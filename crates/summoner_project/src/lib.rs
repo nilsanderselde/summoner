@@ -104,6 +104,7 @@ pub fn create_default_project(name: &str) -> ProjectConfig {
 
         ],
         assets: Vec::new(),
+        automation_lanes: Vec::new(),
     }
 }
 

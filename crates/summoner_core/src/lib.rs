@@ -26,8 +26,8 @@ pub mod midi;
 pub mod smoothing;
 pub mod graph;
 pub mod voice;
+pub mod param_bus;
 pub use smoothing::SmoothParam;
 pub use graph::{Edge, NodeGraph};
 pub use voice::{PolyphonicVoice, VoicePool};
-
-
+pub use param_bus::{AtomicParam, ParamBus, ParamId};

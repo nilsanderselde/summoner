@@ -27,6 +27,21 @@ pub struct ProjectConfig {
     pub tracks: Vec<TrackConfig>,
     #[serde(default)]
     pub assets: Vec<AssetConfig>,
+    #[serde(default)]
+    pub automation_lanes: Vec<AutomationLaneConfig>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct AutomationEventConfig {
+    pub frame: u64,
+    pub value: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct AutomationLaneConfig {
+    pub param_id: String,
+    pub track_id: u64,
+    pub events: Vec<AutomationEventConfig>,
 }
 
 /// Asset descriptor in project document.

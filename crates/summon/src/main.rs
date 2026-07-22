@@ -15,6 +15,7 @@
 
 pub mod export_clap;
 pub mod graph;
+pub mod audio_engine;
 
 
 use summoner_core::allocator::AllocGuard;
@@ -301,7 +302,11 @@ fn main() {
             }
             println!("Initializing native hardware audio via CPAL...");
             println!("Playing project: {}", path_str);
-            println!("(Mock: Running real-time audio thread)");
+            
+            let content = fs::read_to_string(path_str).expect("Failed to read project file");
+            let project = parse_project_toml(&content).expect("Failed to parse project TOML");
+            
+            audio_engine::run_live(&project);
         }
         "asset-add" => {
             let proj_path = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");

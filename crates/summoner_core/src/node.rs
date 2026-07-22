@@ -17,6 +17,8 @@ use crate::audio::Sample;
 use crate::transport::Transport;
 use std::f32::consts::TAU;
 
+use crate::param_bus::ParamBus;
+
 /// Contextual metadata passed to `AudioNode::process` during DSP render evaluation.
 #[derive(Debug, Clone, Copy)]
 pub struct ProcessContext {
@@ -24,6 +26,7 @@ pub struct ProcessContext {
     pub sample_rate: u32,
     pub bpm: f64,
     pub is_playing: bool,
+    pub param_bus: Option<*const ParamBus>,
 }
 
 impl ProcessContext {
@@ -34,6 +37,7 @@ impl ProcessContext {
             sample_rate,
             bpm,
             is_playing: true,
+            param_bus: None,
         }
     }
 
@@ -43,6 +47,7 @@ impl ProcessContext {
             sample_rate: transport.sample_rate,
             bpm: transport.bpm,
             is_playing: transport.is_playing,
+            param_bus: None,
         }
     }
 }
