@@ -1,0 +1,159 @@
+// Summoner - Deterministic, Headless-First DAW
+// Copyright (C) 2026 nilsanderselde
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+
+//! Signal graph AudioNode traits and reference DSP nodes.
+
+use crate::audio::Sample;
+use crate::transport::Transport;
+use std::f32::consts::TAU;
+
+/// Contextual metadata passed to `AudioNode::process` during DSP render evaluation.
+#[derive(Debug, Clone, Copy)]
+pub struct ProcessContext {
+    pub frame_position: u64,
+    pub sample_rate: u32,
+    pub bpm: f64,
+    pub is_playing: bool,
+}
+
+impl ProcessContext {
+    pub fn from_transport(transport: &Transport) -> Self {
+        Self {
+            frame_position: transport.frame_position,
+            sample_rate: transport.sample_rate,
+            bpm: transport.bpm,
+            is_playing: transport.is_playing,
+        }
+    }
+}
+
+/// Fundamental signal processing node interface for audio rendering graph.
+pub trait AudioNode: Send {
+    /// Return human-readable identifier for this node type.
+    fn name(&self) -> &str;
+
+    /// Process an input sample buffer slice into output sample buffer slice.
+    /// MUST NOT perform heap allocations (`malloc`/`free`) or block on locks.
+    fn process(
+        &mut self,
+        input: &[&[Sample]],
+        output: &mut [&mut [Sample]],
+        ctx: &ProcessContext,
+    );
+}
+
+/// A transparent audio node that copies inputs directly to outputs.
+#[derive(Debug, Default)]
+pub struct PassthroughNode;
+
+impl AudioNode for PassthroughNode {
+    fn name(&self) -> &str {
+        "PassthroughNode"
+    }
+
+    fn process(
+        &mut self,
+        input: &[&[Sample]],
+        output: &mut [&mut [Sample]],
+        _ctx: &ProcessContext,
+    ) {
+        let channels = input.len().min(output.len());
+        for ch in 0..channels {
+            let samples = input[ch].len().min(output[ch].len());
+            output[ch][..samples].copy_from_slice(&input[ch][..samples]);
+        }
+    }
+}
+
+/// Gain node that scales input signals by a linear gain factor.
+#[derive(Debug)]
+pub struct GainNode {
+    pub gain: Sample,
+}
+
+impl GainNode {
+    pub fn new(gain: Sample) -> Self {
+        Self { gain }
+    }
+}
+
+impl AudioNode for GainNode {
+    fn name(&self) -> &str {
+        "GainNode"
+    }
+
+    fn process(
+        &mut self,
+        input: &[&[Sample]],
+        output: &mut [&mut [Sample]],
+        _ctx: &ProcessContext,
+    ) {
+        let channels = input.len().min(output.len());
+        for ch in 0..channels {
+            let samples = input[ch].len().min(output[ch].len());
+            for i in 0..samples {
+                output[ch][i] = input[ch][i] * self.gain;
+            }
+        }
+    }
+}
+
+/// Deterministic sine wave oscillator generator node.
+#[derive(Debug)]
+pub struct SineOscillatorNode {
+    pub frequency: f32,
+    pub phase: f32,
+}
+
+impl SineOscillatorNode {
+    pub fn new(frequency: f32) -> Self {
+        Self {
+            frequency,
+            phase: 0.0,
+        }
+    }
+}
+
+impl AudioNode for SineOscillatorNode {
+    fn name(&self) -> &str {
+        "SineOscillatorNode"
+    }
+
+    fn process(
+        &mut self,
+        _input: &[&[Sample]],
+        output: &mut [&mut [Sample]],
+        ctx: &ProcessContext,
+    ) {
+        if ctx.sample_rate == 0 {
+            return;
+        }
+        let phase_step = (TAU * self.frequency) / ctx.sample_rate as f32;
+        let output_channels = output.len();
+        if output_channels == 0 {
+            return;
+        }
+
+        let num_samples = output[0].len();
+        for i in 0..num_samples {
+            let val = self.phase.sin();
+            self.phase = (self.phase + phase_step) % TAU;
+            for ch_slice in output.iter_mut().take(output_channels) {
+                if i < ch_slice.len() {
+                    ch_slice[i] = val;
+                }
+            }
+
+        }
+    }
+}

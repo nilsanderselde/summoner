@@ -1,0 +1,252 @@
+// Summoner - Deterministic, Headless-First DAW
+// Copyright (C) 2026 nilsanderselde
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+
+//! Atomic filter DSP primitives (Moog Ladder, State Variable Filter, Comb Filter).
+
+use crate::traits::SignalProcessor;
+use summoner_core::audio::Sample;
+use summoner_core::node::ProcessContext;
+use std::f32::consts::PI;
+
+/// 4-pole (24dB/octave) Moog-style nonlinear ladder filter.
+#[derive(Debug)]
+pub struct FilterLadder {
+    pub cutoff: f32,
+    pub resonance: f32,
+    stage: [f32; 4],
+    stage_tanh: [f32; 3],
+}
+
+impl FilterLadder {
+    pub fn new(cutoff: f32, resonance: f32) -> Self {
+        Self {
+            cutoff,
+            resonance: resonance.clamp(0.0, 4.0),
+            stage: [0.0; 4],
+            stage_tanh: [0.0; 3],
+        }
+    }
+
+    pub fn process_sample(&mut self, input: f32, sample_rate: u32) -> f32 {
+        if sample_rate == 0 {
+            return 0.0;
+        }
+
+        let cutoff_norm = (self.cutoff / sample_rate as f32).clamp(0.0001, 0.49);
+        let f = (PI * cutoff_norm).sin();
+        let k = self.resonance;
+
+        // Feedback calculation
+        let res_input = input - 4.0 * k * self.stage[3];
+        let input_tanh = res_input.tanh();
+
+        self.stage[0] += f * (input_tanh - self.stage_tanh[0]);
+        self.stage_tanh[0] = self.stage[0].tanh();
+
+        self.stage[1] += f * (self.stage_tanh[0] - self.stage_tanh[1]);
+        self.stage_tanh[1] = self.stage[1].tanh();
+
+        self.stage[2] += f * (self.stage_tanh[1] - self.stage_tanh[2]);
+        self.stage_tanh[2] = self.stage[2].tanh();
+
+        self.stage[3] += f * (self.stage_tanh[2] - self.stage[3].tanh());
+
+        self.stage[3]
+    }
+}
+
+impl SignalProcessor for FilterLadder {
+    fn name(&self) -> &str {
+        "FilterLadder"
+    }
+
+    fn process_block(
+        &mut self,
+        inputs: &[&[Sample]],
+        outputs: &mut [&mut [Sample]],
+        ctx: &ProcessContext,
+    ) {
+        if ctx.sample_rate == 0 || outputs.is_empty() {
+            return;
+        }
+
+        let num_samples = outputs[0].len();
+        for i in 0..num_samples {
+            let in_sample = if !inputs.is_empty() && !inputs[0].is_empty() && i < inputs[0].len() {
+                inputs[0][i]
+            } else {
+                0.0
+            };
+
+            let out_sample = self.process_sample(in_sample, ctx.sample_rate);
+            for out_ch in outputs.iter_mut() {
+                if i < out_ch.len() {
+                    out_ch[i] = out_sample;
+                }
+            }
+        }
+    }
+}
+
+/// State Variable Filter (SVF) outputting Lowpass, Highpass, and Bandpass.
+#[derive(Debug)]
+pub struct FilterSVF {
+    pub cutoff: f32,
+    pub resonance: f32,
+    ic1eq: f32,
+    ic2eq: f32,
+}
+
+impl FilterSVF {
+    pub fn new(cutoff: f32, resonance: f32) -> Self {
+        Self {
+            cutoff,
+            resonance: resonance.max(0.1),
+            ic1eq: 0.0,
+            ic2eq: 0.0,
+        }
+    }
+
+    pub fn process_sample(&mut self, input: f32, sample_rate: u32) -> (f32, f32, f32) {
+        if sample_rate == 0 {
+            return (0.0, 0.0, 0.0);
+        }
+
+        let g = (PI * (self.cutoff / sample_rate as f32).clamp(0.0001, 0.49)).tan();
+        let k = 1.0 / self.resonance;
+
+        let a1 = 1.0 / (1.0 + g * (g + k));
+        let a2 = g * a1;
+        let a3 = g * a2;
+
+        let v3 = input - self.ic2eq;
+        let v1 = a1 * self.ic1eq + a2 * v3;
+        let v2 = self.ic2eq + a2 * self.ic1eq + a3 * v3;
+
+        self.ic1eq = 2.0 * v1 - self.ic1eq;
+        self.ic2eq = 2.0 * v2 - self.ic2eq;
+
+        let lowpass = v2;
+        let bandpass = v1;
+        let highpass = input - k * v1 - v2;
+
+        (lowpass, highpass, bandpass)
+    }
+}
+
+impl SignalProcessor for FilterSVF {
+    fn name(&self) -> &str {
+        "FilterSVF"
+    }
+
+    fn process_block(
+        &mut self,
+        inputs: &[&[Sample]],
+        outputs: &mut [&mut [Sample]],
+        ctx: &ProcessContext,
+    ) {
+        if ctx.sample_rate == 0 || outputs.is_empty() {
+            return;
+        }
+
+        let num_samples = outputs[0].len();
+        for i in 0..num_samples {
+            let in_sample = if !inputs.is_empty() && !inputs[0].is_empty() && i < inputs[0].len() {
+                inputs[0][i]
+            } else {
+                0.0
+            };
+
+            let (lp, _hp, _bp) = self.process_sample(in_sample, ctx.sample_rate);
+            for out_ch in outputs.iter_mut() {
+                if i < out_ch.len() {
+                    out_ch[i] = lp;
+                }
+            }
+        }
+    }
+}
+
+/// Tuned delay line with feedback (Comb Filter) for physical modeling synthesis.
+#[derive(Debug)]
+pub struct FilterComb {
+    pub frequency: f32,
+    pub feedback: f32,
+    buffer: [f32; 2048],
+    write_pos: usize,
+}
+
+impl FilterComb {
+    pub fn new(frequency: f32, feedback: f32) -> Self {
+        Self {
+            frequency: frequency.max(20.0),
+            feedback: feedback.clamp(-0.999, 0.999),
+            buffer: [0.0; 2048],
+            write_pos: 0,
+        }
+    }
+
+    pub fn process_sample(&mut self, input: f32, sample_rate: u32) -> f32 {
+        if sample_rate == 0 {
+            return input;
+        }
+
+        let delay_samples = (sample_rate as f32 / self.frequency).clamp(1.0, 2047.0);
+        let read_pos = (self.write_pos as f32 + 2048.0 - delay_samples) % 2048.0;
+
+        let read_idx = read_pos.floor() as usize;
+        let frac = read_pos % 1.0;
+        let next_idx = (read_idx + 1) % 2048;
+
+        let delayed = self.buffer[read_idx] * (1.0 - frac) + self.buffer[next_idx] * frac;
+        let output = input + delayed * self.feedback;
+
+        self.buffer[self.write_pos] = output;
+        self.write_pos = (self.write_pos + 1) % 2048;
+
+        output
+    }
+}
+
+impl SignalProcessor for FilterComb {
+    fn name(&self) -> &str {
+        "FilterComb"
+    }
+
+    fn process_block(
+        &mut self,
+        inputs: &[&[Sample]],
+        outputs: &mut [&mut [Sample]],
+        ctx: &ProcessContext,
+    ) {
+        if ctx.sample_rate == 0 || outputs.is_empty() {
+            return;
+        }
+
+        let num_samples = outputs[0].len();
+        for i in 0..num_samples {
+            let in_sample = if !inputs.is_empty() && !inputs[0].is_empty() && i < inputs[0].len() {
+                inputs[0][i]
+            } else {
+                0.0
+            };
+
+            let out_sample = self.process_sample(in_sample, ctx.sample_rate);
+            for out_ch in outputs.iter_mut() {
+                if i < out_ch.len() {
+                    out_ch[i] = out_sample;
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,15 @@
+[package]
+name = "summon"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "summon"
+path = "src/main.rs"
+
+[dependencies]
+summoner_core = { path = "../summoner_core" }
+summoner_project = { path = "../summoner_project" }

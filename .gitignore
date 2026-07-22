@@ -1,0 +1,23 @@
+# Rust build artifacts
+/target/
+**/*.rs.bk
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary session & render outputs
+*.raw
+*.wav
+*_session.toml
+
+# Agent local temporary state
+.gemini/tmp/
+/local/*

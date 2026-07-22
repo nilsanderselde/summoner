@@ -1,0 +1,14 @@
+[package]
+name = "summoner_project"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+summoner_core = { path = "../summoner_core" }
+blake3.workspace = true
+serde.workspace = true
+toml.workspace = true
+

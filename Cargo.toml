@@ -1,0 +1,30 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/summoner_core",
+    "crates/summoner_dsp",
+    "crates/summoner_harmony",
+    "crates/summoner_project",
+    "crates/summoner_gui",
+    "crates/summon",
+]
+
+[workspace.package]
+version = "0.1.0"
+authors = ["nilsanderselde"]
+edition = "2021"
+license = "AGPL-3.0-or-later"
+repository = "https://github.com/nilsanderselde/summoner"
+
+[workspace.dependencies]
+blake3 = "1.5"
+serde = { version = "1.0", features = ["derive"] }
+toml = "0.8"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+
+[profile.dev]
+opt-level = 1

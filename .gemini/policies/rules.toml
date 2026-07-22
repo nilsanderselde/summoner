@@ -1,0 +1,35 @@
+# Allow safe Rust build and test operations
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "cargo"
+decision = "allow"
+
+# Allow safe Git operations
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "git"
+decision = "allow"
+
+# Allow file reading, writing, and editing
+[[rule]]
+toolName = "read_file"
+decision = "allow"
+
+[[rule]]
+toolName = "write_file"
+decision = "allow"
+
+[[rule]]
+toolName = "edit_file"
+decision = "allow"
+
+# Hard block dangerous system-wide commands
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "rm -rf /"
+decision = "deny"
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "Remove-Item -Recurse -Force C:\\"
+decision = "deny"
