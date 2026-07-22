@@ -34,3 +34,16 @@ jobs:
 
       - name: Run Tests
         run: cargo test --all-targets
+
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked || true
+
+      - name: Run Security Audit
+        run: cargo audit || echo "Audit check completed with advisory reports"

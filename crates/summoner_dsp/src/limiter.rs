@@ -52,7 +52,7 @@ impl SignalProcessor for LimiterNode {
             if target_env > self.env {
                 self.env = target_env;
             } else {
-                self.env = self.env * release_coeff;
+                self.env *= release_coeff;
             }
             
             self.lookahead_buffer.push_back(x);

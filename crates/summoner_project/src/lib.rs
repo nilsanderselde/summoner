@@ -59,6 +59,7 @@ pub fn create_default_project(name: &str) -> ProjectConfig {
 
     ProjectConfig {
         name: name.to_string(),
+        tuning_file: None,
         transport: TransportConfig::default(),
         tracks: vec![
             TrackConfig {
@@ -101,6 +102,7 @@ pub fn create_default_project(name: &str) -> ProjectConfig {
             },
 
         ],
+        assets: Vec::new(),
     }
 }
 

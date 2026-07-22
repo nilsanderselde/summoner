@@ -30,12 +30,25 @@ crate-type = ["cdylib"]
 // C-ABI CLAP Plugin Entry Point
 
 use std::os::raw::c_char;
-use std::ffi::CStr;
+
+#[repr(C)]
+pub struct clap_plugin_descriptor {
+    pub clap_version: [u32; 3],
+    pub id: *const c_char,
+    pub name: *const c_char,
+    pub vendor: *const c_char,
+    pub url: *const c_char,
+    pub manual_url: *const c_char,
+    pub support_url: *const c_char,
+    pub version: *const c_char,
+    pub description: *const c_char,
+    pub features: *const *const c_char,
+}
 
 #[repr(C)]
 pub struct clap_plugin {
-    // Basic CLAP plugin descriptor would go here
-    pub desc: *const c_char,
+    pub desc: *const clap_plugin_descriptor,
+    pub plugin_data: *mut std::ffi::c_void,
 }
 
 #[no_mangle]
@@ -44,11 +57,11 @@ pub extern "C" fn clap_plugin_init(_plugin_path: *const c_char) -> bool {
 }
 
 #[no_mangle]
-pub extern "C" fn clap_plugin_instantiate(
-    _host: *const std::ffi::c_void,
-    _plugin_id: *const c_char,
-) -> *const clap_plugin {
-    std::ptr::null()
+pub extern "C" fn clap_plugin_deinit() {}
+
+#[no_mangle]
+pub extern "C" fn clap_entry_init(_plugin_path: *const c_char) -> bool {
+    true
 }
 "#;
     fs::write(plugin_dir.join("src").join("lib.rs"), lib_rs)?;

@@ -26,7 +26,7 @@ impl SclTuning {
         
         let mut cents_or_ratios = Vec::new();
         for line in lines.take(num_notes) {
-            let val_str = line.trim().split_whitespace().next().unwrap_or("");
+            let val_str = line.split_whitespace().next().unwrap_or("");
             if val_str.contains('.') {
                 // Cents
                 let cents: f64 = val_str.parse().map_err(|_| "Invalid cents value")?;

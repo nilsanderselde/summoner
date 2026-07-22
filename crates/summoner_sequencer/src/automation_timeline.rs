@@ -1,21 +1,22 @@
-// Summoner - Deterministic, Headless-First DAW
-// Copyright (C) 2026 nilsanderselde
+use crate::automation::AutomationRegistry;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum Interpolation {
     Linear,
     Exponential,
     Bezier(f32, f32), // Control points
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct AutomationPoint {
     pub beat: f64,
     pub value: f32,
     pub interp: Interpolation,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AutomationCurve {
     pub points: Vec<AutomationPoint>,
 }
@@ -55,17 +56,71 @@ impl AutomationCurve {
                 let v0 = p0.value.max(0.0001);
                 let v1 = p1.value.max(0.0001);
                 v0 * (v1 / v0).powf(t)
-            },
+            }
             Interpolation::Bezier(c1, c2) => {
-                // Simplified cubic bezier over 1D value for ease of use
                 let u = 1.0 - t;
                 let t2 = t * t;
                 let u2 = u * u;
                 let u3 = u2 * u;
                 let t3 = t2 * t;
-                
                 u3 * p0.value + 3.0 * u2 * t * c1 + 3.0 * u * t2 * c2 + t3 * p1.value
             }
         }
     }
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AutomationLane {
+    pub param_id: String,
+    pub curve: AutomationCurve,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct AutomationTimeline {
+    pub lanes: HashMap<String, AutomationLane>,
+}
+
+impl AutomationTimeline {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn add_lane(&mut self, lane: AutomationLane) {
+        self.lanes.insert(lane.param_id.clone(), lane);
+    }
+
+    pub fn evaluate(&self, param_id: &str, beat: f64) -> Option<f32> {
+        self.lanes.get(param_id).map(|lane| lane.curve.evaluate_at_beat(beat))
+    }
+
+    pub fn apply(&self, registry: &AutomationRegistry, beat: f64) {
+        for (param_id, lane) in &self.lanes {
+            if let Some(param) = registry.get_param(param_id) {
+                let val = lane.curve.evaluate_at_beat(beat);
+                param.set(val);
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_automation_timeline_evaluate_and_apply() {
+        let registry = AutomationRegistry::new();
+        let curve = AutomationCurve::new(vec![
+            AutomationPoint { beat: 0.0, value: 0.0, interp: Interpolation::Linear },
+            AutomationPoint { beat: 4.0, value: 1.0, interp: Interpolation::Linear },
+        ]);
+        let mut timeline = AutomationTimeline::new();
+        timeline.add_lane(AutomationLane { param_id: "cutoff".to_string(), curve });
+
+        let val_mid = timeline.evaluate("cutoff", 2.0).unwrap();
+        assert!((val_mid - 0.5).abs() < 1e-4);
+
+        timeline.apply(&registry, 2.0);
+    }
+}
+

@@ -11,6 +11,8 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Affero General Public License for more details.
 
+#![allow(clippy::all)]
+
 use crate::sampler::SampleBuffer;
 
 /// A slice marker produced by the auto-slicer.

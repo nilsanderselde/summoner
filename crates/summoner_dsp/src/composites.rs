@@ -551,9 +551,7 @@ impl SignalProcessor for GlitchPercussionSynth {
 
         let num_samples = outputs[0].len();
         let mut temp_l = vec![0.0; num_samples];
-        for i in 0..num_samples {
-            temp_l[i] = outputs[0][i];
-        }
+        temp_l[..num_samples].copy_from_slice(&outputs[0][..num_samples]);
         self.stutter.process_block(&[&temp_l], outputs, ctx);
     }
 }

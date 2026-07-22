@@ -215,15 +215,34 @@ impl SignalProcessor for LFO {
     }
 }
 
-/// MacroKnob bridging GUI parameters to DSP modulation inputs.
-#[derive(Debug)]
+use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::Arc;
+
+/// MacroKnob bridging GUI/Automation parameters to DSP modulation inputs.
+#[derive(Debug, Clone)]
 pub struct MacroKnob {
     pub value: f32,
+    pub atomic_binding: Option<Arc<AtomicU32>>,
 }
 
 impl MacroKnob {
     pub fn new(value: f32) -> Self {
-        Self { value: value.clamp(0.0, 1.0) }
+        Self {
+            value: value.clamp(0.0, 1.0),
+            atomic_binding: None,
+        }
+    }
+
+    pub fn bind_atomic(&mut self, binding: Arc<AtomicU32>) {
+        self.atomic_binding = Some(binding);
+    }
+
+    pub fn get_value(&self) -> f32 {
+        if let Some(ref binding) = self.atomic_binding {
+            f32::from_bits(binding.load(Ordering::Relaxed))
+        } else {
+            self.value
+        }
     }
 }
 
@@ -241,13 +260,15 @@ impl SignalProcessor for MacroKnob {
         if outputs.is_empty() {
             return;
         }
+        let current_val = self.get_value();
         let num_samples = outputs[0].len();
         for i in 0..num_samples {
             for out_ch in outputs.iter_mut() {
                 if i < out_ch.len() {
-                    out_ch[i] = self.value;
+                    out_ch[i] = current_val;
                 }
             }
         }
     }
 }
+

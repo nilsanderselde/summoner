@@ -13,6 +13,8 @@
 
 //! GPU-accelerated UI & LOD rendering engine for Summoner DAW.
 
+#![allow(clippy::new_without_default)]
+
 pub mod lod;
 pub mod renderer;
 pub mod stage_view;

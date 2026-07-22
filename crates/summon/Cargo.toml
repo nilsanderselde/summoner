@@ -14,4 +14,6 @@ path = "src/main.rs"
 summoner_core = { path = "../summoner_core" }
 summoner_project = { path = "../summoner_project" }
 summoner_dsp = { path = "../summoner_dsp" }
+summoner_harmony = { path = "../summoner_harmony" }
+blake3.workspace = true
 cpal = "0.15"

@@ -24,6 +24,10 @@ pub mod wav;
 pub mod panner;
 pub mod midi;
 pub mod smoothing;
+pub mod graph;
+pub mod voice;
 pub use smoothing::SmoothParam;
+pub use graph::{Edge, NodeGraph};
+pub use voice::{PolyphonicVoice, VoicePool};
 
 

@@ -41,6 +41,10 @@ fn print_usage() {
     println!("  summon patch-export-clap [PROJECT_PATH] [OUTPUT_DIR]");
     println!("  summon commit-history [PROJECT_PATH]");
     println!("  summon play [PROJECT_PATH]");
+    println!("  summon asset-add [PROJECT_PATH] [WAV_PATH]");
+    println!("  summon asset-verify [PROJECT_PATH]");
+    println!("  summon tune [PROJECT_PATH] [SCL_PATH]");
+    println!("  summon harmony-suggest [PROJECT_PATH]");
 }
 
 fn main() {
@@ -294,10 +298,119 @@ fn main() {
                 eprintln!("Error: Project file '{}' not found.", path_str);
                 process::exit(1);
             }
-            // Scaffold: cpal initialization and real-time thread spawning
             println!("Initializing native hardware audio via CPAL...");
             println!("Playing project: {}", path_str);
             println!("(Mock: Running real-time audio thread)");
+        }
+        "asset-add" => {
+            let proj_path = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            let wav_path = args.get(3).map(|s| s.as_str()).unwrap_or("sample.wav");
+
+            if !Path::new(proj_path).exists() {
+                eprintln!("Error: Project file '{}' not found.", proj_path);
+                process::exit(1);
+            }
+            if !Path::new(wav_path).exists() {
+                eprintln!("Error: Audio asset file '{}' not found.", wav_path);
+                process::exit(1);
+            }
+
+            let file_bytes = fs::read(wav_path).expect("Failed to read audio asset file");
+            let hash_hex = blake3::hash(&file_bytes).to_hex().to_string();
+
+            let content = fs::read_to_string(proj_path).expect("Failed to read project file");
+            let mut project = parse_project_toml(&content).expect("Failed to parse project TOML");
+
+            let asset_id = Path::new(wav_path)
+                .file_stem()
+                .map(|s| s.to_string_lossy().to_string())
+                .unwrap_or_else(|| "asset".to_string());
+
+            project.assets.push(summoner_project::schema::AssetConfig {
+                id: asset_id.clone(),
+                hash: hash_hex.clone(),
+                path: wav_path.to_string(),
+                auto_slice: true,
+                slice_threshold: 0.15,
+            });
+
+            let serialized = serialize_project_toml(&project).expect("Failed to serialize project");
+            fs::write(proj_path, serialized).expect("Failed to write updated project TOML");
+
+            println!("Added asset '{}' (BLAKE3: {}) to project '{}'", asset_id, &hash_hex[..12], proj_path);
+        }
+        "asset-verify" => {
+            let proj_path = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            if !Path::new(proj_path).exists() {
+                eprintln!("Error: Project file '{}' not found.", proj_path);
+                process::exit(1);
+            }
+
+            let content = fs::read_to_string(proj_path).expect("Failed to read project file");
+            let project = parse_project_toml(&content).expect("Failed to parse project TOML");
+
+            println!("Verifying BLAKE3 integrity for {} assets in '{}':", project.assets.len(), proj_path);
+            let mut all_valid = true;
+            for asset in &project.assets {
+                if !Path::new(&asset.path).exists() {
+                    eprintln!(" [MISSING] Asset file '{}' not found", asset.path);
+                    all_valid = false;
+                    continue;
+                }
+                let bytes = fs::read(&asset.path).expect("Failed to read asset file");
+                let computed_hash = blake3::hash(&bytes).to_hex().to_string();
+                if computed_hash == asset.hash {
+                    println!(" [OK] {} -> BLAKE3 matched ({})", asset.id, &computed_hash[..12]);
+                } else {
+                    eprintln!(" [HASH MISMATCH] {} expected {} got {}", asset.id, &asset.hash[..12], &computed_hash[..12]);
+                    all_valid = false;
+                }
+            }
+
+            if all_valid {
+                println!("All project assets verified successfully!");
+            } else {
+                eprintln!("Asset verification failed with errors.");
+                process::exit(1);
+            }
+        }
+        "tune" => {
+            let proj_path = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            let scl_path = args.get(3).map(|s| s.as_str()).unwrap_or("19-edo.scl");
+
+            if !Path::new(proj_path).exists() {
+                eprintln!("Error: Project file '{}' not found.", proj_path);
+                process::exit(1);
+            }
+
+            let content = fs::read_to_string(proj_path).expect("Failed to read project file");
+            let mut project = parse_project_toml(&content).expect("Failed to parse project TOML");
+
+            project.tuning_file = Some(scl_path.to_string());
+            let serialized = serialize_project_toml(&project).expect("Failed to serialize project");
+            fs::write(proj_path, serialized).expect("Failed to update project TOML");
+
+            println!("Updated project '{}' microtonal tuning file to: '{}'", proj_path, scl_path);
+        }
+        "harmony-suggest" => {
+            let proj_path = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            if !Path::new(proj_path).exists() {
+                eprintln!("Error: Project file '{}' not found.", proj_path);
+                process::exit(1);
+            }
+
+            let mut context = summoner_harmony::bus::HarmonicContext::default();
+            // Simulate active notes for demonstration
+            context.push_note_on(60);
+            context.push_note_on(64);
+            context.push_note_on(67);
+
+            let current_chord = context.analyze_active_chord();
+            let suggestions = context.suggest_next_chord_notes();
+
+            println!("Global Harmonic Bus Cadence Report for: {}", proj_path);
+            println!("Current Active Chord: {}", current_chord);
+            println!("Suggested Next Diatonic Chord MIDI Notes: {:?}", suggestions);
         }
         _ => {
             print_usage();
@@ -305,3 +418,4 @@ fn main() {
         }
     }
 }
+

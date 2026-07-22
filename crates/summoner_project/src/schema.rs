@@ -20,10 +20,31 @@ use std::collections::HashMap;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ProjectConfig {
     pub name: String,
+    #[serde(default)]
+    pub tuning_file: Option<String>,
     pub transport: TransportConfig,
     #[serde(default)]
     pub tracks: Vec<TrackConfig>,
+    #[serde(default)]
+    pub assets: Vec<AssetConfig>,
 }
+
+/// Asset descriptor in project document.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct AssetConfig {
+    pub id: String,
+    pub hash: String,
+    pub path: String,
+    #[serde(default)]
+    pub auto_slice: bool,
+    #[serde(default = "default_slice_threshold")]
+    pub slice_threshold: f32,
+}
+
+fn default_slice_threshold() -> f32 {
+    0.15
+}
+
 
 /// Transport settings in project document.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

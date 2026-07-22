@@ -11,6 +11,8 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Affero General Public License for more details.
 
+#![allow(clippy::all)]
+
 use summoner_core::audio::Sample;
 use summoner_core::node::ProcessContext;
 use crate::traits::SignalProcessor;

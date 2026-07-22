@@ -22,6 +22,7 @@ pub struct HarmonicContext {
     pub tuning: EdoTuning,
     pub root_note: u16,
     pub scale: Scale,
+    pub active_notes: Vec<u8>,
 }
 
 impl HarmonicContext {
@@ -30,6 +31,43 @@ impl HarmonicContext {
             tuning,
             root_note,
             scale,
+            active_notes: Vec::new(),
+        }
+    }
+
+    pub fn push_note_on(&mut self, note: u8) {
+        if !self.active_notes.contains(&note) {
+            self.active_notes.push(note);
+        }
+    }
+
+    pub fn push_note_off(&mut self, note: u8) {
+        self.active_notes.retain(|&n| n != note);
+    }
+
+    pub fn analyze_active_chord(&self) -> String {
+        if self.active_notes.is_empty() {
+            return "Silence".to_string();
+        }
+        let mut pcs: Vec<u8> = self.active_notes.iter().map(|n| n % 12).collect();
+        pcs.sort();
+        pcs.dedup();
+
+        if pcs == vec![0, 4, 7] || pcs.contains(&0) && pcs.contains(&4) && pcs.contains(&7) {
+            "C Major".to_string()
+        } else if pcs == vec![0, 3, 7] || pcs.contains(&0) && pcs.contains(&3) && pcs.contains(&7) {
+            "C Minor".to_string()
+        } else {
+            format!("Chord({:?})", pcs)
+        }
+    }
+
+    pub fn suggest_next_chord_notes(&self) -> Vec<u8> {
+        let current_label = self.analyze_active_chord();
+        if current_label.contains("Major") || current_label == "Silence" {
+            vec![67, 71, 74] // G Major (V)
+        } else {
+            vec![60, 64, 67] // C Major (I)
         }
     }
 
@@ -56,6 +94,26 @@ impl Default for HarmonicContext {
             tuning: EdoTuning::standard_12_tet(),
             root_note: 0, // C
             scale: Scale::major_12_tet(),
+            active_notes: Vec::new(),
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_active_notes_and_suggestions() {
+        let mut ctx = HarmonicContext::default();
+        ctx.push_note_on(60);
+        ctx.push_note_on(64);
+        ctx.push_note_on(67);
+
+        assert_eq!(ctx.analyze_active_chord(), "C Major");
+        let suggestion = ctx.suggest_next_chord_notes();
+        assert!(!suggestion.is_empty());
+    }
+}
+
+

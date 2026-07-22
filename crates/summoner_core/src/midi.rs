@@ -75,9 +75,8 @@ impl MidiFileParser {
         let _ticks_per_qn = self.read_u16().ok_or("EOF")?;
 
         let mut seq_tracks = Vec::new();
-        let mut track_id = 1;
 
-        for _ in 0..tracks {
+        for track_id in 1..=tracks {
             if self.read_u32() != Some(0x4D54726B) {
                 // If it's not a track, skip
                 break;
@@ -126,12 +125,11 @@ impl MidiFileParser {
             }
             
             seq_tracks.push(SequenceTrack::new(
-                track_id,
+                track_id as u64,
                 format!("Track {}", track_id),
                 0.25, // 1/16th note default
                 steps,
             ));
-            track_id += 1;
             self.pos = end_pos;
         }
 
