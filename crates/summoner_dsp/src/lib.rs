@@ -34,10 +34,12 @@ pub mod mod_fx;
 pub mod ring_mod;
 pub mod meter;
 pub mod granular;
+pub mod drum_machine;
 pub use composites::{
     AetherSynth, AtmosphericPadSynth, CyberpunkSubSynth, FmOperatorPair, GlitchAetherMachine,
-    GlitchPercussionSynth, PluckSynth,
+    GlitchPercussionSynth, PluckSynth, SamplerDevice,
 };
+pub use drum_machine::{DrumMachineDevice, DrumPad, MAX_PADS};
 pub use distortion::{DistortionNode, DistortionType};
 pub use effects::{EffectDelay, EffectReverb};
 pub use filters::{FilterComb, FilterLadder, FilterSVF};

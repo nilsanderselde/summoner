@@ -29,7 +29,7 @@ pub enum EnvState {
 }
 
 /// 4-stage exponential envelope generator.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct EnvADSR {
     pub attack: f32,  // in seconds
     pub decay: f32,   // in seconds

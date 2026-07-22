@@ -27,6 +27,16 @@ pub struct ProcessContext {
 }
 
 impl ProcessContext {
+    /// Construct a `ProcessContext` directly from raw values, for tests and internal DSP use.
+    pub fn new(sample_rate: u32, bpm: f64, frame_position: u64) -> Self {
+        Self {
+            frame_position,
+            sample_rate,
+            bpm,
+            is_playing: true,
+        }
+    }
+
     pub fn from_transport(transport: &Transport) -> Self {
         Self {
             frame_position: transport.frame_position,
