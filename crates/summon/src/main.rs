@@ -45,6 +45,7 @@ fn print_usage() {
     println!("  summon asset-verify [PROJECT_PATH]");
     println!("  summon tune [PROJECT_PATH] [SCL_PATH]");
     println!("  summon harmony-suggest [PROJECT_PATH]");
+    println!("  summon sfz-convert [SFZ_DIR] [OUTPUT_DIR]");
 }
 
 fn main() {
@@ -400,7 +401,6 @@ fn main() {
             }
 
             let mut context = summoner_harmony::bus::HarmonicContext::default();
-            // Simulate active notes for demonstration
             context.push_note_on(60);
             context.push_note_on(64);
             context.push_note_on(67);
@@ -412,10 +412,42 @@ fn main() {
             println!("Current Active Chord: {}", current_chord);
             println!("Suggested Next Diatonic Chord MIDI Notes: {:?}", suggestions);
         }
+        "sfz-convert" => {
+            let sfz_dir = args.get(2).map(|s| s.as_str()).unwrap_or("local/FreePatsGM-SFZ+FLAC-20221026");
+            let out_dir = args.get(3).map(|s| s.as_str()).unwrap_or("local/presets/freepats");
+
+            if !Path::new(sfz_dir).exists() {
+                eprintln!("Error: SFZ directory '{}' not found.", sfz_dir);
+                process::exit(1);
+            }
+
+            fs::create_dir_all(out_dir).expect("Failed to create output preset directory");
+
+            let entries = fs::read_dir(sfz_dir).expect("Failed to read SFZ directory");
+            let mut converted_count = 0;
+
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.extension().and_then(|e| e.to_str()) == Some("sfz") {
+                    let stem = path.file_stem().unwrap().to_string_lossy().to_string();
+                    let sfz_text = fs::read_to_string(&path).expect("Failed to read SFZ file");
+                    let patch = summoner_project::sfz::SfzPresetPatch::parse_sfz(&stem, &sfz_text);
+
+                    let out_path = Path::new(out_dir).join(format!("{}.preset.toml", stem));
+                    fs::write(&out_path, patch.to_toml_preset()).expect("Failed to write preset TOML");
+
+                    println!("  [CONVERTED] {} -> {} ({} regions)", stem, out_path.display(), patch.regions.len());
+                    converted_count += 1;
+                }
+            }
+
+            println!("Successfully converted {} SFZ instruments into Summoner presets at: {}", converted_count, out_dir);
+        }
         _ => {
             print_usage();
             process::exit(1);
         }
     }
 }
+
 

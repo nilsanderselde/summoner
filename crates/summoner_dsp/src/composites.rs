@@ -555,3 +555,92 @@ impl SignalProcessor for GlitchPercussionSynth {
         self.stutter.process_block(&[&temp_l], outputs, ctx);
     }
 }
+
+use crate::sampler::{MultiSampleBank, MultiSamplerNode};
+
+/// Macro View parameters for SamplerDevice.
+#[derive(Debug)]
+pub struct SamplerMacroView {
+    pub filter_cutoff: MacroKnob, // 20.0 to 20000.0 Hz
+    pub filter_res: MacroKnob,   // 0.0 to 4.0
+    pub amp_attack: MacroKnob,   // Seconds
+    pub amp_release: MacroKnob,  // Seconds
+    pub gain: MacroKnob,         // Volume scaling
+}
+
+/// Composite sub-graph device: SamplerDevice (MultiSamplerNode + EnvADSR + FilterLadder + VCA).
+#[derive(Debug)]
+pub struct SamplerDevice {
+    pub sampler: MultiSamplerNode,
+    pub amp_env: EnvADSR,
+    pub filter: FilterLadder,
+    pub vca: VCA,
+    pub macro_view: SamplerMacroView,
+}
+
+impl SamplerDevice {
+    pub fn new(bank: MultiSampleBank) -> Self {
+        Self {
+            sampler: MultiSamplerNode::new(bank),
+            amp_env: EnvADSR::new(0.005, 0.1, 1.0, 0.4),
+            filter: FilterLadder::new(18000.0, 0.7),
+            vca: VCA::new(1.0),
+            macro_view: SamplerMacroView {
+                filter_cutoff: MacroKnob::new(1.0),
+                filter_res: MacroKnob::new(0.2),
+                amp_attack: MacroKnob::new(0.005),
+                amp_release: MacroKnob::new(0.4),
+                gain: MacroKnob::new(0.8),
+            },
+        }
+    }
+
+    pub fn trigger_note(&mut self, note: u8, velocity: u8) {
+        self.sampler.trigger_note(note, velocity);
+        self.amp_env.trigger(true);
+    }
+
+    pub fn release_note(&mut self) {
+        self.amp_env.trigger(false);
+    }
+}
+
+impl SignalProcessor for SamplerDevice {
+    fn name(&self) -> &str {
+        "SamplerDevice"
+    }
+
+    fn process_block(
+        &mut self,
+        inputs: &[&[Sample]],
+        outputs: &mut [&mut [Sample]],
+        ctx: &ProcessContext,
+    ) {
+        if ctx.sample_rate == 0 || outputs.is_empty() {
+            return;
+        }
+
+        let num_samples = outputs[0].len();
+        let mut raw_buf = vec![0.0f32; num_samples];
+        let mut sampler_out = [&mut raw_buf[..]];
+
+        self.sampler.process_block(inputs, &mut sampler_out[..], ctx);
+
+        for i in 0..num_samples {
+            let sample_in = raw_buf[i];
+            self.filter.cutoff = self.macro_view.filter_cutoff.get_value() * 18000.0 + 20.0;
+            self.filter.resonance = self.macro_view.filter_res.get_value() * 3.9;
+            let filtered = self.filter.process_sample(sample_in, ctx.sample_rate);
+
+            let env_level = self.amp_env.process_sample(ctx.sample_rate);
+            let vca_out = filtered * env_level * self.macro_view.gain.get_value();
+
+            for out_ch in outputs.iter_mut() {
+                if i < out_ch.len() {
+                    out_ch[i] = vca_out;
+                }
+            }
+        }
+    }
+}
+
