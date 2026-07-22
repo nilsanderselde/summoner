@@ -70,12 +70,12 @@ pub fn create_default_project(name: &str) -> ProjectConfig {
                 gain: 1.0,
                 pan: 0.0,
                 muted: false,
-                nodes: vec![NodeConfig {
-                    kind: "GainNode".to_string(),
-                    params: gain_params,
-                }],
+                nodes: Vec::new(),
                 sequence: None,
                 connections: Vec::new(),
+                tuning_edo: None,
+                tuning_root_hz: None,
+                tuning_scl_path: None,
             },
             TrackConfig {
                 id: 2,
@@ -100,6 +100,9 @@ pub fn create_default_project(name: &str) -> ProjectConfig {
                 ],
                 sequence: None,
                 connections: Vec::new(),
+                tuning_edo: None,
+                tuning_root_hz: None,
+                tuning_scl_path: None,
             },
 
         ],

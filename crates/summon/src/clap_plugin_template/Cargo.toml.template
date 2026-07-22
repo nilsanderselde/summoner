@@ -1,0 +1,13 @@
+[package]
+name = "{{plugin_name}}"
+version = "{{plugin_version}}"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+clap-sys = "0.3"
+summoner_core = { path = "{{core_path}}" }
+summoner_dsp = { path = "{{dsp_path}}" }
+summoner_project = { path = "{{project_path}}" }

@@ -93,11 +93,35 @@ impl AutomationTimeline {
         self.lanes.get(param_id).map(|lane| lane.curve.evaluate_at_beat(beat))
     }
 
-    pub fn apply(&self, registry: &AutomationRegistry, beat: f64) {
+    pub fn apply_beat(&self, registry: &AutomationRegistry, beat: f64) {
         for (param_id, lane) in &self.lanes {
             if let Some(param) = registry.get_param(param_id) {
                 let val = lane.curve.evaluate_at_beat(beat);
                 param.set(val);
+            }
+        }
+    }
+
+    pub fn record_beat(&mut self, registry: &mut AutomationRegistry, beat: f64) {
+        if registry.is_recording_all() {
+            let dirty = registry.snapshot_dirty_params(0 /* unused frame */);
+            for (param_id, value) in dirty {
+                let lane = self.lanes.entry(param_id.clone()).or_insert_with(|| AutomationLane {
+                    param_id: param_id.clone(),
+                    curve: AutomationCurve { points: Vec::new() },
+                });
+                
+                // Keep it sorted
+                let point = AutomationPoint {
+                    beat,
+                    value,
+                    interp: Interpolation::Linear,
+                };
+                
+                match lane.curve.points.binary_search_by(|p| p.beat.partial_cmp(&beat).unwrap()) {
+                    Ok(idx) => lane.curve.points[idx] = point,
+                    Err(idx) => lane.curve.points.insert(idx, point),
+                }
             }
         }
     }
@@ -120,7 +144,30 @@ mod tests {
         let val_mid = timeline.evaluate("cutoff", 2.0).unwrap();
         assert!((val_mid - 0.5).abs() < 1e-4);
 
-        timeline.apply(&registry, 2.0);
+        timeline.apply_beat(&registry, 2.0);
+    }
+
+    #[test]
+    fn test_automation_record_all() {
+        let mut registry = AutomationRegistry::new();
+        let param = registry.register_param("cutoff", 0.0);
+        
+        let mut timeline = AutomationTimeline::new();
+        
+        registry.start_record_all();
+        
+        // Simulating parameter sweeping 0 -> 1 over 100 frames (let's say 4 beats)
+        for i in 0..=100 {
+            let beat = (i as f64 / 100.0) * 4.0;
+            let value = i as f32 / 100.0;
+            param.set(value);
+            timeline.record_beat(&mut registry, beat);
+        }
+        
+        registry.stop_record_all();
+        
+        let val_mid = timeline.evaluate("cutoff", 2.0).unwrap();
+        assert!((val_mid - 0.5).abs() < 1e-4);
     }
 }
 

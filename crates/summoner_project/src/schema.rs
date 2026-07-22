@@ -98,6 +98,12 @@ pub struct TrackConfig {
     pub sequence: Option<SequenceConfig>,
     #[serde(default)]
     pub connections: Vec<ConnectionConfig>,
+    #[serde(default)]
+    pub tuning_edo: Option<u32>,
+    #[serde(default)]
+    pub tuning_root_hz: Option<f32>,
+    #[serde(default)]
+    pub tuning_scl_path: Option<String>,
 }
 
 /// Routing connection configuration

@@ -71,6 +71,12 @@ impl AetherSynth {
         self.amp_env.trigger(gate);
         self.filter_env.trigger(gate);
     }
+
+    pub fn trigger_note(&mut self, note: u8, ctx: &ProcessContext) {
+        self.osc_saw.trigger(note, ctx);
+        self.osc_pulse.trigger(note, ctx);
+        self.trigger(true);
+    }
 }
 
 impl SignalProcessor for AetherSynth {

@@ -27,6 +27,8 @@ pub struct ProcessContext {
     pub bpm: f64,
     pub is_playing: bool,
     pub param_bus: Option<*const ParamBus>,
+    pub tuning_root_hz: f32,
+    pub tuning_edo_divisions: u32,
 }
 
 impl ProcessContext {
@@ -38,6 +40,8 @@ impl ProcessContext {
             bpm,
             is_playing: true,
             param_bus: None,
+            tuning_root_hz: 440.0,
+            tuning_edo_divisions: 12,
         }
     }
 
@@ -48,7 +52,26 @@ impl ProcessContext {
             bpm: transport.bpm,
             is_playing: transport.is_playing,
             param_bus: None,
+            tuning_root_hz: 440.0,
+            tuning_edo_divisions: 12,
         }
+    }
+
+    pub fn with_tuning(transport: &Transport, root_hz: f32, edo_divisions: u32) -> Self {
+        Self {
+            frame_position: transport.frame_position,
+            sample_rate: transport.sample_rate,
+            bpm: transport.bpm,
+            is_playing: transport.is_playing,
+            param_bus: None,
+            tuning_root_hz: root_hz,
+            tuning_edo_divisions: edo_divisions,
+        }
+    }
+
+    pub fn note_to_hz(&self, midi_note: i32) -> f32 {
+        let semitone_from_root = midi_note as f32 - 69.0; // relative to A4
+        self.tuning_root_hz * 2.0f32.powf(semitone_from_root / self.tuning_edo_divisions as f32)
     }
 }
 
@@ -137,6 +160,10 @@ impl SineOscillatorNode {
             phase: 0.0,
         }
     }
+
+    pub fn trigger(&mut self, note: u8, ctx: &ProcessContext) {
+        self.frequency = ctx.note_to_hz(note as i32);
+    }
 }
 
 impl AudioNode for SineOscillatorNode {
@@ -170,5 +197,25 @@ impl AudioNode for SineOscillatorNode {
             }
 
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_process_context_tuning() {
+        // Default 12-EDO, A4 = 440
+        let ctx_12 = ProcessContext::new(44100, 120.0, 0);
+        assert!((ctx_12.note_to_hz(69) - 440.0).abs() < 1e-4);
+        assert!((ctx_12.note_to_hz(70) - 466.1637).abs() < 1e-3); // A#4
+
+        // Custom 19-EDO, A4 = 440
+        let mut ctx_19 = ProcessContext::new(44100, 120.0, 0);
+        ctx_19.tuning_edo_divisions = 19;
+        assert!((ctx_19.note_to_hz(69) - 440.0).abs() < 1e-4);
+        // Note 70 in 19-EDO: 440 * 2^(1/19) = 456.3482
+        assert!((ctx_19.note_to_hz(70) - 456.3482).abs() < 1e-3);
     }
 }

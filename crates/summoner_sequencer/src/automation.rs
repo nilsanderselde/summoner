@@ -42,6 +42,7 @@ impl AtomicParam {
 #[derive(Debug, Default)]
 pub struct AutomationRegistry {
     params: HashMap<String, Arc<AtomicParam>>,
+    last_snapshotted: HashMap<String, f32>,
     recording_all: bool,
 }
 
@@ -60,11 +61,39 @@ impl AutomationRegistry {
         self.params.get(id).cloned()
     }
 
-    pub fn set_recording_all(&mut self, recording: bool) {
-        self.recording_all = recording;
+    pub fn start_record_all(&mut self) {
+        self.recording_all = true;
+        // Seed the last seen values so we don't dump everything on first frame
+        self.last_snapshotted.clear();
+        for (id, param) in &self.params {
+            self.last_snapshotted.insert(id.clone(), param.get());
+        }
+    }
+
+    pub fn stop_record_all(&mut self) {
+        self.recording_all = false;
     }
 
     pub fn is_recording_all(&self) -> bool {
         self.recording_all
+    }
+
+    pub fn set(&self, id: &str, value: f32) {
+        if let Some(param) = self.params.get(id) {
+            param.set(value);
+        }
+    }
+
+    pub fn snapshot_dirty_params(&mut self, _frame: u64) -> Vec<(String, f32)> {
+        let mut dirty = Vec::new();
+        for (id, param) in &self.params {
+            let val = param.get();
+            let last_val = self.last_snapshotted.get(id).copied().unwrap_or(0.0);
+            if (val - last_val).abs() > 1e-5 {
+                dirty.push((id.clone(), val));
+                self.last_snapshotted.insert(id.clone(), val);
+            }
+        }
+        dirty
     }
 }

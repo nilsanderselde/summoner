@@ -159,24 +159,101 @@ impl SignalProcessor for FilterSVF {
             return;
         }
 
-        let num_samples = outputs[0].len();
-        for i in 0..num_samples {
-            let in_sample = if !inputs.is_empty() && !inputs[0].is_empty() && i < inputs[0].len() {
-                inputs[0][i]
-            } else {
-                0.0
-            };
+        #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+        {
+            self.process_block_simd(inputs, outputs, ctx);
+        }
+        #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
+        {
+            let num_samples = outputs[0].len();
+            for i in 0..num_samples {
+                let in_sample = if !inputs.is_empty() && !inputs[0].is_empty() && i < inputs[0].len() {
+                    inputs[0][i]
+                } else {
+                    0.0
+                };
 
+                let (lp, hp, bp) = self.process_sample(in_sample, ctx.sample_rate);
+                if !outputs.is_empty() && i < outputs[0].len() {
+                    outputs[0][i] = lp;
+                }
+                if outputs.len() > 1 && i < outputs[1].len() {
+                    outputs[1][i] = hp;
+                }
+                if outputs.len() > 2 && i < outputs[2].len() {
+                    outputs[2][i] = bp;
+                }
+            }
+        }
+    }
+}
+
+impl FilterSVF {
+    #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+    pub fn process_block_simd(
+        &mut self,
+        inputs: &[&[Sample]],
+        outputs: &mut [&mut [Sample]],
+        ctx: &ProcessContext,
+    ) {
+        use wide::f32x4;
+        let num_samples = outputs[0].len();
+        let in_buf = if !inputs.is_empty() && !inputs[0].is_empty() {
+            inputs[0]
+        } else {
+            &[]
+        };
+
+        let mut i = 0;
+        
+        while i + 3 < num_samples {
+            let x0 = if i < in_buf.len() { in_buf[i] } else { 0.0 };
+            let x1 = if i + 1 < in_buf.len() { in_buf[i+1] } else { 0.0 };
+            let x2 = if i + 2 < in_buf.len() { in_buf[i+2] } else { 0.0 };
+            let x3 = if i + 3 < in_buf.len() { in_buf[i+3] } else { 0.0 };
+            
+            let (lp0, hp0, bp0) = self.process_sample(x0, ctx.sample_rate);
+            let (lp1, hp1, bp1) = self.process_sample(x1, ctx.sample_rate);
+            let (lp2, hp2, bp2) = self.process_sample(x2, ctx.sample_rate);
+            let (lp3, hp3, bp3) = self.process_sample(x3, ctx.sample_rate);
+            
+            let lp = f32x4::new([lp0, lp1, lp2, lp3]);
+            let hp = f32x4::new([hp0, hp1, hp2, hp3]);
+            let bp = f32x4::new([bp0, bp1, bp2, bp3]);
+            
+            let lp_arr = lp.to_array();
+            let hp_arr = hp.to_array();
+            let bp_arr = bp.to_array();
+            
+            if !outputs.is_empty() && i + 3 < outputs[0].len() {
+                outputs[0][i] = lp_arr[0];
+                outputs[0][i+1] = lp_arr[1];
+                outputs[0][i+2] = lp_arr[2];
+                outputs[0][i+3] = lp_arr[3];
+            }
+            if outputs.len() > 1 && i + 3 < outputs[1].len() {
+                outputs[1][i] = hp_arr[0];
+                outputs[1][i+1] = hp_arr[1];
+                outputs[1][i+2] = hp_arr[2];
+                outputs[1][i+3] = hp_arr[3];
+            }
+            if outputs.len() > 2 && i + 3 < outputs[2].len() {
+                outputs[2][i] = bp_arr[0];
+                outputs[2][i+1] = bp_arr[1];
+                outputs[2][i+2] = bp_arr[2];
+                outputs[2][i+3] = bp_arr[3];
+            }
+            
+            i += 4;
+        }
+        
+        while i < num_samples {
+            let in_sample = if i < in_buf.len() { in_buf[i] } else { 0.0 };
             let (lp, hp, bp) = self.process_sample(in_sample, ctx.sample_rate);
-            if !outputs.is_empty() && i < outputs[0].len() {
-                outputs[0][i] = lp;
-            }
-            if outputs.len() > 1 && i < outputs[1].len() {
-                outputs[1][i] = hp;
-            }
-            if outputs.len() > 2 && i < outputs[2].len() {
-                outputs[2][i] = bp;
-            }
+            if !outputs.is_empty() && i < outputs[0].len() { outputs[0][i] = lp; }
+            if outputs.len() > 1 && i < outputs[1].len() { outputs[1][i] = hp; }
+            if outputs.len() > 2 && i < outputs[2].len() { outputs[2][i] = bp; }
+            i += 1;
         }
     }
 }

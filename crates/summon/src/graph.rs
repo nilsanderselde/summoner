@@ -106,6 +106,8 @@ impl GraphRunner {
             track.gain = tc.gain;
             track.pan = tc.pan;
             track.muted = tc.muted;
+            track.tuning_edo = tc.tuning_edo;
+            track.tuning_root_hz = tc.tuning_root_hz;
             
             for nc in &tc.nodes {
                 if let Some(node) = NodeFactory::create_node(nc) {
@@ -132,7 +134,16 @@ impl GraphRunner {
         let mut track_out: Vec<Vec<summoner_core::audio::Sample>> = vec![vec![0.0; block_size]; out_buffers.len()];
         for track in &mut self.tracks {
             let mut track_out_slices: Vec<&mut [summoner_core::audio::Sample]> = track_out.iter_mut().map(|v| &mut v[..block_size]).collect();
-            track.process(block_size, ctx, &mut track_out_slices);
+            
+            let mut local_ctx = *ctx;
+            if let Some(edo) = track.tuning_edo {
+                local_ctx.tuning_edo_divisions = edo;
+            }
+            if let Some(root_hz) = track.tuning_root_hz {
+                local_ctx.tuning_root_hz = root_hz;
+            }
+            
+            track.process(block_size, &local_ctx, &mut track_out_slices);
 
             for ch in 0..out_buffers.len() {
                 for i in 0..block_size {

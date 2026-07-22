@@ -90,6 +90,63 @@ impl MultiSampleBank {
     }
 }
 
+pub fn load_flac(path: &std::path::Path) -> Result<SampleBuffer, String> {
+    let mut reader = claxon::FlacReader::open(path).map_err(|e| e.to_string())?;
+    let info = reader.streaminfo();
+    let mut data = Vec::new();
+    
+    let scale = 1.0 / (1i64 << (info.bits_per_sample - 1)) as f32;
+    
+    for sample in reader.samples() {
+        let s = sample.map_err(|e| e.to_string())?;
+        data.push(s as f32 * scale);
+    }
+    
+    Ok(SampleBuffer::new(data, info.sample_rate, info.channels as usize))
+}
+
+pub fn load_wav(path: &std::path::Path) -> Result<SampleBuffer, String> {
+    let mut reader = hound::WavReader::open(path).map_err(|e| e.to_string())?;
+    let spec = reader.spec();
+    let mut data = Vec::new();
+    
+    if spec.sample_format == hound::SampleFormat::Float {
+        for sample in reader.samples::<f32>() {
+            data.push(sample.map_err(|e| e.to_string())?);
+        }
+    } else {
+        let scale = 1.0 / (1i64 << (spec.bits_per_sample - 1)) as f32;
+        for sample in reader.samples::<i32>() {
+            let s = sample.map_err(|e| e.to_string())?;
+            data.push(s as f32 * scale);
+        }
+    }
+    
+    Ok(SampleBuffer::new(data, spec.sample_rate, spec.channels as usize))
+}
+
+pub fn load_sample_file(path: &std::path::Path) -> Result<SampleBuffer, String> {
+    match path.extension().and_then(|e| e.to_str()) {
+        Some("flac") | Some("FLAC") => load_flac(path),
+        Some("wav") | Some("WAV") => load_wav(path),
+        _ => Err(format!("Unsupported file format for {}", path.display())),
+    }
+}
+
+pub fn load_bank_buffers(bank: &mut MultiSampleBank, base_path: &std::path::Path) -> Vec<String> {
+    let mut errors = Vec::new();
+    for region in &mut bank.regions {
+        if region.buffer.is_none() {
+            let full_path = base_path.join(&region.sample_path);
+            match load_sample_file(&full_path) {
+                Ok(buf) => region.buffer = Some(Arc::new(buf)),
+                Err(e) => errors.push(e),
+            }
+        }
+    }
+    errors
+}
+
 /// A Sampler node that plays back a loaded single `SampleBuffer`.
 #[derive(Debug, Clone, Default)]
 pub struct SamplerNode {
@@ -303,6 +360,40 @@ mod tests {
 
         sampler.trigger_note(72, 100);
         assert!((sampler.playback_rate - 2.0).abs() < 1e-4);
+    }
+    #[test]
+    fn test_wav_file_loading() {
+        use hound::{WavSpec, WavWriter, SampleFormat};
+        
+        let file_path = std::env::temp_dir().join("test_load.wav");
+        let spec = WavSpec {
+            channels: 1,
+            sample_rate: 44100,
+            bits_per_sample: 16,
+            sample_format: SampleFormat::Int,
+        };
+        
+        let mut writer = WavWriter::create(&file_path, spec).unwrap();
+        // Generate a 440 Hz sine wave
+        for t in 0..44100 {
+            let sample = (t as f32 * 440.0 * 2.0 * std::f32::consts::PI / 44100.0).sin();
+            let amplitude = i16::MAX as f32;
+            writer.write_sample((sample * amplitude) as i16).unwrap();
+        }
+        writer.finalize().unwrap();
+        
+        let buffer = super::load_wav(&file_path).unwrap();
+        assert_eq!(buffer.sample_rate, 44100);
+        assert_eq!(buffer.channels, 1);
+        assert_eq!(buffer.data.len(), 44100);
+        
+        // Check first few samples
+        for t in 0..10 {
+            let expected = (t as f32 * 440.0 * 2.0 * std::f32::consts::PI / 44100.0).sin();
+            assert!((buffer.data[t] - expected).abs() < 1e-4);
+        }
+        
+        std::fs::remove_file(file_path).unwrap();
     }
 }
 

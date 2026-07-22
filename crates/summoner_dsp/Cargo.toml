@@ -8,3 +8,13 @@ repository.workspace = true
 
 [dependencies]
 summoner_core = { path = "../summoner_core" }
+claxon = "0.4"
+hound = "3.5"
+wide = "0.7"
+
+[dev-dependencies]
+criterion = "0.5"
+
+[[bench]]
+name = "dsp_bench"
+harness = false

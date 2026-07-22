@@ -37,17 +37,60 @@ impl SignalProcessor for MathAdd {
         }
 
         let num_samples = outputs[0].len();
-        for i in 0..num_samples {
-            let mut sum: f32 = 0.0;
-            for input_ch in inputs {
-                if i < input_ch.len() {
-                    sum += input_ch[i];
+        
+        #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+        {
+            use wide::f32x4;
+            let mut i = 0;
+            while i + 3 < num_samples {
+                let mut sum = f32x4::splat(0.0);
+                for input_ch in inputs.iter() {
+                    if i + 3 < input_ch.len() {
+                        let val = f32x4::new([input_ch[i], input_ch[i+1], input_ch[i+2], input_ch[i+3]]);
+                        sum += val;
+                    }
                 }
+                let arr = sum.to_array();
+                for out_ch in outputs.iter_mut() {
+                    if i + 3 < out_ch.len() {
+                        out_ch[i] = arr[0];
+                        out_ch[i+1] = arr[1];
+                        out_ch[i+2] = arr[2];
+                        out_ch[i+3] = arr[3];
+                    }
+                }
+                i += 4;
             }
-
-            for out_ch in outputs.iter_mut() {
-                if i < out_ch.len() {
-                    out_ch[i] = sum;
+            // remainder
+            while i < num_samples {
+                let mut sum: f32 = 0.0;
+                for input_ch in inputs.iter() {
+                    if i < input_ch.len() {
+                        sum += input_ch[i];
+                    }
+                }
+                for out_ch in outputs.iter_mut() {
+                    if i < out_ch.len() {
+                        out_ch[i] = sum;
+                    }
+                }
+                i += 1;
+            }
+        }
+        
+        #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
+        {
+            for i in 0..num_samples {
+                let mut sum: f32 = 0.0;
+                for input_ch in inputs {
+                    if i < input_ch.len() {
+                        sum += input_ch[i];
+                    }
+                }
+                for out_ch in outputs.iter_mut() {
+                    if i < out_ch.len() {
+                        out_ch[i] = sum;
+                    }
                 }
             }
         }

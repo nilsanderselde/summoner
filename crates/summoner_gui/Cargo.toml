@@ -8,3 +8,17 @@ repository.workspace = true
 
 [dependencies]
 summoner_core = { path = "../summoner_core" }
+summoner_project = { path = "../summoner_project" }
+summoner_harmony = { path = "../summoner_harmony" }
+
+[dependencies.egui]
+version = "0.28"
+optional = true
+
+[dependencies.eframe]
+version = "0.28"
+optional = true
+
+[features]
+default = []
+gui = ["egui", "eframe"]

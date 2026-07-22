@@ -44,6 +44,11 @@ impl OscSaw {
     pub fn new(frequency: f32) -> Self {
         Self { frequency, phase: 0.0 }
     }
+    
+    pub fn trigger(&mut self, note: u8, ctx: &ProcessContext) {
+        self.frequency = ctx.note_to_hz(note as i32);
+    }
+    
     pub fn process_sample(&mut self, sample_rate: u32) -> f32 {
         if sample_rate == 0 {
             return 0.0;
@@ -71,14 +76,99 @@ impl SignalProcessor for OscSaw {
             return;
         }
 
-        let num_samples = outputs[0].len();
-        for i in 0..num_samples {
-            let val = self.process_sample(ctx.sample_rate);
-            for out_ch in outputs.iter_mut() {
-                if i < out_ch.len() {
-                    out_ch[i] = val;
+        #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+        {
+            self.process_block_simd(outputs, ctx);
+        }
+        #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
+        {
+            let num_samples = outputs[0].len();
+            for i in 0..num_samples {
+                let val = self.process_sample(ctx.sample_rate);
+                for out_ch in outputs.iter_mut() {
+                    if i < out_ch.len() {
+                        out_ch[i] = val;
+                    }
                 }
             }
+        }
+    }
+}
+
+#[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+fn poly_blep_simd(t: wide::f32x4, dt: wide::f32x4) -> wide::f32x4 {
+    use wide::CmpGt;
+    use wide::CmpLt;
+    let zero = wide::f32x4::splat(0.0);
+    let one = wide::f32x4::splat(1.0);
+    let two = wide::f32x4::splat(2.0);
+
+    let mask1 = t.cmp_lt(dt);
+    let t_norm1 = t / dt;
+    let val1 = two * t_norm1 - (t_norm1 * t_norm1) - one;
+
+    let mask2 = t.cmp_gt(one - dt);
+    let t_norm2 = (t - one) / dt;
+    let val2 = (t_norm2 * t_norm2) + (two * t_norm2) + one;
+
+    let res1 = mask1.blend(val1, zero);
+    let res2 = mask2.blend(val2, res1);
+
+    let mask0 = dt.cmp_gt(zero);
+    mask0.blend(res2, zero)
+}
+
+impl OscSaw {
+    #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+    pub fn process_block_simd(
+        &mut self,
+        outputs: &mut [&mut [Sample]],
+        ctx: &ProcessContext,
+    ) {
+        use wide::f32x4;
+        let num_samples = outputs[0].len();
+        let dt = self.frequency / ctx.sample_rate as f32;
+
+        let mut i = 0;
+        let offsets = f32x4::new([0.0, 1.0, 2.0, 3.0]);
+        let dt_vec = f32x4::splat(dt);
+        let phase_inc = offsets * dt_vec;
+
+        while i + 3 < num_samples {
+            // Apply mod 1.0 manually to each element (fract equivalent for positive numbers)
+            let mut phases_raw = f32x4::splat(self.phase) + phase_inc;
+            let phases_arr = phases_raw.to_array();
+            let mut phases = f32x4::new([
+                phases_arr[0] - phases_arr[0].trunc(),
+                phases_arr[1] - phases_arr[1].trunc(),
+                phases_arr[2] - phases_arr[2].trunc(),
+                phases_arr[3] - phases_arr[3].trunc(),
+            ]);
+            
+            // naive = 2.0 * phases - 1.0;
+            let naive = f32x4::splat(2.0) * phases - f32x4::splat(1.0);
+            let pb = poly_blep_simd(phases, dt_vec);
+            let val = naive - pb;
+            
+            let arr = val.to_array();
+            for out_ch in outputs.iter_mut() {
+                out_ch[i] = arr[0];
+                out_ch[i + 1] = arr[1];
+                out_ch[i + 2] = arr[2];
+                out_ch[i + 3] = arr[3];
+            }
+            
+            self.phase = (self.phase + dt * 4.0) % 1.0;
+            i += 4;
+        }
+
+        // remainder
+        while i < num_samples {
+            let val = self.process_sample(ctx.sample_rate);
+            for out_ch in outputs.iter_mut() {
+                out_ch[i] = val;
+            }
+            i += 1;
         }
     }
 }
@@ -99,6 +189,11 @@ impl OscPulse {
             phase: 0.0,
         }
     }
+
+    pub fn trigger(&mut self, note: u8, ctx: &ProcessContext) {
+        self.frequency = ctx.note_to_hz(note as i32);
+    }
+
     pub fn process_sample(&mut self, sample_rate: u32) -> f32 {
         if sample_rate == 0 {
             return 0.0;
@@ -149,6 +244,11 @@ impl OscSine {
     pub fn new(frequency: f32) -> Self {
         Self { frequency, phase: 0.0 }
     }
+
+    pub fn trigger(&mut self, note: u8, ctx: &ProcessContext) {
+        self.frequency = ctx.note_to_hz(note as i32);
+    }
+
     pub fn process_sample(&mut self, sample_rate: u32, pm_offset: f32) -> f32 {
         if sample_rate == 0 {
             return 0.0;
@@ -205,6 +305,11 @@ impl OscTriangle {
     pub fn new(frequency: f32) -> Self {
         Self { frequency, phase: 0.0, state: 0.0 }
     }
+
+    pub fn trigger(&mut self, note: u8, ctx: &ProcessContext) {
+        self.frequency = ctx.note_to_hz(note as i32);
+    }
+
     pub fn process_sample(&mut self, sample_rate: u32) -> f32 {
         if sample_rate == 0 {
             return 0.0;
@@ -327,6 +432,49 @@ impl SignalProcessor for NoiseGen {
                     out_ch[i] = val;
                 }
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+    fn test_osc_saw_simd_vs_scalar() {
+        use summoner_core::node::ProcessContext;
+        
+        let mut osc_simd = OscSaw::new(440.0);
+        let mut osc_scalar = OscSaw::new(440.0);
+        
+        let ctx = ProcessContext {
+            sample_rate: 44100,
+            bpm: 120.0,
+            frame_position: 0,
+            is_playing: true,
+            param_bus: None,
+            tuning_root_hz: 440.0,
+            tuning_edo_divisions: 12,
+        };
+        
+        let mut outputs_simd = vec![vec![0.0; 1024]];
+        let mut slices_simd: Vec<&mut [f32]> = outputs_simd.iter_mut().map(|v| v.as_mut_slice()).collect();
+        osc_simd.process_block_simd(&mut slices_simd, &ctx);
+        
+        let mut outputs_scalar = vec![vec![0.0; 1024]];
+        // Scalar process loop manually since process_block defaults to SIMD
+        let mut i = 0;
+        let num_samples = 1024;
+        while i < num_samples {
+            let val = osc_scalar.process_sample(ctx.sample_rate);
+            outputs_scalar[0][i] = val;
+            i += 1;
+        }
+        
+        for i in 0..1024 {
+            let diff = (outputs_simd[0][i] - outputs_scalar[0][i]).abs();
+            assert!(diff < 1e-3, "Mismatch at index {}: SIMD {} vs Scalar {} (diff {})", i, outputs_simd[0][i], outputs_scalar[0][i], diff);
         }
     }
 }
