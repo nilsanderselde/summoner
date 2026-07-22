@@ -11,19 +11,23 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Affero General Public License for more details.
 
-pub mod allocator;
-pub mod audio;
-pub mod mpe;
-pub mod node;
-pub mod pipeline;
-pub mod sample;
-pub mod sequence;
-pub mod track;
-pub mod transport;
-pub mod wav;
-pub mod panner;
-pub mod midi;
-pub mod smoothing;
-pub use smoothing::SmoothParam;
+pub struct Oversampler {
+    factor: usize,
+}
 
-
+impl Oversampler {
+    pub fn new(factor: usize) -> Self {
+        Self { factor }
+    }
+    
+    pub fn process_up(&mut self, input: f32) -> Vec<f32> {
+        let mut out = vec![0.0; self.factor];
+        out[0] = input * self.factor as f32; // simple zero-stuffing approximation for now
+        out
+    }
+    
+    pub fn process_down(&mut self, input: &[f32]) -> f32 {
+        // simple averaging approximation for now
+        input.iter().sum::<f32>() / self.factor as f32
+    }
+}

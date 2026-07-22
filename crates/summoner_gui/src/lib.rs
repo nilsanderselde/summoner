@@ -15,4 +15,7 @@
 
 pub mod lod;
 pub mod renderer;
-
+pub mod stage_view;
+pub mod visualizer;
+pub mod command_palette;
+pub mod ascii_renderer;

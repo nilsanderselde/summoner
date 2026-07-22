@@ -81,6 +81,7 @@ pub struct GlitchStutter {
     buffer: [f32; 4096],
     write_pos: usize,
     stutter_pos: usize,
+    start_idx: usize,
 }
 
 impl GlitchStutter {
@@ -91,12 +92,14 @@ impl GlitchStutter {
             buffer: [0.0; 4096],
             write_pos: 0,
             stutter_pos: 0,
+            start_idx: 0,
         }
     }
 
     pub fn set_active(&mut self, active: bool) {
         if active && !self.stutter_active {
             self.stutter_pos = 0;
+            self.start_idx = (self.write_pos + 4096 - self.stutter_len_frames) % 4096;
         }
         self.stutter_active = active;
     }
@@ -127,8 +130,7 @@ impl SignalProcessor for GlitchStutter {
 
             self.buffer[self.write_pos] = in_sample;
             let out_sample = if self.stutter_active {
-                let start_idx = (self.write_pos + 4096 - self.stutter_len_frames) % 4096;
-                let read_idx = (start_idx + self.stutter_pos) % 4096;
+                let read_idx = (self.start_idx + self.stutter_pos) % 4096;
                 self.stutter_pos = (self.stutter_pos + 1) % self.stutter_len_frames;
                 self.buffer[read_idx]
             } else {

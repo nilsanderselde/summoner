@@ -60,6 +60,15 @@ pub struct TrackConfig {
     pub nodes: Vec<NodeConfig>,
     #[serde(default)]
     pub sequence: Option<SequenceConfig>,
+    #[serde(default)]
+    pub connections: Vec<ConnectionConfig>,
+}
+
+/// Routing connection configuration
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ConnectionConfig {
+    pub from: String,
+    pub to: String,
 }
 
 fn default_channels() -> usize {
@@ -99,6 +108,10 @@ pub struct TrackerStepConfig {
     pub gate: f32,
     #[serde(default = "default_probability")]
     pub probability: f32,
+    #[serde(default = "default_ratchet")]
+    pub ratchet: u32,
+    #[serde(default = "default_micro_shift")]
+    pub micro_shift: i32,
     #[serde(default = "default_active")]
     pub active: bool,
 }
@@ -109,5 +122,13 @@ fn default_probability() -> f32 {
 
 fn default_active() -> bool {
     true
+}
+
+fn default_ratchet() -> u32 {
+    1
+}
+
+fn default_micro_shift() -> i32 {
+    0
 }
 

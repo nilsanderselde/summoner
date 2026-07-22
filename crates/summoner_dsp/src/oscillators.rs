@@ -44,6 +44,16 @@ impl OscSaw {
     pub fn new(frequency: f32) -> Self {
         Self { frequency, phase: 0.0 }
     }
+    pub fn process_sample(&mut self, sample_rate: u32) -> f32 {
+        if sample_rate == 0 {
+            return 0.0;
+        }
+        let dt = self.frequency / sample_rate as f32;
+        let naive = 2.0 * self.phase - 1.0;
+        let val = naive - poly_blep(self.phase, dt);
+        self.phase = (self.phase + dt) % 1.0;
+        val
+    }
 }
 
 impl SignalProcessor for OscSaw {
@@ -61,14 +71,9 @@ impl SignalProcessor for OscSaw {
             return;
         }
 
-        let dt = self.frequency / ctx.sample_rate as f32;
         let num_samples = outputs[0].len();
-
         for i in 0..num_samples {
-            let naive = 2.0 * self.phase - 1.0;
-            let val = naive - poly_blep(self.phase, dt);
-            self.phase = (self.phase + dt) % 1.0;
-
+            let val = self.process_sample(ctx.sample_rate);
             for out_ch in outputs.iter_mut() {
                 if i < out_ch.len() {
                     out_ch[i] = val;
@@ -94,6 +99,16 @@ impl OscPulse {
             phase: 0.0,
         }
     }
+    pub fn process_sample(&mut self, sample_rate: u32) -> f32 {
+        if sample_rate == 0 {
+            return 0.0;
+        }
+        let dt = self.frequency / sample_rate as f32;
+        let naive = if self.phase < self.pulse_width { 1.0 } else { -1.0 };
+        let val = naive + poly_blep(self.phase, dt) - poly_blep((self.phase + 1.0 - self.pulse_width) % 1.0, dt);
+        self.phase = (self.phase + dt) % 1.0;
+        val
+    }
 }
 
 impl SignalProcessor for OscPulse {
@@ -111,14 +126,9 @@ impl SignalProcessor for OscPulse {
             return;
         }
 
-        let dt = self.frequency / ctx.sample_rate as f32;
         let num_samples = outputs[0].len();
-
         for i in 0..num_samples {
-            let naive = if self.phase < self.pulse_width { 1.0 } else { -1.0 };
-            let val = naive + poly_blep(self.phase, dt) - poly_blep((self.phase + 1.0 - self.pulse_width) % 1.0, dt);
-            self.phase = (self.phase + dt) % 1.0;
-
+            let val = self.process_sample(ctx.sample_rate);
             for out_ch in outputs.iter_mut() {
                 if i < out_ch.len() {
                     out_ch[i] = val;
@@ -139,6 +149,15 @@ impl OscSine {
     pub fn new(frequency: f32) -> Self {
         Self { frequency, phase: 0.0 }
     }
+    pub fn process_sample(&mut self, sample_rate: u32, pm_offset: f32) -> f32 {
+        if sample_rate == 0 {
+            return 0.0;
+        }
+        let dt = (TAU * self.frequency) / sample_rate as f32;
+        let val = (self.phase + pm_offset).sin();
+        self.phase = (self.phase + dt) % TAU;
+        val
+    }
 }
 
 impl SignalProcessor for OscSine {
@@ -156,9 +175,7 @@ impl SignalProcessor for OscSine {
             return;
         }
 
-        let dt = (TAU * self.frequency) / ctx.sample_rate as f32;
         let num_samples = outputs[0].len();
-
         for i in 0..num_samples {
             let pm_offset = if !inputs.is_empty() && !inputs[0].is_empty() && i < inputs[0].len() {
                 inputs[0][i] * TAU
@@ -166,9 +183,7 @@ impl SignalProcessor for OscSine {
                 0.0
             };
 
-            let val = (self.phase + pm_offset).sin();
-            self.phase = (self.phase + dt) % TAU;
-
+            let val = self.process_sample(ctx.sample_rate, pm_offset);
             for out_ch in outputs.iter_mut() {
                 if i < out_ch.len() {
                     out_ch[i] = val;
@@ -183,11 +198,28 @@ impl SignalProcessor for OscSine {
 pub struct OscTriangle {
     pub frequency: f32,
     pub phase: f32,
+    pub state: f32,
 }
 
 impl OscTriangle {
     pub fn new(frequency: f32) -> Self {
-        Self { frequency, phase: 0.0 }
+        Self { frequency, phase: 0.0, state: 0.0 }
+    }
+    pub fn process_sample(&mut self, sample_rate: u32) -> f32 {
+        if sample_rate == 0 {
+            return 0.0;
+        }
+        let dt = self.frequency / sample_rate as f32;
+        
+        let naive_sq = if self.phase < 0.5 { 1.0 } else { -1.0 };
+        let sq = naive_sq + poly_blep(self.phase, dt) - poly_blep((self.phase + 0.5) % 1.0, dt);
+        
+        self.state += 4.0 * dt * sq;
+        self.state *= 0.999; // leaky integrator
+        
+        let val = self.state;
+        self.phase = (self.phase + dt) % 1.0;
+        val
     }
 }
 
@@ -206,13 +238,9 @@ impl SignalProcessor for OscTriangle {
             return;
         }
 
-        let dt = self.frequency / ctx.sample_rate as f32;
         let num_samples = outputs[0].len();
-
         for i in 0..num_samples {
-            let val = 2.0 * (2.0 * (self.phase - (self.phase + 0.5).floor())).abs() - 1.0;
-            self.phase = (self.phase + dt) % 1.0;
-
+            let val = self.process_sample(ctx.sample_rate);
             for out_ch in outputs.iter_mut() {
                 if i < out_ch.len() {
                     out_ch[i] = val;

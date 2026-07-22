@@ -11,19 +11,8 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Affero General Public License for more details.
 
-pub mod allocator;
-pub mod audio;
-pub mod mpe;
-pub mod node;
-pub mod pipeline;
-pub mod sample;
-pub mod sequence;
-pub mod track;
-pub mod transport;
-pub mod wav;
-pub mod panner;
-pub mod midi;
-pub mod smoothing;
-pub use smoothing::SmoothParam;
-
-
+pub mod automation;
+pub mod generative;
+pub mod pattern;
+pub mod automation_timeline;
+pub mod timeline;

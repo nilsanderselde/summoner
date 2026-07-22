@@ -23,6 +23,11 @@ pub use cadence::{CadenceEngine, CadenceType, Chord};
 pub use edo::EdoTuning;
 pub use scale::Scale;
 
+pub mod scl;
+pub mod kbm;
+pub use scl::SclTuning;
+pub use kbm::KbmMapping;
+
 
 #[cfg(test)]
 mod tests {

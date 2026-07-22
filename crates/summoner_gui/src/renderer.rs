@@ -37,6 +37,21 @@ pub enum RenderCommand {
         name: String,
         lod: LodLevel,
     },
+    DrawMacroRackView {
+        device_id: u64,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+    },
+    DrawMicroGraphView {
+        device_id: u64,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        lod: LodLevel,
+    },
 }
 
 /// GUI Renderer managing viewports, command submission, and LOD vertex throttling.

@@ -13,6 +13,10 @@
 
 //! CLI entry point for Summoner DAW (`summon`).
 
+pub mod export_clap;
+pub mod graph;
+
+
 use summoner_core::allocator::AllocGuard;
 use summoner_core::audio::{FixedAudioBuffer, Sample};
 use summoner_core::node::{AudioNode, GainNode, ProcessContext, SineOscillatorNode};
@@ -34,7 +38,9 @@ fn print_usage() {
     println!("  summon render-wav [PROJECT_PATH] [OUTPUT_WAV_PATH] [--frames N]");
     println!("  summon render-batch [MANIFEST_PATH]");
     println!("  summon patch-export [PROJECT_PATH]");
+    println!("  summon patch-export-clap [PROJECT_PATH] [OUTPUT_DIR]");
     println!("  summon commit-history [PROJECT_PATH]");
+    println!("  summon play [PROJECT_PATH]");
 }
 
 fn main() {
@@ -121,8 +127,12 @@ fn main() {
             let mut transport = Transport::new(project.transport.sample_rate, project.transport.bpm);
             transport.play();
 
-            let mut sine_node = SineOscillatorNode::new(440.0);
-            let mut gain_node = GainNode::new(0.5);
+            let mut runner = graph::GraphRunner::new(&project);
+
+            // Fallback for empty tracks
+            let use_fallback = runner.tracks.is_empty() || runner.tracks.iter().all(|t| t.nodes.is_empty());
+            let mut fallback_sine = SineOscillatorNode::new(440.0);
+            let mut fallback_gain = GainNode::new(0.5);
 
             const CHANNELS: usize = 2;
             const BLOCK_SIZE: usize = 64;
@@ -146,16 +156,18 @@ fn main() {
                 let ctx = ProcessContext::from_transport(&transport);
 
                 {
-                    // Real-time zero-allocation DSP scope
                     let _guard = AllocGuard::new();
-
-                    let dummy_in: [&[Sample]; 0] = [];
-                    let mut mid_slices = mid_buffer.channels_mut_2();
-                    sine_node.process(&dummy_in, &mut mid_slices, &ctx);
-
-                    let mid_ref = mid_buffer.channels_ref_2();
                     let mut out_slices = out_buffer.channels_mut_2();
-                    gain_node.process(&mid_ref, &mut out_slices, &ctx);
+
+                    if use_fallback {
+                        let dummy_in: [&[Sample]; 0] = [];
+                        let mut mid_slices = mid_buffer.channels_mut_2();
+                        fallback_sine.process(&dummy_in, &mut mid_slices, &ctx);
+                        let mid_ref = mid_buffer.channels_ref_2();
+                        fallback_gain.process(&mid_ref, &mut out_slices, &ctx);
+                    } else {
+                        runner.process_block(block_frames, &ctx, &mut out_slices);
+                    }
                 }
 
                 // Interleave samples and write file I/O outside real-time audio thread scope
@@ -267,6 +279,25 @@ fn main() {
             println!("Processed Frames: {}", frames_processed);
             println!("Final Transport Position: {} frames ({:.3}s)", transport.frame_position, transport.seconds());
             println!("Output Energy Checksum: {:.6}", sample_sum);
+        }
+        "patch-export-clap" => {
+            let path_str = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            let out_dir = args.get(3).map(|s| s.as_str()).unwrap_or(".");
+            match export_clap::generate_clap_plugin(Path::new(path_str), Path::new(out_dir)) {
+                Ok(msg) => println!("{}", msg),
+                Err(e) => eprintln!("Failed to export CLAP plugin: {}", e),
+            }
+        }
+        "play" => {
+            let path_str = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            if !Path::new(path_str).exists() {
+                eprintln!("Error: Project file '{}' not found.", path_str);
+                process::exit(1);
+            }
+            // Scaffold: cpal initialization and real-time thread spawning
+            println!("Initializing native hardware audio via CPAL...");
+            println!("Playing project: {}", path_str);
+            println!("(Mock: Running real-time audio thread)");
         }
         _ => {
             print_usage();

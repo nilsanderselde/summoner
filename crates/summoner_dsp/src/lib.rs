@@ -16,6 +16,8 @@
 pub mod composites;
 pub mod distortion;
 pub mod effects;
+pub mod sampler;
+pub mod slicer;
 pub mod filters;
 pub mod glitch;
 pub mod math;
@@ -24,7 +26,14 @@ pub mod modulators;
 pub mod oscillators;
 pub mod traits;
 pub mod waveguide;
-
+pub mod oversampling;
+pub mod biquad;
+pub mod compressor;
+pub mod limiter;
+pub mod mod_fx;
+pub mod ring_mod;
+pub mod meter;
+pub mod granular;
 pub use composites::{
     AetherSynth, AtmosphericPadSynth, CyberpunkSubSynth, FmOperatorPair, GlitchAetherMachine,
     GlitchPercussionSynth, PluckSynth,
@@ -39,7 +48,16 @@ pub use modulators::{EnvADSR, LfoShape, MacroKnob, LFO};
 pub use oscillators::{NoiseGen, NoiseType, OscPulse, OscSaw, OscSine, OscTriangle};
 pub use traits::{ProcessorNodeAdapter, SignalProcessor};
 pub use waveguide::KarplusStrongString;
-
+pub use sampler::{SampleBuffer, SamplerNode};
+pub use slicer::{AutoSlicer, SliceMarker};
+pub use oversampling::Oversampler;
+pub use biquad::{FilterBiquad, FilterType};
+pub use compressor::CompressorNode;
+pub use limiter::LimiterNode;
+pub use mod_fx::{EffectChorus, EffectFlanger, EffectPhaser};
+pub use ring_mod::{RingModulator, FrequencyShifter};
+pub use meter::LufsMeterNode;
+pub use granular::GranularSynthNode;
 
 
 use summoner_core::audio::Sample;

@@ -91,7 +91,7 @@ impl EnvADSR {
                 self.level = self.sustain;
             }
             EnvState::Release => {
-                self.level -= dt / self.release * self.sustain.max(0.01);
+                self.level -= dt / self.release;
                 if self.level <= 0.0 {
                     self.level = 0.0;
                     self.state = EnvState::Idle;

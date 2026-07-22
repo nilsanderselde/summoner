@@ -1,17 +1,11 @@
 [package]
-name = "summon"
+name = "summoner_sequencer"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
 
-[[bin]]
-name = "summon"
-path = "src/main.rs"
-
 [dependencies]
 summoner_core = { path = "../summoner_core" }
-summoner_project = { path = "../summoner_project" }
-summoner_dsp = { path = "../summoner_dsp" }
-cpal = "0.15"
+serde = { workspace = true }

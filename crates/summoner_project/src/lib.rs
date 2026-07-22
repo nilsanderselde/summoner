@@ -15,6 +15,7 @@
 
 pub mod git_dag;
 pub mod schema;
+pub mod preset;
 
 
 use schema::{NodeConfig, ProjectConfig, TrackConfig, TransportConfig};
@@ -72,6 +73,7 @@ pub fn create_default_project(name: &str) -> ProjectConfig {
                     params: gain_params,
                 }],
                 sequence: None,
+                connections: Vec::new(),
             },
             TrackConfig {
                 id: 2,
@@ -95,6 +97,7 @@ pub fn create_default_project(name: &str) -> ProjectConfig {
                     },
                 ],
                 sequence: None,
+                connections: Vec::new(),
             },
 
         ],
@@ -125,6 +128,8 @@ mod tests {
                     velocity: 0.9,
                     gate: 0.5,
                     probability: 1.0,
+                    ratchet: 1,
+                    micro_shift: 0,
                     active: true,
                 },
                 TrackerStepConfig {
@@ -132,6 +137,8 @@ mod tests {
                     velocity: 0.8,
                     gate: 0.5,
                     probability: 1.0,
+                    ratchet: 1,
+                    micro_shift: 0,
                     active: true,
                 },
                 TrackerStepConfig {
@@ -139,6 +146,8 @@ mod tests {
                     velocity: 0.85,
                     gate: 0.5,
                     probability: 1.0,
+                    ratchet: 1,
+                    micro_shift: 0,
                     active: true,
                 },
             ],

@@ -63,14 +63,13 @@ impl SignalProcessor for EffectDelay {
         }
 
         let delay_samples = (self.delay_time_sec * ctx.sample_rate as f32).clamp(1.0, 44099.0);
-        let read_pos = (self.write_pos as f32 + 44100.0 - delay_samples) % 44100.0;
-
-        let read_idx = read_pos.floor() as usize;
-        let frac = read_pos % 1.0;
-        let next_idx = (read_idx + 1) % 44100;
 
         let num_samples = outputs[0].len();
         for i in 0..num_samples {
+            let read_pos = (self.write_pos as f32 + 44100.0 - delay_samples) % 44100.0;
+            let read_idx = read_pos.floor() as usize;
+            let frac = read_pos % 1.0;
+            let next_idx = (read_idx + 1) % 44100;
             let in_l = if !inputs.is_empty() && !inputs[0].is_empty() && i < inputs[0].len() {
                 inputs[0][i]
             } else {

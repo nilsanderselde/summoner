@@ -97,15 +97,10 @@ impl SignalProcessor for AetherSynth {
             let lfo_val = self.lfo.process_sample(ctx.sample_rate);
             self.osc_pulse.pulse_width = (0.5 + 0.4 * lfo_val).clamp(0.05, 0.95);
 
-            let saw_val = (1.0 - self.macro_view.osc_mix.value) * self.osc_saw.phase;
-            let pulse_val = self.macro_view.osc_mix.value * if self.osc_pulse.phase < self.osc_pulse.pulse_width { 1.0 } else { -1.0 };
-            
-            let dt_saw = self.osc_saw.frequency / ctx.sample_rate as f32;
-            let dt_pulse = self.osc_pulse.frequency / ctx.sample_rate as f32;
-            self.osc_saw.phase = (self.osc_saw.phase + dt_saw) % 1.0;
-            self.osc_pulse.phase = (self.osc_pulse.phase + dt_pulse) % 1.0;
+            let saw_val = self.osc_saw.process_sample(ctx.sample_rate);
+            let pulse_val = self.osc_pulse.process_sample(ctx.sample_rate);
 
-            let mixed = saw_val + pulse_val;
+            let mixed = (1.0 - self.macro_view.osc_mix.value) * saw_val + self.macro_view.osc_mix.value * pulse_val;
 
             let f_env = self.filter_env.process_sample(ctx.sample_rate);
             let cutoff_mod = (self.filter.cutoff + f_env * 4000.0).clamp(20.0, 20000.0);
@@ -314,11 +309,9 @@ impl SignalProcessor for GlitchAetherMachine {
                 self.trigger(inputs[0][i] > 0.5);
             }
 
-            let dt_saw = self.osc_saw.frequency / ctx.sample_rate as f32;
-            let dt_pulse = self.osc_pulse.frequency / ctx.sample_rate as f32;
-            let raw_synth = 0.5 * (2.0 * self.osc_saw.phase - 1.0) + 0.5 * if self.osc_pulse.phase < 0.5 { 1.0 } else { -1.0 };
-            self.osc_saw.phase = (self.osc_saw.phase + dt_saw) % 1.0;
-            self.osc_pulse.phase = (self.osc_pulse.phase + dt_pulse) % 1.0;
+            let saw_val = self.osc_saw.process_sample(ctx.sample_rate);
+            let pulse_val = self.osc_pulse.process_sample(ctx.sample_rate);
+            let raw_synth = 0.5 * saw_val + 0.5 * pulse_val;
 
             let distorted = self.distortion.process_sample(raw_synth);
             let filtered = self.filter.process_sample(distorted, ctx.sample_rate);
@@ -388,13 +381,9 @@ impl SignalProcessor for CyberpunkSubSynth {
             }
 
             let lfo_val = self.pitch_lfo.process_sample(ctx.sample_rate);
-            let sub_val = (self.sub_sine.phase + lfo_val * 0.1).sin();
-            let dt_sub = (std::f32::consts::TAU * self.sub_sine.frequency) / ctx.sample_rate as f32;
-            self.sub_sine.phase = (self.sub_sine.phase + dt_sub) % std::f32::consts::TAU;
+            let sub_val = self.sub_sine.process_sample(ctx.sample_rate, lfo_val * 0.1);
 
-            let saw_val = 2.0 * self.drive_saw.phase - 1.0;
-            let dt_saw = self.drive_saw.frequency / ctx.sample_rate as f32;
-            self.drive_saw.phase = (self.drive_saw.phase + dt_saw) % 1.0;
+            let saw_val = self.drive_saw.process_sample(ctx.sample_rate);
 
             let mixed = sub_val * 0.7 + saw_val * 0.3;
             let (lp, _, _) = self.filter_svf.process_sample(mixed, ctx.sample_rate);
@@ -466,13 +455,8 @@ impl SignalProcessor for AtmosphericPadSynth {
             let lfo_val = self.lfo_filter.process_sample(ctx.sample_rate);
             self.svf.cutoff = (800.0 + lfo_val * 400.0).clamp(100.0, 5000.0);
 
-            let saw_val = 2.0 * self.saw1.phase - 1.0;
-            let tri_val = 2.0 * (2.0 * (self.tri2.phase - (self.tri2.phase + 0.5).floor())).abs() - 1.0;
-
-            let dt1 = self.saw1.frequency / ctx.sample_rate as f32;
-            let dt2 = self.tri2.frequency / ctx.sample_rate as f32;
-            self.saw1.phase = (self.saw1.phase + dt1) % 1.0;
-            self.tri2.phase = (self.tri2.phase + dt2) % 1.0;
+            let saw_val = self.saw1.process_sample(ctx.sample_rate);
+            let tri_val = self.tri2.process_sample(ctx.sample_rate);
 
             let (filtered, _, _) = self.svf.process_sample(0.5 * (saw_val + tri_val), ctx.sample_rate);
             let a_env = self.amp_env.process_sample(ctx.sample_rate);
@@ -486,6 +470,17 @@ impl SignalProcessor for AtmosphericPadSynth {
                 }
             }
         }
+
+        let num_samples = outputs[0].len();
+        let mut temp_l = vec![0.0; num_samples];
+        let mut temp_r = vec![0.0; num_samples];
+        for i in 0..num_samples {
+            temp_l[i] = outputs[0][i];
+            if outputs.len() > 1 {
+                temp_r[i] = outputs[1][i];
+            }
+        }
+        self.delay.process_block(&[&temp_l, &temp_r], outputs, ctx);
     }
 }
 
@@ -538,9 +533,7 @@ impl SignalProcessor for GlitchPercussionSynth {
         let num_samples = outputs[0].len();
         for i in 0..num_samples {
             let noise_val = self.noise.next_sample();
-            let sine_val = self.pitch_sine.phase.sin();
-            let dt_sine = (std::f32::consts::TAU * self.pitch_sine.frequency) / ctx.sample_rate as f32;
-            self.pitch_sine.phase = (self.pitch_sine.phase + dt_sine) % std::f32::consts::TAU;
+            let sine_val = self.pitch_sine.process_sample(ctx.sample_rate, 0.0);
 
             let mixed = noise_val * 0.4 + sine_val * 0.6;
             let crushed = self.bitcrusher.process_sample(mixed);
@@ -555,5 +548,12 @@ impl SignalProcessor for GlitchPercussionSynth {
                 }
             }
         }
+
+        let num_samples = outputs[0].len();
+        let mut temp_l = vec![0.0; num_samples];
+        for i in 0..num_samples {
+            temp_l[i] = outputs[0][i];
+        }
+        self.stutter.process_block(&[&temp_l], outputs, ctx);
     }
 }

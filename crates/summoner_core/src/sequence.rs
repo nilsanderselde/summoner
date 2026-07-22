@@ -49,6 +49,8 @@ pub struct TrackerStep {
     pub velocity: f32,
     pub gate: f32,
     pub probability: f32,
+    pub ratchet: u32,
+    pub micro_shift: i32,
     pub active: bool,
 }
 
@@ -59,6 +61,8 @@ impl TrackerStep {
             velocity,
             gate,
             probability: 1.0,
+            ratchet: 1,
+            micro_shift: 0,
             active: true,
         }
     }
@@ -69,6 +73,8 @@ impl TrackerStep {
             velocity: 0.0,
             gate: 0.0,
             probability: 1.0,
+            ratchet: 1,
+            micro_shift: 0,
             active: false,
         }
     }

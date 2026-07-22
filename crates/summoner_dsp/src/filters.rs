@@ -167,11 +167,15 @@ impl SignalProcessor for FilterSVF {
                 0.0
             };
 
-            let (lp, _hp, _bp) = self.process_sample(in_sample, ctx.sample_rate);
-            for out_ch in outputs.iter_mut() {
-                if i < out_ch.len() {
-                    out_ch[i] = lp;
-                }
+            let (lp, hp, bp) = self.process_sample(in_sample, ctx.sample_rate);
+            if !outputs.is_empty() && i < outputs[0].len() {
+                outputs[0][i] = lp;
+            }
+            if outputs.len() > 1 && i < outputs[1].len() {
+                outputs[1][i] = hp;
+            }
+            if outputs.len() > 2 && i < outputs[2].len() {
+                outputs[2][i] = bp;
             }
         }
     }
