@@ -1,6 +1,6 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use summoner_dsp::oscillators::OscSaw;
-use summoner_core::traits::SignalProcessor;
+use summoner_dsp::traits::SignalProcessor;
 use summoner_core::node::ProcessContext;
 
 fn bench_osc_saw_scalar(c: &mut Criterion) {

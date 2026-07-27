@@ -26,7 +26,10 @@ impl NodeFactory {
         match config.kind.as_str() {
             "OscSaw" => Some(Box::new(ProcessorNodeAdapter::new(OscSaw::new(*params.get("freq").unwrap_or(&440.0))))),
             "OscPulse" => Some(Box::new(ProcessorNodeAdapter::new(OscPulse::new(*params.get("freq").unwrap_or(&440.0), *params.get("pw").unwrap_or(&0.5))))),
-            "OscSine" => Some(Box::new(ProcessorNodeAdapter::new(OscSine::new(*params.get("freq").unwrap_or(&440.0))))),
+            "OscSine" | "SineOscillatorNode" => {
+                let freq = params.get("freq").or_else(|| params.get("frequency")).copied().unwrap_or(440.0);
+                Some(Box::new(ProcessorNodeAdapter::new(OscSine::new(freq))))
+            }
             "OscTriangle" => Some(Box::new(ProcessorNodeAdapter::new(OscTriangle::new(*params.get("freq").unwrap_or(&440.0))))),
             "NoiseGen" => Some(Box::new(ProcessorNodeAdapter::new(NoiseGen::new(summoner_dsp::oscillators::NoiseType::White)))),
             "FilterLadder" => Some(Box::new(ProcessorNodeAdapter::new(FilterLadder::new(*params.get("cutoff").unwrap_or(&1000.0), *params.get("res").unwrap_or(&0.0))))),

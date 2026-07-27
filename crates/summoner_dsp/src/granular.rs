@@ -17,9 +17,11 @@ pub struct Grain {
     pub active: bool,
 }
 
+use std::sync::Arc;
+
 #[derive(Debug, Clone)]
 pub struct GranularSynthNode {
-    pub buffer: Vec<f32>,
+    pub buffer: Arc<Vec<f32>>,
     pub sample_rate: u32,
     pub grain_size_ms: f32,
     pub density: f32,
@@ -33,7 +35,7 @@ pub struct GranularSynthNode {
 impl GranularSynthNode {
     pub fn new(sample_rate: u32) -> Self {
         Self {
-            buffer: Vec::new(),
+            buffer: Arc::new(Vec::new()),
             sample_rate,
             grain_size_ms: 50.0,
             density: 10.0,
@@ -46,7 +48,7 @@ impl GranularSynthNode {
     }
 
     pub fn load_buffer(&mut self, data: Vec<f32>) {
-        self.buffer = data;
+        self.buffer = Arc::new(data);
     }
 
     fn next_prng(&mut self) -> f32 {

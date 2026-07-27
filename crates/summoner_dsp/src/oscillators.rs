@@ -136,9 +136,9 @@ impl OscSaw {
 
         while i + 3 < num_samples {
             // Apply mod 1.0 manually to each element (fract equivalent for positive numbers)
-            let mut phases_raw = f32x4::splat(self.phase) + phase_inc;
+            let phases_raw = f32x4::splat(self.phase) + phase_inc;
             let phases_arr = phases_raw.to_array();
-            let mut phases = f32x4::new([
+            let phases = f32x4::new([
                 phases_arr[0] - phases_arr[0].trunc(),
                 phases_arr[1] - phases_arr[1].trunc(),
                 phases_arr[2] - phases_arr[2].trunc(),

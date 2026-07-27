@@ -93,7 +93,10 @@ impl<V: PolyphonicVoice, const MAX_VOICES: usize> VoicePool<V, MAX_VOICES> {
     }
 
     fn find_inactive_slot(&self) -> Option<usize> {
-        self.metadata.iter().position(|meta| !meta.active && !self.voices[meta.age as usize % MAX_VOICES].is_active())
+        self.metadata
+            .iter()
+            .enumerate()
+            .position(|(idx, meta)| !meta.active && !self.voices[idx].is_active())
     }
 
     fn find_oldest_slot(&self) -> usize {

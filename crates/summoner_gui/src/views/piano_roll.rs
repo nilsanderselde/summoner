@@ -129,16 +129,17 @@ mod tests {
     fn test_piano_roll_renders_without_panic() {
         let mut sequence = SequenceConfig {
             step_division: 16.0,
-            steps: vec![summoner_project::schema::StepConfig {
+            steps: vec![summoner_project::schema::TrackerStepConfig {
+                note: 60.0,
                 velocity: 0.8,
                 gate: 0.5,
-                pitch_offset: 0,
                 probability: 1.0,
                 ratchet: 1,
-                micro_shift: 0.0,
+                micro_shift: 0,
+                active: true,
             }; 16],
         };
-        let tuning = EdoTuning::new(19);
+        let tuning = EdoTuning::new(19, 440.0, 69.0);
         let mut state = PianoRollState::default();
         let viewport = Viewport { width: 800.0, height: 600.0 };
 

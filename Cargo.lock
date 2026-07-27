@@ -3481,6 +3481,7 @@ dependencies = [
  "summoner_core",
  "summoner_harmony",
  "summoner_project",
+ "summoner_sequencer",
 ]
 
 [[package]]
@@ -3506,6 +3507,7 @@ version = "0.1.0"
 dependencies = [
  "serde",
  "summoner_core",
+ "summoner_project",
 ]
 
 [[package]]

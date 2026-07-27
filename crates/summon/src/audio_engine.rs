@@ -54,6 +54,10 @@ pub fn run_live(project: &ProjectConfig) -> ! {
     let param_bus_audio = param_bus.clone();
     let (tx, rx): (Sender<ParamUpdate>, Receiver<ParamUpdate>) = crossbeam_channel::bounded(1024);
 
+    const MAX_BLOCK_SIZE: usize = 8192;
+    let mut out_l = vec![0.0f32; MAX_BLOCK_SIZE];
+    let mut out_r = vec![0.0f32; MAX_BLOCK_SIZE];
+
     let stream = device
         .build_output_stream(
             &stream_config,
@@ -65,20 +69,22 @@ pub fn run_live(project: &ProjectConfig) -> ! {
                     }
                 }
 
-                let frames = data.len() / channels;
+                let frames = (data.len() / channels).min(MAX_BLOCK_SIZE);
                 
                 let mut ctx = ProcessContext::new(sample_rate.0, bpm, frame_position);
                 ctx.param_bus = Some(Arc::as_ptr(&param_bus_audio));
 
-                // We use process_block which expects &[&mut [Sample]]
-                let mut out_l = vec![0.0f32; frames];
-                let mut out_r = vec![0.0f32; frames];
+                let buf_l = &mut out_l[..frames];
+                let buf_r = &mut out_r[..frames];
+                buf_l.fill(0.0);
+                buf_r.fill(0.0);
                 
                 // Process one block
-                runner.process_block(frames, &ctx, &mut [&mut out_l, &mut out_r]);
+                runner.process_block(frames, &ctx, &mut [buf_l, buf_r]);
 
                 // Interleave the output
                 for (i, frame) in data.chunks_mut(channels).enumerate() {
+                    if i >= frames { break; }
                     let l = out_l[i];
                     let r = if channels > 1 { out_r[i] } else { out_l[i] };
                     

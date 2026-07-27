@@ -8,4 +8,5 @@ repository.workspace = true
 
 [dependencies]
 summoner_core = { path = "../summoner_core" }
+summoner_project = { path = "../summoner_project" }
 serde = { workspace = true }

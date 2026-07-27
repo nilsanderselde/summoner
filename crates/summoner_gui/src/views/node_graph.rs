@@ -88,7 +88,9 @@ pub fn show_node_graph(
                 
                 // Drop logic for edge creation
                 if let Some((from_node, from_port, _)) = state.dragging_edge {
-                    if port_interact.contains_pointer() && ui.input(|i| i.pointer.any_released()) {
+                    let is_released = ui.input(|i| i.pointer.any_released());
+                    let pointer_pos = ui.input(|i| i.pointer.interact_pos().or_else(|| i.pointer.hover_pos()));
+                    if is_released && pointer_pos.map_or(false, |p| port_rect.expand(6.0).contains(p)) {
                         graph.edges.push(Edge {
                             from_node,
                             from_port,
@@ -116,20 +118,12 @@ pub fn show_node_graph(
                     if let Some(edge) = &mut state.dragging_edge {
                         edge.2 = port_interact.interact_pointer_pos().unwrap_or(port_pos);
                     }
-                } else if port_interact.drag_released() {
-                    // Check if released over an input happens in the input port logic above
-                    // If not caught there, cancel it
-                    if state.dragging_edge.is_some() {
-                        let pointer_pos = ui.input(|i| i.pointer.interact_pos());
-                        // Just clear it if released anywhere (the input port logic runs before the frame ends usually, but since egui interactions are immediate, we'll clear it on release)
-                        // Actually, if we clear it here, the input port might not catch it if it evaluates later. We'll clear it globally at the end if released.
-                    }
                 }
             }
         }
 
-        // Global check for drop cancel
-        if ui.input(|i| i.pointer.any_released()) {
+        // Global check for drop cancel if mouse released without dropping on a valid input port
+        if ui.input(|i| i.pointer.any_released()) && !modified {
             state.dragging_edge = None;
         }
 

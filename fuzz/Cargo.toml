@@ -1,0 +1,22 @@
+[package]
+name = "summoner-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+summoner_core = { path = "../crates/summoner_core" }
+summoner_dsp = { path = "../crates/summoner_dsp" }
+summoner_project = { path = "../crates/summoner_project" }
+
+[[bin]]
+name = "dsp_fuzz"
+path = "fuzz_targets/dsp_fuzz.rs"
+
+[[bin]]
+name = "toml_fuzz"
+path = "fuzz_targets/toml_fuzz.rs"

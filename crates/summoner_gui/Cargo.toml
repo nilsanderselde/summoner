@@ -10,6 +10,7 @@ repository.workspace = true
 summoner_core = { path = "../summoner_core" }
 summoner_project = { path = "../summoner_project" }
 summoner_harmony = { path = "../summoner_harmony" }
+summoner_sequencer = { path = "../summoner_sequencer" }
 
 [dependencies.egui]
 version = "0.28"

@@ -125,6 +125,46 @@ impl AutomationTimeline {
             }
         }
     }
+
+    pub fn to_configs(&self, track_id: u64, sample_rate: u32, bpm: f64) -> Vec<summoner_project::schema::AutomationLaneConfig> {
+        let sec_per_beat = 60.0 / bpm.max(1.0);
+        self.lanes.values().map(|lane| {
+            let events = lane.curve.points.iter().map(|p| {
+                let frame = (p.beat * sec_per_beat * sample_rate as f64) as u64;
+                summoner_project::schema::AutomationEventConfig {
+                    frame,
+                    value: p.value,
+                }
+            }).collect();
+
+            summoner_project::schema::AutomationLaneConfig {
+                param_id: lane.param_id.clone(),
+                track_id,
+                events,
+            }
+        }).collect()
+    }
+
+    pub fn from_configs(configs: &[summoner_project::schema::AutomationLaneConfig], sample_rate: u32, bpm: f64) -> Self {
+        let sec_per_beat = 60.0 / bpm.max(1.0);
+        let mut timeline = Self::new();
+        for config in configs {
+            let points = config.events.iter().map(|evt| {
+                let beat = (evt.frame as f64 / sample_rate as f64) / sec_per_beat;
+                AutomationPoint {
+                    beat,
+                    value: evt.value,
+                    interp: Interpolation::Linear,
+                }
+            }).collect();
+
+            timeline.add_lane(AutomationLane {
+                param_id: config.param_id.clone(),
+                curve: AutomationCurve::new(points),
+            });
+        }
+        timeline
+    }
 }
 
 #[cfg(test)]
@@ -168,6 +208,24 @@ mod tests {
         
         let val_mid = timeline.evaluate("cutoff", 2.0).unwrap();
         assert!((val_mid - 0.5).abs() < 1e-4);
+    }
+
+    #[test]
+    fn test_automation_timeline_to_from_configs() {
+        let curve = AutomationCurve::new(vec![
+            AutomationPoint { beat: 0.0, value: 0.0, interp: Interpolation::Linear },
+            AutomationPoint { beat: 4.0, value: 1.0, interp: Interpolation::Linear },
+        ]);
+        let mut timeline = AutomationTimeline::new();
+        timeline.add_lane(AutomationLane { param_id: "cutoff".to_string(), curve });
+
+        let configs = timeline.to_configs(1, 44100, 120.0);
+        assert_eq!(configs.len(), 1);
+        assert_eq!(configs[0].events.len(), 2);
+
+        let restored = AutomationTimeline::from_configs(&configs, 44100, 120.0);
+        let val_mid = restored.evaluate("cutoff", 2.0).unwrap();
+        assert!((val_mid - 0.5).abs() < 1e-3);
     }
 }
 

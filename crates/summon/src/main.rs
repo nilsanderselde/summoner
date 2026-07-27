@@ -340,17 +340,15 @@ fn main() {
             
             println!("Auto-slicing {} using {:?} threshold {}...", asset_path, algorithm, threshold);
             
-            // Generate dummy data since we don't have claxon/hound actually loading yet in main
-            let sample_rate = 44100;
-            let mut data = vec![0.0f32; sample_rate * 5];
-            // inject a fake transient
-            data[44100] = 0.9;
-            
-            let buffer = summoner_dsp::sampler::SampleBuffer {
-                data,
-                channels: 1,
-                sample_rate: sample_rate as u32,
-            };
+            let path = Path::new(asset_path);
+            let buffer = summoner_dsp::sampler::load_sample_file(path)
+                .unwrap_or_else(|e| {
+                    eprintln!("Warning: Failed to load file '{}' ({}), using fallback buffer.", asset_path, e);
+                    let sample_rate = 44100;
+                    let mut data = vec![0.0f32; sample_rate * 5];
+                    data[44100] = 0.9;
+                    summoner_dsp::sampler::SampleBuffer::new(data, sample_rate as u32, 1)
+                });
             
             let slicer = summoner_dsp::slicer::AutoSlicer::new(threshold, algorithm);
             let slices = slicer.detect_slices(&buffer);
@@ -366,15 +364,44 @@ fn main() {
         }
         "load-preset" => {
             if args.len() < 4 {
-                eprintln!("Error: Missing arguments for load-preset");
+                eprintln!("Error: Missing arguments for load-preset. Usage: summon load-preset <preset.sfz> <base_dir>");
                 process::exit(1);
             }
             let preset_path = &args[2];
             let base_dir = Path::new(&args[3]);
             println!("Loading preset {} from base dir {}...", preset_path, base_dir.display());
             
-            // Just simulating for now to fulfill the command structure
-            println!("Loaded bank with 0 errors.");
+            let sfz_content = fs::read_to_string(preset_path).unwrap_or_else(|e| {
+                eprintln!("Failed to read SFZ preset: {}", e);
+                process::exit(1);
+            });
+            let patch = summoner_project::sfz::SfzPresetPatch::parse_sfz("Preset", &sfz_content);
+            let mut bank = summoner_dsp::sampler::MultiSampleBank::new();
+            for r in &patch.regions {
+                let loop_mode = if r.loop_mode.contains("loop") {
+                    summoner_dsp::sampler::LoopMode::LoopContinuous
+                } else {
+                    summoner_dsp::sampler::LoopMode::NoLoop
+                };
+                let mut region = summoner_dsp::sampler::SampleRegion::new(
+                    r.lokey,
+                    r.hikey,
+                    r.pitch_keycenter,
+                    &r.sample_path,
+                );
+                region.lovel = r.lovel;
+                region.hivel = r.hivel;
+                region.loop_mode = loop_mode;
+                region.loop_start = r.loop_start;
+                region.loop_end = r.loop_end;
+                bank.add_region(region);
+            }
+            let errors = summoner_dsp::sampler::load_bank_buffers(&mut bank, base_dir);
+            
+            println!("Loaded bank with {} regions and {} errors.", bank.regions.len(), errors.len());
+            for err in &errors {
+                eprintln!("  Sample error: {}", err);
+            }
             println!("Rendered C4 preview to output.wav");
         }
         "play" => {
