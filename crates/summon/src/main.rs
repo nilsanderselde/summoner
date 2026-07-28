@@ -406,15 +406,20 @@ fn main() {
         }
         "play" => {
             let path_str = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
-            if !Path::new(path_str).exists() {
-                eprintln!("Error: Project file '{}' not found.", path_str);
-                process::exit(1);
-            }
+            let project = if Path::new(path_str).exists() {
+                let content = fs::read_to_string(path_str).expect("Failed to read project file");
+                parse_project_toml(&content).expect("Failed to parse project TOML")
+            } else {
+                println!("Project file '{}' not found. Creating default session...", path_str);
+                let default_proj = summoner_project::create_default_project("Default Session");
+                if let Ok(serialized) = serialize_project_toml(&default_proj) {
+                    let _ = fs::write(path_str, serialized);
+                }
+                default_proj
+            };
+
             println!("Initializing native hardware audio via CPAL...");
             println!("Playing project: {}", path_str);
-            
-            let content = fs::read_to_string(path_str).expect("Failed to read project file");
-            let project = parse_project_toml(&content).expect("Failed to parse project TOML");
             
             audio_engine::run_live(&project);
         }
@@ -560,15 +565,20 @@ fn main() {
         }
         "gui" => {
             let path_str = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
-            if !Path::new(path_str).exists() {
-                eprintln!("Error: Project file '{}' not found.", path_str);
-                process::exit(1);
-            }
-            let content = fs::read_to_string(path_str).expect("Failed to read project file");
-            let project = parse_project_toml(&content).expect("Failed to parse project TOML");
+            let project = if Path::new(path_str).exists() {
+                let content = fs::read_to_string(path_str).expect("Failed to read project file");
+                parse_project_toml(&content).expect("Failed to parse project TOML")
+            } else {
+                println!("Project file '{}' not found. Creating default session...", path_str);
+                let default_proj = summoner_project::create_default_project("Default Session");
+                if let Ok(serialized) = serialize_project_toml(&default_proj) {
+                    let _ = fs::write(path_str, serialized);
+                }
+                default_proj
+            };
 
             // Build param bus
-            let mut param_bus = summoner_core::param_bus::ParamBus::new();
+            let param_bus = summoner_core::param_bus::ParamBus::new();
             // In a real app we'd iterate over tracks/nodes and register them, but for now we just give it an empty one
             let param_bus_arc = std::sync::Arc::new(param_bus);
             

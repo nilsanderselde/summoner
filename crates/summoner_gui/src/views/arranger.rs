@@ -1,7 +1,14 @@
 use eframe::egui;
 use summoner_project::schema::ProjectConfig;
+use crate::app::ViewMode;
 
-pub fn show_arranger(ui: &mut egui::Ui, project: &mut ProjectConfig) {
+pub fn show_arranger(
+    ui: &mut egui::Ui,
+    project: &mut ProjectConfig,
+    selected_track_id: &mut Option<u64>,
+) -> Option<ViewMode> {
+    let mut navigation_target = None;
+
     ui.horizontal(|ui| {
         ui.heading("Arranger Timeline");
         ui.separator();
@@ -25,7 +32,7 @@ pub fn show_arranger(ui: &mut egui::Ui, project: &mut ProjectConfig) {
                 let x = ruler_rect.left() + beat as f32 * pixels_per_beat;
                 ruler_painter.line_segment(
                     [egui::pos2(x, ruler_rect.top()), egui::pos2(x, ruler_rect.bottom())],
-                    egui::Stroke::new(1.0, egui::Color32::from_gray(80)),
+                    egui::Stroke::new(1.0f32, egui::Color32::from_gray(80)),
                 );
                 if beat % 4 == 0 {
                     ruler_painter.text(
@@ -43,12 +50,17 @@ pub fn show_arranger(ui: &mut egui::Ui, project: &mut ProjectConfig) {
 
         // Track Lanes
         for track in &mut project.tracks {
+            let is_selected = selected_track_id.map_or(false, |id| id == track.id);
+
             ui.horizontal(|ui| {
                 // Track Control Header
                 ui.allocate_ui(egui::vec2(180.0, 50.0), |ui| {
                     ui.vertical(|ui| {
                         ui.horizontal(|ui| {
-                            ui.label(egui::RichText::new(&track.name).strong());
+                            let head = ui.selectable_label(is_selected, egui::RichText::new(&track.name).strong());
+                            if head.clicked() {
+                                *selected_track_id = Some(track.id);
+                            }
                             let mut mute = track.muted;
                             if ui.toggle_value(&mut mute, "M").changed() {
                                 track.muted = mute;
@@ -67,14 +79,18 @@ pub fn show_arranger(ui: &mut egui::Ui, project: &mut ProjectConfig) {
                 let (lane_resp, painter) = ui.allocate_painter(egui::vec2(total_beats * pixels_per_beat, 50.0), egui::Sense::click_and_drag());
                 let lane_rect = lane_resp.rect;
 
+                if lane_resp.clicked() {
+                    *selected_track_id = Some(track.id);
+                }
+
                 // Draw beat grid lines
-                painter.rect_filled(lane_rect, 2.0, egui::Color32::from_rgb(20, 20, 20));
+                painter.rect_filled(lane_rect, 2.0, if is_selected { egui::Color32::from_rgb(25, 30, 40) } else { egui::Color32::from_rgb(20, 20, 20) });
                 for beat in 0..=(total_beats as usize) {
                     let x = lane_rect.left() + beat as f32 * pixels_per_beat;
                     let stroke_color = if beat % 4 == 0 { egui::Color32::from_gray(60) } else { egui::Color32::from_gray(35) };
                     painter.line_segment(
                         [egui::pos2(x, lane_rect.top()), egui::pos2(x, lane_rect.bottom())],
-                        egui::Stroke::new(1.0, stroke_color),
+                        egui::Stroke::new(1.0f32, stroke_color),
                     );
                 }
 
@@ -86,8 +102,14 @@ pub fn show_arranger(ui: &mut egui::Ui, project: &mut ProjectConfig) {
                         egui::vec2(clip_width.max(80.0), lane_rect.height() - 8.0),
                     );
 
+                    let clip_interact = ui.interact(clip_rect, ui.id().with(("clip", track.id)), egui::Sense::click());
+                    if clip_interact.clicked() {
+                        *selected_track_id = Some(track.id);
+                        navigation_target = Some(ViewMode::PianoRoll(track.id));
+                    }
+
                     painter.rect_filled(clip_rect, 4.0, egui::Color32::from_rgb(40, 80, 140));
-                    painter.rect_stroke(clip_rect, 4.0, egui::Stroke::new(1.0, egui::Color32::from_rgb(100, 160, 240)));
+                    painter.rect_stroke(clip_rect, 4.0, egui::Stroke::new(1.0f32, egui::Color32::from_rgb(100, 160, 240)));
                     painter.text(
                         clip_rect.center(),
                         egui::Align2::CENTER_CENTER,
@@ -100,6 +122,8 @@ pub fn show_arranger(ui: &mut egui::Ui, project: &mut ProjectConfig) {
             ui.add_space(4.0);
         }
     });
+
+    navigation_target
 }
 
 #[cfg(test)]
@@ -110,11 +134,12 @@ mod tests {
     #[test]
     fn test_arranger_renders_without_panic() {
         let mut project = create_default_project("Arranger Test");
+        let mut selected_id = Some(1);
 
         let ctx = egui::Context::default();
         let _ = ctx.run(egui::RawInput::default(), |ctx| {
             egui::CentralPanel::default().show(ctx, |ui| {
-                show_arranger(ui, &mut project);
+                show_arranger(ui, &mut project, &mut selected_id);
             });
         });
     }

@@ -32,7 +32,7 @@ pub fn show_macro_rack(
         let y = rect.center().y + (i as f32 * 0.1).sin() * 20.0;
         points.push(egui::pos2(x, y));
     }
-    painter.add(egui::Shape::line(points, egui::Stroke::new(1.0, egui::Color32::GREEN)));
+    painter.add(egui::Shape::line(points, egui::Stroke::new(1.0f32, egui::Color32::GREEN)));
 
     ui.separator();
 

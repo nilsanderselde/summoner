@@ -51,7 +51,7 @@ impl StageView {
     }
 }
 
-pub fn show_stage_view(ui: &mut egui::Ui, stage: &mut StageView, transport: &mut Transport) {
+pub fn show_stage_view(ui: &mut egui::Ui, stage: &mut StageView, _transport: &mut Transport) {
     let dark_bg = egui::Color32::from_rgb(10, 10, 10);
     egui::Frame::none().fill(dark_bg).show(ui, |ui| {
         ui.vertical_centered(|ui| {
@@ -100,7 +100,7 @@ pub fn show_stage_view(ui: &mut egui::Ui, stage: &mut StageView, transport: &mut
                         };
 
                         ui.painter().rect_filled(button_rect, 10.0, fill_color);
-                        ui.painter().rect_stroke(button_rect, 10.0, egui::Stroke::new(2.0, if response.hovered() { egui::Color32::WHITE } else { color }));
+                        ui.painter().rect_stroke(button_rect, 10.0, egui::Stroke::new(2.0f32, if response.hovered() { egui::Color32::WHITE } else { color }));
                         ui.painter().text(button_rect.center(), egui::Align2::CENTER_CENTER, text, egui::FontId::proportional(24.0), egui::Color32::WHITE);
 
                         if response.clicked() {

@@ -18,7 +18,7 @@ pub fn show_node_graph(
 
     // A Frame to contain the graph background
     egui::Frame::canvas(ui.style()).show(ui, |ui| {
-        let (mut response, painter) = ui.allocate_painter(ui.available_size(), egui::Sense::click_and_drag());
+        let (response, painter) = ui.allocate_painter(ui.available_size(), egui::Sense::click_and_drag());
         
         let rect = response.rect;
         
@@ -28,7 +28,7 @@ pub fn show_node_graph(
         while x < rect.right() {
             painter.line_segment(
                 [egui::pos2(x, rect.top()), egui::pos2(x, rect.bottom())],
-                egui::Stroke::new(1.0, egui::Color32::from_gray(30)),
+                egui::Stroke::new(1.0f32, egui::Color32::from_gray(30)),
             );
             x += grid_size;
         }
@@ -36,7 +36,7 @@ pub fn show_node_graph(
         while y < rect.bottom() {
             painter.line_segment(
                 [egui::pos2(rect.left(), y), egui::pos2(rect.right(), y)],
-                egui::Stroke::new(1.0, egui::Color32::from_gray(30)),
+                egui::Stroke::new(1.0f32, egui::Color32::from_gray(30)),
             );
             y += grid_size;
         }
@@ -58,7 +58,7 @@ pub fn show_node_graph(
 
             // Node background
             painter.rect_filled(node_rect, 5.0, egui::Color32::from_gray(40));
-            painter.rect_stroke(node_rect, 5.0, egui::Stroke::new(1.0, egui::Color32::from_gray(100)));
+            painter.rect_stroke(node_rect, 5.0, egui::Stroke::new(1.0f32, egui::Color32::from_gray(100)));
 
             // Title bar
             let title_rect = egui::Rect::from_min_max(node_rect.left_top(), egui::pos2(node_rect.right(), node_rect.top() + 24.0));
@@ -83,7 +83,7 @@ pub fn show_node_graph(
                 let port_rect = egui::Rect::from_center_size(port_pos, egui::vec2(12.0, 12.0));
                 let port_interact = ui.interact(port_rect, ui.id().with(("in", i, port)), egui::Sense::hover());
                 if port_interact.hovered() && !response.dragged() {
-                    painter.circle_stroke(port_pos, 8.0, egui::Stroke::new(2.0, egui::Color32::WHITE));
+                    painter.circle_stroke(port_pos, 8.0, egui::Stroke::new(2.0f32, egui::Color32::WHITE));
                 }
                 
                 // Drop logic for edge creation
@@ -136,7 +136,7 @@ pub fn show_node_graph(
                     points: [*start_pos, control_1, control_2, current_pos],
                     closed: false,
                     fill: egui::Color32::TRANSPARENT,
-                    stroke: egui::Stroke::new(2.0, egui::Color32::WHITE).into(),
+                    stroke: egui::Stroke::new(2.0f32, egui::Color32::WHITE).into(),
                 }));
             }
         }
@@ -168,7 +168,7 @@ pub fn show_node_graph(
                     points: [*start_pos, control_1, control_2, *end_pos],
                     closed: false,
                     fill: egui::Color32::TRANSPARENT,
-                    stroke: egui::Stroke::new(3.0, stroke_color).into(),
+                    stroke: egui::Stroke::new(3.0f32, stroke_color).into(),
                 }));
 
                 if is_hovered && ui.input(|i| i.pointer.secondary_clicked()) {

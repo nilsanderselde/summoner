@@ -84,11 +84,10 @@ pub fn show_piano_roll(
                 let num_octaves = 8;
                 let key_height = 12.0;
                 let beat_width = 100.0;
-                let num_beats = sequence.steps.len() as f32 / 4.0; // Assuming 1/16th notes
                 let num_beats = sequence.steps.len() as f32 / sequence.step_division as f32;
                 
                 let canvas_size = egui::vec2(num_beats * beat_width, keys_per_octave as f32 * num_octaves as f32 * key_height);
-                let (mut response, painter) = ui.allocate_painter(canvas_size, egui::Sense::click_and_drag());
+                let (response, painter) = ui.allocate_painter(canvas_size, egui::Sense::click_and_drag());
                 
                 // Draw keyboard background
                 for i in 0..(keys_per_octave * num_octaves) {
@@ -103,7 +102,7 @@ pub fn show_piano_roll(
                     );
                     painter.line_segment(
                         [egui::pos2(response.rect.left(), y), egui::pos2(response.rect.right(), y)],
-                        egui::Stroke::new(1.0, egui::Color32::from_gray(10))
+                        egui::Stroke::new(1.0f32, egui::Color32::from_gray(10))
                     );
                 }
                 
@@ -111,7 +110,7 @@ pub fn show_piano_roll(
                 if response.clicked() {
                     if let Some(pos) = response.interact_pointer_pos() {
                         let y_offset = response.rect.bottom() - pos.y;
-                        let pitch = (y_offset / key_height).floor() as u16;
+                        let _pitch = (y_offset / key_height).floor() as u16;
                         // For a simple mock we don't insert arbitrary notes, just let it be.
                         // In reality we'd add to the sequence or piano roll data structure.
                     }

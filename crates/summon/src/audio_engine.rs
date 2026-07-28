@@ -52,7 +52,7 @@ pub fn run_live(project: &ProjectConfig) -> ! {
     // Create a dummy param bus and update channel for future integration
     let param_bus = Arc::new(ParamBus::new());
     let param_bus_audio = param_bus.clone();
-    let (tx, rx): (Sender<ParamUpdate>, Receiver<ParamUpdate>) = crossbeam_channel::bounded(1024);
+    let (_tx, rx): (Sender<ParamUpdate>, Receiver<ParamUpdate>) = crossbeam_channel::bounded(1024);
 
     const MAX_BLOCK_SIZE: usize = 8192;
     let mut out_l = vec![0.0f32; MAX_BLOCK_SIZE];

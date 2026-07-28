@@ -5,18 +5,21 @@ use eframe::egui;
 
 use crate::views::arranger::show_arranger;
 use crate::views::node_graph::{show_node_graph, NodeGraphState};
+use crate::views::piano_roll::{show_piano_roll, PianoRollState, Viewport};
 use crate::views::mixer::show_mixer;
 use crate::views::macro_rack::show_macro_rack;
 use crate::stage_view::{show_stage_view, StageView};
 use crate::command_palette::CommandPalette;
 use summoner_core::graph::NodeGraph;
 use summoner_core::transport::Transport;
+use summoner_harmony::edo::EdoTuning;
 use summoner_sequencer::automation::AutomationRegistry;
 use summoner_sequencer::automation_timeline::AutomationTimeline;
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum ViewMode {
     Arranger,
+    PianoRoll(u64),
     NodeGraph(u64),
     Mixer,
     Performance,
@@ -28,6 +31,7 @@ pub struct SummonerApp {
     pub transport_running: bool,
     pub current_view: ViewMode,
     pub node_graph_state: NodeGraphState,
+    pub piano_roll_state: PianoRollState,
     pub dummy_graph: NodeGraph,
     pub recording_all: bool,
     pub selected_track_id: Option<u64>,
@@ -49,6 +53,7 @@ impl SummonerApp {
             transport_running: false,
             current_view: ViewMode::Arranger,
             node_graph_state: NodeGraphState::default(),
+            piano_roll_state: PianoRollState::default(),
             dummy_graph: NodeGraph::new("Main Track", 64, 2),
             recording_all: false,
             selected_track_id: Some(1),
@@ -124,7 +129,10 @@ impl eframe::App for SummonerApp {
 
                 ui.separator();
 
+                let active_tid = self.selected_track_id.unwrap_or(1);
                 ui.selectable_value(&mut self.current_view, ViewMode::Arranger, "Arranger");
+                ui.selectable_value(&mut self.current_view, ViewMode::PianoRoll(active_tid), "Piano Roll");
+                ui.selectable_value(&mut self.current_view, ViewMode::NodeGraph(active_tid), "Node Graph");
                 ui.selectable_value(&mut self.current_view, ViewMode::Mixer, "Console Mixer");
                 ui.selectable_value(&mut self.current_view, ViewMode::Performance, "Stage Performance");
 
@@ -182,7 +190,30 @@ impl eframe::App for SummonerApp {
         egui::CentralPanel::default().show(ctx, |ui| {
             match self.current_view {
                 ViewMode::Arranger => {
-                    show_arranger(ui, &mut self.project);
+                    if let Some(target_view) = show_arranger(ui, &mut self.project, &mut self.selected_track_id) {
+                        self.current_view = target_view;
+                    }
+                }
+                ViewMode::PianoRoll(track_id) => {
+                    if let Some(track) = self.project.tracks.iter_mut().find(|t| t.id == track_id) {
+                        let sequence = track.sequence.get_or_insert_with(|| summoner_project::schema::SequenceConfig {
+                            step_division: 16.0,
+                            steps: vec![summoner_project::schema::TrackerStepConfig {
+                                note: 60.0,
+                                velocity: 0.8,
+                                gate: 0.5,
+                                probability: 1.0,
+                                ratchet: 1,
+                                micro_shift: 0,
+                                active: true,
+                            }; 16],
+                        });
+                        let tuning = EdoTuning::new(track.tuning_edo.unwrap_or(12) as u16, track.tuning_root_hz.unwrap_or(440.0) as f64, 69.0);
+                        let viewport = Viewport { width: ui.available_width(), height: ui.available_height() };
+                        show_piano_roll(ui, sequence, &tuning, &mut self.piano_roll_state, &viewport);
+                    } else {
+                        ui.heading("Track not found");
+                    }
                 }
                 ViewMode::NodeGraph(_track_id) => {
                     let mut selected_edge = None;

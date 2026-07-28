@@ -29,7 +29,7 @@ pub fn show_mixer(ui: &mut egui::Ui, project: &mut ProjectConfig, selected_track
                                 if ui.toggle_value(&mut mute, "M").changed() {
                                     track.muted = mute;
                                 }
-                                ui.button("S"); // Solo toggle placeholder
+                                let _ = ui.button("S"); // Solo toggle placeholder
                             });
 
                             ui.add_space(8.0);
