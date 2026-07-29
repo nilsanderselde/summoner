@@ -15,11 +15,13 @@ summoner_core = { path = "../summoner_core" }
 summoner_project = { path = "../summoner_project" }
 summoner_dsp = { path = "../summoner_dsp" }
 summoner_harmony = { path = "../summoner_harmony" }
+summoner_sequencer = { path = "../summoner_sequencer" }
 summoner_gui = { path = "../summoner_gui", optional = true }
 blake3.workspace = true
 cpal = "0.15"
 crossbeam-channel = "0.5"
 clap-sys = "0.3"
+hound = "3.5"
 
 [features]
 default = []

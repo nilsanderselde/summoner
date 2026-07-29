@@ -421,5 +421,75 @@ mod tests {
 
         let _ = std::fs::remove_file(wav_path);
     }
+
+    #[test]
+    fn test_load_wav_round_trip() {
+        use hound::{WavSpec, WavWriter, SampleFormat};
+        
+        let file_path = std::env::temp_dir().join("test_load_wav_round_trip.wav");
+        let spec = WavSpec {
+            channels: 2,
+            sample_rate: 48000,
+            bits_per_sample: 16,
+            sample_format: SampleFormat::Int,
+        };
+        
+        let mut writer = WavWriter::create(&file_path, spec).unwrap();
+        for t in 0..100 {
+            writer.write_sample((t * 100) as i16).unwrap();
+            writer.write_sample((-t * 100) as i16).unwrap();
+        }
+        writer.finalize().unwrap();
+        
+        let buffer = load_wav(&file_path).unwrap();
+        assert_eq!(buffer.sample_rate, 48000);
+        assert_eq!(buffer.channels, 2);
+        assert_eq!(buffer.data.len(), 200);
+        
+        let _ = std::fs::remove_file(file_path);
+    }
+
+    #[test]
+    fn test_load_flac_round_trip() {
+        let flac_path = std::path::Path::new("local/FreePatsGM-SFZ+FLAC-20221026/samples/Applause/Applause.flac");
+        if flac_path.exists() {
+            let buffer = load_flac(flac_path).unwrap();
+            assert!(buffer.sample_rate > 0);
+            assert!(buffer.channels > 0);
+            assert!(!buffer.data.is_empty());
+        }
+    }
+
+    #[test]
+    fn test_load_sample_file_wav() {
+        use hound::{WavSpec, WavWriter, SampleFormat};
+        let file_path = std::env::temp_dir().join("test_sample_file.wav");
+        let spec = WavSpec {
+            channels: 1,
+            sample_rate: 44100,
+            bits_per_sample: 16,
+            sample_format: SampleFormat::Int,
+        };
+        let mut writer = WavWriter::create(&file_path, spec).unwrap();
+        writer.write_sample(1000i16).unwrap();
+        writer.finalize().unwrap();
+
+        let buffer = load_sample_file(&file_path).unwrap();
+        assert_eq!(buffer.sample_rate, 44100);
+        assert_eq!(buffer.channels, 1);
+
+        let _ = std::fs::remove_file(file_path);
+    }
+
+    #[test]
+    fn test_load_sample_file_flac() {
+        let flac_path = std::path::Path::new("local/FreePatsGM-SFZ+FLAC-20221026/samples/Applause/Applause.flac");
+        if flac_path.exists() {
+            let buffer = load_sample_file(flac_path).unwrap();
+            assert!(buffer.sample_rate > 0);
+            assert!(buffer.channels > 0);
+            assert!(!buffer.data.is_empty());
+        }
+    }
 }
 

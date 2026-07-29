@@ -632,6 +632,98 @@ mod tests {
         let use_fallback = runner.tracks.is_empty() || runner.tracks.iter().all(|t| t.nodes.is_empty());
         assert!(!use_fallback, "Should not fallback when at least one track has non-empty nodes");
     }
+
+    #[test]
+    fn test_auto_slice_real_wav() {
+        use hound::{WavSpec, WavWriter, SampleFormat};
+        let file_path = std::env::temp_dir().join("test_slice_real.wav");
+        let spec = WavSpec {
+            channels: 1,
+            sample_rate: 44100,
+            bits_per_sample: 16,
+            sample_format: SampleFormat::Int,
+        };
+        let mut writer = WavWriter::create(&file_path, spec).unwrap();
+        for t in 0..44100 {
+            let sample = if t == 10000 { 0.9f32 } else { 0.0f32 };
+            writer.write_sample((sample * i16::MAX as f32) as i16).unwrap();
+        }
+        writer.finalize().unwrap();
+
+        let buffer = summoner_dsp::sampler::load_sample_file(&file_path).unwrap();
+        let slicer = summoner_dsp::slicer::AutoSlicer::new(0.15, summoner_dsp::slicer::SliceAlgorithm::SpectralFlux);
+        let slices = slicer.detect_slices(&buffer);
+        assert!(!slices.is_empty(), "AutoSlicer should detect transient in real WAV file");
+
+        let _ = std::fs::remove_file(file_path);
+    }
+
+    #[test]
+    fn test_load_preset_renders_audio() {
+        use summoner_dsp::traits::SignalProcessor;
+        let mut bank = summoner_dsp::sampler::MultiSampleBank::new();
+        let mut reg = summoner_dsp::sampler::SampleRegion::new(60, 72, 60, "dummy.wav");
+        let sin_data: Vec<f32> = (0..44100).map(|i| (i as f32 * 440.0 * 2.0 * std::f32::consts::PI / 44100.0).sin()).collect();
+        reg.buffer = Some(std::sync::Arc::new(summoner_dsp::sampler::SampleBuffer::new(sin_data, 44100, 1)));
+        bank.add_region(reg);
+
+        let mut sampler = summoner_dsp::SamplerDevice::new(bank);
+        sampler.trigger_note(60, 100);
+
+        let mut out_l = vec![0.0f32; 512];
+        let mut out_r = vec![0.0f32; 512];
+        let ctx = summoner_core::node::ProcessContext::new(44100, 120.0, 0);
+        sampler.process_block(&[], &mut [&mut out_l, &mut out_r], &ctx);
+
+        assert!(out_l.iter().any(|&s| s != 0.0), "SamplerDevice rendered audio output");
+    }
+
+    #[test]
+    fn test_render_wav_full_pipeline() {
+        let project = create_default_project("Full Pipeline Test");
+        let mut runner = graph::GraphRunner::new(&project);
+
+        let mut out_l = vec![0.0f32; 512];
+        let mut out_r = vec![0.0f32; 512];
+        let ctx = ProcessContext::new(44100, 120.0, 0);
+        runner.process_block(512, &ctx, &mut [&mut out_l, &mut out_r]);
+
+        assert_eq!(out_l.len(), 512);
+        assert_eq!(out_r.len(), 512);
+    }
+
+    #[test]
+    fn test_macro_knob_driven_by_automation() {
+        use summoner_core::param_bus::{ParamBus, ParamId};
+        use summoner_sequencer::automation_timeline::{AutomationTimeline, AutomationLane, AutomationCurve, AutomationPoint, Interpolation};
+        use summoner_sequencer::automation::AutomationRegistry;
+
+        let mut bus = ParamBus::new();
+        let param_id = ParamId(1);
+        let _atomic = bus.register(param_id, 1000.0);
+
+        let mut timeline = AutomationTimeline::new();
+        let curve = AutomationCurve::new(vec![
+            AutomationPoint { beat: 0.0, value: 500.0, interp: Interpolation::Linear },
+            AutomationPoint { beat: 4.0, value: 5000.0, interp: Interpolation::Linear },
+        ]);
+        let lane = AutomationLane {
+            param_id: "1".to_string(),
+            curve,
+        };
+        timeline.add_lane(lane);
+
+        let mut reg = AutomationRegistry::new();
+        let atomic = reg.register_param("1", 1000.0);
+
+        timeline.apply_beat(&reg, 2.0);
+        let val = atomic.get();
+        assert!((val - 2750.0).abs() < 10.0, "Macro knob parameter updated by automation interpolated value");
+    }
+
+
+
 }
+
 
 

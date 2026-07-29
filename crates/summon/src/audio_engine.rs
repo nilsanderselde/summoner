@@ -163,4 +163,60 @@ mod tests {
 
         assert!(result.is_ok(), "Audio callback block processing triggered heap allocation!");
     }
+
+    #[test]
+    fn test_voice_pool_in_audio_path() {
+        use summoner_core::mpe::MpeEvent;
+        use summoner_core::voice::VoicePool;
+        use summoner_core::node::AudioNode;
+        use crossbeam_channel::unbounded;
+
+        struct MockVoice {
+            freq: f32,
+            active: bool,
+        }
+
+        impl AudioNode for MockVoice {
+            fn name(&self) -> &str { "MockVoice" }
+            fn process(&mut self, _inputs: &[&[f32]], outputs: &mut [&mut [f32]], _ctx: &ProcessContext) {
+                if self.active {
+                    for out in outputs.iter_mut() {
+                        out.fill(0.5);
+                    }
+                }
+            }
+        }
+
+        impl summoner_core::voice::PolyphonicVoice for MockVoice {
+            fn note_on(&mut self, note: u8, _vel: f32) {
+                self.freq = note as f32;
+                self.active = true;
+            }
+            fn note_off(&mut self, _vel: f32) {
+                self.active = false;
+            }
+            fn set_pitch_bend(&mut self, _semitones: f32) {}
+            fn set_pressure(&mut self, _pressure: f32) {}
+            fn is_active(&self) -> bool { self.active }
+        }
+
+        let (tx, rx) = unbounded::<MpeEvent>();
+        let mut pool = VoicePool::<MockVoice, 8>::new(
+            "MockPool",
+            || MockVoice { freq: 440.0, active: false },
+            512
+        );
+
+        tx.send(MpeEvent::NoteOn { voice_id: 1, channel: 0, note: 60.0, velocity: 1.0 }).unwrap();
+        while let Ok(evt) = rx.try_recv() {
+            pool.dispatch_mpe(evt);
+        }
+
+        let mut out_l = vec![0.0f32; 512];
+        let mut out_r = vec![0.0f32; 512];
+        let ctx = ProcessContext::new(44100, 120.0, 0);
+        pool.process(&[], &mut [&mut out_l, &mut out_r], &ctx);
+
+        assert!(out_l.iter().any(|&s| s != 0.0));
+    }
 }

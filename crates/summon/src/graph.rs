@@ -54,6 +54,18 @@ impl NodeFactory {
             "FrequencyShifter" => Some(Box::new(ProcessorNodeAdapter::new(FrequencyShifter::new()))),
             "LufsMeterNode" => Some(Box::new(ProcessorNodeAdapter::new(LufsMeterNode::new()))),
             "GranularSynthNode" => Some(Box::new(ProcessorNodeAdapter::new(GranularSynthNode::new(44100)))),
+            "SamplerDevice" => {
+                let mut bank = summoner_dsp::sampler::MultiSampleBank::new();
+                let base_dir = std::path::Path::new("local");
+                summoner_dsp::sampler::load_bank_buffers(&mut bank, base_dir);
+                Some(Box::new(ProcessorNodeAdapter::new(summoner_dsp::SamplerDevice::new(bank))))
+            }
+            "MultiSamplerNode" => {
+                let mut bank = summoner_dsp::sampler::MultiSampleBank::new();
+                let base_dir = std::path::Path::new("local");
+                summoner_dsp::sampler::load_bank_buffers(&mut bank, base_dir);
+                Some(Box::new(ProcessorNodeAdapter::new(summoner_dsp::sampler::MultiSamplerNode::new(bank))))
+            }
             _ => {
                 eprintln!("Warning: Unknown node kind '{}'", config.kind);
                 Some(Box::new(GainNode::new(0.0)))
