@@ -29,6 +29,16 @@ pub struct ProjectConfig {
     pub assets: Vec<AssetConfig>,
     #[serde(default)]
     pub automation_lanes: Vec<AutomationLaneConfig>,
+    #[serde(default)]
+    pub midi_mappings: Vec<MidiMappingConfig>,
+}
+
+/// MIDI Learn mapping entry in project TOML.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct MidiMappingConfig {
+    pub channel: u8,
+    pub cc: u8,
+    pub param_id: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -140,6 +150,10 @@ pub struct SequenceConfig {
     pub start_beat: f64,
     #[serde(default = "default_step_division")]
     pub step_division: f64,
+    #[serde(default)]
+    pub clip_color: Option<[u8; 3]>,
+    #[serde(default)]
+    pub clip_name: Option<String>,
     #[serde(default)]
     pub steps: Vec<TrackerStepConfig>,
 }

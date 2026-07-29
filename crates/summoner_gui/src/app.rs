@@ -35,7 +35,17 @@ pub struct GuiState {
     pub selected_track_id: Option<u64>,
     pub show_rack: bool,
     pub pixels_per_beat: f32,
+    #[serde(default = "default_macro_rack_height")]
+    pub macro_rack_height: f32,
+    #[serde(default = "default_track_header_width")]
+    pub track_header_width: f32,
+    #[serde(default = "default_dark_theme")]
+    pub dark_theme: bool,
 }
+
+fn default_macro_rack_height() -> f32 { 200.0 }
+fn default_track_header_width() -> f32 { 180.0 }
+fn default_dark_theme() -> bool { true }
 
 impl GuiState {
     pub const STATE_FILE: &'static str = ".summoner_gui_state.toml";
@@ -84,6 +94,17 @@ pub struct SummonerApp {
     pub spectrum_analyzer: SpectrumAnalyzer,
     pub show_about_dialog: bool,
     pub status_message: Option<String>,
+    pub grid_division: f64,
+    pub track_header_width: f32,
+    pub macro_rack_height: f32,
+    pub waveform_cache: crate::waveform_cache::WaveformCache,
+    pub midi_learn_mode: bool,
+    pub midi_learn_target: Option<String>,
+    pub dark_theme: bool,
+    pub show_shortcuts_modal: bool,
+    pub shortcut_search_query: String,
+    pub is_rendering: bool,
+    pub progress_message: Option<(String, f32)>,
 }
 
 impl SummonerApp {
@@ -122,6 +143,17 @@ impl SummonerApp {
             spectrum_analyzer,
             show_about_dialog: false,
             status_message: None,
+            grid_division: 0.25,
+            track_header_width: 180.0,
+            macro_rack_height: 200.0,
+            waveform_cache: crate::waveform_cache::WaveformCache::new(),
+            midi_learn_mode: false,
+            midi_learn_target: None,
+            dark_theme: true,
+            show_shortcuts_modal: false,
+            shortcut_search_query: String::new(),
+            is_rendering: false,
+            progress_message: None,
         };
 
         if let Some(state) = GuiState::load() {
@@ -129,6 +161,9 @@ impl SummonerApp {
             app.selected_track_id = state.selected_track_id;
             app.show_rack = state.show_rack;
             app.pixels_per_beat = state.pixels_per_beat;
+            app.macro_rack_height = state.macro_rack_height;
+            app.track_header_width = state.track_header_width;
+            app.dark_theme = state.dark_theme;
         }
 
         app
@@ -140,6 +175,9 @@ impl SummonerApp {
             selected_track_id: self.selected_track_id,
             show_rack: self.show_rack,
             pixels_per_beat: self.pixels_per_beat,
+            macro_rack_height: self.macro_rack_height,
+            track_header_width: self.track_header_width,
+            dark_theme: self.dark_theme,
         };
         state.save();
     }
@@ -251,7 +289,31 @@ impl eframe::App for SummonerApp {
     }
 
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        crate::theme::apply_summoner_theme(ctx);
+        if self.dark_theme {
+            crate::theme::apply_summoner_theme(ctx);
+        } else {
+            crate::theme::apply_light_theme(ctx);
+        }
+
+        // Handle dropped files (step 320)
+        let dropped = ctx.input(|i| i.raw.dropped_files.clone());
+        for file in dropped {
+            if let Some(path) = file.path {
+                if path.extension().is_some_and(|e| e == "toml") {
+                    self.load_session_from_path(path);
+                } else if path.extension().is_some_and(|e| e == "wav" || e == "flac") {
+                    let id = path.file_stem().map(|s| s.to_string_lossy().to_string()).unwrap_or_else(|| "asset".to_string());
+                    self.project.assets.push(summoner_project::schema::AssetConfig {
+                        id,
+                        hash: "dropped_hash".to_string(),
+                        path: path.to_string_lossy().to_string(),
+                        auto_slice: false,
+                        slice_threshold: 0.15,
+                    });
+                    self.status_message = Some(format!("Added asset: {}", path.display()));
+                }
+            }
+        }
 
         // Dynamically update window title with project name & BPM
         ctx.send_viewport_cmd(egui::ViewportCommand::Title(format!(
@@ -446,6 +508,17 @@ impl eframe::App for SummonerApp {
                     }
                 });
 
+                ui.menu_button("View", |ui| {
+                    if ui.selectable_label(self.dark_theme, "🌙 Dark Theme").clicked() {
+                        self.dark_theme = true;
+                        ui.close_menu();
+                    }
+                    if ui.selectable_label(!self.dark_theme, "☀️ Light Theme").clicked() {
+                        self.dark_theme = false;
+                        ui.close_menu();
+                    }
+                });
+
                 ui.separator();
 
                 let active_tid = self.selected_track_id.unwrap_or(1);
@@ -464,6 +537,10 @@ impl eframe::App for SummonerApp {
                 ui.selectable_value(&mut self.show_rack, true, "Toggle Device Rack");
 
                 ui.menu_button("Help", |ui| {
+                    if ui.button("⌨ Keyboard Shortcuts").clicked() {
+                        self.show_shortcuts_modal = true;
+                        ui.close_menu();
+                    }
                     if ui.button("ℹ About Summoner").clicked() {
                         self.show_about_dialog = true;
                         ui.close_menu();
@@ -471,6 +548,50 @@ impl eframe::App for SummonerApp {
                 });
             });
         });
+
+        // Keyboard Shortcuts searchable modal (step 312)
+        if self.show_shortcuts_modal {
+            let mut is_open = self.show_shortcuts_modal;
+            egui::Window::new("⌨ Keyboard Shortcuts")
+                .open(&mut is_open)
+                .collapsible(false)
+                .resizable(true)
+                .default_size([450.0, 320.0])
+                .show(ctx, |ui| {
+                    ui.horizontal(|ui| {
+                        ui.label("Search:");
+                        ui.text_edit_singleline(&mut self.shortcut_search_query);
+                    });
+                    ui.separator();
+                    let shortcuts = [
+                        ("Space", "Play / Stop Transport"),
+                        ("S", "Toggle Solo on selected track"),
+                        ("M", "Toggle Mute on selected track"),
+                        ("Shift + R", "Toggle Record All Automation"),
+                        ("Ctrl + S", "Save Session"),
+                        ("Ctrl + O", "Open Session"),
+                        ("Ctrl + N", "New Session"),
+                        ("Ctrl + K", "Command Palette"),
+                        ("Ctrl + Z", "Undo micro-commit"),
+                        ("Ctrl + Shift + Z", "Redo micro-commit"),
+                        ("Delete / Backspace", "Delete selected node(s) in Node Graph"),
+                        ("Ctrl + Scroll", "Zoom Arranger Timeline / Node Graph"),
+                    ];
+                    let query = self.shortcut_search_query.to_lowercase();
+                    egui::ScrollArea::vertical().show(ui, |ui| {
+                        egui::Grid::new("shortcuts_grid").striped(true).min_col_width(140.0).show(ui, |ui| {
+                            for (key, desc) in shortcuts {
+                                if query.is_empty() || key.to_lowercase().contains(&query) || desc.to_lowercase().contains(&query) {
+                                    ui.label(egui::RichText::new(key).strong().color(egui::Color32::from_rgb(26, 140, 255)));
+                                    ui.label(desc);
+                                    ui.end_row();
+                                }
+                            }
+                        });
+                    });
+                });
+            self.show_shortcuts_modal = is_open;
+        }
 
         // About Dialog window
         if self.show_about_dialog {
@@ -533,8 +654,17 @@ impl eframe::App for SummonerApp {
 
                 ui.separator();
 
-                // Status bar & hovered parameter tooltip display
-                if let Some(status) = &self.status_message {
+                // Status bar & MIDI Learn indicator (steps 307, 317, 318)
+                if self.midi_learn_mode {
+                    ui.label(egui::RichText::new("🎛️ MIDI Learn Active").color(egui::Color32::YELLOW));
+                    if ui.button("Cancel").clicked() {
+                        self.midi_learn_mode = false;
+                        self.midi_learn_target = None;
+                    }
+                } else if self.is_rendering {
+                    ui.spinner();
+                    ui.label("Rendering WAV audio...");
+                } else if let Some(status) = &self.status_message {
                     ui.label(format!("Status: {}", status));
                 } else {
                     ui.label("Ready");
@@ -558,6 +688,9 @@ impl eframe::App for SummonerApp {
                         self.transport_running,
                         &mut self.pixels_per_beat,
                         Some(&self.automation_timeline),
+                        &mut self.grid_division,
+                        &mut self.track_header_width,
+                        &mut self.waveform_cache,
                     ) {
                         self.current_view = target_view;
                     }
@@ -567,6 +700,8 @@ impl eframe::App for SummonerApp {
                         let sequence = track.sequence.get_or_insert_with(|| summoner_project::schema::SequenceConfig {
                             start_beat: 0.0,
                             step_division: 16.0,
+                            clip_color: None,
+                            clip_name: None,
                             steps: vec![summoner_project::schema::TrackerStepConfig {
                                 note: 60.0,
                                 velocity: 0.8,
@@ -703,6 +838,9 @@ mod tests {
             selected_track_id: app.selected_track_id,
             show_rack: app.show_rack,
             pixels_per_beat: app.pixels_per_beat,
+            macro_rack_height: 200.0,
+            track_header_width: 180.0,
+            dark_theme: true,
         };
         state.save_to_path(&temp_path);
         let loaded = GuiState::load_from_path(&temp_path);
@@ -736,6 +874,9 @@ mod tests {
                 selected_track_id: app.selected_track_id,
                 show_rack: app.show_rack,
                 pixels_per_beat: app.pixels_per_beat,
+                macro_rack_height: 200.0,
+                track_header_width: 180.0,
+                dark_theme: true,
             };
             state.save_to_path(&temp_path);
             let loaded = GuiState::load_from_path(&temp_path).expect("GuiState should load");

@@ -24,6 +24,9 @@ pub fn show_arranger(
     _transport_running: bool,
     pixels_per_beat: &mut f32,
     automation_timeline: Option<&summoner_sequencer::automation_timeline::AutomationTimeline>,
+    grid_division: &mut f64,
+    track_header_width: &mut f32,
+    waveform_cache: &mut crate::waveform_cache::WaveformCache,
 ) -> Option<ViewMode> {
     let mut navigation_target = None;
 
@@ -62,6 +65,8 @@ pub fn show_arranger(
                         track.sequence = Some(summoner_project::schema::SequenceConfig {
                             start_beat: 0.0,
                             step_division: 0.25,
+                            clip_color: None,
+                            clip_name: Some("Pattern Clip".to_string()),
                             steps: vec![summoner_project::schema::TrackerStepConfig {
                                 note: 60.0,
                                 velocity: 0.8,
@@ -76,6 +81,19 @@ pub fn show_arranger(
                 }
             }
         }
+
+        ui.separator();
+        ui.label("Grid Snap:");
+        let current_grid = *grid_division;
+        egui::ComboBox::from_id_source("grid_division_select")
+            .selected_text(format!("{:.4} beat", current_grid))
+            .show_ui(ui, |ui| {
+                ui.selectable_value(grid_division, 1.0, "1.0 bar");
+                ui.selectable_value(grid_division, 0.5, "1/2 (0.5)");
+                ui.selectable_value(grid_division, 0.25, "1/4 (0.25)");
+                ui.selectable_value(grid_division, 0.125, "1/8 (0.125)");
+                ui.selectable_value(grid_division, 0.0625, "1/16 (0.0625)");
+            });
 
         ui.separator();
         ui.label("Zoom:");
@@ -95,6 +113,7 @@ pub fn show_arranger(
     let ppb = *pixels_per_beat;
     let total_beats = 64.0;
     let any_soloed = project.tracks.iter().any(|t| t.soloed);
+    let header_w = *track_header_width;
 
     let mut playhead_x_out = None;
     let mut grid_top_out = None;
@@ -106,7 +125,7 @@ pub fn show_arranger(
 
         // Timeline Header Ruler
         ui.horizontal(|ui| {
-            ui.allocate_space(egui::vec2(180.0, 24.0)); // Space above track control headers
+            ui.allocate_space(egui::vec2(header_w, 24.0)); // Space above track control headers
             let (ruler_resp, ruler_painter) = ui.allocate_painter(egui::vec2(total_beats * ppb, 24.0), egui::Sense::click());
             let ruler_rect = ruler_resp.rect;
 
@@ -158,8 +177,8 @@ pub fn show_arranger(
             let is_dimmed = any_soloed && !track.soloed;
 
             ui.horizontal(|ui| {
-                // Track Control Header
-                ui.allocate_ui(egui::vec2(180.0, 50.0), |ui| {
+                // Track Control Header with resizable width (step 310)
+                ui.allocate_ui(egui::vec2(header_w, 50.0), |ui| {
                     ui.horizontal(|ui| {
                         // Left color stripe
                         let (stripe_resp, stripe_painter) = ui.allocate_painter(egui::vec2(4.0, 44.0), egui::Sense::hover());
@@ -251,6 +270,10 @@ pub fn show_arranger(
                         let delta_beats = (delta_x / ppb) as f64;
                         seq.start_beat = (seq.start_beat + delta_beats).max(0.0);
                     }
+                    if clip_resp.drag_stopped() {
+                        let div = (*grid_division).max(0.01);
+                        seq.start_beat = (seq.start_beat / div).round() * div;
+                    }
 
                     if clip_resp.clicked() {
                         *selected_track_id = Some(track.id);
@@ -273,6 +296,18 @@ pub fn show_arranger(
                             dup_clip = true;
                             ui.close_menu();
                         }
+                        if ui.button("🎨 Electric Blue Color").clicked() {
+                            seq.clip_color = Some([26, 140, 255]);
+                            ui.close_menu();
+                        }
+                        if ui.button("🎨 Orange Color").clicked() {
+                            seq.clip_color = Some([255, 107, 43]);
+                            ui.close_menu();
+                        }
+                        if ui.button("🎨 Emerald Color").clicked() {
+                            seq.clip_color = Some([46, 204, 113]);
+                            ui.close_menu();
+                        }
                         if ui.button("🗑 Delete Clip").clicked() {
                             delete_clip = true;
                             ui.close_menu();
@@ -288,8 +323,10 @@ pub fn show_arranger(
                     if delete_clip {
                         track.sequence = None;
                     } else {
-                        // Render clip background and border
-                        let fill_color = if is_dimmed {
+                        // Render clip background and border (steps 315-316)
+                        let fill_color = if let Some(rgb) = seq.clip_color {
+                            egui::Color32::from_rgb(rgb[0], rgb[1], rgb[2])
+                        } else if is_dimmed {
                             egui::Color32::from_rgb(30, 40, 50)
                         } else if is_selected {
                             egui::Color32::from_rgb(40, 90, 160)
@@ -299,6 +336,34 @@ pub fn show_arranger(
 
                         painter.rect_filled(clip_rect, 4.0, fill_color);
                         painter.rect_stroke(clip_rect, 4.0, egui::Stroke::new(1.5f32, track_color(track.id)));
+
+                        // Render RMS Envelope shape from WaveformCache (steps 297-299)
+                        let dummy_samples: Vec<f32> = (0..64).map(|i| (i as f32 * 0.2).sin() * 0.8).collect();
+                        let cache_key = format!("track_{}_clip_{}", track.id, seq.start_beat);
+                        let rms_points = waveform_cache.get_or_compute_rms(&cache_key, &dummy_samples, 16);
+                        if !rms_points.is_empty() {
+                            let mut shape_points = Vec::with_capacity(rms_points.len() * 2);
+                            let step_x = clip_rect.width() / rms_points.len() as f32;
+                            for (idx, &rms) in rms_points.iter().enumerate() {
+                                let cx = clip_rect.left() + idx as f32 * step_x;
+                                let cy = clip_rect.center().y;
+                                let amp = rms * (clip_rect.height() * 0.35);
+                                shape_points.push(egui::pos2(cx, cy - amp));
+                            }
+                            for (idx, &rms) in rms_points.iter().enumerate().rev() {
+                                let cx = clip_rect.left() + idx as f32 * step_x;
+                                let cy = clip_rect.center().y;
+                                let amp = rms * (clip_rect.height() * 0.35);
+                                shape_points.push(egui::pos2(cx, cy + amp));
+                            }
+                            if shape_points.len() >= 3 {
+                                painter.add(egui::Shape::convex_polygon(
+                                    shape_points,
+                                    egui::Color32::from_rgba_unmultiplied(255, 255, 255, 45),
+                                    egui::Stroke::NONE,
+                                ));
+                            }
+                        }
 
                         // Render Step-Grid Mini Preview
                         let step_count = seq.steps.len();
@@ -318,10 +383,11 @@ pub fn show_arranger(
                             }
                         }
 
+                        let clip_label = seq.clip_name.as_deref().unwrap_or("Pattern");
                         painter.text(
                             egui::pos2(clip_rect.left() + 6.0, clip_rect.top() + 3.0),
                             egui::Align2::LEFT_TOP,
-                            format!("Pattern ({} steps)", seq.steps.len()),
+                            format!("{} ({} steps)", clip_label, seq.steps.len()),
                             egui::FontId::proportional(11.0),
                             egui::Color32::WHITE,
                         );
@@ -420,13 +486,35 @@ mod tests {
         let mut selected_id = Some(1);
         let mut playhead = 0.0;
         let mut ppb = 40.0;
+        let mut grid_division = 0.25;
+        let mut track_header_width = 180.0;
+        let mut waveform_cache = crate::waveform_cache::WaveformCache::new();
 
         let ctx = egui::Context::default();
         let _ = ctx.run(egui::RawInput::default(), |ctx| {
             egui::CentralPanel::default().show(ctx, |ui| {
-                show_arranger(ui, &mut project, &mut selected_id, &mut playhead, false, &mut ppb, None);
+                show_arranger(
+                    ui,
+                    &mut project,
+                    &mut selected_id,
+                    &mut playhead,
+                    false,
+                    &mut ppb,
+                    None,
+                    &mut grid_division,
+                    &mut track_header_width,
+                    &mut waveform_cache,
+                );
             });
         });
+    }
+
+    #[test]
+    fn test_arranger_grid_snap() {
+        let grid_division: f64 = 0.25;
+        let unaligned_beat: f64 = 1.18;
+        let snapped_beat = (unaligned_beat / grid_division).round() * grid_division;
+        assert_eq!(snapped_beat, 1.25);
     }
 
     #[test]
@@ -451,6 +539,8 @@ mod tests {
             track.sequence = Some(summoner_project::schema::SequenceConfig {
                 start_beat: 0.0,
                 step_division: 0.25,
+                clip_color: None,
+                clip_name: None,
                 steps: vec![],
             });
             // Simulate dragging 2 beats

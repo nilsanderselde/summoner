@@ -33,6 +33,19 @@ pub fn apply_summoner_theme(ctx: &egui::Context) {
     ctx.set_fonts(fonts);
 }
 
+#[cfg(feature = "gui")]
+pub fn apply_light_theme(ctx: &egui::Context) {
+    let mut visuals = Visuals::light();
+    visuals.panel_fill = Color32::from_rgb(240, 242, 245);
+    visuals.window_fill = Color32::from_rgb(255, 255, 255);
+    visuals.extreme_bg_color = Color32::from_rgb(225, 230, 238);
+    visuals.widgets.hovered.bg_fill = Color32::from_rgb(180, 210, 255);
+    visuals.widgets.active.bg_fill = COLOR_PRIMARY;
+    visuals.selection.bg_fill = Color32::from_rgba_unmultiplied(26, 140, 255, 120);
+    visuals.window_rounding = Rounding::same(8.0);
+    ctx.set_visuals(visuals);
+}
+
 #[cfg(test)]
 mod tests {
     #[cfg(feature = "gui")]
@@ -46,6 +59,8 @@ mod tests {
         assert_eq!(COLOR_PRIMARY, Color32::from_rgb(26, 140, 255));
         assert_eq!(COLOR_ACCENT, Color32::from_rgb(255, 107, 43));
         assert_eq!(COLOR_BG, Color32::from_rgb(15, 15, 20));
+
+        apply_light_theme(&ctx);
     }
 }
 

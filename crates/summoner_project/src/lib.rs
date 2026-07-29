@@ -117,6 +117,7 @@ pub fn create_default_project(name: &str) -> ProjectConfig {
         ],
         assets: Vec::new(),
         automation_lanes: Vec::new(),
+        midi_mappings: Vec::new(),
     }
 }
 
@@ -139,6 +140,8 @@ mod tests {
         proj.tracks[1].sequence = Some(SequenceConfig {
             start_beat: 0.0,
             step_division: 0.25,
+            clip_color: None,
+            clip_name: None,
             steps: vec![
                 TrackerStepConfig {
                     note: 60.0,

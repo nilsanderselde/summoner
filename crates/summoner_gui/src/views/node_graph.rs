@@ -11,6 +11,7 @@ pub struct NodeGraphState {
     pub pan_offset: egui::Vec2,
     pub selected_nodes: HashSet<usize>,
     pub search_query: String,
+    pub selection_rect: Option<(egui::Pos2, egui::Pos2)>,
 }
 
 impl Default for NodeGraphState {
@@ -22,6 +23,7 @@ impl Default for NodeGraphState {
             pan_offset: egui::Vec2::ZERO,
             selected_nodes: HashSet::new(),
             search_query: String::new(),
+            selection_rect: None,
         }
     }
 }
@@ -86,9 +88,57 @@ pub fn show_node_graph(
     let mut modified = false;
     let mut drop_was_handled = false;
 
+    // Delete key removes all selected nodes (step 302)
+    if ui.input(|i| i.key_pressed(egui::Key::Delete) || i.key_pressed(egui::Key::Backspace)) && !state.selected_nodes.is_empty() {
+        let mut to_delete: Vec<usize> = state.selected_nodes.iter().copied().collect();
+        to_delete.sort_unstable_by(|a, b| b.cmp(a));
+        for idx in to_delete {
+            delete_node(graph, state, idx);
+        }
+        state.selected_nodes.clear();
+        modified = true;
+    }
+
     egui::Frame::canvas(ui.style()).show(ui, |ui| {
         let (response, painter) = ui.allocate_painter(ui.available_size(), egui::Sense::click_and_drag());
         let rect = response.rect;
+
+        // Selection rectangle on background drag (step 301)
+        if response.drag_started_by(egui::PointerButton::Primary) {
+            if let Some(pos) = response.interact_pointer_pos() {
+                state.selection_rect = Some((pos, pos));
+                if !ui.input(|i| i.modifiers.shift) {
+                    state.selected_nodes.clear();
+                }
+            }
+        } else if response.dragged_by(egui::PointerButton::Primary) {
+            if let Some(ref mut r) = state.selection_rect {
+                if let Some(pos) = response.interact_pointer_pos() {
+                    r.1 = pos;
+                }
+            }
+        }
+
+        if response.drag_stopped_by(egui::PointerButton::Primary) {
+            if let Some((start, end)) = state.selection_rect.take() {
+                let sel_bounds = egui::Rect::from_two_pos(start, end);
+                for (i, _) in graph.nodes.iter().enumerate() {
+                    let orig_pos = *state.positions.get(&i).unwrap_or(&egui::pos2(100.0, 100.0));
+                    let screen_pos = rect.min + state.pan_offset + (orig_pos.to_vec2() * state.zoom);
+                    let size = egui::vec2(140.0, 80.0) * state.zoom;
+                    let node_rect = egui::Rect::from_min_size(screen_pos, size);
+                    if sel_bounds.intersects(node_rect) {
+                        state.selected_nodes.insert(i);
+                    }
+                }
+            }
+        }
+
+        if let Some((start, end)) = state.selection_rect {
+            let sel_rect = egui::Rect::from_two_pos(start, end);
+            painter.rect_filled(sel_rect, 2.0, egui::Color32::from_rgba_unmultiplied(26, 140, 255, 30));
+            painter.rect_stroke(sel_rect, 2.0, egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(26, 140, 255)));
+        }
 
         // Zoom and Pan controls
         if response.hovered() {
@@ -228,8 +278,16 @@ pub fn show_node_graph(
                 state.selected_nodes.insert(i);
             }
             if node_interact.dragged() {
-                if let Some(pos) = state.positions.get_mut(&i) {
-                    *pos += node_interact.drag_delta() / state.zoom;
+                let delta = node_interact.drag_delta() / state.zoom;
+                if is_selected {
+                    let sel_list: Vec<usize> = state.selected_nodes.iter().copied().collect();
+                    for sel_idx in sel_list {
+                        if let Some(pos) = state.positions.get_mut(&sel_idx) {
+                            *pos += delta;
+                        }
+                    }
+                } else if let Some(pos) = state.positions.get_mut(&i) {
+                    *pos += delta;
                 }
             }
 

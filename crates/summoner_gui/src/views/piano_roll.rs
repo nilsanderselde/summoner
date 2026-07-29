@@ -423,6 +423,8 @@ mod tests {
         let mut sequence = SequenceConfig {
             start_beat: 0.0,
             step_division: 0.25,
+            clip_color: None,
+            clip_name: None,
             steps: vec![
                 TrackerStepConfig {
                     note: 60.0,
@@ -456,6 +458,8 @@ mod tests {
         let mut sequence = SequenceConfig {
             start_beat: 0.0,
             step_division: 0.25,
+            clip_color: None,
+            clip_name: None,
             steps: vec![
                 TrackerStepConfig {
                     note: 60.0,
@@ -493,6 +497,8 @@ mod tests {
         let mut sequence = SequenceConfig {
             start_beat: 0.0,
             step_division: 0.25,
+            clip_color: None,
+            clip_name: None,
             steps: vec![
                 TrackerStepConfig {
                     note: 60.0,

@@ -522,6 +522,7 @@ mod tests {
             ],
             assets: vec![],
             automation_lanes: vec![],
+            midi_mappings: vec![],
         };
 
         stage.populate_from_project(&project);

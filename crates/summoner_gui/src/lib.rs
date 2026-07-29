@@ -19,6 +19,7 @@ pub mod lod;
 pub mod renderer;
 pub mod visualizer;
 pub mod ascii_renderer;
+pub mod waveform_cache;
 
 #[cfg(feature = "gui")]
 pub mod command_palette;
