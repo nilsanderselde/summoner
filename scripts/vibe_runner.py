@@ -75,36 +75,88 @@ def log(msg, color="\033[36m"):
 
 def parse_quota_reset_seconds(text):
     """
-    Parses reset time from error output (hours, minutes, seconds).
-    Returns total seconds to sleep (with safety buffer) or default if unparseable.
+    Parses the quota reset time from error output.
+    Strategy (in priority order):
+      1. Absolute timestamp: "M/D/YYYY, H:MM:SS AM/PM" (e.g. Antigravity quota message)
+      2. Absolute time only: "H:MM:SS AM/PM" or "HH:MM:SS"
+      3. Relative duration: "2h 30m", "45m", "90s" etc.
+      4. Default: 3600s (1 hour)
+    Always adds a 90-second safety buffer. Caps at 24 hours max.
     """
-    hours, minutes, seconds = 0, 0, 0
+    now = datetime.now()
+    BUFFER = 90   # seconds of extra cushion after reset time
+    MAX_SLEEP = 86400  # 24 hours hard cap
+
+    # 1. Absolute date+time: e.g. "7/29/2026, 4:13:12 PM"
+    m_abs = re.search(
+        r"(\d{1,2})/(\d{1,2})/(\d{4}),?\s+(\d{1,2}):(\d{2}):(\d{2})\s*(AM|PM)",
+        text, re.IGNORECASE
+    )
+    if m_abs:
+        month, day, year = int(m_abs.group(1)), int(m_abs.group(2)), int(m_abs.group(3))
+        hour, minute, second = int(m_abs.group(4)), int(m_abs.group(5)), int(m_abs.group(6))
+        ampm = m_abs.group(7).upper()
+        if ampm == "PM" and hour != 12:
+            hour += 12
+        elif ampm == "AM" and hour == 12:
+            hour = 0
+        try:
+            reset_dt = now.replace(year=year, month=month, day=day,
+                                   hour=hour, minute=minute, second=second, microsecond=0)
+            delta = (reset_dt - now).total_seconds() + BUFFER
+            if delta < 0:
+                delta += 86400  # already passed today, try tomorrow
+            return min(int(delta), MAX_SLEEP)
+        except Exception:
+            pass
+
+    # 2. Absolute time only: "4:13:12 PM" or "16:13:12"
+    m_time = re.search(
+        r"\b(\d{1,2}):(\d{2}):(\d{2})\s*(AM|PM)?\b",
+        text, re.IGNORECASE
+    )
+    if m_time:
+        hour, minute, second = int(m_time.group(1)), int(m_time.group(2)), int(m_time.group(3))
+        ampm = (m_time.group(4) or "").upper()
+        if ampm == "PM" and hour != 12:
+            hour += 12
+        elif ampm == "AM" and hour == 12:
+            hour = 0
+        try:
+            reset_dt = now.replace(hour=hour, minute=minute, second=second, microsecond=0)
+            delta = (reset_dt - now).total_seconds() + BUFFER
+            if delta < 0:
+                delta += 86400  # already passed today, try tomorrow
+            return min(int(delta), MAX_SLEEP)
+        except Exception:
+            pass
+
+    # 3. Relative duration strings: "2h", "30m", "90s" etc.
+    # Only match when followed by a duration unit word boundary, not bare letters like "PM"
+    rel_hours, rel_minutes, rel_seconds = 0, 0, 0
     found_any = False
 
-    # Check for hours: 2h, 2 hours, 2 hrs
-    m_h = re.search(r"(\d+)\s*(?:h|hr|hour|hours)", text, re.IGNORECASE)
+    m_h = re.search(r"(\d+)\s*(?:hr|hour|hours)\b", text, re.IGNORECASE)
     if m_h:
-        hours = int(m_h.group(1))
+        rel_hours = int(m_h.group(1))
         found_any = True
 
-    # Check for minutes: 30m, 30 mins, 30 minutes
-    m_m = re.search(r"(\d+)\s*(?:m|min|minute|minutes)", text, re.IGNORECASE)
+    m_m = re.search(r"(\d+)\s*(?:min|minute|minutes)\b", text, re.IGNORECASE)
     if m_m:
-        minutes = int(m_m.group(1))
+        rel_minutes = int(m_m.group(1))
         found_any = True
 
-    # Check for seconds: 45s, 45 secs, 45 seconds
-    m_s = re.search(r"(\d+)\s*(?:s|sec|second|seconds)", text, re.IGNORECASE)
+    m_s = re.search(r"(\d+)\s*(?:sec|second|seconds)\b", text, re.IGNORECASE)
     if m_s:
-        seconds = int(m_s.group(1))
+        rel_seconds = int(m_s.group(1))
         found_any = True
 
     if found_any:
-        total_seconds = (hours * 3600) + (minutes * 60) + seconds + 120  # 2 minute safety buffer
-        return total_seconds
-    else:
-        # Default safe sleep time (1 hour = 3600s) if quota limit detected but exact time couldn't be parsed
-        return 3600
+        total = (rel_hours * 3600) + (rel_minutes * 60) + rel_seconds + BUFFER
+        return min(total, MAX_SLEEP)
+
+    # 4. Default: 1 hour
+    return 3600
 
 def is_quota_error(output_text):
     """Checks if output contains any quota or rate limiting signatures."""
