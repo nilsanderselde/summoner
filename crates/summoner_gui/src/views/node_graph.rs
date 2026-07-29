@@ -184,6 +184,26 @@ pub fn show_node_graph(
             );
         }
 
+        // Collapsible Performance Profile Panel (Step 383)
+        let perf_rect = egui::Rect::from_min_size(rect.right_top() - egui::vec2(270.0, -10.0), egui::vec2(260.0, 200.0));
+        let mut perf_ui = ui.child_ui(perf_rect, egui::Layout::top_down(egui::Align::Min));
+        egui::Frame::window(ui.style()).show(&mut perf_ui, |ui| {
+            ui.collapsing("⏱️ Performance Profile", |ui| {
+                ui.checkbox(&mut graph.parallel_execution, "Parallel Rayon Execution");
+                ui.separator();
+                let total_micros: u128 = graph.node_timings.iter().map(|d| d.as_micros()).sum();
+                ui.label(format!("Total Graph Time: {} µs", total_micros));
+                ui.label(format!("Graph Levels: {}", graph.levels.len()));
+                ui.separator();
+                egui::ScrollArea::vertical().max_height(100.0).show(ui, |ui| {
+                    for (i, node) in graph.nodes.iter().enumerate() {
+                        let dur = graph.node_timings.get(i).copied().unwrap_or(std::time::Duration::ZERO);
+                        ui.label(format!("#{} {}: {} µs", i, node.name(), dur.as_micros()));
+                    }
+                });
+            });
+        });
+
         // Initialize positions if empty
         for (i, _node) in graph.nodes.iter().enumerate() {
             state.positions.entry(i).or_insert_with(|| {

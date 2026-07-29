@@ -109,6 +109,7 @@ pub struct SummonerApp {
     pub progress_message: Option<(String, f32)>,
     pub harmonic_context: HarmonicContext,
     pub show_scala_browser_modal: bool,
+    pub cpu_usage: f32,
 }
 
 impl SummonerApp {
@@ -160,6 +161,7 @@ impl SummonerApp {
             progress_message: None,
             harmonic_context: HarmonicContext::default(),
             show_scala_browser_modal: false,
+            cpu_usage: 14.2,
         };
 
         if let Some(state) = GuiState::load() {
@@ -687,6 +689,18 @@ impl eframe::App for SummonerApp {
                     "🎵 Chord: {} (Root: C) | Active Voices: {}",
                     active_chord, active_voices
                 )).color(egui::Color32::from_rgb(46, 204, 113)));
+
+                ui.separator();
+
+                // CPU usage display (Step 381: green < 50%, yellow 50..80%, red > 80%)
+                let cpu_color = if self.cpu_usage < 50.0 {
+                    egui::Color32::from_rgb(46, 204, 113) // Green
+                } else if self.cpu_usage < 80.0 {
+                    egui::Color32::from_rgb(241, 196, 15) // Yellow
+                } else {
+                    egui::Color32::from_rgb(231, 76, 60) // Red
+                };
+                ui.label(egui::RichText::new(format!("💻 CPU: {:.1}%", self.cpu_usage)).color(cpu_color));
 
                 ui.separator();
 
