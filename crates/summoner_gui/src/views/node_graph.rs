@@ -2,6 +2,7 @@ use eframe::egui;
 use summoner_core::graph::{Edge, NodeGraph};
 use summoner_core::node::{PassthroughNode, KNOWN_NODE_TYPES};
 use std::collections::{HashMap, HashSet};
+use crate::visualizer::Oscilloscope;
 
 pub struct NodeGraphState {
     pub positions: HashMap<usize, egui::Pos2>,
@@ -80,6 +81,7 @@ pub fn show_node_graph(
     graph: &mut NodeGraph,
     state: &mut NodeGraphState,
     _selected_edge: &mut Option<Edge>,
+    oscilloscope: Option<&Oscilloscope>,
 ) {
     let mut modified = false;
     let mut drop_was_handled = false;
@@ -186,20 +188,27 @@ pub fn show_node_graph(
                 egui::Color32::WHITE,
             );
 
-            // Per-node mini oscilloscope simulation box (50x30 px)
-            let scope_rect = egui::Rect::from_min_size(
-                node_rect.center() - egui::vec2(25.0 * state.zoom, 10.0 * state.zoom),
-                egui::vec2(50.0 * state.zoom, 25.0 * state.zoom),
+            // Per-node mini oscilloscope display (24x24 px)
+            let scope_rect = egui::Rect::from_center_size(
+                node_rect.center(),
+                egui::vec2(24.0 * state.zoom, 24.0 * state.zoom),
             );
-            painter.rect_filled(scope_rect, 3.0, egui::Color32::from_black_alpha(150));
-            let mut points = Vec::new();
-            for s in 0..16 {
-                let px = scope_rect.left() + (s as f32 / 15.0) * scope_rect.width();
-                let py = scope_rect.center().y + ((s as f32 * 0.4).sin() * 8.0 * state.zoom);
+            painter.rect_filled(scope_rect, 2.0 * state.zoom, egui::Color32::from_black_alpha(180));
+            let dummy_scope = Oscilloscope::new();
+            let scope_ref = oscilloscope.unwrap_or(&dummy_scope);
+            let samples = scope_ref.read_all();
+            let mut points = Vec::with_capacity(24);
+            for s in 0..24 {
+                let idx = s * 21;
+                let px = scope_rect.left() + (s as f32 / 23.0) * scope_rect.width();
+                let sample = samples[idx].clamp(-1.0, 1.0);
+                let py = scope_rect.center().y - sample * (scope_rect.height() * 0.4);
                 points.push(egui::pos2(px, py));
             }
-            for w in points.windows(2) {
-                painter.line_segment([w[0], w[1]], egui::Stroke::new(1.0_f32, egui::Color32::GREEN));
+            if points.len() >= 2 {
+                for w in points.windows(2) {
+                    painter.line_segment([w[0], w[1]], egui::Stroke::new(1.0_f32 * state.zoom, egui::Color32::from_rgb(0, 230, 150)));
+                }
             }
 
             // Dragging the node
@@ -424,7 +433,7 @@ mod tests {
         let ctx = egui::Context::default();
         let _ = ctx.run(egui::RawInput::default(), |ctx| {
             egui::CentralPanel::default().show(ctx, |ui| {
-                show_node_graph(ui, &mut graph, &mut state, &mut selected_edge);
+                show_node_graph(ui, &mut graph, &mut state, &mut selected_edge, None);
             });
         });
 
@@ -445,7 +454,7 @@ mod tests {
         let ctx = egui::Context::default();
         let _ = ctx.run(egui::RawInput::default(), |ctx| {
             egui::CentralPanel::default().show(ctx, |ui| {
-                show_node_graph(ui, &mut graph, &mut state, &mut selected_edge);
+                show_node_graph(ui, &mut graph, &mut state, &mut selected_edge, None);
             });
         });
     }

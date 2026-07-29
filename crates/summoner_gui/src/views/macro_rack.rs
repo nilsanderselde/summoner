@@ -3,7 +3,7 @@ use std::sync::Arc;
 use std::path::Path;
 use summoner_project::schema::TrackConfig;
 use summoner_core::param_bus::{ParamBus, ParamId};
-use crate::visualizer::Oscilloscope;
+use crate::visualizer::{show_oscilloscope, Oscilloscope};
 
 /// Scans local preset directory for available `.preset.toml` or `.toml` files.
 pub fn scan_preset_files(presets_dir: &Path) -> Vec<String> {
@@ -49,21 +49,9 @@ pub fn show_macro_rack(
     ui.separator();
 
     // Real-time Oscilloscope strip
-    let rect = ui.allocate_space(egui::vec2(ui.available_width(), 50.0)).1;
-    let painter = ui.painter();
-    painter.rect_filled(rect, 4.0, egui::Color32::from_rgb(8, 8, 12));
-    
-    let mut points = Vec::with_capacity(512);
-    let sample_data = oscilloscope.map(|o| o.read_all()).unwrap_or([0.0f32; 512]);
-    let num_samples = sample_data.len();
-
-    for i in 0..num_samples {
-        let x = rect.left() + (i as f32 / num_samples as f32) * rect.width();
-        let sample = sample_data[i].clamp(-1.0, 1.0);
-        let y = rect.center().y - sample * (rect.height() * 0.4);
-        points.push(egui::pos2(x, y));
-    }
-    painter.add(egui::Shape::line(points, egui::Stroke::new(1.5_f32, egui::Color32::from_rgb(26, 140, 255))));
+    let dummy_scope = Oscilloscope::new();
+    let scope_ref = oscilloscope.unwrap_or(&dummy_scope);
+    show_oscilloscope(ui, scope_ref, ui.available_width(), 50.0);
 
     ui.separator();
 

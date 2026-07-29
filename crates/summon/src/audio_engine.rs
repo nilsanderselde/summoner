@@ -54,6 +54,15 @@ pub fn run_live(project: &ProjectConfig) -> ! {
     let param_bus_audio = param_bus.clone();
     let (_tx, rx): (Sender<ParamUpdate>, Receiver<ParamUpdate>) = crossbeam_channel::bounded(1024);
 
+    #[cfg(feature = "gui")]
+    let scope = summoner_gui::visualizer::Oscilloscope::new();
+    #[cfg(feature = "gui")]
+    let spectrum = summoner_gui::visualizer::SpectrumAnalyzer::new();
+    #[cfg(feature = "gui")]
+    let _dft_handle = summoner_gui::visualizer::SpectrumAnalyzer::spawn_dft_thread(scope.clone(), spectrum.clone());
+    #[cfg(feature = "gui")]
+    let scope_cb = scope.clone();
+
     const MAX_BLOCK_SIZE: usize = 8192;
     let mut out_l = Box::new([0.0f32; MAX_BLOCK_SIZE]);
     let mut out_r = Box::new([0.0f32; MAX_BLOCK_SIZE]);
@@ -94,6 +103,8 @@ pub fn run_live(project: &ProjectConfig) -> ! {
                     if channels > 1 {
                         frame[1] = r;
                     }
+                    #[cfg(feature = "gui")]
+                    scope_cb.write_sample((l + r) * 0.5);
                 }
                 frame_position += frames as u64;
             },

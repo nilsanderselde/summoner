@@ -17,7 +17,7 @@ use summoner_sequencer::automation::AutomationRegistry;
 use summoner_sequencer::automation_timeline::AutomationTimeline;
 
 use std::collections::HashMap;
-use crate::visualizer::Oscilloscope;
+use crate::visualizer::{Oscilloscope, SpectrumAnalyzer};
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum ViewMode {
@@ -47,6 +47,7 @@ pub struct SummonerApp {
     pub transport: Transport,
     pub show_rack: bool,
     pub oscilloscope_buffers: HashMap<u64, Arc<Oscilloscope>>,
+    pub spectrum_analyzer: SpectrumAnalyzer,
 }
 
 impl SummonerApp {
@@ -57,6 +58,7 @@ impl SummonerApp {
         for track in &project.tracks {
             oscilloscope_buffers.insert(track.id, Arc::new(Oscilloscope::new()));
         }
+        let spectrum_analyzer = SpectrumAnalyzer::new();
         let mut stage_view = StageView::new();
         stage_view.populate_from_project(&project);
         Self {
@@ -78,6 +80,7 @@ impl SummonerApp {
             transport: Transport::new(sample_rate, bpm),
             show_rack: true,
             oscilloscope_buffers,
+            spectrum_analyzer,
         }
     }
 }
@@ -270,12 +273,13 @@ impl eframe::App for SummonerApp {
                         ui.heading("Track not found");
                     }
                 }
-                ViewMode::NodeGraph(_track_id) => {
+                ViewMode::NodeGraph(track_id) => {
                     let mut selected_edge = None;
-                    show_node_graph(ui, &mut self.dummy_graph, &mut self.node_graph_state, &mut selected_edge);
+                    let osc = self.oscilloscope_buffers.get(&track_id).map(|o| o.as_ref());
+                    show_node_graph(ui, &mut self.dummy_graph, &mut self.node_graph_state, &mut selected_edge, osc);
                 }
                 ViewMode::Mixer => {
-                    show_mixer(ui, &mut self.project, &mut self.selected_track_id);
+                    show_mixer(ui, &mut self.project, &mut self.selected_track_id, Some(&self.spectrum_analyzer));
                 }
                 ViewMode::Performance => {
                     show_stage_view(ui, &mut self.stage_view, &mut self.transport);

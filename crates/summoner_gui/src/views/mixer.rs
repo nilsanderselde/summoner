@@ -1,6 +1,7 @@
 use eframe::egui;
 use summoner_project::schema::{NodeConfig, ProjectConfig};
 use std::collections::HashMap;
+use crate::visualizer::{show_spectrum, SpectrumAnalyzer};
 
 /// Internal GUI state for Console Mixer view (peak hold, master fader, popup state).
 #[derive(Debug, Clone)]
@@ -38,11 +39,16 @@ fn track_color(track_id: u64) -> egui::Color32 {
     colors[(track_id as usize) % colors.len()]
 }
 
-pub fn show_mixer(ui: &mut egui::Ui, project: &mut ProjectConfig, selected_track_id: &mut Option<u64>) {
+pub fn show_mixer(
+    ui: &mut egui::Ui,
+    project: &mut ProjectConfig,
+    selected_track_id: &mut Option<u64>,
+    spectrum: Option<&SpectrumAnalyzer>,
+) {
     let state_id = ui.id().with("mixer_state");
     let mut state = ui.data_mut(|d| d.get_temp::<MixerState>(state_id)).unwrap_or_default();
 
-    show_mixer_impl(ui, project, selected_track_id, &mut state);
+    show_mixer_impl(ui, project, selected_track_id, spectrum, &mut state);
 
     ui.data_mut(|d| d.insert_temp(state_id, state));
 }
@@ -51,6 +57,7 @@ pub fn show_mixer_impl(
     ui: &mut egui::Ui,
     project: &mut ProjectConfig,
     selected_track_id: &mut Option<u64>,
+    spectrum: Option<&SpectrumAnalyzer>,
     state: &mut MixerState,
 ) {
     ui.heading("Console Mixer");
@@ -182,6 +189,13 @@ pub fn show_mixer_impl(
                                 };
                             }
                             ui.label(egui::RichText::new(format!("{} FX Nodes", track.nodes.len())).size(11.0));
+
+                            ui.separator();
+                            ui.collapsing("Spectrum", |ui| {
+                                let dummy_spec = SpectrumAnalyzer::new();
+                                let spec_ref = spectrum.unwrap_or(&dummy_spec);
+                                show_spectrum(ui, spec_ref, 115.0, 40.0);
+                            });
                         });
                     });
 
@@ -259,6 +273,13 @@ pub fn show_mixer_impl(
                         ui.add_space(4.0);
                         ui.label(egui::RichText::new("Pan").size(11.0));
                         ui.add(egui::Slider::new(&mut state.master_pan, -1.0..=1.0).text(""));
+
+                        ui.separator();
+                        ui.collapsing("Spectrum", |ui| {
+                            let dummy_spec = SpectrumAnalyzer::new();
+                            let spec_ref = spectrum.unwrap_or(&dummy_spec);
+                            show_spectrum(ui, spec_ref, 115.0, 40.0);
+                        });
                     });
                 });
         });
@@ -312,7 +333,7 @@ mod tests {
         let ctx = egui::Context::default();
         let _ = ctx.run(egui::RawInput::default(), |ctx| {
             egui::CentralPanel::default().show(ctx, |ui| {
-                show_mixer(ui, &mut project, &mut selected_track_id);
+                show_mixer(ui, &mut project, &mut selected_track_id, None);
             });
         });
     }
@@ -331,7 +352,7 @@ mod tests {
         let ctx = egui::Context::default();
         let _ = ctx.run(egui::RawInput::default(), |ctx| {
             egui::CentralPanel::default().show(ctx, |ui| {
-                show_mixer_impl(ui, &mut project, &mut selected_track_id, &mut state);
+                show_mixer_impl(ui, &mut project, &mut selected_track_id, None, &mut state);
             });
         });
 
@@ -349,7 +370,7 @@ mod tests {
         let ctx = egui::Context::default();
         let _ = ctx.run(egui::RawInput::default(), |ctx| {
             egui::CentralPanel::default().show(ctx, |ui| {
-                show_mixer_impl(ui, &mut project, &mut selected_track_id, &mut state);
+                show_mixer_impl(ui, &mut project, &mut selected_track_id, None, &mut state);
             });
         });
 
