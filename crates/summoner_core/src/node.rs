@@ -206,6 +206,7 @@ pub const KNOWN_NODE_TYPES: &[&str] = &[
     "OscSaw",
     "OscPulse",
     "OscTriangle",
+    "OscLFO",
     "FilterSVF",
     "FilterLadder",
     "EnvADSR",

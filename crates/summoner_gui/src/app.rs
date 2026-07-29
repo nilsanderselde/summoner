@@ -114,6 +114,9 @@ impl eframe::App for SummonerApp {
                     self.transport_running = false;
                     self.stage_view.trigger_panic();
                 }
+                "set_bpm" => {
+                    self.project.transport.bpm = 120.0;
+                }
                 "add_track" => {
                     let next_id = self.project.tracks.len() as u64 + 1;
                     self.project.tracks.push(summoner_project::schema::TrackConfig {
@@ -132,6 +135,25 @@ impl eframe::App for SummonerApp {
                         tuning_root_hz: None,
                         tuning_scl_path: None,
                     });
+                }
+                "render_wav" | "sfz_convert" | "auto_slice" | "load_preset" | "export_clap" | "toggle_simd" => {
+                    println!("Command palette action executed: {}", action);
+                }
+                action_str if action_str.starts_with("add_node_") => {
+                    let raw_kind = &action_str["add_node_".len()..];
+                    if let Some(&matched_kind) = summoner_core::node::KNOWN_NODE_TYPES
+                        .iter()
+                        .find(|&&k| k.to_lowercase() == raw_kind)
+                    {
+                        let tid = self.selected_track_id.unwrap_or(1);
+                        if let Some(track) = self.project.tracks.iter_mut().find(|t| t.id == tid) {
+                            track.nodes.push(summoner_project::schema::NodeConfig {
+                                kind: matched_kind.to_string(),
+                                params: std::collections::HashMap::new(),
+                            });
+                            self.current_view = ViewMode::NodeGraph(tid);
+                        }
+                    }
                 }
                 _ => {}
             }
