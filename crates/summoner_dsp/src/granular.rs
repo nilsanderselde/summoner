@@ -24,6 +24,8 @@ pub struct GranularSynthNode {
     pub density: f32,
     pub spray: f32,
     pub pitch_jitter: f32,
+    pub pitch_track_mode: bool,
+    pub base_pitch_ratio: f32,
     pub grains: [Grain; MAX_GRAINS],
     pub trigger_timer: f32,
     seed: u64,
@@ -38,6 +40,8 @@ impl GranularSynthNode {
             density: 10.0,
             spray: 0.0,
             pitch_jitter: 0.0,
+            pitch_track_mode: false,
+            base_pitch_ratio: 1.0,
             grains: [Grain::default(); MAX_GRAINS],
             trigger_timer: f32::MAX,
             seed: 0xDEADBEEF12345678,
@@ -46,6 +50,17 @@ impl GranularSynthNode {
 
     pub fn load_buffer(&mut self, sample_buffer: Arc<SampleBuffer>) {
         self.buffer = sample_buffer;
+    }
+
+    pub fn set_note_pitch(&mut self, note_hz: f32, root_hz: f32) {
+        if root_hz > 0.0 {
+            self.base_pitch_ratio = note_hz / root_hz;
+        }
+    }
+
+    pub fn set_midi_note(&mut self, note: u8) {
+        let note_hz = 440.0 * 2.0f32.powf((note as f32 - 69.0) / 12.0);
+        self.base_pitch_ratio = note_hz / 440.0;
     }
 
     fn next_prng(&mut self) -> f32 {
@@ -70,7 +85,12 @@ impl GranularSynthNode {
 
             let grain_duration_sec = (self.grain_size_ms / 1000.0).max(0.005);
             let duration_samples = grain_duration_sec * self.sample_rate as f32;
-            let pitch_ratio = 2.0f32.powf(pitch_jitter_semitones / 12.0);
+            let base_ratio = if self.pitch_track_mode {
+                self.base_pitch_ratio
+            } else {
+                1.0
+            };
+            let pitch_ratio = base_ratio * 2.0f32.powf(pitch_jitter_semitones / 12.0);
 
             *grain = Grain {
                 start_pos,
@@ -195,6 +215,17 @@ mod tests {
         }));
 
         assert!(result.is_ok(), "GranularSynthNode process_block caused allocation!");
+    }
+
+    #[test]
+    fn test_granular_pitch_track_mode() {
+        let mut granular = GranularSynthNode::new(44100);
+        granular.pitch_track_mode = true;
+        granular.set_midi_note(69); // A4 = 440Hz -> ratio 1.0
+        assert!((granular.base_pitch_ratio - 1.0).abs() < 1e-4);
+
+        granular.set_midi_note(81); // A5 = 880Hz -> ratio 2.0
+        assert!((granular.base_pitch_ratio - 2.0).abs() < 1e-4);
     }
 }
 

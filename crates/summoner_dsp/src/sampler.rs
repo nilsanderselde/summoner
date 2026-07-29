@@ -9,7 +9,10 @@ use std::sync::Arc;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LoopMode {
     NoLoop,
+    Loop,
     LoopContinuous,
+    PingPong,
+    LoopRelease,
 }
 
 /// A shared buffer holding audio samples (e.g., loaded from a WAV/FLAC file).
@@ -87,6 +90,51 @@ impl MultiSampleBank {
 
     pub fn find_region(&self, note: u8, velocity: u8) -> Option<&SampleRegion> {
         self.regions.iter().find(|r| r.matches(note, velocity))
+    }
+
+    pub fn auto_map_regions_by_keycenter(&mut self) {
+        if self.regions.is_empty() {
+            return;
+        }
+        self.regions.sort_by_key(|r| r.pitch_keycenter);
+        let n = self.regions.len();
+        for i in 0..n {
+            let lokey = if i == 0 {
+                0
+            } else {
+                ((self.regions[i - 1].pitch_keycenter as u16 + self.regions[i].pitch_keycenter as u16) / 2 + 1) as u8
+            };
+            let hikey = if i == n - 1 {
+                127
+            } else {
+                ((self.regions[i].pitch_keycenter as u16 + self.regions[i + 1].pitch_keycenter as u16) / 2) as u8
+            };
+            self.regions[i].lokey = lokey;
+            self.regions[i].hikey = hikey;
+        }
+    }
+
+    pub fn find_nearest_region(&self, note: u8, velocity: u8) -> Option<&SampleRegion> {
+        if self.regions.is_empty() {
+            return None;
+        }
+        if let Some(r) = self.find_region(note, velocity) {
+            return Some(r);
+        }
+        let vel_matches: Vec<&SampleRegion> = self
+            .regions
+            .iter()
+            .filter(|r| velocity >= r.lovel && velocity <= r.hivel)
+            .collect();
+
+        let pool = if !vel_matches.is_empty() {
+            vel_matches
+        } else {
+            self.regions.iter().collect()
+        };
+
+        pool.into_iter()
+            .min_by_key(|r| (note as i32 - r.pitch_keycenter as i32).abs())
     }
 }
 
@@ -171,6 +219,12 @@ impl SamplerNode {
         self.playback_position = 0.0;
         self.playing = true;
     }
+
+    pub fn trigger_pitch(&mut self, semitones: f64) {
+        self.playback_rate = 2.0f64.powf(semitones / 12.0);
+        self.playback_position = 0.0;
+        self.playing = true;
+    }
     
     pub fn stop(&mut self) {
         self.playing = false;
@@ -240,6 +294,8 @@ pub struct MultiSamplerNode {
     active_region_idx: Option<usize>,
     playback_position: f64,
     playback_rate: f64,
+    playback_reverse: bool,
+    key_released: bool,
     playing: bool,
 }
 
@@ -250,23 +306,40 @@ impl MultiSamplerNode {
             active_region_idx: None,
             playback_position: 0.0,
             playback_rate: 1.0,
+            playback_reverse: false,
+            key_released: false,
             playing: false,
         }
     }
 
     pub fn trigger_note(&mut self, note: u8, velocity: u8) {
-        if let Some(idx) = self.bank.regions.iter().position(|r| r.matches(note, velocity)) {
-            let region = &self.bank.regions[idx];
-            let semitone_diff = note as f64 - region.pitch_keycenter as f64;
-            self.playback_rate = 2.0f64.powf(semitone_diff / 12.0);
-            self.active_region_idx = Some(idx);
-            self.playback_position = 0.0;
-            self.playing = true;
+        if let Some(region) = self.bank.find_nearest_region(note, velocity) {
+            if let Some(idx) = self.bank.regions.iter().position(|r| r.sample_path == region.sample_path && r.pitch_keycenter == region.pitch_keycenter) {
+                let semitone_diff = note as f64 - region.pitch_keycenter as f64;
+                self.playback_rate = 2.0f64.powf(semitone_diff / 12.0);
+                self.active_region_idx = Some(idx);
+                self.playback_position = 0.0;
+                self.playback_reverse = false;
+                self.key_released = false;
+                self.playing = true;
+            }
         }
     }
 
     pub fn stop(&mut self) {
-        self.playing = false;
+        self.key_released = true;
+        if let Some(idx) = self.active_region_idx {
+            let region = &self.bank.regions[idx];
+            if matches!(region.loop_mode, LoopMode::NoLoop | LoopMode::LoopRelease) {
+                if region.loop_mode == LoopMode::NoLoop {
+                    self.playing = false;
+                }
+            } else {
+                self.playing = false;
+            }
+        } else {
+            self.playing = false;
+        }
     }
 }
 
@@ -298,12 +371,32 @@ impl SignalProcessor for MultiSamplerNode {
                         let pos_floor = self.playback_position.floor() as usize;
                         let frac = (self.playback_position - pos_floor as f64) as f32;
 
-                        if region.loop_mode == LoopMode::LoopContinuous && region.loop_end > region.loop_start && region.loop_end <= total_frames {
-                            if pos_floor >= region.loop_end {
-                                let loop_len = region.loop_end - region.loop_start;
-                                self.playback_position = region.loop_start as f64 + ((self.playback_position - region.loop_start as f64) % loop_len as f64);
+                        let is_looping_mode = matches!(
+                            region.loop_mode,
+                            LoopMode::Loop | LoopMode::LoopContinuous
+                        ) || (region.loop_mode == LoopMode::LoopRelease && !self.key_released);
+
+                        let is_pingpong = region.loop_mode == LoopMode::PingPong;
+
+                        if (is_looping_mode || is_pingpong) && region.loop_end > region.loop_start && region.loop_end <= total_frames {
+                            let loop_start_f = region.loop_start as f64;
+                            let loop_end_f = region.loop_end as f64;
+                            let loop_len = loop_end_f - loop_start_f;
+
+                            if is_pingpong {
+                                if !self.playback_reverse && pos_floor >= region.loop_end {
+                                    self.playback_reverse = true;
+                                    let over = self.playback_position - loop_end_f;
+                                    self.playback_position = (loop_end_f - over).max(loop_start_f);
+                                } else if self.playback_reverse && self.playback_position <= loop_start_f {
+                                    self.playback_reverse = false;
+                                    let under = loop_start_f - self.playback_position;
+                                    self.playback_position = (loop_start_f + under).min(loop_end_f);
+                                }
+                            } else if pos_floor >= region.loop_end {
+                                self.playback_position = loop_start_f + ((self.playback_position - loop_start_f) % loop_len);
                             }
-                        } else if pos_floor >= total_frames {
+                        } else if pos_floor >= total_frames || self.playback_position < 0.0 {
                             self.playing = false;
                             for ch in 0..outputs.len() {
                                 outputs[ch][i..block_size].fill(0.0);
@@ -319,7 +412,11 @@ impl SignalProcessor for MultiSamplerNode {
                             outputs[ch][i] = s0 + frac * (s1 - s0);
                         }
 
-                        self.playback_position += self.playback_rate;
+                        if self.playback_reverse {
+                            self.playback_position -= self.playback_rate;
+                        } else {
+                            self.playback_position += self.playback_rate;
+                        }
                     }
                 } else {
                     for out in outputs.iter_mut() {
@@ -490,6 +587,68 @@ mod tests {
             assert!(buffer.channels > 0);
             assert!(!buffer.data.is_empty());
         }
+    }
+
+    #[test]
+    fn test_auto_map_regions_by_keycenter() {
+        let mut bank = MultiSampleBank::new();
+        bank.add_region(SampleRegion::new(0, 0, 36, "c2.wav"));
+        bank.add_region(SampleRegion::new(0, 0, 60, "c4.wav"));
+        bank.add_region(SampleRegion::new(0, 0, 84, "c6.wav"));
+
+        bank.auto_map_regions_by_keycenter();
+
+        assert_eq!(bank.regions[0].lokey, 0);
+        assert_eq!(bank.regions[0].hikey, 48); // (36+60)/2 = 48
+        assert_eq!(bank.regions[1].lokey, 49);
+        assert_eq!(bank.regions[1].hikey, 72); // (60+84)/2 = 72
+        assert_eq!(bank.regions[2].lokey, 73);
+        assert_eq!(bank.regions[2].hikey, 127);
+    }
+
+    #[test]
+    fn test_find_nearest_region_and_velocity() {
+        let mut bank = MultiSampleBank::new();
+        let mut r1 = SampleRegion::new(0, 50, 40, "low.wav");
+        r1.lovel = 0;
+        r1.hivel = 64;
+
+        let mut r2 = SampleRegion::new(51, 127, 80, "high.wav");
+        r2.lovel = 65;
+        r2.hivel = 127;
+
+        bank.add_region(r1);
+        bank.add_region(r2);
+
+        // Note 55 is outside r1's note range, but matches r1 keycenter (40) better than r2 (80)
+        let nearest = bank.find_nearest_region(55, 30);
+        assert!(nearest.is_some());
+        assert_eq!(nearest.unwrap().sample_path, "low.wav");
+    }
+
+    #[test]
+    fn test_ping_pong_loop_mode() {
+        let mut bank = MultiSampleBank::new();
+        let mut reg = SampleRegion::new(0, 127, 60, "test_pp.wav");
+        reg.loop_mode = LoopMode::PingPong;
+        reg.loop_start = 10;
+        reg.loop_end = 20;
+
+        let dummy_data: Vec<f32> = (0..100).map(|i| i as f32).collect();
+        reg.buffer = Some(Arc::new(SampleBuffer::new(dummy_data, 44100, 1)));
+
+        bank.add_region(reg);
+        let mut node = MultiSamplerNode::new(bank);
+        node.trigger_note(60, 100);
+
+        let mut inputs: [&[f32]; 0] = [];
+        let mut out_l = vec![0.0f32; 30];
+        let mut outputs = [&mut out_l[..]];
+        let ctx = ProcessContext::new(44100, 120.0, 0);
+
+        node.process_block(&inputs, &mut outputs, &ctx);
+        // Position should advance into loop and reverse at 20
+        assert!(node.playing);
     }
 }
 
