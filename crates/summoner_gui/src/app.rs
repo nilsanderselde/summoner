@@ -33,6 +33,7 @@ pub struct SummonerApp {
     pub param_bus: Arc<ParamBus>,
     pub transport_running: bool,
     pub playhead_beat: f64,
+    pub current_beat: f64,
     pub pixels_per_beat: f32,
     pub current_view: ViewMode,
     pub node_graph_state: NodeGraphState,
@@ -66,6 +67,7 @@ impl SummonerApp {
             param_bus,
             transport_running: false,
             playhead_beat: 0.0,
+            current_beat: 0.0,
             pixels_per_beat: 40.0,
             current_view: ViewMode::Arranger,
             node_graph_state: NodeGraphState::default(),
@@ -104,7 +106,12 @@ impl eframe::App for SummonerApp {
                     let tid = self.selected_track_id.unwrap_or(1);
                     self.current_view = ViewMode::NodeGraph(tid);
                 }
-                "transport_play" => self.transport_running = !self.transport_running,
+                "transport_play" => {
+                    self.transport_running = !self.transport_running;
+                    if !self.transport_running {
+                        self.automation_registry.stop_record_all();
+                    }
+                }
                 "transport_record" => {
                     self.recording_all = !self.recording_all;
                     if self.recording_all {
@@ -115,6 +122,7 @@ impl eframe::App for SummonerApp {
                 }
                 "panic" => {
                     self.transport_running = false;
+                    self.automation_registry.stop_record_all();
                     self.stage_view.trigger_panic();
                 }
                 "set_bpm" => {
@@ -162,10 +170,18 @@ impl eframe::App for SummonerApp {
             }
         }
 
-        // Advance playhead beat when transport is running
+        // Advance playhead beat when transport is running & apply/record automation
         if self.transport_running {
             let dt = ctx.input(|i| i.stable_dt) as f64;
-            self.playhead_beat += dt * (self.project.transport.bpm / 60.0);
+            let delta_beat = dt * (self.project.transport.bpm / 60.0);
+            self.playhead_beat += delta_beat;
+            self.current_beat = self.playhead_beat;
+
+            if self.recording_all {
+                self.automation_timeline.record_beat(&mut self.automation_registry, self.current_beat);
+            } else {
+                self.automation_timeline.apply_beat(&self.automation_registry, self.current_beat);
+            }
         }
 
         // Top menu bar
@@ -211,6 +227,9 @@ impl eframe::App for SummonerApp {
             ui.horizontal(|ui| {
                 if ui.button(if self.transport_running { "⏹ Stop" } else { "▶ Play" }).clicked() {
                     self.transport_running = !self.transport_running;
+                    if !self.transport_running {
+                        self.automation_registry.stop_record_all();
+                    }
                 }
 
                 let mut record_btn = ui.button(if self.recording_all { "🔴 Recording All" } else { "⏺ Record All (Shift+R)" });
@@ -247,6 +266,7 @@ impl eframe::App for SummonerApp {
                         &mut self.playhead_beat,
                         self.transport_running,
                         &mut self.pixels_per_beat,
+                        Some(&self.automation_timeline),
                     ) {
                         self.current_view = target_view;
                     }
@@ -305,3 +325,70 @@ impl eframe::App for SummonerApp {
         });
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use summoner_project::create_default_project;
+    use summoner_sequencer::automation_timeline::{AutomationCurve, AutomationLane, AutomationPoint, Interpolation};
+
+    #[test]
+    fn test_record_all_toggle_wires_registry() {
+        let project = create_default_project("Test Automation App");
+        let param_bus = Arc::new(ParamBus::new());
+        let mut app = SummonerApp::new(project, param_bus);
+
+        // Register a parameter
+        let cutoff = app.automation_registry.register_param("cutoff", 0.5);
+
+        // Start record all
+        app.recording_all = true;
+        app.automation_registry.start_record_all();
+        assert!(app.automation_registry.is_recording_all());
+
+        // Mutate parameter value
+        cutoff.set(0.8);
+
+        // Record beat at 1.0
+        app.automation_timeline.record_beat(&mut app.automation_registry, 1.0);
+
+        // Verify lane created and recorded point
+        assert!(app.automation_timeline.lanes.contains_key("cutoff"));
+        let lane = app.automation_timeline.lanes.get("cutoff").unwrap();
+        assert_eq!(lane.curve.points.len(), 1);
+        assert_eq!(lane.curve.points[0].beat, 1.0);
+        assert!((lane.curve.points[0].value - 0.8).abs() < 1e-5);
+
+        // Stop record all
+        app.recording_all = false;
+        app.automation_registry.stop_record_all();
+        assert!(!app.automation_registry.is_recording_all());
+    }
+
+    #[test]
+    fn test_automation_replay_sets_param() {
+        let project = create_default_project("Test Replay App");
+        let param_bus = Arc::new(ParamBus::new());
+        let mut app = SummonerApp::new(project, param_bus);
+
+        let gain_param = app.automation_registry.register_param("gain", 0.2);
+
+        // Build automation curve with points at beat 0 (0.2) and beat 4 (0.9)
+        let curve = AutomationCurve::new(vec![
+            AutomationPoint { beat: 0.0, value: 0.2, interp: Interpolation::Linear },
+            AutomationPoint { beat: 4.0, value: 0.9, interp: Interpolation::Linear },
+        ]);
+        app.automation_timeline.add_lane(AutomationLane {
+            param_id: "gain".to_string(),
+            curve,
+        });
+
+        // Replay at beat 2.0 (midpoint linear should give ~0.55)
+        app.current_beat = 2.0;
+        app.automation_timeline.apply_beat(&app.automation_registry, app.current_beat);
+
+        let val = gain_param.get();
+        assert!((val - 0.55).abs() < 1e-4);
+    }
+}
+

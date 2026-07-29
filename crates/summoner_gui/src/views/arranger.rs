@@ -23,6 +23,7 @@ pub fn show_arranger(
     playhead_beat: &mut f64,
     _transport_running: bool,
     pixels_per_beat: &mut f32,
+    automation_timeline: Option<&summoner_sequencer::automation_timeline::AutomationTimeline>,
 ) -> Option<ViewMode> {
     let mut navigation_target = None;
 
@@ -327,6 +328,19 @@ pub fn show_arranger(
                     }
                 }
             });
+
+            // Render Automation Lanes for this track if present in automation_timeline
+            if let Some(timeline) = automation_timeline {
+                let track_prefix = format!("track_{}", track.id);
+                for (param_id, lane) in &timeline.lanes {
+                    let belongs_to_track = param_id.contains(&track_prefix)
+                        || (track.id == 1 && !timeline.lanes.keys().any(|k| k.contains("track_")));
+                    if belongs_to_track {
+                        show_automation_lane(ui, lane, ppb, total_beats);
+                    }
+                }
+            }
+
             ui.add_space(4.0);
         }
 
@@ -345,6 +359,56 @@ pub fn show_arranger(
     navigation_target
 }
 
+pub fn show_automation_lane(
+    ui: &mut egui::Ui,
+    lane: &summoner_sequencer::automation_timeline::AutomationLane,
+    pixels_per_beat: f32,
+    total_beats: f32,
+) {
+    ui.horizontal(|ui| {
+        ui.allocate_ui(egui::vec2(180.0, 24.0), |ui| {
+            ui.horizontal(|ui| {
+                ui.add_space(20.0);
+                ui.label(
+                    egui::RichText::new(format!("📈 {}", lane.param_id))
+                        .font(egui::FontId::proportional(11.0))
+                        .color(egui::Color32::from_rgb(241, 196, 15)),
+                );
+            });
+        });
+
+        ui.separator();
+
+        let (lane_resp, painter) = ui.allocate_painter(
+            egui::vec2(total_beats * pixels_per_beat, 24.0),
+            egui::Sense::hover(),
+        );
+        let lane_rect = lane_resp.rect;
+
+        painter.rect_filled(lane_rect, 1.0, egui::Color32::from_rgb(14, 14, 18));
+
+        let points = &lane.curve.points;
+        if !points.is_empty() {
+            let stroke = egui::Stroke::new(1.5_f32, egui::Color32::from_rgb(241, 196, 15));
+            let mut prev_pos: Option<egui::Pos2> = None;
+
+            for pt in points {
+                let x = lane_rect.left() + (pt.beat as f32 * pixels_per_beat);
+                let norm_val = pt.value.clamp(0.0, 1.0);
+                let y = lane_rect.bottom() - (norm_val * (lane_rect.height() - 4.0) + 2.0);
+                let curr_pos = egui::pos2(x, y);
+
+                if let Some(prev) = prev_pos {
+                    painter.line_segment([prev, curr_pos], stroke);
+                }
+                painter.circle_filled(curr_pos, 2.5, egui::Color32::from_rgb(255, 230, 120));
+                prev_pos = Some(curr_pos);
+            }
+        }
+    });
+    ui.add_space(2.0);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -360,7 +424,7 @@ mod tests {
         let ctx = egui::Context::default();
         let _ = ctx.run(egui::RawInput::default(), |ctx| {
             egui::CentralPanel::default().show(ctx, |ui| {
-                show_arranger(ui, &mut project, &mut selected_id, &mut playhead, false, &mut ppb);
+                show_arranger(ui, &mut project, &mut selected_id, &mut playhead, false, &mut ppb, None);
             });
         });
     }
