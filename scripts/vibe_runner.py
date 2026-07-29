@@ -3,7 +3,7 @@
 Summoner DAW — Smart Vibe Runner (Real-Time JSON Streamed)
 Runs agy in autonomous loop, parsing stream-json events to render live tool calls,
 thinking progress, code edits, and streaming agent text.
-Includes dynamic roadmap selection, robust quota detection, exponential backoff, rate limit safety, and clear error reporting.
+Includes dynamic roadmap selection, robust quota detection, exponential backoff, rate limit safety, and detailed backend log error reporting.
 """
 
 import sys
@@ -21,12 +21,15 @@ if hasattr(sys.stdout, "reconfigure"):
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+LOG_FILE_PATH = os.path.join(SCRIPT_DIR, "vibe_last.log")
+
 def get_latest_roadmap_path():
     """
     Finds the latest dated roadmap file in local/ matching ROADMAP_YYYYMMDD.md
     or ROADMAP*.md, sorting by date/name.
     """
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    base_dir = os.path.dirname(SCRIPT_DIR)
     local_dir = os.path.join(base_dir, "local")
     dated_roadmaps = glob.glob(os.path.join(local_dir, "ROADMAP_[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9].md"))
     
@@ -111,9 +114,11 @@ def is_quota_error(output_text):
     return False
 
 def extract_error_snippet(full_output_str):
-    """Extracts non-JSON or explicit error lines from output buffer."""
-    lines = [line.strip() for line in full_output_str.splitlines() if line.strip()]
+    """Extracts non-JSON, explicit error lines, and backend logs from agy log file."""
     extracted = []
+    
+    # 1. Parse JSON error events from stream output
+    lines = [line.strip() for line in full_output_str.splitlines() if line.strip()]
     for line in lines:
         if line.startswith("{") and line.endswith("}"):
             try:
@@ -121,13 +126,25 @@ def extract_error_snippet(full_output_str):
                 if data.get("event") in ("error", "result"):
                     err = data.get("error") or data.get("result", {}).get("error") or data.get("message")
                     if err:
-                        extracted.append(f"[JSON Error] {err}")
+                        extracted.append(f"[CLI Result] {err}")
                 continue
             except Exception:
                 pass
         extracted.append(line)
-    
-    return extracted[-6:] if extracted else lines[-6:]
+
+    # 2. Inspect backend CLI log file for underlying error/warning details
+    if os.path.exists(LOG_FILE_PATH):
+        try:
+            with open(LOG_FILE_PATH, "r", encoding="utf-8", errors="replace") as f:
+                log_lines = f.readlines()
+                for l in log_lines:
+                    l_str = l.strip()
+                    if (l_str.startswith("E") or "error" in l_str.lower() or "failed" in l_str.lower()) and "singleflight" not in l_str.lower():
+                        extracted.append(f"[Backend Log] {l_str}")
+        except Exception:
+            pass
+
+    return extracted[-8:] if extracted else lines[-8:]
 
 def run_vibe_turn(step_num):
     latest_roadmap = get_latest_roadmap_path()
@@ -138,7 +155,8 @@ def run_vibe_turn(step_num):
     agy_flags = [
         "agy", "-p", prompt,
         "--output-format", "stream-json",
-        "--dangerously-skip-permissions"
+        "--dangerously-skip-permissions",
+        "--log-file", LOG_FILE_PATH
     ]
     
     proc = subprocess.Popen(
@@ -201,6 +219,15 @@ def run_vibe_turn(step_num):
         log(f"  ⚠️ Stream read error: {e}", "\033[31m")
 
     proc.wait()
+    
+    # Read full output log if available to combine with stream output
+    if os.path.exists(LOG_FILE_PATH):
+        try:
+            with open(LOG_FILE_PATH, "r", encoding="utf-8", errors="replace") as f:
+                full_output.append(f.read())
+        except Exception:
+            pass
+
     return proc.returncode, "\n".join(full_output)
 
 def main():
@@ -223,7 +250,7 @@ def main():
             log("\n❌ ------------------- TURN ERROR DETECTED -------------------", "\033[1;31m")
             error_snippet = extract_error_snippet(output)
             if error_snippet:
-                log("   Error Details:", "\033[33m")
+                log(f"   Detailed Log Snippet ({LOG_FILE_PATH}):", "\033[33m")
                 for err_line in error_snippet:
                     log(f"     > {err_line}", "\033[37m")
             

@@ -8,6 +8,10 @@ __pycache__/
 *.pyo
 *.pyd
 
+# Log files
+*.log
+scripts/*.log
+
 # OS junk
 .DS_Store
 Thumbs.db
