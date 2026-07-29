@@ -50,6 +50,7 @@ fn print_usage() {
     println!("  summon sfz-convert [SFZ_DIR] [OUTPUT_DIR]");
     println!("  summon auto-slice [ASSET_PATH] [OUTPUT_TOML] [--threshold 0.15] [--algorithm spectral_flux]");
     println!("  summon load-preset [PRESET_TOML] [SAMPLES_BASE_DIR]");
+    println!("  summon generate-pattern [PROJECT_PATH] [TRACK_ID] [--algo markov2|cellular_automata] [--rule 30] [--generations 4]");
 }
 
 fn main() {
@@ -593,6 +594,79 @@ fn main() {
             
             #[cfg(not(feature = "gui"))]
             eprintln!("Error: Summoner was not compiled with the 'gui' feature. Recompile with `cargo build --features gui`.");
+        }
+        "generate-pattern" => {
+            let proj_path = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            let track_id_str = args.get(3).map(|s| s.as_str()).unwrap_or("0");
+            let track_id: u64 = track_id_str.parse().unwrap_or(0);
+
+            let mut algo = "markov2";
+            let mut rule: u8 = 30;
+            let mut generations: usize = 4;
+
+            let mut i = 4;
+            while i < args.len() {
+                match args[i].as_str() {
+                    "--algo" => {
+                        if let Some(val) = args.get(i + 1) {
+                            algo = val.as_str();
+                            i += 1;
+                        }
+                    }
+                    "--rule" => {
+                        if let Some(val) = args.get(i + 1) {
+                            rule = val.parse().unwrap_or(30);
+                            i += 1;
+                        }
+                    }
+                    "--generations" => {
+                        if let Some(val) = args.get(i + 1) {
+                            generations = val.parse().unwrap_or(4);
+                            i += 1;
+                        }
+                    }
+                    _ => {}
+                }
+                i += 1;
+            }
+
+            if !Path::new(proj_path).exists() {
+                eprintln!("Error: Project file '{}' not found.", proj_path);
+                process::exit(1);
+            }
+
+            let content = fs::read_to_string(proj_path).expect("Failed to read project file");
+            let mut project = parse_project_toml(&content).expect("Failed to parse project TOML");
+
+            if let Some(track) = project.tracks.iter_mut().find(|t| t.id == track_id) {
+                use summoner_sequencer::generative::GenerativeEngine;
+                if let Some(ref mut seq) = track.sequence {
+                    match algo {
+                        "markov2" => {
+                            let notes: Vec<u8> = seq.steps.iter().map(|s| s.note as u8).collect();
+                            let gen_notes = GenerativeEngine::mutate_sequence_markov2(&notes, seq.steps.len(), 42);
+                            for (idx, &n) in gen_notes.iter().enumerate() {
+                                if idx < seq.steps.len() {
+                                    seq.steps[idx].note = n as f64;
+                                }
+                            }
+                            println!("Generated pattern on track {} using markov2 algorithm", track_id);
+                        }
+                        "cellular_automata" => {
+                            let init: Vec<bool> = seq.steps.iter().map(|s| s.gate > 0.0).collect();
+                            let ca_rhythm = GenerativeEngine::cellular_automata_multi_gen(&init, rule, generations);
+                            GenerativeEngine::apply_rhythm_to_sequence(&ca_rhythm, &mut seq.steps);
+                            println!("Generated pattern on track {} using cellular_automata rule {} ({} generations)", track_id, rule, generations);
+                        }
+                        _ => {
+                            println!("Unknown algorithm '{}', defaulting to markov2", algo);
+                        }
+                    }
+                }
+            }
+
+            let serialized = serialize_project_toml(&project).expect("Failed to serialize project");
+            fs::write(proj_path, serialized).expect("Failed to save project TOML");
         }
         _ => {
             print_usage();

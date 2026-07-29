@@ -331,3 +331,55 @@ impl SignalProcessor for FilterComb {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+    fn test_simd_scalar_agreement_filter_svf() {
+        let mut filter_simd = FilterSVF::new(1000.0, 0.707);
+        let mut filter_scalar = FilterSVF::new(1000.0, 0.707);
+
+        let ctx = ProcessContext {
+            sample_rate: 44100,
+            bpm: 120.0,
+            frame_position: 0,
+            is_playing: true,
+            param_bus: None,
+            tuning_root_hz: 440.0,
+            tuning_edo_divisions: 12,
+        };
+
+        let input_signal: Vec<f32> = (0..256).map(|i| (i as f32 * 0.1).sin()).collect();
+        let input_slice = input_signal.as_slice();
+
+        let mut simd_out_lp = vec![0.0f32; 256];
+        let mut simd_out_hp = vec![0.0f32; 256];
+        let mut simd_out_bp = vec![0.0f32; 256];
+        let mut simd_outputs: Vec<&mut [f32]> = vec![
+            simd_out_lp.as_mut_slice(),
+            simd_out_hp.as_mut_slice(),
+            simd_out_bp.as_mut_slice(),
+        ];
+
+        filter_simd.process_block_simd(&[input_slice], &mut simd_outputs, &ctx);
+
+        let mut scalar_out_lp = vec![0.0f32; 256];
+        let mut scalar_out_hp = vec![0.0f32; 256];
+        let mut scalar_out_bp = vec![0.0f32; 256];
+
+        for i in 0..256 {
+            let (lp, hp, bp) = filter_scalar.process_sample(input_signal[i], ctx.sample_rate);
+            scalar_out_lp[i] = lp;
+            scalar_out_hp[i] = hp;
+            scalar_out_bp[i] = bp;
+        }
+
+        for i in 0..256 {
+            let diff_lp = (simd_out_lp[i] - scalar_out_lp[i]).abs();
+            assert!(diff_lp < 1e-4, "FilterSVF LP mismatch at {}: SIMD {} vs Scalar {}", i, simd_out_lp[i], scalar_out_lp[i]);
+        }
+    }
+}

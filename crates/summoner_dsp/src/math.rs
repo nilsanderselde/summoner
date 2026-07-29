@@ -188,3 +188,38 @@ impl SignalProcessor for VCA {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+    fn test_simd_scalar_agreement_math_add() {
+        let mut math_add = MathAdd;
+        let ctx = ProcessContext {
+            sample_rate: 44100,
+            bpm: 120.0,
+            frame_position: 0,
+            is_playing: true,
+            param_bus: None,
+            tuning_root_hz: 440.0,
+            tuning_edo_divisions: 12,
+        };
+
+        let in1: Vec<f32> = (0..64).map(|i| i as f32 * 0.5).collect();
+        let in2: Vec<f32> = (0..64).map(|i| i as f32 * 1.5).collect();
+        let inputs = [in1.as_slice(), in2.as_slice()];
+
+        let mut out = vec![0.0f32; 64];
+        let mut outputs = [out.as_mut_slice()];
+
+        math_add.process_block(&inputs, &mut outputs, &ctx);
+
+        for i in 0..64 {
+            let expected = in1[i] + in2[i];
+            let diff = (outputs[0][i] - expected).abs();
+            assert!(diff < 1e-6, "MathAdd mismatch at {}: output {} vs expected {}", i, outputs[0][i], expected);
+        }
+    }
+}

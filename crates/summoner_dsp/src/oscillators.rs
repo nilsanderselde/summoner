@@ -442,7 +442,7 @@ mod tests {
 
     #[test]
     #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
-    fn test_osc_saw_simd_vs_scalar() {
+    fn test_simd_scalar_agreement_osc_saw() {
         use summoner_core::node::ProcessContext;
         
         let mut osc_simd = OscSaw::new(440.0);
@@ -463,10 +463,8 @@ mod tests {
         osc_simd.process_block_simd(&mut slices_simd, &ctx);
         
         let mut outputs_scalar = vec![vec![0.0; 1024]];
-        // Scalar process loop manually since process_block defaults to SIMD
         let mut i = 0;
-        let num_samples = 1024;
-        while i < num_samples {
+        while i < 1024 {
             let val = osc_scalar.process_sample(ctx.sample_rate);
             outputs_scalar[0][i] = val;
             i += 1;
@@ -476,5 +474,11 @@ mod tests {
             let diff = (outputs_simd[0][i] - outputs_scalar[0][i]).abs();
             assert!(diff < 1e-3, "Mismatch at index {}: SIMD {} vs Scalar {} (diff {})", i, outputs_simd[0][i], outputs_scalar[0][i], diff);
         }
+    }
+
+    #[test]
+    #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+    fn test_osc_saw_simd_vs_scalar() {
+        test_simd_scalar_agreement_osc_saw();
     }
 }
