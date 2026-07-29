@@ -2,6 +2,12 @@
 /target/
 **/*.rs.bk
 
+# Python cache & bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
 # OS junk
 .DS_Store
 Thumbs.db
@@ -21,4 +27,4 @@ desktop.ini
 # Agent local temporary state
 .gemini/tmp/
 /local/*
-.summoner_gui_state.toml
+.summoner_gui_state.toml
