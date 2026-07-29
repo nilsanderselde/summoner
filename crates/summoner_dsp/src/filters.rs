@@ -42,6 +42,12 @@ impl FilterLadder {
             return 0.0;
         }
 
+        let input = if input.is_finite() { input.clamp(-100.0, 100.0) } else { 0.0 };
+        if !self.stage[0].is_finite() {
+            self.stage = [0.0; 4];
+            self.stage_tanh = [0.0; 3];
+        }
+
         let cutoff_norm = (self.cutoff / sample_rate as f32).clamp(0.0001, 0.49);
         let f = (PI * cutoff_norm).sin();
         let k = self.resonance;
@@ -61,7 +67,13 @@ impl FilterLadder {
 
         self.stage[3] += f * (self.stage_tanh[2] - self.stage[3].tanh());
 
-        self.stage[3]
+        if !self.stage[3].is_finite() {
+            self.stage = [0.0; 4];
+            self.stage_tanh = [0.0; 3];
+            0.0
+        } else {
+            self.stage[3]
+        }
     }
 }
 
@@ -122,6 +134,10 @@ impl FilterSVF {
             return (0.0, 0.0, 0.0);
         }
 
+        let input = if input.is_finite() { input.clamp(-100.0, 100.0) } else { 0.0 };
+        if !self.ic1eq.is_finite() { self.ic1eq = 0.0; }
+        if !self.ic2eq.is_finite() { self.ic2eq = 0.0; }
+
         let g = (PI * (self.cutoff / sample_rate as f32).clamp(0.0001, 0.49)).tan();
         let k = 1.0 / self.resonance;
 
@@ -136,9 +152,9 @@ impl FilterSVF {
         self.ic1eq = 2.0 * v1 - self.ic1eq;
         self.ic2eq = 2.0 * v2 - self.ic2eq;
 
-        let lowpass = v2;
-        let bandpass = v1;
-        let highpass = input - k * v1 - v2;
+        let lowpass = if v2.is_finite() { v2 } else { 0.0 };
+        let bandpass = if v1.is_finite() { v1 } else { 0.0 };
+        let highpass = if (input - k * v1 - v2).is_finite() { input - k * v1 - v2 } else { 0.0 };
 
         (lowpass, highpass, bandpass)
     }

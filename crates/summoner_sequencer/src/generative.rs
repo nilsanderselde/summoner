@@ -122,13 +122,13 @@ impl GenerativeEngine {
         }
         let pulses = pulses.min(steps);
         let mut pattern = vec![false; steps as usize];
-        let mut count = 0;
+        let mut count = steps;
         for i in 0..steps {
-            count += pulses;
             if count >= steps {
                 count -= steps;
                 pattern[i as usize] = true;
             }
+            count += pulses;
         }
         pattern
     }

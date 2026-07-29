@@ -186,7 +186,7 @@ pub fn show_node_graph(
 
         // Collapsible Performance Profile Panel (Step 383)
         let perf_rect = egui::Rect::from_min_size(rect.right_top() - egui::vec2(270.0, -10.0), egui::vec2(260.0, 200.0));
-        let mut perf_ui = ui.child_ui(perf_rect, egui::Layout::top_down(egui::Align::Min));
+        let mut perf_ui = ui.child_ui(perf_rect, egui::Layout::top_down(egui::Align::Min), None);
         egui::Frame::window(ui.style()).show(&mut perf_ui, |ui| {
             ui.collapsing("⏱️ Performance Profile", |ui| {
                 ui.checkbox(&mut graph.parallel_execution, "Parallel Rayon Execution");
