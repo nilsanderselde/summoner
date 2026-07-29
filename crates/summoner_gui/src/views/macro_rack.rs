@@ -402,6 +402,7 @@ mod tests {
                 }
             ],
             sequence: None,
+            clips: Vec::new(),
             connections: Vec::new(),
             tuning_edo: None,
             tuning_root_hz: None,
@@ -444,6 +445,7 @@ mod tests {
                 },
             ],
             sequence: None,
+            clips: Vec::new(),
             connections: Vec::new(),
             tuning_edo: None,
             tuning_root_hz: None,

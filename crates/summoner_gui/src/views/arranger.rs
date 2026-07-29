@@ -50,6 +50,7 @@ pub fn show_arranger(
                 send_level: 0.0,
                 nodes: Vec::new(),
                 sequence: None,
+                clips: Vec::new(),
                 connections: Vec::new(),
                 tuning_edo: None,
                 tuning_root_hz: None,
@@ -67,6 +68,8 @@ pub fn show_arranger(
                             step_division: 0.25,
                             clip_color: None,
                             clip_name: Some("Pattern Clip".to_string()),
+                            name: "Pattern Clip".to_string(),
+                            is_unique: true,
                             steps: vec![summoner_project::schema::TrackerStepConfig {
                                 note: 60.0,
                                 velocity: 0.8,
@@ -74,6 +77,9 @@ pub fn show_arranger(
                                 probability: 1.0,
                                 ratchet: 1,
                                 micro_shift: 0,
+                                swing: 0.0,
+                                pan: 0.0,
+                                pitch_offset: 0.0,
                                 active: true,
                             }; 16],
                         });
@@ -255,6 +261,7 @@ pub fn show_arranger(
                 let mut sequences_to_delete: Vec<usize> = Vec::new();
                 let ctrl_d = ui.input(|i| i.modifiers.ctrl && i.key_pressed(egui::Key::D));
 
+                let track_id = track.id;
                 let all_seqs = track.all_sequences_mut();
                 for (seq_idx, seq) in all_seqs.into_iter().enumerate() {
                     let start_x = lane_rect.left() + (seq.start_beat as f32 * ppb);
@@ -266,7 +273,7 @@ pub fn show_arranger(
                         egui::vec2(clip_width, lane_rect.height() - 8.0),
                     );
 
-                    let clip_id = ui.id().with(("clip", track.id, seq_idx));
+                    let clip_id = ui.id().with(("clip", track_id, seq_idx));
                     let clip_resp = ui.interact(clip_rect, clip_id, egui::Sense::click_and_drag());
 
                     if clip_resp.dragged() {
@@ -280,17 +287,17 @@ pub fn show_arranger(
                     }
 
                     if clip_resp.clicked() {
-                        *selected_track_id = Some(track.id);
+                        *selected_track_id = Some(track_id);
                     }
 
                     if is_selected && ctrl_d {
                         let cloned = seq.duplicate();
-                        duplicate_clip_target = Some((track.id, cloned));
+                        duplicate_clip_target = Some((track_id, cloned));
                     }
 
                     if clip_resp.double_clicked() {
-                        *selected_track_id = Some(track.id);
-                        navigation_target = Some(ViewMode::PianoRoll(track.id));
+                        *selected_track_id = Some(track_id);
+                        navigation_target = Some(ViewMode::PianoRoll(track_id));
                     }
 
                     let mut delete_clip = false;
@@ -298,7 +305,7 @@ pub fn show_arranger(
 
                     clip_resp.context_menu(|ui| {
                         if ui.button("🎹 Edit in Piano Roll").clicked() {
-                            navigation_target = Some(ViewMode::PianoRoll(track.id));
+                            navigation_target = Some(ViewMode::PianoRoll(track_id));
                             ui.close_menu();
                         }
                         if ui.button("📋 Duplicate Clip (Ctrl+D)").clicked() {
@@ -329,7 +336,7 @@ pub fn show_arranger(
 
                     if dup_clip {
                         let cloned = seq.duplicate();
-                        duplicate_clip_target = Some((track.id, cloned));
+                        duplicate_clip_target = Some((track_id, cloned));
                     }
 
                     if delete_clip {
@@ -350,13 +357,13 @@ pub fn show_arranger(
                         let border_stroke = if seq.is_unique {
                             egui::Stroke::new(2.0f32, egui::Color32::from_rgb(255, 200, 50))
                         } else {
-                            egui::Stroke::new(1.5f32, track_color(track.id))
+                            egui::Stroke::new(1.5f32, track_color(track_id))
                         };
                         painter.rect_stroke(clip_rect, 4.0, border_stroke);
 
                         // Render RMS Envelope shape from WaveformCache
                         let dummy_samples: Vec<f32> = (0..64).map(|i| (i as f32 * 0.2).sin() * 0.8).collect();
-                        let cache_key = format!("track_{}_clip_{}", track.id, seq.start_beat);
+                        let cache_key = format!("track_{}_clip_{}", track_id, seq.start_beat);
                         let rms_points = waveform_cache.get_or_compute_rms(&cache_key, &dummy_samples, 16);
                         if !rms_points.is_empty() {
                             let mut shape_points = Vec::with_capacity(rms_points.len() * 2);
@@ -568,6 +575,8 @@ mod tests {
                 step_division: 0.25,
                 clip_color: None,
                 clip_name: None,
+                name: "Clip".to_string(),
+                is_unique: true,
                 steps: vec![],
             });
             // Simulate dragging 2 beats

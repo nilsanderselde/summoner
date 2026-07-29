@@ -423,6 +423,7 @@ impl eframe::App for SummonerApp {
                         send_level: 0.0,
                         nodes: Vec::new(),
                         sequence: None,
+                        clips: Vec::new(),
                         connections: Vec::new(),
                         tuning_edo: None,
                         tuning_root_hz: None,
@@ -737,6 +738,8 @@ impl eframe::App for SummonerApp {
                             step_division: 16.0,
                             clip_color: None,
                             clip_name: None,
+                            name: "Pattern Clip".to_string(),
+                            is_unique: true,
                             steps: vec![summoner_project::schema::TrackerStepConfig {
                                 note: 60.0,
                                 velocity: 0.8,
@@ -744,6 +747,9 @@ impl eframe::App for SummonerApp {
                                 probability: 1.0,
                                 ratchet: 1,
                                 micro_shift: 0,
+                                swing: 0.0,
+                                pan: 0.0,
+                                pitch_offset: 0.0,
                                 active: true,
                             }; 16],
                         });

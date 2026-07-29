@@ -33,10 +33,20 @@ fn test_export_clap_plugin() {
     assert!(plugin_dir.exists());
     assert!(plugin_dir.join("Cargo.toml").exists());
     assert!(plugin_dir.join("src").join("lib.rs").exists());
+    assert!(plugin_dir.join("build.sh").exists());
+    assert!(plugin_dir.join("build.bat").exists());
 
-    // verify that it parses as a valid toml
+    // Verify that Cargo.toml parses and contains expected name
     let cargo_content = fs::read_to_string(plugin_dir.join("Cargo.toml")).unwrap();
     assert!(cargo_content.contains("test_session"));
+
+    // Verify that the generated CLAP plugin passes cargo check
+    let check_status = Command::new("cargo")
+        .arg("check")
+        .current_dir(&plugin_dir)
+        .status()
+        .expect("Failed to run cargo check on generated CLAP plugin");
+    assert!(check_status.success(), "Generated CLAP plugin failed cargo check");
     
     fs::remove_dir_all(&temp_dir).unwrap();
 }

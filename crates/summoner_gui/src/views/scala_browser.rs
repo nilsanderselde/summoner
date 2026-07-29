@@ -164,6 +164,7 @@ mod tests {
             send_level: 0.0,
             nodes: Vec::new(),
             sequence: None,
+            clips: Vec::new(),
             connections: Vec::new(),
             tuning_edo: None,
             tuning_root_hz: None,

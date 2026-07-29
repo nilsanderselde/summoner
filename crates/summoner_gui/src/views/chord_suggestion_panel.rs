@@ -78,6 +78,8 @@ mod tests {
             step_division: 0.25,
             clip_color: None,
             clip_name: None,
+            name: "Clip".to_string(),
+            is_unique: true,
             steps: vec![
                 summoner_project::schema::TrackerStepConfig {
                     note: 60.0,
@@ -86,6 +88,9 @@ mod tests {
                     probability: 1.0,
                     ratchet: 1,
                     micro_shift: 0,
+                    swing: 0.0,
+                    pan: 0.0,
+                    pitch_offset: 0.0,
                     active: false,
                 };
                 16
