@@ -77,25 +77,85 @@ def parse_quota_reset_seconds(text):
     """
     Parses the quota reset time from error output.
     Strategy (in priority order):
-      1. Absolute timestamp: "M/D/YYYY, H:MM:SS AM/PM" (e.g. Antigravity quota message)
-      2. Absolute time only: "H:MM:SS AM/PM" or "HH:MM:SS"
-      3. Relative duration: "2h 30m", "45m", "90s" etc.
-      4. Default: 3600s (1 hour)
+      1. Explicit "Resets in X" or "Resets at Y" clauses.
+      2. Relative duration strings: "3h18m38s", "45m", "90s" etc.
+      3. Absolute date+time: "M/D/YYYY, H:MM:SS AM/PM"
+      4. Absolute time only: "H:MM:SS AM/PM" or "HH:MM:SS" (Fallback, prone to matching log timestamps)
     Always adds a 90-second safety buffer. Caps at 24 hours max.
     """
     now = datetime.now()
     BUFFER = 90   # seconds of extra cushion after reset time
     MAX_SLEEP = 86400  # 24 hours hard cap
 
-    # 1. Absolute date+time: e.g. "7/29/2026, 4:13:12 PM"
+    # 1. Target explicit "Resets in" or "Resets at" sentences first to avoid log noise
+    m_resets = re.search(r"resets?\s+(in|at)\s+(.*?)(?:\.|,|;|:|$)", text, re.IGNORECASE)
+    if m_resets:
+        preposition = m_resets.group(1).lower()
+        target_str = m_resets.group(2)
+
+        if preposition == "in":
+            h_match = re.search(r"(\d+)\s*(?:h|hr|hour|hours)(?![a-z])", target_str, re.IGNORECASE)
+            m_match = re.search(r"(\d+)\s*(?:m|min|minute|minutes)(?![a-z])", target_str, re.IGNORECASE)
+            s_match = re.search(r"(\d+)\s*(?:s|sec|second|seconds)(?![a-z])", target_str, re.IGNORECASE)
+            
+            h = int(h_match.group(1)) if h_match else 0
+            m = int(m_match.group(1)) if m_match else 0
+            s = int(s_match.group(1)) if s_match else 0
+            
+            if h or m or s:
+                return min((h * 3600) + (m * 60) + s + BUFFER, MAX_SLEEP)
+                
+        elif preposition == "at":
+            t_match = re.search(r"(\d{1,2}):(\d{2}):(\d{2})\s*(AM|PM)?", target_str, re.IGNORECASE)
+            if t_match:
+                hour, minute, second = int(t_match.group(1)), int(t_match.group(2)), int(t_match.group(3))
+                ampm = (t_match.group(4) or "").upper()
+                if ampm == "PM" and hour != 12:
+                    hour += 12
+                elif ampm == "AM" and hour == 12:
+                    hour = 0
+                try:
+                    reset_dt = now.replace(hour=hour, minute=minute, second=second, microsecond=0)
+                    delta = (reset_dt - now).total_seconds() + BUFFER
+                    if delta < 0:
+                        delta += 86400
+                    return min(int(delta), MAX_SLEEP)
+                except Exception:
+                    pass
+
+    # 2. General Relative duration strings: "2h", "30m", "90s", "3h18m38s"
+    # Negative lookahead (?![a-z]) ensures 'h', 'm', 's' are actual units and not parts of words.
+    found_any = False
+    h, m, s = 0, 0, 0
+
+    m_h = re.search(r"(\d+)\s*(?:h|hr|hour|hours)(?![a-z])", text, re.IGNORECASE)
+    if m_h:
+        h = int(m_h.group(1))
+        found_any = True
+
+    m_m = re.search(r"(\d+)\s*(?:m|min|minute|minutes)(?![a-z])", text, re.IGNORECASE)
+    if m_m:
+        m = int(m_m.group(1))
+        found_any = True
+
+    m_s = re.search(r"(\d+)\s*(?:s|sec|second|seconds)(?![a-z])", text, re.IGNORECASE)
+    if m_s:
+        s = int(m_s.group(1))
+        found_any = True
+
+    if found_any:
+        total = (h * 3600) + (m * 60) + s + BUFFER
+        return min(total, MAX_SLEEP)
+
+    # 3. Absolute date+time: e.g. "7/29/2026, 4:13:12 PM"
     m_abs = re.search(
-        r"(\d{1,2})/(\d{1,2})/(\d{4}),?\s+(\d{1,2}):(\d{2}):(\d{2})\s*(AM|PM)",
+        r"(\d{1,2})/(\d{1,2})/(\d{4}),?\s+(\d{1,2}):(\d{2}):(\d{2})\s*(AM|PM)?",
         text, re.IGNORECASE
     )
     if m_abs:
         month, day, year = int(m_abs.group(1)), int(m_abs.group(2)), int(m_abs.group(3))
         hour, minute, second = int(m_abs.group(4)), int(m_abs.group(5)), int(m_abs.group(6))
-        ampm = m_abs.group(7).upper()
+        ampm = (m_abs.group(7) or "").upper()
         if ampm == "PM" and hour != 12:
             hour += 12
         elif ampm == "AM" and hour == 12:
@@ -110,7 +170,7 @@ def parse_quota_reset_seconds(text):
         except Exception:
             pass
 
-    # 2. Absolute time only: "4:13:12 PM" or "16:13:12"
+    # 4. Absolute time only: "4:13:12 PM" or "16:13:12"
     m_time = re.search(
         r"\b(\d{1,2}):(\d{2}):(\d{2})\s*(AM|PM)?\b",
         text, re.IGNORECASE
@@ -131,31 +191,7 @@ def parse_quota_reset_seconds(text):
         except Exception:
             pass
 
-    # 3. Relative duration strings: "2h", "30m", "90s" etc.
-    # Only match when followed by a duration unit word boundary, not bare letters like "PM"
-    rel_hours, rel_minutes, rel_seconds = 0, 0, 0
-    found_any = False
-
-    m_h = re.search(r"(\d+)\s*(?:hr|hour|hours)\b", text, re.IGNORECASE)
-    if m_h:
-        rel_hours = int(m_h.group(1))
-        found_any = True
-
-    m_m = re.search(r"(\d+)\s*(?:min|minute|minutes)\b", text, re.IGNORECASE)
-    if m_m:
-        rel_minutes = int(m_m.group(1))
-        found_any = True
-
-    m_s = re.search(r"(\d+)\s*(?:sec|second|seconds)\b", text, re.IGNORECASE)
-    if m_s:
-        rel_seconds = int(m_s.group(1))
-        found_any = True
-
-    if found_any:
-        total = (rel_hours * 3600) + (rel_minutes * 60) + rel_seconds + BUFFER
-        return min(total, MAX_SLEEP)
-
-    # 4. Default: 1 hour
+    # 5. Default: 1 hour
     return 3600
 
 def is_quota_error(output_text):
