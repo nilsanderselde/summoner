@@ -31,3 +31,4 @@ pub use smoothing::SmoothParam;
 pub use graph::{Edge, NodeGraph};
 pub use voice::{PolyphonicVoice, VoicePool};
 pub use param_bus::{AtomicParam, ParamBus, ParamId};
+pub use node::KNOWN_NODE_TYPES;

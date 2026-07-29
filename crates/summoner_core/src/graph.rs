@@ -29,6 +29,7 @@ pub struct NodeGraph {
     pub name: String,
     pub nodes: Vec<Box<dyn AudioNode>>,
     pub edges: Vec<Edge>,
+    pub has_cycle: bool,
     evaluation_order: Vec<usize>,
     // Pre-allocated buffers for each node's output: buffers[node_index][channel][sample_index]
     buffers: Vec<Vec<Vec<Sample>>>,
@@ -44,6 +45,7 @@ impl std::fmt::Debug for NodeGraph {
             .field("name", &self.name)
             .field("node_count", &self.nodes.len())
             .field("edges", &self.edges)
+            .field("has_cycle", &self.has_cycle)
             .field("evaluation_order", &self.evaluation_order)
             .finish()
     }
@@ -55,6 +57,7 @@ impl NodeGraph {
             name: name.into(),
             nodes: Vec::new(),
             edges: Vec::new(),
+            has_cycle: false,
             evaluation_order: Vec::new(),
             buffers: Vec::new(),
             input_buffers: Vec::new(),
@@ -114,7 +117,10 @@ impl NodeGraph {
 
         // If cycle detected or unvisited nodes exist, fallback to linear index order
         if order.len() < num_nodes {
+            self.has_cycle = true;
             order = (0..num_nodes).collect();
+        } else {
+            self.has_cycle = false;
         }
 
         self.evaluation_order = order;

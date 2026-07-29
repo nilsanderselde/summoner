@@ -10,6 +10,22 @@ toolName = "run_shell_command"
 commandPrefix = "git"
 decision = "allow"
 
+# Allow Python execution
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "python"
+decision = "allow"
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "python3"
+decision = "allow"
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "py"
+decision = "allow"
+
 # Allow file reading, writing, and editing
 [[rule]]
 toolName = "read_file"

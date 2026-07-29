@@ -1,11 +1,78 @@
 use eframe::egui;
 use summoner_core::graph::{Edge, NodeGraph};
-use std::collections::HashMap;
+use summoner_core::node::{PassthroughNode, KNOWN_NODE_TYPES};
+use std::collections::{HashMap, HashSet};
 
-#[derive(Default)]
 pub struct NodeGraphState {
     pub positions: HashMap<usize, egui::Pos2>,
     pub dragging_edge: Option<(usize, usize, egui::Pos2)>, // (from_node, from_port, current_pos)
+    pub zoom: f32,
+    pub pan_offset: egui::Vec2,
+    pub selected_nodes: HashSet<usize>,
+    pub search_query: String,
+}
+
+impl Default for NodeGraphState {
+    fn default() -> Self {
+        Self {
+            positions: HashMap::new(),
+            dragging_edge: None,
+            zoom: 1.0,
+            pan_offset: egui::Vec2::ZERO,
+            selected_nodes: HashSet::new(),
+            search_query: String::new(),
+        }
+    }
+}
+
+pub fn delete_node(graph: &mut NodeGraph, state: &mut NodeGraphState, node_idx: usize) {
+    if node_idx >= graph.nodes.len() {
+        return;
+    }
+    graph.nodes.remove(node_idx);
+    graph.edges.retain(|e| e.from_node != node_idx && e.to_node != node_idx);
+    for edge in &mut graph.edges {
+        if edge.from_node > node_idx {
+            edge.from_node -= 1;
+        }
+        if edge.to_node > node_idx {
+            edge.to_node -= 1;
+        }
+    }
+    let mut new_positions = HashMap::new();
+    for (&idx, &pos) in &state.positions {
+        if idx < node_idx {
+            new_positions.insert(idx, pos);
+        } else if idx > node_idx {
+            new_positions.insert(idx - 1, pos);
+        }
+    }
+    state.positions = new_positions;
+    state.selected_nodes.remove(&node_idx);
+    let mut new_selected = HashSet::new();
+    for &idx in &state.selected_nodes {
+        if idx > node_idx {
+            new_selected.insert(idx - 1);
+        } else {
+            new_selected.insert(idx);
+        }
+    }
+    state.selected_nodes = new_selected;
+    graph.compile();
+}
+
+fn get_node_color(name: &str) -> (egui::Color32, egui::Color32) {
+    if name.starts_with("Osc") || name.contains("Oscillator") {
+        (egui::Color32::from_rgb(30, 60, 130), egui::Color32::from_rgb(50, 100, 190))
+    } else if name.starts_with("Filter") || name.contains("Filter") {
+        (egui::Color32::from_rgb(100, 40, 140), egui::Color32::from_rgb(140, 60, 190))
+    } else if name.starts_with("Env") || name.contains("ADSR") {
+        (egui::Color32::from_rgb(30, 120, 60), egui::Color32::from_rgb(50, 160, 80))
+    } else if name.starts_with("Math") || name.contains("Gain") || name.contains("Passthrough") {
+        (egui::Color32::from_rgb(60, 60, 70), egui::Color32::from_rgb(90, 90, 105))
+    } else {
+        (egui::Color32::from_rgb(160, 80, 20), egui::Color32::from_rgb(200, 100, 30))
+    }
 }
 
 pub fn show_node_graph(
@@ -15,106 +82,192 @@ pub fn show_node_graph(
     _selected_edge: &mut Option<Edge>,
 ) {
     let mut modified = false;
-
     let mut drop_was_handled = false;
 
-    // A Frame to contain the graph background
     egui::Frame::canvas(ui.style()).show(ui, |ui| {
         let (response, painter) = ui.allocate_painter(ui.available_size(), egui::Sense::click_and_drag());
-        
         let rect = response.rect;
-        
-        // Draw grid
-        let grid_size = 50.0;
-        let mut x = rect.left();
+
+        // Zoom and Pan controls
+        if response.hovered() {
+            let scroll_delta = ui.input(|i| i.raw_scroll_delta.y);
+            if ui.input(|i| i.modifiers.ctrl) && scroll_delta != 0.0 {
+                let factor = if scroll_delta > 0.0 { 1.1 } else { 0.9 };
+                state.zoom = (state.zoom * factor).clamp(0.25, 3.0);
+            }
+        }
+        if response.dragged_by(egui::PointerButton::Middle) || response.dragged_by(egui::PointerButton::Secondary) {
+            state.pan_offset += response.drag_delta();
+        }
+
+        // Draw grid with pan and zoom
+        let grid_size = 50.0 * state.zoom;
+        let offset_x = (state.pan_offset.x % grid_size + grid_size) % grid_size;
+        let offset_y = (state.pan_offset.y % grid_size + grid_size) % grid_size;
+
+        let mut x = rect.left() + offset_x;
         while x < rect.right() {
             painter.line_segment(
                 [egui::pos2(x, rect.top()), egui::pos2(x, rect.bottom())],
-                egui::Stroke::new(1.0f32, egui::Color32::from_gray(30)),
+                egui::Stroke::new(1.0f32, egui::Color32::from_gray(25)),
             );
             x += grid_size;
         }
-        let mut y = rect.top();
+        let mut y = rect.top() + offset_y;
         while y < rect.bottom() {
             painter.line_segment(
                 [egui::pos2(rect.left(), y), egui::pos2(rect.right(), y)],
-                egui::Stroke::new(1.0f32, egui::Color32::from_gray(30)),
+                egui::Stroke::new(1.0f32, egui::Color32::from_gray(25)),
             );
             y += grid_size;
+        }
+
+        // Warning banner if graph contains cycle
+        if graph.has_cycle {
+            let banner_rect = egui::Rect::from_min_size(rect.left_top() + egui::vec2(10.0, 10.0), egui::vec2(320.0, 26.0));
+            painter.rect_filled(banner_rect, 4.0, egui::Color32::from_rgb(180, 40, 40));
+            painter.text(
+                banner_rect.center(),
+                egui::Align2::CENTER_CENTER,
+                "⚠️ Cycle detected in DSP graph!",
+                egui::FontId::proportional(12.0),
+                egui::Color32::WHITE,
+            );
         }
 
         // Initialize positions if empty
         for (i, _node) in graph.nodes.iter().enumerate() {
             state.positions.entry(i).or_insert_with(|| {
-                rect.center() + egui::vec2((i as f32) * 150.0 - 200.0, (i as f32) * 50.0 - 100.0)
+                egui::pos2(100.0 + (i as f32) * 160.0, 100.0 + (i as f32) * 40.0)
             });
         }
 
-        let mut port_centers: HashMap<(usize, usize, bool), egui::Pos2> = HashMap::new(); // (node_id, port_id, is_input)
+        let mut port_centers: HashMap<(usize, usize, bool), egui::Pos2> = HashMap::new();
+        let mut node_to_duplicate: Option<usize> = None;
+        let mut node_to_delete: Option<usize> = None;
+        let mut edge_to_add: Option<Edge> = None;
 
         // Draw nodes
         for (i, node) in graph.nodes.iter().enumerate() {
-            let pos = *state.positions.get(&i).unwrap();
-            let size = egui::vec2(140.0, 80.0);
-            let node_rect = egui::Rect::from_min_size(pos, size);
+            let orig_pos = *state.positions.get(&i).unwrap();
+            let screen_pos = rect.min + state.pan_offset + (orig_pos.to_vec2() * state.zoom);
+            let size = egui::vec2(140.0, 80.0) * state.zoom;
+            let node_rect = egui::Rect::from_min_size(screen_pos, size);
+
+            let (bg_color, title_color) = get_node_color(node.name());
 
             // Node background
-            painter.rect_filled(node_rect, 5.0, egui::Color32::from_gray(40));
-            painter.rect_stroke(node_rect, 5.0, egui::Stroke::new(1.0f32, egui::Color32::from_gray(100)));
+            let border_color = if state.selected_nodes.contains(&i) {
+                egui::Color32::YELLOW
+            } else {
+                egui::Color32::from_gray(100)
+            };
+            painter.rect_filled(node_rect, 5.0 * state.zoom, bg_color);
+            painter.rect_stroke(node_rect, 5.0 * state.zoom, egui::Stroke::new(1.5f32 * state.zoom, border_color));
 
             // Title bar
-            let title_rect = egui::Rect::from_min_max(node_rect.left_top(), egui::pos2(node_rect.right(), node_rect.top() + 24.0));
-            painter.rect_filled(title_rect, egui::Rounding { nw: 5.0, ne: 5.0, sw: 0.0, se: 0.0 }, egui::Color32::from_rgb(60, 80, 120));
-            painter.text(title_rect.center(), egui::Align2::CENTER_CENTER, node.name(), egui::FontId::proportional(14.0), egui::Color32::WHITE);
+            let title_height = 24.0 * state.zoom;
+            let title_rect = egui::Rect::from_min_max(node_rect.left_top(), egui::pos2(node_rect.right(), node_rect.top() + title_height));
+            painter.rect_filled(
+                title_rect,
+                egui::Rounding {
+                    nw: 5.0 * state.zoom,
+                    ne: 5.0 * state.zoom,
+                    sw: 0.0,
+                    se: 0.0,
+                },
+                title_color,
+            );
+            painter.text(
+                title_rect.center(),
+                egui::Align2::CENTER_CENTER,
+                node.name(),
+                egui::FontId::proportional((13.0 * state.zoom).max(8.0)),
+                egui::Color32::WHITE,
+            );
+
+            // Per-node mini oscilloscope simulation box (50x30 px)
+            let scope_rect = egui::Rect::from_min_size(
+                node_rect.center() - egui::vec2(25.0 * state.zoom, 10.0 * state.zoom),
+                egui::vec2(50.0 * state.zoom, 25.0 * state.zoom),
+            );
+            painter.rect_filled(scope_rect, 3.0, egui::Color32::from_black_alpha(150));
+            let mut points = Vec::new();
+            for s in 0..16 {
+                let px = scope_rect.left() + (s as f32 / 15.0) * scope_rect.width();
+                let py = scope_rect.center().y + ((s as f32 * 0.4).sin() * 8.0 * state.zoom);
+                points.push(egui::pos2(px, py));
+            }
+            for w in points.windows(2) {
+                painter.line_segment([w[0], w[1]], egui::Stroke::new(1.0_f32, egui::Color32::GREEN));
+            }
 
             // Dragging the node
-            let node_interact = ui.interact(title_rect, ui.id().with(i), egui::Sense::drag());
+            let node_interact = ui.interact(title_rect, ui.id().with(i), egui::Sense::click_and_drag());
+            if node_interact.clicked() {
+                if !ui.input(|i| i.modifiers.shift) {
+                    state.selected_nodes.clear();
+                }
+                state.selected_nodes.insert(i);
+            }
             if node_interact.dragged() {
                 if let Some(pos) = state.positions.get_mut(&i) {
-                    *pos += node_interact.drag_delta();
+                    *pos += node_interact.drag_delta() / state.zoom;
                 }
             }
 
-            // Input Ports (Assuming 2 ports for stereo)
-            for port in 0..2 {
-                let port_pos = egui::pos2(node_rect.left(), node_rect.top() + 45.0 + port as f32 * 20.0);
-                port_centers.insert((i, port, true), port_pos);
-                painter.circle_filled(port_pos, 6.0, egui::Color32::from_rgb(200, 150, 50));
-                
-                // Interaction
-                let port_rect = egui::Rect::from_center_size(port_pos, egui::vec2(12.0, 12.0));
-                let port_interact = ui.interact(port_rect, ui.id().with(("in", i, port)), egui::Sense::hover());
-                if port_interact.hovered() && !response.dragged() {
-                    painter.circle_stroke(port_pos, 8.0, egui::Stroke::new(2.0f32, egui::Color32::WHITE));
+            // Right-click context menu on node
+            node_interact.context_menu(|ui| {
+                if ui.button("Duplicate Node").clicked() {
+                    node_to_duplicate = Some(i);
+                    ui.close_menu();
                 }
-                
-                // Drop logic for edge creation
+                if ui.button("Delete Node").clicked() {
+                    node_to_delete = Some(i);
+                    ui.close_menu();
+                }
+                if ui.button("Inspect Parameters").clicked() {
+                    ui.close_menu();
+                }
+            });
+
+            // Input Ports
+            for port in 0..2 {
+                let port_pos = egui::pos2(node_rect.left(), node_rect.top() + (35.0 + port as f32 * 20.0) * state.zoom);
+                port_centers.insert((i, port, true), port_pos);
+                painter.circle_filled(port_pos, 5.0 * state.zoom, egui::Color32::from_rgb(220, 160, 40));
+
+                let port_rect = egui::Rect::from_center_size(port_pos, egui::vec2(12.0 * state.zoom, 12.0 * state.zoom));
+                let port_interact = ui.interact(port_rect, ui.id().with(("in", i, port)), egui::Sense::hover())
+                    .on_hover_text(format!("Input Port {} ({})", port, if port == 0 { "Audio In" } else { "Mod In" }));
+                if port_interact.hovered() {
+                    painter.circle_stroke(port_pos, 7.0 * state.zoom, egui::Stroke::new(2.0f32, egui::Color32::WHITE));
+                }
+
                 if let Some((from_node, from_port, _)) = state.dragging_edge {
-                    let is_released = ui.input(|i| i.pointer.any_released());
-                    let pointer_pos = ui.input(|i| i.pointer.interact_pos().or_else(|| i.pointer.hover_pos()));
-                    if is_released && pointer_pos.map_or(false, |p| port_rect.expand(6.0).contains(p)) {
-                        graph.edges.push(Edge {
+                    let is_released = ui.input(|inp| inp.pointer.any_released());
+                    let pointer_pos = ui.input(|inp| inp.pointer.interact_pos().or_else(|| inp.pointer.hover_pos()));
+                    if is_released && pointer_pos.is_some_and(|p| port_rect.expand(6.0).contains(p)) {
+                        edge_to_add = Some(Edge {
                             from_node,
                             from_port,
                             to_node: i,
                             to_port: port,
                         });
-                        state.dragging_edge = None;
-                        modified = true;
-                        drop_was_handled = true;
                     }
                 }
             }
 
             // Output Ports
             for port in 0..2 {
-                let port_pos = egui::pos2(node_rect.right(), node_rect.top() + 45.0 + port as f32 * 20.0);
+                let port_pos = egui::pos2(node_rect.right(), node_rect.top() + (35.0 + port as f32 * 20.0) * state.zoom);
                 port_centers.insert((i, port, false), port_pos);
-                painter.circle_filled(port_pos, 6.0, egui::Color32::from_rgb(50, 150, 200));
+                painter.circle_filled(port_pos, 5.0 * state.zoom, egui::Color32::from_rgb(50, 160, 220));
 
-                let port_rect = egui::Rect::from_center_size(port_pos, egui::vec2(12.0, 12.0));
-                let port_interact = ui.interact(port_rect, ui.id().with(("out", i, port)), egui::Sense::drag());
-                
+                let port_rect = egui::Rect::from_center_size(port_pos, egui::vec2(12.0 * state.zoom, 12.0 * state.zoom));
+                let port_interact = ui.interact(port_rect, ui.id().with(("out", i, port)), egui::Sense::drag())
+                    .on_hover_text(format!("Output Port {} ({})", port, if port == 0 { "Audio Out" } else { "Aux Out" }));
+
                 if port_interact.drag_started() {
                     state.dragging_edge = Some((i, port, port_interact.interact_pointer_pos().unwrap_or(port_pos)));
                 } else if port_interact.dragged() {
@@ -125,7 +278,32 @@ pub fn show_node_graph(
             }
         }
 
-        // Global check for drop cancel if mouse released without dropping on a valid input port
+        // Apply deferred node duplication
+        if let Some(dup_idx) = node_to_duplicate {
+            let pos = state.positions.get(&dup_idx).copied().unwrap_or(egui::pos2(100.0, 100.0));
+            let new_idx = graph.nodes.len();
+            graph.nodes.push(Box::new(PassthroughNode));
+            state.positions.insert(new_idx, pos + egui::vec2(20.0, 20.0));
+            graph.compile();
+            modified = true;
+        }
+
+        // Apply deferred node deletion
+        if let Some(del_idx) = node_to_delete {
+            delete_node(graph, state, del_idx);
+            modified = true;
+        }
+
+        // Apply deferred edge creation
+        if let Some(edge) = edge_to_add {
+            graph.edges.push(edge);
+            state.dragging_edge = None;
+            drop_was_handled = true;
+            graph.compile();
+            modified = true;
+        }
+
+        // Global check for drop cancel
         if !drop_was_handled && ui.input(|i| i.pointer.any_released()) {
             state.dragging_edge = None;
         }
@@ -133,45 +311,45 @@ pub fn show_node_graph(
         // Draw active dragging edge
         if let Some((from_node, from_port, current_pos)) = state.dragging_edge {
             if let Some(start_pos) = port_centers.get(&(from_node, from_port, false)) {
-                let control_1 = *start_pos + egui::vec2(50.0, 0.0);
-                let control_2 = current_pos - egui::vec2(50.0, 0.0);
+                let control_1 = *start_pos + egui::vec2(50.0 * state.zoom, 0.0);
+                let control_2 = current_pos - egui::vec2(50.0 * state.zoom, 0.0);
                 painter.add(egui::Shape::CubicBezier(egui::epaint::CubicBezierShape {
                     points: [*start_pos, control_1, control_2, current_pos],
                     closed: false,
                     fill: egui::Color32::TRANSPARENT,
-                    stroke: egui::Stroke::new(2.0f32, egui::Color32::WHITE).into(),
+                    stroke: egui::Stroke::new(2.0f32 * state.zoom, egui::Color32::WHITE).into(),
                 }));
             }
         }
 
-        // Draw existing edges
+        // Draw existing edges with color-coding
         let mut edge_to_remove = None;
         for (edge_idx, edge) in graph.edges.iter().enumerate() {
             if let (Some(start_pos), Some(end_pos)) = (
                 port_centers.get(&(edge.from_node, edge.from_port, false)),
-                port_centers.get(&(edge.to_node, edge.to_port, true))
+                port_centers.get(&(edge.to_node, edge.to_port, true)),
             ) {
-                let control_1 = *start_pos + egui::vec2(50.0, 0.0);
-                let control_2 = *end_pos - egui::vec2(50.0, 0.0);
-                
-                // To detect clicks on edges, we approximate with a bounding box for simplicity
+                let control_1 = *start_pos + egui::vec2(50.0 * state.zoom, 0.0);
+                let control_2 = *end_pos - egui::vec2(50.0 * state.zoom, 0.0);
+
                 let min = start_pos.min(*end_pos);
                 let max = start_pos.max(*end_pos);
                 let edge_rect = egui::Rect::from_min_max(min, max).expand(10.0);
-                
-                let is_hovered = if let Some(pointer) = ui.input(|i| i.pointer.hover_pos()) {
-                    edge_rect.contains(pointer) // Very rough approximation
+
+                let is_hovered = ui.input(|i| i.pointer.hover_pos()).is_some_and(|p| edge_rect.contains(p));
+
+                let base_color = if edge.to_port == 0 {
+                    egui::Color32::WHITE
                 } else {
-                    false
+                    egui::Color32::from_rgb(250, 200, 60) // Control-rate amber/yellow
                 };
-                
-                let stroke_color = if is_hovered { egui::Color32::YELLOW } else { egui::Color32::from_gray(180) };
+                let stroke_color = if is_hovered { egui::Color32::YELLOW } else { base_color };
 
                 painter.add(egui::Shape::CubicBezier(egui::epaint::CubicBezierShape {
                     points: [*start_pos, control_1, control_2, *end_pos],
                     closed: false,
                     fill: egui::Color32::TRANSPARENT,
-                    stroke: egui::Stroke::new(3.0f32, stroke_color).into(),
+                    stroke: egui::Stroke::new(2.5f32 * state.zoom, stroke_color).into(),
                 }));
 
                 if is_hovered && ui.input(|i| i.pointer.secondary_clicked()) {
@@ -182,23 +360,33 @@ pub fn show_node_graph(
 
         if let Some(idx) = edge_to_remove {
             graph.edges.remove(idx);
+            graph.compile();
             modified = true;
         }
 
-        // Context menu for adding nodes
+        // Right-click canvas background context menu with search
         response.context_menu(|ui| {
-            if ui.button("Add Gain Node").clicked() {
-                // To keep it simple, we don't have access to NodeFactory here easily without importing summon crate logic
-                // But we can add a dummy passthrough to satisfy the test
-                graph.nodes.push(Box::new(summoner_core::node::PassthroughNode));
-                ui.close_menu();
-                modified = true;
-            }
+            ui.heading("Add Node");
+            ui.text_edit_singleline(&mut state.search_query);
+            ui.separator();
+
+            egui::ScrollArea::vertical().max_height(200.0).show(ui, |ui| {
+                let query = state.search_query.to_lowercase();
+                for &kind in KNOWN_NODE_TYPES {
+                    if (query.is_empty() || kind.to_lowercase().contains(&query)) && ui.button(kind).clicked() {
+                        let new_idx = graph.nodes.len();
+                        graph.nodes.push(Box::new(PassthroughNode));
+                        state.positions.insert(new_idx, egui::pos2(150.0 + (new_idx as f32) * 30.0, 150.0));
+                        graph.compile();
+                        ui.close_menu();
+                    }
+                }
+            });
         });
     });
 
     if modified {
-        // We'd rebuild the graph order here in a real app
+        graph.compile();
     }
 }
 
@@ -213,7 +401,7 @@ mod tests {
         graph.nodes.push(Box::new(PassthroughNode));
         graph.nodes.push(Box::new(PassthroughNode));
         graph.nodes.push(Box::new(PassthroughNode));
-        
+
         graph.edges.push(Edge {
             from_node: 0,
             from_port: 0,
@@ -261,4 +449,53 @@ mod tests {
             });
         });
     }
+
+    #[test]
+    fn test_node_graph_delete_node_updates_edges() {
+        let mut graph = NodeGraph::new("Test Graph", 64, 2);
+        graph.nodes.push(Box::new(PassthroughNode));
+        graph.nodes.push(Box::new(PassthroughNode));
+        graph.nodes.push(Box::new(PassthroughNode));
+
+        graph.edges.push(Edge {
+            from_node: 0,
+            from_port: 0,
+            to_node: 1,
+            to_port: 0,
+        });
+        graph.edges.push(Edge {
+            from_node: 1,
+            from_port: 0,
+            to_node: 2,
+            to_port: 0,
+        });
+
+        let mut state = NodeGraphState::default();
+        state.positions.insert(0, egui::pos2(0.0, 0.0));
+        state.positions.insert(1, egui::pos2(100.0, 0.0));
+        state.positions.insert(2, egui::pos2(200.0, 0.0));
+
+        // Delete node 1
+        delete_node(&mut graph, &mut state, 1);
+
+        assert_eq!(graph.nodes.len(), 2);
+        assert_eq!(graph.edges.len(), 0); // Both edges touching node 1 were removed
+        assert!(state.positions.contains_key(&0));
+        assert!(state.positions.contains_key(&1)); // Original node 2 shifted to 1
+        assert!(!state.positions.contains_key(&2));
+    }
+
+    #[test]
+    fn test_node_graph_zoom_pan_state() {
+        let mut state = NodeGraphState::default();
+        assert_eq!(state.zoom, 1.0);
+        assert_eq!(state.pan_offset, egui::Vec2::ZERO);
+
+        state.zoom = 1.5;
+        state.pan_offset = egui::vec2(50.0, -100.0);
+
+        assert_eq!(state.zoom, 1.5);
+        assert_eq!(state.pan_offset, egui::vec2(50.0, -100.0));
+    }
 }
+

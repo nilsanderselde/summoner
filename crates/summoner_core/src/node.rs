@@ -196,10 +196,31 @@ impl AudioNode for SineOscillatorNode {
                     ch_slice[i] = val;
                 }
             }
-
         }
     }
 }
+
+/// Standard list of known DSP and utility node type names for graph editor and CLI.
+pub const KNOWN_NODE_TYPES: &[&str] = &[
+    "OscSine",
+    "OscSaw",
+    "OscPulse",
+    "OscTriangle",
+    "FilterSVF",
+    "FilterLadder",
+    "EnvADSR",
+    "MathAdd",
+    "MathMult",
+    "GainNode",
+    "DistortionNode",
+    "GranularSynthNode",
+    "EffectChorus",
+    "EffectFlanger",
+    "EffectPhaser",
+    "EffectDelay",
+    "EffectReverb",
+    "PassthroughNode",
+];
 
 #[cfg(test)]
 mod tests {
