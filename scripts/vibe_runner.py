@@ -3,13 +3,15 @@
 Summoner DAW — Smart Vibe Runner (Real-Time JSON Streamed)
 Runs agy in autonomous loop, parsing stream-json events to render live tool calls,
 thinking progress, code edits, and streaming agent text.
+Includes robust quota detection, exponential backoff, and rate limit safety.
 """
 
 import sys
 import subprocess
 import json
 import time
-from datetime import datetime
+import re
+from datetime import datetime, timedelta
 
 PROMPT = (
     "Read local/ROADMAP_20260729.md and previous analysis. "
@@ -24,10 +26,62 @@ AGY_FLAGS = [
     "--dangerously-skip-permissions"
 ]
 
+# Case-insensitive patterns indicating rate limits or quota exhaustion
+QUOTA_PATTERNS = [
+    r"resets?\s+in",
+    r"resets?\s+at",
+    r"quota\s+exceeded",
+    r"rate\s*limit",
+    r"resource_exhausted",
+    r"too\s+many\s+requests",
+    r"429\b",
+    r"over_query_limit"
+]
+
 def log(msg, color="\033[36m"):
     timestamp = datetime.now().strftime("%H:%M:%S")
     reset = "\033[0m"
     print(f"{color}[{timestamp}] {msg}{reset}", flush=True)
+
+def parse_quota_reset_seconds(text):
+    """
+    Parses reset time from error output (hours, minutes, seconds).
+    Returns total seconds to sleep (with safety buffer) or default if unparseable.
+    """
+    hours, minutes, seconds = 0, 0, 0
+    found_any = False
+
+    # Check for hours: 2h, 2 hours, 2 hrs
+    m_h = re.search(r"(\d+)\s*(?:h|hr|hour|hours)", text, re.IGNORECASE)
+    if m_h:
+        hours = int(m_h.group(1))
+        found_any = True
+
+    # Check for minutes: 30m, 30 mins, 30 minutes
+    m_m = re.search(r"(\d+)\s*(?:m|min|minute|minutes)", text, re.IGNORECASE)
+    if m_m:
+        minutes = int(m_m.group(1))
+        found_any = True
+
+    # Check for seconds: 45s, 45 secs, 45 seconds
+    m_s = re.search(r"(\d+)\s*(?:s|sec|second|seconds)", text, re.IGNORECASE)
+    if m_s:
+        seconds = int(m_s.group(1))
+        found_any = True
+
+    if found_any:
+        total_seconds = (hours * 3600) + (minutes * 60) + seconds + 120  # 2 minute safety buffer
+        return total_seconds
+    else:
+        # Default safe sleep time (1 hour = 3600s) if quota limit detected but exact time couldn't be parsed
+        return 3600
+
+def is_quota_error(output_text):
+    """Checks if output contains any quota or rate limiting signatures."""
+    for pattern in QUOTA_PATTERNS:
+        if re.search(pattern, output_text, re.IGNORECASE):
+            return True
+    return False
 
 def run_vibe_turn(step_num):
     log(f"🤖 Starting Vibe Turn #{step_num}...", "\033[1;36m")
@@ -90,28 +144,32 @@ def run_vibe_turn(step_num):
 
 def main():
     step = 1
+    consecutive_failures = 0
     log("🚀 Summoner Autonomous Vibe Runner Started", "\033[1;35m")
     
     while True:
         code, output = run_vibe_turn(step)
         
         if code == 0:
+            consecutive_failures = 0
             log(f"🎉 Step #{step} complete. Sleeping 10s before next task...", "\033[32m")
             step += 1
             time.sleep(10)
         else:
-            if "Resets in" in output:
-                import re
-                m_h = re.search(r"(\d+)\s*h", output)
-                m_m = re.search(r"(\d+)\s*m", output)
-                h = int(m_h.group(1)) if m_h else 0
-                m = int(m_m.group(1)) if m_m else 0
-                seconds = (h * 3600) + (m * 60) + 120
-                log(f"⏳ Quota limit reached. Sleeping for {seconds}s ({h}h {m}m)...", "\033[33m")
-                time.sleep(seconds)
+            consecutive_failures += 1
+            
+            if is_quota_error(output):
+                sleep_seconds = parse_quota_reset_seconds(output)
+                resume_time = (datetime.now() + timedelta(seconds=sleep_seconds)).strftime("%H:%M:%S")
+                log(f"⏳ Quota / Rate limit detected!", "\033[1;33m")
+                log(f"   Sleeping for {sleep_seconds}s ({sleep_seconds // 60}m). Resuming at ~{resume_time}...", "\033[33m")
+                time.sleep(sleep_seconds)
             else:
-                log(f"⚠️ agy process exited with code {code}. Retrying in 30s...", "\033[31m")
-                time.sleep(30)
+                # Exponential backoff for generic errors: 30s -> 60s -> 120s -> 300s -> max 600s
+                backoff_seconds = min(30 * (2 ** (consecutive_failures - 1)), 600)
+                log(f"⚠️ agy process exited with code {code} (Consecutive failures: {consecutive_failures}).", "\033[31m")
+                log(f"   Retrying in {backoff_seconds}s with exponential backoff...", "\033[31m")
+                time.sleep(backoff_seconds)
 
 if __name__ == "__main__":
     main()
