@@ -3,7 +3,7 @@
 Summoner DAW — Smart Vibe Runner (Real-Time JSON Streamed)
 Runs agy in autonomous loop, parsing stream-json events to render live tool calls,
 thinking progress, code edits, and streaming agent text.
-Includes robust quota detection, exponential backoff, rate limit safety, and UTF-8 stream handling.
+Includes robust quota detection, exponential backoff, rate limit safety, and clear error reporting.
 """
 
 import sys
@@ -89,6 +89,25 @@ def is_quota_error(output_text):
             return True
     return False
 
+def extract_error_snippet(full_output_str):
+    """Extracts non-JSON or explicit error lines from output buffer."""
+    lines = [line.strip() for line in full_output_str.splitlines() if line.strip()]
+    extracted = []
+    for line in lines:
+        if line.startswith("{") and line.endswith("}"):
+            try:
+                data = json.loads(line)
+                if data.get("event") in ("error", "result"):
+                    err = data.get("error") or data.get("result", {}).get("error") or data.get("message")
+                    if err:
+                        extracted.append(f"[JSON Error] {err}")
+                continue
+            except Exception:
+                pass
+        extracted.append(line)
+    
+    return extracted[-6:] if extracted else lines[-6:]
+
 def run_vibe_turn(step_num):
     log(f"🤖 Starting Vibe Turn #{step_num}...", "\033[1;36m")
     
@@ -143,7 +162,8 @@ def run_vibe_turn(step_num):
                     if status == "SUCCESS":
                         log(f"  ✅ Turn #{step_num} finished successfully!", "\033[32m")
                     else:
-                        log(f"  ⚠️ Turn finished with status: {status}", "\033[31m")
+                        err_msg = res.get("error") or res.get("message") or status
+                        log(f"  ⚠️ Turn finished with error status: {status} ({err_msg})", "\033[31m")
 
             except json.JSONDecodeError:
                 print(f"  {line_str}", flush=True)
@@ -169,17 +189,26 @@ def main():
         else:
             consecutive_failures += 1
             
+            # Prominent Error Display Banner
+            log("\n❌ ------------------- TURN ERROR DETECTED -------------------", "\033[1;31m")
+            error_snippet = extract_error_snippet(output)
+            if error_snippet:
+                log("   Error Details:", "\033[33m")
+                for err_line in error_snippet:
+                    log(f"     > {err_line}", "\033[37m")
+            
             if is_quota_error(output):
                 sleep_seconds = parse_quota_reset_seconds(output)
                 resume_time = (datetime.now() + timedelta(seconds=sleep_seconds)).strftime("%H:%M:%S")
-                log(f"⏳ Quota / Rate limit detected!", "\033[1;33m")
-                log(f"   Sleeping for {sleep_seconds}s ({sleep_seconds // 60}m). Resuming at ~{resume_time}...", "\033[33m")
+                log("   Detected Issue: Quota / Rate limit reached.", "\033[1;33m")
+                log(f"   👉 Handling Strategy: Quota limit backoff. Sleeping for {sleep_seconds}s ({sleep_seconds // 60}m). Will resume automatically at ~{resume_time}.", "\033[1;32m")
+                log("----------------------------------------------------------------\n", "\033[1;31m")
                 time.sleep(sleep_seconds)
             else:
-                # Exponential backoff for generic errors: 30s -> 60s -> 120s -> 300s -> max 600s
                 backoff_seconds = min(30 * (2 ** (consecutive_failures - 1)), 600)
-                log(f"⚠️ agy process exited with code {code} (Consecutive failures: {consecutive_failures}).", "\033[31m")
-                log(f"   Retrying in {backoff_seconds}s with exponential backoff...", "\033[31m")
+                log(f"   Detected Issue: Process exited with code {code} (Consecutive failures: {consecutive_failures}).", "\033[1;31m")
+                log(f"   👉 Handling Strategy: Applying exponential backoff. Will retry in {backoff_seconds}s.", "\033[1;33m")
+                log("----------------------------------------------------------------\n", "\033[1;31m")
                 time.sleep(backoff_seconds)
 
 if __name__ == "__main__":
