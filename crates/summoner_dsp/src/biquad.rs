@@ -15,11 +15,12 @@ use summoner_core::audio::Sample;
 use summoner_core::node::ProcessContext;
 use crate::traits::SignalProcessor;
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FilterType {
     Lowpass, Highpass, Bandpass, Notch, Peaking, LowShelf, HighShelf,
 }
 
+#[derive(Debug, Clone)]
 pub struct FilterBiquad {
     pub filter_type: FilterType,
     pub freq: f32,
@@ -53,8 +54,9 @@ impl FilterBiquad {
     
     pub fn calculate_coeffs(&mut self) {
         use std::f32::consts::PI;
-        let w0 = 2.0 * PI * self.freq / self.sample_rate;
-        let alpha = w0.sin() / (2.0 * self.q);
+        let sr = if self.sample_rate > 0.0 { self.sample_rate } else { 44100.0 };
+        let w0 = 2.0 * PI * self.freq.clamp(10.0, sr * 0.49) / sr;
+        let alpha = w0.sin() / (2.0 * self.q.max(0.01));
         let a = 10.0f32.powf(self.gain_db / 40.0);
         
         let (b0, b1, b2, a0, a1, a2) = match self.filter_type {
@@ -110,6 +112,13 @@ impl FilterBiquad {
         self.a1 = a1 / a0;
         self.a2 = a2 / a0;
     }
+
+    pub fn process_sample(&mut self, x: f32) -> f32 {
+        let y = self.b0 * x + self.b1 * self.z1 + self.b2 * self.z2 - self.a1 * self.z1 - self.a2 * self.z2;
+        self.z2 = self.z1;
+        self.z1 = x;
+        y
+    }
 }
 
 impl SignalProcessor for FilterBiquad {
@@ -120,12 +129,12 @@ impl SignalProcessor for FilterBiquad {
         
         for i in 0..num_samples {
             let x = input[0][i];
-            let y = self.b0 * x + self.b1 * self.z1 + self.b2 * self.z2 - self.a1 * self.z1 - self.a2 * self.z2;
-            self.z2 = self.z1;
-            self.z1 = x;
+            let y = self.process_sample(x);
             
             for out_ch in output.iter_mut() {
-                out_ch[i] = y;
+                if i < out_ch.len() {
+                    out_ch[i] = y;
+                }
             }
         }
     }

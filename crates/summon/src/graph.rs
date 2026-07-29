@@ -18,6 +18,8 @@ use summoner_dsp::math::VCA;
 use summoner_dsp::{FilterBiquad, CompressorNode, LimiterNode, EffectChorus, EffectFlanger, EffectPhaser, RingModulator, FrequencyShifter, LufsMeterNode, GranularSynthNode};
 use summoner_core::graph::{NodeGraph, Edge};
 
+use summoner_dsp::{EffectDelay, EffectReverb, WavefolderNode, PitchShifterNode, BitcrusherNode, MidSideNode, ParametricEqNode, DistortionNode, DistortionType};
+
 pub struct NodeFactory;
 
 impl NodeFactory {
@@ -54,6 +56,35 @@ impl NodeFactory {
             "FrequencyShifter" => Some(Box::new(ProcessorNodeAdapter::new(FrequencyShifter::new()))),
             "LufsMeterNode" => Some(Box::new(ProcessorNodeAdapter::new(LufsMeterNode::new()))),
             "GranularSynthNode" => Some(Box::new(ProcessorNodeAdapter::new(GranularSynthNode::new(44100)))),
+            "EffectDelay" | "DelayNode" => Some(Box::new(ProcessorNodeAdapter::new(EffectDelay::new(
+                *params.get("delay_time").unwrap_or(&0.3),
+                *params.get("feedback").unwrap_or(&0.4),
+                *params.get("mix").unwrap_or(&0.3)
+            )))),
+            "EffectReverb" | "ReverbNode" => Some(Box::new(ProcessorNodeAdapter::new(EffectReverb::new(
+                *params.get("room_size").unwrap_or(&0.7),
+                *params.get("mix").unwrap_or(&0.3)
+            )))),
+            "WavefolderNode" => Some(Box::new(ProcessorNodeAdapter::new(WavefolderNode::new(
+                *params.get("threshold").unwrap_or(&0.5),
+                *params.get("folds").unwrap_or(&4.0) as u8,
+                *params.get("drive").unwrap_or(&2.0)
+            )))),
+            "PitchShifterNode" => Some(Box::new(ProcessorNodeAdapter::new(PitchShifterNode::new(
+                *params.get("semitones").unwrap_or(&0.0)
+            )))),
+            "BitcrusherNode" => Some(Box::new(ProcessorNodeAdapter::new(BitcrusherNode::new(
+                *params.get("bit_depth").unwrap_or(&8.0) as u8,
+                *params.get("sample_reduction").unwrap_or(&4.0) as u32
+            )))),
+            "MidSideNode" => Some(Box::new(ProcessorNodeAdapter::new(MidSideNode::new(
+                *params.get("width").unwrap_or(&1.0)
+            )))),
+            "ParametricEqNode" => Some(Box::new(ProcessorNodeAdapter::new(ParametricEqNode::new()))),
+            "DistortionNode" => Some(Box::new(ProcessorNodeAdapter::new(DistortionNode::new(
+                DistortionType::SoftClipping,
+                *params.get("drive").unwrap_or(&2.0)
+            )))),
             "SamplerDevice" => {
                 let mut bank = summoner_dsp::sampler::MultiSampleBank::new();
                 let base_dir = std::path::Path::new("local");

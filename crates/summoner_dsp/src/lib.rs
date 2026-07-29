@@ -16,6 +16,13 @@
 pub mod composites;
 pub mod distortion;
 pub mod effects;
+pub mod delay;
+pub mod reverb;
+pub mod wavefolder;
+pub mod pitch_shifter;
+pub mod bitcrusher;
+pub mod midside;
+pub mod parametric_eq;
 pub mod sampler;
 pub mod slicer;
 pub mod filters;
@@ -35,13 +42,21 @@ pub mod ring_mod;
 pub mod meter;
 pub mod granular;
 pub mod drum_machine;
+
 pub use composites::{
     AetherSynth, AtmosphericPadSynth, CyberpunkSubSynth, FmOperatorPair, GlitchAetherMachine,
     GlitchPercussionSynth, PluckSynth, SamplerDevice,
 };
 pub use drum_machine::{DrumMachineDevice, DrumPad, MAX_PADS};
 pub use distortion::{DistortionNode, DistortionType};
-pub use effects::{EffectDelay, EffectReverb};
+pub use effects::{EffectDelay as LegacyEffectDelay, EffectReverb as LegacyEffectReverb};
+pub use delay::EffectDelay;
+pub use reverb::EffectReverb;
+pub use wavefolder::WavefolderNode;
+pub use pitch_shifter::PitchShifterNode;
+pub use bitcrusher::BitcrusherNode;
+pub use midside::MidSideNode;
+pub use parametric_eq::{ParametricEqNode, EqBand};
 pub use filters::{FilterComb, FilterLadder, FilterSVF};
 pub use glitch::{AudioReverse, GlitchGate, GlitchShuffle, GlitchStutter, TapeStop};
 pub use math::{MathAdd, MathMult, VCA};
@@ -60,7 +75,6 @@ pub use mod_fx::{EffectChorus, EffectFlanger, EffectPhaser};
 pub use ring_mod::{RingModulator, FrequencyShifter};
 pub use meter::LufsMeterNode;
 pub use granular::GranularSynthNode;
-
 
 use summoner_core::audio::Sample;
 use summoner_core::node::{AudioNode, ProcessContext};
@@ -102,7 +116,6 @@ impl AudioNode for PluckedStringNode {
                     out_ch[i] = sample;
                 }
             }
-
         }
     }
 }
@@ -111,6 +124,32 @@ impl AudioNode for PluckedStringNode {
 mod tests {
     use super::*;
     use summoner_core::transport::Transport;
+
+    #[test]
+    fn test_tier13_dsp_nodes_integration() {
+        let transport = Transport::new(44100, 120.0);
+        let ctx = ProcessContext::from_transport(&transport);
+
+        let mut wavefolder = WavefolderNode::new(0.5, 4, 2.0);
+        let mut pitch_shifter = PitchShifterNode::new(3.0);
+        let mut bitcrusher = BitcrusherNode::new(8, 2);
+        let mut midside = MidSideNode::new(1.5);
+        let mut eq = ParametricEqNode::new();
+
+        let in_buf_l = vec![0.5f32; 64];
+        let in_buf_r = vec![-0.5f32; 64];
+        let mut out_l = vec![0.0f32; 64];
+        let mut out_r = vec![0.0f32; 64];
+
+        wavefolder.process_block(&[&in_buf_l[..]], &mut [&mut out_l[..]], &ctx);
+        pitch_shifter.process_block(&[&in_buf_l[..]], &mut [&mut out_l[..]], &ctx);
+        bitcrusher.process_block(&[&in_buf_l[..]], &mut [&mut out_l[..]], &ctx);
+        midside.process_block(&[&in_buf_l[..], &in_buf_r[..]], &mut [&mut out_l[..], &mut out_r[..]], &ctx);
+        eq.process_block(&[&in_buf_l[..]], &mut [&mut out_l[..]], &ctx);
+
+        assert!(out_l.iter().all(|s| s.is_finite()));
+        assert!(out_r.iter().all(|s| s.is_finite()));
+    }
 
     #[test]
     fn test_waveguide_pluck_decay() {
@@ -165,7 +204,6 @@ mod tests {
         assert!(buf_out.iter().any(|v| *v != 0.0));
     }
 
-
     #[test]
     fn test_composite_devices() {
         let transport = Transport::new(44100, 120.0);
@@ -217,5 +255,4 @@ mod tests {
         assert!(buf_pad.iter().any(|v| *v != 0.0));
         assert!(buf_glitch_perc.iter().any(|v| *v != 0.0));
     }
-
 }

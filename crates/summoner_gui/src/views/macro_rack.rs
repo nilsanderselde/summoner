@@ -252,6 +252,75 @@ pub fn show_macro_rack(
                                 param_bus.set(ParamId(track.id as u32 * 10 + 2), cutoff);
                             }
                         }
+                        "EffectDelay" | "DelayNode" => {
+                            let mut delay_time = param_bus.get(ParamId(track.id as u32 * 10 + 1)).unwrap_or(0.3);
+                            if ui.add(egui::Slider::new(&mut delay_time, 0.01..=2.0).text("Time (s)")).changed() {
+                                param_bus.set(ParamId(track.id as u32 * 10 + 1), delay_time);
+                            }
+                            let mut feedback = param_bus.get(ParamId(track.id as u32 * 10 + 2)).unwrap_or(0.4);
+                            if ui.add(egui::Slider::new(&mut feedback, 0.0..=0.95).text("Feedback")).changed() {
+                                param_bus.set(ParamId(track.id as u32 * 10 + 2), feedback);
+                            }
+                            let mut mix = param_bus.get(ParamId(track.id as u32 * 10 + 3)).unwrap_or(0.3);
+                            if ui.add(egui::Slider::new(&mut mix, 0.0..=1.0).text("Mix")).changed() {
+                                param_bus.set(ParamId(track.id as u32 * 10 + 3), mix);
+                            }
+                        }
+                        "EffectReverb" | "ReverbNode" => {
+                            let mut room_size = param_bus.get(ParamId(track.id as u32 * 10 + 1)).unwrap_or(0.7);
+                            if ui.add(egui::Slider::new(&mut room_size, 0.0..=0.98).text("Room Size")).changed() {
+                                param_bus.set(ParamId(track.id as u32 * 10 + 1), room_size);
+                            }
+                            let mut mix = param_bus.get(ParamId(track.id as u32 * 10 + 2)).unwrap_or(0.3);
+                            if ui.add(egui::Slider::new(&mut mix, 0.0..=1.0).text("Mix")).changed() {
+                                param_bus.set(ParamId(track.id as u32 * 10 + 2), mix);
+                            }
+                        }
+                        "WavefolderNode" => {
+                            let mut threshold = param_bus.get(ParamId(track.id as u32 * 10 + 1)).unwrap_or(0.5);
+                            if ui.add(egui::Slider::new(&mut threshold, 0.05..=1.0).text("Threshold")).changed() {
+                                param_bus.set(ParamId(track.id as u32 * 10 + 1), threshold);
+                            }
+                            let mut drive = param_bus.get(ParamId(track.id as u32 * 10 + 2)).unwrap_or(2.0);
+                            if ui.add(egui::Slider::new(&mut drive, 1.0..=10.0).text("Drive")).changed() {
+                                param_bus.set(ParamId(track.id as u32 * 10 + 2), drive);
+                            }
+                        }
+                        "PitchShifterNode" => {
+                            let mut semitones = param_bus.get(ParamId(track.id as u32 * 10 + 1)).unwrap_or(0.0);
+                            if ui.add(egui::Slider::new(&mut semitones, -24.0..=24.0).text("Semitones")).changed() {
+                                param_bus.set(ParamId(track.id as u32 * 10 + 1), semitones);
+                            }
+                        }
+                        "BitcrusherNode" => {
+                            let mut bit_depth = param_bus.get(ParamId(track.id as u32 * 10 + 1)).unwrap_or(8.0);
+                            if ui.add(egui::Slider::new(&mut bit_depth, 1.0..=16.0).text("Bit Depth")).changed() {
+                                param_bus.set(ParamId(track.id as u32 * 10 + 1), bit_depth);
+                            }
+                            let mut reduction = param_bus.get(ParamId(track.id as u32 * 10 + 2)).unwrap_or(4.0);
+                            if ui.add(egui::Slider::new(&mut reduction, 1.0..=32.0).text("Downsample")).changed() {
+                                param_bus.set(ParamId(track.id as u32 * 10 + 2), reduction);
+                            }
+                        }
+                        "MidSideNode" => {
+                            let mut width = param_bus.get(ParamId(track.id as u32 * 10 + 1)).unwrap_or(1.0);
+                            if ui.add(egui::Slider::new(&mut width, 0.0..=4.0).text("Stereo Width")).changed() {
+                                param_bus.set(ParamId(track.id as u32 * 10 + 1), width);
+                            }
+                        }
+                        "ParametricEqNode" => {
+                            ui.label("8-Band Parametric EQ");
+                            let mut boost = param_bus.get(ParamId(track.id as u32 * 10 + 1)).unwrap_or(0.0);
+                            if ui.add(egui::Slider::new(&mut boost, -12.0..=12.0).text("Mid Gain (dB)")).changed() {
+                                param_bus.set(ParamId(track.id as u32 * 10 + 1), boost);
+                            }
+                        }
+                        "DistortionNode" => {
+                            let mut drive = param_bus.get(ParamId(track.id as u32 * 10 + 1)).unwrap_or(2.0);
+                            if ui.add(egui::Slider::new(&mut drive, 1.0..=20.0).text("Drive")).changed() {
+                                param_bus.set(ParamId(track.id as u32 * 10 + 1), drive);
+                            }
+                        }
                         _ => {
                             // Generic parameters fallback
                             for (i, (key, default_val)) in node.params.iter_mut().enumerate() {

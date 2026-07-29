@@ -11,8 +11,9 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Affero General Public License for more details.
 
-//! Multi-mode distortion, overdrive, bitcrusher, and wavefolder processors.
+//! Multi-mode distortion, overdrive, bitcrusher, and wavefolder processors with polyphase FIR oversampling support.
 
+use crate::oversampling::Oversampler;
 use crate::traits::SignalProcessor;
 use summoner_core::audio::Sample;
 use summoner_core::node::ProcessContext;
@@ -34,7 +35,7 @@ pub enum DistortionType {
     Wavefolder,
 }
 
-/// Multi-algorithm Distortion and Bitcrusher DSP node.
+/// Multi-algorithm Distortion and Bitcrusher DSP node with anti-aliasing oversampler.
 #[derive(Debug)]
 pub struct DistortionNode {
     pub distortion_type: DistortionType,
@@ -43,9 +44,11 @@ pub struct DistortionNode {
     pub mix: f32,             // Dry/Wet blend 0.0 to 1.0
     pub bit_depth: u8,        // Bitcrusher depth 1 to 16
     pub sample_reduction: u32,// Downsampling factor 1 to 32
+    pub oversample_factor: u8,// 1 (off), 2, 4, or 8
     lp_state: f32,
     downsample_counter: u32,
     held_sample: f32,
+    oversampler: Option<Oversampler>,
 }
 
 impl DistortionNode {
@@ -57,16 +60,32 @@ impl DistortionNode {
             mix: 1.0,
             bit_depth: 8,
             sample_reduction: 1,
+            oversample_factor: 1,
             lp_state: 0.0,
             downsample_counter: 0,
             held_sample: 0.0,
+            oversampler: None,
         }
     }
 
-    pub fn process_sample(&mut self, input: f32) -> f32 {
-        let driven = input * self.drive;
+    pub fn set_oversample_factor(&mut self, factor: u8) {
+        self.oversample_factor = factor;
+        if factor > 1 {
+            self.oversampler = Some(Oversampler::new(factor as usize));
+        } else {
+            self.oversampler = None;
+        }
+    }
 
-        let processed = match self.distortion_type {
+    fn apply_distortion(
+        distortion_type: DistortionType,
+        driven: f32,
+        bit_depth: u8,
+        sample_reduction: u32,
+        downsample_counter: &mut u32,
+        held_sample: &mut f32,
+    ) -> f32 {
+        match distortion_type {
             DistortionType::SoftClipping => (driven * 0.8).tanh(),
             DistortionType::HardClipping => driven.clamp(-1.0, 1.0),
             DistortionType::TubeOverdrive => {
@@ -78,20 +97,70 @@ impl DistortionNode {
                 }
             }
             DistortionType::Bitcrusher => {
-                self.downsample_counter += 1;
-                if self.downsample_counter >= self.sample_reduction.max(1) {
-                    self.downsample_counter = 0;
-                    let steps = (1 << self.bit_depth.clamp(1, 16)) as f32;
+                *downsample_counter += 1;
+                if *downsample_counter >= sample_reduction.max(1) {
+                    *downsample_counter = 0;
+                    let steps = (1 << bit_depth.clamp(1, 16)) as f32;
                     let quantized = (driven.clamp(-1.0, 1.0) * steps).round() / steps;
-                    self.held_sample = quantized;
+                    *held_sample = quantized;
                 }
-                self.held_sample
+                *held_sample
             }
             DistortionType::Fuzz => (driven * std::f32::consts::PI).sin().clamp(-1.0, 1.0),
             DistortionType::Wavefolder => {
                 let folded = (driven + 1.0).rem_euclid(4.0) - 2.0;
                 (folded.abs() - 1.0).clamp(-1.0, 1.0)
             }
+        }
+    }
+
+    pub fn process_sample(&mut self, input: f32) -> f32 {
+        let driven = input * self.drive;
+
+        let processed = if self.oversample_factor > 1 {
+            if self.oversampler.is_none() {
+                self.oversampler = Some(Oversampler::new(self.oversample_factor as usize));
+            }
+            let factor = self.oversample_factor as usize;
+            let mut up_buf = vec![0.0f32; factor];
+            let mut sub_out = vec![0.0f32; factor];
+
+            let dist_type = self.distortion_type;
+            let b_depth = self.bit_depth;
+            let s_red = self.sample_reduction;
+
+            if let Some(ref mut os) = self.oversampler {
+                os.process_up(driven, &mut up_buf);
+                for sub in 0..factor {
+                    sub_out[sub] = Self::apply_distortion(
+                        dist_type,
+                        up_buf[sub],
+                        b_depth,
+                        s_red,
+                        &mut self.downsample_counter,
+                        &mut self.held_sample,
+                    );
+                }
+                os.process_down(&sub_out)
+            } else {
+                Self::apply_distortion(
+                    dist_type,
+                    driven,
+                    b_depth,
+                    s_red,
+                    &mut self.downsample_counter,
+                    &mut self.held_sample,
+                )
+            }
+        } else {
+            Self::apply_distortion(
+                self.distortion_type,
+                driven,
+                self.bit_depth,
+                self.sample_reduction,
+                &mut self.downsample_counter,
+                &mut self.held_sample,
+            )
         };
 
         // Simple 1-pole tone filter
@@ -159,5 +228,15 @@ mod tests {
         crusher.bit_depth = 4; // 16 steps
         let sample = crusher.process_sample(0.33);
         assert!((sample - 0.3125).abs() < 0.1);
+    }
+
+    #[test]
+    fn test_distortion_oversampling() {
+        let mut dist = DistortionNode::new(DistortionType::SoftClipping, 4.0);
+        dist.set_oversample_factor(4);
+
+        let out = dist.process_sample(0.5);
+        assert!(out.is_finite());
+        assert!(out.abs() <= 1.0);
     }
 }
