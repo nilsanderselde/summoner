@@ -31,6 +31,56 @@ pub struct ProjectConfig {
     pub automation_lanes: Vec<AutomationLaneConfig>,
     #[serde(default)]
     pub midi_mappings: Vec<MidiMappingConfig>,
+    #[serde(default)]
+    pub markers: Vec<MarkerConfig>,
+    #[serde(default)]
+    pub loop_start_beat: f64,
+    #[serde(default = "default_loop_end")]
+    pub loop_end_beat: f64,
+    #[serde(default)]
+    pub loop_enabled: bool,
+    #[serde(default)]
+    pub punch_in_beat: Option<f64>,
+    #[serde(default)]
+    pub punch_out_beat: Option<f64>,
+    #[serde(default)]
+    pub locator_a_beat: Option<f64>,
+    #[serde(default)]
+    pub locator_b_beat: Option<f64>,
+}
+
+fn default_loop_end() -> f64 {
+    16.0
+}
+
+impl Default for ProjectConfig {
+    fn default() -> Self {
+        Self {
+            name: "New Project".to_string(),
+            tuning_file: None,
+            transport: TransportConfig::default(),
+            tracks: Vec::new(),
+            assets: Vec::new(),
+            automation_lanes: Vec::new(),
+            midi_mappings: Vec::new(),
+            markers: Vec::new(),
+            loop_start_beat: 0.0,
+            loop_end_beat: 16.0,
+            loop_enabled: false,
+            punch_in_beat: None,
+            punch_out_beat: None,
+            locator_a_beat: None,
+            locator_b_beat: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct MarkerConfig {
+    pub name: String,
+    pub beat: f64,
+    #[serde(default)]
+    pub color: Option<[u8; 3]>,
 }
 
 /// MIDI Learn mapping entry in project TOML.
@@ -120,6 +170,50 @@ pub struct TrackConfig {
     pub tuning_root_hz: Option<f32>,
     #[serde(default)]
     pub tuning_scl_path: Option<String>,
+    #[serde(default)]
+    pub collapsed: bool,
+    #[serde(default)]
+    pub color: Option<[u8; 3]>,
+    #[serde(default)]
+    pub group_bus: Option<String>,
+    #[serde(default)]
+    pub record_armed: bool,
+    #[serde(default = "default_true")]
+    pub send_to_master: bool,
+    #[serde(default)]
+    pub is_frozen: bool,
+}
+
+fn default_true() -> bool {
+    true
+}
+
+impl Default for TrackConfig {
+    fn default() -> Self {
+        Self {
+            id: 1,
+            name: "Track 1".to_string(),
+            channels: 2,
+            gain: 1.0,
+            pan: 0.0,
+            muted: false,
+            soloed: false,
+            send_level: 0.0,
+            nodes: Vec::new(),
+            sequence: None,
+            clips: Vec::new(),
+            connections: Vec::new(),
+            tuning_edo: None,
+            tuning_root_hz: None,
+            tuning_scl_path: None,
+            collapsed: false,
+            color: None,
+            group_bus: None,
+            record_armed: false,
+            send_to_master: true,
+            is_frozen: false,
+        }
+    }
 }
 
 impl TrackConfig {
@@ -186,6 +280,36 @@ pub struct SequenceConfig {
     pub is_unique: bool,
     #[serde(default)]
     pub steps: Vec<TrackerStepConfig>,
+    #[serde(default)]
+    pub fade_in: f64,
+    #[serde(default)]
+    pub fade_out: f64,
+    #[serde(default)]
+    pub is_reversed: bool,
+    #[serde(default = "default_one_f64")]
+    pub time_stretch: f64,
+}
+
+fn default_one_f64() -> f64 {
+    1.0
+}
+
+impl Default for SequenceConfig {
+    fn default() -> Self {
+        Self {
+            start_beat: 0.0,
+            step_division: 0.25,
+            clip_color: None,
+            clip_name: None,
+            name: "Sequence".to_string(),
+            is_unique: true,
+            steps: Vec::new(),
+            fade_in: 0.0,
+            fade_out: 0.0,
+            is_reversed: false,
+            time_stretch: 1.0,
+        }
+    }
 }
 
 impl SequenceConfig {

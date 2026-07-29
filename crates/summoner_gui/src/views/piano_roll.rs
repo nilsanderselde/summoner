@@ -521,6 +521,7 @@ mod tests {
                 };
                 16
             ],
+            ..Default::default()
         };
         let tuning = EdoTuning::new(19, 440.0, 69.0);
         let mut state = PianoRollState::default();
@@ -561,6 +562,7 @@ mod tests {
                 };
                 16
             ],
+            ..Default::default()
         };
         assert!(!sequence.steps[0].active);
 
@@ -605,6 +607,7 @@ mod tests {
                 };
                 16
             ],
+            ..Default::default()
         };
         let tuning = EdoTuning::standard_12_tet();
         let mut state = PianoRollState::default();

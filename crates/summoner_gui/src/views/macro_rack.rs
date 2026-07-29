@@ -407,6 +407,7 @@ mod tests {
             tuning_edo: None,
             tuning_root_hz: None,
             tuning_scl_path: None,
+            ..Default::default()
         };
         let param_bus = Arc::new(ParamBus::new());
         let mut on_open = || {};
@@ -450,6 +451,7 @@ mod tests {
             tuning_edo: None,
             tuning_root_hz: None,
             tuning_scl_path: None,
+            ..Default::default()
         };
         let param_bus = Arc::new(ParamBus::new());
         let oscilloscope = Oscilloscope::new();

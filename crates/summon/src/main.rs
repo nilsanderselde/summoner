@@ -804,6 +804,7 @@ mod tests {
             tuning_edo: None,
             tuning_root_hz: None,
             tuning_scl_path: None,
+            ..Default::default()
         };
         project.tracks.push(empty_track);
 

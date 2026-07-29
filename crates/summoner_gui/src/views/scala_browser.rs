@@ -169,6 +169,7 @@ mod tests {
             tuning_edo: None,
             tuning_root_hz: None,
             tuning_scl_path: None,
+            ..Default::default()
         };
 
         let mut ctx = HarmonicContext::default();

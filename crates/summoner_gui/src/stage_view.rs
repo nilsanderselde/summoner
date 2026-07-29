@@ -528,6 +528,7 @@ mod tests {
                     tuning_edo: Some(12),
                     tuning_root_hz: Some(440.0),
                     tuning_scl_path: None,
+                    ..Default::default()
                 },
                 summoner_project::schema::TrackConfig {
                     id: 20,
@@ -545,11 +546,13 @@ mod tests {
                     tuning_edo: Some(12),
                     tuning_root_hz: Some(440.0),
                     tuning_scl_path: None,
+                    ..Default::default()
                 },
             ],
             assets: vec![],
             automation_lanes: vec![],
             midi_mappings: vec![],
+            ..Default::default()
         };
 
         stage.populate_from_project(&project);

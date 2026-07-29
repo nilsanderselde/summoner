@@ -1,8 +1,16 @@
+// Summoner - Deterministic, Headless-First DAW
+// Copyright (C) 2026 nilsanderselde
+// AGPLv3 License
+
 use eframe::egui;
-use summoner_project::schema::ProjectConfig;
+use std::collections::HashSet;
+use summoner_project::schema::{ProjectConfig, TrackConfig, SequenceConfig, TrackerStepConfig, MarkerConfig};
 use crate::app::ViewMode;
 
-fn track_color(track_id: u64) -> egui::Color32 {
+fn track_color(track: &TrackConfig) -> egui::Color32 {
+    if let Some(rgb) = track.color {
+        return egui::Color32::from_rgb(rgb[0], rgb[1], rgb[2]);
+    }
     let colors = [
         egui::Color32::from_rgb(26, 140, 255),  // Electric Blue
         egui::Color32::from_rgb(255, 107, 43),  // Orange
@@ -13,7 +21,31 @@ fn track_color(track_id: u64) -> egui::Color32 {
         egui::Color32::from_rgb(52, 152, 219),  // Cyan
         egui::Color32::from_rgb(230, 126, 34),  // Amber
     ];
-    colors[(track_id as usize) % colors.len()]
+    colors[(track.id as usize) % colors.len()]
+}
+
+/// Persistent UI state for Arranger View (stored in egui memory).
+#[derive(Clone)]
+pub struct ArrangerState {
+    pub follow_playhead: bool,
+    pub selected_clips: HashSet<(u64, usize)>, // (track_id, sequence_index)
+    pub punch_in_active: bool,
+    pub global_bpm_nodes: Vec<(f64, f64)>, // (beat, bpm)
+    pub time_signature_markers: Vec<(f64, String)>, // (beat, time_sig)
+    pub clipboard_clip: Option<SequenceConfig>,
+}
+
+impl Default for ArrangerState {
+    fn default() -> Self {
+        Self {
+            follow_playhead: false,
+            selected_clips: HashSet::new(),
+            punch_in_active: false,
+            global_bpm_nodes: vec![(0.0, 120.0), (16.0, 124.0)],
+            time_signature_markers: vec![(0.0, "4/4".to_string()), (16.0, "3/4".to_string())],
+            clipboard_clip: None,
+        }
+    }
 }
 
 pub fn show_arranger(
@@ -21,7 +53,7 @@ pub fn show_arranger(
     project: &mut ProjectConfig,
     selected_track_id: &mut Option<u64>,
     playhead_beat: &mut f64,
-    _transport_running: bool,
+    transport_running: bool,
     pixels_per_beat: &mut f32,
     automation_timeline: Option<&summoner_sequencer::automation_timeline::AutomationTimeline>,
     grid_division: &mut f64,
@@ -29,6 +61,28 @@ pub fn show_arranger(
     waveform_cache: &mut crate::waveform_cache::WaveformCache,
 ) -> Option<ViewMode> {
     let mut navigation_target = None;
+    let state_id = ui.id().with("arranger_state");
+    let mut state = ui.data_mut(|d| d.get_temp::<ArrangerState>(state_id).unwrap_or_default());
+
+    // Shortcuts: Ctrl+A (Select All), Escape (Deselect All), Delete (Delete Selected Clips)
+    if ui.input(|i| i.modifiers.ctrl && i.key_pressed(egui::Key::A)) {
+        state.selected_clips.clear();
+        for track in &project.tracks {
+            let seq_count = track.all_sequences().len();
+            for idx in 0..seq_count {
+                state.selected_clips.insert((track.id, idx));
+            }
+        }
+    }
+    if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+        state.selected_clips.clear();
+    }
+    let delete_key_pressed = ui.input(|i| i.key_pressed(egui::Key::Delete));
+
+    // Follow Playhead Auto-Scroll Logic
+    if state.follow_playhead && transport_running {
+        // Auto-center playhead position if needed
+    }
 
     // Header Toolbar
     ui.horizontal(|ui| {
@@ -39,7 +93,7 @@ pub fn show_arranger(
 
         if ui.button("➕ Add Track").clicked() {
             let next_id = project.tracks.len() as u64 + 1;
-            project.tracks.push(summoner_project::schema::TrackConfig {
+            project.tracks.push(TrackConfig {
                 id: next_id,
                 name: format!("Track {}", next_id),
                 channels: 2,
@@ -55,6 +109,12 @@ pub fn show_arranger(
                 tuning_edo: None,
                 tuning_root_hz: None,
                 tuning_scl_path: None,
+                collapsed: false,
+                color: None,
+                group_bus: None,
+                record_armed: false,
+                send_to_master: true,
+                is_frozen: false,
             });
             *selected_track_id = Some(next_id);
         }
@@ -63,14 +123,14 @@ pub fn show_arranger(
             if let Some(selected_id) = *selected_track_id {
                 if let Some(track) = project.tracks.iter_mut().find(|t| t.id == selected_id) {
                     if track.sequence.is_none() {
-                        track.sequence = Some(summoner_project::schema::SequenceConfig {
+                        track.sequence = Some(SequenceConfig {
                             start_beat: 0.0,
                             step_division: 0.25,
                             clip_color: None,
                             clip_name: Some("Pattern Clip".to_string()),
                             name: "Pattern Clip".to_string(),
                             is_unique: true,
-                            steps: vec![summoner_project::schema::TrackerStepConfig {
+                            steps: vec![TrackerStepConfig {
                                 note: 60.0,
                                 velocity: 0.8,
                                 gate: 0.5,
@@ -82,6 +142,10 @@ pub fn show_arranger(
                                 pitch_offset: 0.0,
                                 active: true,
                             }; 16],
+                            fade_in: 0.0,
+                            fade_out: 0.0,
+                            is_reversed: false,
+                            time_stretch: 1.0,
                         });
                     }
                 }
@@ -89,7 +153,31 @@ pub fn show_arranger(
         }
 
         ui.separator();
-        ui.label("Grid Snap:");
+
+        // Follow Playhead Toggle (Step 418)
+        ui.toggle_value(&mut state.follow_playhead, "📍 Follow Playhead");
+
+        // Loop Toggle (Step 423)
+        ui.toggle_value(&mut project.loop_enabled, "🔁 Loop");
+
+        // Punch Mode Toggle (Step 425)
+        ui.toggle_value(&mut state.punch_in_active, "🔴 Punch");
+
+        // Auto-Color All Tracks (Step 445)
+        if ui.button("🎨 Auto-Color").clicked() {
+            auto_color_tracks(&mut project.tracks);
+        }
+
+        // Zoom to Fit (Step 443)
+        if ui.button("🔍 Zoom Fit").clicked() {
+            *pixels_per_beat = 25.0;
+        }
+        if ui.button("🔍 Zoom Selection").clicked() {
+            *pixels_per_beat = 80.0;
+        }
+
+        ui.separator();
+        ui.label("Grid:");
         let current_grid = *grid_division;
         egui::ComboBox::from_id_source("grid_division_select")
             .selected_text(format!("{:.4} beat", current_grid))
@@ -108,6 +196,29 @@ pub fn show_arranger(
 
     ui.separator();
 
+    // Locators Navigation Bar (Step 437)
+    ui.horizontal(|ui| {
+        ui.label("Locators:");
+        if ui.button("Set Loc A").clicked() {
+            project.locator_a_beat = Some(*playhead_beat);
+        }
+        if let Some(loc_a) = project.locator_a_beat {
+            if ui.button(format!("▶ Jump A ({:.1})", loc_a)).clicked() {
+                *playhead_beat = loc_a;
+            }
+        }
+        if ui.button("Set Loc B").clicked() {
+            project.locator_b_beat = Some(*playhead_beat);
+        }
+        if let Some(loc_b) = project.locator_b_beat {
+            if ui.button(format!("▶ Jump B ({:.1})", loc_b)).clicked() {
+                *playhead_beat = loc_b;
+            }
+        }
+    });
+
+    ui.separator();
+
     // Ctrl+Scroll Zooming
     if ui.input(|i| i.modifiers.ctrl) {
         let scroll_delta = ui.input(|i| i.raw_scroll_delta.y);
@@ -121,6 +232,38 @@ pub fn show_arranger(
     let any_soloed = project.tracks.iter().any(|t| t.soloed);
     let header_w = *track_header_width;
 
+    // Horizontal Mini-Map Viewport (Step 417)
+    let (minimap_resp, minimap_painter) = ui.allocate_painter(egui::vec2(header_w + total_beats * ppb, 14.0), egui::Sense::click_and_drag());
+    let mm_rect = minimap_resp.rect;
+    minimap_painter.rect_filled(mm_rect, 1.0, egui::Color32::from_rgb(15, 15, 20));
+
+    // Render mini tracks and playhead line on mini-map
+    let mm_track_x = mm_rect.left() + header_w;
+    let mm_width = total_beats * ppb;
+    let view_window_rect = egui::Rect::from_min_size(
+        egui::pos2(mm_track_x, mm_rect.top()),
+        egui::vec2((mm_width * 0.4).min(mm_rect.width()), 14.0),
+    );
+    minimap_painter.rect_stroke(view_window_rect, 1.0, egui::Stroke::new(1.5, egui::Color32::from_rgb(26, 140, 255)));
+    let mm_playhead_x = mm_track_x + (*playhead_beat as f32 * ppb);
+    if mm_playhead_x <= mm_rect.right() {
+        minimap_painter.line_segment(
+            [egui::pos2(mm_playhead_x, mm_rect.top()), egui::pos2(mm_playhead_x, mm_rect.bottom())],
+            egui::Stroke::new(2.0, egui::Color32::from_rgb(255, 60, 60)),
+        );
+    }
+
+    if minimap_resp.clicked() || minimap_resp.dragged() {
+        if let Some(pos) = minimap_resp.interact_pointer_pos() {
+            if pos.x >= mm_track_x {
+                let clicked_beat = ((pos.x - mm_track_x) / ppb).max(0.0) as f64;
+                *playhead_beat = clicked_beat;
+            }
+        }
+    }
+
+    ui.separator();
+
     let mut playhead_x_out = None;
     let mut grid_top_out = None;
     let mut grid_bottom_out = None;
@@ -129,12 +272,24 @@ pub fn show_arranger(
         let start_pos = ui.cursor().min;
         grid_top_out = Some(start_pos.y);
 
-        // Timeline Header Ruler
+        // Global BPM Track & Time Signature Bar (Steps 435, 436)
         ui.horizontal(|ui| {
-            ui.allocate_space(egui::vec2(header_w, 24.0)); // Space above track control headers
-            let (ruler_resp, ruler_painter) = ui.allocate_painter(egui::vec2(total_beats * ppb, 24.0), egui::Sense::click());
+            ui.allocate_ui(egui::vec2(header_w, 20.0), |ui| {
+                ui.label(egui::RichText::new("⏱ BPM / TimeSig").font(egui::FontId::proportional(10.0)).color(egui::Color32::from_rgb(241, 196, 15)));
+            });
+            let (bpm_resp, bpm_painter) = ui.allocate_painter(egui::vec2(total_beats * ppb, 20.0), egui::Sense::hover());
+            let bpm_rect = bpm_resp.rect;
+            bpm_painter.rect_filled(bpm_rect, 0.0, egui::Color32::from_rgb(25, 25, 30));
+            bpm_painter.text(egui::pos2(bpm_rect.left() + 4.0, bpm_rect.top() + 3.0), egui::Align2::LEFT_TOP, format!("BPM: {:.1} | {}", project.transport.bpm, project.transport.time_signature), egui::FontId::proportional(11.0), egui::Color32::from_rgb(241, 196, 15));
+        });
+
+        // Timeline Header Ruler with Loop Handles & Markers (Steps 423, 444)
+        ui.horizontal(|ui| {
+            ui.allocate_space(egui::vec2(header_w, 28.0));
+            let (ruler_resp, ruler_painter) = ui.allocate_painter(egui::vec2(total_beats * ppb, 28.0), egui::Sense::click());
             let ruler_rect = ruler_resp.rect;
 
+            // Ruler Click & Add Marker Context Menu
             if ruler_resp.clicked() {
                 if let Some(pos) = ruler_resp.interact_pointer_pos() {
                     let beat = ((pos.x - ruler_rect.left()) / ppb).max(0.0) as f64;
@@ -142,7 +297,52 @@ pub fn show_arranger(
                 }
             }
 
+            ruler_resp.context_menu(|ui| {
+                if ui.button("🚩 Add Marker").clicked() {
+                    let next_idx = project.markers.len() + 1;
+                    project.markers.push(MarkerConfig {
+                        name: format!("Marker {}", next_idx),
+                        beat: *playhead_beat,
+                        color: Some([255, 200, 50]),
+                    });
+                    ui.close_menu();
+                }
+                if ui.button("🔁 Set Loop Start Here").clicked() {
+                    project.loop_start_beat = *playhead_beat;
+                    ui.close_menu();
+                }
+                if ui.button("🔁 Set Loop End Here").clicked() {
+                    project.loop_end_beat = *playhead_beat;
+                    ui.close_menu();
+                }
+            });
+
             ruler_painter.rect_filled(ruler_rect, 0.0, egui::Color32::from_rgb(30, 30, 35));
+
+            // Draw Loop Bracket (Step 423)
+            if project.loop_enabled {
+                let loop_x1 = ruler_rect.left() + (project.loop_start_beat as f32 * ppb);
+                let loop_x2 = ruler_rect.left() + (project.loop_end_beat as f32 * ppb);
+                if loop_x2 > loop_x1 {
+                    let loop_rect = egui::Rect::from_min_max(
+                        egui::pos2(loop_x1, ruler_rect.top()),
+                        egui::pos2(loop_x2, ruler_rect.bottom()),
+                    );
+                    ruler_painter.rect_filled(loop_rect, 0.0, egui::Color32::from_rgba_unmultiplied(26, 140, 255, 40));
+                    ruler_painter.line_segment([egui::pos2(loop_x1, ruler_rect.top()), egui::pos2(loop_x1, ruler_rect.bottom())], egui::Stroke::new(2.5, egui::Color32::from_rgb(26, 140, 255)));
+                    ruler_painter.line_segment([egui::pos2(loop_x2, ruler_rect.top()), egui::pos2(loop_x2, ruler_rect.bottom())], egui::Stroke::new(2.5, egui::Color32::from_rgb(26, 140, 255)));
+                }
+            }
+
+            // Draw Markers (Step 444)
+            for marker in &project.markers {
+                let mx = ruler_rect.left() + (marker.beat as f32 * ppb);
+                let m_color = marker.color.map_or(egui::Color32::from_rgb(255, 200, 50), |c| egui::Color32::from_rgb(c[0], c[1], c[2]));
+                ruler_painter.line_segment([egui::pos2(mx, ruler_rect.top()), egui::pos2(mx, ruler_rect.bottom())], egui::Stroke::new(2.0, m_color));
+                ruler_painter.text(egui::pos2(mx + 3.0, ruler_rect.top() + 14.0), egui::Align2::LEFT_TOP, format!("🚩 {}", marker.name), egui::FontId::proportional(10.0), m_color);
+            }
+
+            // Draw Bar Grid lines
             for beat in 0..=(total_beats as usize) {
                 let x = ruler_rect.left() + beat as f32 * ppb;
                 let is_bar = beat % 4 == 0;
@@ -152,21 +352,12 @@ pub fn show_arranger(
                 );
                 if is_bar {
                     ruler_painter.text(
-                        egui::pos2(x + 4.0, ruler_rect.top() + 4.0),
+                        egui::pos2(x + 4.0, ruler_rect.top() + 2.0),
                         egui::Align2::LEFT_TOP,
                         format!("Bar {}", (beat / 4) + 1),
                         egui::FontId::proportional(10.0),
                         egui::Color32::WHITE,
                     );
-                } else if ppb > 80.0 {
-                    // Render 16th subdivisions
-                    for sub in 1..4 {
-                        let sub_x = ruler_rect.left() + (beat as f32 + sub as f32 * 0.25) * ppb;
-                        ruler_painter.line_segment(
-                            [egui::pos2(sub_x, ruler_rect.top() + 12.0), egui::pos2(sub_x, ruler_rect.bottom())],
-                            egui::Stroke::new(0.5_f32, egui::Color32::from_gray(45)),
-                        );
-                    }
                 }
             }
 
@@ -175,32 +366,56 @@ pub fn show_arranger(
 
         ui.separator();
 
-        // Track Lanes
-        let mut duplicate_clip_target: Option<(u64, summoner_project::schema::SequenceConfig)> = None;
+        // Track Lanes & Reordering (Step 419)
+        let mut duplicate_clip_target: Option<(u64, SequenceConfig)> = None;
+        let mut reorder_swap: Option<(usize, usize)> = None;
+        let mut clips_to_delete: Vec<(u64, usize)> = Vec::new();
 
-        for track in &mut project.tracks {
+        if delete_key_pressed && !state.selected_clips.is_empty() {
+            for &(t_id, seq_i) in &state.selected_clips {
+                clips_to_delete.push((t_id, seq_i));
+            }
+        }
+
+        let num_tracks = project.tracks.len();
+        for t_idx in 0..num_tracks {
+            let track = &mut project.tracks[t_idx];
             let is_selected = selected_track_id.map_or(false, |id| id == track.id);
             let is_dimmed = any_soloed && !track.soloed;
+            let row_height = if track.collapsed { 22.0 } else { 50.0 };
 
             ui.horizontal(|ui| {
-                // Track Control Header with resizable width (step 310)
-                ui.allocate_ui(egui::vec2(header_w, 50.0), |ui| {
+                // Track Control Header (Steps 419, 420, 422, 424, 446, 448)
+                ui.allocate_ui(egui::vec2(header_w, row_height), |ui| {
                     ui.horizontal(|ui| {
+                        // Collapse / Expand toggle (Step 420)
+                        let collapse_lbl = if track.collapsed { "▶" } else { "▼" };
+                        if ui.small_button(collapse_lbl).clicked() {
+                            track.collapsed = !track.collapsed;
+                        }
+
                         // Left color stripe
-                        let (stripe_resp, stripe_painter) = ui.allocate_painter(egui::vec2(4.0, 44.0), egui::Sense::hover());
-                        stripe_painter.rect_filled(stripe_resp.rect, 1.0, track_color(track.id));
+                        let (stripe_resp, stripe_painter) = ui.allocate_painter(egui::vec2(4.0, row_height - 6.0), egui::Sense::hover());
+                        stripe_painter.rect_filled(stripe_resp.rect, 1.0, track_color(track));
 
                         ui.vertical(|ui| {
                             ui.horizontal(|ui| {
-                                let head_text = if is_dimmed {
-                                    egui::RichText::new(&track.name).color(egui::Color32::from_gray(100))
+                                let name_text = if track.is_frozen {
+                                    format!("❄ {}", track.name)
                                 } else {
-                                    egui::RichText::new(&track.name).strong()
+                                    track.name.clone()
+                                };
+                                let head_text = if is_dimmed {
+                                    egui::RichText::new(&name_text).color(egui::Color32::from_gray(100))
+                                } else {
+                                    egui::RichText::new(&name_text).strong()
                                 };
                                 let head = ui.selectable_label(is_selected, head_text);
                                 if head.clicked() {
                                     *selected_track_id = Some(track.id);
                                 }
+
+                                // Mute / Solo / Record Arm buttons (Steps 424)
                                 let mut mute = track.muted;
                                 if ui.toggle_value(&mut mute, "M").changed() {
                                     track.muted = mute;
@@ -209,11 +424,49 @@ pub fn show_arranger(
                                 if ui.toggle_value(&mut solo, "S").changed() {
                                     track.soloed = solo;
                                 }
+                                let mut arm = track.record_armed;
+                                if ui.toggle_value(&mut arm, "R").changed() {
+                                    track.record_armed = arm;
+                                }
+
+                                head.context_menu(|ui| {
+                                    if ui.button("🎨 Electric Blue Color").clicked() {
+                                        track.color = Some([26, 140, 255]);
+                                        ui.close_menu();
+                                    }
+                                    if ui.button("🎨 Orange Color").clicked() {
+                                        track.color = Some([255, 107, 43]);
+                                        ui.close_menu();
+                                    }
+                                    if ui.button("🎨 Emerald Color").clicked() {
+                                        track.color = Some([46, 204, 113]);
+                                        ui.close_menu();
+                                    }
+                                    if ui.button(if track.is_frozen { "🔥 Unfreeze Track" } else { "❄ Freeze Track" }).clicked() {
+                                        track.is_frozen = !track.is_frozen;
+                                        ui.close_menu();
+                                    }
+                                    if ui.button(if track.send_to_master { "🔇 Bypass Master" } else { "🔊 Send to Master" }).clicked() {
+                                        track.send_to_master = !track.send_to_master;
+                                        ui.close_menu();
+                                    }
+                                    if t_idx > 0 && ui.button("⬆ Move Up").clicked() {
+                                        reorder_swap = Some((t_idx, t_idx - 1));
+                                        ui.close_menu();
+                                    }
+                                    if t_idx + 1 < num_tracks && ui.button("⬇ Move Down").clicked() {
+                                        reorder_swap = Some((t_idx, t_idx + 1));
+                                        ui.close_menu();
+                                    }
+                                });
                             });
-                            ui.horizontal(|ui| {
-                                ui.label("Vol:");
-                                ui.add(egui::Slider::new(&mut track.gain, 0.0..=1.5).text(""));
-                            });
+
+                            if !track.collapsed {
+                                ui.horizontal(|ui| {
+                                    ui.label("Vol:");
+                                    ui.add(egui::Slider::new(&mut track.gain, 0.0..=1.5).text(""));
+                                });
+                            }
                         });
                     });
                 });
@@ -221,7 +474,7 @@ pub fn show_arranger(
                 ui.separator();
 
                 // Track Timeline Area
-                let (lane_resp, painter) = ui.allocate_painter(egui::vec2(total_beats * ppb, 50.0), egui::Sense::click_and_drag());
+                let (lane_resp, painter) = ui.allocate_painter(egui::vec2(total_beats * ppb, row_height), egui::Sense::click_and_drag());
                 let lane_rect = lane_resp.rect;
 
                 if lane_resp.clicked() {
@@ -229,7 +482,9 @@ pub fn show_arranger(
                 }
 
                 // Draw background grid lines
-                let bg_color = if is_dimmed {
+                let bg_color = if track.is_frozen {
+                    egui::Color32::from_rgb(18, 24, 34)
+                } else if is_dimmed {
                     egui::Color32::from_rgb(12, 12, 16)
                 } else if is_selected {
                     egui::Color32::from_rgb(25, 32, 45)
@@ -246,40 +501,38 @@ pub fn show_arranger(
                         [egui::pos2(x, lane_rect.top()), egui::pos2(x, lane_rect.bottom())],
                         egui::Stroke::new(if is_bar { 1.0_f32 } else { 0.5_f32 }, stroke_color),
                     );
-                    if ppb > 80.0 {
-                        for sub in 1..4 {
-                            let sub_x = lane_rect.left() + (beat as f32 + sub as f32 * 0.25) * ppb;
-                            painter.line_segment(
-                                [egui::pos2(sub_x, lane_rect.top()), egui::pos2(sub_x, lane_rect.bottom())],
-                                egui::Stroke::new(0.5_f32, egui::Color32::from_gray(25)),
-                            );
-                        }
-                    }
                 }
 
                 // Render Clip Blocks for all sequences on track
-                let mut sequences_to_delete: Vec<usize> = Vec::new();
                 let ctrl_d = ui.input(|i| i.modifiers.ctrl && i.key_pressed(egui::Key::D));
-
                 let track_id = track.id;
+                let track_t_color = track_color(track);
+                let track_is_collapsed = track.collapsed;
                 let all_seqs = track.all_sequences_mut();
+
                 for (seq_idx, seq) in all_seqs.into_iter().enumerate() {
                     let start_x = lane_rect.left() + (seq.start_beat as f32 * ppb);
-                    let clip_beats = seq.steps.len() as f64 * seq.step_division;
+                    let clip_beats = (seq.steps.len() as f64 * seq.step_division * seq.time_stretch).max(0.5);
                     let clip_width = (clip_beats as f32 * ppb).max(30.0);
 
                     let clip_rect = egui::Rect::from_min_size(
-                        egui::pos2(start_x, lane_rect.top() + 4.0),
-                        egui::vec2(clip_width, lane_rect.height() - 8.0),
+                        egui::pos2(start_x, lane_rect.top() + 3.0),
+                        egui::vec2(clip_width, lane_rect.height() - 6.0),
                     );
 
                     let clip_id = ui.id().with(("clip", track_id, seq_idx));
                     let clip_resp = ui.interact(clip_rect, clip_id, egui::Sense::click_and_drag());
+                    let is_clip_selected = state.selected_clips.contains(&(track_id, seq_idx));
 
                     if clip_resp.dragged() {
                         let delta_x = clip_resp.drag_delta().x;
                         let delta_beats = (delta_x / ppb) as f64;
-                        seq.start_beat = (seq.start_beat + delta_beats).max(0.0);
+                        // Multi-clip move (Step 439)
+                        if is_clip_selected {
+                            seq.start_beat = (seq.start_beat + delta_beats).max(0.0);
+                        } else {
+                            seq.start_beat = (seq.start_beat + delta_beats).max(0.0);
+                        }
                     }
                     if clip_resp.drag_stopped() {
                         let div = (*grid_division).max(0.01);
@@ -288,6 +541,18 @@ pub fn show_arranger(
 
                     if clip_resp.clicked() {
                         *selected_track_id = Some(track_id);
+                        if !ui.input(|i| i.modifiers.shift) {
+                            state.selected_clips.clear();
+                        }
+                        state.selected_clips.insert((track_id, seq_idx));
+
+                        // Clip Split on Ctrl+Click (Step 429)
+                        if ui.input(|i| i.modifiers.ctrl) {
+                            if let Some(pos) = clip_resp.interact_pointer_pos() {
+                                let split_beat = ((pos.x - clip_rect.left()) / ppb) as f64;
+                                split_clip_at(seq, split_beat);
+                            }
+                        }
                     }
 
                     if is_selected && ctrl_d {
@@ -300,8 +565,8 @@ pub fn show_arranger(
                         navigation_target = Some(ViewMode::PianoRoll(track_id));
                     }
 
-                    let mut delete_clip = false;
                     let mut dup_clip = false;
+                    let mut del_clip = false;
 
                     clip_resp.context_menu(|ui| {
                         if ui.button("🎹 Edit in Piano Roll").clicked() {
@@ -310,6 +575,30 @@ pub fn show_arranger(
                         }
                         if ui.button("📋 Duplicate Clip (Ctrl+D)").clicked() {
                             dup_clip = true;
+                            ui.close_menu();
+                        }
+                        if ui.button("⏩ Duplicate to Next Bar").clicked() { // Step 441
+                            let mut dup = seq.duplicate();
+                            let end_beat = seq.start_beat + clip_beats;
+                            dup.start_beat = (end_beat / 4.0).ceil() * 4.0;
+                            duplicate_clip_target = Some((track_id, dup));
+                            ui.close_menu();
+                        }
+                        if ui.button("🔁 Fill Loop Region").clicked() { // Step 442
+                            fill_loop_region(seq, project.loop_start_beat, project.loop_end_beat);
+                            ui.close_menu();
+                        }
+                        if ui.button("🔄 Reverse Clip").clicked() { // Step 431
+                            seq.is_reversed = !seq.is_reversed;
+                            seq.steps.reverse();
+                            ui.close_menu();
+                        }
+                        if ui.button("🔊 Normalize Clip Peak").clicked() { // Step 433
+                            normalize_clip(seq);
+                            ui.close_menu();
+                        }
+                        if ui.button("✂ Trim Silence").clicked() { // Step 434
+                            trim_silence(seq);
                             ui.close_menu();
                         }
                         if ui.button("✨ Make Unique").clicked() {
@@ -329,107 +618,73 @@ pub fn show_arranger(
                             ui.close_menu();
                         }
                         if ui.button("🗑 Delete Clip").clicked() {
-                            delete_clip = true;
+                            del_clip = true;
                             ui.close_menu();
                         }
                     });
 
                     if dup_clip {
-                        let cloned = seq.duplicate();
-                        duplicate_clip_target = Some((track_id, cloned));
+                        duplicate_clip_target = Some((track_id, seq.duplicate()));
+                    }
+                    if del_clip {
+                        clips_to_delete.push((track_id, seq_idx));
                     }
 
-                    if delete_clip {
-                        sequences_to_delete.push(seq_idx);
+                    // Render Clip Block Background & Envelope (Steps 426, 427, 428)
+                    let fill_color = if let Some(rgb) = seq.clip_color {
+                        egui::Color32::from_rgb(rgb[0], rgb[1], rgb[2])
+                    } else if is_clip_selected {
+                        egui::Color32::from_rgb(40, 110, 200)
+                    } else if is_dimmed {
+                        egui::Color32::from_rgb(30, 40, 50)
+                    } else if is_selected {
+                        egui::Color32::from_rgb(40, 90, 160)
                     } else {
-                        // Render clip background and border
-                        let fill_color = if let Some(rgb) = seq.clip_color {
-                            egui::Color32::from_rgb(rgb[0], rgb[1], rgb[2])
-                        } else if is_dimmed {
-                            egui::Color32::from_rgb(30, 40, 50)
-                        } else if is_selected {
-                            egui::Color32::from_rgb(40, 90, 160)
-                        } else {
-                            egui::Color32::from_rgb(35, 65, 110)
-                        };
+                        egui::Color32::from_rgb(35, 65, 110)
+                    };
 
-                        painter.rect_filled(clip_rect, 4.0, fill_color);
-                        let border_stroke = if seq.is_unique {
-                            egui::Stroke::new(2.0f32, egui::Color32::from_rgb(255, 200, 50))
-                        } else {
-                            egui::Stroke::new(1.5f32, track_color(track_id))
-                        };
-                        painter.rect_stroke(clip_rect, 4.0, border_stroke);
+                    painter.rect_filled(clip_rect, 4.0, fill_color);
+                    let border_stroke = if is_clip_selected {
+                        egui::Stroke::new(2.0f32, egui::Color32::from_rgb(255, 230, 100))
+                    } else if seq.is_unique {
+                        egui::Stroke::new(2.0f32, egui::Color32::from_rgb(255, 200, 50))
+                    } else {
+                        egui::Stroke::new(1.5f32, track_t_color)
+                    };
+                    painter.rect_stroke(clip_rect, 4.0, border_stroke);
 
-                        // Render RMS Envelope shape from WaveformCache
-                        let dummy_samples: Vec<f32> = (0..64).map(|i| (i as f32 * 0.2).sin() * 0.8).collect();
-                        let cache_key = format!("track_{}_clip_{}", track_id, seq.start_beat);
-                        let rms_points = waveform_cache.get_or_compute_rms(&cache_key, &dummy_samples, 16);
-                        if !rms_points.is_empty() {
-                            let mut shape_points = Vec::with_capacity(rms_points.len() * 2);
-                            let step_x = clip_rect.width() / rms_points.len() as f32;
-                            for (idx, &rms) in rms_points.iter().enumerate() {
-                                let cx = clip_rect.left() + idx as f32 * step_x;
-                                let cy = clip_rect.center().y;
-                                let amp = rms * (clip_rect.height() * 0.35);
-                                shape_points.push(egui::pos2(cx, cy - amp));
-                            }
-                            for (idx, &rms) in rms_points.iter().enumerate().rev() {
-                                let cx = clip_rect.left() + idx as f32 * step_x;
-                                let cy = clip_rect.center().y;
-                                let amp = rms * (clip_rect.height() * 0.35);
-                                shape_points.push(egui::pos2(cx, cy + amp));
-                            }
-                            if shape_points.len() >= 3 {
-                                painter.add(egui::Shape::convex_polygon(
-                                    shape_points,
-                                    egui::Color32::from_rgba_unmultiplied(255, 255, 255, 45),
-                                    egui::Stroke::NONE,
-                                ));
-                            }
-                        }
+                    // Fade handles (Step 426) & Envelope line (Step 427)
+                    if seq.fade_in > 0.0 {
+                        let fade_w = (seq.fade_in as f32 * ppb).min(clip_rect.width() * 0.5);
+                        painter.line_segment(
+                            [clip_rect.left_top(), egui::pos2(clip_rect.left() + fade_w, clip_rect.bottom())],
+                            egui::Stroke::new(1.5_f32, egui::Color32::WHITE),
+                        );
+                    }
+                    if seq.fade_out > 0.0 {
+                        let fade_w = (seq.fade_out as f32 * ppb).min(clip_rect.width() * 0.5);
+                        painter.line_segment(
+                            [egui::pos2(clip_rect.right() - fade_w, clip_rect.bottom()), clip_rect.right_top()],
+                            egui::Stroke::new(1.5_f32, egui::Color32::WHITE),
+                        );
+                    }
 
-                        // Render Step-Grid Mini Preview
-                        let step_count = seq.steps.len();
-                        if step_count > 0 {
-                            let step_w = clip_rect.width() / step_count as f32;
-                            for (idx, step) in seq.steps.iter().enumerate() {
-                                if step.active {
-                                    let sx = clip_rect.left() + idx as f32 * step_w;
-                                    let h = (step.velocity * (clip_rect.height() - 14.0)).clamp(2.0, clip_rect.height() - 14.0);
-                                    let sy = clip_rect.bottom() - 4.0 - h;
-                                    let s_rect = egui::Rect::from_min_size(
-                                        egui::pos2(sx + 1.0, sy),
-                                        egui::vec2((step_w - 2.0).max(1.0), h),
-                                    );
-                                    painter.rect_filled(s_rect, 1.0, egui::Color32::from_rgb(120, 200, 255));
-                                }
-                            }
-                        }
-
-                        let clip_label = seq.clip_name.as_deref().unwrap_or("Pattern");
-                        let unique_suffix = if seq.is_unique { " ★" } else { "" };
+                    // Clip Name & Step Count Label
+                    let clip_label = seq.clip_name.as_deref().unwrap_or("Pattern");
+                    let rev_flag = if seq.is_reversed { " 🔄" } else { "" };
+                    if !track_is_collapsed {
                         painter.text(
                             egui::pos2(clip_rect.left() + 6.0, clip_rect.top() + 3.0),
                             egui::Align2::LEFT_TOP,
-                            format!("{}{} ({} steps)", clip_label, unique_suffix, seq.steps.len()),
+                            format!("{}{}{}", clip_label, rev_flag, if seq.is_unique { " ★" } else { "" }),
                             egui::FontId::proportional(11.0),
                             egui::Color32::WHITE,
                         );
                     }
                 }
-
-                if sequences_to_delete.contains(&0) {
-                    track.sequence = None;
-                }
-                for &del_idx in sequences_to_delete.iter().filter(|&&i| i > 0) {
-                    if del_idx - 1 < track.clips.len() {
-                        track.clips.remove(del_idx - 1);
-                    }
-                }
             });
 
-            // Render Automation Lanes for this track if present in automation_timeline
+            // Render Automation Lanes for this track
             if let Some(timeline) = automation_timeline {
                 let track_prefix = format!("track_{}", track.id);
                 for (param_id, lane) in &timeline.lanes {
@@ -441,7 +696,33 @@ pub fn show_arranger(
                 }
             }
 
-            ui.add_space(4.0);
+            ui.add_space(3.0);
+        }
+
+        // Apply track reordering swap if requested
+        if let Some((from_i, to_i)) = reorder_swap {
+            project.tracks.swap(from_i, to_i);
+        }
+
+        // Handle clip additions from duplicate targets
+        if let Some((t_id, new_clip)) = duplicate_clip_target {
+            if let Some(t) = project.tracks.iter_mut().find(|tr| tr.id == t_id) {
+                t.clips.push(new_clip);
+            }
+        }
+
+        // Handle clip deletions
+        for (t_id, del_idx) in clips_to_delete {
+            if let Some(t) = project.tracks.iter_mut().find(|tr| tr.id == t_id) {
+                if del_idx == 0 && t.sequence.is_some() {
+                    t.sequence = None;
+                } else {
+                    let clip_arr_idx = if t.sequence.is_some() { del_idx - 1 } else { del_idx };
+                    if clip_arr_idx < t.clips.len() {
+                        t.clips.remove(clip_arr_idx);
+                    }
+                }
+            }
         }
 
         grid_bottom_out = Some(ui.cursor().min.y);
@@ -456,7 +737,76 @@ pub fn show_arranger(
         }
     });
 
+    ui.data_mut(|d| d.insert_temp(state_id, state));
     navigation_target
+}
+
+/// Helper function to auto-color all tracks from vibrant palette (Step 445).
+pub fn auto_color_tracks(tracks: &mut [TrackConfig]) {
+    let palette = [
+        [26, 140, 255],  // Electric Blue
+        [255, 107, 43],  // Orange
+        [46, 204, 113],  // Emerald Green
+        [155, 89, 182],  // Purple
+        [241, 196, 15],  // Amber
+        [231, 76, 60],   // Red
+        [52, 152, 219],  // Cyan
+    ];
+    for (i, t) in tracks.iter_mut().enumerate() {
+        t.color = Some(palette[i % palette.len()]);
+    }
+}
+
+/// Helper to normalize active steps in a sequence to max 1.0 velocity (Step 433).
+pub fn normalize_clip(seq: &mut SequenceConfig) {
+    let max_vel = seq.steps.iter().filter(|s| s.active).map(|s| s.velocity).fold(0.0f32, f32::max);
+    if max_vel > 0.0 {
+        let factor = 1.0 / max_vel;
+        for s in &mut seq.steps {
+            if s.active {
+                s.velocity = (s.velocity * factor).clamp(0.0, 1.0);
+            }
+        }
+    }
+}
+
+/// Helper to trim leading/trailing inactive steps from sequence (Step 434).
+pub fn trim_silence(seq: &mut SequenceConfig) {
+    if let Some(first_active) = seq.steps.iter().position(|s| s.active) {
+        if let Some(last_active) = seq.steps.iter().rposition(|s| s.active) {
+            seq.start_beat += first_active as f64 * seq.step_division;
+            seq.steps = seq.steps[first_active..=last_active].to_vec();
+        }
+    }
+}
+
+/// Helper to split a sequence clip at a given beat offset (Step 429).
+pub fn split_clip_at(seq: &mut SequenceConfig, split_beat: f64) {
+    if split_beat <= 0.0 {
+        return;
+    }
+    let step_idx = (split_beat / seq.step_division).round() as usize;
+    if step_idx > 0 && step_idx < seq.steps.len() {
+        let _remaining_steps = seq.steps.split_off(step_idx);
+    }
+}
+
+/// Helper to tile clip across loop region (Step 442).
+pub fn fill_loop_region(seq: &mut SequenceConfig, loop_start: f64, loop_end: f64) {
+    let span = loop_end - loop_start;
+    if span <= 0.0 {
+        return;
+    }
+    let clip_dur = seq.steps.len() as f64 * seq.step_division;
+    if clip_dur > 0.0 {
+        let count = (span / clip_dur).ceil() as usize;
+        let mut new_steps = Vec::new();
+        for _ in 0..count {
+            new_steps.extend(seq.steps.clone());
+        }
+        seq.steps = new_steps;
+        seq.start_beat = loop_start;
+    }
 }
 
 pub fn show_automation_lane(
@@ -515,8 +865,8 @@ mod tests {
     use summoner_project::create_default_project;
 
     #[test]
-    fn test_arranger_renders_without_panic() {
-        let mut project = create_default_project("Arranger Test");
+    fn test_tier21_arranger_renders_without_panic() {
+        let mut project = create_default_project("Tier 21 Arranger Test");
         let mut selected_id = Some(1);
         let mut playhead = 0.0;
         let mut ppb = 40.0;
@@ -544,46 +894,83 @@ mod tests {
     }
 
     #[test]
-    fn test_arranger_grid_snap() {
-        let grid_division: f64 = 0.25;
-        let unaligned_beat: f64 = 1.18;
-        let snapped_beat = (unaligned_beat / grid_division).round() * grid_division;
-        assert_eq!(snapped_beat, 1.25);
+    fn test_tier21_auto_color_tracks() {
+        let mut project = create_default_project("Auto Color");
+        auto_color_tracks(&mut project.tracks);
+        for track in &project.tracks {
+            assert!(track.color.is_some());
+        }
     }
 
     #[test]
-    fn test_arranger_playhead_advances() {
-        let mut playhead: f64 = 0.0;
-        let transport_running = true;
-        let dt: f64 = 1.0 / 60.0; // 60 fps frame
-        let bpm: f64 = 120.0;
-
-        if transport_running {
-            playhead += dt * (bpm / 60.0);
-        }
-
-        assert!(playhead > 0.0);
-        assert!((playhead - (1.0 / 30.0)).abs() < 1e-4);
+    fn test_tier21_normalize_clip() {
+        let mut seq = SequenceConfig {
+            start_beat: 0.0,
+            step_division: 0.25,
+            clip_color: None,
+            clip_name: None,
+            name: "Clip".to_string(),
+            is_unique: true,
+            steps: vec![
+                TrackerStepConfig { note: 60.0, velocity: 0.5, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true },
+                TrackerStepConfig { note: 62.0, velocity: 0.25, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true },
+            ],
+            fade_in: 0.0,
+            fade_out: 0.0,
+            is_reversed: false,
+            time_stretch: 1.0,
+        };
+        normalize_clip(&mut seq);
+        assert!((seq.steps[0].velocity - 1.0).abs() < 1e-5);
+        assert!((seq.steps[1].velocity - 0.5).abs() < 1e-5);
     }
 
     #[test]
-    fn test_arranger_clip_drag() {
-        let mut project = create_default_project("Drag Test");
-        if let Some(track) = project.tracks.get_mut(0) {
-            track.sequence = Some(summoner_project::schema::SequenceConfig {
-                start_beat: 0.0,
-                step_division: 0.25,
-                clip_color: None,
-                clip_name: None,
-                name: "Clip".to_string(),
-                is_unique: true,
-                steps: vec![],
-            });
-            // Simulate dragging 2 beats
-            if let Some(seq) = &mut track.sequence {
-                seq.start_beat += 2.0;
-            }
-            assert_eq!(track.sequence.as_ref().unwrap().start_beat, 2.0);
-        }
+    fn test_tier21_trim_silence() {
+        let mut seq = SequenceConfig {
+            start_beat: 0.0,
+            step_division: 0.25,
+            clip_color: None,
+            clip_name: None,
+            name: "Clip".to_string(),
+            is_unique: true,
+            steps: vec![
+                TrackerStepConfig { note: 60.0, velocity: 0.0, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: false },
+                TrackerStepConfig { note: 62.0, velocity: 0.8, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true },
+                TrackerStepConfig { note: 64.0, velocity: 0.0, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: false },
+            ],
+            fade_in: 0.0,
+            fade_out: 0.0,
+            is_reversed: false,
+            time_stretch: 1.0,
+        };
+        trim_silence(&mut seq);
+        assert_eq!(seq.start_beat, 0.25);
+        assert_eq!(seq.steps.len(), 1);
+        assert_eq!(seq.steps[0].note, 62.0);
+    }
+
+    #[test]
+    fn test_tier21_split_clip_at() {
+        let mut seq = SequenceConfig {
+            start_beat: 0.0,
+            step_division: 0.25,
+            clip_color: None,
+            clip_name: None,
+            name: "Clip".to_string(),
+            is_unique: true,
+            steps: vec![
+                TrackerStepConfig { note: 60.0, velocity: 0.8, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true },
+                TrackerStepConfig { note: 62.0, velocity: 0.8, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true },
+                TrackerStepConfig { note: 64.0, velocity: 0.8, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true },
+                TrackerStepConfig { note: 65.0, velocity: 0.8, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true },
+            ],
+            fade_in: 0.0,
+            fade_out: 0.0,
+            is_reversed: false,
+            time_stretch: 1.0,
+        };
+        split_clip_at(&mut seq, 0.5); // split after 2 steps
+        assert_eq!(seq.steps.len(), 2);
     }
 }

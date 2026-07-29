@@ -95,6 +95,7 @@ mod tests {
                 };
                 16
             ],
+            ..Default::default()
         };
 
         insert_chord_at_playhead(&mut sequence, &[67, 71, 74], 0.0);

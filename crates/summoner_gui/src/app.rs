@@ -512,6 +512,7 @@ impl eframe::App for SummonerApp {
                         tuning_edo: None,
                         tuning_root_hz: None,
                         tuning_scl_path: None,
+                        ..Default::default()
                     });
                 }
                 "render_wav" => {
@@ -1059,6 +1060,7 @@ impl eframe::App for SummonerApp {
                                 pitch_offset: 0.0,
                                 active: true,
                             }; 16],
+                            ..Default::default()
                         });
                         let tuning = EdoTuning::new(track.tuning_edo.unwrap_or(12) as u16, track.tuning_root_hz.unwrap_or(440.0) as f64, 69.0);
                         let viewport = Viewport { width: ui.available_width(), height: ui.available_height() };

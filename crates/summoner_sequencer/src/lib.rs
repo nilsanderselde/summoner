@@ -55,6 +55,7 @@ mod tests {
                     pitch_offset: 0.0,
                     active: true,
                 }; 16],
+                ..Default::default()
             }),
             clips: vec![SequenceConfig {
                 start_beat: 4.0,
@@ -75,11 +76,13 @@ mod tests {
                     pitch_offset: 0.0,
                     active: true,
                 }; 16],
+                ..Default::default()
             }],
             connections: Vec::new(),
             tuning_edo: None,
             tuning_root_hz: None,
             tuning_scl_path: None,
+            ..Default::default()
         };
 
         let seqs = track.all_sequences();

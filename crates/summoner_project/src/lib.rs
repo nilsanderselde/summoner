@@ -86,6 +86,7 @@ pub fn create_project_from_template(name: &str, template_kind: &str) -> ProjectC
                 tuning_edo: None,
                 tuning_root_hz: None,
                 tuning_scl_path: None,
+                ..Default::default()
             },
             TrackConfig {
                 id: 2,
@@ -112,6 +113,7 @@ pub fn create_project_from_template(name: &str, template_kind: &str) -> ProjectC
                 tuning_edo: None,
                 tuning_root_hz: None,
                 tuning_scl_path: None,
+                ..Default::default()
             },
             TrackConfig {
                 id: 3,
@@ -129,6 +131,7 @@ pub fn create_project_from_template(name: &str, template_kind: &str) -> ProjectC
                 tuning_edo: None,
                 tuning_root_hz: None,
                 tuning_scl_path: None,
+                ..Default::default()
             },
         ],
         "Microtonal Exploration" => vec![
@@ -148,6 +151,7 @@ pub fn create_project_from_template(name: &str, template_kind: &str) -> ProjectC
                 tuning_edo: None,
                 tuning_root_hz: None,
                 tuning_scl_path: None,
+                ..Default::default()
             },
             TrackConfig {
                 id: 2,
@@ -165,6 +169,7 @@ pub fn create_project_from_template(name: &str, template_kind: &str) -> ProjectC
                 tuning_edo: Some(19),
                 tuning_root_hz: Some(440.0),
                 tuning_scl_path: None,
+                ..Default::default()
             },
         ],
         _ => vec![
@@ -184,6 +189,7 @@ pub fn create_project_from_template(name: &str, template_kind: &str) -> ProjectC
                 tuning_edo: None,
                 tuning_root_hz: None,
                 tuning_scl_path: None,
+                ..Default::default()
             },
             TrackConfig {
                 id: 2,
@@ -210,6 +216,7 @@ pub fn create_project_from_template(name: &str, template_kind: &str) -> ProjectC
                 tuning_edo: None,
                 tuning_root_hz: None,
                 tuning_scl_path: None,
+                ..Default::default()
             },
         ],
     };
@@ -222,6 +229,7 @@ pub fn create_project_from_template(name: &str, template_kind: &str) -> ProjectC
         assets: Vec::new(),
         automation_lanes: Vec::new(),
         midi_mappings: Vec::new(),
+        ..Default::default()
     }
 }
 
@@ -286,6 +294,7 @@ mod tests {
                     active: true,
                 },
             ],
+            ..Default::default()
         });
 
         let serialized = serialize_project_toml(&proj).expect("Serialization failed");
