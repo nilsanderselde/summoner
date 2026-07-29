@@ -72,6 +72,18 @@ impl HarmonicContext {
     }
 
     /// Resolve note index to frequency in Hz using current tuning context.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use summoner_harmony::bus::HarmonicContext;
+    /// use summoner_harmony::edo::EdoTuning;
+    /// use summoner_harmony::scale::Scale;
+    ///
+    /// let bus = HarmonicContext::new(EdoTuning::default(), 60, Scale::major_12_tet());
+    /// let freq = bus.freq_from_note(69.0);
+    /// assert!((freq - 440.0).abs() < 1e-3);
+    /// ```
     pub fn freq_from_note(&self, note: f64) -> f64 {
         self.tuning.note_to_freq(note)
     }

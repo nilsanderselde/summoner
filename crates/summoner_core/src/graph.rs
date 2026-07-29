@@ -66,6 +66,18 @@ impl NodeGraph {
         }
     }
 
+    /// Adds a new audio node to the graph and allocates internal buffers for it.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use summoner_core::graph::NodeGraph;
+    /// use summoner_core::node::GainNode;
+    ///
+    /// let mut graph = NodeGraph::new("TestGraph", 512, 2);
+    /// let node_idx = graph.add_node(Box::new(GainNode::new(0.8)));
+    /// assert_eq!(node_idx, 0);
+    /// ```
     pub fn add_node(&mut self, node: Box<dyn AudioNode>) -> usize {
         let idx = self.nodes.len();
         self.nodes.push(node);

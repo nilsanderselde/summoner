@@ -601,6 +601,18 @@ impl SamplerDevice {
         }
     }
 
+    /// Triggers a MIDI note on the internal sampler node and activates amplitude envelope.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use summoner_dsp::composites::SamplerDevice;
+    /// use summoner_dsp::sampler::MultiSampleBank;
+    ///
+    /// let bank = MultiSampleBank::new();
+    /// let mut device = SamplerDevice::new(bank);
+    /// device.trigger_note(60, 100);
+    /// ```
     pub fn trigger_note(&mut self, note: u8, velocity: u8) {
         self.sampler.trigger_note(note, velocity);
         self.amp_env.trigger(true);

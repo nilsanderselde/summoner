@@ -174,5 +174,26 @@ mod tests {
         let parsed = parse_project_toml(&serialized).expect("Deserialization failed");
         assert_eq!(proj, parsed);
     }
+
+    #[test]
+    fn test_preset_schema_validates_freepats_presets() {
+        let presets_dir = std::path::Path::new("local/presets/freepats");
+        if presets_dir.exists() {
+            let entries = std::fs::read_dir(presets_dir).unwrap();
+            let mut validated_count = 0;
+            for entry in entries {
+                let entry = entry.unwrap();
+                let path = entry.path();
+                if path.extension().and_then(|s| s.to_str()) == Some("toml") || path.to_string_lossy().ends_with(".preset.toml") {
+                    let content = std::fs::read_to_string(&path).unwrap();
+                    let val: toml::Value = toml::from_str(&content).unwrap();
+                    assert!(val.get("name").is_some(), "Preset {:?} missing 'name'", path);
+                    assert!(val.get("regions").is_some(), "Preset {:?} missing 'regions'", path);
+                    validated_count += 1;
+                }
+            }
+            assert!(validated_count > 0, "Expected to validate at least one freepats preset");
+        }
+    }
 }
 

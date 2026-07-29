@@ -93,6 +93,23 @@ impl AutomationTimeline {
         self.lanes.get(param_id).map(|lane| lane.curve.evaluate_at_beat(beat))
     }
 
+    /// Evaluates all automation lanes at the specified beat position and updates registered parameters.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use summoner_sequencer::automation_timeline::{AutomationTimeline, AutomationLane, AutomationCurve, AutomationPoint, Interpolation};
+    /// use summoner_sequencer::automation::AutomationRegistry;
+    ///
+    /// let registry = AutomationRegistry::new();
+    /// let curve = AutomationCurve::new(vec![
+    ///     AutomationPoint { beat: 0.0, value: 0.0, interp: Interpolation::Linear },
+    ///     AutomationPoint { beat: 4.0, value: 1.0, interp: Interpolation::Linear },
+    /// ]);
+    /// let mut timeline = AutomationTimeline::new();
+    /// timeline.add_lane(AutomationLane { param_id: "cutoff".to_string(), curve });
+    /// timeline.apply_beat(&registry, 2.0);
+    /// ```
     pub fn apply_beat(&self, registry: &AutomationRegistry, beat: f64) {
         for (param_id, lane) in &self.lanes {
             if let Some(param) = registry.get_param(param_id) {
