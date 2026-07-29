@@ -62,17 +62,17 @@ pub fn delete_node(graph: &mut NodeGraph, state: &mut NodeGraphState, node_idx: 
     graph.compile();
 }
 
-fn get_node_color(name: &str) -> (egui::Color32, egui::Color32) {
+fn get_node_icon_and_color(name: &str) -> (&'static str, egui::Color32, egui::Color32) {
     if name.starts_with("Osc") || name.contains("Oscillator") {
-        (egui::Color32::from_rgb(30, 60, 130), egui::Color32::from_rgb(50, 100, 190))
+        ("🌊", egui::Color32::from_rgb(30, 60, 130), egui::Color32::from_rgb(50, 100, 190))
     } else if name.starts_with("Filter") || name.contains("Filter") {
-        (egui::Color32::from_rgb(100, 40, 140), egui::Color32::from_rgb(140, 60, 190))
+        ("🎛️", egui::Color32::from_rgb(100, 40, 140), egui::Color32::from_rgb(140, 60, 190))
     } else if name.starts_with("Env") || name.contains("ADSR") {
-        (egui::Color32::from_rgb(30, 120, 60), egui::Color32::from_rgb(50, 160, 80))
+        ("📈", egui::Color32::from_rgb(30, 120, 60), egui::Color32::from_rgb(50, 160, 80))
     } else if name.starts_with("Math") || name.contains("Gain") || name.contains("Passthrough") {
-        (egui::Color32::from_rgb(60, 60, 70), egui::Color32::from_rgb(90, 90, 105))
+        ("⚡", egui::Color32::from_rgb(60, 60, 70), egui::Color32::from_rgb(90, 90, 105))
     } else {
-        (egui::Color32::from_rgb(160, 80, 20), egui::Color32::from_rgb(200, 100, 30))
+        ("🎹", egui::Color32::from_rgb(160, 80, 20), egui::Color32::from_rgb(200, 100, 30))
     }
 }
 
@@ -102,26 +102,23 @@ pub fn show_node_graph(
             state.pan_offset += response.drag_delta();
         }
 
-        // Draw grid with pan and zoom
-        let grid_size = 50.0 * state.zoom;
+        // Draw dot grid with pan and zoom
+        let grid_size = 30.0 * state.zoom;
         let offset_x = (state.pan_offset.x % grid_size + grid_size) % grid_size;
         let offset_y = (state.pan_offset.y % grid_size + grid_size) % grid_size;
 
         let mut x = rect.left() + offset_x;
         while x < rect.right() {
-            painter.line_segment(
-                [egui::pos2(x, rect.top()), egui::pos2(x, rect.bottom())],
-                egui::Stroke::new(1.0f32, egui::Color32::from_gray(25)),
-            );
+            let mut y = rect.top() + offset_y;
+            while y < rect.bottom() {
+                painter.circle_filled(
+                    egui::pos2(x, y),
+                    1.5 * state.zoom,
+                    egui::Color32::from_gray(50),
+                );
+                y += grid_size;
+            }
             x += grid_size;
-        }
-        let mut y = rect.top() + offset_y;
-        while y < rect.bottom() {
-            painter.line_segment(
-                [egui::pos2(rect.left(), y), egui::pos2(rect.right(), y)],
-                egui::Stroke::new(1.0f32, egui::Color32::from_gray(25)),
-            );
-            y += grid_size;
         }
 
         // Warning banner if graph contains cycle
@@ -156,10 +153,20 @@ pub fn show_node_graph(
             let size = egui::vec2(140.0, 80.0) * state.zoom;
             let node_rect = egui::Rect::from_min_size(screen_pos, size);
 
-            let (bg_color, title_color) = get_node_color(node.name());
+            let (icon, bg_color, title_color) = get_node_icon_and_color(node.name());
 
-            // Node background
-            let border_color = if state.selected_nodes.contains(&i) {
+            // Node background and glow effect for selected nodes
+            let is_selected = state.selected_nodes.contains(&i);
+            if is_selected {
+                let glow_rect = node_rect.expand(4.0 * state.zoom);
+                painter.rect_stroke(
+                    glow_rect,
+                    8.0 * state.zoom,
+                    egui::Stroke::new(3.0 * state.zoom, egui::Color32::from_rgba_unmultiplied(26, 140, 255, 120)),
+                );
+            }
+
+            let border_color = if is_selected {
                 egui::Color32::YELLOW
             } else {
                 egui::Color32::from_gray(100)
@@ -167,7 +174,7 @@ pub fn show_node_graph(
             painter.rect_filled(node_rect, 5.0 * state.zoom, bg_color);
             painter.rect_stroke(node_rect, 5.0 * state.zoom, egui::Stroke::new(1.5f32 * state.zoom, border_color));
 
-            // Title bar
+            // Title bar with icon
             let title_height = 24.0 * state.zoom;
             let title_rect = egui::Rect::from_min_max(node_rect.left_top(), egui::pos2(node_rect.right(), node_rect.top() + title_height));
             painter.rect_filled(
@@ -180,11 +187,12 @@ pub fn show_node_graph(
                 },
                 title_color,
             );
+            let title_text = format!("{} {}", icon, node.name());
             painter.text(
                 title_rect.center(),
                 egui::Align2::CENTER_CENTER,
-                node.name(),
-                egui::FontId::proportional((13.0 * state.zoom).max(8.0)),
+                &title_text,
+                egui::FontId::proportional((12.0 * state.zoom).max(8.0)),
                 egui::Color32::WHITE,
             );
 

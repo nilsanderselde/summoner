@@ -40,15 +40,23 @@ pub struct GuiState {
 impl GuiState {
     pub const STATE_FILE: &'static str = ".summoner_gui_state.toml";
 
-    pub fn load() -> Option<Self> {
-        let content = std::fs::read_to_string(Self::STATE_FILE).ok()?;
+    pub fn load_from_path(path: &std::path::Path) -> Option<Self> {
+        let content = std::fs::read_to_string(path).ok()?;
         toml::from_str(&content).ok()
     }
 
-    pub fn save(&self) {
+    pub fn load() -> Option<Self> {
+        Self::load_from_path(std::path::Path::new(Self::STATE_FILE))
+    }
+
+    pub fn save_to_path(&self, path: &std::path::Path) {
         if let Ok(serialized) = toml::to_string(self) {
-            let _ = std::fs::write(Self::STATE_FILE, serialized);
+            let _ = std::fs::write(path, serialized);
         }
+    }
+
+    pub fn save(&self) {
+        self.save_to_path(std::path::Path::new(Self::STATE_FILE));
     }
 }
 
@@ -665,12 +673,20 @@ mod tests {
         assert_eq!(app.project.name, "New Project");
         assert_eq!(app.status_message.as_deref(), Some("Created new session"));
 
-        // Save GUI state persistence round-trip check
-        app.save_gui_state();
-        let loaded = GuiState::load();
+        // Save GUI state persistence round-trip check with isolated temp file
+        let temp_path = std::env::temp_dir().join(format!("test_gui_state_{}.toml", std::process::id()));
+        let state = GuiState {
+            current_view: app.current_view.clone(),
+            selected_track_id: app.selected_track_id,
+            show_rack: app.show_rack,
+            pixels_per_beat: app.pixels_per_beat,
+        };
+        state.save_to_path(&temp_path);
+        let loaded = GuiState::load_from_path(&temp_path);
         assert!(loaded.is_some());
         let loaded_state = loaded.unwrap();
         assert_eq!(loaded_state.current_view, ViewMode::Arranger);
+        let _ = std::fs::remove_file(&temp_path);
     }
 
     #[test]
@@ -687,13 +703,22 @@ mod tests {
             ViewMode::Performance,
         ];
 
+        let temp_path = std::env::temp_dir().join(format!("test_gui_nav_{}.toml", std::process::id()));
+
         for mode in modes {
             app.current_view = mode.clone();
             assert_eq!(app.current_view, mode);
-            app.save_gui_state();
-            let loaded = GuiState::load().expect("GuiState should load");
+            let state = GuiState {
+                current_view: app.current_view.clone(),
+                selected_track_id: app.selected_track_id,
+                show_rack: app.show_rack,
+                pixels_per_beat: app.pixels_per_beat,
+            };
+            state.save_to_path(&temp_path);
+            let loaded = GuiState::load_from_path(&temp_path).expect("GuiState should load");
             assert_eq!(loaded.current_view, mode);
         }
+        let _ = std::fs::remove_file(&temp_path);
     }
 }
 
