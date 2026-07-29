@@ -20,3 +20,31 @@ path = "fuzz_targets/dsp_fuzz.rs"
 [[bin]]
 name = "toml_fuzz"
 path = "fuzz_targets/toml_fuzz.rs"
+
+[[bin]]
+name = "fuzz_filter_ladder"
+path = "fuzz_targets/fuzz_filter_ladder.rs"
+
+[[bin]]
+name = "fuzz_filter_svf"
+path = "fuzz_targets/fuzz_filter_svf.rs"
+
+[[bin]]
+name = "fuzz_osc_saw"
+path = "fuzz_targets/fuzz_osc_saw.rs"
+
+[[bin]]
+name = "fuzz_osc_pulse"
+path = "fuzz_targets/fuzz_osc_pulse.rs"
+
+[[bin]]
+name = "fuzz_granular"
+path = "fuzz_targets/fuzz_granular.rs"
+
+[[bin]]
+name = "fuzz_karplus_strong"
+path = "fuzz_targets/fuzz_karplus_strong.rs"
+
+[[bin]]
+name = "fuzz_auto_slicer"
+path = "fuzz_targets/fuzz_auto_slicer.rs"

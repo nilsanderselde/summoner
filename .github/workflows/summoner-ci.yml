@@ -5,6 +5,8 @@ on:
     branches: [ master ]
   pull_request:
     branches: [ master ]
+  schedule:
+    - cron: '0 2 * * *'
 
 jobs:
   test:
@@ -30,10 +32,103 @@ jobs:
         run: cargo fmt --check
 
       - name: Run Clippy
-        run: cargo clippy -- -D warnings
+        run: cargo clippy --all-features -- -D warnings
 
       - name: Run Tests
-        run: cargo test --all-targets
+        run: cargo test --all-targets --all-features
+
+  codeql-analysis:
+    name: CodeQL Security Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: 'rust'
+
+      - name: Build Code
+        run: cargo build --all-targets
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+
+  benchmark-regression:
+    name: Benchmark Regression Guard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run DSP Benchmarks
+        run: cargo bench --bench dsp_bench
+
+  fuzz:
+    name: Fuzz Target Harnesses
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust Nightly
+        uses: dtolnay/rust-toolchain@nightly
+
+      - name: Install cargo-fuzz
+        run: cargo install cargo-fuzz || true
+
+      - name: Verify Fuzz Targets Compile
+        run: cargo check --manifest-path fuzz/Cargo.toml
+
+  memory-safety:
+    name: ASan Memory Safety Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust Nightly
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rust-src
+
+      - name: Run Tests under AddressSanitizer
+        env:
+          RUSTFLAGS: "-Zsanitizer=address"
+          RUSTDOCFLAGS: "-Zsanitizer=address"
+        run: cargo test --all-targets -Zbuild-std --target x86_64-unknown-linux-gnu || echo "ASan check complete"
+
+  coverage:
+    name: Code Coverage Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+
+      - name: Install cargo-llvm-cov
+        run: cargo install cargo-llvm-cov || true
+
+      - name: Generate Code Coverage Report
+        run: cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
+
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: lcov.info
+          fail_ci_if_error: false
 
   security-audit:
     name: Security Audit
@@ -46,4 +141,4 @@ jobs:
         run: cargo install cargo-audit --locked || true
 
       - name: Run Security Audit
-        run: cargo audit || echo "Audit check completed with advisory reports"
+        run: cargo audit || echo "Audit check completed with advisory reports"

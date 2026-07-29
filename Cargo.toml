@@ -9,6 +9,7 @@ members = [
     "crates/summoner_sequencer",
     "crates/summon",
 ]
+exclude = ["fuzz"]
 
 [workspace.package]
 version = "0.1.0"
