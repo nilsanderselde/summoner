@@ -93,6 +93,8 @@ pub struct TrackConfig {
     #[serde(default)]
     pub muted: bool,
     #[serde(default)]
+    pub soloed: bool,
+    #[serde(default)]
     pub nodes: Vec<NodeConfig>,
     #[serde(default)]
     pub sequence: Option<SequenceConfig>,
@@ -132,6 +134,8 @@ pub struct NodeConfig {
 /// Polymetric sequence configuration for a track.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SequenceConfig {
+    #[serde(default)]
+    pub start_beat: f64,
     #[serde(default = "default_step_division")]
     pub step_division: f64,
     #[serde(default)]

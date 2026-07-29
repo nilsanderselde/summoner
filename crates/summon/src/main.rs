@@ -154,8 +154,10 @@ fn main() {
 
             let mut runner = graph::GraphRunner::new(&project);
 
-            // Fallback for empty tracks
             let use_fallback = runner.tracks.is_empty() || runner.tracks.iter().all(|t| t.nodes.is_empty());
+            if use_fallback {
+                eprintln!("Warning: All tracks are empty. Using fallback sine oscillator.");
+            }
             let mut fallback_sine = SineOscillatorNode::new(440.0);
             let mut fallback_gain = GainNode::new(0.5);
 
@@ -565,6 +567,7 @@ fn main() {
         }
         "gui" => {
             let path_str = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            #[allow(unused_variables)]
             let project = if Path::new(path_str).exists() {
                 let content = fs::read_to_string(path_str).expect("Failed to read project file");
                 parse_project_toml(&content).expect("Failed to parse project TOML")
@@ -580,6 +583,7 @@ fn main() {
             // Build param bus
             let param_bus = summoner_core::param_bus::ParamBus::new();
             // In a real app we'd iterate over tracks/nodes and register them, but for now we just give it an empty one
+            #[allow(unused_variables)]
             let param_bus_arc = std::sync::Arc::new(param_bus);
             
             println!("Launching Summoner GUI with project '{}'...", path_str);
@@ -594,6 +598,38 @@ fn main() {
             print_usage();
             process::exit(1);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_render_wav_uses_graph_with_partial_empty_tracks() {
+        let mut project = summoner_project::create_default_project("Partial Test");
+        // Add an empty track to project
+        let empty_track = summoner_project::schema::TrackConfig {
+            id: 99,
+            name: "Empty Track".to_string(),
+            channels: 2,
+            gain: 1.0,
+            pan: 0.0,
+            muted: false,
+            soloed: false,
+            nodes: vec![],
+            sequence: None,
+            connections: vec![],
+            tuning_edo: None,
+            tuning_root_hz: None,
+            tuning_scl_path: None,
+        };
+        project.tracks.push(empty_track);
+
+        let runner = graph::GraphRunner::new(&project);
+        // Track 0 has nodes, Track 1 (index 1) has 0 nodes.
+        let use_fallback = runner.tracks.is_empty() || runner.tracks.iter().all(|t| t.nodes.is_empty());
+        assert!(!use_fallback, "Should not fallback when at least one track has non-empty nodes");
     }
 }
 

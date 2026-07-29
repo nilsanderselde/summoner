@@ -17,16 +17,17 @@ use crate::audio::Sample;
 use crate::transport::Transport;
 use std::f32::consts::TAU;
 
+use std::sync::Arc;
 use crate::param_bus::ParamBus;
 
 /// Contextual metadata passed to `AudioNode::process` during DSP render evaluation.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct ProcessContext {
     pub frame_position: u64,
     pub sample_rate: u32,
     pub bpm: f64,
     pub is_playing: bool,
-    pub param_bus: Option<*const ParamBus>,
+    pub param_bus: Option<Arc<ParamBus>>,
     pub tuning_root_hz: f32,
     pub tuning_edo_divisions: u32,
 }
@@ -217,5 +218,16 @@ mod tests {
         assert!((ctx_19.note_to_hz(69) - 440.0).abs() < 1e-4);
         // Note 70 in 19-EDO: 440 * 2^(1/19) = 456.3482
         assert!((ctx_19.note_to_hz(70) - 456.3482).abs() < 1e-3);
+    }
+
+    #[test]
+    fn test_process_context_param_bus_send_sync() {
+        let bus = Arc::new(ParamBus::new());
+        let mut ctx = ProcessContext::new(44100, 120.0, 0);
+        ctx.param_bus = Some(Arc::clone(&bus));
+
+        fn assert_send_sync<T: Send + Sync>() {}
+        assert_send_sync::<ProcessContext>();
+        assert!(ctx.param_bus.is_some());
     }
 }

@@ -227,5 +227,43 @@ mod tests {
         let val_mid = restored.evaluate("cutoff", 2.0).unwrap();
         assert!((val_mid - 0.5).abs() < 1e-3);
     }
+
+    #[test]
+    fn test_automation_toml_round_trip() {
+        let curve = AutomationCurve::new(vec![
+            AutomationPoint { beat: 0.0, value: 0.1, interp: Interpolation::Linear },
+            AutomationPoint { beat: 1.0, value: 0.3, interp: Interpolation::Linear },
+            AutomationPoint { beat: 2.0, value: 0.5, interp: Interpolation::Linear },
+            AutomationPoint { beat: 3.0, value: 0.7, interp: Interpolation::Linear },
+            AutomationPoint { beat: 4.0, value: 0.9, interp: Interpolation::Linear },
+        ]);
+        let mut timeline = AutomationTimeline::new();
+        timeline.add_lane(AutomationLane { param_id: "res".to_string(), curve });
+
+        let configs = timeline.to_configs(0, 44100, 120.0);
+        let restored = AutomationTimeline::from_configs(&configs, 44100, 120.0);
+
+        for beat in [0.0, 1.0, 2.0, 3.0, 4.0] {
+            let orig = timeline.evaluate("res", beat).unwrap();
+            let rest = restored.evaluate("res", beat).unwrap();
+            assert!((orig - rest).abs() < 1e-4, "Mismatch at beat {}: orig={}, rest={}", beat, orig, rest);
+        }
+    }
+
+    #[test]
+    fn test_automation_beat_frame_conversion_120bpm() {
+        let curve = AutomationCurve::new(vec![
+            AutomationPoint { beat: 1.0, value: 1.0, interp: Interpolation::Linear },
+        ]);
+        let mut timeline = AutomationTimeline::new();
+        timeline.add_lane(AutomationLane { param_id: "gain".to_string(), curve });
+
+        let configs = timeline.to_configs(0, 44100, 120.0);
+        assert_eq!(configs[0].events[0].frame, 22050);
+
+        let restored = AutomationTimeline::from_configs(&configs, 44100, 120.0);
+        let point_beat = restored.lanes.get("gain").unwrap().curve.points[0].beat;
+        assert!((point_beat - 1.0).abs() < 1e-5);
+    }
 }
 

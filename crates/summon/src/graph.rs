@@ -97,8 +97,12 @@ pub fn graph_from_project(project: &ProjectConfig, max_block_size: usize) -> Nod
     graph
 }
 
+const MAX_RUNNER_BLOCK_SIZE: usize = 8192;
+
 pub struct GraphRunner {
     pub tracks: Vec<Track>,
+    scratch_l: Box<[f32; MAX_RUNNER_BLOCK_SIZE]>,
+    scratch_r: Box<[f32; MAX_RUNNER_BLOCK_SIZE]>,
 }
 
 impl GraphRunner {
@@ -121,7 +125,11 @@ impl GraphRunner {
             }
             tracks.push(track);
         }
-        Self { tracks }
+        Self {
+            tracks,
+            scratch_l: Box::new([0.0f32; MAX_RUNNER_BLOCK_SIZE]),
+            scratch_r: Box::new([0.0f32; MAX_RUNNER_BLOCK_SIZE]),
+        }
     }
 
     pub fn process_block(
@@ -130,27 +138,32 @@ impl GraphRunner {
         ctx: &summoner_core::node::ProcessContext,
         out_buffers: &mut [&mut [summoner_core::audio::Sample]],
     ) {
+        let block_size = block_size.min(MAX_RUNNER_BLOCK_SIZE);
         for out in out_buffers.iter_mut() {
             out[..block_size].fill(0.0);
         }
 
-        let mut track_out: Vec<Vec<summoner_core::audio::Sample>> = vec![vec![0.0; block_size]; out_buffers.len()];
         for track in &mut self.tracks {
-            let mut track_out_slices: Vec<&mut [summoner_core::audio::Sample]> = track_out.iter_mut().map(|v| &mut v[..block_size]).collect();
-            
-            let mut local_ctx = *ctx;
+            self.scratch_l[..block_size].fill(0.0);
+            self.scratch_r[..block_size].fill(0.0);
+
+            let mut local_ctx = ctx.clone();
             if let Some(edo) = track.tuning_edo {
                 local_ctx.tuning_edo_divisions = edo;
             }
             if let Some(root_hz) = track.tuning_root_hz {
                 local_ctx.tuning_root_hz = root_hz;
             }
-            
-            track.process(block_size, &local_ctx, &mut track_out_slices);
 
-            for ch in 0..out_buffers.len() {
+            let (slice_l, slice_r) = (&mut self.scratch_l[..block_size], &mut self.scratch_r[..block_size]);
+            let mut track_out_slices: [&mut [f32]; 2] = [slice_l, slice_r];
+
+            track.process(block_size, &local_ctx, &mut track_out_slices[..out_buffers.len().min(2)]);
+
+            for ch in 0..out_buffers.len().min(2) {
+                let scratch_slice = if ch == 0 { &self.scratch_l[..block_size] } else { &self.scratch_r[..block_size] };
                 for i in 0..block_size {
-                    out_buffers[ch][i] += track_out_slices[ch][i] * track.gain;
+                    out_buffers[ch][i] += scratch_slice[i] * track.gain;
                 }
             }
         }
@@ -206,8 +219,27 @@ mod tests {
         
         // Track 1 has 2 nodes: SineOscillatorNode and GainNode
         // Note: SineOscillatorNode is not in the node factory right now, let's change the project mock or just check graph nodes length
-        // Ah, SineOscillatorNode isn't in NodeFactory, so it fails and emits a warning, replacing it with GainNode(0.0). So it still adds 2 nodes!
         assert_eq!(graph.nodes.len(), 2);
         assert_eq!(graph.edges.len(), 1);
+    }
+
+    #[test]
+    fn test_factory_sine_oscillator_node() {
+        let mut params = std::collections::HashMap::new();
+        params.insert("freq".to_string(), 440.0);
+        let config = NodeConfig {
+            kind: "SineOscillatorNode".to_string(),
+            params,
+        };
+        let mut node = NodeFactory::create_node(&config).expect("Factory should create SineOscillatorNode");
+        let ctx = summoner_core::node::ProcessContext::new(44100, 120.0, 0);
+
+        let mut out_l = vec![0.0f32; 512];
+        let mut out_r = vec![0.0f32; 512];
+        let dummy_in: [&[f32]; 0] = [];
+        node.process(&dummy_in, &mut [&mut out_l[..], &mut out_r[..]], &ctx);
+
+        let rms: f32 = (out_l.iter().map(|s| s * s).sum::<f32>() / out_l.len() as f32).sqrt();
+        assert!(rms > 0.0, "SineOscillatorNode RMS output must be greater than zero");
     }
 }

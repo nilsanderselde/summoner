@@ -1,10 +1,9 @@
-// Summoner - Deterministic, Headless-First DAW
-// Copyright (C) 2026 nilsanderselde
-
 use crate::traits::SignalProcessor;
+use crate::sampler::SampleBuffer;
 use summoner_core::audio::Sample;
 use summoner_core::node::ProcessContext;
 use std::f32::consts::TAU;
+use std::sync::Arc;
 
 const MAX_GRAINS: usize = 64;
 
@@ -17,11 +16,9 @@ pub struct Grain {
     pub active: bool,
 }
 
-use std::sync::Arc;
-
 #[derive(Debug, Clone)]
 pub struct GranularSynthNode {
-    pub buffer: Arc<Vec<f32>>,
+    pub buffer: Arc<SampleBuffer>,
     pub sample_rate: u32,
     pub grain_size_ms: f32,
     pub density: f32,
@@ -35,7 +32,7 @@ pub struct GranularSynthNode {
 impl GranularSynthNode {
     pub fn new(sample_rate: u32) -> Self {
         Self {
-            buffer: Arc::new(Vec::new()),
+            buffer: Arc::new(SampleBuffer::new(Vec::new(), sample_rate, 1)),
             sample_rate,
             grain_size_ms: 50.0,
             density: 10.0,
@@ -47,8 +44,8 @@ impl GranularSynthNode {
         }
     }
 
-    pub fn load_buffer(&mut self, data: Vec<f32>) {
-        self.buffer = Arc::new(data);
+    pub fn load_buffer(&mut self, sample_buffer: Arc<SampleBuffer>) {
+        self.buffer = sample_buffer;
     }
 
     fn next_prng(&mut self) -> f32 {
@@ -58,7 +55,7 @@ impl GranularSynthNode {
     }
 
     fn spawn_grain(&mut self) {
-        if self.buffer.is_empty() {
+        if self.buffer.data.is_empty() {
             return;
         }
 
@@ -68,7 +65,7 @@ impl GranularSynthNode {
         // Find inactive slot
         if let Some(grain) = self.grains.iter_mut().find(|g| !g.active) {
             let base_start = 0.0;
-            let buf_len = self.buffer.len() as f32;
+            let buf_len = self.buffer.data.len() as f32;
             let start_pos = (base_start + spray_offset).clamp(0.0, (buf_len - 1.0).max(0.0));
 
             let grain_duration_sec = (self.grain_size_ms / 1000.0).max(0.005);
@@ -97,7 +94,7 @@ impl SignalProcessor for GranularSynthNode {
         outputs: &mut [&mut [Sample]],
         ctx: &ProcessContext,
     ) {
-        if outputs.is_empty() || self.buffer.is_empty() {
+        if outputs.is_empty() || self.buffer.data.is_empty() {
             return;
         }
 
@@ -125,13 +122,13 @@ impl SignalProcessor for GranularSynthNode {
 
             for grain in self.grains.iter_mut().filter(|g| g.active) {
                 let current_buf_idx = grain.start_pos + grain.play_head * grain.pitch_ratio;
-                let buf_len = self.buffer.len();
+                let buf_len = self.buffer.data.len();
 
                 if current_buf_idx < (buf_len as f32 - 1.0) && grain.play_head < grain.duration_samples {
                     let idx_floor = current_buf_idx.floor() as usize;
                     let frac = current_buf_idx - idx_floor as f32;
-                    let s0 = self.buffer[idx_floor];
-                    let s1 = self.buffer[(idx_floor + 1).min(buf_len - 1)];
+                    let s0 = self.buffer.data[idx_floor];
+                    let s1 = self.buffer.data[(idx_floor + 1).min(buf_len - 1)];
                     let raw_sample = s0 + frac * (s1 - s0);
 
                     // Hann window
@@ -158,12 +155,13 @@ impl SignalProcessor for GranularSynthNode {
 mod tests {
     use super::*;
     use summoner_core::transport::Transport;
+    use summoner_core::allocator::AllocGuard;
 
     #[test]
     fn test_granular_synth_node_output() {
         let mut granular = GranularSynthNode::new(44100);
         let sin_wave: Vec<f32> = (0..44100).map(|i| (i as f32 * 440.0 * TAU / 44100.0).sin()).collect();
-        granular.load_buffer(sin_wave);
+        granular.load_buffer(Arc::new(SampleBuffer::new(sin_wave, 44100, 1)));
         granular.density = 20.0;
 
         let transport = Transport::new(44100, 120.0);
@@ -176,6 +174,27 @@ mod tests {
 
         let rms: f32 = (output_buf.iter().map(|s| s * s).sum::<f32>() / output_buf.len() as f32).sqrt();
         assert!(rms > 0.0, "GranularSynthNode RMS should be greater than zero when active");
+    }
+
+    #[test]
+    fn test_granular_synth_no_alloc_in_process() {
+        let mut granular = GranularSynthNode::new(44100);
+        let sin_wave: Vec<f32> = (0..44100).map(|i| (i as f32 * 440.0 * TAU / 44100.0).sin()).collect();
+        granular.load_buffer(Arc::new(SampleBuffer::new(sin_wave, 44100, 1)));
+        granular.density = 20.0;
+
+        let transport = Transport::new(44100, 120.0);
+        let ctx = ProcessContext::from_transport(&transport);
+
+        let mut output_buf = vec![0.0f32; 512];
+        let dummy_in: [&[Sample]; 0] = [];
+
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let _guard = AllocGuard::new();
+            granular.process_block(&dummy_in, &mut [&mut output_buf[..]], &ctx);
+        }));
+
+        assert!(result.is_ok(), "GranularSynthNode process_block caused allocation!");
     }
 }
 

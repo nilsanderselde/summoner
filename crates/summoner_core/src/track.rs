@@ -36,6 +36,13 @@ pub struct Track {
 
 impl Track {
     pub fn new(id: TrackId, name: impl Into<String>, channels: usize) -> Self {
+        const MAX_INITIAL_BLOCK_SIZE: usize = 8192;
+        let mut temp_buf_a = Vec::with_capacity(channels);
+        let mut temp_buf_b = Vec::with_capacity(channels);
+        for _ in 0..channels {
+            temp_buf_a.push(vec![0.0; MAX_INITIAL_BLOCK_SIZE]);
+            temp_buf_b.push(vec![0.0; MAX_INITIAL_BLOCK_SIZE]);
+        }
         Self {
             id,
             name: name.into(),
@@ -47,8 +54,8 @@ impl Track {
             tuning_edo: None,
             tuning_root_hz: None,
             nodes: Vec::new(),
-            temp_buf_a: Vec::new(),
-            temp_buf_b: Vec::new(),
+            temp_buf_a,
+            temp_buf_b,
         }
     }
 
@@ -64,40 +71,37 @@ impl Track {
     ) {
         if self.muted || self.nodes.is_empty() {
             for out in out_buffers.iter_mut() {
-                out.fill(0.0);
+                out[..block_size].fill(0.0);
             }
             return;
         }
 
-        while self.temp_buf_a.len() < self.channels {
-            self.temp_buf_a.push(vec![0.0; block_size]);
-        }
-        while self.temp_buf_b.len() < self.channels {
-            self.temp_buf_b.push(vec![0.0; block_size]);
-        }
-        for ch in 0..self.channels {
-            if self.temp_buf_a[ch].len() < block_size {
-                self.temp_buf_a[ch].resize(block_size, 0.0);
-            }
-            if self.temp_buf_b[ch].len() < block_size {
-                self.temp_buf_b[ch].resize(block_size, 0.0);
-            }
-            self.temp_buf_a[ch][..block_size].fill(0.0);
-        }
+        const MAX_TRACK_CHANNELS: usize = 16;
+        let channels = self.channels.min(MAX_TRACK_CHANNELS);
 
         let mut a_is_input = true;
 
         for node in &mut self.nodes {
-            let (input, output) = if a_is_input {
-                (&mut self.temp_buf_a, &mut self.temp_buf_b)
+            let mut in_slices: [&[crate::audio::Sample]; MAX_TRACK_CHANNELS] = [&[]; MAX_TRACK_CHANNELS];
+            let mut out_slices: [&mut [crate::audio::Sample]; MAX_TRACK_CHANNELS] = std::array::from_fn(|_| &mut [][..]);
+
+            if a_is_input {
+                for (ch, buf) in self.temp_buf_a.iter().take(channels).enumerate() {
+                    in_slices[ch] = &buf[..block_size];
+                }
+                for (ch, buf) in self.temp_buf_b.iter_mut().take(channels).enumerate() {
+                    out_slices[ch] = &mut buf[..block_size];
+                }
+                node.process(&in_slices[..channels], &mut out_slices[..channels], ctx);
             } else {
-                (&mut self.temp_buf_b, &mut self.temp_buf_a)
-            };
-
-            let in_slices: Vec<&[crate::audio::Sample]> = input.iter().map(|v| &v[..block_size]).collect();
-            let mut out_slices: Vec<&mut [crate::audio::Sample]> = output.iter_mut().map(|v| &mut v[..block_size]).collect();
-
-            node.process(&in_slices, &mut out_slices, ctx);
+                for (ch, buf) in self.temp_buf_b.iter().take(channels).enumerate() {
+                    in_slices[ch] = &buf[..block_size];
+                }
+                for (ch, buf) in self.temp_buf_a.iter_mut().take(channels).enumerate() {
+                    out_slices[ch] = &mut buf[..block_size];
+                }
+                node.process(&in_slices[..channels], &mut out_slices[..channels], ctx);
+            }
 
             a_is_input = !a_is_input;
         }
@@ -107,7 +111,7 @@ impl Track {
             if ch < self.channels {
                 out[..block_size].copy_from_slice(&final_out[ch][..block_size]);
             } else {
-                out.fill(0.0);
+                out[..block_size].fill(0.0);
             }
         }
     }

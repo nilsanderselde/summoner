@@ -55,13 +55,15 @@ pub fn run_live(project: &ProjectConfig) -> ! {
     let (_tx, rx): (Sender<ParamUpdate>, Receiver<ParamUpdate>) = crossbeam_channel::bounded(1024);
 
     const MAX_BLOCK_SIZE: usize = 8192;
-    let mut out_l = vec![0.0f32; MAX_BLOCK_SIZE];
-    let mut out_r = vec![0.0f32; MAX_BLOCK_SIZE];
+    let mut out_l = Box::new([0.0f32; MAX_BLOCK_SIZE]);
+    let mut out_r = Box::new([0.0f32; MAX_BLOCK_SIZE]);
 
     let stream = device
         .build_output_stream(
             &stream_config,
             move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
+                let _alloc_guard = summoner_core::allocator::AllocGuard::new();
+
                 // Apply any parameter updates
                 while let Ok(update) = rx.try_recv() {
                     match update {
@@ -72,7 +74,7 @@ pub fn run_live(project: &ProjectConfig) -> ! {
                 let frames = (data.len() / channels).min(MAX_BLOCK_SIZE);
                 
                 let mut ctx = ProcessContext::new(sample_rate.0, bpm, frame_position);
-                ctx.param_bus = Some(Arc::as_ptr(&param_bus_audio));
+                ctx.param_bus = Some(param_bus_audio.clone());
 
                 let buf_l = &mut out_l[..frames];
                 let buf_r = &mut out_r[..frames];
@@ -113,6 +115,7 @@ mod tests {
     use super::*;
     use summoner_project::create_default_project;
     use crate::graph::GraphRunner;
+    use summoner_core::allocator::AllocGuard;
 
     #[test]
     fn test_audio_engine_builds_without_panic() {
@@ -125,5 +128,28 @@ mod tests {
         runner.process_block(512, &ctx, &mut [&mut out_l, &mut out_r]);
 
         assert_eq!(out_l.len(), 512);
+    }
+
+    #[test]
+    fn test_audio_callback_zero_alloc() {
+        let project = create_default_project("Test Session");
+        let mut runner = GraphRunner::new(&project);
+
+        const MAX_BLOCK_SIZE: usize = 4096;
+        let mut out_l = Box::new([0.0f32; MAX_BLOCK_SIZE]);
+        let mut out_r = Box::new([0.0f32; MAX_BLOCK_SIZE]);
+
+        let ctx = ProcessContext::new(44100, 120.0, 0);
+
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let _guard = AllocGuard::new();
+            let buf_l = &mut out_l[..512];
+            let buf_r = &mut out_r[..512];
+            buf_l.fill(0.0);
+            buf_r.fill(0.0);
+            runner.process_block(512, &ctx, &mut [buf_l, buf_r]);
+        }));
+
+        assert!(result.is_ok(), "Audio callback block processing triggered heap allocation!");
     }
 }

@@ -103,6 +103,7 @@ mod tests {
             gain: 1.0,
             pan: 0.0,
             muted: false,
+            soloed: false,
             nodes: vec![
                 summoner_project::schema::NodeConfig {
                     kind: "AetherSynth".to_string(),

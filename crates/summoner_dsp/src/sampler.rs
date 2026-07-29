@@ -395,5 +395,31 @@ mod tests {
         
         std::fs::remove_file(file_path).unwrap();
     }
+
+    #[test]
+    fn test_load_bank_buffers_fills_regions() {
+        use hound::{WavSpec, WavWriter, SampleFormat};
+        let temp_dir = std::env::temp_dir();
+        let wav_path = temp_dir.join("bank_test.wav");
+        let spec = WavSpec {
+            channels: 1,
+            sample_rate: 44100,
+            bits_per_sample: 16,
+            sample_format: SampleFormat::Int,
+        };
+        let mut writer = WavWriter::create(&wav_path, spec).unwrap();
+        writer.write_sample(0i16).unwrap();
+        writer.finalize().unwrap();
+
+        let mut bank = MultiSampleBank::new();
+        let reg = SampleRegion::new(60, 60, 60, "bank_test.wav");
+        bank.add_region(reg);
+
+        let errs = load_bank_buffers(&mut bank, &temp_dir);
+        assert!(errs.is_empty(), "load_bank_buffers returned errors: {:?}", errs);
+        assert!(bank.regions[0].buffer.is_some(), "Region buffer should be loaded");
+
+        let _ = std::fs::remove_file(wav_path);
+    }
 }
 

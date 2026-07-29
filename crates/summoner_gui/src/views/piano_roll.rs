@@ -127,6 +127,7 @@ mod tests {
     #[test]
     fn test_piano_roll_renders_without_panic() {
         let mut sequence = SequenceConfig {
+            start_beat: 0.0,
             step_division: 16.0,
             steps: vec![summoner_project::schema::TrackerStepConfig {
                 note: 60.0,

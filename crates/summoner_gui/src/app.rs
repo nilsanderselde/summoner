@@ -29,6 +29,8 @@ pub struct SummonerApp {
     pub project: ProjectConfig,
     pub param_bus: Arc<ParamBus>,
     pub transport_running: bool,
+    pub playhead_beat: f64,
+    pub pixels_per_beat: f32,
     pub current_view: ViewMode,
     pub node_graph_state: NodeGraphState,
     pub piano_roll_state: PianoRollState,
@@ -51,6 +53,8 @@ impl SummonerApp {
             project,
             param_bus,
             transport_running: false,
+            playhead_beat: 0.0,
+            pixels_per_beat: 40.0,
             current_view: ViewMode::Arranger,
             node_graph_state: NodeGraphState::default(),
             piano_roll_state: PianoRollState::default(),
@@ -69,6 +73,8 @@ impl SummonerApp {
 
 impl eframe::App for SummonerApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        crate::theme::apply_summoner_theme(ctx);
+
         // Ctrl+K / Cmd+K Command Palette hotkey
         if ctx.input(|i| (i.modifiers.command || i.modifiers.ctrl) && i.key_pressed(egui::Key::K)) {
             self.command_palette.open();
@@ -106,6 +112,7 @@ impl eframe::App for SummonerApp {
                         gain: 1.0,
                         pan: 0.0,
                         muted: false,
+                        soloed: false,
                         nodes: Vec::new(),
                         sequence: None,
                         connections: Vec::new(),
@@ -116,6 +123,12 @@ impl eframe::App for SummonerApp {
                 }
                 _ => {}
             }
+        }
+
+        // Advance playhead beat when transport is running
+        if self.transport_running {
+            let dt = ctx.input(|i| i.stable_dt) as f64;
+            self.playhead_beat += dt * (self.project.transport.bpm / 60.0);
         }
 
         // Top menu bar
@@ -190,13 +203,21 @@ impl eframe::App for SummonerApp {
         egui::CentralPanel::default().show(ctx, |ui| {
             match self.current_view {
                 ViewMode::Arranger => {
-                    if let Some(target_view) = show_arranger(ui, &mut self.project, &mut self.selected_track_id) {
+                    if let Some(target_view) = show_arranger(
+                        ui,
+                        &mut self.project,
+                        &mut self.selected_track_id,
+                        &mut self.playhead_beat,
+                        self.transport_running,
+                        &mut self.pixels_per_beat,
+                    ) {
                         self.current_view = target_view;
                     }
                 }
                 ViewMode::PianoRoll(track_id) => {
                     if let Some(track) = self.project.tracks.iter_mut().find(|t| t.id == track_id) {
                         let sequence = track.sequence.get_or_insert_with(|| summoner_project::schema::SequenceConfig {
+                            start_beat: 0.0,
                             step_division: 16.0,
                             steps: vec![summoner_project::schema::TrackerStepConfig {
                                 note: 60.0,

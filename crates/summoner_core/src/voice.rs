@@ -93,10 +93,7 @@ impl<V: PolyphonicVoice, const MAX_VOICES: usize> VoicePool<V, MAX_VOICES> {
     }
 
     fn find_inactive_slot(&self) -> Option<usize> {
-        self.metadata
-            .iter()
-            .enumerate()
-            .position(|(idx, meta)| !meta.active && !self.voices[idx].is_active())
+        self.metadata.iter().position(|meta| !meta.active)
     }
 
     fn find_oldest_slot(&self) -> usize {
@@ -243,5 +240,40 @@ mod tests {
         pool.process(&[], &mut [&mut out_l[..], &mut out_r[..]], &ctx);
 
         assert_eq!(out_l[0], 2.0); // 4 voices * 0.5 = 2.0
+    }
+
+    #[test]
+    fn test_voice_pool_steal_oldest() {
+        let mut pool: VoicePool<TestVoice, 16> = VoicePool::new("TestPool", TestVoice::new, 256);
+        for note in 0..17 {
+            pool.dispatch_mpe(MpeEvent::NoteOn {
+                voice_id: note as u32,
+                channel: (note % 16) as u8,
+                note: note as f32,
+                velocity: 0.8,
+            });
+        }
+        assert_eq!(pool.active_voice_count(), 16);
+    }
+
+    #[test]
+    fn test_voice_pool_inactive_finds_correct_slot() {
+        let mut pool: VoicePool<TestVoice, 4> = VoicePool::new("TestPool", TestVoice::new, 256);
+        assert_eq!(pool.find_inactive_slot(), Some(0));
+
+        pool.dispatch_mpe(MpeEvent::NoteOn {
+            voice_id: 60,
+            channel: 0,
+            note: 60.0,
+            velocity: 0.8,
+        });
+        assert_eq!(pool.find_inactive_slot(), Some(1));
+
+        pool.dispatch_mpe(MpeEvent::NoteOff {
+            voice_id: 60,
+            channel: 0,
+            release_velocity: 0.0,
+        });
+        assert_eq!(pool.find_inactive_slot(), Some(0));
     }
 }

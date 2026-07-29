@@ -16,6 +16,8 @@ pub fn show_node_graph(
 ) {
     let mut modified = false;
 
+    let mut drop_was_handled = false;
+
     // A Frame to contain the graph background
     egui::Frame::canvas(ui.style()).show(ui, |ui| {
         let (response, painter) = ui.allocate_painter(ui.available_size(), egui::Sense::click_and_drag());
@@ -99,6 +101,7 @@ pub fn show_node_graph(
                         });
                         state.dragging_edge = None;
                         modified = true;
+                        drop_was_handled = true;
                     }
                 }
             }
@@ -123,7 +126,7 @@ pub fn show_node_graph(
         }
 
         // Global check for drop cancel if mouse released without dropping on a valid input port
-        if ui.input(|i| i.pointer.any_released()) && !modified {
+        if !drop_was_handled && ui.input(|i| i.pointer.any_released()) {
             state.dragging_edge = None;
         }
 
@@ -239,5 +242,23 @@ mod tests {
 
         assert_eq!(graph.nodes.len(), node_count_before);
         assert_eq!(graph.edges.len(), edge_count_before);
+    }
+
+    #[test]
+    fn test_edge_drag_does_not_cancel_on_valid_port_drop() {
+        let mut graph = NodeGraph::new("Test Graph", 64, 2);
+        graph.nodes.push(Box::new(PassthroughNode));
+        graph.nodes.push(Box::new(PassthroughNode));
+
+        let mut state = NodeGraphState::default();
+        state.dragging_edge = Some((0, 0, egui::pos2(0.0, 0.0)));
+        let mut selected_edge = None;
+
+        let ctx = egui::Context::default();
+        let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                show_node_graph(ui, &mut graph, &mut state, &mut selected_edge);
+            });
+        });
     }
 }

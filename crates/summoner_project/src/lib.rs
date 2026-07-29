@@ -70,6 +70,7 @@ pub fn create_default_project(name: &str) -> ProjectConfig {
                 gain: 1.0,
                 pan: 0.0,
                 muted: false,
+                soloed: false,
                 nodes: Vec::new(),
                 sequence: None,
                 connections: Vec::new(),
@@ -84,6 +85,7 @@ pub fn create_default_project(name: &str) -> ProjectConfig {
                 gain: 0.75,
                 pan: 0.0,
                 muted: false,
+                soloed: false,
                 nodes: vec![
                     NodeConfig {
                         kind: "SineOscillatorNode".to_string(),
@@ -128,6 +130,7 @@ mod tests {
     fn test_polymetric_sequence_roundtrip() {
         let mut proj = create_default_project("Polymetric Session");
         proj.tracks[1].sequence = Some(SequenceConfig {
+            start_beat: 0.0,
             step_division: 0.25,
             steps: vec![
                 TrackerStepConfig {
