@@ -617,6 +617,7 @@ mod tests {
             pan: 0.0,
             muted: false,
             soloed: false,
+            send_level: 0.0,
             nodes: vec![],
             sequence: None,
             connections: vec![],

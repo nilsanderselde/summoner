@@ -95,6 +95,8 @@ pub struct TrackConfig {
     #[serde(default)]
     pub soloed: bool,
     #[serde(default)]
+    pub send_level: f32,
+    #[serde(default)]
     pub nodes: Vec<NodeConfig>,
     #[serde(default)]
     pub sequence: Option<SequenceConfig>,

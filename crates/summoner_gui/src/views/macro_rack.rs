@@ -309,6 +309,7 @@ mod tests {
             pan: 0.0,
             muted: false,
             soloed: false,
+            send_level: 0.0,
             nodes: vec![
                 summoner_project::schema::NodeConfig {
                     kind: "AetherSynth".to_string(),
@@ -342,6 +343,7 @@ mod tests {
             pan: 0.0,
             muted: false,
             soloed: false,
+            send_level: 0.0,
             nodes: vec![
                 summoner_project::schema::NodeConfig {
                     kind: "FmOperatorPair".to_string(),

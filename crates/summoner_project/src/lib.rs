@@ -71,6 +71,7 @@ pub fn create_default_project(name: &str) -> ProjectConfig {
                 pan: 0.0,
                 muted: false,
                 soloed: false,
+                send_level: 0.0,
                 nodes: Vec::new(),
                 sequence: None,
                 connections: Vec::new(),
@@ -86,6 +87,7 @@ pub fn create_default_project(name: &str) -> ProjectConfig {
                 pan: 0.0,
                 muted: false,
                 soloed: false,
+                send_level: 0.0,
                 nodes: vec![
                     NodeConfig {
                         kind: "SineOscillatorNode".to_string(),

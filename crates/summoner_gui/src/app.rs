@@ -122,6 +122,7 @@ impl eframe::App for SummonerApp {
                         pan: 0.0,
                         muted: false,
                         soloed: false,
+                        send_level: 0.0,
                         nodes: Vec::new(),
                         sequence: None,
                         connections: Vec::new(),
