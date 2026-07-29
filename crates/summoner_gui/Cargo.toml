@@ -11,6 +11,10 @@ summoner_core = { path = "../summoner_core" }
 summoner_project = { path = "../summoner_project" }
 summoner_harmony = { path = "../summoner_harmony" }
 summoner_sequencer = { path = "../summoner_sequencer" }
+summoner_dsp = { path = "../summoner_dsp" }
+hound = "3.5"
+serde = { workspace = true, features = ["derive"] }
+toml = { workspace = true }
 
 [dependencies.egui]
 version = "0.28"
@@ -20,6 +24,11 @@ optional = true
 version = "0.28"
 optional = true
 
+[dependencies.rfd]
+version = "0.14"
+optional = true
+
 [features]
 default = []
-gui = ["egui", "eframe"]
+gui = ["egui", "eframe", "rfd"]
+
