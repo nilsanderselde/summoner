@@ -111,6 +111,8 @@ pub struct TrackConfig {
     #[serde(default)]
     pub sequence: Option<SequenceConfig>,
     #[serde(default)]
+    pub clips: Vec<SequenceConfig>,
+    #[serde(default)]
     pub connections: Vec<ConnectionConfig>,
     #[serde(default)]
     pub tuning_edo: Option<u32>,
@@ -118,6 +120,30 @@ pub struct TrackConfig {
     pub tuning_root_hz: Option<f32>,
     #[serde(default)]
     pub tuning_scl_path: Option<String>,
+}
+
+impl TrackConfig {
+    pub fn all_sequences(&self) -> Vec<&SequenceConfig> {
+        let mut list = Vec::new();
+        if let Some(ref seq) = self.sequence {
+            list.push(seq);
+        }
+        for clip in &self.clips {
+            list.push(clip);
+        }
+        list
+    }
+
+    pub fn all_sequences_mut(&mut self) -> Vec<&mut SequenceConfig> {
+        let mut list = Vec::new();
+        if let Some(ref mut seq) = self.sequence {
+            list.push(seq);
+        }
+        for clip in &mut self.clips {
+            list.push(clip);
+        }
+        list
+    }
 }
 
 /// Routing connection configuration
@@ -155,7 +181,27 @@ pub struct SequenceConfig {
     #[serde(default)]
     pub clip_name: Option<String>,
     #[serde(default)]
+    pub name: String,
+    #[serde(default)]
+    pub is_unique: bool,
+    #[serde(default)]
     pub steps: Vec<TrackerStepConfig>,
+}
+
+impl SequenceConfig {
+    pub fn duplicate(&self) -> Self {
+        let mut dup = self.clone();
+        let clip_len = self.steps.len() as f64 * self.step_division;
+        dup.start_beat += if clip_len > 0.0 { clip_len } else { 4.0 };
+        if let Some(ref cname) = self.clip_name {
+            dup.clip_name = Some(format!("{} (Copy)", cname));
+        }
+        dup
+    }
+
+    pub fn make_unique(&mut self) {
+        self.is_unique = true;
+    }
 }
 
 fn default_step_division() -> f64 {
@@ -174,6 +220,12 @@ pub struct TrackerStepConfig {
     pub ratchet: u32,
     #[serde(default = "default_micro_shift")]
     pub micro_shift: i32,
+    #[serde(default)]
+    pub swing: f32,
+    #[serde(default)]
+    pub pan: f32,
+    #[serde(default)]
+    pub pitch_offset: f32,
     #[serde(default = "default_active")]
     pub active: bool,
 }

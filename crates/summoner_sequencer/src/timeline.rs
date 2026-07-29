@@ -27,6 +27,9 @@ pub struct PatternNote {
     pub probability: f32,
     pub ratchet: u32,
     pub micro_shift: i32,
+    pub swing: f32,
+    pub pan: f32,
+    pub pitch_offset: f32,
 }
 
 impl PatternNote {
@@ -39,6 +42,9 @@ impl PatternNote {
             probability: 1.0,
             ratchet: 1,
             micro_shift: 0,
+            swing: 0.0,
+            pan: 0.0,
+            pitch_offset: 0.0,
         }
     }
 }
@@ -90,7 +96,16 @@ impl TimelineArranger {
                                 }
                             }
 
-                            let micro_offset_beats = note.micro_shift as f64 * 0.001;
+                            // Calculate swing timing shift (Step 365)
+                            // If note falls on off-beat sub-division (e.g. step index odd), apply swing delay
+                            let is_offbeat = ((note.start_beat * 4.0).round() as i64 % 2) != 0;
+                            let swing_offset_beats = if is_offbeat {
+                                note.swing as f64 * 0.125
+                            } else {
+                                0.0
+                            };
+
+                            let micro_offset_beats = note.micro_shift as f64 * 0.001 + swing_offset_beats;
                             let base_start = clip.start_beat + note.start_beat + micro_offset_beats;
 
                             let ratchet_count = note.ratchet.max(1);
@@ -99,11 +114,14 @@ impl TimelineArranger {
                             for r in 0..ratchet_count {
                                 let abs_start = base_start + r as f64 * sub_step_dur;
                                 if abs_start >= current_beat && abs_start < end_beat {
+                                    let effective_note = note.note + (note.pitch_offset as f64 / 100.0);
                                     eval.note_events.push(NoteEvent {
                                         track_id: clip.track_id,
-                                        note: note.note,
+                                        note: effective_note,
                                         velocity: note.velocity,
                                         beat_offset: abs_start - current_beat,
+                                        pan: note.pan,
+                                        pitch_offset: note.pitch_offset,
                                     });
                                 }
                             }
@@ -132,6 +150,8 @@ pub struct NoteEvent {
     pub note: f64,
     pub velocity: f32,
     pub beat_offset: f64,
+    pub pan: f32,
+    pub pitch_offset: f32,
 }
 
 #[cfg(test)]
@@ -149,6 +169,9 @@ mod tests {
             probability: 1.0,
             ratchet: 4,
             micro_shift: 0,
+            swing: 0.0,
+            pan: 0.0,
+            pitch_offset: 0.0,
         };
         arranger.add_clip(Clip {
             start_beat: 0.0,

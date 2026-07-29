@@ -28,6 +28,12 @@ pub struct PatternStep {
     pub ratchet: u32,
     /// Timing offset in ticks (swing / push / pull)
     pub micro_shift: i32,
+    /// Per-step swing offset (0.0 to 1.0)
+    pub swing: f32,
+    /// Per-step stereo pan (-1.0 to 1.0)
+    pub pan: f32,
+    /// Per-step pitch offset in cents (-100.0 to 100.0)
+    pub pitch_offset: f32,
     /// Whether this step is active
     pub active: bool,
 }
@@ -41,6 +47,9 @@ impl Default for PatternStep {
             probability: 1.0,
             ratchet: 1,
             micro_shift: 0,
+            swing: 0.0,
+            pan: 0.0,
+            pitch_offset: 0.0,
             active: true,
         }
     }
@@ -50,7 +59,9 @@ impl Default for PatternStep {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PatternClip {
     pub name: String,
+    pub start_beat: f64,
     pub length_beats: f32,
+    pub is_unique: bool,
     pub steps: Vec<PatternStep>,
 }
 
@@ -58,12 +69,25 @@ impl PatternClip {
     pub fn new(name: &str, length_beats: f32) -> Self {
         Self {
             name: name.to_string(),
+            start_beat: 0.0,
             length_beats,
+            is_unique: false,
             steps: Vec::new(),
         }
     }
 
     pub fn add_step(&mut self, step: PatternStep) {
         self.steps.push(step);
+    }
+
+    pub fn duplicate(&self) -> Self {
+        let mut dup = self.clone();
+        dup.start_beat += self.length_beats as f64;
+        dup.name = format!("{} (Copy)", self.name);
+        dup
+    }
+
+    pub fn make_unique(&mut self) {
+        self.is_unique = true;
     }
 }

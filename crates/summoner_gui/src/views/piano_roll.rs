@@ -17,6 +17,9 @@ pub struct PianoRollState {
     pub clipboard: Vec<(usize, TrackerStepConfig)>,
     pub loop_start: f64,
     pub loop_end: f64,
+    pub euclidean_pulses: u32,
+    pub euclidean_steps: u32,
+    pub show_euclidean_popup: bool,
 }
 
 impl Default for PianoRollState {
@@ -29,6 +32,9 @@ impl Default for PianoRollState {
             clipboard: Vec::new(),
             loop_start: 0.0,
             loop_end: 16.0,
+            euclidean_pulses: 4,
+            euclidean_steps: 16,
+            show_euclidean_popup: false,
         }
     }
 }
@@ -96,12 +102,52 @@ pub fn show_piano_roll(
             quantize_notes(sequence, state.snap_division, &state.selected_notes);
         }
         ui.separator();
+        if ui.button("🌀 Euclidean").clicked() {
+            state.show_euclidean_popup = !state.show_euclidean_popup;
+        }
+        if ui.button("◀ Shift L").clicked() {
+            sequence.steps.rotate_left(1);
+        }
+        if ui.button("▶ Shift R").clicked() {
+            sequence.steps.rotate_right(1);
+        }
+        if ui.button("🔄 Reverse").clicked() {
+            sequence.steps.reverse();
+        }
+        if ui.button("🪞 Mirror").clicked() {
+            for step in &mut sequence.steps {
+                step.active = !step.active;
+                if !step.active {
+                    step.gate = 0.0;
+                } else if step.gate <= 0.0 {
+                    step.gate = 0.8;
+                }
+            }
+        }
+        ui.separator();
         if let Some(hc) = harmonic_ctx {
             ui.label(egui::RichText::new(format!("Scale: {} (Root: C)", hc.scale.name)).color(egui::Color32::from_rgb(26, 140, 255)));
         }
         ui.separator();
         ui.label(format!("Selected: {}", state.selected_notes.len()));
     });
+
+    if state.show_euclidean_popup {
+        ui.horizontal(|ui| {
+            ui.label("Hits:");
+            ui.add(egui::Slider::new(&mut state.euclidean_pulses, 1..=32));
+            ui.label("Steps:");
+            ui.add(egui::Slider::new(&mut state.euclidean_steps, 1..=32));
+            if ui.button("Apply Euclidean Rhythm").clicked() {
+                let rhythm = summoner_sequencer::generative::GenerativeEngine::euclidean_rhythm(
+                    state.euclidean_pulses,
+                    state.euclidean_steps,
+                );
+                summoner_sequencer::generative::GenerativeEngine::apply_rhythm_to_sequence(&rhythm, &mut sequence.steps);
+            }
+        });
+        ui.separator();
+    }
 
     if let Some(hc) = harmonic_ctx {
         ui.collapsing("🎼 Real-Time Chord Suggestions", |ui| {
@@ -147,6 +193,9 @@ pub fn show_piano_roll(
                                 egui::Slider::new(&mut step.micro_shift, -64..=64)
                                     .text("Micro Shift"),
                             );
+                            ui.add(egui::Slider::new(&mut step.swing, 0.0..=1.0).text("Swing"));
+                            ui.add(egui::Slider::new(&mut step.pan, -1.0..=1.0).text("Pan"));
+                            ui.add(egui::Slider::new(&mut step.pitch_offset, -100.0..=100.0).text("Pitch Cents"));
                         });
                         i += 1;
                     }

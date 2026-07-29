@@ -799,6 +799,7 @@ mod tests {
             send_level: 0.0,
             nodes: vec![],
             sequence: None,
+            clips: vec![],
             connections: vec![],
             tuning_edo: None,
             tuning_root_hz: None,

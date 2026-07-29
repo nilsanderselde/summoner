@@ -251,8 +251,12 @@ pub fn show_arranger(
                     }
                 }
 
-                // Render Clip Block
-                if let Some(seq) = &mut track.sequence {
+                // Render Clip Blocks for all sequences on track
+                let mut sequences_to_delete: Vec<usize> = Vec::new();
+                let ctrl_d = ui.input(|i| i.modifiers.ctrl && i.key_pressed(egui::Key::D));
+
+                let all_seqs = track.all_sequences_mut();
+                for (seq_idx, seq) in all_seqs.into_iter().enumerate() {
                     let start_x = lane_rect.left() + (seq.start_beat as f32 * ppb);
                     let clip_beats = seq.steps.len() as f64 * seq.step_division;
                     let clip_width = (clip_beats as f32 * ppb).max(30.0);
@@ -262,7 +266,7 @@ pub fn show_arranger(
                         egui::vec2(clip_width, lane_rect.height() - 8.0),
                     );
 
-                    let clip_id = ui.id().with(("clip", track.id));
+                    let clip_id = ui.id().with(("clip", track.id, seq_idx));
                     let clip_resp = ui.interact(clip_rect, clip_id, egui::Sense::click_and_drag());
 
                     if clip_resp.dragged() {
@@ -279,6 +283,11 @@ pub fn show_arranger(
                         *selected_track_id = Some(track.id);
                     }
 
+                    if is_selected && ctrl_d {
+                        let cloned = seq.duplicate();
+                        duplicate_clip_target = Some((track.id, cloned));
+                    }
+
                     if clip_resp.double_clicked() {
                         *selected_track_id = Some(track.id);
                         navigation_target = Some(ViewMode::PianoRoll(track.id));
@@ -292,8 +301,12 @@ pub fn show_arranger(
                             navigation_target = Some(ViewMode::PianoRoll(track.id));
                             ui.close_menu();
                         }
-                        if ui.button("📋 Duplicate Clip").clicked() {
+                        if ui.button("📋 Duplicate Clip (Ctrl+D)").clicked() {
                             dup_clip = true;
+                            ui.close_menu();
+                        }
+                        if ui.button("✨ Make Unique").clicked() {
+                            seq.make_unique();
                             ui.close_menu();
                         }
                         if ui.button("🎨 Electric Blue Color").clicked() {
@@ -315,15 +328,14 @@ pub fn show_arranger(
                     });
 
                     if dup_clip {
-                        let mut cloned = seq.clone();
-                        cloned.start_beat += clip_beats;
+                        let cloned = seq.duplicate();
                         duplicate_clip_target = Some((track.id, cloned));
                     }
 
                     if delete_clip {
-                        track.sequence = None;
+                        sequences_to_delete.push(seq_idx);
                     } else {
-                        // Render clip background and border (steps 315-316)
+                        // Render clip background and border
                         let fill_color = if let Some(rgb) = seq.clip_color {
                             egui::Color32::from_rgb(rgb[0], rgb[1], rgb[2])
                         } else if is_dimmed {
@@ -335,9 +347,14 @@ pub fn show_arranger(
                         };
 
                         painter.rect_filled(clip_rect, 4.0, fill_color);
-                        painter.rect_stroke(clip_rect, 4.0, egui::Stroke::new(1.5f32, track_color(track.id)));
+                        let border_stroke = if seq.is_unique {
+                            egui::Stroke::new(2.0f32, egui::Color32::from_rgb(255, 200, 50))
+                        } else {
+                            egui::Stroke::new(1.5f32, track_color(track.id))
+                        };
+                        painter.rect_stroke(clip_rect, 4.0, border_stroke);
 
-                        // Render RMS Envelope shape from WaveformCache (steps 297-299)
+                        // Render RMS Envelope shape from WaveformCache
                         let dummy_samples: Vec<f32> = (0..64).map(|i| (i as f32 * 0.2).sin() * 0.8).collect();
                         let cache_key = format!("track_{}_clip_{}", track.id, seq.start_beat);
                         let rms_points = waveform_cache.get_or_compute_rms(&cache_key, &dummy_samples, 16);
@@ -384,13 +401,23 @@ pub fn show_arranger(
                         }
 
                         let clip_label = seq.clip_name.as_deref().unwrap_or("Pattern");
+                        let unique_suffix = if seq.is_unique { " ★" } else { "" };
                         painter.text(
                             egui::pos2(clip_rect.left() + 6.0, clip_rect.top() + 3.0),
                             egui::Align2::LEFT_TOP,
-                            format!("{} ({} steps)", clip_label, seq.steps.len()),
+                            format!("{}{} ({} steps)", clip_label, unique_suffix, seq.steps.len()),
                             egui::FontId::proportional(11.0),
                             egui::Color32::WHITE,
                         );
+                    }
+                }
+
+                if sequences_to_delete.contains(&0) {
+                    track.sequence = None;
+                }
+                for &del_idx in sequences_to_delete.iter().filter(|&&i| i > 0) {
+                    if del_idx - 1 < track.clips.len() {
+                        track.clips.remove(del_idx - 1);
                     }
                 }
             });
