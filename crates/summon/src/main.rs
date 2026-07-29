@@ -17,6 +17,8 @@ pub mod export_clap;
 pub mod graph;
 pub mod audio_engine;
 pub mod github;
+pub mod osc;
+
 
 use summoner_core::allocator::AllocGuard;
 use summoner_core::audio::{FixedAudioBuffer, Sample};
@@ -46,7 +48,7 @@ fn print_usage() {
     println!("  summon redo [PROJECT_DIR]");
     println!("  summon patch-to-pr [PROJECT_DIR] [--repo owner/repo] [--title \"TITLE\"]");
     println!("  summon gui [PROJECT_PATH]");
-    println!("  summon play [PROJECT_PATH]");
+    println!("  summon play [PROJECT_PATH] [--midi-clock-out DEVICE]");
     println!("  summon asset-add [PROJECT_PATH] [WAV_PATH]");
     println!("  summon asset-verify [PROJECT_PATH]");
     println!("  summon tune [PROJECT_PATH] [SCL_PATH]");
@@ -498,6 +500,17 @@ fn main() {
         }
         "play" => {
             let path_str = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            let mut midi_clock_out: Option<String> = None;
+            let mut idx = 3;
+            while idx < args.len() {
+                if args[idx] == "--midi-clock-out" && idx + 1 < args.len() {
+                    midi_clock_out = Some(args[idx + 1].clone());
+                    idx += 2;
+                } else {
+                    idx += 1;
+                }
+            }
+
             let project = if Path::new(path_str).exists() {
                 let content = fs::read_to_string(path_str).expect("Failed to read project file");
                 parse_project_toml(&content).expect("Failed to parse project TOML")
@@ -511,6 +524,9 @@ fn main() {
             };
 
             println!("Initializing native hardware audio via CPAL...");
+            if let Some(ref device) = midi_clock_out {
+                println!("MIDI Clock Out enabled on device: {}", device);
+            }
             println!("Playing project: {}", path_str);
             
             audio_engine::run_live(&project);

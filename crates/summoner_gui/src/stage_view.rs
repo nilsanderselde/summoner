@@ -37,6 +37,7 @@ pub struct StageView {
     pub bpm_display: f64,
     pub bpm_step: f64,
     pub tap_history: Vec<Instant>,
+    pub pending_launch: Option<(usize, u64)>, // (slot_index, fire_at_frame)
 }
 
 impl StageView {
@@ -49,7 +50,24 @@ impl StageView {
             bpm_display: 120.0,
             bpm_step: 1.0,
             tap_history: Vec::new(),
+            pending_launch: None,
         }
+    }
+
+    /// Step 322: Calculate next launch frame position rounded to quantize boundary.
+    pub fn calculate_next_fire_frame(current_frame: u64, sample_rate: u32, bpm: f64, quantize_beats: u32) -> u64 {
+        if sample_rate == 0 || bpm <= 0.0 || quantize_beats == 0 {
+            return current_frame;
+        }
+        let beats_per_sec = bpm / 60.0;
+        let frames_per_beat = (sample_rate as f64 / beats_per_sec).max(1.0);
+        let quantize_frames = (frames_per_beat * quantize_beats as f64) as u64;
+        if quantize_frames == 0 {
+            return current_frame;
+        }
+        let frames_f = current_frame as f64;
+        let q_f = quantize_frames as f64;
+        (frames_f / q_f).ceil() as u64 * quantize_frames
     }
 
     pub fn populate_from_project(&mut self, project: &ProjectConfig) {
@@ -101,6 +119,7 @@ impl StageView {
 
     pub fn all_stop(&mut self, transport: &mut Transport) {
         transport.stop();
+        self.pending_launch = None;
         for slot in self.pattern_slots.iter_mut().flatten() {
             slot.armed = false;
             slot.pending_fire = false;
@@ -158,16 +177,22 @@ fn trigger_slot_launch(idx: usize, stage: &mut StageView, transport: &mut Transp
             slot.armed = false;
             slot.pending_fire = false;
             slot.target_fire_beat = None;
+            if stage.pending_launch.map(|p| p.0) == Some(idx) {
+                stage.pending_launch = None;
+            }
         } else {
             if transport.is_playing {
                 let target = ((current_beat / q).floor() + 1.0) * q;
+                let target_frame = StageView::calculate_next_fire_frame(transport.frame_position, transport.sample_rate, transport.bpm, stage.quantize_beats);
                 slot.pending_fire = true;
                 slot.target_fire_beat = Some(target);
+                stage.pending_launch = Some((idx, target_frame));
             } else {
                 slot.armed = true;
                 slot.pending_fire = false;
                 slot.last_fired_beat = Some(current_beat);
                 slot.last_fired_time = Some(Instant::now());
+                stage.pending_launch = None;
                 transport.play();
             }
         }
@@ -558,6 +583,17 @@ mod tests {
         assert!(!slot.armed);
         assert!(!slot.pending_fire);
         assert!(slot.target_fire_beat.is_none());
+        assert!(stage.pending_launch.is_none());
+    }
+
+    #[test]
+    fn test_stage_view_pending_launch_frame_quantization() {
+        // At 44100 Hz, 120 BPM, 1 beat = 22050 frames. 4 beats quantize = 88200 frames.
+        let target_frame = StageView::calculate_next_fire_frame(1000, 44100, 120.0, 4);
+        assert_eq!(target_frame, 88200);
+
+        let target_frame_exact = StageView::calculate_next_fire_frame(88200, 44100, 120.0, 4);
+        assert_eq!(target_frame_exact, 88200);
     }
 }
 

@@ -30,8 +30,11 @@ pub mod smoothing;
 pub mod graph;
 pub mod voice;
 pub mod param_bus;
+pub mod midi_clock;
 pub use smoothing::SmoothParam;
 pub use graph::{Edge, NodeGraph};
 pub use voice::{PolyphonicVoice, VoicePool};
 pub use param_bus::{AtomicParam, ParamBus, ParamId};
+pub use midi_clock::{MidiClockGenerator, MidiClockReceiver, MIDI_CLOCK_BYTE, MIDI_CLOCK_PPQN};
 pub use node::KNOWN_NODE_TYPES;
+
