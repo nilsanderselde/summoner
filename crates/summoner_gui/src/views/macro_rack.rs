@@ -55,6 +55,34 @@ pub fn show_macro_rack(
 
     ui.separator();
 
+    // Tuning collapsible section (Step 357)
+    ui.collapsing("🎼 Microtonal Tuning & Scale", |ui| {
+        let mut edo = track.tuning_edo.unwrap_or(12) as i32;
+        if ui.add(egui::Slider::new(&mut edo, 1..=72).text("EDO Divisions")).changed() {
+            track.tuning_edo = Some(edo as u32);
+        }
+        let mut root_hz = track.tuning_root_hz.unwrap_or(440.0);
+        if ui.add(egui::Slider::new(&mut root_hz, 100.0..=1000.0).text("Root Freq (Hz)")).changed() {
+            track.tuning_root_hz = Some(root_hz);
+        }
+        let mut scl_path = track.tuning_scl_path.clone().unwrap_or_default();
+        ui.horizontal(|ui| {
+            ui.label("SCL File:");
+            if ui.text_edit_singleline(&mut scl_path).changed() {
+                track.tuning_scl_path = if scl_path.is_empty() { None } else { Some(scl_path.clone()) };
+            }
+            if ui.button("📂 Browse...").clicked() {
+                if let Some(path) = rfd::FileDialog::new().add_filter("Scala SCL", &["scl"]).pick_file() {
+                    if let Some(path_str) = path.to_str() {
+                        track.tuning_scl_path = Some(path_str.to_string());
+                    }
+                }
+            }
+        });
+    });
+
+    ui.separator();
+
     // Scan available preset files for SamplerDevice
     let preset_files = scan_preset_files(Path::new("local/presets"));
 

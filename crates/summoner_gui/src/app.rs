@@ -17,6 +17,8 @@ use summoner_harmony::edo::EdoTuning;
 use summoner_sequencer::automation::AutomationRegistry;
 use summoner_sequencer::automation_timeline::AutomationTimeline;
 
+use summoner_harmony::bus::HarmonicContext;
+
 use std::collections::HashMap;
 use crate::visualizer::{Oscilloscope, SpectrumAnalyzer};
 
@@ -105,6 +107,8 @@ pub struct SummonerApp {
     pub shortcut_search_query: String,
     pub is_rendering: bool,
     pub progress_message: Option<(String, f32)>,
+    pub harmonic_context: HarmonicContext,
+    pub show_scala_browser_modal: bool,
 }
 
 impl SummonerApp {
@@ -154,6 +158,8 @@ impl SummonerApp {
             shortcut_search_query: String::new(),
             is_rendering: false,
             progress_message: None,
+            harmonic_context: HarmonicContext::default(),
+            show_scala_browser_modal: false,
         };
 
         if let Some(state) = GuiState::load() {
@@ -517,6 +523,11 @@ impl eframe::App for SummonerApp {
                         self.dark_theme = false;
                         ui.close_menu();
                     }
+                    ui.separator();
+                    if ui.button("📜 Scala Scale Browser").clicked() {
+                        self.show_scala_browser_modal = true;
+                        ui.close_menu();
+                    }
                 });
 
                 ui.separator();
@@ -548,6 +559,20 @@ impl eframe::App for SummonerApp {
                 });
             });
         });
+
+        // Scala Scale Browser Modal (Step 360)
+        if self.show_scala_browser_modal {
+            let mut is_open = self.show_scala_browser_modal;
+            let mut track_copy = self.selected_track_id.and_then(|tid| self.project.tracks.iter_mut().find(|t| t.id == tid));
+            egui::Window::new("📜 Scala Historical Scale Browser")
+                .open(&mut is_open)
+                .resizable(true)
+                .default_size([580.0, 360.0])
+                .show(ctx, |ui| {
+                    crate::views::scala_browser::show_scala_browser(ui, track_copy.as_deref_mut(), &mut self.harmonic_context);
+                });
+            self.show_scala_browser_modal = is_open;
+        }
 
         // Keyboard Shortcuts searchable modal (step 312)
         if self.show_shortcuts_modal {
@@ -654,6 +679,16 @@ impl eframe::App for SummonerApp {
 
                 ui.separator();
 
+                // Harmonic Context & Status Bar info (Steps 358 & 359)
+                let active_chord = self.harmonic_context.analyze_active_chord();
+                let active_voices = self.harmonic_context.active_notes.len();
+                ui.label(egui::RichText::new(format!(
+                    "🎵 Chord: {} (Root: C) | Active Voices: {}",
+                    active_chord, active_voices
+                )).color(egui::Color32::from_rgb(46, 204, 113)));
+
+                ui.separator();
+
                 // Status bar & MIDI Learn indicator (steps 307, 317, 318)
                 if self.midi_learn_mode {
                     ui.label(egui::RichText::new("🎛️ MIDI Learn Active").color(egui::Color32::YELLOW));
@@ -714,7 +749,7 @@ impl eframe::App for SummonerApp {
                         });
                         let tuning = EdoTuning::new(track.tuning_edo.unwrap_or(12) as u16, track.tuning_root_hz.unwrap_or(440.0) as f64, 69.0);
                         let viewport = Viewport { width: ui.available_width(), height: ui.available_height() };
-                        show_piano_roll(ui, sequence, &tuning, &mut self.piano_roll_state, &viewport);
+                        show_piano_roll(ui, sequence, &tuning, &mut self.piano_roll_state, &viewport, Some(&self.harmonic_context));
                     } else {
                         ui.heading("Track not found");
                     }

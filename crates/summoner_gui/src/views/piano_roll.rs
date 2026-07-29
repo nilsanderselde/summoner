@@ -48,12 +48,15 @@ pub fn quantize_notes(sequence: &mut SequenceConfig, snap_div: f64, selected: &H
     }
 }
 
+use summoner_harmony::bus::HarmonicContext;
+
 pub fn show_piano_roll(
     ui: &mut egui::Ui,
     sequence: &mut SequenceConfig,
     tuning: &EdoTuning,
     state: &mut PianoRollState,
     _viewport: &Viewport,
+    harmonic_ctx: Option<&HarmonicContext>,
 ) {
     // Keyboard shortcuts for Ctrl+C and Ctrl+V
     if ui.input(|i| i.modifiers.ctrl && i.key_pressed(egui::Key::C)) {
@@ -93,8 +96,18 @@ pub fn show_piano_roll(
             quantize_notes(sequence, state.snap_division, &state.selected_notes);
         }
         ui.separator();
+        if let Some(hc) = harmonic_ctx {
+            ui.label(egui::RichText::new(format!("Scale: {} (Root: C)", hc.scale.name)).color(egui::Color32::from_rgb(26, 140, 255)));
+        }
+        ui.separator();
         ui.label(format!("Selected: {}", state.selected_notes.len()));
     });
+
+    if let Some(hc) = harmonic_ctx {
+        ui.collapsing("🎼 Real-Time Chord Suggestions", |ui| {
+            crate::views::chord_suggestion_panel::show_chord_suggestion_panel(ui, hc, sequence, 0.0);
+        });
+    }
 
     ui.separator();
 
@@ -169,29 +182,46 @@ pub fn show_piano_roll(
 
                     let pitch_class = k % keys_per_octave;
                     let octave = k / keys_per_octave;
+                    let root_pc = harmonic_ctx.map_or(0, |hc| (hc.root_note % keys_per_octave as u16) as usize);
+                    let rel_pc = ((pitch_class as i32 - root_pc as i32).rem_euclid(keys_per_octave as i32)) as u16;
+                    let is_in_scale = harmonic_ctx.map_or(true, |hc| hc.scale.degrees.contains(&rel_pc));
+                    let scale_name = harmonic_ctx.map_or("Chromatic", |hc| hc.scale.name.as_str());
+
                     let is_black = if keys_per_octave == 12 {
                         matches!(pitch_class, 1 | 3 | 6 | 8 | 10)
                     } else {
                         pitch_class % 2 != 0
                     };
 
-                    let bg_color = if is_black {
-                        egui::Color32::from_gray(35)
+                    let bg_color = if is_in_scale {
+                        if is_black {
+                            egui::Color32::from_rgb(35, 55, 80)
+                        } else {
+                            egui::Color32::from_rgb(220, 235, 255)
+                        }
                     } else {
-                        egui::Color32::from_gray(210)
+                        if is_black {
+                            egui::Color32::from_gray(18)
+                        } else {
+                            egui::Color32::from_gray(115)
+                        }
                     };
                     painter.rect_filled(key_rect, 0.0, bg_color);
-                    painter.rect_stroke(
-                        key_rect,
-                        0.0,
-                        egui::Stroke::new(0.5_f32, egui::Color32::from_gray(80)),
-                    );
+
+                    let border_stroke = if rel_pc == 0 && is_in_scale {
+                        egui::Stroke::new(1.5_f32, egui::Color32::from_rgb(255, 200, 50))
+                    } else if is_in_scale {
+                        egui::Stroke::new(0.8_f32, egui::Color32::from_rgb(26, 140, 255))
+                    } else {
+                        egui::Stroke::new(0.5_f32, egui::Color32::from_gray(60))
+                    };
+                    painter.rect_stroke(key_rect, 0.0, border_stroke);
 
                     if pitch_class == 0 {
-                        let text_color = if is_black {
-                            egui::Color32::WHITE
-                        } else {
+                        let text_color = if is_black || is_in_scale {
                             egui::Color32::BLACK
+                        } else {
+                            egui::Color32::WHITE
                         };
                         painter.text(
                             key_rect.center(),
@@ -202,12 +232,12 @@ pub fn show_piano_roll(
                         );
                     }
 
-                    // Hover tooltip with Hz + note label
+                    // Hover tooltip with Hz + note label + scale status (Step 354)
                     let key_interact = ui.interact(key_rect, ui.id().with(("key", k)), egui::Sense::hover());
                     let freq = tuning.note_to_freq(k as f64);
                     key_interact.on_hover_text(format!(
-                        "Note {} (Oct {}, Deg {}): {:.1} Hz",
-                        k, octave, pitch_class, freq
+                        "Note {} (Oct {}, Deg {}): {:.1} Hz | Scale: {} (In Scale: {})",
+                        k, octave, pitch_class, freq, scale_name, if is_in_scale { "Yes" } else { "No" }
                     ));
                 }
 
@@ -448,7 +478,7 @@ mod tests {
         let ctx = egui::Context::default();
         let _ = ctx.run(egui::RawInput::default(), |ctx| {
             egui::CentralPanel::default().show(ctx, |ui| {
-                show_piano_roll(ui, &mut sequence, &tuning, &mut state, &viewport);
+                show_piano_roll(ui, &mut sequence, &tuning, &mut state, &viewport, None);
             });
         });
     }
@@ -523,7 +553,7 @@ mod tests {
         let ctx = egui::Context::default();
         let _ = ctx.run(egui::RawInput::default(), |ctx| {
             egui::CentralPanel::default().show(ctx, |ui| {
-                show_piano_roll(ui, &mut sequence, &tuning, &mut state, &viewport);
+                show_piano_roll(ui, &mut sequence, &tuning, &mut state, &viewport, None);
             });
         });
 
