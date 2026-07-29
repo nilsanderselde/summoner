@@ -11,4 +11,6 @@ summoner_core = { path = "../summoner_core" }
 blake3.workspace = true
 serde.workspace = true
 toml.workspace = true
+git2.workspace = true
+
 

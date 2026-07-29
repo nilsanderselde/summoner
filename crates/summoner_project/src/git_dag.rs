@@ -188,6 +188,80 @@ impl GitSessionDag {
     }
 }
 
+/// Open an existing Git repository at project_dir or initialize a new one.
+pub fn open_or_init_repo(project_dir: &std::path::Path) -> Result<git2::Repository, git2::Error> {
+    git2::Repository::open(project_dir).or_else(|_| git2::Repository::init(project_dir))
+}
+
+/// Commit current ProjectConfig state into the Git repository.
+pub fn commit_project_state(
+    repo: &git2::Repository,
+    project: &ProjectConfig,
+    message: &str,
+) -> Result<git2::Oid, git2::Error> {
+    let toml_str = serialize_project_toml(project)
+        .map_err(|e| git2::Error::from_str(&e.to_string()))?;
+    
+    let session_filename = "summoner_session.toml";
+    let workdir = repo.workdir().unwrap_or_else(|| repo.path());
+    let file_path = workdir.join(session_filename);
+    std::fs::write(&file_path, toml_str)
+        .map_err(|e| git2::Error::from_str(&e.to_string()))?;
+
+    let mut index = repo.index()?;
+    index.add_path(std::path::Path::new(session_filename))?;
+    index.write()?;
+
+    let tree_id = index.write_tree()?;
+    let tree = repo.find_tree(tree_id)?;
+
+    let sig = git2::Signature::now("Summoner DAW", "summoner@local")?;
+    let parent_commit = repo.head().ok().and_then(|h| h.peel_to_commit().ok());
+    let parents: Vec<&git2::Commit> = parent_commit.as_ref().map(|p| vec![p]).unwrap_or_default();
+
+    repo.commit(
+        Some("HEAD"),
+        &sig,
+        &sig,
+        message,
+        &tree,
+        &parents[..],
+    )
+}
+
+
+/// Undo: Reset repository hard to HEAD~1.
+pub fn undo(repo: &git2::Repository) -> Result<(), git2::Error> {
+    let head = repo.head()?.peel_to_commit()?;
+    if head.parent_count() > 0 {
+        let parent = head.parent(0)?;
+        repo.reset(parent.as_object(), git2::ResetType::Hard, None)?;
+        Ok(())
+    } else {
+        Err(git2::Error::from_str("No parent commit to undo to"))
+    }
+}
+
+/// Redo: Reset repository hard to previous state prior to undo.
+pub fn redo(repo: &git2::Repository) -> Result<(), git2::Error> {
+    let head_oid = repo.head()?.peel_to_commit()?.id();
+    let reflog = repo.reflog("HEAD")?;
+
+    if let Some(entry) = reflog.iter().find(|e| e.id_old() == head_oid) {
+        let target_oid = entry.id_new();
+        let target_commit = repo.find_commit(target_oid)?;
+        repo.reset(target_commit.as_object(), git2::ResetType::Hard, None)?;
+        Ok(())
+    } else if let Some(entry) = reflog.get(1) {
+        let target_oid = entry.id_old();
+        let target_commit = repo.find_commit(target_oid)?;
+        repo.reset(target_commit.as_object(), git2::ResetType::Hard, None)?;
+        Ok(())
+    } else {
+        Err(git2::Error::from_str("No redo state found in reflog"))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -234,4 +308,56 @@ mod tests {
         assert!(pr_json.contains("\"title\": \"BPM Update PR\""));
         assert!(pr_json.contains("\"author\": \"developer\""));
     }
+
+    #[test]
+    fn test_git_commit_and_undo() {
+        let temp_dir = std::env::temp_dir().join(format!("summoner_git_test_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+        let repo = open_or_init_repo(&temp_dir).expect("Failed to init repo");
+
+        let mut proj1 = create_default_project("Git Commit Proj 1");
+        commit_project_state(&repo, &proj1, "Initial commit").expect("Commit 1 failed");
+
+        proj1.name = "Git Commit Proj 2".to_string();
+        commit_project_state(&repo, &proj1, "Second commit").expect("Commit 2 failed");
+
+        let session_file = temp_dir.join("summoner_session.toml");
+        let content2 = std::fs::read_to_string(&session_file).unwrap();
+        assert!(content2.contains("Git Commit Proj 2"));
+
+        undo(&repo).expect("Undo failed");
+        let content_undone = std::fs::read_to_string(&session_file).unwrap();
+        assert!(content_undone.contains("Git Commit Proj 1"));
+
+        let _ = std::fs::remove_dir_all(temp_dir);
+    }
+
+    #[test]
+    fn test_git_undo_redo_cycle() {
+        let temp_dir = std::env::temp_dir().join(format!("summoner_git_cycle_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+        let repo = open_or_init_repo(&temp_dir).expect("Failed to init repo");
+
+        let mut proj = create_default_project("State 1");
+        commit_project_state(&repo, &proj, "Commit 1").expect("Commit 1 failed");
+
+        proj.name = "State 2".to_string();
+        commit_project_state(&repo, &proj, "Commit 2").expect("Commit 2 failed");
+
+        proj.name = "State 3".to_string();
+        commit_project_state(&repo, &proj, "Commit 3").expect("Commit 3 failed");
+
+        let session_file = temp_dir.join("summoner_session.toml");
+
+        // Undo to State 2
+        undo(&repo).expect("Undo 1 failed");
+        let text1 = std::fs::read_to_string(&session_file).unwrap();
+        assert!(text1.contains("State 2"));
+
+        // Redo back to State 3
+        redo(&repo).expect("Redo 1 failed");
+        let text2 = std::fs::read_to_string(&session_file).unwrap();
+        assert!(text2.contains("State 3"));
+
+        let _ = std::fs::remove_dir_all(temp_dir);
+    }
 }
+

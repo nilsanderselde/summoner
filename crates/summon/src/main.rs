@@ -16,7 +16,7 @@
 pub mod export_clap;
 pub mod graph;
 pub mod audio_engine;
-
+pub mod github;
 
 use summoner_core::allocator::AllocGuard;
 use summoner_core::audio::{FixedAudioBuffer, Sample};
@@ -24,7 +24,8 @@ use summoner_core::node::{AudioNode, GainNode, ProcessContext, SineOscillatorNod
 use summoner_core::pipeline::{MultiTenantRenderQueue, RenderJob};
 use summoner_core::transport::Transport;
 use summoner_core::wav::WavWriter;
-use summoner_project::git_dag::GitSessionDag;
+use summoner_project::git_dag::{open_or_init_repo, undo as git_undo, redo as git_redo, GitSessionDag};
+
 use summoner_project::{create_default_project, parse_project_toml, serialize_project_toml};
 use std::env;
 use std::fs;
@@ -41,6 +42,9 @@ fn print_usage() {
     println!("  summon patch-export [PROJECT_PATH]");
     println!("  summon patch-export-clap [PROJECT_PATH] [OUTPUT_DIR]");
     println!("  summon commit-history [PROJECT_PATH]");
+    println!("  summon undo [PROJECT_DIR]");
+    println!("  summon redo [PROJECT_DIR]");
+    println!("  summon patch-to-pr [PROJECT_DIR] [--repo owner/repo] [--title \"TITLE\"]");
     println!("  summon gui [PROJECT_PATH]");
     println!("  summon play [PROJECT_PATH]");
     println!("  summon asset-add [PROJECT_PATH] [WAV_PATH]");
@@ -52,6 +56,7 @@ fn print_usage() {
     println!("  summon load-preset [PRESET_TOML] [SAMPLES_BASE_DIR]");
     println!("  summon generate-pattern [PROJECT_PATH] [TRACK_ID] [--algo markov2|cellular_automata] [--rule 30] [--generations 4]");
 }
+
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -110,6 +115,90 @@ fn main() {
                 println!("Commit: {} | Author: {} | Msg: {}", commit.id, commit.author, commit.message);
             }
         }
+        "undo" => {
+            let dir_str = args.get(2).map(|s| s.as_str()).unwrap_or(".");
+            let dir_path = Path::new(dir_str);
+            let repo = open_or_init_repo(dir_path).unwrap_or_else(|e| {
+                eprintln!("Error opening Git repository at '{}': {}", dir_str, e);
+                process::exit(1);
+            });
+            match git_undo(&repo) {
+                Ok(_) => println!("Successfully undid last micro-commit in repository at '{}'", dir_str),
+                Err(e) => eprintln!("Undo failed: {}", e),
+            }
+        }
+        "redo" => {
+            let dir_str = args.get(2).map(|s| s.as_str()).unwrap_or(".");
+            let dir_path = Path::new(dir_str);
+            let repo = open_or_init_repo(dir_path).unwrap_or_else(|e| {
+                eprintln!("Error opening Git repository at '{}': {}", dir_str, e);
+                process::exit(1);
+            });
+            match git_redo(&repo) {
+                Ok(_) => println!("Successfully redid micro-commit in repository at '{}'", dir_str),
+                Err(e) => eprintln!("Redo failed: {}", e),
+            }
+        }
+        "patch-to-pr" => {
+            let dir_str = args.get(2).map(|s| s.as_str()).unwrap_or(".");
+            let mut repo_target = "owner/repo".to_string();
+            let mut pr_title = "Patch Export".to_string();
+
+            let mut idx = 3;
+            while idx < args.len() {
+                match args[idx].as_str() {
+                    "--repo" => {
+                        if let Some(val) = args.get(idx + 1) {
+                            repo_target = val.clone();
+                            idx += 1;
+                        }
+                    }
+                    "--title" => {
+                        if let Some(val) = args.get(idx + 1) {
+                            pr_title = val.clone();
+                            idx += 1;
+                        }
+                    }
+                    _ => {}
+                }
+                idx += 1;
+            }
+
+            let dir_path = Path::new(dir_str);
+            let repo = open_or_init_repo(dir_path).unwrap_or_else(|e| {
+                eprintln!("Error opening Git repository at '{}': {}", dir_str, e);
+                process::exit(1);
+            });
+
+            let timestamp = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_secs())
+                .unwrap_or(0);
+            let branch_name = format!("patch/session-{}", timestamp);
+
+            if let Err(e) = github::create_patch_branch(&repo, &branch_name) {
+                eprintln!("Failed to create patch branch: {}", e);
+                process::exit(1);
+            }
+            println!("Created patch branch '{}'", branch_name);
+
+            let token = env::var("GITHUB_TOKEN").ok();
+            if let Some(tok) = token {
+                let parts: Vec<&str> = repo_target.split('/').collect();
+                if parts.len() == 2 {
+                    match github::create_github_pr(&tok, parts[0], parts[1], &branch_name, &pr_title, "Automated patch-to-PR submission") {
+                        Ok(res) => println!("PR created successfully:\n{}", res),
+                        Err(e) => eprintln!("Failed to create GitHub PR: {}", e),
+                    }
+                } else {
+                    eprintln!("Invalid --repo format. Expected 'owner/repo'");
+                }
+            } else {
+                println!("GITHUB_TOKEN environment variable not set. Skipping remote push & PR creation.");
+                println!("Branch '{}' created locally.", branch_name);
+            }
+        }
+
         "render-batch" => {
             println!("Starting Multi-Tenant Cloud Render Batch...");
             let mut queue = MultiTenantRenderQueue::new();

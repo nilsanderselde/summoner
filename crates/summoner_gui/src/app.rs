@@ -272,20 +272,43 @@ impl eframe::App for SummonerApp {
             self.save_session();
         }
 
-        // Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y Undo and Redo stubs
+        // Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y Undo and Redo
         if is_ctrl && ctx.input(|i| i.key_pressed(egui::Key::Z)) {
-            if is_shift {
-                self.status_message = Some("Redo action triggered (stub)".to_string());
-                println!("Redo action triggered (stub)");
+            let path = self.project_path.clone().unwrap_or_else(|| std::path::PathBuf::from("."));
+            let dir = if path.is_dir() { path } else { path.parent().unwrap_or_else(|| std::path::Path::new(".")).to_path_buf() };
+            if let Ok(repo) = summoner_project::git_dag::open_or_init_repo(&dir) {
+                if is_shift {
+                    if summoner_project::git_dag::redo(&repo).is_ok() {
+                        self.load_session_from_path(dir.join("summoner_session.toml"));
+                        self.status_message = Some("Redid micro-commit via Git".to_string());
+                    } else {
+                        self.status_message = Some("Redo: no further history".to_string());
+                    }
+                } else {
+                    if summoner_project::git_dag::undo(&repo).is_ok() {
+                        self.load_session_from_path(dir.join("summoner_session.toml"));
+                        self.status_message = Some("Undid micro-commit via Git".to_string());
+                    } else {
+                        self.status_message = Some("Undo: no parent commit".to_string());
+                    }
+                }
             } else {
-                self.status_message = Some("Undo action triggered (stub)".to_string());
-                println!("Undo action triggered (stub)");
+                self.status_message = Some("Git repository operation unavailable".to_string());
             }
         }
         if is_ctrl && ctx.input(|i| i.key_pressed(egui::Key::Y)) {
-            self.status_message = Some("Redo action triggered (stub)".to_string());
-            println!("Redo action triggered (stub)");
+            let path = self.project_path.clone().unwrap_or_else(|| std::path::PathBuf::from("."));
+            let dir = if path.is_dir() { path } else { path.parent().unwrap_or_else(|| std::path::Path::new(".")).to_path_buf() };
+            if let Ok(repo) = summoner_project::git_dag::open_or_init_repo(&dir) {
+                if summoner_project::git_dag::redo(&repo).is_ok() {
+                    self.load_session_from_path(dir.join("summoner_session.toml"));
+                    self.status_message = Some("Redid micro-commit via Git".to_string());
+                } else {
+                    self.status_message = Some("Redo: no further history".to_string());
+                }
+            }
         }
+
 
         // Execute command palette actions
         if let Some(action) = self.command_palette.show(ctx) {
