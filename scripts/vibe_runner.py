@@ -3,7 +3,7 @@
 Summoner DAW — Smart Vibe Runner (Real-Time JSON Streamed)
 Runs agy in autonomous loop, parsing stream-json events to render live tool calls,
 thinking progress, code edits, and streaming agent text.
-Includes robust quota detection, exponential backoff, rate limit safety, and clear error reporting.
+Includes dynamic roadmap selection, robust quota detection, exponential backoff, rate limit safety, and clear error reporting.
 """
 
 import sys
@@ -11,6 +11,8 @@ import subprocess
 import json
 import time
 import re
+import os
+import glob
 from datetime import datetime, timedelta
 
 # Ensure stdout and stderr use UTF-8 on Windows
@@ -19,18 +21,37 @@ if hasattr(sys.stdout, "reconfigure"):
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
-PROMPT = (
-    "Read local/ROADMAP_20260729.md and previous analysis. "
-    "Proceed with implementing the next incomplete logical step on the roadmap, "
-    "edit the code, run tests to verify, and commit all changes with a detailed commit message "
-    "before finishing or beginning the next step."
-)
+def get_latest_roadmap_path():
+    """
+    Finds the latest dated roadmap file in local/ matching ROADMAP_YYYYMMDD.md
+    or ROADMAP*.md, sorting by date/name.
+    """
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    local_dir = os.path.join(base_dir, "local")
+    dated_roadmaps = glob.glob(os.path.join(local_dir, "ROADMAP_[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9].md"))
+    
+    if dated_roadmaps:
+        latest = sorted(dated_roadmaps)[-1]
+        rel_path = os.path.relpath(latest, base_dir)
+        return rel_path.replace("\\", "/")
+    
+    all_roadmaps = glob.glob(os.path.join(local_dir, "ROADMAP*.md"))
+    if all_roadmaps:
+        latest = sorted(all_roadmaps)[-1]
+        rel_path = os.path.relpath(latest, base_dir)
+        return rel_path.replace("\\", "/")
+        
+    return "local/ROADMAP_20260729.md"
 
-AGY_FLAGS = [
-    "agy", "-p", PROMPT,
-    "--output-format", "stream-json",
-    "--dangerously-skip-permissions"
-]
+def build_prompt(latest_roadmap):
+    return (
+        f"Identify and read the latest roadmap file in local/ ({latest_roadmap}) as authoritative. "
+        f"If needed for context, review older roadmap files in local/. "
+        f"Proceed with implementing the next incomplete logical step on {latest_roadmap}, "
+        f"edit the code, run tests to verify, and commit all changes with a detailed commit message. "
+        f"If all tasks in {latest_roadmap} are complete, create a new roadmap file "
+        f"local/ROADMAP_YYYYMMDD.md for subsequent steps before finishing."
+    )
 
 # Case-insensitive patterns indicating rate limits or quota exhaustion
 QUOTA_PATTERNS = [
@@ -109,10 +130,19 @@ def extract_error_snippet(full_output_str):
     return extracted[-6:] if extracted else lines[-6:]
 
 def run_vibe_turn(step_num):
-    log(f"🤖 Starting Vibe Turn #{step_num}...", "\033[1;36m")
+    latest_roadmap = get_latest_roadmap_path()
+    prompt = build_prompt(latest_roadmap)
+    
+    log(f"🤖 Starting Vibe Turn #{step_num} (Active Roadmap: {latest_roadmap})...", "\033[1;36m")
+    
+    agy_flags = [
+        "agy", "-p", prompt,
+        "--output-format", "stream-json",
+        "--dangerously-skip-permissions"
+    ]
     
     proc = subprocess.Popen(
-        AGY_FLAGS,
+        agy_flags,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
