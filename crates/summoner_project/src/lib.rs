@@ -57,17 +57,19 @@ pub fn serialize_project_toml(config: &ProjectConfig) -> Result<String, ProjectE
 
 /// Generate default project configuration.
 pub fn create_default_project(name: &str) -> ProjectConfig {
+    create_project_from_template(name, "Default")
+}
+
+/// Generate a project from a preset template (Step 416).
+pub fn create_project_from_template(name: &str, template_kind: &str) -> ProjectConfig {
     let mut synth_params = HashMap::new();
     synth_params.insert("frequency".to_string(), 440.0);
 
     let mut gain_params = HashMap::new();
     gain_params.insert("gain".to_string(), 0.8);
 
-    ProjectConfig {
-        name: name.to_string(),
-        tuning_file: None,
-        transport: TransportConfig::default(),
-        tracks: vec![
+    let base_tracks = match template_kind {
+        "Synth + Drums" | "Drum Beat" => vec![
             TrackConfig {
                 id: 1,
                 name: "Master Track".to_string(),
@@ -101,11 +103,7 @@ pub fn create_default_project(name: &str) -> ProjectConfig {
                     },
                     NodeConfig {
                         kind: "GainNode".to_string(),
-                        params: {
-                            let mut p = HashMap::new();
-                            p.insert("gain".to_string(), 0.5);
-                            p
-                        },
+                        params: gain_params.clone(),
                     },
                 ],
                 sequence: None,
@@ -115,8 +113,112 @@ pub fn create_default_project(name: &str) -> ProjectConfig {
                 tuning_root_hz: None,
                 tuning_scl_path: None,
             },
-
+            TrackConfig {
+                id: 3,
+                name: "Drum Track".to_string(),
+                channels: 2,
+                gain: 0.85,
+                pan: 0.0,
+                muted: false,
+                soloed: false,
+                send_level: 0.0,
+                nodes: Vec::new(),
+                sequence: None,
+                clips: Vec::new(),
+                connections: Vec::new(),
+                tuning_edo: None,
+                tuning_root_hz: None,
+                tuning_scl_path: None,
+            },
         ],
+        "Microtonal Exploration" => vec![
+            TrackConfig {
+                id: 1,
+                name: "Master Track".to_string(),
+                channels: 2,
+                gain: 1.0,
+                pan: 0.0,
+                muted: false,
+                soloed: false,
+                send_level: 0.0,
+                nodes: Vec::new(),
+                sequence: None,
+                clips: Vec::new(),
+                connections: Vec::new(),
+                tuning_edo: None,
+                tuning_root_hz: None,
+                tuning_scl_path: None,
+            },
+            TrackConfig {
+                id: 2,
+                name: "19-EDO Micro Synth".to_string(),
+                channels: 2,
+                gain: 0.8,
+                pan: 0.0,
+                muted: false,
+                soloed: false,
+                send_level: 0.0,
+                nodes: Vec::new(),
+                sequence: None,
+                clips: Vec::new(),
+                connections: Vec::new(),
+                tuning_edo: Some(19),
+                tuning_root_hz: Some(440.0),
+                tuning_scl_path: None,
+            },
+        ],
+        _ => vec![
+            TrackConfig {
+                id: 1,
+                name: "Master Track".to_string(),
+                channels: 2,
+                gain: 1.0,
+                pan: 0.0,
+                muted: false,
+                soloed: false,
+                send_level: 0.0,
+                nodes: Vec::new(),
+                sequence: None,
+                clips: Vec::new(),
+                connections: Vec::new(),
+                tuning_edo: None,
+                tuning_root_hz: None,
+                tuning_scl_path: None,
+            },
+            TrackConfig {
+                id: 2,
+                name: "Synth Lead".to_string(),
+                channels: 2,
+                gain: 0.75,
+                pan: 0.0,
+                muted: false,
+                soloed: false,
+                send_level: 0.0,
+                nodes: vec![
+                    NodeConfig {
+                        kind: "SineOscillatorNode".to_string(),
+                        params: synth_params,
+                    },
+                    NodeConfig {
+                        kind: "GainNode".to_string(),
+                        params: gain_params,
+                    },
+                ],
+                sequence: None,
+                clips: Vec::new(),
+                connections: Vec::new(),
+                tuning_edo: None,
+                tuning_root_hz: None,
+                tuning_scl_path: None,
+            },
+        ],
+    };
+
+    ProjectConfig {
+        name: name.to_string(),
+        tuning_file: None,
+        transport: TransportConfig::default(),
+        tracks: base_tracks,
         assets: Vec::new(),
         automation_lanes: Vec::new(),
         midi_mappings: Vec::new(),
