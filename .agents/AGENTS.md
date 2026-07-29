@@ -7,7 +7,6 @@
 ## Makefile Targets & Workflows
 - `make vibe` runs the autonomous vibe coding bash runner script (`scripts/smart-vibe.sh`).
 - `make vibe-py` runs the streaming Python runner (`scripts/vibe_runner.py`).
-- `make vibe-ps` runs the PowerShell runner (`scripts/smart-vibe.ps1`).
 - `make test`, `make check`, `make build`, `make run`, `make clippy`, `make fmt` provide workspace shortcuts.
 
 ## Git Commit Requirement

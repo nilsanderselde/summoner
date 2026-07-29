@@ -1,6 +1,6 @@
 # Summoner DAW Makefile
 
-.PHONY: help vibe vibe-py vibe-ps run build release test check clippy fmt fmt-fix generate presets clean
+.PHONY: help vibe vibe-py run build release test check clippy fmt fmt-fix generate presets clean
 
 # Default target
 .DEFAULT_GOAL := help
@@ -12,7 +12,6 @@ help:
 	@echo "  Vibe Coding Autonomous Runners:"
 	@echo "    make vibe        - Run vibe-coding autonomous loop (Bash: scripts/smart-vibe.sh)"
 	@echo "    make vibe-py     - Run vibe-coding autonomous loop (Python stream: scripts/vibe_runner.py)"
-	@echo "    make vibe-ps     - Run vibe-coding autonomous loop (PowerShell: scripts/smart-vibe.ps1)"
 	@echo ""
 	@echo "  Cargo & Rust Operations:"
 	@echo "    make run         - Run main Summoner application (cargo run -p summon)"
@@ -36,10 +35,6 @@ vibe:
 ## vibe-py: Run the streaming Python vibe coding script
 vibe-py:
 	python ./scripts/vibe_runner.py
-
-## vibe-ps: Run the PowerShell vibe coding script
-vibe-ps:
-	powershell -ExecutionPolicy Bypass -File ./scripts/smart-vibe.ps1
 
 ## run: Run the main Summoner DAW binary
 run:
