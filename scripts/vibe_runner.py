@@ -242,6 +242,7 @@ def run_vibe_turn(step_num):
     
     agy_flags = [
         "agy", "-p", prompt,
+        "--add-dir", ".",
         "--output-format", "stream-json",
         "--dangerously-skip-permissions",
         "--log-file", LOG_FILE_PATH
