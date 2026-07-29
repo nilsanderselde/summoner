@@ -26,6 +26,12 @@ toolName = "run_shell_command"
 commandPrefix = "py"
 decision = "allow"
 
+# Allow Makefile operations
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "make"
+decision = "allow"
+
 # Allow file reading, writing, and editing
 [[rule]]
 toolName = "read_file"
