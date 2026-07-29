@@ -13,6 +13,46 @@
 
 use crate::renderer::RenderCommand;
 use crate::lod::LodLevel;
+use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
+use std::sync::Arc;
+
+/// Real-time lock-free oscilloscope ring buffer for audio waveform visualization.
+#[derive(Clone)]
+pub struct Oscilloscope {
+    pub buffer: Arc<[AtomicU32; 512]>,
+    pub write_pos: Arc<AtomicUsize>,
+}
+
+impl Oscilloscope {
+    pub fn new() -> Self {
+        let array: [AtomicU32; 512] = std::array::from_fn(|_| AtomicU32::new(0.0f32.to_bits()));
+        Self {
+            buffer: Arc::new(array),
+            write_pos: Arc::new(AtomicUsize::new(0)),
+        }
+    }
+
+    pub fn write_sample(&self, sample: f32) {
+        let pos = self.write_pos.fetch_add(1, Ordering::Relaxed) % 512;
+        self.buffer[pos].store(sample.to_bits(), Ordering::Relaxed);
+    }
+
+    pub fn read_all(&self) -> [f32; 512] {
+        let current_pos = self.write_pos.load(Ordering::Relaxed);
+        let mut out = [0.0f32; 512];
+        for i in 0..512 {
+            let idx = (current_pos + i) % 512;
+            out[i] = f32::from_bits(self.buffer[idx].load(Ordering::Relaxed));
+        }
+        out
+    }
+}
+
+impl Default for Oscilloscope {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 /// Inline visualizers to be rendered inside the signal paths.
 pub struct Visualizer {

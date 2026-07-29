@@ -217,14 +217,14 @@ pub fn show_arranger(
                     let stroke_color = if is_bar { egui::Color32::from_gray(60) } else { egui::Color32::from_gray(35) };
                     painter.line_segment(
                         [egui::pos2(x, lane_rect.top()), egui::pos2(x, lane_rect.bottom())],
-                        egui::Stroke::new(if is_bar { 1.0 } else { 0.5 }, stroke_color),
+                        egui::Stroke::new(if is_bar { 1.0_f32 } else { 0.5_f32 }, stroke_color),
                     );
                     if ppb > 80.0 {
                         for sub in 1..4 {
                             let sub_x = lane_rect.left() + (beat as f32 + sub as f32 * 0.25) * ppb;
                             painter.line_segment(
                                 [egui::pos2(sub_x, lane_rect.top()), egui::pos2(sub_x, lane_rect.bottom())],
-                                egui::Stroke::new(0.5, egui::Color32::from_gray(25)),
+                                egui::Stroke::new(0.5_f32, egui::Color32::from_gray(25)),
                             );
                         }
                     }

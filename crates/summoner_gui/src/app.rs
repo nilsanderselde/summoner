@@ -16,6 +16,9 @@ use summoner_harmony::edo::EdoTuning;
 use summoner_sequencer::automation::AutomationRegistry;
 use summoner_sequencer::automation_timeline::AutomationTimeline;
 
+use std::collections::HashMap;
+use crate::visualizer::Oscilloscope;
+
 #[derive(PartialEq, Debug, Clone)]
 pub enum ViewMode {
     Arranger,
@@ -43,12 +46,17 @@ pub struct SummonerApp {
     pub automation_timeline: AutomationTimeline,
     pub transport: Transport,
     pub show_rack: bool,
+    pub oscilloscope_buffers: HashMap<u64, Arc<Oscilloscope>>,
 }
 
 impl SummonerApp {
     pub fn new(project: ProjectConfig, param_bus: Arc<ParamBus>) -> Self {
         let sample_rate = project.transport.sample_rate;
         let bpm = project.transport.bpm;
+        let mut oscilloscope_buffers = HashMap::new();
+        for track in &project.tracks {
+            oscilloscope_buffers.insert(track.id, Arc::new(Oscilloscope::new()));
+        }
         Self {
             project,
             param_bus,
@@ -67,6 +75,7 @@ impl SummonerApp {
             automation_timeline: AutomationTimeline::new(),
             transport: Transport::new(sample_rate, bpm),
             show_rack: true,
+            oscilloscope_buffers,
         }
     }
 }
@@ -252,10 +261,10 @@ impl eframe::App for SummonerApp {
             if self.show_rack && self.current_view != ViewMode::Performance {
                 ui.separator();
                 if let Some(tid) = self.selected_track_id {
-                    if let Some(track) = self.project.tracks.iter().find(|t| t.id == tid) {
-                        let track_clone = track.clone();
+                    let osc = self.oscilloscope_buffers.get(&tid).map(|o| o.as_ref());
+                    if let Some(track) = self.project.tracks.iter_mut().find(|t| t.id == tid) {
                         let mut open_graph = false;
-                        show_macro_rack(ui, &track_clone, &self.param_bus, &mut || {
+                        show_macro_rack(ui, track, &self.param_bus, osc, &mut || {
                             open_graph = true;
                         });
                         if open_graph {
