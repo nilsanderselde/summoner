@@ -57,6 +57,8 @@ impl SummonerApp {
         for track in &project.tracks {
             oscilloscope_buffers.insert(track.id, Arc::new(Oscilloscope::new()));
         }
+        let mut stage_view = StageView::new();
+        stage_view.populate_from_project(&project);
         Self {
             project,
             param_bus,
@@ -69,7 +71,7 @@ impl SummonerApp {
             dummy_graph: NodeGraph::new("Main Track", 64, 2),
             recording_all: false,
             selected_track_id: Some(1),
-            stage_view: StageView::new(),
+            stage_view,
             command_palette: CommandPalette::new(),
             automation_registry: AutomationRegistry::new(),
             automation_timeline: AutomationTimeline::new(),
