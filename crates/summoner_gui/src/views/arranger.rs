@@ -59,6 +59,7 @@ pub fn show_arranger(
     grid_division: &mut f64,
     track_header_width: &mut f32,
     waveform_cache: &mut crate::waveform_cache::WaveformCache,
+    oscilloscope_buffers: Option<&std::collections::HashMap<u64, std::sync::Arc<crate::visualizer::Oscilloscope>>>,
 ) -> Option<ViewMode> {
     let mut navigation_target = None;
     let state_id = ui.id().with("arranger_state");
@@ -466,6 +467,33 @@ pub fn show_arranger(
                                     ui.label("Vol:");
                                     ui.add(egui::Slider::new(&mut track.gain, 0.0..=1.5).text(""));
                                 });
+
+                                // Track volume live RMS VU meter (Step 580)
+                                let rms_vol = oscilloscope_buffers
+                                    .and_then(|map| map.get(&track.id))
+                                    .map_or(0.0f32, |scope| {
+                                        let samples = scope.read_all();
+                                        let sum_sq: f32 = samples.iter().map(|&s| s * s).sum();
+                                        (sum_sq / 512.0).sqrt()
+                                    });
+                                ui.horizontal(|ui| {
+                                    ui.label("VU:");
+                                    let (vu_resp, vu_painter) = ui.allocate_painter(egui::vec2(60.0, 6.0), egui::Sense::hover());
+                                    let vu_rect = vu_resp.rect;
+                                    vu_painter.rect_filled(vu_rect, 1.0, egui::Color32::from_rgb(10, 10, 15));
+                                    let fill_w = (rms_vol * 60.0).clamp(0.0, 60.0);
+                                    if fill_w > 0.0 {
+                                        let fill_rect = egui::Rect::from_min_size(vu_rect.min, egui::vec2(fill_w, 6.0));
+                                        let vu_col = if rms_vol > 0.8 {
+                                            egui::Color32::from_rgb(231, 76, 60)
+                                        } else if rms_vol > 0.5 {
+                                            egui::Color32::from_rgb(241, 196, 15)
+                                        } else {
+                                            egui::Color32::from_rgb(46, 204, 113)
+                                        };
+                                        vu_painter.rect_filled(fill_rect, 1.0, vu_col);
+                                    }
+                                });
                             }
                         });
                     });
@@ -527,9 +555,16 @@ pub fn show_arranger(
                     if clip_resp.dragged() {
                         let delta_x = clip_resp.drag_delta().x;
                         let delta_beats = (delta_x / ppb) as f64;
-                        // Multi-clip move (Step 439)
-                        if is_clip_selected {
-                            seq.start_beat = (seq.start_beat + delta_beats).max(0.0);
+                        // Multi-clip move (Step 590)
+                        if state.selected_clips.contains(&(track_id, seq_idx)) && state.selected_clips.len() > 1 {
+                            for &(t_id, s_idx) in &state.selected_clips {
+                                if let Some(tr) = project.tracks.iter_mut().find(|t| t.id == t_id) {
+                                    let seqs = tr.all_sequences_mut();
+                                    if s_idx < seqs.len() {
+                                        seqs[s_idx].start_beat = (seqs[s_idx].start_beat + delta_beats).max(0.0);
+                                    }
+                                }
+                            }
                         } else {
                             seq.start_beat = (seq.start_beat + delta_beats).max(0.0);
                         }
@@ -588,6 +623,28 @@ pub fn show_arranger(
                             fill_loop_region(seq, project.loop_start_beat, project.loop_end_beat);
                             ui.close_menu();
                         }
+                        if ui.button("↩ Restore Clip (Reset Trim & Fades)").clicked() { // Step 588
+                            seq.restore();
+                            ui.close_menu();
+                        }
+                        ui.separator();
+                        ui.horizontal(|ui| {
+                            ui.label("Gain:");
+                            ui.add(egui::DragValue::new(&mut seq.gain).speed(0.05).range(0.0..=4.0)); // Step 584
+                        });
+                        ui.horizontal(|ui| {
+                            ui.label("Pitch (st):");
+                            ui.add(egui::DragValue::new(&mut seq.pitch_offset).speed(1.0).range(-24.0..=24.0)); // Step 585
+                        });
+                        ui.horizontal(|ui| {
+                            ui.label("Trim Start:");
+                            ui.add(egui::DragValue::new(&mut seq.trim_start).speed(0.1).range(0.0..=64.0)); // Step 586
+                        });
+                        ui.horizontal(|ui| {
+                            ui.label("Trim End:");
+                            ui.add(egui::DragValue::new(&mut seq.trim_end).speed(0.1).range(0.0..=64.0)); // Step 586
+                        });
+                        ui.separator();
                         if ui.button("🔄 Reverse Clip").clicked() { // Step 431
                             seq.is_reversed = !seq.is_reversed;
                             seq.steps.reverse();
@@ -653,35 +710,117 @@ pub fn show_arranger(
                     };
                     painter.rect_stroke(clip_rect, 4.0, border_stroke);
 
-                    // Fade handles (Step 426) & Envelope line (Step 427)
+                    // Trim shading (Step 587)
+                    if seq.trim_start > 0.0 {
+                        let trim_w = (seq.trim_start as f32 * ppb).min(clip_rect.width() * 0.5);
+                        let trim_rect = egui::Rect::from_min_size(clip_rect.min, egui::vec2(trim_w, clip_rect.height()));
+                        painter.rect_filled(trim_rect, 0.0, egui::Color32::from_black_alpha(160));
+                    }
+                    if seq.trim_end > 0.0 {
+                        let trim_w = (seq.trim_end as f32 * ppb).min(clip_rect.width() * 0.5);
+                        let trim_rect = egui::Rect::from_min_size(
+                            egui::pos2(clip_rect.right() - trim_w, clip_rect.top()),
+                            egui::vec2(trim_w, clip_rect.height()),
+                        );
+                        painter.rect_filled(trim_rect, 0.0, egui::Color32::from_black_alpha(160));
+                    }
+
+                    // Fade handles & Polygon gradient fill (Step 582)
                     if seq.fade_in > 0.0 {
                         let fade_w = (seq.fade_in as f32 * ppb).min(clip_rect.width() * 0.5);
-                        painter.line_segment(
-                            [clip_rect.left_top(), egui::pos2(clip_rect.left() + fade_w, clip_rect.bottom())],
-                            egui::Stroke::new(1.5_f32, egui::Color32::WHITE),
-                        );
+                        let pts = vec![
+                            clip_rect.left_bottom(),
+                            clip_rect.left_top(),
+                            egui::pos2(clip_rect.left() + fade_w, clip_rect.top()),
+                        ];
+                        painter.add(egui::Shape::convex_polygon(
+                            pts,
+                            egui::Color32::from_rgba_unmultiplied(255, 255, 255, 35),
+                            egui::Stroke::new(1.0_f32, egui::Color32::WHITE),
+                        ));
                     }
                     if seq.fade_out > 0.0 {
                         let fade_w = (seq.fade_out as f32 * ppb).min(clip_rect.width() * 0.5);
-                        painter.line_segment(
-                            [egui::pos2(clip_rect.right() - fade_w, clip_rect.bottom()), clip_rect.right_top()],
-                            egui::Stroke::new(1.5_f32, egui::Color32::WHITE),
-                        );
+                        let pts = vec![
+                            egui::pos2(clip_rect.right() - fade_w, clip_rect.top()),
+                            clip_rect.right_top(),
+                            clip_rect.right_bottom(),
+                        ];
+                        painter.add(egui::Shape::convex_polygon(
+                            pts,
+                            egui::Color32::from_rgba_unmultiplied(255, 255, 255, 35),
+                            egui::Stroke::new(1.0_f32, egui::Color32::WHITE),
+                        ));
                     }
 
-                    // Clip Name & Step Count Label
+                    // Clip Name, Gain/Pitch & Step Count Label (Steps 584, 585)
                     let clip_label = seq.clip_name.as_deref().unwrap_or("Pattern");
                     let rev_flag = if seq.is_reversed { " 🔄" } else { "" };
+                    let gain_str = if (seq.gain - 1.0).abs() > 0.01 { format!(" G:{:.1}x", seq.gain) } else { String::new() };
+                    let pitch_str = if seq.pitch_offset.abs() > 0.01 { format!(" P:{:+.0}st", seq.pitch_offset) } else { String::new() };
                     if !track_is_collapsed {
                         painter.text(
                             egui::pos2(clip_rect.left() + 6.0, clip_rect.top() + 3.0),
                             egui::Align2::LEFT_TOP,
-                            format!("{}{}{}", clip_label, rev_flag, if seq.is_unique { " ★" } else { "" }),
+                            format!("{}{}{}{}{}", clip_label, rev_flag, gain_str, pitch_str, if seq.is_unique { " ★" } else { "" }),
                             egui::FontId::proportional(11.0),
                             egui::Color32::WHITE,
                         );
                     }
                 }
+
+                // Crossfade indicator between overlapping clips on the same track (Step 583)
+                let clip_info_list: Vec<(f32, f32)> = track.all_sequences().iter().map(|s| {
+                    let start = lane_rect.left() + (s.start_beat as f32 * ppb);
+                    let duration_beats = (s.steps.len() as f64 * s.step_division * s.time_stretch).max(0.5) as f32;
+                    let width = (duration_beats * ppb).max(30.0);
+                    (start, start + width)
+                }).collect();
+
+                for i in 0..clip_info_list.len() {
+                    for j in (i + 1)..clip_info_list.len() {
+                        let (s1, e1) = clip_info_list[i];
+                        let (s2, e2) = clip_info_list[j];
+                        let overlap_start = s1.max(s2);
+                        let overlap_end = e1.min(e2);
+                        if overlap_end > overlap_start {
+                            let xf_rect = egui::Rect::from_min_max(
+                                egui::pos2(overlap_start, lane_rect.top() + 3.0),
+                                egui::pos2(overlap_end, lane_rect.bottom() - 3.0),
+                            );
+                            painter.rect_filled(xf_rect, 2.0, egui::Color32::from_rgba_unmultiplied(46, 204, 113, 60));
+                            painter.line_segment([xf_rect.left_top(), xf_rect.right_bottom()], egui::Stroke::new(1.5, egui::Color32::WHITE));
+                            painter.line_segment([xf_rect.left_bottom(), xf_rect.right_top()], egui::Stroke::new(1.5, egui::Color32::WHITE));
+                        }
+                    }
+                }
+
+                // Context menu on empty track lane area (Step 589)
+                lane_resp.context_menu(|ui| {
+                    if ui.button("➕ Add Pattern Clip").clicked() {
+                        let click_pos = ui.input(|i| i.pointer.hover_pos()).unwrap_or(lane_rect.min);
+                        let clicked_beat = ((click_pos.x - lane_rect.left()) / ppb).max(0.0) as f64;
+                        let div = (*grid_division).max(0.01);
+                        let start_beat = (clicked_beat / div).round() * div;
+                        track.clips.push(SequenceConfig {
+                            start_beat,
+                            clip_name: Some(format!("Clip {}", track.clips.len() + 1)),
+                            ..Default::default()
+                        });
+                        ui.close_menu();
+                    }
+                    if let Some(ref cb) = state.clipboard_clip {
+                        if ui.button("📋 Paste Clip").clicked() {
+                            let mut pasted = cb.duplicate();
+                            let click_pos = ui.input(|i| i.pointer.hover_pos()).unwrap_or(lane_rect.min);
+                            let clicked_beat = ((click_pos.x - lane_rect.left()) / ppb).max(0.0) as f64;
+                            let div = (*grid_division).max(0.01);
+                            pasted.start_beat = (clicked_beat / div).round() * div;
+                            track.clips.push(pasted);
+                            ui.close_menu();
+                        }
+                    }
+                });
             });
 
             // Render Automation Lanes for this track

@@ -156,6 +156,10 @@ pub struct SummonerApp {
     pub reduce_motion: bool,
     pub keyboard_navigation: bool,
     pub show_accessibility_modal: bool,
+    // Tier 32 fields (Steps 577, 579)
+    pub tempo_tap_times: std::collections::VecDeque<std::time::Instant>,
+    pub min_bpm: f64,
+    pub max_bpm: f64,
 }
 
 impl SummonerApp {
@@ -235,6 +239,9 @@ impl SummonerApp {
             reduce_motion: false,
             keyboard_navigation: true,
             show_accessibility_modal: false,
+            tempo_tap_times: std::collections::VecDeque::new(),
+            min_bpm: 20.0,
+            max_bpm: 300.0,
         };
 
         if let Some(state) = GuiState::load() {
@@ -291,6 +298,33 @@ impl SummonerApp {
             self.recent_projects.truncate(10);
         }
         self.save_gui_state();
+    }
+
+    /// Step 577 & 578: Calculate tap tempo average and update project transport BPM within min/max bounds.
+    pub fn tap_tempo(&mut self) {
+        let now = std::time::Instant::now();
+        self.tempo_tap_times.push_back(now);
+        while let Some(&first) = self.tempo_tap_times.front() {
+            if now.duration_since(first).as_secs_f64() > 3.0 {
+                self.tempo_tap_times.pop_front();
+            } else {
+                break;
+            }
+        }
+        if self.tempo_tap_times.len() >= 2 {
+            let slices = self.tempo_tap_times.make_contiguous();
+            let intervals: Vec<f64> = slices
+                .windows(2)
+                .map(|w| w[1].duration_since(w[0]).as_secs_f64())
+                .collect();
+            if !intervals.is_empty() {
+                let avg_sec = intervals.iter().sum::<f64>() / intervals.len() as f64;
+                if avg_sec > 0.0 {
+                    let calculated_bpm = 60.0 / avg_sec;
+                    self.project.transport.bpm = calculated_bpm.clamp(self.min_bpm, self.max_bpm);
+                }
+            }
+        }
     }
 
     pub fn check_auto_save(&mut self) {
@@ -461,6 +495,11 @@ impl eframe::App for SummonerApp {
         // Ctrl+K / Cmd+K Command Palette hotkey
         if is_ctrl && ctx.input(|i| i.key_pressed(egui::Key::K)) {
             self.command_palette.open();
+        }
+
+        // T hotkey Tap Tempo (Step 578)
+        if !is_ctrl && !ctx.wants_keyboard_input() && ctx.input(|i| i.key_pressed(egui::Key::T)) {
+            self.tap_tempo();
         }
 
         // Ctrl+B Patch Browser hotkey (Step 465)
@@ -1110,6 +1149,14 @@ impl eframe::App for SummonerApp {
                 ui.separator();
 
                 ui.label(format!("Tempo: {:.1} BPM", self.project.transport.bpm));
+                if ui.button("🥁 Tap Tempo (T)").clicked() {
+                    self.tap_tempo();
+                }
+                ui.label("Min:");
+                ui.add(egui::DragValue::new(&mut self.min_bpm).speed(1.0).range(10.0..=100.0));
+                ui.label("Max:");
+                ui.add(egui::DragValue::new(&mut self.max_bpm).speed(1.0).range(100.0..=500.0));
+                self.project.transport.bpm = self.project.transport.bpm.clamp(self.min_bpm, self.max_bpm);
 
                 ui.separator();
 
@@ -1196,6 +1243,7 @@ impl eframe::App for SummonerApp {
                         &mut self.grid_division,
                         &mut self.track_header_width,
                         &mut self.waveform_cache,
+                        Some(&self.oscilloscope_buffers),
                     ) {
                         self.current_view = target_view;
                     }

@@ -312,6 +312,14 @@ pub struct SequenceConfig {
     pub is_reversed: bool,
     #[serde(default = "default_one_f64")]
     pub time_stretch: f64,
+    #[serde(default = "default_one_f64")]
+    pub gain: f64,
+    #[serde(default)]
+    pub pitch_offset: f64,
+    #[serde(default)]
+    pub trim_start: f64,
+    #[serde(default)]
+    pub trim_end: f64,
 }
 
 fn default_one_f64() -> f64 {
@@ -332,7 +340,22 @@ impl Default for SequenceConfig {
             fade_out: 0.0,
             is_reversed: false,
             time_stretch: 1.0,
+            gain: 1.0,
+            pitch_offset: 0.0,
+            trim_start: 0.0,
+            trim_end: 0.0,
         }
+    }
+}
+
+impl SequenceConfig {
+    pub fn restore(&mut self) {
+        self.trim_start = 0.0;
+        self.trim_end = 0.0;
+        self.fade_in = 0.0;
+        self.fade_out = 0.0;
+        self.gain = 1.0;
+        self.pitch_offset = 0.0;
     }
 }
 

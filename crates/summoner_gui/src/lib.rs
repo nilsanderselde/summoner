@@ -32,6 +32,8 @@ pub mod views;
 pub mod stage_view;
 #[cfg(feature = "gui")]
 pub mod theme;
+#[cfg(feature = "gui")]
+pub mod tier32_tests;
 
 #[cfg(feature = "gui")]
 pub fn launch(project: summoner_project::schema::ProjectConfig, param_bus: std::sync::Arc<summoner_core::param_bus::ParamBus>) {
