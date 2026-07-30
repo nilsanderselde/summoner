@@ -806,42 +806,58 @@ impl QuantumPhaseEstimationPitchTracker {
     }
 
     pub fn estimate_pitch(&self, signal: &[f32], sample_rate: u32) -> f32 {
-        if signal.len() < 16 {
+        if signal.len() < 32 {
             return 440.0;
         }
 
-        let max_lag = (sample_rate as usize / 20).min(signal.len() - 1);
+        let max_lag = (sample_rate as usize / 20).min(signal.len() / 2);
         let min_lag = (sample_rate as usize / 4000).max(1);
 
-        let mut max_corr = -1e9f32;
-        let mut best_lag = 1;
+        let mut autocorrs = vec![0.0f32; max_lag + 1];
 
         for lag in min_lag..=max_lag {
-            let mut corr = 0.0f32;
             let count = signal.len() - lag;
+            let mut corr = 0.0f32;
+            let mut e1 = 0.0f32;
+            let mut e2 = 0.0f32;
             for i in 0..count {
                 corr += signal[i] * signal[i + lag];
+                e1 += signal[i] * signal[i];
+                e2 += signal[i + lag] * signal[i + lag];
             }
-            corr /= count as f32;
-            if corr > max_corr {
-                max_corr = corr;
+            let denom = (e1 * e2).sqrt();
+            if denom > 1e-6 {
+                autocorrs[lag] = corr / denom;
+            }
+        }
+
+        // Find global maximum
+        let mut max_val = -1.0f32;
+        for lag in min_lag..=max_lag {
+            if autocorrs[lag] > max_val {
+                max_val = autocorrs[lag];
+            }
+        }
+
+        if max_val <= 0.0 {
+            return 440.0;
+        }
+
+        // Pick first peak that reaches at least 80% of max_val (prevents picking sub-harmonics)
+        let thresh = 0.8 * max_val;
+        let mut best_lag = min_lag;
+        for lag in (min_lag + 1)..max_lag {
+            if autocorrs[lag] >= thresh && autocorrs[lag] >= autocorrs[lag - 1] && autocorrs[lag] >= autocorrs[lag + 1] {
                 best_lag = lag;
+                break;
             }
         }
 
         let p = best_lag;
         if p > min_lag && p < max_lag {
-            let mut calc_corr = |l: usize| {
-                let mut c = 0.0f32;
-                let cnt = signal.len() - l;
-                for i in 0..cnt {
-                    c += signal[i] * signal[i + l];
-                }
-                c / cnt as f32
-            };
-            let y1 = calc_corr(p - 1);
-            let y2 = max_corr;
-            let y3 = calc_corr(p + 1);
+            let y1 = autocorrs[p - 1];
+            let y2 = autocorrs[p];
+            let y3 = autocorrs[p + 1];
             let denom = 2.0 * (2.0 * y2 - y1 - y3);
             if denom.abs() > 1e-6 {
                 let delta = (y1 - y3) / denom;
@@ -1070,12 +1086,12 @@ mod tests {
     #[test]
     fn test_step_1153_qpe_pitch_tracker() {
         let tracker = QuantumPhaseEstimationPitchTracker::new();
-        let mut sig = vec![0.0f32; 441];
-        for i in 0..441 {
+        let mut sig = vec![0.0f32; 2048];
+        for i in 0..2048 {
             sig[i] = (2.0 * PI * 440.0 * (i as f32) / 44100.0).sin();
         }
         let est = tracker.estimate_pitch(&sig, 44100);
-        assert!((est - 440.0).abs() < 20.0);
+        assert!((est - 440.0).abs() < 20.0, "Expected est near 440.0, got {}", est);
     }
 
     #[test]
