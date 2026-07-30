@@ -58,6 +58,7 @@ pub mod ecosystem_hardware;
 pub mod spatial_audio;
 pub mod ai_mixing;
 pub mod quantum_audio;
+pub mod neuro_synthesis;
 
 pub use sample_editor::*;
 pub use track_dsp::*;
@@ -66,6 +67,7 @@ pub use ecosystem_hardware::*;
 pub use spatial_audio::*;
 pub use ai_mixing::*;
 pub use quantum_audio::*;
+pub use neuro_synthesis::*;
 pub use multiband_compressor::MultibandCompressorNode;
 pub use tape_saturation::TapeSaturationNode;
 pub use tube_saturation::TubeSaturationNode;
