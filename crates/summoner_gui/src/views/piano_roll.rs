@@ -44,6 +44,10 @@ pub struct PianoRollState {
     pub triplet_steps: bool,
     pub pattern_density: f32,
     pub copied_step: Option<TrackerStepConfig>,
+
+    // Steps 626-630 Scale/Chord Controls
+    pub root_note: u8,
+    pub scale_type: String,
 }
 
 impl Default for PianoRollState {
@@ -80,6 +84,9 @@ impl Default for PianoRollState {
             triplet_steps: false,
             pattern_density: 0.75,
             copied_step: None,
+
+            root_note: 0,
+            scale_type: "Major".to_string(),
         }
     }
 }
@@ -556,6 +563,39 @@ pub fn show_piano_roll(
                 *sequence = imported;
             }
         }
+    });
+
+    // Header toolbar - Row 5 (Steps 626-630 Scale & Chord Controls)
+    ui.horizontal(|ui| {
+        ui.label("Scale Root:");
+        let note_names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+        egui::ComboBox::from_id_source("piano_roll_root_combo")
+            .selected_text(note_names[(state.root_note % 12) as usize])
+            .show_ui(ui, |ui| {
+                for (idx, &name) in note_names.iter().enumerate() {
+                    ui.selectable_value(&mut state.root_note, idx as u8, name);
+                }
+            });
+
+        ui.label("Scale Type:");
+        let scale_types = ["Major", "Minor", "Dorian", "Mixolydian", "Pentatonic", "Harmonic Minor", "Blues"];
+        egui::ComboBox::from_id_source("piano_roll_scale_combo")
+            .selected_text(&state.scale_type)
+            .show_ui(ui, |ui| {
+                for &st in &scale_types {
+                    ui.selectable_value(&mut state.scale_type, st.to_string(), st);
+                }
+            });
+
+        if ui.button("🎼 Transpose to Scale").clicked() {
+            push_history(state, &sequence.steps);
+            summoner_sequencer::transpose_sequence_to_scale(sequence, state.root_note, &state.scale_type);
+        }
+
+        ui.separator();
+        let active_pitches: Vec<f64> = sequence.steps.iter().filter(|s| s.active).map(|s| s.note).collect();
+        let current_chord = summoner_sequencer::detect_chord_name_from_notes(&active_pitches);
+        ui.label(format!("Detected Chord: {}", current_chord));
     });
 
     if state.show_euclidean_popup {

@@ -189,6 +189,18 @@ pub struct TrackConfig {
     pub send_to_master: bool,
     #[serde(default)]
     pub is_frozen: bool,
+    #[serde(default)]
+    pub root_note: u8,
+    #[serde(default = "default_scale_type")]
+    pub scale_type: String,
+    #[serde(default)]
+    pub midi_transpose: i8,
+    #[serde(default)]
+    pub midi_channel_filter: Option<u8>,
+}
+
+fn default_scale_type() -> String {
+    "Major".to_string()
 }
 
 fn default_true() -> bool {
@@ -219,6 +231,10 @@ impl Default for TrackConfig {
             record_armed: false,
             send_to_master: true,
             is_frozen: false,
+            root_note: 0,
+            scale_type: "Major".to_string(),
+            midi_transpose: 0,
+            midi_channel_filter: None,
         }
     }
 }

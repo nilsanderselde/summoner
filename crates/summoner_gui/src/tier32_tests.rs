@@ -247,5 +247,88 @@ mod tests {
         let active_count = seq.steps.iter().filter(|s| s.active).count();
         assert_eq!(active_count, 1);
     }
+
+    #[test]
+    fn test_step626_to_step630_chord_detection_scale_transpose() {
+        use summoner_sequencer::*;
+        use summoner_harmony::scale::Scale;
+
+        // Chord detection (Step 626)
+        let single_note = vec![60.0]; // C4
+        assert_eq!(detect_chord_name_from_notes(&single_note), "C4");
+
+        let c_maj = vec![60.0, 64.0, 67.0]; // C, E, G
+        assert_eq!(detect_chord_name_from_notes(&c_maj), "Cmaj");
+
+        let c_min = vec![60.0, 63.0, 67.0]; // C, Eb, G
+        assert_eq!(detect_chord_name_from_notes(&c_min), "Cm");
+
+        let c_maj7 = vec![60.0, 64.0, 67.0, 71.0]; // C, E, G, B
+        assert_eq!(detect_chord_name_from_notes(&c_maj7), "Cmaj7");
+
+        // Scale lookup & Transpose to Scale (Steps 627-630)
+        let mut seq = SequenceConfig {
+            steps: vec![
+                TrackerStepConfig { note: 61.0, active: true, ..Default::default() }, // C#4 -> D4 or C4 in C Major
+                TrackerStepConfig { note: 66.0, active: true, ..Default::default() }, // F#4 -> G4 or F4
+            ],
+            ..Default::default()
+        };
+
+        transpose_sequence_to_scale(&mut seq, 0, "Major"); // C Major scale
+        let c_maj_scale = Scale::get_scale_by_name("Major");
+        for step in &seq.steps {
+            let pc = (step.note as u16) % 12;
+            assert!(c_maj_scale.degrees.contains(&pc), "Note {} (pc {}) should be in C Major scale", step.note, pc);
+        }
+    }
+
+    #[test]
+    fn test_step631_to_step638_midi_mapping_aftertouch_pitchbend_monitor_panic() {
+        use summoner_sequencer::midi_tools::*;
+
+        // MIDI mapping scaling (Steps 631-633)
+        let cc_map = MidiControllerMapping::new(1, MidiMappingType::CC(7), "track.gain", 0.0, 1.0);
+        assert_eq!(cc_map.map_value(127.0, 0.0, 127.0), 1.0);
+        assert_eq!(cc_map.map_value(63.5, 0.0, 127.0), 0.5);
+
+        let pb_map = MidiControllerMapping::new(0, MidiMappingType::PitchBend, "synth.pitch", -12.0, 12.0);
+        assert_eq!(pb_map.map_value(0.0, -8192.0, 8191.0), 0.0);
+
+        // Velocity Curve (Step 634)
+        assert_eq!(transform_velocity(127, VelocityCurve::Linear), 127);
+        assert_eq!(transform_velocity(127, VelocityCurve::Fixed(100)), 100);
+
+        // Channel filter & Transpose offset (Steps 635-636)
+        let pass = filter_and_transpose_midi_note(1, 60, Some(1), 12);
+        assert_eq!(pass, Some(72));
+
+        let reject = filter_and_transpose_midi_note(2, 60, Some(1), 0);
+        assert_eq!(reject, None);
+
+        // MIDI Monitor & Panic (Steps 637-638)
+        let mut log = MidiMonitorLog::new(10);
+        log.log_event(100, 1, "NoteOn", 60, 100);
+        assert_eq!(log.entries.len(), 1);
+
+        let panic_msgs = generate_panic_all_note_off();
+        assert!(panic_msgs.len() >= 16 * 130);
+    }
+
+    #[test]
+    fn test_step639_to_step645_virtual_keyboard_and_qwerty() {
+        use summoner_sequencer::midi_tools::qwerty_key_to_midi_note;
+        use crate::views::midi_panel::VirtualKeyboardState;
+
+        let state = VirtualKeyboardState::default();
+        assert_eq!(state.base_octave, 4);
+
+        // QWERTY note mappings (Step 645)
+        let z_note = qwerty_key_to_midi_note("Z", 4); // C4 (MIDI 60)
+        assert_eq!(z_note, Some(60));
+
+        let q_note = qwerty_key_to_midi_note("Q", 4); // C5 (MIDI 72)
+        assert_eq!(q_note, Some(72));
+    }
 }
 

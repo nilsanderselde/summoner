@@ -39,6 +39,59 @@ impl Scale {
         }
     }
 
+    /// 12-TET Dorian scale.
+    pub fn dorian_12_tet() -> Self {
+        Self {
+            name: "Dorian".to_string(),
+            degrees: vec![0, 2, 3, 5, 7, 9, 10],
+        }
+    }
+
+    /// 12-TET Mixolydian scale.
+    pub fn mixolydian_12_tet() -> Self {
+        Self {
+            name: "Mixolydian".to_string(),
+            degrees: vec![0, 2, 4, 5, 7, 9, 10],
+        }
+    }
+
+    /// 12-TET Pentatonic Major scale.
+    pub fn pentatonic_major_12_tet() -> Self {
+        Self {
+            name: "Pentatonic".to_string(),
+            degrees: vec![0, 2, 4, 7, 9],
+        }
+    }
+
+    /// 12-TET Harmonic Minor scale.
+    pub fn harmonic_minor_12_tet() -> Self {
+        Self {
+            name: "Harmonic Minor".to_string(),
+            degrees: vec![0, 2, 3, 5, 7, 8, 11],
+        }
+    }
+
+    /// 12-TET Blues scale.
+    pub fn blues_12_tet() -> Self {
+        Self {
+            name: "Blues".to_string(),
+            degrees: vec![0, 3, 5, 6, 7, 10],
+        }
+    }
+
+    /// Lookup scale by name string.
+    pub fn get_scale_by_name(name: &str) -> Self {
+        match name.to_lowercase().as_str() {
+            "minor" | "aeolian" => Self::minor_12_tet(),
+            "dorian" => Self::dorian_12_tet(),
+            "mixolydian" => Self::mixolydian_12_tet(),
+            "pentatonic" => Self::pentatonic_major_12_tet(),
+            "harmonic minor" | "harmonic_minor" => Self::harmonic_minor_12_tet(),
+            "blues" => Self::blues_12_tet(),
+            _ => Self::major_12_tet(),
+        }
+    }
+
     /// Snap continuous note index to nearest valid scale note.
     pub fn snap_note(&self, note: f64, root: u16, tuning: &EdoTuning) -> f64 {
         if self.degrees.is_empty() {

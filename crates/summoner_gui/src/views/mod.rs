@@ -7,4 +7,5 @@ pub mod chord_suggestion_panel;
 pub mod scala_browser;
 pub mod patch_browser;
 pub mod co_producer;
+pub mod midi_panel;
 

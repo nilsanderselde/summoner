@@ -18,10 +18,12 @@ pub mod pattern_tools;
 pub mod automation_timeline;
 pub mod timeline;
 pub mod groove;
+pub mod midi_tools;
 
 pub use groove::{apply_groove_quantize, GrooveTemplate};
 pub use generative::{generate_melody_onnx, ONNX_MELODY_MODEL_BYTES};
 pub use pattern_tools::*;
+pub use midi_tools::*;
 
 
 #[cfg(test)]

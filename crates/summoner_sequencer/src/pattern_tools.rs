@@ -300,6 +300,88 @@ fn read_varlen(buf: &[u8]) -> (usize, usize) {
     (result, count)
 }
 
+/// Transpose all active steps in a sequence to match the specified scale and root note.
+pub fn transpose_sequence_to_scale(sequence: &mut SequenceConfig, root_note: u8, scale_type: &str) {
+    use summoner_harmony::edo::EdoTuning;
+    use summoner_harmony::scale::Scale;
+
+    let scale = Scale::get_scale_by_name(scale_type);
+    let tuning = EdoTuning::default();
+
+    for step in &mut sequence.steps {
+        if step.active {
+            step.note = scale.snap_note(step.note, root_note as u16, &tuning);
+        }
+    }
+}
+
+/// Detect chord name from a slice of MIDI note pitches.
+pub fn detect_chord_name_from_notes(notes: &[f64]) -> String {
+    if notes.is_empty() {
+        return "Silence".to_string();
+    }
+    if notes.len() == 1 {
+        let note_names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+        let pc = (notes[0].round() as i32).rem_euclid(12) as usize;
+        let octave = ((notes[0].round() as i32) / 12) - 1;
+        return format!("{}{}", note_names[pc], octave);
+    }
+
+    let note_names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+    let mut pcs: Vec<i32> = notes.iter().map(|&n| (n.round() as i32).rem_euclid(12)).collect();
+    pcs.sort_unstable();
+    pcs.dedup();
+
+    if pcs.len() == 2 {
+        let diff = (pcs[1] - pcs[0]).rem_euclid(12);
+        let interval_name = match diff {
+            1 => "m2", 2 => "M2", 3 => "m3", 4 => "M3", 5 => "P4",
+            6 => "TT", 7 => "P5", 8 => "m6", 9 => "M6", 10 => "m7", 11 => "M7",
+            _ => "Unison",
+        };
+        return format!("{}-{} ({})", note_names[pcs[0] as usize], note_names[pcs[1] as usize], interval_name);
+    }
+
+    // Try each pitch as candidate root note
+    for &root in &pcs {
+        let rel_pcs: Vec<i32> = pcs.iter().map(|&pc| (pc - root).rem_euclid(12)).collect();
+        let mut rel_set: std::collections::HashSet<i32> = rel_pcs.into_iter().collect();
+        rel_set.insert(0); // Root is 0
+
+        let root_name = note_names[root as usize];
+
+        if rel_set.contains(&4) && rel_set.contains(&7) && rel_set.contains(&11) {
+            return format!("{}maj7", root_name);
+        }
+        if rel_set.contains(&3) && rel_set.contains(&7) && rel_set.contains(&10) {
+            return format!("{}m7", root_name);
+        }
+        if rel_set.contains(&4) && rel_set.contains(&7) && rel_set.contains(&10) {
+            return format!("{}7", root_name);
+        }
+        if rel_set.contains(&4) && rel_set.contains(&7) {
+            return format!("{}maj", root_name);
+        }
+        if rel_set.contains(&3) && rel_set.contains(&7) {
+            return format!("{}m", root_name);
+        }
+        if rel_set.contains(&3) && rel_set.contains(&6) {
+            return format!("{}dim", root_name);
+        }
+        if rel_set.contains(&4) && rel_set.contains(&8) {
+            return format!("{}aug", root_name);
+        }
+        if rel_set.contains(&5) && rel_set.contains(&7) {
+            return format!("{}sus4", root_name);
+        }
+        if rel_set.contains(&2) && rel_set.contains(&7) {
+            return format!("{}sus2", root_name);
+        }
+    }
+
+    format!("Chord({:?})", pcs)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -348,7 +430,6 @@ mod tests {
 
         let levels = [0.2, 0.5, 0.8, 1.0];
         quantize_velocities(&mut seq, &levels);
-
         assert_eq!(seq.steps[0].velocity, 0.2);
         assert_eq!(seq.steps[1].velocity, 0.8);
     }
