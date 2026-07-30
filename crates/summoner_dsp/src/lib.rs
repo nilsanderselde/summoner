@@ -105,7 +105,10 @@ pub use filters::{FilterComb, FilterLadder, FilterSVF, DcBlockFilter, LowCutFilt
 pub use glitch::{AudioReverse, GlitchGate, GlitchShuffle, GlitchStutter, TapeStop};
 pub use math::{MathAdd, MathMult, VCA};
 pub use modal::ModalResonator;
-pub use modulators::{EnvADSR, LfoShape, MacroKnob, LFO};
+pub use modulators::{
+    EnvADSR, EnvState, LfoShape, MacroKnob, MacroModulationMatrix, ModulationAssignment,
+    ModulationCurve, ModulationSourceId, ModulationTarget, ModulationTargetId, LFO,
+};
 pub use oscillators::{NoiseGen, NoiseType, OscPulse, OscSaw, OscSine, OscTriangle, OscWavetable, WAVETABLE_SIZE, render_buffer_to_wavetable};
 pub use traits::{ProcessorNodeAdapter, SignalProcessor};
 pub use waveguide::KarplusStrongString;

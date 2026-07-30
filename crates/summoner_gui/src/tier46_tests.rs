@@ -114,5 +114,88 @@ mod tests {
 
         let _ = std::fs::remove_dir_all(&temp_dir);
     }
+
+    #[test]
+    fn test_step_1248_macro_parameter_mapping_matrix() {
+        use summoner_dsp::modulators::{
+            LfoShape, MacroModulationMatrix, ModulationCurve, ModulationSourceId,
+        };
+
+        let mut matrix = MacroModulationMatrix::new("Synth Main Matrix");
+
+        // 1. Register modulation sources
+        let macro_cutoff = matrix.add_macro(0.7);
+        let macro_res = matrix.add_macro(0.4);
+        let lfo_vibrato = matrix.add_lfo(6.0, LfoShape::Sine);
+        let env_filter = matrix.add_envelope(0.005, 0.2, 0.3, 0.4);
+
+        // 2. Register modulation targets
+        let target_cutoff = matrix.add_target("Filter Cutoff", 2000.0, 20.0, 20000.0);
+        let target_res = matrix.add_target("Filter Resonance", 1.0, 0.1, 10.0);
+        let target_pitch = matrix.add_target("Oscillator Pitch", 440.0, 110.0, 1760.0);
+
+        // 3. Add modulation assignments
+        let assign_1 = matrix.add_assignment(
+            macro_cutoff,
+            target_cutoff,
+            0.6,
+            true,
+            ModulationCurve::Exponential,
+        );
+        let assign_2 = matrix.add_assignment(
+            lfo_vibrato,
+            target_pitch,
+            0.05,
+            true,
+            ModulationCurve::Linear,
+        );
+        let _assign_3 = matrix.add_assignment(
+            env_filter,
+            target_cutoff,
+            0.5,
+            false,
+            ModulationCurve::SmoothStep,
+        );
+        let _assign_4 = matrix.add_assignment(
+            macro_res,
+            target_res,
+            0.8,
+            true,
+            ModulationCurve::Logarithmic,
+        );
+        let _assign_vel = matrix.add_assignment(
+            ModulationSourceId::Velocity,
+            target_cutoff,
+            0.2,
+            false,
+            ModulationCurve::Linear,
+        );
+
+        // 4. Trigger envelope gate and process audio samples
+        matrix.trigger_envelope(0, true);
+        matrix.set_velocity(0.85);
+
+        for _ in 0..200 {
+            matrix.process_sample(44100);
+        }
+
+        let cutoff_val = matrix.get_modulated_value(target_cutoff).unwrap();
+        let res_val = matrix.get_modulated_value(target_res).unwrap();
+        let pitch_val = matrix.get_modulated_value(target_pitch).unwrap();
+
+        assert!(cutoff_val >= 20.0 && cutoff_val <= 20000.0);
+        assert!(res_val >= 0.1 && res_val <= 10.0);
+        assert!(pitch_val >= 110.0 && pitch_val <= 1760.0);
+
+        // 5. Test assignment modification and disable toggle
+        matrix.set_assignment_enabled(assign_1, false);
+        matrix.set_assignment_amount(assign_2, 0.1);
+
+        matrix.process_sample(44100);
+        assert!(!matrix.assignments[assign_1].enabled);
+        assert_eq!(matrix.assignments[assign_2].amount, 0.1);
+        assert_eq!(matrix.assignments.len(), 5);
+        assert_eq!(matrix.targets.len(), 3);
+    }
 }
 
