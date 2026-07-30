@@ -17,7 +17,7 @@ clap-sys = "0.3"
 vst = "0.3"
 
 [dev-dependencies]
-criterion = "0.5"
+criterion = "0.8"
 summoner_project = { path = "../summoner_project" }
 
 [[test]]
