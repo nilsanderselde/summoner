@@ -436,6 +436,144 @@ impl SignalProcessor for NoiseGen {
     }
 }
 
+pub const WAVETABLE_SIZE: usize = 2048;
+
+/// Wavetable oscillator supporting dual-table morphing (Step 472, 475).
+#[derive(Debug, Clone)]
+pub struct OscWavetable {
+    pub frequency: f32,
+    pub phase: f32,
+    pub table: std::sync::Arc<[f32; WAVETABLE_SIZE]>,
+    pub table2: Option<std::sync::Arc<[f32; WAVETABLE_SIZE]>>,
+    pub morph: f32,
+}
+
+impl OscWavetable {
+    pub fn new(frequency: f32, table: std::sync::Arc<[f32; WAVETABLE_SIZE]>) -> Self {
+        Self {
+            frequency,
+            phase: 0.0,
+            table,
+            table2: None,
+            morph: 0.0,
+        }
+    }
+
+    pub fn with_table2(mut self, table2: std::sync::Arc<[f32; WAVETABLE_SIZE]>, morph: f32) -> Self {
+        self.table2 = Some(table2);
+        self.morph = morph;
+        self
+    }
+
+    pub fn default_sine() -> std::sync::Arc<[f32; WAVETABLE_SIZE]> {
+        let mut data = [0.0f32; WAVETABLE_SIZE];
+        for i in 0..WAVETABLE_SIZE {
+            data[i] = (2.0 * std::f32::consts::PI * i as f32 / WAVETABLE_SIZE as f32).sin();
+        }
+        std::sync::Arc::new(data)
+    }
+
+    pub fn default_saw() -> std::sync::Arc<[f32; WAVETABLE_SIZE]> {
+        let mut data = [0.0f32; WAVETABLE_SIZE];
+        for i in 0..WAVETABLE_SIZE {
+            data[i] = 2.0 * (i as f32 / WAVETABLE_SIZE as f32) - 1.0;
+        }
+        std::sync::Arc::new(data)
+    }
+
+    pub fn default_square() -> std::sync::Arc<[f32; WAVETABLE_SIZE]> {
+        let mut data = [0.0f32; WAVETABLE_SIZE];
+        for i in 0..WAVETABLE_SIZE {
+            data[i] = if i < WAVETABLE_SIZE / 2 { 1.0 } else { -1.0 };
+        }
+        std::sync::Arc::new(data)
+    }
+
+    pub fn default_triangle() -> std::sync::Arc<[f32; WAVETABLE_SIZE]> {
+        let mut data = [0.0f32; WAVETABLE_SIZE];
+        for i in 0..WAVETABLE_SIZE {
+            let phase = i as f32 / WAVETABLE_SIZE as f32;
+            data[i] = 2.0 * (2.0 * (phase - (phase + 0.5).floor())).abs() - 1.0;
+        }
+        std::sync::Arc::new(data)
+    }
+
+    pub fn trigger(&mut self, note: u8, ctx: &ProcessContext) {
+        self.frequency = ctx.note_to_hz(note as i32);
+    }
+
+    pub fn process_sample(&mut self, sample_rate: u32) -> f32 {
+        if sample_rate == 0 {
+            return 0.0;
+        }
+        let index_float = self.phase * (WAVETABLE_SIZE as f32);
+        let idx0 = index_float.floor() as usize % WAVETABLE_SIZE;
+        let idx1 = (idx0 + 1) % WAVETABLE_SIZE;
+        let frac = index_float - index_float.floor();
+
+        let s1 = self.table[idx0] * (1.0 - frac) + self.table[idx1] * frac;
+        let val = if let Some(ref t2) = self.table2 {
+            let morph_clamped = self.morph.clamp(0.0, 1.0);
+            let s2 = t2[idx0] * (1.0 - frac) + t2[idx1] * frac;
+            s1 * (1.0 - morph_clamped) + s2 * morph_clamped
+        } else {
+            s1
+        };
+
+        let dt = self.frequency / sample_rate as f32;
+        self.phase = (self.phase + dt) % 1.0;
+        val
+    }
+}
+
+impl SignalProcessor for OscWavetable {
+    fn name(&self) -> &str {
+        "OscWavetable"
+    }
+
+    fn process_block(
+        &mut self,
+        _inputs: &[&[Sample]],
+        outputs: &mut [&mut [Sample]],
+        ctx: &ProcessContext,
+    ) {
+        if ctx.sample_rate == 0 || outputs.is_empty() {
+            return;
+        }
+        let num_samples = outputs[0].len();
+        for i in 0..num_samples {
+            let val = self.process_sample(ctx.sample_rate);
+            for out_ch in outputs.iter_mut() {
+                if i < out_ch.len() {
+                    out_ch[i] = val;
+                }
+            }
+        }
+    }
+}
+
+/// Renders a 2048-sample wavetable from an input sample buffer, normalized to 1.0 peak (Step 471).
+pub fn render_buffer_to_wavetable(samples: &[f32]) -> std::sync::Arc<[f32; WAVETABLE_SIZE]> {
+    let mut table = [0.0f32; WAVETABLE_SIZE];
+    if samples.is_empty() {
+        return std::sync::Arc::new(table);
+    }
+    let len = samples.len();
+    let mut max_abs = 1e-6f32;
+    for i in 0..WAVETABLE_SIZE {
+        let src_idx = (i * len) / WAVETABLE_SIZE;
+        let val = samples[src_idx.min(len - 1)];
+        table[i] = val;
+        if val.abs() > max_abs {
+            max_abs = val.abs();
+        }
+    }
+    for i in 0..WAVETABLE_SIZE {
+        table[i] /= max_abs;
+    }
+    std::sync::Arc::new(table)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -480,5 +618,35 @@ mod tests {
     #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
     fn test_osc_saw_simd_vs_scalar() {
         test_simd_scalar_agreement_osc_saw();
+    }
+
+    #[test]
+    fn test_osc_wavetable_basic() {
+        let sine_table = OscWavetable::default_sine();
+        let mut osc = OscWavetable::new(440.0, sine_table);
+        let sample = osc.process_sample(44100);
+        assert!(sample.abs() <= 1.0);
+
+        let mut output = vec![vec![0.0f32; 512]];
+        let mut slices: Vec<&mut [f32]> = output.iter_mut().map(|v| v.as_mut_slice()).collect();
+        let ctx = ProcessContext::new(44100, 120.0, 0);
+        osc.process_block(&[], &mut slices, &ctx);
+        let rms: f32 = (slices[0].iter().map(|s| s * s).sum::<f32>() / 512.0).sqrt();
+        assert!(rms > 0.1, "Wavetable oscillator RMS should be > 0.1");
+    }
+
+    #[test]
+    fn test_osc_wavetable_morph() {
+        let saw_table = OscWavetable::default_saw();
+        let square_table = OscWavetable::default_square();
+
+        let mut osc0 = OscWavetable::new(440.0, saw_table.clone())
+            .with_table2(square_table.clone(), 0.0);
+        let mut osc1 = OscWavetable::new(440.0, saw_table.clone())
+            .with_table2(square_table.clone(), 1.0);
+
+        let sample0 = osc0.process_sample(44100);
+        let sample1 = osc1.process_sample(44100);
+        assert!((sample0 - sample1).abs() > 0.5, "Morphing should produce different outputs");
     }
 }

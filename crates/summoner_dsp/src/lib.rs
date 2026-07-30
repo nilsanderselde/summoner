@@ -62,7 +62,7 @@ pub use glitch::{AudioReverse, GlitchGate, GlitchShuffle, GlitchStutter, TapeSto
 pub use math::{MathAdd, MathMult, VCA};
 pub use modal::ModalResonator;
 pub use modulators::{EnvADSR, LfoShape, MacroKnob, LFO};
-pub use oscillators::{NoiseGen, NoiseType, OscPulse, OscSaw, OscSine, OscTriangle};
+pub use oscillators::{NoiseGen, NoiseType, OscPulse, OscSaw, OscSine, OscTriangle, OscWavetable, WAVETABLE_SIZE, render_buffer_to_wavetable};
 pub use traits::{ProcessorNodeAdapter, SignalProcessor};
 pub use waveguide::KarplusStrongString;
 pub use sampler::{SampleBuffer, SamplerNode};

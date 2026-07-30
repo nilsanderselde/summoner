@@ -10,7 +10,7 @@ use summoner_core::node::{AudioNode, GainNode};
 use summoner_core::track::Track;
 use summoner_project::schema::{ProjectConfig, NodeConfig};
 use summoner_dsp::traits::ProcessorNodeAdapter;
-use summoner_dsp::oscillators::{OscSaw, OscPulse, OscSine, OscTriangle, NoiseGen};
+use summoner_dsp::oscillators::{OscSaw, OscPulse, OscSine, OscTriangle, OscWavetable, NoiseGen};
 use summoner_dsp::filters::{FilterLadder, FilterSVF, FilterComb};
 use summoner_dsp::SamplerNode;
 use summoner_dsp::modulators::EnvADSR;
@@ -33,6 +33,13 @@ impl NodeFactory {
                 Some(Box::new(ProcessorNodeAdapter::new(OscSine::new(freq))))
             }
             "OscTriangle" => Some(Box::new(ProcessorNodeAdapter::new(OscTriangle::new(*params.get("freq").unwrap_or(&440.0))))),
+            "OscWavetable" | "WavetableOscillator" => {
+                let freq = params.get("freq").or_else(|| params.get("frequency")).copied().unwrap_or(440.0);
+                let morph = *params.get("morph").unwrap_or(&0.0);
+                let osc = OscWavetable::new(freq, OscWavetable::default_saw())
+                    .with_table2(OscWavetable::default_square(), morph);
+                Some(Box::new(ProcessorNodeAdapter::new(osc)))
+            }
             "NoiseGen" => Some(Box::new(ProcessorNodeAdapter::new(NoiseGen::new(summoner_dsp::oscillators::NoiseType::White)))),
             "FilterLadder" => Some(Box::new(ProcessorNodeAdapter::new(FilterLadder::new(*params.get("cutoff").unwrap_or(&1000.0), *params.get("res").unwrap_or(&0.0))))),
             "FilterSVF" => Some(Box::new(ProcessorNodeAdapter::new(FilterSVF::new(*params.get("cutoff").unwrap_or(&1000.0), *params.get("res").unwrap_or(&0.0))))),

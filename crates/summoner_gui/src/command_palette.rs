@@ -165,6 +165,12 @@ impl CommandPalette {
                 action_id: "toggle_simd".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Toggle Patch Browser".into(),
+                category: "Navigation".into(),
+                action_id: "toggle_patch_browser".into(),
+                shortcut_hint: Some("Ctrl+B".into()),
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

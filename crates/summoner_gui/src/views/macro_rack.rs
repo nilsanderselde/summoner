@@ -349,6 +349,41 @@ pub fn show_macro_rack(
                                 param_bus.set(ParamId(track.id as u32 * 10 + 1), drive);
                             }
                         }
+                        "OscWavetable" | "WavetableOscillator" => {
+                            let mut freq = param_bus.get(ParamId(track.id as u32 * 10 + 1)).unwrap_or(440.0);
+                            if ui.add(egui::Slider::new(&mut freq, 20.0..=2000.0).text("Frequency")).changed() {
+                                param_bus.set(ParamId(track.id as u32 * 10 + 1), freq);
+                                node.params.insert("freq".to_string(), freq);
+                            }
+
+                            let mut morph = param_bus.get(ParamId(track.id as u32 * 10 + 2)).unwrap_or(0.0);
+                            if ui.add(egui::Slider::new(&mut morph, 0.0..=1.0).text("Wavetable Morph")).changed() {
+                                param_bus.set(ParamId(track.id as u32 * 10 + 2), morph);
+                                node.params.insert("morph".to_string(), morph);
+                            }
+
+                            // Wavetable Display (Step 474)
+                            ui.label("Wavetable Curve:");
+                            let (response, painter) = ui.allocate_painter(egui::Vec2::new(160.0, 40.0), egui::Sense::hover());
+                            let rect = response.rect;
+                            painter.rect_filled(rect, 4.0, egui::Color32::from_rgb(10, 15, 25));
+                            painter.rect_stroke(rect, 4.0, egui::Stroke::new(1.0, egui::Color32::from_rgb(50, 80, 120)));
+
+                            let morph_val = morph.clamp(0.0, 1.0);
+                            let points: Vec<egui::Pos2> = (0..50).map(|i| {
+                                let t = i as f32 / 50.0;
+                                let saw = 2.0 * t - 1.0;
+                                let sq = if t < 0.5 { 1.0 } else { -1.0 };
+                                let val = saw * (1.0 - morph_val) + sq * morph_val;
+                                let x = rect.left() + t * rect.width();
+                                let y = rect.center().y - val * (rect.height() * 0.4);
+                                egui::Pos2::new(x, y)
+                            }).collect();
+
+                            for window in points.windows(2) {
+                                painter.line_segment([window[0], window[1]], egui::Stroke::new(1.5, egui::Color32::from_rgb(0, 200, 255)));
+                            }
+                        }
                         _ => {
                             // Generic parameters fallback
                             for (i, (key, default_val)) in node.params.iter_mut().enumerate() {

@@ -137,6 +137,8 @@ pub struct SummonerApp {
     pub last_auto_save: std::time::Instant,
     pub auto_save_interval_secs: u64,
     pub recent_projects: Vec<PathBuf>,
+    pub patch_browser_state: crate::views::patch_browser::PatchBrowserState,
+    pub show_patch_browser: bool,
 }
 
 impl SummonerApp {
@@ -207,6 +209,8 @@ impl SummonerApp {
             last_auto_save: std::time::Instant::now(),
             auto_save_interval_secs: 300,
             recent_projects: Vec::new(),
+            patch_browser_state: crate::views::patch_browser::PatchBrowserState::default(),
+            show_patch_browser: true,
         };
 
         if let Some(state) = GuiState::load() {
@@ -419,6 +423,11 @@ impl eframe::App for SummonerApp {
             self.command_palette.open();
         }
 
+        // Ctrl+B Patch Browser hotkey (Step 465)
+        if is_ctrl && ctx.input(|i| i.key_pressed(egui::Key::B)) {
+            self.show_patch_browser = !self.show_patch_browser;
+        }
+
         // Ctrl+S Save Session hotkey
         if is_ctrl && ctx.input(|i| i.key_pressed(egui::Key::S)) {
             self.save_session();
@@ -517,6 +526,9 @@ impl eframe::App for SummonerApp {
                 }
                 "render_wav" => {
                     self.export_wav();
+                }
+                "toggle_patch_browser" => {
+                    self.show_patch_browser = !self.show_patch_browser;
                 }
                 "sfz_convert" | "auto_slice" | "load_preset" | "export_clap" | "toggle_simd" => {
                     println!("Command palette action executed: {}", action);
@@ -649,6 +661,7 @@ impl eframe::App for SummonerApp {
                         self.show_scala_browser_modal = true;
                         ui.close_menu();
                     }
+                    ui.checkbox(&mut self.show_patch_browser, "🎛 Patch Browser (Ctrl+B)");
                 });
 
                 ui.separator();
@@ -1007,6 +1020,18 @@ impl eframe::App for SummonerApp {
                 }
             });
         });
+
+        // Left Side Panel: Patch Browser (Step 465)
+        if self.show_patch_browser {
+            let mut track_copy = self.selected_track_id.and_then(|tid| self.project.tracks.iter_mut().find(|t| t.id == tid));
+            let bus_ref = Arc::clone(&self.param_bus);
+            egui::SidePanel::left("patch_browser_side_panel")
+                .default_width(260.0)
+                .resizable(true)
+                .show(ctx, |ui| {
+                    crate::views::patch_browser::show_patch_browser(ui, &mut self.patch_browser_state, track_copy.as_deref_mut(), &bus_ref);
+                });
+        }
 
         // Central main view
         egui::CentralPanel::default().show(ctx, |ui| {

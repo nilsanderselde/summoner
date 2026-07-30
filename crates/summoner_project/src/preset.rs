@@ -11,6 +11,12 @@ pub struct DevicePreset {
     pub name: String,
     pub device_kind: String,
     pub params: HashMap<String, f32>,
+    #[serde(default)]
+    pub category: String,
+    #[serde(default)]
+    pub tags: Vec<String>,
+    #[serde(default)]
+    pub is_favorite: bool,
 }
 
 impl DevicePreset {
@@ -19,6 +25,9 @@ impl DevicePreset {
             name: name.into(),
             device_kind: device_kind.into(),
             params: HashMap::new(),
+            category: "General".to_string(),
+            tags: Vec::new(),
+            is_favorite: false,
         }
     }
 
