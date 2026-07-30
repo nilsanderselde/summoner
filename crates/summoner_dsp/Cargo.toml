@@ -32,6 +32,11 @@ path = "../../tests/tier44_integration_test.rs"
 name = "tier45_integration_test"
 path = "../../tests/tier45_integration_test.rs"
 
+[[test]]
+name = "tier46_integration_test"
+path = "../../tests/tier46_integration_test.rs"
+
 [[bench]]
 name = "dsp_bench"
 harness = false
+
