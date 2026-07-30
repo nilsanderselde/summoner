@@ -33,6 +33,7 @@ pub struct PianoRollState {
     pub chord_input: String,
     pub auto_color_notes: bool,
     pub midi_chord_detect: bool,
+    pub show_hertz: bool,
     pub drag_ramp_start: Option<(usize, f32, f32)>, // (start_step_idx, initial_velocity, initial_probability)
 }
 
@@ -60,6 +61,7 @@ impl Default for PianoRollState {
             chord_input: "Cmaj7".to_string(),
             auto_color_notes: false,
             midi_chord_detect: false,
+            show_hertz: false,
             drag_ramp_start: None,
         }
     }
@@ -314,6 +316,7 @@ pub fn show_piano_roll(
         }
         ui.toggle_value(&mut state.auto_color_notes, "🎨 Pitch Colors");
         ui.toggle_value(&mut state.midi_chord_detect, "🎹 Chord Detect");
+        ui.toggle_value(&mut state.show_hertz, "Hz Display");
 
         if ui.button("🎯 Quantize").clicked() {
             push_history(state, &sequence.steps);
@@ -550,7 +553,8 @@ pub fn show_piano_roll(
             let beat_width = 80.0;
             let num_beats = (sequence.steps.len() as f64 * sequence.step_division).max(16.0) as f32;
 
-            let canvas_width = 24.0 + (num_beats * beat_width);
+            let strip_width = if state.show_hertz { 48.0 } else { 24.0 };
+            let canvas_width = strip_width + (num_beats * beat_width);
             let canvas_height = total_keys as f32 * key_height;
 
             egui::ScrollArea::both().show(ui, |ui| {
@@ -560,13 +564,13 @@ pub fn show_piano_roll(
                 );
                 let canvas_rect = response.rect;
 
-                // Draw 24-px left piano keyboard strip
+                // Draw left piano keyboard strip (Step 478 Hz Display mode)
                 for k in 0..total_keys {
                     let y_bottom = canvas_rect.bottom() - (k as f32) * key_height;
                     let y_top = y_bottom - key_height;
                     let key_rect = egui::Rect::from_min_max(
                         egui::pos2(canvas_rect.left(), y_top),
-                        egui::pos2(canvas_rect.left() + 24.0, y_bottom),
+                        egui::pos2(canvas_rect.left() + strip_width, y_bottom),
                     );
 
                     let pitch_class = k % keys_per_octave;
@@ -606,7 +610,21 @@ pub fn show_piano_roll(
                     };
                     painter.rect_stroke(key_rect, 0.0, border_stroke);
 
-                    if pitch_class == 0 {
+                    let freq = tuning.note_to_freq(k as f64);
+                    if state.show_hertz {
+                        let text_color = if is_black || !is_in_scale {
+                            egui::Color32::WHITE
+                        } else {
+                            egui::Color32::BLACK
+                        };
+                        painter.text(
+                            key_rect.center(),
+                            egui::Align2::CENTER_CENTER,
+                            format!("{:.0}Hz", freq),
+                            egui::FontId::proportional(8.5),
+                            text_color,
+                        );
+                    } else if pitch_class == 0 {
                         let text_color = if is_black || is_in_scale {
                             egui::Color32::BLACK
                         } else {
@@ -624,7 +642,6 @@ pub fn show_piano_roll(
                     // Hover tooltip with Hz + note label + scale status
                     let key_interact = ui.interact(key_rect, ui.id().with(("key", k)), egui::Sense::click_and_drag());
                     let key_clicked = key_interact.clicked();
-                    let freq = tuning.note_to_freq(k as f64);
                     key_interact.on_hover_text(format!(
                         "Note {} (Oct {}, Deg {}): {:.1} Hz | Scale: {} (In Scale: {})",
                         k, octave, pitch_class, freq, scale_name, if is_in_scale { "Yes" } else { "No" }
@@ -646,9 +663,9 @@ pub fn show_piano_roll(
                     }
                 }
 
-                // Draw background grid lines on piano roll canvas area (x > left + 24.0)
-                let roll_left = canvas_rect.left() + 24.0;
-                let roll_width = canvas_rect.width() - 24.0;
+                // Draw background grid lines on piano roll canvas area (x > left + strip_width)
+                let roll_left = canvas_rect.left() + strip_width;
+                let roll_width = canvas_rect.width() - strip_width;
 
                 // Horizontal key lines
                 for k in 0..total_keys {
@@ -1110,5 +1127,21 @@ mod tests {
         assert_eq!(sequence.steps[1].note, 64.0);
         assert_eq!(sequence.steps[2].note, 60.0);
     }
+
+    #[test]
+    fn test_piano_roll_hertz_display_mode() {
+        let mut state = PianoRollState::default();
+        assert!(!state.show_hertz);
+        state.show_hertz = true;
+        assert!(state.show_hertz);
+
+        let tuning = EdoTuning::standard_12_tet();
+        let freq_a4 = tuning.note_to_freq(69.0);
+        assert!((freq_a4 - 440.0).abs() < 1e-3);
+
+        let formatted = format!("{:.0}Hz", freq_a4);
+        assert_eq!(formatted, "440Hz");
+    }
 }
+
 

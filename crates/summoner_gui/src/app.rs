@@ -121,6 +121,7 @@ pub struct SummonerApp {
     pub progress_message: Option<(String, f32)>,
     pub harmonic_context: HarmonicContext,
     pub show_scala_browser_modal: bool,
+    pub scala_browser_state: crate::views::scala_browser::ScalaBrowserState,
     pub cpu_usage: f32,
     // Tier 20 Onboarding & UX fields (Steps 408-416)
     pub show_first_run_wizard: bool,
@@ -194,6 +195,7 @@ impl SummonerApp {
             progress_message: None,
             harmonic_context: HarmonicContext::default(),
             show_scala_browser_modal: false,
+            scala_browser_state: crate::views::scala_browser::ScalaBrowserState::default(),
             cpu_usage: 14.2,
             show_first_run_wizard: false,
             wizard_step: 0,
@@ -714,7 +716,7 @@ impl eframe::App for SummonerApp {
                 .resizable(true)
                 .default_size([580.0, 360.0])
                 .show(ctx, |ui| {
-                    crate::views::scala_browser::show_scala_browser(ui, track_copy.as_deref_mut(), &mut self.harmonic_context);
+                    crate::views::scala_browser::show_scala_browser_with_state(ui, &mut self.scala_browser_state, track_copy.as_deref_mut(), &mut self.harmonic_context);
                 });
             self.show_scala_browser_modal = is_open;
         }
