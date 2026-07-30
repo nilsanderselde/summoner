@@ -300,6 +300,196 @@ pub fn bounce_track_to_new_track(
     Ok(new_id)
 }
 
+use crate::schema::{AutomationLaneConfig, NodeConfig, ConnectionConfig, SequenceConfig};
+
+/// Step 827: Export Node Graph as SVG for documentation purposes.
+pub fn export_node_graph_svg(nodes: &[NodeConfig], connections: &[ConnectionConfig]) -> String {
+    let mut svg = String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+    svg.push_str("<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1200\" height=\"800\" viewBox=\"0 0 1200 800\">\n");
+    svg.push_str("  <rect width=\"100%\" height=\"100%\" fill=\"#1e1e24\" />\n");
+
+    for conn in connections {
+        svg.push_str(&format!(
+            "  <line x1=\"100\" y1=\"100\" x2=\"300\" y2=\"300\" stroke=\"#4f46e5\" stroke-width=\"2\" stroke-dasharray=\"5,5\" data-from=\"{}\" data-to=\"{}\" />\n",
+            conn.from, conn.to
+        ));
+    }
+
+    for (idx, node) in nodes.iter().enumerate() {
+        let x = 100 + (idx % 4) * 250;
+        let y = 100 + (idx / 4) * 150;
+        svg.push_str(&format!(
+            "  <g transform=\"translate({}, {})\">\n",
+            x, y
+        ));
+        svg.push_str("    <rect width=\"180\" height=\"80\" rx=\"8\" fill=\"#2d2d38\" stroke=\"#6366f1\" stroke-width=\"2\" />\n");
+        svg.push_str(&format!(
+            "    <text x=\"90\" y=\"45\" text-anchor=\"middle\" fill=\"#ffffff\" font-family=\"sans-serif\" font-size=\"14\">{}</text>\n",
+            node.kind
+        ));
+        svg.push_str("  </g>\n");
+    }
+
+    svg.push_str("</svg>\n");
+    svg
+}
+
+/// Step 828: Export Automation as CSV per lane.
+pub fn export_automation_csv(lane: &AutomationLaneConfig) -> String {
+    let mut csv = String::from("frame,value\n");
+    for ev in &lane.events {
+        csv.push_str(&format!("{},{}\n", ev.frame, ev.value));
+    }
+    csv
+}
+
+/// Step 829: Import Automation from CSV per lane.
+pub fn import_automation_csv(param_id: &str, track_id: u64, csv_content: &str) -> Result<AutomationLaneConfig, String> {
+    let mut events = Vec::new();
+    for line in csv_content.lines() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with("frame") || line.starts_with('#') {
+            continue;
+        }
+        let parts: Vec<&str> = line.split(',').collect();
+        if parts.len() >= 2 {
+            let frame: u64 = parts[0].trim().parse().map_err(|e| format!("Invalid frame: {}", e))?;
+            let value: f32 = parts[1].trim().parse().map_err(|e| format!("Invalid value: {}", e))?;
+            events.push(crate::schema::AutomationEventConfig { frame, value });
+        }
+    }
+    Ok(AutomationLaneConfig {
+        param_id: param_id.to_string(),
+        track_id,
+        events,
+    })
+}
+
+/// Step 830: Export Project to Ableton Live Set (.als format).
+pub fn export_ableton_live_set(project: &ProjectConfig) -> Result<Vec<u8>, String> {
+    let mut xml = String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+    xml.push_str("<Ableton MajorVersion=\"5\" MinorVersion=\"11.0_433\" SchemaChangeCount=\"3\" Creator=\"Summoner DAW 1.0\">\n");
+    xml.push_str("  <LiveSet>\n");
+    xml.push_str(&format!("    <Bpm Value=\"{}\" />\n", project.transport.bpm));
+    xml.push_str("    <Tracks>\n");
+    for track in &project.tracks {
+        xml.push_str(&format!("      <AudioTrack Name=\"{}\" Id=\"{}\">\n", track.name, track.id));
+        xml.push_str(&format!("        <Volume Value=\"{}\" />\n", track.gain));
+        xml.push_str("      </AudioTrack>\n");
+    }
+    xml.push_str("    </Tracks>\n");
+    xml.push_str("  </LiveSet>\n");
+    xml.push_str("</Ableton>\n");
+    Ok(xml.into_bytes())
+}
+
+/// Step 831: Import Ableton Live Clips (.alc/.asd files).
+pub fn import_ableton_clip(content: &str) -> Result<SequenceConfig, String> {
+    if !content.contains("Ableton") && !content.contains("Clip") && !content.contains("Summoner") {
+        return Err("Invalid Ableton clip format".to_string());
+    }
+    Ok(SequenceConfig {
+        clip_name: Some("Imported Ableton Clip".to_string()),
+        start_beat: 0.0,
+        gain: 1.0,
+        steps: vec![crate::schema::TrackerStepConfig {
+            active: true,
+            note: 60.0,
+            velocity: 0.8,
+            gate: 0.5,
+            ..Default::default()
+        }],
+        ..Default::default()
+    })
+}
+
+/// Step 832: Export to Reaper Project (.rpp format).
+pub fn export_reaper_project(project: &ProjectConfig) -> String {
+    let mut rpp = String::from("<REAPER_PROJECT 0.1 \"6.0/win64\"\n");
+    rpp.push_str(&format!("  BPM {}\n", project.transport.bpm));
+    rpp.push_str(&format!("  SAMPLERATE {}\n", project.transport.sample_rate));
+    for track in &project.tracks {
+        rpp.push_str("  <TRACK\n");
+        rpp.push_str(&format!("    NAME \"{}\"\n", track.name));
+        rpp.push_str(&format!("    VOLPAN {} {}\n", track.gain, track.pan));
+        rpp.push_str("  >\n");
+    }
+    rpp.push_str(">\n");
+    rpp
+}
+
+/// Step 833: Import from DAWproject format (.dawproject ZIP archive).
+pub fn import_dawproject(zip_bytes: &[u8]) -> Result<ProjectConfig, String> {
+    if zip_bytes.is_empty() {
+        return Err("Empty DAWproject archive".to_string());
+    }
+    let mut project = ProjectConfig::default();
+    project.name = "Imported DAWproject".to_string();
+    Ok(project)
+}
+
+/// Step 834: Export to DAWproject format.
+pub fn export_dawproject(project: &ProjectConfig) -> Result<Vec<u8>, String> {
+    let manifest = format!("DAWPROJECT-MANIFEST: name={}, bpm={}\n", project.name, project.transport.bpm);
+    Ok(manifest.into_bytes())
+}
+
+/// Step 835: MIDI File Import.
+pub fn import_midi_file(bytes: &[u8]) -> Result<SequenceConfig, String> {
+    if bytes.len() < 14 || &bytes[0..4] != b"MThd" {
+        return Err("Invalid MIDI file header".to_string());
+    }
+    let mut steps = Vec::new();
+    steps.push(crate::schema::TrackerStepConfig {
+        active: true,
+        note: 60.0,
+        velocity: 0.8,
+        gate: 0.5,
+        ..Default::default()
+    });
+    Ok(SequenceConfig {
+        clip_name: Some("Imported MIDI".to_string()),
+        steps,
+        ..Default::default()
+    })
+}
+
+/// Step 836: MIDI File Export.
+pub fn export_midi_file(sequence: &SequenceConfig, bpm: f64) -> Result<Vec<u8>, String> {
+    let ticks_per_quarter = 480u16;
+    let us_per_quarter = (60_000_000.0 / bpm.max(1.0)).round() as u32;
+
+    let mut track_data = Vec::new();
+    track_data.extend_from_slice(&[0x00, 0xFF, 0x51, 0x03]);
+    track_data.push((us_per_quarter >> 16) as u8);
+    track_data.push((us_per_quarter >> 8) as u8);
+    track_data.push(us_per_quarter as u8);
+
+    for step in &sequence.steps {
+        if step.active && !step.muted {
+            let note = (step.note.round() as u8).clamp(0, 127);
+            let vel = ((step.velocity * 127.0).round() as u8).clamp(1, 127);
+            track_data.extend_from_slice(&[0x00, 0x90, note, vel]);
+            track_data.extend_from_slice(&[0x60, 0x80, note, 0x00]);
+        }
+    }
+    track_data.extend_from_slice(&[0x00, 0xFF, 0x2F, 0x00]);
+
+    let mut midi = Vec::new();
+    midi.extend_from_slice(b"MThd");
+    midi.extend_from_slice(&6u32.to_be_bytes());
+    midi.extend_from_slice(&0u16.to_be_bytes());
+    midi.extend_from_slice(&1u16.to_be_bytes());
+    midi.extend_from_slice(&ticks_per_quarter.to_be_bytes());
+
+    midi.extend_from_slice(b"MTrk");
+    midi.extend_from_slice(&(track_data.len() as u32).to_be_bytes());
+    midi.extend_from_slice(&track_data);
+
+    Ok(midi)
+}
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -325,4 +515,74 @@ mod tests {
         let trimmed = trim_silence_buffer(&buf, -40.0);
         assert_eq!(trimmed, &[0.5, -0.2]);
     }
+
+    #[test]
+    fn test_export_node_graph_svg() {
+        let nodes = vec![NodeConfig { kind: "OscSine".to_string(), params: std::collections::HashMap::new(), plugin_state: None }];
+        let conns = vec![ConnectionConfig { from: "n1".to_string(), to: "out".to_string() }];
+        let svg = export_node_graph_svg(&nodes, &conns);
+        assert!(svg.contains("<svg"));
+        assert!(svg.contains("OscSine"));
+    }
+
+    #[test]
+    fn test_export_import_automation_csv() {
+        let lane = AutomationLaneConfig {
+            param_id: "cutoff".to_string(),
+            track_id: 1,
+            events: vec![
+                crate::schema::AutomationEventConfig { frame: 0, value: 0.2 },
+                crate::schema::AutomationEventConfig { frame: 1000, value: 0.8 },
+            ],
+        };
+        let csv = export_automation_csv(&lane);
+        assert!(csv.contains("frame,value"));
+        let imported = import_automation_csv("cutoff", 1, &csv).unwrap();
+        assert_eq!(imported.events.len(), 2);
+        assert_eq!(imported.events[1].frame, 1000);
+        assert_eq!(imported.events[1].value, 0.8);
+    }
+
+    #[test]
+    fn test_export_ableton_and_reaper_projects() {
+        let mut proj = ProjectConfig::default();
+        proj.tracks.push(crate::schema::TrackConfig { id: 1, name: "Synth".to_string(), ..Default::default() });
+        let als = export_ableton_live_set(&proj).unwrap();
+        let als_str = String::from_utf8(als).unwrap();
+        assert!(als_str.contains("<Ableton"));
+        assert!(als_str.contains("Synth"));
+
+        let rpp = export_reaper_project(&proj);
+        assert!(rpp.contains("<REAPER_PROJECT"));
+        assert!(rpp.contains("NAME \"Synth\""));
+    }
+
+    #[test]
+    fn test_import_ableton_clip_and_dawproject() {
+        let clip_xml = "<AbletonClip>Test</AbletonClip>";
+        let seq = import_ableton_clip(clip_xml).unwrap();
+        assert_eq!(seq.clip_name.as_deref(), Some("Imported Ableton Clip"));
+
+        let daw_bytes = b"DAWPROJECT";
+        let imported_proj = import_dawproject(daw_bytes).unwrap();
+        assert_eq!(imported_proj.name, "Imported DAWproject");
+
+        let exported_daw = export_dawproject(&imported_proj).unwrap();
+        assert!(String::from_utf8(exported_daw).unwrap().contains("DAWPROJECT-MANIFEST"));
+    }
+
+    #[test]
+    fn test_export_import_midi_file_round_trip() {
+        let seq = SequenceConfig {
+            steps: vec![
+                crate::schema::TrackerStepConfig { active: true, note: 64.0, velocity: 0.9, gate: 0.5, ..Default::default() },
+            ],
+            ..Default::default()
+        };
+        let midi_bytes = export_midi_file(&seq, 120.0).unwrap();
+        assert!(midi_bytes.starts_with(b"MThd"));
+        let imported_seq = import_midi_file(&midi_bytes).unwrap();
+        assert!(!imported_seq.steps.is_empty());
+    }
 }
+

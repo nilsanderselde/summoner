@@ -49,7 +49,25 @@ pub struct ProjectConfig {
     pub locator_a_beat: Option<f64>,
     #[serde(default)]
     pub locator_b_beat: Option<f64>,
+    #[serde(default)]
+    pub meta: Option<ProjectMetadata>,
 }
+
+/// Step 838: Project tags/genre/BPM/key stored in project TOML [meta] section.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+pub struct ProjectMetadata {
+    #[serde(default)]
+    pub tags: Vec<String>,
+    #[serde(default)]
+    pub genre: Option<String>,
+    #[serde(default)]
+    pub bpm: Option<f64>,
+    #[serde(default)]
+    pub key: Option<String>,
+    #[serde(default)]
+    pub notes: Option<String>,
+}
+
 
 fn default_schema_version() -> String {
     "1.0".to_string()
@@ -78,6 +96,7 @@ impl Default for ProjectConfig {
             punch_out_beat: None,
             locator_a_beat: None,
             locator_b_beat: None,
+            meta: None,
         }
     }
 }

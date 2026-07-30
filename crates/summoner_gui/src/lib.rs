@@ -38,6 +38,8 @@ pub mod touch_gestures;
 pub mod param_controls;
 #[cfg(feature = "gui")]
 pub mod tier32_tests;
+#[cfg(feature = "gui")]
+pub mod tier33_tests;
 
 #[cfg(feature = "gui")]
 pub fn launch(project: summoner_project::schema::ProjectConfig, param_bus: std::sync::Arc<summoner_core::param_bus::ParamBus>) {
