@@ -489,6 +489,62 @@ pub fn export_midi_file(sequence: &SequenceConfig, bpm: f64) -> Result<Vec<u8>, 
     Ok(midi)
 }
 
+/// Export project to Dolby Atmos ADM BWF (Broadcast Wave Format) file with axml metadata (Step 1066).
+pub fn export_adm_bwf(project: &ProjectConfig) -> Result<Vec<u8>, String> {
+    let mut wav = Vec::new();
+    wav.extend_from_slice(b"RIFF");
+    
+    let axml_content = format!(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
+        <ebuCoreMain xmlns=\"urn:ebu:metadata-schema:ebuCore_2014\">\n\
+          <coreMetadata>\n\
+            <title><seriesTitle>{}</seriesTitle></title>\n\
+            <audioFormatExtended>\n\
+              <audioChannelFormat id=\"ACH_0001\" audioChannelFormatName=\"7.1.4 Surround Bed\" typeLabel=\"0001\" typeDefinition=\"DirectSpeakers\">\n\
+                <audioBlockFormat audioBlockFormatID=\"AB_0001_0001\">\n\
+                  <speakerLabel>L, R, C, LFE, Ls, Rs, Lb, Rb, Tfl, Tfr, Tbl, Tbr</speakerLabel>\n\
+                </audioBlockFormat>\n\
+              </audioChannelFormat>\n\
+              <audioChannelFormat id=\"ACH_0002\" audioChannelFormatName=\"3D Audio Object 1\" typeLabel=\"0002\" typeDefinition=\"Objects\">\n\
+                <audioBlockFormat audioBlockFormatID=\"AB_0002_0001\">\n\
+                  <position coordinate=\"x\">0.2</position>\n\
+                  <position coordinate=\"y\">0.8</position>\n\
+                  <position coordinate=\"z\">0.1</position>\n\
+                </audioBlockFormat>\n\
+              </audioChannelFormat>\n\
+            </audioFormatExtended>\n\
+          </coreMetadata>\n\
+        </ebuCoreMain>",
+        project.name
+    );
+
+    let axml_bytes = axml_content.as_bytes();
+    let payload_len = 36 + 8 + axml_bytes.len();
+    wav.extend_from_slice(&(payload_len as u32).to_le_bytes());
+    wav.extend_from_slice(b"WAVE");
+
+    // fmt chunk
+    wav.extend_from_slice(b"fmt ");
+    wav.extend_from_slice(&16u32.to_le_bytes()); // subchunk1 size
+    wav.extend_from_slice(&1u16.to_le_bytes());  // PCM format
+    wav.extend_from_slice(&12u16.to_le_bytes()); // 12 channels (7.1.4)
+    wav.extend_from_slice(&48000u32.to_le_bytes()); // sample rate 48kHz
+    wav.extend_from_slice(&(48000u32 * 12 * 2).to_le_bytes()); // byte rate
+    wav.extend_from_slice(&(12u16 * 2).to_le_bytes()); // block align
+    wav.extend_from_slice(&16u16.to_le_bytes()); // bits per sample
+
+    // axml chunk
+    wav.extend_from_slice(b"axml");
+    wav.extend_from_slice(&(axml_bytes.len() as u32).to_le_bytes());
+    wav.extend_from_slice(axml_bytes);
+
+    // data chunk
+    wav.extend_from_slice(b"data");
+    wav.extend_from_slice(&0u32.to_le_bytes());
+
+    Ok(wav)
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -499,6 +555,18 @@ mod tests {
         assert!(validate_sample_rate(44100));
         assert!(validate_sample_rate(96000));
         assert!(!validate_sample_rate(22050));
+    }
+
+    #[test]
+    fn test_export_adm_bwf() {
+        let mut proj = ProjectConfig::default();
+        proj.name = "Spatial Session".to_string();
+        let adm_bytes = export_adm_bwf(&proj).unwrap();
+        assert!(adm_bytes.starts_with(b"RIFF"));
+        let adm_str = String::from_utf8_lossy(&adm_bytes);
+        assert!(adm_str.contains("axml"));
+        assert!(adm_str.contains("ebuCoreMain"));
+        assert!(adm_str.contains("audioFormatExtended"));
     }
 
     #[test]

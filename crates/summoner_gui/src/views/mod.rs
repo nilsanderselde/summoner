@@ -8,4 +8,6 @@ pub mod scala_browser;
 pub mod patch_browser;
 pub mod co_producer;
 pub mod midi_panel;
+pub mod spatial_panner_view;
+
 

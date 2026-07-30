@@ -31,6 +31,7 @@ pub mod graph;
 pub mod voice;
 pub mod param_bus;
 pub mod midi_clock;
+pub use audio::{ChannelLayout, Frame, FixedAudioBuffer, MultichannelAudioBuffer, Sample};
 pub use smoothing::SmoothParam;
 pub use graph::{Edge, NodeGraph};
 pub use voice::{PolyphonicVoice, VoicePool};

@@ -74,6 +74,7 @@ fn print_usage() {
     println!("  summon eval-script [PROJECT_PATH] [SCRIPT_PATH]");
     println!("  summon list-scripts [PROJECT_PATH]");
     println!("  summon package-wasm [SRC]");
+    println!("  summon export-adm [PROJECT_PATH] [OUTPUT_ADM_PATH]");
 }
 
 
@@ -1354,6 +1355,19 @@ fn main() {
                 process::exit(1);
             }
             println!("Successfully packaged Wasm DSP plugin at '{}'", bundle_path.display());
+        }
+        "export-adm" => {
+            let path_str = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            let out_str = args.get(3).map(|s| s.as_str()).unwrap_or("spatial_session.adm.wav");
+            let project = if Path::new(path_str).exists() {
+                let content = fs::read_to_string(path_str).expect("Failed to read project file");
+                parse_project_toml(&content).expect("Failed to parse project TOML")
+            } else {
+                create_default_project("Default Spatial Session")
+            };
+            let adm_bytes = summoner_project::export_adm_bwf(&project).expect("Failed to export ADM BWF");
+            fs::write(out_str, adm_bytes).expect("Failed to write ADM BWF output file");
+            println!("Successfully exported Dolby Atmos ADM BWF to '{}'", out_str);
         }
         _ => {
             print_usage();

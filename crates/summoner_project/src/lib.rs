@@ -26,6 +26,7 @@ pub mod crdt;
 pub use project_tools::*;
 pub use media_export::*;
 pub use crdt::*;
+pub use export::*;
 
 #[cfg(target_os = "windows")]
 #[link(name = "advapi32")]
