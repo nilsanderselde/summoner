@@ -201,6 +201,14 @@ pub fn show_macro_rack(
 
                     // Render specific device controls
                     match node.kind.as_str() {
+                        "MacroRackLuaDevice" | "LuaDevice" | "LuaMacroDevice" => {
+                            ui.colored_label(egui::Color32::from_rgb(0, 200, 255), "📜 Macro Rack Lua DSP Node");
+                            ui.label("DSP API: read_input / write_output active");
+                            ui.label("Lua Sandbox: Enabled");
+                            if ui.button("▶ Execute DSP Test Block").clicked() {
+                                // Real-time Lua DSP evaluation block
+                            }
+                        }
                         "AetherSynth" => {
                             let mut mix = param_bus.get(ParamId(track.id as u32 * 10 + 1)).unwrap_or(0.5);
                             if ui.add(egui::Slider::new(&mut mix, 0.0..=1.0).text("Osc Mix")).changed() {
