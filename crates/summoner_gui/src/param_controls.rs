@@ -605,9 +605,9 @@ pub fn humanize_drum_pattern(
         let jitter_shift = (rng_val * 2.0 - 1.0) * timing_jitter_ms;
         step.micro_shift = (step.micro_shift as f64 + jitter_shift).round() as i32;
 
-        let vel_rng = ((seed.wrapping_add((idx as u64).wrapping_mul(12345))) % 100) as f64 / 100.0;
-        let vel_delta = ((vel_rng * 2.0 - 1.0) * velocity_jitter as f64).round() as i32;
-        step.velocity = (step.velocity as i32 + vel_delta).clamp(1, 127) as u8;
+        let vel_rng = ((seed.wrapping_add((idx as u64).wrapping_mul(12345))) % 100) as f32 / 100.0;
+        let vel_delta = (vel_rng * 2.0 - 1.0) * (velocity_jitter as f32 / 127.0);
+        step.velocity = (step.velocity + vel_delta).clamp(0.0, 1.0);
     }
 }
 
@@ -674,3 +674,484 @@ impl LayoutManager {
         self.layouts.get(name)
     }
 }
+
+/// Step 781: Default workspace panel layout presets.
+pub fn get_default_layout_presets() -> HashMap<String, PanelLayoutConfig> {
+    let mut map = HashMap::new();
+
+    let mut comp_vis = HashMap::new();
+    comp_vis.insert("Arranger".to_string(), true);
+    comp_vis.insert("PianoRoll".to_string(), true);
+    comp_vis.insert("Mixer".to_string(), false);
+    comp_vis.insert("NodeGraph".to_string(), false);
+    map.insert(
+        "Composition".to_string(),
+        PanelLayoutConfig {
+            layout_name: "Composition".to_string(),
+            panel_visibility: comp_vis,
+            panel_sizes: HashMap::new(),
+        },
+    );
+
+    let mut mix_vis = HashMap::new();
+    mix_vis.insert("Arranger".to_string(), true);
+    mix_vis.insert("PianoRoll".to_string(), false);
+    mix_vis.insert("Mixer".to_string(), true);
+    mix_vis.insert("NodeGraph".to_string(), false);
+    map.insert(
+        "Mixing".to_string(),
+        PanelLayoutConfig {
+            layout_name: "Mixing".to_string(),
+            panel_visibility: mix_vis,
+            panel_sizes: HashMap::new(),
+        },
+    );
+
+    let mut mast_vis = HashMap::new();
+    mast_vis.insert("Arranger".to_string(), true);
+    mast_vis.insert("PianoRoll".to_string(), false);
+    mast_vis.insert("Mixer".to_string(), true);
+    mast_vis.insert("NodeGraph".to_string(), true);
+    map.insert(
+        "Mastering".to_string(),
+        PanelLayoutConfig {
+            layout_name: "Mastering".to_string(),
+            panel_visibility: mast_vis,
+            panel_sizes: HashMap::new(),
+        },
+    );
+
+    let mut live_vis = HashMap::new();
+    live_vis.insert("StageView".to_string(), true);
+    live_vis.insert("MacroRack".to_string(), true);
+    map.insert(
+        "Live".to_string(),
+        PanelLayoutConfig {
+            layout_name: "Live".to_string(),
+            panel_visibility: live_vis,
+            panel_sizes: HashMap::new(),
+        },
+    );
+
+    map
+}
+
+/// Step 782: Layout hotkey manager for switching between workspace presets.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct LayoutHotkeyManager {
+    pub key_map: HashMap<String, String>,
+}
+
+impl LayoutHotkeyManager {
+    pub fn new_default() -> Self {
+        let mut key_map = HashMap::new();
+        key_map.insert("F1".to_string(), "Composition".to_string());
+        key_map.insert("F2".to_string(), "Mixing".to_string());
+        key_map.insert("F3".to_string(), "Mastering".to_string());
+        key_map.insert("F4".to_string(), "Live".to_string());
+        Self { key_map }
+    }
+
+    pub fn handle_hotkey(&self, key: &str) -> Option<&str> {
+        self.key_map.get(key).map(|s| s.as_str())
+    }
+}
+
+/// Step 783: Timeline zoom helper for Zoom to Fit and Zoom to Selection.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TimelineZoomState {
+    pub pixels_per_beat: f32,
+}
+
+impl Default for TimelineZoomState {
+    fn default() -> Self {
+        Self { pixels_per_beat: 50.0 }
+    }
+}
+
+impl TimelineZoomState {
+    pub fn zoom_to_fit(&mut self, total_duration_beats: f32, viewport_width_px: f32) -> f32 {
+        if total_duration_beats > 0.0 && viewport_width_px > 0.0 {
+            self.pixels_per_beat = (viewport_width_px / total_duration_beats).clamp(10.0, 400.0);
+        }
+        self.pixels_per_beat
+    }
+
+    pub fn zoom_to_selection(&mut self, sel_start_beat: f32, sel_end_beat: f32, viewport_width_px: f32) -> f32 {
+        let duration = (sel_end_beat - sel_start_beat).abs();
+        if duration > 0.0 && viewport_width_px > 0.0 {
+            self.pixels_per_beat = (viewport_width_px / duration).clamp(10.0, 400.0);
+        }
+        self.pixels_per_beat
+    }
+}
+
+/// Step 784: Per-view zoom state persistence.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ViewZoomPersistence {
+    pub arranger_ppb: f32,
+    pub piano_roll_ppb: f32,
+    pub piano_roll_ppk: f32,
+    pub automation_ppb: f32,
+}
+
+impl Default for ViewZoomPersistence {
+    fn default() -> Self {
+        Self {
+            arranger_ppb: 50.0,
+            piano_roll_ppb: 60.0,
+            piano_roll_ppk: 20.0,
+            automation_ppb: 40.0,
+        }
+    }
+}
+
+/// Step 785: Project search panel item result.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum SearchResultKind {
+    Track,
+    Clip,
+    Node,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SearchResultItem {
+    pub kind: SearchResultKind,
+    pub name: String,
+    pub id: u64,
+}
+
+/// Step 785: Find in Project panel logic.
+pub fn search_project(
+    project: &summoner_project::schema::ProjectConfig,
+    query: &str,
+) -> Vec<SearchResultItem> {
+    let mut results = Vec::new();
+    if query.trim().is_empty() {
+        return results;
+    }
+    let query_lower = query.to_lowercase();
+
+    for track in &project.tracks {
+        if track.name.to_lowercase().contains(&query_lower) {
+            results.push(SearchResultItem {
+                kind: SearchResultKind::Track,
+                name: track.name.clone(),
+                id: track.id,
+            });
+        }
+
+        for clip in track.all_sequences() {
+            if let Some(ref name) = clip.clip_name {
+                if name.to_lowercase().contains(&query_lower) {
+                    results.push(SearchResultItem {
+                        kind: SearchResultKind::Clip,
+                        name: name.clone(),
+                        id: track.id,
+                    });
+                }
+            }
+        }
+
+        for (idx, node) in track.nodes.iter().enumerate() {
+            if node.kind.to_lowercase().contains(&query_lower) {
+                results.push(SearchResultItem {
+                    kind: SearchResultKind::Node,
+                    name: format!("{} (#{})", node.kind, idx),
+                    id: idx as u64,
+                });
+            }
+        }
+    }
+
+    results
+}
+
+/// Step 786: Project statistics model.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ProjectStatistics {
+    pub total_tracks: usize,
+    pub total_clips: usize,
+    pub total_nodes: usize,
+    pub total_parameters: usize,
+}
+
+impl ProjectStatistics {
+    pub fn compute(project: &summoner_project::schema::ProjectConfig) -> Self {
+        let mut stats = Self::default();
+        stats.total_tracks = project.tracks.len();
+
+        for track in &project.tracks {
+            stats.total_clips += track.all_sequences().len();
+            stats.total_nodes += track.nodes.len();
+            for node in &track.nodes {
+                stats.total_parameters += node.params.len();
+            }
+        }
+
+        stats
+    }
+}
+
+/// Step 787: Node Usage panel helper returning unique node types used in a project.
+pub fn get_unique_node_types_used(
+    project: &summoner_project::schema::ProjectConfig,
+) -> Vec<String> {
+    let mut types = HashSet::new();
+    for track in &project.tracks {
+        for node in &track.nodes {
+            types.insert(node.kind.clone());
+        }
+    }
+    let mut result: Vec<String> = types.into_iter().collect();
+    result.sort();
+    result
+}
+
+/// Step 788: Dependency graph overview adjacency computation.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct DependencyGraphOverview {
+    pub adjacency: HashMap<usize, Vec<usize>>,
+}
+
+impl DependencyGraphOverview {
+    pub fn from_connections(connections: &[summoner_project::schema::ConnectionConfig]) -> Self {
+        let mut adjacency: HashMap<usize, Vec<usize>> = HashMap::new();
+        for conn in connections {
+            if let (Ok(from_idx), Ok(to_idx)) = (conn.from.parse::<usize>(), conn.to.parse::<usize>()) {
+                adjacency.entry(from_idx).or_default().push(to_idx);
+            }
+        }
+        Self { adjacency }
+    }
+}
+
+/// Step 789: Signal flow animation mode for Node Graph.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SignalFlowAnimation {
+    pub dot_phase: f32,
+    pub dot_speed: f32,
+}
+
+impl Default for SignalFlowAnimation {
+    fn default() -> Self {
+        Self {
+            dot_phase: 0.0,
+            dot_speed: 2.0,
+        }
+    }
+}
+
+impl SignalFlowAnimation {
+    pub fn step(&mut self, dt: f32) -> f32 {
+        self.dot_phase = (self.dot_phase + self.dot_speed * dt) % 1.0;
+        self.dot_phase
+    }
+
+    pub fn compute_dot_position(&self, start: (f32, f32), end: (f32, f32)) -> (f32, f32) {
+        let x = start.0 + (end.0 - start.0) * self.dot_phase;
+        let y = start.1 + (end.1 - start.1) * self.dot_phase;
+        (x, y)
+    }
+}
+
+/// Step 790: LOD switching in Node Graph depending on zoom scale.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum NodeGraphLod {
+    Detailed,
+    Simplified,
+    Compact,
+}
+
+pub fn get_node_graph_lod(zoom: f32) -> NodeGraphLod {
+    if zoom >= 0.8 {
+        NodeGraphLod::Detailed
+    } else if zoom >= 0.4 {
+        NodeGraphLod::Simplified
+    } else {
+        NodeGraphLod::Compact
+    }
+}
+
+/// Step 791: Node grouping / subgraph box representation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubGraphGroup {
+    pub group_id: u64,
+    pub name: String,
+    pub node_ids: Vec<usize>,
+    pub collapsed: bool,
+}
+
+impl SubGraphGroup {
+    pub fn new(group_id: u64, name: &str, node_ids: Vec<usize>) -> Self {
+        Self {
+            group_id,
+            name: name.to_string(),
+            node_ids,
+            collapsed: false,
+        }
+    }
+
+    pub fn toggle_collapsed(&mut self) -> bool {
+        self.collapsed = !self.collapsed;
+        self.collapsed
+    }
+}
+
+/// Step 792: Create device preset from subgraph.
+pub fn create_preset_from_subgraph(
+    group: &SubGraphGroup,
+    nodes: &[summoner_project::schema::NodeConfig],
+    preset_name: &str,
+) -> summoner_project::preset::DevicePreset {
+    let mut preset = summoner_project::preset::DevicePreset::new(preset_name, "Subgraph");
+    preset.category = "Subgraph Presets".to_string();
+    preset.comment = format!("Generated from subgraph {}", group.name);
+    for (idx, node) in nodes.iter().enumerate() {
+        if group.node_ids.contains(&idx) {
+            for (p_name, p_val) in &node.params {
+                preset.params.insert(format!("{}_{}", node.kind, p_name), *p_val);
+            }
+        }
+    }
+    preset
+}
+
+/// Step 793: GitHub Feature Request issue URL generator.
+pub fn get_github_feature_request_url() -> &'static str {
+    "https://github.com/nilsanderselde/summoner/issues/new?template=feature_request.md"
+}
+
+/// Step 794: GitHub Report Bug issue URL generator with diagnostic info.
+pub fn generate_bug_report_url(os_info: &str, app_version: &str) -> String {
+    let body = format!(
+        "**OS**: {}\n**Version**: {}\n\n**Describe the bug**:\n",
+        os_info, app_version
+    );
+    let encoded = body.replace(' ', "%20").replace('\n', "%0A").replace(':', "%3A");
+    format!(
+        "https://github.com/nilsanderselde/summoner/issues/new?title=Bug%20Report&body={}",
+        encoded
+    )
+}
+
+/// Step 795: Preferences panel categories.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum PreferencesCategory {
+    Audio,
+    Midi,
+    Appearance,
+    Shortcuts,
+    Plugins,
+}
+
+impl Default for PreferencesCategory {
+    fn default() -> Self {
+        Self::Audio
+    }
+}
+
+/// Step 796: Audio preferences config.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AudioPreferencesConfig {
+    pub device_name: String,
+    pub sample_rate: u32,
+    pub block_size: usize,
+}
+
+impl Default for AudioPreferencesConfig {
+    fn default() -> Self {
+        Self {
+            device_name: "Default Output".to_string(),
+            sample_rate: 44100,
+            block_size: 256,
+        }
+    }
+}
+
+/// Step 797: MIDI preferences config.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MidiPreferencesConfig {
+    pub input_device: String,
+    pub output_device: String,
+    pub latency_ms: f32,
+    pub routing_mode: String,
+}
+
+impl Default for MidiPreferencesConfig {
+    fn default() -> Self {
+        Self {
+            input_device: "All Devices".to_string(),
+            output_device: "None".to_string(),
+            latency_ms: 5.0,
+            routing_mode: "Omni".to_string(),
+        }
+    }
+}
+
+/// Step 798: Appearance preferences config.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AppearancePreferencesConfig {
+    pub theme: String,
+    pub font_size: f32,
+    pub default_zoom: f32,
+}
+
+impl Default for AppearancePreferencesConfig {
+    fn default() -> Self {
+        Self {
+            theme: "Dark".to_string(),
+            font_size: 14.0,
+            default_zoom: 1.0,
+        }
+    }
+}
+
+/// Step 799: Shortcuts preferences config.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct ShortcutsPreferencesConfig {
+    pub bindings: HashMap<String, String>,
+}
+
+impl ShortcutsPreferencesConfig {
+    pub fn get_binding(&self, action: &str) -> Option<&str> {
+        self.bindings.get(action).map(|s| s.as_str())
+    }
+
+    pub fn set_binding(&mut self, action: &str, hotkey: &str) {
+        self.bindings.insert(action.to_string(), hotkey.to_string());
+    }
+}
+
+/// Step 800: Plugins preferences config.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PluginsPreferencesConfig {
+    pub scan_paths: Vec<String>,
+    pub safe_mode: bool,
+    pub cpu_budget_percent: f32,
+}
+
+impl Default for PluginsPreferencesConfig {
+    fn default() -> Self {
+        Self {
+            scan_paths: vec![
+                "/Library/Audio/Plug-Ins/VST3".to_string(),
+                "C:\\Program Files\\Common Files\\VST3".to_string(),
+            ],
+            safe_mode: true,
+            cpu_budget_percent: 80.0,
+        }
+    }
+}
+
+/// Step 795: Full application Preferences State container.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct PreferencesState {
+    pub active_category: PreferencesCategory,
+    pub audio: AudioPreferencesConfig,
+    pub midi: MidiPreferencesConfig,
+    pub appearance: AppearancePreferencesConfig,
+    pub shortcuts: ShortcutsPreferencesConfig,
+    pub plugins: PluginsPreferencesConfig,
+}
+
