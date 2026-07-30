@@ -10,11 +10,14 @@ mod tests {
     use summoner_project::scratch_audio_cache::ScratchAudioCache;
     #[cfg(feature = "gui")]
     use crate::app::{SummonerApp, GuiDisplayMode};
+    #[cfg(feature = "gui")]
     use summoner_project::schema::ProjectConfig;
+    #[cfg(feature = "gui")]
     use summoner_core::param_bus::ParamBus;
     use summoner_core::node::AudioNode;
     use summoner_core::transport::Transport;
     use summoner_core::node::ProcessContext;
+    #[cfg(feature = "gui")]
     use std::sync::Arc;
     use std::path::Path;
     use std::env;
