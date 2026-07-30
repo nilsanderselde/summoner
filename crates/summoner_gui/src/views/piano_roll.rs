@@ -37,6 +37,13 @@ pub struct PianoRollState {
     pub drag_ramp_start: Option<(usize, f32, f32)>, // (start_step_idx, initial_velocity, initial_probability)
     pub selected_groove_idx: usize,
     pub groove_amount: f32,
+
+    // Steps 616-625 Pattern Controls
+    pub random_seed: u64,
+    pub random_density: f32,
+    pub triplet_steps: bool,
+    pub pattern_density: f32,
+    pub copied_step: Option<TrackerStepConfig>,
 }
 
 impl Default for PianoRollState {
@@ -67,9 +74,16 @@ impl Default for PianoRollState {
             drag_ramp_start: None,
             selected_groove_idx: 0,
             groove_amount: 0.5,
+
+            random_seed: 42,
+            random_density: 0.5,
+            triplet_steps: false,
+            pattern_density: 0.75,
+            copied_step: None,
         }
     }
 }
+
 
 pub struct Viewport {
     pub width: f32,
@@ -497,6 +511,53 @@ pub fn show_piano_roll(
         }
     });
 
+    // Header toolbar - Row 4 (Steps 616-625 Pattern Tools & MIDI Export/Import)
+    ui.horizontal(|ui| {
+        ui.label("Pattern Len:");
+        let mut len = sequence.steps.len();
+        if ui.add(egui::Slider::new(&mut len, 1..=64).text("Steps")).changed() {
+            push_history(state, &sequence.steps);
+            summoner_sequencer::set_pattern_length(sequence, len);
+        }
+
+        if ui.toggle_value(&mut state.triplet_steps, "3️⃣ Triplets").changed() {
+            summoner_sequencer::set_pattern_resolution(sequence, sequence.step_division, state.triplet_steps);
+        }
+
+        ui.separator();
+        if ui.button("🎲 Randomize").clicked() {
+            push_history(state, &sequence.steps);
+            summoner_sequencer::randomize_pattern(sequence, state.random_seed, state.random_density, (48, 72));
+        }
+        ui.add(egui::DragValue::new(&mut state.random_seed).prefix("Seed: "));
+        ui.add(egui::Slider::new(&mut state.random_density, 0.0..=1.0).text("Dens"));
+
+        ui.separator();
+        if ui.button("📉 Filter Density").clicked() {
+            push_history(state, &sequence.steps);
+            summoner_sequencer::apply_pattern_density(sequence, state.pattern_density);
+        }
+        ui.add(egui::Slider::new(&mut state.pattern_density, 0.0..=1.0).text("Filter"));
+
+        if ui.button("⚡ Quantize Vel").clicked() {
+            push_history(state, &sequence.steps);
+            summoner_sequencer::quantize_velocities(sequence, &[0.2, 0.5, 0.8, 1.0]);
+        }
+
+        ui.separator();
+        if ui.button("💾 Export MIDI").clicked() {
+            let path = std::path::Path::new("pattern_export.mid");
+            let _ = summoner_sequencer::export_pattern_to_midi_file(sequence, 120.0, path);
+        }
+        if ui.button("📂 Import MIDI").clicked() {
+            let path = std::path::Path::new("pattern_export.mid");
+            if let Ok(imported) = summoner_sequencer::import_pattern_from_midi_file(path) {
+                push_history(state, &sequence.steps);
+                *sequence = imported;
+            }
+        }
+    });
+
     if state.show_euclidean_popup {
         ui.horizontal(|ui| {
             ui.label("Hits:");
@@ -536,10 +597,16 @@ pub fn show_piano_roll(
 
                         ui.allocate_ui(egui::vec2(step_width, step_height), |ui| {
                             ui.vertical(|ui| {
-                                let mut active = step.gate > 0.0;
-                                if ui.toggle_value(&mut active, format!("{}", i + 1)).changed() {
+                                let mut active = step.gate > 0.0 && !step.muted;
+                                let step_label = if step.muted {
+                                    format!("{} 🔇", i + 1)
+                                } else {
+                                    format!("{}", i + 1)
+                                };
+                                if ui.toggle_value(&mut active, step_label).changed() {
                                     step.gate = if active { 0.5 } else { 0.0 };
                                     step.active = active;
+                                    step.muted = false;
                                 }
 
                                 ui.add(
@@ -547,12 +614,25 @@ pub fn show_piano_roll(
                                         .orientation(egui::SliderOrientation::Vertical),
                                 );
 
+                                // Probability display (Step 612)
                                 let prob = step.probability;
-                                ui.label(format!("{:.0}%", prob * 100.0));
+                                let prob_text = if prob < 1.0 {
+                                    format!("{:.0}%", prob * 100.0)
+                                } else {
+                                    "100%".to_string()
+                                };
+                                ui.label(prob_text);
+
+                                // Ratchet & Micro-shift indicator (Steps 613-614)
+                                if step.ratchet > 1 || step.micro_shift != 0 {
+                                    ui.label(format!("r:{} ms:{}", step.ratchet, step.micro_shift));
+                                }
 
                                 // Mini piano keyboard pitch key preview (Step 449)
                                 let note_label = note_name_for_pitch(step.note, tuning.divisions as usize);
-                                let btn_color = if state.auto_color_notes {
+                                let btn_color = if step.muted {
+                                    egui::Color32::from_gray(60)
+                                } else if state.auto_color_notes {
                                     pitch_to_color(step.note, tuning.divisions as usize)
                                 } else {
                                     egui::Color32::from_rgb(40, 60, 90)
@@ -573,12 +653,22 @@ pub fn show_piano_roll(
                         .response
                         .context_menu(|ui| {
                             ui.heading("Step Properties");
+                            ui.checkbox(&mut step.muted, "🔇 Mute Step");
+                            if ui.button("📋 Copy Step").clicked() {
+                                state.copied_step = Some(step.clone());
+                            }
+                            if ui.button("📥 Paste Step").clicked() {
+                                if let Some(ref cs) = state.copied_step {
+                                    *step = cs.clone();
+                                }
+                            }
                             ui.add(egui::Slider::new(&mut step.ratchet, 1..=16).text("Ratchet"));
                             ui.add(
                                 egui::Slider::new(&mut step.micro_shift, -64..=64)
                                     .text("Micro Shift"),
                             );
                             ui.add(egui::Slider::new(&mut step.swing, 0.0..=1.0).text("Swing"));
+
                             ui.add(egui::Slider::new(&mut step.pan, -1.0..=1.0).text("Pan"));
                             ui.add(egui::Slider::new(&mut step.pitch_offset, -100.0..=100.0).text("Pitch Cents"));
                         });

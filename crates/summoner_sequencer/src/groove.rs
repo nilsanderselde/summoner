@@ -78,11 +78,12 @@ mod tests {
     #[test]
     fn test_groove_quantize_templates() {
         let mut steps = vec![
-            TrackerStepConfig { note: 60.0, velocity: 0.7, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true },
-            TrackerStepConfig { note: 62.0, velocity: 0.7, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true },
-            TrackerStepConfig { note: 64.0, velocity: 0.7, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true },
-            TrackerStepConfig { note: 65.0, velocity: 0.7, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true },
+            TrackerStepConfig { note: 60.0, velocity: 0.7, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true, muted: false },
+            TrackerStepConfig { note: 62.0, velocity: 0.7, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true, muted: false },
+            TrackerStepConfig { note: 64.0, velocity: 0.7, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true, muted: false },
+            TrackerStepConfig { note: 65.0, velocity: 0.7, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true, muted: false },
         ];
+
 
         apply_groove_quantize(&mut steps, GrooveTemplate::HipHop, 1.0);
         assert!(steps[1].swing > 0.0);

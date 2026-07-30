@@ -24,6 +24,14 @@ fn track_color(track: &TrackConfig) -> egui::Color32 {
     colors[(track.id as usize) % colors.len()]
 }
 
+#[derive(PartialEq, Clone, Copy, Debug)]
+pub enum AutomationToolMode {
+    Pointer,
+    Draw,
+    Line,
+    Curve,
+}
+
 /// Persistent UI state for Arranger View (stored in egui memory).
 #[derive(Clone)]
 pub struct ArrangerState {
@@ -33,6 +41,8 @@ pub struct ArrangerState {
     pub global_bpm_nodes: Vec<(f64, f64)>, // (beat, bpm)
     pub time_signature_markers: Vec<(f64, String)>, // (beat, time_sig)
     pub clipboard_clip: Option<SequenceConfig>,
+    pub automation_tool: AutomationToolMode,
+    pub snap_automation: bool,
 }
 
 impl Default for ArrangerState {
@@ -44,9 +54,12 @@ impl Default for ArrangerState {
             global_bpm_nodes: vec![(0.0, 120.0), (16.0, 124.0)],
             time_signature_markers: vec![(0.0, "4/4".to_string()), (16.0, "3/4".to_string())],
             clipboard_clip: None,
+            automation_tool: AutomationToolMode::Pointer,
+            snap_automation: true,
         }
     }
 }
+
 
 pub fn show_arranger(
     ui: &mut egui::Ui,
@@ -215,7 +228,16 @@ pub fn show_arranger(
         ui.separator();
         ui.label("Zoom:");
         ui.add(egui::Slider::new(pixels_per_beat, 10.0..=400.0).text("px/beat"));
+
+        ui.separator();
+        ui.label("Auto Tool:");
+        ui.selectable_value(&mut state.automation_tool, AutomationToolMode::Pointer, "↖ Pointer");
+        ui.selectable_value(&mut state.automation_tool, AutomationToolMode::Draw, "✏ Draw");
+        ui.selectable_value(&mut state.automation_tool, AutomationToolMode::Line, "📈 Line");
+        ui.selectable_value(&mut state.automation_tool, AutomationToolMode::Curve, "🌊 Curve");
+        ui.toggle_value(&mut state.snap_automation, "🧲 Snap Auto");
     });
+
 
     ui.separator();
 

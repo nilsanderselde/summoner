@@ -143,4 +143,109 @@ mod tests {
         assert_eq!(project.tracks[0].sequence.as_ref().unwrap().start_beat, 2.0);
         assert_eq!(project.tracks[0].clips[0].start_beat, 6.0);
     }
+
+    #[test]
+    fn test_step606_to_step609_automation_line_curve_and_snap_grid() {
+        use summoner_sequencer::automation_timeline::{AutomationLane, AutomationCurve};
+
+        let mut lane = AutomationLane {
+            param_id: "filter_cutoff".to_string(),
+            curve: AutomationCurve::new(Vec::new()),
+        };
+
+        // Line segment drawing with grid snapping (Step 606, 608)
+        lane.add_line_segment(0.12, 0.2, 3.89, 0.9, Some(0.25));
+        assert_eq!(lane.curve.points[0].beat, 0.0);
+        assert_eq!(lane.curve.points[1].beat, 4.0);
+
+        // Curve segment drawing (Step 609)
+        lane.add_curve_segment(4.0, 0.1, 6.0, 0.5, 8.0, 1.0, None);
+        assert_eq!(lane.curve.points.len(), 5);
+
+        // Snap all points to grid (Step 606)
+        lane.snap_all_to_grid(1.0);
+        for pt in &lane.curve.points {
+            assert_eq!(pt.beat.fract(), 0.0);
+        }
+    }
+
+    #[test]
+    fn test_step610_to_step615_step_grid_mute_prob_ratchet_microshift() {
+        let mut step = TrackerStepConfig {
+            note: 60.0,
+            velocity: 0.8,
+            gate: 0.5,
+            probability: 0.75,
+            ratchet: 3,
+            micro_shift: 12,
+            swing: 0.1,
+            pan: 0.0,
+            pitch_offset: 0.0,
+            active: true,
+            muted: false,
+        };
+
+        assert!(!step.muted);
+        step.muted = true; // Step Mute (Step 611)
+        assert!(step.muted);
+
+        assert_eq!(step.probability, 0.75); // Step Probability (Step 612)
+        assert_eq!(step.ratchet, 3); // Step Ratchet (Step 613)
+        assert_eq!(step.micro_shift, 12); // Step Micro-shift (Step 614)
+
+        let step_copied = step.clone(); // Step Copy (Step 615)
+        assert_eq!(step_copied.note, 60.0);
+        assert_eq!(step_copied.ratchet, 3);
+    }
+
+    #[test]
+    fn test_step616_to_step621_pattern_tools_and_midi() {
+        use summoner_sequencer::*;
+
+        let mut seq = SequenceConfig {
+            steps: vec![TrackerStepConfig::default(); 16],
+            ..Default::default()
+        };
+
+        // Randomize pattern (Step 616)
+        randomize_pattern(&mut seq, 999, 0.6, (50, 70));
+        assert!(seq.steps.iter().any(|s| s.active));
+
+        // Pattern Length & Resolution (Steps 619-621)
+        set_pattern_length(&mut seq, 8);
+        assert_eq!(seq.steps.len(), 8);
+
+        set_pattern_resolution(&mut seq, 0.25, true);
+        assert!((seq.step_division - 0.16666666666666666).abs() < 1e-5);
+
+        // MIDI Export & Import (Steps 617-618)
+        let bytes = export_pattern_to_midi_bytes(&seq, 128.0);
+        assert!(!bytes.is_empty());
+        let imported = import_pattern_from_midi_bytes(&bytes).expect("MIDI import should succeed");
+        assert!(imported.steps.len() > 0);
+    }
+
+    #[test]
+    fn test_step622_to_step625_swing_density_vel_quantize() {
+        use summoner_sequencer::*;
+
+        let mut seq = SequenceConfig {
+            steps: vec![
+                TrackerStepConfig { note: 60.0, velocity: 0.33, active: true, swing: 0.2, ..Default::default() },
+                TrackerStepConfig { note: 64.0, velocity: 0.77, active: true, swing: 0.2, ..Default::default() },
+            ],
+            ..Default::default()
+        };
+
+        // Velocity quantize (Step 625)
+        quantize_velocities(&mut seq, &[0.25, 0.5, 0.75, 1.0]);
+        assert_eq!(seq.steps[0].velocity, 0.25);
+        assert_eq!(seq.steps[1].velocity, 0.75);
+
+        // Apply density (Step 624)
+        apply_pattern_density(&mut seq, 0.5);
+        let active_count = seq.steps.iter().filter(|s| s.active).count();
+        assert_eq!(active_count, 1);
+    }
 }
+

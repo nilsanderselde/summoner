@@ -399,6 +399,26 @@ pub struct TrackerStepConfig {
     pub pitch_offset: f32,
     #[serde(default = "default_active")]
     pub active: bool,
+    #[serde(default)]
+    pub muted: bool,
+}
+
+impl Default for TrackerStepConfig {
+    fn default() -> Self {
+        Self {
+            note: 60.0,
+            velocity: 0.8,
+            gate: 0.5,
+            probability: 1.0,
+            ratchet: 1,
+            micro_shift: 0,
+            swing: 0.0,
+            pan: 0.0,
+            pitch_offset: 0.0,
+            active: true,
+            muted: false,
+        }
+    }
 }
 
 fn default_probability() -> f32 {
@@ -416,4 +436,5 @@ fn default_ratchet() -> u32 {
 fn default_micro_shift() -> i32 {
     0
 }
+
 

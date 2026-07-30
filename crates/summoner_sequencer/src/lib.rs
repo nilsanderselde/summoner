@@ -14,12 +14,15 @@
 pub mod automation;
 pub mod generative;
 pub mod pattern;
+pub mod pattern_tools;
 pub mod automation_timeline;
 pub mod timeline;
 pub mod groove;
 
 pub use groove::{apply_groove_quantize, GrooveTemplate};
 pub use generative::{generate_melody_onnx, ONNX_MELODY_MODEL_BYTES};
+pub use pattern_tools::*;
+
 
 #[cfg(test)]
 mod tests {
@@ -58,6 +61,7 @@ mod tests {
                     pan: 0.0,
                     pitch_offset: 0.0,
                     active: true,
+                    muted: false,
                 }; 16],
                 ..Default::default()
             }),
@@ -79,6 +83,7 @@ mod tests {
                     pan: 0.0,
                     pitch_offset: 0.0,
                     active: true,
+                    muted: false,
                 }; 16],
                 ..Default::default()
             }],
@@ -146,8 +151,8 @@ mod tests {
     #[test]
     fn test_polyrhythmic_track_lengths() {
         // Poly-rhythm: 3 steps vs 4 steps
-        let seq_3 = vec![TrackerStepConfig { note: 60.0, velocity: 0.8, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true }; 3];
-        let seq_4 = vec![TrackerStepConfig { note: 67.0, velocity: 0.8, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true }; 4];
+        let seq_3 = vec![TrackerStepConfig { note: 60.0, velocity: 0.8, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true, muted: false }; 3];
+        let seq_4 = vec![TrackerStepConfig { note: 67.0, velocity: 0.8, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true, muted: false }; 4];
 
         let len_3 = seq_3.len() as f64 * 0.25;
         let len_4 = seq_4.len() as f64 * 0.25;
@@ -167,10 +172,11 @@ mod tests {
     #[test]
     fn test_pattern_shift_rotate_reverse_mirror() {
         let mut steps = vec![
-            TrackerStepConfig { note: 60.0, velocity: 0.8, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true },
-            TrackerStepConfig { note: 62.0, velocity: 0.8, gate: 0.0, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: false },
-            TrackerStepConfig { note: 64.0, velocity: 0.8, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true },
+            TrackerStepConfig { note: 60.0, velocity: 0.8, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true, muted: false },
+            TrackerStepConfig { note: 62.0, velocity: 0.8, gate: 0.0, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: false, muted: false },
+            TrackerStepConfig { note: 64.0, velocity: 0.8, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true, muted: false },
         ];
+
 
         steps.rotate_left(1);
         assert_eq!(steps[0].note, 62.0);

@@ -272,6 +272,7 @@ mod tests {
                     pan: 0.0,
                     pitch_offset: 0.0,
                     active: true,
+                    muted: false,
                 },
                 TrackerStepConfig {
                     note: 64.0,
@@ -284,6 +285,7 @@ mod tests {
                     pan: 0.0,
                     pitch_offset: 0.0,
                     active: true,
+                    muted: false,
                 },
                 TrackerStepConfig {
                     note: 67.0,
@@ -296,6 +298,7 @@ mod tests {
                     pan: 0.0,
                     pitch_offset: 0.0,
                     active: true,
+                    muted: false,
                 },
             ],
             ..Default::default()

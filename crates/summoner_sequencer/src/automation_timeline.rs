@@ -115,7 +115,49 @@ impl AutomationLane {
             self.curve.points[i].value = avg.clamp(0.0, 1.0);
         }
     }
+
+    pub fn snap_all_to_grid(&mut self, grid_division: f64) {
+        let snap = grid_division.max(0.001);
+        for pt in &mut self.curve.points {
+            pt.beat = (pt.beat / snap).round() * snap;
+        }
+        self.curve.points.sort_by(|a, b| a.beat.partial_cmp(&b.beat).unwrap());
+    }
+
+    pub fn add_line_segment(&mut self, mut start_beat: f64, start_val: f32, mut end_beat: f64, end_val: f32, snap_grid: Option<f64>) {
+        if let Some(snap) = snap_grid {
+            let s = snap.max(0.001);
+            start_beat = (start_beat / s).round() * s;
+            end_beat = (end_beat / s).round() * s;
+        }
+        let p1 = AutomationPoint { beat: start_beat, value: start_val.clamp(0.0, 1.0), interp: Interpolation::Linear };
+        let p2 = AutomationPoint { beat: end_beat, value: end_val.clamp(0.0, 1.0), interp: Interpolation::Linear };
+
+        self.curve.points.retain(|p| p.beat < start_beat || p.beat > end_beat);
+        self.curve.points.push(p1);
+        self.curve.points.push(p2);
+        self.curve.points.sort_by(|a, b| a.beat.partial_cmp(&b.beat).unwrap());
+    }
+
+    pub fn add_curve_segment(&mut self, mut start_beat: f64, start_val: f32, mut mid_beat: f64, mid_val: f32, mut end_beat: f64, end_val: f32, snap_grid: Option<f64>) {
+        if let Some(snap) = snap_grid {
+            let s = snap.max(0.001);
+            start_beat = (start_beat / s).round() * s;
+            mid_beat = (mid_beat / s).round() * s;
+            end_beat = (end_beat / s).round() * s;
+        }
+        let p1 = AutomationPoint { beat: start_beat, value: start_val.clamp(0.0, 1.0), interp: Interpolation::Smooth };
+        let p2 = AutomationPoint { beat: mid_beat, value: mid_val.clamp(0.0, 1.0), interp: Interpolation::Smooth };
+        let p3 = AutomationPoint { beat: end_beat, value: end_val.clamp(0.0, 1.0), interp: Interpolation::Smooth };
+
+        self.curve.points.retain(|p| p.beat < start_beat || p.beat > end_beat);
+        self.curve.points.push(p1);
+        self.curve.points.push(p2);
+        self.curve.points.push(p3);
+        self.curve.points.sort_by(|a, b| a.beat.partial_cmp(&b.beat).unwrap());
+    }
 }
+
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct AutomationTimeline {
