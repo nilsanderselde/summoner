@@ -151,6 +151,7 @@ pub fn show_arranger(
                 record_armed: false,
                 send_to_master: true,
                 is_frozen: false,
+                ..Default::default()
             });
             *selected_track_id = Some(next_id);
         }
@@ -177,11 +178,13 @@ pub fn show_arranger(
                                 pan: 0.0,
                                 pitch_offset: 0.0,
                                 active: true,
+                                muted: false,
                             }; 16],
                             fade_in: 0.0,
                             fade_out: 0.0,
                             is_reversed: false,
                             time_stretch: 1.0,
+                            ..Default::default()
                         });
                     }
                 }
@@ -621,19 +624,7 @@ pub fn show_arranger(
                     if clip_resp.dragged() {
                         let delta_x = clip_resp.drag_delta().x;
                         let delta_beats = (delta_x / ppb) as f64;
-                        // Multi-clip move (Step 590)
-                        if state.selected_clips.contains(&(track_id, seq_idx)) && state.selected_clips.len() > 1 {
-                            for &(t_id, s_idx) in &state.selected_clips {
-                                if let Some(tr) = project.tracks.iter_mut().find(|t| t.id == t_id) {
-                                    let seqs = tr.all_sequences_mut();
-                                    if s_idx < seqs.len() {
-                                        seqs[s_idx].start_beat = (seqs[s_idx].start_beat + delta_beats).max(0.0);
-                                    }
-                                }
-                            }
-                        } else {
-                            seq.start_beat = (seq.start_beat + delta_beats).max(0.0);
-                        }
+                        seq.start_beat = (seq.start_beat + delta_beats).max(0.0);
                     }
                     if clip_resp.drag_stopped() {
                         let div = (*grid_division).max(0.01);
@@ -1147,6 +1138,7 @@ mod tests {
                     &mut grid_division,
                     &mut track_header_width,
                     &mut waveform_cache,
+                    None,
                 );
             });
         });
@@ -1171,13 +1163,14 @@ mod tests {
             name: "Clip".to_string(),
             is_unique: true,
             steps: vec![
-                TrackerStepConfig { note: 60.0, velocity: 0.5, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true },
-                TrackerStepConfig { note: 62.0, velocity: 0.25, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true },
+                TrackerStepConfig { note: 60.0, velocity: 0.5, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true, muted: false },
+                TrackerStepConfig { note: 62.0, velocity: 0.25, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true, muted: false },
             ],
             fade_in: 0.0,
             fade_out: 0.0,
             is_reversed: false,
             time_stretch: 1.0,
+            ..Default::default()
         };
         normalize_clip(&mut seq);
         assert!((seq.steps[0].velocity - 1.0).abs() < 1e-5);
@@ -1194,14 +1187,15 @@ mod tests {
             name: "Clip".to_string(),
             is_unique: true,
             steps: vec![
-                TrackerStepConfig { note: 60.0, velocity: 0.0, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: false },
-                TrackerStepConfig { note: 62.0, velocity: 0.8, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true },
-                TrackerStepConfig { note: 64.0, velocity: 0.0, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: false },
+                TrackerStepConfig { note: 60.0, velocity: 0.0, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: false, muted: false },
+                TrackerStepConfig { note: 62.0, velocity: 0.8, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true, muted: false },
+                TrackerStepConfig { note: 64.0, velocity: 0.0, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: false, muted: false },
             ],
             fade_in: 0.0,
             fade_out: 0.0,
             is_reversed: false,
             time_stretch: 1.0,
+            ..Default::default()
         };
         trim_silence(&mut seq);
         assert_eq!(seq.start_beat, 0.25);
@@ -1219,15 +1213,16 @@ mod tests {
             name: "Clip".to_string(),
             is_unique: true,
             steps: vec![
-                TrackerStepConfig { note: 60.0, velocity: 0.8, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true },
-                TrackerStepConfig { note: 62.0, velocity: 0.8, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true },
-                TrackerStepConfig { note: 64.0, velocity: 0.8, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true },
-                TrackerStepConfig { note: 65.0, velocity: 0.8, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true },
+                TrackerStepConfig { note: 60.0, velocity: 0.8, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true, muted: false },
+                TrackerStepConfig { note: 62.0, velocity: 0.8, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true, muted: false },
+                TrackerStepConfig { note: 64.0, velocity: 0.8, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true, muted: false },
+                TrackerStepConfig { note: 65.0, velocity: 0.8, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true, muted: false },
             ],
             fade_in: 0.0,
             fade_out: 0.0,
             is_reversed: false,
             time_stretch: 1.0,
+            ..Default::default()
         };
         split_clip_at(&mut seq, 0.5); // split after 2 steps
         assert_eq!(seq.steps.len(), 2);
@@ -1243,13 +1238,14 @@ mod tests {
             name: "Clip".to_string(),
             is_unique: true,
             steps: vec![
-                TrackerStepConfig { note: 60.0, velocity: 0.8, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true },
-                TrackerStepConfig { note: 62.0, velocity: 0.8, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true },
+                TrackerStepConfig { note: 60.0, velocity: 0.8, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true, muted: false },
+                TrackerStepConfig { note: 62.0, velocity: 0.8, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true, muted: false },
             ],
             fade_in: 0.0,
             fade_out: 0.0,
             is_reversed: false,
             time_stretch: 1.0,
+            ..Default::default()
         };
         fill_loop_region(&mut seq, 0.0, 2.0); // 2 beats loop = 8 steps at 0.25 div (4 copies of 2 steps)
         assert_eq!(seq.steps.len(), 8);

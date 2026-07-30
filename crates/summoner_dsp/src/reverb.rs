@@ -116,6 +116,82 @@ impl SignalProcessor for EffectReverb {
     }
 }
 
+/// Convolution Reverb processor using custom impulse response samples.
+#[derive(Debug)]
+pub struct ConvolutionReverbNode {
+    pub ir_samples: Vec<f32>,
+    pub mix: f32,
+    history: Vec<f32>,
+    head: usize,
+}
+
+impl ConvolutionReverbNode {
+    pub fn new(ir_samples: Vec<f32>, mix: f32) -> Self {
+        let len = ir_samples.len().max(1);
+        Self {
+            ir_samples,
+            mix: mix.clamp(0.0, 1.0),
+            history: vec![0.0; len],
+            head: 0,
+        }
+    }
+
+    pub fn process_sample(&mut self, input: f32) -> f32 {
+        if self.ir_samples.is_empty() {
+            return input;
+        }
+        let len = self.ir_samples.len();
+        self.history[self.head] = input;
+
+        let mut acc = 0.0f32;
+        let mut idx = self.head;
+        for &ir_val in &self.ir_samples {
+            acc += self.history[idx] * ir_val;
+            if idx == 0 {
+                idx = len - 1;
+            } else {
+                idx -= 1;
+            }
+        }
+
+        self.head = (self.head + 1) % len;
+        input * (1.0 - self.mix) + acc * self.mix
+    }
+}
+
+impl SignalProcessor for ConvolutionReverbNode {
+    fn name(&self) -> &str {
+        "ConvolutionReverbNode"
+    }
+
+    fn process_block(
+        &mut self,
+        inputs: &[&[Sample]],
+        outputs: &mut [&mut [Sample]],
+        _ctx: &ProcessContext,
+    ) {
+        if outputs.is_empty() {
+            return;
+        }
+
+        let num_samples = outputs[0].len();
+        for i in 0..num_samples {
+            let in_sample = if !inputs.is_empty() && !inputs[0].is_empty() && i < inputs[0].len() {
+                inputs[0][i]
+            } else {
+                0.0
+            };
+
+            let out_sample = self.process_sample(in_sample);
+            for out_ch in outputs.iter_mut() {
+                if i < out_ch.len() {
+                    out_ch[i] = out_sample;
+                }
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -133,4 +209,17 @@ mod tests {
         reverb.process_block(&[&in_buf[..]], &mut [&mut out_rev[..]], &ctx);
         assert!(out_rev.iter().any(|v| *v != 0.0));
     }
+
+    #[test]
+    fn test_convolution_reverb() {
+        let ir = vec![1.0, 0.5, 0.25];
+        let mut conv = ConvolutionReverbNode::new(ir, 1.0);
+        let out1 = conv.process_sample(1.0);
+        assert_eq!(out1, 1.0);
+        let out2 = conv.process_sample(0.0);
+        assert_eq!(out2, 0.5);
+        let out3 = conv.process_sample(0.0);
+        assert_eq!(out3, 0.25);
+    }
 }
+

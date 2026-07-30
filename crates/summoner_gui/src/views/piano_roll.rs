@@ -1112,6 +1112,7 @@ mod tests {
                     pan: 0.0,
                     pitch_offset: 0.0,
                     active: true,
+                    muted: false,
                 };
                 16
             ],
@@ -1153,6 +1154,7 @@ mod tests {
                     pan: 0.0,
                     pitch_offset: 0.0,
                     active: false,
+                    muted: false,
                 };
                 16
             ],
@@ -1198,6 +1200,7 @@ mod tests {
                     pan: 0.0,
                     pitch_offset: 0.0,
                     active: true,
+                    muted: false,
                 };
                 16
             ],
@@ -1249,6 +1252,7 @@ mod tests {
                 pan: 0.0,
                 pitch_offset: 0.0,
                 active: true,
+                muted: false,
             }
         ];
 
@@ -1281,9 +1285,9 @@ mod tests {
     fn test_arpeggiator_selected_notes() {
         let mut sequence = SequenceConfig {
             steps: vec![
-                TrackerStepConfig { note: 67.0, velocity: 0.8, gate: 1.0, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true },
-                TrackerStepConfig { note: 60.0, velocity: 0.8, gate: 1.0, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true },
-                TrackerStepConfig { note: 64.0, velocity: 0.8, gate: 1.0, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true },
+                TrackerStepConfig { note: 67.0, velocity: 0.8, gate: 1.0, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true, muted: false },
+                TrackerStepConfig { note: 60.0, velocity: 0.8, gate: 1.0, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true, muted: false },
+                TrackerStepConfig { note: 64.0, velocity: 0.8, gate: 1.0, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true, muted: false },
             ],
             ..Default::default()
         };

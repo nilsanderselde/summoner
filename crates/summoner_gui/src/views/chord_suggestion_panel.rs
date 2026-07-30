@@ -92,6 +92,7 @@ mod tests {
                     pan: 0.0,
                     pitch_offset: 0.0,
                     active: false,
+                    muted: false,
                 };
                 16
             ],

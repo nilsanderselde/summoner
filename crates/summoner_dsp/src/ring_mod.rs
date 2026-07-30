@@ -17,23 +17,49 @@ use summoner_core::audio::Sample;
 use summoner_core::node::ProcessContext;
 use crate::traits::SignalProcessor;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RingModWaveform {
+    Sine,
+    Triangle,
+    Saw,
+    Square,
+}
+
 pub struct RingModulator {
     phase: f32,
     pub freq: f32,
+    pub waveform: RingModWaveform,
 }
+
 impl RingModulator {
-    pub fn new() -> Self { Self { phase: 0.0, freq: 100.0 } }
+    pub fn new() -> Self {
+        Self {
+            phase: 0.0,
+            freq: 100.0,
+            waveform: RingModWaveform::Sine,
+        }
+    }
+
+    pub fn carrier_sample(&self, phase: f32) -> f32 {
+        use std::f32::consts::PI;
+        match self.waveform {
+            RingModWaveform::Sine => (2.0 * PI * phase).sin(),
+            RingModWaveform::Triangle => (2.0 * (2.0 * phase - 1.0).abs()) - 1.0,
+            RingModWaveform::Saw => 2.0 * phase - 1.0,
+            RingModWaveform::Square => if phase < 0.5 { 1.0 } else { -1.0 },
+        }
+    }
 }
+
 impl SignalProcessor for RingModulator {
     fn name(&self) -> &str { "RingModulator" }
     fn process_block(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
         if input.is_empty() || output.is_empty() { return; }
         let num_samples = input[0].len().min(output[0].len());
         let dt = 1.0 / ctx.sample_rate as f32;
-        use std::f32::consts::PI;
         for i in 0..num_samples {
             let x = input[0][i];
-            let mod_sig = (2.0 * PI * self.phase).sin();
+            let mod_sig = self.carrier_sample(self.phase);
             self.phase = (self.phase + self.freq * dt).fract();
             for out_ch in output.iter_mut() { out_ch[i] = x * mod_sig; }
         }

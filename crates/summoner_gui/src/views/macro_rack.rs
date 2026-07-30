@@ -500,6 +500,88 @@ pub fn show_harmonics_display(ui: &mut egui::Ui, harmonics: &[f32; 16], width: f
     }
 }
 
+/// FM Operator Matrix topology display grid (Step 661).
+pub fn show_fm_matrix_display(ui: &mut egui::Ui, matrix: &[[f32; 4]; 4], width: f32, height: f32) {
+    let (rect, _) = ui.allocate_exact_size(egui::vec2(width, height), egui::Sense::hover());
+    ui.painter().rect_filled(rect, 4.0, egui::Color32::from_rgb(12, 16, 24));
+
+    let cell_w = rect.width() / 4.0;
+    let cell_h = rect.height() / 4.0;
+
+    for row in 0..4 {
+        for col in 0..4 {
+            let cell_rect = egui::Rect::from_min_size(
+                egui::pos2(rect.left() + col as f32 * cell_w, rect.top() + row as f32 * cell_h),
+                egui::vec2(cell_w, cell_h),
+            );
+            let intensity = matrix[row][col].clamp(0.0, 1.0);
+            let fill_color = egui::Color32::from_rgba_unmultiplied(26, 140, 255, (intensity * 220.0) as u8);
+            ui.painter().rect_filled(cell_rect.shrink(1.0), 2.0, fill_color);
+            ui.painter().rect_stroke(cell_rect.shrink(1.0), 2.0, egui::Stroke::new(0.5, egui::Color32::from_rgb(40, 60, 90)));
+        }
+    }
+}
+
+/// Filter magnitude response curve display (Step 662).
+pub fn show_filter_response_curve(ui: &mut egui::Ui, cutoff_hz: f32, resonance: f32, width: f32, height: f32) {
+    let (rect, _) = ui.allocate_exact_size(egui::vec2(width, height), egui::Sense::hover());
+    ui.painter().rect_filled(rect, 4.0, egui::Color32::from_rgb(10, 12, 18));
+    ui.painter().rect_stroke(rect, 4.0, egui::Stroke::new(1.0, egui::Color32::from_rgb(40, 60, 90)));
+
+    let points: Vec<egui::Pos2> = (0..50).map(|i| {
+        let t = i as f32 / 49.0;
+        let freq = 20.0 * (20000.0f32 / 20.0).powf(t);
+        let ratio = freq / cutoff_hz.max(20.0);
+        let magnitude = 1.0 / (1.0 + ratio.powi(4) - 0.5 * resonance * ratio.powi(2)).sqrt();
+        let norm_mag = magnitude.clamp(0.0, 2.0) / 2.0;
+        let x = rect.left() + t * rect.width();
+        let y = rect.bottom() - norm_mag * rect.height();
+        egui::Pos2::new(x, y)
+    }).collect();
+
+    for window in points.windows(2) {
+        ui.painter().line_segment([window[0], window[1]], egui::Stroke::new(1.5, egui::Color32::from_rgb(180, 80, 240)));
+    }
+}
+
+/// Reverb Impulse Response decay curve display (Step 663).
+pub fn show_impulse_response_display(ui: &mut egui::Ui, ir_samples: &[f32], width: f32, height: f32) {
+    let (rect, _) = ui.allocate_exact_size(egui::vec2(width, height), egui::Sense::hover());
+    ui.painter().rect_filled(rect, 4.0, egui::Color32::from_rgb(12, 10, 18));
+
+    if ir_samples.is_empty() {
+        return;
+    }
+    let step = (ir_samples.len() as f32 / width).max(1.0) as usize;
+    for (i, x_idx) in (0..ir_samples.len()).step_by(step).enumerate() {
+        let val = ir_samples[x_idx].abs().clamp(0.0, 1.0);
+        let x = rect.left() + i as f32 * 2.0;
+        if x > rect.right() { break; }
+        let h = val * rect.height();
+        let line_rect = egui::Rect::from_min_size(egui::pos2(x, rect.center().y - h * 0.5), egui::vec2(1.5, h.max(1.0)));
+        ui.painter().rect_filled(line_rect, 0.0, egui::Color32::from_rgb(255, 130, 40));
+    }
+}
+
+/// Convolution Reverb UI block with IR File Browser (Step 665).
+pub fn show_convolution_reverb_block(ui: &mut egui::Ui, ir_filename: &mut String, mix: &mut f32) {
+    ui.group(|ui| {
+        ui.heading("Convolution Reverb");
+        ui.horizontal(|ui| {
+            ui.label("IR File:");
+            ui.text_edit_singleline(ir_filename);
+            if ui.button("📂 Browse IR...").clicked() {
+                if let Some(path) = rfd::FileDialog::new().add_filter("Audio IR", &["wav", "flac"]).pick_file() {
+                    if let Some(p_str) = path.to_str() {
+                        *ir_filename = p_str.to_string();
+                    }
+                }
+            }
+        });
+        ui.add(egui::Slider::new(mix, 0.0..=1.0).text("Mix"));
+    });
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

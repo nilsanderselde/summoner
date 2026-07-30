@@ -79,6 +79,66 @@ impl SignalProcessor for MidSideNode {
     }
 }
 
+/// Stereo Imager tool supporting L/R delay, phase offset, and stereo width.
+#[derive(Debug)]
+pub struct StereoImager {
+    pub l_delay_ms: f32,
+    pub r_delay_ms: f32,
+    pub phase_offset: f32,
+    pub width: f32,
+    l_buffer: Vec<f32>,
+    r_buffer: Vec<f32>,
+    l_pos: usize,
+    r_pos: usize,
+    sample_rate: u32,
+}
+
+impl StereoImager {
+    pub fn new(sample_rate: u32) -> Self {
+        let max_samples = (sample_rate as f32 * 0.1) as usize; // up to 100ms max delay
+        Self {
+            l_delay_ms: 0.0,
+            r_delay_ms: 0.0,
+            phase_offset: 0.0,
+            width: 1.0,
+            l_buffer: vec![0.0; max_samples.max(1)],
+            r_buffer: vec![0.0; max_samples.max(1)],
+            l_pos: 0,
+            r_pos: 0,
+            sample_rate,
+        }
+    }
+
+    pub fn process_stereo(&mut self, left: f32, right: f32) -> (f32, f32) {
+        let max_len = self.l_buffer.len();
+        self.l_buffer[self.l_pos] = left;
+        self.r_buffer[self.r_pos] = right;
+
+        let l_delay_samples = ((self.l_delay_ms * 0.001 * self.sample_rate as f32) as usize).min(max_len - 1);
+        let r_delay_samples = ((self.r_delay_ms * 0.001 * self.sample_rate as f32) as usize).min(max_len - 1);
+
+        let l_read_idx = (self.l_pos + max_len - l_delay_samples) % max_len;
+        let r_read_idx = (self.r_pos + max_len - r_delay_samples) % max_len;
+
+        let mut l_out = self.l_buffer[l_read_idx];
+        let mut r_out = self.r_buffer[r_read_idx];
+
+        self.l_pos = (self.l_pos + 1) % max_len;
+        self.r_pos = (self.r_pos + 1) % max_len;
+
+        // Apply phase offset (invert right channel if phase_offset near PI)
+        if (self.phase_offset - std::f32::consts::PI).abs() < 0.1 {
+            r_out = -r_out;
+        }
+
+        // Apply mid-side width scaling
+        let mid = 0.5 * (l_out + r_out);
+        let side = 0.5 * (l_out - r_out) * self.width;
+
+        (mid + side, mid - side)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -101,4 +161,15 @@ mod tests {
         assert_eq!(l_out[0], 0.0);
         assert_eq!(r_out[0], 0.0);
     }
+
+    #[test]
+    fn test_stereo_imager() {
+        let mut imager = StereoImager::new(44100);
+        imager.width = 1.5;
+        imager.l_delay_ms = 5.0;
+        let (out_l, out_r) = imager.process_stereo(1.0, -1.0);
+        assert!(out_l.is_finite());
+        assert!(out_r.is_finite());
+    }
 }
+

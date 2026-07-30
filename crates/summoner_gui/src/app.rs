@@ -1268,6 +1268,7 @@ impl eframe::App for SummonerApp {
                                 pan: 0.0,
                                 pitch_offset: 0.0,
                                 active: true,
+                                muted: false,
                             }; 16],
                             ..Default::default()
                         });

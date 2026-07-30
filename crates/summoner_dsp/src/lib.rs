@@ -46,6 +46,7 @@ pub mod stem_separator;
 pub mod plugin_host;
 pub mod tuner;
 pub mod autotune;
+pub mod dither;
 
 pub use plugin_host::{
     PluginAudioNode, PluginDescriptor, PluginFormat, PluginParamInfo, PluginStateConfig,
@@ -61,11 +62,11 @@ pub use stem_separator::{StemSeparator, ONNX_STEM_SEPARATOR_MODEL_BYTES};
 pub use distortion::{DistortionNode, DistortionType};
 pub use effects::{EffectDelay as LegacyEffectDelay, EffectReverb as LegacyEffectReverb};
 pub use delay::EffectDelay;
-pub use reverb::EffectReverb;
+pub use reverb::{EffectReverb, ConvolutionReverbNode};
 pub use wavefolder::WavefolderNode;
 pub use pitch_shifter::PitchShifterNode;
 pub use bitcrusher::BitcrusherNode;
-pub use midside::MidSideNode;
+pub use midside::{MidSideNode, StereoImager};
 pub use parametric_eq::{ParametricEqNode, EqBand};
 pub use filters::{FilterComb, FilterLadder, FilterSVF};
 pub use glitch::{AudioReverse, GlitchGate, GlitchShuffle, GlitchStutter, TapeStop};
@@ -80,10 +81,11 @@ pub use slicer::{AutoSlicer, SliceMarker, ONNX_TRANSIENT_MODEL_BYTES};
 pub use oversampling::Oversampler;
 pub use biquad::{FilterBiquad, FilterType};
 pub use compressor::CompressorNode;
-pub use limiter::LimiterNode;
+pub use limiter::{LimiterNode, MasterLimiter};
 pub use mod_fx::{EffectChorus, EffectFlanger, EffectPhaser};
-pub use ring_mod::{RingModulator, FrequencyShifter};
-pub use meter::LufsMeterNode;
+pub use ring_mod::{RingModulator, FrequencyShifter, RingModWaveform};
+pub use meter::{LufsMeterNode, TruePeakMeter, KSystemScale, k_system_headroom};
+pub use dither::{DitherType, apply_dither};
 pub use granular::GranularSynthNode;
 
 use summoner_core::audio::Sample;

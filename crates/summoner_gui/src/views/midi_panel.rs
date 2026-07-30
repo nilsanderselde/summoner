@@ -255,11 +255,13 @@ pub fn show_virtual_keyboard_panel(
                 ];
                 for (k, _semi) in keys_check {
                     if let Some(note) = qwerty_key_to_midi_note(k, state.base_octave) {
-                        let is_down = ui.input(|i| i.key_pressed(egui::Key::Name(k.to_uppercase().into())));
-                        if is_down {
-                            state.active_held_notes.insert(note);
-                            let final_vel = transform_velocity(state.velocity, state.velocity_curve);
-                            on_note_on(note, final_vel);
+                        if let Some(key) = egui::Key::from_name(&k.to_lowercase()) {
+                            let is_down = ui.input(|i| i.key_pressed(key));
+                            if is_down {
+                                state.active_held_notes.insert(note);
+                                let final_vel = transform_velocity(state.velocity, state.velocity_curve);
+                                on_note_on(note, final_vel);
+                            }
                         }
                     }
                 }
@@ -292,7 +294,7 @@ pub fn show_virtual_keyboard_panel(
                 };
 
                 painter.rect_filled(key_rect, 2.0, color);
-                painter.rect_stroke(key_rect, 2.0, egui::Stroke::new(1.0, egui::Color32::from_rgb(40, 40, 50)), egui::StrokeKind::Outside);
+                painter.rect_stroke(key_rect, 2.0, egui::Stroke::new(1.0, egui::Color32::from_rgb(40, 40, 50)));
             }
 
             // Draw black keys on top
@@ -326,7 +328,7 @@ pub fn show_virtual_keyboard_panel(
                 };
 
                 painter.rect_filled(key_rect, 2.0, color);
-                painter.rect_stroke(key_rect, 2.0, egui::Stroke::new(1.0, egui::Color32::from_rgb(10, 10, 15)), egui::StrokeKind::Outside);
+                painter.rect_stroke(key_rect, 2.0, egui::Stroke::new(1.0, egui::Color32::from_rgb(10, 10, 15)));
             }
         });
     });

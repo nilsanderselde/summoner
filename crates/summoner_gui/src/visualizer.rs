@@ -192,6 +192,35 @@ pub fn show_spectrum(ui: &mut egui::Ui, spectrum: &SpectrumAnalyzer, width: f32,
     response
 }
 
+/// Render Phase Scope (Lissajous X/Y plot rotated 45 deg) inside UI (Step 671).
+#[cfg(feature = "gui")]
+pub fn show_phase_scope(ui: &mut egui::Ui, left_buf: &[f32], right_buf: &[f32], width: f32, height: f32) -> egui::Response {
+    let (rect, response) = ui.allocate_exact_size(egui::vec2(width, height), egui::Sense::hover());
+    let painter = ui.painter();
+    painter.rect_filled(rect, 4.0, egui::Color32::from_rgb(10, 10, 16));
+    painter.rect_stroke(rect, 4.0, egui::Stroke::new(1.0, egui::Color32::from_rgb(40, 60, 90)));
+
+    let center = rect.center();
+    let radius = (rect.width().min(rect.height()) * 0.45).max(10.0);
+
+    let len = left_buf.len().min(right_buf.len());
+    if len > 0 {
+        let inv_sqrt2 = 0.70710678f32;
+        for i in 0..len {
+            let l = left_buf[i].clamp(-1.0, 1.0);
+            let r = right_buf[i].clamp(-1.0, 1.0);
+
+            let x = (l - r) * inv_sqrt2;
+            let y = (l + r) * inv_sqrt2;
+
+            let pos = egui::pos2(center.x + x * radius, center.y - y * radius);
+            painter.circle_filled(pos, 1.2, egui::Color32::from_rgb(0, 230, 180));
+        }
+    }
+
+    response
+}
+
 /// Inline visualizers to be rendered inside the signal paths.
 pub struct Visualizer {
     pub width: f32,

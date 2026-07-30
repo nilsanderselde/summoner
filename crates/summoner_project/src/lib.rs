@@ -17,6 +17,7 @@ pub mod git_dag;
 pub mod schema;
 pub mod preset;
 pub mod sfz;
+pub mod export;
 
 #[cfg(target_os = "windows")]
 #[link(name = "advapi32")]
