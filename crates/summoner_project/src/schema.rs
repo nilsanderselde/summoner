@@ -19,6 +19,8 @@ use std::collections::HashMap;
 /// Root project session definition.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ProjectConfig {
+    #[serde(default = "default_schema_version")]
+    pub version: String,
     pub name: String,
     #[serde(default)]
     pub tuning_file: Option<String>,
@@ -49,6 +51,10 @@ pub struct ProjectConfig {
     pub locator_b_beat: Option<f64>,
 }
 
+fn default_schema_version() -> String {
+    "1.0".to_string()
+}
+
 fn default_loop_end() -> f64 {
     16.0
 }
@@ -56,6 +62,7 @@ fn default_loop_end() -> f64 {
 impl Default for ProjectConfig {
     fn default() -> Self {
         Self {
+            version: "1.0".to_string(),
             name: "New Project".to_string(),
             tuning_file: None,
             transport: TransportConfig::default(),

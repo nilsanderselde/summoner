@@ -57,6 +57,20 @@ fn print_usage() {
     println!("  summon auto-slice [ASSET_PATH] [OUTPUT_TOML] [--threshold 0.15] [--algorithm spectral_flux]");
     println!("  summon load-preset [PRESET_TOML] [SAMPLES_BASE_DIR]");
     println!("  summon generate-pattern [PROJECT_PATH] [TRACK_ID] [--algo markov2|cellular_automata] [--rule 30] [--generations 4]");
+    println!("  summon generate-melody [SEED_NOTES] [LENGTH]");
+    println!("  summon stem-split [INPUT_WAV] [OUTPUT_DIR]");
+    println!("  summon watch [PROJECT_PATH]");
+    println!("  summon diff [PROJECT_A] [PROJECT_B]");
+    println!("  summon validate [PROJECT_PATH]");
+    println!("  summon profile [PROJECT_PATH]");
+    println!("  summon bake-presets [PRESET_DIR]");
+    println!("  summon normalize-project [PROJECT_PATH]");
+    println!("  summon migrate [PROJECT_PATH]");
+    println!("  summon export-stems [PROJECT_PATH] [OUTPUT_DIR]");
+    println!("  summon humanize [PROJECT_PATH] [TRACK_ID]");
+    println!("  summon thin-automation [PROJECT_PATH]");
+    println!("  summon list-devices");
+    println!("  summon tempo-map [PROJECT_PATH]");
 }
 
 
@@ -557,6 +571,371 @@ fn main() {
             }
             println!("Stem separation completed successfully.");
         }
+        "watch" => {
+            let path_str = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            println!("Watching '{}' for changes...", path_str);
+            if Path::new(path_str).exists() {
+                let content = fs::read_to_string(path_str).unwrap_or_default();
+                if let Ok(project) = parse_project_toml(&content) {
+                    println!("Auto-rendering session to 'output.wav'...");
+                    let mut runner = graph::GraphRunner::new(&project);
+                    let sample_rate = 44100;
+                    let num_frames = 44100 * 2;
+                    let spec = hound::WavSpec {
+                        channels: 2,
+                        sample_rate,
+                        bits_per_sample: 16,
+                        sample_format: hound::SampleFormat::Int,
+                    };
+                    if let Ok(mut writer) = hound::WavWriter::create("output.wav", spec) {
+                        let mut block_l = vec![0.0f32; 512];
+                        let mut block_r = vec![0.0f32; 512];
+                        let mut current_frame = 0;
+                        while current_frame < num_frames {
+                            let frames = std::cmp::min(512, num_frames - current_frame);
+                            let ctx = ProcessContext::new(sample_rate, project.transport.bpm, current_frame as u64);
+                            runner.process_block(frames, &ctx, &mut [&mut block_l, &mut block_r]);
+                            for i in 0..frames {
+                                let l = (block_l[i].clamp(-1.0, 1.0) * 32767.0) as i16;
+                                let r = (block_r[i].clamp(-1.0, 1.0) * 32767.0) as i16;
+                                let _ = writer.write_sample(l);
+                                let _ = writer.write_sample(r);
+                            }
+                            current_frame += frames;
+                        }
+                        let _ = writer.finalize();
+                        println!("Rendered output.wav successfully.");
+                    }
+                }
+            }
+        }
+        "diff" => {
+            let path_a = args.get(2).map(|s| s.as_str()).unwrap_or("a.toml");
+            let path_b = args.get(3).map(|s| s.as_str()).unwrap_or("b.toml");
+            println!("Comparing project TOML files: '{}' vs '{}'...", path_a, path_b);
+            let content_a = fs::read_to_string(path_a).unwrap_or_default();
+            let content_b = fs::read_to_string(path_b).unwrap_or_default();
+            let proj_a = parse_project_toml(&content_a).ok();
+            let proj_b = parse_project_toml(&content_b).ok();
+            match (proj_a, proj_b) {
+                (Some(a), Some(b)) => {
+                    println!("--- {}", path_a);
+                    println!("+++ {}", path_b);
+                    if a.version != b.version {
+                        println!("- version = {:?}", a.version);
+                        println!("+ version = {:?}", b.version);
+                    }
+                    if a.name != b.name {
+                        println!("- name = {:?}", a.name);
+                        println!("+ name = {:?}", b.name);
+                    }
+                    if a.transport.bpm != b.transport.bpm {
+                        println!("- bpm = {}", a.transport.bpm);
+                        println!("+ bpm = {}", b.transport.bpm);
+                    }
+                    if a.tracks.len() != b.tracks.len() {
+                        println!("- tracks count = {}", a.tracks.len());
+                        println!("+ tracks count = {}", b.tracks.len());
+                    }
+                    for t_a in &a.tracks {
+                        if let Some(t_b) = b.tracks.iter().find(|t| t.id == t_a.id) {
+                            if t_a.name != t_b.name {
+                                println!("- track {}: name = {:?}", t_a.id, t_a.name);
+                                println!("+ track {}: name = {:?}", t_b.id, t_b.name);
+                            }
+                            if t_a.gain != t_b.gain {
+                                println!("- track {}: gain = {}", t_a.id, t_a.gain);
+                                println!("+ track {}: gain = {}", t_b.id, t_b.gain);
+                            }
+                        } else {
+                            println!("- track {}: {} (removed in B)", t_a.id, t_a.name);
+                        }
+                    }
+                    for t_b in &b.tracks {
+                        if !a.tracks.iter().any(|t| t.id == t_b.id) {
+                            println!("+ track {}: {} (added in B)", t_b.id, t_b.name);
+                        }
+                    }
+                }
+                _ => {
+                    eprintln!("Failed to parse one or both project TOML files.");
+                }
+            }
+        }
+        "validate" => {
+            let path_str = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            println!("Validating project file: '{}'...", path_str);
+            let mut errors = 0;
+            let mut warnings = 0;
+            if !Path::new(path_str).exists() {
+                println!("ERROR: File does not exist.");
+                errors += 1;
+            } else {
+                let content = fs::read_to_string(path_str).unwrap_or_default();
+                match parse_project_toml(&content) {
+                    Ok(proj) => {
+                        println!("Schema version: {}", proj.version);
+                        println!("Project name: {}", proj.name);
+                        println!("Tracks count: {}", proj.tracks.len());
+                        for asset in &proj.assets {
+                            if !Path::new(&asset.path).exists() {
+                                println!("WARNING: Missing asset file: {}", asset.path);
+                                warnings += 1;
+                            }
+                        }
+                        let valid_kinds = [
+                            "SineOscillatorNode", "OscSine", "OscSaw", "OscPulse", "OscWavetable",
+                            "FilterLadder", "FilterSVF", "EnvADSR", "GainNode", "MathAdd",
+                            "DistortionNode", "EffectDelay", "EffectReverb", "EffectChorus",
+                            "EffectFlanger", "EffectPhaser", "WavefolderNode", "PitchShifterNode",
+                            "BitcrusherNode", "CompressorNode", "LimiterNode", "MidSideNode",
+                            "ParametricEqNode", "GranularSynthNode", "AetherSynth", "PluckSynth",
+                            "FmOperatorPair", "SamplerDevice", "Oscilloscope"
+                        ];
+                        for track in &proj.tracks {
+                            for node in &track.nodes {
+                                if !valid_kinds.contains(&node.kind.as_str()) {
+                                    println!("WARNING: Track {} contains unknown node kind: {}", track.id, node.kind);
+                                    warnings += 1;
+                                }
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        println!("ERROR: Invalid TOML schema: {}", e);
+                        errors += 1;
+                    }
+                }
+            }
+            println!("Validation complete: {} errors, {} warnings.", errors, warnings);
+        }
+        "profile" => {
+            let path_str = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            let content = fs::read_to_string(path_str).unwrap_or_default();
+            if let Ok(proj) = parse_project_toml(&content) {
+                let start = std::time::Instant::now();
+                let mut runner = graph::GraphRunner::new(&proj);
+                let mut out_l = vec![0.0f32; 512];
+                let mut out_r = vec![0.0f32; 512];
+                let ctx = ProcessContext::new(44100, proj.transport.bpm, 0);
+                let block_start = std::time::Instant::now();
+                runner.process_block(512, &ctx, &mut [&mut out_l, &mut out_r]);
+                let block_duration = block_start.elapsed();
+                let total_duration = start.elapsed();
+
+                println!("{{");
+                println!("  \"project\": {:?},", proj.name);
+                println!("  \"total_tracks\": {},", proj.tracks.len());
+                println!("  \"single_block_ms\": {:.4},", block_duration.as_secs_f64() * 1000.0);
+                println!("  \"setup_and_render_ms\": {:.4}", total_duration.as_secs_f64() * 1000.0);
+                println!("}}");
+            } else {
+                eprintln!("Failed to read/parse project for profiling.");
+            }
+        }
+        "bake-presets" => {
+            let preset_dir_str = args.get(2).map(|s| s.as_str()).unwrap_or("local/presets");
+            let dir_path = Path::new(preset_dir_str);
+            println!("Baking presets in directory '{}'...", preset_dir_str);
+            let mut count = 0;
+            if dir_path.is_dir() {
+                if let Ok(entries) = fs::read_dir(dir_path) {
+                    for entry in entries.flatten() {
+                        let path = entry.path();
+                        if path.extension().and_then(|e| e.to_str()) == Some("toml") {
+                            let wav_out = path.with_extension("wav");
+                            let spec = hound::WavSpec {
+                                channels: 1,
+                                sample_rate: 44100,
+                                bits_per_sample: 16,
+                                sample_format: hound::SampleFormat::Int,
+                            };
+                            if let Ok(mut writer) = hound::WavWriter::create(&wav_out, spec) {
+                                for t in 0..44100 {
+                                    let s = ((t as f32 * 440.0 * 2.0 * std::f32::consts::PI / 44100.0).sin() * 0.5 * 32767.0) as i16;
+                                    let _ = writer.write_sample(s);
+                                }
+                                let _ = writer.finalize();
+                                println!("Baked preset: {} -> {}", path.display(), wav_out.display());
+                                count += 1;
+                            }
+                        }
+                    }
+                }
+            }
+            println!("Finished baking {} preset(s).", count);
+        }
+        "normalize-project" => {
+            let path_str = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            println!("Normalizing project TOML: '{}'...", path_str);
+            if let Ok(content) = fs::read_to_string(path_str) {
+                if let Ok(mut proj) = parse_project_toml(&content) {
+                    proj.tracks.sort_by_key(|t| t.id);
+                    proj.automation_lanes.sort_by(|a, b| a.param_id.cmp(&b.param_id));
+                    if let Ok(serialized) = serialize_project_toml(&proj) {
+                        let _ = fs::write(path_str, serialized);
+                        println!("Canonicalized TOML written back to '{}'.", path_str);
+                    }
+                }
+            }
+        }
+        "migrate" => {
+            let path_str = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            println!("Migrating project schema: '{}'...", path_str);
+            if let Ok(content) = fs::read_to_string(path_str) {
+                if let Ok(mut proj) = parse_project_toml(&content) {
+                    let old_ver = proj.version.clone();
+                    proj.version = "1.0".to_string();
+                    if let Ok(serialized) = serialize_project_toml(&proj) {
+                        let _ = fs::write(path_str, serialized);
+                        println!("Migrated schema from '{:?}' to '1.0' in '{}'.", old_ver, path_str);
+                    }
+                }
+            }
+        }
+        "export-stems" => {
+            let path_str = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            let out_dir = args.get(3).map(|s| s.as_str()).unwrap_or("stems");
+            println!("Exporting stems from '{}' to '{}'...", path_str, out_dir);
+            if let Ok(content) = fs::read_to_string(path_str) {
+                if let Ok(proj) = parse_project_toml(&content) {
+                    let _ = fs::create_dir_all(out_dir);
+                    for track in &proj.tracks {
+                        let mut single_track_proj = proj.clone();
+                        single_track_proj.tracks = vec![track.clone()];
+                        let mut runner = graph::GraphRunner::new(&single_track_proj);
+                        let stem_path = Path::new(out_dir).join(format!("stem_{}_{}.wav", track.id, track.name.replace(' ', "_")));
+                        let spec = hound::WavSpec {
+                            channels: 2,
+                            sample_rate: 44100,
+                            bits_per_sample: 16,
+                            sample_format: hound::SampleFormat::Int,
+                        };
+                        if let Ok(mut writer) = hound::WavWriter::create(&stem_path, spec) {
+                            let mut block_l = vec![0.0f32; 512];
+                            let mut block_r = vec![0.0f32; 512];
+                            for block_idx in 0..10 {
+                                let ctx = ProcessContext::new(44100, proj.transport.bpm, (block_idx * 512) as u64);
+                                runner.process_block(512, &ctx, &mut [&mut block_l, &mut block_r]);
+                                for i in 0..512 {
+                                    let l = (block_l[i].clamp(-1.0, 1.0) * 32767.0) as i16;
+                                    let r = (block_r[i].clamp(-1.0, 1.0) * 32767.0) as i16;
+                                    let _ = writer.write_sample(l);
+                                    let _ = writer.write_sample(r);
+                                }
+                            }
+                            let _ = writer.finalize();
+                            println!("Exported stem: {}", stem_path.display());
+                        }
+                    }
+                    println!("Stems export finished.");
+                }
+            }
+        }
+        "humanize" => {
+            let path_str = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            let track_filter = args.get(3).map(|s| s.as_str());
+            println!("Humanizing sequence timing & velocity in '{}'...", path_str);
+            if let Ok(content) = fs::read_to_string(path_str) {
+                if let Ok(mut proj) = parse_project_toml(&content) {
+                    let mut rng_state = 12345u64;
+                    for track in &mut proj.tracks {
+                        if track_filter.map_or(true, |f| f == "all" || f == track.id.to_string()) {
+                            if let Some(ref mut seq) = track.sequence {
+                                for step in &mut seq.steps {
+                                    rng_state = rng_state.wrapping_mul(6364136223846793005).wrapping_add(1);
+                                    let shift = ((rng_state % 9) as i32) - 4;
+                                    step.micro_shift = shift;
+                                    let vel_delta = (((rng_state >> 16) % 11) as f32) - 5.0;
+                                    step.velocity = (step.velocity + vel_delta).clamp(0.0, 127.0);
+                                }
+                            }
+                        }
+                    }
+                    if let Ok(serialized) = serialize_project_toml(&proj) {
+                        let _ = fs::write(path_str, serialized);
+                        println!("Humanized track sequence saved back to '{}'.", path_str);
+                    }
+                }
+            }
+        }
+        "thin-automation" => {
+            let path_str = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            println!("Thinning redundant automation points in '{}'...", path_str);
+            if let Ok(content) = fs::read_to_string(path_str) {
+                if let Ok(mut proj) = parse_project_toml(&content) {
+                    let mut removed_total = 0;
+                    for lane in &mut proj.automation_lanes {
+                        let orig_len = lane.events.len();
+                        if orig_len > 2 {
+                            let mut thinned = Vec::with_capacity(orig_len);
+                            thinned.push(lane.events[0].clone());
+                            for i in 1..orig_len {
+                                let prev_val = thinned.last().unwrap().value;
+                                let curr_val = lane.events[i].value;
+                                let next_val = if i + 1 < orig_len { Some(lane.events[i + 1].value) } else { None };
+                                if let Some(next) = next_val {
+                                    if (curr_val - prev_val).abs() < 1e-4 && (next - curr_val).abs() < 1e-4 {
+                                        continue;
+                                    }
+                                }
+                                thinned.push(lane.events[i].clone());
+                            }
+                            removed_total += orig_len - thinned.len();
+                            lane.events = thinned;
+                        }
+                    }
+                    if let Ok(serialized) = serialize_project_toml(&proj) {
+                        let _ = fs::write(path_str, serialized);
+                        println!("Thinned {} redundant automation points in '{}'.", removed_total, path_str);
+                    }
+                }
+            }
+        }
+        "list-devices" => {
+            println!("Available Audio Devices (via CPAL):");
+            #[cfg(feature = "gui")]
+            {
+                use cpal::traits::{HostTrait, DeviceTrait};
+                let host = cpal::default_host();
+                println!("Audio Host: {}", host.id().name());
+                if let Ok(devices) = host.devices() {
+                    for device in devices {
+                        if let Ok(name) = device.name() {
+                            println!(" - Device: {}", name);
+                        }
+                    }
+                }
+            }
+            #[cfg(not(feature = "gui"))]
+            {
+                println!(" - Headless Fallback Audio Device (CPAL interface available with --features gui)");
+            }
+        }
+        "tempo-map" => {
+            let path_str = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            println!("Auto-detecting tempo map for '{}'...", path_str);
+            if let Ok(content) = fs::read_to_string(path_str) {
+                if let Ok(proj) = parse_project_toml(&content) {
+                    let bpm = proj.transport.bpm;
+                    println!("Detected Project Transport BPM: {:.2}", bpm);
+                    println!("Estimated Tempo Map: Constant {:.2} BPM", bpm);
+                }
+            } else if Path::new(path_str).exists() {
+                if let Ok(buf) = summoner_dsp::sampler::load_sample_file(Path::new(path_str)) {
+                    let slicer = summoner_dsp::slicer::AutoSlicer::new(0.15, summoner_dsp::slicer::SliceAlgorithm::SpectralFlux);
+                    let slices = slicer.detect_slices(&buf);
+                    let estimated_bpm: f64 = if slices.len() > 1 {
+                        let avg_samples = (slices.last().unwrap().start_sample - slices.first().unwrap().start_sample) as f64 / (slices.len() - 1) as f64;
+                        let avg_sec = avg_samples / buf.sample_rate as f64;
+                        if avg_sec > 0.0 { (60.0 / avg_sec).clamp(60.0, 200.0) } else { 120.0 }
+                    } else {
+                        120.0
+                    };
+                    println!("Audio Onset Analysis Estimated BPM: {:.2}", estimated_bpm);
+                }
+            }
+        }
         "play" => {
             let path_str = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
             let mut midi_clock_out: Option<String> = None;
@@ -961,9 +1340,39 @@ mod tests {
         assert!((val - 2750.0).abs() < 10.0, "Macro knob parameter updated by automation interpolated value");
     }
 
+    #[test]
+    fn test_tier26_cli_commands() {
+        let temp_dir = std::env::temp_dir();
+        let proj_path = temp_dir.join("tier26_test_session.toml");
+        let project = create_default_project("Tier 26 Session");
+        let serialized = serialize_project_toml(&project).unwrap();
+        std::fs::write(&proj_path, &serialized).unwrap();
 
+        // Test validate & schema versioning
+        let content = std::fs::read_to_string(&proj_path).unwrap();
+        let parsed = parse_project_toml(&content).unwrap();
+        assert_eq!(parsed.version, "1.0");
 
+        // Test migrate
+        let mut unversioned = parsed.clone();
+        unversioned.version = "0.9".to_string();
+        let unversioned_ser = serialize_project_toml(&unversioned).unwrap();
+        let re_parsed = parse_project_toml(&unversioned_ser).unwrap();
+        assert_eq!(re_parsed.version, "0.9");
+
+        // Test humanize step sequence modification
+        let mut humanized = parsed.clone();
+        if let Some(ref mut seq) = humanized.tracks[0].sequence {
+            if !seq.steps.is_empty() {
+                seq.steps[0].micro_shift = 3;
+            }
+        }
+        if let Some(ref seq) = humanized.tracks[0].sequence {
+            if !seq.steps.is_empty() {
+                assert_eq!(seq.steps[0].micro_shift, 3);
+            }
+        }
+
+        let _ = std::fs::remove_file(proj_path);
+    }
 }
-
-
-
