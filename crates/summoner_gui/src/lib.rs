@@ -21,6 +21,7 @@ pub mod visualizer;
 pub mod ascii_renderer;
 pub mod waveform_cache;
 pub mod platform;
+pub mod gpu_waveform;
 
 #[cfg(feature = "gui")]
 pub mod command_palette;
@@ -40,6 +41,10 @@ pub mod param_controls;
 pub mod tier32_tests;
 #[cfg(feature = "gui")]
 pub mod tier33_tests;
+#[cfg(feature = "gui")]
+pub mod tier33_advanced_tests;
+#[cfg(feature = "gui")]
+pub mod tier34_tests;
 
 #[cfg(feature = "gui")]
 pub fn launch(project: summoner_project::schema::ProjectConfig, param_bus: std::sync::Arc<summoner_core::param_bus::ParamBus>) {
