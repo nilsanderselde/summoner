@@ -29,6 +29,7 @@ pub enum ViewMode {
     NodeGraph(u64),
     Mixer,
     Performance,
+    CoProducer,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
@@ -138,6 +139,7 @@ pub struct SummonerApp {
     pub last_auto_save: std::time::Instant,
     pub auto_save_interval_secs: u64,
     pub recent_projects: Vec<PathBuf>,
+    pub co_producer_state: crate::views::co_producer::CoProducerState,
     pub patch_browser_state: crate::views::patch_browser::PatchBrowserState,
     pub show_patch_browser: bool,
 }
@@ -213,6 +215,7 @@ impl SummonerApp {
             recent_projects: Vec::new(),
             patch_browser_state: crate::views::patch_browser::PatchBrowserState::default(),
             show_patch_browser: true,
+            co_producer_state: crate::views::co_producer::CoProducerState::default(),
         };
 
         if let Some(state) = GuiState::load() {
@@ -676,6 +679,7 @@ impl eframe::App for SummonerApp {
                 }
                 ui.selectable_value(&mut self.current_view, ViewMode::Mixer, "Console Mixer");
                 ui.selectable_value(&mut self.current_view, ViewMode::Performance, "Stage Performance");
+                ui.selectable_value(&mut self.current_view, ViewMode::CoProducer, "🤖 AI Co-Producer");
 
                 ui.separator();
 
@@ -1118,6 +1122,9 @@ impl eframe::App for SummonerApp {
                 }
                 ViewMode::Performance => {
                     show_stage_view(ui, &mut self.stage_view, &mut self.transport);
+                }
+                ViewMode::CoProducer => {
+                    crate::views::co_producer::show_co_producer_panel(ui, &self.project, &mut self.co_producer_state);
                 }
             }
 

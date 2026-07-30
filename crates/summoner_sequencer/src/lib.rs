@@ -16,6 +16,10 @@ pub mod generative;
 pub mod pattern;
 pub mod automation_timeline;
 pub mod timeline;
+pub mod groove;
+
+pub use groove::{apply_groove_quantize, GrooveTemplate};
+pub use generative::{generate_melody_onnx, ONNX_MELODY_MODEL_BYTES};
 
 #[cfg(test)]
 mod tests {

@@ -42,12 +42,14 @@ pub mod ring_mod;
 pub mod meter;
 pub mod granular;
 pub mod drum_machine;
+pub mod stem_separator;
 
 pub use composites::{
     AetherSynth, AtmosphericPadSynth, CyberpunkSubSynth, FmOperatorPair, GlitchAetherMachine,
     GlitchPercussionSynth, PluckSynth, SamplerDevice,
 };
 pub use drum_machine::{DrumMachineDevice, DrumPad, MAX_PADS};
+pub use stem_separator::{StemSeparator, ONNX_STEM_SEPARATOR_MODEL_BYTES};
 pub use distortion::{DistortionNode, DistortionType};
 pub use effects::{EffectDelay as LegacyEffectDelay, EffectReverb as LegacyEffectReverb};
 pub use delay::EffectDelay;
@@ -66,7 +68,7 @@ pub use oscillators::{NoiseGen, NoiseType, OscPulse, OscSaw, OscSine, OscTriangl
 pub use traits::{ProcessorNodeAdapter, SignalProcessor};
 pub use waveguide::KarplusStrongString;
 pub use sampler::{SampleBuffer, SamplerNode};
-pub use slicer::{AutoSlicer, SliceMarker};
+pub use slicer::{AutoSlicer, SliceMarker, ONNX_TRANSIENT_MODEL_BYTES};
 pub use oversampling::Oversampler;
 pub use biquad::{FilterBiquad, FilterType};
 pub use compressor::CompressorNode;

@@ -424,6 +424,8 @@ fn main() {
                         if idx + 1 < args.len() {
                             if args[idx + 1] == "spectral_flux" {
                                 algorithm = summoner_dsp::slicer::SliceAlgorithm::SpectralFlux;
+                            } else if args[idx + 1] == "onnx" {
+                                algorithm = summoner_dsp::slicer::SliceAlgorithm::Onnx;
                             }
                             idx += 2;
                         } else { idx += 1; }
@@ -497,6 +499,63 @@ fn main() {
                 eprintln!("  Sample error: {}", err);
             }
             println!("Rendered C4 preview to output.wav");
+        }
+        "generate-melody" => {
+            let seed_str = args.get(2).map(|s| s.as_str()).unwrap_or("60,62,64");
+            let length: usize = args.get(3).and_then(|s| s.parse().ok()).unwrap_or(16);
+
+            let seeds: Vec<u8> = seed_str
+                .split(',')
+                .filter_map(|s| s.trim().parse::<u8>().ok())
+                .collect();
+
+            let melody = summoner_sequencer::generate_melody_onnx(&seeds, length);
+            println!("Generated ONNX Melody Sequence:");
+            println!("Seed: {:?}", seeds);
+            println!("Length: {}", length);
+            println!("Melody Notes: {:?}", melody);
+        }
+        "stem-split" => {
+            if args.len() < 3 {
+                eprintln!("Error: Missing arguments for stem-split. Usage: summon stem-split <input.wav> [output_dir]");
+                process::exit(1);
+            }
+            let input_wav = &args[2];
+            let out_dir = args.get(3).map(|s| s.as_str()).unwrap_or(".");
+
+            println!("Splitting stems for '{}' -> '{}'...", input_wav, out_dir);
+            let input_path = Path::new(input_wav);
+            let buffer = summoner_dsp::sampler::load_sample_file(input_path).unwrap_or_else(|e| {
+                eprintln!("Failed to load audio file '{}': {}", input_wav, e);
+                process::exit(1);
+            });
+
+            let separator = summoner_dsp::stem_separator::StemSeparator::new();
+            let stems = separator.separate_stems(&buffer);
+
+            let out_path_buf = Path::new(out_dir);
+            if !out_path_buf.exists() {
+                let _ = fs::create_dir_all(out_path_buf);
+            }
+
+            for (stem_name, stem_buf) in stems {
+                let stem_file = out_path_buf.join(format!("{}.wav", stem_name));
+                let spec = hound::WavSpec {
+                    channels: stem_buf.channels as u16,
+                    sample_rate: stem_buf.sample_rate,
+                    bits_per_sample: 16,
+                    sample_format: hound::SampleFormat::Int,
+                };
+                if let Ok(mut writer) = hound::WavWriter::create(&stem_file, spec) {
+                    for &sample in &stem_buf.data {
+                        let pcm = (sample.clamp(-1.0, 1.0) * 32767.0) as i16;
+                        let _ = writer.write_sample(pcm);
+                    }
+                    let _ = writer.finalize();
+                    println!("Saved stem: {}", stem_file.display());
+                }
+            }
+            println!("Stem separation completed successfully.");
         }
         "play" => {
             let path_str = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");

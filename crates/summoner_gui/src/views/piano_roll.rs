@@ -35,6 +35,8 @@ pub struct PianoRollState {
     pub midi_chord_detect: bool,
     pub show_hertz: bool,
     pub drag_ramp_start: Option<(usize, f32, f32)>, // (start_step_idx, initial_velocity, initial_probability)
+    pub selected_groove_idx: usize,
+    pub groove_amount: f32,
 }
 
 impl Default for PianoRollState {
@@ -63,6 +65,8 @@ impl Default for PianoRollState {
             midi_chord_detect: false,
             show_hertz: false,
             drag_ramp_start: None,
+            selected_groove_idx: 0,
+            groove_amount: 0.5,
         }
     }
 }
@@ -401,6 +405,44 @@ pub fn show_piano_roll(
             }
         }
         ui.add(egui::Slider::new(&mut state.mutate_amount, 0.0..=1.0).text("Mutate Amt"));
+        ui.separator();
+
+        if ui.button("🤖 AI Suggest").clicked() {
+            push_history(state, &sequence.steps);
+            let active_notes: Vec<u8> = sequence.steps.iter().filter(|s| s.active).map(|s| s.note as u8).collect();
+            let seed_notes = if active_notes.is_empty() { vec![60, 62, 64] } else { active_notes };
+            let gen_melody = summoner_sequencer::generate_melody_onnx(&seed_notes, sequence.steps.len());
+            for (idx, &pitch) in gen_melody.iter().enumerate() {
+                if idx < sequence.steps.len() {
+                    sequence.steps[idx].note = pitch as f64;
+                    sequence.steps[idx].active = true;
+                    if state.lock_scale {
+                        sequence.steps[idx].note = snap_pitch_to_scale(sequence.steps[idx].note, tuning, harmonic_ctx);
+                    }
+                }
+            }
+        }
+
+        ui.label("Groove:");
+        let groove_templates = [
+            ("Funk", summoner_sequencer::GrooveTemplate::Funk),
+            ("House", summoner_sequencer::GrooveTemplate::House),
+            ("HipHop", summoner_sequencer::GrooveTemplate::HipHop),
+            ("BossaNova", summoner_sequencer::GrooveTemplate::BossaNova),
+        ];
+        egui::ComboBox::from_id_source("piano_roll_groove_combo")
+            .selected_text(groove_templates[state.selected_groove_idx % 4].0)
+            .show_ui(ui, |ui| {
+                for (idx, (name, _)) in groove_templates.iter().enumerate() {
+                    ui.selectable_value(&mut state.selected_groove_idx, idx, *name);
+                }
+            });
+        if ui.button("🎵 Apply Groove").clicked() {
+            push_history(state, &sequence.steps);
+            let template = groove_templates[state.selected_groove_idx % 4].1;
+            summoner_sequencer::apply_groove_quantize(&mut sequence.steps, template, state.groove_amount);
+        }
+        ui.add(egui::Slider::new(&mut state.groove_amount, 0.0..=1.0).text("Amt"));
     });
 
     // Header toolbar - Row 3 (Arpeggiator, Chord Input & Note Length Quick Buttons - Step 458-461)

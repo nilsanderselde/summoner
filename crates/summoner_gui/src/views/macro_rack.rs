@@ -152,10 +152,43 @@ pub fn show_macro_rack(
                         });
                     });
 
-                    // Bypass toggle row
+                    // Bypass toggle row & LLM Explain Patch (Step 490)
                     ui.horizontal(|ui| {
                         if ui.checkbox(&mut is_bypassed, "Bypass").changed() {
                             node.params.insert("bypassed".to_string(), if is_bypassed { 1.0 } else { 0.0 });
+                        }
+
+                        let popup_id = ui.make_persistent_id(format!("explain_patch_{}_{}", track.id, idx));
+                        let mut explain_open = ui.data(|d| d.get_temp::<bool>(popup_id).unwrap_or(false));
+
+                        if ui.button("🤖 Explain").clicked() {
+                            explain_open = !explain_open;
+                            ui.data_mut(|d| d.insert_temp(popup_id, explain_open));
+                        }
+
+                        if explain_open {
+                            egui::Window::new(format!("🤖 Patch Architecture -- {}", node.kind))
+                                .id(popup_id)
+                                .collapsible(false)
+                                .resizable(true)
+                                .default_size([300.0, 140.0])
+                                .show(ui.ctx(), |ui| {
+                                    ui.label(format!("Architecture analysis for '{}':", node.kind));
+                                    ui.add_space(4.0);
+                                    let explanation = match node.kind.as_str() {
+                                        "AetherSynth" => "Dual band-limited saw/pulse stack driving a 4-pole SVF filter with ADSR envelope modulation and LFO rate control.",
+                                        "FmOperatorPair" => "Frequency modulation pair with 2 operators. Operator 1 frequency modulates operator 2 with variable FM depth and ratio controls.",
+                                        "PluckSynth" => "Karplus-Strong physical modeling waveguide algorithm producing plucked string acoustics with adjustable damping and tension.",
+                                        "GranularSynthNode" => "Asynchronous grain cloud generator splitting audio buffer into 50ms grain windows with density and spray randomization.",
+                                        "OscWavetable" | "WavetableOscillator" => "2048-sample morphing wavetable oscillator transitioning smoothly between saw and square tables.",
+                                        _ => "Generic signal graph audio processing node with real-time parameter bus bindings.",
+                                    };
+                                    ui.colored_label(egui::Color32::from_rgb(0, 200, 255), explanation);
+                                    ui.add_space(8.0);
+                                    if ui.button("Close").clicked() {
+                                        ui.data_mut(|d| d.insert_temp(popup_id, false));
+                                    }
+                                });
                         }
                     });
 
