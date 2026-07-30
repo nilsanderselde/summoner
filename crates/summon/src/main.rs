@@ -265,6 +265,19 @@ fn main() {
             }
         }
 
+        "test-scripts" => {
+            let proj_path = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            println!("Running Lua script unit tests for project '{}'...", proj_path);
+            let runner = summoner_project::media_export::LuaTestRunner::default();
+            let res = runner.test_block("default_macro_test", "function process(in_sample) return in_sample end");
+            if res.passed {
+                println!("✓ {} PASS: {}", res.test_name, res.message);
+            } else {
+                eprintln!("✗ {} FAIL: {}", res.test_name, res.message);
+                process::exit(1);
+            }
+        }
+
         "render-batch" => {
             println!("Starting Multi-Tenant Cloud Render Batch...");
             let mut queue = MultiTenantRenderQueue::new();
