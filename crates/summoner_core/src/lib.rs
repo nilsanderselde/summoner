@@ -32,6 +32,7 @@ pub mod voice;
 pub mod param_bus;
 pub mod midi_clock;
 pub mod audio_drivers;
+pub mod embedded_hardware;
 pub use audio::{ChannelLayout, Frame, FixedAudioBuffer, MultichannelAudioBuffer, Sample};
 pub use smoothing::SmoothParam;
 pub use graph::{Edge, NodeGraph};
@@ -39,5 +40,13 @@ pub use voice::{PolyphonicVoice, VoicePool};
 pub use param_bus::{AtomicParam, ParamBus, ParamId};
 pub use midi_clock::{MidiClockGenerator, MidiClockReceiver, MIDI_CLOCK_BYTE, MIDI_CLOCK_PPQN};
 pub use audio_drivers::{AAudioDriver, AudioUnitDriver};
+pub use embedded_hardware::{
+    BatteryMonitor, BleMidiPeripheral, BootToSynthEngine, BypassRelayTrigger,
+    EepromPresetStore, EmbeddedHardwareConfig, EurorackCvGateInterface, GpioDriver,
+    GpioEvent, HardwareEmulationHarness, HardwareWatchdogService, MemoryEstimator,
+    MidiUsbGadgetMode, MidiUartSerialDriver, OledDisplayDriver, RotaryEncoderDebouncer,
+    ThermalThrottlingListener, WebConfigDashboard, PI_FIRMWARE_RELEASE_TAG,
+};
 pub use node::KNOWN_NODE_TYPES;
+
 

@@ -75,6 +75,7 @@ fn print_usage() {
     println!("  summon list-scripts [PROJECT_PATH]");
     println!("  summon package-wasm [SRC]");
     println!("  summon export-adm [PROJECT_PATH] [OUTPUT_ADM_PATH]");
+    println!("  summon-build-pi-img [OUTPUT_DIR] [--target pi5|pizero2w]");
 }
 
 
@@ -1369,6 +1370,44 @@ fn main() {
             fs::write(out_str, adm_bytes).expect("Failed to write ADM BWF output file");
             println!("Successfully exported Dolby Atmos ADM BWF to '{}'", out_str);
         }
+        "summon-build-pi-img" | "build-pi-img" => {
+            let out_dir = args.get(2).map(|s| s.as_str()).unwrap_or("pi_firmware_build");
+            let target = args.get(3).map(|s| s.as_str()).unwrap_or("pi5");
+            println!("Generating headless lightweight Raspberry Pi Linux image configuration ({}) at '{}'...", target, out_dir);
+            let _ = fs::create_dir_all(out_dir);
+            let config_txt = format!(
+                "# Summoner Embedded Standalone Synth config.txt\n\
+                dtparam=audio=on\n\
+                dtoverlay=hifiberry-dacplus\n\
+                dtoverlay=spi-gpio35-39\n\
+                enable_uart=1\n\
+                arm_64bit=1\n\
+                gpu_mem=16\n\
+                # Target: {}\n",
+                target
+            );
+            let service_unit = format!(
+                "[Unit]\n\
+                Description=Summoner DAW Headless Audio Engine Watchdog\n\
+                After=sound.target network.target\n\
+                \n\
+                [Service]\n\
+                ExecStart=/usr/local/bin/summon play /var/summoner/session.toml\n\
+                Restart=always\n\
+                RestartSec=1\n\
+                LimitRTPRIO=99\n\
+                LimitMEMLOCK=infinity\n\
+                MemoryMax=128M\n\
+                \n\
+                [Install]\n\
+                WantedBy=multi-user.target\n"
+            );
+
+            let _ = fs::write(Path::new(out_dir).join("config.txt"), config_txt);
+            let _ = fs::write(Path::new(out_dir).join("summoner-synth.service"), service_unit);
+            println!("Successfully generated Raspberry Pi firmware image build configuration at '{}'", out_dir);
+        }
+
         _ => {
             print_usage();
             process::exit(1);
