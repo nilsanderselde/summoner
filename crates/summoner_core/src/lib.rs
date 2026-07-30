@@ -39,7 +39,10 @@ pub use graph::{Edge, NodeGraph};
 pub use voice::{PolyphonicVoice, VoicePool};
 pub use param_bus::{AtomicParam, ParamBus, ParamId};
 pub use midi_clock::{MidiClockGenerator, MidiClockReceiver, MIDI_CLOCK_BYTE, MIDI_CLOCK_PPQN};
-pub use audio_drivers::{AAudioDriver, AudioUnitDriver};
+pub use audio_drivers::{
+    AAudioDriver, AlsaDriver, AsapiDriver, AudioUnitDriver, NativeAudioDriver,
+    NativeAudioDriverTuner, WasapiDriver,
+};
 pub use embedded_hardware::{
     BatteryMonitor, BleMidiPeripheral, BootToSynthEngine, BypassRelayTrigger,
     EepromPresetStore, EmbeddedHardwareConfig, EurorackCvGateInterface, GpioDriver,
