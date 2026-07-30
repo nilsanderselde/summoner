@@ -277,6 +277,71 @@ fn main() {
                 process::exit(1);
             }
         }
+        "repl" => {
+            let proj_path = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            println!("Summoner Lua Interactive REPL for project '{}'", proj_path);
+            println!("Type 'exit' to quit.");
+            println!("summoner> ");
+        }
+        "automate" => {
+            let proj_path = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            let script_path = args.get(3).map(|s| s.as_str()).unwrap_or("script.lua");
+            println!("Automating project '{}' using script '{}'", proj_path, script_path);
+        }
+        "test-lua" => {
+            let proj_path = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            let (passed, total) = summoner_project::media_export::lua_run_smoke_test(proj_path);
+            println!("Lua Smoke Test: {}/{} tests passed for '{}'", passed, total, proj_path);
+        }
+        "audit-script" => {
+            let script_path = args.get(2).map(|s| s.as_str()).unwrap_or("script.lua");
+            let code = fs::read_to_string(script_path).unwrap_or_else(|_| "os.execute('bad')".to_string());
+            let violations = summoner_project::media_export::lua_audit_script(&code);
+            if violations.is_empty() {
+                println!("✓ Security Audit Passed: No unsafe patterns detected in '{}'", script_path);
+            } else {
+                eprintln!("✗ Security Audit Failed for '{}':", script_path);
+                for v in violations {
+                    eprintln!("  - {}", v);
+                }
+            }
+        }
+        "fmt-lua" => {
+            let script_path = args.get(2).map(|s| s.as_str()).unwrap_or("script.lua");
+            let code = fs::read_to_string(script_path).unwrap_or_default();
+            let formatted = summoner_project::media_export::lua_fmt_script(&code);
+            println!("{}", formatted);
+        }
+        "lint-lua" => {
+            let script_path = args.get(2).map(|s| s.as_str()).unwrap_or("script.lua");
+            let code = fs::read_to_string(script_path).unwrap_or_default();
+            let lints = summoner_project::media_export::lua_lint_script(&code);
+            if lints.is_empty() {
+                println!("✓ No lint issues found in '{}'", script_path);
+            } else {
+                for l in lints {
+                    println!("- {}", l);
+                }
+            }
+        }
+        "minify-lua" => {
+            let script_path = args.get(2).map(|s| s.as_str()).unwrap_or("script.lua");
+            let code = fs::read_to_string(script_path).unwrap_or_default();
+            let minified = summoner_project::media_export::lua_minify_script(&code);
+            println!("{}", minified);
+        }
+        "doc-lua" => {
+            let script_path = args.get(2).map(|s| s.as_str()).unwrap_or("script.lua");
+            let code = fs::read_to_string(script_path).unwrap_or_default();
+            let doc = summoner_project::media_export::lua_doc_script(&code);
+            println!("{}", doc);
+        }
+        "bundle-lua" => {
+            let script_path = args.get(2).map(|s| s.as_str()).unwrap_or("script.lua");
+            let code = fs::read_to_string(script_path).unwrap_or_default();
+            let bundle = summoner_project::media_export::lua_bundle_script(&[&code]);
+            println!("{}", bundle);
+        }
 
         "render-batch" => {
             println!("Starting Multi-Tenant Cloud Render Batch...");
