@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-render-worker
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: summoner-render-worker
+  template:
+    metadata:
+      labels:
+        app: summoner-render-worker
+    spec:
+      containers:
+        - name: render-worker
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["summon", "render", "--daemon"]
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

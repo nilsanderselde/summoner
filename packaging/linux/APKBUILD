@@ -1,0 +1,14 @@
+# APKBUILD for Alpine Linux container package (Step 1091)
+pkgname=summoner-daw
+pkgver=1.1.0
+pkgrel=0
+pkgdesc="Deterministic microtonal DAW for containerized headless rendering"
+url="https://summoner.audio"
+arch="x86_64 aarch64"
+license="AGPL-3.0-or-later"
+depends="alsa-lib"
+makedepends="cargo rust"
+
+package() {
+  install -Dm755 "$builddir/target/release/summon" "$pkgdir/usr/bin/summon"
+}

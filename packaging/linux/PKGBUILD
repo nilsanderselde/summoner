@@ -1,0 +1,20 @@
+# PKGBUILD for Arch Linux AUR package summoner-daw-bin (Step 1090)
+pkgname=summoner-daw-bin
+pkgver=1.1.0
+pkgrel=1
+pkgdesc="Deterministic microtonal DAW and headless synthesizer engine"
+arch=('x86_64' 'aarch64')
+url="https://summoner.audio"
+license=('AGPL3')
+depends=('alsa-lib' 'jack' 'fontconfig' 'freetype2')
+provides=('summoner-daw' 'summon')
+conflicts=('summoner-daw')
+
+build() {
+  echo "Building Summoner DAW release binaries..."
+}
+
+package() {
+  install -Dm755 "${srcdir}/summon" "${pkgdir}/usr/bin/summon"
+  install -Dm755 "${srcdir}/summoner_gui" "${pkgdir}/usr/bin/summoner_gui"
+}

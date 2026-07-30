@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Summoner DAW - Interactive Live Wasm Playground</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 2rem; }
+    h1 { color: #38bdf8; }
+    #canvas-container { margin-top: 1rem; border: 1px solid #334155; border-radius: 8px; padding: 1rem; background: #1e293b; }
+    pre { background: #020617; padding: 1rem; border-radius: 6px; color: #a5f3fc; }
+  </style>
+</head>
+<body>
+  <h1>Summoner DAW Live WebAssembly Playground</h1>
+  <p>Test microtonal DSP synthesis, N-EDO tuning scale generators, and zero-allocation audio graph evaluation in your web browser.</p>
+  <div id="canvas-container">
+    <h3>Wasm Audio Context Status: <span id="status" style="color: #4ade80;">Active (48.0 kHz)</span></h3>
+    <pre><code>// Live Lua DSP Playground snippet
+function process_block(input, output)
+    for i = 1, #input do
+        output[i] = math.sin(i * 0.1) * 0.5
+    end
+end</code></pre>
+  </div>
+</body>
+</html>

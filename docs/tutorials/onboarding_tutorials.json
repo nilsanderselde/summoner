@@ -1,0 +1,23 @@
+{
+  "version": "1.1.0",
+  "tutorials": [
+    {
+      "id": "tut-01",
+      "title": "Getting Started with Microtonal N-EDO Synthesizer Routing",
+      "url": "https://summoner.audio/tutorials/01_microtonal_routing.mp4",
+      "duration_sec": 420
+    },
+    {
+      "id": "tut-02",
+      "title": "Live Lua Device Scripting & Custom DSP Filters",
+      "url": "https://summoner.audio/tutorials/02_lua_dsp_scripting.mp4",
+      "duration_sec": 580
+    },
+    {
+      "id": "tut-03",
+      "title": "3D Spatial Panning & Dolby Atmos Stem Export",
+      "url": "https://summoner.audio/tutorials/03_spatial_panning_atmos.mp4",
+      "duration_sec": 650
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+replicaCount: 3
+
+image:
+  repository: summoner/daw
+  tag: "v1.1.0"
+  pullPolicy: IfNotPresent
+
+resources:
+  limits:
+    cpu: "2000m"
+    memory: "2Gi"
+  requests:
+    cpu: "500m"
+    memory: "512Mi"
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 20
+  targetCPUUtilizationPercentage: 80
