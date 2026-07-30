@@ -52,8 +52,10 @@ pub mod multiband_compressor;
 pub mod tape_saturation;
 pub mod tube_saturation;
 pub mod console_emulation;
+pub mod track_dsp;
 
 pub use sample_editor::*;
+pub use track_dsp::*;
 pub use multiband_compressor::MultibandCompressorNode;
 pub use tape_saturation::TapeSaturationNode;
 pub use tube_saturation::TubeSaturationNode;

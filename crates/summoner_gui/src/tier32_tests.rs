@@ -1008,7 +1008,243 @@ params = { freq = 220.0 }"#;
         let wet = [0.5, 0.5];
         assert_eq!(bypass_mgr.process_chain(&dry, &wet), &[1.0, 2.0]);
     }
+
+    #[test]
+    fn test_step681_step682_clean_and_collect_project_assets() {
+        use summoner_project::{clean_project, collect_and_save, schema::{AssetConfig, ProjectConfig}};
+        let temp_dir = std::env::temp_dir().join("summoner_test_project_assets");
+        let assets_dir = temp_dir.join("assets");
+        let _ = std::fs::create_dir_all(&assets_dir);
+
+        let file_used = assets_dir.join("kick.wav");
+        let file_unused = assets_dir.join("unused_snare.wav");
+        let _ = std::fs::write(&file_used, b"RIFF....WAVEfmt ");
+        let _ = std::fs::write(&file_unused, b"RIFF....WAVEfmt ");
+
+        let mut project = ProjectConfig::default();
+        project.assets.push(AssetConfig {
+            id: "1".to_string(),
+            hash: "123".to_string(),
+            path: "assets/kick.wav".to_string(),
+            auto_slice: false,
+            slice_threshold: 0.15,
+        });
+
+        // Step 681: Clean Project
+        let removed = clean_project(&mut project, &temp_dir).unwrap();
+        assert_eq!(removed, vec!["unused_snare.wav"]);
+        assert!(!file_unused.exists());
+        assert!(file_used.exists());
+
+        // Step 682: Collect and Save
+        let external_file = temp_dir.join("external_synth.wav");
+        let _ = std::fs::write(&external_file, b"RIFF....WAVEfmt ");
+        project.assets.push(AssetConfig {
+            id: "2".to_string(),
+            hash: "456".to_string(),
+            path: external_file.to_string_lossy().to_string(),
+            auto_slice: false,
+            slice_threshold: 0.15,
+        });
+
+        let copied = collect_and_save(&mut project, &temp_dir).unwrap();
+        assert_eq!(copied, 1);
+        assert_eq!(project.assets[1].path, "assets/external_synth.wav");
+
+        let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_step683_freeze_and_unfreeze_track() {
+        use summoner_project::{freeze_track, unfreeze_track, schema::TrackConfig};
+        let mut track = TrackConfig::default();
+        assert!(!track.is_frozen);
+        assert!(track.frozen_buffer.is_none());
+
+        let audio = vec![0.1, 0.2, 0.3, 0.4];
+        freeze_track(&mut track, audio.clone());
+        assert!(track.is_frozen);
+        assert_eq!(track.frozen_buffer, Some(audio));
+
+        unfreeze_track(&mut track);
+        assert!(!track.is_frozen);
+        assert!(track.frozen_buffer.is_none());
+    }
+
+    #[test]
+    fn test_step684_parallel_compression_template() {
+        use summoner_project::{apply_parallel_compression_template, schema::ProjectConfig, create_default_project};
+        let mut project = create_default_project("Parallel Comp Test");
+        let initial_count = project.tracks.len();
+        let target_id = project.tracks[0].id;
+
+        let bus_id = apply_parallel_compression_template(&mut project, target_id).unwrap();
+        assert_eq!(project.tracks.len(), initial_count + 1);
+        let bus_track = project.tracks.iter().find(|t| t.id == bus_id).unwrap();
+        assert!(bus_track.name.contains("Comp"));
+        assert_eq!(bus_track.nodes[0].node_type, "CompressorNode");
+    }
+
+    #[test]
+    fn test_step685_step686_sidechain_and_bus_routing() {
+        use summoner_project::{set_sidechain_routing, route_track_to_bus, schema::TrackConfig};
+        let mut track = TrackConfig::default();
+
+        set_sidechain_routing(&mut track, Some(42));
+        assert_eq!(track.sidechain_source_track_id, Some(42));
+
+        route_track_to_bus(&mut track, Some("Drums Bus".to_string()));
+        assert_eq!(track.bus_target, Some("Drums Bus".to_string()));
+    }
+
+    #[test]
+    fn test_step687_phase_flip() {
+        use summoner_dsp::apply_phase_flip;
+        let mut samples = vec![0.5, -0.8, 0.0, 1.0];
+        apply_phase_flip(&mut samples);
+        assert_eq!(samples, vec![-0.5, 0.8, -0.0, -1.0]);
+    }
+
+    #[test]
+    fn test_step688_step689_dc_block_and_quick_filters() {
+        use summoner_dsp::{DcBlockFilter, LowCutFilter, HighCutFilter};
+
+        // Step 688: DC Block
+        let mut dc_block = DcBlockFilter::new();
+        let mut dc_signal = vec![1.0; 100];
+        dc_block.process_buffer(&mut dc_signal);
+        assert!(dc_signal.last().unwrap().abs() < 0.1);
+
+        // Step 689: Low Cut & High Cut filters
+        let mut low_cut = LowCutFilter::new(100.0);
+        let mut high_cut = HighCutFilter::new(5000.0);
+        let out_lc = low_cut.process_sample(1.0, 44100);
+        let out_hc = high_cut.process_sample(1.0, 44100);
+        assert!(out_lc.is_finite());
+        assert!(out_hc.is_finite());
+    }
+
+    #[test]
+    fn test_step690_auto_level_track_gain() {
+        use summoner_project::{auto_level_track_gain, schema::TrackConfig};
+        let mut track = TrackConfig { gain: 1.0, ..Default::default() };
+
+        // Current -18 LUFS, Target -14 LUFS (+4 dB)
+        auto_level_track_gain(&mut track, -18.0, -14.0);
+        let expected_gain = 10.0f32.powf(4.0 / 20.0);
+        assert!((track.gain - expected_gain).abs() < 1e-3);
+    }
+
+    #[test]
+    fn test_step691_spectrum_matching_gain_offsets() {
+        use summoner_dsp::compute_spectrum_matching_gain_offsets;
+        let source = vec![0.1, 0.5, 1.0];
+        let target = vec![0.2, 0.5, 0.5];
+        let offsets = compute_spectrum_matching_gain_offsets(&source, &target);
+        assert_eq!(offsets.len(), 3);
+        assert!((offsets[0] - 6.02).abs() < 0.1); // +6dB
+        assert!((offsets[1] - 0.0).abs() < 0.1);   // 0dB
+        assert!((offsets[2] - (-6.02)).abs() < 0.1); // -6dB
+    }
+
+    #[test]
+    fn test_step692_stereo_correlation_meter() {
+        use summoner_dsp::compute_stereo_correlation;
+        let l = vec![1.0, 0.5, -0.5, -1.0];
+        let r_in_phase = vec![1.0, 0.5, -0.5, -1.0];
+        let r_out_of_phase = vec![-1.0, -0.5, 0.5, 1.0];
+
+        let corr_in = compute_stereo_correlation(&l, &r_in_phase);
+        let corr_out = compute_stereo_correlation(&l, &r_out_of_phase);
+        assert!((corr_in - 1.0).abs() < 1e-3);
+        assert!((corr_out - (-1.0)).abs() < 1e-3);
+    }
+
+    #[test]
+    fn test_step693_step694_master_and_track_gain_trims() {
+        use summoner_dsp::{apply_master_trim, apply_input_gain, apply_output_gain};
+
+        let mut samples_master = vec![1.0, 1.0];
+        apply_master_trim(&mut samples_master, 6.0206);
+        assert!((samples_master[0] - 2.0).abs() < 1e-3);
+
+        let mut samples_in = vec![1.0, 1.0];
+        apply_input_gain(&mut samples_in, -6.0206);
+        assert!((samples_in[0] - 0.5).abs() < 1e-3);
+
+        let mut samples_out = vec![1.0, 1.0];
+        apply_output_gain(&mut samples_out, 0.0);
+        assert_eq!(samples_out, vec![1.0, 1.0]);
+    }
+
+    #[test]
+    fn test_step695_bounce_track_to_new_track() {
+        use summoner_project::{bounce_track_to_new_track, create_default_project};
+        let mut project = create_default_project("Bounce Test");
+        let source_id = project.tracks[0].id;
+        let rendered = vec![0.0; 1000];
+
+        let bounced_id = bounce_track_to_new_track(&mut project, source_id, rendered.clone()).unwrap();
+        let bounced = project.tracks.iter().find(|t| t.id == bounced_id).unwrap();
+        assert!(bounced.name.contains("Bounced"));
+        assert!(bounced.is_frozen);
+        assert_eq!(bounced.frozen_buffer, Some(rendered));
+    }
+
+    #[test]
+    fn test_step696_to_step700_sample_editor_tools() {
+        use summoner_dsp::{
+            audition_sample_at_c4, trim_sample, normalize_sample, reverse_sample,
+            fade_in_sample, fade_out_sample, remove_dc_offset_sample, crossfade_sample_loop,
+            chop_sample_to_pads, SampleBuffer, SampleEditor,
+        };
+
+        // Step 696: Audition sample at C4
+        let buf = SampleBuffer::new(vec![0.5; 100], 44100, 1);
+        let auditioned = audition_sample_at_c4(&buf, 60);
+        assert_eq!(auditioned.data.len(), 100);
+
+        // Step 697: Destructive editing
+        let mut data = vec![1.0, 2.0, 3.0, 4.0, 5.0];
+        trim_sample(&mut data, 1, 4);
+        assert_eq!(data, vec![2.0, 3.0, 4.0]);
+
+        normalize_sample(&mut data, 0.0); // 0 dB = 1.0 max peak
+        assert_eq!(*data.iter().max_by(|a, b| a.partial_cmp(b).unwrap()).unwrap(), 1.0);
+
+        reverse_sample(&mut data);
+        assert_eq!(data[0], 1.0);
+
+        fade_in_sample(&mut data, 2);
+        assert_eq!(data[0], 0.0);
+
+        fade_out_sample(&mut data, 2);
+        assert_eq!(*data.last().unwrap(), 0.0);
+
+        let mut dc_data = vec![2.0, 4.0, 6.0];
+        remove_dc_offset_sample(&mut dc_data);
+        assert_eq!(dc_data, vec![-2.0, 0.0, 2.0]);
+
+        // Step 698: Sample crossfade loop
+        let mut loop_data = vec![0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8];
+        crossfade_sample_loop(&mut loop_data, 2, 6, 2);
+        assert_eq!(loop_data.len(), 8);
+
+        // Step 699: SampleMarker editor
+        let mut editor = SampleEditor::new();
+        editor.add_marker(100, "Transient 1");
+        editor.add_marker(50, "Transient 0");
+        assert_eq!(editor.markers[0].label, "Transient 0");
+        assert!(editor.move_marker(0, 200));
+        assert!(editor.remove_marker(0));
+
+        // Step 700: Chop to pads
+        let pads_signal = vec![0.1; 400];
+        let regions = chop_sample_to_pads(&pads_signal, 44100, 4);
+        assert_eq!(regions.len(), 4);
+    }
 }
+
 
 
 

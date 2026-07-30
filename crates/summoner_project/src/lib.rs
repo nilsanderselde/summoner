@@ -19,6 +19,9 @@ pub mod preset;
 pub mod sfz;
 pub mod export;
 pub mod system_tools;
+pub mod project_tools;
+
+pub use project_tools::*;
 
 #[cfg(target_os = "windows")]
 #[link(name = "advapi32")]
