@@ -59,6 +59,7 @@ pub mod spatial_audio;
 pub mod ai_mixing;
 pub mod quantum_audio;
 pub mod neuro_synthesis;
+pub mod zero_gravity_fluid;
 
 pub use sample_editor::*;
 pub use track_dsp::*;
@@ -68,6 +69,7 @@ pub use spatial_audio::*;
 pub use ai_mixing::*;
 pub use quantum_audio::*;
 pub use neuro_synthesis::*;
+pub use zero_gravity_fluid::*;
 pub use multiband_compressor::MultibandCompressorNode;
 pub use tape_saturation::TapeSaturationNode;
 pub use tube_saturation::TubeSaturationNode;
