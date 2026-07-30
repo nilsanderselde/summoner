@@ -759,6 +759,134 @@ params = { freq = 220.0 }"#;
         state_new.show_whats_new = true;
         assert!(state_new.show_whats_new);
     }
+
+    #[test]
+    fn test_steps_721_to_740_system_tools_and_cloud() {
+        use summoner_project::system_tools::*;
+        use summoner_project::schema::ProjectConfig;
+        use std::path::PathBuf;
+
+        // Step 721: Automatic Update Checker
+        let mut checker = UpdateChecker::new("1.0.0");
+        assert!(checker.check_for_updates());
+        assert!(checker.update_available);
+        assert!(checker.notification_pending);
+        checker.dismiss_notification();
+        assert!(!checker.notification_pending);
+
+        // Step 722: One-Click Installer
+        let install_res = checker.install_update("1.1.0");
+        assert!(install_res.is_ok());
+        assert_eq!(checker.current_version, "1.1.0");
+
+        // Step 723: Rollback Option
+        let rollback_res = checker.rollback_update();
+        assert!(rollback_res.is_ok());
+        assert_eq!(checker.current_version, "1.0.0");
+
+        // Step 724: Crash Reporter
+        let report = CrashReport::generate("1.0.0", "Null pointer in DSP node");
+        assert!(report.anonymized);
+        assert!(report.send_anonymized().is_ok());
+
+        // Step 725: Opt-In Telemetry
+        let mut telem = TelemetryManager::new(true);
+        telem.track("button_click", "play_transport");
+        assert_eq!(telem.events.len(), 1);
+        let log = telem.export_log();
+        assert!(log.contains("play_transport"));
+
+        // Step 726: Privacy Policy
+        let policy = get_privacy_policy();
+        assert!(policy.contains("Privacy Policy"));
+
+        // Step 727: GDPR Compliance & Data Export
+        let gdpr_dump = GdprNotice::export_user_data(&telem, "theme=Dark");
+        assert!(gdpr_dump.contains("GDPR Compliance Notice"));
+
+        // Step 728: Factory Reset
+        let reset_settings = factory_reset_settings();
+        assert_eq!(reset_settings.theme, "Dark Hybrid");
+
+        // Step 729: Settings Backup & Restore ZIP
+        let backup_p = PathBuf::from("local/scratch/settings_test.zip");
+        let settings = SystemSettings::default();
+        settings.export_backup_zip(&backup_p).expect("Export settings ZIP");
+        let restored = SystemSettings::restore_backup_zip(&backup_p).expect("Restore settings ZIP");
+        assert_eq!(settings, restored);
+        let _ = std::fs::remove_file(&backup_p);
+
+        // Step 730: Account Panel & Login
+        let mut user = UserAccount::login("nils", "nils@example.com", "tok_9988");
+        assert!(user.is_logged_in);
+
+        // Step 731: Cloud Save & Restore
+        let proj = ProjectConfig::default();
+        let cloud_id = CloudProjectManager::cloud_save_project(&proj, &user).expect("Cloud save");
+        let restored_proj = CloudProjectManager::cloud_restore_project(&cloud_id, &user).expect("Cloud restore");
+        assert_eq!(restored_proj.name, proj.name);
+
+        // Step 732: Cloud Render Submission
+        let render_job = submit_cloud_render(&proj, "wav", &user).expect("Submit render");
+        assert_eq!(render_job.status, "Completed");
+
+        // Step 733: Cloud Collaboration
+        let mut collab = CollaborationSession::create_session("workspace-alpha", "nils");
+        collab.invite_member("alice");
+        assert_eq!(collab.members.len(), 2);
+        collab.remove_member("alice");
+        assert_eq!(collab.members.len(), 1);
+
+        // Step 734: Offline Mode Indicator
+        let net = NetworkStatus::check_status();
+        assert!(net.is_offline());
+        assert!(net.degrade_gracefully().contains("Offline mode active"));
+
+        // Step 735: Cloud Storage Quota Display
+        let quota_str = user.formatted_quota_display();
+        assert!(quota_str.contains("GB"));
+        user.logout();
+        assert!(!user.is_logged_in);
+
+        // Step 736: Plugin Marketplace & Installation
+        let mut market = PluginMarketplace::fetch_catalog();
+        assert!(!market.plugins.is_empty());
+        let install_msg = market.install_plugin("clap.surge_synth", &PathBuf::from("local/scratch")).expect("Install plugin");
+        assert!(install_msg.contains("Surge XT"));
+
+        // Step 737: Plugin Rating & Review
+        market.rate_plugin("clap.surge_synth", 5, "Awesome synth").expect("Rate plugin");
+        assert!(market.plugins[0].user_reviews.iter().any(|r| r.contains("Awesome synth")));
+
+        // Step 738: Plugin Sandbox
+        let sandbox = PluginSandbox::spawn_sandbox("clap.surge_synth");
+        let in_pcm = vec![0.5f32; 64];
+        let mut out_pcm = vec![0.0f32; 64];
+        sandbox.process_audio_sandboxed(&in_pcm, &mut out_pcm).expect("Sandbox process");
+        assert_eq!(in_pcm, out_pcm);
+
+        // Step 739: Plugin Crash Protection
+        let mut crash_guard = PluginCrashGuard::default();
+        let res_ok = crash_guard.execute_safe("clap.surge_synth", || Ok(()));
+        assert!(res_ok.is_ok());
+        let res_err = crash_guard.execute_safe("clap.buggy_plugin", || {
+            panic!("Plugin Segfault!");
+        });
+        assert!(res_err.is_err());
+        assert!(crash_guard.faulted_plugins.contains("clap.buggy_plugin"));
+
+        // Step 740: Plugin Latency Compensation
+        let mut lat_comp = PluginLatencyCompensation::default();
+        lat_comp.set_latency("plugin_a", 128);
+        lat_comp.set_latency("plugin_b", 32);
+        let delays = lat_comp.calculate_alignment_delays();
+        assert_eq!(*delays.get("plugin_b").unwrap(), 96);
+        assert_eq!(*delays.get("plugin_a").unwrap(), 0);
+
+        let mut buf_out = vec![0.0f32; 8];
+        PluginLatencyCompensation::apply_delay_compensation(&[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0], &mut buf_out, 2);
+        assert_eq!(buf_out, vec![0.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+    }
 }
 
 

@@ -10,6 +10,8 @@ repository.workspace = true
 summoner_core = { path = "../summoner_core" }
 blake3.workspace = true
 serde.workspace = true
+serde_json = "1.0"
+zip = "0.6"
 toml.workspace = true
 git2.workspace = true
 

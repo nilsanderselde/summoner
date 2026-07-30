@@ -18,6 +18,7 @@ pub mod schema;
 pub mod preset;
 pub mod sfz;
 pub mod export;
+pub mod system_tools;
 
 #[cfg(target_os = "windows")]
 #[link(name = "advapi32")]
