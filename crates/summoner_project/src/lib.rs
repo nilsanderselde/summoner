@@ -21,9 +21,11 @@ pub mod export;
 pub mod media_export;
 pub mod system_tools;
 pub mod project_tools;
+pub mod crdt;
 
 pub use project_tools::*;
 pub use media_export::*;
+pub use crdt::*;
 
 #[cfg(target_os = "windows")]
 #[link(name = "advapi32")]
