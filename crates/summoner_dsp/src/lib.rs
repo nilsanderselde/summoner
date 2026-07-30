@@ -43,6 +43,12 @@ pub mod meter;
 pub mod granular;
 pub mod drum_machine;
 pub mod stem_separator;
+pub mod plugin_host;
+
+pub use plugin_host::{
+    PluginAudioNode, PluginDescriptor, PluginFormat, PluginParamInfo, PluginStateConfig,
+    scan_plugin_directory,
+};
 
 pub use composites::{
     AetherSynth, AtmosphericPadSynth, CyberpunkSubSynth, FmOperatorPair, GlitchAetherMachine,

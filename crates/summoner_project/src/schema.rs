@@ -262,13 +262,30 @@ fn default_gain() -> f32 {
     1.0
 }
 
+/// Plugin state representation for project TOML session serialization (Step 510).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+pub struct PluginStateConfig {
+    pub plugin_name: String,
+    pub plugin_path: String,
+    pub format: String,
+    #[serde(default)]
+    pub is_bypassed: bool,
+    #[serde(default)]
+    pub state_base64: String,
+    #[serde(default)]
+    pub parameters: HashMap<String, f32>,
+}
+
 /// Node configuration in audio pipeline.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct NodeConfig {
     pub kind: String,
     #[serde(default)]
     pub params: HashMap<String, f32>,
+    #[serde(default)]
+    pub plugin_state: Option<PluginStateConfig>,
 }
+
 
 /// Polymetric sequence configuration for a track.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

@@ -467,6 +467,7 @@ mod tests {
                 summoner_project::schema::NodeConfig {
                     kind: "AetherSynth".to_string(),
                     params: std::collections::HashMap::new(),
+                    plugin_state: None,
                 }
             ],
             sequence: None,
@@ -503,14 +504,17 @@ mod tests {
                 summoner_project::schema::NodeConfig {
                     kind: "FmOperatorPair".to_string(),
                     params: std::collections::HashMap::new(),
+                    plugin_state: None,
                 },
                 summoner_project::schema::NodeConfig {
                     kind: "PluckSynth".to_string(),
                     params: std::collections::HashMap::new(),
+                    plugin_state: None,
                 },
                 summoner_project::schema::NodeConfig {
                     kind: "GranularSynthNode".to_string(),
                     params: std::collections::HashMap::new(),
+                    plugin_state: None,
                 },
             ],
             sequence: None,

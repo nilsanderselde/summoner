@@ -8,9 +8,12 @@ repository.workspace = true
 
 [dependencies]
 summoner_core = { path = "../summoner_core" }
+serde.workspace = true
 claxon = "0.4"
 hound = "3.5"
 wide = "0.7"
+clap-sys = "0.3"
+vst = "0.3"
 
 [dev-dependencies]
 criterion = "0.5"

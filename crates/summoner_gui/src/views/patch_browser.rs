@@ -290,6 +290,7 @@ pub fn show_patch_browser(
                 tr.nodes.push(NodeConfig {
                     kind: patch.device_kind.clone(),
                     params: std::collections::HashMap::new(),
+                    plugin_state: None,
                 });
                 state.status_text = Some(format!("Loaded patch '{}' into track '{}'", patch.name, tr.name));
             }
@@ -308,6 +309,7 @@ pub fn show_patch_browser(
                         ("freq".to_string(), 261.63),
                         ("morph".to_string(), 0.5),
                     ]),
+                    plugin_state: None,
                 });
                 state.status_text = Some(format!("Rendered 2048-sample wavetable into track '{}'", tr.name));
             }

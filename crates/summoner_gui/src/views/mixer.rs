@@ -308,6 +308,7 @@ pub fn show_mixer_impl(
                             tr.nodes.push(NodeConfig {
                                 kind: fx_kind.to_string(),
                                 params: HashMap::new(),
+                                plugin_state: None,
                             });
                         }
                         state.fx_popup_track_id = None;

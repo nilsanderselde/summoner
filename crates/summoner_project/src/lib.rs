@@ -101,10 +101,12 @@ pub fn create_project_from_template(name: &str, template_kind: &str) -> ProjectC
                     NodeConfig {
                         kind: "SineOscillatorNode".to_string(),
                         params: synth_params,
+                        plugin_state: None,
                     },
                     NodeConfig {
                         kind: "GainNode".to_string(),
                         params: gain_params.clone(),
+                        plugin_state: None,
                     },
                 ],
                 sequence: None,
@@ -204,10 +206,12 @@ pub fn create_project_from_template(name: &str, template_kind: &str) -> ProjectC
                     NodeConfig {
                         kind: "SineOscillatorNode".to_string(),
                         params: synth_params,
+                        plugin_state: None,
                     },
                     NodeConfig {
                         kind: "GainNode".to_string(),
                         params: gain_params,
+                        plugin_state: None,
                     },
                 ],
                 sequence: None,

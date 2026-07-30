@@ -549,6 +549,7 @@ impl eframe::App for SummonerApp {
                             track.nodes.push(summoner_project::schema::NodeConfig {
                                 kind: matched_kind.to_string(),
                                 params: std::collections::HashMap::new(),
+                                plugin_state: None,
                             });
                             self.current_view = ViewMode::NodeGraph(tid);
                         }

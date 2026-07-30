@@ -104,6 +104,37 @@ impl NodeFactory {
                 summoner_dsp::sampler::load_bank_buffers(&mut bank, base_dir);
                 Some(Box::new(ProcessorNodeAdapter::new(summoner_dsp::sampler::MultiSamplerNode::new(bank))))
             }
+            "PluginNode" | "VstPluginNode" | "ClapPluginNode" => {
+                let format = if config.kind.contains("Vst") {
+                    summoner_dsp::PluginFormat::Vst3
+                } else {
+                    summoner_dsp::PluginFormat::Clap
+                };
+                let descriptor = summoner_dsp::PluginDescriptor {
+                    name: config.params.get("name_hash").map(|_| "Plugin").unwrap_or("HostedPluginNode").to_string(),
+                    vendor: "ThirdParty".to_string(),
+                    format,
+                    path: std::path::PathBuf::from("plugins/hosted.vst3"),
+                    version: "1.0.0".to_string(),
+                    category: "Audio Effect".to_string(),
+                    num_inputs: 2,
+                    num_outputs: 2,
+                };
+                let mut node = summoner_dsp::PluginAudioNode::new(descriptor);
+                if let Some(ref ps) = config.plugin_state {
+                    let dsp_ps = summoner_dsp::PluginStateConfig {
+                        plugin_name: ps.plugin_name.clone(),
+                        plugin_path: ps.plugin_path.clone(),
+                        format: ps.format.clone(),
+                        is_bypassed: ps.is_bypassed,
+                        state_base64: ps.state_base64.clone(),
+                        parameters: ps.parameters.clone(),
+                    };
+                    node.restore_state(&dsp_ps);
+                }
+                Some(Box::new(node))
+            }
+
             _ => {
                 eprintln!("Warning: Unknown node kind '{}'", config.kind);
                 Some(Box::new(GainNode::new(0.0)))
@@ -280,6 +311,7 @@ mod tests {
         let config = NodeConfig {
             kind: "SineOscillatorNode".to_string(),
             params,
+            plugin_state: None,
         };
         let mut node = NodeFactory::create_node(&config).expect("Factory should create SineOscillatorNode");
         let ctx = summoner_core::node::ProcessContext::new(44100, 120.0, 0);
