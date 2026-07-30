@@ -37,6 +37,18 @@ jobs:
       - name: Run Tests
         run: cargo test --all-targets --all-features
 
+  cargo-deny:
+    name: Cargo Deny License & Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Run Cargo Deny Check
+        uses: EmbarkStudios/cargo-deny-action@v1
+        with:
+          command: check
+
   codeql-analysis:
     name: CodeQL Security Analysis
     runs-on: ubuntu-latest

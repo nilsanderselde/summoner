@@ -11,6 +11,7 @@ All of the following GitHub Actions CI jobs must pass cleanly before any code ca
 - **`Build & Test (ubuntu-latest)`**
 - **`Build & Test (windows-latest)`**
 - **`Build & Test (macos-latest)`**
+- **`Cargo Deny License & Security Audit`**
 - **`CodeQL Security Analysis`**
 - **`Benchmark Regression Guard`**
 - **`Fuzz Target Harnesses`**
@@ -20,15 +21,17 @@ All of the following GitHub Actions CI jobs must pass cleanly before any code ca
 
 ---
 
-### 2. Pull Request Review Requirements
+## 2. Pull Request & Code Ownership Requirements
 - **Approving Reviews:** At least **1 approving review** is required for all PRs.
+- **Code Owner Review Enforced (`require_code_owner_reviews: true`):** Reviews from designated CODEOWNERS (`.github/CODEOWNERS`) are mandatory.
 - **Stale Review Dismissal:** Approvals are automatically dismissed when new commits are pushed to the PR branch (`dismiss_stale_reviews: true`).
 - **Last Push Approval:** Approvals must be made on the latest commit hash (`require_last_push_approval: true`).
 - **Conversation Resolution:** All review comment threads must be resolved before merging (`required_conversation_resolution: true`).
 
 ---
 
-### 3. History & Push Protections
+## 3. History & Push Protections
+- **Cryptographically Signed Commits Enforced (`required_signatures: true`):** All commits pushed to `master` must be signed with a verified GPG or SSH key.
 - **Linear History Enforced (`required_linear_history: true`):** Require rebased or squashed commits to keep the Git DAG clean.
 - **Force Pushes Blocked (`allow_force_pushes: false`):** Prevents accidental `--force` pushes from overwriting history on `master`.
 - **Branch Deletions Blocked (`allow_deletions: false`):** Prevents deletion of the `master` branch.
