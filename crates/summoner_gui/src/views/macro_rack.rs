@@ -209,6 +209,18 @@ pub fn show_macro_rack(
                                 // Real-time Lua DSP evaluation block
                             }
                         }
+                        "NamAmpNode" | "NamAmp" => {
+                            ui.colored_label(egui::Color32::from_rgb(255, 140, 0), "🎸 Neural Amp Modeler (NAM)");
+                            ui.label("Architecture: WaveNet Dilated Conv Net");
+                            let mut drive = param_bus.get(ParamId(track.id as u32 * 10 + 1)).unwrap_or(1.5);
+                            if ui.add(egui::Slider::new(&mut drive, 0.1..=10.0).text("Amp Drive")).changed() {
+                                param_bus.set(ParamId(track.id as u32 * 10 + 1), drive);
+                            }
+                            let mut gain = param_bus.get(ParamId(track.id as u32 * 10 + 2)).unwrap_or(1.0);
+                            if ui.add(egui::Slider::new(&mut gain, 0.0..=2.0).text("Output Level")).changed() {
+                                param_bus.set(ParamId(track.id as u32 * 10 + 2), gain);
+                            }
+                        }
                         "AetherSynth" => {
                             let mut mix = param_bus.get(ParamId(track.id as u32 * 10 + 1)).unwrap_or(0.5);
                             if ui.add(egui::Slider::new(&mut mix, 0.0..=1.0).text("Osc Mix")).changed() {

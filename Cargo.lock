@@ -3919,6 +3919,7 @@ dependencies = [
  "criterion",
  "hound",
  "serde",
+ "serde_json",
  "summoner_core",
  "vst",
  "wide",

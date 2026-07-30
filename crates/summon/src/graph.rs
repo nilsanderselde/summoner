@@ -113,6 +113,20 @@ impl NodeFactory {
             )))),
             "DeesserNode" | "Deesser" => Some(Box::new(ProcessorNodeAdapter::new(summoner_dsp::DeesserNode::new()))),
             "HarmonicExciterNode" | "HarmonicExciter" => Some(Box::new(ProcessorNodeAdapter::new(summoner_dsp::HarmonicExciterNode::new()))),
+            "NamAmpNode" | "NamAmp" => Some(Box::new(ProcessorNodeAdapter::new(summoner_dsp::NamAmpNode::new(
+                *params.get("drive").unwrap_or(&1.5),
+                *params.get("output_gain").unwrap_or(&1.0),
+                *params.get("gate_threshold").unwrap_or(&-60.0),
+            )))),
+            "RnnoiseNode" | "Rnnoise" => Some(Box::new(ProcessorNodeAdapter::new(summoner_dsp::RnnoiseNode::new(*params.get("suppression").unwrap_or(&-12.0))))),
+            "AiAutoGainNode" | "AiAutoGain" => Some(Box::new(ProcessorNodeAdapter::new(summoner_dsp::AiAutoGainNode::new(*params.get("target_lufs").unwrap_or(&-18.0))))),
+            "DdspTimbreTransferNode" | "DdspTimbreTransfer" => Some(Box::new(ProcessorNodeAdapter::new(summoner_dsp::DdspTimbreTransferNode::new(
+                *params.get("harmonics").unwrap_or(&32.0) as usize,
+                *params.get("noise").unwrap_or(&0.05),
+            )))),
+            "VocalHarmonyGeneratorNode" | "VocalHarmonizer" => Some(Box::new(ProcessorNodeAdapter::new(summoner_dsp::VocalHarmonyGeneratorNode::default()))),
+            "NeuralDereverbNode" | "NeuralDereverb" => Some(Box::new(ProcessorNodeAdapter::new(summoner_dsp::NeuralDereverbNode::new()))),
+            "NeuralSuperResolutionNode" | "NeuralSuperResolution" => Some(Box::new(ProcessorNodeAdapter::new(summoner_dsp::NeuralSuperResolutionNode::new()))),
             "SamplerDevice" => {
                 let mut bank = summoner_dsp::sampler::MultiSampleBank::new();
                 let base_dir = std::path::Path::new("local");
