@@ -13,7 +13,7 @@ Summoner DAW security updates are applied to the `master` branch and the latest 
 
 We take the security of Summoner DAW seriously. If you believe you have found a security vulnerability in any aspect of Summoner DAW (including audio engine memory safety, DSP node processing, CLI tools, GUI components, or plugin isolation), please report it to us as follows:
 
-1. **Email**: Send details of the vulnerability to `security@summoner-daw.org` (or contact core maintainers directly via private GitHub security advisories).
+1. **Email**: Send details of the vulnerability to `TBD` (or contact core maintainers directly via private GitHub security advisories).
 2. **Details to Include**:
    - Description of the vulnerability and potential impact.
    - Steps to reproduce or a minimal proof-of-concept (PoC) project/file.

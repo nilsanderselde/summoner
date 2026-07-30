@@ -1,7 +1,7 @@
 # Workspace Rules for Summoner
 
 ## Environment & Python Configuration
-- Use `python` to execute Python scripts (located in system PATH at `C:\Users\Nils\AppData\Local\Programs\Python\Python313\python.exe`).
+- Use `python` to execute Python scripts.
 - Python command prefixes (`python`, `python3`, `py`, `make`) are authorized for execution within workspace scripts (e.g. `scripts/vibe_runner.py`, `scripts/smart-vibe.sh`, `generate.py`).
 
 ## Roadmap Management Rules
