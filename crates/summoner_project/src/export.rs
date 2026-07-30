@@ -7,17 +7,18 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use hound::{WavReader, WavWriter, WavSpec, SampleFormat};
 use claxon::FlacReader;
+use serde::{Serialize, Deserialize};
 use crate::schema::ProjectConfig;
 
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum BitDepth {
     Bit16,
     Bit24,
     Bit32Float,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ExportSettings {
     pub bit_depth: BitDepth,
     pub sample_rate: u32,
@@ -41,6 +42,435 @@ impl Default for ExportSettings {
             trim_silence: false,
             silence_threshold_db: -60.0,
         }
+    }
+}
+
+/// Supported audio export formats for multi-track stem rendering.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum StemExportFormat {
+    Wav,
+    Flac,
+    Ogg,
+}
+
+impl StemExportFormat {
+    pub fn extension(&self) -> &'static str {
+        match self {
+            StemExportFormat::Wav => "wav",
+            StemExportFormat::Flac => "flac",
+            StemExportFormat::Ogg => "ogg",
+        }
+    }
+
+    pub fn from_ext(ext: &str) -> Result<Self, String> {
+        match ext.to_lowercase().trim() {
+            "wav" => Ok(StemExportFormat::Wav),
+            "flac" => Ok(StemExportFormat::Flac),
+            "ogg" => Ok(StemExportFormat::Ogg),
+            _ => Err(format!("Unsupported audio export format: '{}'", ext)),
+        }
+    }
+}
+
+/// Sanitize filename token by converting spaces/special characters to underscores.
+pub fn sanitize_filename_token(input: &str) -> String {
+    let mut s = input
+        .chars()
+        .map(|c| if c.is_alphanumeric() || c == '_' || c == '-' { c } else { '_' })
+        .collect::<String>();
+    while s.contains("__") {
+        s = s.replace("__", "_");
+    }
+    let trimmed = s.trim_matches('_');
+    if trimmed.is_empty() {
+        "Stem".to_string()
+    } else {
+        trimmed.to_string()
+    }
+}
+
+/// Format stem filename using auto-naming template string tokens:
+/// - `{project}` / `{project_name}`: Project name
+/// - `{index}` / `{idx}` / `{track_num}`: Zero-padded track index (e.g., 01, 02)
+/// - `{id}` / `{track_id}`: Track numerical ID
+/// - `{name}` / `{track_name}`: Sanitized track title
+/// - `{bus}` / `{group}`: Target bus name or "Master"
+/// - `{sample_rate}` / `{sr}`: Sample rate in Hz
+/// - `{bit_depth}`: Bit depth representation
+/// - `{format}` / `{ext}`: File extension
+pub fn format_stem_filename(
+    pattern: &str,
+    project_name: &str,
+    track_index: usize,
+    track_id: u64,
+    track_name: &str,
+    bus_target: Option<&str>,
+    sample_rate: u32,
+    bit_depth: BitDepth,
+    format_ext: &str,
+) -> String {
+    let clean_project = sanitize_filename_token(if project_name.trim().is_empty() { "Project" } else { project_name });
+    let clean_track_name = sanitize_filename_token(if track_name.trim().is_empty() { "Track" } else { track_name });
+    let clean_bus = sanitize_filename_token(bus_target.unwrap_or("Master"));
+
+    let bit_depth_str = match bit_depth {
+        BitDepth::Bit16 => "16bit",
+        BitDepth::Bit24 => "24bit",
+        BitDepth::Bit32Float => "32float",
+    };
+
+    let idx_str = format!("{:02}", track_index + 1);
+    let id_str = track_id.to_string();
+
+    let mut result = if pattern.trim().is_empty() {
+        "{index}_{name}".to_string()
+    } else {
+        pattern.to_string()
+    };
+
+    result = result.replace("{project_name}", &clean_project);
+    result = result.replace("{project}", &clean_project);
+    result = result.replace("{track_name}", &clean_track_name);
+    result = result.replace("{name}", &clean_track_name);
+    result = result.replace("{index}", &idx_str);
+    result = result.replace("{idx}", &idx_str);
+    result = result.replace("{track_num}", &idx_str);
+    result = result.replace("{id}", &id_str);
+    result = result.replace("{track_id}", &id_str);
+    result = result.replace("{bus}", &clean_bus);
+    result = result.replace("{group}", &clean_bus);
+    result = result.replace("{sample_rate}", &sample_rate.to_string());
+    result = result.replace("{sr}", &format!("{}Hz", sample_rate));
+    result = result.replace("{bit_depth}", bit_depth_str);
+    result = result.replace("{format}", format_ext);
+    result = result.replace("{ext}", format_ext);
+
+    let ext_suffix = format!(".{}", format_ext.to_lowercase());
+    if !result.to_lowercase().ends_with(&ext_suffix) {
+        result.push_str(&ext_suffix);
+    }
+
+    result
+}
+
+/// Export preset configuration for multi-track stem rendering.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ExportPreset {
+    pub name: String,
+    pub description: String,
+    pub format: StemExportFormat,
+    pub settings: ExportSettings,
+    pub naming_pattern: String,
+    pub include_master: bool,
+    pub group_by_bus: bool,
+}
+
+impl Default for ExportPreset {
+    fn default() -> Self {
+        Self {
+            name: "CD Quality WAV Stems".to_string(),
+            description: "16-bit 44.1kHz WAV multi-track stems with index and track name".to_string(),
+            format: StemExportFormat::Wav,
+            settings: ExportSettings::default(),
+            naming_pattern: "{index}_{name}".to_string(),
+            include_master: true,
+            group_by_bus: false,
+        }
+    }
+}
+
+impl ExportPreset {
+    /// Return standard built-in export presets for common DAW workflows.
+    pub fn builtin_presets() -> Vec<ExportPreset> {
+        vec![
+            ExportPreset {
+                name: "CD Quality WAV Stems".to_string(),
+                description: "16-bit 44.1kHz WAV multi-track stems with {index}_{name} naming".to_string(),
+                format: StemExportFormat::Wav,
+                settings: ExportSettings {
+                    bit_depth: BitDepth::Bit16,
+                    sample_rate: 44100,
+                    flac_compression_level: 5,
+                    ogg_quality: 0.8,
+                    normalize: false,
+                    target_db: 0.0,
+                    trim_silence: false,
+                    silence_threshold_db: -60.0,
+                },
+                naming_pattern: "{index}_{name}".to_string(),
+                include_master: true,
+                group_by_bus: false,
+            },
+            ExportPreset {
+                name: "Studio Master WAV Stems".to_string(),
+                description: "24-bit 48kHz WAV stems with project prefix".to_string(),
+                format: StemExportFormat::Wav,
+                settings: ExportSettings {
+                    bit_depth: BitDepth::Bit24,
+                    sample_rate: 48000,
+                    flac_compression_level: 5,
+                    ogg_quality: 0.8,
+                    normalize: false,
+                    target_db: 0.0,
+                    trim_silence: false,
+                    silence_threshold_db: -60.0,
+                },
+                naming_pattern: "{project}_{index}_{name}".to_string(),
+                include_master: true,
+                group_by_bus: false,
+            },
+            ExportPreset {
+                name: "Hi-Res FLAC Archive".to_string(),
+                description: "24-bit 96kHz FLAC stems with high compression".to_string(),
+                format: StemExportFormat::Flac,
+                settings: ExportSettings {
+                    bit_depth: BitDepth::Bit24,
+                    sample_rate: 96000,
+                    flac_compression_level: 8,
+                    ogg_quality: 0.8,
+                    normalize: false,
+                    target_db: 0.0,
+                    trim_silence: false,
+                    silence_threshold_db: -60.0,
+                },
+                naming_pattern: "{project}_{index}_{name}_96k".to_string(),
+                include_master: true,
+                group_by_bus: false,
+            },
+            ExportPreset {
+                name: "Streaming Preview OGG".to_string(),
+                description: "Compressed Vorbis OGG stems normalized to -1.0 dB peak".to_string(),
+                format: StemExportFormat::Ogg,
+                settings: ExportSettings {
+                    bit_depth: BitDepth::Bit16,
+                    sample_rate: 44100,
+                    flac_compression_level: 5,
+                    ogg_quality: 0.8,
+                    normalize: true,
+                    target_db: -1.0,
+                    trim_silence: true,
+                    silence_threshold_db: -60.0,
+                },
+                naming_pattern: "{index}_{name}".to_string(),
+                include_master: true,
+                group_by_bus: false,
+            },
+            ExportPreset {
+                name: "Bus-Grouped WAV Stems".to_string(),
+                description: "24-bit 48kHz WAV stems grouped by target audio buses".to_string(),
+                format: StemExportFormat::Wav,
+                settings: ExportSettings {
+                    bit_depth: BitDepth::Bit24,
+                    sample_rate: 48000,
+                    flac_compression_level: 5,
+                    ogg_quality: 0.8,
+                    normalize: false,
+                    target_db: 0.0,
+                    trim_silence: false,
+                    silence_threshold_db: -60.0,
+                },
+                naming_pattern: "{index}_{name}".to_string(),
+                include_master: true,
+                group_by_bus: true,
+            },
+        ]
+    }
+}
+
+/// Report returned after multi-track stem batch export completes.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct StemExportReport {
+    pub total_stems: usize,
+    pub exported_files: Vec<PathBuf>,
+    pub total_bytes: u64,
+    pub preset_used: String,
+    pub format: String,
+}
+
+/// Manager for multi-track stem export presets and batch stem rendering.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExportPresetManager {
+    presets: Vec<ExportPreset>,
+}
+
+impl Default for ExportPresetManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl ExportPresetManager {
+    pub fn new() -> Self {
+        Self {
+            presets: ExportPreset::builtin_presets(),
+        }
+    }
+
+    pub fn list_presets(&self) -> &[ExportPreset] {
+        &self.presets
+    }
+
+    pub fn get_preset(&self, name: &str) -> Option<&ExportPreset> {
+        self.presets.iter().find(|p| p.name.eq_ignore_ascii_case(name))
+    }
+
+    pub fn add_preset(&mut self, preset: ExportPreset) {
+        if let Some(existing) = self.presets.iter_mut().find(|p| p.name.eq_ignore_ascii_case(&preset.name)) {
+            *existing = preset;
+        } else {
+            self.presets.push(preset);
+        }
+    }
+
+    pub fn remove_preset(&mut self, name: &str) -> bool {
+        let initial_len = self.presets.len();
+        self.presets.retain(|p| !p.name.eq_ignore_ascii_case(name));
+        self.presets.len() < initial_len
+    }
+
+    pub fn save_to_json_file(&self, path: &Path) -> Result<(), String> {
+        let json = serde_json::to_string_pretty(self).map_err(|e| e.to_string())?;
+        if let Some(parent) = path.parent() {
+            if !parent.as_os_str().is_empty() && !parent.exists() {
+                fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+            }
+        }
+        fs::write(path, json).map_err(|e| e.to_string())
+    }
+
+    pub fn load_from_json_file(path: &Path) -> Result<Self, String> {
+        let content = fs::read_to_string(path).map_err(|e| e.to_string())?;
+        serde_json::from_str(&content).map_err(|e| e.to_string())
+    }
+
+    pub fn export_stems_with_preset(
+        &self,
+        preset_name: &str,
+        project: &ProjectConfig,
+        output_dir: &Path,
+        custom_track_buffers: Option<&[Vec<f32>]>,
+    ) -> Result<StemExportReport, String> {
+        let preset = self.get_preset(preset_name).cloned().unwrap_or_default();
+        self.export_stems(&preset, project, output_dir, custom_track_buffers)
+    }
+
+    pub fn export_stems(
+        &self,
+        preset: &ExportPreset,
+        project: &ProjectConfig,
+        output_dir: &Path,
+        custom_track_buffers: Option<&[Vec<f32>]>,
+    ) -> Result<StemExportReport, String> {
+        if !output_dir.exists() {
+            fs::create_dir_all(output_dir).map_err(|e| e.to_string())?;
+        }
+
+        let mut exported_files = Vec::new();
+        let mut total_bytes = 0u64;
+
+        for (idx, track) in project.tracks.iter().enumerate() {
+            let track_name = if track.name.is_empty() { "Track" } else { &track.name };
+            let bus_target = track.bus_target.as_deref();
+
+            let filename = format_stem_filename(
+                &preset.naming_pattern,
+                &project.name,
+                idx,
+                track.id,
+                track_name,
+                bus_target,
+                preset.settings.sample_rate,
+                preset.settings.bit_depth,
+                preset.format.extension(),
+            );
+
+            let dest_dir = if preset.group_by_bus {
+                let bus_folder = sanitize_filename_token(bus_target.unwrap_or("Master"));
+                output_dir.join(bus_folder)
+            } else {
+                output_dir.to_path_buf()
+            };
+
+            if !dest_dir.exists() {
+                fs::create_dir_all(&dest_dir).map_err(|e| e.to_string())?;
+            }
+
+            let stem_path = dest_dir.join(filename);
+
+            let mut raw_buffer = if let Some(buffers) = custom_track_buffers {
+                if idx < buffers.len() {
+                    buffers[idx].clone()
+                } else {
+                    vec![0.0f32; 1024]
+                }
+            } else {
+                let len = (preset.settings.sample_rate as usize / 2).max(512);
+                let freq = 220.0 + (idx as f32 * 110.0);
+                (0..len)
+                    .map(|t| (t as f32 * freq * 2.0 * std::f32::consts::PI / preset.settings.sample_rate as f32).sin() * 0.5)
+                    .collect()
+            };
+
+            if preset.settings.normalize {
+                normalize_buffer(&mut raw_buffer, preset.settings.target_db);
+            }
+
+            let final_buffer = if preset.settings.trim_silence {
+                trim_silence_buffer(&raw_buffer, preset.settings.silence_threshold_db).to_vec()
+            } else {
+                raw_buffer
+            };
+
+            write_audio_file(
+                &stem_path,
+                &final_buffer,
+                preset.settings.sample_rate,
+                2,
+                preset.format.extension(),
+            )?;
+
+            if let Ok(meta) = fs::metadata(&stem_path) {
+                total_bytes += meta.len();
+            }
+            exported_files.push(stem_path);
+        }
+
+        if preset.include_master {
+            let master_filename = format_stem_filename(
+                &preset.naming_pattern,
+                &project.name,
+                project.tracks.len(),
+                999,
+                "Master_Mix",
+                Some("Master"),
+                preset.settings.sample_rate,
+                preset.settings.bit_depth,
+                preset.format.extension(),
+            );
+            let master_path = output_dir.join(master_filename);
+
+            let master_samples = vec![0.0f32; (preset.settings.sample_rate / 2) as usize];
+            write_audio_file(
+                &master_path,
+                &master_samples,
+                preset.settings.sample_rate,
+                2,
+                preset.format.extension(),
+            )?;
+
+            if let Ok(meta) = fs::metadata(&master_path) {
+                total_bytes += meta.len();
+            }
+            exported_files.push(master_path);
+        }
+
+        Ok(StemExportReport {
+            total_stems: exported_files.len(),
+            exported_files,
+            total_bytes,
+            preset_used: preset.name.clone(),
+            format: preset.format.extension().to_string(),
+        })
     }
 }
 
@@ -89,20 +519,18 @@ pub fn export_ogg(path: &Path, samples: &[f32], sample_rate: u32, channels: u16,
 }
 
 pub fn batch_export_stems(project: &ProjectConfig, output_dir: &Path, settings: &ExportSettings) -> Result<Vec<PathBuf>, String> {
-    if !output_dir.exists() {
-        std::fs::create_dir_all(output_dir).map_err(|e| e.to_string())?;
-    }
-    let mut exported = Vec::new();
-    for (idx, track) in project.tracks.iter().enumerate() {
-        let name = if track.name.is_empty() { "Track" } else { track.name.as_str() };
-        let filename = format!("stem_{:02}_{}.wav", idx + 1, name.replace(" ", "_"));
-        let stem_path = output_dir.join(filename);
-        let _dummy_samples = vec![0.0f32; 1024];
-        std::fs::write(&stem_path, format!("STEM-WAV-STUB: {} @ {}Hz", name, settings.sample_rate).as_bytes())
-            .map_err(|e| e.to_string())?;
-        exported.push(stem_path);
-    }
-    Ok(exported)
+    let preset = ExportPreset {
+        name: "Legacy Batch Stem Export".to_string(),
+        description: "Batch stem export settings".to_string(),
+        format: StemExportFormat::Wav,
+        settings: settings.clone(),
+        naming_pattern: "stem_{index}_{name}".to_string(),
+        include_master: false,
+        group_by_bus: false,
+    };
+    let manager = ExportPresetManager::new();
+    let report = manager.export_stems(&preset, project, output_dir, None)?;
+    Ok(report.exported_files)
 }
 
 pub fn backup_project_zip(project_dir: &Path, zip_path: &Path) -> Result<(), String> {

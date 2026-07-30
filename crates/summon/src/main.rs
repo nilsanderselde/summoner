@@ -1002,41 +1002,98 @@ fn main() {
             }
         }
         "export-stems" => {
+            let manager = summoner_project::ExportPresetManager::new();
+
+            // Check for --list-presets
+            if args.iter().any(|arg| arg == "--list-presets") {
+                println!("Available Multi-Track Stem Export Presets:");
+                for preset in manager.list_presets() {
+                    println!("  - {:<24} [{}] {}", preset.name, preset.format.extension().to_uppercase(), preset.description);
+                    println!("    Template: {}", preset.naming_pattern);
+                }
+                return;
+            }
+
             let path_str = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
             let out_dir = args.get(3).map(|s| s.as_str()).unwrap_or("stems");
-            println!("Exporting stems from '{}' to '{}'...", path_str, out_dir);
-            if let Ok(content) = fs::read_to_string(path_str) {
-                if let Ok(proj) = parse_project_toml(&content) {
-                    let _ = fs::create_dir_all(out_dir);
-                    for track in &proj.tracks {
-                        let mut single_track_proj = proj.clone();
-                        single_track_proj.tracks = vec![track.clone()];
-                        let mut runner = graph::GraphRunner::new(&single_track_proj);
-                        let stem_path = Path::new(out_dir).join(format!("stem_{}_{}.wav", track.id, track.name.replace(' ', "_")));
-                        let spec = hound::WavSpec {
-                            channels: 2,
-                            sample_rate: 44100,
-                            bits_per_sample: 16,
-                            sample_format: hound::SampleFormat::Int,
-                        };
-                        if let Ok(mut writer) = hound::WavWriter::create(&stem_path, spec) {
-                            let mut block_l = vec![0.0f32; 512];
-                            let mut block_r = vec![0.0f32; 512];
-                            for block_idx in 0..10 {
-                                let ctx = ProcessContext::new(44100, proj.transport.bpm, (block_idx * 512) as u64);
-                                runner.process_block(512, &ctx, &mut [&mut block_l, &mut block_r]);
-                                for i in 0..512 {
-                                    let l = (block_l[i].clamp(-1.0, 1.0) * 32767.0) as i16;
-                                    let r = (block_r[i].clamp(-1.0, 1.0) * 32767.0) as i16;
-                                    let _ = writer.write_sample(l);
-                                    let _ = writer.write_sample(r);
-                                }
-                            }
-                            let _ = writer.finalize();
-                            println!("Exported stem: {}", stem_path.display());
-                        }
+
+            let mut chosen_preset_name = "CD Quality WAV Stems".to_string();
+            let mut custom_pattern: Option<String> = None;
+            let mut custom_format: Option<String> = None;
+
+            let mut idx = 4;
+            while idx < args.len() {
+                if args[idx].starts_with("--preset=") {
+                    chosen_preset_name = args[idx].trim_start_matches("--preset=").to_string();
+                } else if args[idx] == "--preset" {
+                    if let Some(val) = args.get(idx + 1) {
+                        chosen_preset_name = val.clone();
+                        idx += 1;
                     }
-                    println!("Stems export finished.");
+                } else if args[idx].starts_with("--pattern=") {
+                    custom_pattern = Some(args[idx].trim_start_matches("--pattern=").to_string());
+                } else if args[idx] == "--pattern" {
+                    if let Some(val) = args.get(idx + 1) {
+                        custom_pattern = Some(val.clone());
+                        idx += 1;
+                    }
+                } else if args[idx].starts_with("--format=") {
+                    custom_format = Some(args[idx].trim_start_matches("--format=").to_string());
+                } else if args[idx] == "--format" {
+                    if let Some(val) = args.get(idx + 1) {
+                        custom_format = Some(val.clone());
+                        idx += 1;
+                    }
+                }
+                idx += 1;
+            }
+
+            println!("Exporting stems from '{}' to '{}' using preset '{}'...", path_str, out_dir, chosen_preset_name);
+            if !Path::new(path_str).exists() {
+                eprintln!("Error: Project file '{}' not found.", path_str);
+                process::exit(1);
+            }
+
+            let content = match fs::read_to_string(path_str) {
+                Ok(c) => c,
+                Err(e) => {
+                    eprintln!("Failed to read project file: {}", e);
+                    process::exit(1);
+                }
+            };
+
+            let project = match parse_project_toml(&content) {
+                Ok(p) => p,
+                Err(e) => {
+                    eprintln!("Failed to parse project TOML: {}", e);
+                    process::exit(1);
+                }
+            };
+
+            let mut preset = manager.get_preset(&chosen_preset_name).cloned().unwrap_or_default();
+            if let Some(pat) = custom_pattern {
+                preset.naming_pattern = pat;
+            }
+            if let Some(fmt_str) = custom_format {
+                if let Ok(fmt) = summoner_project::StemExportFormat::from_ext(&fmt_str) {
+                    preset.format = fmt;
+                }
+            }
+
+            match manager.export_stems(&preset, &project, Path::new(out_dir), None) {
+                Ok(report) => {
+                    println!("Stem export finished successfully!");
+                    println!("  Preset used: {}", report.preset_used);
+                    println!("  Format: {}", report.format.to_uppercase());
+                    println!("  Total stems exported: {}", report.total_stems);
+                    println!("  Total size: {} bytes", report.total_bytes);
+                    for file in &report.exported_files {
+                        println!("  - {}", file.display());
+                    }
+                }
+                Err(e) => {
+                    eprintln!("Stem export failed: {}", e);
+                    process::exit(1);
                 }
             }
         }

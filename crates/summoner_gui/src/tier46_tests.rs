@@ -197,5 +197,125 @@ mod tests {
         assert_eq!(matrix.assignments.len(), 5);
         assert_eq!(matrix.targets.len(), 3);
     }
+
+    #[test]
+    fn test_step_1249_multi_track_stems_auto_naming_and_export_preset_manager() {
+        use summoner_project::export::{
+            format_stem_filename, BitDepth, ExportPreset, ExportPresetManager, StemExportFormat, ExportSettings,
+        };
+        use summoner_project::schema::{ProjectConfig, TrackConfig, TransportConfig};
+
+        // 1. Test auto-naming template string token substitution
+        let filename_wav = format_stem_filename(
+            "{project}_{index}_{name}_{bus}_{sr}_{bit_depth}",
+            "Solar Odyssey",
+            0,
+            1,
+            "Synth Lead",
+            Some("Melodic Bus"),
+            48000,
+            BitDepth::Bit24,
+            "wav",
+        );
+        assert_eq!(filename_wav, "Solar_Odyssey_01_Synth_Lead_Melodic_Bus_48000Hz_24bit.wav");
+
+        let filename_flac = format_stem_filename(
+            "{index}_{name}",
+            "Solar Odyssey",
+            1,
+            2,
+            "Bass Synth",
+            None,
+            96000,
+            BitDepth::Bit24,
+            "flac",
+        );
+        assert_eq!(filename_flac, "02_Bass_Synth.flac");
+
+        // 2. Test ExportPresetManager built-in presets
+        let mut manager = ExportPresetManager::new();
+        assert!(manager.list_presets().len() >= 5);
+
+        let preset_cd = manager.get_preset("CD Quality WAV Stems").unwrap();
+        assert_eq!(preset_cd.format, StemExportFormat::Wav);
+        assert_eq!(preset_cd.settings.sample_rate, 44100);
+
+        let preset_flac = manager.get_preset("Hi-Res FLAC Archive").unwrap();
+        assert_eq!(preset_flac.format, StemExportFormat::Flac);
+        assert_eq!(preset_flac.settings.sample_rate, 96000);
+
+        // 3. Test custom preset creation and manager management
+        let custom_preset = ExportPreset {
+            name: "Custom Techno OGG Stems".to_string(),
+            description: "Custom OGG stem preset with bus subfolders".to_string(),
+            format: StemExportFormat::Ogg,
+            settings: ExportSettings {
+                bit_depth: BitDepth::Bit16,
+                sample_rate: 48000,
+                flac_compression_level: 5,
+                ogg_quality: 0.9,
+                normalize: true,
+                target_db: -0.5,
+                trim_silence: true,
+                silence_threshold_db: -50.0,
+            },
+            naming_pattern: "{project}_{idx}_{name}".to_string(),
+            include_master: true,
+            group_by_bus: true,
+        };
+
+        manager.add_preset(custom_preset.clone());
+        assert!(manager.get_preset("Custom Techno OGG Stems").is_some());
+
+        // 4. Test saving and loading preset manager configuration JSON
+        let temp_dir = std::env::temp_dir().join("summoner_preset_test_tier46");
+        let json_path = temp_dir.join("export_presets.json");
+        manager.save_to_json_file(&json_path).unwrap();
+
+        let restored_manager = ExportPresetManager::load_from_json_file(&json_path).unwrap();
+        assert!(restored_manager.get_preset("Custom Techno OGG Stems").is_some());
+
+        // 5. Build mock project and test stem export execution
+        let proj = ProjectConfig {
+            version: "1.0".to_string(),
+            name: "Hyperdrive".to_string(),
+            transport: TransportConfig {
+                bpm: 128.0,
+                sample_rate: 48000,
+                ..Default::default()
+            },
+            tracks: vec![
+                TrackConfig {
+                    id: 1,
+                    name: "Kick Drum".to_string(),
+                    bus_target: Some("Drums Bus".to_string()),
+                    ..Default::default()
+                },
+                TrackConfig {
+                    id: 2,
+                    name: "Acid Line".to_string(),
+                    bus_target: Some("Synth Bus".to_string()),
+                    ..Default::default()
+                },
+            ],
+            ..Default::default()
+        };
+
+        let export_dir = temp_dir.join("stems_out");
+        let report = restored_manager.export_stems(&custom_preset, &proj, &export_dir, None).unwrap();
+
+        assert_eq!(report.total_stems, 3); // 2 tracks + 1 master
+        assert_eq!(report.format, "ogg");
+        assert_eq!(report.preset_used, "Custom Techno OGG Stems");
+
+        let drums_folder = export_dir.join("Drums_Bus");
+        let synth_folder = export_dir.join("Synth_Bus");
+        assert!(drums_folder.join("Hyperdrive_01_Kick_Drum.ogg").exists());
+        assert!(synth_folder.join("Hyperdrive_02_Acid_Line.ogg").exists());
+        assert!(export_dir.join("Hyperdrive_03_Master_Mix.ogg").exists());
+
+        let _ = std::fs::remove_dir_all(&temp_dir);
+    }
 }
+
 
