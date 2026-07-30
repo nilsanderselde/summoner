@@ -887,7 +887,129 @@ params = { freq = 220.0 }"#;
         PluginLatencyCompensation::apply_delay_compensation(&[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0], &mut buf_out, 2);
         assert_eq!(buf_out, vec![0.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
     }
+
+    #[test]
+    fn test_steps_741_to_760_plugin_and_param_tools() {
+        use summoner_project::system_tools::{
+            PluginResourceBudget, PluginBlacklist, PluginConflictDetector, PluginStateBackup,
+        };
+        use crate::touch_gestures::{TouchGestureManager, SwipeDirection, ViewModeDirection};
+        use crate::param_controls::{
+            ParamUnit, format_hover_tooltip, ParamClipboard, ParamLockManager,
+            ParamLfoModulator, randomize_parameter, InlineValueEditor, reset_param_to_default,
+            LinkedParamGroup, ParamGroup, SendFxRoute, FxChainBypassManager,
+        };
+
+        // Step 741: Plugin Resource Budget
+        let budget = PluginResourceBudget::new("clap.synth", 50.0, 512);
+        assert!(budget.check_budget(30.0, 256).is_ok());
+        assert!(budget.check_budget(60.0, 256).is_err());
+        assert!(budget.check_budget(30.0, 1024).is_err());
+
+        // Step 742: Plugin Blacklist
+        let mut blacklist = PluginBlacklist::new();
+        assert!(blacklist.is_blacklisted("clap.unstable_legacy_synth"));
+        blacklist.add_to_blacklist("clap.bad_plugin", "Causes crash");
+        let allowed = blacklist.filter_allowed(&["clap.good_plugin".to_string(), "clap.bad_plugin".to_string()]);
+        assert_eq!(allowed, vec!["clap.good_plugin".to_string()]);
+
+        // Step 743: Plugin Conflict Detector
+        let detector = PluginConflictDetector::new();
+        let active = vec!["clap.legacy_driver_v1".to_string(), "clap.legacy_driver_v2".to_string()];
+        let conflicts = detector.detect_conflicts(&active);
+        assert_eq!(conflicts.len(), 1);
+
+        // Step 744: Plugin State Backup
+        let mut backup = PluginStateBackup::default();
+        backup.create_backup("clap.synth", "1.0.0", &[1, 2, 3, 4]);
+        assert!(backup.has_backup("clap.synth"));
+        let (ver, data) = backup.restore_backup("clap.synth").expect("Restore backup");
+        assert_eq!(ver, "1.0.0");
+        assert_eq!(data, vec![1, 2, 3, 4]);
+
+        // Step 745: Touch Screen & Target Scaling & Swipes
+        let touch_mgr = TouchGestureManager::new();
+        assert_eq!(touch_mgr.scaled_target_size((10.0, 20.0)), (15.0, 30.0));
+        let swipe_right = touch_mgr.detect_swipe((0.0, 0.0), (100.0, 0.0));
+        assert_eq!(swipe_right, Some(SwipeDirection::Right));
+
+        // Step 746: Two-finger zoom
+        let zoom_factor = TouchGestureManager::two_finger_zoom(100.0, 150.0);
+        assert_eq!(zoom_factor, 1.5);
+
+        // Step 747: Three-finger swipe
+        let starts = [(0.0, 0.0), (0.0, 10.0), (0.0, 20.0)];
+        let ends = [(-100.0, 0.0), (-100.0, 10.0), (-100.0, 20.0)];
+        let view_swipe = TouchGestureManager::three_finger_swipe(&starts, &ends);
+        assert_eq!(view_swipe, Some(ViewModeDirection::NextView));
+
+        // Step 749: Inline Value Editor
+        let mut editor = InlineValueEditor::default();
+        editor.start_edit("cutoff_freq", 440.0);
+        editor.text_buffer = "880.0".to_string();
+        let (id, val) = editor.submit_edit().expect("Submit edit");
+        assert_eq!(id, "cutoff_freq");
+        assert_eq!(val, 880.0);
+
+        // Step 750: Value Reset
+        assert_eq!(reset_param_to_default(100.0), 100.0);
+
+        // Step 751: Param Clipboard
+        let mut clipboard = ParamClipboard::default();
+        clipboard.copy(42.5);
+        assert_eq!(clipboard.paste(), Some(42.5));
+
+        // Step 752: Param Lock Manager
+        let mut lock_mgr = ParamLockManager::default();
+        lock_mgr.lock("vol");
+        assert_eq!(lock_mgr.apply_mutation("vol", 0.5, 1.0), 0.5);
+        lock_mgr.unlock("vol");
+        assert_eq!(lock_mgr.apply_mutation("vol", 0.5, 1.0), 1.0);
+
+        // Step 753: Param LFO Modulator
+        let lfo = ParamLfoModulator::new("cutoff", 1.0, 0.5);
+        let val_at_0 = lfo.evaluate(1.0, 0.0);
+        assert!((val_at_0 - 1.0).abs() < 1e-4);
+
+        // Step 754: Parameter Randomizer
+        let rand_val = randomize_parameter("cutoff", 20.0, 20000.0, 12345);
+        assert!(rand_val >= 20.0 && rand_val <= 20000.0);
+
+        // Step 755: Param Unit Display
+        assert_eq!(ParamUnit::Hz.format_value(440.0), "440.0 Hz");
+        assert_eq!(ParamUnit::Db.format_value(-6.0), "-6.0 dB");
+
+        // Step 756: Hover Tooltip
+        let tooltip = format_hover_tooltip("Cutoff", 440.0, 20.0, 20000.0, &ParamUnit::Hz);
+        assert!(tooltip.contains("Cutoff: 440.0 Hz"));
+
+        // Step 757: Linked Parameters
+        let mut linked = LinkedParamGroup::default();
+        linked.link("filter_l", "filter_r", 1.0);
+        let updates = linked.compute_linked_values("filter_l", 1000.0);
+        assert_eq!(updates, vec![("filter_r".to_string(), 1000.0)]);
+
+        // Step 758: Param Group
+        let mut group = ParamGroup::new("Filter Controls", &["cutoff", "res"]);
+        assert!(!group.collapsed);
+        group.toggle_collapsed();
+        assert!(group.collapsed);
+
+        // Step 759: Send FX Route
+        let route = SendFxRoute::new(1, "ReverbBus", 0.75);
+        assert_eq!(route.send_amount, 0.75);
+
+        // Step 760: FX Chain Bypass Manager
+        let mut bypass_mgr = FxChainBypassManager::default();
+        assert!(!bypass_mgr.insert_bypassed);
+        bypass_mgr.toggle_bypass();
+        assert!(bypass_mgr.insert_bypassed);
+        let dry = [1.0, 2.0];
+        let wet = [0.5, 0.5];
+        assert_eq!(bypass_mgr.process_chain(&dry, &wet), &[1.0, 2.0]);
+    }
 }
+
 
 
 

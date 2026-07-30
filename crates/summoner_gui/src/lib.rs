@@ -33,6 +33,10 @@ pub mod stage_view;
 #[cfg(feature = "gui")]
 pub mod theme;
 #[cfg(feature = "gui")]
+pub mod touch_gestures;
+#[cfg(feature = "gui")]
+pub mod param_controls;
+#[cfg(feature = "gui")]
 pub mod tier32_tests;
 
 #[cfg(feature = "gui")]

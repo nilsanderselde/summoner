@@ -533,3 +533,118 @@ impl PluginLatencyCompensation {
         }
     }
 }
+
+/// Step 741: Plugin CPU and memory budget management per plugin instance.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct PluginResourceBudget {
+    pub plugin_id: String,
+    pub max_cpu_percent: f32,
+    pub max_memory_mb: usize,
+}
+
+impl PluginResourceBudget {
+    pub fn new(plugin_id: &str, max_cpu_percent: f32, max_memory_mb: usize) -> Self {
+        Self {
+            plugin_id: plugin_id.to_string(),
+            max_cpu_percent,
+            max_memory_mb,
+        }
+    }
+
+    pub fn check_budget(&self, current_cpu_percent: f32, current_memory_mb: usize) -> Result<(), String> {
+        if current_cpu_percent > self.max_cpu_percent {
+            return Err(format!("Plugin {} exceeded CPU budget: {:.1}% > {:.1}%", self.plugin_id, current_cpu_percent, self.max_cpu_percent));
+        }
+        if current_memory_mb > self.max_memory_mb {
+            return Err(format!("Plugin {} exceeded Memory budget: {} MB > {} MB", self.plugin_id, current_memory_mb, self.max_memory_mb));
+        }
+        Ok(())
+    }
+}
+
+/// Step 742: Plugin blacklist preventing known problematic or unstable plugins from loading.
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+pub struct PluginBlacklist {
+    pub blacklisted_ids: HashSet<String>,
+    pub reasons: HashMap<String, String>,
+}
+
+impl PluginBlacklist {
+    pub fn new() -> Self {
+        let mut bl = Self::default();
+        bl.add_to_blacklist("clap.unstable_legacy_synth", "Known memory leak and audio callback freeze.");
+        bl
+    }
+
+    pub fn add_to_blacklist(&mut self, plugin_id: &str, reason: &str) {
+        self.blacklisted_ids.insert(plugin_id.to_string());
+        self.reasons.insert(plugin_id.to_string(), reason.to_string());
+    }
+
+    pub fn remove_from_blacklist(&mut self, plugin_id: &str) {
+        self.blacklisted_ids.remove(plugin_id);
+        self.reasons.remove(plugin_id);
+    }
+
+    pub fn is_blacklisted(&self, plugin_id: &str) -> bool {
+        self.blacklisted_ids.contains(plugin_id)
+    }
+
+    pub fn filter_allowed(&self, plugin_ids: &[String]) -> Vec<String> {
+        plugin_ids.iter().filter(|id| !self.is_blacklisted(id)).cloned().collect()
+    }
+}
+
+/// Step 743: Plugin conflict detection for incompatible plugin combinations.
+#[derive(Debug, Clone, Default)]
+pub struct PluginConflictDetector {
+    pub rules: Vec<(String, String, String)>,
+}
+
+impl PluginConflictDetector {
+    pub fn new() -> Self {
+        Self {
+            rules: vec![
+                ("clap.legacy_driver_v1".to_string(), "clap.legacy_driver_v2".to_string(), "Concurrent legacy driver instances cause audio driver conflict.".to_string()),
+            ],
+        }
+    }
+
+    pub fn add_rule(&mut self, plugin_a: &str, plugin_b: &str, reason: &str) {
+        self.rules.push((plugin_a.to_string(), plugin_b.to_string(), reason.to_string()));
+    }
+
+    pub fn detect_conflicts(&self, active_plugins: &[String]) -> Vec<(String, String, String)> {
+        let active_set: HashSet<&String> = active_plugins.iter().collect();
+        let mut conflicts = Vec::new();
+        for (a, b, reason) in &self.rules {
+            if active_set.contains(a) && active_set.contains(b) {
+                conflicts.push((a.clone(), b.clone(), reason.clone()));
+            }
+        }
+        conflicts
+    }
+}
+
+/// Step 744: Plugin state backup before updating plugin instances.
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+pub struct PluginStateBackup {
+    pub backups: HashMap<String, (String, Vec<u8>)>,
+}
+
+impl PluginStateBackup {
+    pub fn create_backup(&mut self, plugin_id: &str, version: &str, state_data: &[u8]) {
+        self.backups.insert(plugin_id.to_string(), (version.to_string(), state_data.to_vec()));
+    }
+
+    pub fn has_backup(&self, plugin_id: &str) -> bool {
+        self.backups.contains_key(plugin_id)
+    }
+
+    pub fn restore_backup(&self, plugin_id: &str) -> Result<(String, Vec<u8>), String> {
+        self.backups.get(plugin_id)
+            .cloned()
+            .ok_or_else(|| format!("No plugin state backup found for {}", plugin_id))
+    }
+}
+
