@@ -88,6 +88,19 @@ impl NodeFactory {
                 *params.get("width").unwrap_or(&1.0)
             )))),
             "ParametricEqNode" => Some(Box::new(ProcessorNodeAdapter::new(ParametricEqNode::new()))),
+            "MultibandCompressorNode" | "MultibandCompressor" => Some(Box::new(ProcessorNodeAdapter::new(summoner_dsp::MultibandCompressorNode::new()))),
+            "TapeSaturationNode" | "TapeSaturation" => Some(Box::new(ProcessorNodeAdapter::new(summoner_dsp::TapeSaturationNode::new(
+                *params.get("drive").unwrap_or(&2.0),
+                *params.get("saturation").unwrap_or(&0.5),
+            )))),
+            "TubeSaturationNode" | "TubeSaturation" => Some(Box::new(ProcessorNodeAdapter::new(summoner_dsp::TubeSaturationNode::new(
+                *params.get("drive").unwrap_or(&2.5),
+                *params.get("bias").unwrap_or(&0.2),
+            )))),
+            "ConsoleEmulationNode" | "ConsoleEmulation" => Some(Box::new(ProcessorNodeAdapter::new(summoner_dsp::ConsoleEmulationNode::new(
+                summoner_dsp::ConsoleMode::from_f32(*params.get("mode").unwrap_or(&0.0)),
+                *params.get("drive").unwrap_or(&1.0),
+            )))),
             "DistortionNode" => Some(Box::new(ProcessorNodeAdapter::new(DistortionNode::new(
                 DistortionType::SoftClipping,
                 *params.get("drive").unwrap_or(&2.0)

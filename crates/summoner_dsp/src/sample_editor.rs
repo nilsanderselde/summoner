@@ -114,10 +114,11 @@ pub fn fade_out_sample(buffer: &mut [f32], fade_len: usize) {
     let len = fade_len.min(buffer.len());
     let total = buffer.len();
     if len == 0 || total == 0 { return; }
+    let divisor = if len > 1 { (len - 1) as f32 } else { 1.0 };
     for i in 0..len {
         let idx = total - len + i;
-        let t = 1.0 - (i as f32 / len as f32);
-        buffer[idx] *= t;
+        let t = 1.0 - (i as f32 / divisor);
+        buffer[idx] *= t.max(0.0);
     }
 }
 

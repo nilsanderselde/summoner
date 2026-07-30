@@ -48,8 +48,16 @@ pub mod tuner;
 pub mod autotune;
 pub mod dither;
 pub mod sample_editor;
+pub mod multiband_compressor;
+pub mod tape_saturation;
+pub mod tube_saturation;
+pub mod console_emulation;
 
 pub use sample_editor::*;
+pub use multiband_compressor::MultibandCompressorNode;
+pub use tape_saturation::TapeSaturationNode;
+pub use tube_saturation::TubeSaturationNode;
+pub use console_emulation::{ConsoleEmulationNode, ConsoleMode};
 
 pub use plugin_host::{
     PluginAudioNode, PluginDescriptor, PluginFormat, PluginParamInfo, PluginStateConfig,

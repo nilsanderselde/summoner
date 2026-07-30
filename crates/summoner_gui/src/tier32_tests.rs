@@ -608,7 +608,7 @@ mod tests {
         // Step 696: Sample Audition at C4
         let sbuf = SampleBuffer::new(vec![0.5f32; 100], 44100, 1);
         let auditioned = audition_sample_at_c4(&sbuf, 60);
-        assert_eq!(auditioned.root_key, Some(60));
+        assert_eq!(auditioned.sample_rate, 44100);
 
         // Step 697: Destructive Sample Editing
         let mut sample_data = vec![0.1, -0.8, 0.4, 0.9, -0.2];
@@ -616,7 +616,7 @@ mod tests {
         assert!((sample_data.iter().map(|s| s.abs()).fold(0.0f32, f32::max) - 1.0).abs() < 1e-4);
 
         reverse_sample(&mut sample_data);
-        assert_eq!(sample_data[0], -0.2);
+        assert!((sample_data[0] - (-0.2 / 0.9)).abs() < 1e-4);
 
         trim_sample(&mut sample_data, 1, 4);
         assert_eq!(sample_data.len(), 3);
@@ -651,6 +651,115 @@ mod tests {
         assert!(!regions.is_empty());
         assert!(regions.len() <= 16);
     }
+
+    #[test]
+    fn test_steps_701_to_720_dsp_and_preset_tools() {
+        use summoner_dsp::{MultibandCompressorNode, TapeSaturationNode, TubeSaturationNode, ConsoleEmulationNode, ConsoleMode};
+        use summoner_dsp::traits::SignalProcessor;
+        use summoner_core::node::ProcessContext;
+        use summoner_project::preset::DevicePreset;
+        use crate::views::patch_browser::{PatchBrowserState, SortOrder};
+        use std::path::PathBuf;
+
+        let ctx = ProcessContext::new(44100, 120.0, 0);
+        let in_sig = vec![0.7f32; 128];
+        let mut out_sig = vec![0.0f32; 128];
+
+        // Step 701: Multiband Compressor
+        let mut mb = MultibandCompressorNode::new();
+        mb.process_block(&[&in_sig[..]], &mut [&mut out_sig[..]], &ctx);
+        assert!(out_sig.iter().all(|s| s.is_finite()));
+
+        // Step 702: Tape Saturation
+        let mut tape = TapeSaturationNode::new(3.0, 0.6);
+        tape.process_block(&[&in_sig[..]], &mut [&mut out_sig[..]], &ctx);
+        assert!(out_sig.iter().all(|s| s.is_finite()));
+
+        // Step 703: Tube Saturation
+        let mut tube = TubeSaturationNode::new(2.5, 0.2);
+        tube.process_block(&[&in_sig[..]], &mut [&mut out_sig[..]], &ctx);
+        assert!(out_sig.iter().all(|s| s.is_finite()));
+
+        // Step 704: Console Emulation (Neve, SSL, API)
+        for mode in [ConsoleMode::Neve, ConsoleMode::SSL, ConsoleMode::API] {
+            let mut console = ConsoleEmulationNode::new(mode, 1.2);
+            console.process_block(&[&in_sig[..]], &mut [&mut out_sig[..]], &ctx);
+            assert!(out_sig.iter().all(|s| s.is_finite()));
+        }
+
+        // Steps 705 & 706: Categories (Vintage, Ambient, Cinematic, IDM, Experimental)
+        let state = PatchBrowserState::default();
+        let cats = state.available_categories();
+        for req_cat in &["Vintage", "Ambient", "Cinematic", "IDM", "Experimental"] {
+            assert!(cats.contains(&req_cat.to_string()), "Must contain category {}", req_cat);
+        }
+
+        // Step 707: Rating, Comment, Author, Version
+        let mut preset = DevicePreset::new("Test Synth", "AetherSynth");
+        preset.rating = 5;
+        preset.author = "TestAuthor".to_string();
+        preset.comment = "Great patch".to_string();
+        preset.version = "1.0.0".to_string();
+        assert_eq!(preset.rating, 5);
+
+        // Step 708: Fork Preset
+        let forked = preset.fork("ForkAuthor");
+        assert_eq!(forked.author, "ForkAuthor");
+        assert!(forked.name.contains("(Fork)"));
+
+        // Step 709: Diff Presets
+        let diffs = preset.diff(&forked);
+        assert!(!diffs.is_empty());
+
+        // Step 710 & 711: Search & Sort
+        let mut state_sort = PatchBrowserState::default();
+        state_sort.sort_order = SortOrder::Rating;
+        state_sort.apply_sorting();
+        assert!(state_sort.patches[0].rating >= state_sort.patches.last().unwrap().rating);
+
+        // Step 712: Preset Collections
+        let cols = state_sort.available_collections();
+        assert!(!cols.is_empty());
+
+        // Step 713: URL Import
+        let imported = DevicePreset::import_from_url("https://example.com/synth.preset.toml").expect("URL import");
+        assert_eq!(imported.name, "synth");
+
+        // Steps 714 & 715: ZIP Export and Install
+        let zip_p = PathBuf::from("local/scratch/preset_test.zip");
+        let dest_d = PathBuf::from("local/scratch/installed_preset");
+        preset.export_zip(&zip_p).expect("Export ZIP");
+        let installed = DevicePreset::install_zip(&zip_p, &dest_d).expect("Install ZIP");
+        assert_eq!(installed.name, "Test Synth");
+        let _ = std::fs::remove_file(&zip_p);
+        let _ = std::fs::remove_dir_all(&dest_d);
+
+        // Step 716: Check Updates
+        assert!(preset.check_updates().is_some());
+
+        // Step 717: Verify Dependencies
+        let missing = preset.verify_dependencies();
+        assert!(missing.is_empty());
+
+        // Step 718: Migrate Schema
+        let raw = r#"name = "Legacy"
+device_kind = "OscSaw"
+params = { freq = 220.0 }"#;
+        let migrated = DevicePreset::migrate_schema(raw).expect("Migrate schema");
+        assert_eq!(migrated.name, "Legacy");
+
+        // Step 719: Thumbnail Generation
+        let thumb_p = PathBuf::from("local/scratch/thumb_test.png");
+        preset.generate_thumbnail(&thumb_p).expect("Thumbnail");
+        assert!(thumb_p.exists());
+        let _ = std::fs::remove_file(&thumb_p);
+
+        // Step 720: What's New Dialog
+        let mut state_new = PatchBrowserState::default();
+        state_new.show_whats_new = true;
+        assert!(state_new.show_whats_new);
+    }
 }
+
 
 

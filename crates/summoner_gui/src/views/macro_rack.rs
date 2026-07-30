@@ -384,6 +384,56 @@ pub fn show_macro_rack(
                                 param_bus.set(ParamId(track.id as u32 * 10 + 1), boost);
                             }
                         }
+                        "MultibandCompressorNode" | "MultibandCompressor" => {
+                            ui.label("3-Band Multiband Compressor");
+                            let mut low_thresh = param_bus.get(ParamId(track.id as u32 * 10 + 1)).unwrap_or(-18.0);
+                            if ui.add(egui::Slider::new(&mut low_thresh, -40.0..=0.0).text("Low Thresh (dB)")).changed() {
+                                param_bus.set(ParamId(track.id as u32 * 10 + 1), low_thresh);
+                            }
+                            let mut mid_thresh = param_bus.get(ParamId(track.id as u32 * 10 + 2)).unwrap_or(-16.0);
+                            if ui.add(egui::Slider::new(&mut mid_thresh, -40.0..=0.0).text("Mid Thresh (dB)")).changed() {
+                                param_bus.set(ParamId(track.id as u32 * 10 + 2), mid_thresh);
+                            }
+                            let mut high_thresh = param_bus.get(ParamId(track.id as u32 * 10 + 3)).unwrap_or(-14.0);
+                            if ui.add(egui::Slider::new(&mut high_thresh, -40.0..=0.0).text("High Thresh (dB)")).changed() {
+                                param_bus.set(ParamId(track.id as u32 * 10 + 3), high_thresh);
+                            }
+                        }
+                        "TapeSaturationNode" | "TapeSaturation" => {
+                            let mut drive = param_bus.get(ParamId(track.id as u32 * 10 + 1)).unwrap_or(2.0);
+                            if ui.add(egui::Slider::new(&mut drive, 1.0..=10.0).text("Tape Drive")).changed() {
+                                param_bus.set(ParamId(track.id as u32 * 10 + 1), drive);
+                            }
+                            let mut sat = param_bus.get(ParamId(track.id as u32 * 10 + 2)).unwrap_or(0.5);
+                            if ui.add(egui::Slider::new(&mut sat, 0.0..=1.0).text("Saturation")).changed() {
+                                param_bus.set(ParamId(track.id as u32 * 10 + 2), sat);
+                            }
+                        }
+                        "TubeSaturationNode" | "TubeSaturation" => {
+                            let mut drive = param_bus.get(ParamId(track.id as u32 * 10 + 1)).unwrap_or(2.5);
+                            if ui.add(egui::Slider::new(&mut drive, 1.0..=10.0).text("Tube Drive")).changed() {
+                                param_bus.set(ParamId(track.id as u32 * 10 + 1), drive);
+                            }
+                            let mut bias = param_bus.get(ParamId(track.id as u32 * 10 + 2)).unwrap_or(0.2);
+                            if ui.add(egui::Slider::new(&mut bias, 0.0..=0.5).text("Bias (Asymmetry)")).changed() {
+                                param_bus.set(ParamId(track.id as u32 * 10 + 2), bias);
+                            }
+                        }
+                        "ConsoleEmulationNode" | "ConsoleEmulation" => {
+                            let mut mode = param_bus.get(ParamId(track.id as u32 * 10 + 1)).unwrap_or(0.0);
+                            ui.horizontal(|ui| {
+                                ui.label("Console Mode:");
+                                ui.selectable_value(&mut mode, 0.0, "Neve");
+                                ui.selectable_value(&mut mode, 1.0, "SSL");
+                                ui.selectable_value(&mut mode, 2.0, "API");
+                            });
+                            param_bus.set(ParamId(track.id as u32 * 10 + 1), mode);
+
+                            let mut drive = param_bus.get(ParamId(track.id as u32 * 10 + 2)).unwrap_or(1.0);
+                            if ui.add(egui::Slider::new(&mut drive, 0.0..=5.0).text("Console Drive")).changed() {
+                                param_bus.set(ParamId(track.id as u32 * 10 + 2), drive);
+                            }
+                        }
                         "DistortionNode" => {
                             let mut drive = param_bus.get(ParamId(track.id as u32 * 10 + 1)).unwrap_or(2.0);
                             if ui.add(egui::Slider::new(&mut drive, 1.0..=20.0).text("Drive")).changed() {
