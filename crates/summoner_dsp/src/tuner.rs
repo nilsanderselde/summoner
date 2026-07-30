@@ -19,7 +19,7 @@ pub struct TunerResult {
 const NOTE_NAMES: [&str; 12] = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 
 /// Estimate fundamental pitch (Hz), nearest MIDI note, note name, and cents deviation
-/// using time-domain autocorrelation over input buffer.
+/// using time-domain autocorrelation peak detection over input buffer.
 pub fn detect_chromatic_pitch(samples: &[f32], sample_rate: f32) -> Option<TunerResult> {
     if samples.len() < 128 || sample_rate <= 0.0 {
         return None;
@@ -32,11 +32,9 @@ pub fn detect_chromatic_pitch(samples: &[f32], sample_rate: f32) -> Option<Tuner
         return None;
     }
 
-    let mut best_lag = 0;
-    let mut best_corr = 0.0f32;
+    let n = samples.len() / 2;
     let mut zero_lag_corr = 0.0f32;
-
-    for i in 0..samples.len() / 2 {
+    for i in 0..n {
         zero_lag_corr += samples[i] * samples[i];
     }
 
@@ -44,23 +42,40 @@ pub fn detect_chromatic_pitch(samples: &[f32], sample_rate: f32) -> Option<Tuner
         return None; // Signal too quiet
     }
 
+    let mut corrs = vec![0.0f32; max_lag + 2];
+    let mut max_corr = 0.0f32;
+
     for lag in min_lag..=max_lag {
         let mut corr = 0.0f32;
-        for i in 0..samples.len() / 2 {
+        for i in 0..n {
             corr += samples[i] * samples[i + lag];
         }
-        if corr > best_corr {
-            best_corr = corr;
-            best_lag = lag;
+        corrs[lag] = corr;
+        if corr > max_corr {
+            max_corr = corr;
         }
     }
 
-    let norm_corr = best_corr / zero_lag_corr;
-    if norm_corr < 0.3 || best_lag == 0 {
-        return None; // Unpitched or weak periodicity
+    if max_corr / zero_lag_corr < 0.3 {
+        return None; // Signal unpitched or weak autocorrelation
     }
 
-    let pitch_hz = sample_rate / (best_lag as f32);
+    // Pick the FIRST local peak whose correlation is at least 70% of max_corr
+    let threshold = max_corr * 0.70;
+    let mut fundamental_lag = 0;
+
+    for lag in (min_lag + 1)..max_lag {
+        if corrs[lag] >= threshold && corrs[lag] >= corrs[lag - 1] && corrs[lag] >= corrs[lag + 1] {
+            fundamental_lag = lag;
+            break;
+        }
+    }
+
+    if fundamental_lag == 0 {
+        return None;
+    }
+
+    let pitch_hz = sample_rate / (fundamental_lag as f32);
     let note_num = 69.0 + 12.0 * (pitch_hz / 440.0).log2();
     let rounded_midi = note_num.round().clamp(0.0, 127.0) as u8;
     let cents_dev = (note_num - rounded_midi as f32) * 100.0;
