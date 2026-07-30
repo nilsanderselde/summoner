@@ -8,14 +8,28 @@
 
 use crate::sequence::{SequenceTrack, TrackerStep};
 
-#[derive(Debug)]
+/// Represent standard MIDI protocol messages for real-time engine event handling.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MidiEvent {
+    /// Note On event with (channel 0-15, note 0-127, velocity 0-127).
     NoteOn(u8, u8, u8),
+    /// Note Off event with (channel 0-15, note 0-127, release velocity 0-127).
     NoteOff(u8, u8, u8),
+    /// Pitch Bend event with (channel 0-15, 14-bit unsigned pitch value 0-16383).
     PitchBend(u8, u16),
+    /// Control Change event with (channel 0-15, controller number 0-127, controller value 0-127).
     ControlChange(u8, u8, u8),
+    /// Program Change event with (channel 0-15, program number 0-127).
+    ProgramChange(u8, u8),
+    /// Channel Pressure / Aftertouch event with (channel 0-15, pressure value 0-127).
+    Aftertouch(u8, u8),
+    /// Polyphonic Key Pressure event with (channel 0-15, note 0-127, pressure value 0-127).
+    PolyPressure(u8, u8, u8),
+    /// System Realtime status byte message (e.g. 0xF8 Timing Clock, 0xFA Start, 0xFC Stop).
+    SystemRealtime(u8),
 }
 
+/// Standard Standard MIDI File (.mid) parser.
 pub struct MidiFileParser {
     data: Vec<u8>,
     pos: usize,
