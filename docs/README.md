@@ -18,13 +18,13 @@ Welcome to the official documentation for **Summoner DAW**, a headless-first, de
 
 | Document | Description |
 | :--- | :--- |
-| [ARCHITECTURE.md](file:///c:/Users/Nils/Code/Summoner/docs/ARCHITECTURE.md) | High-level system architecture, crate topology, real-time audio thread rules, and content-addressed storage. |
-| [DSP_PRIMITIVES_AND_PRESETS.md](file:///c:/Users/Nils/Code/Summoner/docs/DSP_PRIMITIVES_AND_PRESETS.md) | Atomic DSP nodes (`OscSaw`, `FilterLadder`, `FilterComb`, etc.) and composite devices (`AetherSynth`, `Pluck`, `FmOperatorPair`, `SamplerDevice`). |
-| [HARMONIC_BUS_AND_MICROTONAL.md](file:///c:/Users/Nils/Code/Summoner/docs/HARMONIC_BUS_AND_MICROTONAL.md) | The reactive Global Harmonic Bus, 12-TET and arbitrary $N$-EDO microtonal tuning systems, and Scala (`.scl`/`.kbm`) integration. |
-| [PATCH_AND_SESSION_SPEC.md](file:///c:/Users/Nils/Code/Summoner/docs/PATCH_AND_SESSION_SPEC.md) | Complete TOML session document schema, track pipelines, step sequencer ratchets/probabilities, and preset specifications. |
-| [VERSION_CONTROL_ENGINE.md](file:///c:/Users/Nils/Code/Summoner/docs/VERSION_CONTROL_ENGINE.md) | The embedded `libgit2` micro-commit engine, DAG traversal for undo/redo, and patch export features. |
-| [CLI_AND_HEADLESS.md](file:///c:/Users/Nils/Code/Summoner/docs/CLI_AND_HEADLESS.md) | Headless daemon commands (`summon play`, `summon render`), UDP OSC remote server, and MIDI Clock synchronization. |
-| [CONTRIBUTING.md](file:///c:/Users/Nils/Code/Summoner/docs/CONTRIBUTING.md) | Developer guide, coding standards, real-time safety guardrails, testing/doctests/fuzzing, and commit conventions. |
+| [ARCHITECTURE.md](./ARCHITECTURE.md) | High-level system architecture, crate topology, real-time audio thread rules, and content-addressed storage. |
+| [DSP_PRIMITIVES_AND_PRESETS.md](./DSP_PRIMITIVES_AND_PRESETS.md) | Atomic DSP nodes (`OscSaw`, `FilterLadder`, `FilterComb`, etc.) and composite devices (`AetherSynth`, `Pluck`, `FmOperatorPair`, `SamplerDevice`). |
+| [HARMONIC_BUS_AND_MICROTONAL.md](./HARMONIC_BUS_AND_MICROTONAL.md) | The reactive Global Harmonic Bus, 12-TET and arbitrary $N$-EDO microtonal tuning systems, and Scala (`.scl`/`.kbm`) integration. |
+| [PATCH_AND_SESSION_SPEC.md](./PATCH_AND_SESSION_SPEC.md) | Complete TOML session document schema, track pipelines, step sequencer ratchets/probabilities, and preset specifications. |
+| [VERSION_CONTROL_ENGINE.md](./VERSION_CONTROL_ENGINE.md) | The embedded `libgit2` micro-commit engine, DAG traversal for undo/redo, and patch export features. |
+| [CLI_AND_HEADLESS.md](./CLI_AND_HEADLESS.md) | Headless daemon commands (`summon play`, `summon render`), UDP OSC remote server, and MIDI Clock synchronization. |
+| [CONTRIBUTING.md](./CONTRIBUTING.md) | Developer guide, coding standards, real-time safety guardrails, testing/doctests/fuzzing, and commit conventions. |
 
 ---
 

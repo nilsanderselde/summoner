@@ -1,6 +1,6 @@
 # Deterministic Microtonal DSP & High-Order Ambisonic Audio Synthesis Architecture
 
-**Author:** Nils Anders Elde & The Summoner DAW Foundation  
+**Author:** Nils Anders Elde 
 **Published:** July 2026  
 **License:** Creative Commons Attribution 4.0 International (CC-BY 4.0)
 
