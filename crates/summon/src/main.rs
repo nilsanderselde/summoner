@@ -77,6 +77,7 @@ fn print_usage() {
     println!("  summon export-adm [PROJECT_PATH] [OUTPUT_ADM_PATH]");
     println!("  summon convert [INPUT_PATH] [OUTPUT_PATH] [--format=flac]");
     println!("  summon analyze-crash-dump [FILE_OR_DIR]");
+    println!("  summon benchmark [PROJECT_PATH] [--frames N] [--runs R] [--block-size B] [--json]");
     println!("  summon-build-pi-img [OUTPUT_DIR] [--target pi5|pizero2w]");
 }
 
@@ -115,6 +116,84 @@ fn main() {
                         process::exit(1);
                     }
                 }
+            }
+        }
+        "benchmark" | "--benchmark" => {
+            let mut proj_path = "summoner_session.toml".to_string();
+            let mut frames = 44100 * 5;
+            let mut runs = 5;
+            let mut specified_block_size: Option<usize> = None;
+            let mut json_output = false;
+
+            let mut idx = 2;
+            while idx < args.len() {
+                let arg = &args[idx];
+                if arg == "--json" {
+                    json_output = true;
+                } else if arg.starts_with("--frames=") {
+                    frames = arg.trim_start_matches("--frames=").parse().unwrap_or(frames);
+                } else if arg == "--frames" && idx + 1 < args.len() {
+                    frames = args[idx + 1].parse().unwrap_or(frames);
+                    idx += 1;
+                } else if arg.starts_with("--runs=") {
+                    runs = arg.trim_start_matches("--runs=").parse().unwrap_or(runs);
+                } else if arg == "--runs" && idx + 1 < args.len() {
+                    runs = args[idx + 1].parse().unwrap_or(runs);
+                    idx += 1;
+                } else if arg.starts_with("--block-size=") {
+                    if let Ok(val) = arg.trim_start_matches("--block-size=").parse::<usize>() {
+                        specified_block_size = Some(val);
+                    }
+                } else if arg == "--block-size" && idx + 1 < args.len() {
+                    if let Ok(val) = args[idx + 1].parse::<usize>() {
+                        specified_block_size = Some(val);
+                    }
+                    idx += 1;
+                } else if !arg.starts_with('-') {
+                    proj_path = arg.clone();
+                }
+                idx += 1;
+            }
+
+            let project = if Path::new(&proj_path).exists() {
+                let content = fs::read_to_string(&proj_path).unwrap_or_default();
+                parse_project_toml(&content).unwrap_or_else(|_| create_default_project("Benchmark Session"))
+            } else {
+                create_default_project("Benchmark Session")
+            };
+
+            let block_sizes = match specified_block_size {
+                Some(b) => vec![b],
+                None => vec![32, 64, 128, 256, 512, 1024],
+            };
+
+            let config = summoner_project::AudioGraphBenchmarkConfig {
+                frames_to_process: frames,
+                block_sizes,
+                runs_per_block_size: runs,
+                warmup_runs: 1,
+                sample_rate: project.transport.sample_rate,
+                channels: 2,
+            };
+
+            let total_nodes: usize = project.tracks.iter().map(|t| t.nodes.len()).sum();
+            let mut runner = graph::GraphRunner::new(&project);
+
+            let report = summoner_project::AudioGraphBenchmarkSuite::run_benchmark_with_runner(
+                &project.name,
+                project.tracks.len(),
+                total_nodes,
+                &config,
+                |block_size, outputs| {
+                    let ctx = summoner_core::node::ProcessContext::new(project.transport.sample_rate, project.transport.bpm, 0);
+                    runner.process_block(block_size, &ctx, outputs);
+                },
+            );
+
+            if json_output {
+                println!("{}", report.formatted_json);
+            } else {
+                println!("{}", report.formatted_summary);
             }
         }
         "convert" => {

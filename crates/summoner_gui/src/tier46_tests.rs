@@ -316,6 +316,64 @@ mod tests {
 
         let _ = std::fs::remove_dir_all(&temp_dir);
     }
+
+    #[test]
+    fn test_step_1250_audio_graph_benchmark_suite() {
+        use summoner_project::benchmark::{
+            AudioGraphBenchmarkConfig, AudioGraphBenchmarkSuite,
+        };
+        use summoner_project::create_default_project;
+
+        let proj = create_default_project("Benchmark Test Session");
+        let config = AudioGraphBenchmarkConfig {
+            frames_to_process: 44100 * 2, // 2 seconds
+            block_sizes: vec![64, 256, 1024],
+            runs_per_block_size: 3,
+            warmup_runs: 1,
+            sample_rate: 44100,
+            channels: 2,
+        };
+
+        // 1. Run benchmark directly on project config
+        let report = AudioGraphBenchmarkSuite::run_benchmark_on_project(&proj, &config);
+
+        assert_eq!(report.project_name, "Benchmark Test Session");
+        assert_eq!(report.block_results.len(), 3);
+        assert_eq!(report.sample_rate, 44100);
+        assert_eq!(report.channels, 2);
+        assert!(report.peak_realtime_factor > 0.0);
+        assert!(report.peak_throughput_mb_s > 0.0);
+        assert!(report.best_block_size > 0);
+
+        // 2. Verify summary text table and JSON reporting output
+        assert!(report.formatted_summary.contains("SUMMONER AUDIO GRAPH BUFFER PROCESSING THROUGHPUT BENCHMARK"));
+        assert!(report.formatted_summary.contains("Block Size"));
+        assert!(report.formatted_summary.contains("Speed Factor"));
+        assert!(report.formatted_json.contains("best_block_size"));
+        assert!(report.formatted_json.contains("peak_realtime_factor"));
+
+        // 3. Test benchmark execution with custom closure runner
+        let mut closure_calls = 0;
+        let custom_report = AudioGraphBenchmarkSuite::run_benchmark_with_runner(
+            "Custom Closure Graph",
+            2,
+            4,
+            &config,
+            |block_size, outputs| {
+                closure_calls += 1;
+                for ch in outputs {
+                    for sample in ch.iter_mut().take(block_size) {
+                        *sample = 0.42;
+                    }
+                }
+            },
+        );
+
+        assert_eq!(custom_report.project_name, "Custom Closure Graph");
+        assert_eq!(custom_report.block_results.len(), 3);
+        assert!(closure_calls > 0);
+        assert!(custom_report.block_results.iter().all(|r| r.checksum > 0.0));
+    }
 }
 
 
