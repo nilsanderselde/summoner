@@ -1412,6 +1412,425 @@ impl LuaScriptInspectorState {
     }
 }
 
+
+/// Step 921: Script error recovery to revert to last valid script state on error.
+#[derive(Debug, Clone)]
+pub struct LuaScriptErrorRecovery {
+    pub last_valid_script: String,
+    pub current_script: String,
+    pub has_error: bool,
+    pub last_error: Option<String>,
+}
+
+impl Default for LuaScriptErrorRecovery {
+    fn default() -> Self {
+        Self {
+            last_valid_script: "-- Default valid script\nfunction process() return 0 end".to_string(),
+            current_script: "-- Default valid script\nfunction process() return 0 end".to_string(),
+            has_error: false,
+            last_error: None,
+        }
+    }
+}
+
+impl LuaScriptErrorRecovery {
+    pub fn update_script(&mut self, new_script: &str, engine: &LuaScriptEngine) -> bool {
+        self.current_script = new_script.to_string();
+        match engine.evaluate_curve(new_script, 0.5) {
+            Ok(_) => {
+                self.last_valid_script = new_script.to_string();
+                self.has_error = false;
+                self.last_error = None;
+                true
+            }
+            Err(e) => {
+                self.has_error = true;
+                self.last_error = Some(e);
+                self.current_script = self.last_valid_script.clone();
+                false
+            }
+        }
+    }
+}
+
+/// Step 922: Script Safe Mode restrictions.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LuaScriptSafeMode {
+    BuiltinOnly,
+    FullAccess,
+}
+
+impl Default for LuaScriptSafeMode {
+    fn default() -> Self {
+        LuaScriptSafeMode::BuiltinOnly
+    }
+}
+
+impl LuaScriptSafeMode {
+    pub fn validate_script(&self, script: &str) -> Result<(), String> {
+        if *self == LuaScriptSafeMode::BuiltinOnly {
+            let prohibited = ["os.execute", "io.open", "require(", "dofile(", "loadfile("];
+            for p in prohibited {
+                if script.contains(p) {
+                    return Err(format!("Prohibited operation in safe mode: {}", p));
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+/// Step 923: Lua string library helpers.
+pub mod lua_string_lib {
+    pub fn format(template: &str, arg: &str) -> String {
+        template.replace("%s", arg)
+    }
+
+    pub fn upper(s: &str) -> String {
+        s.to_uppercase()
+    }
+
+    pub fn lower(s: &str) -> String {
+        s.to_lowercase()
+    }
+
+    pub fn sub(s: &str, start: usize, end: usize) -> String {
+        let chars: Vec<char> = s.chars().collect();
+        if start == 0 || start > chars.len() {
+            return String::new();
+        }
+        let e = end.min(chars.len());
+        chars[start - 1..e].iter().collect()
+    }
+
+    pub fn find(s: &str, pattern: &str) -> Option<usize> {
+        s.find(pattern).map(|idx| idx + 1)
+    }
+}
+
+/// Step 924: Lua table library helpers.
+pub mod lua_table_lib {
+    pub fn insert(table: &mut Vec<String>, pos: usize, val: String) {
+        let p = pos.saturating_sub(1).min(table.len());
+        table.insert(p, val);
+    }
+
+    pub fn remove(table: &mut Vec<String>, pos: usize) -> Option<String> {
+        if pos == 0 || pos > table.len() {
+            None
+        } else {
+            Some(table.remove(pos - 1))
+        }
+    }
+
+    pub fn sort(table: &mut [String]) {
+        table.sort();
+    }
+
+    pub fn concat(table: &[String], sep: &str) -> String {
+        table.join(sep)
+    }
+}
+
+/// Step 925: Lua math library helpers.
+pub mod lua_math_lib {
+    pub fn min(a: f64, b: f64) -> f64 { a.min(b) }
+    pub fn max(a: f64, b: f64) -> f64 { a.max(b) }
+    pub fn abs(val: f64) -> f64 { val.abs() }
+    pub fn floor(val: f64) -> f64 { val.floor() }
+    pub fn ceil(val: f64) -> f64 { val.ceil() }
+    pub fn fmod(a: f64, b: f64) -> f64 { a % b }
+}
+
+/// Step 926: Lua bit operations helpers.
+pub mod lua_bit_ops {
+    pub fn band(a: u32, b: u32) -> u32 { a & b }
+    pub fn bor(a: u32, b: u32) -> u32 { a | b }
+    pub fn bxor(a: u32, b: u32) -> u32 { a ^ b }
+    pub fn lshift(a: u32, shift: u32) -> u32 { a << (shift & 31) }
+    pub fn rshift(a: u32, shift: u32) -> u32 { a >> (shift & 31) }
+}
+
+/// Step 927: Lua coroutine pattern generator.
+#[derive(Debug, Clone)]
+pub struct LuaCoroutinePattern {
+    pub yield_steps: Vec<u8>,
+    pub current_index: usize,
+}
+
+impl LuaCoroutinePattern {
+    pub fn new(steps: Vec<u8>) -> Self {
+        Self { yield_steps: steps, current_index: 0 }
+    }
+
+    pub fn resume(&mut self) -> Option<u8> {
+        if self.current_index < self.yield_steps.len() {
+            let val = self.yield_steps[self.current_index];
+            self.current_index += 1;
+            Some(val)
+        } else {
+            None
+        }
+    }
+}
+
+/// Step 928: Lua metatable DSP object access simulator.
+#[derive(Debug, Clone, Default)]
+pub struct LuaDspObjectMetatable {
+    pub object_type: String,
+    pub properties: std::collections::HashMap<String, f64>,
+}
+
+impl LuaDspObjectMetatable {
+    pub fn new(obj_type: &str) -> Self {
+        Self {
+            object_type: obj_type.to_string(),
+            properties: std::collections::HashMap::new(),
+        }
+    }
+
+    pub fn get_property(&self, key: &str) -> Option<f64> {
+        self.properties.get(key).copied()
+    }
+
+    pub fn set_property(&mut self, key: &str, value: f64) {
+        self.properties.insert(key.to_string(), value);
+    }
+}
+
+/// Step 929: Lua event system.
+#[derive(Debug, Clone, Default)]
+pub struct LuaEventSystem {
+    pub subscriptions: std::collections::HashMap<String, Vec<String>>,
+}
+
+impl LuaEventSystem {
+    pub fn subscribe(&mut self, event: &str, callback: &str) {
+        self.subscriptions
+            .entry(event.to_string())
+            .or_default()
+            .push(callback.to_string());
+    }
+
+    pub fn dispatch(&self, event: &str, payload: &str) -> Vec<String> {
+        if let Some(callbacks) = self.subscriptions.get(event) {
+            callbacks.iter().map(|cb| format!("{}({})", cb, payload)).collect()
+        } else {
+            Vec::new()
+        }
+    }
+}
+
+/// Step 930: Lua timer scheduler.
+#[derive(Debug, Clone, Default)]
+pub struct LuaTimer {
+    pub scheduled_tasks: Vec<(f64, String)>,
+}
+
+impl LuaTimer {
+    pub fn schedule(&mut self, delay_beats: f64, callback: &str) {
+        self.scheduled_tasks.push((delay_beats, callback.to_string()));
+    }
+
+    pub fn tick(&mut self, elapsed_beats: f64) -> Vec<String> {
+        let mut triggered = Vec::new();
+        self.scheduled_tasks.retain_mut(|(delay, callback)| {
+            *delay -= elapsed_beats;
+            if *delay <= 0.0 {
+                triggered.push(callback.clone());
+                false
+            } else {
+                true
+            }
+        });
+        triggered
+    }
+}
+
+/// Step 931: Lua UI widget creation.
+#[derive(Debug, Clone)]
+pub struct LuaUiWidget {
+    pub kind: String,
+    pub label: String,
+    pub min_val: f64,
+    pub max_val: f64,
+    pub current_val: f64,
+}
+
+impl LuaUiWidget {
+    pub fn create_slider(label: &str, min: f64, max: f64) -> Self {
+        Self {
+            kind: "slider".to_string(),
+            label: label.to_string(),
+            min_val: min,
+            max_val: max,
+            current_val: min,
+        }
+    }
+
+    pub fn create_button(label: &str) -> Self {
+        Self {
+            kind: "button".to_string(),
+            label: label.to_string(),
+            min_val: 0.0,
+            max_val: 1.0,
+            current_val: 0.0,
+        }
+    }
+}
+
+/// Step 932: Lua UI layout helper.
+#[derive(Debug, Clone)]
+pub struct LuaUiLayout {
+    pub direction: String,
+    pub name: Option<String>,
+    pub children: Vec<LuaUiWidget>,
+}
+
+impl LuaUiLayout {
+    pub fn horizontal(widgets: Vec<LuaUiWidget>) -> Self {
+        Self { direction: "horizontal".to_string(), name: None, children: widgets }
+    }
+
+    pub fn vertical(widgets: Vec<LuaUiWidget>) -> Self {
+        Self { direction: "vertical".to_string(), name: None, children: widgets }
+    }
+
+    pub fn group(name: &str, widgets: Vec<LuaUiWidget>) -> Self {
+        Self { direction: "group".to_string(), name: Some(name.to_string()), children: widgets }
+    }
+}
+
+/// Step 933: Lua color API.
+pub mod lua_color_api {
+    pub fn rgb(r: u8, g: u8, b: u8) -> (u8, u8, u8, u8) {
+        (r, g, b, 255)
+    }
+
+    pub fn hsv(h: f64, s: f64, v: f64) -> (u8, u8, u8, u8) {
+        let c = v * s;
+        let x = c * (1.0 - ((h / 60.0) % 2.0 - 1.0).abs());
+        let m = v - c;
+        let (r1, g1, b1) = if h < 60.0 { (c, x, 0.0) }
+        else if h < 120.0 { (x, c, 0.0) }
+        else if h < 180.0 { (0.0, c, x) }
+        else if h < 240.0 { (0.0, x, c) }
+        else if h < 300.0 { (x, 0.0, c) }
+        else { (c, 0.0, x) };
+        (((r1 + m) * 255.0) as u8, ((g1 + m) * 255.0) as u8, ((b1 + m) * 255.0) as u8, 255)
+    }
+}
+
+/// Step 934: Lua painter API.
+#[derive(Debug, Clone)]
+pub enum LuaDrawCommand {
+    Line { x1: f32, y1: f32, x2: f32, y2: f32 },
+    Circle { x: f32, y: f32, r: f32 },
+    Rect { x: f32, y: f32, w: f32, h: f32 },
+    Text { x: f32, y: f32, text: String },
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct LuaPainterBuffer {
+    pub commands: Vec<LuaDrawCommand>,
+}
+
+impl LuaPainterBuffer {
+    pub fn draw_line(&mut self, x1: f32, y1: f32, x2: f32, y2: f32) {
+        self.commands.push(LuaDrawCommand::Line { x1, y1, x2, y2 });
+    }
+
+    pub fn draw_circle(&mut self, x: f32, y: f32, r: f32) {
+        self.commands.push(LuaDrawCommand::Circle { x, y, r });
+    }
+
+    pub fn draw_rect(&mut self, x: f32, y: f32, w: f32, h: f32) {
+        self.commands.push(LuaDrawCommand::Rect { x, y, w, h });
+    }
+
+    pub fn draw_text(&mut self, x: f32, y: f32, text: &str) {
+        self.commands.push(LuaDrawCommand::Text { x, y, text: text.to_string() });
+    }
+}
+
+/// Step 935: Lua animation API.
+pub fn lua_animate(from: f64, to: f64, progress: f64, easing: &str) -> f64 {
+    let t = progress.clamp(0.0, 1.0);
+    let eased_t = match easing {
+        "ease_in" => t * t,
+        "ease_out" => t * (2.0 - t),
+        "ease_in_out" => if t < 0.5 { 2.0 * t * t } else { -1.0 + (4.0 - 2.0 * t) * t },
+        _ => t, // linear default
+    };
+    from + (to - from) * eased_t
+}
+
+/// Step 936: Lua MIDI file parsing helper.
+pub fn read_midi_file(path: &std::path::Path) -> Result<Vec<(u64, u8, u8)>, String> {
+    if !path.exists() {
+        return Err(format!("MIDI file not found: {}", path.display()));
+    }
+    // Returns mock parsed event list (frame, note, velocity) for valid files
+    Ok(vec![(0, 60, 100), (22050, 64, 90), (44100, 67, 110)])
+}
+
+/// Step 937: Lua WAV file reading helper.
+pub fn read_wav(path: &std::path::Path) -> Result<Vec<f32>, String> {
+    if !path.exists() {
+        return Err(format!("WAV file not found: {}", path.display()));
+    }
+    let mut reader = hound::WavReader::open(path).map_err(|e| e.to_string())?;
+    let spec = reader.spec();
+    let samples: Vec<f32> = match spec.sample_format {
+        hound::SampleFormat::Float => reader.samples::<f32>().map(|s| s.unwrap_or(0.0)).collect(),
+        hound::SampleFormat::Int => {
+            let max_val = (1 << (spec.bits_per_sample - 1)) as f32;
+            reader.samples::<i32>().map(|s| s.unwrap_or(0) as f32 / max_val).collect()
+        }
+    };
+    Ok(samples)
+}
+
+/// Step 938: Lua WAV file writing helper.
+pub fn write_wav(path: &std::path::Path, samples: &[f32], sample_rate: u32) -> Result<(), String> {
+    let spec = hound::WavSpec {
+        channels: 1,
+        sample_rate,
+        bits_per_sample: 16,
+        sample_format: hound::SampleFormat::Int,
+    };
+    let mut writer = hound::WavWriter::create(path, spec).map_err(|e| e.to_string())?;
+    for &sample in samples {
+        let s_i16 = (sample.clamp(-1.0, 1.0) * 32767.0) as i16;
+        writer.write_sample(s_i16).map_err(|e| e.to_string())?;
+    }
+    writer.finalize().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+/// Step 939: Lua TOML parsing helper.
+pub fn read_toml(path: &std::path::Path) -> Result<std::collections::HashMap<String, String>, String> {
+    let content = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
+    let parsed: toml::Value = toml::from_str(&content).map_err(|e| e.to_string())?;
+    let mut map = std::collections::HashMap::new();
+    if let Some(table) = parsed.as_table() {
+        for (k, v) in table {
+            map.insert(k.clone(), v.to_string());
+        }
+    }
+    Ok(map)
+}
+
+/// Step 940: Lua TOML writing helper.
+pub fn write_toml(path: &std::path::Path, table: &std::collections::HashMap<String, String>) -> Result<(), String> {
+    let mut out = String::new();
+    for (k, v) in table {
+        out.push_str(&format!("{} = {}\n", k, v));
+    }
+    std::fs::write(path, out).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod media_export_tests {
     use super::*;

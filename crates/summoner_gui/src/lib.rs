@@ -48,6 +48,8 @@ pub mod tier34_tests;
 pub mod tier35_tests;
 pub mod tier36_tests;
 pub mod tier37_tests;
+pub mod tier38_tests;
+
 
 #[cfg(feature = "gui")]
 pub fn launch(project: summoner_project::schema::ProjectConfig, param_bus: std::sync::Arc<summoner_core::param_bus::ParamBus>) {
