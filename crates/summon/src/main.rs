@@ -76,6 +76,7 @@ fn print_usage() {
     println!("  summon package-wasm [SRC]");
     println!("  summon export-adm [PROJECT_PATH] [OUTPUT_ADM_PATH]");
     println!("  summon convert [INPUT_PATH] [OUTPUT_PATH] [--format=flac]");
+    println!("  summon analyze-crash-dump [FILE_OR_DIR]");
     println!("  summon-build-pi-img [OUTPUT_DIR] [--target pi5|pizero2w]");
 }
 
@@ -89,6 +90,33 @@ fn main() {
     }
 
     match args[1].as_str() {
+        "analyze-crash-dump" | "dump-analyze" => {
+            let target_path_str = match args.get(2) {
+                Some(p) => p.as_str(),
+                None => {
+                    eprintln!("Usage: summon analyze-crash-dump <FILE_OR_DIR>");
+                    process::exit(1);
+                }
+            };
+            let path = Path::new(target_path_str);
+            if path.is_dir() {
+                match summoner_project::CrashDumpAnalyzer::analyze_dumps_directory(path) {
+                    Ok(summary) => println!("{}", summary.formatted_summary),
+                    Err(e) => {
+                        eprintln!("Failed to analyze crash dumps directory: {}", e);
+                        process::exit(1);
+                    }
+                }
+            } else {
+                match summoner_project::CrashDumpAnalyzer::analyze_dump_file(path) {
+                    Ok(result) => println!("{}", result.formatted_report),
+                    Err(e) => {
+                        eprintln!("Failed to analyze crash dump file: {}", e);
+                        process::exit(1);
+                    }
+                }
+            }
+        }
         "convert" => {
             let input_path_str = match args.get(2) {
                 Some(p) => p.as_str(),

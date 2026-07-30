@@ -63,4 +63,56 @@ mod tests {
         assert!(cue.contains("TRACK 04 AUDIO"));
         assert!(cue.contains("TITLE \"Chorus 1\""));
     }
+
+    #[test]
+    fn test_step_1247_offline_crash_dump_analyzer() {
+        use summoner_project::crash_analyzer::{
+            CrashDump, CrashDumpAnalyzer, CrashSeverity,
+        };
+
+        let dump1 = CrashDump::new(
+            "dump-20260805-001",
+            CrashSeverity::Fatal,
+            "summoner_dsp",
+            "vst3_host",
+            "Access violation writing location 0x00000000",
+            vec![
+                "vst3_host::process_audio_block (line 120)".to_string(),
+                "audio_engine::render_loop (line 45)".to_string(),
+            ],
+        )
+        .with_metadata("sample_rate", "48000")
+        .with_log("INFO: Native host started");
+
+        let dump2 = CrashDump::new(
+            "dump-20260805-002",
+            CrashSeverity::Error,
+            "summoner_core",
+            "audio_driver",
+            "Real-time audio buffer starvation underflow",
+            vec!["audio_driver::wasapi::callback (line 89)".to_string()],
+        )
+        .with_metadata("buffer_frames", "64");
+
+        let res1 = CrashDumpAnalyzer::analyze_dump(&dump1);
+        assert_eq!(res1.dump_id, "dump-20260805-001");
+        assert!(res1.is_offline_safe);
+        assert!(res1.probable_root_cause.contains("Memory Access Violation"));
+        assert!(res1.formatted_report.contains("OFFLINE CRASH REPORT DUMP ANALYZER"));
+
+        let res2 = CrashDumpAnalyzer::analyze_dump(&dump2);
+        assert!(res2.probable_root_cause.contains("Buffer Processing Underflow"));
+
+        let temp_dir = std::env::temp_dir().join("summoner_crash_dumps_tier46");
+        dump1.save_to_file(&temp_dir.join("dump1.json")).unwrap();
+        dump2.save_to_file(&temp_dir.join("dump2.json")).unwrap();
+
+        let summary = CrashDumpAnalyzer::analyze_dumps_directory(&temp_dir).unwrap();
+        assert_eq!(summary.total_dumps_analyzed, 2);
+        assert!(summary.formatted_summary.contains("LOCAL DISK CRASH REPORT DUMP SUMMARY"));
+        assert!(summary.recommendations.len() > 0);
+
+        let _ = std::fs::remove_dir_all(&temp_dir);
+    }
 }
+
