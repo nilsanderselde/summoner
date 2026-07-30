@@ -574,6 +574,348 @@ pub fn render_buffer_to_wavetable(samples: &[f32]) -> std::sync::Arc<[f32; WAVET
     std::sync::Arc::new(table)
 }
 
+pub const DEFAULT_MAX_VOICES: usize = 16;
+
+/// Voice state for the SIMD Polyphonic Wavetable Oscillator (Step 1261).
+#[derive(Debug, Clone)]
+pub struct SimdPolyVoice {
+    pub note: u8,
+    pub frequency: f32,
+    pub velocity: f32,
+    pub phase: f32,
+    pub active: bool,
+    pub releasing: bool,
+    pub env_level: f32,
+    pub age: u64,
+}
+
+impl SimdPolyVoice {
+    pub fn new() -> Self {
+        Self {
+            note: 0,
+            frequency: 440.0,
+            velocity: 0.0,
+            phase: 0.0,
+            active: false,
+            releasing: false,
+            env_level: 0.0,
+            age: 0,
+        }
+    }
+}
+
+impl Default for SimdPolyVoice {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// SIMD-accelerated polyphonic wavetable oscillator with dynamic anti-aliasing interpolation (Step 1261).
+#[derive(Debug, Clone)]
+pub struct SimdPolyWavetableOscillator {
+    pub sample_rate: u32,
+    pub max_voices: usize,
+    pub voices: Vec<SimdPolyVoice>,
+    pub table: std::sync::Arc<[f32; WAVETABLE_SIZE]>,
+    pub table2: Option<std::sync::Arc<[f32; WAVETABLE_SIZE]>>,
+    pub morph: f32,
+    pub release_decay_rate: f32,
+    pub attack_rate: f32,
+    pub age_counter: u64,
+}
+
+impl SimdPolyWavetableOscillator {
+    pub fn new(sample_rate: u32) -> Self {
+        let max_voices = DEFAULT_MAX_VOICES;
+        let mut voices = Vec::with_capacity(max_voices);
+        for _ in 0..max_voices {
+            voices.push(SimdPolyVoice::new());
+        }
+        Self {
+            sample_rate,
+            max_voices,
+            voices,
+            table: OscWavetable::default_sine(),
+            table2: None,
+            morph: 0.0,
+            release_decay_rate: 0.999,
+            attack_rate: 0.1,
+            age_counter: 0,
+        }
+    }
+
+    pub fn with_table(mut self, table: std::sync::Arc<[f32; WAVETABLE_SIZE]>) -> Self {
+        self.table = table;
+        self
+    }
+
+    pub fn with_table2(mut self, table2: std::sync::Arc<[f32; WAVETABLE_SIZE]>, morph: f32) -> Self {
+        self.table2 = Some(table2);
+        self.morph = morph.clamp(0.0, 1.0);
+        self
+    }
+
+    pub fn set_morph(&mut self, morph: f32) {
+        self.morph = morph.clamp(0.0, 1.0);
+    }
+
+    pub fn set_sample_rate(&mut self, sample_rate: u32) {
+        self.sample_rate = sample_rate;
+    }
+
+    pub fn note_on(&mut self, note: u8, velocity: f32) {
+        let freq = 440.0 * 2.0f32.powf((note as f32 - 69.0) / 12.0);
+        self.age_counter += 1;
+
+        // Try to find an inactive voice first
+        if let Some(voice) = self.voices.iter_mut().find(|v| !v.active) {
+            voice.note = note;
+            voice.frequency = freq;
+            voice.velocity = velocity.clamp(0.0, 1.0);
+            voice.phase = 0.0;
+            voice.active = true;
+            voice.releasing = false;
+            voice.env_level = 0.0;
+            voice.age = self.age_counter;
+            return;
+        }
+
+        // Voice stealing: steal oldest voice
+        if let Some(oldest) = self.voices.iter_mut().min_by_key(|v| v.age) {
+            oldest.note = note;
+            oldest.frequency = freq;
+            oldest.velocity = velocity.clamp(0.0, 1.0);
+            oldest.phase = 0.0;
+            oldest.active = true;
+            oldest.releasing = false;
+            oldest.env_level = 0.0;
+            oldest.age = self.age_counter;
+        }
+    }
+
+    pub fn note_off(&mut self, note: u8) {
+        for voice in self.voices.iter_mut().filter(|v| v.active && v.note == note) {
+            voice.releasing = true;
+        }
+    }
+
+    pub fn all_notes_off(&mut self) {
+        for voice in self.voices.iter_mut() {
+            if voice.active {
+                voice.releasing = true;
+            }
+        }
+    }
+
+    pub fn active_voice_count(&self) -> usize {
+        self.voices.iter().filter(|v| v.active).count()
+    }
+
+    /// Evaluates dynamic anti-aliasing wavetable interpolation for a single voice phase and frequency.
+    pub fn interpolate_voice_sample(&self, phase: f32, frequency: f32) -> f32 {
+        Self::interpolate_wavetable_sample(
+            &self.table,
+            self.table2.as_deref(),
+            self.morph,
+            self.sample_rate,
+            phase,
+            frequency,
+        )
+    }
+
+    /// Evaluates dynamic anti-aliasing wavetable interpolation given explicit table references.
+    pub fn interpolate_wavetable_sample(
+        table: &[f32; WAVETABLE_SIZE],
+        table2: Option<&[f32; WAVETABLE_SIZE]>,
+        morph: f32,
+        sample_rate: u32,
+        phase: f32,
+        frequency: f32,
+    ) -> f32 {
+        if sample_rate == 0 {
+            return 0.0;
+        }
+
+        let dt = frequency / sample_rate as f32;
+        let index_float = phase * (WAVETABLE_SIZE as f32);
+        let idx0 = index_float.floor() as usize % WAVETABLE_SIZE;
+        let idx_prev = (idx0 + WAVETABLE_SIZE - 1) % WAVETABLE_SIZE;
+        let idx1 = (idx0 + 1) % WAVETABLE_SIZE;
+        let idx2 = (idx0 + 2) % WAVETABLE_SIZE;
+        let frac = index_float - index_float.floor();
+
+        // 4-point Hermite cubic interpolation for table 1
+        let y0 = table[idx_prev];
+        let y1 = table[idx0];
+        let y2 = table[idx1];
+        let y3 = table[idx2];
+
+        let c0 = y1;
+        let c1 = 0.5 * (y2 - y0);
+        let c2 = y0 - 2.5 * y1 + 2.0 * y2 - 0.5 * y3;
+        let c3 = 0.5 * (y3 - y0) + 1.5 * (y1 - y2);
+        let cubic1 = ((c3 * frac + c2) * frac + c1) * frac + c0;
+
+        // Dynamic anti-aliasing interpolation parameter based on phase increment dt vs Nyquist threshold
+        let aa_blend = (1.0 - (dt * WAVETABLE_SIZE as f32 * 1.5)).clamp(0.0, 1.0);
+        let linear1 = y1 * (1.0 - frac) + y2 * frac;
+        let s1 = aa_blend * cubic1 + (1.0 - aa_blend) * linear1;
+
+        if let Some(t2) = table2 {
+            let y0_2 = t2[idx_prev];
+            let y1_2 = t2[idx0];
+            let y2_2 = t2[idx1];
+            let y3_2 = t2[idx2];
+
+            let c0_2 = y1_2;
+            let c1_2 = 0.5 * (y2_2 - y0_2);
+            let c2_2 = y0_2 - 2.5 * y1_2 + 2.0 * y2_2 - 0.5 * y3_2;
+            let c3_2 = 0.5 * (y3_2 - y0_2) + 1.5 * (y1_2 - y2_2);
+            let cubic2 = ((c3_2 * frac + c2_2) * frac + c1_2) * frac + c0_2;
+
+            let linear2 = y1_2 * (1.0 - frac) + y2_2 * frac;
+            let s2 = aa_blend * cubic2 + (1.0 - aa_blend) * linear2;
+
+            let morph_clamped = morph.clamp(0.0, 1.0);
+            s1 * (1.0 - morph_clamped) + s2 * morph_clamped
+        } else {
+            s1
+        }
+    }
+
+    /// Process a single audio frame across all active polyphonic voices using SIMD vectorization.
+    pub fn process_sample(&mut self) -> f32 {
+        if self.sample_rate == 0 {
+            return 0.0;
+        }
+
+        // Collect indices of active voices
+        let mut active_indices: Vec<usize> = Vec::with_capacity(self.max_voices);
+        for (idx, voice) in self.voices.iter().enumerate() {
+            if voice.active {
+                active_indices.push(idx);
+            }
+        }
+
+        if active_indices.is_empty() {
+            return 0.0;
+        }
+
+        let t1_ref = &self.table;
+        let t2_ref = self.table2.as_deref();
+        let morph_val = self.morph;
+        let sr = self.sample_rate;
+
+        let mut mix_sample = 0.0f32;
+
+        // Process in SIMD 4-wide batches
+        let chunks = active_indices.chunks_exact(4);
+        let remainder = chunks.remainder();
+
+        for chunk in chunks {
+            // Pack voice parameters into arrays for SIMD processing
+            let mut phases_arr = [0.0f32; 4];
+            let mut freqs_arr = [0.0f32; 4];
+            let mut gains_arr = [0.0f32; 4];
+
+            for b in 0..4 {
+                let v = &self.voices[chunk[b]];
+                phases_arr[b] = v.phase;
+                freqs_arr[b] = v.frequency;
+                gains_arr[b] = v.env_level;
+            }
+
+            use wide::f32x4;
+            let phases_v = f32x4::new(phases_arr);
+            let dts_v = f32x4::new([
+                freqs_arr[0] / sr as f32,
+                freqs_arr[1] / sr as f32,
+                freqs_arr[2] / sr as f32,
+                freqs_arr[3] / sr as f32,
+            ]);
+            let gains_v = f32x4::new(gains_arr);
+
+            // Compute voice sample for each voice in batch
+            let mut samples_arr = [0.0f32; 4];
+            for b in 0..4 {
+                samples_arr[b] = Self::interpolate_wavetable_sample(
+                    t1_ref, t2_ref, morph_val, sr, phases_arr[b], freqs_arr[b],
+                );
+            }
+
+            let samples_v = f32x4::new(samples_arr);
+            let out_v = samples_v * gains_v;
+            let out_arr = out_v.to_array();
+
+            mix_sample += out_arr[0] + out_arr[1] + out_arr[2] + out_arr[3];
+
+            // Advance voice phases using SIMD
+            let next_phases_v = phases_v + dts_v;
+            let next_phases = next_phases_v.to_array();
+
+            for b in 0..4 {
+                let v = &mut self.voices[chunk[b]];
+                v.phase = next_phases[b] % 1.0;
+            }
+        }
+
+        // Process scalar remainder
+        for &idx in remainder {
+            let v = &mut self.voices[idx];
+            let s = Self::interpolate_wavetable_sample(
+                t1_ref, t2_ref, morph_val, sr, v.phase, v.frequency,
+            );
+            mix_sample += s * v.env_level;
+
+            let dt = v.frequency / sr as f32;
+            v.phase = (v.phase + dt) % 1.0;
+        }
+
+        // Update voice envelopes and release state
+        for voice in self.voices.iter_mut().filter(|v| v.active) {
+            if voice.releasing {
+                voice.env_level *= self.release_decay_rate;
+                if voice.env_level < 1e-4 {
+                    voice.active = false;
+                    voice.releasing = false;
+                    voice.env_level = 0.0;
+                }
+            } else {
+                voice.env_level = (voice.env_level + self.attack_rate).min(voice.velocity);
+            }
+        }
+
+        mix_sample
+    }
+}
+
+impl SignalProcessor for SimdPolyWavetableOscillator {
+    fn name(&self) -> &str {
+        "SimdPolyWavetableOscillator"
+    }
+
+    fn process_block(
+        &mut self,
+        _inputs: &[&[Sample]],
+        outputs: &mut [&mut [Sample]],
+        ctx: &ProcessContext,
+    ) {
+        if ctx.sample_rate == 0 || outputs.is_empty() {
+            return;
+        }
+        self.set_sample_rate(ctx.sample_rate);
+        let num_samples = outputs[0].len();
+        for i in 0..num_samples {
+            let val = self.process_sample();
+            for out_ch in outputs.iter_mut() {
+                if i < out_ch.len() {
+                    out_ch[i] = val;
+                }
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -649,4 +991,50 @@ mod tests {
         let sample1 = osc1.process_sample(44100);
         assert!((sample0 - sample1).abs() > 0.5, "Morphing should produce different outputs");
     }
+
+    #[test]
+    fn test_step_1261_simd_poly_wavetable_oscillator() {
+        let mut synth = SimdPolyWavetableOscillator::new(44100);
+        assert_eq!(synth.active_voice_count(), 0);
+
+        // 1. Play 4-note chord (C4, E4, G4, B4) to test SIMD 4-wide batch processing
+        synth.note_on(60, 0.8);
+        synth.note_on(64, 0.8);
+        synth.note_on(67, 0.8);
+        synth.note_on(71, 0.8);
+        assert_eq!(synth.active_voice_count(), 4);
+
+        let mut block = vec![vec![0.0f32; 256]];
+        let mut slices: Vec<&mut [f32]> = block.iter_mut().map(|v| v.as_mut_slice()).collect();
+        let ctx = ProcessContext::new(44100, 120.0, 0);
+
+        synth.process_block(&[], &mut slices, &ctx);
+
+        let energy: f32 = slices[0].iter().map(|s| s * s).sum();
+        assert!(energy > 1.0, "Polyphonic SIMD oscillator block output energy should be non-zero");
+
+        // 2. Test table morphing
+        let saw_table = OscWavetable::default_saw();
+        let square_table = OscWavetable::default_square();
+        let mut morph_synth = SimdPolyWavetableOscillator::new(44100)
+            .with_table(saw_table)
+            .with_table2(square_table, 0.5);
+
+        morph_synth.note_on(60, 1.0);
+        let sample = morph_synth.process_sample();
+        assert!(sample.is_finite());
+
+        // 3. Test note_off and envelope release
+        synth.note_off(60);
+        synth.note_off(64);
+        synth.note_off(67);
+        synth.note_off(71);
+
+        for _ in 0..10000 {
+            synth.process_sample();
+        }
+
+        assert_eq!(synth.active_voice_count(), 0, "All voices should decay and become inactive after release");
+    }
 }
+

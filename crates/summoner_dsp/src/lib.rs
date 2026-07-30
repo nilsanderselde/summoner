@@ -109,7 +109,10 @@ pub use modulators::{
     EnvADSR, EnvState, LfoShape, MacroKnob, MacroModulationMatrix, ModulationAssignment,
     ModulationCurve, ModulationSourceId, ModulationTarget, ModulationTargetId, LFO,
 };
-pub use oscillators::{NoiseGen, NoiseType, OscPulse, OscSaw, OscSine, OscTriangle, OscWavetable, WAVETABLE_SIZE, render_buffer_to_wavetable};
+pub use oscillators::{
+    DEFAULT_MAX_VOICES, NoiseGen, NoiseType, OscPulse, OscSaw, OscSine, OscTriangle, OscWavetable,
+    SimdPolyVoice, SimdPolyWavetableOscillator, WAVETABLE_SIZE, render_buffer_to_wavetable,
+};
 pub use traits::{ProcessorNodeAdapter, SignalProcessor};
 pub use waveguide::KarplusStrongString;
 pub use sampler::{SampleBuffer, SamplerNode};
