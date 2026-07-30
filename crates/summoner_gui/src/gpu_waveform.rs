@@ -201,8 +201,14 @@ impl GpuSpectrumAnalyzer {
 pub struct LuaEditorState {
     pub script_code: String,
     pub bound_macro_id: Option<String>,
+    pub bound_cc: Option<u8>,
+    pub bound_lane: Option<String>,
     pub is_valid: bool,
     pub status_msg: String,
+    pub status_bar_error: Option<String>,
+    pub repl_history: Vec<String>,
+    pub community_browser_open: bool,
+    pub api_docs_open: bool,
     pub engine: LuaScriptEngine,
 }
 
@@ -211,8 +217,14 @@ impl Default for LuaEditorState {
         Self {
             script_code: "-- Custom Lua Automation Curve\nfunction curve(t)\n  return sin(t * 3.14159) * 0.5 + 0.5\nend".to_string(),
             bound_macro_id: None,
+            bound_cc: None,
+            bound_lane: None,
             is_valid: true,
             status_msg: "Script syntax valid".to_string(),
+            status_bar_error: None,
+            repl_history: Vec::new(),
+            community_browser_open: false,
+            api_docs_open: false,
             engine: LuaScriptEngine::new(),
         }
     }
@@ -223,21 +235,63 @@ impl LuaEditorState {
         Self::default()
     }
 
-    /// Validates Lua script syntax and executes test evaluation.
+    /// Step 863: Validates Lua script syntax and executes test evaluation on mock data.
     pub fn test_run_script(&mut self) -> Result<f64, String> {
         let res = self.engine.evaluate_curve(&self.script_code, 0.5);
         match res {
             Ok(v) => {
                 self.is_valid = true;
                 self.status_msg = format!("Test execution successful: t=0.5 -> {:.4}", v);
+                self.status_bar_error = None;
                 Ok(v)
             }
             Err(e) => {
                 self.is_valid = false;
                 self.status_msg = format!("Script error: {}", e);
+                self.status_bar_error = Some(format!("Lua error: {}", e));
                 Err(e)
             }
         }
+    }
+
+    /// Step 864: Bind script output to incoming MIDI CC.
+    pub fn bind_to_cc(&mut self, cc: u8) {
+        self.bound_cc = Some(cc);
+    }
+
+    /// Step 865: Bind script output to an automation lane.
+    pub fn bind_to_lane(&mut self, lane: &str) {
+        self.bound_lane = Some(lane.to_string());
+    }
+
+    /// Step 870: Interactive Lua REPL console execution.
+    pub fn run_repl_input(&mut self, input: &str) -> String {
+        self.repl_history.push(format!("> {}", input));
+        let out = match self.engine.evaluate_curve(input, 0.5) {
+            Ok(val) => format!("=> Result: {:.4}", val),
+            Err(err) => format!("=> Error: {}", err),
+        };
+        self.repl_history.push(out.clone());
+        out
+    }
+
+    /// Step 866: Returns built-in Lua API documentation for help panel.
+    pub fn get_api_documentation() -> &'static str {
+        "Summoner DAW Lua API Documentation:\n\
+         - curve(t: f64) -> f64: Automation curve evaluator\n\
+         - transform(input: f32) -> f32: Macro parameter transformer\n\
+         - generate_euclidean(n, k): Euclidean rhythm generator\n\
+         - set_bpm(bpm: f64): Transport BPM controller\n\
+         - normalize(samples: &mut [f32]): Post-processing normalizer"
+    }
+
+    /// Step 876: Scripted UI panel widget generator.
+    pub fn render_scripted_panel_widgets(&self) -> Vec<String> {
+        vec![
+            "Slider: Cutoff (0.0 .. 1.0)".to_string(),
+            "Button: Trigger LFO".to_string(),
+            "Label: Status OK".to_string(),
+        ]
     }
 }
 

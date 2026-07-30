@@ -51,6 +51,23 @@ pub struct ProjectConfig {
     pub locator_b_beat: Option<f64>,
     #[serde(default)]
     pub meta: Option<ProjectMetadata>,
+    #[serde(default)]
+    pub scripts: Vec<LuaScriptConfig>,
+    #[serde(default)]
+    pub lua_state: Option<String>,
+}
+
+/// Step 869: Persistent Lua script configuration stored in project TOML.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+pub struct LuaScriptConfig {
+    pub name: String,
+    pub script: String,
+    #[serde(default)]
+    pub bound_cc: Option<u8>,
+    #[serde(default)]
+    pub bound_lane: Option<String>,
+    #[serde(default)]
+    pub sandbox_fs: bool,
 }
 
 /// Step 838: Project tags/genre/BPM/key stored in project TOML [meta] section.
@@ -97,6 +114,8 @@ impl Default for ProjectConfig {
             locator_a_beat: None,
             locator_b_beat: None,
             meta: None,
+            scripts: Vec::new(),
+            lua_state: None,
         }
     }
 }

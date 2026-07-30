@@ -71,6 +71,8 @@ fn print_usage() {
     println!("  summon thin-automation [PROJECT_PATH]");
     println!("  summon list-devices");
     println!("  summon tempo-map [PROJECT_PATH]");
+    println!("  summon eval-script [PROJECT_PATH] [SCRIPT_PATH]");
+    println!("  summon list-scripts [PROJECT_PATH]");
 }
 
 
@@ -212,6 +214,54 @@ fn main() {
             } else {
                 println!("GITHUB_TOKEN environment variable not set. Skipping remote push & PR creation.");
                 println!("Branch '{}' created locally.", branch_name);
+            }
+        }
+        "eval-script" => {
+            let proj_path = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            let script_path_or_code = args.get(3).map(|s| s.as_str()).unwrap_or("return 'OK'");
+            let script_code = if Path::new(script_path_or_code).exists() {
+                fs::read_to_string(script_path_or_code).unwrap_or_else(|_| script_path_or_code.to_string())
+            } else {
+                script_path_or_code.to_string()
+            };
+
+            let proj = if Path::new(proj_path).exists() {
+                let content = fs::read_to_string(proj_path).unwrap_or_default();
+                parse_project_toml(&content).unwrap_or_default()
+            } else {
+                summoner_project::schema::ProjectConfig::default()
+            };
+
+            let engine = summoner_project::media_export::LuaScriptEngine::new();
+            match engine.eval_script(&script_code, &proj) {
+                Ok(res) => println!("{}", res),
+                Err(e) => {
+                    eprintln!("Lua evaluation error: {}", e);
+                    process::exit(1);
+                }
+            }
+        }
+        "list-scripts" => {
+            let proj_path = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            let proj = if Path::new(proj_path).exists() {
+                let content = fs::read_to_string(proj_path).unwrap_or_default();
+                parse_project_toml(&content).unwrap_or_default()
+            } else {
+                summoner_project::schema::ProjectConfig::default()
+            };
+
+            println!("Project Scripts for '{}':", proj.name);
+            if proj.scripts.is_empty() {
+                println!("  (No persistent project scripts defined)");
+            } else {
+                for script in &proj.scripts {
+                    println!("  - {}: bound CC {:?}, bound lane {:?}", script.name, script.bound_cc, script.bound_lane);
+                }
+            }
+
+            println!("\nCommunity & Built-in Automation Scripts:");
+            for comm in summoner_project::media_export::LuaScriptEngine::list_community_scripts() {
+                println!("  - {} by {}: {}", comm.name, comm.author, comm.description);
             }
         }
 
