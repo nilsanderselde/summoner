@@ -641,7 +641,7 @@ mod tests {
         let mut node = MultiSamplerNode::new(bank);
         node.trigger_note(60, 100);
 
-        let mut inputs: [&[f32]; 0] = [];
+        let inputs: [&[f32]; 0] = [];
         let mut out_l = vec![0.0f32; 30];
         let mut outputs = [&mut out_l[..]];
         let ctx = ProcessContext::new(44100, 120.0, 0);

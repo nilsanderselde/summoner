@@ -9,7 +9,6 @@
 //! AI vocal harmonizer, 2D neural wavetable morphing, audio asset tagging,
 //! AI mix assistant, neural de-reverberation, super-resolution, and polyphonic MIDI transcription.
 
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use summoner_core::audio::Sample;
 use summoner_core::node::{AudioNode, ProcessContext};
@@ -265,7 +264,7 @@ impl OnnxCpuSimdExecutionProvider {
 #[derive(Debug, Clone)]
 pub struct CrepePitchTracker {
     sample_rate: u32,
-    weights: Vec<f32>,
+    pub weights: Vec<f32>,
 }
 
 impl CrepePitchTracker {
@@ -324,7 +323,7 @@ impl CrepePitchTracker {
 #[derive(Debug, Clone)]
 pub struct RnnoiseNode {
     pub suppression_db: f32,
-    band_gains: [f32; 22],
+    pub band_gains: [f32; 22],
 }
 
 impl Default for RnnoiseNode {

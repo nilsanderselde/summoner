@@ -398,7 +398,7 @@ pub struct SurroundLimiterAndLoudness {
     pub integrated_lufs: f32,
     pub short_term_lufs: f32,
     pub true_peak_db: f32,
-    k_filter_states: Vec<(f32, f32)>,
+    pub k_filter_states: Vec<(f32, f32)>,
 }
 
 impl SurroundLimiterAndLoudness {
@@ -452,7 +452,7 @@ impl SurroundLimiterAndLoudness {
 pub struct SpatialReverb3D {
     pub room_size: Position3D, // Room dimensions Lx, Ly, Lz in meters
     pub absorption: f32,       // Wall absorption coefficient 0..1
-    early_delays: Vec<(usize, f32)>, // Delay in samples, reflection gain
+    pub early_delays: Vec<(usize, f32)>, // Delay in samples, reflection gain
 }
 
 impl SpatialReverb3D {
@@ -631,7 +631,7 @@ mod tests {
         assert_eq!(weights[0], 1.0); // W channel is omni 1.0
 
         let dec = AmbisonicsDecoder3D::new(ChannelLayout::Surround7_1_4);
-        let mut b_format = vec![vec![0.5f32; 64]; 16];
+        let b_format = vec![vec![0.5f32; 64]; 16];
         let mut output = MultichannelAudioBuffer::new(ChannelLayout::Surround7_1_4);
         output.set_active_frames(64);
 

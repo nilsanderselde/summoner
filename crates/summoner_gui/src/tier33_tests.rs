@@ -126,21 +126,13 @@ mod tests {
     }
 
     #[test]
-    fn test_tier33_share_and_soundcloud_upload() {
+    fn test_tier33_share_export() {
         let bus = Arc::new(ParamBus::new());
         let mut app = SummonerApp::new(ProjectConfig::default(), bus);
 
         let path = std::path::Path::new("export/master.wav");
         app.share_project_export(path);
         assert!(app.last_share_action_message.as_ref().unwrap().contains("master.wav"));
-
-        let err_sc = app.soundcloud_upload_request(path);
-        assert!(err_sc.is_err());
-
-        app.soundcloud_token = "oauth_token_12345".to_string();
-        let sc_url = app.soundcloud_upload_request(path).unwrap();
-        assert!(sc_url.contains("oauth_token=oauth_token_12345"));
-        assert!(sc_url.contains("master.wav"));
     }
 
     #[test]

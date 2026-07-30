@@ -78,6 +78,7 @@ impl TruePeakMeter {
             let abs_s0 = s0.abs();
             let abs_s1 = s1.abs();
             if abs_s0 > peak { peak = abs_s0; }
+            if abs_s1 > peak { peak = abs_s1; }
             // Interpolate mid-point (simple 4x oversampling approximation)
             let mid = (s0 + s1) * 0.5;
             let quad1 = s0 * 0.75 + s1 * 0.25;

@@ -57,7 +57,7 @@ mod tests {
 
     #[test]
     fn test_step_1205_quantum_dot_transducer() {
-        let mut node = QuantumDotTransducerNode::new(500.0);
+        let node = QuantumDotTransducerNode::new(500.0);
         assert_eq!(node.name(), "QuantumDotTransducerNode");
         let freq = node.wavelength_to_audio_freq();
         assert!(freq >= 100.0 && freq <= 4000.0);
@@ -143,7 +143,7 @@ mod tests {
         let ctx = ProcessContext::from_transport(&transport);
 
         let mut fluid = NavierStokesFluidNode::new(0.01, 343.0);
-        let mut in_buf = vec![0.1f32; 512];
+        let in_buf = vec![0.1f32; 512];
         let mut out_buf = vec![0.0f32; 512];
 
         // Process multiple blocks to verify zero allocations on steady state

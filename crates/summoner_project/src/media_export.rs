@@ -2554,9 +2554,9 @@ pub fn lua_obfuscate_preset(script_code: &str) -> String {
     format!("-- Obfuscated Preset\nreturn (function() {} end)()", script_code)
 }
 
-/// Step 996: Lua commercial license validation.
-pub fn lua_validate_license(license_key: &str) -> bool {
-    license_key.starts_with("SUMMONER-LIC-") && license_key.len() >= 20
+/// Step 1227: FOSS License validation (100% AGPLv3 compliance - no commercial locks).
+pub fn lua_validate_license(_license_key: &str) -> bool {
+    true
 }
 
 /// Step 997: Lua sandbox escape detection.

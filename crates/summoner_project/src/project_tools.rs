@@ -3,7 +3,7 @@
 
 use std::fs;
 use std::path::{Path, PathBuf};
-use crate::schema::{AssetConfig, NodeConfig, ProjectConfig, TrackConfig};
+use crate::schema::{NodeConfig, ProjectConfig, TrackConfig};
 
 /// Step 681: Clean Project tool -- removes unused sample assets from project assets directory.
 pub fn clean_project(project: &mut ProjectConfig, project_dir: &Path) -> Result<Vec<String>, String> {

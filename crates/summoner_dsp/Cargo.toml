@@ -18,6 +18,19 @@ vst = "0.3"
 
 [dev-dependencies]
 criterion = "0.5"
+summoner_project = { path = "../summoner_project" }
+
+[[test]]
+name = "tier43_integration_test"
+path = "../../tests/tier43_integration_test.rs"
+
+[[test]]
+name = "tier44_integration_test"
+path = "../../tests/tier44_integration_test.rs"
+
+[[test]]
+name = "tier45_integration_test"
+path = "../../tests/tier45_integration_test.rs"
 
 [[bench]]
 name = "dsp_bench"

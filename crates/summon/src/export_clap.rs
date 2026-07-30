@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use summoner_project::parse_project_toml;
 
 fn find_crate_path(crate_name: &str) -> String {

@@ -111,6 +111,12 @@ impl GuiState {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum GuiDisplayMode {
+    SimpleMode,
+    AdvancedMode,
+}
+
 pub struct SummonerApp {
     pub project: ProjectConfig,
     pub project_path: Option<PathBuf>,
@@ -177,6 +183,7 @@ pub struct SummonerApp {
     pub tempo_tap_times: std::collections::VecDeque<std::time::Instant>,
     pub min_bpm: f64,
     pub max_bpm: f64,
+
     // Tier 33 fields (Steps 816, 817, 818, 819, 820, 821-840)
     pub show_go_to_bar_modal: bool,
     pub go_to_bar_input: String,
@@ -193,9 +200,12 @@ pub struct SummonerApp {
     pub dragged_preset_id: Option<String>,
     pub show_project_notes_panel: bool,
     pub project_notes_text: String,
-    pub show_soundcloud_modal: bool,
-    pub soundcloud_token: String,
     pub last_share_action_message: Option<String>,
+    // Tier 45 fields (Steps 1223, 1224, 1226)
+    pub display_mode: GuiDisplayMode,
+    pub live_session_recorder: summoner_dsp::LiveSessionRecorder,
+    pub spectrogram_art_engine: summoner_dsp::SpectrogramArtEngine,
+    pub visualizer_engine: summoner_dsp::VisualizerIntegrationEngine,
 }
 
 impl SummonerApp {
@@ -293,9 +303,11 @@ impl SummonerApp {
             dragged_preset_id: None,
             show_project_notes_panel: false,
             project_notes_text: String::from("# Project Notes\n\nAdd session notes, lyrics, or ideas here."),
-            show_soundcloud_modal: false,
-            soundcloud_token: String::new(),
             last_share_action_message: None,
+            display_mode: GuiDisplayMode::SimpleMode,
+            live_session_recorder: summoner_dsp::LiveSessionRecorder::new(),
+            spectrogram_art_engine: summoner_dsp::SpectrogramArtEngine::new(summoner_dsp::SpectrogramArtConfig::default()),
+            visualizer_engine: summoner_dsp::VisualizerIntegrationEngine::new(),
         };
 
         if let Some(state) = GuiState::load() {
@@ -432,13 +444,14 @@ impl SummonerApp {
         self.last_share_action_message = Some(format!("Export ready for sharing: {}", export_path.display()));
     }
 
-    /// Step 840: Upload to SoundCloud OAuth helper.
-    pub fn soundcloud_upload_request(&self, export_path: &std::path::Path) -> Result<String, String> {
-        if self.soundcloud_token.is_empty() {
-            return Err("SoundCloud OAuth token missing".to_string());
-        }
-        Ok(format!("https://api.soundcloud.com/tracks?oauth_token={}&file={}", self.soundcloud_token, export_path.file_name().unwrap_or_default().to_string_lossy()))
+    /// Step 1226: Toggle between Simple Mode and Advanced Mode GUI interface.
+    pub fn toggle_display_mode(&mut self) {
+        self.display_mode = match self.display_mode {
+            GuiDisplayMode::SimpleMode => GuiDisplayMode::AdvancedMode,
+            GuiDisplayMode::AdvancedMode => GuiDisplayMode::SimpleMode,
+        };
     }
+
 
     pub fn add_recent_project(&mut self, path: PathBuf) {
         self.recent_projects.retain(|p| p != &path);

@@ -3922,6 +3922,7 @@ dependencies = [
  "serde",
  "serde_json",
  "summoner_core",
+ "summoner_project",
  "vst",
  "wide",
 ]

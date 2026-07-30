@@ -120,7 +120,7 @@ impl StereoImager {
         let l_read_idx = (self.l_pos + max_len - l_delay_samples) % max_len;
         let r_read_idx = (self.r_pos + max_len - r_delay_samples) % max_len;
 
-        let mut l_out = self.l_buffer[l_read_idx];
+        let l_out = self.l_buffer[l_read_idx];
         let mut r_out = self.r_buffer[r_read_idx];
 
         self.l_pos = (self.l_pos + 1) % max_len;

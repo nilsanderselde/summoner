@@ -7,7 +7,7 @@
 #[cfg(test)]
 mod tests {
     use summoner_project::media_export::{
-        LuaScriptEngine, LuaScriptInfo, LuaDebugger, LuaProfiler,
+        LuaScriptEngine, LuaDebugger, LuaProfiler,
     };
     use summoner_project::schema::{ProjectConfig, LuaScriptConfig};
     use crate::gpu_waveform::LuaEditorState;

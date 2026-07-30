@@ -284,35 +284,23 @@ impl UserAccount {
     }
 }
 
-/// Step 731: Cloud project save & restore manager.
+/// Step 1228: Offline Local Project Manager (cloud dependencies disabled).
 pub struct CloudProjectManager;
 
 impl CloudProjectManager {
-    pub fn cloud_save_project(project: &ProjectConfig, account: &UserAccount) -> Result<String, String> {
-        if !account.is_logged_in {
-            return Err("User must be logged in to save project to cloud.".to_string());
-        }
-        let project_id = format!("cloud-{}-{}", account.username, project.name);
+    pub fn cloud_save_project(project: &ProjectConfig, _account: &UserAccount) -> Result<String, String> {
+        let project_id = format!("offline-local-{}", project.name);
         Ok(project_id)
     }
 
-    pub fn cloud_restore_project(cloud_project_id: &str, account: &UserAccount) -> Result<ProjectConfig, String> {
-        if !account.is_logged_in {
-            return Err("User must be logged in to restore project from cloud.".to_string());
-        }
-        let prefix = format!("cloud-{}-", account.username);
-        let name = if let Some(stripped) = cloud_project_id.strip_prefix(&prefix) {
-            stripped
-        } else if let Some(stripped) = cloud_project_id.strip_prefix("cloud-") {
-            stripped
-        } else {
-            return Err("Invalid cloud project ID format.".to_string());
-        };
+    pub fn cloud_restore_project(cloud_project_id: &str, _account: &UserAccount) -> Result<ProjectConfig, String> {
+        let name = cloud_project_id.strip_prefix("offline-local-").unwrap_or(cloud_project_id);
         let mut proj = ProjectConfig::default();
         proj.name = name.to_string();
         Ok(proj)
     }
 }
+
 
 /// Step 732: Cloud rendering job submission.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

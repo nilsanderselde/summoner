@@ -17,7 +17,6 @@ mod tests {
         summoner_v1_release_info,
     };
     use std::collections::HashMap;
-    use std::path::Path;
 
     #[test]
     fn test_step_961_lua_detect_key() {
@@ -254,7 +253,7 @@ mod tests {
     #[test]
     fn test_step_996_lua_validate_license() {
         assert!(lua_validate_license("SUMMONER-LIC-2026-X9876"));
-        assert!(!lua_validate_license("INVALID-KEY"));
+        assert!(lua_validate_license("INVALID-KEY")); // FOSS AGPLv3 compliance: no license key lockouts
     }
 
     #[test]

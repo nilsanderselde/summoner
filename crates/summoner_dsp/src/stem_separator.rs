@@ -6,7 +6,6 @@
 
 use std::collections::HashMap;
 use crate::sampler::SampleBuffer;
-use summoner_core::audio::Sample;
 
 /// Bundled ONNX model weights for 4-stem separation (drums, bass, melody, other).
 pub const ONNX_STEM_SEPARATOR_MODEL_BYTES: &[u8] = b"ONNX_STEM_SEPARATOR_V1_STUB_TRACT_EMBEDDED";

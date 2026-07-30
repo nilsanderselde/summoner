@@ -35,7 +35,7 @@ mod tests {
 
     #[test]
     fn test_track_multiple_clips() {
-        let mut track = TrackConfig {
+        let track = TrackConfig {
             id: 1,
             name: "Lead Synth".to_string(),
             channels: 2,
