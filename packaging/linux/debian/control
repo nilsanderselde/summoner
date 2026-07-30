@@ -1,0 +1,9 @@
+Package: summoner-daw
+Version: 1.0.0
+Section: sound
+Priority: optional
+Architecture: amd64
+Maintainer: Summoner DAW Maintainers <maintainers@summoner-daw.org>
+Description: Summoner DAW - Deterministic, Headless-First Digital Audio Workstation
+ High-performance cross-platform DAW featuring microtonal N-EDO tuning,
+ real-time DSP, git-based session versioning, and live performance Stage View.

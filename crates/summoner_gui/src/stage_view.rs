@@ -38,6 +38,7 @@ pub struct StageView {
     pub bpm_step: f64,
     pub tap_history: Vec<Instant>,
     pub pending_launch: Option<(usize, u64)>, // (slot_index, fire_at_frame)
+    pub steam_deck: crate::platform::SteamDeckControllerState,
 }
 
 impl StageView {
@@ -51,6 +52,7 @@ impl StageView {
             bpm_step: 1.0,
             tap_history: Vec::new(),
             pending_launch: None,
+            steam_deck: crate::platform::SteamDeckControllerState::detect(),
         }
     }
 
@@ -237,6 +239,24 @@ pub fn show_stage_view(ui: &mut egui::Ui, stage: &mut StageView, transport: &mut
                 trigger_slot_launch(idx, stage, transport);
             }
         }
+    }
+
+    // Step 536: Steam Deck controller D-pad / Arrow key grid navigation
+    if ui.input(|i| i.key_pressed(egui::Key::ArrowUp)) {
+        stage.steam_deck.navigate_grid(-1, 0);
+    }
+    if ui.input(|i| i.key_pressed(egui::Key::ArrowDown)) {
+        stage.steam_deck.navigate_grid(1, 0);
+    }
+    if ui.input(|i| i.key_pressed(egui::Key::ArrowLeft)) {
+        stage.steam_deck.navigate_grid(0, -1);
+    }
+    if ui.input(|i| i.key_pressed(egui::Key::ArrowRight)) {
+        stage.steam_deck.navigate_grid(0, 1);
+    }
+    if ui.input(|i| i.key_pressed(egui::Key::Enter) || i.key_pressed(egui::Key::Space)) {
+        let focused = stage.steam_deck.focused_slot;
+        trigger_slot_launch(focused, stage, transport);
     }
 
     let dark_bg = egui::Color32::from_rgb(10, 10, 10);

@@ -154,3 +154,21 @@ jobs:
 
       - name: Run Security Audit
         run: cargo audit || echo "Audit check completed with advisory reports"
+
+  packaging-artifacts:
+    name: Platform Packaging Verification (Steps 530-535)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Verify Installer Scripts and Manifests Exist
+        run: |
+          test -f packaging/windows/installer.nsi
+          test -f packaging/macos/create_dmg.sh
+          test -f packaging/linux/build_appimage.sh
+          test -f packaging/linux/debian/control
+          test -f packaging/flatpak/org.summoner.SummonerDAW.yml
+          test -f packaging/homebrew/summoner.rb
+          test -f packaging/winget/manifests/s/SummonerDAW/Summoner/1.0.0/SummonerDAW.Summoner.yaml
+          echo "All platform packaging scripts and manifests validated."
