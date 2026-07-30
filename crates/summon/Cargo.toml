@@ -18,7 +18,7 @@ summoner_harmony = { path = "../summoner_harmony" }
 summoner_sequencer = { path = "../summoner_sequencer" }
 summoner_gui = { path = "../summoner_gui", optional = true }
 blake3.workspace = true
-cpal = "0.15"
+cpal = "0.18"
 crossbeam-channel = "0.5"
 clap-sys = "0.3"
 hound = "3.5"
