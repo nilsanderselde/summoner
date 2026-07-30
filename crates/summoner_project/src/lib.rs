@@ -28,6 +28,7 @@ pub mod scratch_audio_cache;
 pub mod session_markers;
 pub mod crash_analyzer;
 pub mod benchmark;
+pub mod dependency_audit;
 
 pub use media_export::*;
 pub use crdt::*;
@@ -38,6 +39,7 @@ pub use scratch_audio_cache::*;
 pub use session_markers::*;
 pub use crash_analyzer::*;
 pub use benchmark::*;
+pub use dependency_audit::*;
 
 #[cfg(target_os = "windows")]
 #[link(name = "advapi32")]

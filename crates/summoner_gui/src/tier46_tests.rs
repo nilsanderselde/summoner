@@ -374,6 +374,25 @@ mod tests {
         assert!(closure_calls > 0);
         assert!(custom_report.block_results.iter().all(|r| r.checksum > 0.0));
     }
+
+    #[test]
+    fn test_step_1253_workspace_dependency_security_audit() {
+        use summoner_project::dependency_audit::WorkspaceDependencyAuditor;
+
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let report = WorkspaceDependencyAuditor::audit_workspace_manifests(&root).expect("Workspace audit failed");
+
+        assert_eq!(report.total_workspace_crates, 7);
+        assert!(report.total_dependencies_audited > 0);
+        assert_eq!(report.vulnerabilities_found, 0);
+        assert_eq!(report.wildcard_dependencies_found, 0);
+        assert_eq!(report.telemetry_dependencies_found, 0);
+        assert_eq!(report.non_foss_licenses_found, 0);
+        assert!(report.is_security_compliant);
+        assert!(report.formatted_summary.contains("SUMMONER DAW - WORKSPACE DEPENDENCY SECURITY AUDIT"));
+        assert!(report.formatted_summary.contains("Compliance Status          : VERIFIED PASS"));
+    }
 }
+
 
 
