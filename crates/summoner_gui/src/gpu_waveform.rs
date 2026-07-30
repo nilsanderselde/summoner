@@ -295,6 +295,59 @@ impl LuaEditorState {
     }
 }
 
+// ============================================================================
+// Step 1048: Custom Hardware Surface Control Editor State
+// ============================================================================
+
+/// State manager for custom hardware surface control editor UI.
+#[derive(Debug, Clone)]
+pub struct HardwareControlEditorState {
+    pub surface_name: String,
+    pub is_learning: bool,
+    pub bound_cc_map: HashMap<String, u8>,
+    pub selected_element: Option<String>,
+    pub status_msg: String,
+}
+
+impl Default for HardwareControlEditorState {
+    fn default() -> Self {
+        let mut map = HashMap::new();
+        map.insert("Fader 1".to_string(), 7);
+        map.insert("Knob 1".to_string(), 74);
+        Self {
+            surface_name: "Generic Control Surface".to_string(),
+            is_learning: false,
+            bound_cc_map: map,
+            selected_element: Some("Knob 1".to_string()),
+            status_msg: "Ready".to_string(),
+        }
+    }
+}
+
+impl HardwareControlEditorState {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn toggle_midi_learn(&mut self) {
+        self.is_learning = !self.is_learning;
+        self.status_msg = if self.is_learning {
+            "MIDI Learn Active: Move hardware control...".to_string()
+        } else {
+            "MIDI Learn Disabled".to_string()
+        };
+    }
+
+    pub fn bind_cc(&mut self, element: &str, cc: u8) {
+        self.bound_cc_map.insert(element.to_string(), cc);
+        self.status_msg = format!("Bound {} to CC {}", element, cc);
+    }
+
+    pub fn render_layout_preview(&self) -> String {
+        format!("Surface: {} | Mapped Elements: {}", self.surface_name, self.bound_cc_map.len())
+    }
+}
+
 #[cfg(test)]
 mod gpu_waveform_tests {
     use super::*;

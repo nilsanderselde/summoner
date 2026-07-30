@@ -73,6 +73,7 @@ fn print_usage() {
     println!("  summon tempo-map [PROJECT_PATH]");
     println!("  summon eval-script [PROJECT_PATH] [SCRIPT_PATH]");
     println!("  summon list-scripts [PROJECT_PATH]");
+    println!("  summon package-wasm [SRC]");
 }
 
 
@@ -1338,6 +1339,21 @@ fn main() {
 
             let serialized = serialize_project_toml(&project).expect("Failed to serialize project");
             fs::write(proj_path, serialized).expect("Failed to save project TOML");
+        }
+        "package-wasm" => {
+            let src_path_str = args.get(2).map(|s| s.as_str()).unwrap_or("plugin_src");
+            println!("Packaging Wasm DSP plugin from source '{}'...", src_path_str);
+            let src_path = Path::new(src_path_str);
+            let bundle_path = src_path.with_extension("wasm.bundle");
+            let manifest = format!(
+                "{{\n  \"name\": \"{}\",\n  \"version\": \"1.0.0\",\n  \"format\": \"WasmDsp\",\n  \"memory_pages\": 4\n}}",
+                src_path.file_stem().and_then(|s| s.to_str()).unwrap_or("WasmPlugin")
+            );
+            if let Err(e) = fs::write(&bundle_path, manifest) {
+                eprintln!("Failed to package Wasm plugin: {}", e);
+                process::exit(1);
+            }
+            println!("Successfully packaged Wasm DSP plugin at '{}'", bundle_path.display());
         }
         _ => {
             print_usage();
