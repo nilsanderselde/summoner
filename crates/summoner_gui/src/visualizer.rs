@@ -244,6 +244,82 @@ impl Visualizer {
     }
 }
 
+/// Quantum state tomographic visualizer state and rendering UI (Step 1149).
+#[derive(Clone, Debug)]
+pub struct QuantumTomographyVisualizer {
+    pub bloch_x: Arc<AtomicU32>,
+    pub bloch_y: Arc<AtomicU32>,
+    pub bloch_z: Arc<AtomicU32>,
+    pub purity: Arc<AtomicU32>,
+}
+
+impl QuantumTomographyVisualizer {
+    pub fn new() -> Self {
+        Self {
+            bloch_x: Arc::new(AtomicU32::new(0.0f32.to_bits())),
+            bloch_y: Arc::new(AtomicU32::new(0.0f32.to_bits())),
+            bloch_z: Arc::new(AtomicU32::new(1.0f32.to_bits())),
+            purity: Arc::new(AtomicU32::new(1.0f32.to_bits())),
+        }
+    }
+
+    pub fn update(&self, x: f32, y: f32, z: f32, purity: f32) {
+        self.bloch_x.store(x.to_bits(), Ordering::Relaxed);
+        self.bloch_y.store(y.to_bits(), Ordering::Relaxed);
+        self.bloch_z.store(z.to_bits(), Ordering::Relaxed);
+        self.purity.store(purity.to_bits(), Ordering::Relaxed);
+    }
+
+    pub fn read(&self) -> (f32, f32, f32, f32) {
+        (
+            f32::from_bits(self.bloch_x.load(Ordering::Relaxed)),
+            f32::from_bits(self.bloch_y.load(Ordering::Relaxed)),
+            f32::from_bits(self.bloch_z.load(Ordering::Relaxed)),
+            f32::from_bits(self.purity.load(Ordering::Relaxed)),
+        )
+    }
+}
+
+impl Default for QuantumTomographyVisualizer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[cfg(feature = "gui")]
+pub fn show_quantum_tomography(
+    ui: &mut egui::Ui,
+    vis: &QuantumTomographyVisualizer,
+    width: f32,
+    height: f32,
+) -> egui::Response {
+    let (rect, response) = ui.allocate_exact_size(egui::vec2(width, height), egui::Sense::hover());
+    if ui.is_rect_visible(rect) {
+        let painter = ui.painter_at(rect);
+        painter.rect_filled(rect, 4.0, egui::Color32::from_rgb(12, 16, 28));
+        painter.rect_stroke(rect, 4.0, egui::Stroke::new(1.0, egui::Color32::from_rgb(80, 120, 220)));
+
+        let (x, y, z, purity) = vis.read();
+        let center = rect.center();
+        let radius = (rect.width().min(rect.height()) * 0.4).max(10.0);
+
+        painter.circle_stroke(center, radius, egui::Stroke::new(1.0, egui::Color32::from_rgb(60, 90, 150)));
+        let bloch_pos = egui::pos2(center.x + x * radius, center.y - y * radius);
+        painter.circle_filled(bloch_pos, 4.0, egui::Color32::from_rgb(0, 240, 255));
+        painter.line_segment([center, bloch_pos], egui::Stroke::new(1.5, egui::Color32::from_rgb(0, 240, 255)));
+
+        let label = format!("Purity: {:.2} | Z: {:.2}", purity, z);
+        painter.text(
+            egui::pos2(rect.min.x + 6.0, rect.min.y + 6.0),
+            egui::Align2::LEFT_TOP,
+            label,
+            egui::FontId::proportional(11.0),
+            egui::Color32::WHITE,
+        );
+    }
+    response
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
