@@ -73,7 +73,7 @@ pub use composites::{
 pub use drum_machine::{DrumMachineDevice, DrumPad, MAX_PADS};
 pub use stem_separator::{StemSeparator, ONNX_STEM_SEPARATOR_MODEL_BYTES};
 pub use distortion::{DistortionNode, DistortionType};
-pub use effects::{EffectDelay as LegacyEffectDelay, EffectReverb as LegacyEffectReverb};
+pub use effects::{EffectDelay as LegacyEffectDelay, EffectReverb as LegacyEffectReverb, NoiseGateNode, DeesserNode, HarmonicExciterNode};
 pub use delay::EffectDelay;
 pub use reverb::{EffectReverb, ConvolutionReverbNode};
 pub use wavefolder::WavefolderNode;

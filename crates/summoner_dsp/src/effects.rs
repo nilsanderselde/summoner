@@ -201,6 +201,244 @@ impl SignalProcessor for EffectReverb {
     }
 }
 
+/// Noise Gate effect node for suppressing background noise below threshold.
+#[derive(Debug)]
+pub struct NoiseGateNode {
+    pub threshold_db: f32,
+    pub ratio: f32,
+    pub attack: f32,
+    pub release: f32,
+    pub env_db: f32,
+}
+
+impl NoiseGateNode {
+    pub fn new() -> Self {
+        Self {
+            threshold_db: -40.0,
+            ratio: 4.0,
+            attack: 0.005,
+            release: 0.1,
+            env_db: -120.0,
+        }
+    }
+
+    pub fn with_params(threshold_db: f32, ratio: f32, attack_ms: f32, release_ms: f32) -> Self {
+        Self {
+            threshold_db,
+            ratio: ratio.max(1.0),
+            attack: (attack_ms * 0.001).max(0.0001),
+            release: (release_ms * 0.001).max(0.001),
+            env_db: -120.0,
+        }
+    }
+}
+
+impl Default for NoiseGateNode {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl SignalProcessor for NoiseGateNode {
+    fn name(&self) -> &str {
+        "NoiseGateNode"
+    }
+
+    fn process_block(
+        &mut self,
+        inputs: &[&[Sample]],
+        outputs: &mut [&mut [Sample]],
+        ctx: &ProcessContext,
+    ) {
+        if inputs.is_empty() || outputs.is_empty() {
+            return;
+        }
+        let num_samples = inputs[0].len().min(outputs[0].len());
+        let sr = if ctx.sample_rate > 0 { ctx.sample_rate as f32 } else { 44100.0 };
+        let dt = 1.0 / sr;
+        let attack_coeff = (-dt / self.attack.max(0.0001)).exp();
+        let release_coeff = (-dt / self.release.max(0.001)).exp();
+
+        for i in 0..num_samples {
+            let sample = inputs[0][i];
+            let abs_level = sample.abs().max(1e-6);
+            let level_db = 20.0 * abs_level.log10();
+
+            let coeff = if level_db > self.env_db { attack_coeff } else { release_coeff };
+            self.env_db = self.env_db * coeff + level_db * (1.0 - coeff);
+
+            let gain = if self.env_db < self.threshold_db {
+                let depth = (self.threshold_db - self.env_db) * (self.ratio - 1.0);
+                10.0f32.powf(-depth / 20.0).clamp(0.0, 1.0)
+            } else {
+                1.0
+            };
+
+            for (ch_idx, out_ch) in outputs.iter_mut().enumerate() {
+                if i < out_ch.len() {
+                    let in_val = if ch_idx < inputs.len() && i < inputs[ch_idx].len() {
+                        inputs[ch_idx][i]
+                    } else {
+                        sample
+                    };
+                    out_ch[i] = in_val * gain;
+                }
+            }
+        }
+    }
+}
+
+/// De-esser node for attenuating harsh sibilance frequencies.
+#[derive(Debug)]
+pub struct DeesserNode {
+    pub frequency: f32,
+    pub threshold_db: f32,
+    pub ratio: f32,
+    pub attack: f32,
+    pub release: f32,
+    pub env_db: f32,
+    filter_state: f32,
+}
+
+impl DeesserNode {
+    pub fn new() -> Self {
+        Self {
+            frequency: 6000.0,
+            threshold_db: -20.0,
+            ratio: 4.0,
+            attack: 0.002,
+            release: 0.05,
+            env_db: -120.0,
+            filter_state: 0.0,
+        }
+    }
+}
+
+impl Default for DeesserNode {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl SignalProcessor for DeesserNode {
+    fn name(&self) -> &str {
+        "DeesserNode"
+    }
+
+    fn process_block(
+        &mut self,
+        inputs: &[&[Sample]],
+        outputs: &mut [&mut [Sample]],
+        ctx: &ProcessContext,
+    ) {
+        if inputs.is_empty() || outputs.is_empty() {
+            return;
+        }
+        let num_samples = inputs[0].len().min(outputs[0].len());
+        let sr = if ctx.sample_rate > 0 { ctx.sample_rate as f32 } else { 44100.0 };
+        let dt = 1.0 / sr;
+        let attack_coeff = (-dt / self.attack.max(0.0001)).exp();
+        let release_coeff = (-dt / self.release.max(0.001)).exp();
+        let hp_alpha = (-2.0 * std::f32::consts::PI * self.frequency * dt).exp();
+
+        for i in 0..num_samples {
+            let in_sample = inputs[0][i];
+            let high_freq = in_sample - self.filter_state;
+            self.filter_state = self.filter_state * hp_alpha + in_sample * (1.0 - hp_alpha);
+
+            let sib_db = 20.0 * high_freq.abs().max(1e-6).log10();
+            let coeff = if sib_db > self.env_db { attack_coeff } else { release_coeff };
+            self.env_db = self.env_db * coeff + sib_db * (1.0 - coeff);
+
+            let gain_reduction = if self.env_db > self.threshold_db {
+                let over = self.env_db - self.threshold_db;
+                let red_db = over * (1.0 - 1.0 / self.ratio);
+                10.0f32.powf(-red_db / 20.0).clamp(0.0, 1.0)
+            } else {
+                1.0
+            };
+
+            for (ch_idx, out_ch) in outputs.iter_mut().enumerate() {
+                if i < out_ch.len() {
+                    let s = if ch_idx < inputs.len() && i < inputs[ch_idx].len() {
+                        inputs[ch_idx][i]
+                    } else {
+                        in_sample
+                    };
+                    out_ch[i] = s * gain_reduction;
+                }
+            }
+        }
+    }
+}
+
+/// Harmonic Exciter node for adding synthesized high-frequency harmonics.
+#[derive(Debug)]
+pub struct HarmonicExciterNode {
+    pub frequency: f32,
+    pub drive: f32,
+    pub blend: f32,
+    hp_state: f32,
+}
+
+impl HarmonicExciterNode {
+    pub fn new() -> Self {
+        Self {
+            frequency: 3000.0,
+            drive: 2.0,
+            blend: 0.3,
+            hp_state: 0.0,
+        }
+    }
+}
+
+impl Default for HarmonicExciterNode {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl SignalProcessor for HarmonicExciterNode {
+    fn name(&self) -> &str {
+        "HarmonicExciterNode"
+    }
+
+    fn process_block(
+        &mut self,
+        inputs: &[&[Sample]],
+        outputs: &mut [&mut [Sample]],
+        ctx: &ProcessContext,
+    ) {
+        if inputs.is_empty() || outputs.is_empty() {
+            return;
+        }
+        let num_samples = inputs[0].len().min(outputs[0].len());
+        let sr = if ctx.sample_rate > 0 { ctx.sample_rate as f32 } else { 44100.0 };
+        let dt = 1.0 / sr;
+        let hp_alpha = (-2.0 * std::f32::consts::PI * self.frequency * dt).exp();
+
+        for i in 0..num_samples {
+            let in_sample = inputs[0][i];
+            let hp_signal = in_sample - self.hp_state;
+            self.hp_state = self.hp_state * hp_alpha + in_sample * (1.0 - hp_alpha);
+
+            let driven = hp_signal * self.drive;
+            let harmonic = (driven.sin() + 0.5 * driven.powi(2)).clamp(-1.0, 1.0);
+
+            for (ch_idx, out_ch) in outputs.iter_mut().enumerate() {
+                if i < out_ch.len() {
+                    let s = if ch_idx < inputs.len() && i < inputs[ch_idx].len() {
+                        inputs[ch_idx][i]
+                    } else {
+                        in_sample
+                    };
+                    out_ch[i] = s + harmonic * self.blend;
+                }
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

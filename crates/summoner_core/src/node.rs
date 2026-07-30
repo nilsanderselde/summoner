@@ -232,6 +232,9 @@ pub const KNOWN_NODE_TYPES: &[&str] = &[
     "EffectPhaser",
     "EffectDelay",
     "EffectReverb",
+    "NoiseGateNode",
+    "DeesserNode",
+    "HarmonicExciterNode",
     "PassthroughNode",
 ];
 

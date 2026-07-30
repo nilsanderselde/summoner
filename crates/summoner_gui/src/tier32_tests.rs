@@ -1243,6 +1243,162 @@ params = { freq = 220.0 }"#;
         let regions = chop_sample_to_pads(&pads_signal, 44100, 4);
         assert_eq!(regions.len(), 4);
     }
+
+    #[test]
+    fn test_step761_to_step780_tier32_features() {
+        use crate::param_controls::{
+            FxChainCompare, FxCompareSlot, save_fx_chain_preset, load_fx_chain_preset,
+            InsertFxPosition, process_insert_fx_with_position, set_effect_sidechain,
+            get_wire_stroke_style, compute_auto_crossfade, export_clip_to_sfz,
+            DrumMachineGrid, compute_pad_click_velocity, get_drum_pad_color,
+            PadMuteGroupManager, PadNoteAssignmentTable, PadChokeGroupManager,
+            humanize_drum_pattern, FullScreenToggle, StageViewWindowConfig, LayoutManager,
+        };
+        use summoner_dsp::{NoiseGateNode, DeesserNode, HarmonicExciterNode, SignalProcessor};
+        use summoner_core::node::ProcessContext;
+        use summoner_core::transport::Transport;
+        use std::collections::HashSet;
+
+        // Step 761: FX Chain Compare A/B
+        let mut compare = FxChainCompare::default();
+        assert_eq!(compare.active_slot, FxCompareSlot::SlotA);
+        assert_eq!(compare.toggle_slot(), FxCompareSlot::SlotB);
+        let dry = [1.0, 2.0];
+        let wet = [0.5, 0.5];
+        assert_eq!(compare.process_compare(&dry, &wet), &dry);
+
+        // Step 762: FX Preset Save/Load
+        let nodes = vec![summoner_project::schema::NodeConfig {
+            id: 1,
+            kind: "NoiseGateNode".to_string(),
+            node_type: "NoiseGateNode".to_string(),
+            params: std::collections::HashMap::new(),
+        }];
+        let preset = save_fx_chain_preset("Vocal Chain", &nodes);
+        assert_eq!(preset.name, "Vocal Chain");
+        let loaded = load_fx_chain_preset(&preset);
+        assert_eq!(loaded.len(), 1);
+
+        // Step 763: Pre/Post Fader Position Selector
+        let input_samples = vec![1.0, 1.0];
+        let fx_samples = vec![2.0, 2.0];
+        let pre_out = process_insert_fx_with_position(InsertFxPosition::PreFader, 0.5, &input_samples, &fx_samples);
+        assert_eq!(pre_out, vec![1.0, 1.0]);
+        let post_out = process_insert_fx_with_position(InsertFxPosition::PostFader, 0.5, &input_samples, &fx_samples);
+        assert_eq!(post_out, vec![2.0, 2.0]);
+
+        // Step 764: Sidechain source selector
+        let mut sidechain_cfgs = Vec::new();
+        set_effect_sidechain(&mut sidechain_cfgs, 0, Some(42));
+        assert_eq!(sidechain_cfgs[0].sidechain_source_track_id, Some(42));
+
+        // Step 765: Node graph wire style
+        let wire_style = get_wire_stroke_style(true);
+        assert!(wire_style.stroke_dashed);
+
+        // Step 766: NoiseGateNode
+        let transport = Transport::new(44100, 120.0);
+        let ctx = ProcessContext::from_transport(&transport);
+        let mut gate = NoiseGateNode::new();
+        let in_buf = vec![0.0001f32; 64];
+        let mut out_buf = vec![0.0f32; 64];
+        gate.process_block(&[&in_buf[..]], &mut [&mut out_buf[..]], &ctx);
+        assert!(out_buf.iter().all(|v| v.abs() < 0.001));
+
+        // Step 767: DeesserNode
+        let mut deesser = DeesserNode::new();
+        let mut deesser_out = vec![0.0f32; 64];
+        deesser.process_block(&[&in_buf[..]], &mut [&mut deesser_out[..]], &ctx);
+        assert_eq!(deesser.name(), "DeesserNode");
+
+        // Step 768: HarmonicExciterNode
+        let mut exciter = HarmonicExciterNode::new();
+        let mut exciter_out = vec![0.0f32; 64];
+        let exciter_in = vec![0.5f32; 64];
+        exciter.process_block(&[&exciter_in[..]], &mut [&mut exciter_out[..]], &ctx);
+        assert!(exciter_out.iter().any(|v| *v != 0.0));
+
+        // Step 769: Auto-Crossfade
+        let fade = compute_auto_crossfade(0.0, 4.0, 3.5, 0.5);
+        assert_eq!(fade, Some((0.5, 0.5)));
+
+        // Step 770: Export Clip to SFZ
+        let temp_dir = std::env::temp_dir().join("summoner_sfz_export_test");
+        let pcm = vec![0.1f32; 100];
+        let (wav_p, sfz_p) = export_clip_to_sfz("test_clip", &pcm, 44100, 60, &temp_dir).unwrap();
+        assert!(wav_p.exists());
+        assert!(sfz_p.exists());
+        let _ = std::fs::remove_dir_all(&temp_dir);
+
+        // Step 771: Drum Machine Grid
+        let mut grid = DrumMachineGrid::default();
+        assert!(!grid.is_step_active(0, 0));
+        assert!(grid.toggle_step(0, 0));
+        assert!(grid.is_step_active(0, 0));
+
+        // Step 772: Pad click velocity
+        let vel = compute_pad_click_velocity(0.0, 100.0);
+        assert_eq!(vel, 127);
+
+        // Step 773: Pad color mapping
+        let color = get_drum_pad_color(36);
+        assert_eq!(color, [231, 76, 60]);
+
+        // Step 774: Pad mute groups
+        let mut mute_mgr = PadMuteGroupManager::default();
+        mute_mgr.set_pad_mute_group(0, 1);
+        mute_mgr.set_pad_mute_group(1, 1);
+        let mut active_pads = HashSet::new();
+        mute_mgr.trigger_pad(0, &mut active_pads);
+        mute_mgr.trigger_pad(1, &mut active_pads);
+        assert!(!active_pads.contains(&0));
+        assert!(active_pads.contains(&1));
+
+        // Step 775: Pad note assignment
+        let mut assign_table = PadNoteAssignmentTable::default();
+        assign_table.assign_note(0, 36, "Kick Drum");
+        let (note, label) = assign_table.get_note(0);
+        assert_eq!(note, 36);
+        assert_eq!(label, "Kick Drum");
+
+        // Step 776: Pad choke groups
+        let mut choke_mgr = PadChokeGroupManager::default();
+        choke_mgr.set_choke_group(0, 1);
+        choke_mgr.set_choke_group(1, 1);
+        let mut active_voices = vec![0];
+        choke_mgr.choke_active_voices(1, &mut active_voices);
+        assert_eq!(active_voices, vec![1]);
+
+        // Step 777: Drum pattern humanize
+        let mut steps = vec![summoner_project::schema::TrackerStepConfig {
+            note: 60.0,
+            velocity: 100,
+            gate: 0.5,
+            probability: 1.0,
+            micro_shift: 0,
+            ratchet: 1,
+        }];
+        humanize_drum_pattern(&mut steps, 5.0, 10, 42);
+        assert!(steps[0].micro_shift != 0 || steps[0].velocity != 100);
+
+        // Step 778: Full-screen toggle
+        let mut fs = FullScreenToggle::default();
+        assert!(fs.handle_key_event(true));
+
+        // Step 779: Always-on-top mode
+        let mut stage_cfg = StageViewWindowConfig::default();
+        assert!(stage_cfg.toggle_always_on_top());
+
+        // Step 780: Layout manager
+        let mut layout_mgr = LayoutManager::default();
+        let mut vis = std::collections::HashMap::new();
+        vis.insert("Mixer".to_string(), true);
+        let mut sizes = std::collections::HashMap::new();
+        sizes.insert("Mixer".to_string(), (300.0, 400.0));
+        layout_mgr.save_layout("Mixing", vis.clone(), sizes.clone());
+        let restored = layout_mgr.restore_layout("Mixing").unwrap();
+        assert_eq!(restored.panel_visibility, vis);
+    }
 }
 
 

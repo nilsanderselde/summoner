@@ -105,6 +105,14 @@ impl NodeFactory {
                 DistortionType::SoftClipping,
                 *params.get("drive").unwrap_or(&2.0)
             )))),
+            "NoiseGateNode" | "NoiseGate" => Some(Box::new(ProcessorNodeAdapter::new(summoner_dsp::NoiseGateNode::with_params(
+                *params.get("threshold").unwrap_or(&-40.0),
+                *params.get("ratio").unwrap_or(&4.0),
+                *params.get("attack").unwrap_or(&5.0),
+                *params.get("release").unwrap_or(&100.0),
+            )))),
+            "DeesserNode" | "Deesser" => Some(Box::new(ProcessorNodeAdapter::new(summoner_dsp::DeesserNode::new()))),
+            "HarmonicExciterNode" | "HarmonicExciter" => Some(Box::new(ProcessorNodeAdapter::new(summoner_dsp::HarmonicExciterNode::new()))),
             "SamplerDevice" => {
                 let mut bank = summoner_dsp::sampler::MultiSampleBank::new();
                 let base_dir = std::path::Path::new("local");
