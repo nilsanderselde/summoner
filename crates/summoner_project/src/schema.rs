@@ -126,6 +126,14 @@ pub struct MarkerConfig {
     pub beat: f64,
     #[serde(default)]
     pub color: Option<[u8; 3]>,
+    #[serde(default)]
+    pub end_beat: Option<f64>,
+    #[serde(default)]
+    pub chapter_type: Option<crate::session_markers::ChapterType>,
+    #[serde(default)]
+    pub notes: Option<String>,
+    #[serde(default)]
+    pub hotkey_binding: Option<String>,
 }
 
 /// MIDI Learn mapping entry in project TOML.

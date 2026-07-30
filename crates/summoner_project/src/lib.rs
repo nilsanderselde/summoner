@@ -25,6 +25,7 @@ pub mod crdt;
 pub mod enterprise_qa;
 pub mod cloud_federated;
 pub mod scratch_audio_cache;
+pub mod session_markers;
 
 pub use media_export::*;
 pub use crdt::*;
@@ -32,6 +33,7 @@ pub use export::*;
 pub use enterprise_qa::*;
 pub use cloud_federated::*;
 pub use scratch_audio_cache::*;
+pub use session_markers::*;
 
 #[cfg(target_os = "windows")]
 #[link(name = "advapi32")]
