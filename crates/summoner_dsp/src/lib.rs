@@ -47,6 +47,9 @@ pub mod plugin_host;
 pub mod tuner;
 pub mod autotune;
 pub mod dither;
+pub mod sample_editor;
+
+pub use sample_editor::*;
 
 pub use plugin_host::{
     PluginAudioNode, PluginDescriptor, PluginFormat, PluginParamInfo, PluginStateConfig,
@@ -68,7 +71,7 @@ pub use pitch_shifter::PitchShifterNode;
 pub use bitcrusher::BitcrusherNode;
 pub use midside::{MidSideNode, StereoImager};
 pub use parametric_eq::{ParametricEqNode, EqBand};
-pub use filters::{FilterComb, FilterLadder, FilterSVF};
+pub use filters::{FilterComb, FilterLadder, FilterSVF, DcBlockFilter, LowCutFilter, HighCutFilter};
 pub use glitch::{AudioReverse, GlitchGate, GlitchShuffle, GlitchStutter, TapeStop};
 pub use math::{MathAdd, MathMult, VCA};
 pub use modal::ModalResonator;

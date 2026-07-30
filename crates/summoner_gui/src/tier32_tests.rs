@@ -486,6 +486,171 @@ mod tests {
 
         assert!(validate_sample_rate(48000));
     }
+
+    #[test]
+    fn test_step681_to_step700_project_and_sample_tools() {
+        use summoner_project::export::*;
+        use summoner_project::schema::*;
+        use summoner_project::create_default_project;
+        use summoner_dsp::filters::{DcBlockFilter, LowCutFilter, HighCutFilter};
+        use summoner_dsp::sample_editor::*;
+        use summoner_dsp::sampler::SampleBuffer;
+
+        // Step 681: Clean Project
+        let temp_dir = std::env::temp_dir().join("summoner_test_clean_proj");
+        let assets_dir = temp_dir.join("assets");
+        let _ = std::fs::create_dir_all(&assets_dir);
+        let _ = std::fs::write(assets_dir.join("ref.wav"), "dummy");
+        let _ = std::fs::write(assets_dir.join("unref.wav"), "dummy");
+
+        let mut proj = ProjectConfig::default();
+        proj.assets.push(AssetConfig {
+            id: "1".to_string(),
+            hash: "123".to_string(),
+            path: "assets/ref.wav".to_string(),
+            auto_slice: false,
+            slice_threshold: 0.15,
+        });
+
+        let removed = clean_project(&temp_dir, &proj).expect("clean project");
+        assert_eq!(removed, vec!["unref.wav".to_string()]);
+        let _ = std::fs::remove_dir_all(&temp_dir);
+
+        // Step 682: Collect and Save
+        let temp_dir2 = std::env::temp_dir().join("summoner_test_collect_save");
+        let ext_file = std::env::temp_dir().join("summoner_ext_sample.wav");
+        let _ = std::fs::write(&ext_file, "external sample data");
+
+        let mut proj2 = ProjectConfig::default();
+        proj2.assets.push(AssetConfig {
+            id: "ext".to_string(),
+            hash: "456".to_string(),
+            path: ext_file.to_string_lossy().to_string(),
+            auto_slice: false,
+            slice_threshold: 0.15,
+        });
+
+        let copied = collect_and_save(&temp_dir2, &mut proj2).expect("collect save");
+        assert_eq!(copied, vec!["assets/summoner_ext_sample.wav".to_string()]);
+        assert_eq!(proj2.assets[0].path, "assets/summoner_ext_sample.wav");
+        let _ = std::fs::remove_dir_all(&temp_dir2);
+        let _ = std::fs::remove_file(&ext_file);
+
+        // Step 683: Freeze / Unfreeze Track
+        let mut track = TrackConfig::default();
+        freeze_track(&mut track, 44100, 120.0);
+        assert!(track.is_frozen);
+        assert!(track.frozen_buffer.is_some());
+        unfreeze_track(&mut track);
+        assert!(!track.is_frozen);
+        assert!(track.frozen_buffer.is_none());
+
+        // Step 684: Parallel Compression Template
+        let mut proj3 = create_default_project("Parallel Comp Test");
+        apply_parallel_compression_template(&mut proj3, 1, 4.0, 0.5).expect("parallel comp");
+        assert!(proj3.tracks[0].nodes.iter().any(|n| n.kind == "CompressorNode"));
+
+        // Steps 685-689 & 693-694: Sidechain, Bus Target, Phase Flip, DC Block, Quick Filters, Gain Trims
+        let mut track2 = TrackConfig::default();
+        set_track_sidechain_source(&mut track2, 2);
+        set_track_bus_target(&mut track2, "DrumBus");
+        track2.phase_flip = true;
+        track2.dc_block = true;
+        track2.low_cut_hz = Some(80.0);
+        track2.high_cut_hz = Some(12000.0);
+        track2.input_gain_db = -3.0;
+        track2.output_gain_db = 1.5;
+
+        assert_eq!(track2.sidechain_source_track_id, Some(2));
+        assert_eq!(track2.bus_target.as_deref(), Some("DrumBus"));
+
+        let mut dc_filter = DcBlockFilter::new();
+        let dc_sample = dc_filter.process_sample(1.0);
+        assert!(dc_sample.is_finite());
+
+        let mut low_cut = LowCutFilter::new(80.0);
+        let hp_sample = low_cut.process_sample(0.5, 44100);
+        assert!(hp_sample.is_finite());
+
+        let mut high_cut = HighCutFilter::new(12000.0);
+        let lp_sample = high_cut.process_sample(0.5, 44100);
+        assert!(lp_sample.is_finite());
+
+        // Step 690: LUFS Target Auto-Level
+        let mut buf_level = vec![0.1f32; 100];
+        let delta = auto_level_track(&mut buf_level, -20.0, -14.0);
+        assert_eq!(delta, 6.0);
+        assert!((buf_level[0] - (0.1 * 10.0f32.powf(6.0 / 20.0))).abs() < 1e-4);
+
+        // Step 691: Spectrum Matching
+        let src_spec = [0.1, 0.5, 0.8];
+        let tgt_spec = [0.2, 0.5, 0.4];
+        let eq_offsets = match_spectrum_eq(&src_spec, &tgt_spec);
+        assert_eq!(eq_offsets.len(), 3);
+        assert!((eq_offsets[0] - 6.02).abs() < 0.1);
+
+        // Step 692: Stereo Correlation
+        let l_ch = vec![1.0, 0.5, -0.5];
+        let r_ch = vec![1.0, 0.5, -0.5];
+        let corr = calculate_stereo_correlation(&l_ch, &r_ch);
+        assert!((corr - 1.0).abs() < 1e-4);
+
+        let r_inv = vec![-1.0, -0.5, 0.5];
+        let corr_inv = calculate_stereo_correlation(&l_ch, &r_inv);
+        assert!((corr_inv + 1.0).abs() < 1e-4);
+
+        // Step 695: Bounce to Track
+        let mut proj4 = create_default_project("Bounce Test");
+        let bounced_id = bounce_track_to_new_track(&mut proj4, 1, &[0.5, 0.5]).expect("bounce track");
+        assert!(proj4.tracks.iter().any(|t| t.id == bounced_id));
+        assert!(proj4.tracks[0].muted);
+
+        // Step 696: Sample Audition at C4
+        let sbuf = SampleBuffer::new(vec![0.5f32; 100], 44100, 1);
+        let auditioned = audition_sample_at_c4(&sbuf, 60);
+        assert_eq!(auditioned.root_key, Some(60));
+
+        // Step 697: Destructive Sample Editing
+        let mut sample_data = vec![0.1, -0.8, 0.4, 0.9, -0.2];
+        normalize_sample(&mut sample_data, 0.0);
+        assert!((sample_data.iter().map(|s| s.abs()).fold(0.0f32, f32::max) - 1.0).abs() < 1e-4);
+
+        reverse_sample(&mut sample_data);
+        assert_eq!(sample_data[0], -0.2);
+
+        trim_sample(&mut sample_data, 1, 4);
+        assert_eq!(sample_data.len(), 3);
+
+        fade_in_sample(&mut sample_data, 2);
+        assert_eq!(sample_data[0], 0.0);
+
+        fade_out_sample(&mut sample_data, 2);
+        assert_eq!(sample_data[sample_data.len() - 1], 0.0);
+
+        remove_dc_offset_sample(&mut sample_data);
+        let mean: f32 = sample_data.iter().sum::<f32>() / sample_data.len() as f32;
+        assert!(mean.abs() < 1e-5);
+
+        // Step 698: Sample Crossfade Loop
+        let mut loop_buf = vec![0.0; 100];
+        crossfade_sample_loop(&mut loop_buf, 20, 80, 10);
+        assert_eq!(loop_buf.len(), 100);
+
+        // Step 699: Sample Marker Editor
+        let mut editor = SampleEditor::new();
+        editor.add_marker(100, "Verse Start");
+        editor.add_marker(500, "Chorus Start");
+        assert_eq!(editor.markers.len(), 2);
+        assert!(editor.move_marker(0, 150));
+        assert!(editor.remove_marker(1));
+        assert_eq!(editor.markers.len(), 1);
+
+        // Step 700: Chop Sample to Pads
+        let pad_buf = vec![0.0f32; 1000];
+        let regions = chop_sample_to_pads(&pad_buf, 44100, 16);
+        assert!(!regions.is_empty());
+        assert!(regions.len() <= 16);
+    }
 }
 
 

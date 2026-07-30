@@ -136,6 +136,8 @@ pub struct TransportConfig {
     pub time_signature: String,
     #[serde(default)]
     pub master_tune_cents: f32,
+    #[serde(default)]
+    pub master_trim_db: f32,
 }
 
 impl Default for TransportConfig {
@@ -145,6 +147,7 @@ impl Default for TransportConfig {
             bpm: 120.0,
             time_signature: "4/4".to_string(),
             master_tune_cents: 0.0,
+            master_trim_db: 0.0,
         }
     }
 }
@@ -193,6 +196,8 @@ pub struct TrackConfig {
     #[serde(default)]
     pub is_frozen: bool,
     #[serde(default)]
+    pub frozen_buffer: Option<Vec<f32>>,
+    #[serde(default)]
     pub root_note: u8,
     #[serde(default = "default_scale_type")]
     pub scale_type: String,
@@ -208,6 +213,22 @@ pub struct TrackConfig {
     pub split_key: Option<u8>,
     #[serde(default)]
     pub layer_target_ids: Vec<u64>,
+    #[serde(default)]
+    pub sidechain_source_track_id: Option<u64>,
+    #[serde(default)]
+    pub bus_target: Option<String>,
+    #[serde(default)]
+    pub phase_flip: bool,
+    #[serde(default)]
+    pub dc_block: bool,
+    #[serde(default)]
+    pub low_cut_hz: Option<f32>,
+    #[serde(default)]
+    pub high_cut_hz: Option<f32>,
+    #[serde(default)]
+    pub input_gain_db: f32,
+    #[serde(default)]
+    pub output_gain_db: f32,
 }
 
 fn default_scale_type() -> String {
@@ -242,6 +263,7 @@ impl Default for TrackConfig {
             record_armed: false,
             send_to_master: true,
             is_frozen: false,
+            frozen_buffer: None,
             root_note: 0,
             scale_type: "Major".to_string(),
             midi_transpose: 0,
@@ -250,6 +272,14 @@ impl Default for TrackConfig {
             fine_tune_cents: 0.0,
             split_key: None,
             layer_target_ids: Vec::new(),
+            sidechain_source_track_id: None,
+            bus_target: None,
+            phase_flip: false,
+            dc_block: false,
+            low_cut_hz: None,
+            high_cut_hz: None,
+            input_gain_db: 0.0,
+            output_gain_db: 0.0,
         }
     }
 }

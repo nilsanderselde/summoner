@@ -348,6 +348,87 @@ impl SignalProcessor for FilterComb {
     }
 }
 
+/// DC Blocking filter (y[n] = x[n] - x[n-1] + R * y[n-1], with R = 0.995).
+#[derive(Debug, Clone)]
+pub struct DcBlockFilter {
+    x1: f32,
+    y1: f32,
+    pub r: f32,
+}
+
+impl Default for DcBlockFilter {
+    fn default() -> Self {
+        Self { x1: 0.0, y1: 0.0, r: 0.995 }
+    }
+}
+
+impl DcBlockFilter {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn process_sample(&mut self, input: f32) -> f32 {
+        let y = input - self.x1 + self.r * self.y1;
+        self.x1 = input;
+        self.y1 = if y.is_finite() { y } else { 0.0 };
+        self.y1
+    }
+
+    pub fn process_buffer(&mut self, buffer: &mut [f32]) {
+        for sample in buffer.iter_mut() {
+            *sample = self.process_sample(*sample);
+        }
+    }
+}
+
+/// 1st order High-Pass (Low-Cut) filter.
+#[derive(Debug, Clone)]
+pub struct LowCutFilter {
+    pub cutoff_hz: f32,
+    x1: f32,
+    y1: f32,
+}
+
+impl LowCutFilter {
+    pub fn new(cutoff_hz: f32) -> Self {
+        Self { cutoff_hz, x1: 0.0, y1: 0.0 }
+    }
+
+    pub fn process_sample(&mut self, input: f32, sample_rate: u32) -> f32 {
+        if sample_rate == 0 { return input; }
+        let dt = 1.0 / sample_rate as f32;
+        let rc = 1.0 / (2.0 * std::f32::consts::PI * self.cutoff_hz.max(1.0));
+        let alpha = rc / (rc + dt);
+        let y = alpha * (self.y1 + input - self.x1);
+        self.x1 = input;
+        self.y1 = if y.is_finite() { y } else { 0.0 };
+        self.y1
+    }
+}
+
+/// 1st order Low-Pass (High-Cut) filter.
+#[derive(Debug, Clone)]
+pub struct HighCutFilter {
+    pub cutoff_hz: f32,
+    y1: f32,
+}
+
+impl HighCutFilter {
+    pub fn new(cutoff_hz: f32) -> Self {
+        Self { cutoff_hz, y1: 0.0 }
+    }
+
+    pub fn process_sample(&mut self, input: f32, sample_rate: u32) -> f32 {
+        if sample_rate == 0 { return input; }
+        let dt = 1.0 / sample_rate as f32;
+        let rc = 1.0 / (2.0 * std::f32::consts::PI * self.cutoff_hz.max(1.0));
+        let alpha = dt / (rc + dt);
+        let y = self.y1 + alpha * (input - self.y1);
+        self.y1 = if y.is_finite() { y } else { 0.0 };
+        self.y1
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
