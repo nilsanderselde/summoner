@@ -56,12 +56,14 @@ pub mod track_dsp;
 pub mod neural_dsp;
 pub mod ecosystem_hardware;
 pub mod spatial_audio;
+pub mod ai_mixing;
 
 pub use sample_editor::*;
 pub use track_dsp::*;
 pub use neural_dsp::*;
 pub use ecosystem_hardware::*;
 pub use spatial_audio::*;
+pub use ai_mixing::*;
 pub use multiband_compressor::MultibandCompressorNode;
 pub use tape_saturation::TapeSaturationNode;
 pub use tube_saturation::TubeSaturationNode;
