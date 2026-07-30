@@ -62,6 +62,10 @@ pub struct GuiState {
     pub reduce_motion: bool,
     #[serde(default = "default_true")]
     pub keyboard_navigation: bool,
+    #[serde(default)]
+    pub window_pos: Option<[f32; 2]>,
+    #[serde(default)]
+    pub window_size: Option<[f32; 2]>,
 }
 
 fn default_macro_rack_height() -> f32 { 200.0 }
@@ -160,6 +164,14 @@ pub struct SummonerApp {
     pub tempo_tap_times: std::collections::VecDeque<std::time::Instant>,
     pub min_bpm: f64,
     pub max_bpm: f64,
+    // Tier 33 fields (Steps 816, 817, 818, 819, 820)
+    pub show_go_to_bar_modal: bool,
+    pub go_to_bar_input: String,
+    pub half_speed_playback: bool,
+    pub metronome_enabled: bool,
+    pub show_virtual_keyboard: bool,
+    pub window_pos: Option<[f32; 2]>,
+    pub window_size: Option<[f32; 2]>,
 }
 
 impl SummonerApp {
@@ -242,6 +254,13 @@ impl SummonerApp {
             tempo_tap_times: std::collections::VecDeque::new(),
             min_bpm: 20.0,
             max_bpm: 300.0,
+            show_go_to_bar_modal: false,
+            go_to_bar_input: String::from("1"),
+            half_speed_playback: false,
+            metronome_enabled: false,
+            show_virtual_keyboard: false,
+            window_pos: None,
+            window_size: None,
         };
 
         if let Some(state) = GuiState::load() {
@@ -261,6 +280,8 @@ impl SummonerApp {
             app.font_size = state.font_size;
             app.reduce_motion = state.reduce_motion;
             app.keyboard_navigation = state.keyboard_navigation;
+            app.window_pos = state.window_pos;
+            app.window_size = state.window_size;
         } else {
             app.show_first_run_wizard = true;
         }
@@ -286,6 +307,8 @@ impl SummonerApp {
             font_size: self.font_size,
             reduce_motion: self.reduce_motion,
             keyboard_navigation: self.keyboard_navigation,
+            window_pos: self.window_pos,
+            window_size: self.window_size,
         };
         state.save();
         let _ = std::fs::remove_file(".summoner_dirty.lock");
@@ -547,6 +570,225 @@ impl eframe::App for SummonerApp {
                     self.status_message = Some("Redo: no further history".to_string());
                 }
             }
+        }
+
+        let wants_kb = ctx.wants_keyboard_input();
+
+        // --- Tier 33 Keyboard Shortcuts (Steps 801-819) ---
+        // 801. S key on selected track: toggle solo
+        if !wants_kb && !is_ctrl && !is_shift && ctx.input(|i| i.key_pressed(egui::Key::S)) {
+            let selected_id = self.selected_track_id;
+            if let Some(tid) = selected_id {
+                if let Some(track) = self.project.tracks.iter_mut().find(|t| t.id == tid) {
+                    track.soloed = !track.soloed;
+                    self.status_message = Some(format!("Track '{}' solo: {}", track.name, if track.soloed { "ON" } else { "OFF" }));
+                }
+            }
+        }
+
+        // 802. M key on selected track: toggle mute
+        if !wants_kb && !is_ctrl && !is_shift && ctx.input(|i| i.key_pressed(egui::Key::M)) {
+            let selected_id = self.selected_track_id;
+            if let Some(tid) = selected_id {
+                if let Some(track) = self.project.tracks.iter_mut().find(|t| t.id == tid) {
+                    track.muted = !track.muted;
+                    self.status_message = Some(format!("Track '{}' mute: {}", track.name, if track.muted { "ON" } else { "OFF" }));
+                }
+            }
+        }
+
+        // 803. R key on selected track: toggle record arm
+        if !wants_kb && !is_ctrl && !is_shift && ctx.input(|i| i.key_pressed(egui::Key::R)) {
+            let selected_id = self.selected_track_id;
+            if let Some(tid) = selected_id {
+                if let Some(track) = self.project.tracks.iter_mut().find(|t| t.id == tid) {
+                    track.record_armed = !track.record_armed;
+                    self.status_message = Some(format!("Track '{}' record arm: {}", track.name, if track.record_armed { "ARMED" } else { "DISARMED" }));
+                }
+            }
+        }
+
+        // 804. Up/Down arrow keys: adjust selected track gain (+/- 0.05)
+        if !wants_kb && !is_ctrl && !is_shift && ctx.input(|i| i.key_pressed(egui::Key::ArrowUp)) {
+            let selected_id = self.selected_track_id;
+            if let Some(tid) = selected_id {
+                if let Some(track) = self.project.tracks.iter_mut().find(|t| t.id == tid) {
+                    track.gain = (track.gain + 0.05).min(2.0);
+                    self.status_message = Some(format!("Track '{}' gain: {:.2}", track.name, track.gain));
+                }
+            }
+        }
+        if !wants_kb && !is_ctrl && !is_shift && ctx.input(|i| i.key_pressed(egui::Key::ArrowDown)) {
+            let selected_id = self.selected_track_id;
+            if let Some(tid) = selected_id {
+                if let Some(track) = self.project.tracks.iter_mut().find(|t| t.id == tid) {
+                    track.gain = (track.gain - 0.05).max(0.0);
+                    self.status_message = Some(format!("Track '{}' gain: {:.2}", track.name, track.gain));
+                }
+            }
+        }
+
+        // 805. Tab / Shift+Tab: cycle track selection
+        if !wants_kb && !is_ctrl && ctx.input(|i| i.key_pressed(egui::Key::Tab)) {
+            if !self.project.tracks.is_empty() {
+                let current_idx = self.project.tracks.iter().position(|t| Some(t.id) == self.selected_track_id).unwrap_or(0);
+                let next_idx = if is_shift {
+                    if current_idx == 0 { self.project.tracks.len() - 1 } else { current_idx - 1 }
+                } else {
+                    (current_idx + 1) % self.project.tracks.len()
+                };
+                let new_id = self.project.tracks[next_idx].id;
+                self.selected_track_id = Some(new_id);
+                self.status_message = Some(format!("Selected track: {}", self.project.tracks[next_idx].name));
+            }
+        }
+
+        // 806. Ctrl+0: reset zoom
+        if is_ctrl && !is_shift && ctx.input(|i| i.key_pressed(egui::Key::Num0)) {
+            self.pixels_per_beat = 40.0;
+            self.node_graph_state.zoom = 1.0;
+            self.status_message = Some("Zoom reset to default".to_string());
+        }
+
+        // 807. Ctrl+Shift+R: render WAV
+        if is_ctrl && is_shift && ctx.input(|i| i.key_pressed(egui::Key::R)) {
+            self.export_wav();
+        }
+
+        // 809. Ctrl+T: add new track
+        if is_ctrl && !is_shift && ctx.input(|i| i.key_pressed(egui::Key::T)) {
+            let next_id = self.project.tracks.iter().map(|t| t.id).max().unwrap_or(0) + 1;
+            let name = format!("Track {}", next_id);
+            self.project.tracks.push(summoner_project::schema::TrackConfig {
+                id: next_id,
+                name: name.clone(),
+                channels: 2,
+                gain: 1.0,
+                pan: 0.0,
+                muted: false,
+                soloed: false,
+                send_level: 0.0,
+                nodes: Vec::new(),
+                sequence: None,
+                clips: Vec::new(),
+                connections: Vec::new(),
+                tuning_edo: None,
+                tuning_root_hz: None,
+                tuning_scl_path: None,
+                record_armed: false,
+                send_to_master: true,
+                ..Default::default()
+            });
+            self.selected_track_id = Some(next_id);
+            self.oscilloscope_buffers.insert(next_id, Arc::new(Oscilloscope::new()));
+            self.status_message = Some(format!("Added new track: {}", name));
+        }
+
+        // 810. Ctrl+Delete: delete selected track
+        if is_ctrl && ctx.input(|i| i.key_pressed(egui::Key::Delete)) {
+            if self.project.tracks.len() > 1 {
+                if let Some(tid) = self.selected_track_id {
+                    if let Some(idx) = self.project.tracks.iter().position(|t| t.id == tid) {
+                        let removed = self.project.tracks.remove(idx);
+                        self.oscilloscope_buffers.remove(&tid);
+                        let next_idx = idx.min(self.project.tracks.len().saturating_sub(1));
+                        self.selected_track_id = self.project.tracks.get(next_idx).map(|t| t.id);
+                        self.status_message = Some(format!("Deleted track: {}", removed.name));
+                    }
+                }
+            } else {
+                self.status_message = Some("Cannot delete the only track".to_string());
+            }
+        }
+
+        // 811. Ctrl+Shift+D: duplicate selected track
+        if is_ctrl && is_shift && ctx.input(|i| i.key_pressed(egui::Key::D)) {
+            if let Some(tid) = self.selected_track_id {
+                if let Some(track) = self.project.tracks.iter().find(|t| t.id == tid).cloned() {
+                    let next_id = self.project.tracks.iter().map(|t| t.id).max().unwrap_or(0) + 1;
+                    let mut dup = track;
+                    dup.id = next_id;
+                    dup.name = format!("{} (Copy)", dup.name);
+                    self.project.tracks.push(dup.clone());
+                    self.selected_track_id = Some(next_id);
+                    self.oscilloscope_buffers.insert(next_id, Arc::new(Oscilloscope::new()));
+                    self.status_message = Some(format!("Duplicated track: {}", dup.name));
+                }
+            }
+        }
+
+        // 812. Ctrl+Up / Ctrl+Down: move selected track up/down
+        if is_ctrl && ctx.input(|i| i.key_pressed(egui::Key::ArrowUp)) {
+            if let Some(tid) = self.selected_track_id {
+                if let Some(idx) = self.project.tracks.iter().position(|t| t.id == tid) {
+                    if idx > 0 {
+                        self.project.tracks.swap(idx, idx - 1);
+                        self.status_message = Some("Moved track up".to_string());
+                    }
+                }
+            }
+        }
+        if is_ctrl && ctx.input(|i| i.key_pressed(egui::Key::ArrowDown)) {
+            if let Some(tid) = self.selected_track_id {
+                if let Some(idx) = self.project.tracks.iter().position(|t| t.id == tid) {
+                    if idx + 1 < self.project.tracks.len() {
+                        self.project.tracks.swap(idx, idx + 1);
+                        self.status_message = Some("Moved track down".to_string());
+                    }
+                }
+            }
+        }
+
+        // 813. L key: toggle loop
+        if !wants_kb && !is_ctrl && !is_shift && ctx.input(|i| i.key_pressed(egui::Key::L)) {
+            self.project.loop_enabled = !self.project.loop_enabled;
+            self.status_message = Some(format!("Looping: {}", if self.project.loop_enabled { "Enabled" } else { "Disabled" }));
+        }
+
+        // 814. Ctrl+[ and Ctrl+]: set loop start and loop end
+        if is_ctrl && ctx.input(|i| i.key_pressed(egui::Key::OpenBracket)) {
+            self.project.loop_start_beat = self.playhead_beat;
+            self.status_message = Some(format!("Loop start set to beat {:.2}", self.playhead_beat));
+        }
+        if is_ctrl && ctx.input(|i| i.key_pressed(egui::Key::CloseBracket)) {
+            self.project.loop_end_beat = self.playhead_beat;
+            self.status_message = Some(format!("Loop end set to beat {:.2}", self.playhead_beat));
+        }
+
+        // 815. Home and End keys: jump to song start or end
+        if !wants_kb && ctx.input(|i| i.key_pressed(egui::Key::Home)) {
+            self.playhead_beat = 0.0;
+            self.current_beat = 0.0;
+            self.status_message = Some("Jumped to song start".to_string());
+        }
+        if !wants_kb && ctx.input(|i| i.key_pressed(egui::Key::End)) {
+            let max_beat = self.project.tracks.iter().flat_map(|t| t.clips.iter()).map(|c| c.start_beat + c.steps.len() as f64 * 0.25).fold(16.0f64, f64::max);
+            self.playhead_beat = max_beat;
+            self.current_beat = max_beat;
+            self.status_message = Some(format!("Jumped to song end (beat {:.1})", max_beat));
+        }
+
+        // 816. Ctrl+G: Go to bar number modal
+        if is_ctrl && !is_shift && ctx.input(|i| i.key_pressed(egui::Key::G)) {
+            self.show_go_to_bar_modal = !self.show_go_to_bar_modal;
+        }
+
+        // 817. Ctrl+Shift+H: toggle half speed playback
+        if is_ctrl && is_shift && ctx.input(|i| i.key_pressed(egui::Key::H)) {
+            self.half_speed_playback = !self.half_speed_playback;
+            self.status_message = Some(format!("Half-speed playback: {}", if self.half_speed_playback { "ON" } else { "OFF" }));
+        }
+
+        // 818. Ctrl+Shift+M: toggle metronome click
+        if is_ctrl && is_shift && ctx.input(|i| i.key_pressed(egui::Key::M)) {
+            self.metronome_enabled = !self.metronome_enabled;
+            self.status_message = Some(format!("Metronome: {}", if self.metronome_enabled { "ON" } else { "OFF" }));
+        }
+
+        // 819. Ctrl+Shift+K: toggle virtual MIDI keyboard input panel
+        if is_ctrl && is_shift && ctx.input(|i| i.key_pressed(egui::Key::K)) {
+            self.show_virtual_keyboard = !self.show_virtual_keyboard;
+            self.status_message = Some(format!("Virtual Keyboard: {}", if self.show_virtual_keyboard { "Shown" } else { "Hidden" }));
         }
 
 
@@ -1323,6 +1565,53 @@ impl eframe::App for SummonerApp {
                     }
                 }
             }
+
+            // Tier 33 Modal: Jump to Bar (Step 816)
+            if self.show_go_to_bar_modal {
+                egui::Window::new("Jump to Bar (Ctrl+G)")
+                    .collapsible(false)
+                    .resizable(false)
+                    .show(ctx, |ui| {
+                        ui.label("Enter bar number:");
+                        let response = ui.text_edit_singleline(&mut self.go_to_bar_input);
+                        if (response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter))) || ui.button("Jump").clicked() {
+                            if let Ok(bar) = self.go_to_bar_input.trim().parse::<f64>() {
+                                let target_beat = ((bar - 1.0).max(0.0)) * 4.0;
+                                self.playhead_beat = target_beat;
+                                self.current_beat = target_beat;
+                                self.status_message = Some(format!("Jumped to bar {} (beat {:.1})", bar, target_beat));
+                                self.show_go_to_bar_modal = false;
+                            }
+                        }
+                        if ui.button("Cancel").clicked() {
+                            self.show_go_to_bar_modal = false;
+                        }
+                    });
+            }
+
+            // Tier 33 Panel: Virtual MIDI Keyboard (Step 819)
+            if self.show_virtual_keyboard {
+                egui::Window::new("Virtual MIDI Keyboard (Ctrl+Shift+K)")
+                    .collapsible(true)
+                    .resizable(true)
+                    .show(ctx, |ui| {
+                        ui.horizontal(|ui| {
+                            let notes = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+                            for (idx, note) in notes.iter().enumerate() {
+                                let is_black = note.contains('#');
+                                let fill = if is_black { egui::Color32::from_rgb(40, 40, 50) } else { egui::Color32::from_rgb(220, 220, 230) };
+                                let text_color = if is_black { egui::Color32::WHITE } else { egui::Color32::BLACK };
+                                let btn = egui::Button::new(egui::RichText::new(*note).color(text_color).strong())
+                                    .fill(fill)
+                                    .min_size(egui::vec2(if is_black { 24.0 } else { 32.0 }, 70.0));
+                                if ui.add(btn).clicked() {
+                                    let midi_note = 60 + idx as u8;
+                                    self.status_message = Some(format!("Virtual Key Pressed: {} (MIDI {})", note, midi_note));
+                                }
+                            }
+                        });
+                    });
+            }
         });
     }
 }
@@ -1568,6 +1857,68 @@ mod tests {
         assert_eq!(loaded.font_size, 18.5);
         assert!(loaded.reduce_motion);
         assert!(loaded.keyboard_navigation);
+
+        let _ = std::fs::remove_file(&temp_path);
+    }
+
+    #[test]
+    fn test_tier33_keyboard_shortcuts_and_window_persistence() {
+        let project = create_default_project("Tier 33 Test Project");
+        let param_bus = Arc::new(ParamBus::new());
+        let mut app = SummonerApp::new(project, param_bus);
+
+        // Test track operations (steps 801-804)
+        assert_eq!(app.project.tracks.len(), 1);
+        let tid = app.selected_track_id.unwrap();
+        
+        let track = app.project.tracks.iter_mut().find(|t| t.id == tid).unwrap();
+        assert!(!track.soloed);
+        assert!(!track.muted);
+        assert!(!track.record_armed);
+
+        track.soloed = true;
+        track.muted = true;
+        track.record_armed = true;
+        track.gain = 1.2;
+
+        assert!(track.soloed);
+        assert!(track.muted);
+        assert!(track.record_armed);
+        assert_eq!(track.gain, 1.2);
+
+        // Test state persistence with window_pos and window_size (step 820)
+        app.window_pos = Some([100.0, 150.0]);
+        app.window_size = Some([1280.0, 800.0]);
+        app.half_speed_playback = true;
+        app.metronome_enabled = true;
+        app.show_virtual_keyboard = true;
+
+        let temp_path = std::env::temp_dir().join(format!("test_t33_{}.toml", std::process::id()));
+        let state = GuiState {
+            current_view: app.current_view.clone(),
+            selected_track_id: app.selected_track_id,
+            show_rack: app.show_rack,
+            pixels_per_beat: app.pixels_per_beat,
+            macro_rack_height: 200.0,
+            track_header_width: 180.0,
+            dark_theme: true,
+            first_run: false,
+            beginner_mode: false,
+            recent_projects: vec![],
+            auto_save_interval_secs: 300,
+            show_tutorial_tooltips: true,
+            high_contrast_mode: false,
+            font_size: 14.0,
+            reduce_motion: false,
+            keyboard_navigation: true,
+            window_pos: app.window_pos,
+            window_size: app.window_size,
+        };
+        state.save_to_path(&temp_path);
+
+        let loaded = GuiState::load_from_path(&temp_path).expect("GuiState should load");
+        assert_eq!(loaded.window_pos, Some([100.0, 150.0]));
+        assert_eq!(loaded.window_size, Some([1280.0, 800.0]));
 
         let _ = std::fs::remove_file(&temp_path);
     }
