@@ -171,6 +171,24 @@ impl CommandPalette {
                 action_id: "toggle_patch_browser".into(),
                 shortcut_hint: Some("Ctrl+B".into()),
             },
+            CommandAction {
+                label: "Toggle High Contrast Mode".into(),
+                category: "Accessibility".into(),
+                action_id: "toggle_high_contrast".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Toggle Reduce Motion Mode".into(),
+                category: "Accessibility".into(),
+                action_id: "toggle_reduce_motion".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Accessibility Settings".into(),
+                category: "Accessibility".into(),
+                action_id: "open_accessibility_settings".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

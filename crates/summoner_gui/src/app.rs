@@ -54,12 +54,21 @@ pub struct GuiState {
     pub auto_save_interval_secs: u64,
     #[serde(default = "default_true")]
     pub show_tutorial_tooltips: bool,
+    #[serde(default)]
+    pub high_contrast_mode: bool,
+    #[serde(default = "default_font_size")]
+    pub font_size: f32,
+    #[serde(default)]
+    pub reduce_motion: bool,
+    #[serde(default = "default_true")]
+    pub keyboard_navigation: bool,
 }
 
 fn default_macro_rack_height() -> f32 { 200.0 }
 fn default_track_header_width() -> f32 { 180.0 }
 fn default_dark_theme() -> bool { true }
 fn default_true() -> bool { true }
+fn default_font_size() -> f32 { 14.0 }
 fn default_auto_save_interval() -> u64 { 300 }
 
 impl GuiState {
@@ -142,6 +151,11 @@ pub struct SummonerApp {
     pub co_producer_state: crate::views::co_producer::CoProducerState,
     pub patch_browser_state: crate::views::patch_browser::PatchBrowserState,
     pub show_patch_browser: bool,
+    pub high_contrast_mode: bool,
+    pub font_size: f32,
+    pub reduce_motion: bool,
+    pub keyboard_navigation: bool,
+    pub show_accessibility_modal: bool,
 }
 
 impl SummonerApp {
@@ -216,6 +230,11 @@ impl SummonerApp {
             patch_browser_state: crate::views::patch_browser::PatchBrowserState::default(),
             show_patch_browser: true,
             co_producer_state: crate::views::co_producer::CoProducerState::default(),
+            high_contrast_mode: false,
+            font_size: 14.0,
+            reduce_motion: false,
+            keyboard_navigation: true,
+            show_accessibility_modal: false,
         };
 
         if let Some(state) = GuiState::load() {
@@ -231,6 +250,10 @@ impl SummonerApp {
             app.auto_save_interval_secs = state.auto_save_interval_secs;
             app.show_tutorial_tooltips = state.show_tutorial_tooltips;
             app.show_first_run_wizard = state.first_run;
+            app.high_contrast_mode = state.high_contrast_mode;
+            app.font_size = state.font_size;
+            app.reduce_motion = state.reduce_motion;
+            app.keyboard_navigation = state.keyboard_navigation;
         } else {
             app.show_first_run_wizard = true;
         }
@@ -252,6 +275,10 @@ impl SummonerApp {
             recent_projects: self.recent_projects.clone(),
             auto_save_interval_secs: self.auto_save_interval_secs,
             show_tutorial_tooltips: self.show_tutorial_tooltips,
+            high_contrast_mode: self.high_contrast_mode,
+            font_size: self.font_size,
+            reduce_motion: self.reduce_motion,
+            keyboard_navigation: self.keyboard_navigation,
         };
         state.save();
         let _ = std::fs::remove_file(".summoner_dirty.lock");
@@ -388,10 +415,18 @@ impl eframe::App for SummonerApp {
     }
 
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        if self.dark_theme {
-            crate::theme::apply_summoner_theme(ctx);
+        if self.high_contrast_mode {
+            crate::theme::apply_high_contrast_theme(ctx, self.font_size);
+        } else if self.dark_theme {
+            crate::theme::apply_summoner_theme(ctx, self.font_size);
         } else {
-            crate::theme::apply_light_theme(ctx);
+            crate::theme::apply_light_theme(ctx, self.font_size);
+        }
+
+        if self.reduce_motion {
+            ctx.style_mut(|s| s.animation_time = 0.0);
+        } else {
+            ctx.style_mut(|s| s.animation_time = 0.15);
         }
 
         // Handle dropped files (step 320)
@@ -534,6 +569,17 @@ impl eframe::App for SummonerApp {
                 }
                 "toggle_patch_browser" => {
                     self.show_patch_browser = !self.show_patch_browser;
+                }
+                "toggle_high_contrast" => {
+                    self.high_contrast_mode = !self.high_contrast_mode;
+                    self.status_message = Some(format!("High Contrast Mode: {}", if self.high_contrast_mode { "Enabled" } else { "Disabled" }));
+                }
+                "toggle_reduce_motion" => {
+                    self.reduce_motion = !self.reduce_motion;
+                    self.status_message = Some(format!("Reduce Motion Mode: {}", if self.reduce_motion { "Enabled" } else { "Disabled" }));
+                }
+                "open_accessibility_settings" => {
+                    self.show_accessibility_modal = true;
                 }
                 "sfz_convert" | "auto_slice" | "load_preset" | "export_clap" | "toggle_simd" => {
                     println!("Command palette action executed: {}", action);
@@ -704,6 +750,10 @@ impl eframe::App for SummonerApp {
                         self.show_shortcuts_modal = true;
                         ui.close_menu();
                     }
+                    if ui.button("♿ Accessibility Settings").clicked() {
+                        self.show_accessibility_modal = true;
+                        ui.close_menu();
+                    }
                     if ui.button("ℹ About Summoner").clicked() {
                         self.show_about_dialog = true;
                         ui.close_menu();
@@ -768,6 +818,85 @@ impl eframe::App for SummonerApp {
                     });
                 });
             self.show_shortcuts_modal = is_open;
+        }
+
+        // Accessibility Settings Modal (Tier 29 - Steps 517-523)
+        if self.show_accessibility_modal {
+            let mut is_open = self.show_accessibility_modal;
+            let mut close_requested = false;
+            egui::Window::new("♿ Accessibility & Visual Settings")
+                .open(&mut is_open)
+                .resizable(true)
+                .default_size([480.0, 360.0])
+                .show(ctx, |ui| {
+                    ui.heading("Accessibility Preferences");
+                    ui.label("Configure contrast, text scaling, animation, and focus settings.");
+                    ui.separator();
+
+                    egui::Grid::new("accessibility_settings_grid")
+                        .striped(true)
+                        .min_col_width(200.0)
+                        .show(ui, |ui| {
+                            ui.label("High Contrast Mode:");
+                            ui.push_id("acc_high_contrast_toggle", |ui| {
+                                ui.checkbox(&mut self.high_contrast_mode, "Enable High Contrast Palette (Step 520)");
+                            });
+                            ui.end_row();
+
+                            ui.label("Font Size Scaling (px):");
+                            ui.push_id("acc_font_size_slider", |ui| {
+                                ui.add(egui::Slider::new(&mut self.font_size, 10.0..=24.0).text("px (Step 521)"));
+                            });
+                            ui.end_row();
+
+                            ui.label("Reduce Motion:");
+                            ui.push_id("acc_reduce_motion_toggle", |ui| {
+                                ui.checkbox(&mut self.reduce_motion, "Disable UI Animations (Step 523)");
+                            });
+                            ui.end_row();
+
+                            ui.label("Keyboard Navigation:");
+                            ui.push_id("acc_keyboard_nav_toggle", |ui| {
+                                ui.checkbox(&mut self.keyboard_navigation, "High-Visibility Focus Rings (Step 518/522)");
+                            });
+                            ui.end_row();
+                        });
+
+                    ui.separator();
+                    ui.heading("WCAG AA Compliance");
+                    let bg_col = if self.high_contrast_mode {
+                        crate::theme::COLOR_HIGH_CONTRAST_BG
+                    } else if self.dark_theme {
+                        crate::theme::COLOR_BG
+                    } else {
+                        egui::Color32::WHITE
+                    };
+                    let text_col = if self.high_contrast_mode {
+                        crate::theme::COLOR_HIGH_CONTRAST_TEXT
+                    } else if self.dark_theme {
+                        egui::Color32::WHITE
+                    } else {
+                        egui::Color32::BLACK
+                    };
+
+                    let ratio = crate::theme::contrast_ratio(text_col, bg_col);
+                    let meets_aa = crate::theme::meets_wcag_aa(text_col, bg_col);
+
+                    ui.horizontal(|ui| {
+                        ui.label(format!("Primary Text Contrast Ratio: {:.1}:1", ratio));
+                        if meets_aa {
+                            ui.label(egui::RichText::new("✓ WCAG AA Pass (≥ 4.5:1)").color(egui::Color32::GREEN).strong());
+                        } else {
+                            ui.label(egui::RichText::new("⚠ WCAG AA Warning").color(egui::Color32::YELLOW));
+                        }
+                    });
+
+                    ui.add_space(10.0);
+                    if ui.button("Close").clicked() {
+                        close_requested = true;
+                    }
+                });
+            self.show_accessibility_modal = is_open && !close_requested;
         }
 
         // About Dialog window
@@ -1243,6 +1372,10 @@ mod tests {
             recent_projects: vec![],
             auto_save_interval_secs: 300,
             show_tutorial_tooltips: true,
+            high_contrast_mode: false,
+            font_size: 14.0,
+            reduce_motion: false,
+            keyboard_navigation: true,
         };
         state.save_to_path(&temp_path);
         let loaded = GuiState::load_from_path(&temp_path);
@@ -1284,6 +1417,10 @@ mod tests {
                 recent_projects: vec![],
                 auto_save_interval_secs: 300,
                 show_tutorial_tooltips: true,
+                high_contrast_mode: false,
+                font_size: 14.0,
+                reduce_motion: false,
+                keyboard_navigation: true,
             };
             state.save_to_path(&temp_path);
             let loaded = GuiState::load_from_path(&temp_path).expect("GuiState should load");
@@ -1338,6 +1475,52 @@ mod tests {
         assert!(!app.beginner_mode);
         app.beginner_mode = true;
         assert!(app.beginner_mode);
+    }
+
+    #[test]
+    fn test_tier29_accessibility_settings_and_persistence() {
+        let project = create_default_project("Accessibility Test");
+        let param_bus = Arc::new(ParamBus::new());
+        let mut app = SummonerApp::new(project, param_bus);
+
+        assert!(!app.high_contrast_mode);
+        assert_eq!(app.font_size, 14.0);
+        assert!(!app.reduce_motion);
+        assert!(app.keyboard_navigation);
+
+        app.high_contrast_mode = true;
+        app.font_size = 18.5;
+        app.reduce_motion = true;
+        app.keyboard_navigation = true;
+
+        let temp_path = std::env::temp_dir().join(format!("test_acc_{}.toml", std::process::id()));
+        let state = GuiState {
+            current_view: app.current_view.clone(),
+            selected_track_id: app.selected_track_id,
+            show_rack: app.show_rack,
+            pixels_per_beat: app.pixels_per_beat,
+            macro_rack_height: 200.0,
+            track_header_width: 180.0,
+            dark_theme: true,
+            first_run: false,
+            beginner_mode: false,
+            recent_projects: vec![],
+            auto_save_interval_secs: 300,
+            show_tutorial_tooltips: true,
+            high_contrast_mode: app.high_contrast_mode,
+            font_size: app.font_size,
+            reduce_motion: app.reduce_motion,
+            keyboard_navigation: app.keyboard_navigation,
+        };
+        state.save_to_path(&temp_path);
+
+        let loaded = GuiState::load_from_path(&temp_path).expect("GuiState should load");
+        assert!(loaded.high_contrast_mode);
+        assert_eq!(loaded.font_size, 18.5);
+        assert!(loaded.reduce_motion);
+        assert!(loaded.keyboard_navigation);
+
+        let _ = std::fs::remove_file(&temp_path);
     }
 }
 
