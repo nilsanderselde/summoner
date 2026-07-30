@@ -600,6 +600,324 @@ impl SurroundStemSplitterBedObject {
     }
 }
 
+/// Room acoustic geometry model for spatial impulse response generation (Step 1244).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum RoomAcousticModel {
+    /// Rectangular shoebox room model with width (x), length (y), height (z) in meters.
+    Rectangular { width: f32, length: f32, height: f32 },
+    /// Spherical room acoustic model with specified radius in meters.
+    Spherical { radius: f32 },
+    /// Custom room geometry model specified by internal volume (m^3), surface area (m^2), average absorption (0..1), and scattering (0..1).
+    CustomMesh {
+        volume_m3: f32,
+        surface_area_m2: f32,
+        avg_absorption: f32,
+        scattering: f32,
+    },
+}
+
+/// Acoustic surface material presets with absorption coefficients (Step 1244).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum AcousticMaterial {
+    Concrete,
+    WoodPaneling,
+    AcousticFoam,
+    HeavyCurtains,
+    Glass,
+    Custom(f32),
+}
+
+impl AcousticMaterial {
+    pub fn absorption_coefficient(&self) -> f32 {
+        match self {
+            AcousticMaterial::Concrete => 0.05,
+            AcousticMaterial::WoodPaneling => 0.15,
+            AcousticMaterial::AcousticFoam => 0.75,
+            AcousticMaterial::HeavyCurtains => 0.50,
+            AcousticMaterial::Glass => 0.08,
+            AcousticMaterial::Custom(alpha) => alpha.clamp(0.01, 0.99),
+        }
+    }
+}
+
+/// Configuration parameters for procedural spatial impulse response synthesis (Step 1244).
+#[derive(Debug, Clone, PartialEq)]
+pub struct SpatialIrConfig {
+    pub model: RoomAcousticModel,
+    pub source_pos: Position3D,
+    pub listener_pos: Position3D,
+    pub material: AcousticMaterial,
+    pub air_damping: f32,
+    pub sample_rate: u32,
+    pub duration_sec: f32,
+}
+
+impl Default for SpatialIrConfig {
+    fn default() -> Self {
+        Self {
+            model: RoomAcousticModel::Rectangular {
+                width: 10.0,
+                length: 15.0,
+                height: 4.0,
+            },
+            source_pos: Position3D::new(0.0, 3.0, 0.0),
+            listener_pos: Position3D::new(0.0, 8.0, 0.0),
+            material: AcousticMaterial::WoodPaneling,
+            air_damping: 0.002,
+            sample_rate: 44100,
+            duration_sec: 1.5,
+        }
+    }
+}
+
+/// Generated Spatial Impulse Response containing stereo impulse signals & room acoustics metadata (Step 1244).
+#[derive(Debug, Clone)]
+pub struct SpatialImpulseResponse {
+    pub left: Vec<f32>,
+    pub right: Vec<f32>,
+    pub sample_rate: u32,
+    pub rt60_sec: f32,
+    pub direct_delay_ms: f32,
+}
+
+impl SpatialImpulseResponse {
+    pub fn len(&self) -> usize {
+        self.left.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.left.is_empty()
+    }
+
+    /// Peak normalize left and right channels to maximum amplitude 1.0.
+    pub fn normalize(&mut self) {
+        let max_peak = self
+            .left
+            .iter()
+            .chain(self.right.iter())
+            .map(|s| s.abs())
+            .fold(0.0f32, f32::max);
+
+        if max_peak > 1e-6 {
+            let scale = 1.0 / max_peak;
+            for sample in self.left.iter_mut() {
+                *sample *= scale;
+            }
+            for sample in self.right.iter_mut() {
+                *sample *= scale;
+            }
+        }
+    }
+
+    /// Convert stereo impulse response into a `MultichannelAudioBuffer`.
+    pub fn to_multichannel_buffer(&self) -> MultichannelAudioBuffer {
+        let mut buf = MultichannelAudioBuffer::with_max_frames(ChannelLayout::Stereo, self.len());
+        buf.set_active_frames(self.len());
+        if !self.left.is_empty() && buf.num_channels() >= 2 {
+            buf.channel_mut(0).copy_from_slice(&self.left);
+            buf.channel_mut(1).copy_from_slice(&self.right);
+        }
+        buf
+    }
+}
+
+/// Procedural Spatial Impulse Response Generator Engine (Step 1244).
+#[derive(Debug, Clone)]
+pub struct ProceduralSpatialIrGenerator {
+    pub config: SpatialIrConfig,
+}
+
+impl ProceduralSpatialIrGenerator {
+    pub fn new(config: SpatialIrConfig) -> Self {
+        Self { config }
+    }
+
+    /// Calculate Sabine RT60 reverberation time based on room volume and total absorption area.
+    pub fn calculate_sabine_rt60(&self) -> f32 {
+        let alpha = self.config.material.absorption_coefficient();
+        let (volume, surface_area) = match self.config.model {
+            RoomAcousticModel::Rectangular { width, length, height } => {
+                let w = width.max(1.0);
+                let l = length.max(1.0);
+                let h = height.max(1.0);
+                let v = w * l * h;
+                let s = 2.0 * (w * l + w * h + l * h);
+                (v, s)
+            }
+            RoomAcousticModel::Spherical { radius } => {
+                let r = radius.max(1.0);
+                let v = (4.0 / 3.0) * PI * r * r * r;
+                let s = 4.0 * PI * r * r;
+                (v, s)
+            }
+            RoomAcousticModel::CustomMesh {
+                volume_m3,
+                surface_area_m2,
+                avg_absorption,
+                ..
+            } => {
+                let effective_alpha = (alpha + avg_absorption) * 0.5;
+                let s = surface_area_m2.max(1.0);
+                let v = volume_m3.max(1.0);
+                return (0.161 * v / (s * effective_alpha.max(0.01))).clamp(0.05, 10.0);
+            }
+        };
+
+        let total_absorption = surface_area * alpha.max(0.01);
+        (0.161 * volume / total_absorption).clamp(0.05, 10.0)
+    }
+
+    /// Generate complete stereo binaural spatial impulse response.
+    pub fn generate(&self) -> SpatialImpulseResponse {
+        let sr = self.config.sample_rate as f32;
+        let rt60 = self.calculate_sabine_rt60();
+        let duration_sec = self.config.duration_sec.min(rt60 * 1.5).max(0.1);
+        let num_samples = (duration_sec * sr) as usize;
+
+        let mut left = vec![0.0f32; num_samples];
+        let mut right = vec![0.0f32; num_samples];
+
+        let speed_of_sound = 343.0; // m/s
+        let head_radius = 0.0875; // meters
+
+        // Relative vector from listener to source
+        let dx = self.config.source_pos.x - self.config.listener_pos.x;
+        let dy = self.config.source_pos.y - self.config.listener_pos.y;
+        let dz = self.config.source_pos.z - self.config.listener_pos.z;
+        let direct_dist = (dx * dx + dy * dy + dz * dz).sqrt().max(0.1);
+        let direct_delay_sec = direct_dist / speed_of_sound;
+        let direct_delay_ms = direct_delay_sec * 1000.0;
+
+        let azimuth = dx.atan2(dy); // -pi to +pi
+        let sin_az = azimuth.sin();
+        let itd_sec = (head_radius / speed_of_sound) * (azimuth.abs() + sin_az.abs());
+
+        // Gain attenuation based on direct distance and material
+        let direct_gain = 1.0 / direct_dist.max(0.5);
+        let left_ild = (1.0 - 0.4 * sin_az).clamp(0.1, 1.5) * direct_gain;
+        let right_ild = (1.0 + 0.4 * sin_az).clamp(0.1, 1.5) * direct_gain;
+
+        let direct_idx_l = ((direct_delay_sec + if sin_az > 0.0 { itd_sec } else { 0.0 }) * sr) as usize;
+        let direct_idx_r = ((direct_delay_sec + if sin_az < 0.0 { itd_sec } else { 0.0 }) * sr) as usize;
+
+        if direct_idx_l < num_samples {
+            left[direct_idx_l] += left_ild;
+        }
+        if direct_idx_r < num_samples {
+            right[direct_idx_r] += right_ild;
+        }
+
+        let alpha = self.config.material.absorption_coefficient();
+        let wall_reflect = (1.0 - alpha).clamp(0.05, 0.95);
+
+        // Early reflections based on room model
+        match self.config.model {
+            RoomAcousticModel::Rectangular { width, length, height } => {
+                let w = width.max(1.0);
+                let l = length.max(1.0);
+                let h = height.max(1.0);
+
+                // 1st order image sources (6 virtual wall sources)
+                let image_offsets = [
+                    (-2.0 * self.config.source_pos.x, 0.0, 0.0),
+                    (2.0 * (w - self.config.source_pos.x), 0.0, 0.0),
+                    (0.0, -2.0 * self.config.source_pos.y, 0.0),
+                    (0.0, 2.0 * (l - self.config.source_pos.y), 0.0),
+                    (0.0, 0.0, -2.0 * self.config.source_pos.z),
+                    (0.0, 0.0, 2.0 * (h - self.config.source_pos.z)),
+                ];
+
+                for (ox, oy, oz) in image_offsets {
+                    let rx = dx + ox;
+                    let ry = dy + oy;
+                    let rz = dz + oz;
+                    let rdist = (rx * rx + ry * ry + rz * rz).sqrt().max(0.1);
+                    let rdelay_sec = rdist / speed_of_sound;
+                    let rgain = (1.0 / rdist) * wall_reflect;
+                    let raz = rx.atan2(ry);
+                    let r_sin_az = raz.sin();
+
+                    let idx_l = (rdelay_sec * sr) as usize;
+                    let idx_r = (rdelay_sec * sr + r_sin_az * itd_sec * sr) as usize;
+
+                    if idx_l < num_samples {
+                        left[idx_l] += rgain * (1.0 - 0.3 * r_sin_az);
+                    }
+                    if idx_r < num_samples {
+                        right[idx_r] += rgain * (1.0 + 0.3 * r_sin_az);
+                    }
+                }
+            }
+            RoomAcousticModel::Spherical { radius } => {
+                let r = radius.max(1.0);
+                // Spherical radial reflections from wall boundaries
+                for order in 1..=4 {
+                    let rdist = direct_dist + 2.0 * (r - direct_dist * 0.5) * (order as f32);
+                    let rdelay_sec = rdist / speed_of_sound;
+                    let rgain = (1.0 / rdist) * wall_reflect.powi(order);
+                    let idx = (rdelay_sec * sr) as usize;
+
+                    if idx < num_samples {
+                        let phase_l = ((order as f32) * 1.5).cos();
+                        let phase_r = ((order as f32) * 1.5).sin();
+                        left[idx] += rgain * phase_l;
+                        right[idx] += rgain * phase_r;
+                    }
+                }
+            }
+            RoomAcousticModel::CustomMesh { scattering, .. } => {
+                // Stochastic early reflections based on scattering and mean free path
+                let mean_free_path = 4.0 * (self.config.duration_sec * 10.0);
+                let count = 8;
+                for i in 1..=count {
+                    let rdist = direct_dist + (i as f32) * mean_free_path * 0.2;
+                    let rdelay_sec = rdist / speed_of_sound;
+                    let rgain = (1.0 / rdist) * wall_reflect.powf((i as f32) * 0.8) * (1.0 + scattering);
+                    let idx_l = (rdelay_sec * sr) as usize;
+                    let idx_r = ((rdelay_sec + 0.002 * (i as f32)) * sr) as usize;
+
+                    if idx_l < num_samples {
+                        left[idx_l] += rgain * 0.8;
+                    }
+                    if idx_r < num_samples {
+                        right[idx_r] += rgain * 0.8;
+                    }
+                }
+            }
+        }
+
+        // Late Reverberant Tail (Stochastic diffuse decay)
+        let decay_rate = 6.908 / rt60.max(0.05); // 60dB decay constant ln(1000)
+        let direct_samples = (direct_delay_sec * sr) as usize;
+
+        for i in direct_samples..num_samples {
+            let t = (i - direct_samples) as f32 / sr;
+            let env = (-decay_rate * t).exp();
+            let air_loss = (-self.config.air_damping * t * 10.0).exp();
+            let sample_t = i as f32;
+
+            // Deterministic pseudo-noise sequence for reproducibility
+            let n_l = ((sample_t * 12.9898 + 78.233).sin() * 43758.5453).fract() * 2.0 - 1.0;
+            let n_r = ((sample_t * 39.3461 + 11.619).sin() * 24614.6143).fract() * 2.0 - 1.0;
+
+            let diffuse_scale = 0.15 * wall_reflect;
+            left[i] += n_l * env * air_loss * diffuse_scale;
+            right[i] += n_r * env * air_loss * diffuse_scale;
+        }
+
+        let mut response = SpatialImpulseResponse {
+            left,
+            right,
+            sample_rate: self.config.sample_rate,
+            rt60_sec: rt60,
+            direct_delay_ms,
+        };
+
+        response.normalize();
+        response
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -660,4 +978,74 @@ mod tests {
         assert!(rms_l > 0.0);
         assert!(rms_r > 0.0);
     }
+
+    #[test]
+    fn test_step_1244_procedural_spatial_impulse_response_generator() {
+        // 1. Rectangular room model
+        let rect_config = SpatialIrConfig {
+            model: RoomAcousticModel::Rectangular {
+                width: 12.0,
+                length: 18.0,
+                height: 5.0,
+            },
+            source_pos: Position3D::new(2.0, 4.0, 1.5),
+            listener_pos: Position3D::new(-2.0, 10.0, 1.5),
+            material: AcousticMaterial::WoodPaneling,
+            air_damping: 0.002,
+            sample_rate: 44100,
+            duration_sec: 0.5,
+        };
+
+        let gen_rect = ProceduralSpatialIrGenerator::new(rect_config);
+        let rt60_rect = gen_rect.calculate_sabine_rt60();
+        assert!(rt60_rect > 0.1 && rt60_rect < 5.0);
+
+        let ir_rect = gen_rect.generate();
+        assert!(!ir_rect.is_empty());
+        assert_eq!(ir_rect.sample_rate, 44100);
+        assert!(ir_rect.direct_delay_ms > 0.0);
+        assert!(ir_rect.left.iter().any(|&s| s != 0.0));
+        assert!(ir_rect.right.iter().any(|&s| s != 0.0));
+
+        let mc_buf = ir_rect.to_multichannel_buffer();
+        assert_eq!(mc_buf.num_channels(), 2);
+
+        // 2. Spherical room model
+        let sphere_config = SpatialIrConfig {
+            model: RoomAcousticModel::Spherical { radius: 10.0 },
+            source_pos: Position3D::new(1.0, 1.0, 0.0),
+            listener_pos: Position3D::new(0.0, 5.0, 0.0),
+            material: AcousticMaterial::Concrete,
+            air_damping: 0.001,
+            sample_rate: 44100,
+            duration_sec: 0.4,
+        };
+        let gen_sphere = ProceduralSpatialIrGenerator::new(sphere_config);
+        let rt60_sphere = gen_sphere.calculate_sabine_rt60();
+        assert!(rt60_sphere > 0.1);
+        let ir_sphere = gen_sphere.generate();
+        assert!(!ir_sphere.is_empty());
+
+        // 3. Custom mesh room model
+        let custom_config = SpatialIrConfig {
+            model: RoomAcousticModel::CustomMesh {
+                volume_m3: 500.0,
+                surface_area_m2: 400.0,
+                avg_absorption: 0.3,
+                scattering: 0.5,
+            },
+            source_pos: Position3D::new(0.0, 2.0, 0.0),
+            listener_pos: Position3D::new(0.0, 6.0, 0.0),
+            material: AcousticMaterial::HeavyCurtains,
+            air_damping: 0.003,
+            sample_rate: 44100,
+            duration_sec: 0.3,
+        };
+        let gen_custom = ProceduralSpatialIrGenerator::new(custom_config);
+        let rt60_custom = gen_custom.calculate_sabine_rt60();
+        assert!(rt60_custom > 0.05);
+        let ir_custom = gen_custom.generate();
+        assert!(!ir_custom.is_empty());
+    }
 }
+
