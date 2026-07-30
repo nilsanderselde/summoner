@@ -6,6 +6,9 @@ use std::collections::HashMap;
 pub enum Interpolation {
     Linear,
     Exponential,
+    Logarithmic,
+    Step,
+    Smooth,
     Bezier(f32, f32), // Control points
 }
 
@@ -57,6 +60,16 @@ impl AutomationCurve {
                 let v1 = p1.value.max(0.0001);
                 v0 * (v1 / v0).powf(t)
             }
+            Interpolation::Logarithmic => {
+                p0.value + t.sqrt() * (p1.value - p0.value)
+            }
+            Interpolation::Step => {
+                if t < 1.0 { p0.value } else { p1.value }
+            }
+            Interpolation::Smooth => {
+                let s = t * t * (3.0 - 2.0 * t);
+                p0.value + s * (p1.value - p0.value)
+            }
             Interpolation::Bezier(c1, c2) => {
                 let u = 1.0 - t;
                 let t2 = t * t;
@@ -75,6 +88,35 @@ pub struct AutomationLane {
     pub curve: AutomationCurve,
 }
 
+impl AutomationLane {
+    pub fn scale_values(&mut self, factor: f32) {
+        for pt in &mut self.curve.points {
+            pt.value = (pt.value * factor).clamp(0.0, 1.0);
+        }
+    }
+
+    pub fn invert_values(&mut self) {
+        for pt in &mut self.curve.points {
+            pt.value = (1.0 - pt.value).clamp(0.0, 1.0);
+        }
+    }
+
+    pub fn smooth_values(&mut self, window_size: usize) {
+        if self.curve.points.len() < 3 || window_size < 2 {
+            return;
+        }
+        let vals: Vec<f32> = self.curve.points.iter().map(|p| p.value).collect();
+        let half = window_size / 2;
+        for i in 0..vals.len() {
+            let start = i.saturating_sub(half);
+            let end = (i + half + 1).min(vals.len());
+            let slice = &vals[start..end];
+            let avg: f32 = slice.iter().sum::<f32>() / slice.len() as f32;
+            self.curve.points[i].value = avg.clamp(0.0, 1.0);
+        }
+    }
+}
+
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct AutomationTimeline {
     pub lanes: HashMap<String, AutomationLane>,
@@ -87,6 +129,16 @@ impl AutomationTimeline {
 
     pub fn add_lane(&mut self, lane: AutomationLane) {
         self.lanes.insert(lane.param_id.clone(), lane);
+    }
+
+    pub fn copy_lane(&self, param_id: &str) -> Option<AutomationLane> {
+        self.lanes.get(param_id).cloned()
+    }
+
+    pub fn paste_lane(&mut self, target_param_id: &str, lane: &AutomationLane) {
+        let mut pasted = lane.clone();
+        pasted.param_id = target_param_id.to_string();
+        self.lanes.insert(target_param_id.to_string(), pasted);
     }
 
     pub fn evaluate(&self, param_id: &str, beat: f64) -> Option<f32> {
@@ -281,6 +333,66 @@ mod tests {
         let restored = AutomationTimeline::from_configs(&configs, 44100, 120.0);
         let point_beat = restored.lanes.get("gain").unwrap().curve.points[0].beat;
         assert!((point_beat - 1.0).abs() < 1e-5);
+    }
+
+    #[test]
+    fn test_automation_curve_shapes() {
+        // Step interpolation test
+        let step_curve = AutomationCurve::new(vec![
+            AutomationPoint { beat: 0.0, value: 0.0, interp: Interpolation::Step },
+            AutomationPoint { beat: 4.0, value: 1.0, interp: Interpolation::Step },
+        ]);
+        assert_eq!(step_curve.evaluate_at_beat(2.0), 0.0);
+
+        // Smooth interpolation test
+        let smooth_curve = AutomationCurve::new(vec![
+            AutomationPoint { beat: 0.0, value: 0.0, interp: Interpolation::Smooth },
+            AutomationPoint { beat: 4.0, value: 1.0, interp: Interpolation::Smooth },
+        ]);
+        let smooth_mid = smooth_curve.evaluate_at_beat(2.0); // t=0.5 => 0.5 * 0.5 * 2.0 = 0.5
+        assert!((smooth_mid - 0.5).abs() < 1e-4);
+
+        // Logarithmic interpolation test
+        let log_curve = AutomationCurve::new(vec![
+            AutomationPoint { beat: 0.0, value: 0.0, interp: Interpolation::Logarithmic },
+            AutomationPoint { beat: 4.0, value: 1.0, interp: Interpolation::Logarithmic },
+        ]);
+        let log_mid = log_curve.evaluate_at_beat(2.0); // sqrt(0.5) approx 0.7071
+        assert!((log_mid - 0.7071).abs() < 1e-3);
+    }
+
+    #[test]
+    fn test_automation_lane_editing_tools() {
+        let curve = AutomationCurve::new(vec![
+            AutomationPoint { beat: 0.0, value: 0.2, interp: Interpolation::Linear },
+            AutomationPoint { beat: 2.0, value: 0.8, interp: Interpolation::Linear },
+        ]);
+        let mut lane = AutomationLane { param_id: "cutoff".to_string(), curve };
+
+        // Scale by 0.5
+        lane.scale_values(0.5);
+        assert!((lane.curve.points[0].value - 0.1).abs() < 1e-5);
+        assert!((lane.curve.points[1].value - 0.4).abs() < 1e-5);
+
+        // Invert
+        lane.invert_values();
+        assert!((lane.curve.points[0].value - 0.9).abs() < 1e-5);
+        assert!((lane.curve.points[1].value - 0.6).abs() < 1e-5);
+    }
+
+    #[test]
+    fn test_automation_lane_copy_paste() {
+        let curve = AutomationCurve::new(vec![
+            AutomationPoint { beat: 0.0, value: 0.5, interp: Interpolation::Linear },
+        ]);
+        let mut timeline = AutomationTimeline::new();
+        timeline.add_lane(AutomationLane { param_id: "res".to_string(), curve });
+
+        let copied = timeline.copy_lane("res").expect("Lane exists");
+        timeline.paste_lane("filter_res", &copied);
+
+        assert!(timeline.lanes.contains_key("filter_res"));
+        assert_eq!(timeline.evaluate("filter_res", 0.0), Some(0.5));
     }
 }
 

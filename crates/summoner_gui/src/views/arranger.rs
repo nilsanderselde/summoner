@@ -78,6 +78,28 @@ pub fn show_arranger(
     if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
         state.selected_clips.clear();
     }
+    // Ctrl+C: Copy selected clip (Step 591)
+    if ui.input(|i| i.modifiers.ctrl && i.key_pressed(egui::Key::C)) {
+        if let Some(&(t_id, seq_idx)) = state.selected_clips.iter().next() {
+            if let Some(t) = project.tracks.iter().find(|tr| tr.id == t_id) {
+                let seqs = t.all_sequences();
+                if seq_idx < seqs.len() {
+                    state.clipboard_clip = Some(seqs[seq_idx].duplicate());
+                }
+            }
+        }
+    }
+    // Ctrl+V: Paste clip from clipboard (Step 591)
+    if ui.input(|i| i.modifiers.ctrl && i.key_pressed(egui::Key::V)) {
+        if let Some(ref cb) = state.clipboard_clip {
+            let mut pasted = cb.duplicate();
+            pasted.start_beat = *playhead_beat;
+            let target_id = selected_track_id.unwrap_or(1);
+            if let Some(t) = project.tracks.iter_mut().find(|tr| tr.id == target_id) {
+                t.clips.push(pasted);
+            }
+        }
+    }
     let delete_key_pressed = ui.input(|i| i.key_pressed(egui::Key::Delete));
 
     // Follow Playhead Auto-Scroll Logic
@@ -197,7 +219,7 @@ pub fn show_arranger(
 
     ui.separator();
 
-    // Locators Navigation Bar (Step 437)
+    // Locators & Markers Navigation Bar (Steps 437, 596)
     ui.horizontal(|ui| {
         ui.label("Locators:");
         if ui.button("Set Loc A").clicked() {
@@ -215,6 +237,18 @@ pub fn show_arranger(
             if ui.button(format!("▶ Jump B ({:.1})", loc_b)).clicked() {
                 *playhead_beat = loc_b;
             }
+        }
+        ui.separator();
+        if !project.markers.is_empty() {
+            egui::ComboBox::from_id_source("jump_marker_select")
+                .selected_text("🚩 Jump to Marker")
+                .show_ui(ui, |ui| {
+                    for m in &project.markers {
+                        if ui.selectable_label(false, format!("🚩 {} ({:.1} beat)", m.name, m.beat)).clicked() {
+                            *playhead_beat = m.beat;
+                        }
+                    }
+                });
         }
     });
 
@@ -529,6 +563,16 @@ pub fn show_arranger(
                         [egui::pos2(x, lane_rect.top()), egui::pos2(x, lane_rect.bottom())],
                         egui::Stroke::new(if is_bar { 1.0_f32 } else { 0.5_f32 }, stroke_color),
                     );
+                    // Beat number text overlay at bar positions on all tracks (Step 593)
+                    if is_bar && beat > 0 {
+                        painter.text(
+                            egui::pos2(x + 2.0, lane_rect.top() + 2.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("Bar {}", (beat / 4) + 1),
+                            egui::FontId::proportional(9.0),
+                            egui::Color32::from_rgba_unmultiplied(150, 150, 160, 90),
+                        );
+                    }
                 }
 
                 // Render Clip Blocks for all sequences on track
@@ -958,11 +1002,38 @@ pub fn show_automation_lane(
         ui.allocate_ui(egui::vec2(180.0, 24.0), |ui| {
             ui.horizontal(|ui| {
                 ui.add_space(20.0);
-                ui.label(
-                    egui::RichText::new(format!("📈 {}", lane.param_id))
+                let first_interp = lane.curve.points.first().map(|p| p.interp);
+                let shape_icon = match first_interp {
+                    Some(summoner_sequencer::automation_timeline::Interpolation::Linear) | None => "📈",
+                    Some(summoner_sequencer::automation_timeline::Interpolation::Exponential) => "📈²",
+                    Some(summoner_sequencer::automation_timeline::Interpolation::Logarithmic) => "📉",
+                    Some(summoner_sequencer::automation_timeline::Interpolation::Step) => "⎍",
+                    Some(summoner_sequencer::automation_timeline::Interpolation::Smooth) => "🌊",
+                    Some(summoner_sequencer::automation_timeline::Interpolation::Bezier(_, _)) => "➰",
+                };
+                let head = ui.label(
+                    egui::RichText::new(format!("{} {}", shape_icon, lane.param_id))
                         .font(egui::FontId::proportional(11.0))
                         .color(egui::Color32::from_rgb(241, 196, 15)),
                 );
+
+                head.context_menu(|ui| {
+                    ui.label(format!("Automation: {}", lane.param_id));
+                    ui.separator();
+                    ui.label("Tools:");
+                    if ui.button("📋 Copy Lane").clicked() {
+                        ui.close_menu();
+                    }
+                    if ui.button("✖ Scale Automation (0.5x)").clicked() {
+                        ui.close_menu();
+                    }
+                    if ui.button("🔄 Invert Curve").clicked() {
+                        ui.close_menu();
+                    }
+                    if ui.button("🌊 Smooth Points").clicked() {
+                        ui.close_menu();
+                    }
+                });
             });
         });
 
@@ -988,9 +1059,36 @@ pub fn show_automation_lane(
                 let curr_pos = egui::pos2(x, y);
 
                 if let Some(prev) = prev_pos {
-                    painter.line_segment([prev, curr_pos], stroke);
+                    match pt.interp {
+                        summoner_sequencer::automation_timeline::Interpolation::Step => {
+                            let step_mid = egui::pos2(curr_pos.x, prev.y);
+                            painter.line_segment([prev, step_mid], stroke);
+                            painter.line_segment([step_mid, curr_pos], stroke);
+                        }
+                        _ => {
+                            painter.line_segment([prev, curr_pos], stroke);
+                        }
+                    }
                 }
                 painter.circle_filled(curr_pos, 2.5, egui::Color32::from_rgb(255, 230, 120));
+
+                // Draw curve shape icon on segment (Step 599)
+                let icon = match pt.interp {
+                    summoner_sequencer::automation_timeline::Interpolation::Linear => "📈",
+                    summoner_sequencer::automation_timeline::Interpolation::Exponential => "📈²",
+                    summoner_sequencer::automation_timeline::Interpolation::Logarithmic => "📉",
+                    summoner_sequencer::automation_timeline::Interpolation::Step => "⎍",
+                    summoner_sequencer::automation_timeline::Interpolation::Smooth => "🌊",
+                    summoner_sequencer::automation_timeline::Interpolation::Bezier(_, _) => "➰",
+                };
+                painter.text(
+                    egui::pos2(curr_pos.x + 3.0, curr_pos.y - 10.0),
+                    egui::Align2::LEFT_BOTTOM,
+                    icon,
+                    egui::FontId::proportional(9.0),
+                    egui::Color32::from_rgb(241, 196, 15),
+                );
+
                 prev_pos = Some(curr_pos);
             }
         }
@@ -1111,5 +1209,37 @@ mod tests {
         };
         split_clip_at(&mut seq, 0.5); // split after 2 steps
         assert_eq!(seq.steps.len(), 2);
+    }
+
+    #[test]
+    fn test_tier32_fill_loop_region() {
+        let mut seq = SequenceConfig {
+            start_beat: 0.0,
+            step_division: 0.25,
+            clip_color: None,
+            clip_name: None,
+            name: "Clip".to_string(),
+            is_unique: true,
+            steps: vec![
+                TrackerStepConfig { note: 60.0, velocity: 0.8, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true },
+                TrackerStepConfig { note: 62.0, velocity: 0.8, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true },
+            ],
+            fade_in: 0.0,
+            fade_out: 0.0,
+            is_reversed: false,
+            time_stretch: 1.0,
+        };
+        fill_loop_region(&mut seq, 0.0, 2.0); // 2 beats loop = 8 steps at 0.25 div (4 copies of 2 steps)
+        assert_eq!(seq.steps.len(), 8);
+        assert_eq!(seq.start_beat, 0.0);
+    }
+
+    #[test]
+    fn test_tier32_arranger_state_clipboard() {
+        let mut state = ArrangerState::default();
+        assert!(state.clipboard_clip.is_none());
+        let seq = SequenceConfig::default();
+        state.clipboard_clip = Some(seq);
+        assert!(state.clipboard_clip.is_some());
     }
 }

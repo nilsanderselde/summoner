@@ -105,6 +105,22 @@ impl AtomicParam {
     }
 }
 
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum AutomationMode {
+    Read,
+    Write,
+    Touch,
+    Latch,
+}
+
+impl Default for AutomationMode {
+    fn default() -> Self {
+        AutomationMode::Read
+    }
+}
+
 /// Central registry for all automatable parameters across the DAW.
 /// Supports the "Record All" toggle for live performance capturing.
 #[derive(Debug, Default)]
@@ -112,11 +128,21 @@ pub struct AutomationRegistry {
     params: HashMap<String, Arc<AtomicParam>>,
     last_snapshotted: HashMap<String, f32>,
     recording_all: bool,
+    mode: AutomationMode,
+    latched_params: HashMap<String, f32>,
 }
 
 impl AutomationRegistry {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn set_mode(&mut self, mode: AutomationMode) {
+        self.mode = mode;
+    }
+
+    pub fn mode(&self) -> AutomationMode {
+        self.mode
     }
 
     pub fn register_param(&mut self, id: &str, initial_value: f32) -> Arc<AtomicParam> {
@@ -131,8 +157,10 @@ impl AutomationRegistry {
 
     pub fn start_record_all(&mut self) {
         self.recording_all = true;
+        self.mode = AutomationMode::Write;
         // Seed the last seen values so we don't dump everything on first frame
         self.last_snapshotted.clear();
+        self.latched_params.clear();
         for (id, param) in &self.params {
             self.last_snapshotted.insert(id.clone(), param.get());
         }
@@ -140,6 +168,8 @@ impl AutomationRegistry {
 
     pub fn stop_record_all(&mut self) {
         self.recording_all = false;
+        self.mode = AutomationMode::Read;
+        self.latched_params.clear();
     }
 
     pub fn is_recording_all(&self) -> bool {
