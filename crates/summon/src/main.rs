@@ -75,8 +75,10 @@ fn print_usage() {
     println!("  summon list-scripts [PROJECT_PATH]");
     println!("  summon package-wasm [SRC]");
     println!("  summon export-adm [PROJECT_PATH] [OUTPUT_ADM_PATH]");
+    println!("  summon convert [INPUT_PATH] [OUTPUT_PATH] [--format=flac]");
     println!("  summon-build-pi-img [OUTPUT_DIR] [--target pi5|pizero2w]");
 }
+
 
 
 fn main() {
@@ -87,7 +89,54 @@ fn main() {
     }
 
     match args[1].as_str() {
+        "convert" => {
+            let input_path_str = match args.get(2) {
+                Some(p) => p.as_str(),
+                None => {
+                    eprintln!("Usage: summon convert <INPUT_PATH> <OUTPUT_PATH> [--format=<flac|wav|ogg|mp3|aiff>]");
+                    process::exit(1);
+                }
+            };
+            let output_path_str = match args.get(3) {
+                Some(p) => p.as_str(),
+                None => {
+                    eprintln!("Usage: summon convert <INPUT_PATH> <OUTPUT_PATH> [--format=<flac|wav|ogg|mp3|aiff>]");
+                    process::exit(1);
+                }
+            };
+            let mut format = "flac".to_string();
+            let mut idx = 4;
+            while idx < args.len() {
+                if args[idx].starts_with("--format=") {
+                    format = args[idx].trim_start_matches("--format=").to_string();
+                } else if args[idx] == "--format" {
+                    if let Some(val) = args.get(idx + 1) {
+                        format = val.clone();
+                        idx += 1;
+                    }
+                }
+                idx += 1;
+            }
+
+            let input_path = Path::new(input_path_str);
+            let output_path = Path::new(output_path_str);
+
+            match summoner_project::export::batch_convert_audio(input_path, output_path, &format) {
+                Ok(report) => {
+                    println!("Batch conversion complete!");
+                    println!("  Target format: {}", report.target_format);
+                    println!("  Files processed: {}", report.total_files);
+                    println!("  Successfully converted: {}", report.converted_files);
+                    println!("  Failures: {}", report.failed_files);
+                }
+                Err(e) => {
+                    eprintln!("Batch conversion failed: {}", e);
+                    process::exit(1);
+                }
+            }
+        }
         "init" => {
+
             let path_str = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
             let project = create_default_project("New Session");
             let serialized = serialize_project_toml(&project).expect("Failed to serialize default project");
