@@ -32,4 +32,5 @@ desktop.ini
 # Agent local temporary state
 .gemini/tmp/
 /local/*
+local/
 .summoner_gui_state.toml
