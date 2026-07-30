@@ -1190,6 +1190,48 @@ mod tests {
 
         let _ = fs::remove_dir_all(&temp_dir);
     }
+
+    #[test]
+    fn test_step_1251_batch_convert_audio_nonexistent_and_empty() {
+        let non_existent = Path::new("non_existent_directory_for_test_1251");
+        assert!(batch_convert_audio(non_existent, Path::new("out"), "flac").is_err());
+
+        let temp_dir = std::env::temp_dir().join("summoner_empty_convert_test");
+        let _ = fs::remove_dir_all(&temp_dir);
+        fs::create_dir_all(&temp_dir).unwrap();
+
+        let report = batch_convert_audio(&temp_dir, &temp_dir.join("out"), "ogg").unwrap();
+        assert_eq!(report.total_files, 0);
+        assert_eq!(report.converted_files, 0);
+        assert_eq!(report.target_format, "ogg");
+
+        let _ = fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_step_1251_batch_convert_audio_nested_directories_and_formats() {
+        let temp_dir = std::env::temp_dir().join("summoner_nested_convert_test");
+        let input_dir = temp_dir.join("input");
+        let nested_dir = input_dir.join("subfolder");
+        let output_dir = temp_dir.join("output");
+
+        let _ = fs::remove_dir_all(&temp_dir);
+        fs::create_dir_all(&nested_dir).unwrap();
+
+        let wav1 = input_dir.join("root.wav");
+        let wav2 = nested_dir.join("sub.wav");
+        write_audio_file(&wav1, &[0.5, -0.5], 44100, 1, "wav").unwrap();
+        write_audio_file(&wav2, &[0.25, -0.25], 44100, 1, "wav").unwrap();
+
+        let report = batch_convert_audio(&input_dir, &output_dir, "AIFF").unwrap();
+        assert_eq!(report.total_files, 2);
+        assert_eq!(report.converted_files, 2);
+        assert_eq!(report.target_format, "aiff");
+        assert!(output_dir.join("root.aiff").exists());
+        assert!(output_dir.join("subfolder").join("sub.aiff").exists());
+
+        let _ = fs::remove_dir_all(&temp_dir);
+    }
 }
 
 

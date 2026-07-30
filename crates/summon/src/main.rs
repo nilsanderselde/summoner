@@ -31,7 +31,7 @@ use summoner_project::git_dag::{open_or_init_repo, undo as git_undo, redo as git
 use summoner_project::{create_default_project, parse_project_toml, serialize_project_toml};
 use std::env;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process;
 
 fn print_usage() {
@@ -197,38 +197,15 @@ fn main() {
             }
         }
         "convert" => {
-            let input_path_str = match args.get(2) {
-                Some(p) => p.as_str(),
-                None => {
-                    eprintln!("Usage: summon convert <INPUT_PATH> <OUTPUT_PATH> [--format=<flac|wav|ogg|mp3|aiff>]");
+            let (input_path, output_path, format) = match parse_convert_args(&args) {
+                Ok(res) => res,
+                Err(err) => {
+                    eprintln!("{}", err);
                     process::exit(1);
                 }
             };
-            let output_path_str = match args.get(3) {
-                Some(p) => p.as_str(),
-                None => {
-                    eprintln!("Usage: summon convert <INPUT_PATH> <OUTPUT_PATH> [--format=<flac|wav|ogg|mp3|aiff>]");
-                    process::exit(1);
-                }
-            };
-            let mut format = "flac".to_string();
-            let mut idx = 4;
-            while idx < args.len() {
-                if args[idx].starts_with("--format=") {
-                    format = args[idx].trim_start_matches("--format=").to_string();
-                } else if args[idx] == "--format" {
-                    if let Some(val) = args.get(idx + 1) {
-                        format = val.clone();
-                        idx += 1;
-                    }
-                }
-                idx += 1;
-            }
 
-            let input_path = Path::new(input_path_str);
-            let output_path = Path::new(output_path_str);
-
-            match summoner_project::export::batch_convert_audio(input_path, output_path, &format) {
+            match summoner_project::export::batch_convert_audio(&input_path, &output_path, &format) {
                 Ok(report) => {
                     println!("Batch conversion complete!");
                     println!("  Target format: {}", report.target_format);
@@ -1628,6 +1605,37 @@ fn main() {
     }
 }
 
+/// Helper to parse CLI arguments for `summon convert`.
+pub fn parse_convert_args(args: &[String]) -> Result<(PathBuf, PathBuf, String), String> {
+    let input_path_str = match args.get(2) {
+        Some(p) => p.as_str(),
+        None => {
+            return Err("Usage: summon convert <INPUT_PATH> <OUTPUT_PATH> [--format=<flac|wav|ogg|mp3|aiff>]".to_string());
+        }
+    };
+    let output_path_str = match args.get(3) {
+        Some(p) => p.as_str(),
+        None => {
+            return Err("Usage: summon convert <INPUT_PATH> <OUTPUT_PATH> [--format=<flac|wav|ogg|mp3|aiff>]".to_string());
+        }
+    };
+    let mut format = "flac".to_string();
+    let mut idx = 4;
+    while idx < args.len() {
+        if args[idx].starts_with("--format=") {
+            format = args[idx].trim_start_matches("--format=").to_string();
+        } else if args[idx] == "--format" {
+            if let Some(val) = args.get(idx + 1) {
+                format = val.clone();
+                idx += 1;
+            }
+        }
+        idx += 1;
+    }
+
+    Ok((PathBuf::from(input_path_str), PathBuf::from(output_path_str), format))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1784,5 +1792,57 @@ mod tests {
         }
 
         let _ = std::fs::remove_file(proj_path);
+    }
+
+    #[test]
+    fn test_step_1251_parse_convert_args_default_and_flags() {
+        let args_default = vec!["summon".to_string(), "convert".to_string(), "input_dir".to_string(), "output_dir".to_string()];
+        let (in_p, out_p, fmt) = parse_convert_args(&args_default).unwrap();
+        assert_eq!(in_p, PathBuf::from("input_dir"));
+        assert_eq!(out_p, PathBuf::from("output_dir"));
+        assert_eq!(fmt, "flac");
+
+        let args_flag_eq = vec!["summon".to_string(), "convert".to_string(), "input_dir".to_string(), "output_dir".to_string(), "--format=wav".to_string()];
+        let (_, _, fmt_eq) = parse_convert_args(&args_flag_eq).unwrap();
+        assert_eq!(fmt_eq, "wav");
+
+        let args_flag_space = vec!["summon".to_string(), "convert".to_string(), "input_dir".to_string(), "output_dir".to_string(), "--format".to_string(), "ogg".to_string()];
+        let (_, _, fmt_sp) = parse_convert_args(&args_flag_space).unwrap();
+        assert_eq!(fmt_sp, "ogg");
+
+        let args_missing = vec!["summon".to_string(), "convert".to_string(), "input_dir".to_string()];
+        assert!(parse_convert_args(&args_missing).is_err());
+    }
+
+    #[test]
+    fn test_step_1251_convert_cli_end_to_end() {
+        let temp_dir = std::env::temp_dir().join("summon_convert_cli_test");
+        let input_dir = temp_dir.join("input");
+        let output_dir = temp_dir.join("output");
+
+        let _ = std::fs::remove_dir_all(&temp_dir);
+        std::fs::create_dir_all(&input_dir).unwrap();
+
+        let sample_wav = input_dir.join("test_signal.wav");
+        summoner_project::export::write_audio_file(&sample_wav, &[0.0, 0.5, -0.5, 0.0], 48000, 2, "wav").unwrap();
+
+        let cli_args = vec![
+            "summon".to_string(),
+            "convert".to_string(),
+            input_dir.to_str().unwrap().to_string(),
+            output_dir.to_str().unwrap().to_string(),
+            "--format=flac".to_string(),
+        ];
+
+        let (in_p, out_p, fmt) = parse_convert_args(&cli_args).unwrap();
+        let report = summoner_project::export::batch_convert_audio(&in_p, &out_p, &fmt).unwrap();
+
+        assert_eq!(report.total_files, 1);
+        assert_eq!(report.converted_files, 1);
+        assert_eq!(report.failed_files, 0);
+        assert_eq!(report.target_format, "flac");
+        assert!(output_dir.join("test_signal.flac").exists());
+
+        let _ = std::fs::remove_dir_all(&temp_dir);
     }
 }
