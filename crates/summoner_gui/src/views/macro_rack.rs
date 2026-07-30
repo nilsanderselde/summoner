@@ -246,6 +246,14 @@ pub fn show_macro_rack(
                                     param_bus.set(ParamId(track.id as u32 * 10 + 9), lfo_shape);
                                 }
                             });
+
+                            ui.collapsing("📊 Real-time Spectrum & Harmonics", |ui| {
+                                let dummy_spectrum = [0.1, 0.4, 0.7, 0.5, 0.3, 0.2, 0.15, 0.08];
+                                show_spectral_display(ui, &dummy_spectrum, 200.0, 40.0);
+                                ui.add_space(4.0);
+                                let dummy_harmonics = [1.0, 0.8, 0.6, 0.4, 0.3, 0.25, 0.2, 0.15, 0.1, 0.08, 0.06, 0.05, 0.04, 0.03, 0.02, 0.01];
+                                show_harmonics_display(ui, &dummy_harmonics, 200.0, 40.0);
+                            });
                         }
                         "FmOperatorPair" => {
                             let mut ratio1 = param_bus.get(ParamId(track.id as u32 * 10 + 1)).unwrap_or(1.0);
@@ -445,6 +453,50 @@ pub fn show_macro_rack(
         if idx + 1 < track.nodes.len() {
             track.nodes.swap(idx, idx + 1);
         }
+    }
+}
+
+/// Real-time spectral display component for Macro Rack (Step 659).
+pub fn show_spectral_display(ui: &mut egui::Ui, spectrum: &[f32], width: f32, height: f32) {
+    let (rect, _) = ui.allocate_exact_size(egui::vec2(width, height), egui::Sense::hover());
+    ui.painter().rect_filled(rect, 4.0, egui::Color32::from_rgb(10, 10, 15));
+
+    if spectrum.is_empty() {
+        return;
+    }
+
+    let bar_w = rect.width() / spectrum.len() as f32;
+    for (i, &mag) in spectrum.iter().enumerate() {
+        let h = (mag.clamp(0.0, 1.0) * rect.height()).max(2.0);
+        let x = rect.left() + i as f32 * bar_w;
+        let bar_rect = egui::Rect::from_min_size(
+            egui::pos2(x + 1.0, rect.bottom() - h),
+            egui::vec2((bar_w - 1.0).max(1.0), h),
+        );
+        let color = egui::Color32::from_rgb(
+            (mag * 255.0) as u8,
+            (140.0 + mag * 115.0) as u8,
+            255,
+        );
+        ui.painter().rect_filled(bar_rect, 1.0, color);
+    }
+}
+
+/// 16 Harmonics bar graph display component for Macro Rack (Step 660).
+pub fn show_harmonics_display(ui: &mut egui::Ui, harmonics: &[f32; 16], width: f32, height: f32) {
+    let (rect, _) = ui.allocate_exact_size(egui::vec2(width, height), egui::Sense::hover());
+    ui.painter().rect_filled(rect, 4.0, egui::Color32::from_rgb(8, 12, 20));
+
+    let bar_w = rect.width() / 16.0;
+    for (i, &amp) in harmonics.iter().enumerate() {
+        let h = (amp.clamp(0.0, 1.0) * rect.height()).max(2.0);
+        let x = rect.left() + i as f32 * bar_w;
+        let bar_rect = egui::Rect::from_min_size(
+            egui::pos2(x + 1.0, rect.bottom() - h),
+            egui::vec2((bar_w - 2.0).max(1.0), h),
+        );
+        let color = egui::Color32::from_rgb(255, (120.0 + amp * 135.0) as u8, 40);
+        ui.painter().rect_filled(bar_rect, 1.0, color);
     }
 }
 

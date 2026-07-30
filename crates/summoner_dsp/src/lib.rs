@@ -44,6 +44,8 @@ pub mod granular;
 pub mod drum_machine;
 pub mod stem_separator;
 pub mod plugin_host;
+pub mod tuner;
+pub mod autotune;
 
 pub use plugin_host::{
     PluginAudioNode, PluginDescriptor, PluginFormat, PluginParamInfo, PluginStateConfig,

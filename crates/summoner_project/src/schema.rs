@@ -134,6 +134,8 @@ pub struct TransportConfig {
     pub sample_rate: u32,
     pub bpm: f64,
     pub time_signature: String,
+    #[serde(default)]
+    pub master_tune_cents: f32,
 }
 
 impl Default for TransportConfig {
@@ -142,6 +144,7 @@ impl Default for TransportConfig {
             sample_rate: 44100,
             bpm: 120.0,
             time_signature: "4/4".to_string(),
+            master_tune_cents: 0.0,
         }
     }
 }
@@ -197,6 +200,14 @@ pub struct TrackConfig {
     pub midi_transpose: i8,
     #[serde(default)]
     pub midi_channel_filter: Option<u8>,
+    #[serde(default)]
+    pub input_echo: bool,
+    #[serde(default)]
+    pub fine_tune_cents: f32,
+    #[serde(default)]
+    pub split_key: Option<u8>,
+    #[serde(default)]
+    pub layer_target_ids: Vec<u64>,
 }
 
 fn default_scale_type() -> String {
@@ -235,6 +246,10 @@ impl Default for TrackConfig {
             scale_type: "Major".to_string(),
             midi_transpose: 0,
             midi_channel_filter: None,
+            input_echo: false,
+            fine_tune_cents: 0.0,
+            split_key: None,
+            layer_target_ids: Vec::new(),
         }
     }
 }

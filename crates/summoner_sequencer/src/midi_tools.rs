@@ -181,3 +181,308 @@ pub fn qwerty_key_to_midi_note(key: &str, base_octave: u8) -> Option<u8> {
     let note = (root_midi + offset).clamp(0, 127);
     Some(note as u8)
 }
+
+/// Handle Input Echo toggle (Step 646).
+/// Returns true if incoming MIDI should echo through instrument output.
+pub fn should_echo_midi_input(echo_enabled: bool, is_instrument_selected: bool) -> bool {
+    echo_enabled && is_instrument_selected
+}
+
+/// Arpeggiator direction modes (Step 647).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ArpDirection {
+    Up,
+    Down,
+    UpDown,
+    Random,
+    AsPlayed,
+}
+
+/// Arpeggiator configuration and pattern generator (Steps 647, 648, 649).
+#[derive(Debug, Clone)]
+pub struct Arpeggiator {
+    pub direction: ArpDirection,
+    pub octave_range: u8, // 1..=4
+    pub gate_length: f32, // e.g. 0.8 = 80% step duration
+    pub latch_enabled: bool,
+    pub step_index: usize,
+    pub latched_notes: Vec<u8>,
+}
+
+impl Default for Arpeggiator {
+    fn default() -> Self {
+        Self {
+            direction: ArpDirection::Up,
+            octave_range: 1,
+            gate_length: 0.8,
+            latch_enabled: false,
+            step_index: 0,
+            latched_notes: Vec::new(),
+        }
+    }
+}
+
+impl Arpeggiator {
+    pub fn new(direction: ArpDirection, octave_range: u8, gate_length: f32, latch_enabled: bool) -> Self {
+        Self {
+            direction,
+            octave_range: octave_range.clamp(1, 4),
+            gate_length: gate_length.clamp(0.05, 2.0),
+            latch_enabled,
+            step_index: 0,
+            latched_notes: Vec::new(),
+        }
+    }
+
+    /// Generate the full expanded sequence of MIDI notes across octaves based on direction.
+    pub fn generate_expanded_sequence(&self, base_notes: &[u8]) -> Vec<u8> {
+        let active_base = if self.latch_enabled && base_notes.is_empty() {
+            &self.latched_notes[..]
+        } else {
+            base_notes
+        };
+
+        if active_base.is_empty() {
+            return Vec::new();
+        }
+
+        let mut expanded = Vec::new();
+
+        match self.direction {
+            ArpDirection::AsPlayed => {
+                for oct in 0..self.octave_range {
+                    for &n in active_base {
+                        let shifted = (n as u16 + oct as u16 * 12).min(127) as u8;
+                        expanded.push(shifted);
+                    }
+                }
+            }
+            ArpDirection::Up => {
+                let mut sorted = active_base.to_vec();
+                sorted.sort_unstable();
+                for oct in 0..self.octave_range {
+                    for &n in &sorted {
+                        let shifted = (n as u16 + oct as u16 * 12).min(127) as u8;
+                        expanded.push(shifted);
+                    }
+                }
+            }
+            ArpDirection::Down => {
+                let mut sorted = active_base.to_vec();
+                sorted.sort_unstable();
+                sorted.reverse();
+                for oct in (0..self.octave_range).rev() {
+                    for &n in &sorted {
+                        let shifted = (n as u16 + oct as u16 * 12).min(127) as u8;
+                        expanded.push(shifted);
+                    }
+                }
+            }
+            ArpDirection::UpDown => {
+                let mut sorted = active_base.to_vec();
+                sorted.sort_unstable();
+                let mut up_seq = Vec::new();
+                for oct in 0..self.octave_range {
+                    for &n in &sorted {
+                        let shifted = (n as u16 + oct as u16 * 12).min(127) as u8;
+                        up_seq.push(shifted);
+                    }
+                }
+                expanded.extend_from_slice(&up_seq);
+                if up_seq.len() > 2 {
+                    let mut down_seq = up_seq[1..up_seq.len() - 1].to_vec();
+                    down_seq.reverse();
+                    expanded.extend(down_seq);
+                }
+            }
+            ArpDirection::Random => {
+                let mut sorted = active_base.to_vec();
+                sorted.sort_unstable();
+                for oct in 0..self.octave_range {
+                    for &n in &sorted {
+                        let shifted = (n as u16 + oct as u16 * 12).min(127) as u8;
+                        expanded.push(shifted);
+                    }
+                }
+                // Pseudo-random deterministic permutation based on note values
+                expanded.sort_by_key(|&n| (n as u32 * 2654435761) % 1000);
+            }
+        }
+        expanded
+    }
+
+    /// Step the arpeggiator to retrieve next note and active gate duration (in beats/fraction).
+    pub fn next_step(&mut self, base_notes: &[u8]) -> Option<(u8, f32)> {
+        if !base_notes.is_empty() && self.latch_enabled {
+            self.latched_notes = base_notes.to_vec();
+        }
+
+        let sequence = self.generate_expanded_sequence(base_notes);
+        if sequence.is_empty() {
+            return None;
+        }
+
+        let idx = self.step_index % sequence.len();
+        let note = sequence[idx];
+        self.step_index += 1;
+        Some((note, self.gate_length))
+    }
+}
+
+/// Strum direction option (Step 650).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StrumDirection {
+    LowToHigh,
+    HighToLow,
+}
+
+/// Strummer tool: spreads chord notes over configurable millisecond delay (Step 650).
+#[derive(Debug, Clone)]
+pub struct Strummer {
+    pub strum_time_ms: f32, // total time spread across chord notes
+    pub direction: StrumDirection,
+}
+
+impl Default for Strummer {
+    fn default() -> Self {
+        Self {
+            strum_time_ms: 30.0,
+            direction: StrumDirection::LowToHigh,
+        }
+    }
+}
+
+impl Strummer {
+    pub fn new(strum_time_ms: f32, direction: StrumDirection) -> Self {
+        Self {
+            strum_time_ms: strum_time_ms.max(0.0),
+            direction,
+        }
+    }
+
+    /// Takes a list of chord notes and returns pairs of (note, delay_ms).
+    pub fn strum(&self, chord_notes: &[u8]) -> Vec<(u8, f32)> {
+        if chord_notes.is_empty() {
+            return Vec::new();
+        }
+        let mut sorted = chord_notes.to_vec();
+        sorted.sort_unstable();
+        if self.direction == StrumDirection::HighToLow {
+            sorted.reverse();
+        }
+
+        let step_delay = if sorted.len() > 1 {
+            self.strum_time_ms / (sorted.len() - 1) as f32
+        } else {
+            0.0
+        };
+
+        sorted
+            .into_iter()
+            .enumerate()
+            .map(|(idx, note)| (note, idx as f32 * step_delay))
+            .collect()
+    }
+}
+
+/// Chord Memory manager: save up to 8 chords, trigger by slot index (0..7) or MIDI note 1..8 (Step 651).
+#[derive(Debug, Clone)]
+pub struct ChordMemory {
+    pub slots: [Vec<u8>; 8],
+}
+
+impl Default for ChordMemory {
+    fn default() -> Self {
+        Self {
+            slots: Default::default(),
+        }
+    }
+}
+
+impl ChordMemory {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn save_chord(&mut self, slot: usize, notes: Vec<u8>) -> bool {
+        if slot < 8 {
+            self.slots[slot] = notes;
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn trigger(&self, slot: usize) -> Option<&[u8]> {
+        if slot < 8 && !self.slots[slot].is_empty() {
+            Some(&self.slots[slot])
+        } else {
+            None
+        }
+    }
+
+    /// Trigger stored chord by MIDI note index 1..=8 (or MIDI pitch 36..=43 / C2..G2).
+    pub fn trigger_by_note(&self, note: u8) -> Option<&[u8]> {
+        let slot = match note {
+            1..=8 => (note - 1) as usize,
+            36..=43 => (note - 36) as usize,
+            _ => return None,
+        };
+        self.trigger(slot)
+    }
+}
+
+/// Keyboard Split router: low range plays one instrument, high range plays another (Step 652).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct KeyboardSplit {
+    pub split_key: u8,
+    pub low_track_id: u64,
+    pub high_track_id: u64,
+}
+
+impl KeyboardSplit {
+    pub fn new(split_key: u8, low_track_id: u64, high_track_id: u64) -> Self {
+        Self {
+            split_key,
+            low_track_id,
+            high_track_id,
+        }
+    }
+
+    pub fn route(&self, note: u8) -> u64 {
+        if note < self.split_key {
+            self.low_track_id
+        } else {
+            self.high_track_id
+        }
+    }
+}
+
+/// Keyboard Layering router: multiple instruments play simultaneously (Step 653).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct KeyboardLayering {
+    pub target_track_ids: Vec<u64>,
+}
+
+impl KeyboardLayering {
+    pub fn new(target_track_ids: Vec<u64>) -> Self {
+        Self { target_track_ids }
+    }
+
+    pub fn route(&self) -> &[u64] {
+        &self.target_track_ids
+    }
+}
+
+/// Calculate frequency ratio multiplier for +/-50 cents fine tuning (Step 654).
+pub fn cents_to_freq_ratio(cents: f32) -> f32 {
+    2.0f32.powf(cents.clamp(-50.0, 50.0) / 1200.0)
+}
+
+/// Calculate tuned frequency (Hz) for a MIDI note with master tune offset (-100..+100 cents)
+/// and fine tune offset (-50..+50 cents) (Step 655).
+pub fn midi_note_to_hz_tuned(note: u8, master_cents: f32, fine_cents: f32) -> f32 {
+    let total_cents = master_cents.clamp(-100.0, 100.0) + fine_cents.clamp(-50.0, 50.0);
+    440.0 * 2.0f32.powf(((note as f32) - 69.0 + total_cents / 100.0) / 12.0)
+}
+

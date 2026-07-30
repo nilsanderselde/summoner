@@ -330,5 +330,92 @@ mod tests {
         let q_note = qwerty_key_to_midi_note("Q", 4); // C5 (MIDI 72)
         assert_eq!(q_note, Some(72));
     }
+
+    #[test]
+    fn test_step646_to_step655_arpeggiator_strummer_chords_split_tuning() {
+        use summoner_sequencer::midi_tools::*;
+
+        // Step 646: Input Echo
+        assert!(should_echo_midi_input(true, true));
+        assert!(!should_echo_midi_input(true, false));
+
+        // Steps 647-649: Arpeggiator (Up, Down, UpDown, Random, AsPlayed, Octaves, Latch)
+        let mut arp = Arpeggiator::new(ArpDirection::Up, 2, 0.75, true);
+        let seq_up = arp.generate_expanded_sequence(&[60, 64, 67]); // C4, E4, G4 across 2 octaves
+        assert_eq!(seq_up, vec![60, 64, 67, 72, 76, 79]);
+
+        let arp_down = Arpeggiator::new(ArpDirection::Down, 1, 0.8, false);
+        let seq_down = arp_down.generate_expanded_sequence(&[60, 64, 67]);
+        assert_eq!(seq_down, vec![67, 64, 60]);
+
+        let (note, gate) = arp.next_step(&[60, 64, 67]).unwrap();
+        assert_eq!(note, 60);
+        assert_eq!(gate, 0.75);
+
+        // Step 650: Strummer
+        let strummer = Strummer::new(30.0, StrumDirection::LowToHigh);
+        let strummed = strummer.strum(&[60, 64, 67]);
+        assert_eq!(strummed.len(), 3);
+        assert_eq!(strummed[0], (60, 0.0));
+        assert_eq!(strummed[1], (64, 15.0));
+        assert_eq!(strummed[2], (67, 30.0));
+
+        // Step 651: Chord Memory
+        let mut cm = ChordMemory::new();
+        cm.save_chord(0, vec![60, 64, 67]);
+        assert_eq!(cm.trigger(0), Some(&[60, 64, 67][..]));
+        assert_eq!(cm.trigger_by_note(1), Some(&[60, 64, 67][..]));
+
+        // Step 652: Keyboard Split
+        let split = KeyboardSplit::new(60, 1, 2);
+        assert_eq!(split.route(59), 1);
+        assert_eq!(split.route(60), 2);
+
+        // Step 653: Keyboard Layering
+        let layer = KeyboardLayering::new(vec![1, 2, 3]);
+        assert_eq!(layer.route(), &[1, 2, 3]);
+
+        // Step 654: Fine Tune
+        let ratio = cents_to_freq_ratio(0.0);
+        assert!((ratio - 1.0).abs() < 1e-4);
+
+        // Step 655: Master Tune
+        let hz = midi_note_to_hz_tuned(69, 0.0, 0.0); // A4 = 440 Hz
+        assert!((hz - 440.0).abs() < 1e-3);
+    }
+
+    #[test]
+    fn test_step656_to_step660_tuner_autotune_spectrum_harmonics() {
+        use summoner_dsp::tuner::detect_chromatic_pitch;
+        use summoner_dsp::autotune::AutoTuneNode;
+        use crate::views::macro_rack::{show_spectral_display, show_harmonics_display};
+
+        // Step 656: Chromatic Tuner pitch detection
+        let sr = 44100.0;
+        let mut buf = vec![0.0f32; 2048];
+        for i in 0..buf.len() {
+            buf[i] = (2.0 * std::f32::consts::PI * 440.0 * (i as f32) / sr).sin();
+        }
+        let res = detect_chromatic_pitch(&buf, sr).expect("Detect pitch");
+        assert_eq!(res.note_name, "A4");
+        assert_eq!(res.midi_note, 69);
+
+        // Steps 657-658: AutoTuneNode scale snapping & formant flag
+        let autotune = AutoTuneNode::new(vec![0, 2, 4, 5, 7, 9, 11], 0.8, true);
+        assert_eq!(autotune.snap_to_target(61), 60); // C#4 -> C4
+        assert!(autotune.formant_preservation);
+
+        // Steps 659-660: Spectrum & Harmonics UI rendering
+        let ctx = eframe::egui::Context::default();
+        let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+            eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                let spec = [0.2, 0.5, 0.8, 0.3];
+                show_spectral_display(ui, &spec, 100.0, 30.0);
+
+                let harm = [1.0, 0.5, 0.25, 0.125, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+                show_harmonics_display(ui, &harm, 100.0, 30.0);
+            });
+        });
+    }
 }
 
