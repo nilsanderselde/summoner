@@ -30,6 +30,8 @@ QUOTA_PATTERNS = [
     r"resource_exhausted",
     r"too\s+many\s+requests",
     r"429\b",
+    r"503\b",
+    r"unavailable",
     r"over_query_limit"
 ]
 
@@ -328,8 +330,8 @@ def run_vibe_loop(build_prompt_fn, log_file_name, runner_title):
             if is_quota_error(output):
                 sleep_seconds = parse_quota_reset_seconds(output)
                 resume_time = (datetime.now() + timedelta(seconds=sleep_seconds)).strftime("%H:%M:%S")
-                log("   Detected Issue: Quota / Rate limit reached.", "\033[1;33m")
-                log(f"   👉 Handling Strategy: Quota limit backoff. Sleeping for {sleep_seconds}s ({sleep_seconds // 60}m). Will resume automatically at ~{resume_time}.", "\033[1;32m")
+                log("   Detected Issue: Quota / Rate limit / Backend 503 Service Outage reached.", "\033[1;33m")
+                log(f"   👉 Handling Strategy: Service outage / Quota backoff. Sleeping for {sleep_seconds}s ({sleep_seconds // 60}m). Will resume automatically at ~{resume_time}.", "\033[1;32m")
                 log("----------------------------------------------------------------\n", "\033[1;31m")
                 time.sleep(sleep_seconds)
             else:
