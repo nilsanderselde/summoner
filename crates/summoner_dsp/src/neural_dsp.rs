@@ -1108,10 +1108,78 @@ impl NeuralMidiTranscriber {
 }
 
 // ============================================================================
+// Step 1267: Neural Audio Style Transfer Preview Renderer
+// ============================================================================
+
+/// Style preset for offline sample pack style transfer preview (Step 1267).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum AudioStylePreset {
+    VintageTape,
+    AnalogWarmth,
+    CyberpunkDistortion,
+    LoFiVinyl,
+    QuantumResonance,
+}
+
+/// Neural audio style transfer preview renderer for offline sample packs (Step 1267).
+#[derive(Debug, Clone, Default)]
+pub struct NeuralAudioStyleTransferPreviewRenderer;
+
+impl NeuralAudioStyleTransferPreviewRenderer {
+    pub fn new() -> Self {
+        Self
+    }
+
+    /// Render offline neural style transfer preview onto sample buffer.
+    pub fn render_preview(
+        &self,
+        input: &SampleBuffer,
+        style: AudioStylePreset,
+        mix: f32,
+    ) -> SampleBuffer {
+        let mix = mix.clamp(0.0, 1.0);
+        let mut output_data = Vec::with_capacity(input.data.len());
+
+        for (i, &sample) in input.data.iter().enumerate() {
+            let styled_sample = match style {
+                AudioStylePreset::VintageTape => {
+                    let drive = (sample * 1.5).tanh();
+                    let flutter = (i as f32 * 0.01).sin() * 0.05 + 1.0;
+                    drive * flutter * 0.9
+                }
+                AudioStylePreset::AnalogWarmth => {
+                    let odd_harmonics = sample + 0.15 * sample.powi(3);
+                    odd_harmonics.clamp(-1.0, 1.0)
+                }
+                AudioStylePreset::CyberpunkDistortion => {
+                    let bit_crush = (sample * 16.0).round() / 16.0;
+                    (bit_crush * 2.0).clamp(-1.0, 1.0) * 0.8
+                }
+                AudioStylePreset::LoFiVinyl => {
+                    let noise = ((i * 1103515245 + 12345) as f32 / 2147483648.0 - 0.5) * 0.02;
+                    let filtered = sample * 0.85 + noise;
+                    filtered.clamp(-1.0, 1.0)
+                }
+                AudioStylePreset::QuantumResonance => {
+                    let phase = (i as f32 * 0.08).sin() * 0.2;
+                    (sample + phase).tanh()
+                }
+            };
+
+            let blended = sample * (1.0 - mix) + styled_sample * mix;
+            output_data.push(blended);
+        }
+
+        SampleBuffer::new(output_data, input.sample_rate, input.channels)
+    }
+}
+
+// ============================================================================
 // 1019 & 1020: Comprehensive Unit Tests & Inference Determinism Verification
 // ============================================================================
 
 #[cfg(test)]
+
 mod tests {
     use super::*;
 

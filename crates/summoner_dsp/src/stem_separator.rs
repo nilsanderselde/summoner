@@ -86,6 +86,81 @@ impl StemSeparator {
     }
 }
 
+/// Metadata for offline stem separation and multi-track routing (Step 1264).
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct StemMetadata {
+    pub stem_name: String,
+    pub gain_db: f32,
+    pub target_track_index: usize,
+    pub pan: f32,
+    pub is_muted: bool,
+}
+
+/// Parser for offline stem separation metadata.
+#[derive(Debug, Default, Clone)]
+pub struct StemMetadataParser;
+
+impl StemMetadataParser {
+    pub fn new() -> Self {
+        Self
+    }
+
+    pub fn parse_json(&self, json_str: &str) -> Result<Vec<StemMetadata>, String> {
+        serde_json::from_str(json_str).map_err(|e| e.to_string())
+    }
+
+    pub fn export_json(&self, metadata: &[StemMetadata]) -> String {
+        serde_json::to_string_pretty(metadata).unwrap_or_default()
+    }
+}
+
+/// Multi-track audio router routing separated audio stems to target mixer tracks.
+#[derive(Debug, Clone)]
+pub struct MultiTrackAudioRouter {
+    pub num_tracks: usize,
+}
+
+impl MultiTrackAudioRouter {
+    pub fn new(num_tracks: usize) -> Self {
+        Self {
+            num_tracks: num_tracks.max(1),
+        }
+    }
+
+    pub fn route_stems(
+        &self,
+        stems: &HashMap<String, SampleBuffer>,
+        metadata: &[StemMetadata],
+    ) -> Vec<SampleBuffer> {
+        let mut track_buffers: Vec<Option<SampleBuffer>> = vec![None; self.num_tracks];
+
+        for meta in metadata {
+            if meta.is_muted || meta.target_track_index >= self.num_tracks {
+                continue;
+            }
+
+            if let Some(stem_buf) = stems.get(&meta.stem_name) {
+                let gain_factor = 10.0f32.powf(meta.gain_db / 20.0);
+                let routed_data: Vec<f32> = stem_buf.data.iter().map(|&s| s * gain_factor).collect();
+                let buf = SampleBuffer::new(routed_data, stem_buf.sample_rate, stem_buf.channels);
+
+                if let Some(existing) = &mut track_buffers[meta.target_track_index] {
+                    for (e, r) in existing.data.iter_mut().zip(buf.data.iter()) {
+                        *e += r;
+                    }
+                } else {
+                    track_buffers[meta.target_track_index] = Some(buf);
+                }
+            }
+        }
+
+        track_buffers
+            .into_iter()
+            .map(|opt| opt.unwrap_or_else(|| SampleBuffer::new(vec![0.0; 512], 44100, 2)))
+            .collect()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

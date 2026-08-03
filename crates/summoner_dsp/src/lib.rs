@@ -63,6 +63,7 @@ pub mod zero_gravity_fluid;
 pub mod spectrogram_art;
 pub mod live_session_recorder;
 pub mod visualizer_engine;
+pub mod spectral_eq;
 
 pub use sample_editor::*;
 pub use track_dsp::*;
@@ -76,6 +77,7 @@ pub use zero_gravity_fluid::*;
 pub use spectrogram_art::*;
 pub use live_session_recorder::*;
 pub use visualizer_engine::*;
+pub use spectral_eq::MultiChannelSpectralEqualizerNode;
 pub use multiband_compressor::MultibandCompressorNode;
 pub use tape_saturation::TapeSaturationNode;
 pub use tube_saturation::TubeSaturationNode;
@@ -91,7 +93,7 @@ pub use composites::{
     GlitchPercussionSynth, PluckSynth, SamplerDevice,
 };
 pub use drum_machine::{DrumMachineDevice, DrumPad, MAX_PADS};
-pub use stem_separator::{StemSeparator, ONNX_STEM_SEPARATOR_MODEL_BYTES};
+pub use stem_separator::{StemSeparator, StemMetadata, StemMetadataParser, MultiTrackAudioRouter, ONNX_STEM_SEPARATOR_MODEL_BYTES};
 pub use distortion::{DistortionNode, DistortionType};
 pub use effects::{EffectDelay as LegacyEffectDelay, EffectReverb as LegacyEffectReverb, NoiseGateNode, DeesserNode, HarmonicExciterNode};
 pub use delay::EffectDelay;
@@ -123,7 +125,7 @@ pub use compressor::CompressorNode;
 pub use limiter::{LimiterNode, MasterLimiter};
 pub use mod_fx::{EffectChorus, EffectFlanger, EffectPhaser};
 pub use ring_mod::{RingModulator, FrequencyShifter, RingModWaveform};
-pub use meter::{LufsMeterNode, TruePeakMeter, KSystemScale, k_system_headroom};
+pub use meter::{LufsMeterNode, TruePeakMeter, KSystemScale, k_system_headroom, EbuR128LoudnessMeter, PeakHeadroomAnalyzer};
 pub use dither::{DitherType, apply_dither};
 pub use granular::GranularSynthNode;
 

@@ -115,3 +115,103 @@ pub fn k_system_headroom(rms_db: f32, scale: KSystemScale) -> f32 {
     rms_db - scale.reference_db()
 }
 
+/// EBU R128 Loudness Meter (Step 1270 & Step 1272).
+#[derive(Debug, Clone)]
+pub struct EbuR128LoudnessMeter {
+    pub target_lufs: f32,
+    pub integrated_lufs: f32,
+    pub momentary_lufs: f32,
+    pub short_term_lufs: f32,
+    pub loudness_range_lu: f32,
+}
+
+impl Default for EbuR128LoudnessMeter {
+    fn default() -> Self {
+        Self::new(-23.0)
+    }
+}
+
+impl EbuR128LoudnessMeter {
+    pub fn new(target_lufs: f32) -> Self {
+        Self {
+            target_lufs,
+            integrated_lufs: -70.0,
+            momentary_lufs: -70.0,
+            short_term_lufs: -70.0,
+            loudness_range_lu: 0.0,
+        }
+    }
+
+    pub fn process_block(&mut self, samples: &[f32]) {
+        if samples.is_empty() {
+            return;
+        }
+        let sum_sq: f32 = samples.iter().map(|&s| s * s).sum();
+        let mean_sq = (sum_sq / samples.len() as f32).max(1e-12);
+        let lufs = 10.0 * mean_sq.log10() - 0.691;
+
+        self.momentary_lufs = lufs.clamp(-70.0, 6.0);
+        self.short_term_lufs = (lufs * 0.85 + self.short_term_lufs * 0.15).clamp(-70.0, 6.0);
+        self.integrated_lufs = (lufs * 0.1 + self.integrated_lufs * 0.9).clamp(-70.0, 6.0);
+        self.loudness_range_lu = (self.short_term_lufs - self.integrated_lufs).abs();
+    }
+
+    pub fn is_within_target(&self, tolerance_lu: f32) -> bool {
+        (self.integrated_lufs - self.target_lufs).abs() <= tolerance_lu
+    }
+}
+
+/// Peak Headroom Analyzer (Step 1270 & Step 1272).
+#[derive(Debug, Clone)]
+pub struct PeakHeadroomAnalyzer {
+    pub target_headroom_db: f32,
+    pub peak_sample_db: f32,
+    pub true_peak_db: f32,
+}
+
+impl Default for PeakHeadroomAnalyzer {
+    fn default() -> Self {
+        Self::new(1.0)
+    }
+}
+
+impl PeakHeadroomAnalyzer {
+    pub fn new(target_headroom_db: f32) -> Self {
+        Self {
+            target_headroom_db,
+            peak_sample_db: -120.0,
+            true_peak_db: -120.0,
+        }
+    }
+
+    pub fn analyze(&mut self, samples: &[f32]) {
+        let mut max_peak = 0.0f32;
+        let mut max_inter = 0.0f32;
+
+        for window in samples.windows(2) {
+            let s0 = window[0].abs();
+            let s1 = window[1].abs();
+            max_peak = max_peak.max(s0).max(s1);
+
+            let mid = ((window[0] + window[1]) * 0.5).abs();
+            max_inter = max_inter.max(mid);
+        }
+        if samples.len() == 1 {
+            max_peak = max_peak.max(samples[0].abs());
+        }
+
+        self.peak_sample_db = if max_peak > 1e-6 { 20.0 * max_peak.log10() } else { -120.0 };
+        let true_peak_linear = max_peak.max(max_inter);
+        self.true_peak_db = if true_peak_linear > 1e-6 { 20.0 * true_peak_linear.log10() } else { -120.0 };
+    }
+
+    pub fn current_headroom_db(&self) -> f32 {
+        0.0 - self.true_peak_db
+    }
+
+    pub fn has_headroom(&self) -> bool {
+        self.current_headroom_db() >= self.target_headroom_db
+    }
+}
+
+

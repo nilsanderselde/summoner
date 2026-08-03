@@ -149,3 +149,59 @@ impl Default for MpeRouter {
         Self::new()
     }
 }
+
+/// MPE Expression Curve Types (Step 1265).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ExpressionCurveType {
+    Linear,
+    Logarithmic,
+    Exponential,
+    Sigmoid,
+}
+
+/// Real-time MIDI MPE expression curve editor and per-note pitch bend mapping (Step 1265).
+#[derive(Debug, Clone)]
+pub struct MpeExpressionCurveEditor {
+    pub pitch_bend_range_semitones: f32,
+    pub velocity_curve: ExpressionCurveType,
+    pub pressure_curve: ExpressionCurveType,
+    pub timbre_curve: ExpressionCurveType,
+    pub curve_curvature: f32,
+}
+
+impl Default for MpeExpressionCurveEditor {
+    fn default() -> Self {
+        Self {
+            pitch_bend_range_semitones: 48.0,
+            velocity_curve: ExpressionCurveType::Linear,
+            pressure_curve: ExpressionCurveType::Linear,
+            timbre_curve: ExpressionCurveType::Linear,
+            curve_curvature: 1.0,
+        }
+    }
+}
+
+impl MpeExpressionCurveEditor {
+    pub fn new(pitch_bend_range_semitones: f32) -> Self {
+        Self {
+            pitch_bend_range_semitones: pitch_bend_range_semitones.clamp(1.0, 96.0),
+            ..Default::default()
+        }
+    }
+
+    pub fn map_expression_value(&self, value: f32, curve: ExpressionCurveType) -> f32 {
+        let v = value.clamp(0.0, 1.0);
+        match curve {
+            ExpressionCurveType::Linear => v,
+            ExpressionCurveType::Logarithmic => (1.0 + v * (self.curve_curvature - 1.0)).ln() / self.curve_curvature.ln().max(1e-5),
+            ExpressionCurveType::Exponential => v.powf(self.curve_curvature),
+            ExpressionCurveType::Sigmoid => 1.0 / (1.0 + (-((v - 0.5) * 10.0 * self.curve_curvature)).exp()),
+        }
+    }
+
+    pub fn map_pitch_bend(&self, raw_14bit: i16) -> f32 {
+        let norm = (raw_14bit as f32) / 8191.0;
+        norm.clamp(-1.0, 1.0) * self.pitch_bend_range_semitones
+    }
+}
+
