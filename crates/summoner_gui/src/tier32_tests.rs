@@ -8,7 +8,9 @@ mod tests {
     use std::collections::HashSet;
     use std::sync::Arc;
     use summoner_core::param_bus::ParamBus;
-    use summoner_project::schema::{ProjectConfig, SequenceConfig, TrackerStepConfig};
+    use summoner_project::cloud_federated::*;
+    use summoner_project::project_tools::*;
+    use summoner_project::schema::{AssetConfig, ProjectConfig, SequenceConfig, TrackConfig, TrackerStepConfig};
 
     #[test]
     fn test_step577_step578_tap_tempo() {
@@ -544,7 +546,7 @@ mod tests {
             slice_threshold: 0.15,
         });
 
-        let removed = clean_project(&temp_dir, &proj).expect("clean project");
+        let removed = clean_project(&mut proj, &temp_dir).expect("clean project");
         assert_eq!(removed, vec!["unref.wav".to_string()]);
         let _ = std::fs::remove_dir_all(&temp_dir);
 
@@ -562,15 +564,15 @@ mod tests {
             slice_threshold: 0.15,
         });
 
-        let copied = collect_and_save(&temp_dir2, &mut proj2).expect("collect save");
-        assert_eq!(copied, vec!["assets/summoner_ext_sample.wav".to_string()]);
+        let copied = collect_and_save(&mut proj2, &temp_dir2).expect("collect save");
+        assert_eq!(copied, 1);
         assert_eq!(proj2.assets[0].path, "assets/summoner_ext_sample.wav");
         let _ = std::fs::remove_dir_all(&temp_dir2);
         let _ = std::fs::remove_file(&ext_file);
 
         // Step 683: Freeze / Unfreeze Track
         let mut track = TrackConfig::default();
-        freeze_track(&mut track, 44100, 120.0);
+        freeze_track(&mut track, vec![0.5f32; 100]);
         assert!(track.is_frozen);
         assert!(track.frozen_buffer.is_some());
         unfreeze_track(&mut track);
@@ -579,7 +581,7 @@ mod tests {
 
         // Step 684: Parallel Compression Template
         let mut proj3 = create_default_project("Parallel Comp Test");
-        apply_parallel_compression_template(&mut proj3, 1, 4.0, 0.5).expect("parallel comp");
+        apply_parallel_compression_template(&mut proj3, 1).expect("parallel comp");
         assert!(proj3.tracks[0]
             .nodes
             .iter()
@@ -637,7 +639,7 @@ mod tests {
         // Step 695: Bounce to Track
         let mut proj4 = create_default_project("Bounce Test");
         let bounced_id =
-            bounce_track_to_new_track(&mut proj4, 1, &[0.5, 0.5]).expect("bounce track");
+            bounce_track_to_new_track(&mut proj4, 1, vec![0.5f32, 0.5f32]).expect("bounce track");
         assert!(proj4.tracks.iter().any(|t| t.id == bounced_id));
         assert!(proj4.tracks[0].muted);
 
@@ -862,9 +864,9 @@ params = { freq = 220.0 }"#;
         assert_eq!(settings, restored);
         let _ = std::fs::remove_file(&backup_p);
 
-        // // Step 730: Account Panel & Login
-        // let mut user = UserAccount::login("nils", "nils@example.com", "tok_9988");
-        // assert!(user.is_logged_in); // logged into what?! it's an offline program
+        // Step 730: Account Panel & Login
+        let mut user = UserAccount::login("nils", "nils@example.com", "tok_9988");
+        assert!(user.is_logged_in);
 
         // Step 731: Cloud Save & Restore
         let proj = ProjectConfig::default();

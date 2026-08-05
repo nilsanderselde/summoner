@@ -189,6 +189,42 @@ impl CommandPalette {
                 action_id: "open_accessibility_settings".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Audio Driver Settings & Native Device Selector".into(),
+                category: "Settings".into(),
+                action_id: "open_audio_driver_settings".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Toggle Loudness & Peak Headroom Meter".into(),
+                category: "View".into(),
+                action_id: "toggle_loudness_meter".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "MPE Expression Curve Editor".into(),
+                category: "Tools".into(),
+                action_id: "open_mpe_editor".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Project Backup Snapshots Manager".into(),
+                category: "File".into(),
+                action_id: "open_backup_manager".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Neural Audio Style Transfer Preview".into(),
+                category: "Tools".into(),
+                action_id: "open_style_transfer".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Multi-Channel Spectral Equalizer".into(),
+                category: "Tools".into(),
+                action_id: "open_spectral_eq".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

@@ -413,6 +413,7 @@ pub fn show_arranger(
                         name: format!("Marker {}", next_idx),
                         beat: *playhead_beat,
                         color: Some([255, 200, 50]),
+                        ..Default::default()
                     });
                     ui.close_menu();
                 }

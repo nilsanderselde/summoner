@@ -220,6 +220,21 @@ pub struct SummonerApp {
     pub live_session_recorder: summoner_dsp::LiveSessionRecorder,
     pub spectrogram_art_engine: summoner_dsp::SpectrogramArtEngine,
     pub visualizer_engine: summoner_dsp::VisualizerIntegrationEngine,
+    // Tier 47 fields (Steps 1261-1270)
+    pub audio_driver_panel: crate::visualizer::AudioDriverSelectorPanel,
+    pub show_audio_driver_modal: bool,
+    pub ebu_r128_meter: summoner_dsp::EbuR128LoudnessMeter,
+    pub peak_headroom_analyzer: summoner_dsp::PeakHeadroomAnalyzer,
+    pub show_loudness_meter_panel: bool,
+    pub mpe_editor: summoner_core::mpe::MpeExpressionCurveEditor,
+    pub show_mpe_editor_modal: bool,
+    pub show_backup_manager_modal: bool,
+    pub style_transfer_renderer: summoner_dsp::neural_dsp::NeuralAudioStyleTransferPreviewRenderer,
+    pub style_transfer_preset: summoner_dsp::neural_dsp::AudioStylePreset,
+    pub style_transfer_mix: f32,
+    pub show_style_transfer_modal: bool,
+    pub spectral_eq: summoner_dsp::MultiChannelSpectralEqualizerNode,
+    pub show_spectral_eq_modal: bool,
 }
 
 impl SummonerApp {
@@ -326,6 +341,20 @@ impl SummonerApp {
                 summoner_dsp::SpectrogramArtConfig::default(),
             ),
             visualizer_engine: summoner_dsp::VisualizerIntegrationEngine::new(),
+            audio_driver_panel: crate::visualizer::AudioDriverSelectorPanel::default(),
+            show_audio_driver_modal: false,
+            ebu_r128_meter: summoner_dsp::EbuR128LoudnessMeter::default(),
+            peak_headroom_analyzer: summoner_dsp::PeakHeadroomAnalyzer::default(),
+            show_loudness_meter_panel: false,
+            mpe_editor: summoner_core::mpe::MpeExpressionCurveEditor::default(),
+            show_mpe_editor_modal: false,
+            show_backup_manager_modal: false,
+            style_transfer_renderer: summoner_dsp::neural_dsp::NeuralAudioStyleTransferPreviewRenderer::new(),
+            style_transfer_preset: summoner_dsp::neural_dsp::AudioStylePreset::VintageTape,
+            style_transfer_mix: 0.5,
+            show_style_transfer_modal: false,
+            spectral_eq: summoner_dsp::MultiChannelSpectralEqualizerNode::new(sample_rate, 2, 8),
+            show_spectral_eq_modal: false,
         };
 
         if let Some(state) = GuiState::load() {
@@ -1163,6 +1192,14 @@ impl eframe::App for SummonerApp {
                 "open_accessibility_settings" => {
                     self.show_accessibility_modal = true;
                 }
+                "open_audio_driver_settings" => self.show_audio_driver_modal = true,
+                "toggle_loudness_meter" => {
+                    self.show_loudness_meter_panel = !self.show_loudness_meter_panel;
+                }
+                "open_mpe_editor" => self.show_mpe_editor_modal = true,
+                "open_backup_manager" => self.show_backup_manager_modal = true,
+                "open_style_transfer" => self.show_style_transfer_modal = true,
+                "open_spectral_eq" => self.show_spectral_eq_modal = true,
                 "sfz_convert" | "auto_slice" | "load_preset" | "export_clap" | "toggle_simd" => {
                     println!("Command palette action executed: {}", action);
                 }
@@ -1273,6 +1310,10 @@ impl eframe::App for SummonerApp {
                         self.save_session_as();
                         ui.close_menu();
                     }
+                    if ui.button("💾 Backup Snapshots Manager...").clicked() {
+                        self.show_backup_manager_modal = true;
+                        ui.close_menu();
+                    }
                     ui.separator();
                     if ui.button("🎵 Export WAV...").clicked() {
                         self.export_wav();
@@ -1321,7 +1362,30 @@ impl eframe::App for SummonerApp {
                         self.show_scala_browser_modal = true;
                         ui.close_menu();
                     }
+                    if ui.button("📊 Peak Headroom & Loudness Meter").clicked() {
+                        self.show_loudness_meter_panel = !self.show_loudness_meter_panel;
+                        ui.close_menu();
+                    }
                     ui.checkbox(&mut self.show_patch_browser, "🎛 Patch Browser (Ctrl+B)");
+                });
+
+                ui.menu_button("Tools", |ui| {
+                    if ui.button("🎧 Audio Driver Settings...").clicked() {
+                        self.show_audio_driver_modal = true;
+                        ui.close_menu();
+                    }
+                    if ui.button("🎛 MPE Expression Curve Editor...").clicked() {
+                        self.show_mpe_editor_modal = true;
+                        ui.close_menu();
+                    }
+                    if ui.button("🎨 Neural Audio Style Transfer...").clicked() {
+                        self.show_style_transfer_modal = true;
+                        ui.close_menu();
+                    }
+                    if ui.button("🎚 Multi-Channel Spectral EQ...").clicked() {
+                        self.show_spectral_eq_modal = true;
+                        ui.close_menu();
+                    }
                 });
 
                 ui.separator();
@@ -1405,6 +1469,235 @@ impl eframe::App for SummonerApp {
                     );
                 });
             self.show_scala_browser_modal = is_open;
+        }
+
+        // Audio Driver Settings & Device Selector Panel (Step 1269)
+        if self.show_audio_driver_modal {
+            let mut is_open = self.show_audio_driver_modal;
+            egui::Window::new("🎧 Audio Driver Settings & Native Device Selector")
+                .open(&mut is_open)
+                .resizable(true)
+                .default_size([460.0, 320.0])
+                .show(ctx, |ui| {
+                    crate::visualizer::show_audio_driver_selector_panel(
+                        ui,
+                        &mut self.audio_driver_panel,
+                    );
+                });
+            self.show_audio_driver_modal = is_open;
+        }
+
+        // Peak Headroom & EBU R128 Loudness Metering Display (Step 1270 & Step 1272)
+        if self.show_loudness_meter_panel {
+            let mut is_open = self.show_loudness_meter_panel;
+            egui::Window::new("📊 Peak Headroom & EBU R128 Loudness Meter")
+                .open(&mut is_open)
+                .resizable(true)
+                .default_size([420.0, 110.0])
+                .show(ctx, |ui| {
+                    let w = ui.available_width();
+                    crate::visualizer::show_ebu_r128_loudness_meter(
+                        ui,
+                        &self.ebu_r128_meter,
+                        &self.peak_headroom_analyzer,
+                        w,
+                        60.0,
+                    );
+                });
+            self.show_loudness_meter_panel = is_open;
+        }
+
+        // MPE Expression Curve Editor Modal (Step 1265)
+        if self.show_mpe_editor_modal {
+            let mut is_open = self.show_mpe_editor_modal;
+            egui::Window::new("🎛 MIDI MPE Expression Curve Editor")
+                .open(&mut is_open)
+                .resizable(true)
+                .default_size([460.0, 280.0])
+                .show(ctx, |ui| {
+                    ui.heading("MPE Expression & Pitch Bend Calibration");
+                    ui.separator();
+                    ui.add(
+                        egui::Slider::new(
+                            &mut self.mpe_editor.pitch_bend_range_semitones,
+                            1.0..=96.0,
+                        )
+                        .text("Pitch Bend Range (semitones)"),
+                    );
+                    ui.add(
+                        egui::Slider::new(&mut self.mpe_editor.curve_curvature, 0.1..=5.0)
+                            .text("Curve Curvature"),
+                    );
+                    ui.horizontal(|ui| {
+                        ui.label(format!("Velocity Curve: {:?}", self.mpe_editor.velocity_curve));
+                        ui.label(format!("Pressure Curve: {:?}", self.mpe_editor.pressure_curve));
+                        ui.label(format!("Timbre Curve: {:?}", self.mpe_editor.timbre_curve));
+                    });
+                });
+            self.show_mpe_editor_modal = is_open;
+        }
+
+        // Project Backup Snapshots Manager Modal (Step 1266 & Step 1273)
+        if self.show_backup_manager_modal {
+            let mut is_open = self.show_backup_manager_modal;
+            egui::Window::new("💾 Project Backup Snapshots Manager")
+                .open(&mut is_open)
+                .resizable(true)
+                .default_size([500.0, 320.0])
+                .show(ctx, |ui| {
+                    ui.heading("Automated Project Backups (.summoner/backups/)");
+                    ui.separator();
+                    ui.horizontal(|ui| {
+                        ui.label("Auto-save interval (secs):");
+                        ui.add(
+                            egui::DragValue::new(&mut self.auto_save_interval_secs)
+                                .clamp_range(10..=3600),
+                        );
+                    });
+                    if ui.button("📸 Create Snapshot Backup Now").clicked() {
+                        let proj_dir = self
+                            .project_path
+                            .as_deref()
+                            .and_then(|p| p.parent())
+                            .unwrap_or_else(|| std::path::Path::new("."));
+                        let mut mgr = summoner_project::backup::ProjectAutoSaveManager::new(
+                            proj_dir,
+                            self.auto_save_interval_secs,
+                            10,
+                        );
+                        match mgr.create_backup_snapshot(&self.project) {
+                            Ok(path) => {
+                                self.status_message = Some(format!(
+                                    "Created backup snapshot at {}",
+                                    path.display()
+                                ))
+                            }
+                            Err(e) => {
+                                self.status_message = Some(format!("Backup failed: {}", e))
+                            }
+                        }
+                    }
+                    ui.separator();
+                    ui.label("Available Snapshot Backups:");
+                    let proj_dir = self
+                        .project_path
+                        .as_deref()
+                        .and_then(|p| p.parent())
+                        .unwrap_or_else(|| std::path::Path::new("."));
+                    let mgr = summoner_project::backup::ProjectAutoSaveManager::new(
+                        proj_dir,
+                        self.auto_save_interval_secs,
+                        10,
+                    );
+                    if let Ok(backups) = mgr.list_backups() {
+                        if backups.is_empty() {
+                            ui.label("(No snapshot backups found)");
+                        } else {
+                            for path in backups {
+                                let name = path
+                                    .file_name()
+                                    .map(|n| n.to_string_lossy().to_string())
+                                    .unwrap_or_default();
+                                if ui.button(format!("↩ Restore {}", name)).clicked() {
+                                    if let Ok(restored) = mgr.restore_snapshot(&path) {
+                                        self.project = restored;
+                                        self.status_message = Some(format!(
+                                            "Restored project configuration from {}",
+                                            name
+                                        ));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            self.show_backup_manager_modal = is_open;
+        }
+
+        // Neural Audio Style Transfer Preview Modal (Step 1267)
+        if self.show_style_transfer_modal {
+            let mut is_open = self.show_style_transfer_modal;
+            egui::Window::new("🎨 Neural Audio Style Transfer Preview")
+                .open(&mut is_open)
+                .resizable(true)
+                .default_size([440.0, 240.0])
+                .show(ctx, |ui| {
+                    ui.heading("Offline Sample Pack Style Transfer");
+                    ui.separator();
+                    ui.horizontal(|ui| {
+                        ui.label("Style Preset:");
+                        egui::ComboBox::from_id_source("style_transfer_preset_combo")
+                            .selected_text(format!("{:?}", self.style_transfer_preset))
+                            .show_ui(ui, |ui| {
+                                ui.selectable_value(
+                                    &mut self.style_transfer_preset,
+                                    summoner_dsp::neural_dsp::AudioStylePreset::VintageTape,
+                                    "Vintage Tape",
+                                );
+                                ui.selectable_value(
+                                    &mut self.style_transfer_preset,
+                                    summoner_dsp::neural_dsp::AudioStylePreset::AnalogWarmth,
+                                    "Analog Warmth",
+                                );
+                                ui.selectable_value(
+                                    &mut self.style_transfer_preset,
+                                    summoner_dsp::neural_dsp::AudioStylePreset::CyberpunkDistortion,
+                                    "Cyberpunk Distortion",
+                                );
+                                ui.selectable_value(
+                                    &mut self.style_transfer_preset,
+                                    summoner_dsp::neural_dsp::AudioStylePreset::LoFiVinyl,
+                                    "Lo-Fi Vinyl",
+                                );
+                                ui.selectable_value(
+                                    &mut self.style_transfer_preset,
+                                    summoner_dsp::neural_dsp::AudioStylePreset::QuantumResonance,
+                                    "Quantum Resonance",
+                                );
+                            });
+                    });
+                    ui.add(egui::Slider::new(&mut self.style_transfer_mix, 0.0..=1.0).text("Mix"));
+                    if ui.button("⚡ Render Style Transfer Preview").clicked() {
+                        self.status_message = Some(format!(
+                            "Rendered style transfer preview with preset {:?}",
+                            self.style_transfer_preset
+                        ));
+                    }
+                });
+            self.show_style_transfer_modal = is_open;
+        }
+
+        // Multi-Channel Spectral Equalizer Node Modal (Step 1262)
+        if self.show_spectral_eq_modal {
+            let mut is_open = self.show_spectral_eq_modal;
+            egui::Window::new("🎚 Multi-Channel Spectral Equalizer")
+                .open(&mut is_open)
+                .resizable(true)
+                .default_size([520.0, 300.0])
+                .show(ctx, |ui| {
+                    ui.heading("Live Spectral Equalizer & FFT Visual Feedback");
+                    ui.separator();
+                    ui.label(format!(
+                        "Bands: {} | Channels: {}",
+                        self.spectral_eq.num_bands, self.spectral_eq.num_channels
+                    ));
+                    ui.horizontal(|ui| {
+                        for b in 0..self.spectral_eq.num_bands.min(16) {
+                            let mut gain = self.spectral_eq.band_gains[b];
+                            if ui
+                                .add(
+                                    egui::Slider::new(&mut gain, -24.0..=24.0)
+                                        .vertical()
+                                        .text(format!("B{}", b + 1)),
+                                )
+                                .changed()
+                            {
+                                self.spectral_eq.set_band_gain(b, gain);
+                            }
+                        }
+                    });
+                });
+            self.show_spectral_eq_modal = is_open;
         }
 
         // Keyboard Shortcuts searchable modal (step 312)

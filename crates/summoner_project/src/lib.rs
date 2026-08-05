@@ -40,6 +40,9 @@ pub use dependency_audit::*;
 pub use enterprise_qa::*;
 pub use export::*;
 pub use media_export::*;
+pub use preset::*;
+pub use project_tools::*;
+pub use schema::*;
 pub use scratch_audio_cache::*;
 pub use session_markers::*;
 
@@ -47,7 +50,6 @@ pub use session_markers::*;
 #[link(name = "advapi32")]
 extern "C" {}
 
-use schema::{NodeConfig, ProjectConfig, TrackConfig, TransportConfig};
 use std::collections::HashMap;
 
 /// Error type for project parsing and serialization.

@@ -275,4 +275,59 @@ mod tests {
         assert_eq!(panel.selected_driver_name, "ALSA");
         assert!(panel.exclusive_mode);
     }
+
+    #[test]
+    #[cfg(feature = "gui")]
+    fn test_tier47_gui_modal_states_and_command_palette_integration() {
+        use crate::app::SummonerApp;
+        use crate::command_palette::CommandPalette;
+        use summoner_core::param_bus::ParamBus;
+        use summoner_project::create_default_project;
+        use std::sync::Arc;
+
+        let proj = create_default_project("Tier47 Integration Test");
+        let bus = Arc::new(ParamBus::new());
+        let mut app = SummonerApp::new(proj, bus);
+
+        // Verify initial modal states are closed
+        assert!(!app.show_audio_driver_modal);
+        assert!(!app.show_loudness_meter_panel);
+        assert!(!app.show_mpe_editor_modal);
+        assert!(!app.show_backup_manager_modal);
+        assert!(!app.show_style_transfer_modal);
+        assert!(!app.show_spectral_eq_modal);
+
+        // Test command palette integration
+        let cp = CommandPalette::new();
+        let tier47_action_ids = [
+            "open_audio_driver_settings",
+            "toggle_loudness_meter",
+            "open_mpe_editor",
+            "open_backup_manager",
+            "open_style_transfer",
+            "open_spectral_eq",
+        ];
+        for action_id in &tier47_action_ids {
+            assert!(
+                cp.actions.iter().any(|a| a.action_id == *action_id),
+                "Command palette should contain action_id: {}",
+                action_id
+            );
+        }
+
+        // Toggle modals programmatically
+        app.show_audio_driver_modal = true;
+        app.show_loudness_meter_panel = true;
+        app.show_mpe_editor_modal = true;
+        app.show_backup_manager_modal = true;
+        app.show_style_transfer_modal = true;
+        app.show_spectral_eq_modal = true;
+
+        assert!(app.show_audio_driver_modal);
+        assert!(app.show_loudness_meter_panel);
+        assert!(app.show_mpe_editor_modal);
+        assert!(app.show_backup_manager_modal);
+        assert!(app.show_style_transfer_modal);
+        assert!(app.show_spectral_eq_modal);
+    }
 }

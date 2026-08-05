@@ -119,7 +119,7 @@ impl Default for ProjectConfig {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct MarkerConfig {
     pub name: String,
     pub beat: f64,
