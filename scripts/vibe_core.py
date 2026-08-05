@@ -29,9 +29,10 @@ QUOTA_PATTERNS = [
     r"rate\s*limit",
     r"resource_exhausted",
     r"too\s+many\s+requests",
-    r"429\b",
-    r"503\b",
-    r"unavailable",
+    r"code\s+429\b",
+    r"code\s+503\b",
+    r"503\s+service\s+unavailable",
+    r"unavailable\s+\(code\s+503\)",
     r"over_query_limit"
 ]
 
@@ -179,7 +180,7 @@ def parse_quota_reset_seconds(text):
         except Exception:
             pass
 
-    return 3600
+    return 60  # Default fallback sleep if we know it's a quota/503 issue but can't parse a time
 
 def is_quota_error(output_text):
     """Checks if output contains any quota or rate limiting signatures."""

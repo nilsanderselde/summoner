@@ -68,10 +68,8 @@ impl MultiChannelSpectralEqualizerNode {
             self.live_spectrum[ch][k] = mag;
         }
     }
-}
 
-impl SignalProcessor for MultiChannelSpectralEqualizerNode {
-    fn process_sample(&mut self, input: Sample) -> Sample {
+    pub fn process_sample(&mut self, input: Sample) -> Sample {
         let mut out = input;
         for &gain_db in &self.band_gains {
             if gain_db != 0.0 {
@@ -82,7 +80,7 @@ impl SignalProcessor for MultiChannelSpectralEqualizerNode {
         out
     }
 
-    fn reset(&mut self) {
+    pub fn reset(&mut self) {
         for ch_buf in &mut self.buffer {
             ch_buf.fill(0.0);
         }
@@ -90,6 +88,21 @@ impl SignalProcessor for MultiChannelSpectralEqualizerNode {
             ch_spec.fill(0.0);
         }
         self.write_pos = 0;
+    }
+}
+
+impl SignalProcessor for MultiChannelSpectralEqualizerNode {
+    fn name(&self) -> &str {
+        "MultiChannelSpectralEqualizerNode"
+    }
+
+    fn process_block(
+        &mut self,
+        inputs: &[&[Sample]],
+        outputs: &mut [&mut [Sample]],
+        ctx: &ProcessContext,
+    ) {
+        self.process(inputs, outputs, ctx);
     }
 }
 

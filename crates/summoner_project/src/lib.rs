@@ -29,6 +29,7 @@ pub mod session_markers;
 pub mod crash_analyzer;
 pub mod benchmark;
 pub mod dependency_audit;
+pub mod backup;
 
 pub use media_export::*;
 pub use crdt::*;
@@ -40,6 +41,7 @@ pub use session_markers::*;
 pub use crash_analyzer::*;
 pub use benchmark::*;
 pub use dependency_audit::*;
+pub use backup::*;
 
 #[cfg(target_os = "windows")]
 #[link(name = "advapi32")]
