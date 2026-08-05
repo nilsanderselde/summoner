@@ -10,7 +10,9 @@ mod tests {
     use summoner_core::param_bus::ParamBus;
     use summoner_project::cloud_federated::*;
     use summoner_project::project_tools::*;
-    use summoner_project::schema::{AssetConfig, ProjectConfig, SequenceConfig, TrackConfig, TrackerStepConfig};
+    use summoner_project::schema::{
+        AssetConfig, ProjectConfig, SequenceConfig, TrackConfig, TrackerStepConfig,
+    };
 
     #[test]
     fn test_step577_step578_tap_tempo() {

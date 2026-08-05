@@ -281,9 +281,9 @@ mod tests {
     fn test_tier47_gui_modal_states_and_command_palette_integration() {
         use crate::app::SummonerApp;
         use crate::command_palette::CommandPalette;
+        use std::sync::Arc;
         use summoner_core::param_bus::ParamBus;
         use summoner_project::create_default_project;
-        use std::sync::Arc;
 
         let proj = create_default_project("Tier47 Integration Test");
         let bus = Arc::new(ParamBus::new());

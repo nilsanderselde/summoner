@@ -349,7 +349,8 @@ impl SummonerApp {
             mpe_editor: summoner_core::mpe::MpeExpressionCurveEditor::default(),
             show_mpe_editor_modal: false,
             show_backup_manager_modal: false,
-            style_transfer_renderer: summoner_dsp::neural_dsp::NeuralAudioStyleTransferPreviewRenderer::new(),
+            style_transfer_renderer:
+                summoner_dsp::neural_dsp::NeuralAudioStyleTransferPreviewRenderer::new(),
             style_transfer_preset: summoner_dsp::neural_dsp::AudioStylePreset::VintageTape,
             style_transfer_mix: 0.5,
             show_style_transfer_modal: false,
@@ -1529,8 +1530,14 @@ impl eframe::App for SummonerApp {
                             .text("Curve Curvature"),
                     );
                     ui.horizontal(|ui| {
-                        ui.label(format!("Velocity Curve: {:?}", self.mpe_editor.velocity_curve));
-                        ui.label(format!("Pressure Curve: {:?}", self.mpe_editor.pressure_curve));
+                        ui.label(format!(
+                            "Velocity Curve: {:?}",
+                            self.mpe_editor.velocity_curve
+                        ));
+                        ui.label(format!(
+                            "Pressure Curve: {:?}",
+                            self.mpe_editor.pressure_curve
+                        ));
                         ui.label(format!("Timbre Curve: {:?}", self.mpe_editor.timbre_curve));
                     });
                 });
@@ -1567,14 +1574,10 @@ impl eframe::App for SummonerApp {
                         );
                         match mgr.create_backup_snapshot(&self.project) {
                             Ok(path) => {
-                                self.status_message = Some(format!(
-                                    "Created backup snapshot at {}",
-                                    path.display()
-                                ))
+                                self.status_message =
+                                    Some(format!("Created backup snapshot at {}", path.display()))
                             }
-                            Err(e) => {
-                                self.status_message = Some(format!("Backup failed: {}", e))
-                            }
+                            Err(e) => self.status_message = Some(format!("Backup failed: {}", e)),
                         }
                     }
                     ui.separator();
