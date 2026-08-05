@@ -31,15 +31,16 @@ impl SmoothParam {
             smoothing_factor: factor,
         }
     }
-    
+
     /// Set new target parameter value.
     pub fn set_target(&mut self, target: f32) {
         self.target = target;
     }
-    
+
     /// Advance smoother by one sample and return smoothed parameter value.
     pub fn next_sample(&mut self) -> f32 {
-        self.current = self.current * self.smoothing_factor + self.target * (1.0 - self.smoothing_factor);
+        self.current =
+            self.current * self.smoothing_factor + self.target * (1.0 - self.smoothing_factor);
         self.current
     }
 }

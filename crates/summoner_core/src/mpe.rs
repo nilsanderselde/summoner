@@ -93,7 +93,12 @@ impl MpeRouter {
     /// Dispatch MPE event to active voice states.
     pub fn dispatch(&mut self, event: &MpeEvent) {
         match event {
-            MpeEvent::NoteOn { voice_id, channel, note, velocity } => {
+            MpeEvent::NoteOn {
+                voice_id,
+                channel,
+                note,
+                velocity,
+            } => {
                 for slot in self.voices.iter_mut() {
                     if !slot.is_active || slot.voice_id == *voice_id {
                         slot.voice_id = *voice_id;
@@ -116,7 +121,10 @@ impl MpeRouter {
                     }
                 }
             }
-            MpeEvent::PitchBend { voice_id, semitones } => {
+            MpeEvent::PitchBend {
+                voice_id,
+                semitones,
+            } => {
                 for slot in self.voices.iter_mut() {
                     if slot.is_active && slot.voice_id == *voice_id {
                         slot.pitch_bend_semitones = *semitones;
@@ -193,9 +201,13 @@ impl MpeExpressionCurveEditor {
         let v = value.clamp(0.0, 1.0);
         match curve {
             ExpressionCurveType::Linear => v,
-            ExpressionCurveType::Logarithmic => (1.0 + v * (self.curve_curvature - 1.0)).ln() / self.curve_curvature.ln().max(1e-5),
+            ExpressionCurveType::Logarithmic => {
+                (1.0 + v * (self.curve_curvature - 1.0)).ln() / self.curve_curvature.ln().max(1e-5)
+            }
             ExpressionCurveType::Exponential => v.powf(self.curve_curvature),
-            ExpressionCurveType::Sigmoid => 1.0 / (1.0 + (-((v - 0.5) * 10.0 * self.curve_curvature)).exp()),
+            ExpressionCurveType::Sigmoid => {
+                1.0 / (1.0 + (-((v - 0.5) * 10.0 * self.curve_curvature)).exp())
+            }
         }
     }
 
@@ -204,4 +216,3 @@ impl MpeExpressionCurveEditor {
         norm.clamp(-1.0, 1.0) * self.pitch_bend_range_semitones
     }
 }
-

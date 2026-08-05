@@ -11,8 +11,8 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Affero General Public License for more details.
 
-use crate::renderer::RenderCommand;
 use crate::lod::LodLevel;
+use crate::renderer::RenderCommand;
 #[cfg(feature = "gui")]
 use eframe::egui;
 use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
@@ -88,7 +88,10 @@ impl SpectrumAnalyzer {
 
     /// Spawns a background thread that periodically computes a 512-point DFT
     /// from the Oscilloscope waveform data and writes 256 magnitude bins to SpectrumAnalyzer.
-    pub fn spawn_dft_thread(scope: Oscilloscope, spectrum: SpectrumAnalyzer) -> thread::JoinHandle<()> {
+    pub fn spawn_dft_thread(
+        scope: Oscilloscope,
+        spectrum: SpectrumAnalyzer,
+    ) -> thread::JoinHandle<()> {
         thread::spawn(move || {
             let mut cos_table = Vec::with_capacity(256 * 512);
             let mut sin_table = Vec::with_capacity(256 * 512);
@@ -129,7 +132,12 @@ impl Default for SpectrumAnalyzer {
 
 /// Render real-time oscilloscope waveform inside UI.
 #[cfg(feature = "gui")]
-pub fn show_oscilloscope(ui: &mut egui::Ui, scope: &Oscilloscope, width: f32, height: f32) -> egui::Response {
+pub fn show_oscilloscope(
+    ui: &mut egui::Ui,
+    scope: &Oscilloscope,
+    width: f32,
+    height: f32,
+) -> egui::Response {
     let (rect, response) = ui.allocate_exact_size(egui::vec2(width, height), egui::Sense::hover());
     let painter = ui.painter();
     painter.rect_filled(rect, 4.0, egui::Color32::from_rgb(8, 8, 12));
@@ -157,7 +165,12 @@ pub fn show_oscilloscope(ui: &mut egui::Ui, scope: &Oscilloscope, width: f32, he
 
 /// Render real-time spectrum analyzer magnitude bars inside UI.
 #[cfg(feature = "gui")]
-pub fn show_spectrum(ui: &mut egui::Ui, spectrum: &SpectrumAnalyzer, width: f32, height: f32) -> egui::Response {
+pub fn show_spectrum(
+    ui: &mut egui::Ui,
+    spectrum: &SpectrumAnalyzer,
+    width: f32,
+    height: f32,
+) -> egui::Response {
     let (rect, response) = ui.allocate_exact_size(egui::vec2(width, height), egui::Sense::hover());
     let painter = ui.painter();
     painter.rect_filled(rect, 4.0, egui::Color32::from_rgb(10, 12, 18));
@@ -194,11 +207,21 @@ pub fn show_spectrum(ui: &mut egui::Ui, spectrum: &SpectrumAnalyzer, width: f32,
 
 /// Render Phase Scope (Lissajous X/Y plot rotated 45 deg) inside UI (Step 671).
 #[cfg(feature = "gui")]
-pub fn show_phase_scope(ui: &mut egui::Ui, left_buf: &[f32], right_buf: &[f32], width: f32, height: f32) -> egui::Response {
+pub fn show_phase_scope(
+    ui: &mut egui::Ui,
+    left_buf: &[f32],
+    right_buf: &[f32],
+    width: f32,
+    height: f32,
+) -> egui::Response {
     let (rect, response) = ui.allocate_exact_size(egui::vec2(width, height), egui::Sense::hover());
     let painter = ui.painter();
     painter.rect_filled(rect, 4.0, egui::Color32::from_rgb(10, 10, 16));
-    painter.rect_stroke(rect, 4.0, egui::Stroke::new(1.0, egui::Color32::from_rgb(40, 60, 90)));
+    painter.rect_stroke(
+        rect,
+        4.0,
+        egui::Stroke::new(1.0, egui::Color32::from_rgb(40, 60, 90)),
+    );
 
     let center = rect.center();
     let radius = (rect.width().min(rect.height()) * 0.45).max(10.0);
@@ -297,16 +320,27 @@ pub fn show_quantum_tomography(
     if ui.is_rect_visible(rect) {
         let painter = ui.painter_at(rect);
         painter.rect_filled(rect, 4.0, egui::Color32::from_rgb(12, 16, 28));
-        painter.rect_stroke(rect, 4.0, egui::Stroke::new(1.0, egui::Color32::from_rgb(80, 120, 220)));
+        painter.rect_stroke(
+            rect,
+            4.0,
+            egui::Stroke::new(1.0, egui::Color32::from_rgb(80, 120, 220)),
+        );
 
         let (x, y, z, purity) = vis.read();
         let center = rect.center();
         let radius = (rect.width().min(rect.height()) * 0.4).max(10.0);
 
-        painter.circle_stroke(center, radius, egui::Stroke::new(1.0, egui::Color32::from_rgb(60, 90, 150)));
+        painter.circle_stroke(
+            center,
+            radius,
+            egui::Stroke::new(1.0, egui::Color32::from_rgb(60, 90, 150)),
+        );
         let bloch_pos = egui::pos2(center.x + x * radius, center.y - y * radius);
         painter.circle_filled(bloch_pos, 4.0, egui::Color32::from_rgb(0, 240, 255));
-        painter.line_segment([center, bloch_pos], egui::Stroke::new(1.5, egui::Color32::from_rgb(0, 240, 255)));
+        painter.line_segment(
+            [center, bloch_pos],
+            egui::Stroke::new(1.5, egui::Color32::from_rgb(0, 240, 255)),
+        );
 
         let label = format!("Purity: {:.2} | Z: {:.2}", purity, z);
         painter.text(
@@ -333,7 +367,11 @@ pub fn show_ebu_r128_loudness_meter(
     if ui.is_rect_visible(rect) {
         let painter = ui.painter_at(rect);
         painter.rect_filled(rect, 4.0, egui::Color32::from_rgb(14, 16, 22));
-        painter.rect_stroke(rect, 4.0, egui::Stroke::new(1.0, egui::Color32::from_rgb(50, 70, 100)));
+        painter.rect_stroke(
+            rect,
+            4.0,
+            egui::Stroke::new(1.0, egui::Color32::from_rgb(50, 70, 100)),
+        );
 
         let m_lufs = meter.momentary_lufs;
         let s_lufs = meter.short_term_lufs;
@@ -393,10 +431,7 @@ impl Default for AudioDriverSelectorPanel {
 
 /// Render WASAPI / ASAPI / ALSA driver device selector UI panel (Step 1269).
 #[cfg(feature = "gui")]
-pub fn show_audio_driver_selector_panel(
-    ui: &mut egui::Ui,
-    panel: &mut AudioDriverSelectorPanel,
-) {
+pub fn show_audio_driver_selector_panel(ui: &mut egui::Ui, panel: &mut AudioDriverSelectorPanel) {
     ui.group(|ui| {
         ui.heading("Audio Driver Settings & Device Selector");
         ui.separator();
@@ -406,18 +441,40 @@ pub fn show_audio_driver_selector_panel(
             egui::ComboBox::from_id_source("driver_api_combo")
                 .selected_text(&panel.selected_driver_name)
                 .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut panel.selected_driver_name, "WASAPI".to_string(), "WASAPI (Windows Native)");
-                    ui.selectable_value(&mut panel.selected_driver_name, "ASAPI".to_string(), "ASAPI (Low Latency)");
-                    ui.selectable_value(&mut panel.selected_driver_name, "ALSA".to_string(), "ALSA (Linux Audio)");
-                    ui.selectable_value(&mut panel.selected_driver_name, "AAudio".to_string(), "AAudio (Android NDK)");
-                    ui.selectable_value(&mut panel.selected_driver_name, "AudioUnit".to_string(), "AudioUnit (iOS CoreAudio)");
+                    ui.selectable_value(
+                        &mut panel.selected_driver_name,
+                        "WASAPI".to_string(),
+                        "WASAPI (Windows Native)",
+                    );
+                    ui.selectable_value(
+                        &mut panel.selected_driver_name,
+                        "ASAPI".to_string(),
+                        "ASAPI (Low Latency)",
+                    );
+                    ui.selectable_value(
+                        &mut panel.selected_driver_name,
+                        "ALSA".to_string(),
+                        "ALSA (Linux Audio)",
+                    );
+                    ui.selectable_value(
+                        &mut panel.selected_driver_name,
+                        "AAudio".to_string(),
+                        "AAudio (Android NDK)",
+                    );
+                    ui.selectable_value(
+                        &mut panel.selected_driver_name,
+                        "AudioUnit".to_string(),
+                        "AudioUnit (iOS CoreAudio)",
+                    );
                 });
         });
 
         ui.horizontal(|ui| {
             ui.label("Device:");
             if !panel.device_list.is_empty() {
-                let current_device = panel.device_list[panel.selected_device_index % panel.device_list.len()].clone();
+                let current_device = panel.device_list
+                    [panel.selected_device_index % panel.device_list.len()]
+                .clone();
                 egui::ComboBox::from_id_source("driver_device_combo")
                     .selected_text(current_device)
                     .show_ui(ui, |ui| {

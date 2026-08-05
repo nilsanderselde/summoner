@@ -95,16 +95,25 @@ impl DevicePreset {
             diffs.push(format!("Name: '{}' vs '{}'", self.name, other.name));
         }
         if self.device_kind != other.device_kind {
-            diffs.push(format!("DeviceKind: '{}' vs '{}'", self.device_kind, other.device_kind));
+            diffs.push(format!(
+                "DeviceKind: '{}' vs '{}'",
+                self.device_kind, other.device_kind
+            ));
         }
         if self.category != other.category {
-            diffs.push(format!("Category: '{}' vs '{}'", self.category, other.category));
+            diffs.push(format!(
+                "Category: '{}' vs '{}'",
+                self.category, other.category
+            ));
         }
         if self.author != other.author {
             diffs.push(format!("Author: '{}' vs '{}'", self.author, other.author));
         }
         if self.version != other.version {
-            diffs.push(format!("Version: '{}' vs '{}'", self.version, other.version));
+            diffs.push(format!(
+                "Version: '{}' vs '{}'",
+                self.version, other.version
+            ));
         }
 
         // Compare parameters
@@ -130,7 +139,11 @@ impl DevicePreset {
         }
 
         // If URL points to local or raw string representation, parse directly or create stub preset
-        let preset_name = url.split('/').next_back().unwrap_or("URL_Preset").trim_end_matches(".preset.toml");
+        let preset_name = url
+            .split('/')
+            .next_back()
+            .unwrap_or("URL_Preset")
+            .trim_end_matches(".preset.toml");
         let mut preset = Self::new(preset_name, "AetherSynth");
         preset.comment = format!("Imported from {}", url);
         preset.tags.push("cloud".to_string());
@@ -149,8 +162,8 @@ impl DevicePreset {
         // Local File Header signature (PK\x03\x04)
         zip_data.extend_from_slice(&[0x50, 0x4b, 0x03, 0x04]); // Magic
         zip_data.extend_from_slice(&[20, 0]); // Version needed
-        zip_data.extend_from_slice(&[0, 0]);  // General flag
-        zip_data.extend_from_slice(&[0, 0]);  // Compression method (0 = store)
+        zip_data.extend_from_slice(&[0, 0]); // General flag
+        zip_data.extend_from_slice(&[0, 0]); // Compression method (0 = store)
         zip_data.extend_from_slice(&[0, 0, 0, 0]); // Time/Date
         let crc = crc32_simple(toml_bytes);
         zip_data.extend_from_slice(&crc.to_le_bytes());
@@ -183,7 +196,9 @@ impl DevicePreset {
 
         let fn_len = u16::from_le_bytes([zip_bytes[26], zip_bytes[27]]) as usize;
         let extra_len = u16::from_le_bytes([zip_bytes[28], zip_bytes[29]]) as usize;
-        let comp_size = u32::from_le_bytes([zip_bytes[18], zip_bytes[19], zip_bytes[20], zip_bytes[21]]) as usize;
+        let comp_size =
+            u32::from_le_bytes([zip_bytes[18], zip_bytes[19], zip_bytes[20], zip_bytes[21]])
+                as usize;
 
         let data_start = 30 + fn_len + extra_len;
         if data_start + comp_size > zip_bytes.len() {
@@ -194,7 +209,10 @@ impl DevicePreset {
             .map_err(|e| e.to_string())?;
         let preset: DevicePreset = toml::from_str(toml_str).map_err(|e| e.to_string())?;
 
-        let dest_file = dest_dir.as_ref().join(format!("{}.preset.toml", preset.name.to_lowercase().replace(' ', "_")));
+        let dest_file = dest_dir.as_ref().join(format!(
+            "{}.preset.toml",
+            preset.name.to_lowercase().replace(' ', "_")
+        ));
         let _ = fs::create_dir_all(&dest_dir);
         let _ = fs::write(dest_file, toml_str);
 
@@ -232,13 +250,22 @@ impl DevicePreset {
         let mut val: toml::Value = toml::from_str(raw_toml).map_err(|e| e.to_string())?;
         if let Some(table) = val.as_table_mut() {
             if !table.contains_key("version") {
-                table.insert("version".to_string(), toml::Value::String("1.0.0".to_string()));
+                table.insert(
+                    "version".to_string(),
+                    toml::Value::String("1.0.0".to_string()),
+                );
             }
             if !table.contains_key("category") {
-                table.insert("category".to_string(), toml::Value::String("General".to_string()));
+                table.insert(
+                    "category".to_string(),
+                    toml::Value::String("General".to_string()),
+                );
             }
             if !table.contains_key("author") {
-                table.insert("author".to_string(), toml::Value::String("Anonymous".to_string()));
+                table.insert(
+                    "author".to_string(),
+                    toml::Value::String("Anonymous".to_string()),
+                );
             }
         }
 
@@ -255,8 +282,8 @@ impl DevicePreset {
         png_bytes.extend_from_slice(&[0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52]); // IHDR
         png_bytes.extend_from_slice(&64u32.to_be_bytes()); // Width 64
         png_bytes.extend_from_slice(&64u32.to_be_bytes()); // Height 64
-        png_bytes.extend_from_slice(&[8, 6, 0, 0, 0]);     // 8-bit RGBA
-        png_bytes.extend_from_slice(&[0, 0, 0, 0]);         // CRC placeholder
+        png_bytes.extend_from_slice(&[8, 6, 0, 0, 0]); // 8-bit RGBA
+        png_bytes.extend_from_slice(&[0, 0, 0, 0]); // CRC placeholder
 
         if let Some(parent) = path.as_ref().parent() {
             let _ = fs::create_dir_all(parent);
@@ -296,7 +323,10 @@ mod tests {
         assert!(forked.name.contains("(Fork)"));
 
         let diffs = preset.diff(&forked);
-        assert!(!diffs.is_empty(), "Diff should identify differences between preset and fork");
+        assert!(
+            !diffs.is_empty(),
+            "Diff should identify differences between preset and fork"
+        );
     }
 
     #[test]
@@ -305,10 +335,13 @@ mod tests {
         let zip_path = PathBuf::from("local/scratch/test_preset.zip");
         let dest_dir = PathBuf::from("local/scratch/installed");
 
-        preset.export_zip(&zip_path).expect("ZIP export should succeed");
+        preset
+            .export_zip(&zip_path)
+            .expect("ZIP export should succeed");
         assert!(zip_path.exists());
 
-        let installed = DevicePreset::install_zip(&zip_path, &dest_dir).expect("ZIP install should succeed");
+        let installed =
+            DevicePreset::install_zip(&zip_path, &dest_dir).expect("ZIP install should succeed");
         assert_eq!(installed.name, "Zip Preset");
 
         let _ = fs::remove_file(&zip_path);
@@ -328,7 +361,9 @@ mod tests {
         assert_eq!(migrated.version, "1.0.0");
 
         let thumb_path = PathBuf::from("local/scratch/thumb.png");
-        migrated.generate_thumbnail(&thumb_path).expect("Thumbnail generation should succeed");
+        migrated
+            .generate_thumbnail(&thumb_path)
+            .expect("Thumbnail generation should succeed");
         assert!(thumb_path.exists());
         let _ = fs::remove_file(&thumb_path);
     }

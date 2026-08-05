@@ -19,11 +19,16 @@ pub struct SclTuning {
 
 impl SclTuning {
     pub fn parse(content: &str) -> Result<Self, &'static str> {
-        let mut lines = content.lines().filter(|l| !l.trim().starts_with('!') && !l.trim().is_empty());
+        let mut lines = content
+            .lines()
+            .filter(|l| !l.trim().starts_with('!') && !l.trim().is_empty());
         let title = lines.next().ok_or("Missing title")?.trim().to_string();
         let num_notes_str = lines.next().ok_or("Missing number of notes")?;
-        let num_notes = num_notes_str.trim().parse::<usize>().map_err(|_| "Invalid number of notes")?;
-        
+        let num_notes = num_notes_str
+            .trim()
+            .parse::<usize>()
+            .map_err(|_| "Invalid number of notes")?;
+
         let mut cents_or_ratios = Vec::new();
         for line in lines.take(num_notes) {
             let val_str = line.split_whitespace().next().unwrap_or("");
@@ -34,8 +39,16 @@ impl SclTuning {
             } else if val_str.contains('/') {
                 // Ratio
                 let mut parts = val_str.split('/');
-                let num: f64 = parts.next().unwrap().parse().map_err(|_| "Invalid ratio num")?;
-                let den: f64 = parts.next().unwrap_or("1").parse().map_err(|_| "Invalid ratio den")?;
+                let num: f64 = parts
+                    .next()
+                    .unwrap()
+                    .parse()
+                    .map_err(|_| "Invalid ratio num")?;
+                let den: f64 = parts
+                    .next()
+                    .unwrap_or("1")
+                    .parse()
+                    .map_err(|_| "Invalid ratio den")?;
                 let cents = 1200.0 * (num / den).log2();
                 cents_or_ratios.push(cents);
             } else {
@@ -45,7 +58,7 @@ impl SclTuning {
                 cents_or_ratios.push(cents);
             }
         }
-        
+
         Ok(Self {
             title,
             num_notes,

@@ -1,10 +1,10 @@
 // Summoner DAW - Master Output Live Session Recorder
 // Step 1223: One-click "Record Live Session" master output recorder writing directly to offline WAV/FLAC disk files.
 
+use hound::{SampleFormat, WavSpec, WavWriter};
 use std::fs::File;
 use std::io::BufWriter;
 use std::path::{Path, PathBuf};
-use hound::{WavSpec, WavWriter, SampleFormat};
 
 /// Supported file formats for live session disk recording.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

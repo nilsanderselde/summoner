@@ -66,6 +66,11 @@ impl AsciiRenderer {
     }
 
     pub fn render_track_header(&self, track_id: u64, name: &str, level: f32) -> String {
-        format!("Track {} | {:<15} | {}", track_id, name, self.render_vu_meter(level, 20))
+        format!(
+            "Track {} | {:<15} | {}",
+            track_id,
+            name,
+            self.render_vu_meter(level, 20)
+        )
     }
 }

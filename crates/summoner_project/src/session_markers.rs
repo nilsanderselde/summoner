@@ -3,9 +3,9 @@
 //! Provides comprehensive session marker management, project chapter navigation,
 //! hotkey binding handling, CUE sheet export, and YouTube timestamp formatting.
 
+use crate::schema::{MarkerConfig, ProjectConfig};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use crate::schema::{MarkerConfig, ProjectConfig};
 
 /// Chapter type categories for song / session structure.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -26,13 +26,13 @@ impl ChapterType {
     pub fn default_color(&self) -> [u8; 3] {
         match self {
             ChapterType::Intro => [64, 158, 255],     // Blue
-            ChapterType::Verse => [103, 194, 58],    // Green
-            ChapterType::Chorus => [230, 162, 60],   // Gold / Orange
-            ChapterType::Bridge => [157, 92, 255],   // Purple
-            ChapterType::Outro => [245, 108, 108],   // Red
+            ChapterType::Verse => [103, 194, 58],     // Green
+            ChapterType::Chorus => [230, 162, 60],    // Gold / Orange
+            ChapterType::Bridge => [157, 92, 255],    // Purple
+            ChapterType::Outro => [245, 108, 108],    // Red
             ChapterType::Breakdown => [230, 126, 34], // Dark Orange
-            ChapterType::Drop => [231, 76, 60],      // Crimson
-            ChapterType::Marker => [144, 147, 153],  // Gray
+            ChapterType::Drop => [231, 76, 60],       // Crimson
+            ChapterType::Marker => [144, 147, 153],   // Gray
             ChapterType::Custom(_) => [180, 180, 180],
         }
     }
@@ -83,11 +83,20 @@ impl SessionMarker {
     }
 
     /// Create a chapter range marker (e.g. Intro, Verse, Chorus).
-    pub fn chapter(name: impl Into<String>, start_beat: f64, end_beat: f64, chapter_type: ChapterType) -> Self {
+    pub fn chapter(
+        name: impl Into<String>,
+        start_beat: f64,
+        end_beat: f64,
+        chapter_type: ChapterType,
+    ) -> Self {
         let name_str = name.into();
         let color = chapter_type.default_color();
         Self {
-            id: format!("chapter_{}_{}", start_beat as u64, name_str.replace(' ', "_")),
+            id: format!(
+                "chapter_{}_{}",
+                start_beat as u64,
+                name_str.replace(' ', "_")
+            ),
             name: name_str,
             beat: start_beat,
             end_beat: Some(end_beat),
@@ -142,7 +151,11 @@ impl From<&SessionMarker> for MarkerConfig {
             color: Some(m.color),
             end_beat: m.end_beat,
             chapter_type: Some(m.chapter_type.clone()),
-            notes: if m.notes.is_empty() { None } else { Some(m.notes.clone()) },
+            notes: if m.notes.is_empty() {
+                None
+            } else {
+                Some(m.notes.clone())
+            },
             hotkey_binding: m.hotkey_binding.clone(),
         }
     }
@@ -194,16 +207,25 @@ impl SessionMarkerNavigationManager {
 
     /// Register standard default hotkeys.
     pub fn register_default_hotkeys(&mut self) {
-        self.hotkey_bindings.insert("Ctrl+Left".to_string(), "PREV_MARKER".to_string());
-        self.hotkey_bindings.insert("P".to_string(), "PREV_MARKER".to_string());
-        self.hotkey_bindings.insert("Ctrl+Right".to_string(), "NEXT_MARKER".to_string());
-        self.hotkey_bindings.insert("N".to_string(), "NEXT_MARKER".to_string());
-        self.hotkey_bindings.insert("M".to_string(), "CREATE_MARKER".to_string());
-        self.hotkey_bindings.insert("Shift+M".to_string(), "CREATE_CHAPTER".to_string());
-        self.hotkey_bindings.insert("L".to_string(), "LOOP_ACTIVE_CHAPTER".to_string());
+        self.hotkey_bindings
+            .insert("Ctrl+Left".to_string(), "PREV_MARKER".to_string());
+        self.hotkey_bindings
+            .insert("P".to_string(), "PREV_MARKER".to_string());
+        self.hotkey_bindings
+            .insert("Ctrl+Right".to_string(), "NEXT_MARKER".to_string());
+        self.hotkey_bindings
+            .insert("N".to_string(), "NEXT_MARKER".to_string());
+        self.hotkey_bindings
+            .insert("M".to_string(), "CREATE_MARKER".to_string());
+        self.hotkey_bindings
+            .insert("Shift+M".to_string(), "CREATE_CHAPTER".to_string());
+        self.hotkey_bindings
+            .insert("L".to_string(), "LOOP_ACTIVE_CHAPTER".to_string());
         for i in 1..=9 {
-            self.hotkey_bindings.insert(format!("{}", i), format!("JUMP_INDEX_{}", i - 1));
-            self.hotkey_bindings.insert(format!("Ctrl+{}", i), format!("JUMP_INDEX_{}", i - 1));
+            self.hotkey_bindings
+                .insert(format!("{}", i), format!("JUMP_INDEX_{}", i - 1));
+            self.hotkey_bindings
+                .insert(format!("Ctrl+{}", i), format!("JUMP_INDEX_{}", i - 1));
         }
     }
 
@@ -228,9 +250,14 @@ impl SessionMarkerNavigationManager {
             self.hotkey_bindings.insert(hk.clone(), marker.id.clone());
         }
 
-        let insert_idx = self.markers.binary_search_by(|m| {
-            m.beat.partial_cmp(&marker.beat).unwrap_or(std::cmp::Ordering::Equal)
-        }).unwrap_or_else(|e| e);
+        let insert_idx = self
+            .markers
+            .binary_search_by(|m| {
+                m.beat
+                    .partial_cmp(&marker.beat)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+            .unwrap_or_else(|e| e);
 
         self.markers.insert(insert_idx, marker);
         self.active_marker_index = Some(insert_idx);
@@ -238,7 +265,13 @@ impl SessionMarkerNavigationManager {
     }
 
     /// Add a quick chapter marker.
-    pub fn add_chapter(&mut self, name: &str, start_beat: f64, end_beat: f64, chapter_type: ChapterType) -> usize {
+    pub fn add_chapter(
+        &mut self,
+        name: &str,
+        start_beat: f64,
+        end_beat: f64,
+        chapter_type: ChapterType,
+    ) -> usize {
         let marker = SessionMarker::chapter(name, start_beat, end_beat, chapter_type);
         self.add_marker(marker)
     }
@@ -330,7 +363,10 @@ impl SessionMarkerNavigationManager {
 
     /// Jump to next marker after `current_beat`.
     pub fn jump_next(&mut self, current_beat: f64) -> Option<&SessionMarker> {
-        let next_idx = self.markers.iter().position(|m| m.beat > current_beat + 0.0001);
+        let next_idx = self
+            .markers
+            .iter()
+            .position(|m| m.beat > current_beat + 0.0001);
         if let Some(idx) = next_idx {
             self.active_marker_index = Some(idx);
             Some(&self.markers[idx])
@@ -341,7 +377,10 @@ impl SessionMarkerNavigationManager {
 
     /// Jump to previous marker before `current_beat`.
     pub fn jump_prev(&mut self, current_beat: f64) -> Option<&SessionMarker> {
-        let prev_idx = self.markers.iter().rposition(|m| m.beat < current_beat - 0.0001);
+        let prev_idx = self
+            .markers
+            .iter()
+            .rposition(|m| m.beat < current_beat - 0.0001);
         if let Some(idx) = prev_idx {
             self.active_marker_index = Some(idx);
             Some(&self.markers[idx])
@@ -382,7 +421,11 @@ impl SessionMarkerNavigationManager {
 
     /// Jump to marker by name.
     pub fn jump_to_name(&mut self, name: &str) -> Option<&SessionMarker> {
-        if let Some(idx) = self.markers.iter().position(|m| m.name.eq_ignore_ascii_case(name)) {
+        if let Some(idx) = self
+            .markers
+            .iter()
+            .position(|m| m.name.eq_ignore_ascii_case(name))
+        {
             self.active_marker_index = Some(idx);
             Some(&self.markers[idx])
         } else {
@@ -391,7 +434,11 @@ impl SessionMarkerNavigationManager {
     }
 
     /// Handle keyboard input / hotkey string, returning NavigationCommand if triggered.
-    pub fn handle_key_input(&mut self, hotkey: &str, current_beat: f64) -> Option<NavigationCommand> {
+    pub fn handle_key_input(
+        &mut self,
+        hotkey: &str,
+        current_beat: f64,
+    ) -> Option<NavigationCommand> {
         if let Some(target) = self.hotkey_bindings.get(hotkey).cloned() {
             match target.as_str() {
                 "PREV_MARKER" => {
@@ -426,11 +473,17 @@ impl SessionMarkerNavigationManager {
                         let m = &self.markers[idx];
                         let start = m.beat;
                         let end = m.end_beat.unwrap_or(start + 16.0);
-                        return Some(NavigationCommand::LoopChapter { start_beat: start, end_beat: end });
+                        return Some(NavigationCommand::LoopChapter {
+                            start_beat: start,
+                            end_beat: end,
+                        });
                     } else if let Some(ch) = self.find_chapter_at(current_beat) {
                         let start = ch.beat;
                         let end = ch.end_beat.unwrap_or(start + 16.0);
-                        return Some(NavigationCommand::LoopChapter { start_beat: start, end_beat: end });
+                        return Some(NavigationCommand::LoopChapter {
+                            start_beat: start,
+                            end_beat: end,
+                        });
                     }
                 }
                 other if other.starts_with("JUMP_INDEX_") => {
@@ -489,7 +542,10 @@ impl SessionMarkerNavigationManager {
 
             out.push_str(&format!("  TRACK {:02} AUDIO\n", i + 1));
             out.push_str(&format!("    TITLE \"{}\"\n", m.name));
-            out.push_str(&format!("    INDEX 01 {:02}:{:02}:{:02}\n", mins, secs, frames));
+            out.push_str(&format!(
+                "    INDEX 01 {:02}:{:02}:{:02}\n",
+                mins, secs, frames
+            ));
         }
         out
     }
@@ -541,7 +597,10 @@ mod tests {
         assert_eq!(cmd, Some(NavigationCommand::JumpToBeat(16.0)));
 
         let cmd_create = mgr.handle_key_input("M", 100.0);
-        assert!(matches!(cmd_create, Some(NavigationCommand::MarkerCreated(_))));
+        assert!(matches!(
+            cmd_create,
+            Some(NavigationCommand::MarkerCreated(_))
+        ));
         assert_eq!(mgr.len(), 4);
 
         // Test project sync

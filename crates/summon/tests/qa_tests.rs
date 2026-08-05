@@ -35,7 +35,11 @@ fn test_aether_synth_rms_nonzero() {
     synth.process_block(&dummy_in, &mut [&mut out_l[..]], &ctx);
 
     let rms = (out_l.iter().map(|&s| (s * s) as f64).sum::<f64>() / out_l.len() as f64).sqrt();
-    assert!(rms > 0.001, "Expected non-zero RMS for AetherSynth, got {}", rms);
+    assert!(
+        rms > 0.001,
+        "Expected non-zero RMS for AetherSynth, got {}",
+        rms
+    );
 }
 
 #[test]
@@ -50,7 +54,11 @@ fn test_pluck_synth_rms_nonzero() {
     pluck.process_block(&dummy_in, &mut [&mut out_l[..]], &ctx);
 
     let rms = (out_l.iter().map(|&s| (s * s) as f64).sum::<f64>() / out_l.len() as f64).sqrt();
-    assert!(rms > 0.001, "Expected non-zero RMS for PluckSynth, got {}", rms);
+    assert!(
+        rms > 0.001,
+        "Expected non-zero RMS for PluckSynth, got {}",
+        rms
+    );
 }
 
 #[test]
@@ -65,7 +73,11 @@ fn test_fm_operator_pair_rms_nonzero() {
     fm.process_block(&dummy_in, &mut [&mut out_l[..]], &ctx);
 
     let rms = (out_l.iter().map(|&s| (s * s) as f64).sum::<f64>() / out_l.len() as f64).sqrt();
-    assert!(rms > 0.001, "Expected non-zero RMS for FmOperatorPair, got {}", rms);
+    assert!(
+        rms > 0.001,
+        "Expected non-zero RMS for FmOperatorPair, got {}",
+        rms
+    );
 }
 
 #[test]
@@ -86,7 +98,11 @@ fn test_granular_synth_rms_nonzero() {
     granular.process_block(&dummy_in, &mut [&mut out_l[..]], &ctx);
 
     let rms = (out_l.iter().map(|&s| (s * s) as f64).sum::<f64>() / out_l.len() as f64).sqrt();
-    assert!(rms > 0.0001, "Expected non-zero RMS for GranularSynthNode, got {}", rms);
+    assert!(
+        rms > 0.0001,
+        "Expected non-zero RMS for GranularSynthNode, got {}",
+        rms
+    );
 }
 
 #[test]
@@ -96,7 +112,15 @@ fn test_filter_ladder_no_nan() {
     let mut filter = FilterLadder::new(1000.0, 0.9);
 
     let extreme_inputs = vec![
-        f32::NAN, f32::INFINITY, f32::NEG_INFINITY, 1e10, -1e10, 1e-35, 0.0, 1.0, -1.0,
+        f32::NAN,
+        f32::INFINITY,
+        f32::NEG_INFINITY,
+        1e10,
+        -1e10,
+        1e-35,
+        0.0,
+        1.0,
+        -1.0,
     ];
     let mut input = Vec::new();
     for _ in 0..450 {
@@ -107,7 +131,12 @@ fn test_filter_ladder_no_nan() {
     filter.process_block(&[&input[..]], &mut [&mut out_l[..]], &ctx);
 
     for (i, &s) in out_l.iter().enumerate() {
-        assert!(s.is_finite(), "FilterLadder produced non-finite sample at index {}: {}", i, s);
+        assert!(
+            s.is_finite(),
+            "FilterLadder produced non-finite sample at index {}: {}",
+            i,
+            s
+        );
     }
 }
 
@@ -118,7 +147,15 @@ fn test_filter_svf_no_nan() {
     let mut filter = FilterSVF::new(1000.0, 0.9);
 
     let extreme_inputs = vec![
-        f32::NAN, f32::INFINITY, f32::NEG_INFINITY, 1e10, -1e10, 1e-35, 0.0, 1.0, -1.0,
+        f32::NAN,
+        f32::INFINITY,
+        f32::NEG_INFINITY,
+        1e10,
+        -1e10,
+        1e-35,
+        0.0,
+        1.0,
+        -1.0,
     ];
     let mut input = Vec::new();
     for _ in 0..450 {
@@ -129,7 +166,12 @@ fn test_filter_svf_no_nan() {
     filter.process_block(&[&input[..]], &mut [&mut out_l[..]], &ctx);
 
     for (i, &s) in out_l.iter().enumerate() {
-        assert!(s.is_finite(), "FilterSVF produced non-finite sample at index {}: {}", i, s);
+        assert!(
+            s.is_finite(),
+            "FilterSVF produced non-finite sample at index {}: {}",
+            i,
+            s
+        );
     }
 }
 
@@ -152,7 +194,12 @@ fn test_osc_saw_frequency_accuracy() {
 
     let measured_freq = zero_crossings as f64;
     let err = (measured_freq - 440.0).abs() / 440.0;
-    assert!(err < 0.001, "Measured saw frequency {} deviated by {:.4}% (expected 440 Hz)", measured_freq, err * 100.0);
+    assert!(
+        err < 0.001,
+        "Measured saw frequency {} deviated by {:.4}% (expected 440 Hz)",
+        measured_freq,
+        err * 100.0
+    );
 }
 
 #[test]
@@ -167,7 +214,11 @@ fn test_osc_pulse_pwm_duty_cycle() {
 
     let pos_count = out_l.iter().filter(|&&s| s > 0.0).count();
     let duty_cycle = pos_count as f32 / out_l.len() as f32;
-    assert!((duty_cycle - 0.25).abs() < 0.02, "Measured duty cycle {} deviates from 0.25", duty_cycle);
+    assert!(
+        (duty_cycle - 0.25).abs() < 0.02,
+        "Measured duty cycle {} deviates from 0.25",
+        duty_cycle
+    );
 }
 
 #[test]
@@ -182,20 +233,32 @@ fn test_env_adsr_shape() {
             peak = val;
         }
     }
-    assert!(peak > 0.9, "EnvADSR attack peak failed to reach ~1.0, got {}", peak);
+    assert!(
+        peak > 0.9,
+        "EnvADSR attack peak failed to reach ~1.0, got {}",
+        peak
+    );
 
     let mut sustain_val = 0.0f32;
     for _ in 0..882 {
         sustain_val = env.process_sample(44100);
     }
-    assert!((sustain_val - 0.5).abs() < 0.1, "EnvADSR decay failed to reach ~0.5 sustain, got {}", sustain_val);
+    assert!(
+        (sustain_val - 0.5).abs() < 0.1,
+        "EnvADSR decay failed to reach ~0.5 sustain, got {}",
+        sustain_val
+    );
 
     env.trigger(false);
     let mut release_val = 0.0f32;
     for _ in 0..1323 {
         release_val = env.process_sample(44100);
     }
-    assert!(release_val < 0.05, "EnvADSR release failed to decay to ~0.0, got {}", release_val);
+    assert!(
+        release_val < 0.05,
+        "EnvADSR release failed to decay to ~0.0, got {}",
+        release_val
+    );
 }
 
 #[test]
@@ -208,7 +271,10 @@ fn test_effect_chorus_modulates_signal() {
     let mut out_l = vec![0.0f32; 1024];
     chorus.process_block(&[&input[..]], &mut [&mut out_l[..]], &ctx);
 
-    assert!(out_l.iter().any(|&s| s != input[0]), "Chorus output expected to modulate signal");
+    assert!(
+        out_l.iter().any(|&s| s != input[0]),
+        "Chorus output expected to modulate signal"
+    );
 }
 
 #[test]
@@ -221,7 +287,10 @@ fn test_effect_flanger_modulates_signal() {
     let mut out_l = vec![0.0f32; 1024];
     flanger.process_block(&[&input[..]], &mut [&mut out_l[..]], &ctx);
 
-    assert!(out_l.iter().any(|&s| s != input[0]), "Flanger output expected to modulate signal");
+    assert!(
+        out_l.iter().any(|&s| s != input[0]),
+        "Flanger output expected to modulate signal"
+    );
 }
 
 #[test]
@@ -234,7 +303,10 @@ fn test_effect_phaser_modulates_signal() {
     let mut out_l = vec![0.0f32; 1024];
     phaser.process_block(&[&input[..]], &mut [&mut out_l[..]], &ctx);
 
-    assert!(out_l.iter().any(|&s| s != input[0]), "Phaser output expected to modulate signal");
+    assert!(
+        out_l.iter().any(|&s| s != input[0]),
+        "Phaser output expected to modulate signal"
+    );
 }
 
 #[test]
@@ -243,10 +315,23 @@ fn test_node_graph_topological_sort_cycle_detection() {
     let n0 = graph.add_node(Box::new(GainNode::new(1.0)));
     let n1 = graph.add_node(Box::new(GainNode::new(1.0)));
 
-    graph.add_edge(Edge { from_node: n0, from_port: 0, to_node: n1, to_port: 0 });
-    graph.add_edge(Edge { from_node: n1, from_port: 0, to_node: n0, to_port: 0 });
+    graph.add_edge(Edge {
+        from_node: n0,
+        from_port: 0,
+        to_node: n1,
+        to_port: 0,
+    });
+    graph.add_edge(Edge {
+        from_node: n1,
+        from_port: 0,
+        to_node: n0,
+        to_port: 0,
+    });
 
-    assert!(graph.has_cycle, "Expected cycle detection to set has_cycle = true");
+    assert!(
+        graph.has_cycle,
+        "Expected cycle detection to set has_cycle = true"
+    );
 }
 
 #[test]
@@ -282,7 +367,12 @@ fn test_param_bus_cross_thread_read_write() {
 fn test_mpe_router_channel_dispatch() {
     let mut router = MpeRouter::new();
     for ch in 2..=16 {
-        router.dispatch(&MpeEvent::NoteOn { voice_id: ch as u32, channel: ch, note: 60.0, velocity: 0.8 });
+        router.dispatch(&MpeEvent::NoteOn {
+            voice_id: ch as u32,
+            channel: ch,
+            note: 60.0,
+            velocity: 0.8,
+        });
     }
     let active_count = router.voices.iter().filter(|v| v.is_active).count();
     assert_eq!(active_count, 15);
@@ -296,13 +386,20 @@ fn test_harmony_bus_chord_detection_c_major() {
     context.push_note_on(67);
 
     let chord = context.analyze_active_chord();
-    assert!(chord.contains("C Major"), "Expected C Major chord detection, got '{}'", chord);
+    assert!(
+        chord.contains("C Major"),
+        "Expected C Major chord detection, got '{}'",
+        chord
+    );
 }
 
 #[test]
 fn test_euclidean_rhythm_3_8() {
     let pattern_bool = GenerativeEngine::euclidean_rhythm(3, 8);
-    let pattern_int: Vec<i32> = pattern_bool.into_iter().map(|b| if b { 1 } else { 0 }).collect();
+    let pattern_int: Vec<i32> = pattern_bool
+        .into_iter()
+        .map(|b| if b { 1 } else { 0 })
+        .collect();
     assert_eq!(pattern_int, vec![1, 0, 0, 1, 0, 0, 1, 0]);
 }
 
@@ -371,5 +468,8 @@ fn test_cli_harmony_suggest_returns_notes() {
     context.push_note_on(67);
 
     let suggestions = context.suggest_next_chord_notes();
-    assert!(!suggestions.is_empty(), "Expected non-empty harmony suggestions");
+    assert!(
+        !suggestions.is_empty(),
+        "Expected non-empty harmony suggestions"
+    );
 }

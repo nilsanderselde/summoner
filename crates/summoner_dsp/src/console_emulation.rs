@@ -66,7 +66,12 @@ impl SignalProcessor for ConsoleEmulationNode {
         "ConsoleEmulationNode"
     }
 
-    fn process_block(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], _ctx: &ProcessContext) {
+    fn process_block(
+        &mut self,
+        input: &[&[Sample]],
+        output: &mut [&mut [Sample]],
+        _ctx: &ProcessContext,
+    ) {
         if input.is_empty() || output.is_empty() {
             return;
         }
@@ -124,7 +129,11 @@ mod tests {
             console.process_block(&[&input_sig[..]], &mut [&mut out_sig[..]], &ctx);
 
             assert!(out_sig.iter().all(|s| s.is_finite()));
-            assert!(out_sig[63] != 0.0, "Console emulation mode {:?} should process audio", mode);
+            assert!(
+                out_sig[63] != 0.0,
+                "Console emulation mode {:?} should process audio",
+                mode
+            );
         }
     }
 }

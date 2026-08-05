@@ -6,11 +6,10 @@
 #[cfg(test)]
 mod tests {
     use summoner_project::media_export::{
-        LuaScriptErrorRecovery, LuaScriptEngine, LuaScriptSafeMode,
-        lua_string_lib, lua_table_lib, lua_math_lib, lua_bit_ops,
-        LuaCoroutinePattern, LuaDspObjectMetatable, LuaEventSystem, LuaTimer,
-        LuaUiWidget, LuaUiLayout, lua_color_api, LuaPainterBuffer, LuaDrawCommand,
-        lua_animate, read_midi_file, read_wav, write_wav, read_toml, write_toml,
+        lua_animate, lua_bit_ops, lua_color_api, lua_math_lib, lua_string_lib, lua_table_lib,
+        read_midi_file, read_toml, read_wav, write_toml, write_wav, LuaCoroutinePattern,
+        LuaDrawCommand, LuaDspObjectMetatable, LuaEventSystem, LuaPainterBuffer, LuaScriptEngine,
+        LuaScriptErrorRecovery, LuaScriptSafeMode, LuaTimer, LuaUiLayout, LuaUiWidget,
     };
 
     #[test]

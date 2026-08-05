@@ -13,8 +13,8 @@
 
 //! Modal resonator physical modeling primitives.
 
-use summoner_core::audio::Sample;
 use std::f32::consts::TAU;
+use summoner_core::audio::Sample;
 
 /// Second-order IIR modal bandpass resonator filter.
 #[derive(Debug, Clone)]

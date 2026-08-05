@@ -15,34 +15,30 @@
 
 #![allow(clippy::new_without_default)]
 
+pub mod ascii_renderer;
+pub mod gpu_waveform;
 pub mod lod;
+pub mod platform;
 pub mod renderer;
 pub mod visualizer;
-pub mod ascii_renderer;
 pub mod waveform_cache;
-pub mod platform;
-pub mod gpu_waveform;
 
-#[cfg(feature = "gui")]
-pub mod command_palette;
 #[cfg(feature = "gui")]
 pub mod app;
 #[cfg(feature = "gui")]
-pub mod views;
+pub mod command_palette;
+#[cfg(feature = "gui")]
+pub mod param_controls;
 #[cfg(feature = "gui")]
 pub mod stage_view;
 #[cfg(feature = "gui")]
 pub mod theme;
 #[cfg(feature = "gui")]
-pub mod touch_gestures;
-#[cfg(feature = "gui")]
-pub mod param_controls;
-#[cfg(feature = "gui")]
 pub mod tier32_tests;
 #[cfg(feature = "gui")]
-pub mod tier33_tests;
-#[cfg(feature = "gui")]
 pub mod tier33_advanced_tests;
+#[cfg(feature = "gui")]
+pub mod tier33_tests;
 #[cfg(feature = "gui")]
 pub mod tier34_tests;
 pub mod tier35_tests;
@@ -57,15 +53,21 @@ pub mod tier44_tests;
 pub mod tier45_tests;
 pub mod tier46_tests;
 pub mod tier47_tests;
-
-
+#[cfg(feature = "gui")]
+pub mod touch_gestures;
+#[cfg(feature = "gui")]
+pub mod views;
 
 #[cfg(feature = "gui")]
-pub fn launch(project: summoner_project::schema::ProjectConfig, param_bus: std::sync::Arc<summoner_core::param_bus::ParamBus>) {
+pub fn launch(
+    project: summoner_project::schema::ProjectConfig,
+    param_bus: std::sync::Arc<summoner_core::param_bus::ParamBus>,
+) {
     let native_options = eframe::NativeOptions::default();
     eframe::run_native(
         "Summoner DAW",
         native_options,
         Box::new(|_cc| Ok(Box::new(app::SummonerApp::new(project, param_bus)))),
-    ).unwrap();
+    )
+    .unwrap();
 }

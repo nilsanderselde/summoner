@@ -13,121 +13,132 @@
 
 //! SIMD synthesis primitives & DSP algorithms for Summoner DAW.
 
-pub mod composites;
-pub mod distortion;
-pub mod effects;
-pub mod delay;
-pub mod reverb;
-pub mod wavefolder;
-pub mod pitch_shifter;
+pub mod ai_mixing;
+pub mod autotune;
+pub mod biquad;
 pub mod bitcrusher;
-pub mod midside;
-pub mod parametric_eq;
-pub mod sampler;
-pub mod slicer;
+pub mod composites;
+pub mod compressor;
+pub mod console_emulation;
+pub mod delay;
+pub mod distortion;
+pub mod dither;
+pub mod drum_machine;
+pub mod ecosystem_hardware;
+pub mod effects;
 pub mod filters;
 pub mod glitch;
+pub mod granular;
+pub mod limiter;
+pub mod live_session_recorder;
 pub mod math;
+pub mod meter;
+pub mod midside;
+pub mod mod_fx;
 pub mod modal;
 pub mod modulators;
-pub mod oscillators;
-pub mod traits;
-pub mod waveguide;
-pub mod oversampling;
-pub mod biquad;
-pub mod compressor;
-pub mod limiter;
-pub mod mod_fx;
-pub mod ring_mod;
-pub mod meter;
-pub mod granular;
-pub mod drum_machine;
-pub mod stem_separator;
-pub mod plugin_host;
-pub mod tuner;
-pub mod autotune;
-pub mod dither;
-pub mod sample_editor;
 pub mod multiband_compressor;
-pub mod tape_saturation;
-pub mod tube_saturation;
-pub mod console_emulation;
-pub mod track_dsp;
 pub mod neural_dsp;
-pub mod ecosystem_hardware;
-pub mod spatial_audio;
-pub mod ai_mixing;
-pub mod quantum_audio;
 pub mod neuro_synthesis;
-pub mod zero_gravity_fluid;
-pub mod spectrogram_art;
-pub mod live_session_recorder;
-pub mod visualizer_engine;
+pub mod oscillators;
+pub mod oversampling;
+pub mod parametric_eq;
+pub mod pitch_shifter;
+pub mod plugin_host;
+pub mod quantum_audio;
+pub mod reverb;
+pub mod ring_mod;
+pub mod sample_editor;
+pub mod sampler;
+pub mod slicer;
+pub mod spatial_audio;
 pub mod spectral_eq;
+pub mod spectrogram_art;
+pub mod stem_separator;
+pub mod tape_saturation;
+pub mod track_dsp;
+pub mod traits;
+pub mod tube_saturation;
+pub mod tuner;
+pub mod visualizer_engine;
+pub mod wavefolder;
+pub mod waveguide;
+pub mod zero_gravity_fluid;
 
-pub use sample_editor::*;
-pub use track_dsp::*;
-pub use neural_dsp::*;
-pub use ecosystem_hardware::*;
-pub use spatial_audio::*;
 pub use ai_mixing::*;
-pub use quantum_audio::*;
-pub use neuro_synthesis::*;
-pub use zero_gravity_fluid::*;
-pub use spectrogram_art::*;
-pub use live_session_recorder::*;
-pub use visualizer_engine::*;
-pub use spectral_eq::MultiChannelSpectralEqualizerNode;
-pub use multiband_compressor::MultibandCompressorNode;
-pub use tape_saturation::TapeSaturationNode;
-pub use tube_saturation::TubeSaturationNode;
 pub use console_emulation::{ConsoleEmulationNode, ConsoleMode};
+pub use ecosystem_hardware::*;
+pub use live_session_recorder::*;
+pub use multiband_compressor::MultibandCompressorNode;
+pub use neural_dsp::*;
+pub use neuro_synthesis::*;
+pub use quantum_audio::*;
+pub use sample_editor::*;
+pub use spatial_audio::*;
+pub use spectral_eq::MultiChannelSpectralEqualizerNode;
+pub use spectrogram_art::*;
+pub use tape_saturation::TapeSaturationNode;
+pub use track_dsp::*;
+pub use tube_saturation::TubeSaturationNode;
+pub use visualizer_engine::*;
+pub use zero_gravity_fluid::*;
 
 pub use plugin_host::{
-    PluginAudioNode, PluginDescriptor, PluginFormat, PluginParamInfo, PluginStateConfig,
-    scan_plugin_directory,
+    scan_plugin_directory, PluginAudioNode, PluginDescriptor, PluginFormat, PluginParamInfo,
+    PluginStateConfig,
 };
 
+pub use biquad::{FilterBiquad, FilterType};
+pub use bitcrusher::BitcrusherNode;
 pub use composites::{
     AetherSynth, AtmosphericPadSynth, CyberpunkSubSynth, FmOperatorPair, GlitchAetherMachine,
     GlitchPercussionSynth, PluckSynth, SamplerDevice,
 };
-pub use drum_machine::{DrumMachineDevice, DrumPad, MAX_PADS};
-pub use stem_separator::{StemSeparator, StemMetadata, StemMetadataParser, MultiTrackAudioRouter, ONNX_STEM_SEPARATOR_MODEL_BYTES};
-pub use distortion::{DistortionNode, DistortionType};
-pub use effects::{EffectDelay as LegacyEffectDelay, EffectReverb as LegacyEffectReverb, NoiseGateNode, DeesserNode, HarmonicExciterNode};
+pub use compressor::CompressorNode;
 pub use delay::EffectDelay;
-pub use reverb::{EffectReverb, ConvolutionReverbNode};
-pub use wavefolder::WavefolderNode;
-pub use pitch_shifter::PitchShifterNode;
-pub use bitcrusher::BitcrusherNode;
-pub use midside::{MidSideNode, StereoImager};
-pub use parametric_eq::{ParametricEqNode, EqBand};
-pub use filters::{FilterComb, FilterLadder, FilterSVF, DcBlockFilter, LowCutFilter, HighCutFilter};
+pub use distortion::{DistortionNode, DistortionType};
+pub use dither::{apply_dither, DitherType};
+pub use drum_machine::{DrumMachineDevice, DrumPad, MAX_PADS};
+pub use effects::{
+    DeesserNode, EffectDelay as LegacyEffectDelay, EffectReverb as LegacyEffectReverb,
+    HarmonicExciterNode, NoiseGateNode,
+};
+pub use filters::{
+    DcBlockFilter, FilterComb, FilterLadder, FilterSVF, HighCutFilter, LowCutFilter,
+};
 pub use glitch::{AudioReverse, GlitchGate, GlitchShuffle, GlitchStutter, TapeStop};
+pub use granular::GranularSynthNode;
+pub use limiter::{LimiterNode, MasterLimiter};
 pub use math::{MathAdd, MathMult, VCA};
+pub use meter::{
+    k_system_headroom, EbuR128LoudnessMeter, KSystemScale, LufsMeterNode, PeakHeadroomAnalyzer,
+    TruePeakMeter,
+};
+pub use midside::{MidSideNode, StereoImager};
+pub use mod_fx::{EffectChorus, EffectFlanger, EffectPhaser};
 pub use modal::ModalResonator;
 pub use modulators::{
     EnvADSR, EnvState, LfoShape, MacroKnob, MacroModulationMatrix, ModulationAssignment,
     ModulationCurve, ModulationSourceId, ModulationTarget, ModulationTargetId, LFO,
 };
 pub use oscillators::{
-    DEFAULT_MAX_VOICES, NoiseGen, NoiseType, OscPulse, OscSaw, OscSine, OscTriangle, OscWavetable,
-    SimdPolyVoice, SimdPolyWavetableOscillator, WAVETABLE_SIZE, render_buffer_to_wavetable,
+    render_buffer_to_wavetable, NoiseGen, NoiseType, OscPulse, OscSaw, OscSine, OscTriangle,
+    OscWavetable, SimdPolyVoice, SimdPolyWavetableOscillator, DEFAULT_MAX_VOICES, WAVETABLE_SIZE,
 };
-pub use traits::{ProcessorNodeAdapter, SignalProcessor};
-pub use waveguide::KarplusStrongString;
+pub use oversampling::Oversampler;
+pub use parametric_eq::{EqBand, ParametricEqNode};
+pub use pitch_shifter::PitchShifterNode;
+pub use reverb::{ConvolutionReverbNode, EffectReverb};
+pub use ring_mod::{FrequencyShifter, RingModWaveform, RingModulator};
 pub use sampler::{SampleBuffer, SamplerNode};
 pub use slicer::{AutoSlicer, SliceMarker, ONNX_TRANSIENT_MODEL_BYTES};
-pub use oversampling::Oversampler;
-pub use biquad::{FilterBiquad, FilterType};
-pub use compressor::CompressorNode;
-pub use limiter::{LimiterNode, MasterLimiter};
-pub use mod_fx::{EffectChorus, EffectFlanger, EffectPhaser};
-pub use ring_mod::{RingModulator, FrequencyShifter, RingModWaveform};
-pub use meter::{LufsMeterNode, TruePeakMeter, KSystemScale, k_system_headroom, EbuR128LoudnessMeter, PeakHeadroomAnalyzer};
-pub use dither::{DitherType, apply_dither};
-pub use granular::GranularSynthNode;
+pub use stem_separator::{
+    MultiTrackAudioRouter, StemMetadata, StemMetadataParser, StemSeparator,
+    ONNX_STEM_SEPARATOR_MODEL_BYTES,
+};
+pub use traits::{ProcessorNodeAdapter, SignalProcessor};
+pub use wavefolder::WavefolderNode;
+pub use waveguide::KarplusStrongString;
 
 use summoner_core::audio::Sample;
 use summoner_core::node::{AudioNode, ProcessContext};
@@ -197,7 +208,11 @@ mod tests {
         wavefolder.process_block(&[&in_buf_l[..]], &mut [&mut out_l[..]], &ctx);
         pitch_shifter.process_block(&[&in_buf_l[..]], &mut [&mut out_l[..]], &ctx);
         bitcrusher.process_block(&[&in_buf_l[..]], &mut [&mut out_l[..]], &ctx);
-        midside.process_block(&[&in_buf_l[..], &in_buf_r[..]], &mut [&mut out_l[..], &mut out_r[..]], &ctx);
+        midside.process_block(
+            &[&in_buf_l[..], &in_buf_r[..]],
+            &mut [&mut out_l[..], &mut out_r[..]],
+            &ctx,
+        );
         eq.process_block(&[&in_buf_l[..]], &mut [&mut out_l[..]], &ctx);
 
         assert!(out_l.iter().all(|s| s.is_finite()));

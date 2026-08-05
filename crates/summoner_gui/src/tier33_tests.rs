@@ -5,11 +5,13 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::app::{SummonerApp, GuiState};
-    use summoner_project::schema::{ProjectConfig, TrackConfig, SequenceConfig, TrackerStepConfig, ProjectMetadata};
-    use summoner_core::param_bus::ParamBus;
-    use std::sync::Arc;
+    use crate::app::{GuiState, SummonerApp};
     use std::path::PathBuf;
+    use std::sync::Arc;
+    use summoner_core::param_bus::ParamBus;
+    use summoner_project::schema::{
+        ProjectConfig, ProjectMetadata, SequenceConfig, TrackConfig, TrackerStepConfig,
+    };
 
     #[test]
     fn test_tier33_keyboard_shortcuts_and_window_state() {
@@ -24,7 +26,8 @@ mod tests {
         app.snap_to_edges = true;
         app.show_project_notes_panel = true;
 
-        let test_path = std::env::temp_dir().join(format!("test_tier33_gui_state_{}.toml", std::process::id()));
+        let test_path =
+            std::env::temp_dir().join(format!("test_tier33_gui_state_{}.toml", std::process::id()));
         let state = GuiState {
             current_view: app.current_view.clone(),
             selected_track_id: app.selected_track_id,
@@ -69,12 +72,16 @@ mod tests {
         let bus = Arc::new(ParamBus::new());
         let mut app = SummonerApp::new(ProjectConfig::default(), bus);
 
-        let res_wav = app.handle_dropped_file(std::path::Path::new("samples/kick.wav")).unwrap();
+        let res_wav = app
+            .handle_dropped_file(std::path::Path::new("samples/kick.wav"))
+            .unwrap();
         assert!(res_wav.contains("Added audio asset"));
         assert_eq!(app.project.assets.len(), 1);
         assert_eq!(app.project.assets[0].path, "samples/kick.wav");
 
-        let res_flac = app.handle_dropped_file(std::path::Path::new("samples/snare.flac")).unwrap();
+        let res_flac = app
+            .handle_dropped_file(std::path::Path::new("samples/snare.flac"))
+            .unwrap();
         assert!(res_flac.contains("Added audio asset"));
         assert_eq!(app.project.assets.len(), 2);
 
@@ -108,7 +115,10 @@ mod tests {
         app.move_clip_between_tracks(1, 0, 2).unwrap();
         assert_eq!(app.project.tracks[0].clips.len(), 0);
         assert_eq!(app.project.tracks[1].clips.len(), 1);
-        assert_eq!(app.project.tracks[1].clips[0].clip_name.as_deref(), Some("Clip A"));
+        assert_eq!(
+            app.project.tracks[1].clips[0].clip_name.as_deref(),
+            Some("Clip A")
+        );
 
         // Drag preset into Arranger
         let new_track_id = app.create_track_from_preset("OscSaw");
@@ -132,7 +142,11 @@ mod tests {
 
         let path = std::path::Path::new("export/master.wav");
         app.share_project_export(path);
-        assert!(app.last_share_action_message.as_ref().unwrap().contains("master.wav"));
+        assert!(app
+            .last_share_action_message
+            .as_ref()
+            .unwrap()
+            .contains("master.wav"));
     }
 
     #[test]

@@ -57,13 +57,22 @@ impl SignalProcessor for MultibandCompressorNode {
         "MultibandCompressorNode"
     }
 
-    fn process_block(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
+    fn process_block(
+        &mut self,
+        input: &[&[Sample]],
+        output: &mut [&mut [Sample]],
+        ctx: &ProcessContext,
+    ) {
         if input.is_empty() || output.is_empty() {
             return;
         }
 
         let num_samples = input[0].len().min(output[0].len());
-        let sr = if ctx.sample_rate > 0 { ctx.sample_rate } else { 44100 };
+        let sr = if ctx.sample_rate > 0 {
+            ctx.sample_rate
+        } else {
+            44100
+        };
 
         let mut low_in = vec![0.0f32; num_samples];
         let mut mid_in = vec![0.0f32; num_samples];
@@ -87,9 +96,12 @@ impl SignalProcessor for MultibandCompressorNode {
         }
 
         // Compress each band independently
-        self.low_comp.process_block(&[&low_in[..]], &mut [&mut low_out[..]], ctx);
-        self.mid_comp.process_block(&[&mid_in[..]], &mut [&mut mid_out[..]], ctx);
-        self.high_comp.process_block(&[&high_in[..]], &mut [&mut high_out[..]], ctx);
+        self.low_comp
+            .process_block(&[&low_in[..]], &mut [&mut low_out[..]], ctx);
+        self.mid_comp
+            .process_block(&[&mid_in[..]], &mut [&mut mid_out[..]], ctx);
+        self.high_comp
+            .process_block(&[&high_in[..]], &mut [&mut high_out[..]], ctx);
 
         // Sum bands back together into output channels
         for i in 0..num_samples {
@@ -117,7 +129,13 @@ mod tests {
 
         mb_comp.process_block(&[&input_sig[..]], &mut [&mut out_sig[..]], &ctx);
 
-        assert!(out_sig.iter().all(|s| s.is_finite()), "Multiband output must be finite");
-        assert!(out_sig.iter().any(|s| *s != 0.0), "Multiband output should produce non-zero signal");
+        assert!(
+            out_sig.iter().all(|s| s.is_finite()),
+            "Multiband output must be finite"
+        );
+        assert!(
+            out_sig.iter().any(|s| *s != 0.0),
+            "Multiband output should produce non-zero signal"
+        );
     }
 }

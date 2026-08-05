@@ -2,16 +2,14 @@
 
 #[cfg(test)]
 mod tests {
-    use summoner_dsp::oscillators::{
-        SimdPolyWavetableOscillator, OscWavetable,
-    };
-    use summoner_dsp::SignalProcessor;
     use summoner_core::node::ProcessContext;
+    use summoner_dsp::oscillators::{OscWavetable, SimdPolyWavetableOscillator};
+    use summoner_dsp::SignalProcessor;
 
     #[test]
     fn test_step_1261_simd_polyphonic_wavetable_oscillator_gui_integration() {
         let mut synth = SimdPolyWavetableOscillator::new(48000);
-        
+
         // Polyphonic note trigger
         synth.note_on(48, 0.9); // C3
         synth.note_on(52, 0.8); // E3
@@ -23,7 +21,9 @@ mod tests {
         // Wavetable morphing setup
         let sine_table = OscWavetable::default_sine();
         let triangle_table = OscWavetable::default_triangle();
-        synth = synth.with_table(sine_table).with_table2(triangle_table, 0.75);
+        synth = synth
+            .with_table(sine_table)
+            .with_table2(triangle_table, 0.75);
 
         let mut out_buffer = vec![vec![0.0f32; 512]; 2];
         let mut slices: Vec<&mut [f32]> = out_buffer.iter_mut().map(|v| v.as_mut_slice()).collect();
@@ -52,8 +52,8 @@ mod tests {
 
     #[test]
     fn test_step_1262_multi_channel_spectral_equalizer_node() {
-        use summoner_dsp::MultiChannelSpectralEqualizerNode;
         use summoner_core::node::AudioNode;
+        use summoner_dsp::MultiChannelSpectralEqualizerNode;
 
         let mut eq = MultiChannelSpectralEqualizerNode::new(48000, 2, 8);
         eq.set_band_gain(0, 6.0);
@@ -79,8 +79,8 @@ mod tests {
 
     #[test]
     fn test_step_1263_adaptive_buffer_size_auto_scaling() {
-        use summoner_core::adaptive_buffer::AdaptiveBufferScaler;
         use std::time::Duration;
+        use summoner_core::adaptive_buffer::AdaptiveBufferScaler;
 
         let mut scaler = AdaptiveBufferScaler::new(48000, 256);
         assert_eq!(scaler.current_buffer_size, 256);
@@ -97,9 +97,11 @@ mod tests {
 
     #[test]
     fn test_step_1264_stem_metadata_and_multi_track_router() {
-        use summoner_dsp::stem_separator::{StemMetadata, StemMetadataParser, MultiTrackAudioRouter};
-        use summoner_dsp::sampler::SampleBuffer;
         use std::collections::HashMap;
+        use summoner_dsp::sampler::SampleBuffer;
+        use summoner_dsp::stem_separator::{
+            MultiTrackAudioRouter, StemMetadata, StemMetadataParser,
+        };
 
         let parser = StemMetadataParser::new();
         let metadata = vec![
@@ -125,8 +127,14 @@ mod tests {
 
         let router = MultiTrackAudioRouter::new(2);
         let mut stems = HashMap::new();
-        stems.insert("drums".to_string(), SampleBuffer::new(vec![0.8f32; 100], 48000, 1));
-        stems.insert("bass".to_string(), SampleBuffer::new(vec![0.4f32; 100], 48000, 1));
+        stems.insert(
+            "drums".to_string(),
+            SampleBuffer::new(vec![0.8f32; 100], 48000, 1),
+        );
+        stems.insert(
+            "bass".to_string(),
+            SampleBuffer::new(vec![0.4f32; 100], 48000, 1),
+        );
 
         let routed = router.route_stems(&stems, &metadata);
         assert_eq!(routed.len(), 2);
@@ -134,7 +142,7 @@ mod tests {
 
     #[test]
     fn test_step_1265_mpe_expression_curve_editor() {
-        use summoner_core::mpe::{MpeExpressionCurveEditor, ExpressionCurveType};
+        use summoner_core::mpe::{ExpressionCurveType, MpeExpressionCurveEditor};
 
         let editor = MpeExpressionCurveEditor::new(48.0);
         let val_lin = editor.map_expression_value(0.5, ExpressionCurveType::Linear);
@@ -148,7 +156,7 @@ mod tests {
 
     #[test]
     fn test_step_1267_neural_audio_style_transfer_renderer() {
-        use summoner_dsp::neural_dsp::{NeuralAudioStyleTransferPreviewRenderer, AudioStylePreset};
+        use summoner_dsp::neural_dsp::{AudioStylePreset, NeuralAudioStyleTransferPreviewRenderer};
         use summoner_dsp::sampler::SampleBuffer;
 
         let renderer = NeuralAudioStyleTransferPreviewRenderer::new();
@@ -198,13 +206,19 @@ mod tests {
         let mut manager = ProjectAutoSaveManager::new(&dir, 1, 3);
         assert!(manager.should_auto_save());
 
-        let snapshot_path = manager.create_backup_snapshot(&project).expect("Snapshot creation should succeed");
+        let snapshot_path = manager
+            .create_backup_snapshot(&project)
+            .expect("Snapshot creation should succeed");
         assert!(snapshot_path.exists());
 
-        let backups = manager.list_backups().expect("Listing backups should succeed");
+        let backups = manager
+            .list_backups()
+            .expect("Listing backups should succeed");
         assert!(!backups.is_empty());
 
-        let restored = manager.restore_snapshot(&snapshot_path).expect("Restore should succeed");
+        let restored = manager
+            .restore_snapshot(&snapshot_path)
+            .expect("Restore should succeed");
         assert_eq!(restored.name, "AutoSave Test Session");
 
         let _ = std::fs::remove_dir_all(&dir);
@@ -223,14 +237,18 @@ mod tests {
         assert_eq!(manager.auto_save_interval.as_secs(), 60);
         assert_eq!(manager.max_backups, 5);
 
-        let snapshot = manager.create_backup_snapshot(&project).expect("Backup creation should succeed");
+        let snapshot = manager
+            .create_backup_snapshot(&project)
+            .expect("Backup creation should succeed");
         assert!(snapshot.exists());
         let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
     fn test_step_1268_cli_project_wizard_template_creation() {
-        use summoner_project::{create_project_from_template, serialize_project_toml, parse_project_toml};
+        use summoner_project::{
+            create_project_from_template, parse_project_toml, serialize_project_toml,
+        };
 
         let template_names = vec!["Default", "Electronic", "Orchestral", "Minimal"];
         for t in template_names {
@@ -258,4 +276,3 @@ mod tests {
         assert!(panel.exclusive_mode);
     }
 }
-

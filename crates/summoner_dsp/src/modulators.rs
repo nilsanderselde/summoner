@@ -670,13 +670,7 @@ mod tests {
         let filter_cutoff = matrix.add_target("Filter Cutoff", 1000.0, 20.0, 20000.0);
         let amp_gain = matrix.add_target("Amplifier Gain", 0.5, 0.0, 1.0);
 
-        matrix.add_assignment(
-            macro_src,
-            filter_cutoff,
-            0.5,
-            true,
-            ModulationCurve::Linear,
-        );
+        matrix.add_assignment(macro_src, filter_cutoff, 0.5, true, ModulationCurve::Linear);
         matrix.add_assignment(
             lfo_src,
             filter_cutoff,

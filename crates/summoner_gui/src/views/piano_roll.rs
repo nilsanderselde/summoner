@@ -1,8 +1,8 @@
 use eframe::egui;
 use std::collections::HashSet;
-use summoner_project::schema::{SequenceConfig, TrackerStepConfig};
-use summoner_harmony::edo::EdoTuning;
 use summoner_harmony::bus::HarmonicContext;
+use summoner_harmony::edo::EdoTuning;
+use summoner_project::schema::{SequenceConfig, TrackerStepConfig};
 
 #[derive(PartialEq, Clone, Copy, Debug)]
 pub enum PianoRollMode {
@@ -91,7 +91,6 @@ impl Default for PianoRollState {
     }
 }
 
-
 pub struct Viewport {
     pub width: f32,
     pub height: f32,
@@ -122,7 +121,11 @@ pub fn redo_pattern(state: &mut PianoRollState, steps: &mut Vec<TrackerStepConfi
     }
 }
 
-pub fn snap_pitch_to_scale(pitch: f64, tuning: &EdoTuning, harmonic_ctx: Option<&HarmonicContext>) -> f64 {
+pub fn snap_pitch_to_scale(
+    pitch: f64,
+    tuning: &EdoTuning,
+    harmonic_ctx: Option<&HarmonicContext>,
+) -> f64 {
     if let Some(hc) = harmonic_ctx {
         let keys_per_oct = (tuning.divisions as usize).max(1);
         let pitch_int = pitch.round() as i32;
@@ -191,12 +194,21 @@ pub fn parse_chord_notes(chord_str: &str, base_octave: u8) -> Vec<f64> {
     };
 
     let base_midi = (base_octave as i32 + 1) * 12 + root_pc;
-    intervals.iter().map(|&semi| (base_midi + semi) as f64).collect()
+    intervals
+        .iter()
+        .map(|&semi| (base_midi + semi) as f64)
+        .collect()
 }
 
-pub fn arpeggiate_selected_notes(sequence: &mut SequenceConfig, selected: &HashSet<usize>, pattern_mode: &str) {
+pub fn arpeggiate_selected_notes(
+    sequence: &mut SequenceConfig,
+    selected: &HashSet<usize>,
+    pattern_mode: &str,
+) {
     let active_indices: Vec<usize> = if selected.is_empty() {
-        (0..sequence.steps.len()).filter(|&i| sequence.steps[i].active).collect()
+        (0..sequence.steps.len())
+            .filter(|&i| sequence.steps[i].active)
+            .collect()
     } else {
         let mut v: Vec<usize> = selected.iter().copied().collect();
         v.sort_unstable();
@@ -205,7 +217,10 @@ pub fn arpeggiate_selected_notes(sequence: &mut SequenceConfig, selected: &HashS
     if active_indices.is_empty() {
         return;
     }
-    let notes: Vec<f64> = active_indices.iter().map(|&i| sequence.steps[i].note).collect();
+    let notes: Vec<f64> = active_indices
+        .iter()
+        .map(|&i| sequence.steps[i].note)
+        .collect();
     let mut sorted_notes = notes.clone();
     sorted_notes.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
 
@@ -259,7 +274,9 @@ pub fn note_name_for_pitch(pitch: f64, keys_per_octave: usize) -> String {
     let oct = p / keys_per_octave.max(1);
     let pc = p % keys_per_octave.max(1);
     if keys_per_octave == 12 {
-        let names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+        let names = [
+            "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
+        ];
         format!("{}{}", names[pc], oct)
     } else {
         format!("d{}{}", pc, oct)
@@ -357,7 +374,9 @@ pub fn show_piano_roll(
             for (i, s) in sequence.steps.iter_mut().enumerate() {
                 if state.selected_notes.is_empty() || state.selected_notes.contains(&i) {
                     s.note = (s.note - 12.0).max(0.0);
-                    if state.lock_scale { s.note = snap_pitch_to_scale(s.note, tuning, harmonic_ctx); }
+                    if state.lock_scale {
+                        s.note = snap_pitch_to_scale(s.note, tuning, harmonic_ctx);
+                    }
                 }
             }
         }
@@ -366,7 +385,9 @@ pub fn show_piano_roll(
             for (i, s) in sequence.steps.iter_mut().enumerate() {
                 if state.selected_notes.is_empty() || state.selected_notes.contains(&i) {
                     s.note = (s.note - 1.0).max(0.0);
-                    if state.lock_scale { s.note = snap_pitch_to_scale(s.note, tuning, harmonic_ctx); }
+                    if state.lock_scale {
+                        s.note = snap_pitch_to_scale(s.note, tuning, harmonic_ctx);
+                    }
                 }
             }
         }
@@ -375,7 +396,9 @@ pub fn show_piano_roll(
             for (i, s) in sequence.steps.iter_mut().enumerate() {
                 if state.selected_notes.is_empty() || state.selected_notes.contains(&i) {
                     s.note = (s.note + 1.0).min(127.0);
-                    if state.lock_scale { s.note = snap_pitch_to_scale(s.note, tuning, harmonic_ctx); }
+                    if state.lock_scale {
+                        s.note = snap_pitch_to_scale(s.note, tuning, harmonic_ctx);
+                    }
                 }
             }
         }
@@ -384,7 +407,9 @@ pub fn show_piano_roll(
             for (i, s) in sequence.steps.iter_mut().enumerate() {
                 if state.selected_notes.is_empty() || state.selected_notes.contains(&i) {
                     s.note = (s.note + 12.0).min(127.0);
-                    if state.lock_scale { s.note = snap_pitch_to_scale(s.note, tuning, harmonic_ctx); }
+                    if state.lock_scale {
+                        s.note = snap_pitch_to_scale(s.note, tuning, harmonic_ctx);
+                    }
                 }
             }
         }
@@ -420,7 +445,9 @@ pub fn show_piano_roll(
                     let step = &mut sequence.steps[i];
                     let shift = (((i as i32 * 7) % 7) - 3) as f64;
                     step.note = (step.note + shift).clamp(36.0, 96.0);
-                    if state.lock_scale { step.note = snap_pitch_to_scale(step.note, tuning, harmonic_ctx); }
+                    if state.lock_scale {
+                        step.note = snap_pitch_to_scale(step.note, tuning, harmonic_ctx);
+                    }
                     step.velocity = (step.velocity + (seed - 0.5) * 0.4).clamp(0.1, 1.0);
                 }
             }
@@ -430,15 +457,26 @@ pub fn show_piano_roll(
 
         if ui.button("🤖 AI Suggest").clicked() {
             push_history(state, &sequence.steps);
-            let active_notes: Vec<u8> = sequence.steps.iter().filter(|s| s.active).map(|s| s.note as u8).collect();
-            let seed_notes = if active_notes.is_empty() { vec![60, 62, 64] } else { active_notes };
-            let gen_melody = summoner_sequencer::generate_melody_onnx(&seed_notes, sequence.steps.len());
+            let active_notes: Vec<u8> = sequence
+                .steps
+                .iter()
+                .filter(|s| s.active)
+                .map(|s| s.note as u8)
+                .collect();
+            let seed_notes = if active_notes.is_empty() {
+                vec![60, 62, 64]
+            } else {
+                active_notes
+            };
+            let gen_melody =
+                summoner_sequencer::generate_melody_onnx(&seed_notes, sequence.steps.len());
             for (idx, &pitch) in gen_melody.iter().enumerate() {
                 if idx < sequence.steps.len() {
                     sequence.steps[idx].note = pitch as f64;
                     sequence.steps[idx].active = true;
                     if state.lock_scale {
-                        sequence.steps[idx].note = snap_pitch_to_scale(sequence.steps[idx].note, tuning, harmonic_ctx);
+                        sequence.steps[idx].note =
+                            snap_pitch_to_scale(sequence.steps[idx].note, tuning, harmonic_ctx);
                     }
                 }
             }
@@ -461,7 +499,11 @@ pub fn show_piano_roll(
         if ui.button("🎵 Apply Groove").clicked() {
             push_history(state, &sequence.steps);
             let template = groove_templates[state.selected_groove_idx % 4].1;
-            summoner_sequencer::apply_groove_quantize(&mut sequence.steps, template, state.groove_amount);
+            summoner_sequencer::apply_groove_quantize(
+                &mut sequence.steps,
+                template,
+                state.groove_amount,
+            );
         }
         ui.add(egui::Slider::new(&mut state.groove_amount, 0.0..=1.0).text("Amt"));
     });
@@ -469,10 +511,22 @@ pub fn show_piano_roll(
     // Header toolbar - Row 3 (Arpeggiator, Chord Input & Note Length Quick Buttons - Step 458-461)
     ui.horizontal(|ui| {
         ui.label("Arp:");
-        if ui.button("▲ Up").clicked() { push_history(state, &sequence.steps); arpeggiate_selected_notes(sequence, &state.selected_notes, "Up"); }
-        if ui.button("▼ Down").clicked() { push_history(state, &sequence.steps); arpeggiate_selected_notes(sequence, &state.selected_notes, "Down"); }
-        if ui.button("▲▼ UpDown").clicked() { push_history(state, &sequence.steps); arpeggiate_selected_notes(sequence, &state.selected_notes, "UpDown"); }
-        if ui.button("🔀 Rand").clicked() { push_history(state, &sequence.steps); arpeggiate_selected_notes(sequence, &state.selected_notes, "Random"); }
+        if ui.button("▲ Up").clicked() {
+            push_history(state, &sequence.steps);
+            arpeggiate_selected_notes(sequence, &state.selected_notes, "Up");
+        }
+        if ui.button("▼ Down").clicked() {
+            push_history(state, &sequence.steps);
+            arpeggiate_selected_notes(sequence, &state.selected_notes, "Down");
+        }
+        if ui.button("▲▼ UpDown").clicked() {
+            push_history(state, &sequence.steps);
+            arpeggiate_selected_notes(sequence, &state.selected_notes, "UpDown");
+        }
+        if ui.button("🔀 Rand").clicked() {
+            push_history(state, &sequence.steps);
+            arpeggiate_selected_notes(sequence, &state.selected_notes, "Random");
+        }
         ui.separator();
         ui.label("Chord:");
         ui.text_edit_singleline(&mut state.chord_input);
@@ -495,25 +549,33 @@ pub fn show_piano_roll(
         if ui.button("1/4").clicked() {
             push_history(state, &sequence.steps);
             for (i, s) in sequence.steps.iter_mut().enumerate() {
-                if state.selected_notes.is_empty() || state.selected_notes.contains(&i) { s.gate = 1.0; }
+                if state.selected_notes.is_empty() || state.selected_notes.contains(&i) {
+                    s.gate = 1.0;
+                }
             }
         }
         if ui.button("1/8").clicked() {
             push_history(state, &sequence.steps);
             for (i, s) in sequence.steps.iter_mut().enumerate() {
-                if state.selected_notes.is_empty() || state.selected_notes.contains(&i) { s.gate = 0.5; }
+                if state.selected_notes.is_empty() || state.selected_notes.contains(&i) {
+                    s.gate = 0.5;
+                }
             }
         }
         if ui.button("1/16").clicked() {
             push_history(state, &sequence.steps);
             for (i, s) in sequence.steps.iter_mut().enumerate() {
-                if state.selected_notes.is_empty() || state.selected_notes.contains(&i) { s.gate = 0.25; }
+                if state.selected_notes.is_empty() || state.selected_notes.contains(&i) {
+                    s.gate = 0.25;
+                }
             }
         }
         if ui.button("1/32").clicked() {
             push_history(state, &sequence.steps);
             for (i, s) in sequence.steps.iter_mut().enumerate() {
-                if state.selected_notes.is_empty() || state.selected_notes.contains(&i) { s.gate = 0.125; }
+                if state.selected_notes.is_empty() || state.selected_notes.contains(&i) {
+                    s.gate = 0.125;
+                }
             }
         }
     });
@@ -522,19 +584,34 @@ pub fn show_piano_roll(
     ui.horizontal(|ui| {
         ui.label("Pattern Len:");
         let mut len = sequence.steps.len();
-        if ui.add(egui::Slider::new(&mut len, 1..=64).text("Steps")).changed() {
+        if ui
+            .add(egui::Slider::new(&mut len, 1..=64).text("Steps"))
+            .changed()
+        {
             push_history(state, &sequence.steps);
             summoner_sequencer::set_pattern_length(sequence, len);
         }
 
-        if ui.toggle_value(&mut state.triplet_steps, "3️⃣ Triplets").changed() {
-            summoner_sequencer::set_pattern_resolution(sequence, sequence.step_division, state.triplet_steps);
+        if ui
+            .toggle_value(&mut state.triplet_steps, "3️⃣ Triplets")
+            .changed()
+        {
+            summoner_sequencer::set_pattern_resolution(
+                sequence,
+                sequence.step_division,
+                state.triplet_steps,
+            );
         }
 
         ui.separator();
         if ui.button("🎲 Randomize").clicked() {
             push_history(state, &sequence.steps);
-            summoner_sequencer::randomize_pattern(sequence, state.random_seed, state.random_density, (48, 72));
+            summoner_sequencer::randomize_pattern(
+                sequence,
+                state.random_seed,
+                state.random_density,
+                (48, 72),
+            );
         }
         ui.add(egui::DragValue::new(&mut state.random_seed).prefix("Seed: "));
         ui.add(egui::Slider::new(&mut state.random_density, 0.0..=1.0).text("Dens"));
@@ -568,7 +645,9 @@ pub fn show_piano_roll(
     // Header toolbar - Row 5 (Steps 626-630 Scale & Chord Controls)
     ui.horizontal(|ui| {
         ui.label("Scale Root:");
-        let note_names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+        let note_names = [
+            "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
+        ];
         egui::ComboBox::from_id_source("piano_roll_root_combo")
             .selected_text(note_names[(state.root_note % 12) as usize])
             .show_ui(ui, |ui| {
@@ -578,7 +657,15 @@ pub fn show_piano_roll(
             });
 
         ui.label("Scale Type:");
-        let scale_types = ["Major", "Minor", "Dorian", "Mixolydian", "Pentatonic", "Harmonic Minor", "Blues"];
+        let scale_types = [
+            "Major",
+            "Minor",
+            "Dorian",
+            "Mixolydian",
+            "Pentatonic",
+            "Harmonic Minor",
+            "Blues",
+        ];
         egui::ComboBox::from_id_source("piano_roll_scale_combo")
             .selected_text(&state.scale_type)
             .show_ui(ui, |ui| {
@@ -589,11 +676,20 @@ pub fn show_piano_roll(
 
         if ui.button("🎼 Transpose to Scale").clicked() {
             push_history(state, &sequence.steps);
-            summoner_sequencer::transpose_sequence_to_scale(sequence, state.root_note, &state.scale_type);
+            summoner_sequencer::transpose_sequence_to_scale(
+                sequence,
+                state.root_note,
+                &state.scale_type,
+            );
         }
 
         ui.separator();
-        let active_pitches: Vec<f64> = sequence.steps.iter().filter(|s| s.active).map(|s| s.note).collect();
+        let active_pitches: Vec<f64> = sequence
+            .steps
+            .iter()
+            .filter(|s| s.active)
+            .map(|s| s.note)
+            .collect();
         let current_chord = summoner_sequencer::detect_chord_name_from_notes(&active_pitches);
         ui.label(format!("Detected Chord: {}", current_chord));
     });
@@ -610,7 +706,10 @@ pub fn show_piano_roll(
                     state.euclidean_pulses,
                     state.euclidean_steps,
                 );
-                summoner_sequencer::generative::GenerativeEngine::apply_rhythm_to_sequence(&rhythm, &mut sequence.steps);
+                summoner_sequencer::generative::GenerativeEngine::apply_rhythm_to_sequence(
+                    &rhythm,
+                    &mut sequence.steps,
+                );
             }
         });
         ui.separator();
@@ -618,7 +717,9 @@ pub fn show_piano_roll(
 
     if let Some(hc) = harmonic_ctx {
         ui.collapsing("🎼 Real-Time Chord Suggestions", |ui| {
-            crate::views::chord_suggestion_panel::show_chord_suggestion_panel(ui, hc, sequence, 0.0);
+            crate::views::chord_suggestion_panel::show_chord_suggestion_panel(
+                ui, hc, sequence, 0.0,
+            );
         });
     }
 
@@ -669,7 +770,8 @@ pub fn show_piano_roll(
                                 }
 
                                 // Mini piano keyboard pitch key preview (Step 449)
-                                let note_label = note_name_for_pitch(step.note, tuning.divisions as usize);
+                                let note_label =
+                                    note_name_for_pitch(step.note, tuning.divisions as usize);
                                 let btn_color = if step.muted {
                                     egui::Color32::from_gray(60)
                                 } else if state.auto_color_notes {
@@ -679,9 +781,13 @@ pub fn show_piano_roll(
                                 };
 
                                 let pitch_btn = ui.add(
-                                    egui::Button::new(egui::RichText::new(&note_label).size(10.0).color(egui::Color32::WHITE))
-                                        .fill(btn_color)
-                                        .min_size(egui::vec2(step_width - 4.0, 14.0))
+                                    egui::Button::new(
+                                        egui::RichText::new(&note_label)
+                                            .size(10.0)
+                                            .color(egui::Color32::WHITE),
+                                    )
+                                    .fill(btn_color)
+                                    .min_size(egui::vec2(step_width - 4.0, 14.0)),
                                 );
                                 if pitch_btn.clicked() {
                                     if state.step_record {
@@ -710,7 +816,10 @@ pub fn show_piano_roll(
                             ui.add(egui::Slider::new(&mut step.swing, 0.0..=1.0).text("Swing"));
 
                             ui.add(egui::Slider::new(&mut step.pan, -1.0..=1.0).text("Pan"));
-                            ui.add(egui::Slider::new(&mut step.pitch_offset, -100.0..=100.0).text("Pitch Cents"));
+                            ui.add(
+                                egui::Slider::new(&mut step.pitch_offset, -100.0..=100.0)
+                                    .text("Pitch Cents"),
+                            );
                         });
                         i += 1;
                     }
@@ -747,9 +856,13 @@ pub fn show_piano_roll(
 
                     let pitch_class = k % keys_per_octave;
                     let octave = k / keys_per_octave;
-                    let root_pc = harmonic_ctx.map_or(0, |hc| (hc.root_note % keys_per_octave as u16) as usize);
-                    let rel_pc = ((pitch_class as i32 - root_pc as i32).rem_euclid(keys_per_octave as i32)) as u16;
-                    let is_in_scale = harmonic_ctx.map_or(true, |hc| hc.scale.degrees.contains(&rel_pc));
+                    let root_pc = harmonic_ctx
+                        .map_or(0, |hc| (hc.root_note % keys_per_octave as u16) as usize);
+                    let rel_pc = ((pitch_class as i32 - root_pc as i32)
+                        .rem_euclid(keys_per_octave as i32))
+                        as u16;
+                    let is_in_scale =
+                        harmonic_ctx.map_or(true, |hc| hc.scale.degrees.contains(&rel_pc));
                     let scale_name = harmonic_ctx.map_or("Chromatic", |hc| hc.scale.name.as_str());
 
                     let is_black = if keys_per_octave == 12 {
@@ -812,11 +925,20 @@ pub fn show_piano_roll(
                     }
 
                     // Hover tooltip with Hz + note label + scale status
-                    let key_interact = ui.interact(key_rect, ui.id().with(("key", k)), egui::Sense::click_and_drag());
+                    let key_interact = ui.interact(
+                        key_rect,
+                        ui.id().with(("key", k)),
+                        egui::Sense::click_and_drag(),
+                    );
                     let key_clicked = key_interact.clicked();
                     key_interact.on_hover_text(format!(
                         "Note {} (Oct {}, Deg {}): {:.1} Hz | Scale: {} (In Scale: {})",
-                        k, octave, pitch_class, freq, scale_name, if is_in_scale { "Yes" } else { "No" }
+                        k,
+                        octave,
+                        pitch_class,
+                        freq,
+                        scale_name,
+                        if is_in_scale { "Yes" } else { "No" }
                     ));
 
                     // Step record mode key click (Step 452)
@@ -854,8 +976,18 @@ pub fn show_piano_roll(
                     let x = roll_left + b as f32 * beat_width;
                     let is_bar = b % 4 == 0;
                     painter.line_segment(
-                        [egui::pos2(x, canvas_rect.top()), egui::pos2(x, canvas_rect.bottom())],
-                        egui::Stroke::new(if is_bar { 1.2_f32 } else { 0.5_f32 }, if is_bar { egui::Color32::from_gray(70) } else { egui::Color32::from_gray(35) }),
+                        [
+                            egui::pos2(x, canvas_rect.top()),
+                            egui::pos2(x, canvas_rect.bottom()),
+                        ],
+                        egui::Stroke::new(
+                            if is_bar { 1.2_f32 } else { 0.5_f32 },
+                            if is_bar {
+                                egui::Color32::from_gray(70)
+                            } else {
+                                egui::Color32::from_gray(35)
+                            },
+                        ),
                     );
                 }
 
@@ -864,9 +996,16 @@ pub fn show_piano_roll(
                 let loop_end_x = roll_left + (state.loop_end as f32 * beat_width);
                 let loop_rect = egui::Rect::from_min_max(
                     egui::pos2(loop_start_x.max(roll_left), canvas_rect.top()),
-                    egui::pos2(loop_end_x.min(canvas_rect.right()), canvas_rect.top() + 12.0),
+                    egui::pos2(
+                        loop_end_x.min(canvas_rect.right()),
+                        canvas_rect.top() + 12.0,
+                    ),
                 );
-                painter.rect_filled(loop_rect, 2.0, egui::Color32::from_rgba_unmultiplied(26, 140, 255, 60));
+                painter.rect_filled(
+                    loop_rect,
+                    2.0,
+                    egui::Color32::from_rgba_unmultiplied(26, 140, 255, 60),
+                );
                 painter.text(
                     loop_rect.left_center() + egui::vec2(4.0, 0.0),
                     egui::Align2::LEFT_CENTER,
@@ -877,7 +1016,8 @@ pub fn show_piano_roll(
 
                 // Render notes from sequence
                 let mut note_to_delete: Option<usize> = None;
-                let pointer_pos = ui.input(|i| i.pointer.hover_pos().or_else(|| i.pointer.interact_pos()));
+                let pointer_pos =
+                    ui.input(|i| i.pointer.hover_pos().or_else(|| i.pointer.interact_pos()));
 
                 for (idx, step) in sequence.steps.iter_mut().enumerate() {
                     if !step.active || step.gate <= 0.0 {
@@ -926,7 +1066,8 @@ pub fn show_piano_roll(
                     if handle_interact.dragged() {
                         let delta_x = handle_interact.drag_delta().x;
                         let delta_beats = (delta_x / beat_width) as f64;
-                        let new_gate = (step.gate as f64 + (delta_beats / sequence.step_division)).max(0.1);
+                        let new_gate =
+                            (step.gate as f64 + (delta_beats / sequence.step_division)).max(0.1);
                         step.gate = new_gate as f32;
                     }
 
@@ -974,7 +1115,8 @@ pub fn show_piano_roll(
                             let mut clicked_pitch = (y_offset / key_height).floor() as f64;
 
                             if state.lock_scale {
-                                clicked_pitch = snap_pitch_to_scale(clicked_pitch, tuning, harmonic_ctx);
+                                clicked_pitch =
+                                    snap_pitch_to_scale(clicked_pitch, tuning, harmonic_ctx);
                             }
 
                             if step_idx < sequence.steps.len() {
@@ -997,7 +1139,9 @@ pub fn show_piano_roll(
 
             ui.add_space(8.0);
             ui.separator();
-            ui.label("📊 Velocity & Probability Bars (Shift+Drag = Vel Ramp | Alt+Drag = Prob Ramp)");
+            ui.label(
+                "📊 Velocity & Probability Bars (Shift+Drag = Vel Ramp | Alt+Drag = Prob Ramp)",
+            );
 
             // Velocity Bars Panel below piano roll canvas (Step 463 & 464)
             let velocity_panel_height = 60.0;
@@ -1016,7 +1160,8 @@ pub fn show_piano_roll(
             for (i, step) in sequence.steps.iter_mut().enumerate() {
                 let bar_x = roll_left + (i as f32 * step_width_px);
                 let bar_w = (step_width_px - 2.0).max(4.0);
-                let bar_h = (step.velocity * (velocity_panel_height - 10.0)).clamp(2.0, velocity_panel_height - 10.0);
+                let bar_h = (step.velocity * (velocity_panel_height - 10.0))
+                    .clamp(2.0, velocity_panel_height - 10.0);
                 let bar_rect = egui::Rect::from_min_size(
                     egui::pos2(bar_x, vel_rect.bottom() - 5.0 - bar_h),
                     egui::vec2(bar_w, bar_h),
@@ -1050,7 +1195,8 @@ pub fn show_piano_roll(
 
                 if bar_interact.clicked() || bar_interact.dragged() {
                     if let Some(pos) = ui.input(|inp| inp.pointer.interact_pos()) {
-                        let new_val = ((vel_rect.bottom() - 5.0 - pos.y) / (velocity_panel_height - 10.0))
+                        let new_val = ((vel_rect.bottom() - 5.0 - pos.y)
+                            / (velocity_panel_height - 10.0))
                             .clamp(0.0, 1.0);
                         if ui.input(|inp| inp.modifiers.alt) {
                             step.probability = new_val;
@@ -1064,7 +1210,9 @@ pub fn show_piano_roll(
             }
 
             // Apply Shift+Drag velocity ramp or Alt+Drag probability ramp
-            if let (Some((start_i, start_v, start_p)), Some((end_i, end_val))) = (state.drag_ramp_start, active_ramp_end) {
+            if let (Some((start_i, start_v, start_p)), Some((end_i, end_val))) =
+                (state.drag_ramp_start, active_ramp_end)
+            {
                 let is_alt = ui.input(|inp| inp.modifiers.alt);
                 let (min_i, max_i) = (start_i.min(end_i), start_i.max(end_i));
                 let count = (max_i - min_i).max(1);
@@ -1226,7 +1374,11 @@ mod tests {
     #[test]
     fn test_lock_scale_snapping() {
         let tuning = EdoTuning::standard_12_tet();
-        let hc = HarmonicContext::new(tuning.clone(), 60, summoner_harmony::scale::Scale::major_12_tet());
+        let hc = HarmonicContext::new(
+            tuning.clone(),
+            60,
+            summoner_harmony::scale::Scale::major_12_tet(),
+        );
 
         // 61.0 is C#4 (not in C major). Snap should produce 60.0 (C4) or 62.0 (D4).
         let snapped = snap_pitch_to_scale(61.0, &tuning, Some(&hc));
@@ -1240,21 +1392,19 @@ mod tests {
     #[test]
     fn test_pattern_version_history_undo_redo() {
         let mut state = PianoRollState::default();
-        let mut steps = vec![
-            TrackerStepConfig {
-                note: 60.0,
-                velocity: 0.8,
-                gate: 1.0,
-                probability: 1.0,
-                ratchet: 1,
-                micro_shift: 0,
-                swing: 0.0,
-                pan: 0.0,
-                pitch_offset: 0.0,
-                active: true,
-                muted: false,
-            }
-        ];
+        let mut steps = vec![TrackerStepConfig {
+            note: 60.0,
+            velocity: 0.8,
+            gate: 1.0,
+            probability: 1.0,
+            ratchet: 1,
+            micro_shift: 0,
+            swing: 0.0,
+            pan: 0.0,
+            pitch_offset: 0.0,
+            active: true,
+            muted: false,
+        }];
 
         push_history(&mut state, &steps);
 
@@ -1285,9 +1435,45 @@ mod tests {
     fn test_arpeggiator_selected_notes() {
         let mut sequence = SequenceConfig {
             steps: vec![
-                TrackerStepConfig { note: 67.0, velocity: 0.8, gate: 1.0, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true, muted: false },
-                TrackerStepConfig { note: 60.0, velocity: 0.8, gate: 1.0, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true, muted: false },
-                TrackerStepConfig { note: 64.0, velocity: 0.8, gate: 1.0, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true, muted: false },
+                TrackerStepConfig {
+                    note: 67.0,
+                    velocity: 0.8,
+                    gate: 1.0,
+                    probability: 1.0,
+                    ratchet: 1,
+                    micro_shift: 0,
+                    swing: 0.0,
+                    pan: 0.0,
+                    pitch_offset: 0.0,
+                    active: true,
+                    muted: false,
+                },
+                TrackerStepConfig {
+                    note: 60.0,
+                    velocity: 0.8,
+                    gate: 1.0,
+                    probability: 1.0,
+                    ratchet: 1,
+                    micro_shift: 0,
+                    swing: 0.0,
+                    pan: 0.0,
+                    pitch_offset: 0.0,
+                    active: true,
+                    muted: false,
+                },
+                TrackerStepConfig {
+                    note: 64.0,
+                    velocity: 0.8,
+                    gate: 1.0,
+                    probability: 1.0,
+                    ratchet: 1,
+                    micro_shift: 0,
+                    swing: 0.0,
+                    pan: 0.0,
+                    pitch_offset: 0.0,
+                    active: true,
+                    muted: false,
+                },
             ],
             ..Default::default()
         };
@@ -1319,5 +1505,3 @@ mod tests {
         assert_eq!(formatted, "440Hz");
     }
 }
-
-

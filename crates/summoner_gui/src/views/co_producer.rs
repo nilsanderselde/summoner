@@ -27,13 +27,21 @@ impl Default for CoProducerState {
     }
 }
 
-pub fn show_co_producer_panel(ui: &mut egui::Ui, project: &ProjectConfig, state: &mut CoProducerState) {
+pub fn show_co_producer_panel(
+    ui: &mut egui::Ui,
+    project: &ProjectConfig,
+    state: &mut CoProducerState,
+) {
     ui.heading("🤖 AI Co-Producer Panel");
     ui.separator();
 
     ui.horizontal(|ui| {
         ui.label("Cloud API Key:");
-        ui.add(egui::TextEdit::singleline(&mut state.api_key).password(true).hint_text("sk-proj-..."));
+        ui.add(
+            egui::TextEdit::singleline(&mut state.api_key)
+                .password(true)
+                .hint_text("sk-proj-..."),
+        );
         if state.api_key.is_empty() {
             ui.label("(Local Simulation Mode Active)");
         } else {

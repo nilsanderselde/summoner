@@ -5,8 +5,8 @@
 //! Parameter controls, inline editing, lock/lfo modulation, hover tooltips,
 //! linked parameter groups, FX send routing, and FX chain bypass (Steps 748-760).
 
-use std::collections::{HashMap, HashSet};
 use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
 
 /// Step 755: Parameter unit types for formatting display text.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -36,7 +36,13 @@ impl ParamUnit {
 }
 
 /// Step 756: Format tooltip text displaying parameter name, value, min, and max on hover.
-pub fn format_hover_tooltip(name: &str, value: f64, min: f64, max: f64, unit: &ParamUnit) -> String {
+pub fn format_hover_tooltip(
+    name: &str,
+    value: f64,
+    min: f64,
+    max: f64,
+    unit: &ParamUnit,
+) -> String {
     format!(
         "{}: {}\nRange: [{}, {}]",
         name,
@@ -133,7 +139,9 @@ impl ParamLfoModulator {
 pub fn randomize_parameter(param_id: &str, min: f64, max: f64, seed: u64) -> f64 {
     let mut hash = seed ^ (param_id.len() as u64);
     for b in param_id.bytes() {
-        hash = hash.wrapping_mul(6364136223846793005).wrapping_add(b as u64);
+        hash = hash
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(b as u64);
     }
     let norm = (hash % 10_000) as f64 / 10_000.0;
     min + norm * (max - min)
@@ -186,7 +194,11 @@ impl LinkedParamGroup {
             .push((target_id.to_string(), ratio));
     }
 
-    pub fn compute_linked_values(&self, source_id: &str, source_new_val: f64) -> Vec<(String, f64)> {
+    pub fn compute_linked_values(
+        &self,
+        source_id: &str,
+        source_new_val: f64,
+    ) -> Vec<(String, f64)> {
         let mut updates = Vec::new();
         if let Some(targets) = self.links.get(source_id) {
             for (target_id, ratio) in targets {
@@ -323,7 +335,10 @@ pub struct FxChainPreset {
     pub nodes: Vec<summoner_project::schema::NodeConfig>,
 }
 
-pub fn save_fx_chain_preset(name: &str, nodes: &[summoner_project::schema::NodeConfig]) -> FxChainPreset {
+pub fn save_fx_chain_preset(
+    name: &str,
+    nodes: &[summoner_project::schema::NodeConfig],
+) -> FxChainPreset {
     FxChainPreset {
         name: name.to_string(),
         nodes: nodes.to_vec(),
@@ -555,7 +570,8 @@ pub struct PadNoteAssignmentTable {
 
 impl PadNoteAssignmentTable {
     pub fn assign_note(&mut self, pad_id: u8, midi_note: u8, label: &str) {
-        self.assignments.insert(pad_id, (midi_note, label.to_string()));
+        self.assignments
+            .insert(pad_id, (midi_note, label.to_string()));
     }
 
     pub fn get_note(&self, pad_id: u8) -> (u8, String) {
@@ -601,7 +617,8 @@ pub fn humanize_drum_pattern(
     seed: u64,
 ) {
     for (idx, step) in steps.iter_mut().enumerate() {
-        let rng_val = ((seed.wrapping_add((idx as u64).wrapping_mul(1103515245))) % 100) as f64 / 100.0;
+        let rng_val =
+            ((seed.wrapping_add((idx as u64).wrapping_mul(1103515245))) % 100) as f64 / 100.0;
         let jitter_shift = (rng_val * 2.0 - 1.0) * timing_jitter_ms;
         step.micro_shift = (step.micro_shift as f64 + jitter_shift).round() as i32;
 
@@ -765,7 +782,9 @@ pub struct TimelineZoomState {
 
 impl Default for TimelineZoomState {
     fn default() -> Self {
-        Self { pixels_per_beat: 50.0 }
+        Self {
+            pixels_per_beat: 50.0,
+        }
     }
 }
 
@@ -777,7 +796,12 @@ impl TimelineZoomState {
         self.pixels_per_beat
     }
 
-    pub fn zoom_to_selection(&mut self, sel_start_beat: f32, sel_end_beat: f32, viewport_width_px: f32) -> f32 {
+    pub fn zoom_to_selection(
+        &mut self,
+        sel_start_beat: f32,
+        sel_end_beat: f32,
+        viewport_width_px: f32,
+    ) -> f32 {
         let duration = (sel_end_beat - sel_start_beat).abs();
         if duration > 0.0 && viewport_width_px > 0.0 {
             self.pixels_per_beat = (viewport_width_px / duration).clamp(10.0, 400.0);
@@ -918,7 +942,9 @@ impl DependencyGraphOverview {
     pub fn from_connections(connections: &[summoner_project::schema::ConnectionConfig]) -> Self {
         let mut adjacency: HashMap<usize, Vec<usize>> = HashMap::new();
         for conn in connections {
-            if let (Ok(from_idx), Ok(to_idx)) = (conn.from.parse::<usize>(), conn.to.parse::<usize>()) {
+            if let (Ok(from_idx), Ok(to_idx)) =
+                (conn.from.parse::<usize>(), conn.to.parse::<usize>())
+            {
                 adjacency.entry(from_idx).or_default().push(to_idx);
             }
         }
@@ -1010,7 +1036,9 @@ pub fn create_preset_from_subgraph(
     for (idx, node) in nodes.iter().enumerate() {
         if group.node_ids.contains(&idx) {
             for (p_name, p_val) in &node.params {
-                preset.params.insert(format!("{}_{}", node.kind, p_name), *p_val);
+                preset
+                    .params
+                    .insert(format!("{}_{}", node.kind, p_name), *p_val);
             }
         }
     }
@@ -1028,7 +1056,10 @@ pub fn generate_bug_report_url(os_info: &str, app_version: &str) -> String {
         "**OS**: {}\n**Version**: {}\n\n**Describe the bug**:\n",
         os_info, app_version
     );
-    let encoded = body.replace(' ', "%20").replace('\n', "%0A").replace(':', "%3A");
+    let encoded = body
+        .replace(' ', "%20")
+        .replace('\n', "%0A")
+        .replace(':', "%3A");
     format!(
         "https://github.com/nilsanderselde/summoner/issues/new?title=Bug%20Report&body={}",
         encoded
@@ -1154,4 +1185,3 @@ pub struct PreferencesState {
     pub shortcuts: ShortcutsPreferencesConfig,
     pub plugins: PluginsPreferencesConfig,
 }
-

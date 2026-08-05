@@ -74,7 +74,12 @@ impl PeerMeshNetwork {
         self.pending_buffers.remove(peer_id);
     }
 
-    pub fn broadcast_audio_chunk(&mut self, payload: &[f32], sample_rate: u32, channels: u16) -> usize {
+    pub fn broadcast_audio_chunk(
+        &mut self,
+        payload: &[f32],
+        sample_rate: u32,
+        channels: u16,
+    ) -> usize {
         self.sequence_counter += 1;
         let packet = AudioMeshPacket {
             sender_id: self.local_node_id.clone(),
@@ -139,7 +144,9 @@ impl ZkPatchVerifier {
         let seed_hash = blake3::hash(secret_seed.as_bytes()).to_hex().to_string();
         let combined = format!("{}:{}", hash, seed_hash);
         let proof_token = blake3::hash(combined.as_bytes()).to_hex().to_string();
-        let commitment = blake3::hash(format!("commit:{}", hash).as_bytes()).to_hex().to_string();
+        let commitment = blake3::hash(format!("commit:{}", hash).as_bytes())
+            .to_hex()
+            .to_string();
 
         ZkPatchProof {
             patch_hash: hash,
@@ -153,7 +160,9 @@ impl ZkPatchVerifier {
         if proof.patch_hash != expected_hash {
             return false;
         }
-        let expected_commitment = blake3::hash(format!("commit:{}", expected_hash).as_bytes()).to_hex().to_string();
+        let expected_commitment = blake3::hash(format!("commit:{}", expected_hash).as_bytes())
+            .to_hex()
+            .to_string();
         proof.public_commitment == expected_commitment
     }
 }
@@ -184,10 +193,14 @@ impl FederatedMixLearner {
         if features.len() != self.local_weights.len() {
             return;
         }
-        let predicted: f32 = features.iter().zip(self.local_weights.iter()).map(|(x, w)| x * w).sum();
+        let predicted: f32 = features
+            .iter()
+            .zip(self.local_weights.iter())
+            .map(|(x, w)| x * w)
+            .sum();
         let err = predicted - target_gain;
-        for i in 0..features.len() {
-            self.gradient_accumulator[i] += err * features[i];
+        for (i, &feat) in features.iter().enumerate() {
+            self.gradient_accumulator[i] += err * feat;
         }
         self.sample_count += 1;
     }
@@ -212,12 +225,12 @@ impl FederatedMixLearner {
     pub fn export_anonymized_update(&mut self) -> Vec<f32> {
         let mut update = self.local_weights.clone();
         if self.sample_count > 0 {
-            for i in 0..update.len() {
+            for (i, val) in update.iter_mut().enumerate() {
                 let grad = self.gradient_accumulator[i] / self.sample_count as f32;
-                update[i] -= 0.01 * grad;
+                *val -= 0.01 * grad;
                 // Add Differential Privacy pseudo-random noise
                 let noise = ((i as f32 * 0.12345).sin()) * self.dp_noise_scale;
-                update[i] += noise;
+                *val += noise;
             }
             self.gradient_accumulator.fill(0.0);
             self.sample_count = 0;
@@ -331,7 +344,12 @@ impl TomlMergeDriver {
         Self
     }
 
-    pub fn merge_3way(&self, base_toml: &str, local_toml: &str, remote_toml: &str) -> Result<String, String> {
+    pub fn merge_3way(
+        &self,
+        base_toml: &str,
+        local_toml: &str,
+        remote_toml: &str,
+    ) -> Result<String, String> {
         let base_val: toml::Value = toml::from_str(base_toml).map_err(|e| e.to_string())?;
         let local_val: toml::Value = toml::from_str(local_toml).map_err(|e| e.to_string())?;
         let remote_val: toml::Value = toml::from_str(remote_toml).map_err(|e| e.to_string())?;
@@ -340,7 +358,12 @@ impl TomlMergeDriver {
         toml::to_string_pretty(&merged).map_err(|e| e.to_string())
     }
 
-    fn merge_values(&self, _base: &toml::Value, local: &toml::Value, remote: &toml::Value) -> Result<toml::Value, String> {
+    fn merge_values(
+        &self,
+        _base: &toml::Value,
+        local: &toml::Value,
+        remote: &toml::Value,
+    ) -> Result<toml::Value, String> {
         if local == remote {
             return Ok(local.clone());
         }
@@ -384,7 +407,12 @@ impl DistributedRenderFarm {
         Self
     }
 
-    pub fn slice_render_task(&self, track_id: u64, total_samples: usize, block_size: usize) -> Vec<RenderTaskBlock> {
+    pub fn slice_render_task(
+        &self,
+        track_id: u64,
+        total_samples: usize,
+        block_size: usize,
+    ) -> Vec<RenderTaskBlock> {
         let mut blocks = Vec::new();
         let mut offset = 0;
         let mut block_id = 0;
@@ -403,7 +431,10 @@ impl DistributedRenderFarm {
         blocks
     }
 
-    pub fn assemble_rendered_blocks(&self, mut blocks: Vec<(RenderTaskBlock, Vec<f32>)>) -> Vec<f32> {
+    pub fn assemble_rendered_blocks(
+        &self,
+        mut blocks: Vec<(RenderTaskBlock, Vec<f32>)>,
+    ) -> Vec<f32> {
         blocks.sort_by_key(|(b, _)| b.start_sample);
         let mut output = Vec::new();
         for (_, samples) in blocks {
@@ -441,7 +472,11 @@ impl SessionChatCrypto {
             .collect()
     }
 
-    pub fn decrypt_message(&mut self, _sender_id: &str, ciphertext: &[u8]) -> Result<String, String> {
+    pub fn decrypt_message(
+        &mut self,
+        _sender_id: &str,
+        ciphertext: &[u8],
+    ) -> Result<String, String> {
         let mask = (self.ratchet_state & 0xFF) as u8;
         let bytes: Vec<u8> = ciphertext
             .iter()
@@ -472,7 +507,11 @@ impl WasmPluginRunner {
         }
         // Simulated safe WASM sandboxed execution
         let mut output = input.to_vec();
-        let scale = if wasm_bytecode.len() > 4 { (wasm_bytecode[0] as f32) / 255.0 } else { 1.0 };
+        let scale = if wasm_bytecode.len() > 4 {
+            (wasm_bytecode[0] as f32) / 255.0
+        } else {
+            1.0
+        };
         for sample in &mut output {
             *sample *= scale;
         }
@@ -525,7 +564,9 @@ impl FederatedMarketplace {
         let q = query.to_lowercase();
         self.catalog
             .values()
-            .filter(|p| p.title.to_lowercase().contains(&q) || p.category.to_lowercase().contains(&q))
+            .filter(|p| {
+                p.title.to_lowercase().contains(&q) || p.category.to_lowercase().contains(&q)
+            })
             .cloned()
             .collect()
     }
@@ -554,7 +595,12 @@ impl DidAuthenticator {
         did.starts_with("did:key:z6Mk") && did.len() >= 20
     }
 
-    pub fn issue_token(&self, did: &str, perms: &[&str], expires_at: u64) -> Result<PermissionToken, String> {
+    pub fn issue_token(
+        &self,
+        did: &str,
+        perms: &[&str],
+        expires_at: u64,
+    ) -> Result<PermissionToken, String> {
         if !Self::validate_did_key(did) {
             return Err("Invalid DID key format".to_string());
         }
@@ -569,7 +615,12 @@ impl DidAuthenticator {
         })
     }
 
-    pub fn has_permission(&self, token: &PermissionToken, required_perm: &str, current_time: u64) -> bool {
+    pub fn has_permission(
+        &self,
+        token: &PermissionToken,
+        required_perm: &str,
+        current_time: u64,
+    ) -> bool {
         if current_time > token.expires_at {
             return false;
         }
@@ -753,7 +804,9 @@ mod tests {
         let count = net.broadcast_audio_chunk(&[0.1, 0.2, 0.3], 44100, 2);
         assert_eq!(count, 1);
 
-        let chunk = net.receive_audio_chunk("node_beta").expect("Expected chunk");
+        let chunk = net
+            .receive_audio_chunk("node_beta")
+            .expect("Expected chunk");
         assert_eq!(chunk.payload, vec![0.1, 0.2, 0.3]);
 
         let mut queue = OfflineCrdtQueue::new();
@@ -810,7 +863,10 @@ mod tests {
         net.add_peer("remote_daw_1", "10.0.0.1:9001", 18.4);
         net.add_peer("remote_daw_2", "10.0.0.2:9002", 24.1);
 
-        assert!(net.average_mesh_latency_ms() < 50.0, "Mesh latency exceeding 50ms requirement");
+        assert!(
+            net.average_mesh_latency_ms() < 50.0,
+            "Mesh latency exceeding 50ms requirement"
+        );
         let mut bw = AdaptiveBandwidthManager::new();
         let bitrate = bw.adapt_bandwidth(0.01, net.average_mesh_latency_ms());
         assert!(bitrate >= 128000);

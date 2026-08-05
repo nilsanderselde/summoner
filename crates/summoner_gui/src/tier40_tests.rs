@@ -5,18 +5,18 @@
 
 #[cfg(test)]
 mod tests {
-    use summoner_project::media_export::{
-        lua_detect_key, lua_compute_chroma, lua_mel_spectrogram, lua_mfccs, lua_onnx_infer,
-        lua_has_feature, lua_platform, lua_summoner_version, lua_locale, lua_translate,
-        lua_log_info, lua_log_warn, lua_log_error, lua_assert, lua_fuzz_run, lua_seed_random,
-        lua_benchmark, LuaDspGraphBuilder, LuaProjectBuilder, lua_generate_clap_from_lua,
-        lua_run_smoke_test, lua_coverage_report, lua_mutation_test, lua_fuzz_dsp,
-        lua_audit_script, lua_fmt_script, lua_lint_script, lua_minify_script, lua_doc_script,
-        lua_bundle_script, lua_tree_shake_script, lua_encrypt_preset, lua_obfuscate_preset,
-        lua_validate_license, lua_detect_sandbox_escape, LuaUsageAnalytics, lua_ai_complete,
-        summoner_v1_release_info,
-    };
     use std::collections::HashMap;
+    use summoner_project::media_export::{
+        lua_ai_complete, lua_assert, lua_audit_script, lua_benchmark, lua_bundle_script,
+        lua_compute_chroma, lua_coverage_report, lua_detect_key, lua_detect_sandbox_escape,
+        lua_doc_script, lua_encrypt_preset, lua_fmt_script, lua_fuzz_dsp, lua_fuzz_run,
+        lua_generate_clap_from_lua, lua_has_feature, lua_lint_script, lua_locale, lua_log_error,
+        lua_log_info, lua_log_warn, lua_mel_spectrogram, lua_mfccs, lua_minify_script,
+        lua_mutation_test, lua_obfuscate_preset, lua_onnx_infer, lua_platform, lua_run_smoke_test,
+        lua_seed_random, lua_summoner_version, lua_translate, lua_tree_shake_script,
+        lua_validate_license, summoner_v1_release_info, LuaDspGraphBuilder, LuaProjectBuilder,
+        LuaUsageAnalytics,
+    };
 
     #[test]
     fn test_step_961_lua_detect_key() {
@@ -118,7 +118,12 @@ mod tests {
 
     #[test]
     fn test_step_975_lua_benchmark() {
-        let (mean, stddev) = lua_benchmark(|| { let _ = 1 + 1; }, 10);
+        let (mean, stddev) = lua_benchmark(
+            || {
+                let _ = 1 + 1;
+            },
+            10,
+        );
         assert!(mean >= 0.0);
         assert!(stddev >= 0.0);
     }
@@ -214,7 +219,8 @@ mod tests {
 
     #[test]
     fn test_step_991_lua_doc_script() {
-        let code = "---@param freq number\n---@return number\nfunction set_freq(freq) return freq end";
+        let code =
+            "---@param freq number\n---@return number\nfunction set_freq(freq) return freq end";
         let docs = lua_doc_script(code);
         assert!(docs.contains("# Lua Script API Documentation"));
         assert!(docs.contains("---@param freq number"));

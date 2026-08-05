@@ -2,24 +2,26 @@
 // Copyright (C) 2026 nilsanderselde
 // AGPLv3 License
 
+use crate::app::ViewMode;
 use eframe::egui;
 use std::collections::HashSet;
-use summoner_project::schema::{ProjectConfig, TrackConfig, SequenceConfig, TrackerStepConfig, MarkerConfig};
-use crate::app::ViewMode;
+use summoner_project::schema::{
+    MarkerConfig, ProjectConfig, SequenceConfig, TrackConfig, TrackerStepConfig,
+};
 
 fn track_color(track: &TrackConfig) -> egui::Color32 {
     if let Some(rgb) = track.color {
         return egui::Color32::from_rgb(rgb[0], rgb[1], rgb[2]);
     }
     let colors = [
-        egui::Color32::from_rgb(26, 140, 255),  // Electric Blue
-        egui::Color32::from_rgb(255, 107, 43),  // Orange
-        egui::Color32::from_rgb(46, 204, 113),  // Emerald Green
-        egui::Color32::from_rgb(155, 89, 182),  // Purple
-        egui::Color32::from_rgb(241, 196, 15),  // Yellow/Amber
-        egui::Color32::from_rgb(231, 76, 60),   // Red/Rose
-        egui::Color32::from_rgb(52, 152, 219),  // Cyan
-        egui::Color32::from_rgb(230, 126, 34),  // Amber
+        egui::Color32::from_rgb(26, 140, 255), // Electric Blue
+        egui::Color32::from_rgb(255, 107, 43), // Orange
+        egui::Color32::from_rgb(46, 204, 113), // Emerald Green
+        egui::Color32::from_rgb(155, 89, 182), // Purple
+        egui::Color32::from_rgb(241, 196, 15), // Yellow/Amber
+        egui::Color32::from_rgb(231, 76, 60),  // Red/Rose
+        egui::Color32::from_rgb(52, 152, 219), // Cyan
+        egui::Color32::from_rgb(230, 126, 34), // Amber
     ];
     colors[(track.id as usize) % colors.len()]
 }
@@ -60,7 +62,6 @@ impl Default for ArrangerState {
     }
 }
 
-
 pub fn show_arranger(
     ui: &mut egui::Ui,
     project: &mut ProjectConfig,
@@ -72,7 +73,9 @@ pub fn show_arranger(
     grid_division: &mut f64,
     track_header_width: &mut f32,
     waveform_cache: &mut crate::waveform_cache::WaveformCache,
-    oscilloscope_buffers: Option<&std::collections::HashMap<u64, std::sync::Arc<crate::visualizer::Oscilloscope>>>,
+    oscilloscope_buffers: Option<
+        &std::collections::HashMap<u64, std::sync::Arc<crate::visualizer::Oscilloscope>>,
+    >,
 ) -> Option<ViewMode> {
     let mut navigation_target = None;
     let state_id = ui.id().with("arranger_state");
@@ -167,19 +170,22 @@ pub fn show_arranger(
                             clip_name: Some("Pattern Clip".to_string()),
                             name: "Pattern Clip".to_string(),
                             is_unique: true,
-                            steps: vec![TrackerStepConfig {
-                                note: 60.0,
-                                velocity: 0.8,
-                                gate: 0.5,
-                                probability: 1.0,
-                                ratchet: 1,
-                                micro_shift: 0,
-                                swing: 0.0,
-                                pan: 0.0,
-                                pitch_offset: 0.0,
-                                active: true,
-                                muted: false,
-                            }; 16],
+                            steps: vec![
+                                TrackerStepConfig {
+                                    note: 60.0,
+                                    velocity: 0.8,
+                                    gate: 0.5,
+                                    probability: 1.0,
+                                    ratchet: 1,
+                                    micro_shift: 0,
+                                    swing: 0.0,
+                                    pan: 0.0,
+                                    pitch_offset: 0.0,
+                                    active: true,
+                                    muted: false,
+                                };
+                                16
+                            ],
                             fade_in: 0.0,
                             fade_out: 0.0,
                             is_reversed: false,
@@ -234,13 +240,28 @@ pub fn show_arranger(
 
         ui.separator();
         ui.label("Auto Tool:");
-        ui.selectable_value(&mut state.automation_tool, AutomationToolMode::Pointer, "↖ Pointer");
-        ui.selectable_value(&mut state.automation_tool, AutomationToolMode::Draw, "✏ Draw");
-        ui.selectable_value(&mut state.automation_tool, AutomationToolMode::Line, "📈 Line");
-        ui.selectable_value(&mut state.automation_tool, AutomationToolMode::Curve, "🌊 Curve");
+        ui.selectable_value(
+            &mut state.automation_tool,
+            AutomationToolMode::Pointer,
+            "↖ Pointer",
+        );
+        ui.selectable_value(
+            &mut state.automation_tool,
+            AutomationToolMode::Draw,
+            "✏ Draw",
+        );
+        ui.selectable_value(
+            &mut state.automation_tool,
+            AutomationToolMode::Line,
+            "📈 Line",
+        );
+        ui.selectable_value(
+            &mut state.automation_tool,
+            AutomationToolMode::Curve,
+            "🌊 Curve",
+        );
         ui.toggle_value(&mut state.snap_automation, "🧲 Snap Auto");
     });
-
 
     ui.separator();
 
@@ -269,7 +290,10 @@ pub fn show_arranger(
                 .selected_text("🚩 Jump to Marker")
                 .show_ui(ui, |ui| {
                     for m in &project.markers {
-                        if ui.selectable_label(false, format!("🚩 {} ({:.1} beat)", m.name, m.beat)).clicked() {
+                        if ui
+                            .selectable_label(false, format!("🚩 {} ({:.1} beat)", m.name, m.beat))
+                            .clicked()
+                        {
                             *playhead_beat = m.beat;
                         }
                     }
@@ -293,7 +317,10 @@ pub fn show_arranger(
     let header_w = *track_header_width;
 
     // Horizontal Mini-Map Viewport (Step 417)
-    let (minimap_resp, minimap_painter) = ui.allocate_painter(egui::vec2(header_w + total_beats * ppb, 14.0), egui::Sense::click_and_drag());
+    let (minimap_resp, minimap_painter) = ui.allocate_painter(
+        egui::vec2(header_w + total_beats * ppb, 14.0),
+        egui::Sense::click_and_drag(),
+    );
     let mm_rect = minimap_resp.rect;
     minimap_painter.rect_filled(mm_rect, 1.0, egui::Color32::from_rgb(15, 15, 20));
 
@@ -304,11 +331,18 @@ pub fn show_arranger(
         egui::pos2(mm_track_x, mm_rect.top()),
         egui::vec2((mm_width * 0.4).min(mm_rect.width()), 14.0),
     );
-    minimap_painter.rect_stroke(view_window_rect, 1.0, egui::Stroke::new(1.5, egui::Color32::from_rgb(26, 140, 255)));
+    minimap_painter.rect_stroke(
+        view_window_rect,
+        1.0,
+        egui::Stroke::new(1.5, egui::Color32::from_rgb(26, 140, 255)),
+    );
     let mm_playhead_x = mm_track_x + (*playhead_beat as f32 * ppb);
     if mm_playhead_x <= mm_rect.right() {
         minimap_painter.line_segment(
-            [egui::pos2(mm_playhead_x, mm_rect.top()), egui::pos2(mm_playhead_x, mm_rect.bottom())],
+            [
+                egui::pos2(mm_playhead_x, mm_rect.top()),
+                egui::pos2(mm_playhead_x, mm_rect.bottom()),
+            ],
             egui::Stroke::new(2.0, egui::Color32::from_rgb(255, 60, 60)),
         );
     }
@@ -335,18 +369,33 @@ pub fn show_arranger(
         // Global BPM Track & Time Signature Bar (Steps 435, 436)
         ui.horizontal(|ui| {
             ui.allocate_ui(egui::vec2(header_w, 20.0), |ui| {
-                ui.label(egui::RichText::new("⏱ BPM / TimeSig").font(egui::FontId::proportional(10.0)).color(egui::Color32::from_rgb(241, 196, 15)));
+                ui.label(
+                    egui::RichText::new("⏱ BPM / TimeSig")
+                        .font(egui::FontId::proportional(10.0))
+                        .color(egui::Color32::from_rgb(241, 196, 15)),
+                );
             });
-            let (bpm_resp, bpm_painter) = ui.allocate_painter(egui::vec2(total_beats * ppb, 20.0), egui::Sense::hover());
+            let (bpm_resp, bpm_painter) =
+                ui.allocate_painter(egui::vec2(total_beats * ppb, 20.0), egui::Sense::hover());
             let bpm_rect = bpm_resp.rect;
             bpm_painter.rect_filled(bpm_rect, 0.0, egui::Color32::from_rgb(25, 25, 30));
-            bpm_painter.text(egui::pos2(bpm_rect.left() + 4.0, bpm_rect.top() + 3.0), egui::Align2::LEFT_TOP, format!("BPM: {:.1} | {}", project.transport.bpm, project.transport.time_signature), egui::FontId::proportional(11.0), egui::Color32::from_rgb(241, 196, 15));
+            bpm_painter.text(
+                egui::pos2(bpm_rect.left() + 4.0, bpm_rect.top() + 3.0),
+                egui::Align2::LEFT_TOP,
+                format!(
+                    "BPM: {:.1} | {}",
+                    project.transport.bpm, project.transport.time_signature
+                ),
+                egui::FontId::proportional(11.0),
+                egui::Color32::from_rgb(241, 196, 15),
+            );
         });
 
         // Timeline Header Ruler with Loop Handles & Markers (Steps 423, 444)
         ui.horizontal(|ui| {
             ui.allocate_space(egui::vec2(header_w, 28.0));
-            let (ruler_resp, ruler_painter) = ui.allocate_painter(egui::vec2(total_beats * ppb, 28.0), egui::Sense::click());
+            let (ruler_resp, ruler_painter) =
+                ui.allocate_painter(egui::vec2(total_beats * ppb, 28.0), egui::Sense::click());
             let ruler_rect = ruler_resp.rect;
 
             // Ruler Click & Add Marker Context Menu
@@ -388,18 +437,50 @@ pub fn show_arranger(
                         egui::pos2(loop_x1, ruler_rect.top()),
                         egui::pos2(loop_x2, ruler_rect.bottom()),
                     );
-                    ruler_painter.rect_filled(loop_rect, 0.0, egui::Color32::from_rgba_unmultiplied(26, 140, 255, 40));
-                    ruler_painter.line_segment([egui::pos2(loop_x1, ruler_rect.top()), egui::pos2(loop_x1, ruler_rect.bottom())], egui::Stroke::new(2.5, egui::Color32::from_rgb(26, 140, 255)));
-                    ruler_painter.line_segment([egui::pos2(loop_x2, ruler_rect.top()), egui::pos2(loop_x2, ruler_rect.bottom())], egui::Stroke::new(2.5, egui::Color32::from_rgb(26, 140, 255)));
+                    ruler_painter.rect_filled(
+                        loop_rect,
+                        0.0,
+                        egui::Color32::from_rgba_unmultiplied(26, 140, 255, 40),
+                    );
+                    ruler_painter.line_segment(
+                        [
+                            egui::pos2(loop_x1, ruler_rect.top()),
+                            egui::pos2(loop_x1, ruler_rect.bottom()),
+                        ],
+                        egui::Stroke::new(2.5, egui::Color32::from_rgb(26, 140, 255)),
+                    );
+                    ruler_painter.line_segment(
+                        [
+                            egui::pos2(loop_x2, ruler_rect.top()),
+                            egui::pos2(loop_x2, ruler_rect.bottom()),
+                        ],
+                        egui::Stroke::new(2.5, egui::Color32::from_rgb(26, 140, 255)),
+                    );
                 }
             }
 
             // Draw Markers (Step 444)
             for marker in &project.markers {
                 let mx = ruler_rect.left() + (marker.beat as f32 * ppb);
-                let m_color = marker.color.map_or(egui::Color32::from_rgb(255, 200, 50), |c| egui::Color32::from_rgb(c[0], c[1], c[2]));
-                ruler_painter.line_segment([egui::pos2(mx, ruler_rect.top()), egui::pos2(mx, ruler_rect.bottom())], egui::Stroke::new(2.0, m_color));
-                ruler_painter.text(egui::pos2(mx + 3.0, ruler_rect.top() + 14.0), egui::Align2::LEFT_TOP, format!("🚩 {}", marker.name), egui::FontId::proportional(10.0), m_color);
+                let m_color = marker
+                    .color
+                    .map_or(egui::Color32::from_rgb(255, 200, 50), |c| {
+                        egui::Color32::from_rgb(c[0], c[1], c[2])
+                    });
+                ruler_painter.line_segment(
+                    [
+                        egui::pos2(mx, ruler_rect.top()),
+                        egui::pos2(mx, ruler_rect.bottom()),
+                    ],
+                    egui::Stroke::new(2.0, m_color),
+                );
+                ruler_painter.text(
+                    egui::pos2(mx + 3.0, ruler_rect.top() + 14.0),
+                    egui::Align2::LEFT_TOP,
+                    format!("🚩 {}", marker.name),
+                    egui::FontId::proportional(10.0),
+                    m_color,
+                );
             }
 
             // Draw Bar Grid lines
@@ -407,8 +488,18 @@ pub fn show_arranger(
                 let x = ruler_rect.left() + beat as f32 * ppb;
                 let is_bar = beat % 4 == 0;
                 ruler_painter.line_segment(
-                    [egui::pos2(x, ruler_rect.top()), egui::pos2(x, ruler_rect.bottom())],
-                    egui::Stroke::new(if is_bar { 1.5_f32 } else { 0.8_f32 }, if is_bar { egui::Color32::from_gray(140) } else { egui::Color32::from_gray(70) }),
+                    [
+                        egui::pos2(x, ruler_rect.top()),
+                        egui::pos2(x, ruler_rect.bottom()),
+                    ],
+                    egui::Stroke::new(
+                        if is_bar { 1.5_f32 } else { 0.8_f32 },
+                        if is_bar {
+                            egui::Color32::from_gray(140)
+                        } else {
+                            egui::Color32::from_gray(70)
+                        },
+                    ),
                 );
                 if is_bar {
                     ruler_painter.text(
@@ -455,7 +546,10 @@ pub fn show_arranger(
                         }
 
                         // Left color stripe
-                        let (stripe_resp, stripe_painter) = ui.allocate_painter(egui::vec2(4.0, row_height - 6.0), egui::Sense::hover());
+                        let (stripe_resp, stripe_painter) = ui.allocate_painter(
+                            egui::vec2(4.0, row_height - 6.0),
+                            egui::Sense::hover(),
+                        );
                         stripe_painter.rect_filled(stripe_resp.rect, 1.0, track_color(track));
 
                         ui.vertical(|ui| {
@@ -466,7 +560,8 @@ pub fn show_arranger(
                                     track.name.clone()
                                 };
                                 let head_text = if is_dimmed {
-                                    egui::RichText::new(&name_text).color(egui::Color32::from_gray(100))
+                                    egui::RichText::new(&name_text)
+                                        .color(egui::Color32::from_gray(100))
                                 } else {
                                     egui::RichText::new(&name_text).strong()
                                 };
@@ -502,11 +597,25 @@ pub fn show_arranger(
                                         track.color = Some([46, 204, 113]);
                                         ui.close_menu();
                                     }
-                                    if ui.button(if track.is_frozen { "🔥 Unfreeze Track" } else { "❄ Freeze Track" }).clicked() {
+                                    if ui
+                                        .button(if track.is_frozen {
+                                            "🔥 Unfreeze Track"
+                                        } else {
+                                            "❄ Freeze Track"
+                                        })
+                                        .clicked()
+                                    {
                                         track.is_frozen = !track.is_frozen;
                                         ui.close_menu();
                                     }
-                                    if ui.button(if track.send_to_master { "🔇 Bypass Master" } else { "🔊 Send to Master" }).clicked() {
+                                    if ui
+                                        .button(if track.send_to_master {
+                                            "🔇 Bypass Master"
+                                        } else {
+                                            "🔊 Send to Master"
+                                        })
+                                        .clicked()
+                                    {
                                         track.send_to_master = !track.send_to_master;
                                         ui.close_menu();
                                     }
@@ -514,7 +623,8 @@ pub fn show_arranger(
                                         reorder_swap = Some((t_idx, t_idx - 1));
                                         ui.close_menu();
                                     }
-                                    if t_idx + 1 < num_tracks && ui.button("⬇ Move Down").clicked() {
+                                    if t_idx + 1 < num_tracks && ui.button("⬇ Move Down").clicked()
+                                    {
                                         reorder_swap = Some((t_idx, t_idx + 1));
                                         ui.close_menu();
                                     }
@@ -537,12 +647,22 @@ pub fn show_arranger(
                                     });
                                 ui.horizontal(|ui| {
                                     ui.label("VU:");
-                                    let (vu_resp, vu_painter) = ui.allocate_painter(egui::vec2(60.0, 6.0), egui::Sense::hover());
+                                    let (vu_resp, vu_painter) = ui.allocate_painter(
+                                        egui::vec2(60.0, 6.0),
+                                        egui::Sense::hover(),
+                                    );
                                     let vu_rect = vu_resp.rect;
-                                    vu_painter.rect_filled(vu_rect, 1.0, egui::Color32::from_rgb(10, 10, 15));
+                                    vu_painter.rect_filled(
+                                        vu_rect,
+                                        1.0,
+                                        egui::Color32::from_rgb(10, 10, 15),
+                                    );
                                     let fill_w = (rms_vol * 60.0).clamp(0.0, 60.0);
                                     if fill_w > 0.0 {
-                                        let fill_rect = egui::Rect::from_min_size(vu_rect.min, egui::vec2(fill_w, 6.0));
+                                        let fill_rect = egui::Rect::from_min_size(
+                                            vu_rect.min,
+                                            egui::vec2(fill_w, 6.0),
+                                        );
                                         let vu_col = if rms_vol > 0.8 {
                                             egui::Color32::from_rgb(231, 76, 60)
                                         } else if rms_vol > 0.5 {
@@ -561,7 +681,10 @@ pub fn show_arranger(
                 ui.separator();
 
                 // Track Timeline Area
-                let (lane_resp, painter) = ui.allocate_painter(egui::vec2(total_beats * ppb, row_height), egui::Sense::click_and_drag());
+                let (lane_resp, painter) = ui.allocate_painter(
+                    egui::vec2(total_beats * ppb, row_height),
+                    egui::Sense::click_and_drag(),
+                );
                 let lane_rect = lane_resp.rect;
 
                 if lane_resp.clicked() {
@@ -583,9 +706,16 @@ pub fn show_arranger(
                 for beat in 0..=(total_beats as usize) {
                     let x = lane_rect.left() + beat as f32 * ppb;
                     let is_bar = beat % 4 == 0;
-                    let stroke_color = if is_bar { egui::Color32::from_gray(60) } else { egui::Color32::from_gray(35) };
+                    let stroke_color = if is_bar {
+                        egui::Color32::from_gray(60)
+                    } else {
+                        egui::Color32::from_gray(35)
+                    };
                     painter.line_segment(
-                        [egui::pos2(x, lane_rect.top()), egui::pos2(x, lane_rect.bottom())],
+                        [
+                            egui::pos2(x, lane_rect.top()),
+                            egui::pos2(x, lane_rect.bottom()),
+                        ],
                         egui::Stroke::new(if is_bar { 1.0_f32 } else { 0.5_f32 }, stroke_color),
                     );
                     // Beat number text overlay at bar positions on all tracks (Step 593)
@@ -609,7 +739,8 @@ pub fn show_arranger(
 
                 for (seq_idx, seq) in all_seqs.into_iter().enumerate() {
                     let start_x = lane_rect.left() + (seq.start_beat as f32 * ppb);
-                    let clip_beats = (seq.steps.len() as f64 * seq.step_division * seq.time_stretch).max(0.5);
+                    let clip_beats =
+                        (seq.steps.len() as f64 * seq.step_division * seq.time_stretch).max(0.5);
                     let clip_width = (clip_beats as f32 * ppb).max(30.0);
 
                     let clip_rect = egui::Rect::from_min_size(
@@ -669,49 +800,71 @@ pub fn show_arranger(
                             dup_clip = true;
                             ui.close_menu();
                         }
-                        if ui.button("⏩ Duplicate to Next Bar").clicked() { // Step 441
+                        if ui.button("⏩ Duplicate to Next Bar").clicked() {
+                            // Step 441
                             let mut dup = seq.duplicate();
                             let end_beat = seq.start_beat + clip_beats;
                             dup.start_beat = (end_beat / 4.0).ceil() * 4.0;
                             duplicate_clip_target = Some((track_id, dup));
                             ui.close_menu();
                         }
-                        if ui.button("🔁 Fill Loop Region").clicked() { // Step 442
+                        if ui.button("🔁 Fill Loop Region").clicked() {
+                            // Step 442
                             fill_loop_region(seq, project.loop_start_beat, project.loop_end_beat);
                             ui.close_menu();
                         }
-                        if ui.button("↩ Restore Clip (Reset Trim & Fades)").clicked() { // Step 588
+                        if ui.button("↩ Restore Clip (Reset Trim & Fades)").clicked() {
+                            // Step 588
                             seq.restore();
                             ui.close_menu();
                         }
                         ui.separator();
                         ui.horizontal(|ui| {
                             ui.label("Gain:");
-                            ui.add(egui::DragValue::new(&mut seq.gain).speed(0.05).range(0.0..=4.0)); // Step 584
+                            ui.add(
+                                egui::DragValue::new(&mut seq.gain)
+                                    .speed(0.05)
+                                    .range(0.0..=4.0),
+                            ); // Step 584
                         });
                         ui.horizontal(|ui| {
                             ui.label("Pitch (st):");
-                            ui.add(egui::DragValue::new(&mut seq.pitch_offset).speed(1.0).range(-24.0..=24.0)); // Step 585
+                            ui.add(
+                                egui::DragValue::new(&mut seq.pitch_offset)
+                                    .speed(1.0)
+                                    .range(-24.0..=24.0),
+                            ); // Step 585
                         });
                         ui.horizontal(|ui| {
                             ui.label("Trim Start:");
-                            ui.add(egui::DragValue::new(&mut seq.trim_start).speed(0.1).range(0.0..=64.0)); // Step 586
+                            ui.add(
+                                egui::DragValue::new(&mut seq.trim_start)
+                                    .speed(0.1)
+                                    .range(0.0..=64.0),
+                            ); // Step 586
                         });
                         ui.horizontal(|ui| {
                             ui.label("Trim End:");
-                            ui.add(egui::DragValue::new(&mut seq.trim_end).speed(0.1).range(0.0..=64.0)); // Step 586
+                            ui.add(
+                                egui::DragValue::new(&mut seq.trim_end)
+                                    .speed(0.1)
+                                    .range(0.0..=64.0),
+                            ); // Step 586
                         });
                         ui.separator();
-                        if ui.button("🔄 Reverse Clip").clicked() { // Step 431
+                        if ui.button("🔄 Reverse Clip").clicked() {
+                            // Step 431
                             seq.is_reversed = !seq.is_reversed;
                             seq.steps.reverse();
                             ui.close_menu();
                         }
-                        if ui.button("🔊 Normalize Clip Peak").clicked() { // Step 433
+                        if ui.button("🔊 Normalize Clip Peak").clicked() {
+                            // Step 433
                             normalize_clip(seq);
                             ui.close_menu();
                         }
-                        if ui.button("✂ Trim Silence").clicked() { // Step 434
+                        if ui.button("✂ Trim Silence").clicked() {
+                            // Step 434
                             trim_silence(seq);
                             ui.close_menu();
                         }
@@ -770,7 +923,10 @@ pub fn show_arranger(
                     // Trim shading (Step 587)
                     if seq.trim_start > 0.0 {
                         let trim_w = (seq.trim_start as f32 * ppb).min(clip_rect.width() * 0.5);
-                        let trim_rect = egui::Rect::from_min_size(clip_rect.min, egui::vec2(trim_w, clip_rect.height()));
+                        let trim_rect = egui::Rect::from_min_size(
+                            clip_rect.min,
+                            egui::vec2(trim_w, clip_rect.height()),
+                        );
                         painter.rect_filled(trim_rect, 0.0, egui::Color32::from_black_alpha(160));
                     }
                     if seq.trim_end > 0.0 {
@@ -813,13 +969,28 @@ pub fn show_arranger(
                     // Clip Name, Gain/Pitch & Step Count Label (Steps 584, 585)
                     let clip_label = seq.clip_name.as_deref().unwrap_or("Pattern");
                     let rev_flag = if seq.is_reversed { " 🔄" } else { "" };
-                    let gain_str = if (seq.gain - 1.0).abs() > 0.01 { format!(" G:{:.1}x", seq.gain) } else { String::new() };
-                    let pitch_str = if seq.pitch_offset.abs() > 0.01 { format!(" P:{:+.0}st", seq.pitch_offset) } else { String::new() };
+                    let gain_str = if (seq.gain - 1.0).abs() > 0.01 {
+                        format!(" G:{:.1}x", seq.gain)
+                    } else {
+                        String::new()
+                    };
+                    let pitch_str = if seq.pitch_offset.abs() > 0.01 {
+                        format!(" P:{:+.0}st", seq.pitch_offset)
+                    } else {
+                        String::new()
+                    };
                     if !track_is_collapsed {
                         painter.text(
                             egui::pos2(clip_rect.left() + 6.0, clip_rect.top() + 3.0),
                             egui::Align2::LEFT_TOP,
-                            format!("{}{}{}{}{}", clip_label, rev_flag, gain_str, pitch_str, if seq.is_unique { " ★" } else { "" }),
+                            format!(
+                                "{}{}{}{}{}",
+                                clip_label,
+                                rev_flag,
+                                gain_str,
+                                pitch_str,
+                                if seq.is_unique { " ★" } else { "" }
+                            ),
                             egui::FontId::proportional(11.0),
                             egui::Color32::WHITE,
                         );
@@ -827,12 +998,18 @@ pub fn show_arranger(
                 }
 
                 // Crossfade indicator between overlapping clips on the same track (Step 583)
-                let clip_info_list: Vec<(f32, f32)> = track.all_sequences().iter().map(|s| {
-                    let start = lane_rect.left() + (s.start_beat as f32 * ppb);
-                    let duration_beats = (s.steps.len() as f64 * s.step_division * s.time_stretch).max(0.5) as f32;
-                    let width = (duration_beats * ppb).max(30.0);
-                    (start, start + width)
-                }).collect();
+                let clip_info_list: Vec<(f32, f32)> = track
+                    .all_sequences()
+                    .iter()
+                    .map(|s| {
+                        let start = lane_rect.left() + (s.start_beat as f32 * ppb);
+                        let duration_beats =
+                            (s.steps.len() as f64 * s.step_division * s.time_stretch).max(0.5)
+                                as f32;
+                        let width = (duration_beats * ppb).max(30.0);
+                        (start, start + width)
+                    })
+                    .collect();
 
                 for i in 0..clip_info_list.len() {
                     for j in (i + 1)..clip_info_list.len() {
@@ -845,9 +1022,19 @@ pub fn show_arranger(
                                 egui::pos2(overlap_start, lane_rect.top() + 3.0),
                                 egui::pos2(overlap_end, lane_rect.bottom() - 3.0),
                             );
-                            painter.rect_filled(xf_rect, 2.0, egui::Color32::from_rgba_unmultiplied(46, 204, 113, 60));
-                            painter.line_segment([xf_rect.left_top(), xf_rect.right_bottom()], egui::Stroke::new(1.5, egui::Color32::WHITE));
-                            painter.line_segment([xf_rect.left_bottom(), xf_rect.right_top()], egui::Stroke::new(1.5, egui::Color32::WHITE));
+                            painter.rect_filled(
+                                xf_rect,
+                                2.0,
+                                egui::Color32::from_rgba_unmultiplied(46, 204, 113, 60),
+                            );
+                            painter.line_segment(
+                                [xf_rect.left_top(), xf_rect.right_bottom()],
+                                egui::Stroke::new(1.5, egui::Color32::WHITE),
+                            );
+                            painter.line_segment(
+                                [xf_rect.left_bottom(), xf_rect.right_top()],
+                                egui::Stroke::new(1.5, egui::Color32::WHITE),
+                            );
                         }
                     }
                 }
@@ -855,7 +1042,8 @@ pub fn show_arranger(
                 // Context menu on empty track lane area (Step 589)
                 lane_resp.context_menu(|ui| {
                     if ui.button("➕ Add Pattern Clip").clicked() {
-                        let click_pos = ui.input(|i| i.pointer.hover_pos()).unwrap_or(lane_rect.min);
+                        let click_pos =
+                            ui.input(|i| i.pointer.hover_pos()).unwrap_or(lane_rect.min);
                         let clicked_beat = ((click_pos.x - lane_rect.left()) / ppb).max(0.0) as f64;
                         let div = (*grid_division).max(0.01);
                         let start_beat = (clicked_beat / div).round() * div;
@@ -869,8 +1057,10 @@ pub fn show_arranger(
                     if let Some(ref cb) = state.clipboard_clip {
                         if ui.button("📋 Paste Clip").clicked() {
                             let mut pasted = cb.duplicate();
-                            let click_pos = ui.input(|i| i.pointer.hover_pos()).unwrap_or(lane_rect.min);
-                            let clicked_beat = ((click_pos.x - lane_rect.left()) / ppb).max(0.0) as f64;
+                            let click_pos =
+                                ui.input(|i| i.pointer.hover_pos()).unwrap_or(lane_rect.min);
+                            let clicked_beat =
+                                ((click_pos.x - lane_rect.left()) / ppb).max(0.0) as f64;
                             let div = (*grid_division).max(0.01);
                             pasted.start_beat = (clicked_beat / div).round() * div;
                             track.clips.push(pasted);
@@ -913,7 +1103,11 @@ pub fn show_arranger(
                 if del_idx == 0 && t.sequence.is_some() {
                     t.sequence = None;
                 } else {
-                    let clip_arr_idx = if t.sequence.is_some() { del_idx - 1 } else { del_idx };
+                    let clip_arr_idx = if t.sequence.is_some() {
+                        del_idx - 1
+                    } else {
+                        del_idx
+                    };
                     if clip_arr_idx < t.clips.len() {
                         t.clips.remove(clip_arr_idx);
                     }
@@ -924,7 +1118,8 @@ pub fn show_arranger(
         grid_bottom_out = Some(ui.cursor().min.y);
 
         // Render Red Playhead Line across all tracks
-        if let (Some(px), Some(top), Some(bottom)) = (playhead_x_out, grid_top_out, grid_bottom_out) {
+        if let (Some(px), Some(top), Some(bottom)) = (playhead_x_out, grid_top_out, grid_bottom_out)
+        {
             let painter = ui.painter();
             painter.line_segment(
                 [egui::pos2(px, top), egui::pos2(px, bottom)],
@@ -940,13 +1135,13 @@ pub fn show_arranger(
 /// Helper function to auto-color all tracks from vibrant palette (Step 445).
 pub fn auto_color_tracks(tracks: &mut [TrackConfig]) {
     let palette = [
-        [26, 140, 255],  // Electric Blue
-        [255, 107, 43],  // Orange
-        [46, 204, 113],  // Emerald Green
-        [155, 89, 182],  // Purple
-        [241, 196, 15],  // Amber
-        [231, 76, 60],   // Red
-        [52, 152, 219],  // Cyan
+        [26, 140, 255], // Electric Blue
+        [255, 107, 43], // Orange
+        [46, 204, 113], // Emerald Green
+        [155, 89, 182], // Purple
+        [241, 196, 15], // Amber
+        [231, 76, 60],  // Red
+        [52, 152, 219], // Cyan
     ];
     for (i, t) in tracks.iter_mut().enumerate() {
         t.color = Some(palette[i % palette.len()]);
@@ -955,7 +1150,12 @@ pub fn auto_color_tracks(tracks: &mut [TrackConfig]) {
 
 /// Helper to normalize active steps in a sequence to max 1.0 velocity (Step 433).
 pub fn normalize_clip(seq: &mut SequenceConfig) {
-    let max_vel = seq.steps.iter().filter(|s| s.active).map(|s| s.velocity).fold(0.0f32, f32::max);
+    let max_vel = seq
+        .steps
+        .iter()
+        .filter(|s| s.active)
+        .map(|s| s.velocity)
+        .fold(0.0f32, f32::max);
     if max_vel > 0.0 {
         let factor = 1.0 / max_vel;
         for s in &mut seq.steps {
@@ -1017,12 +1217,20 @@ pub fn show_automation_lane(
                 ui.add_space(20.0);
                 let first_interp = lane.curve.points.first().map(|p| p.interp);
                 let shape_icon = match first_interp {
-                    Some(summoner_sequencer::automation_timeline::Interpolation::Linear) | None => "📈",
-                    Some(summoner_sequencer::automation_timeline::Interpolation::Exponential) => "📈²",
-                    Some(summoner_sequencer::automation_timeline::Interpolation::Logarithmic) => "📉",
+                    Some(summoner_sequencer::automation_timeline::Interpolation::Linear) | None => {
+                        "📈"
+                    }
+                    Some(summoner_sequencer::automation_timeline::Interpolation::Exponential) => {
+                        "📈²"
+                    }
+                    Some(summoner_sequencer::automation_timeline::Interpolation::Logarithmic) => {
+                        "📉"
+                    }
                     Some(summoner_sequencer::automation_timeline::Interpolation::Step) => "⎍",
                     Some(summoner_sequencer::automation_timeline::Interpolation::Smooth) => "🌊",
-                    Some(summoner_sequencer::automation_timeline::Interpolation::Bezier(_, _)) => "➰",
+                    Some(summoner_sequencer::automation_timeline::Interpolation::Bezier(_, _)) => {
+                        "➰"
+                    }
                 };
                 let head = ui.label(
                     egui::RichText::new(format!("{} {}", shape_icon, lane.param_id))
@@ -1163,8 +1371,32 @@ mod tests {
             name: "Clip".to_string(),
             is_unique: true,
             steps: vec![
-                TrackerStepConfig { note: 60.0, velocity: 0.5, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true, muted: false },
-                TrackerStepConfig { note: 62.0, velocity: 0.25, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true, muted: false },
+                TrackerStepConfig {
+                    note: 60.0,
+                    velocity: 0.5,
+                    gate: 0.5,
+                    probability: 1.0,
+                    ratchet: 1,
+                    micro_shift: 0,
+                    swing: 0.0,
+                    pan: 0.0,
+                    pitch_offset: 0.0,
+                    active: true,
+                    muted: false,
+                },
+                TrackerStepConfig {
+                    note: 62.0,
+                    velocity: 0.25,
+                    gate: 0.5,
+                    probability: 1.0,
+                    ratchet: 1,
+                    micro_shift: 0,
+                    swing: 0.0,
+                    pan: 0.0,
+                    pitch_offset: 0.0,
+                    active: true,
+                    muted: false,
+                },
             ],
             fade_in: 0.0,
             fade_out: 0.0,
@@ -1187,9 +1419,45 @@ mod tests {
             name: "Clip".to_string(),
             is_unique: true,
             steps: vec![
-                TrackerStepConfig { note: 60.0, velocity: 0.0, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: false, muted: false },
-                TrackerStepConfig { note: 62.0, velocity: 0.8, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true, muted: false },
-                TrackerStepConfig { note: 64.0, velocity: 0.0, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: false, muted: false },
+                TrackerStepConfig {
+                    note: 60.0,
+                    velocity: 0.0,
+                    gate: 0.5,
+                    probability: 1.0,
+                    ratchet: 1,
+                    micro_shift: 0,
+                    swing: 0.0,
+                    pan: 0.0,
+                    pitch_offset: 0.0,
+                    active: false,
+                    muted: false,
+                },
+                TrackerStepConfig {
+                    note: 62.0,
+                    velocity: 0.8,
+                    gate: 0.5,
+                    probability: 1.0,
+                    ratchet: 1,
+                    micro_shift: 0,
+                    swing: 0.0,
+                    pan: 0.0,
+                    pitch_offset: 0.0,
+                    active: true,
+                    muted: false,
+                },
+                TrackerStepConfig {
+                    note: 64.0,
+                    velocity: 0.0,
+                    gate: 0.5,
+                    probability: 1.0,
+                    ratchet: 1,
+                    micro_shift: 0,
+                    swing: 0.0,
+                    pan: 0.0,
+                    pitch_offset: 0.0,
+                    active: false,
+                    muted: false,
+                },
             ],
             fade_in: 0.0,
             fade_out: 0.0,
@@ -1213,10 +1481,58 @@ mod tests {
             name: "Clip".to_string(),
             is_unique: true,
             steps: vec![
-                TrackerStepConfig { note: 60.0, velocity: 0.8, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true, muted: false },
-                TrackerStepConfig { note: 62.0, velocity: 0.8, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true, muted: false },
-                TrackerStepConfig { note: 64.0, velocity: 0.8, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true, muted: false },
-                TrackerStepConfig { note: 65.0, velocity: 0.8, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true, muted: false },
+                TrackerStepConfig {
+                    note: 60.0,
+                    velocity: 0.8,
+                    gate: 0.5,
+                    probability: 1.0,
+                    ratchet: 1,
+                    micro_shift: 0,
+                    swing: 0.0,
+                    pan: 0.0,
+                    pitch_offset: 0.0,
+                    active: true,
+                    muted: false,
+                },
+                TrackerStepConfig {
+                    note: 62.0,
+                    velocity: 0.8,
+                    gate: 0.5,
+                    probability: 1.0,
+                    ratchet: 1,
+                    micro_shift: 0,
+                    swing: 0.0,
+                    pan: 0.0,
+                    pitch_offset: 0.0,
+                    active: true,
+                    muted: false,
+                },
+                TrackerStepConfig {
+                    note: 64.0,
+                    velocity: 0.8,
+                    gate: 0.5,
+                    probability: 1.0,
+                    ratchet: 1,
+                    micro_shift: 0,
+                    swing: 0.0,
+                    pan: 0.0,
+                    pitch_offset: 0.0,
+                    active: true,
+                    muted: false,
+                },
+                TrackerStepConfig {
+                    note: 65.0,
+                    velocity: 0.8,
+                    gate: 0.5,
+                    probability: 1.0,
+                    ratchet: 1,
+                    micro_shift: 0,
+                    swing: 0.0,
+                    pan: 0.0,
+                    pitch_offset: 0.0,
+                    active: true,
+                    muted: false,
+                },
             ],
             fade_in: 0.0,
             fade_out: 0.0,
@@ -1238,8 +1554,32 @@ mod tests {
             name: "Clip".to_string(),
             is_unique: true,
             steps: vec![
-                TrackerStepConfig { note: 60.0, velocity: 0.8, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true, muted: false },
-                TrackerStepConfig { note: 62.0, velocity: 0.8, gate: 0.5, probability: 1.0, ratchet: 1, micro_shift: 0, swing: 0.0, pan: 0.0, pitch_offset: 0.0, active: true, muted: false },
+                TrackerStepConfig {
+                    note: 60.0,
+                    velocity: 0.8,
+                    gate: 0.5,
+                    probability: 1.0,
+                    ratchet: 1,
+                    micro_shift: 0,
+                    swing: 0.0,
+                    pan: 0.0,
+                    pitch_offset: 0.0,
+                    active: true,
+                    muted: false,
+                },
+                TrackerStepConfig {
+                    note: 62.0,
+                    velocity: 0.8,
+                    gate: 0.5,
+                    probability: 1.0,
+                    ratchet: 1,
+                    micro_shift: 0,
+                    swing: 0.0,
+                    pan: 0.0,
+                    pitch_offset: 0.0,
+                    active: true,
+                    muted: false,
+                },
             ],
             fade_in: 0.0,
             fade_out: 0.0,

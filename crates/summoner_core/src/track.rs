@@ -82,8 +82,10 @@ impl Track {
         let mut a_is_input = true;
 
         for node in &mut self.nodes {
-            let mut in_slices: [&[crate::audio::Sample]; MAX_TRACK_CHANNELS] = [&[]; MAX_TRACK_CHANNELS];
-            let mut out_slices: [&mut [crate::audio::Sample]; MAX_TRACK_CHANNELS] = std::array::from_fn(|_| &mut [][..]);
+            let mut in_slices: [&[crate::audio::Sample]; MAX_TRACK_CHANNELS] =
+                [&[]; MAX_TRACK_CHANNELS];
+            let mut out_slices: [&mut [crate::audio::Sample]; MAX_TRACK_CHANNELS] =
+                std::array::from_fn(|_| &mut [][..]);
 
             if a_is_input {
                 for (ch, buf) in self.temp_buf_a.iter().take(channels).enumerate() {
@@ -106,7 +108,11 @@ impl Track {
             a_is_input = !a_is_input;
         }
 
-        let final_out = if a_is_input { &self.temp_buf_a } else { &self.temp_buf_b };
+        let final_out = if a_is_input {
+            &self.temp_buf_a
+        } else {
+            &self.temp_buf_b
+        };
         for (ch, out) in out_buffers.iter_mut().enumerate() {
             if ch < self.channels {
                 out[..block_size].copy_from_slice(&final_out[ch][..block_size]);

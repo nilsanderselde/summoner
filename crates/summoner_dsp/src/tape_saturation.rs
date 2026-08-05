@@ -47,13 +47,22 @@ impl SignalProcessor for TapeSaturationNode {
         "TapeSaturationNode"
     }
 
-    fn process_block(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
+    fn process_block(
+        &mut self,
+        input: &[&[Sample]],
+        output: &mut [&mut [Sample]],
+        ctx: &ProcessContext,
+    ) {
         if input.is_empty() || output.is_empty() {
             return;
         }
 
         let num_samples = input[0].len().min(output[0].len());
-        let sr = if ctx.sample_rate > 0 { ctx.sample_rate as f32 } else { 44100.0 };
+        let sr = if ctx.sample_rate > 0 {
+            ctx.sample_rate as f32
+        } else {
+            44100.0
+        };
 
         for i in 0..num_samples {
             // LFO for subtle wow & flutter
@@ -61,12 +70,14 @@ impl SignalProcessor for TapeSaturationNode {
             if self.lfo_phase > 1.0 {
                 self.lfo_phase -= 1.0;
             }
-            let flutter_mod = 1.0 + (self.lfo_phase * std::f32::consts::TAU).sin() * 0.002 * self.wow_flutter;
+            let flutter_mod =
+                1.0 + (self.lfo_phase * std::f32::consts::TAU).sin() * 0.002 * self.wow_flutter;
 
             let in_sample = input[0][i] * self.drive * flutter_mod;
 
             // Soft-clipping hyperbolic tangent tape curve
-            let saturated = (in_sample * (1.0 + self.saturation)).tanh() / (1.0 + self.saturation * 0.5);
+            let saturated =
+                (in_sample * (1.0 + self.saturation)).tanh() / (1.0 + self.saturation * 0.5);
 
             // Tone high-frequency attenuation damping
             let alpha = 1.0 - (self.tone * 0.5);
@@ -96,6 +107,9 @@ mod tests {
         tape.process_block(&[&input_sig[..]], &mut [&mut out_sig[..]], &ctx);
 
         assert!(out_sig.iter().all(|s| s.is_finite()));
-        assert!(out_sig[127].abs() < 1.0, "Tape saturation should soft clip loud inputs below 1.0");
+        assert!(
+            out_sig[127].abs() < 1.0,
+            "Tape saturation should soft clip loud inputs below 1.0"
+        );
     }
 }

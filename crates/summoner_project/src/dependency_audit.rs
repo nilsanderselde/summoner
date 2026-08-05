@@ -55,7 +55,10 @@ impl WorkspaceDependencyAuditor {
     ) -> Result<DependencyAuditReport, String> {
         let manifest_path = workspace_root.join("Cargo.toml");
         if !manifest_path.exists() {
-            return Err(format!("Workspace root manifest missing at {:?}", manifest_path));
+            return Err(format!(
+                "Workspace root manifest missing at {:?}",
+                manifest_path
+            ));
         }
 
         let mut crate_audits = Vec::new();
@@ -65,12 +68,36 @@ impl WorkspaceDependencyAuditor {
         let mut telemetry = 0;
 
         let member_crates = [
-            ("summoner_core", "crates/summoner_core/Cargo.toml", "AGPL-3.0-or-later"),
-            ("summoner_dsp", "crates/summoner_dsp/Cargo.toml", "AGPL-3.0-or-later"),
-            ("summoner_harmony", "crates/summoner_harmony/Cargo.toml", "AGPL-3.0-or-later"),
-            ("summoner_project", "crates/summoner_project/Cargo.toml", "AGPL-3.0-or-later"),
-            ("summoner_gui", "crates/summoner_gui/Cargo.toml", "AGPL-3.0-or-later"),
-            ("summoner_sequencer", "crates/summoner_sequencer/Cargo.toml", "AGPL-3.0-or-later"),
+            (
+                "summoner_core",
+                "crates/summoner_core/Cargo.toml",
+                "AGPL-3.0-or-later",
+            ),
+            (
+                "summoner_dsp",
+                "crates/summoner_dsp/Cargo.toml",
+                "AGPL-3.0-or-later",
+            ),
+            (
+                "summoner_harmony",
+                "crates/summoner_harmony/Cargo.toml",
+                "AGPL-3.0-or-later",
+            ),
+            (
+                "summoner_project",
+                "crates/summoner_project/Cargo.toml",
+                "AGPL-3.0-or-later",
+            ),
+            (
+                "summoner_gui",
+                "crates/summoner_gui/Cargo.toml",
+                "AGPL-3.0-or-later",
+            ),
+            (
+                "summoner_sequencer",
+                "crates/summoner_sequencer/Cargo.toml",
+                "AGPL-3.0-or-later",
+            ),
             ("summon", "crates/summon/Cargo.toml", "AGPL-3.0-or-later"),
         ];
 
@@ -83,7 +110,9 @@ impl WorkspaceDependencyAuditor {
             if full_path.exists() {
                 if let Ok(content) = std::fs::read_to_string(&full_path) {
                     if let Ok(value) = content.parse::<toml::Value>() {
-                        if let Some(deps_table) = value.get("dependencies").and_then(|d| d.as_table()) {
+                        if let Some(deps_table) =
+                            value.get("dependencies").and_then(|d| d.as_table())
+                        {
                             for (dep_name, dep_val) in deps_table {
                                 if dep_name.starts_with("summoner_") {
                                     continue;
@@ -105,12 +134,15 @@ impl WorkspaceDependencyAuditor {
                                     wildcards += 1;
                                 }
 
-                                let is_telemetry = telemetry_keywords.iter().any(|&k| dep_name.contains(k));
+                                let is_telemetry =
+                                    telemetry_keywords.iter().any(|&k| dep_name.contains(k));
                                 if is_telemetry {
                                     telemetry += 1;
                                 }
 
-                                let license = LicenseCompliance::ApprovedFoss("MIT / Apache-2.0 / AGPL-3.0".to_string());
+                                let license = LicenseCompliance::ApprovedFoss(
+                                    "MIT / Apache-2.0 / AGPL-3.0".to_string(),
+                                );
 
                                 audited_deps.push(AuditedCrateDependency {
                                     name: dep_name.clone(),
@@ -140,13 +172,23 @@ impl WorkspaceDependencyAuditor {
         summary.push_str("=====================================================\n");
         summary.push_str("   SUMMONER DAW - WORKSPACE DEPENDENCY SECURITY AUDIT\n");
         summary.push_str("=====================================================\n");
-        summary.push_str(&format!("Workspace Crates Audited : {}\n", crate_audits.len()));
+        summary.push_str(&format!(
+            "Workspace Crates Audited : {}\n",
+            crate_audits.len()
+        ));
         summary.push_str(&format!("Total External Dependencies: {}\n", total_deps));
         summary.push_str("Security Vulnerabilities   : 0 (PASSED)\n");
         summary.push_str(&format!("Wildcard Dependencies (*)  : {}\n", wildcards));
         summary.push_str(&format!("Telemetry Dependencies     : {}\n", telemetry));
         summary.push_str(&format!("Non-FOSS Licenses          : {}\n", non_foss));
-        summary.push_str(&format!("Compliance Status          : {}\n", if is_security_compliant { "VERIFIED PASS" } else { "FAIL" }));
+        summary.push_str(&format!(
+            "Compliance Status          : {}\n",
+            if is_security_compliant {
+                "VERIFIED PASS"
+            } else {
+                "FAIL"
+            }
+        ));
         summary.push_str("=====================================================\n");
 
         Ok(DependencyAuditReport {

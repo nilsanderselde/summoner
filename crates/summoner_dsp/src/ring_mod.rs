@@ -13,9 +13,9 @@
 
 #![allow(clippy::all)]
 
+use crate::traits::SignalProcessor;
 use summoner_core::audio::Sample;
 use summoner_core::node::ProcessContext;
-use crate::traits::SignalProcessor;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RingModWaveform {
@@ -46,29 +46,54 @@ impl RingModulator {
             RingModWaveform::Sine => (2.0 * PI * phase).sin(),
             RingModWaveform::Triangle => (2.0 * (2.0 * phase - 1.0).abs()) - 1.0,
             RingModWaveform::Saw => 2.0 * phase - 1.0,
-            RingModWaveform::Square => if phase < 0.5 { 1.0 } else { -1.0 },
+            RingModWaveform::Square => {
+                if phase < 0.5 {
+                    1.0
+                } else {
+                    -1.0
+                }
+            }
         }
     }
 }
 
 impl SignalProcessor for RingModulator {
-    fn name(&self) -> &str { "RingModulator" }
-    fn process_block(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
-        if input.is_empty() || output.is_empty() { return; }
+    fn name(&self) -> &str {
+        "RingModulator"
+    }
+    fn process_block(
+        &mut self,
+        input: &[&[Sample]],
+        output: &mut [&mut [Sample]],
+        ctx: &ProcessContext,
+    ) {
+        if input.is_empty() || output.is_empty() {
+            return;
+        }
         let num_samples = input[0].len().min(output[0].len());
         let dt = 1.0 / ctx.sample_rate as f32;
         for i in 0..num_samples {
             let x = input[0][i];
             let mod_sig = self.carrier_sample(self.phase);
             self.phase = (self.phase + self.freq * dt).fract();
-            for out_ch in output.iter_mut() { out_ch[i] = x * mod_sig; }
+            for out_ch in output.iter_mut() {
+                out_ch[i] = x * mod_sig;
+            }
         }
     }
 }
 
-pub struct FrequencyShifter { pub freq: f32 }
-impl FrequencyShifter { pub fn new() -> Self { Self { freq: 100.0 } } }
+pub struct FrequencyShifter {
+    pub freq: f32,
+}
+impl FrequencyShifter {
+    pub fn new() -> Self {
+        Self { freq: 100.0 }
+    }
+}
 impl SignalProcessor for FrequencyShifter {
-    fn name(&self) -> &str { "FrequencyShifter" }
+    fn name(&self) -> &str {
+        "FrequencyShifter"
+    }
     fn process_block(&mut self, _i: &[&[Sample]], _o: &mut [&mut [Sample]], _c: &ProcessContext) {}
 }

@@ -19,9 +19,9 @@
 use crate::modulators::EnvADSR;
 use crate::sampler::{LoopMode, MultiSampleBank, MultiSamplerNode, SampleBuffer, SampleRegion};
 use crate::traits::SignalProcessor;
+use std::sync::Arc;
 use summoner_core::audio::Sample;
 use summoner_core::node::ProcessContext;
-use std::sync::Arc;
 
 /// Maximum pads supported per DrumMachineDevice (zero-alloc, fixed-size arrays).
 pub const MAX_PADS: usize = 24;
@@ -49,7 +49,15 @@ pub struct DrumPad {
 
 impl DrumPad {
     /// Create a new pad with the given MIDI note, attack/decay/sustain/release, and gain.
-    pub fn new(name: impl Into<String>, midi_note: u8, attack: f32, decay: f32, sustain: f32, release: f32, gain: f32) -> Self {
+    pub fn new(
+        name: impl Into<String>,
+        midi_note: u8,
+        attack: f32,
+        decay: f32,
+        sustain: f32,
+        release: f32,
+        gain: f32,
+    ) -> Self {
         let bank = MultiSampleBank::new();
         let sampler = MultiSamplerNode::new(bank.clone());
         Self {
@@ -163,7 +171,11 @@ impl DrumMachineDevice {
 
     /// Add a new pad. Panics if MAX_PADS would be exceeded.
     pub fn add_pad(&mut self, pad: DrumPad) {
-        assert!(self.pads.len() < MAX_PADS, "DrumMachineDevice: exceeded MAX_PADS={}", MAX_PADS);
+        assert!(
+            self.pads.len() < MAX_PADS,
+            "DrumMachineDevice: exceeded MAX_PADS={}",
+            MAX_PADS
+        );
         self.pads.push(pad);
     }
 
@@ -237,16 +249,32 @@ mod tests {
         let sine_data: Vec<f32> = (0..4410)
             .map(|i| (i as f32 * 2.0 * std::f32::consts::PI * 60.0 / 44100.0).sin())
             .collect();
-        kick_pad.add_sample(36, 36, 36, "kick.wav", Some(Arc::new(SampleBuffer::new(sine_data, 44100, 1))), LoopMode::NoLoop);
+        kick_pad.add_sample(
+            36,
+            36,
+            36,
+            "kick.wav",
+            Some(Arc::new(SampleBuffer::new(sine_data, 44100, 1))),
+            LoopMode::NoLoop,
+        );
         kit.add_pad(kick_pad);
 
         // Create a snare pad with noise buffer.
         let mut snare_pad = DrumPad::new("Snare", 38, 0.001, 0.15, 0.0, 0.08, 0.9);
-        let noise_data: Vec<f32> = (0u64..4410).map(|i| {
-            let x = i.wrapping_mul(1664525).wrapping_add(1013904223);
-            ((x & 0x00FF_FFFF) as f32 / (1u32 << 23) as f32) - 1.0
-        }).collect();
-        snare_pad.add_sample(38, 38, 38, "snare.wav", Some(Arc::new(SampleBuffer::new(noise_data, 44100, 1))), LoopMode::NoLoop);
+        let noise_data: Vec<f32> = (0u64..4410)
+            .map(|i| {
+                let x = i.wrapping_mul(1664525).wrapping_add(1013904223);
+                ((x & 0x00FF_FFFF) as f32 / (1u32 << 23) as f32) - 1.0
+            })
+            .collect();
+        snare_pad.add_sample(
+            38,
+            38,
+            38,
+            "snare.wav",
+            Some(Arc::new(SampleBuffer::new(noise_data, 44100, 1))),
+            LoopMode::NoLoop,
+        );
         kit.add_pad(snare_pad);
 
         assert_eq!(kit.pads.len(), 2);

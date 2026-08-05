@@ -23,7 +23,10 @@ fn test_alloc_guard_detects_allocations() {
         // Heap allocation while AllocGuard is active should trigger panic
         let _v: Vec<i32> = vec![1, 2, 3];
     });
-    assert!(result.is_err(), "AllocGuard failed to catch heap allocation panic!");
+    assert!(
+        result.is_err(),
+        "AllocGuard failed to catch heap allocation panic!"
+    );
 }
 
 #[test]
@@ -54,7 +57,10 @@ fn test_zero_alloc_dsp_processing() {
     }
 
     let energy: f32 = out_buf.channel(0).iter().map(|s| s.abs()).sum();
-    assert!(energy > 0.0, "Expected non-zero signal output from DSP chain");
+    assert!(
+        energy > 0.0,
+        "Expected non-zero signal output from DSP chain"
+    );
 }
 
 #[test]
@@ -103,8 +109,12 @@ fn test_deterministic_rendering_identical_output() {
 
 #[test]
 fn test_frame_operations() {
-    let mut f1 = Frame::<2> { channels: [0.5, -0.5] };
-    let f2 = Frame::<2> { channels: [0.25, 0.25] };
+    let mut f1 = Frame::<2> {
+        channels: [0.5, -0.5],
+    };
+    let f2 = Frame::<2> {
+        channels: [0.25, 0.25],
+    };
 
     f1.mix(&f2);
     assert_eq!(f1.channels, [0.75, -0.25]);

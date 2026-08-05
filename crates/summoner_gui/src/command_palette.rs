@@ -336,7 +336,9 @@ impl CommandPalette {
                 egui::ScrollArea::vertical().show(ui, |ui| {
                     let mut current_category = String::new();
                     for (idx, action) in filtered.iter().enumerate() {
-                        if self.search_query.trim().is_empty() && action.category != current_category {
+                        if self.search_query.trim().is_empty()
+                            && action.category != current_category
+                        {
                             current_category = action.category.clone();
                             ui.add_space(4.0);
                             ui.label(
@@ -356,13 +358,16 @@ impl CommandPalette {
                                 self.is_open = false;
                             }
                             if let Some(ref hint) = action.shortcut_hint {
-                                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                    ui.label(
-                                        egui::RichText::new(hint)
-                                            .small()
-                                            .color(egui::Color32::from_rgb(120, 120, 140)),
-                                    );
-                                });
+                                ui.with_layout(
+                                    egui::Layout::right_to_left(egui::Align::Center),
+                                    |ui| {
+                                        ui.label(
+                                            egui::RichText::new(hint)
+                                                .small()
+                                                .color(egui::Color32::from_rgb(120, 120, 140)),
+                                        );
+                                    },
+                                );
                             }
                         });
                     }
@@ -426,4 +431,3 @@ mod tests {
         assert_eq!(palette.recent_action_ids[0], first_id);
     }
 }
-

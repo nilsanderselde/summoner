@@ -1,7 +1,7 @@
-use eframe::egui;
-use summoner_project::schema::{NodeConfig, ProjectConfig};
-use std::collections::HashMap;
 use crate::visualizer::{show_spectrum, SpectrumAnalyzer};
+use eframe::egui;
+use std::collections::HashMap;
+use summoner_project::schema::{NodeConfig, ProjectConfig};
 
 /// Internal GUI state for Console Mixer view (peak hold, master fader, popup state).
 #[derive(Debug, Clone)]
@@ -27,14 +27,14 @@ impl Default for MixerState {
 
 fn track_color(track_id: u64) -> egui::Color32 {
     let colors = [
-        egui::Color32::from_rgb(26, 140, 255),  // Electric Blue
-        egui::Color32::from_rgb(255, 107, 43),  // Orange Accent
-        egui::Color32::from_rgb(155, 89, 182),  // Purple
-        egui::Color32::from_rgb(46, 204, 113),  // Emerald Green
-        egui::Color32::from_rgb(241, 196, 15),  // Yellow
-        egui::Color32::from_rgb(231, 76, 60),   // Crimson
-        egui::Color32::from_rgb(52, 152, 219),  // Cyan
-        egui::Color32::from_rgb(230, 126, 34),  // Amber
+        egui::Color32::from_rgb(26, 140, 255), // Electric Blue
+        egui::Color32::from_rgb(255, 107, 43), // Orange Accent
+        egui::Color32::from_rgb(155, 89, 182), // Purple
+        egui::Color32::from_rgb(46, 204, 113), // Emerald Green
+        egui::Color32::from_rgb(241, 196, 15), // Yellow
+        egui::Color32::from_rgb(231, 76, 60),  // Crimson
+        egui::Color32::from_rgb(52, 152, 219), // Cyan
+        egui::Color32::from_rgb(230, 126, 34), // Amber
     ];
     colors[(track_id as usize) % colors.len()]
 }
@@ -46,7 +46,9 @@ pub fn show_mixer(
     spectrum: Option<&SpectrumAnalyzer>,
 ) {
     let state_id = ui.id().with("mixer_state");
-    let mut state = ui.data_mut(|d| d.get_temp::<MixerState>(state_id)).unwrap_or_default();
+    let mut state = ui
+        .data_mut(|d| d.get_temp::<MixerState>(state_id))
+        .unwrap_or_default();
 
     show_mixer_impl(ui, project, selected_track_id, spectrum, &mut state);
 
@@ -85,13 +87,18 @@ pub fn show_mixer_impl(
                         ui.set_width(125.0);
                         ui.vertical_centered(|ui| {
                             // Top track color indicator stripe
-                            let (stripe_rect, _) = ui.allocate_exact_size(egui::vec2(115.0, 4.0), egui::Sense::hover());
-                            ui.painter().rect_filled(stripe_rect, 2.0, track_color(track.id));
+                            let (stripe_rect, _) = ui
+                                .allocate_exact_size(egui::vec2(115.0, 4.0), egui::Sense::hover());
+                            ui.painter()
+                                .rect_filled(stripe_rect, 2.0, track_color(track.id));
 
                             ui.add_space(4.0);
 
                             // Track header button
-                            let head_btn = ui.selectable_label(is_selected, egui::RichText::new(&track.name).strong().size(13.0));
+                            let head_btn = ui.selectable_label(
+                                is_selected,
+                                egui::RichText::new(&track.name).strong().size(13.0),
+                            );
                             if head_btn.clicked() {
                                 *selected_track_id = Some(track.id);
                             }
@@ -101,11 +108,17 @@ pub fn show_mixer_impl(
                             // Mute & Solo toggles
                             ui.horizontal(|ui| {
                                 let mut mute = track.muted;
-                                if ui.toggle_value(&mut mute, egui::RichText::new("M").strong()).changed() {
+                                if ui
+                                    .toggle_value(&mut mute, egui::RichText::new("M").strong())
+                                    .changed()
+                                {
                                     track.muted = mute;
                                 }
                                 let mut solo = track.soloed;
-                                if ui.toggle_value(&mut solo, egui::RichText::new("S").strong()).changed() {
+                                if ui
+                                    .toggle_value(&mut solo, egui::RichText::new("S").strong())
+                                    .changed()
+                                {
                                     track.soloed = solo;
                                 }
                             });
@@ -127,9 +140,16 @@ pub fn show_mixer_impl(
                                 ui.add(gain_slider);
 
                                 // VU Meter bar beside fader
-                                let (meter_rect, _) = ui.allocate_exact_size(egui::vec2(12.0, 100.0), egui::Sense::hover());
+                                let (meter_rect, _) = ui.allocate_exact_size(
+                                    egui::vec2(12.0, 100.0),
+                                    egui::Sense::hover(),
+                                );
                                 let painter = ui.painter();
-                                painter.rect_filled(meter_rect, 2.0, egui::Color32::from_rgb(12, 12, 16));
+                                painter.rect_filled(
+                                    meter_rect,
+                                    2.0,
+                                    egui::Color32::from_rgb(12, 12, 16),
+                                );
 
                                 let current_level = if track.muted || is_dimmed {
                                     0.0f32
@@ -164,13 +184,22 @@ pub fn show_mixer_impl(
                                 if peak_val > 0.0 {
                                     let peak_y = meter_rect.max.y - peak_val * meter_rect.height();
                                     painter.line_segment(
-                                        [egui::pos2(meter_rect.min.x, peak_y), egui::pos2(meter_rect.max.x, peak_y)],
+                                        [
+                                            egui::pos2(meter_rect.min.x, peak_y),
+                                            egui::pos2(meter_rect.max.x, peak_y),
+                                        ],
                                         egui::Stroke::new(2.0_f32, egui::Color32::WHITE),
                                     );
                                 }
                             });
 
-                            ui.label(egui::RichText::new(format!("{:.1} dB", 20.0 * track.gain.max(0.0001).log10())).size(11.0));
+                            ui.label(
+                                egui::RichText::new(format!(
+                                    "{:.1} dB",
+                                    20.0 * track.gain.max(0.0001).log10()
+                                ))
+                                .size(11.0),
+                            );
 
                             ui.add_space(4.0);
 
@@ -182,13 +211,17 @@ pub fn show_mixer_impl(
 
                             // Insert FX Button & count
                             if ui.button("➕ Insert FX").clicked() {
-                                state.fx_popup_track_id = if state.fx_popup_track_id == Some(track.id) {
-                                    None
-                                } else {
-                                    Some(track.id)
-                                };
+                                state.fx_popup_track_id =
+                                    if state.fx_popup_track_id == Some(track.id) {
+                                        None
+                                    } else {
+                                        Some(track.id)
+                                    };
                             }
-                            ui.label(egui::RichText::new(format!("{} FX Nodes", track.nodes.len())).size(11.0));
+                            ui.label(
+                                egui::RichText::new(format!("{} FX Nodes", track.nodes.len()))
+                                    .size(11.0),
+                            );
 
                             ui.separator();
                             ui.collapsing("Spectrum", |ui| {
@@ -209,21 +242,37 @@ pub fn show_mixer_impl(
             // Master Bus Channel Strip at Right End
             egui::Frame::window(ui.style())
                 .fill(egui::Color32::from_rgb(30, 32, 42))
-                .stroke(egui::Stroke::new(1.5_f32, egui::Color32::from_rgb(255, 180, 40)))
+                .stroke(egui::Stroke::new(
+                    1.5_f32,
+                    egui::Color32::from_rgb(255, 180, 40),
+                ))
                 .show(ui, |ui| {
                     ui.set_width(125.0);
                     ui.vertical_centered(|ui| {
                         // Master Color Stripe (Gold/Amber)
-                        let (stripe_rect, _) = ui.allocate_exact_size(egui::vec2(115.0, 4.0), egui::Sense::hover());
-                        ui.painter().rect_filled(stripe_rect, 2.0, egui::Color32::from_rgb(255, 180, 40));
+                        let (stripe_rect, _) =
+                            ui.allocate_exact_size(egui::vec2(115.0, 4.0), egui::Sense::hover());
+                        ui.painter().rect_filled(
+                            stripe_rect,
+                            2.0,
+                            egui::Color32::from_rgb(255, 180, 40),
+                        );
 
                         ui.add_space(4.0);
-                        ui.label(egui::RichText::new("Master").strong().size(14.0).color(egui::Color32::from_rgb(255, 180, 40)));
+                        ui.label(
+                            egui::RichText::new("Master")
+                                .strong()
+                                .size(14.0)
+                                .color(egui::Color32::from_rgb(255, 180, 40)),
+                        );
                         ui.separator();
 
                         // Master Mute
                         let mut m_mute = state.master_muted;
-                        if ui.toggle_value(&mut m_mute, egui::RichText::new("M").strong()).changed() {
+                        if ui
+                            .toggle_value(&mut m_mute, egui::RichText::new("M").strong())
+                            .changed()
+                        {
                             state.master_muted = m_mute;
                         }
 
@@ -237,18 +286,31 @@ pub fn show_mixer_impl(
                                 .text("");
                             ui.add(g_slider);
 
-                            let (meter_rect, _) = ui.allocate_exact_size(egui::vec2(12.0, 100.0), egui::Sense::hover());
+                            let (meter_rect, _) = ui
+                                .allocate_exact_size(egui::vec2(12.0, 100.0), egui::Sense::hover());
                             let painter = ui.painter();
-                            painter.rect_filled(meter_rect, 2.0, egui::Color32::from_rgb(12, 12, 16));
+                            painter.rect_filled(
+                                meter_rect,
+                                2.0,
+                                egui::Color32::from_rgb(12, 12, 16),
+                            );
 
-                            let m_level = if state.master_muted { 0.0 } else { (state.master_gain * 0.65).min(1.0) };
+                            let m_level = if state.master_muted {
+                                0.0
+                            } else {
+                                (state.master_gain * 0.65).min(1.0)
+                            };
                             if m_level > 0.0 {
                                 let fill_h = m_level * meter_rect.height();
                                 let fill_r = egui::Rect::from_min_max(
                                     egui::pos2(meter_rect.min.x, meter_rect.max.y - fill_h),
                                     meter_rect.max,
                                 );
-                                painter.rect_filled(fill_r, 1.0, egui::Color32::from_rgb(255, 180, 40));
+                                painter.rect_filled(
+                                    fill_r,
+                                    1.0,
+                                    egui::Color32::from_rgb(255, 180, 40),
+                                );
                             }
 
                             // Peak hold for master (id 0)
@@ -262,13 +324,22 @@ pub fn show_mixer_impl(
                             if peak_val > 0.0 {
                                 let peak_y = meter_rect.max.y - peak_val * meter_rect.height();
                                 painter.line_segment(
-                                    [egui::pos2(meter_rect.min.x, peak_y), egui::pos2(meter_rect.max.x, peak_y)],
+                                    [
+                                        egui::pos2(meter_rect.min.x, peak_y),
+                                        egui::pos2(meter_rect.max.x, peak_y),
+                                    ],
                                     egui::Stroke::new(2.0_f32, egui::Color32::WHITE),
                                 );
                             }
                         });
 
-                        ui.label(egui::RichText::new(format!("{:.1} dB", 20.0 * state.master_gain.max(0.0001).log10())).size(11.0));
+                        ui.label(
+                            egui::RichText::new(format!(
+                                "{:.1} dB",
+                                20.0 * state.master_gain.max(0.0001).log10()
+                            ))
+                            .size(11.0),
+                        );
 
                         ui.add_space(4.0);
                         ui.label(egui::RichText::new("Pan").size(11.0));

@@ -85,7 +85,6 @@ pub struct ProjectMetadata {
     pub notes: Option<String>,
 }
 
-
 fn default_schema_version() -> String {
     "1.0".to_string()
 }
@@ -172,7 +171,6 @@ pub struct AssetConfig {
 fn default_slice_threshold() -> f32 {
     0.15
 }
-
 
 /// Transport settings in project document.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -393,7 +391,6 @@ pub struct NodeConfig {
     pub plugin_state: Option<PluginStateConfig>,
 }
 
-
 /// Polymetric sequence configuration for a track.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SequenceConfig {
@@ -543,5 +540,3 @@ fn default_ratchet() -> u32 {
 fn default_micro_shift() -> i32 {
     0
 }
-
-

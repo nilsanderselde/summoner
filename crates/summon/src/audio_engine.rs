@@ -11,14 +11,14 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Affero General Public License for more details.
 
-use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use std::thread;
-use summoner_core::param_bus::{ParamBus, ParamId};
-use summoner_core::node::ProcessContext;
-use summoner_project::schema::ProjectConfig;
 use crate::graph::GraphRunner;
-use std::sync::Arc;
+use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use crossbeam_channel::{Receiver, Sender};
+use std::sync::Arc;
+use std::thread;
+use summoner_core::node::ProcessContext;
+use summoner_core::param_bus::{ParamBus, ParamId};
+use summoner_project::schema::ProjectConfig;
 
 pub enum ParamUpdate {
     Set(ParamId, f32),
@@ -31,13 +31,16 @@ pub fn run_live(project: &ProjectConfig) -> ! {
     let device = host
         .default_output_device()
         .expect("Failed to find a default output device");
-    
-    println!("Using audio device: {}", device.name().unwrap_or_else(|_| "Unknown".to_string()));
+
+    println!(
+        "Using audio device: {}",
+        device.name().unwrap_or_else(|_| "Unknown".to_string())
+    );
 
     let config = device
         .default_output_config()
         .expect("Failed to get default output config");
-    
+
     let sample_rate = config.sample_rate();
     println!("Sample rate: {}", sample_rate.0);
 
@@ -59,7 +62,10 @@ pub fn run_live(project: &ProjectConfig) -> ! {
     #[cfg(feature = "gui")]
     let spectrum = summoner_gui::visualizer::SpectrumAnalyzer::new();
     #[cfg(feature = "gui")]
-    let _dft_handle = summoner_gui::visualizer::SpectrumAnalyzer::spawn_dft_thread(scope.clone(), spectrum.clone());
+    let _dft_handle = summoner_gui::visualizer::SpectrumAnalyzer::spawn_dft_thread(
+        scope.clone(),
+        spectrum.clone(),
+    );
     #[cfg(feature = "gui")]
     let scope_cb = scope.clone();
 
@@ -81,7 +87,7 @@ pub fn run_live(project: &ProjectConfig) -> ! {
                 }
 
                 let frames = (data.len() / channels).min(MAX_BLOCK_SIZE);
-                
+
                 let mut ctx = ProcessContext::new(sample_rate.0, bpm, frame_position);
                 ctx.param_bus = Some(param_bus_audio.clone());
 
@@ -89,16 +95,18 @@ pub fn run_live(project: &ProjectConfig) -> ! {
                 let buf_r = &mut out_r[..frames];
                 buf_l.fill(0.0);
                 buf_r.fill(0.0);
-                
+
                 // Process one block
                 runner.process_block(frames, &ctx, &mut [buf_l, buf_r]);
 
                 // Interleave the output
                 for (i, frame) in data.chunks_mut(channels).enumerate() {
-                    if i >= frames { break; }
+                    if i >= frames {
+                        break;
+                    }
                     let l = out_l[i];
                     let r = if channels > 1 { out_r[i] } else { out_l[i] };
-                    
+
                     frame[0] = l;
                     if channels > 1 {
                         frame[1] = r;
@@ -124,9 +132,9 @@ pub fn run_live(project: &ProjectConfig) -> ! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use summoner_project::create_default_project;
     use crate::graph::GraphRunner;
     use summoner_core::allocator::AllocGuard;
+    use summoner_project::create_default_project;
 
     #[test]
     fn test_audio_engine_builds_without_panic() {
@@ -161,15 +169,18 @@ mod tests {
             runner.process_block(512, &ctx, &mut [buf_l, buf_r]);
         }));
 
-        assert!(result.is_ok(), "Audio callback block processing triggered heap allocation!");
+        assert!(
+            result.is_ok(),
+            "Audio callback block processing triggered heap allocation!"
+        );
     }
 
     #[test]
     fn test_voice_pool_in_audio_path() {
-        use summoner_core::mpe::MpeEvent;
-        use summoner_core::voice::VoicePool;
-        use summoner_core::node::AudioNode;
         use crossbeam_channel::unbounded;
+        use summoner_core::mpe::MpeEvent;
+        use summoner_core::node::AudioNode;
+        use summoner_core::voice::VoicePool;
 
         struct MockVoice {
             freq: f32,
@@ -177,8 +188,15 @@ mod tests {
         }
 
         impl AudioNode for MockVoice {
-            fn name(&self) -> &str { "MockVoice" }
-            fn process(&mut self, _inputs: &[&[f32]], outputs: &mut [&mut [f32]], _ctx: &ProcessContext) {
+            fn name(&self) -> &str {
+                "MockVoice"
+            }
+            fn process(
+                &mut self,
+                _inputs: &[&[f32]],
+                outputs: &mut [&mut [f32]],
+                _ctx: &ProcessContext,
+            ) {
                 if self.active {
                     for out in outputs.iter_mut() {
                         out.fill(0.5);
@@ -197,17 +215,28 @@ mod tests {
             }
             fn set_pitch_bend(&mut self, _semitones: f32) {}
             fn set_pressure(&mut self, _pressure: f32) {}
-            fn is_active(&self) -> bool { self.active }
+            fn is_active(&self) -> bool {
+                self.active
+            }
         }
 
         let (tx, rx) = unbounded::<MpeEvent>();
         let mut pool = VoicePool::<MockVoice, 8>::new(
             "MockPool",
-            || MockVoice { freq: 440.0, active: false },
-            512
+            || MockVoice {
+                freq: 440.0,
+                active: false,
+            },
+            512,
         );
 
-        tx.send(MpeEvent::NoteOn { voice_id: 1, channel: 0, note: 60.0, velocity: 1.0 }).unwrap();
+        tx.send(MpeEvent::NoteOn {
+            voice_id: 1,
+            channel: 0,
+            note: 60.0,
+            velocity: 1.0,
+        })
+        .unwrap();
         while let Ok(evt) = rx.try_recv() {
             pool.dispatch_mpe(evt);
         }

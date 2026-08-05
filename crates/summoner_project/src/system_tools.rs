@@ -5,13 +5,13 @@
 //! System tools, update manager, cloud integration, privacy/GDPR compliance,
 //! plugin marketplace, sandboxing, and latency compensation (Steps 721-740).
 
+use crate::schema::ProjectConfig;
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{Read, Write};
 use std::path::Path;
 use zip::write::FileOptions;
 use zip::{ZipArchive, ZipWriter};
-use crate::schema::ProjectConfig;
 
 /// Step 721: Automatic update checker with notification tracking.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -42,7 +42,9 @@ impl UpdateChecker {
         if latest != self.current_version {
             self.remote_version = Some(latest.to_string());
             self.update_available = true;
-            self.release_notes = "v1.1.0: Enhanced cloud sync, plugin sandboxing, and latency compensation.".to_string();
+            self.release_notes =
+                "v1.1.0: Enhanced cloud sync, plugin sandboxing, and latency compensation."
+                    .to_string();
             self.notification_pending = true;
             true
         } else {
@@ -65,7 +67,10 @@ impl UpdateChecker {
         self.current_version = target_version.to_string();
         self.update_available = false;
         self.notification_pending = false;
-        Ok(format!("Successfully updated from {:?} to {}", self.backup_version, self.current_version))
+        Ok(format!(
+            "Successfully updated from {:?} to {}",
+            self.backup_version, self.current_version
+        ))
     }
 
     /// Step 723: Rollback option if update causes issues.
@@ -73,7 +78,10 @@ impl UpdateChecker {
         if let Some(prev) = self.backup_version.take() {
             let failed_ver = self.current_version.clone();
             self.current_version = prev.clone();
-            Ok(format!("Rolled back from {} to previous version {}", failed_ver, prev))
+            Ok(format!(
+                "Rolled back from {} to previous version {}",
+                failed_ver, prev
+            ))
         } else {
             Err("No previous version backup found to rollback to.".to_string())
         }
@@ -105,7 +113,10 @@ impl CrashReport {
         if !self.anonymized {
             return Err("Crash report is not anonymized!".to_string());
         }
-        Ok(format!("Crash report [{}] submitted successfully to telemetry endpoint.", self.timestamp))
+        Ok(format!(
+            "Crash report [{}] submitted successfully to telemetry endpoint.",
+            self.timestamp
+        ))
     }
 }
 
@@ -204,7 +215,8 @@ impl SystemSettings {
         let mut zip = ZipWriter::new(file);
         let options = FileOptions::default().compression_method(zip::CompressionMethod::Stored);
 
-        zip.start_file("settings.json", options).map_err(|e| e.to_string())?;
+        zip.start_file("settings.json", options)
+            .map_err(|e| e.to_string())?;
         let json = serde_json::to_string_pretty(self).map_err(|e| e.to_string())?;
         zip.write_all(json.as_bytes()).map_err(|e| e.to_string())?;
         zip.finish().map_err(|e| e.to_string())?;
@@ -218,7 +230,9 @@ impl SystemSettings {
         let mut zip_file = zip.by_name("settings.json").map_err(|e| e.to_string())?;
 
         let mut content = String::new();
-        zip_file.read_to_string(&mut content).map_err(|e| e.to_string())?;
+        zip_file
+            .read_to_string(&mut content)
+            .map_err(|e| e.to_string())?;
         serde_json::from_str(&content).map_err(|e| e.to_string())
     }
 }
@@ -247,7 +261,7 @@ impl Default for UserAccount {
             auth_token: None,
             is_logged_in: false,
             storage_quota_bytes: 5_368_709_120, // 5 GB
-            storage_used_bytes: 1_288_490_188, // 1.2 GB
+            storage_used_bytes: 1_288_490_188,  // 1.2 GB
         }
     }
 }
@@ -288,13 +302,21 @@ impl UserAccount {
 pub struct CloudProjectManager;
 
 impl CloudProjectManager {
-    pub fn cloud_save_project(project: &ProjectConfig, _account: &UserAccount) -> Result<String, String> {
+    pub fn cloud_save_project(
+        project: &ProjectConfig,
+        _account: &UserAccount,
+    ) -> Result<String, String> {
         let project_id = format!("offline-local-{}", project.name);
         Ok(project_id)
     }
 
-    pub fn cloud_restore_project(cloud_project_id: &str, _account: &UserAccount) -> Result<ProjectConfig, String> {
-        let name = cloud_project_id.strip_prefix("offline-local-").unwrap_or(cloud_project_id);
+    pub fn cloud_restore_project(
+        cloud_project_id: &str,
+        _account: &UserAccount,
+    ) -> Result<ProjectConfig, String> {
+        let name = cloud_project_id
+            .strip_prefix("offline-local-")
+            .unwrap_or(cloud_project_id);
         let proj = ProjectConfig {
             name: name.to_string(),
             ..Default::default()
@@ -302,7 +324,6 @@ impl CloudProjectManager {
         Ok(proj)
     }
 }
-
 
 /// Step 732: Cloud rendering job submission.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -312,7 +333,11 @@ pub struct CloudRenderJob {
     pub output_url: Option<String>,
 }
 
-pub fn submit_cloud_render(project: &ProjectConfig, format: &str, account: &UserAccount) -> Result<CloudRenderJob, String> {
+pub fn submit_cloud_render(
+    project: &ProjectConfig,
+    format: &str,
+    account: &UserAccount,
+) -> Result<CloudRenderJob, String> {
     if !account.is_logged_in {
         return Err("Account login required for cloud render.".to_string());
     }
@@ -320,7 +345,10 @@ pub fn submit_cloud_render(project: &ProjectConfig, format: &str, account: &User
     Ok(CloudRenderJob {
         job_id,
         status: "Completed".to_string(),
-        output_url: Some(format!("https://cloud.summonerdaw.io/renders/{}.{}", project.name, format)),
+        output_url: Some(format!(
+            "https://cloud.summonerdaw.io/renders/{}.{}",
+            project.name, format
+        )),
     })
 }
 
@@ -404,7 +432,8 @@ impl PluginMarketplace {
                     version: "1.3.0".to_string(),
                     rating: 5,
                     downloads: 15400,
-                    download_url: "https://marketplace.summoner.io/plugins/surge_xt.clap".to_string(),
+                    download_url: "https://marketplace.summoner.io/plugins/surge_xt.clap"
+                        .to_string(),
                     user_reviews: vec!["Incredible hybrid synth!".to_string()],
                 },
                 MarketplacePlugin {
@@ -414,7 +443,8 @@ impl PluginMarketplace {
                     version: "2.0.1".to_string(),
                     rating: 4,
                     downloads: 8200,
-                    download_url: "https://marketplace.summoner.io/plugins/freeverb_plus.clap".to_string(),
+                    download_url: "https://marketplace.summoner.io/plugins/freeverb_plus.clap"
+                        .to_string(),
                     user_reviews: Vec::new(),
                 },
             ],
@@ -422,15 +452,29 @@ impl PluginMarketplace {
     }
 
     pub fn install_plugin(&self, plugin_id: &str, target_dir: &Path) -> Result<String, String> {
-        let plugin = self.plugins.iter().find(|p| p.id == plugin_id)
+        let plugin = self
+            .plugins
+            .iter()
+            .find(|p| p.id == plugin_id)
             .ok_or_else(|| format!("Plugin {} not found in marketplace", plugin_id))?;
         let install_path = target_dir.join(format!("{}.clap", plugin.id));
-        Ok(format!("Installed {} v{} to {:?}", plugin.name, plugin.version, install_path))
+        Ok(format!(
+            "Installed {} v{} to {:?}",
+            plugin.name, plugin.version, install_path
+        ))
     }
 
     /// Step 737: Plugin rating and review submission.
-    pub fn rate_plugin(&mut self, plugin_id: &str, rating_1_to_5: u32, review: &str) -> Result<(), String> {
-        let plugin = self.plugins.iter_mut().find(|p| p.id == plugin_id)
+    pub fn rate_plugin(
+        &mut self,
+        plugin_id: &str,
+        rating_1_to_5: u32,
+        review: &str,
+    ) -> Result<(), String> {
+        let plugin = self
+            .plugins
+            .iter_mut()
+            .find(|p| p.id == plugin_id)
             .ok_or_else(|| format!("Plugin {} not found in marketplace", plugin_id))?;
         let clamped = rating_1_to_5.clamp(1, 5);
         plugin.rating = ((plugin.rating + clamped) / 2).max(1);
@@ -479,7 +523,10 @@ impl PluginCrashGuard {
         F: FnOnce() -> Result<(), String>,
     {
         if self.faulted_plugins.contains(plugin_id) {
-            return Err(format!("Plugin {} is marked faulted and was bypassed.", plugin_id));
+            return Err(format!(
+                "Plugin {} is marked faulted and was bypassed.",
+                plugin_id
+            ));
         }
 
         match std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)) {
@@ -487,7 +534,10 @@ impl PluginCrashGuard {
             Ok(Err(err)) => Err(err),
             Err(_) => {
                 self.faulted_plugins.insert(plugin_id.to_string());
-                Err(format!("Plugin {} crashed! Fault isolation intercepted crash and bypassed plugin.", plugin_id))
+                Err(format!(
+                    "Plugin {} crashed! Fault isolation intercepted crash and bypassed plugin.",
+                    plugin_id
+                ))
             }
         }
     }
@@ -541,12 +591,22 @@ impl PluginResourceBudget {
         }
     }
 
-    pub fn check_budget(&self, current_cpu_percent: f32, current_memory_mb: usize) -> Result<(), String> {
+    pub fn check_budget(
+        &self,
+        current_cpu_percent: f32,
+        current_memory_mb: usize,
+    ) -> Result<(), String> {
         if current_cpu_percent > self.max_cpu_percent {
-            return Err(format!("Plugin {} exceeded CPU budget: {:.1}% > {:.1}%", self.plugin_id, current_cpu_percent, self.max_cpu_percent));
+            return Err(format!(
+                "Plugin {} exceeded CPU budget: {:.1}% > {:.1}%",
+                self.plugin_id, current_cpu_percent, self.max_cpu_percent
+            ));
         }
         if current_memory_mb > self.max_memory_mb {
-            return Err(format!("Plugin {} exceeded Memory budget: {} MB > {} MB", self.plugin_id, current_memory_mb, self.max_memory_mb));
+            return Err(format!(
+                "Plugin {} exceeded Memory budget: {} MB > {} MB",
+                self.plugin_id, current_memory_mb, self.max_memory_mb
+            ));
         }
         Ok(())
     }
@@ -562,13 +622,17 @@ pub struct PluginBlacklist {
 impl PluginBlacklist {
     pub fn new() -> Self {
         let mut bl = Self::default();
-        bl.add_to_blacklist("clap.unstable_legacy_synth", "Known memory leak and audio callback freeze.");
+        bl.add_to_blacklist(
+            "clap.unstable_legacy_synth",
+            "Known memory leak and audio callback freeze.",
+        );
         bl
     }
 
     pub fn add_to_blacklist(&mut self, plugin_id: &str, reason: &str) {
         self.blacklisted_ids.insert(plugin_id.to_string());
-        self.reasons.insert(plugin_id.to_string(), reason.to_string());
+        self.reasons
+            .insert(plugin_id.to_string(), reason.to_string());
     }
 
     pub fn remove_from_blacklist(&mut self, plugin_id: &str) {
@@ -581,7 +645,11 @@ impl PluginBlacklist {
     }
 
     pub fn filter_allowed(&self, plugin_ids: &[String]) -> Vec<String> {
-        plugin_ids.iter().filter(|id| !self.is_blacklisted(id)).cloned().collect()
+        plugin_ids
+            .iter()
+            .filter(|id| !self.is_blacklisted(id))
+            .cloned()
+            .collect()
     }
 }
 
@@ -594,14 +662,20 @@ pub struct PluginConflictDetector {
 impl PluginConflictDetector {
     pub fn new() -> Self {
         Self {
-            rules: vec![
-                ("clap.legacy_driver_v1".to_string(), "clap.legacy_driver_v2".to_string(), "Concurrent legacy driver instances cause audio driver conflict.".to_string()),
-            ],
+            rules: vec![(
+                "clap.legacy_driver_v1".to_string(),
+                "clap.legacy_driver_v2".to_string(),
+                "Concurrent legacy driver instances cause audio driver conflict.".to_string(),
+            )],
         }
     }
 
     pub fn add_rule(&mut self, plugin_a: &str, plugin_b: &str, reason: &str) {
-        self.rules.push((plugin_a.to_string(), plugin_b.to_string(), reason.to_string()));
+        self.rules.push((
+            plugin_a.to_string(),
+            plugin_b.to_string(),
+            reason.to_string(),
+        ));
     }
 
     pub fn detect_conflicts(&self, active_plugins: &[String]) -> Vec<(String, String, String)> {
@@ -624,7 +698,10 @@ pub struct PluginStateBackup {
 
 impl PluginStateBackup {
     pub fn create_backup(&mut self, plugin_id: &str, version: &str, state_data: &[u8]) {
-        self.backups.insert(plugin_id.to_string(), (version.to_string(), state_data.to_vec()));
+        self.backups.insert(
+            plugin_id.to_string(),
+            (version.to_string(), state_data.to_vec()),
+        );
     }
 
     pub fn has_backup(&self, plugin_id: &str) -> bool {
@@ -632,9 +709,9 @@ impl PluginStateBackup {
     }
 
     pub fn restore_backup(&self, plugin_id: &str) -> Result<(String, Vec<u8>), String> {
-        self.backups.get(plugin_id)
+        self.backups
+            .get(plugin_id)
             .cloned()
             .ok_or_else(|| format!("No plugin state backup found for {}", plugin_id))
     }
 }
-

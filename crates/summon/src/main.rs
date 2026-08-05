@@ -13,12 +13,11 @@
 
 //! CLI entry point for Summoner DAW (`summon`).
 
-pub mod export_clap;
-pub mod graph;
 pub mod audio_engine;
+pub mod export_clap;
 pub mod github;
+pub mod graph;
 pub mod osc;
-
 
 use summoner_core::allocator::AllocGuard;
 use summoner_core::audio::{FixedAudioBuffer, Sample};
@@ -26,13 +25,15 @@ use summoner_core::node::{AudioNode, GainNode, ProcessContext, SineOscillatorNod
 use summoner_core::pipeline::{MultiTenantRenderQueue, RenderJob};
 use summoner_core::transport::Transport;
 use summoner_core::wav::WavWriter;
-use summoner_project::git_dag::{open_or_init_repo, undo as git_undo, redo as git_redo, GitSessionDag};
+use summoner_project::git_dag::{
+    open_or_init_repo, redo as git_redo, undo as git_undo, GitSessionDag,
+};
 
-use summoner_project::{create_default_project, parse_project_toml, serialize_project_toml};
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process;
+use summoner_project::{create_default_project, parse_project_toml, serialize_project_toml};
 
 fn print_usage() {
     println!("Summoner DAW CLI (`summon`)");
@@ -81,8 +82,6 @@ fn print_usage() {
     println!("  summon-build-pi-img [OUTPUT_DIR] [--target pi5|pizero2w]");
 }
 
-
-
 fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {
@@ -91,6 +90,10 @@ fn main() {
     }
 
     match args[1].as_str() {
+        "--help" | "-h" | "help" | "--version" | "-v" => {
+            print_usage();
+            process::exit(0);
+        }
         "analyze-crash-dump" | "dump-analyze" => {
             let target_path_str = match args.get(2) {
                 Some(p) => p.as_str(),
@@ -131,7 +134,10 @@ fn main() {
                 if arg == "--json" {
                     json_output = true;
                 } else if arg.starts_with("--frames=") {
-                    frames = arg.trim_start_matches("--frames=").parse().unwrap_or(frames);
+                    frames = arg
+                        .trim_start_matches("--frames=")
+                        .parse()
+                        .unwrap_or(frames);
                 } else if arg == "--frames" && idx + 1 < args.len() {
                     frames = args[idx + 1].parse().unwrap_or(frames);
                     idx += 1;
@@ -157,7 +163,8 @@ fn main() {
 
             let project = if Path::new(&proj_path).exists() {
                 let content = fs::read_to_string(&proj_path).unwrap_or_default();
-                parse_project_toml(&content).unwrap_or_else(|_| create_default_project("Benchmark Session"))
+                parse_project_toml(&content)
+                    .unwrap_or_else(|_| create_default_project("Benchmark Session"))
             } else {
                 create_default_project("Benchmark Session")
             };
@@ -185,7 +192,11 @@ fn main() {
                 total_nodes,
                 &config,
                 |block_size, outputs| {
-                    let ctx = summoner_core::node::ProcessContext::new(project.transport.sample_rate, project.transport.bpm, 0);
+                    let ctx = summoner_core::node::ProcessContext::new(
+                        project.transport.sample_rate,
+                        project.transport.bpm,
+                        0,
+                    );
                     runner.process_block(block_size, &ctx, outputs);
                 },
             );
@@ -205,7 +216,8 @@ fn main() {
                 }
             };
 
-            match summoner_project::export::batch_convert_audio(&input_path, &output_path, &format) {
+            match summoner_project::export::batch_convert_audio(&input_path, &output_path, &format)
+            {
                 Ok(report) => {
                     println!("Batch conversion complete!");
                     println!("  Target format: {}", report.target_format);
@@ -247,23 +259,31 @@ fn main() {
                 fs::create_dir_all(&target_dir).expect("Failed to create project directory");
             }
 
-            let proj_title = target_dir.file_name()
+            let proj_title = target_dir
+                .file_name()
                 .and_then(|n| n.to_str())
                 .unwrap_or("New Session");
 
-            let project = summoner_project::create_project_from_template(proj_title, &template_name);
+            let project =
+                summoner_project::create_project_from_template(proj_title, &template_name);
             let serialized = serialize_project_toml(&project).expect("Failed to serialize project");
             fs::write(&file_path, serialized).expect("Failed to write project file");
 
             let mut auto_save = summoner_project::ProjectAutoSaveManager::new(&target_dir, 300, 10);
             let _ = auto_save.create_backup_snapshot(&project);
 
-            println!("Initialized new Summoner session at: {}", file_path.display());
+            println!(
+                "Initialized new Summoner session at: {}",
+                file_path.display()
+            );
             println!("  Template: {}", template_name);
             println!("  Backup storage: {}", auto_save.backup_dir.display());
         }
         "patch-export" => {
-            let path_str = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            let path_str = args
+                .get(2)
+                .map(|s| s.as_str())
+                .unwrap_or("summoner_session.toml");
             if !Path::new(path_str).exists() {
                 eprintln!("Error: Project file '{}' not found.", path_str);
                 process::exit(1);
@@ -274,23 +294,35 @@ fn main() {
             println!("{}", dag.export_patch());
         }
         "export-clap" => {
-            let path_str = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            let path_str = args
+                .get(2)
+                .map(|s| s.as_str())
+                .unwrap_or("summoner_session.toml");
             let output_dir_str = args.get(3).map(|s| s.as_str()).unwrap_or("clap_exports");
-            
+
             if !Path::new(path_str).exists() {
                 eprintln!("Error: Project file '{}' not found.", path_str);
                 process::exit(1);
             }
-            
-            if let Err(e) = export_clap::generate_clap_plugin(Path::new(path_str), Path::new(output_dir_str)) {
+
+            if let Err(e) =
+                export_clap::generate_clap_plugin(Path::new(path_str), Path::new(output_dir_str))
+            {
                 eprintln!("Failed to generate CLAP plugin: {}", e);
                 process::exit(1);
             }
-            
-            println!("Successfully generated CLAP plugin template at {}/{}", output_dir_str, Path::new(path_str).file_stem().unwrap().to_string_lossy());
+
+            println!(
+                "Successfully generated CLAP plugin template at {}/{}",
+                output_dir_str,
+                Path::new(path_str).file_stem().unwrap().to_string_lossy()
+            );
         }
         "commit-history" => {
-            let path_str = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            let path_str = args
+                .get(2)
+                .map(|s| s.as_str())
+                .unwrap_or("summoner_session.toml");
             if !Path::new(path_str).exists() {
                 eprintln!("Error: Project file '{}' not found.", path_str);
                 process::exit(1);
@@ -301,7 +333,10 @@ fn main() {
 
             println!("Git Micro-Commit History for: {}", path_str);
             for commit in dag.history() {
-                println!("Commit: {} | Author: {} | Msg: {}", commit.id, commit.author, commit.message);
+                println!(
+                    "Commit: {} | Author: {} | Msg: {}",
+                    commit.id, commit.author, commit.message
+                );
             }
         }
         "undo" => {
@@ -312,7 +347,10 @@ fn main() {
                 process::exit(1);
             });
             match git_undo(&repo) {
-                Ok(_) => println!("Successfully undid last micro-commit in repository at '{}'", dir_str),
+                Ok(_) => println!(
+                    "Successfully undid last micro-commit in repository at '{}'",
+                    dir_str
+                ),
                 Err(e) => eprintln!("Undo failed: {}", e),
             }
         }
@@ -324,7 +362,10 @@ fn main() {
                 process::exit(1);
             });
             match git_redo(&repo) {
-                Ok(_) => println!("Successfully redid micro-commit in repository at '{}'", dir_str),
+                Ok(_) => println!(
+                    "Successfully redid micro-commit in repository at '{}'",
+                    dir_str
+                ),
                 Err(e) => eprintln!("Redo failed: {}", e),
             }
         }
@@ -375,7 +416,14 @@ fn main() {
             if let Some(tok) = token {
                 let parts: Vec<&str> = repo_target.split('/').collect();
                 if parts.len() == 2 {
-                    match github::create_github_pr(&tok, parts[0], parts[1], &branch_name, &pr_title, "Automated patch-to-PR submission") {
+                    match github::create_github_pr(
+                        &tok,
+                        parts[0],
+                        parts[1],
+                        &branch_name,
+                        &pr_title,
+                        "Automated patch-to-PR submission",
+                    ) {
                         Ok(res) => println!("PR created successfully:\n{}", res),
                         Err(e) => eprintln!("Failed to create GitHub PR: {}", e),
                     }
@@ -388,10 +436,14 @@ fn main() {
             }
         }
         "eval-script" => {
-            let proj_path = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            let proj_path = args
+                .get(2)
+                .map(|s| s.as_str())
+                .unwrap_or("summoner_session.toml");
             let script_path_or_code = args.get(3).map(|s| s.as_str()).unwrap_or("return 'OK'");
             let script_code = if Path::new(script_path_or_code).exists() {
-                fs::read_to_string(script_path_or_code).unwrap_or_else(|_| script_path_or_code.to_string())
+                fs::read_to_string(script_path_or_code)
+                    .unwrap_or_else(|_| script_path_or_code.to_string())
             } else {
                 script_path_or_code.to_string()
             };
@@ -413,7 +465,10 @@ fn main() {
             }
         }
         "list-scripts" => {
-            let proj_path = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            let proj_path = args
+                .get(2)
+                .map(|s| s.as_str())
+                .unwrap_or("summoner_session.toml");
             let proj = if Path::new(proj_path).exists() {
                 let content = fs::read_to_string(proj_path).unwrap_or_default();
                 parse_project_toml(&content).unwrap_or_default()
@@ -426,7 +481,10 @@ fn main() {
                 println!("  (No persistent project scripts defined)");
             } else {
                 for script in &proj.scripts {
-                    println!("  - {}: bound CC {:?}, bound lane {:?}", script.name, script.bound_cc, script.bound_lane);
+                    println!(
+                        "  - {}: bound CC {:?}, bound lane {:?}",
+                        script.name, script.bound_cc, script.bound_lane
+                    );
                 }
             }
 
@@ -437,10 +495,19 @@ fn main() {
         }
 
         "test-scripts" => {
-            let proj_path = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
-            println!("Running Lua script unit tests for project '{}'...", proj_path);
+            let proj_path = args
+                .get(2)
+                .map(|s| s.as_str())
+                .unwrap_or("summoner_session.toml");
+            println!(
+                "Running Lua script unit tests for project '{}'...",
+                proj_path
+            );
             let runner = summoner_project::media_export::LuaTestRunner;
-            let res = runner.test_block("default_macro_test", "function process(in_sample) return in_sample end");
+            let res = runner.test_block(
+                "default_macro_test",
+                "function process(in_sample) return in_sample end",
+            );
             if res.passed {
                 println!("✓ {} PASS: {}", res.test_name, res.message);
             } else {
@@ -449,27 +516,46 @@ fn main() {
             }
         }
         "repl" => {
-            let proj_path = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            let proj_path = args
+                .get(2)
+                .map(|s| s.as_str())
+                .unwrap_or("summoner_session.toml");
             println!("Summoner Lua Interactive REPL for project '{}'", proj_path);
             println!("Type 'exit' to quit.");
             println!("summoner> ");
         }
         "automate" => {
-            let proj_path = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            let proj_path = args
+                .get(2)
+                .map(|s| s.as_str())
+                .unwrap_or("summoner_session.toml");
             let script_path = args.get(3).map(|s| s.as_str()).unwrap_or("script.lua");
-            println!("Automating project '{}' using script '{}'", proj_path, script_path);
+            println!(
+                "Automating project '{}' using script '{}'",
+                proj_path, script_path
+            );
         }
         "test-lua" => {
-            let proj_path = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            let proj_path = args
+                .get(2)
+                .map(|s| s.as_str())
+                .unwrap_or("summoner_session.toml");
             let (passed, total) = summoner_project::media_export::lua_run_smoke_test(proj_path);
-            println!("Lua Smoke Test: {}/{} tests passed for '{}'", passed, total, proj_path);
+            println!(
+                "Lua Smoke Test: {}/{} tests passed for '{}'",
+                passed, total, proj_path
+            );
         }
         "audit-script" => {
             let script_path = args.get(2).map(|s| s.as_str()).unwrap_or("script.lua");
-            let code = fs::read_to_string(script_path).unwrap_or_else(|_| "os.execute('bad')".to_string());
+            let code =
+                fs::read_to_string(script_path).unwrap_or_else(|_| "os.execute('bad')".to_string());
             let violations = summoner_project::media_export::lua_audit_script(&code);
             if violations.is_empty() {
-                println!("✓ Security Audit Passed: No unsafe patterns detected in '{}'", script_path);
+                println!(
+                    "✓ Security Audit Passed: No unsafe patterns detected in '{}'",
+                    script_path
+                );
             } else {
                 eprintln!("✗ Security Audit Failed for '{}':", script_path);
                 for v in violations {
@@ -517,20 +603,40 @@ fn main() {
         "render-batch" => {
             println!("Starting Multi-Tenant Cloud Render Batch...");
             let mut queue = MultiTenantRenderQueue::new();
-            queue.enqueue(RenderJob::new("job-alpha-001", "tenant-1", 2048, 44100, 120.0, 440.0));
-            queue.enqueue(RenderJob::new("job-beta-002", "tenant-2", 4096, 48000, 128.0, 880.0));
+            queue.enqueue(RenderJob::new(
+                "job-alpha-001",
+                "tenant-1",
+                2048,
+                44100,
+                120.0,
+                440.0,
+            ));
+            queue.enqueue(RenderJob::new(
+                "job-beta-002",
+                "tenant-2",
+                4096,
+                48000,
+                128.0,
+                880.0,
+            ));
 
             let results = queue.process_all();
             for res in results {
                 println!(
                     "Job ID: {} | Tenant: {} | Frames: {} | Digest: {} | Status: Success",
-                    res.job_id, res.tenant_id, res.frames_processed, &res.hash_digest[..12]
+                    res.job_id,
+                    res.tenant_id,
+                    res.frames_processed,
+                    &res.hash_digest[..12]
                 );
             }
             println!("Batch rendering completed successfully.");
         }
         "render-wav" => {
-            let proj_path = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            let proj_path = args
+                .get(2)
+                .map(|s| s.as_str())
+                .unwrap_or("summoner_session.toml");
             let out_wav_path = args.get(3).map(|s| s.as_str()).unwrap_or("output.wav");
             let mut num_frames: usize = 44100; // 1 second default
 
@@ -545,7 +651,10 @@ fn main() {
             }
 
             if !Path::new(proj_path).exists() {
-                eprintln!("Error: Project file '{}' not found. Run `summon init` first.", proj_path);
+                eprintln!(
+                    "Error: Project file '{}' not found. Run `summon init` first.",
+                    proj_path
+                );
                 process::exit(1);
             }
 
@@ -554,12 +663,14 @@ fn main() {
 
             println!("Rendering WAV file: '{}' -> '{}'", proj_path, out_wav_path);
 
-            let mut transport = Transport::new(project.transport.sample_rate, project.transport.bpm);
+            let mut transport =
+                Transport::new(project.transport.sample_rate, project.transport.bpm);
             transport.play();
 
             let mut runner = graph::GraphRunner::new(&project);
 
-            let use_fallback = runner.tracks.is_empty() || runner.tracks.iter().all(|t| t.nodes.is_empty());
+            let use_fallback =
+                runner.tracks.is_empty() || runner.tracks.iter().all(|t| t.nodes.is_empty());
             if use_fallback {
                 eprintln!("Warning: All tracks are empty. Using fallback sine oscillator.");
             }
@@ -571,8 +682,9 @@ fn main() {
             let mut mid_buffer = FixedAudioBuffer::<CHANNELS, BLOCK_SIZE>::new();
             let mut out_buffer = FixedAudioBuffer::<CHANNELS, BLOCK_SIZE>::new();
 
-            let mut wav_writer = WavWriter::create(out_wav_path, project.transport.sample_rate, CHANNELS as u16)
-                .expect("Failed to create WAV writer");
+            let mut wav_writer =
+                WavWriter::create(out_wav_path, project.transport.sample_rate, CHANNELS as u16)
+                    .expect("Failed to create WAV writer");
 
             let mut frames_processed: usize = 0;
             let mut interleaved = vec![0.0f32; BLOCK_SIZE * CHANNELS];
@@ -618,14 +730,21 @@ fn main() {
                 frames_processed += block_frames;
             }
 
-
-            wav_writer.finalize().expect("Failed to finalize WAV header");
-            println!("Successfully rendered {} frames to '{}'", frames_processed, out_wav_path);
+            wav_writer
+                .finalize()
+                .expect("Failed to finalize WAV header");
+            println!(
+                "Successfully rendered {} frames to '{}'",
+                frames_processed, out_wav_path
+            );
         }
         "render-stub" => {
-            let path_str = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            let path_str = args
+                .get(2)
+                .map(|s| s.as_str())
+                .unwrap_or("summoner_session.toml");
             let mut num_frames: usize = 1024;
-            
+
             let mut i = 3;
             while i < args.len() {
                 if args[i] == "--frames" && i + 1 < args.len() {
@@ -637,17 +756,23 @@ fn main() {
             }
 
             if !Path::new(path_str).exists() {
-                eprintln!("Error: Project file '{}' not found. Run `summon init` first.", path_str);
+                eprintln!(
+                    "Error: Project file '{}' not found. Run `summon init` first.",
+                    path_str
+                );
                 process::exit(1);
             }
 
             let content = fs::read_to_string(path_str).expect("Failed to read project file");
             let project = parse_project_toml(&content).expect("Failed to parse project TOML");
 
-            println!("Loaded project: '{}' (BPM: {}, Sample Rate: {})",
-                project.name, project.transport.bpm, project.transport.sample_rate);
+            println!(
+                "Loaded project: '{}' (BPM: {}, Sample Rate: {})",
+                project.name, project.transport.bpm, project.transport.sample_rate
+            );
 
-            let mut transport = Transport::new(project.transport.sample_rate, project.transport.bpm);
+            let mut transport =
+                Transport::new(project.transport.sample_rate, project.transport.bpm);
             transport.play();
 
             // Set up test DSP chain (Sine -> Gain)
@@ -664,7 +789,10 @@ fn main() {
             let mut frames_processed: usize = 0;
             let mut sample_sum: f64 = 0.0;
 
-            println!("Starting deterministic rendering run of {} frames...", num_frames);
+            println!(
+                "Starting deterministic rendering run of {} frames...",
+                num_frames
+            );
 
             {
                 // Enter zero-allocation guard scope to enforce real-time safety
@@ -709,7 +837,11 @@ fn main() {
 
             println!("Rendering completed successfully!");
             println!("Processed Frames: {}", frames_processed);
-            println!("Final Transport Position: {} frames ({:.3}s)", transport.frame_position, transport.seconds());
+            println!(
+                "Final Transport Position: {} frames ({:.3}s)",
+                transport.frame_position,
+                transport.seconds()
+            );
             println!("Output Energy Checksum: {:.6}", sample_sum);
         }
 
@@ -720,10 +852,10 @@ fn main() {
             }
             let asset_path = &args[2];
             let out_toml = &args[3];
-            
+
             let mut threshold = 0.15;
             let mut algorithm = summoner_dsp::slicer::SliceAlgorithm::EnergyDerivative;
-            
+
             let mut idx = 4;
             while idx < args.len() {
                 match args[idx].as_str() {
@@ -731,7 +863,9 @@ fn main() {
                         if idx + 1 < args.len() {
                             threshold = args[idx + 1].parse().unwrap_or(0.15);
                             idx += 2;
-                        } else { idx += 1; }
+                        } else {
+                            idx += 1;
+                        }
                     }
                     "--algorithm" => {
                         if idx + 1 < args.len() {
@@ -741,33 +875,43 @@ fn main() {
                                 algorithm = summoner_dsp::slicer::SliceAlgorithm::Onnx;
                             }
                             idx += 2;
-                        } else { idx += 1; }
+                        } else {
+                            idx += 1;
+                        }
                     }
                     _ => idx += 1,
                 }
             }
-            
-            println!("Auto-slicing {} using {:?} threshold {}...", asset_path, algorithm, threshold);
-            
+
+            println!(
+                "Auto-slicing {} using {:?} threshold {}...",
+                asset_path, algorithm, threshold
+            );
+
             let path = Path::new(asset_path);
-            let buffer = summoner_dsp::sampler::load_sample_file(path)
-                .unwrap_or_else(|e| {
-                    eprintln!("Warning: Failed to load file '{}' ({}), using fallback buffer.", asset_path, e);
-                    let sample_rate = 44100;
-                    let mut data = vec![0.0f32; sample_rate * 5];
-                    data[44100] = 0.9;
-                    summoner_dsp::sampler::SampleBuffer::new(data, sample_rate as u32, 1)
-                });
-            
+            let buffer = summoner_dsp::sampler::load_sample_file(path).unwrap_or_else(|e| {
+                eprintln!(
+                    "Warning: Failed to load file '{}' ({}), using fallback buffer.",
+                    asset_path, e
+                );
+                let sample_rate = 44100;
+                let mut data = vec![0.0f32; sample_rate * 5];
+                data[44100] = 0.9;
+                summoner_dsp::sampler::SampleBuffer::new(data, sample_rate as u32, 1)
+            });
+
             let slicer = summoner_dsp::slicer::AutoSlicer::new(threshold, algorithm);
             let slices = slicer.detect_slices(&buffer);
-            
+
             let mut toml_out = String::new();
             toml_out.push_str("[[slices]]\n");
             for slice in slices {
-                toml_out.push_str(&format!("start_sample = {}\nend_sample = {}\n\n", slice.start_sample, slice.end_sample));
+                toml_out.push_str(&format!(
+                    "start_sample = {}\nend_sample = {}\n\n",
+                    slice.start_sample, slice.end_sample
+                ));
             }
-            
+
             fs::write(out_toml, toml_out).expect("Failed to write toml slices");
             println!("Wrote slices to {}", out_toml);
         }
@@ -778,8 +922,12 @@ fn main() {
             }
             let preset_path = &args[2];
             let base_dir = Path::new(&args[3]);
-            println!("Loading preset {} from base dir {}...", preset_path, base_dir.display());
-            
+            println!(
+                "Loading preset {} from base dir {}...",
+                preset_path,
+                base_dir.display()
+            );
+
             let sfz_content = fs::read_to_string(preset_path).unwrap_or_else(|e| {
                 eprintln!("Failed to read SFZ preset: {}", e);
                 process::exit(1);
@@ -806,8 +954,12 @@ fn main() {
                 bank.add_region(region);
             }
             let errors = summoner_dsp::sampler::load_bank_buffers(&mut bank, base_dir);
-            
-            println!("Loaded bank with {} regions and {} errors.", bank.regions.len(), errors.len());
+
+            println!(
+                "Loaded bank with {} regions and {} errors.",
+                bank.regions.len(),
+                errors.len()
+            );
             for err in &errors {
                 eprintln!("  Sample error: {}", err);
             }
@@ -871,7 +1023,10 @@ fn main() {
             println!("Stem separation completed successfully.");
         }
         "watch" => {
-            let path_str = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            let path_str = args
+                .get(2)
+                .map(|s| s.as_str())
+                .unwrap_or("summoner_session.toml");
             println!("Watching '{}' for changes...", path_str);
             if Path::new(path_str).exists() {
                 let content = fs::read_to_string(path_str).unwrap_or_default();
@@ -892,7 +1047,11 @@ fn main() {
                         let mut current_frame = 0;
                         while current_frame < num_frames {
                             let frames = std::cmp::min(512, num_frames - current_frame);
-                            let ctx = ProcessContext::new(sample_rate, project.transport.bpm, current_frame as u64);
+                            let ctx = ProcessContext::new(
+                                sample_rate,
+                                project.transport.bpm,
+                                current_frame as u64,
+                            );
                             runner.process_block(frames, &ctx, &mut [&mut block_l, &mut block_r]);
                             for i in 0..frames {
                                 let l = (block_l[i].clamp(-1.0, 1.0) * 32767.0) as i16;
@@ -911,7 +1070,10 @@ fn main() {
         "diff" => {
             let path_a = args.get(2).map(|s| s.as_str()).unwrap_or("a.toml");
             let path_b = args.get(3).map(|s| s.as_str()).unwrap_or("b.toml");
-            println!("Comparing project TOML files: '{}' vs '{}'...", path_a, path_b);
+            println!(
+                "Comparing project TOML files: '{}' vs '{}'...",
+                path_a, path_b
+            );
             let content_a = fs::read_to_string(path_a).unwrap_or_default();
             let content_b = fs::read_to_string(path_b).unwrap_or_default();
             let proj_a = parse_project_toml(&content_a).ok();
@@ -962,7 +1124,10 @@ fn main() {
             }
         }
         "validate" => {
-            let path_str = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            let path_str = args
+                .get(2)
+                .map(|s| s.as_str())
+                .unwrap_or("summoner_session.toml");
             println!("Validating project file: '{}'...", path_str);
             let mut errors = 0;
             let mut warnings = 0;
@@ -983,18 +1148,43 @@ fn main() {
                             }
                         }
                         let valid_kinds = [
-                            "SineOscillatorNode", "OscSine", "OscSaw", "OscPulse", "OscWavetable",
-                            "FilterLadder", "FilterSVF", "EnvADSR", "GainNode", "MathAdd",
-                            "DistortionNode", "EffectDelay", "EffectReverb", "EffectChorus",
-                            "EffectFlanger", "EffectPhaser", "WavefolderNode", "PitchShifterNode",
-                            "BitcrusherNode", "CompressorNode", "LimiterNode", "MidSideNode",
-                            "ParametricEqNode", "GranularSynthNode", "AetherSynth", "PluckSynth",
-                            "FmOperatorPair", "SamplerDevice", "Oscilloscope"
+                            "SineOscillatorNode",
+                            "OscSine",
+                            "OscSaw",
+                            "OscPulse",
+                            "OscWavetable",
+                            "FilterLadder",
+                            "FilterSVF",
+                            "EnvADSR",
+                            "GainNode",
+                            "MathAdd",
+                            "DistortionNode",
+                            "EffectDelay",
+                            "EffectReverb",
+                            "EffectChorus",
+                            "EffectFlanger",
+                            "EffectPhaser",
+                            "WavefolderNode",
+                            "PitchShifterNode",
+                            "BitcrusherNode",
+                            "CompressorNode",
+                            "LimiterNode",
+                            "MidSideNode",
+                            "ParametricEqNode",
+                            "GranularSynthNode",
+                            "AetherSynth",
+                            "PluckSynth",
+                            "FmOperatorPair",
+                            "SamplerDevice",
+                            "Oscilloscope",
                         ];
                         for track in &proj.tracks {
                             for node in &track.nodes {
                                 if !valid_kinds.contains(&node.kind.as_str()) {
-                                    println!("WARNING: Track {} contains unknown node kind: {}", track.id, node.kind);
+                                    println!(
+                                        "WARNING: Track {} contains unknown node kind: {}",
+                                        track.id, node.kind
+                                    );
                                     warnings += 1;
                                 }
                             }
@@ -1006,10 +1196,16 @@ fn main() {
                     }
                 }
             }
-            println!("Validation complete: {} errors, {} warnings.", errors, warnings);
+            println!(
+                "Validation complete: {} errors, {} warnings.",
+                errors, warnings
+            );
         }
         "profile" => {
-            let path_str = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            let path_str = args
+                .get(2)
+                .map(|s| s.as_str())
+                .unwrap_or("summoner_session.toml");
             let content = fs::read_to_string(path_str).unwrap_or_default();
             if let Ok(proj) = parse_project_toml(&content) {
                 let start = std::time::Instant::now();
@@ -1025,8 +1221,14 @@ fn main() {
                 println!("{{");
                 println!("  \"project\": {:?},", proj.name);
                 println!("  \"total_tracks\": {},", proj.tracks.len());
-                println!("  \"single_block_ms\": {:.4},", block_duration.as_secs_f64() * 1000.0);
-                println!("  \"setup_and_render_ms\": {:.4}", total_duration.as_secs_f64() * 1000.0);
+                println!(
+                    "  \"single_block_ms\": {:.4},",
+                    block_duration.as_secs_f64() * 1000.0
+                );
+                println!(
+                    "  \"setup_and_render_ms\": {:.4}",
+                    total_duration.as_secs_f64() * 1000.0
+                );
                 println!("}}");
             } else {
                 eprintln!("Failed to read/parse project for profiling.");
@@ -1051,11 +1253,20 @@ fn main() {
                             };
                             if let Ok(mut writer) = hound::WavWriter::create(&wav_out, spec) {
                                 for t in 0..44100 {
-                                    let s = ((t as f32 * 440.0 * 2.0 * std::f32::consts::PI / 44100.0).sin() * 0.5 * 32767.0) as i16;
+                                    let s = ((t as f32 * 440.0 * 2.0 * std::f32::consts::PI
+                                        / 44100.0)
+                                        .sin()
+                                        * 0.5
+                                        * 32767.0)
+                                        as i16;
                                     let _ = writer.write_sample(s);
                                 }
                                 let _ = writer.finalize();
-                                println!("Baked preset: {} -> {}", path.display(), wav_out.display());
+                                println!(
+                                    "Baked preset: {} -> {}",
+                                    path.display(),
+                                    wav_out.display()
+                                );
                                 count += 1;
                             }
                         }
@@ -1065,12 +1276,16 @@ fn main() {
             println!("Finished baking {} preset(s).", count);
         }
         "normalize-project" => {
-            let path_str = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            let path_str = args
+                .get(2)
+                .map(|s| s.as_str())
+                .unwrap_or("summoner_session.toml");
             println!("Normalizing project TOML: '{}'...", path_str);
             if let Ok(content) = fs::read_to_string(path_str) {
                 if let Ok(mut proj) = parse_project_toml(&content) {
                     proj.tracks.sort_by_key(|t| t.id);
-                    proj.automation_lanes.sort_by(|a, b| a.param_id.cmp(&b.param_id));
+                    proj.automation_lanes
+                        .sort_by(|a, b| a.param_id.cmp(&b.param_id));
                     if let Ok(serialized) = serialize_project_toml(&proj) {
                         let _ = fs::write(path_str, serialized);
                         println!("Canonicalized TOML written back to '{}'.", path_str);
@@ -1079,7 +1294,10 @@ fn main() {
             }
         }
         "migrate" => {
-            let path_str = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            let path_str = args
+                .get(2)
+                .map(|s| s.as_str())
+                .unwrap_or("summoner_session.toml");
             println!("Migrating project schema: '{}'...", path_str);
             if let Ok(content) = fs::read_to_string(path_str) {
                 if let Ok(mut proj) = parse_project_toml(&content) {
@@ -1087,7 +1305,10 @@ fn main() {
                     proj.version = "1.0".to_string();
                     if let Ok(serialized) = serialize_project_toml(&proj) {
                         let _ = fs::write(path_str, serialized);
-                        println!("Migrated schema from '{:?}' to '1.0' in '{}'.", old_ver, path_str);
+                        println!(
+                            "Migrated schema from '{:?}' to '1.0' in '{}'.",
+                            old_ver, path_str
+                        );
                     }
                 }
             }
@@ -1099,13 +1320,21 @@ fn main() {
             if args.iter().any(|arg| arg == "--list-presets") {
                 println!("Available Multi-Track Stem Export Presets:");
                 for preset in manager.list_presets() {
-                    println!("  - {:<24} [{}] {}", preset.name, preset.format.extension().to_uppercase(), preset.description);
+                    println!(
+                        "  - {:<24} [{}] {}",
+                        preset.name,
+                        preset.format.extension().to_uppercase(),
+                        preset.description
+                    );
                     println!("    Template: {}", preset.naming_pattern);
                 }
                 return;
             }
 
-            let path_str = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            let path_str = args
+                .get(2)
+                .map(|s| s.as_str())
+                .unwrap_or("summoner_session.toml");
             let out_dir = args.get(3).map(|s| s.as_str()).unwrap_or("stems");
 
             let mut chosen_preset_name = "CD Quality WAV Stems".to_string();
@@ -1139,7 +1368,10 @@ fn main() {
                 idx += 1;
             }
 
-            println!("Exporting stems from '{}' to '{}' using preset '{}'...", path_str, out_dir, chosen_preset_name);
+            println!(
+                "Exporting stems from '{}' to '{}' using preset '{}'...",
+                path_str, out_dir, chosen_preset_name
+            );
             if !Path::new(path_str).exists() {
                 eprintln!("Error: Project file '{}' not found.", path_str);
                 process::exit(1);
@@ -1161,7 +1393,10 @@ fn main() {
                 }
             };
 
-            let mut preset = manager.get_preset(&chosen_preset_name).cloned().unwrap_or_default();
+            let mut preset = manager
+                .get_preset(&chosen_preset_name)
+                .cloned()
+                .unwrap_or_default();
             if let Some(pat) = custom_pattern {
                 preset.naming_pattern = pat;
             }
@@ -1189,7 +1424,10 @@ fn main() {
             }
         }
         "humanize" => {
-            let path_str = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            let path_str = args
+                .get(2)
+                .map(|s| s.as_str())
+                .unwrap_or("summoner_session.toml");
             let track_filter = args.get(3).map(|s| s.as_str());
             println!("Humanizing sequence timing & velocity in '{}'...", path_str);
             if let Ok(content) = fs::read_to_string(path_str) {
@@ -1199,7 +1437,8 @@ fn main() {
                         if track_filter.is_none_or(|f| f == "all" || f == track.id.to_string()) {
                             if let Some(ref mut seq) = track.sequence {
                                 for step in &mut seq.steps {
-                                    rng_state = rng_state.wrapping_mul(6364136223846793005).wrapping_add(1);
+                                    rng_state =
+                                        rng_state.wrapping_mul(6364136223846793005).wrapping_add(1);
                                     let shift = ((rng_state % 9) as i32) - 4;
                                     step.micro_shift = shift;
                                     let vel_delta = (((rng_state >> 16) % 11) as f32) - 5.0;
@@ -1216,7 +1455,10 @@ fn main() {
             }
         }
         "thin-automation" => {
-            let path_str = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            let path_str = args
+                .get(2)
+                .map(|s| s.as_str())
+                .unwrap_or("summoner_session.toml");
             println!("Thinning redundant automation points in '{}'...", path_str);
             if let Ok(content) = fs::read_to_string(path_str) {
                 if let Ok(mut proj) = parse_project_toml(&content) {
@@ -1229,9 +1471,15 @@ fn main() {
                             for i in 1..orig_len {
                                 let prev_val = thinned.last().unwrap().value;
                                 let curr_val = lane.events[i].value;
-                                let next_val = if i + 1 < orig_len { Some(lane.events[i + 1].value) } else { None };
+                                let next_val = if i + 1 < orig_len {
+                                    Some(lane.events[i + 1].value)
+                                } else {
+                                    None
+                                };
                                 if let Some(next) = next_val {
-                                    if (curr_val - prev_val).abs() < 1e-4 && (next - curr_val).abs() < 1e-4 {
+                                    if (curr_val - prev_val).abs() < 1e-4
+                                        && (next - curr_val).abs() < 1e-4
+                                    {
                                         continue;
                                     }
                                 }
@@ -1243,7 +1491,10 @@ fn main() {
                     }
                     if let Ok(serialized) = serialize_project_toml(&proj) {
                         let _ = fs::write(path_str, serialized);
-                        println!("Thinned {} redundant automation points in '{}'.", removed_total, path_str);
+                        println!(
+                            "Thinned {} redundant automation points in '{}'.",
+                            removed_total, path_str
+                        );
                     }
                 }
             }
@@ -1252,7 +1503,7 @@ fn main() {
             println!("Available Audio Devices (via CPAL):");
             #[cfg(feature = "gui")]
             {
-                use cpal::traits::{HostTrait, DeviceTrait};
+                use cpal::traits::{DeviceTrait, HostTrait};
                 let host = cpal::default_host();
                 println!("Audio Host: {}", host.id().name());
                 if let Ok(devices) = host.devices() {
@@ -1269,7 +1520,10 @@ fn main() {
             }
         }
         "tempo-map" => {
-            let path_str = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            let path_str = args
+                .get(2)
+                .map(|s| s.as_str())
+                .unwrap_or("summoner_session.toml");
             println!("Auto-detecting tempo map for '{}'...", path_str);
             if let Ok(content) = fs::read_to_string(path_str) {
                 if let Ok(proj) = parse_project_toml(&content) {
@@ -1279,12 +1533,22 @@ fn main() {
                 }
             } else if Path::new(path_str).exists() {
                 if let Ok(buf) = summoner_dsp::sampler::load_sample_file(Path::new(path_str)) {
-                    let slicer = summoner_dsp::slicer::AutoSlicer::new(0.15, summoner_dsp::slicer::SliceAlgorithm::SpectralFlux);
+                    let slicer = summoner_dsp::slicer::AutoSlicer::new(
+                        0.15,
+                        summoner_dsp::slicer::SliceAlgorithm::SpectralFlux,
+                    );
                     let slices = slicer.detect_slices(&buf);
                     let estimated_bpm: f64 = if slices.len() > 1 {
-                        let avg_samples = (slices.last().unwrap().start_sample - slices.first().unwrap().start_sample) as f64 / (slices.len() - 1) as f64;
+                        let avg_samples = (slices.last().unwrap().start_sample
+                            - slices.first().unwrap().start_sample)
+                            as f64
+                            / (slices.len() - 1) as f64;
                         let avg_sec = avg_samples / buf.sample_rate as f64;
-                        if avg_sec > 0.0 { (60.0 / avg_sec).clamp(60.0, 200.0) } else { 120.0 }
+                        if avg_sec > 0.0 {
+                            (60.0 / avg_sec).clamp(60.0, 200.0)
+                        } else {
+                            120.0
+                        }
                     } else {
                         120.0
                     };
@@ -1293,7 +1557,10 @@ fn main() {
             }
         }
         "play" => {
-            let path_str = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            let path_str = args
+                .get(2)
+                .map(|s| s.as_str())
+                .unwrap_or("summoner_session.toml");
             let mut midi_clock_out: Option<String> = None;
             let mut idx = 3;
             while idx < args.len() {
@@ -1309,7 +1576,10 @@ fn main() {
                 let content = fs::read_to_string(path_str).expect("Failed to read project file");
                 parse_project_toml(&content).expect("Failed to parse project TOML")
             } else {
-                println!("Project file '{}' not found. Creating default session...", path_str);
+                println!(
+                    "Project file '{}' not found. Creating default session...",
+                    path_str
+                );
                 let default_proj = summoner_project::create_default_project("Default Session");
                 if let Ok(serialized) = serialize_project_toml(&default_proj) {
                     let _ = fs::write(path_str, serialized);
@@ -1322,11 +1592,14 @@ fn main() {
                 println!("MIDI Clock Out enabled on device: {}", device);
             }
             println!("Playing project: {}", path_str);
-            
+
             audio_engine::run_live(&project);
         }
         "asset-add" => {
-            let proj_path = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            let proj_path = args
+                .get(2)
+                .map(|s| s.as_str())
+                .unwrap_or("summoner_session.toml");
             let wav_path = args.get(3).map(|s| s.as_str()).unwrap_or("sample.wav");
 
             if !Path::new(proj_path).exists() {
@@ -1360,10 +1633,18 @@ fn main() {
             let serialized = serialize_project_toml(&project).expect("Failed to serialize project");
             fs::write(proj_path, serialized).expect("Failed to write updated project TOML");
 
-            println!("Added asset '{}' (BLAKE3: {}) to project '{}'", asset_id, &hash_hex[..12], proj_path);
+            println!(
+                "Added asset '{}' (BLAKE3: {}) to project '{}'",
+                asset_id,
+                &hash_hex[..12],
+                proj_path
+            );
         }
         "asset-verify" => {
-            let proj_path = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            let proj_path = args
+                .get(2)
+                .map(|s| s.as_str())
+                .unwrap_or("summoner_session.toml");
             if !Path::new(proj_path).exists() {
                 eprintln!("Error: Project file '{}' not found.", proj_path);
                 process::exit(1);
@@ -1372,7 +1653,11 @@ fn main() {
             let content = fs::read_to_string(proj_path).expect("Failed to read project file");
             let project = parse_project_toml(&content).expect("Failed to parse project TOML");
 
-            println!("Verifying BLAKE3 integrity for {} assets in '{}':", project.assets.len(), proj_path);
+            println!(
+                "Verifying BLAKE3 integrity for {} assets in '{}':",
+                project.assets.len(),
+                proj_path
+            );
             let mut all_valid = true;
             for asset in &project.assets {
                 if !Path::new(&asset.path).exists() {
@@ -1383,9 +1668,18 @@ fn main() {
                 let bytes = fs::read(&asset.path).expect("Failed to read asset file");
                 let computed_hash = blake3::hash(&bytes).to_hex().to_string();
                 if computed_hash == asset.hash {
-                    println!(" [OK] {} -> BLAKE3 matched ({})", asset.id, &computed_hash[..12]);
+                    println!(
+                        " [OK] {} -> BLAKE3 matched ({})",
+                        asset.id,
+                        &computed_hash[..12]
+                    );
                 } else {
-                    eprintln!(" [HASH MISMATCH] {} expected {} got {}", asset.id, &asset.hash[..12], &computed_hash[..12]);
+                    eprintln!(
+                        " [HASH MISMATCH] {} expected {} got {}",
+                        asset.id,
+                        &asset.hash[..12],
+                        &computed_hash[..12]
+                    );
                     all_valid = false;
                 }
             }
@@ -1398,7 +1692,10 @@ fn main() {
             }
         }
         "tune" => {
-            let proj_path = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            let proj_path = args
+                .get(2)
+                .map(|s| s.as_str())
+                .unwrap_or("summoner_session.toml");
             let scl_path = args.get(3).map(|s| s.as_str()).unwrap_or("19-edo.scl");
 
             if !Path::new(proj_path).exists() {
@@ -1413,10 +1710,16 @@ fn main() {
             let serialized = serialize_project_toml(&project).expect("Failed to serialize project");
             fs::write(proj_path, serialized).expect("Failed to update project TOML");
 
-            println!("Updated project '{}' microtonal tuning file to: '{}'", proj_path, scl_path);
+            println!(
+                "Updated project '{}' microtonal tuning file to: '{}'",
+                proj_path, scl_path
+            );
         }
         "harmony-suggest" => {
-            let proj_path = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            let proj_path = args
+                .get(2)
+                .map(|s| s.as_str())
+                .unwrap_or("summoner_session.toml");
             if !Path::new(proj_path).exists() {
                 eprintln!("Error: Project file '{}' not found.", proj_path);
                 process::exit(1);
@@ -1432,11 +1735,20 @@ fn main() {
 
             println!("Global Harmonic Bus Cadence Report for: {}", proj_path);
             println!("Current Active Chord: {}", current_chord);
-            println!("Suggested Next Diatonic Chord MIDI Notes: {:?}", suggestions);
+            println!(
+                "Suggested Next Diatonic Chord MIDI Notes: {:?}",
+                suggestions
+            );
         }
         "sfz-convert" => {
-            let sfz_dir = args.get(2).map(|s| s.as_str()).unwrap_or("local/FreePatsGM-SFZ+FLAC-20221026");
-            let out_dir = args.get(3).map(|s| s.as_str()).unwrap_or("local/presets/freepats");
+            let sfz_dir = args
+                .get(2)
+                .map(|s| s.as_str())
+                .unwrap_or("local/FreePatsGM-SFZ+FLAC-20221026");
+            let out_dir = args
+                .get(3)
+                .map(|s| s.as_str())
+                .unwrap_or("local/presets/freepats");
 
             if !Path::new(sfz_dir).exists() {
                 eprintln!("Error: SFZ directory '{}' not found.", sfz_dir);
@@ -1456,23 +1768,38 @@ fn main() {
                     let patch = summoner_project::sfz::SfzPresetPatch::parse_sfz(&stem, &sfz_text);
 
                     let out_path = Path::new(out_dir).join(format!("{}.preset.toml", stem));
-                    fs::write(&out_path, patch.to_toml_preset()).expect("Failed to write preset TOML");
+                    fs::write(&out_path, patch.to_toml_preset())
+                        .expect("Failed to write preset TOML");
 
-                    println!("  [CONVERTED] {} -> {} ({} regions)", stem, out_path.display(), patch.regions.len());
+                    println!(
+                        "  [CONVERTED] {} -> {} ({} regions)",
+                        stem,
+                        out_path.display(),
+                        patch.regions.len()
+                    );
                     converted_count += 1;
                 }
             }
 
-            println!("Successfully converted {} SFZ instruments into Summoner presets at: {}", converted_count, out_dir);
+            println!(
+                "Successfully converted {} SFZ instruments into Summoner presets at: {}",
+                converted_count, out_dir
+            );
         }
         "gui" => {
-            let path_str = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            let path_str = args
+                .get(2)
+                .map(|s| s.as_str())
+                .unwrap_or("summoner_session.toml");
             #[allow(unused_variables)]
             let project = if Path::new(path_str).exists() {
                 let content = fs::read_to_string(path_str).expect("Failed to read project file");
                 parse_project_toml(&content).expect("Failed to parse project TOML")
             } else {
-                println!("Project file '{}' not found. Creating default session...", path_str);
+                println!(
+                    "Project file '{}' not found. Creating default session...",
+                    path_str
+                );
                 let default_proj = summoner_project::create_default_project("Default Session");
                 if let Ok(serialized) = serialize_project_toml(&default_proj) {
                     let _ = fs::write(path_str, serialized);
@@ -1485,17 +1812,20 @@ fn main() {
             // In a real app we'd iterate over tracks/nodes and register them, but for now we just give it an empty one
             #[allow(unused_variables)]
             let param_bus_arc = std::sync::Arc::new(param_bus);
-            
+
             println!("Launching Summoner GUI with project '{}'...", path_str);
-            
+
             #[cfg(feature = "gui")]
             summoner_gui::launch(project, param_bus_arc);
-            
+
             #[cfg(not(feature = "gui"))]
             eprintln!("Error: Summoner was not compiled with the 'gui' feature. Recompile with `cargo build --features gui`.");
         }
         "generate-pattern" => {
-            let proj_path = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
+            let proj_path = args
+                .get(2)
+                .map(|s| s.as_str())
+                .unwrap_or("summoner_session.toml");
             let track_id_str = args.get(3).map(|s| s.as_str()).unwrap_or("0");
             let track_id: u64 = track_id_str.parse().unwrap_or(0);
 
@@ -1543,17 +1873,28 @@ fn main() {
                     match algo {
                         "markov2" => {
                             let notes: Vec<u8> = seq.steps.iter().map(|s| s.note as u8).collect();
-                            let gen_notes = GenerativeEngine::mutate_sequence_markov2(&notes, seq.steps.len(), 42);
+                            let gen_notes = GenerativeEngine::mutate_sequence_markov2(
+                                &notes,
+                                seq.steps.len(),
+                                42,
+                            );
                             for (idx, &n) in gen_notes.iter().enumerate() {
                                 if idx < seq.steps.len() {
                                     seq.steps[idx].note = n as f64;
                                 }
                             }
-                            println!("Generated pattern on track {} using markov2 algorithm", track_id);
+                            println!(
+                                "Generated pattern on track {} using markov2 algorithm",
+                                track_id
+                            );
                         }
                         "cellular_automata" => {
                             let init: Vec<bool> = seq.steps.iter().map(|s| s.gate > 0.0).collect();
-                            let ca_rhythm = GenerativeEngine::cellular_automata_multi_gen(&init, rule, generations);
+                            let ca_rhythm = GenerativeEngine::cellular_automata_multi_gen(
+                                &init,
+                                rule,
+                                generations,
+                            );
                             GenerativeEngine::apply_rhythm_to_sequence(&ca_rhythm, &mut seq.steps);
                             println!("Generated pattern on track {} using cellular_automata rule {} ({} generations)", track_id, rule, generations);
                         }
@@ -1569,7 +1910,10 @@ fn main() {
         }
         "package-wasm" => {
             let src_path_str = args.get(2).map(|s| s.as_str()).unwrap_or("plugin_src");
-            println!("Packaging Wasm DSP plugin from source '{}'...", src_path_str);
+            println!(
+                "Packaging Wasm DSP plugin from source '{}'...",
+                src_path_str
+            );
             let src_path = Path::new(src_path_str);
             let bundle_path = src_path.with_extension("wasm.bundle");
             let manifest = format!(
@@ -1580,23 +1924,36 @@ fn main() {
                 eprintln!("Failed to package Wasm plugin: {}", e);
                 process::exit(1);
             }
-            println!("Successfully packaged Wasm DSP plugin at '{}'", bundle_path.display());
+            println!(
+                "Successfully packaged Wasm DSP plugin at '{}'",
+                bundle_path.display()
+            );
         }
         "export-adm" => {
-            let path_str = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
-            let out_str = args.get(3).map(|s| s.as_str()).unwrap_or("spatial_session.adm.wav");
+            let path_str = args
+                .get(2)
+                .map(|s| s.as_str())
+                .unwrap_or("summoner_session.toml");
+            let out_str = args
+                .get(3)
+                .map(|s| s.as_str())
+                .unwrap_or("spatial_session.adm.wav");
             let project = if Path::new(path_str).exists() {
                 let content = fs::read_to_string(path_str).expect("Failed to read project file");
                 parse_project_toml(&content).expect("Failed to parse project TOML")
             } else {
                 create_default_project("Default Spatial Session")
             };
-            let adm_bytes = summoner_project::export_adm_bwf(&project).expect("Failed to export ADM BWF");
+            let adm_bytes =
+                summoner_project::export_adm_bwf(&project).expect("Failed to export ADM BWF");
             fs::write(out_str, adm_bytes).expect("Failed to write ADM BWF output file");
             println!("Successfully exported Dolby Atmos ADM BWF to '{}'", out_str);
         }
         "summon-build-pi-img" | "build-pi-img" => {
-            let out_dir = args.get(2).map(|s| s.as_str()).unwrap_or("pi_firmware_build");
+            let out_dir = args
+                .get(2)
+                .map(|s| s.as_str())
+                .unwrap_or("pi_firmware_build");
             let target = args.get(3).map(|s| s.as_str()).unwrap_or("pi5");
             println!("Generating headless lightweight Raspberry Pi Linux image configuration ({}) at '{}'...", target, out_dir);
             let _ = fs::create_dir_all(out_dir);
@@ -1624,11 +1981,18 @@ fn main() {
                 MemoryMax=128M\n\
                 \n\
                 [Install]\n\
-                WantedBy=multi-user.target\n".to_string();
+                WantedBy=multi-user.target\n"
+                .to_string();
 
             let _ = fs::write(Path::new(out_dir).join("config.txt"), config_txt);
-            let _ = fs::write(Path::new(out_dir).join("summoner-synth.service"), service_unit);
-            println!("Successfully generated Raspberry Pi firmware image build configuration at '{}'", out_dir);
+            let _ = fs::write(
+                Path::new(out_dir).join("summoner-synth.service"),
+                service_unit,
+            );
+            println!(
+                "Successfully generated Raspberry Pi firmware image build configuration at '{}'",
+                out_dir
+            );
         }
 
         _ => {
@@ -1666,7 +2030,11 @@ pub fn parse_convert_args(args: &[String]) -> Result<(PathBuf, PathBuf, String),
         idx += 1;
     }
 
-    Ok((PathBuf::from(input_path_str), PathBuf::from(output_path_str), format))
+    Ok((
+        PathBuf::from(input_path_str),
+        PathBuf::from(output_path_str),
+        format,
+    ))
 }
 
 #[cfg(test)]
@@ -1699,13 +2067,17 @@ mod tests {
 
         let runner = graph::GraphRunner::new(&project);
         // Track 0 has nodes, Track 1 (index 1) has 0 nodes.
-        let use_fallback = runner.tracks.is_empty() || runner.tracks.iter().all(|t| t.nodes.is_empty());
-        assert!(!use_fallback, "Should not fallback when at least one track has non-empty nodes");
+        let use_fallback =
+            runner.tracks.is_empty() || runner.tracks.iter().all(|t| t.nodes.is_empty());
+        assert!(
+            !use_fallback,
+            "Should not fallback when at least one track has non-empty nodes"
+        );
     }
 
     #[test]
     fn test_auto_slice_real_wav() {
-        use hound::{WavSpec, WavWriter, SampleFormat};
+        use hound::{SampleFormat, WavSpec, WavWriter};
         let file_path = std::env::temp_dir().join("test_slice_real.wav");
         let spec = WavSpec {
             channels: 1,
@@ -1716,14 +2088,22 @@ mod tests {
         let mut writer = WavWriter::create(&file_path, spec).unwrap();
         for t in 0..44100 {
             let sample = if t == 10000 { 0.9f32 } else { 0.0f32 };
-            writer.write_sample((sample * i16::MAX as f32) as i16).unwrap();
+            writer
+                .write_sample((sample * i16::MAX as f32) as i16)
+                .unwrap();
         }
         writer.finalize().unwrap();
 
         let buffer = summoner_dsp::sampler::load_sample_file(&file_path).unwrap();
-        let slicer = summoner_dsp::slicer::AutoSlicer::new(0.15, summoner_dsp::slicer::SliceAlgorithm::SpectralFlux);
+        let slicer = summoner_dsp::slicer::AutoSlicer::new(
+            0.15,
+            summoner_dsp::slicer::SliceAlgorithm::SpectralFlux,
+        );
         let slices = slicer.detect_slices(&buffer);
-        assert!(!slices.is_empty(), "AutoSlicer should detect transient in real WAV file");
+        assert!(
+            !slices.is_empty(),
+            "AutoSlicer should detect transient in real WAV file"
+        );
 
         let _ = std::fs::remove_file(file_path);
     }
@@ -1733,8 +2113,12 @@ mod tests {
         use summoner_dsp::traits::SignalProcessor;
         let mut bank = summoner_dsp::sampler::MultiSampleBank::new();
         let mut reg = summoner_dsp::sampler::SampleRegion::new(60, 72, 60, "dummy.wav");
-        let sin_data: Vec<f32> = (0..44100).map(|i| (i as f32 * 440.0 * 2.0 * std::f32::consts::PI / 44100.0).sin()).collect();
-        reg.buffer = Some(std::sync::Arc::new(summoner_dsp::sampler::SampleBuffer::new(sin_data, 44100, 1)));
+        let sin_data: Vec<f32> = (0..44100)
+            .map(|i| (i as f32 * 440.0 * 2.0 * std::f32::consts::PI / 44100.0).sin())
+            .collect();
+        reg.buffer = Some(std::sync::Arc::new(
+            summoner_dsp::sampler::SampleBuffer::new(sin_data, 44100, 1),
+        ));
         bank.add_region(reg);
 
         let mut sampler = summoner_dsp::SamplerDevice::new(bank);
@@ -1745,7 +2129,10 @@ mod tests {
         let ctx = summoner_core::node::ProcessContext::new(44100, 120.0, 0);
         sampler.process_block(&[], &mut [&mut out_l, &mut out_r], &ctx);
 
-        assert!(out_l.iter().any(|&s| s != 0.0), "SamplerDevice rendered audio output");
+        assert!(
+            out_l.iter().any(|&s| s != 0.0),
+            "SamplerDevice rendered audio output"
+        );
     }
 
     #[test]
@@ -1765,8 +2152,10 @@ mod tests {
     #[test]
     fn test_macro_knob_driven_by_automation() {
         use summoner_core::param_bus::{ParamBus, ParamId};
-        use summoner_sequencer::automation_timeline::{AutomationTimeline, AutomationLane, AutomationCurve, AutomationPoint, Interpolation};
         use summoner_sequencer::automation::AutomationRegistry;
+        use summoner_sequencer::automation_timeline::{
+            AutomationCurve, AutomationLane, AutomationPoint, AutomationTimeline, Interpolation,
+        };
 
         let mut bus = ParamBus::new();
         let param_id = ParamId(1);
@@ -1774,8 +2163,16 @@ mod tests {
 
         let mut timeline = AutomationTimeline::new();
         let curve = AutomationCurve::new(vec![
-            AutomationPoint { beat: 0.0, value: 500.0, interp: Interpolation::Linear },
-            AutomationPoint { beat: 4.0, value: 5000.0, interp: Interpolation::Linear },
+            AutomationPoint {
+                beat: 0.0,
+                value: 500.0,
+                interp: Interpolation::Linear,
+            },
+            AutomationPoint {
+                beat: 4.0,
+                value: 5000.0,
+                interp: Interpolation::Linear,
+            },
         ]);
         let lane = AutomationLane {
             param_id: "1".to_string(),
@@ -1788,7 +2185,10 @@ mod tests {
 
         timeline.apply_beat(&reg, 2.0);
         let val = atomic.get();
-        assert!((val - 2750.0).abs() < 10.0, "Macro knob parameter updated by automation interpolated value");
+        assert!(
+            (val - 2750.0).abs() < 10.0,
+            "Macro knob parameter updated by automation interpolated value"
+        );
     }
 
     #[test]
@@ -1829,21 +2229,43 @@ mod tests {
 
     #[test]
     fn test_step_1251_parse_convert_args_default_and_flags() {
-        let args_default = vec!["summon".to_string(), "convert".to_string(), "input_dir".to_string(), "output_dir".to_string()];
+        let args_default = vec![
+            "summon".to_string(),
+            "convert".to_string(),
+            "input_dir".to_string(),
+            "output_dir".to_string(),
+        ];
         let (in_p, out_p, fmt) = parse_convert_args(&args_default).unwrap();
         assert_eq!(in_p, PathBuf::from("input_dir"));
         assert_eq!(out_p, PathBuf::from("output_dir"));
         assert_eq!(fmt, "flac");
 
-        let args_flag_eq = vec!["summon".to_string(), "convert".to_string(), "input_dir".to_string(), "output_dir".to_string(), "--format=wav".to_string()];
+        let args_flag_eq = vec![
+            "summon".to_string(),
+            "convert".to_string(),
+            "input_dir".to_string(),
+            "output_dir".to_string(),
+            "--format=wav".to_string(),
+        ];
         let (_, _, fmt_eq) = parse_convert_args(&args_flag_eq).unwrap();
         assert_eq!(fmt_eq, "wav");
 
-        let args_flag_space = vec!["summon".to_string(), "convert".to_string(), "input_dir".to_string(), "output_dir".to_string(), "--format".to_string(), "ogg".to_string()];
+        let args_flag_space = vec![
+            "summon".to_string(),
+            "convert".to_string(),
+            "input_dir".to_string(),
+            "output_dir".to_string(),
+            "--format".to_string(),
+            "ogg".to_string(),
+        ];
         let (_, _, fmt_sp) = parse_convert_args(&args_flag_space).unwrap();
         assert_eq!(fmt_sp, "ogg");
 
-        let args_missing = vec!["summon".to_string(), "convert".to_string(), "input_dir".to_string()];
+        let args_missing = vec![
+            "summon".to_string(),
+            "convert".to_string(),
+            "input_dir".to_string(),
+        ];
         assert!(parse_convert_args(&args_missing).is_err());
     }
 
@@ -1857,7 +2279,14 @@ mod tests {
         std::fs::create_dir_all(&input_dir).unwrap();
 
         let sample_wav = input_dir.join("test_signal.wav");
-        summoner_project::export::write_audio_file(&sample_wav, &[0.0, 0.5, -0.5, 0.0], 48000, 2, "wav").unwrap();
+        summoner_project::export::write_audio_file(
+            &sample_wav,
+            &[0.0, 0.5, -0.5, 0.0],
+            48000,
+            2,
+            "wav",
+        )
+        .unwrap();
 
         let cli_args = vec![
             "summon".to_string(),

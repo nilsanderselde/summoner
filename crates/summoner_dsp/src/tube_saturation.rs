@@ -43,7 +43,12 @@ impl SignalProcessor for TubeSaturationNode {
         "TubeSaturationNode"
     }
 
-    fn process_block(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], _ctx: &ProcessContext) {
+    fn process_block(
+        &mut self,
+        input: &[&[Sample]],
+        output: &mut [&mut [Sample]],
+        _ctx: &ProcessContext,
+    ) {
         if input.is_empty() || output.is_empty() {
             return;
         }
@@ -90,6 +95,9 @@ mod tests {
 
         assert!(pos_out.iter().all(|s| s.is_finite()));
         assert!(neg_out.iter().all(|s| s.is_finite()));
-        assert!((pos_out[63].abs() - neg_out[63].abs()).abs() > 0.001, "Tube saturation output should be asymmetric");
+        assert!(
+            (pos_out[63].abs() - neg_out[63].abs()).abs() > 0.001,
+            "Tube saturation output should be asymmetric"
+        );
     }
 }

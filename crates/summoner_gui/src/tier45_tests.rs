@@ -2,25 +2,26 @@
 
 #[cfg(test)]
 mod tests {
-    use summoner_dsp::spectrogram_art::{
-        SpectrogramArtConfig, SpectrogramArtEngine, SpectrogramImage, FrequencyMapping, ColorMappingMode, SpectrogramArtNode,
-    };
-    use summoner_dsp::live_session_recorder::{LiveSessionRecorder, RecordingFormat};
-    use summoner_dsp::visualizer_engine::{VisualizerIntegrationEngine, VisualizerPreset};
-    use summoner_project::scratch_audio_cache::ScratchAudioCache;
     #[cfg(feature = "gui")]
-    use crate::app::{SummonerApp, GuiDisplayMode};
-    #[cfg(feature = "gui")]
-    use summoner_project::schema::ProjectConfig;
-    #[cfg(feature = "gui")]
-    use summoner_core::param_bus::ParamBus;
-    use summoner_core::node::AudioNode;
-    use summoner_core::transport::Transport;
-    use summoner_core::node::ProcessContext;
+    use crate::app::{GuiDisplayMode, SummonerApp};
+    use std::env;
+    use std::path::Path;
     #[cfg(feature = "gui")]
     use std::sync::Arc;
-    use std::path::Path;
-    use std::env;
+    use summoner_core::node::AudioNode;
+    use summoner_core::node::ProcessContext;
+    #[cfg(feature = "gui")]
+    use summoner_core::param_bus::ParamBus;
+    use summoner_core::transport::Transport;
+    use summoner_dsp::live_session_recorder::{LiveSessionRecorder, RecordingFormat};
+    use summoner_dsp::spectrogram_art::{
+        ColorMappingMode, FrequencyMapping, SpectrogramArtConfig, SpectrogramArtEngine,
+        SpectrogramArtNode, SpectrogramImage,
+    };
+    use summoner_dsp::visualizer_engine::{VisualizerIntegrationEngine, VisualizerPreset};
+    #[cfg(feature = "gui")]
+    use summoner_project::schema::ProjectConfig;
+    use summoner_project::scratch_audio_cache::ScratchAudioCache;
 
     #[test]
     fn test_step_1221_spectrogram_art_frequency_mapping() {
@@ -32,7 +33,7 @@ mod tests {
             num_oscillators: 32,
         };
         let engine = SpectrogramArtEngine::new(config);
-        
+
         let freq_bottom = engine.map_y_to_freq(31, 32);
         let freq_top = engine.map_y_to_freq(0, 32);
         assert!((freq_bottom - 100.0).abs() < 1.0);
@@ -44,7 +45,7 @@ mod tests {
         let config = SpectrogramArtConfig::default();
         let engine = SpectrogramArtEngine::new(config.clone());
         let mut img = SpectrogramImage::new(16, 16);
-        
+
         // Draw diagonal line
         for i in 0..16 {
             img.set_pixel(i, i, 255, 255, 255);
@@ -119,7 +120,9 @@ mod tests {
 
         let key = cache.compute_cache_key(Path::new("sample.wav"), 1.5, -3.0);
         let data = vec![0.1f32, 0.2f32, 0.3f32];
-        cache.store_cached_audio(&key, &data, 48000, 1).expect("store cache");
+        cache
+            .store_cached_audio(&key, &data, 48000, 1)
+            .expect("store cache");
 
         let (retrieved, sr, ch) = cache.get_cached_audio(&key).expect("get cached audio");
         assert_eq!(sr, 48000);

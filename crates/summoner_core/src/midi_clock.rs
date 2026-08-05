@@ -117,7 +117,8 @@ impl MidiClockReceiver {
                 }
 
                 if self.tick_intervals.len() >= 6 {
-                    let avg_interval: f64 = self.tick_intervals.iter().sum::<f64>() / self.tick_intervals.len() as f64;
+                    let avg_interval: f64 =
+                        self.tick_intervals.iter().sum::<f64>() / self.tick_intervals.len() as f64;
                     if avg_interval > 0.0 {
                         let ticks_per_sec = 1.0 / avg_interval;
                         let beats_per_sec = ticks_per_sec / MIDI_CLOCK_PPQN as f64;

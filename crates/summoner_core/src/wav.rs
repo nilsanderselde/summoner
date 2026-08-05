@@ -94,9 +94,12 @@ mod tests {
         let path = temp_dir.join("summoner_test_out.wav");
 
         {
-            let mut writer = WavWriter::create(&path, 44100, 2).expect("Failed to create WavWriter");
+            let mut writer =
+                WavWriter::create(&path, 44100, 2).expect("Failed to create WavWriter");
             let samples = vec![0.0f32; 128];
-            writer.write_interleaved_samples(&samples).expect("Failed to write samples");
+            writer
+                .write_interleaved_samples(&samples)
+                .expect("Failed to write samples");
             writer.finalize().expect("Failed to finalize WAV header");
         }
 

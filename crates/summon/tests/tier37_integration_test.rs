@@ -5,8 +5,8 @@
 
 use summoner_core::audio::{ChannelLayout, MultichannelAudioBuffer};
 use summoner_dsp::spatial_audio::*;
-use summoner_project::export::export_adm_bwf;
 use summoner_project::create_default_project;
+use summoner_project::export::export_adm_bwf;
 
 #[test]
 fn test_step_1061_multichannel_layout_pipeline() {
@@ -43,12 +43,17 @@ fn test_step_1062_3d_binaural_spatial_panner_node() {
 
     assert!(rms_l > 0.0);
     assert!(rms_r > 0.0);
-    assert!(rms_l > rms_r, "Left ear should receive higher gain for left sound source");
+    assert!(
+        rms_l > rms_r,
+        "Left ear should receive higher gain for left sound source"
+    );
 }
 
 #[test]
 fn test_step_1063_higher_order_ambisonics_3rd_order_encoder_decoder() {
-    let enc = AmbisonicsEncoder3D { position: Position3D::new(0.5, 1.0, 0.2) };
+    let enc = AmbisonicsEncoder3D {
+        position: Position3D::new(0.5, 1.0, 0.2),
+    };
     let weights = enc.encoding_weights();
     assert_eq!(weights.len(), 16);
 
@@ -101,7 +106,10 @@ fn test_step_1067_distance_attenuation_air_absorption_doppler() {
     node.process_block(&input, &mut output);
 
     let rms_out: f32 = (output.iter().map(|s| s * s).sum::<f32>() / 128.0).sqrt();
-    assert!(rms_out < 0.2, "Distance attenuation should reduce signal level at 10 meters");
+    assert!(
+        rms_out < 0.2,
+        "Distance attenuation should reduce signal level at 10 meters"
+    );
 }
 
 #[test]
@@ -134,7 +142,10 @@ fn test_step_1069_surround_limiter_and_bs1770_loudness() {
 
     for ch in 0..6 {
         for &s in buf.channel(ch) {
-            assert!(s.abs() <= 1.0, "Surround limiter must restrict true peak <= 1.0");
+            assert!(
+                s.abs() <= 1.0,
+                "Surround limiter must restrict true peak <= 1.0"
+            );
         }
     }
 }

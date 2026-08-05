@@ -13,9 +13,9 @@
 
 //! VST3 and CLAP plugin hosting infrastructure, directory scanner, and audio node routing.
 
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use serde::{Deserialize, Serialize};
 
 use summoner_core::audio::Sample;
 use summoner_core::node::{AudioNode, ProcessContext};
@@ -59,7 +59,11 @@ pub fn scan_plugin_directory(dir: &Path) -> Vec<PluginDescriptor> {
         if path.is_dir() {
             let extension = path.extension().and_then(|s| s.to_str()).unwrap_or("");
             if extension.eq_ignore_ascii_case("vst3") {
-                let name = path.file_stem().and_then(|s| s.to_str()).unwrap_or("Unknown VST3").to_string();
+                let name = path
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("Unknown VST3")
+                    .to_string();
                 plugins.push(PluginDescriptor {
                     name,
                     vendor: "ThirdParty".into(),
@@ -77,7 +81,11 @@ pub fn scan_plugin_directory(dir: &Path) -> Vec<PluginDescriptor> {
         } else if path.is_file() {
             let extension = path.extension().and_then(|s| s.to_str()).unwrap_or("");
             if extension.eq_ignore_ascii_case("clap") {
-                let name = path.file_stem().and_then(|s| s.to_str()).unwrap_or("Unknown CLAP").to_string();
+                let name = path
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("Unknown CLAP")
+                    .to_string();
                 plugins.push(PluginDescriptor {
                     name,
                     vendor: "ThirdParty".into(),
@@ -89,7 +97,11 @@ pub fn scan_plugin_directory(dir: &Path) -> Vec<PluginDescriptor> {
                     num_outputs: 2,
                 });
             } else if extension.eq_ignore_ascii_case("vst3") {
-                let name = path.file_stem().and_then(|s| s.to_str()).unwrap_or("Unknown VST3").to_string();
+                let name = path
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("Unknown VST3")
+                    .to_string();
                 plugins.push(PluginDescriptor {
                     name,
                     vendor: "ThirdParty".into(),
@@ -155,14 +167,17 @@ impl PluginAudioNode {
         ];
 
         for &(id, name, val, min_v, max_v) in &default_params {
-            parameters.insert(id, PluginParamInfo {
+            parameters.insert(
                 id,
-                name: name.to_string(),
-                value: val,
-                default_value: val,
-                min_value: min_v,
-                max_value: max_v,
-            });
+                PluginParamInfo {
+                    id,
+                    name: name.to_string(),
+                    value: val,
+                    default_value: val,
+                    min_value: min_v,
+                    max_value: max_v,
+                },
+            );
             param_name_to_id.insert(name.to_string(), id);
         }
 
@@ -172,7 +187,10 @@ impl PluginAudioNode {
             format: format!("{:?}", descriptor.format),
             is_bypassed: false,
             state_base64: String::new(),
-            parameters: default_params.iter().map(|(_, name, val, _, _)| (name.to_string(), *val)).collect(),
+            parameters: default_params
+                .iter()
+                .map(|(_, name, val, _, _)| (name.to_string(), *val))
+                .collect(),
         };
 
         Self {
@@ -188,7 +206,9 @@ impl PluginAudioNode {
     pub fn set_parameter(&mut self, param_id: u32, value: f32) {
         if let Some(param) = self.parameters.get_mut(&param_id) {
             param.value = value.clamp(param.min_value, param.max_value);
-            self.state.parameters.insert(param.name.clone(), param.value);
+            self.state
+                .parameters
+                .insert(param.name.clone(), param.value);
         }
     }
 
@@ -224,12 +244,7 @@ impl AudioNode for PluginAudioNode {
         "PluginAudioNode"
     }
 
-    fn process(
-        &mut self,
-        input: &[&[Sample]],
-        output: &mut [&mut [Sample]],
-        ctx: &ProcessContext,
-    ) {
+    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
         if output.is_empty() {
             return;
         }
@@ -261,7 +276,11 @@ impl AudioNode for PluginAudioNode {
 
         for i in 0..num_samples {
             for (ch_idx, out_ch) in output.iter_mut().enumerate() {
-                let in_sample = input.get(ch_idx).and_then(|buf| buf.get(i)).copied().unwrap_or(0.0);
+                let in_sample = input
+                    .get(ch_idx)
+                    .and_then(|buf| buf.get(i))
+                    .copied()
+                    .unwrap_or(0.0);
                 if i < out_ch.len() {
                     out_ch[i] = in_sample * gain;
                 }

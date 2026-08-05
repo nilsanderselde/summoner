@@ -14,48 +14,48 @@
 //! Core audio abstractions, node graph evaluation, and zero-allocation primitives for Summoner DAW.
 #![allow(missing_docs)]
 
+pub mod adaptive_buffer;
 pub mod allocator;
 pub mod audio;
+pub mod audio_drivers;
+pub mod embedded_hardware;
+pub mod graph;
+pub mod midi;
+pub mod midi_clock;
+pub mod midi_filter;
 pub mod mpe;
 pub mod node;
+pub mod panner;
+pub mod param_bus;
 pub mod pipeline;
 pub mod sample;
 pub mod sequence;
+pub mod smoothing;
 pub mod track;
 pub mod transport;
-pub mod wav;
-pub mod panner;
-pub mod midi;
-pub mod smoothing;
-pub mod graph;
 pub mod voice;
-pub mod param_bus;
-pub mod midi_clock;
-pub mod audio_drivers;
-pub mod embedded_hardware;
-pub mod midi_filter;
-pub mod adaptive_buffer;
+pub mod wav;
 pub use adaptive_buffer::AdaptiveBufferScaler;
-pub use audio::{ChannelLayout, Frame, FixedAudioBuffer, MultichannelAudioBuffer, Sample};
-pub use midi::MidiEvent;
-pub use mpe::{MpeEvent, MpeVoiceId, MpeVoiceState, MpeRouter, MpeExpressionCurveEditor, ExpressionCurveType};
-pub use midi_filter::{MidiFilterEngine, MidiInputFilter, VelocityCurve};
-pub use smoothing::SmoothParam;
-pub use graph::{Edge, NodeGraph};
-pub use voice::{PolyphonicVoice, VoicePool};
-pub use param_bus::{AtomicParam, ParamBus, ParamId};
-pub use midi_clock::{MidiClockGenerator, MidiClockReceiver, MIDI_CLOCK_BYTE, MIDI_CLOCK_PPQN};
+pub use audio::{ChannelLayout, FixedAudioBuffer, Frame, MultichannelAudioBuffer, Sample};
 pub use audio_drivers::{
     AAudioDriver, AlsaDriver, AsapiDriver, AudioUnitDriver, NativeAudioDriver,
     NativeAudioDriverTuner, WasapiDriver,
 };
 pub use embedded_hardware::{
-    BatteryMonitor, BleMidiPeripheral, BootToSynthEngine, BypassRelayTrigger,
-    EepromPresetStore, EmbeddedHardwareConfig, EurorackCvGateInterface, GpioDriver,
-    GpioEvent, HardwareEmulationHarness, HardwareWatchdogService, MemoryEstimator,
-    MidiUsbGadgetMode, MidiUartSerialDriver, OledDisplayDriver, RotaryEncoderDebouncer,
-    ThermalThrottlingListener, WebConfigDashboard, PI_FIRMWARE_RELEASE_TAG,
+    BatteryMonitor, BleMidiPeripheral, BootToSynthEngine, BypassRelayTrigger, EepromPresetStore,
+    EmbeddedHardwareConfig, EurorackCvGateInterface, GpioDriver, GpioEvent,
+    HardwareEmulationHarness, HardwareWatchdogService, MemoryEstimator, MidiUartSerialDriver,
+    MidiUsbGadgetMode, OledDisplayDriver, RotaryEncoderDebouncer, ThermalThrottlingListener,
+    WebConfigDashboard, PI_FIRMWARE_RELEASE_TAG,
+};
+pub use graph::{Edge, NodeGraph};
+pub use midi::MidiEvent;
+pub use midi_clock::{MidiClockGenerator, MidiClockReceiver, MIDI_CLOCK_BYTE, MIDI_CLOCK_PPQN};
+pub use midi_filter::{MidiFilterEngine, MidiInputFilter, VelocityCurve};
+pub use mpe::{
+    ExpressionCurveType, MpeEvent, MpeExpressionCurveEditor, MpeRouter, MpeVoiceId, MpeVoiceState,
 };
 pub use node::KNOWN_NODE_TYPES;
-
-
+pub use param_bus::{AtomicParam, ParamBus, ParamId};
+pub use smoothing::SmoothParam;
+pub use voice::{PolyphonicVoice, VoicePool};

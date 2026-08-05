@@ -158,7 +158,8 @@ impl SfzPresetPatch {
     }
 
     pub fn to_toml_preset(&self) -> String {
-        toml::to_string_pretty(self).unwrap_or_else(|_| format!("# Failed to format preset {}", self.name))
+        toml::to_string_pretty(self)
+            .unwrap_or_else(|_| format!("# Failed to format preset {}", self.name))
     }
 }
 

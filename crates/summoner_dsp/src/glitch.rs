@@ -60,7 +60,11 @@ impl SignalProcessor for GlitchGate {
                 0.0
             };
 
-            let gate_mult = if self.phase < self.pulse_width { 1.0 } else { 0.0 };
+            let gate_mult = if self.phase < self.pulse_width {
+                1.0
+            } else {
+                0.0
+            };
             self.phase = (self.phase + dt) % 1.0;
 
             let out_sample = in_sample * gate_mult;
@@ -209,7 +213,7 @@ impl SignalProcessor for GlitchShuffle {
 #[derive(Debug)]
 pub struct TapeStop {
     pub is_stopping: bool,
-    pub speed: f32,          // 0.0 to 1.0
+    pub speed: f32, // 0.0 to 1.0
     pub stop_time_sec: f32,
     pub start_time_sec: f32,
     buffer: [f32; 8192],
@@ -378,7 +382,6 @@ mod tests {
         assert!(out_buf.contains(&1.0));
         assert!(out_buf.contains(&0.0));
     }
-
 
     #[test]
     fn test_tape_stop_and_reverse() {

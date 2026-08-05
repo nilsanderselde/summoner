@@ -74,10 +74,12 @@ impl ParamBus {
         // Since ParamId is typically dense, we can treat it as an index.
         let idx = id.0 as usize;
         if idx >= self.params.len() {
-            self.params.resize_with(idx + 1, || Arc::new(AtomicParam {
-                id: ParamId(0), // Dummy id for padded elements
-                value: AtomicU32::new(0.0f32.to_bits())
-            }));
+            self.params.resize_with(idx + 1, || {
+                Arc::new(AtomicParam {
+                    id: ParamId(0), // Dummy id for padded elements
+                    value: AtomicU32::new(0.0f32.to_bits()),
+                })
+            });
         }
         let param = AtomicParam::new(id, initial);
         self.params[idx] = param.clone();

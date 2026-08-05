@@ -9,20 +9,46 @@
 //! cloud preset hub, E2EE, offline change queue, GitHub Actions bot integration,
 //! session analytics, WebRTC MIDI streaming, and template marketplace.
 
-use std::collections::{HashMap, HashSet};
-use serde::{Deserialize, Serialize};
 use crate::schema::{ProjectConfig, TrackConfig};
+use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
 
 /// Step 1021: Atomic operations for CRDT project editing.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum CrdtOp {
-    SetBpm { bpm: f32, clock: u64 },
-    SetTrackGain { track_id: u64, gain: f32, clock: u64 },
-    SetTrackPan { track_id: u64, pan: f32, clock: u64 },
-    SetTrackMuted { track_id: u64, muted: bool, clock: u64 },
-    AddTrack { track_id: u64, name: String, clock: u64 },
-    RemoveTrack { track_id: u64, clock: u64 },
-    CustomProperty { key: String, value: String, clock: u64 },
+    SetBpm {
+        bpm: f32,
+        clock: u64,
+    },
+    SetTrackGain {
+        track_id: u64,
+        gain: f32,
+        clock: u64,
+    },
+    SetTrackPan {
+        track_id: u64,
+        pan: f32,
+        clock: u64,
+    },
+    SetTrackMuted {
+        track_id: u64,
+        muted: bool,
+        clock: u64,
+    },
+    AddTrack {
+        track_id: u64,
+        name: String,
+        clock: u64,
+    },
+    RemoveTrack {
+        track_id: u64,
+        clock: u64,
+    },
+    CustomProperty {
+        key: String,
+        value: String,
+        clock: u64,
+    },
 }
 
 impl CrdtOp {
@@ -106,7 +132,9 @@ impl CrdtEngine {
         }
         // Sort ops deterministically by clock value then string representation
         self.ops.sort_by(|a, b| {
-            a.clock().cmp(&b.clock()).then_with(|| format!("{:?}", a).cmp(&format!("{:?}", b)))
+            a.clock()
+                .cmp(&b.clock())
+                .then_with(|| format!("{:?}", a).cmp(&format!("{:?}", b)))
         });
     }
 
@@ -127,7 +155,9 @@ impl CrdtEngine {
                         track.pan = *pan;
                     }
                 }
-                CrdtOp::SetTrackMuted { track_id, muted, .. } => {
+                CrdtOp::SetTrackMuted {
+                    track_id, muted, ..
+                } => {
                     if let Some(track) = project.tracks.iter_mut().find(|t| t.id == *track_id) {
                         track.muted = *muted;
                     }
@@ -319,7 +349,13 @@ impl CloudBranchingManager {
         );
     }
 
-    pub fn open_pull_request(&mut self, title: &str, source: &str, target: &str, author: &str) -> u32 {
+    pub fn open_pull_request(
+        &mut self,
+        title: &str,
+        source: &str,
+        target: &str,
+        author: &str,
+    ) -> u32 {
         let pr_id = self.next_pr_id;
         self.next_pr_id += 1;
         self.pull_requests.push(CloudPullRequest {
@@ -335,16 +371,24 @@ impl CloudBranchingManager {
     }
 
     pub fn merge_pull_request(&mut self, pr_id: u32) -> Result<(), String> {
-        let pr = self.pull_requests.iter_mut().find(|p| p.id == pr_id)
+        let pr = self
+            .pull_requests
+            .iter_mut()
+            .find(|p| p.id == pr_id)
             .ok_or_else(|| format!("PR #{} not found", pr_id))?;
         if pr.status != "Open" {
             return Err(format!("PR #{} is already {}", pr_id, pr.status));
         }
 
-        let src_branch = self.branches.get(&pr.source_branch)
-            .ok_or_else(|| format!("Source branch {} not found", pr.source_branch))?.clone();
+        let src_branch = self
+            .branches
+            .get(&pr.source_branch)
+            .ok_or_else(|| format!("Source branch {} not found", pr.source_branch))?
+            .clone();
 
-        let target_branch = self.branches.get_mut(&pr.target_branch)
+        let target_branch = self
+            .branches
+            .get_mut(&pr.target_branch)
             .ok_or_else(|| format!("Target branch {} not found", pr.target_branch))?;
 
         target_branch.crdt_snapshot.merge(&src_branch.crdt_snapshot);
@@ -477,7 +521,10 @@ impl AccessControlPolicy {
     pub fn validate_op(&self, user: &str, _op: &CrdtOp) -> Result<(), String> {
         match self.user_roles.get(user) {
             Some(WorkspaceRole::Owner) | Some(WorkspaceRole::Contributor) => Ok(()),
-            Some(WorkspaceRole::Viewer) => Err(format!("User {} has Read-Only Viewer role and cannot edit project.", user)),
+            Some(WorkspaceRole::Viewer) => Err(format!(
+                "User {} has Read-Only Viewer role and cannot edit project.",
+                user
+            )),
             None => Err(format!("User {} is not a workspace member.", user)),
         }
     }
@@ -631,7 +678,10 @@ impl E2eeProjectEncryptor {
             .collect()
     }
 
-    pub fn decrypt_project_payload(encrypted_payload: &[u8], passkey: &str) -> Result<String, String> {
+    pub fn decrypt_project_payload(
+        encrypted_payload: &[u8],
+        passkey: &str,
+    ) -> Result<String, String> {
         let key_bytes = passkey.as_bytes();
         let decrypted: Vec<u8> = encrypted_payload
             .iter()
@@ -681,11 +731,15 @@ impl GitHubActionsBotIntegration {
                  runs-on: ubuntu-latest\n\
                  steps:\n\
                    - uses: actions/checkout@v3\n\
-                   - run: cargo run --bin summon -- export-render project.toml output.wav\n".to_string()
+                   - run: cargo run --bin summon -- export-render project.toml output.wav\n"
+            .to_string()
     }
 
     pub fn trigger_pr_render_build(&self, pr_number: u32) -> String {
-        format!("Triggered GitHub Actions render job for {}#PR{}", self.repo_name, pr_number)
+        format!(
+            "Triggered GitHub Actions render job for {}#PR{}",
+            self.repo_name, pr_number
+        )
     }
 }
 
@@ -709,7 +763,10 @@ impl SessionAnalyticsDashboard {
     }
 
     pub fn generate_summary_report(&self) -> String {
-        format!("Session Analytics: {} total active contributors.", self.user_metrics.len())
+        format!(
+            "Session Analytics: {} total active contributors.",
+            self.user_metrics.len()
+        )
     }
 }
 
@@ -788,7 +845,10 @@ impl TemplateMarketplace {
     }
 
     pub fn clone_template(&self, template_id: &str) -> Result<ProjectConfig, String> {
-        let tmpl = self.templates.iter().find(|t| t.id == template_id)
+        let tmpl = self
+            .templates
+            .iter()
+            .find(|t| t.id == template_id)
             .ok_or_else(|| format!("Template {} not found", template_id))?;
         Ok(tmpl.config.clone())
     }
@@ -803,11 +863,26 @@ mod tests {
         let mut site_a = CrdtEngine::new("site-A");
         let mut site_b = CrdtEngine::new("site-B");
 
-        site_a.apply_op(CrdtOp::SetBpm { bpm: 128.0, clock: 0 });
-        site_a.apply_op(CrdtOp::AddTrack { track_id: 10, name: "Lead Synth".to_string(), clock: 0 });
+        site_a.apply_op(CrdtOp::SetBpm {
+            bpm: 128.0,
+            clock: 0,
+        });
+        site_a.apply_op(CrdtOp::AddTrack {
+            track_id: 10,
+            name: "Lead Synth".to_string(),
+            clock: 0,
+        });
 
-        site_b.apply_op(CrdtOp::AddTrack { track_id: 20, name: "Bass Track".to_string(), clock: 0 });
-        site_b.apply_op(CrdtOp::SetTrackGain { track_id: 20, gain: 0.8, clock: 0 });
+        site_b.apply_op(CrdtOp::AddTrack {
+            track_id: 20,
+            name: "Bass Track".to_string(),
+            clock: 0,
+        });
+        site_b.apply_op(CrdtOp::SetTrackGain {
+            track_id: 20,
+            gain: 0.8,
+            clock: 0,
+        });
 
         // Merge site B into site A, and site A into site B
         site_a.merge(&site_b);
@@ -849,13 +924,17 @@ mod tests {
         // Step 1033: E2EE Project Encryption
         let plain = "name = \"Encrypted Project\"\n[transport]\nbpm = 120.0\n";
         let encrypted = E2eeProjectEncryptor::encrypt_project_payload(plain, "my-passphrase");
-        let decrypted = E2eeProjectEncryptor::decrypt_project_payload(&encrypted, "my-passphrase").unwrap();
+        let decrypted =
+            E2eeProjectEncryptor::decrypt_project_payload(&encrypted, "my-passphrase").unwrap();
         assert_eq!(plain, decrypted);
 
         // Step 1034: Offline Queue Flush
         let mut target = CrdtEngine::new("main");
         let mut queue = OfflineChangeQueue::default();
-        queue.record_offline_op(CrdtOp::SetBpm { bpm: 150.0, clock: 0 });
+        queue.record_offline_op(CrdtOp::SetBpm {
+            bpm: 150.0,
+            clock: 0,
+        });
         queue.flush_and_merge(&mut target);
         assert_eq!(target.ops.len(), 1);
     }

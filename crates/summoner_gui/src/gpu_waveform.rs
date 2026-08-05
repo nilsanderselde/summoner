@@ -53,10 +53,10 @@ impl GpuWaveformRenderer {
 /// Multi-scale RMS pyramid levels for instant waveform rendering.
 #[derive(Debug, Clone)]
 pub struct MultiScaleLodPyramid {
-    pub level_1x: Vec<f32>,   // Full resolution RMS
-    pub level_4x: Vec<f32>,   // 4:1 downsampled RMS
-    pub level_16x: Vec<f32>,  // 16:1 downsampled RMS
-    pub level_64x: Vec<f32>,  // 64:1 downsampled RMS
+    pub level_1x: Vec<f32>,  // Full resolution RMS
+    pub level_4x: Vec<f32>,  // 4:1 downsampled RMS
+    pub level_16x: Vec<f32>, // 16:1 downsampled RMS
+    pub level_64x: Vec<f32>, // 64:1 downsampled RMS
 }
 
 impl MultiScaleLodPyramid {
@@ -75,8 +75,11 @@ impl MultiScaleLodPyramid {
     }
 
     fn downsample(input: &[f32], factor: usize) -> Vec<f32> {
-        if input.is_empty() || factor == 0 { return Vec::new(); }
-        input.chunks(factor)
+        if input.is_empty() || factor == 0 {
+            return Vec::new();
+        }
+        input
+            .chunks(factor)
             .map(|chunk| {
                 let sum_sq: f32 = chunk.iter().map(|&s| s * s).sum();
                 (sum_sq / chunk.len() as f32).sqrt()
@@ -173,7 +176,9 @@ impl GpuSpectrumAnalyzer {
 
     /// Computes FFT magnitudes from time-domain audio samples.
     pub fn compute_spectrum(&mut self, samples: &[f32]) {
-        if samples.is_empty() { return; }
+        if samples.is_empty() {
+            return;
+        }
         for (i, bin) in self.magnitudes.iter_mut().enumerate() {
             let sample_idx = (i * samples.len()) / self.fft_bins;
             let val = samples.get(sample_idx).copied().unwrap_or(0.0);
@@ -184,11 +189,15 @@ impl GpuSpectrumAnalyzer {
     /// Generates plot points (frequency in Hz vs magnitude dB) for curve displays.
     pub fn get_curve_points(&self, sample_rate: u32) -> Vec<[f64; 2]> {
         let nyquist = sample_rate as f64 * 0.5;
-        self.magnitudes.iter().enumerate().map(|(i, &mag)| {
-            let freq = (i as f64 / self.fft_bins as f64) * nyquist;
-            let db = (mag as f64 + 1e-6).log10() * 20.0;
-            [freq, db.clamp(-90.0, 12.0)]
-        }).collect()
+        self.magnitudes
+            .iter()
+            .enumerate()
+            .map(|(i, &mag)| {
+                let freq = (i as f64 / self.fft_bins as f64) * nyquist;
+                let db = (mag as f64 + 1e-6).log10() * 20.0;
+                [freq, db.clamp(-90.0, 12.0)]
+            })
+            .collect()
     }
 }
 
@@ -344,7 +353,11 @@ impl HardwareControlEditorState {
     }
 
     pub fn render_layout_preview(&self) -> String {
-        format!("Surface: {} | Mapped Elements: {}", self.surface_name, self.bound_cc_map.len())
+        format!(
+            "Surface: {} | Mapped Elements: {}",
+            self.surface_name,
+            self.bound_cc_map.len()
+        )
     }
 }
 

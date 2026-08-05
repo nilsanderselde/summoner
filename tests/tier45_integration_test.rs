@@ -1,13 +1,16 @@
 // Summoner DAW - Tier 45 End-to-End Integration Tests
 // Steps 1231 & 1232: Live session recording pipeline, Spectrogram Art synthesis, scratch folder audio cache transformations
 
-use summoner_dsp::spectrogram_art::{SpectrogramArtConfig, SpectrogramArtEngine, SpectrogramImage, FrequencyMapping, ColorMappingMode};
-use summoner_dsp::live_session_recorder::{LiveSessionRecorder, RecordingFormat};
-use summoner_dsp::visualizer_engine::{VisualizerIntegrationEngine, VisualizerPreset};
-use summoner_project::scratch_audio_cache::ScratchAudioCache;
 use std::env;
 use std::fs;
 use std::path::Path;
+use summoner_dsp::live_session_recorder::{LiveSessionRecorder, RecordingFormat};
+use summoner_dsp::spectrogram_art::{
+    ColorMappingMode, FrequencyMapping, SpectrogramArtConfig, SpectrogramArtEngine,
+    SpectrogramImage,
+};
+use summoner_dsp::visualizer_engine::{VisualizerIntegrationEngine, VisualizerPreset};
+use summoner_project::scratch_audio_cache::ScratchAudioCache;
 
 #[test]
 fn test_tier45_spectrogram_art_pipeline_integration() {
@@ -71,7 +74,9 @@ fn test_tier45_scratch_folder_audio_cache_integration() {
     assert_ne!(key1, key2);
 
     let audio_data = vec![0.0f32, 0.3f32, 0.6f32, 0.9f32, 0.6f32, 0.3f32, 0.0f32];
-    cache.store_cached_audio(&key1, &audio_data, 44100, 1).expect("store");
+    cache
+        .store_cached_audio(&key1, &audio_data, 44100, 1)
+        .expect("store");
 
     let (retrieved, sr, ch) = cache.get_cached_audio(&key1).expect("retrieve");
     assert_eq!(sr, 44100);

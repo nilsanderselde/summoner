@@ -101,10 +101,10 @@ impl VisualizerIntegrationEngine {
         let mut treble = 0.0f32;
 
         let step = num_samples.max(64) / 64;
-        for bin in 0..64 {
+        for (bin, spec_val) in spectrum.iter_mut().enumerate() {
             let idx = (bin * step).min(num_samples - 1);
             let mag = (left[idx].abs() + right[idx].abs()) * 0.5;
-            spectrum[bin] = mag;
+            *spec_val = mag;
             if mag > peak {
                 peak = mag;
             }

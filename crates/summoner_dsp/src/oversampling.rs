@@ -16,8 +16,7 @@
 const FIR_TAPS: usize = 12;
 // Half-band lowpass FIR filter coefficients for anti-aliasing
 const FIR_COEFFS: [f32; FIR_TAPS] = [
-    -0.005, 0.015, -0.035, 0.075, -0.160, 0.610,
-    0.610, -0.160, 0.075, -0.035, 0.015, -0.005,
+    -0.005, 0.015, -0.035, 0.075, -0.160, 0.610, 0.610, -0.160, 0.075, -0.035, 0.015, -0.005,
 ];
 
 #[derive(Debug, Clone)]
@@ -104,4 +103,3 @@ mod tests {
         assert!(down_sample.is_finite());
     }
 }
-

@@ -6,13 +6,11 @@
 
 #[cfg(test)]
 mod tests {
-    use summoner_project::media_export::{
-        LuaScriptEngine, LuaDebugger, LuaProfiler,
-    };
-    use summoner_project::schema::{ProjectConfig, LuaScriptConfig};
     use crate::gpu_waveform::LuaEditorState;
     use std::collections::HashMap;
     use std::path::Path;
+    use summoner_project::media_export::{LuaDebugger, LuaProfiler, LuaScriptEngine};
+    use summoner_project::schema::{LuaScriptConfig, ProjectConfig};
 
     #[test]
     fn test_step_861_status_bar_error_display() {
@@ -111,7 +109,9 @@ mod tests {
     #[test]
     fn test_step_873_scripted_automation_generation() {
         let engine = LuaScriptEngine::new();
-        let points = engine.generate_automation_script("sine_wave()", 4.0).unwrap();
+        let points = engine
+            .generate_automation_script("sine_wave()", 4.0)
+            .unwrap();
         assert_eq!(points.len(), 9);
         assert_eq!(points[0].0, 0.0);
     }
@@ -120,7 +120,9 @@ mod tests {
     fn test_step_874_scripted_rendering_pipeline() {
         let engine = LuaScriptEngine::new();
         let mut proj = ProjectConfig::default();
-        let msg = engine.control_render_pipeline("set_bpm", &mut proj).unwrap();
+        let msg = engine
+            .control_render_pipeline("set_bpm", &mut proj)
+            .unwrap();
         assert_eq!(proj.transport.bpm, 140.0);
         assert!(msg.contains("controlled"));
     }
@@ -129,7 +131,9 @@ mod tests {
     fn test_step_875_scripted_export_pipeline_postprocess() {
         let engine = LuaScriptEngine::new();
         let mut samples = vec![0.0, 0.5, 2.0, -1.0];
-        engine.post_process_render("normalize", &mut samples).unwrap();
+        engine
+            .post_process_render("normalize", &mut samples)
+            .unwrap();
         assert_eq!(samples[2], 1.0);
     }
 
@@ -146,8 +150,12 @@ mod tests {
         let engine = LuaScriptEngine::new();
         let unsafe_script = "io.open('/etc/passwd')";
         assert!(engine.check_sandboxing(unsafe_script, false, None).is_err());
-        assert!(engine.check_sandboxing(unsafe_script, true, Some(Path::new("/tmp/project"))).is_err());
-        assert!(engine.check_sandboxing("print('hello')", false, None).is_ok());
+        assert!(engine
+            .check_sandboxing(unsafe_script, true, Some(Path::new("/tmp/project")))
+            .is_err());
+        assert!(engine
+            .check_sandboxing("print('hello')", false, None)
+            .is_ok());
     }
 
     #[test]

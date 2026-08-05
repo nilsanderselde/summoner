@@ -3,8 +3,8 @@
 //
 // 3D Spatial Panner Visualizer & VR/AR HMD Companion View (Steps 1064, 1074).
 
-use summoner_dsp::spatial_audio::{Position3D, HeadTrackerReceiver};
 use summoner_core::audio::ChannelLayout;
+use summoner_dsp::spatial_audio::{HeadTrackerReceiver, Position3D};
 
 /// 3D Spatial Panner GUI View (Step 1064).
 #[derive(Debug, Clone)]
@@ -44,17 +44,32 @@ impl SpatialPannerView {
     /// Render ASCII/CLI representation of 3D spatial room.
     pub fn render_ascii(&self) -> String {
         let mut out = String::new();
-        out.push_str(&format!("[3D Spatial Panner View - Layout: {:?}]\n", self.layout));
+        out.push_str(&format!(
+            "[3D Spatial Panner View - Layout: {:?}]\n",
+            self.layout
+        ));
         out.push_str(&format!(
             "Listener (Head Tracker): Yaw {:.1} deg | Pitch {:.1} deg | Roll {:.1} deg\n",
             self.head_tracker.yaw_deg, self.head_tracker.pitch_deg, self.head_tracker.roll_deg
         ));
-        out.push_str(&format!("HMD Companion Mode: {}\n", if self.is_hmd_active { "ACTIVE (OpenXR)" } else { "OFF" }));
+        out.push_str(&format!(
+            "HMD Companion Mode: {}\n",
+            if self.is_hmd_active {
+                "ACTIVE (OpenXR)"
+            } else {
+                "OFF"
+            }
+        ));
         out.push_str("Sources:\n");
         for (name, pos) in &self.sources {
             out.push_str(&format!(
                 " - {:<12}: X={:+.2}m, Y={:+.2}m, Z={:+.2}m (Az: {:.1}deg, Dist: {:.2}m)\n",
-                name, pos.x, pos.y, pos.z, pos.azimuth() * 57.2958, pos.distance()
+                name,
+                pos.x,
+                pos.y,
+                pos.z,
+                pos.azimuth() * 57.2958,
+                pos.distance()
             ));
         }
         out

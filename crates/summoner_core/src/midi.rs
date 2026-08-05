@@ -99,20 +99,20 @@ impl MidiFileParser {
             let end_pos = self.pos + track_len;
             let mut steps = Vec::new();
             let mut running_status = 0;
-            
+
             // To properly convert to TrackerStep, we need quantize or just populate them.
             // As a simplified approach, we just append to steps.
             while self.pos < end_pos {
                 let _delta = self.read_vlq().ok_or("EOF")?;
                 let mut status = self.read_u8().ok_or("EOF")?;
-                
+
                 if status < 0x80 {
                     status = running_status;
                     self.pos -= 1;
                 } else {
                     running_status = status;
                 }
-                
+
                 if status == 0xFF {
                     let _meta_type = self.read_u8().ok_or("EOF")?;
                     let meta_len = self.read_vlq().ok_or("EOF")? as usize;
@@ -123,7 +123,7 @@ impl MidiFileParser {
                 } else {
                     let cmd = status & 0xF0;
                     let _channel = status & 0x0F;
-                    
+
                     if cmd == 0x80 || cmd == 0x90 {
                         let note = self.read_u8().ok_or("EOF")?;
                         let vel = self.read_u8().ok_or("EOF")?;
@@ -137,7 +137,7 @@ impl MidiFileParser {
                     }
                 }
             }
-            
+
             seq_tracks.push(SequenceTrack::new(
                 track_id as u64,
                 format!("Track {}", track_id),

@@ -16,7 +16,9 @@ pub struct TunerResult {
     pub cents_dev: f32,
 }
 
-const NOTE_NAMES: [&str; 12] = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+const NOTE_NAMES: [&str; 12] = [
+    "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
+];
 
 /// Estimate fundamental pitch (Hz), nearest MIDI note, note name, and cents deviation
 /// using time-domain autocorrelation peak detection over input buffer.
@@ -34,8 +36,8 @@ pub fn detect_chromatic_pitch(samples: &[f32], sample_rate: f32) -> Option<Tuner
 
     let n = samples.len() / 2;
     let mut zero_lag_corr = 0.0f32;
-    for i in 0..n {
-        zero_lag_corr += samples[i] * samples[i];
+    for &s in samples.iter().take(n) {
+        zero_lag_corr += s * s;
     }
 
     if zero_lag_corr < 1e-5 {

@@ -52,11 +52,11 @@ impl NavierStokesFluidNode {
             for y in 1..(FLUID_GRID_SIZE - 1) {
                 for x in 1..(FLUID_GRID_SIZE - 1) {
                     let idx = x + y * FLUID_GRID_SIZE + z * FLUID_GRID_SIZE * FLUID_GRID_SIZE;
-                    let p_left  = self.pressure[idx - 1];
+                    let p_left = self.pressure[idx - 1];
                     let p_right = self.pressure[idx + 1];
-                    let p_down  = self.pressure[idx - FLUID_GRID_SIZE];
-                    let p_up    = self.pressure[idx + FLUID_GRID_SIZE];
-                    let p_back  = self.pressure[idx - FLUID_GRID_SIZE * FLUID_GRID_SIZE];
+                    let p_down = self.pressure[idx - FLUID_GRID_SIZE];
+                    let p_up = self.pressure[idx + FLUID_GRID_SIZE];
+                    let p_back = self.pressure[idx - FLUID_GRID_SIZE * FLUID_GRID_SIZE];
                     let p_front = self.pressure[idx + FLUID_GRID_SIZE * FLUID_GRID_SIZE];
 
                     let div_p = (p_right - p_left + p_up - p_down + p_front - p_back) * 0.5;
@@ -65,8 +65,10 @@ impl NavierStokesFluidNode {
                     self.velocity_y[idx] -= dt * (p_up - p_down);
                     self.velocity_z[idx] -= dt * (p_front - p_back);
 
-                    let laplacian_p = p_left + p_right + p_down + p_up + p_back + p_front - 6.0 * self.pressure[idx];
-                    self.pressure[idx] += dt * (self.sound_speed * 0.01 * laplacian_p - self.viscosity * div_p);
+                    let laplacian_p = p_left + p_right + p_down + p_up + p_back + p_front
+                        - 6.0 * self.pressure[idx];
+                    self.pressure[idx] +=
+                        dt * (self.sound_speed * 0.01 * laplacian_p - self.viscosity * div_p);
                     self.pressure[idx] *= self.pressure_damping;
                 }
             }
@@ -84,13 +86,22 @@ impl AudioNode for NavierStokesFluidNode {
         "NavierStokesFluidNode"
     }
 
-    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], _ctx: &ProcessContext) {
+    fn process(
+        &mut self,
+        input: &[&[Sample]],
+        output: &mut [&mut [Sample]],
+        _ctx: &ProcessContext,
+    ) {
         if output.is_empty() {
             return;
         }
         let num_samples = output[0].len();
         for i in 0..num_samples {
-            let in_sample = if !input.is_empty() && i < input[0].len() { input[0][i] } else { 0.0 };
+            let in_sample = if !input.is_empty() && i < input[0].len() {
+                input[0][i]
+            } else {
+                0.0
+            };
             self.step_solver(in_sample);
             self.phase += 2.0 * PI * 440.0 / 44100.0;
             if self.phase > 2.0 * PI {
@@ -159,7 +170,11 @@ impl AudioNode for MolecularVibrationResonatorNode {
         let num_samples = output[0].len();
 
         for i in 0..num_samples {
-            let in_sample = if !input.is_empty() && i < input[0].len() { input[0][i] } else { 0.0 };
+            let in_sample = if !input.is_empty() && i < input[0].len() {
+                input[0][i]
+            } else {
+                0.0
+            };
             let mut synth_sample = 0.0;
 
             for (k, &ratio) in ratios.iter().enumerate() {
@@ -224,7 +239,12 @@ impl AudioNode for PlasmaArcSynthesizerNode {
         "PlasmaArcSynthesizerNode"
     }
 
-    fn process(&mut self, _input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
+    fn process(
+        &mut self,
+        _input: &[&[Sample]],
+        output: &mut [&mut [Sample]],
+        ctx: &ProcessContext,
+    ) {
         if output.is_empty() {
             return;
         }
@@ -241,7 +261,8 @@ impl AudioNode for PlasmaArcSynthesizerNode {
             let spark_noise = self.next_rand() * self.decay_envelope;
             self.decay_envelope *= 0.992; // exponential decay transient
 
-            let thermal_hum = (2.0 * PI * 120.0 * (i as f32) / sample_rate).sin() * 0.05 * self.plasma_heat;
+            let thermal_hum =
+                (2.0 * PI * 120.0 * (i as f32) / sample_rate).sin() * 0.05 * self.plasma_heat;
             let out_sample = (spark_noise + thermal_hum).clamp(-1.0, 1.0);
 
             for out_ch in output.iter_mut() {
@@ -285,7 +306,7 @@ impl AtmosphericDensityNode {
         let temp_k = self.temperature_c + 273.15;
         let base_c = 331.3 * (temp_k / 273.15).sqrt();
         let helium_boost = self.helium_ratio * 640.0; // Helium c ~ 965 m/s
-        let co2_drop = self.co2_ratio * 70.0;        // CO2 c ~ 267 m/s
+        let co2_drop = self.co2_ratio * 70.0; // CO2 c ~ 267 m/s
         (base_c + helium_boost - co2_drop).clamp(100.0, 2000.0)
     }
 }
@@ -295,7 +316,12 @@ impl AudioNode for AtmosphericDensityNode {
         "AtmosphericDensityNode"
     }
 
-    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], _ctx: &ProcessContext) {
+    fn process(
+        &mut self,
+        input: &[&[Sample]],
+        output: &mut [&mut [Sample]],
+        _ctx: &ProcessContext,
+    ) {
         if output.is_empty() {
             return;
         }
@@ -305,7 +331,11 @@ impl AudioNode for AtmosphericDensityNode {
         let num_samples = output[0].len();
 
         for i in 0..num_samples {
-            let in_sample = if !input.is_empty() && i < input[0].len() { input[0][i] } else { 0.0 };
+            let in_sample = if !input.is_empty() && i < input[0].len() {
+                input[0][i]
+            } else {
+                0.0
+            };
             self.delay_line[self.write_pos] = in_sample;
 
             let read_pos = (self.write_pos as f32 + 1024.0 - delay_samples) as usize % 1024;
@@ -365,7 +395,11 @@ impl AudioNode for QuantumDotTransducerNode {
         let num_samples = output[0].len();
 
         for i in 0..num_samples {
-            let in_sample = if !input.is_empty() && i < input[0].len() { input[0][i] } else { 0.0 };
+            let in_sample = if !input.is_empty() && i < input[0].len() {
+                input[0][i]
+            } else {
+                0.0
+            };
             self.phase += 2.0 * PI * audio_freq / sample_rate;
             if self.phase > 2.0 * PI {
                 self.phase -= 2.0 * PI;
@@ -427,7 +461,11 @@ impl AudioNode for AcousticLevitationTrapNode {
         let num_samples = output[0].len();
 
         for i in 0..num_samples {
-            let in_sample = if !input.is_empty() && i < input[0].len() { input[0][i] } else { 0.0 };
+            let in_sample = if !input.is_empty() && i < input[0].len() {
+                input[0][i]
+            } else {
+                0.0
+            };
             // Sub-harmonic acoustic radiation pressure force envelope modulation
             self.phase += 2.0 * PI * (self.ultrasound_freq_khz * 10.0) / sample_rate;
             if self.phase > 2.0 * PI {
@@ -485,7 +523,12 @@ impl AudioNode for SupercriticalFluidNoiseNode {
         "SupercriticalFluidNoiseNode"
     }
 
-    fn process(&mut self, _input: &[&[Sample]], output: &mut [&mut [Sample]], _ctx: &ProcessContext) {
+    fn process(
+        &mut self,
+        _input: &[&[Sample]],
+        output: &mut [&mut [Sample]],
+        _ctx: &ProcessContext,
+    ) {
         if output.is_empty() {
             return;
         }
@@ -521,7 +564,8 @@ pub struct MhdPlasmaWaveModulatorNode {
 
 impl MhdPlasmaWaveModulatorNode {
     pub fn new(magnetic_field_tesla: f32, plasma_density: f32) -> Self {
-        let alfven_velocity = (magnetic_field_tesla / (plasma_density.max(0.001)).sqrt() * 100.0).clamp(10.0, 5000.0);
+        let alfven_velocity =
+            (magnetic_field_tesla / (plasma_density.max(0.001)).sqrt() * 100.0).clamp(10.0, 5000.0);
         Self {
             magnetic_field_tesla: magnetic_field_tesla.clamp(0.1, 50.0),
             plasma_density: plasma_density.clamp(0.001, 10.0),
@@ -545,7 +589,11 @@ impl AudioNode for MhdPlasmaWaveModulatorNode {
         let num_samples = output[0].len();
 
         for i in 0..num_samples {
-            let in_sample = if !input.is_empty() && i < input[0].len() { input[0][i] } else { 0.0 };
+            let in_sample = if !input.is_empty() && i < input[0].len() {
+                input[0][i]
+            } else {
+                0.0
+            };
             self.phase += 2.0 * PI * alfven_freq / sample_rate;
             if self.phase > 2.0 * PI {
                 self.phase -= 2.0 * PI;
@@ -592,7 +640,12 @@ impl AudioNode for SonoluminescenceSonifierNode {
         "SonoluminescenceSonifierNode"
     }
 
-    fn process(&mut self, _input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
+    fn process(
+        &mut self,
+        _input: &[&[Sample]],
+        output: &mut [&mut [Sample]],
+        ctx: &ProcessContext,
+    ) {
         if output.is_empty() {
             return;
         }
@@ -606,7 +659,8 @@ impl AudioNode for SonoluminescenceSonifierNode {
                 self.implosion_env = 1.0; // Instant implosion pulse
             }
 
-            let click_pulse = self.implosion_env * (2.0 * PI * 8000.0 * (i as f32) / sample_rate).sin();
+            let click_pulse =
+                self.implosion_env * (2.0 * PI * 8000.0 * (i as f32) / sample_rate).sin();
             self.implosion_env *= 0.95; // Fast decay picosecond shockwave approximation
 
             for out_ch in output.iter_mut() {
@@ -647,7 +701,12 @@ impl AudioNode for MetamaterialRefractionFilterNode {
         "MetamaterialRefractionFilterNode"
     }
 
-    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], _ctx: &ProcessContext) {
+    fn process(
+        &mut self,
+        input: &[&[Sample]],
+        output: &mut [&mut [Sample]],
+        _ctx: &ProcessContext,
+    ) {
         if output.is_empty() {
             return;
         }
@@ -655,9 +714,14 @@ impl AudioNode for MetamaterialRefractionFilterNode {
         let n = self.refractive_index;
 
         for i in 0..num_samples {
-            let in_sample = if !input.is_empty() && i < input[0].len() { input[0][i] } else { 0.0 };
+            let in_sample = if !input.is_empty() && i < input[0].len() {
+                input[0][i]
+            } else {
+                0.0
+            };
             // Phase velocity reversal & negative dispersion
-            let out_sample = (n * (in_sample - self.prev_input) + 0.9 * self.prev_output).clamp(-1.0, 1.0);
+            let out_sample =
+                (n * (in_sample - self.prev_input) + 0.9 * self.prev_output).clamp(-1.0, 1.0);
             self.prev_input = in_sample;
             self.prev_output = out_sample;
 
@@ -704,7 +768,12 @@ impl AudioNode for IsmShockwaveReverbNode {
         "IsmShockwaveReverbNode"
     }
 
-    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], _ctx: &ProcessContext) {
+    fn process(
+        &mut self,
+        input: &[&[Sample]],
+        output: &mut [&mut [Sample]],
+        _ctx: &ProcessContext,
+    ) {
         if output.is_empty() {
             return;
         }
@@ -712,7 +781,11 @@ impl AudioNode for IsmShockwaveReverbNode {
         let feedback = (0.85 + (self.blast_radius_pc / 500.0)).clamp(0.70, 0.98);
 
         for i in 0..num_samples {
-            let in_sample = if !input.is_empty() && i < input[0].len() { input[0][i] } else { 0.0 };
+            let in_sample = if !input.is_empty() && i < input[0].len() {
+                input[0][i]
+            } else {
+                0.0
+            };
             let mut wet = 0.0;
 
             for k in 0..4 {
@@ -761,7 +834,8 @@ impl GravitationalWaveChirpNode {
 
     /// Calculate instantaneous GW chirp frequency (Hz).
     pub fn chirp_freq(&self) -> f32 {
-        let m_chirp = ((self.mass1_solar * self.mass2_solar).powf(3.0 / 5.0)) / (self.mass1_solar + self.mass2_solar).powf(1.0 / 5.0);
+        let m_chirp = ((self.mass1_solar * self.mass2_solar).powf(3.0 / 5.0))
+            / (self.mass1_solar + self.mass2_solar).powf(1.0 / 5.0);
         let base_f = 30.0 + (m_chirp * 2.0);
         base_f * (1.0 + self.chirp_progress.powi(3) * 15.0)
     }
@@ -772,7 +846,12 @@ impl AudioNode for GravitationalWaveChirpNode {
         "GravitationalWaveChirpNode"
     }
 
-    fn process(&mut self, _input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
+    fn process(
+        &mut self,
+        _input: &[&[Sample]],
+        output: &mut [&mut [Sample]],
+        ctx: &ProcessContext,
+    ) {
         if output.is_empty() {
             return;
         }
@@ -843,7 +922,12 @@ impl AudioNode for CasimirVacuumNoiseNode {
         "CasimirVacuumNoiseNode"
     }
 
-    fn process(&mut self, _input: &[&[Sample]], output: &mut [&mut [Sample]], _ctx: &ProcessContext) {
+    fn process(
+        &mut self,
+        _input: &[&[Sample]],
+        output: &mut [&mut [Sample]],
+        _ctx: &ProcessContext,
+    ) {
         if output.is_empty() {
             return;
         }
@@ -889,7 +973,12 @@ impl AudioNode for AcousticCloakingSpatializerNode {
         "AcousticCloakingSpatializerNode"
     }
 
-    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], _ctx: &ProcessContext) {
+    fn process(
+        &mut self,
+        input: &[&[Sample]],
+        output: &mut [&mut [Sample]],
+        _ctx: &ProcessContext,
+    ) {
         if output.is_empty() {
             return;
         }
@@ -898,7 +987,11 @@ impl AudioNode for AcousticCloakingSpatializerNode {
         let pass_through = 1.0 - (self.cloaking_factor * 0.8);
 
         for i in 0..num_samples {
-            let in_sample = if !input.is_empty() && i < input[0].len() { input[0][i] } else { 0.0 };
+            let in_sample = if !input.is_empty() && i < input[0].len() {
+                input[0][i]
+            } else {
+                0.0
+            };
             let cloaked_sample = in_sample * pass_through;
 
             for out_ch in output.iter_mut() {
@@ -946,14 +1039,20 @@ impl AudioNode for FusionResonanceSynthNode {
         "FusionResonanceSynthNode"
     }
 
-    fn process(&mut self, _input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
+    fn process(
+        &mut self,
+        _input: &[&[Sample]],
+        output: &mut [&mut [Sample]],
+        ctx: &ProcessContext,
+    ) {
         if output.is_empty() {
             return;
         }
         let sample_rate = ctx.sample_rate as f32;
         let num_samples = output[0].len();
         // Downscale MHz ion cyclotron resonance frequency into audible sub-harmonics
-        let audio_harm = (self.icrf_freq_mhz * 20.0 + self.ion_temperature_kev * 10.0).clamp(50.0, 3000.0);
+        let audio_harm =
+            (self.icrf_freq_mhz * 20.0 + self.ion_temperature_kev * 10.0).clamp(50.0, 3000.0);
 
         for i in 0..num_samples {
             self.phase += 2.0 * PI * audio_harm / sample_rate;
@@ -995,7 +1094,10 @@ mod tests {
         }
         let p2 = fluid.net_pressure();
         assert!(p2.is_finite());
-        assert!(p2.abs() <= p1.abs() + 1e-4, "Pressure should decay or remain bounded");
+        assert!(
+            p2.abs() <= p1.abs() + 1e-4,
+            "Pressure should decay or remain bounded"
+        );
     }
 
     #[test]

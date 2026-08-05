@@ -1,9 +1,9 @@
-use crate::traits::SignalProcessor;
 use crate::sampler::SampleBuffer;
-use summoner_core::audio::Sample;
-use summoner_core::node::ProcessContext;
+use crate::traits::SignalProcessor;
 use std::f32::consts::TAU;
 use std::sync::Arc;
+use summoner_core::audio::Sample;
+use summoner_core::node::ProcessContext;
 
 const MAX_GRAINS: usize = 64;
 
@@ -64,7 +64,10 @@ impl GranularSynthNode {
     }
 
     fn next_prng(&mut self) -> f32 {
-        self.seed = self.seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        self.seed = self
+            .seed
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         let val = (self.seed >> 33) as f32 / 2147483648.0;
         val - 1.0 // -1.0 to 1.0
     }
@@ -118,7 +121,11 @@ impl SignalProcessor for GranularSynthNode {
             return;
         }
 
-        let sample_rate = if ctx.sample_rate > 0 { ctx.sample_rate } else { self.sample_rate };
+        let sample_rate = if ctx.sample_rate > 0 {
+            ctx.sample_rate
+        } else {
+            self.sample_rate
+        };
         if sample_rate == 0 {
             return;
         }
@@ -144,7 +151,9 @@ impl SignalProcessor for GranularSynthNode {
                 let current_buf_idx = grain.start_pos + grain.play_head * grain.pitch_ratio;
                 let buf_len = self.buffer.data.len();
 
-                if current_buf_idx < (buf_len as f32 - 1.0) && grain.play_head < grain.duration_samples {
+                if current_buf_idx < (buf_len as f32 - 1.0)
+                    && grain.play_head < grain.duration_samples
+                {
                     let idx_floor = current_buf_idx.floor() as usize;
                     let frac = current_buf_idx - idx_floor as f32;
                     let s0 = self.buffer.data[idx_floor];
@@ -174,13 +183,15 @@ impl SignalProcessor for GranularSynthNode {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use summoner_core::transport::Transport;
     use summoner_core::allocator::AllocGuard;
+    use summoner_core::transport::Transport;
 
     #[test]
     fn test_granular_synth_node_output() {
         let mut granular = GranularSynthNode::new(44100);
-        let sin_wave: Vec<f32> = (0..44100).map(|i| (i as f32 * 440.0 * TAU / 44100.0).sin()).collect();
+        let sin_wave: Vec<f32> = (0..44100)
+            .map(|i| (i as f32 * 440.0 * TAU / 44100.0).sin())
+            .collect();
         granular.load_buffer(Arc::new(SampleBuffer::new(sin_wave, 44100, 1)));
         granular.density = 20.0;
 
@@ -192,14 +203,20 @@ mod tests {
 
         granular.process_block(&dummy_in, &mut [&mut output_buf[..]], &ctx);
 
-        let rms: f32 = (output_buf.iter().map(|s| s * s).sum::<f32>() / output_buf.len() as f32).sqrt();
-        assert!(rms > 0.0, "GranularSynthNode RMS should be greater than zero when active");
+        let rms: f32 =
+            (output_buf.iter().map(|s| s * s).sum::<f32>() / output_buf.len() as f32).sqrt();
+        assert!(
+            rms > 0.0,
+            "GranularSynthNode RMS should be greater than zero when active"
+        );
     }
 
     #[test]
     fn test_granular_synth_no_alloc_in_process() {
         let mut granular = GranularSynthNode::new(44100);
-        let sin_wave: Vec<f32> = (0..44100).map(|i| (i as f32 * 440.0 * TAU / 44100.0).sin()).collect();
+        let sin_wave: Vec<f32> = (0..44100)
+            .map(|i| (i as f32 * 440.0 * TAU / 44100.0).sin())
+            .collect();
         granular.load_buffer(Arc::new(SampleBuffer::new(sin_wave, 44100, 1)));
         granular.density = 20.0;
 
@@ -214,7 +231,10 @@ mod tests {
             granular.process_block(&dummy_in, &mut [&mut output_buf[..]], &ctx);
         }));
 
-        assert!(result.is_ok(), "GranularSynthNode process_block caused allocation!");
+        assert!(
+            result.is_ok(),
+            "GranularSynthNode process_block caused allocation!"
+        );
     }
 
     #[test]
@@ -228,4 +248,3 @@ mod tests {
         assert!((granular.base_pitch_ratio - 2.0).abs() < 1e-4);
     }
 }
-

@@ -1,9 +1,9 @@
 // Summoner DAW - Spectrogram Art & Image-to-Sound Synthesis Engine
 // Step 1221 & 1222: Linear/logarithmic mapping, color-note mapping, PNG/JPG/BMP visual raster data conversion
 
-use summoner_core::node::{AudioNode, ProcessContext};
-use summoner_core::audio::Sample;
 use std::f32::consts::PI;
+use summoner_core::audio::Sample;
+use summoner_core::node::{AudioNode, ProcessContext};
 
 /// Frequency mapping mode for visual raster y-axis.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -65,7 +65,11 @@ impl SpectrogramImage {
         if pixels.len() < width * height * 3 {
             return Err("Insufficient pixel data size for image dimensions".to_string());
         }
-        Ok(Self { width, height, pixels })
+        Ok(Self {
+            width,
+            height,
+            pixels,
+        })
     }
 
     /// Set pixel color at (x, y).
@@ -180,13 +184,19 @@ impl SpectrogramArtEngine {
 
         for (frame_idx, frame) in spectral_bank.iter().enumerate() {
             let frame_start = (frame_idx as f32 * samples_per_frame) as usize;
-            let frame_end = (((frame_idx + 1) as f32 * samples_per_frame) as usize).min(total_samples);
+            let frame_end =
+                (((frame_idx + 1) as f32 * samples_per_frame) as usize).min(total_samples);
 
             for (freq, amp) in frame {
                 let norm_amp = amp / (spectral_bank.len().max(1) as f32).sqrt().max(1.0);
-                for i in frame_start..frame_end {
+                for (i, audio_val) in audio
+                    .iter_mut()
+                    .enumerate()
+                    .take(frame_end)
+                    .skip(frame_start)
+                {
                     let t = i as f32 / sample_rate as f32;
-                    audio[i] += norm_amp * (2.0 * PI * freq * t).sin();
+                    *audio_val += norm_amp * (2.0 * PI * freq * t).sin();
                 }
             }
         }
@@ -286,14 +296,25 @@ impl AudioNode for SpectrogramArtNode {
         "SpectrogramArtNode"
     }
 
-    fn process(&mut self, _inputs: &[&[Sample]], outputs: &mut [&mut [Sample]], ctx: &ProcessContext) {
+    fn process(
+        &mut self,
+        _inputs: &[&[Sample]],
+        outputs: &mut [&mut [Sample]],
+        ctx: &ProcessContext,
+    ) {
         let sample_rate = ctx.sample_rate as f32;
         let num_samples = outputs[0].len();
-        let num_osc = self.engine.config.num_oscillators.min(self.image.height).max(1);
+        let num_osc = self
+            .engine
+            .config
+            .num_oscillators
+            .min(self.image.height)
+            .max(1);
 
         for i in 0..num_samples {
             let mut sample_out = 0.0f32;
-            let current_x = ((ctx.frame_position + i as u64) as usize / 512) % self.image.width.max(1);
+            let current_x =
+                ((ctx.frame_position + i as u64) as usize / 512) % self.image.width.max(1);
 
             for osc_idx in 0..num_osc {
                 let y = osc_idx * self.image.height / num_osc;
@@ -373,10 +394,26 @@ impl SpectrogramArtMorpher {
 
         for y in 0..target_h {
             for x in 0..target_w {
-                let src_xa = if image_a.width == 0 { 0 } else { x * image_a.width / target_w };
-                let src_ya = if image_a.height == 0 { 0 } else { y * image_a.height / target_h };
-                let src_xb = if image_b.width == 0 { 0 } else { x * image_b.width / target_w };
-                let src_yb = if image_b.height == 0 { 0 } else { y * image_b.height / target_h };
+                let src_xa = if image_a.width == 0 {
+                    0
+                } else {
+                    x * image_a.width / target_w
+                };
+                let src_ya = if image_a.height == 0 {
+                    0
+                } else {
+                    y * image_a.height / target_h
+                };
+                let src_xb = if image_b.width == 0 {
+                    0
+                } else {
+                    x * image_b.width / target_w
+                };
+                let src_yb = if image_b.height == 0 {
+                    0
+                } else {
+                    y * image_b.height / target_h
+                };
 
                 let (r_a, g_a, b_a) = image_a.get_pixel(src_xa, src_ya);
                 let (r_b, g_b, b_b) = image_b.get_pixel(src_xb, src_yb);
@@ -391,8 +428,10 @@ impl SpectrogramArtMorpher {
                     SpectralMorphMode::SpectralWarp => {
                         let warp_y_a = ((1.0 - alpha) * src_ya as f32) as usize;
                         let warp_y_b = (alpha * src_yb as f32) as usize;
-                        let (r1, g1, b1) = image_a.get_pixel(src_xa, warp_y_a.min(image_a.height.saturating_sub(1)));
-                        let (r2, g2, b2) = image_b.get_pixel(src_xb, warp_y_b.min(image_b.height.saturating_sub(1)));
+                        let (r1, g1, b1) = image_a
+                            .get_pixel(src_xa, warp_y_a.min(image_a.height.saturating_sub(1)));
+                        let (r2, g2, b2) = image_b
+                            .get_pixel(src_xb, warp_y_b.min(image_b.height.saturating_sub(1)));
                         let r = (1.0 - alpha) * (r1 as f32) + alpha * (r2 as f32);
                         let g = (1.0 - alpha) * (g1 as f32) + alpha * (g2 as f32);
                         let b = (1.0 - alpha) * (b1 as f32) + alpha * (b2 as f32);
@@ -434,7 +473,8 @@ impl SpectrogramArtMorpher {
         duration_sec: f32,
     ) -> Vec<f32> {
         let morphed_img = self.morph_images(image_a, image_b, morph_factor);
-        self.engine.generate_audio_buffer(&morphed_img, sample_rate, duration_sec)
+        self.engine
+            .generate_audio_buffer(&morphed_img, sample_rate, duration_sec)
     }
 }
 
@@ -475,7 +515,12 @@ impl AudioNode for SpectrogramArtMorphNode {
         "SpectrogramArtMorphNode"
     }
 
-    fn process(&mut self, _inputs: &[&[Sample]], outputs: &mut [&mut [Sample]], ctx: &ProcessContext) {
+    fn process(
+        &mut self,
+        _inputs: &[&[Sample]],
+        outputs: &mut [&mut [Sample]],
+        ctx: &ProcessContext,
+    ) {
         let sample_rate = ctx.sample_rate as f32;
         let num_samples = outputs[0].len();
         let max_h = self.image_a.height.max(self.image_b.height).max(1);
@@ -494,8 +539,14 @@ impl AudioNode for SpectrogramArtMorphNode {
                 let y_a = osc_idx * self.image_a.height / num_osc;
                 let y_b = osc_idx * self.image_b.height / num_osc;
 
-                let freq_a = self.morpher.engine.map_y_to_freq(y_a, self.image_a.height.max(1));
-                let freq_b = self.morpher.engine.map_y_to_freq(y_b, self.image_b.height.max(1));
+                let freq_a = self
+                    .morpher
+                    .engine
+                    .map_y_to_freq(y_a, self.image_a.height.max(1));
+                let freq_b = self
+                    .morpher
+                    .engine
+                    .map_y_to_freq(y_b, self.image_b.height.max(1));
                 let freq = (1.0 - alpha) * freq_a + alpha * freq_b;
 
                 let (r_a, g_a, b_a) = self.image_a.get_pixel(current_x_a, y_a);
@@ -587,5 +638,3 @@ mod tests {
         assert_eq!(node.morph_factor, 0.8);
     }
 }
-
-

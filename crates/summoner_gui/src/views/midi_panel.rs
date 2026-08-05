@@ -15,8 +15,8 @@
 
 use eframe::egui;
 use summoner_sequencer::midi_tools::{
-    generate_panic_all_note_off, qwerty_key_to_midi_note, transform_velocity, MidiControllerMapping,
-    MidiMappingType, MidiMonitorLog, VelocityCurve,
+    generate_panic_all_note_off, qwerty_key_to_midi_note, transform_velocity,
+    MidiControllerMapping, MidiMappingType, MidiMonitorLog, VelocityCurve,
 };
 
 /// State for the dedicated virtual MIDI keyboard panel and window.
@@ -48,10 +48,7 @@ impl Default for VirtualKeyboardState {
 }
 
 /// Render Global MIDI Controller Mappings Panel.
-pub fn show_midi_mapping_panel(
-    ui: &mut egui::Ui,
-    mappings: &mut Vec<MidiControllerMapping>,
-) {
+pub fn show_midi_mapping_panel(ui: &mut egui::Ui, mappings: &mut Vec<MidiControllerMapping>) {
     ui.group(|ui| {
         ui.horizontal(|ui| {
             ui.heading("🎛️ MIDI Controller Mappings");
@@ -143,28 +140,30 @@ pub fn show_midi_monitor_panel(
         if monitor_log.entries.is_empty() {
             ui.label("No MIDI activity logged.");
         } else {
-            egui::ScrollArea::vertical().max_height(200.0).show(ui, |ui| {
-                egui::Grid::new("midi_monitor_grid")
-                    .striped(true)
-                    .spacing([16.0, 4.0])
-                    .show(ui, |ui| {
-                        ui.label("Time (ms)");
-                        ui.label("Ch");
-                        ui.label("Event Type");
-                        ui.label("Data 1");
-                        ui.label("Data 2");
-                        ui.end_row();
-
-                        for entry in &monitor_log.entries {
-                            ui.label(format!("{}", entry.timestamp_ms));
-                            ui.label(format!("{}", entry.channel));
-                            ui.label(&entry.event_type);
-                            ui.label(format!("{}", entry.data1));
-                            ui.label(format!("{}", entry.data2));
+            egui::ScrollArea::vertical()
+                .max_height(200.0)
+                .show(ui, |ui| {
+                    egui::Grid::new("midi_monitor_grid")
+                        .striped(true)
+                        .spacing([16.0, 4.0])
+                        .show(ui, |ui| {
+                            ui.label("Time (ms)");
+                            ui.label("Ch");
+                            ui.label("Event Type");
+                            ui.label("Data 1");
+                            ui.label("Data 2");
                             ui.end_row();
-                        }
-                    });
-            });
+
+                            for entry in &monitor_log.entries {
+                                ui.label(format!("{}", entry.timestamp_ms));
+                                ui.label(format!("{}", entry.channel));
+                                ui.label(&entry.event_type);
+                                ui.label(format!("{}", entry.data1));
+                                ui.label(format!("{}", entry.data2));
+                                ui.end_row();
+                            }
+                        });
+                });
         }
     });
 }
@@ -203,8 +202,16 @@ pub fn show_virtual_keyboard_panel(
                 .selected_text(format!("{:?}", state.velocity_curve))
                 .show_ui(ui, |ui| {
                     ui.selectable_value(&mut state.velocity_curve, VelocityCurve::Linear, "Linear");
-                    ui.selectable_value(&mut state.velocity_curve, VelocityCurve::Logarithmic, "Logarithmic");
-                    ui.selectable_value(&mut state.velocity_curve, VelocityCurve::Exponential, "Exponential");
+                    ui.selectable_value(
+                        &mut state.velocity_curve,
+                        VelocityCurve::Logarithmic,
+                        "Logarithmic",
+                    );
+                    ui.selectable_value(
+                        &mut state.velocity_curve,
+                        VelocityCurve::Exponential,
+                        "Exponential",
+                    );
                 });
 
             ui.toggle_value(&mut state.qwerty_enabled, "⌨️ QWERTY Key Mode");
@@ -218,7 +225,10 @@ pub fn show_virtual_keyboard_panel(
             // Pitch Bend & Mod Wheel sliders
             ui.vertical(|ui| {
                 ui.label("PBend");
-                if ui.add(egui::Slider::new(&mut state.pitch_bend, -8192..=8191).vertical()).changed() {
+                if ui
+                    .add(egui::Slider::new(&mut state.pitch_bend, -8192..=8191).vertical())
+                    .changed()
+                {
                     // Pitch bend changed
                 }
                 if ui.button("Reset").clicked() {
@@ -235,7 +245,10 @@ pub fn show_virtual_keyboard_panel(
             // Interactive Piano Keyboard Strip (2 octaves: 24 keys)
             let keyboard_width = 480.0;
             let keyboard_height = 90.0;
-            let (rect, response) = ui.allocate_exact_size(egui::vec2(keyboard_width, keyboard_height), egui::Sense::click_and_drag());
+            let (rect, response) = ui.allocate_exact_size(
+                egui::vec2(keyboard_width, keyboard_height),
+                egui::Sense::click_and_drag(),
+            );
             let painter = ui.painter_at(rect);
 
             // Draw background
@@ -250,8 +263,30 @@ pub fn show_virtual_keyboard_panel(
             // Process QWERTY input if enabled
             if state.qwerty_enabled {
                 let keys_check = [
-                    ("Z", 0), ("S", 1), ("X", 2), ("D", 3), ("C", 4), ("V", 5), ("G", 6), ("B", 7), ("H", 8), ("N", 9), ("J", 10), ("M", 11),
-                    ("Q", 12), ("2", 13), ("W", 14), ("3", 15), ("E", 16), ("R", 17), ("5", 18), ("T", 19), ("6", 20), ("Y", 21), ("7", 22), ("U", 23),
+                    ("Z", 0),
+                    ("S", 1),
+                    ("X", 2),
+                    ("D", 3),
+                    ("C", 4),
+                    ("V", 5),
+                    ("G", 6),
+                    ("B", 7),
+                    ("H", 8),
+                    ("N", 9),
+                    ("J", 10),
+                    ("M", 11),
+                    ("Q", 12),
+                    ("2", 13),
+                    ("W", 14),
+                    ("3", 15),
+                    ("E", 16),
+                    ("R", 17),
+                    ("5", 18),
+                    ("T", 19),
+                    ("6", 20),
+                    ("Y", 21),
+                    ("7", 22),
+                    ("U", 23),
                 ];
                 for (k, _semi) in keys_check {
                     if let Some(note) = qwerty_key_to_midi_note(k, state.base_octave) {
@@ -259,7 +294,8 @@ pub fn show_virtual_keyboard_panel(
                             let is_down = ui.input(|i| i.key_pressed(key));
                             if is_down {
                                 state.active_held_notes.insert(note);
-                                let final_vel = transform_velocity(state.velocity, state.velocity_curve);
+                                let final_vel =
+                                    transform_velocity(state.velocity, state.velocity_curve);
                                 on_note_on(note, final_vel);
                             }
                         }
@@ -277,11 +313,14 @@ pub fn show_virtual_keyboard_panel(
                 );
 
                 let is_pressed = state.active_held_notes.contains(&note)
-                    || (response.hovered() && response.is_pointer_button_down_on() && key_rect.contains(response.interact_pointer_pos().unwrap_or_default()));
+                    || (response.hovered()
+                        && response.is_pointer_button_down_on()
+                        && key_rect.contains(response.interact_pointer_pos().unwrap_or_default()));
 
                 if is_pressed && response.clicked_by(egui::PointerButton::Primary) {
                     let click_pos = response.interact_pointer_pos().unwrap_or(key_rect.center());
-                    let norm_y = ((click_pos.y - key_rect.min.y) / key_rect.height()).clamp(0.1, 1.0);
+                    let norm_y =
+                        ((click_pos.y - key_rect.min.y) / key_rect.height()).clamp(0.1, 1.0);
                     let vel = (norm_y * 127.0) as u8;
                     let final_vel = transform_velocity(vel, state.velocity_curve);
                     on_note_on(note, final_vel);
@@ -294,28 +333,46 @@ pub fn show_virtual_keyboard_panel(
                 };
 
                 painter.rect_filled(key_rect, 2.0, color);
-                painter.rect_stroke(key_rect, 2.0, egui::Stroke::new(1.0, egui::Color32::from_rgb(40, 40, 50)));
+                painter.rect_stroke(
+                    key_rect,
+                    2.0,
+                    egui::Stroke::new(1.0, egui::Color32::from_rgb(40, 40, 50)),
+                );
             }
 
             // Draw black keys on top
             let black_key_offsets = [
-                (0, 1), (1, 3), (3, 6), (4, 8), (5, 10),
-                (7, 13), (8, 15), (10, 18), (11, 20), (12, 22),
+                (0, 1),
+                (1, 3),
+                (3, 6),
+                (4, 8),
+                (5, 10),
+                (7, 13),
+                (8, 15),
+                (10, 18),
+                (11, 20),
+                (12, 22),
             ];
 
             for (white_idx, semi) in black_key_offsets {
                 let note = ((start_midi + semi) as u16).clamp(0, 127) as u8;
                 let key_rect = egui::Rect::from_min_size(
-                    egui::pos2(rect.min.x + (white_idx as f32 + 0.65) * key_width, rect.min.y),
+                    egui::pos2(
+                        rect.min.x + (white_idx as f32 + 0.65) * key_width,
+                        rect.min.y,
+                    ),
                     egui::vec2(key_width * 0.7, keyboard_height * 0.6),
                 );
 
                 let is_pressed = state.active_held_notes.contains(&note)
-                    || (response.hovered() && response.is_pointer_button_down_on() && key_rect.contains(response.interact_pointer_pos().unwrap_or_default()));
+                    || (response.hovered()
+                        && response.is_pointer_button_down_on()
+                        && key_rect.contains(response.interact_pointer_pos().unwrap_or_default()));
 
                 if is_pressed && response.clicked_by(egui::PointerButton::Primary) {
                     let click_pos = response.interact_pointer_pos().unwrap_or(key_rect.center());
-                    let norm_y = ((click_pos.y - key_rect.min.y) / key_rect.height()).clamp(0.1, 1.0);
+                    let norm_y =
+                        ((click_pos.y - key_rect.min.y) / key_rect.height()).clamp(0.1, 1.0);
                     let vel = (norm_y * 127.0) as u8;
                     let final_vel = transform_velocity(vel, state.velocity_curve);
                     on_note_on(note, final_vel);
@@ -328,7 +385,11 @@ pub fn show_virtual_keyboard_panel(
                 };
 
                 painter.rect_filled(key_rect, 2.0, color);
-                painter.rect_stroke(key_rect, 2.0, egui::Stroke::new(1.0, egui::Color32::from_rgb(10, 10, 15)));
+                painter.rect_stroke(
+                    key_rect,
+                    2.0,
+                    egui::Stroke::new(1.0, egui::Color32::from_rgb(10, 10, 15)),
+                );
             }
         });
     });

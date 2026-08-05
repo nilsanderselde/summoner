@@ -55,7 +55,13 @@ pub struct MidiControllerMapping {
 }
 
 impl MidiControllerMapping {
-    pub fn new(channel: u8, mapping_type: MidiMappingType, target_param_id: impl Into<String>, min_val: f32, max_val: f32) -> Self {
+    pub fn new(
+        channel: u8,
+        mapping_type: MidiMappingType,
+        target_param_id: impl Into<String>,
+        min_val: f32,
+        max_val: f32,
+    ) -> Self {
         Self {
             channel,
             mapping_type,
@@ -97,7 +103,14 @@ impl MidiMonitorLog {
         }
     }
 
-    pub fn log_event(&mut self, timestamp_ms: u64, channel: u8, event_type: impl Into<String>, data1: u8, data2: u8) {
+    pub fn log_event(
+        &mut self,
+        timestamp_ms: u64,
+        channel: u8,
+        event_type: impl Into<String>,
+        data1: u8,
+        data2: u8,
+    ) {
         if self.max_entries > 0 && self.entries.len() >= self.max_entries {
             self.entries.pop_front();
         }
@@ -223,7 +236,12 @@ impl Default for Arpeggiator {
 }
 
 impl Arpeggiator {
-    pub fn new(direction: ArpDirection, octave_range: u8, gate_length: f32, latch_enabled: bool) -> Self {
+    pub fn new(
+        direction: ArpDirection,
+        octave_range: u8,
+        gate_length: f32,
+        latch_enabled: bool,
+    ) -> Self {
         Self {
             direction,
             octave_range: octave_range.clamp(1, 4),
@@ -386,12 +404,10 @@ impl Strummer {
 }
 
 /// Chord Memory manager: save up to 8 chords, trigger by slot index (0..7) or MIDI note 1..8 (Step 651).
-#[derive(Debug, Clone)]
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub struct ChordMemory {
     pub slots: [Vec<u8>; 8],
 }
-
 
 impl ChordMemory {
     pub fn new() -> Self {
@@ -479,4 +495,3 @@ pub fn midi_note_to_hz_tuned(note: u8, master_cents: f32, fine_cents: f32) -> f3
     let total_cents = master_cents.clamp(-100.0, 100.0) + fine_cents.clamp(-50.0, 50.0);
     440.0 * 2.0f32.powf(((note as f32) - 69.0 + total_cents / 100.0) / 12.0)
 }
-

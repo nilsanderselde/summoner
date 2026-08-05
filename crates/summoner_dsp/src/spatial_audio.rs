@@ -8,9 +8,9 @@
 
 //! Immersive Audio, Spatial Panning & Multichannel Processing Engine (Tier 37).
 
+use std::f32::consts::PI;
 use summoner_core::audio::{ChannelLayout, MultichannelAudioBuffer, Sample};
 use summoner_core::node::{AudioNode, ProcessContext};
-use std::f32::consts::PI;
 
 /// 3D Spatial Position in Cartesian coordinates (meters).
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -26,7 +26,11 @@ impl Position3D {
     }
 
     pub fn zero() -> Self {
-        Self { x: 0.0, y: 0.0, z: 0.0 }
+        Self {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        }
     }
 
     /// Distance from origin (meters).
@@ -97,8 +101,16 @@ impl BinauralSpatialPannerNode {
         let il_r = (1.0 + 0.4 * sin_az).clamp(0.1, 1.5) * dist_gain;
 
         // HF damping filter coefficient for shadow ear
-        let cutoff_l = if az > 0.0 { (8000.0 * (1.0 - 0.5 * sin_az)).max(1000.0) } else { 20000.0 };
-        let cutoff_r = if az < 0.0 { (8000.0 * (1.0 + 0.5 * sin_az)).max(1000.0) } else { 20000.0 };
+        let cutoff_l = if az > 0.0 {
+            (8000.0 * (1.0 - 0.5 * sin_az)).max(1000.0)
+        } else {
+            20000.0
+        };
+        let cutoff_r = if az < 0.0 {
+            (8000.0 * (1.0 + 0.5 * sin_az)).max(1000.0)
+        } else {
+            20000.0
+        };
         let alpha_l = (-2.0 * PI * cutoff_l / self.sample_rate as f32).exp();
         let alpha_r = (-2.0 * PI * cutoff_r / self.sample_rate as f32).exp();
 
@@ -174,7 +186,9 @@ impl Default for AmbisonicsEncoder3D {
 
 impl AmbisonicsEncoder3D {
     pub fn new() -> Self {
-        Self { position: Position3D::new(0.0, 1.0, 0.0) }
+        Self {
+            position: Position3D::new(0.0, 1.0, 0.0),
+        }
     }
 
     /// Computes the 16 spherical harmonic encoding coefficients (ACN / SN3D format).
@@ -189,22 +203,22 @@ impl AmbisonicsEncoder3D {
 
         // 3rd order spherical harmonics (16 components)
         [
-            1.0,                                    // 0: W (0,0)
-            cos_el * sin_az,                        // 1: Y (1,-1)
-            sin_el,                                 // 2: Z (1,0)
-            cos_el * cos_az,                        // 3: X (1,1)
-            (3.0 * sin_el * sin_el - 1.0) * 0.5,    // 4: V (2,0)
-            cos_el * sin_el * sin_az,               // 5: T (2,-1)
-            cos_el * cos_el * (2.0 * az).sin(),     // 6: R (2,-2)
-            cos_el * sin_el * cos_az,               // 7: S (2,1)
-            cos_el * cos_el * (2.0 * az).cos(),     // 8: Q (2,2)
-            sin_el * (5.0 * sin_el * sin_el - 3.0) * 0.5, // 9: K (3,0)
+            1.0,                                             // 0: W (0,0)
+            cos_el * sin_az,                                 // 1: Y (1,-1)
+            sin_el,                                          // 2: Z (1,0)
+            cos_el * cos_az,                                 // 3: X (1,1)
+            (3.0 * sin_el * sin_el - 1.0) * 0.5,             // 4: V (2,0)
+            cos_el * sin_el * sin_az,                        // 5: T (2,-1)
+            cos_el * cos_el * (2.0 * az).sin(),              // 6: R (2,-2)
+            cos_el * sin_el * cos_az,                        // 7: S (2,1)
+            cos_el * cos_el * (2.0 * az).cos(),              // 8: Q (2,2)
+            sin_el * (5.0 * sin_el * sin_el - 3.0) * 0.5,    // 9: K (3,0)
             cos_el * (5.0 * sin_el * sin_el - 1.0) * sin_az, // 10: L (3,-1)
             cos_el * (5.0 * sin_el * sin_el - 1.0) * cos_az, // 11: M (3,1)
-            cos_el * cos_el * sin_el * (2.0 * az).sin(), // 12: N (3,-2)
-            cos_el * cos_el * sin_el * (2.0 * az).cos(), // 13: P (3,2)
-            cos_el * cos_el * cos_el * (3.0 * az).sin(), // 14: O (3,-3)
-            cos_el * cos_el * cos_el * (3.0 * az).cos(), // 15: U (3,3)
+            cos_el * cos_el * sin_el * (2.0 * az).sin(),     // 12: N (3,-2)
+            cos_el * cos_el * sin_el * (2.0 * az).cos(),     // 13: P (3,2)
+            cos_el * cos_el * cos_el * (3.0 * az).sin(),     // 14: O (3,-3)
+            cos_el * cos_el * cos_el * (3.0 * az).cos(),     // 15: U (3,3)
         ]
     }
 
@@ -238,12 +252,12 @@ impl AmbisonicsDecoder3D {
                 Position3D::new(0.866, 0.5, 0.0),  // R (+30 deg)
             ],
             ChannelLayout::Surround5_1 => vec![
-                Position3D::new(-0.866, 0.5, 0.0), // L
-                Position3D::new(0.866, 0.5, 0.0),  // R
-                Position3D::new(0.0, 1.0, 0.0),    // C
-                Position3D::new(0.0, 0.0, -1.0),   // LFE
-                Position3D::new(-0.866, -0.5, 0.0),// Ls (-110 deg)
-                Position3D::new(0.866, -0.5, 0.0), // Rs (+110 deg)
+                Position3D::new(-0.866, 0.5, 0.0),  // L
+                Position3D::new(0.866, 0.5, 0.0),   // R
+                Position3D::new(0.0, 1.0, 0.0),     // C
+                Position3D::new(0.0, 0.0, -1.0),    // LFE
+                Position3D::new(-0.866, -0.5, 0.0), // Ls (-110 deg)
+                Position3D::new(0.866, -0.5, 0.0),  // Rs (+110 deg)
             ],
             ChannelLayout::Surround7_1_4 => vec![
                 Position3D::new(-0.866, 0.5, 0.0),  // L
@@ -259,13 +273,18 @@ impl AmbisonicsDecoder3D {
                 Position3D::new(-0.7, -0.7, 1.0),   // Tbl
                 Position3D::new(0.7, -0.7, 1.0),    // Tbr
             ],
-            _ => (0..layout.channels()).map(|i| {
-                let angle = (i as f32 / layout.channels() as f32) * 2.0 * PI;
-                Position3D::new(angle.sin(), angle.cos(), 0.0)
-            }).collect(),
+            _ => (0..layout.channels())
+                .map(|i| {
+                    let angle = (i as f32 / layout.channels() as f32) * 2.0 * PI;
+                    Position3D::new(angle.sin(), angle.cos(), 0.0)
+                })
+                .collect(),
         };
 
-        Self { layout, speaker_positions }
+        Self {
+            layout,
+            speaker_positions,
+        }
     }
 
     /// Decode 16-channel HOA B-format to multichannel speaker array.
@@ -274,7 +293,12 @@ impl AmbisonicsDecoder3D {
         let frames = output.num_frames();
         output.clear();
 
-        for (spk_idx, spk_pos) in self.speaker_positions.iter().enumerate().take(output.num_channels()) {
+        for (spk_idx, spk_pos) in self
+            .speaker_positions
+            .iter()
+            .enumerate()
+            .take(output.num_channels())
+        {
             let enc = AmbisonicsEncoder3D { position: *spk_pos };
             let weights = enc.encoding_weights();
 
@@ -327,7 +351,9 @@ impl DistanceDopplerNode {
         // Doppler shift velocity calculation
         let dist_delta = dist - self.prev_distance;
         let speed_of_sound = 343.0;
-        let doppler_ratio = 1.0 - (dist_delta / (speed_of_sound * (num_frames as f32 / self.sample_rate as f32))).clamp(-0.5, 0.5);
+        let doppler_ratio = 1.0
+            - (dist_delta / (speed_of_sound * (num_frames as f32 / self.sample_rate as f32)))
+                .clamp(-0.5, 0.5);
 
         let buf_len = self.delay_buf.len();
 
@@ -368,7 +394,11 @@ impl Default for HeadTrackerReceiver {
 
 impl HeadTrackerReceiver {
     pub fn new() -> Self {
-        Self { yaw_deg: 0.0, pitch_deg: 0.0, roll_deg: 0.0 }
+        Self {
+            yaw_deg: 0.0,
+            pitch_deg: 0.0,
+            roll_deg: 0.0,
+        }
     }
 
     /// Parse OSC message format `/spatial/head/orientation yaw pitch roll`.
@@ -468,8 +498,8 @@ impl SurroundLimiterAndLoudness {
 /// 3D Spatial Reverb Node with Raytracing Reflection Simulation (Step 1070).
 #[derive(Debug, Clone)]
 pub struct SpatialReverb3D {
-    pub room_size: Position3D, // Room dimensions Lx, Ly, Lz in meters
-    pub absorption: f32,       // Wall absorption coefficient 0..1
+    pub room_size: Position3D,           // Room dimensions Lx, Ly, Lz in meters
+    pub absorption: f32,                 // Wall absorption coefficient 0..1
     pub early_delays: Vec<(usize, f32)>, // Delay in samples, reflection gain
 }
 
@@ -481,12 +511,25 @@ impl SpatialReverb3D {
         let wall_reflect = (1.0 - absorption).clamp(0.1, 0.95);
 
         let early_delays = vec![
-            ((2.0 * room_size.x / speed_of_sound * sample_rate) as usize, wall_reflect),
-            ((2.0 * room_size.y / speed_of_sound * sample_rate) as usize, wall_reflect),
-            ((2.0 * room_size.z / speed_of_sound * sample_rate) as usize, wall_reflect),
+            (
+                (2.0 * room_size.x / speed_of_sound * sample_rate) as usize,
+                wall_reflect,
+            ),
+            (
+                (2.0 * room_size.y / speed_of_sound * sample_rate) as usize,
+                wall_reflect,
+            ),
+            (
+                (2.0 * room_size.z / speed_of_sound * sample_rate) as usize,
+                wall_reflect,
+            ),
         ];
 
-        Self { room_size, absorption, early_delays }
+        Self {
+            room_size,
+            absorption,
+            early_delays,
+        }
     }
 }
 
@@ -578,7 +621,9 @@ impl Default for SpatialObjectAutomation {
 
 impl SpatialObjectAutomation {
     pub fn new() -> Self {
-        Self { keyframes: Vec::new() }
+        Self {
+            keyframes: Vec::new(),
+        }
     }
 
     pub fn add_keyframe(&mut self, frame: u64, pos: Position3D) {
@@ -640,7 +685,11 @@ impl SurroundStemSplitterBedObject {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum RoomAcousticModel {
     /// Rectangular shoebox room model with width (x), length (y), height (z) in meters.
-    Rectangular { width: f32, length: f32, height: f32 },
+    Rectangular {
+        width: f32,
+        length: f32,
+        height: f32,
+    },
     /// Spherical room acoustic model with specified radius in meters.
     Spherical { radius: f32 },
     /// Custom room geometry model specified by internal volume (m^3), surface area (m^2), average absorption (0..1), and scattering (0..1).
@@ -772,7 +821,11 @@ impl ProceduralSpatialIrGenerator {
     pub fn calculate_sabine_rt60(&self) -> f32 {
         let alpha = self.config.material.absorption_coefficient();
         let (volume, surface_area) = match self.config.model {
-            RoomAcousticModel::Rectangular { width, length, height } => {
+            RoomAcousticModel::Rectangular {
+                width,
+                length,
+                height,
+            } => {
                 let w = width.max(1.0);
                 let l = length.max(1.0);
                 let h = height.max(1.0);
@@ -833,8 +886,10 @@ impl ProceduralSpatialIrGenerator {
         let left_ild = (1.0 - 0.4 * sin_az).clamp(0.1, 1.5) * direct_gain;
         let right_ild = (1.0 + 0.4 * sin_az).clamp(0.1, 1.5) * direct_gain;
 
-        let direct_idx_l = ((direct_delay_sec + if sin_az > 0.0 { itd_sec } else { 0.0 }) * sr) as usize;
-        let direct_idx_r = ((direct_delay_sec + if sin_az < 0.0 { itd_sec } else { 0.0 }) * sr) as usize;
+        let direct_idx_l =
+            ((direct_delay_sec + if sin_az > 0.0 { itd_sec } else { 0.0 }) * sr) as usize;
+        let direct_idx_r =
+            ((direct_delay_sec + if sin_az < 0.0 { itd_sec } else { 0.0 }) * sr) as usize;
 
         if direct_idx_l < num_samples {
             left[direct_idx_l] += left_ild;
@@ -848,7 +903,11 @@ impl ProceduralSpatialIrGenerator {
 
         // Early reflections based on room model
         match self.config.model {
-            RoomAcousticModel::Rectangular { width, length, height } => {
+            RoomAcousticModel::Rectangular {
+                width,
+                length,
+                height,
+            } => {
                 let w = width.max(1.0);
                 let l = length.max(1.0);
                 let h = height.max(1.0);
@@ -908,7 +967,8 @@ impl ProceduralSpatialIrGenerator {
                 for i in 1..=count {
                     let rdist = direct_dist + (i as f32) * mean_free_path * 0.2;
                     let rdelay_sec = rdist / speed_of_sound;
-                    let rgain = (1.0 / rdist) * wall_reflect.powf((i as f32) * 0.8) * (1.0 + scattering);
+                    let rgain =
+                        (1.0 / rdist) * wall_reflect.powf((i as f32) * 0.8) * (1.0 + scattering);
                     let idx_l = (rdelay_sec * sr) as usize;
                     let idx_r = ((rdelay_sec + 0.002 * (i as f32)) * sr) as usize;
 
@@ -979,7 +1039,9 @@ mod tests {
 
     #[test]
     fn test_step_1078_ambisonics_encoding_decoding_matrix() {
-        let enc = AmbisonicsEncoder3D { position: Position3D::new(0.0, 1.0, 0.0) };
+        let enc = AmbisonicsEncoder3D {
+            position: Position3D::new(0.0, 1.0, 0.0),
+        };
         let weights = enc.encoding_weights();
         assert_eq!(weights.len(), 16);
         assert_eq!(weights[0], 1.0); // W channel is omni 1.0
@@ -1084,4 +1146,3 @@ mod tests {
         assert!(!ir_custom.is_empty());
     }
 }
-

@@ -6,19 +6,25 @@
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 
+use summoner_core::graph::{Edge, NodeGraph};
 use summoner_core::node::{AudioNode, GainNode};
 use summoner_core::track::Track;
-use summoner_project::schema::{ProjectConfig, NodeConfig};
-use summoner_dsp::traits::ProcessorNodeAdapter;
-use summoner_dsp::oscillators::{OscSaw, OscPulse, OscSine, OscTriangle, OscWavetable, NoiseGen};
-use summoner_dsp::filters::{FilterLadder, FilterSVF, FilterComb};
-use summoner_dsp::SamplerNode;
-use summoner_dsp::modulators::EnvADSR;
+use summoner_dsp::filters::{FilterComb, FilterLadder, FilterSVF};
 use summoner_dsp::math::VCA;
-use summoner_dsp::{FilterBiquad, CompressorNode, LimiterNode, EffectChorus, EffectFlanger, EffectPhaser, RingModulator, FrequencyShifter, LufsMeterNode, GranularSynthNode};
-use summoner_core::graph::{NodeGraph, Edge};
+use summoner_dsp::modulators::EnvADSR;
+use summoner_dsp::oscillators::{NoiseGen, OscPulse, OscSaw, OscSine, OscTriangle, OscWavetable};
+use summoner_dsp::traits::ProcessorNodeAdapter;
+use summoner_dsp::SamplerNode;
+use summoner_dsp::{
+    CompressorNode, EffectChorus, EffectFlanger, EffectPhaser, FilterBiquad, FrequencyShifter,
+    GranularSynthNode, LimiterNode, LufsMeterNode, RingModulator,
+};
+use summoner_project::schema::{NodeConfig, ProjectConfig};
 
-use summoner_dsp::{EffectDelay, EffectReverb, WavefolderNode, PitchShifterNode, BitcrusherNode, MidSideNode, ParametricEqNode, DistortionNode, DistortionType};
+use summoner_dsp::{
+    BitcrusherNode, DistortionNode, DistortionType, EffectDelay, EffectReverb, MidSideNode,
+    ParametricEqNode, PitchShifterNode, WavefolderNode,
+};
 
 pub struct NodeFactory;
 
@@ -26,120 +32,201 @@ impl NodeFactory {
     pub fn create_node(config: &NodeConfig) -> Option<Box<dyn AudioNode>> {
         let params = &config.params;
         match config.kind.as_str() {
-            "OscSaw" => Some(Box::new(ProcessorNodeAdapter::new(OscSaw::new(*params.get("freq").unwrap_or(&440.0))))),
-            "OscPulse" => Some(Box::new(ProcessorNodeAdapter::new(OscPulse::new(*params.get("freq").unwrap_or(&440.0), *params.get("pw").unwrap_or(&0.5))))),
+            "OscSaw" => Some(Box::new(ProcessorNodeAdapter::new(OscSaw::new(
+                *params.get("freq").unwrap_or(&440.0),
+            )))),
+            "OscPulse" => Some(Box::new(ProcessorNodeAdapter::new(OscPulse::new(
+                *params.get("freq").unwrap_or(&440.0),
+                *params.get("pw").unwrap_or(&0.5),
+            )))),
             "OscSine" | "SineOscillatorNode" => {
-                let freq = params.get("freq").or_else(|| params.get("frequency")).copied().unwrap_or(440.0);
+                let freq = params
+                    .get("freq")
+                    .or_else(|| params.get("frequency"))
+                    .copied()
+                    .unwrap_or(440.0);
                 Some(Box::new(ProcessorNodeAdapter::new(OscSine::new(freq))))
             }
-            "OscTriangle" => Some(Box::new(ProcessorNodeAdapter::new(OscTriangle::new(*params.get("freq").unwrap_or(&440.0))))),
+            "OscTriangle" => Some(Box::new(ProcessorNodeAdapter::new(OscTriangle::new(
+                *params.get("freq").unwrap_or(&440.0),
+            )))),
             "OscWavetable" | "WavetableOscillator" => {
-                let freq = params.get("freq").or_else(|| params.get("frequency")).copied().unwrap_or(440.0);
+                let freq = params
+                    .get("freq")
+                    .or_else(|| params.get("frequency"))
+                    .copied()
+                    .unwrap_or(440.0);
                 let morph = *params.get("morph").unwrap_or(&0.0);
                 let osc = OscWavetable::new(freq, OscWavetable::default_saw())
                     .with_table2(OscWavetable::default_square(), morph);
                 Some(Box::new(ProcessorNodeAdapter::new(osc)))
             }
-            "NoiseGen" => Some(Box::new(ProcessorNodeAdapter::new(NoiseGen::new(summoner_dsp::oscillators::NoiseType::White)))),
-            "FilterLadder" => Some(Box::new(ProcessorNodeAdapter::new(FilterLadder::new(*params.get("cutoff").unwrap_or(&1000.0), *params.get("res").unwrap_or(&0.0))))),
-            "FilterSVF" => Some(Box::new(ProcessorNodeAdapter::new(FilterSVF::new(*params.get("cutoff").unwrap_or(&1000.0), *params.get("res").unwrap_or(&0.0))))),
-            "FilterComb" => Some(Box::new(ProcessorNodeAdapter::new(FilterComb::new(*params.get("freq").unwrap_or(&440.0), *params.get("feedback").unwrap_or(&0.5))))),
+            "NoiseGen" => Some(Box::new(ProcessorNodeAdapter::new(NoiseGen::new(
+                summoner_dsp::oscillators::NoiseType::White,
+            )))),
+            "FilterLadder" => Some(Box::new(ProcessorNodeAdapter::new(FilterLadder::new(
+                *params.get("cutoff").unwrap_or(&1000.0),
+                *params.get("res").unwrap_or(&0.0),
+            )))),
+            "FilterSVF" => Some(Box::new(ProcessorNodeAdapter::new(FilterSVF::new(
+                *params.get("cutoff").unwrap_or(&1000.0),
+                *params.get("res").unwrap_or(&0.0),
+            )))),
+            "FilterComb" => Some(Box::new(ProcessorNodeAdapter::new(FilterComb::new(
+                *params.get("freq").unwrap_or(&440.0),
+                *params.get("feedback").unwrap_or(&0.5),
+            )))),
             "SamplerNode" => Some(Box::new(ProcessorNodeAdapter::new(SamplerNode::new()))),
             "GainNode" => Some(Box::new(GainNode::new(*params.get("gain").unwrap_or(&1.0)))),
             "EnvADSR" => Some(Box::new(ProcessorNodeAdapter::new(EnvADSR::new(
                 *params.get("a").unwrap_or(&0.01),
                 *params.get("d").unwrap_or(&0.1),
                 *params.get("s").unwrap_or(&0.5),
-                *params.get("r").unwrap_or(&0.1)
+                *params.get("r").unwrap_or(&0.1),
             )))),
-            "VCA" => Some(Box::new(ProcessorNodeAdapter::new(VCA::new(*params.get("gain").unwrap_or(&1.0))))),
-            "BiquadFilter" => Some(Box::new(ProcessorNodeAdapter::new(FilterBiquad::new(summoner_dsp::biquad::FilterType::Lowpass, *params.get("cutoff").unwrap_or(&1000.0))))),
+            "VCA" => Some(Box::new(ProcessorNodeAdapter::new(VCA::new(
+                *params.get("gain").unwrap_or(&1.0),
+            )))),
+            "BiquadFilter" => Some(Box::new(ProcessorNodeAdapter::new(FilterBiquad::new(
+                summoner_dsp::biquad::FilterType::Lowpass,
+                *params.get("cutoff").unwrap_or(&1000.0),
+            )))),
             "CompressorNode" => Some(Box::new(ProcessorNodeAdapter::new(CompressorNode::new()))),
             "LimiterNode" => Some(Box::new(ProcessorNodeAdapter::new(LimiterNode::new(64)))),
             "EffectChorus" => Some(Box::new(ProcessorNodeAdapter::new(EffectChorus::new()))),
             "EffectFlanger" => Some(Box::new(ProcessorNodeAdapter::new(EffectFlanger::new()))),
             "EffectPhaser" => Some(Box::new(ProcessorNodeAdapter::new(EffectPhaser::new()))),
             "RingModulator" => Some(Box::new(ProcessorNodeAdapter::new(RingModulator::new()))),
-            "FrequencyShifter" => Some(Box::new(ProcessorNodeAdapter::new(FrequencyShifter::new()))),
+            "FrequencyShifter" => {
+                Some(Box::new(ProcessorNodeAdapter::new(FrequencyShifter::new())))
+            }
             "LufsMeterNode" => Some(Box::new(ProcessorNodeAdapter::new(LufsMeterNode::new()))),
-            "GranularSynthNode" => Some(Box::new(ProcessorNodeAdapter::new(GranularSynthNode::new(44100)))),
-            "EffectDelay" | "DelayNode" => Some(Box::new(ProcessorNodeAdapter::new(EffectDelay::new(
-                *params.get("delay_time").unwrap_or(&0.3),
-                *params.get("feedback").unwrap_or(&0.4),
-                *params.get("mix").unwrap_or(&0.3)
-            )))),
-            "EffectReverb" | "ReverbNode" => Some(Box::new(ProcessorNodeAdapter::new(EffectReverb::new(
-                *params.get("room_size").unwrap_or(&0.7),
-                *params.get("mix").unwrap_or(&0.3)
-            )))),
+            "GranularSynthNode" => Some(Box::new(ProcessorNodeAdapter::new(
+                GranularSynthNode::new(44100),
+            ))),
+            "EffectDelay" | "DelayNode" => {
+                Some(Box::new(ProcessorNodeAdapter::new(EffectDelay::new(
+                    *params.get("delay_time").unwrap_or(&0.3),
+                    *params.get("feedback").unwrap_or(&0.4),
+                    *params.get("mix").unwrap_or(&0.3),
+                ))))
+            }
+            "EffectReverb" | "ReverbNode" => {
+                Some(Box::new(ProcessorNodeAdapter::new(EffectReverb::new(
+                    *params.get("room_size").unwrap_or(&0.7),
+                    *params.get("mix").unwrap_or(&0.3),
+                ))))
+            }
             "WavefolderNode" => Some(Box::new(ProcessorNodeAdapter::new(WavefolderNode::new(
                 *params.get("threshold").unwrap_or(&0.5),
                 *params.get("folds").unwrap_or(&4.0) as u8,
-                *params.get("drive").unwrap_or(&2.0)
+                *params.get("drive").unwrap_or(&2.0),
             )))),
             "PitchShifterNode" => Some(Box::new(ProcessorNodeAdapter::new(PitchShifterNode::new(
-                *params.get("semitones").unwrap_or(&0.0)
+                *params.get("semitones").unwrap_or(&0.0),
             )))),
             "BitcrusherNode" => Some(Box::new(ProcessorNodeAdapter::new(BitcrusherNode::new(
                 *params.get("bit_depth").unwrap_or(&8.0) as u8,
-                *params.get("sample_reduction").unwrap_or(&4.0) as u32
+                *params.get("sample_reduction").unwrap_or(&4.0) as u32,
             )))),
             "MidSideNode" => Some(Box::new(ProcessorNodeAdapter::new(MidSideNode::new(
-                *params.get("width").unwrap_or(&1.0)
+                *params.get("width").unwrap_or(&1.0),
             )))),
-            "ParametricEqNode" => Some(Box::new(ProcessorNodeAdapter::new(ParametricEqNode::new()))),
-            "MultiChannelSpectralEqualizerNode" | "SpectralEqualizer" => Some(Box::new(ProcessorNodeAdapter::new(summoner_dsp::MultiChannelSpectralEqualizerNode::new(44100, 2, 8)))),
-            "SimdPolyWavetableOscillator" | "SimdWavetableOscillator" => Some(Box::new(ProcessorNodeAdapter::new(summoner_dsp::oscillators::SimdPolyWavetableOscillator::new(44100)))),
-            "MultibandCompressorNode" | "MultibandCompressor" => Some(Box::new(ProcessorNodeAdapter::new(summoner_dsp::MultibandCompressorNode::new()))),
-            "TapeSaturationNode" | "TapeSaturation" => Some(Box::new(ProcessorNodeAdapter::new(summoner_dsp::TapeSaturationNode::new(
-                *params.get("drive").unwrap_or(&2.0),
-                *params.get("saturation").unwrap_or(&0.5),
-            )))),
-            "TubeSaturationNode" | "TubeSaturation" => Some(Box::new(ProcessorNodeAdapter::new(summoner_dsp::TubeSaturationNode::new(
-                *params.get("drive").unwrap_or(&2.5),
-                *params.get("bias").unwrap_or(&0.2),
-            )))),
-            "ConsoleEmulationNode" | "ConsoleEmulation" => Some(Box::new(ProcessorNodeAdapter::new(summoner_dsp::ConsoleEmulationNode::new(
-                summoner_dsp::ConsoleMode::from_f32(*params.get("mode").unwrap_or(&0.0)),
-                *params.get("drive").unwrap_or(&1.0),
-            )))),
+            "ParametricEqNode" => {
+                Some(Box::new(ProcessorNodeAdapter::new(ParametricEqNode::new())))
+            }
+            "MultiChannelSpectralEqualizerNode" | "SpectralEqualizer" => {
+                Some(Box::new(ProcessorNodeAdapter::new(
+                    summoner_dsp::MultiChannelSpectralEqualizerNode::new(44100, 2, 8),
+                )))
+            }
+            "SimdPolyWavetableOscillator" | "SimdWavetableOscillator" => {
+                Some(Box::new(ProcessorNodeAdapter::new(
+                    summoner_dsp::oscillators::SimdPolyWavetableOscillator::new(44100),
+                )))
+            }
+            "MultibandCompressorNode" | "MultibandCompressor" => Some(Box::new(
+                ProcessorNodeAdapter::new(summoner_dsp::MultibandCompressorNode::new()),
+            )),
+            "TapeSaturationNode" | "TapeSaturation" => Some(Box::new(ProcessorNodeAdapter::new(
+                summoner_dsp::TapeSaturationNode::new(
+                    *params.get("drive").unwrap_or(&2.0),
+                    *params.get("saturation").unwrap_or(&0.5),
+                ),
+            ))),
+            "TubeSaturationNode" | "TubeSaturation" => Some(Box::new(ProcessorNodeAdapter::new(
+                summoner_dsp::TubeSaturationNode::new(
+                    *params.get("drive").unwrap_or(&2.5),
+                    *params.get("bias").unwrap_or(&0.2),
+                ),
+            ))),
+            "ConsoleEmulationNode" | "ConsoleEmulation" => Some(Box::new(
+                ProcessorNodeAdapter::new(summoner_dsp::ConsoleEmulationNode::new(
+                    summoner_dsp::ConsoleMode::from_f32(*params.get("mode").unwrap_or(&0.0)),
+                    *params.get("drive").unwrap_or(&1.0),
+                )),
+            )),
             "DistortionNode" => Some(Box::new(ProcessorNodeAdapter::new(DistortionNode::new(
                 DistortionType::SoftClipping,
-                *params.get("drive").unwrap_or(&2.0)
+                *params.get("drive").unwrap_or(&2.0),
             )))),
-            "NoiseGateNode" | "NoiseGate" => Some(Box::new(ProcessorNodeAdapter::new(summoner_dsp::NoiseGateNode::with_params(
-                *params.get("threshold").unwrap_or(&-40.0),
-                *params.get("ratio").unwrap_or(&4.0),
-                *params.get("attack").unwrap_or(&5.0),
-                *params.get("release").unwrap_or(&100.0),
-            )))),
-            "DeesserNode" | "Deesser" => Some(Box::new(ProcessorNodeAdapter::new(summoner_dsp::DeesserNode::new()))),
-            "HarmonicExciterNode" | "HarmonicExciter" => Some(Box::new(ProcessorNodeAdapter::new(summoner_dsp::HarmonicExciterNode::new()))),
-            "NamAmpNode" | "NamAmp" => Some(Box::new(ProcessorNodeAdapter::new(summoner_dsp::NamAmpNode::new(
-                *params.get("drive").unwrap_or(&1.5),
-                *params.get("output_gain").unwrap_or(&1.0),
-                *params.get("gate_threshold").unwrap_or(&-60.0),
-            )))),
-            "RnnoiseNode" | "Rnnoise" => Some(Box::new(ProcessorNodeAdapter::new(summoner_dsp::RnnoiseNode::new(*params.get("suppression").unwrap_or(&-12.0))))),
-            "AiAutoGainNode" | "AiAutoGain" => Some(Box::new(ProcessorNodeAdapter::new(summoner_dsp::AiAutoGainNode::new(*params.get("target_lufs").unwrap_or(&-18.0))))),
-            "DdspTimbreTransferNode" | "DdspTimbreTransfer" => Some(Box::new(ProcessorNodeAdapter::new(summoner_dsp::DdspTimbreTransferNode::new(
-                *params.get("harmonics").unwrap_or(&32.0) as usize,
-                *params.get("noise").unwrap_or(&0.05),
-            )))),
-            "VocalHarmonyGeneratorNode" | "VocalHarmonizer" => Some(Box::new(ProcessorNodeAdapter::new(summoner_dsp::VocalHarmonyGeneratorNode::default()))),
-            "NeuralDereverbNode" | "NeuralDereverb" => Some(Box::new(ProcessorNodeAdapter::new(summoner_dsp::NeuralDereverbNode::new()))),
-            "NeuralSuperResolutionNode" | "NeuralSuperResolution" => Some(Box::new(ProcessorNodeAdapter::new(summoner_dsp::NeuralSuperResolutionNode::new()))),
+            "NoiseGateNode" | "NoiseGate" => Some(Box::new(ProcessorNodeAdapter::new(
+                summoner_dsp::NoiseGateNode::with_params(
+                    *params.get("threshold").unwrap_or(&-40.0),
+                    *params.get("ratio").unwrap_or(&4.0),
+                    *params.get("attack").unwrap_or(&5.0),
+                    *params.get("release").unwrap_or(&100.0),
+                ),
+            ))),
+            "DeesserNode" | "Deesser" => Some(Box::new(ProcessorNodeAdapter::new(
+                summoner_dsp::DeesserNode::new(),
+            ))),
+            "HarmonicExciterNode" | "HarmonicExciter" => Some(Box::new(ProcessorNodeAdapter::new(
+                summoner_dsp::HarmonicExciterNode::new(),
+            ))),
+            "NamAmpNode" | "NamAmp" => Some(Box::new(ProcessorNodeAdapter::new(
+                summoner_dsp::NamAmpNode::new(
+                    *params.get("drive").unwrap_or(&1.5),
+                    *params.get("output_gain").unwrap_or(&1.0),
+                    *params.get("gate_threshold").unwrap_or(&-60.0),
+                ),
+            ))),
+            "RnnoiseNode" | "Rnnoise" => Some(Box::new(ProcessorNodeAdapter::new(
+                summoner_dsp::RnnoiseNode::new(*params.get("suppression").unwrap_or(&-12.0)),
+            ))),
+            "AiAutoGainNode" | "AiAutoGain" => Some(Box::new(ProcessorNodeAdapter::new(
+                summoner_dsp::AiAutoGainNode::new(*params.get("target_lufs").unwrap_or(&-18.0)),
+            ))),
+            "DdspTimbreTransferNode" | "DdspTimbreTransfer" => Some(Box::new(
+                ProcessorNodeAdapter::new(summoner_dsp::DdspTimbreTransferNode::new(
+                    *params.get("harmonics").unwrap_or(&32.0) as usize,
+                    *params.get("noise").unwrap_or(&0.05),
+                )),
+            )),
+            "VocalHarmonyGeneratorNode" | "VocalHarmonizer" => Some(Box::new(
+                ProcessorNodeAdapter::new(summoner_dsp::VocalHarmonyGeneratorNode::default()),
+            )),
+            "NeuralDereverbNode" | "NeuralDereverb" => Some(Box::new(ProcessorNodeAdapter::new(
+                summoner_dsp::NeuralDereverbNode::new(),
+            ))),
+            "NeuralSuperResolutionNode" | "NeuralSuperResolution" => Some(Box::new(
+                ProcessorNodeAdapter::new(summoner_dsp::NeuralSuperResolutionNode::new()),
+            )),
             "SamplerDevice" => {
                 let mut bank = summoner_dsp::sampler::MultiSampleBank::new();
                 let base_dir = std::path::Path::new("local");
                 summoner_dsp::sampler::load_bank_buffers(&mut bank, base_dir);
-                Some(Box::new(ProcessorNodeAdapter::new(summoner_dsp::SamplerDevice::new(bank))))
+                Some(Box::new(ProcessorNodeAdapter::new(
+                    summoner_dsp::SamplerDevice::new(bank),
+                )))
             }
             "MultiSamplerNode" => {
                 let mut bank = summoner_dsp::sampler::MultiSampleBank::new();
                 let base_dir = std::path::Path::new("local");
                 summoner_dsp::sampler::load_bank_buffers(&mut bank, base_dir);
-                Some(Box::new(ProcessorNodeAdapter::new(summoner_dsp::sampler::MultiSamplerNode::new(bank))))
+                Some(Box::new(ProcessorNodeAdapter::new(
+                    summoner_dsp::sampler::MultiSamplerNode::new(bank),
+                )))
             }
             "PluginNode" | "VstPluginNode" | "ClapPluginNode" => {
                 let format = if config.kind.contains("Vst") {
@@ -148,7 +235,12 @@ impl NodeFactory {
                     summoner_dsp::PluginFormat::Clap
                 };
                 let descriptor = summoner_dsp::PluginDescriptor {
-                    name: config.params.get("name_hash").map(|_| "Plugin").unwrap_or("HostedPluginNode").to_string(),
+                    name: config
+                        .params
+                        .get("name_hash")
+                        .map(|_| "Plugin")
+                        .unwrap_or("HostedPluginNode")
+                        .to_string(),
                     vendor: "ThirdParty".to_string(),
                     format,
                     path: std::path::PathBuf::from("plugins/hosted.vst3"),
@@ -182,14 +274,14 @@ impl NodeFactory {
 
 pub fn graph_from_project(project: &ProjectConfig, max_block_size: usize) -> NodeGraph {
     let mut graph = NodeGraph::new(project.name.clone(), max_block_size, 2);
-    
+
     if let Some(track) = project.tracks.first() {
         for nc in &track.nodes {
             if let Some(node) = NodeFactory::create_node(nc) {
                 graph.add_node(node);
             }
         }
-        
+
         for conn in &track.connections {
             let parts_from: Vec<&str> = conn.from.split(':').collect();
             let parts_to: Vec<&str> = conn.to.split(':').collect();
@@ -210,7 +302,7 @@ pub fn graph_from_project(project: &ProjectConfig, max_block_size: usize) -> Nod
             }
         }
     }
-    
+
     graph.compile();
     graph
 }
@@ -233,7 +325,7 @@ impl GraphRunner {
             track.muted = tc.muted;
             track.tuning_edo = tc.tuning_edo;
             track.tuning_root_hz = tc.tuning_root_hz;
-            
+
             for nc in &tc.nodes {
                 if let Some(node) = NodeFactory::create_node(nc) {
                     track.add_node(node);
@@ -273,13 +365,24 @@ impl GraphRunner {
                 local_ctx.tuning_root_hz = root_hz;
             }
 
-            let (slice_l, slice_r) = (&mut self.scratch_l[..block_size], &mut self.scratch_r[..block_size]);
+            let (slice_l, slice_r) = (
+                &mut self.scratch_l[..block_size],
+                &mut self.scratch_r[..block_size],
+            );
             let mut track_out_slices: [&mut [f32]; 2] = [slice_l, slice_r];
 
-            track.process(block_size, &local_ctx, &mut track_out_slices[..out_buffers.len().min(2)]);
+            track.process(
+                block_size,
+                &local_ctx,
+                &mut track_out_slices[..out_buffers.len().min(2)],
+            );
 
             for ch in 0..out_buffers.len().min(2) {
-                let scratch_slice = if ch == 0 { &self.scratch_l[..block_size] } else { &self.scratch_r[..block_size] };
+                let scratch_slice = if ch == 0 {
+                    &self.scratch_l[..block_size]
+                } else {
+                    &self.scratch_r[..block_size]
+                };
                 for i in 0..block_size {
                     out_buffers[ch][i] += scratch_slice[i] * track.gain;
                 }
@@ -296,15 +399,17 @@ mod tests {
     #[test]
     fn test_graph_from_project_builds_valid_dag() {
         let mut project = create_default_project("Test Project");
-        
+
         // Add a connection from node 0 to node 1 in port 0
         if let Some(track) = project.tracks.get_mut(1) {
-            track.connections.push(summoner_project::schema::ConnectionConfig {
-                from: "0:0".to_string(),
-                to: "1:0".to_string(),
-            });
+            track
+                .connections
+                .push(summoner_project::schema::ConnectionConfig {
+                    from: "0:0".to_string(),
+                    to: "1:0".to_string(),
+                });
         }
-        
+
         let mut graph = NodeGraph::new(project.name.clone(), 512, 2);
         if let Some(track) = project.tracks.get(1) {
             for nc in &track.nodes {
@@ -312,7 +417,7 @@ mod tests {
                     graph.add_node(node);
                 }
             }
-            
+
             for conn in &track.connections {
                 let parts_from: Vec<&str> = conn.from.split(':').collect();
                 let parts_to: Vec<&str> = conn.to.split(':').collect();
@@ -334,7 +439,7 @@ mod tests {
             }
         }
         graph.compile();
-        
+
         // Track 1 has 2 nodes: SineOscillatorNode and GainNode
         // Note: SineOscillatorNode is not in the node factory right now, let's change the project mock or just check graph nodes length
         assert_eq!(graph.nodes.len(), 2);
@@ -350,7 +455,8 @@ mod tests {
             params,
             plugin_state: None,
         };
-        let mut node = NodeFactory::create_node(&config).expect("Factory should create SineOscillatorNode");
+        let mut node =
+            NodeFactory::create_node(&config).expect("Factory should create SineOscillatorNode");
         let ctx = summoner_core::node::ProcessContext::new(44100, 120.0, 0);
 
         let mut out_l = vec![0.0f32; 512];
@@ -359,6 +465,9 @@ mod tests {
         node.process(&dummy_in, &mut [&mut out_l[..], &mut out_r[..]], &ctx);
 
         let rms: f32 = (out_l.iter().map(|s| s * s).sum::<f32>() / out_l.len() as f32).sqrt();
-        assert!(rms > 0.0, "SineOscillatorNode RMS output must be greater than zero");
+        assert!(
+            rms > 0.0,
+            "SineOscillatorNode RMS output must be greater than zero"
+        );
     }
 }

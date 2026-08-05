@@ -22,10 +22,16 @@ fn test_tier27_vst3_and_clap_hosting_full_pipeline() {
     assert_eq!(scanned.len(), 2);
 
     // 2. Load VST3 and CLAP AudioNodes
-    let vst3_desc = scanned.iter().find(|p| p.format == PluginFormat::Vst3).unwrap();
+    let vst3_desc = scanned
+        .iter()
+        .find(|p| p.format == PluginFormat::Vst3)
+        .unwrap();
     let mut vst3_node = PluginAudioNode::new(vst3_desc.clone());
 
-    let clap_desc = scanned.iter().find(|p| p.format == PluginFormat::Clap).unwrap();
+    let clap_desc = scanned
+        .iter()
+        .find(|p| p.format == PluginFormat::Clap)
+        .unwrap();
     let mut clap_node = PluginAudioNode::new(clap_desc.clone());
 
     // 3. Test Parameter Automation & Audio Routing
@@ -38,7 +44,11 @@ fn test_tier27_vst3_and_clap_hosting_full_pipeline() {
     let mut out_l = vec![0.0f32; 128];
     let mut out_r = vec![0.0f32; 128];
 
-    vst3_node.process(&[&in_l[..], &in_r[..]], &mut [&mut out_l[..], &mut out_r[..]], &ctx);
+    vst3_node.process(
+        &[&in_l[..], &in_r[..]],
+        &mut [&mut out_l[..], &mut out_r[..]],
+        &ctx,
+    );
     assert_eq!(out_l[0], 0.75);
     assert_eq!(out_r[0], 0.75);
 

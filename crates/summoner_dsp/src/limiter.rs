@@ -11,10 +11,10 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Affero General Public License for more details.
 
-use summoner_core::audio::Sample;
-use summoner_core::node::ProcessContext;
 use crate::traits::SignalProcessor;
 use std::collections::VecDeque;
+use summoner_core::audio::Sample;
+use summoner_core::node::ProcessContext;
 
 #[derive(Debug)]
 pub struct LimiterNode {
@@ -38,33 +38,42 @@ impl LimiterNode {
 }
 
 impl SignalProcessor for LimiterNode {
-    fn name(&self) -> &str { "LimiterNode" }
-    fn process_block(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
-        if input.is_empty() || output.is_empty() { return; }
+    fn name(&self) -> &str {
+        "LimiterNode"
+    }
+    fn process_block(
+        &mut self,
+        input: &[&[Sample]],
+        output: &mut [&mut [Sample]],
+        ctx: &ProcessContext,
+    ) {
+        if input.is_empty() || output.is_empty() {
+            return;
+        }
         let num_samples = input[0].len().min(output[0].len());
-        
+
         let dt = 1.0 / ctx.sample_rate as f32;
         let release_coeff = (-dt / self.release_time).exp();
-        
+
         for i in 0..num_samples {
             let x = input[0][i];
-            
+
             let target_env = x.abs();
             if target_env > self.env {
                 self.env = target_env;
             } else {
                 self.env *= release_coeff;
             }
-            
+
             self.lookahead_buffer.push_back(x);
             let delayed = self.lookahead_buffer.pop_front().unwrap();
-            
+
             let gain = if self.env > self.ceiling {
                 self.ceiling / self.env
             } else {
                 1.0
             };
-            
+
             for out_ch in output.iter_mut() {
                 out_ch[i] = delayed * gain;
             }
@@ -132,4 +141,3 @@ impl MasterLimiter {
         }
     }
 }
-

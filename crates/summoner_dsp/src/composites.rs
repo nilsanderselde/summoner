@@ -27,10 +27,10 @@ use summoner_core::node::ProcessContext;
 /// Macro View parameters for Aether Synth.
 #[derive(Debug)]
 pub struct AetherMacroView {
-    pub osc_mix: MacroKnob,      // 0.0 (Saw) to 1.0 (Pulse)
-    pub filter_cutoff: MacroKnob,// 20.0 to 20000.0 Hz
-    pub filter_res: MacroKnob,   // 0.0 to 4.0
-    pub lfo_speed: MacroKnob,    // Hz
+    pub osc_mix: MacroKnob,       // 0.0 (Saw) to 1.0 (Pulse)
+    pub filter_cutoff: MacroKnob, // 20.0 to 20000.0 Hz
+    pub filter_res: MacroKnob,    // 0.0 to 4.0
+    pub lfo_speed: MacroKnob,     // Hz
 }
 
 /// Composite device: Aether Synth (2-Osc Subtractive + Dual ADSR + LFO PWM).
@@ -106,7 +106,8 @@ impl SignalProcessor for AetherSynth {
             let saw_val = self.osc_saw.process_sample(ctx.sample_rate);
             let pulse_val = self.osc_pulse.process_sample(ctx.sample_rate);
 
-            let mixed = (1.0 - self.macro_view.osc_mix.value) * saw_val + self.macro_view.osc_mix.value * pulse_val;
+            let mixed = (1.0 - self.macro_view.osc_mix.value) * saw_val
+                + self.macro_view.osc_mix.value * pulse_val;
 
             let f_env = self.filter_env.process_sample(ctx.sample_rate);
             let cutoff_mod = (self.filter.cutoff + f_env * 4000.0).clamp(20.0, 20000.0);
@@ -174,7 +175,9 @@ impl SignalProcessor for PluckSynth {
             let exciter = noise_sample * env_val;
 
             let comb_out = self.comb_filter.process_sample(exciter, ctx.sample_rate);
-            let (damped, _, _) = self.damping_filter.process_sample(comb_out, ctx.sample_rate);
+            let (damped, _, _) = self
+                .damping_filter
+                .process_sample(comb_out, ctx.sample_rate);
 
             for out_ch in outputs.iter_mut() {
                 if i < out_ch.len() {
@@ -232,7 +235,8 @@ impl SignalProcessor for FmOperatorPair {
         }
 
         let dt_carrier = (std::f32::consts::TAU * self.carrier.frequency) / ctx.sample_rate as f32;
-        let dt_mod = (std::f32::consts::TAU * (self.carrier.frequency * self.ratio)) / ctx.sample_rate as f32;
+        let dt_mod = (std::f32::consts::TAU * (self.carrier.frequency * self.ratio))
+            / ctx.sample_rate as f32;
 
         let num_samples = outputs[0].len();
         for i in 0..num_samples {
@@ -321,8 +325,13 @@ impl SignalProcessor for GlitchAetherMachine {
 
             let distorted = self.distortion.process_sample(raw_synth);
             let filtered = self.filter.process_sample(distorted, ctx.sample_rate);
-            let gate_val = if self.chopper.phase < self.chopper.pulse_width { 1.0 } else { 0.0 };
-            self.chopper.phase = (self.chopper.phase + self.chopper.rate_hz / ctx.sample_rate as f32) % 1.0;
+            let gate_val = if self.chopper.phase < self.chopper.pulse_width {
+                1.0
+            } else {
+                0.0
+            };
+            self.chopper.phase =
+                (self.chopper.phase + self.chopper.rate_hz / ctx.sample_rate as f32) % 1.0;
 
             let chopped = filtered * gate_val;
             let a_env = self.amp_env.process_sample(ctx.sample_rate);
@@ -464,7 +473,9 @@ impl SignalProcessor for AtmosphericPadSynth {
             let saw_val = self.saw1.process_sample(ctx.sample_rate);
             let tri_val = self.tri2.process_sample(ctx.sample_rate);
 
-            let (filtered, _, _) = self.svf.process_sample(0.5 * (saw_val + tri_val), ctx.sample_rate);
+            let (filtered, _, _) = self
+                .svf
+                .process_sample(0.5 * (saw_val + tri_val), ctx.sample_rate);
             let a_env = self.amp_env.process_sample(ctx.sample_rate);
             let synth_out = filtered * a_env;
 
@@ -568,10 +579,10 @@ use crate::sampler::{MultiSampleBank, MultiSamplerNode};
 #[derive(Debug)]
 pub struct SamplerMacroView {
     pub filter_cutoff: MacroKnob, // 20.0 to 20000.0 Hz
-    pub filter_res: MacroKnob,   // 0.0 to 4.0
-    pub amp_attack: MacroKnob,   // Seconds
-    pub amp_release: MacroKnob,  // Seconds
-    pub gain: MacroKnob,         // Volume scaling
+    pub filter_res: MacroKnob,    // 0.0 to 4.0
+    pub amp_attack: MacroKnob,    // Seconds
+    pub amp_release: MacroKnob,   // Seconds
+    pub gain: MacroKnob,          // Volume scaling
 }
 
 /// Composite sub-graph device: SamplerDevice (MultiSamplerNode + EnvADSR + FilterLadder + VCA).
@@ -642,7 +653,8 @@ impl SignalProcessor for SamplerDevice {
         let mut raw_buf = vec![0.0f32; num_samples];
         let mut sampler_out = [&mut raw_buf[..]];
 
-        self.sampler.process_block(inputs, &mut sampler_out[..], ctx);
+        self.sampler
+            .process_block(inputs, &mut sampler_out[..], ctx);
 
         for i in 0..num_samples {
             let sample_in = raw_buf[i];
@@ -661,4 +673,3 @@ impl SignalProcessor for SamplerDevice {
         }
     }
 }
-

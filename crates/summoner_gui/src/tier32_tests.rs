@@ -3,12 +3,12 @@
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-    use std::collections::HashSet;
-    use summoner_core::param_bus::ParamBus;
-    use summoner_project::schema::{ProjectConfig, SequenceConfig, TrackerStepConfig};
     use crate::app::SummonerApp;
     use crate::visualizer::Oscilloscope;
+    use std::collections::HashSet;
+    use std::sync::Arc;
+    use summoner_core::param_bus::ParamBus;
+    use summoner_project::schema::{ProjectConfig, SequenceConfig, TrackerStepConfig};
 
     #[test]
     fn test_step577_step578_tap_tempo() {
@@ -18,9 +18,12 @@ mod tests {
 
         // Simulate tap tempo events 500ms apart (120 BPM)
         let base = std::time::Instant::now();
-        app.tempo_tap_times.push_back(base - std::time::Duration::from_millis(1500));
-        app.tempo_tap_times.push_back(base - std::time::Duration::from_millis(1000));
-        app.tempo_tap_times.push_back(base - std::time::Duration::from_millis(500));
+        app.tempo_tap_times
+            .push_back(base - std::time::Duration::from_millis(1500));
+        app.tempo_tap_times
+            .push_back(base - std::time::Duration::from_millis(1000));
+        app.tempo_tap_times
+            .push_back(base - std::time::Duration::from_millis(500));
 
         // Call tap_tempo logic (adds current Instant as 4th tap)
         app.tap_tempo();
@@ -145,7 +148,7 @@ mod tests {
 
     #[test]
     fn test_step606_to_step609_automation_line_curve_and_snap_grid() {
-        use summoner_sequencer::automation_timeline::{AutomationLane, AutomationCurve};
+        use summoner_sequencer::automation_timeline::{AutomationCurve, AutomationLane};
 
         let mut lane = AutomationLane {
             param_id: "filter_cutoff".to_string(),
@@ -230,8 +233,20 @@ mod tests {
 
         let mut seq = SequenceConfig {
             steps: vec![
-                TrackerStepConfig { note: 60.0, velocity: 0.33, active: true, swing: 0.2, ..Default::default() },
-                TrackerStepConfig { note: 64.0, velocity: 0.77, active: true, swing: 0.2, ..Default::default() },
+                TrackerStepConfig {
+                    note: 60.0,
+                    velocity: 0.33,
+                    active: true,
+                    swing: 0.2,
+                    ..Default::default()
+                },
+                TrackerStepConfig {
+                    note: 64.0,
+                    velocity: 0.77,
+                    active: true,
+                    swing: 0.2,
+                    ..Default::default()
+                },
             ],
             ..Default::default()
         };
@@ -249,8 +264,8 @@ mod tests {
 
     #[test]
     fn test_step626_to_step630_chord_detection_scale_transpose() {
-        use summoner_sequencer::*;
         use summoner_harmony::scale::Scale;
+        use summoner_sequencer::*;
 
         // Chord detection (Step 626)
         let single_note = vec![60.0]; // C4
@@ -268,8 +283,16 @@ mod tests {
         // Scale lookup & Transpose to Scale (Steps 627-630)
         let mut seq = SequenceConfig {
             steps: vec![
-                TrackerStepConfig { note: 61.0, active: true, ..Default::default() }, // C#4 -> D4 or C4 in C Major
-                TrackerStepConfig { note: 66.0, active: true, ..Default::default() }, // F#4 -> G4 or F4
+                TrackerStepConfig {
+                    note: 61.0,
+                    active: true,
+                    ..Default::default()
+                }, // C#4 -> D4 or C4 in C Major
+                TrackerStepConfig {
+                    note: 66.0,
+                    active: true,
+                    ..Default::default()
+                }, // F#4 -> G4 or F4
             ],
             ..Default::default()
         };
@@ -278,7 +301,12 @@ mod tests {
         let c_maj_scale = Scale::get_scale_by_name("Major");
         for step in &seq.steps {
             let pc = (step.note as u16) % 12;
-            assert!(c_maj_scale.degrees.contains(&pc), "Note {} (pc {}) should be in C Major scale", step.note, pc);
+            assert!(
+                c_maj_scale.degrees.contains(&pc),
+                "Note {} (pc {}) should be in C Major scale",
+                step.note,
+                pc
+            );
         }
     }
 
@@ -291,7 +319,8 @@ mod tests {
         assert_eq!(cc_map.map_value(127.0, 0.0, 127.0), 1.0);
         assert_eq!(cc_map.map_value(63.5, 0.0, 127.0), 0.5);
 
-        let pb_map = MidiControllerMapping::new(0, MidiMappingType::PitchBend, "synth.pitch", -12.0, 12.0);
+        let pb_map =
+            MidiControllerMapping::new(0, MidiMappingType::PitchBend, "synth.pitch", -12.0, 12.0);
         assert!((pb_map.map_value(0.0, -8192.0, 8191.0) - 0.0).abs() < 1e-2);
 
         // Velocity Curve (Step 634)
@@ -316,8 +345,8 @@ mod tests {
 
     #[test]
     fn test_step639_to_step645_virtual_keyboard_and_qwerty() {
-        use summoner_sequencer::midi_tools::qwerty_key_to_midi_note;
         use crate::views::midi_panel::VirtualKeyboardState;
+        use summoner_sequencer::midi_tools::qwerty_key_to_midi_note;
 
         let state = VirtualKeyboardState::default();
         assert_eq!(state.base_octave, 4);
@@ -385,9 +414,9 @@ mod tests {
 
     #[test]
     fn test_step656_to_step660_tuner_autotune_spectrum_harmonics() {
-        use summoner_dsp::tuner::detect_chromatic_pitch;
+        use crate::views::macro_rack::{show_harmonics_display, show_spectral_display};
         use summoner_dsp::autotune::AutoTuneNode;
-        use crate::views::macro_rack::{show_spectral_display, show_harmonics_display};
+        use summoner_dsp::tuner::detect_chromatic_pitch;
 
         // Step 656: Chromatic Tuner pitch detection
         let sr = 44100.0;
@@ -411,7 +440,10 @@ mod tests {
                 let spec = [0.2, 0.5, 0.8, 0.3];
                 show_spectral_display(ui, &spec, 100.0, 30.0);
 
-                let harm = [1.0, 0.5, 0.25, 0.125, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+                let harm = [
+                    1.0, 0.5, 0.25, 0.125, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                    0.0,
+                ];
                 show_harmonics_display(ui, &harm, 100.0, 30.0);
             });
         });
@@ -419,12 +451,12 @@ mod tests {
 
     #[test]
     fn test_step661_to_step680_dsp_gui_export_tools() {
-        use summoner_dsp::*;
-        use summoner_project::export::*;
         use crate::views::macro_rack::{
-            show_fm_matrix_display, show_filter_response_curve, show_impulse_response_display,
+            show_filter_response_curve, show_fm_matrix_display, show_impulse_response_display,
         };
         use crate::visualizer::show_phase_scope;
+        use summoner_dsp::*;
+        use summoner_project::export::*;
 
         // Steps 661-663 & 671: GUI rendering displays
         let ctx = eframe::egui::Context::default();
@@ -489,12 +521,12 @@ mod tests {
 
     #[test]
     fn test_step681_to_step700_project_and_sample_tools() {
-        use summoner_project::export::*;
-        use summoner_project::schema::*;
-        use summoner_project::create_default_project;
-        use summoner_dsp::filters::{DcBlockFilter, LowCutFilter, HighCutFilter};
+        use summoner_dsp::filters::{DcBlockFilter, HighCutFilter, LowCutFilter};
         use summoner_dsp::sample_editor::*;
         use summoner_dsp::sampler::SampleBuffer;
+        use summoner_project::create_default_project;
+        use summoner_project::export::*;
+        use summoner_project::schema::*;
 
         // Step 681: Clean Project
         let temp_dir = std::env::temp_dir().join("summoner_test_clean_proj");
@@ -548,7 +580,10 @@ mod tests {
         // Step 684: Parallel Compression Template
         let mut proj3 = create_default_project("Parallel Comp Test");
         apply_parallel_compression_template(&mut proj3, 1, 4.0, 0.5).expect("parallel comp");
-        assert!(proj3.tracks[0].nodes.iter().any(|n| n.kind == "CompressorNode"));
+        assert!(proj3.tracks[0]
+            .nodes
+            .iter()
+            .any(|n| n.kind == "CompressorNode"));
 
         // Steps 685-689 & 693-694: Sidechain, Bus Target, Phase Flip, DC Block, Quick Filters, Gain Trims
         let mut track2 = TrackConfig::default();
@@ -601,7 +636,8 @@ mod tests {
 
         // Step 695: Bounce to Track
         let mut proj4 = create_default_project("Bounce Test");
-        let bounced_id = bounce_track_to_new_track(&mut proj4, 1, &[0.5, 0.5]).expect("bounce track");
+        let bounced_id =
+            bounce_track_to_new_track(&mut proj4, 1, &[0.5, 0.5]).expect("bounce track");
         assert!(proj4.tracks.iter().any(|t| t.id == bounced_id));
         assert!(proj4.tracks[0].muted);
 
@@ -654,12 +690,15 @@ mod tests {
 
     #[test]
     fn test_steps_701_to_720_dsp_and_preset_tools() {
-        use summoner_dsp::{MultibandCompressorNode, TapeSaturationNode, TubeSaturationNode, ConsoleEmulationNode, ConsoleMode};
-        use summoner_dsp::traits::SignalProcessor;
-        use summoner_core::node::ProcessContext;
-        use summoner_project::preset::DevicePreset;
         use crate::views::patch_browser::{PatchBrowserState, SortOrder};
         use std::path::PathBuf;
+        use summoner_core::node::ProcessContext;
+        use summoner_dsp::traits::SignalProcessor;
+        use summoner_dsp::{
+            ConsoleEmulationNode, ConsoleMode, MultibandCompressorNode, TapeSaturationNode,
+            TubeSaturationNode,
+        };
+        use summoner_project::preset::DevicePreset;
 
         let ctx = ProcessContext::new(44100, 120.0, 0);
         let in_sig = vec![0.7f32; 128];
@@ -691,7 +730,11 @@ mod tests {
         let state = PatchBrowserState::default();
         let cats = state.available_categories();
         for req_cat in &["Vintage", "Ambient", "Cinematic", "IDM", "Experimental"] {
-            assert!(cats.contains(&req_cat.to_string()), "Must contain category {}", req_cat);
+            assert!(
+                cats.contains(&req_cat.to_string()),
+                "Must contain category {}",
+                req_cat
+            );
         }
 
         // Step 707: Rating, Comment, Author, Version
@@ -722,7 +765,8 @@ mod tests {
         assert!(!cols.is_empty());
 
         // Step 713: URL Import
-        let imported = DevicePreset::import_from_url("https://example.com/synth.preset.toml").expect("URL import");
+        let imported = DevicePreset::import_from_url("https://example.com/synth.preset.toml")
+            .expect("URL import");
         assert_eq!(imported.name, "synth");
 
         // Steps 714 & 715: ZIP Export and Install
@@ -762,9 +806,9 @@ params = { freq = 220.0 }"#;
 
     #[test]
     fn test_steps_721_to_740_system_tools_and_cloud() {
-        use summoner_project::system_tools::*;
-        use summoner_project::schema::ProjectConfig;
         use std::path::PathBuf;
+        use summoner_project::schema::ProjectConfig;
+        use summoner_project::system_tools::*;
 
         // Step 721: Automatic Update Checker
         let mut checker = UpdateChecker::new("1.0.0");
@@ -811,7 +855,9 @@ params = { freq = 220.0 }"#;
         // Step 729: Settings Backup & Restore ZIP
         let backup_p = PathBuf::from("local/scratch/settings_test.zip");
         let settings = SystemSettings::default();
-        settings.export_backup_zip(&backup_p).expect("Export settings ZIP");
+        settings
+            .export_backup_zip(&backup_p)
+            .expect("Export settings ZIP");
         let restored = SystemSettings::restore_backup_zip(&backup_p).expect("Restore settings ZIP");
         assert_eq!(settings, restored);
         let _ = std::fs::remove_file(&backup_p);
@@ -823,7 +869,8 @@ params = { freq = 220.0 }"#;
         // Step 731: Cloud Save & Restore
         let proj = ProjectConfig::default();
         let cloud_id = CloudProjectManager::cloud_save_project(&proj, &user).expect("Cloud save");
-        let restored_proj = CloudProjectManager::cloud_restore_project(&cloud_id, &user).expect("Cloud restore");
+        let restored_proj =
+            CloudProjectManager::cloud_restore_project(&cloud_id, &user).expect("Cloud restore");
         assert_eq!(restored_proj.name, proj.name);
 
         // Step 732: Cloud Render Submission
@@ -851,18 +898,27 @@ params = { freq = 220.0 }"#;
         // Step 736: Plugin Marketplace & Installation
         let mut market = PluginMarketplace::fetch_catalog();
         assert!(!market.plugins.is_empty());
-        let install_msg = market.install_plugin("clap.surge_synth", &PathBuf::from("local/scratch")).expect("Install plugin");
+        let install_msg = market
+            .install_plugin("clap.surge_synth", &PathBuf::from("local/scratch"))
+            .expect("Install plugin");
         assert!(install_msg.contains("Surge XT"));
 
         // Step 737: Plugin Rating & Review
-        market.rate_plugin("clap.surge_synth", 5, "Awesome synth").expect("Rate plugin");
-        assert!(market.plugins[0].user_reviews.iter().any(|r| r.contains("Awesome synth")));
+        market
+            .rate_plugin("clap.surge_synth", 5, "Awesome synth")
+            .expect("Rate plugin");
+        assert!(market.plugins[0]
+            .user_reviews
+            .iter()
+            .any(|r| r.contains("Awesome synth")));
 
         // Step 738: Plugin Sandbox
         let sandbox = PluginSandbox::spawn_sandbox("clap.surge_synth");
         let in_pcm = vec![0.5f32; 64];
         let mut out_pcm = vec![0.0f32; 64];
-        sandbox.process_audio_sandboxed(&in_pcm, &mut out_pcm).expect("Sandbox process");
+        sandbox
+            .process_audio_sandboxed(&in_pcm, &mut out_pcm)
+            .expect("Sandbox process");
         assert_eq!(in_pcm, out_pcm);
 
         // Step 739: Plugin Crash Protection
@@ -884,20 +940,24 @@ params = { freq = 220.0 }"#;
         assert_eq!(*delays.get("plugin_a").unwrap(), 0);
 
         let mut buf_out = vec![0.0f32; 8];
-        PluginLatencyCompensation::apply_delay_compensation(&[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0], &mut buf_out, 2);
+        PluginLatencyCompensation::apply_delay_compensation(
+            &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
+            &mut buf_out,
+            2,
+        );
         assert_eq!(buf_out, vec![0.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
     }
 
     #[test]
     fn test_steps_741_to_760_plugin_and_param_tools() {
-        use summoner_project::system_tools::{
-            PluginResourceBudget, PluginBlacklist, PluginConflictDetector, PluginStateBackup,
-        };
-        use crate::touch_gestures::{TouchGestureManager, SwipeDirection, ViewModeDirection};
         use crate::param_controls::{
-            ParamUnit, format_hover_tooltip, ParamClipboard, ParamLockManager,
-            ParamLfoModulator, randomize_parameter, InlineValueEditor, reset_param_to_default,
-            LinkedParamGroup, ParamGroup, SendFxRoute, FxChainBypassManager,
+            format_hover_tooltip, randomize_parameter, reset_param_to_default,
+            FxChainBypassManager, InlineValueEditor, LinkedParamGroup, ParamClipboard, ParamGroup,
+            ParamLfoModulator, ParamLockManager, ParamUnit, SendFxRoute,
+        };
+        use crate::touch_gestures::{SwipeDirection, TouchGestureManager, ViewModeDirection};
+        use summoner_project::system_tools::{
+            PluginBlacklist, PluginConflictDetector, PluginResourceBudget, PluginStateBackup,
         };
 
         // Step 741: Plugin Resource Budget
@@ -910,12 +970,18 @@ params = { freq = 220.0 }"#;
         let mut blacklist = PluginBlacklist::new();
         assert!(blacklist.is_blacklisted("clap.unstable_legacy_synth"));
         blacklist.add_to_blacklist("clap.bad_plugin", "Causes crash");
-        let allowed = blacklist.filter_allowed(&["clap.good_plugin".to_string(), "clap.bad_plugin".to_string()]);
+        let allowed = blacklist.filter_allowed(&[
+            "clap.good_plugin".to_string(),
+            "clap.bad_plugin".to_string(),
+        ]);
         assert_eq!(allowed, vec!["clap.good_plugin".to_string()]);
 
         // Step 743: Plugin Conflict Detector
         let detector = PluginConflictDetector::new();
-        let active = vec!["clap.legacy_driver_v1".to_string(), "clap.legacy_driver_v2".to_string()];
+        let active = vec![
+            "clap.legacy_driver_v1".to_string(),
+            "clap.legacy_driver_v2".to_string(),
+        ];
         let conflicts = detector.detect_conflicts(&active);
         assert_eq!(conflicts.len(), 1);
 
@@ -1011,7 +1077,10 @@ params = { freq = 220.0 }"#;
 
     #[test]
     fn test_step681_step682_clean_and_collect_project_assets() {
-        use summoner_project::{clean_project, collect_and_save, schema::{AssetConfig, ProjectConfig}};
+        use summoner_project::{
+            clean_project, collect_and_save,
+            schema::{AssetConfig, ProjectConfig},
+        };
         let temp_dir = std::env::temp_dir().join("summoner_test_project_assets");
         let assets_dir = temp_dir.join("assets");
         let _ = std::fs::create_dir_all(&assets_dir);
@@ -1056,7 +1125,7 @@ params = { freq = 220.0 }"#;
 
     #[test]
     fn test_step683_freeze_and_unfreeze_track() {
-        use summoner_project::{freeze_track, unfreeze_track, schema::TrackConfig};
+        use summoner_project::{freeze_track, schema::TrackConfig, unfreeze_track};
         let mut track = TrackConfig::default();
         assert!(!track.is_frozen);
         assert!(track.frozen_buffer.is_none());
@@ -1073,7 +1142,9 @@ params = { freq = 220.0 }"#;
 
     #[test]
     fn test_step684_parallel_compression_template() {
-        use summoner_project::{apply_parallel_compression_template, schema::ProjectConfig, create_default_project};
+        use summoner_project::{
+            apply_parallel_compression_template, create_default_project, schema::ProjectConfig,
+        };
         let mut project = create_default_project("Parallel Comp Test");
         let initial_count = project.tracks.len();
         let target_id = project.tracks[0].id;
@@ -1087,7 +1158,7 @@ params = { freq = 220.0 }"#;
 
     #[test]
     fn test_step685_step686_sidechain_and_bus_routing() {
-        use summoner_project::{set_sidechain_routing, route_track_to_bus, schema::TrackConfig};
+        use summoner_project::{route_track_to_bus, schema::TrackConfig, set_sidechain_routing};
         let mut track = TrackConfig::default();
 
         set_sidechain_routing(&mut track, Some(42));
@@ -1107,7 +1178,7 @@ params = { freq = 220.0 }"#;
 
     #[test]
     fn test_step688_step689_dc_block_and_quick_filters() {
-        use summoner_dsp::{DcBlockFilter, LowCutFilter, HighCutFilter};
+        use summoner_dsp::{DcBlockFilter, HighCutFilter, LowCutFilter};
 
         // Step 688: DC Block
         let mut dc_block = DcBlockFilter::new();
@@ -1127,7 +1198,10 @@ params = { freq = 220.0 }"#;
     #[test]
     fn test_step690_auto_level_track_gain() {
         use summoner_project::{auto_level_track_gain, schema::TrackConfig};
-        let mut track = TrackConfig { gain: 1.0, ..Default::default() };
+        let mut track = TrackConfig {
+            gain: 1.0,
+            ..Default::default()
+        };
 
         // Current -18 LUFS, Target -14 LUFS (+4 dB)
         auto_level_track_gain(&mut track, -18.0, -14.0);
@@ -1143,7 +1217,7 @@ params = { freq = 220.0 }"#;
         let offsets = compute_spectrum_matching_gain_offsets(&source, &target);
         assert_eq!(offsets.len(), 3);
         assert!((offsets[0] - 6.02).abs() < 0.1); // +6dB
-        assert!((offsets[1] - 0.0).abs() < 0.1);   // 0dB
+        assert!((offsets[1] - 0.0).abs() < 0.1); // 0dB
         assert!((offsets[2] - (-6.02)).abs() < 0.1); // -6dB
     }
 
@@ -1162,7 +1236,7 @@ params = { freq = 220.0 }"#;
 
     #[test]
     fn test_step693_step694_master_and_track_gain_trims() {
-        use summoner_dsp::{apply_master_trim, apply_input_gain, apply_output_gain};
+        use summoner_dsp::{apply_input_gain, apply_master_trim, apply_output_gain};
 
         let mut samples_master = vec![1.0, 1.0];
         apply_master_trim(&mut samples_master, 6.0206);
@@ -1184,7 +1258,8 @@ params = { freq = 220.0 }"#;
         let source_id = project.tracks[0].id;
         let rendered = vec![0.0; 1000];
 
-        let bounced_id = bounce_track_to_new_track(&mut project, source_id, rendered.clone()).unwrap();
+        let bounced_id =
+            bounce_track_to_new_track(&mut project, source_id, rendered.clone()).unwrap();
         let bounced = project.tracks.iter().find(|t| t.id == bounced_id).unwrap();
         assert!(bounced.name.contains("Bounced"));
         assert!(bounced.is_frozen);
@@ -1194,9 +1269,9 @@ params = { freq = 220.0 }"#;
     #[test]
     fn test_step696_to_step700_sample_editor_tools() {
         use summoner_dsp::{
-            audition_sample_at_c4, trim_sample, normalize_sample, reverse_sample,
-            fade_in_sample, fade_out_sample, remove_dc_offset_sample, crossfade_sample_loop,
-            chop_sample_to_pads, SampleBuffer, SampleEditor,
+            audition_sample_at_c4, chop_sample_to_pads, crossfade_sample_loop, fade_in_sample,
+            fade_out_sample, normalize_sample, remove_dc_offset_sample, reverse_sample,
+            trim_sample, SampleBuffer, SampleEditor,
         };
 
         // Step 696: Audition sample at C4
@@ -1210,7 +1285,13 @@ params = { freq = 220.0 }"#;
         assert_eq!(data, vec![2.0, 3.0, 4.0]);
 
         normalize_sample(&mut data, 0.0); // 0 dB = 1.0 max peak
-        assert_eq!(*data.iter().max_by(|a, b| a.partial_cmp(b).unwrap()).unwrap(), 1.0);
+        assert_eq!(
+            *data
+                .iter()
+                .max_by(|a, b| a.partial_cmp(b).unwrap())
+                .unwrap(),
+            1.0
+        );
 
         reverse_sample(&mut data);
         assert_eq!(data[0], 1.0);
@@ -1248,17 +1329,17 @@ params = { freq = 220.0 }"#;
     #[test]
     fn test_step761_to_step780_tier32_features() {
         use crate::param_controls::{
-            FxChainCompare, FxCompareSlot, save_fx_chain_preset, load_fx_chain_preset,
-            InsertFxPosition, process_insert_fx_with_position, set_effect_sidechain,
-            get_wire_stroke_style, compute_auto_crossfade, export_clip_to_sfz,
-            DrumMachineGrid, compute_pad_click_velocity, get_drum_pad_color,
-            PadMuteGroupManager, PadNoteAssignmentTable, PadChokeGroupManager,
-            humanize_drum_pattern, FullScreenToggle, StageViewWindowConfig, LayoutManager,
+            compute_auto_crossfade, compute_pad_click_velocity, export_clip_to_sfz,
+            get_drum_pad_color, get_wire_stroke_style, humanize_drum_pattern, load_fx_chain_preset,
+            process_insert_fx_with_position, save_fx_chain_preset, set_effect_sidechain,
+            DrumMachineGrid, FullScreenToggle, FxChainCompare, FxCompareSlot, InsertFxPosition,
+            LayoutManager, PadChokeGroupManager, PadMuteGroupManager, PadNoteAssignmentTable,
+            StageViewWindowConfig,
         };
-        use summoner_dsp::{NoiseGateNode, DeesserNode, HarmonicExciterNode, SignalProcessor};
+        use std::collections::HashSet;
         use summoner_core::node::ProcessContext;
         use summoner_core::transport::Transport;
-        use std::collections::HashSet;
+        use summoner_dsp::{DeesserNode, HarmonicExciterNode, NoiseGateNode, SignalProcessor};
 
         // Step 761: FX Chain Compare A/B
         let mut compare = FxChainCompare::default();
@@ -1282,9 +1363,19 @@ params = { freq = 220.0 }"#;
         // Step 763: Pre/Post Fader Position Selector
         let input_samples = vec![1.0, 1.0];
         let fx_samples = vec![2.0, 2.0];
-        let pre_out = process_insert_fx_with_position(InsertFxPosition::PreFader, 0.5, &input_samples, &fx_samples);
+        let pre_out = process_insert_fx_with_position(
+            InsertFxPosition::PreFader,
+            0.5,
+            &input_samples,
+            &fx_samples,
+        );
         assert_eq!(pre_out, vec![1.0, 1.0]);
-        let post_out = process_insert_fx_with_position(InsertFxPosition::PostFader, 0.5, &input_samples, &fx_samples);
+        let post_out = process_insert_fx_with_position(
+            InsertFxPosition::PostFader,
+            0.5,
+            &input_samples,
+            &fx_samples,
+        );
         assert_eq!(post_out, vec![2.0, 2.0]);
 
         // Step 764: Sidechain source selector
@@ -1404,16 +1495,16 @@ params = { freq = 220.0 }"#;
     #[test]
     fn test_step781_to_step800_tier32_final_features() {
         use crate::param_controls::{
-            get_default_layout_presets, LayoutHotkeyManager, TimelineZoomState,
-            ViewZoomPersistence, search_project, SearchResultKind, ProjectStatistics,
-            get_unique_node_types_used, DependencyGraphOverview, SignalFlowAnimation,
-            get_node_graph_lod, NodeGraphLod, SubGraphGroup, create_preset_from_subgraph,
-            get_github_feature_request_url, generate_bug_report_url, PreferencesState,
-            PreferencesCategory, AudioPreferencesConfig, MidiPreferencesConfig,
-            AppearancePreferencesConfig, ShortcutsPreferencesConfig, PluginsPreferencesConfig,
+            create_preset_from_subgraph, generate_bug_report_url, get_default_layout_presets,
+            get_github_feature_request_url, get_node_graph_lod, get_unique_node_types_used,
+            search_project, AppearancePreferencesConfig, AudioPreferencesConfig,
+            DependencyGraphOverview, LayoutHotkeyManager, MidiPreferencesConfig, NodeGraphLod,
+            PluginsPreferencesConfig, PreferencesCategory, PreferencesState, ProjectStatistics,
+            SearchResultKind, ShortcutsPreferencesConfig, SignalFlowAnimation, SubGraphGroup,
+            TimelineZoomState, ViewZoomPersistence,
         };
         use summoner_project::schema::{
-            ProjectConfig, TrackConfig, SequenceConfig, NodeConfig, ConnectionConfig,
+            ConnectionConfig, NodeConfig, ProjectConfig, SequenceConfig, TrackConfig,
         };
 
         // Step 781: Default layout presets
@@ -1464,8 +1555,12 @@ params = { freq = 220.0 }"#;
 
         // Step 785: Find in project
         let search_res = search_project(&proj, "Lead");
-        assert!(search_res.iter().any(|r| r.kind == SearchResultKind::Track && r.name == "Lead Synth"));
-        assert!(search_res.iter().any(|r| r.kind == SearchResultKind::Clip && r.name == "Lead Pattern"));
+        assert!(search_res
+            .iter()
+            .any(|r| r.kind == SearchResultKind::Track && r.name == "Lead Synth"));
+        assert!(search_res
+            .iter()
+            .any(|r| r.kind == SearchResultKind::Clip && r.name == "Lead Pattern"));
 
         // Step 786: Project statistics
         let stats = ProjectStatistics::compute(&proj);
@@ -1476,7 +1571,10 @@ params = { freq = 220.0 }"#;
 
         // Step 787: Node Usage
         let node_types = get_unique_node_types_used(&proj);
-        assert_eq!(node_types, vec!["GainNode".to_string(), "OscSine".to_string()]);
+        assert_eq!(
+            node_types,
+            vec!["GainNode".to_string(), "OscSine".to_string()]
+        );
 
         // Step 788: Dependency graph overview
         let connections = vec![ConnectionConfig {
@@ -1539,9 +1637,3 @@ params = { freq = 220.0 }"#;
         assert!(plug_pref.safe_mode);
     }
 }
-
-
-
-
-
-

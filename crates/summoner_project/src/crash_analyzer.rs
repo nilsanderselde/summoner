@@ -75,7 +75,8 @@ impl CrashDump {
     }
 
     pub fn with_metadata(mut self, key: &str, value: &str) -> Self {
-        self.system_metadata.insert(key.to_string(), value.to_string());
+        self.system_metadata
+            .insert(key.to_string(), value.to_string());
         self
     }
 
@@ -147,7 +148,8 @@ impl CrashDumpAnalyzer {
             (
                 "Memory Access Violation in Native Code / Plugin Host".to_string(),
                 vec![
-                    "Enable sub-process crash sandbox isolation for third-party plugins.".to_string(),
+                    "Enable sub-process crash sandbox isolation for third-party plugins."
+                        .to_string(),
                     "Add offending plugin binary to host blacklist.".to_string(),
                 ],
             )
@@ -158,7 +160,8 @@ impl CrashDumpAnalyzer {
             (
                 "Real-time Audio Buffer Processing Underflow (XRUN)".to_string(),
                 vec![
-                    "Increase native audio driver block buffer size (e.g. 256 or 512 frames).".to_string(),
+                    "Increase native audio driver block buffer size (e.g. 256 or 512 frames)."
+                        .to_string(),
                     "Enable high-priority real-time audio thread scheduling.".to_string(),
                 ],
             )
@@ -199,7 +202,10 @@ impl CrashDumpAnalyzer {
         report.push_str(&format!("Dump ID:       {}\n", dump.dump_id));
         report.push_str(&format!("Timestamp:     {}\n", dump.timestamp));
         report.push_str(&format!("Severity:      {}\n", dump.severity));
-        report.push_str(&format!("Crate / Mod:   {} / {}\n", dump.crate_name, dump.subsystem));
+        report.push_str(&format!(
+            "Crate / Mod:   {} / {}\n",
+            dump.crate_name, dump.subsystem
+        ));
         report.push_str(&format!("Error Message: {}\n", dump.error_message));
         report.push_str(&format!("Root Cause:    {}\n", probable_root_cause));
         if let Some(ref frame) = top_frame {
@@ -209,7 +215,9 @@ impl CrashDumpAnalyzer {
         for (idx, remedy) in remedies.iter().enumerate() {
             report.push_str(&format!("  {}. {}\n", idx + 1, remedy));
         }
-        report.push_str("Offline Mode:  STRICT (100% Local Disk Analysis, Zero Telemetry Network Calls)\n");
+        report.push_str(
+            "Offline Mode:  STRICT (100% Local Disk Analysis, Zero Telemetry Network Calls)\n",
+        );
 
         CrashAnalysisResult {
             dump_id: dump.dump_id.clone(),
@@ -270,7 +278,9 @@ impl CrashDumpAnalyzer {
 
         for dump in &dumps {
             *counts_by_severity.entry(dump.severity).or_insert(0) += 1;
-            *subsystem_frequencies.entry(dump.subsystem.clone()).or_insert(0) += 1;
+            *subsystem_frequencies
+                .entry(dump.subsystem.clone())
+                .or_insert(0) += 1;
 
             let result = Self::analyze_dump(dump);
             *cause_counts.entry(result.probable_root_cause).or_insert(0) += 1;
@@ -286,7 +296,8 @@ impl CrashDumpAnalyzer {
                 count, most_frequent_cause
             ));
         }
-        recommendations.push("Ensure all third-party plugins run with process isolation.".to_string());
+        recommendations
+            .push("Ensure all third-party plugins run with process isolation.".to_string());
         recommendations.push("Keep offline log dump retention set to maximum 30 days.".to_string());
 
         let mut formatted_summary = String::new();
@@ -332,8 +343,13 @@ mod tests {
         let result = CrashDumpAnalyzer::analyze_dump(&dump);
         assert_eq!(result.dump_id, "dump-001");
         assert!(result.is_offline_safe);
-        assert!(result.probable_root_cause.contains("Memory Access Violation"));
-        assert!(result.suggested_remedies.iter().any(|r| r.contains("sandbox isolation")));
+        assert!(result
+            .probable_root_cause
+            .contains("Memory Access Violation"));
+        assert!(result
+            .suggested_remedies
+            .iter()
+            .any(|r| r.contains("sandbox isolation")));
 
         let temp_dir = std::env::temp_dir().join("summoner_crash_dump_test");
         let dump_path = temp_dir.join("dump-001.json");
@@ -344,7 +360,9 @@ mod tests {
 
         let summary = CrashDumpAnalyzer::analyze_dumps_directory(&temp_dir).unwrap();
         assert_eq!(summary.total_dumps_analyzed, 1);
-        assert!(summary.formatted_summary.contains("LOCAL DISK CRASH REPORT DUMP SUMMARY"));
+        assert!(summary
+            .formatted_summary
+            .contains("LOCAL DISK CRASH REPORT DUMP SUMMARY"));
 
         let _ = fs::remove_dir_all(&temp_dir);
     }

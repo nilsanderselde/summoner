@@ -88,7 +88,13 @@ mod tests {
     fn test_osc_command_parsing() {
         assert_eq!(OscServer::parse_packet("/play"), Some(OscCommand::Play));
         assert_eq!(OscServer::parse_packet("/stop"), Some(OscCommand::Stop));
-        assert_eq!(OscServer::parse_packet("/bpm 140.5"), Some(OscCommand::SetBpm(140.5)));
-        assert_eq!(OscServer::parse_packet("/param 101 0.75"), Some(OscCommand::SetParam(101, 0.75)));
+        assert_eq!(
+            OscServer::parse_packet("/bpm 140.5"),
+            Some(OscCommand::SetBpm(140.5))
+        );
+        assert_eq!(
+            OscServer::parse_packet("/param 101 0.75"),
+            Some(OscCommand::SetParam(101, 0.75))
+        );
     }
 }

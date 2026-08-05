@@ -121,12 +121,66 @@ impl PatchBrowserState {
         if self.patches.is_empty() {
             // Built-in fallback default patches (Steps 705, 706)
             let fallbacks = vec![
-                ("Aether Lead", "Lead", vec!["cyberpunk", "warm"], "AetherSynth", 5, "Vintage Warm", "Alice", "Vintage"),
-                ("Vintage Tape Bass", "Vintage", vec!["warm", "analog"], "TubeSaturationNode", 4, "Analog warmth", "Bob", "Retro"),
-                ("Ambient Space Drone", "Ambient", vec!["drone", "ethereal"], "GranularSynthNode", 5, "Cinematic space", "Carol", "Atmosphere"),
-                ("Cinematic Brass", "Cinematic", vec!["epic", "orchestral"], "PluckSynth", 5, "Orchestral brass", "Dave", "Film"),
-                ("IDM Glitch Generator", "IDM", vec!["glitch", "complex"], "BitcrusherNode", 4, "Complex rhythm", "Eve", "Experimental"),
-                ("Experimental Modular Synth", "Experimental", vec!["weird", "modular"], "WavefolderNode", 4, "Complex folds", "Frank", "Experimental"),
+                (
+                    "Aether Lead",
+                    "Lead",
+                    vec!["cyberpunk", "warm"],
+                    "AetherSynth",
+                    5,
+                    "Vintage Warm",
+                    "Alice",
+                    "Vintage",
+                ),
+                (
+                    "Vintage Tape Bass",
+                    "Vintage",
+                    vec!["warm", "analog"],
+                    "TubeSaturationNode",
+                    4,
+                    "Analog warmth",
+                    "Bob",
+                    "Retro",
+                ),
+                (
+                    "Ambient Space Drone",
+                    "Ambient",
+                    vec!["drone", "ethereal"],
+                    "GranularSynthNode",
+                    5,
+                    "Cinematic space",
+                    "Carol",
+                    "Atmosphere",
+                ),
+                (
+                    "Cinematic Brass",
+                    "Cinematic",
+                    vec!["epic", "orchestral"],
+                    "PluckSynth",
+                    5,
+                    "Orchestral brass",
+                    "Dave",
+                    "Film",
+                ),
+                (
+                    "IDM Glitch Generator",
+                    "IDM",
+                    vec!["glitch", "complex"],
+                    "BitcrusherNode",
+                    4,
+                    "Complex rhythm",
+                    "Eve",
+                    "Experimental",
+                ),
+                (
+                    "Experimental Modular Synth",
+                    "Experimental",
+                    vec!["weird", "modular"],
+                    "WavefolderNode",
+                    4,
+                    "Complex folds",
+                    "Frank",
+                    "Experimental",
+                ),
             ];
 
             for (name, cat, tags, kind, rating, comment, author, collection) in fallbacks {
@@ -140,7 +194,10 @@ impl PatchBrowserState {
 
                 self.patches.push(PatchItem {
                     name: name.to_string(),
-                    path: PathBuf::from(format!("local/presets/{}.preset.toml", name.to_lowercase().replace(' ', "_"))),
+                    path: PathBuf::from(format!(
+                        "local/presets/{}.preset.toml",
+                        name.to_lowercase().replace(' ', "_")
+                    )),
                     category: cat.to_string(),
                     tags: preset.tags.clone(),
                     is_favorite: rating == 5,
@@ -162,7 +219,9 @@ impl PatchBrowserState {
     /// Step 711: Sort preset list by Name, Date, Rating, Downloads
     pub fn apply_sorting(&mut self) {
         match self.sort_order {
-            SortOrder::Name => self.patches.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase())),
+            SortOrder::Name => self
+                .patches
+                .sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase())),
             SortOrder::Rating => self.patches.sort_by(|a, b| b.rating.cmp(&a.rating)),
             SortOrder::Downloads => self.patches.sort_by(|a, b| b.downloads.cmp(&a.downloads)),
             SortOrder::Date => self.patches.sort_by(|a, b| b.version.cmp(&a.version)),
@@ -172,7 +231,17 @@ impl PatchBrowserState {
     pub fn available_categories(&self) -> Vec<String> {
         let mut set = HashSet::new();
         // Always include mandatory categories from Steps 705 & 706
-        for mandatory in &["General", "Lead", "Bass", "Pad", "Vintage", "Ambient", "Cinematic", "IDM", "Experimental"] {
+        for mandatory in &[
+            "General",
+            "Lead",
+            "Bass",
+            "Pad",
+            "Vintage",
+            "Ambient",
+            "Cinematic",
+            "IDM",
+            "Experimental",
+        ] {
             set.insert(mandatory.to_string());
         }
         for item in &self.patches {
@@ -544,7 +613,10 @@ mod tests {
     #[test]
     fn test_patch_browser_state_init_and_categories() {
         let state = PatchBrowserState::default();
-        assert!(!state.patches.is_empty(), "Patch browser state should initialize with default presets");
+        assert!(
+            !state.patches.is_empty(),
+            "Patch browser state should initialize with default presets"
+        );
         let cats = state.available_categories();
         assert!(cats.contains(&"Vintage".to_string()));
         assert!(cats.contains(&"Ambient".to_string()));

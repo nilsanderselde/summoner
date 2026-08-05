@@ -53,11 +53,23 @@ pub fn meets_wcag_aa(text_color: Color32, bg_color: Color32) -> bool {
 pub fn update_font_styles(ctx: &egui::Context, font_size: f32) {
     let size = font_size.clamp(10.0, 24.0);
     let mut style = (*ctx.style()).clone();
-    style.text_styles.insert(egui::TextStyle::Small, egui::FontId::proportional(size * 0.85));
-    style.text_styles.insert(egui::TextStyle::Body, egui::FontId::proportional(size));
-    style.text_styles.insert(egui::TextStyle::Button, egui::FontId::proportional(size));
-    style.text_styles.insert(egui::TextStyle::Heading, egui::FontId::proportional(size * 1.4));
-    style.text_styles.insert(egui::TextStyle::Monospace, egui::FontId::monospace(size));
+    style.text_styles.insert(
+        egui::TextStyle::Small,
+        egui::FontId::proportional(size * 0.85),
+    );
+    style
+        .text_styles
+        .insert(egui::TextStyle::Body, egui::FontId::proportional(size));
+    style
+        .text_styles
+        .insert(egui::TextStyle::Button, egui::FontId::proportional(size));
+    style.text_styles.insert(
+        egui::TextStyle::Heading,
+        egui::FontId::proportional(size * 1.4),
+    );
+    style
+        .text_styles
+        .insert(egui::TextStyle::Monospace, egui::FontId::monospace(size));
     ctx.set_style(style);
 }
 
@@ -115,7 +127,8 @@ pub fn apply_high_contrast_theme(ctx: &egui::Context, font_size: f32) {
     visuals.extreme_bg_color = Color32::from_rgb(4, 4, 6);
 
     visuals.widgets.noninteractive.fg_stroke = egui::Stroke::new(1.5_f32, COLOR_HIGH_CONTRAST_TEXT);
-    visuals.widgets.inactive.fg_stroke = egui::Stroke::new(1.5_f32, Color32::from_rgb(230, 230, 230));
+    visuals.widgets.inactive.fg_stroke =
+        egui::Stroke::new(1.5_f32, Color32::from_rgb(230, 230, 230));
     visuals.widgets.hovered.bg_fill = Color32::from_rgb(60, 60, 90);
     visuals.widgets.hovered.fg_stroke = egui::Stroke::new(2.0_f32, Color32::WHITE);
     visuals.widgets.active.bg_fill = Color32::from_rgb(0, 180, 255);
@@ -166,4 +179,3 @@ mod tests {
         assert!(meets_wcag_aa(Color32::BLACK, Color32::WHITE));
     }
 }
-

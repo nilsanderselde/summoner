@@ -9,11 +9,11 @@
 //! AI vocal harmonizer, 2D neural wavetable morphing, audio asset tagging,
 //! AI mix assistant, neural de-reverberation, super-resolution, and polyphonic MIDI transcription.
 
+use crate::sampler::SampleBuffer;
+use crate::traits::SignalProcessor;
 use serde::{Deserialize, Serialize};
 use summoner_core::audio::Sample;
 use summoner_core::node::{AudioNode, ProcessContext};
-use crate::traits::SignalProcessor;
-use crate::sampler::SampleBuffer;
 
 // ============================================================================
 // 1001 & 1002 & 1003: NAM (Neural Amp Modeler) Loader & WaveNet Engine
@@ -78,7 +78,8 @@ impl NamModel {
 
     /// Load NAM model metadata and weights from JSON string representation.
     pub fn from_json(json_str: &str) -> Result<Self, String> {
-        serde_json::from_str(json_str).map_err(|e| format!("Failed to parse .nam JSON model: {}", e))
+        serde_json::from_str(json_str)
+            .map_err(|e| format!("Failed to parse .nam JSON model: {}", e))
     }
 }
 
@@ -114,8 +115,18 @@ impl NamWaveNetEngine {
             let prev_sample = self.state_buffer[prev_idx];
 
             let weight_offset = (layer_idx * channels) % self.model.weights.len().max(1);
-            let w_f = self.model.weights.get(weight_offset).copied().unwrap_or(0.8);
-            let w_g = self.model.weights.get(weight_offset + 1).copied().unwrap_or(0.6);
+            let w_f = self
+                .model
+                .weights
+                .get(weight_offset)
+                .copied()
+                .unwrap_or(0.8);
+            let w_g = self
+                .model
+                .weights
+                .get(weight_offset + 1)
+                .copied()
+                .unwrap_or(0.6);
             let b = self.model.bias.get(layer_idx).copied().unwrap_or(0.0);
 
             let filter = ((current * w_f + prev_sample * 0.5 + b).tanh() + 1.0) * 0.5;
@@ -204,12 +215,7 @@ impl AudioNode for NamAmpNode {
         "NamAmpNode"
     }
 
-    fn process(
-        &mut self,
-        input: &[&[Sample]],
-        output: &mut [&mut [Sample]],
-        ctx: &ProcessContext,
-    ) {
+    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
         self.process_block(input, output, ctx);
     }
 }
@@ -237,15 +243,15 @@ impl OnnxCpuSimdExecutionProvider {
             return;
         }
 
-        for i in 0..out_size {
+        for (i, out_val) in output.iter_mut().enumerate().take(out_size) {
             let mut sum = bias.get(i).copied().unwrap_or(0.0);
             let w_offset = i * in_size;
-            for j in 0..in_size {
+            for (j, &in_val) in input.iter().enumerate().take(in_size) {
                 let w = weights.get(w_offset + j).copied().unwrap_or(0.0);
-                sum += input[j] * w;
+                sum += in_val * w;
             }
 
-            output[i] = match activation {
+            *out_val = match activation {
                 "relu" => sum.max(0.0),
                 "sigmoid" => 1.0 / (1.0 + (-sum).exp()),
                 "tanh" => sum.tanh(),
@@ -273,7 +279,10 @@ impl CrepePitchTracker {
         for i in 0..512 {
             weights.push(((i as f32 * 0.05).sin() + 1.0) * 0.5);
         }
-        Self { sample_rate, weights }
+        Self {
+            sample_rate,
+            weights,
+        }
     }
 
     /// Estimates pitch (Hz) and confidence (0.0 .. 1.0) from an input audio frame.
@@ -292,7 +301,7 @@ impl CrepePitchTracker {
         let mut best_lag = 0;
         let mut max_corr = -1.0f32;
         let max_search = (self.sample_rate as usize / 50).min(frame.len() / 2); // 50 Hz min
-        let min_search = (self.sample_rate as usize / 1000).max(1);            // 1000 Hz max
+        let min_search = (self.sample_rate as usize / 1000).max(1); // 1000 Hz max
 
         for lag in min_search..max_search {
             let mut sum = 0.0;
@@ -382,12 +391,7 @@ impl AudioNode for RnnoiseNode {
         "RnnoiseNode"
     }
 
-    fn process(
-        &mut self,
-        input: &[&[Sample]],
-        output: &mut [&mut [Sample]],
-        ctx: &ProcessContext,
-    ) {
+    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
         self.process_block(input, output, ctx);
     }
 }
@@ -430,7 +434,7 @@ impl AiAutoGainNode {
             let approx_lufs = 20.0 * rms.log10();
             let gain_db = (self.target_lufs - approx_lufs).clamp(-18.0, 18.0);
             let target_linear = 10.0f32.powf(gain_db / 20.0);
-            
+
             // Smooth gain adaptation
             self.current_gain = self.current_gain * 0.9 + target_linear * 0.1;
             self.rms_acc = 0.0;
@@ -472,12 +476,7 @@ impl AudioNode for AiAutoGainNode {
         "AiAutoGainNode"
     }
 
-    fn process(
-        &mut self,
-        input: &[&[Sample]],
-        output: &mut [&mut [Sample]],
-        ctx: &ProcessContext,
-    ) {
+    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
         self.process_block(input, output, ctx);
     }
 }
@@ -495,10 +494,10 @@ impl AiChordGenerator {
     pub fn generate_progression(style: &str, root: u8, count: usize) -> Vec<Vec<u8>> {
         let intervals: Vec<Vec<u8>> = match style {
             "jazz" => vec![
-                vec![0, 4, 7, 11], // Maj7
-                vec![2, 5, 9, 12], // m7
+                vec![0, 4, 7, 11],   // Maj7
+                vec![2, 5, 9, 12],   // m7
                 vec![7, 11, 14, 17], // Dom7
-                vec![0, 3, 7, 10], // m7
+                vec![0, 3, 7, 10],   // m7
             ],
             "classical" => vec![
                 vec![0, 4, 7],   // I
@@ -603,12 +602,7 @@ impl AudioNode for DdspTimbreTransferNode {
         "DdspTimbreTransferNode"
     }
 
-    fn process(
-        &mut self,
-        input: &[&[Sample]],
-        output: &mut [&mut [Sample]],
-        ctx: &ProcessContext,
-    ) {
+    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
         self.process_block(input, output, ctx);
     }
 }
@@ -685,11 +679,7 @@ pub struct NeuralIrSynthesizer;
 
 impl NeuralIrSynthesizer {
     /// Generates a synthetic room impulse response buffer based on physical room acoustics.
-    pub fn synthesize_ir(
-        room_size_m3: f32,
-        decay_time_sec: f32,
-        sample_rate: u32,
-    ) -> SampleBuffer {
+    pub fn synthesize_ir(room_size_m3: f32, decay_time_sec: f32, sample_rate: u32) -> SampleBuffer {
         let num_samples = (decay_time_sec * sample_rate as f32) as usize;
         let mut ir_data = vec![0.0f32; num_samples];
 
@@ -785,12 +775,7 @@ impl AudioNode for VocalHarmonyGeneratorNode {
         "VocalHarmonyGeneratorNode"
     }
 
-    fn process(
-        &mut self,
-        input: &[&[Sample]],
-        output: &mut [&mut [Sample]],
-        ctx: &ProcessContext,
-    ) {
+    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
         self.process_block(input, output, ctx);
     }
 }
@@ -813,18 +798,22 @@ impl NeuralWavetableInterpolator {
         let cy = y.clamp(0.0, 1.0);
 
         let w00 = (1.0 - cx) * (1.0 - cy); // Sine
-        let w10 = cx * (1.0 - cy);         // Saw
-        let w01 = (1.0 - cx) * cy;         // Triangle
-        let w11 = cx * cy;                 // Square
+        let w10 = cx * (1.0 - cy); // Saw
+        let w01 = (1.0 - cx) * cy; // Triangle
+        let w11 = cx * cy; // Square
 
-        for i in 0..size {
+        for (i, table_val) in table.iter_mut().enumerate().take(size) {
             let phase = (i as f32 / size as f32) * 2.0 * std::f32::consts::PI;
             let sine = phase.sin();
             let saw = 1.0 - (phase / std::f32::consts::PI);
             let tri = (2.0 / std::f32::consts::PI) * (phase.sin().asin());
-            let sqr = if phase < std::f32::consts::PI { 1.0 } else { -1.0 };
+            let sqr = if phase < std::f32::consts::PI {
+                1.0
+            } else {
+                -1.0
+            };
 
-            table[i] = sine * w00 + saw * w10 + tri * w01 + sqr * w11;
+            *table_val = w00 * sine + w10 * saw + w01 * tri + w11 * sqr;
         }
 
         table
@@ -847,10 +836,15 @@ impl AudioTagger {
             return tags;
         }
 
-        let rms = (buffer.data.iter().map(|&x| x * x).sum::<f32>() / buffer.data.len() as f32).sqrt();
+        let rms =
+            (buffer.data.iter().map(|&x| x * x).sum::<f32>() / buffer.data.len() as f32).sqrt();
 
         // Spectral centroid estimation
-        let zero_crossings = buffer.data.windows(2).filter(|w| (w[0] > 0.0) != (w[1] > 0.0)).count();
+        let zero_crossings = buffer
+            .data
+            .windows(2)
+            .filter(|w| (w[0] > 0.0) != (w[1] > 0.0))
+            .count();
         let zcr = zero_crossings as f32 / buffer.data.len() as f32;
 
         if zcr > 0.15 {
@@ -892,7 +886,9 @@ pub struct AiMixAssistant;
 
 impl AiMixAssistant {
     pub fn analyze_and_suggest(buffer: &SampleBuffer) -> MixSuggestions {
-        let rms = (buffer.data.iter().map(|&x| x * x).sum::<f32>() / buffer.data.len().max(1) as f32).sqrt();
+        let rms = (buffer.data.iter().map(|&x| x * x).sum::<f32>()
+            / buffer.data.len().max(1) as f32)
+            .sqrt();
         let peak = buffer.data.iter().map(|x| x.abs()).fold(0.0f32, f32::max);
 
         let crest_factor = if rms > 1e-5 { peak / rms } else { 1.0 };
@@ -925,7 +921,9 @@ impl Default for NeuralDereverbNode {
 
 impl NeuralDereverbNode {
     pub fn new() -> Self {
-        Self { decay_estimator: 0.0 }
+        Self {
+            decay_estimator: 0.0,
+        }
     }
 
     pub fn process_sample(&mut self, input: f32) -> f32 {
@@ -971,12 +969,7 @@ impl AudioNode for NeuralDereverbNode {
         "NeuralDereverbNode"
     }
 
-    fn process(
-        &mut self,
-        input: &[&[Sample]],
-        output: &mut [&mut [Sample]],
-        ctx: &ProcessContext,
-    ) {
+    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
         self.process_block(input, output, ctx);
     }
 }
@@ -1047,12 +1040,7 @@ impl AudioNode for NeuralSuperResolutionNode {
         "NeuralSuperResolutionNode"
     }
 
-    fn process(
-        &mut self,
-        input: &[&[Sample]],
-        output: &mut [&mut [Sample]],
-        ctx: &ProcessContext,
-    ) {
+    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
         self.process_block(input, output, ctx);
     }
 }

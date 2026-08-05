@@ -60,11 +60,13 @@ impl AutomationCurve {
                 let v1 = p1.value.max(0.0001);
                 v0 * (v1 / v0).powf(t)
             }
-            Interpolation::Logarithmic => {
-                p0.value + t.sqrt() * (p1.value - p0.value)
-            }
+            Interpolation::Logarithmic => p0.value + t.sqrt() * (p1.value - p0.value),
             Interpolation::Step => {
-                if t < 1.0 { p0.value } else { p1.value }
+                if t < 1.0 {
+                    p0.value
+                } else {
+                    p1.value
+                }
             }
             Interpolation::Smooth => {
                 let s = t * t * (3.0 - 2.0 * t);
@@ -121,43 +123,89 @@ impl AutomationLane {
         for pt in &mut self.curve.points {
             pt.beat = (pt.beat / snap).round() * snap;
         }
-        self.curve.points.sort_by(|a, b| a.beat.partial_cmp(&b.beat).unwrap());
+        self.curve
+            .points
+            .sort_by(|a, b| a.beat.partial_cmp(&b.beat).unwrap());
     }
 
-    pub fn add_line_segment(&mut self, mut start_beat: f64, start_val: f32, mut end_beat: f64, end_val: f32, snap_grid: Option<f64>) {
+    pub fn add_line_segment(
+        &mut self,
+        mut start_beat: f64,
+        start_val: f32,
+        mut end_beat: f64,
+        end_val: f32,
+        snap_grid: Option<f64>,
+    ) {
         if let Some(snap) = snap_grid {
             let s = snap.max(0.001);
             start_beat = (start_beat / s).round() * s;
             end_beat = (end_beat / s).round() * s;
         }
-        let p1 = AutomationPoint { beat: start_beat, value: start_val.clamp(0.0, 1.0), interp: Interpolation::Linear };
-        let p2 = AutomationPoint { beat: end_beat, value: end_val.clamp(0.0, 1.0), interp: Interpolation::Linear };
+        let p1 = AutomationPoint {
+            beat: start_beat,
+            value: start_val.clamp(0.0, 1.0),
+            interp: Interpolation::Linear,
+        };
+        let p2 = AutomationPoint {
+            beat: end_beat,
+            value: end_val.clamp(0.0, 1.0),
+            interp: Interpolation::Linear,
+        };
 
-        self.curve.points.retain(|p| p.beat < start_beat || p.beat > end_beat);
+        self.curve
+            .points
+            .retain(|p| p.beat < start_beat || p.beat > end_beat);
         self.curve.points.push(p1);
         self.curve.points.push(p2);
-        self.curve.points.sort_by(|a, b| a.beat.partial_cmp(&b.beat).unwrap());
+        self.curve
+            .points
+            .sort_by(|a, b| a.beat.partial_cmp(&b.beat).unwrap());
     }
 
-    pub fn add_curve_segment(&mut self, mut start_beat: f64, start_val: f32, mut mid_beat: f64, mid_val: f32, mut end_beat: f64, end_val: f32, snap_grid: Option<f64>) {
+    #[allow(clippy::too_many_arguments)]
+    pub fn add_curve_segment(
+        &mut self,
+        mut start_beat: f64,
+        start_val: f32,
+        mut mid_beat: f64,
+        mid_val: f32,
+        mut end_beat: f64,
+        end_val: f32,
+        snap_grid: Option<f64>,
+    ) {
         if let Some(snap) = snap_grid {
             let s = snap.max(0.001);
             start_beat = (start_beat / s).round() * s;
             mid_beat = (mid_beat / s).round() * s;
             end_beat = (end_beat / s).round() * s;
         }
-        let p1 = AutomationPoint { beat: start_beat, value: start_val.clamp(0.0, 1.0), interp: Interpolation::Smooth };
-        let p2 = AutomationPoint { beat: mid_beat, value: mid_val.clamp(0.0, 1.0), interp: Interpolation::Smooth };
-        let p3 = AutomationPoint { beat: end_beat, value: end_val.clamp(0.0, 1.0), interp: Interpolation::Smooth };
+        let p1 = AutomationPoint {
+            beat: start_beat,
+            value: start_val.clamp(0.0, 1.0),
+            interp: Interpolation::Smooth,
+        };
+        let p2 = AutomationPoint {
+            beat: mid_beat,
+            value: mid_val.clamp(0.0, 1.0),
+            interp: Interpolation::Smooth,
+        };
+        let p3 = AutomationPoint {
+            beat: end_beat,
+            value: end_val.clamp(0.0, 1.0),
+            interp: Interpolation::Smooth,
+        };
 
-        self.curve.points.retain(|p| p.beat < start_beat || p.beat > end_beat);
+        self.curve
+            .points
+            .retain(|p| p.beat < start_beat || p.beat > end_beat);
         self.curve.points.push(p1);
         self.curve.points.push(p2);
         self.curve.points.push(p3);
-        self.curve.points.sort_by(|a, b| a.beat.partial_cmp(&b.beat).unwrap());
+        self.curve
+            .points
+            .sort_by(|a, b| a.beat.partial_cmp(&b.beat).unwrap());
     }
 }
-
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct AutomationTimeline {
@@ -184,7 +232,9 @@ impl AutomationTimeline {
     }
 
     pub fn evaluate(&self, param_id: &str, beat: f64) -> Option<f32> {
-        self.lanes.get(param_id).map(|lane| lane.curve.evaluate_at_beat(beat))
+        self.lanes
+            .get(param_id)
+            .map(|lane| lane.curve.evaluate_at_beat(beat))
     }
 
     /// Evaluates all automation lanes at the specified beat position and updates registered parameters.
@@ -217,19 +267,26 @@ impl AutomationTimeline {
         if registry.is_recording_all() {
             let dirty = registry.snapshot_dirty_params(0 /* unused frame */);
             for (param_id, value) in dirty {
-                let lane = self.lanes.entry(param_id.clone()).or_insert_with(|| AutomationLane {
-                    param_id: param_id.clone(),
-                    curve: AutomationCurve { points: Vec::new() },
-                });
-                
+                let lane = self
+                    .lanes
+                    .entry(param_id.clone())
+                    .or_insert_with(|| AutomationLane {
+                        param_id: param_id.clone(),
+                        curve: AutomationCurve { points: Vec::new() },
+                    });
+
                 // Keep it sorted
                 let point = AutomationPoint {
                     beat,
                     value,
                     interp: Interpolation::Linear,
                 };
-                
-                match lane.curve.points.binary_search_by(|p| p.beat.partial_cmp(&beat).unwrap()) {
+
+                match lane
+                    .curve
+                    .points
+                    .binary_search_by(|p| p.beat.partial_cmp(&beat).unwrap())
+                {
                     Ok(idx) => lane.curve.points[idx] = point,
                     Err(idx) => lane.curve.points.insert(idx, point),
                 }
@@ -237,37 +294,58 @@ impl AutomationTimeline {
         }
     }
 
-    pub fn to_configs(&self, track_id: u64, sample_rate: u32, bpm: f64) -> Vec<summoner_project::schema::AutomationLaneConfig> {
+    pub fn to_configs(
+        &self,
+        track_id: u64,
+        sample_rate: u32,
+        bpm: f64,
+    ) -> Vec<summoner_project::schema::AutomationLaneConfig> {
         let sec_per_beat = 60.0 / bpm.max(1.0);
-        self.lanes.values().map(|lane| {
-            let events = lane.curve.points.iter().map(|p| {
-                let frame = (p.beat * sec_per_beat * sample_rate as f64) as u64;
-                summoner_project::schema::AutomationEventConfig {
-                    frame,
-                    value: p.value,
-                }
-            }).collect();
+        self.lanes
+            .values()
+            .map(|lane| {
+                let events = lane
+                    .curve
+                    .points
+                    .iter()
+                    .map(|p| {
+                        let frame = (p.beat * sec_per_beat * sample_rate as f64) as u64;
+                        summoner_project::schema::AutomationEventConfig {
+                            frame,
+                            value: p.value,
+                        }
+                    })
+                    .collect();
 
-            summoner_project::schema::AutomationLaneConfig {
-                param_id: lane.param_id.clone(),
-                track_id,
-                events,
-            }
-        }).collect()
+                summoner_project::schema::AutomationLaneConfig {
+                    param_id: lane.param_id.clone(),
+                    track_id,
+                    events,
+                }
+            })
+            .collect()
     }
 
-    pub fn from_configs(configs: &[summoner_project::schema::AutomationLaneConfig], sample_rate: u32, bpm: f64) -> Self {
+    pub fn from_configs(
+        configs: &[summoner_project::schema::AutomationLaneConfig],
+        sample_rate: u32,
+        bpm: f64,
+    ) -> Self {
         let sec_per_beat = 60.0 / bpm.max(1.0);
         let mut timeline = Self::new();
         for config in configs {
-            let points = config.events.iter().map(|evt| {
-                let beat = (evt.frame as f64 / sample_rate as f64) / sec_per_beat;
-                AutomationPoint {
-                    beat,
-                    value: evt.value,
-                    interp: Interpolation::Linear,
-                }
-            }).collect();
+            let points = config
+                .events
+                .iter()
+                .map(|evt| {
+                    let beat = (evt.frame as f64 / sample_rate as f64) / sec_per_beat;
+                    AutomationPoint {
+                        beat,
+                        value: evt.value,
+                        interp: Interpolation::Linear,
+                    }
+                })
+                .collect();
 
             timeline.add_lane(AutomationLane {
                 param_id: config.param_id.clone(),
@@ -286,11 +364,22 @@ mod tests {
     fn test_automation_timeline_evaluate_and_apply() {
         let registry = AutomationRegistry::new();
         let curve = AutomationCurve::new(vec![
-            AutomationPoint { beat: 0.0, value: 0.0, interp: Interpolation::Linear },
-            AutomationPoint { beat: 4.0, value: 1.0, interp: Interpolation::Linear },
+            AutomationPoint {
+                beat: 0.0,
+                value: 0.0,
+                interp: Interpolation::Linear,
+            },
+            AutomationPoint {
+                beat: 4.0,
+                value: 1.0,
+                interp: Interpolation::Linear,
+            },
         ]);
         let mut timeline = AutomationTimeline::new();
-        timeline.add_lane(AutomationLane { param_id: "cutoff".to_string(), curve });
+        timeline.add_lane(AutomationLane {
+            param_id: "cutoff".to_string(),
+            curve,
+        });
 
         let val_mid = timeline.evaluate("cutoff", 2.0).unwrap();
         assert!((val_mid - 0.5).abs() < 1e-4);
@@ -302,11 +391,11 @@ mod tests {
     fn test_automation_record_all() {
         let mut registry = AutomationRegistry::new();
         let param = registry.register_param("cutoff", 0.0);
-        
+
         let mut timeline = AutomationTimeline::new();
-        
+
         registry.start_record_all();
-        
+
         // Simulating parameter sweeping 0 -> 1 over 100 frames (let's say 4 beats)
         for i in 0..=100 {
             let beat = (i as f64 / 100.0) * 4.0;
@@ -314,9 +403,9 @@ mod tests {
             param.set(value);
             timeline.record_beat(&mut registry, beat);
         }
-        
+
         registry.stop_record_all();
-        
+
         let val_mid = timeline.evaluate("cutoff", 2.0).unwrap();
         assert!((val_mid - 0.5).abs() < 1e-4);
     }
@@ -324,11 +413,22 @@ mod tests {
     #[test]
     fn test_automation_timeline_to_from_configs() {
         let curve = AutomationCurve::new(vec![
-            AutomationPoint { beat: 0.0, value: 0.0, interp: Interpolation::Linear },
-            AutomationPoint { beat: 4.0, value: 1.0, interp: Interpolation::Linear },
+            AutomationPoint {
+                beat: 0.0,
+                value: 0.0,
+                interp: Interpolation::Linear,
+            },
+            AutomationPoint {
+                beat: 4.0,
+                value: 1.0,
+                interp: Interpolation::Linear,
+            },
         ]);
         let mut timeline = AutomationTimeline::new();
-        timeline.add_lane(AutomationLane { param_id: "cutoff".to_string(), curve });
+        timeline.add_lane(AutomationLane {
+            param_id: "cutoff".to_string(),
+            curve,
+        });
 
         let configs = timeline.to_configs(1, 44100, 120.0);
         assert_eq!(configs.len(), 1);
@@ -342,14 +442,37 @@ mod tests {
     #[test]
     fn test_automation_toml_round_trip() {
         let curve = AutomationCurve::new(vec![
-            AutomationPoint { beat: 0.0, value: 0.1, interp: Interpolation::Linear },
-            AutomationPoint { beat: 1.0, value: 0.3, interp: Interpolation::Linear },
-            AutomationPoint { beat: 2.0, value: 0.5, interp: Interpolation::Linear },
-            AutomationPoint { beat: 3.0, value: 0.7, interp: Interpolation::Linear },
-            AutomationPoint { beat: 4.0, value: 0.9, interp: Interpolation::Linear },
+            AutomationPoint {
+                beat: 0.0,
+                value: 0.1,
+                interp: Interpolation::Linear,
+            },
+            AutomationPoint {
+                beat: 1.0,
+                value: 0.3,
+                interp: Interpolation::Linear,
+            },
+            AutomationPoint {
+                beat: 2.0,
+                value: 0.5,
+                interp: Interpolation::Linear,
+            },
+            AutomationPoint {
+                beat: 3.0,
+                value: 0.7,
+                interp: Interpolation::Linear,
+            },
+            AutomationPoint {
+                beat: 4.0,
+                value: 0.9,
+                interp: Interpolation::Linear,
+            },
         ]);
         let mut timeline = AutomationTimeline::new();
-        timeline.add_lane(AutomationLane { param_id: "res".to_string(), curve });
+        timeline.add_lane(AutomationLane {
+            param_id: "res".to_string(),
+            curve,
+        });
 
         let configs = timeline.to_configs(0, 44100, 120.0);
         let restored = AutomationTimeline::from_configs(&configs, 44100, 120.0);
@@ -357,17 +480,28 @@ mod tests {
         for beat in [0.0, 1.0, 2.0, 3.0, 4.0] {
             let orig = timeline.evaluate("res", beat).unwrap();
             let rest = restored.evaluate("res", beat).unwrap();
-            assert!((orig - rest).abs() < 1e-4, "Mismatch at beat {}: orig={}, rest={}", beat, orig, rest);
+            assert!(
+                (orig - rest).abs() < 1e-4,
+                "Mismatch at beat {}: orig={}, rest={}",
+                beat,
+                orig,
+                rest
+            );
         }
     }
 
     #[test]
     fn test_automation_beat_frame_conversion_120bpm() {
-        let curve = AutomationCurve::new(vec![
-            AutomationPoint { beat: 1.0, value: 1.0, interp: Interpolation::Linear },
-        ]);
+        let curve = AutomationCurve::new(vec![AutomationPoint {
+            beat: 1.0,
+            value: 1.0,
+            interp: Interpolation::Linear,
+        }]);
         let mut timeline = AutomationTimeline::new();
-        timeline.add_lane(AutomationLane { param_id: "gain".to_string(), curve });
+        timeline.add_lane(AutomationLane {
+            param_id: "gain".to_string(),
+            curve,
+        });
 
         let configs = timeline.to_configs(0, 44100, 120.0);
         assert_eq!(configs[0].events[0].frame, 22050);
@@ -381,23 +515,47 @@ mod tests {
     fn test_automation_curve_shapes() {
         // Step interpolation test
         let step_curve = AutomationCurve::new(vec![
-            AutomationPoint { beat: 0.0, value: 0.0, interp: Interpolation::Step },
-            AutomationPoint { beat: 4.0, value: 1.0, interp: Interpolation::Step },
+            AutomationPoint {
+                beat: 0.0,
+                value: 0.0,
+                interp: Interpolation::Step,
+            },
+            AutomationPoint {
+                beat: 4.0,
+                value: 1.0,
+                interp: Interpolation::Step,
+            },
         ]);
         assert_eq!(step_curve.evaluate_at_beat(2.0), 0.0);
 
         // Smooth interpolation test
         let smooth_curve = AutomationCurve::new(vec![
-            AutomationPoint { beat: 0.0, value: 0.0, interp: Interpolation::Smooth },
-            AutomationPoint { beat: 4.0, value: 1.0, interp: Interpolation::Smooth },
+            AutomationPoint {
+                beat: 0.0,
+                value: 0.0,
+                interp: Interpolation::Smooth,
+            },
+            AutomationPoint {
+                beat: 4.0,
+                value: 1.0,
+                interp: Interpolation::Smooth,
+            },
         ]);
         let smooth_mid = smooth_curve.evaluate_at_beat(2.0); // t=0.5 => 0.5 * 0.5 * 2.0 = 0.5
         assert!((smooth_mid - 0.5).abs() < 1e-4);
 
         // Logarithmic interpolation test
         let log_curve = AutomationCurve::new(vec![
-            AutomationPoint { beat: 0.0, value: 0.0, interp: Interpolation::Logarithmic },
-            AutomationPoint { beat: 4.0, value: 1.0, interp: Interpolation::Logarithmic },
+            AutomationPoint {
+                beat: 0.0,
+                value: 0.0,
+                interp: Interpolation::Logarithmic,
+            },
+            AutomationPoint {
+                beat: 4.0,
+                value: 1.0,
+                interp: Interpolation::Logarithmic,
+            },
         ]);
         let log_mid = log_curve.evaluate_at_beat(2.0); // sqrt(0.5) approx 0.7071
         assert!((log_mid - std::f32::consts::FRAC_1_SQRT_2).abs() < 1e-3);
@@ -406,10 +564,21 @@ mod tests {
     #[test]
     fn test_automation_lane_editing_tools() {
         let curve = AutomationCurve::new(vec![
-            AutomationPoint { beat: 0.0, value: 0.2, interp: Interpolation::Linear },
-            AutomationPoint { beat: 2.0, value: 0.8, interp: Interpolation::Linear },
+            AutomationPoint {
+                beat: 0.0,
+                value: 0.2,
+                interp: Interpolation::Linear,
+            },
+            AutomationPoint {
+                beat: 2.0,
+                value: 0.8,
+                interp: Interpolation::Linear,
+            },
         ]);
-        let mut lane = AutomationLane { param_id: "cutoff".to_string(), curve };
+        let mut lane = AutomationLane {
+            param_id: "cutoff".to_string(),
+            curve,
+        };
 
         // Scale by 0.5
         lane.scale_values(0.5);
@@ -424,11 +593,16 @@ mod tests {
 
     #[test]
     fn test_automation_lane_copy_paste() {
-        let curve = AutomationCurve::new(vec![
-            AutomationPoint { beat: 0.0, value: 0.5, interp: Interpolation::Linear },
-        ]);
+        let curve = AutomationCurve::new(vec![AutomationPoint {
+            beat: 0.0,
+            value: 0.5,
+            interp: Interpolation::Linear,
+        }]);
         let mut timeline = AutomationTimeline::new();
-        timeline.add_lane(AutomationLane { param_id: "res".to_string(), curve });
+        timeline.add_lane(AutomationLane {
+            param_id: "res".to_string(),
+            curve,
+        });
 
         let copied = timeline.copy_lane("res").expect("Lane exists");
         timeline.paste_lane("filter_res", &copied);
@@ -437,4 +611,3 @@ mod tests {
         assert_eq!(timeline.evaluate("filter_res", 0.0), Some(0.5));
     }
 }
-

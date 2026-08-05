@@ -1,9 +1,9 @@
 // Summoner DAW - Durable Scratch Folder Audio Cache
 // Step 1225: Implement durable scratch folder audio cache for time-stretching and pitch-shifting operations (.summoner/scratch/)
 
+use hound::{SampleFormat, WavReader, WavSpec, WavWriter};
 use std::fs;
 use std::path::{Path, PathBuf};
-use hound::{WavSpec, WavWriter, WavReader, SampleFormat};
 
 /// Durable audio cache for time-stretching and pitch-shifting operations.
 #[derive(Debug, Clone)]
@@ -34,7 +34,10 @@ impl ScratchAudioCache {
         pitch_shift_semitones: f32,
     ) -> String {
         let path_str = source_path.to_string_lossy();
-        let key_raw = format!("{}:{:.4}:{:.2}", path_str, stretch_ratio, pitch_shift_semitones);
+        let key_raw = format!(
+            "{}:{:.4}:{:.2}",
+            path_str, stretch_ratio, pitch_shift_semitones
+        );
         let hash = blake3::hash(key_raw.as_bytes());
         format!("audio_cache_{}.wav", hash.to_hex())
     }
@@ -91,10 +94,9 @@ impl ScratchAudioCache {
         let entries = fs::read_dir(&self.cache_dir).map_err(|e| e.to_string())?;
         let mut count = 0;
         for entry in entries.flatten() {
-            if entry.path().is_file()
-                && fs::remove_file(entry.path()).is_ok() {
-                    count += 1;
-                }
+            if entry.path().is_file() && fs::remove_file(entry.path()).is_ok() {
+                count += 1;
+            }
         }
         Ok(count)
     }
@@ -115,10 +117,13 @@ mod tests {
         assert!(key.starts_with("audio_cache_"));
 
         let test_samples = vec![0.0f32, 0.5f32, -0.5f32, 0.8f32, -0.8f32];
-        let path = cache.store_cached_audio(&key, &test_samples, 44100, 1).expect("store cache");
+        let path = cache
+            .store_cached_audio(&key, &test_samples, 44100, 1)
+            .expect("store cache");
         assert!(path.exists());
 
-        let (retrieved, sample_rate, channels) = cache.get_cached_audio(&key).expect("retrieve cache");
+        let (retrieved, sample_rate, channels) =
+            cache.get_cached_audio(&key).expect("retrieve cache");
         assert_eq!(sample_rate, 44100);
         assert_eq!(channels, 1);
         assert_eq!(retrieved.len(), test_samples.len());

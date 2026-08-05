@@ -12,7 +12,7 @@ fn test_export_clap_plugin() {
         fs::remove_dir_all(&temp_dir).unwrap();
     }
     fs::create_dir_all(&temp_dir).unwrap();
-    
+
     let project_path = temp_dir.join("test_session.toml");
     let project = create_default_project("Test Session");
     fs::write(&project_path, serialize_project_toml(&project).unwrap()).unwrap();
@@ -26,7 +26,7 @@ fn test_export_clap_plugin() {
         .arg(output_dir.to_str().unwrap())
         .status()
         .expect("Failed to execute summon CLI");
-        
+
     assert!(status.success(), "export-clap command failed");
 
     let plugin_dir = output_dir.join("test_session");
@@ -46,7 +46,10 @@ fn test_export_clap_plugin() {
         .current_dir(&plugin_dir)
         .status()
         .expect("Failed to run cargo check on generated CLAP plugin");
-    assert!(check_status.success(), "Generated CLAP plugin failed cargo check");
-    
+    assert!(
+        check_status.success(),
+        "Generated CLAP plugin failed cargo check"
+    );
+
     fs::remove_dir_all(&temp_dir).unwrap();
 }

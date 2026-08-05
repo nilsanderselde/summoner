@@ -42,7 +42,13 @@ impl CompressorNode {
         }
     }
 
-    pub fn with_params(threshold_db: f32, ratio: f32, attack_ms: f32, release_ms: f32, makeup_gain_db: f32) -> Self {
+    pub fn with_params(
+        threshold_db: f32,
+        ratio: f32,
+        attack_ms: f32,
+        release_ms: f32,
+        makeup_gain_db: f32,
+    ) -> Self {
         Self {
             threshold: threshold_db,
             ratio: ratio.max(1.0),
@@ -66,12 +72,21 @@ impl SignalProcessor for CompressorNode {
         "CompressorNode"
     }
 
-    fn process_block(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
+    fn process_block(
+        &mut self,
+        input: &[&[Sample]],
+        output: &mut [&mut [Sample]],
+        ctx: &ProcessContext,
+    ) {
         if input.is_empty() || output.is_empty() {
             return;
         }
         let num_samples = input[0].len().min(output[0].len());
-        let sr = if ctx.sample_rate > 0 { ctx.sample_rate as f32 } else { 44100.0 };
+        let sr = if ctx.sample_rate > 0 {
+            ctx.sample_rate as f32
+        } else {
+            44100.0
+        };
 
         let dt = 1.0 / sr;
         let attack_coeff = (-dt / self.attack.max(0.0001)).exp();
@@ -93,7 +108,11 @@ impl SignalProcessor for CompressorNode {
                 -120.0
             };
 
-            let coeff = if target_env > self.env { attack_coeff } else { release_coeff };
+            let coeff = if target_env > self.env {
+                attack_coeff
+            } else {
+                release_coeff
+            };
             self.env = self.env * coeff + target_env * (1.0 - coeff);
 
             let mut gain_db = 0.0;
@@ -128,6 +147,9 @@ mod tests {
         comp.process_block(&[&loud_in[..]], &mut [&mut out[..]], &ctx);
 
         let final_sample = out[511];
-        assert!(final_sample < 0.9, "Compressor should reduce gain on loud signals");
+        assert!(
+            final_sample < 0.9,
+            "Compressor should reduce gain on loud signals"
+        );
     }
 }

@@ -13,41 +13,39 @@
 
 //! Project document TOML schema parsing and serialization for Summoner DAW.
 
-pub mod git_dag;
-pub mod schema;
-pub mod preset;
-pub mod sfz;
-pub mod export;
-pub mod media_export;
-pub mod system_tools;
-pub mod project_tools;
-pub mod crdt;
-pub mod enterprise_qa;
+pub mod backup;
+pub mod benchmark;
 pub mod cloud_federated;
+pub mod crash_analyzer;
+pub mod crdt;
+pub mod dependency_audit;
+pub mod enterprise_qa;
+pub mod export;
+pub mod git_dag;
+pub mod media_export;
+pub mod preset;
+pub mod project_tools;
+pub mod schema;
 pub mod scratch_audio_cache;
 pub mod session_markers;
-pub mod crash_analyzer;
-pub mod benchmark;
-pub mod dependency_audit;
-pub mod backup;
+pub mod sfz;
+pub mod system_tools;
 
-pub use media_export::*;
-pub use crdt::*;
-pub use export::*;
-pub use enterprise_qa::*;
+pub use backup::*;
+pub use benchmark::*;
 pub use cloud_federated::*;
+pub use crash_analyzer::*;
+pub use crdt::*;
+pub use dependency_audit::*;
+pub use enterprise_qa::*;
+pub use export::*;
+pub use media_export::*;
 pub use scratch_audio_cache::*;
 pub use session_markers::*;
-pub use crash_analyzer::*;
-pub use benchmark::*;
-pub use dependency_audit::*;
-pub use backup::*;
 
 #[cfg(target_os = "windows")]
 #[link(name = "advapi32")]
 extern "C" {}
-
-
 
 use schema::{NodeConfig, ProjectConfig, TrackConfig, TransportConfig};
 use std::collections::HashMap;
@@ -343,16 +341,28 @@ mod tests {
             for entry in entries {
                 let entry = entry.unwrap();
                 let path = entry.path();
-                if path.extension().and_then(|s| s.to_str()) == Some("toml") || path.to_string_lossy().ends_with(".preset.toml") {
+                if path.extension().and_then(|s| s.to_str()) == Some("toml")
+                    || path.to_string_lossy().ends_with(".preset.toml")
+                {
                     let content = std::fs::read_to_string(&path).unwrap();
                     let val: toml::Value = toml::from_str(&content).unwrap();
-                    assert!(val.get("name").is_some(), "Preset {:?} missing 'name'", path);
-                    assert!(val.get("regions").is_some(), "Preset {:?} missing 'regions'", path);
+                    assert!(
+                        val.get("name").is_some(),
+                        "Preset {:?} missing 'name'",
+                        path
+                    );
+                    assert!(
+                        val.get("regions").is_some(),
+                        "Preset {:?} missing 'regions'",
+                        path
+                    );
                     validated_count += 1;
                 }
             }
-            assert!(validated_count > 0, "Expected to validate at least one freepats preset");
+            assert!(
+                validated_count > 0,
+                "Expected to validate at least one freepats preset"
+            );
         }
     }
 }
-

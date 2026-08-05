@@ -1,8 +1,8 @@
 // Summoner - Deterministic, Headless-First DAW
 // Copyright (C) 2026 nilsanderselde
 
-use std::collections::HashMap;
 use crate::automation_timeline::AutomationCurve;
+use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct Clip {
@@ -74,7 +74,9 @@ impl TimelineArranger {
     }
 
     fn next_prng_seed(seed: &mut u64) -> f32 {
-        *seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        *seed = seed
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         (*seed >> 33) as f32 / 2147483648.0
     }
 
@@ -105,7 +107,8 @@ impl TimelineArranger {
                                 0.0
                             };
 
-                            let micro_offset_beats = note.micro_shift as f64 * 0.001 + swing_offset_beats;
+                            let micro_offset_beats =
+                                note.micro_shift as f64 * 0.001 + swing_offset_beats;
                             let base_start = clip.start_beat + note.start_beat + micro_offset_beats;
 
                             let ratchet_count = note.ratchet.max(1);
@@ -114,7 +117,8 @@ impl TimelineArranger {
                             for r in 0..ratchet_count {
                                 let abs_start = base_start + r as f64 * sub_step_dur;
                                 if abs_start >= current_beat && abs_start < end_beat {
-                                    let effective_note = note.note + (note.pitch_offset as f64 / 100.0);
+                                    let effective_note =
+                                        note.note + (note.pitch_offset as f64 / 100.0);
                                     eval.note_events.push(NoteEvent {
                                         track_id: clip.track_id,
                                         note: effective_note,
@@ -181,7 +185,10 @@ mod tests {
         });
 
         let eval = arranger.evaluate(0.0, 1.0);
-        assert_eq!(eval.note_events.len(), 4, "Ratchet 4 should create 4 sub-events");
+        assert_eq!(
+            eval.note_events.len(),
+            4,
+            "Ratchet 4 should create 4 sub-events"
+        );
     }
 }
-

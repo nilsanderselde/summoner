@@ -3,13 +3,12 @@
 
 //! Export settings, audio normalization, stem rendering, FLAC/OGG export, and project backup helpers.
 
+use crate::schema::ProjectConfig;
+use claxon::FlacReader;
+use hound::{SampleFormat, WavReader, WavSpec, WavWriter};
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
-use hound::{WavReader, WavWriter, WavSpec, SampleFormat};
-use claxon::FlacReader;
-use serde::{Serialize, Deserialize};
-use crate::schema::ProjectConfig;
-
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum BitDepth {
@@ -76,7 +75,13 @@ impl StemExportFormat {
 pub fn sanitize_filename_token(input: &str) -> String {
     let mut s = input
         .chars()
-        .map(|c| if c.is_alphanumeric() || c == '_' || c == '-' { c } else { '_' })
+        .map(|c| {
+            if c.is_alphanumeric() || c == '_' || c == '-' {
+                c
+            } else {
+                '_'
+            }
+        })
         .collect::<String>();
     while s.contains("__") {
         s = s.replace("__", "_");
@@ -98,6 +103,7 @@ pub fn sanitize_filename_token(input: &str) -> String {
 /// - `{sample_rate}` / `{sr}`: Sample rate in Hz
 /// - `{bit_depth}`: Bit depth representation
 /// - `{format}` / `{ext}`: File extension
+#[allow(clippy::too_many_arguments)]
 pub fn format_stem_filename(
     pattern: &str,
     project_name: &str,
@@ -109,8 +115,16 @@ pub fn format_stem_filename(
     bit_depth: BitDepth,
     format_ext: &str,
 ) -> String {
-    let clean_project = sanitize_filename_token(if project_name.trim().is_empty() { "Project" } else { project_name });
-    let clean_track_name = sanitize_filename_token(if track_name.trim().is_empty() { "Track" } else { track_name });
+    let clean_project = sanitize_filename_token(if project_name.trim().is_empty() {
+        "Project"
+    } else {
+        project_name
+    });
+    let clean_track_name = sanitize_filename_token(if track_name.trim().is_empty() {
+        "Track"
+    } else {
+        track_name
+    });
     let clean_bus = sanitize_filename_token(bus_target.unwrap_or("Master"));
 
     let bit_depth_str = match bit_depth {
@@ -169,7 +183,8 @@ impl Default for ExportPreset {
     fn default() -> Self {
         Self {
             name: "CD Quality WAV Stems".to_string(),
-            description: "16-bit 44.1kHz WAV multi-track stems with index and track name".to_string(),
+            description: "16-bit 44.1kHz WAV multi-track stems with index and track name"
+                .to_string(),
             format: StemExportFormat::Wav,
             settings: ExportSettings::default(),
             naming_pattern: "{index}_{name}".to_string(),
@@ -185,7 +200,8 @@ impl ExportPreset {
         vec![
             ExportPreset {
                 name: "CD Quality WAV Stems".to_string(),
-                description: "16-bit 44.1kHz WAV multi-track stems with {index}_{name} naming".to_string(),
+                description: "16-bit 44.1kHz WAV multi-track stems with {index}_{name} naming"
+                    .to_string(),
                 format: StemExportFormat::Wav,
                 settings: ExportSettings {
                     bit_depth: BitDepth::Bit16,
@@ -311,11 +327,17 @@ impl ExportPresetManager {
     }
 
     pub fn get_preset(&self, name: &str) -> Option<&ExportPreset> {
-        self.presets.iter().find(|p| p.name.eq_ignore_ascii_case(name))
+        self.presets
+            .iter()
+            .find(|p| p.name.eq_ignore_ascii_case(name))
     }
 
     pub fn add_preset(&mut self, preset: ExportPreset) {
-        if let Some(existing) = self.presets.iter_mut().find(|p| p.name.eq_ignore_ascii_case(&preset.name)) {
+        if let Some(existing) = self
+            .presets
+            .iter_mut()
+            .find(|p| p.name.eq_ignore_ascii_case(&preset.name))
+        {
             *existing = preset;
         } else {
             self.presets.push(preset);
@@ -369,7 +391,11 @@ impl ExportPresetManager {
         let mut total_bytes = 0u64;
 
         for (idx, track) in project.tracks.iter().enumerate() {
-            let track_name = if track.name.is_empty() { "Track" } else { &track.name };
+            let track_name = if track.name.is_empty() {
+                "Track"
+            } else {
+                &track.name
+            };
             let bus_target = track.bus_target.as_deref();
 
             let filename = format_stem_filename(
@@ -407,7 +433,12 @@ impl ExportPresetManager {
                 let len = (preset.settings.sample_rate as usize / 2).max(512);
                 let freq = 220.0 + (idx as f32 * 110.0);
                 (0..len)
-                    .map(|t| (t as f32 * freq * 2.0 * std::f32::consts::PI / preset.settings.sample_rate as f32).sin() * 0.5)
+                    .map(|t| {
+                        (t as f32 * freq * 2.0 * std::f32::consts::PI
+                            / preset.settings.sample_rate as f32)
+                            .sin()
+                            * 0.5
+                    })
                     .collect()
             };
 
@@ -479,9 +510,13 @@ pub fn validate_sample_rate(sr: u32) -> bool {
 }
 
 pub fn normalize_buffer(buffer: &mut [f32], target_db: f32) {
-    if buffer.is_empty() { return; }
+    if buffer.is_empty() {
+        return;
+    }
     let max_peak = buffer.iter().map(|s| s.abs()).fold(0.0f32, f32::max);
-    if max_peak < 1e-6 { return; }
+    if max_peak < 1e-6 {
+        return;
+    }
     let target_linear = 10.0f32.powf(target_db / 20.0);
     let scale = target_linear / max_peak;
     for sample in buffer.iter_mut() {
@@ -490,10 +525,19 @@ pub fn normalize_buffer(buffer: &mut [f32], target_db: f32) {
 }
 
 pub fn trim_silence_buffer(buffer: &[f32], threshold_db: f32) -> &[f32] {
-    if buffer.is_empty() { return buffer; }
+    if buffer.is_empty() {
+        return buffer;
+    }
     let thresh_lin = 10.0f32.powf(threshold_db / 20.0);
-    let start = buffer.iter().position(|&s| s.abs() >= thresh_lin).unwrap_or(0);
-    let end = buffer.iter().rposition(|&s| s.abs() >= thresh_lin).map(|p| p + 1).unwrap_or(buffer.len());
+    let start = buffer
+        .iter()
+        .position(|&s| s.abs() >= thresh_lin)
+        .unwrap_or(0);
+    let end = buffer
+        .iter()
+        .rposition(|&s| s.abs() >= thresh_lin)
+        .map(|p| p + 1)
+        .unwrap_or(buffer.len());
     if start >= end {
         &buffer[..0]
     } else {
@@ -501,24 +545,46 @@ pub fn trim_silence_buffer(buffer: &[f32], threshold_db: f32) -> &[f32] {
     }
 }
 
-pub fn export_flac(path: &Path, samples: &[f32], sample_rate: u32, channels: u16, compression_level: u32) -> Result<(), String> {
+pub fn export_flac(
+    path: &Path,
+    samples: &[f32],
+    sample_rate: u32,
+    channels: u16,
+    compression_level: u32,
+) -> Result<(), String> {
     if samples.is_empty() {
         return Err("Buffer is empty".to_string());
     }
     // Encode to 16-bit PCM WAV container first or FLAC stream stub
-    let header_bytes = format!("FLAC-STUB: sr={}, ch={}, comp={}", sample_rate, channels, compression_level);
+    let header_bytes = format!(
+        "FLAC-STUB: sr={}, ch={}, comp={}",
+        sample_rate, channels, compression_level
+    );
     std::fs::write(path, header_bytes.as_bytes()).map_err(|e| e.to_string())
 }
 
-pub fn export_ogg(path: &Path, samples: &[f32], sample_rate: u32, channels: u16, quality: f32) -> Result<(), String> {
+pub fn export_ogg(
+    path: &Path,
+    samples: &[f32],
+    sample_rate: u32,
+    channels: u16,
+    quality: f32,
+) -> Result<(), String> {
     if samples.is_empty() {
         return Err("Buffer is empty".to_string());
     }
-    let header_bytes = format!("OGG-STUB: sr={}, ch={}, qual={}", sample_rate, channels, quality);
+    let header_bytes = format!(
+        "OGG-STUB: sr={}, ch={}, qual={}",
+        sample_rate, channels, quality
+    );
     std::fs::write(path, header_bytes.as_bytes()).map_err(|e| e.to_string())
 }
 
-pub fn batch_export_stems(project: &ProjectConfig, output_dir: &Path, settings: &ExportSettings) -> Result<Vec<PathBuf>, String> {
+pub fn batch_export_stems(
+    project: &ProjectConfig,
+    output_dir: &Path,
+    settings: &ExportSettings,
+) -> Result<Vec<PathBuf>, String> {
     let preset = ExportPreset {
         name: "Legacy Batch Stem Export".to_string(),
         description: "Batch stem export settings".to_string(),
@@ -557,7 +623,11 @@ pub struct BatchConvertReport {
 
 /// Read audio samples from file path (WAV, FLAC, or generic container).
 pub fn read_audio_file(path: &Path) -> Result<(Vec<f32>, u32, u16), String> {
-    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
+    let ext = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_lowercase();
     match ext.as_str() {
         "wav" => {
             if let Ok(mut reader) = WavReader::open(path) {
@@ -586,7 +656,11 @@ pub fn read_audio_file(path: &Path) -> Result<(Vec<f32>, u32, u16), String> {
             if let Ok(mut reader) = FlacReader::open(path) {
                 let info = reader.streaminfo();
                 let bits = info.bits_per_sample.min(31);
-                let scale = if bits > 1 { 1.0 / (1i64 << (bits - 1)) as f32 } else { 1.0 };
+                let scale = if bits > 1 {
+                    1.0 / (1i64 << (bits - 1)) as f32
+                } else {
+                    1.0
+                };
                 let mut samples = Vec::new();
                 for val in reader.samples().flatten() {
                     samples.push(val as f32 * scale);
@@ -608,7 +682,6 @@ pub fn read_audio_file(path: &Path) -> Result<(Vec<f32>, u32, u16), String> {
         }
     }
 }
-
 
 /// Write audio sample buffer to disk in specified target format (WAV, FLAC, OGG, MP3, AIFF).
 pub fn write_audio_file(
@@ -644,15 +717,31 @@ pub fn write_audio_file(
         "flac" => export_flac(path, samples, sample_rate, channels, 5),
         "ogg" => export_ogg(path, samples, sample_rate, channels, 0.8),
         "mp3" => {
-            let header = format!("MP3-AUDIO-STUB: sr={}, ch={}, samples={}", sample_rate, channels, samples.len());
+            let header = format!(
+                "MP3-AUDIO-STUB: sr={}, ch={}, samples={}",
+                sample_rate,
+                channels,
+                samples.len()
+            );
             fs::write(path, header.as_bytes()).map_err(|e| e.to_string())
         }
         "aiff" | "aif" => {
-            let header = format!("AIFF-AUDIO-STUB: sr={}, ch={}, samples={}", sample_rate, channels, samples.len());
+            let header = format!(
+                "AIFF-AUDIO-STUB: sr={}, ch={}, samples={}",
+                sample_rate,
+                channels,
+                samples.len()
+            );
             fs::write(path, header.as_bytes()).map_err(|e| e.to_string())
         }
         _ => {
-            let header = format!("{}-AUDIO-CONTAINER: sr={}, ch={}, samples={}", fmt.to_uppercase(), sample_rate, channels, samples.len());
+            let header = format!(
+                "{}-AUDIO-CONTAINER: sr={}, ch={}, samples={}",
+                fmt.to_uppercase(),
+                sample_rate,
+                channels,
+                samples.len()
+            );
             fs::write(path, header.as_bytes()).map_err(|e| e.to_string())
         }
     }
@@ -665,14 +754,22 @@ pub fn batch_convert_audio(
     target_format: &str,
 ) -> Result<BatchConvertReport, String> {
     if !input_path.exists() {
-        return Err(format!("Input path '{}' does not exist", input_path.display()));
+        return Err(format!(
+            "Input path '{}' does not exist",
+            input_path.display()
+        ));
     }
 
     if !output_dir.exists() {
         fs::create_dir_all(output_dir).map_err(|e| e.to_string())?;
     }
 
-    let norm_format = if target_format.trim().is_empty() { "flac" } else { target_format.trim() }.to_lowercase();
+    let norm_format = if target_format.trim().is_empty() {
+        "flac"
+    } else {
+        target_format.trim()
+    }
+    .to_lowercase();
 
     let mut input_files = Vec::new();
     if input_path.is_file() {
@@ -687,7 +784,10 @@ pub fn batch_convert_audio(
                     } else if p.is_file() {
                         if let Some(ext) = p.extension().and_then(|e| e.to_str()) {
                             let ext_lower = ext.to_lowercase();
-                            if matches!(ext_lower.as_str(), "wav" | "flac" | "ogg" | "mp3" | "aiff" | "aif" | "m4a" | "aac") {
+                            if matches!(
+                                ext_lower.as_str(),
+                                "wav" | "flac" | "ogg" | "mp3" | "aiff" | "aif" | "m4a" | "aac"
+                            ) {
                                 list.push(p);
                             }
                         }
@@ -740,9 +840,6 @@ pub fn batch_convert_audio(
     })
 }
 
-
-
-
 /// Step 685: Sidechain Routing configuration helper.
 pub fn set_track_sidechain_source(track: &mut crate::schema::TrackConfig, source_id: u64) {
     track.sidechain_source_track_id = Some(source_id);
@@ -779,7 +876,9 @@ pub fn match_spectrum_eq(source_spectrum: &[f32], target_spectrum: &[f32]) -> Ve
 /// Step 692: Stereo Correlation meter calculation (mono compatibility check).
 pub fn calculate_stereo_correlation(l_channel: &[f32], r_channel: &[f32]) -> f32 {
     let len = l_channel.len().min(r_channel.len());
-    if len == 0 { return 1.0; }
+    if len == 0 {
+        return 1.0;
+    }
 
     let mut sum_lr = 0.0f32;
     let mut sum_l2 = 0.0f32;
@@ -801,9 +900,7 @@ pub fn calculate_stereo_correlation(l_channel: &[f32], r_channel: &[f32]) -> f32
     }
 }
 
-
-
-use crate::schema::{AutomationLaneConfig, NodeConfig, ConnectionConfig, SequenceConfig};
+use crate::schema::{AutomationLaneConfig, ConnectionConfig, NodeConfig, SequenceConfig};
 
 /// Step 827: Export Node Graph as SVG for documentation purposes.
 pub fn export_node_graph_svg(nodes: &[NodeConfig], connections: &[ConnectionConfig]) -> String {
@@ -821,10 +918,7 @@ pub fn export_node_graph_svg(nodes: &[NodeConfig], connections: &[ConnectionConf
     for (idx, node) in nodes.iter().enumerate() {
         let x = 100 + (idx % 4) * 250;
         let y = 100 + (idx / 4) * 150;
-        svg.push_str(&format!(
-            "  <g transform=\"translate({}, {})\">\n",
-            x, y
-        ));
+        svg.push_str(&format!("  <g transform=\"translate({}, {})\">\n", x, y));
         svg.push_str("    <rect width=\"180\" height=\"80\" rx=\"8\" fill=\"#2d2d38\" stroke=\"#6366f1\" stroke-width=\"2\" />\n");
         svg.push_str(&format!(
             "    <text x=\"90\" y=\"45\" text-anchor=\"middle\" fill=\"#ffffff\" font-family=\"sans-serif\" font-size=\"14\">{}</text>\n",
@@ -847,7 +941,11 @@ pub fn export_automation_csv(lane: &AutomationLaneConfig) -> String {
 }
 
 /// Step 829: Import Automation from CSV per lane.
-pub fn import_automation_csv(param_id: &str, track_id: u64, csv_content: &str) -> Result<AutomationLaneConfig, String> {
+pub fn import_automation_csv(
+    param_id: &str,
+    track_id: u64,
+    csv_content: &str,
+) -> Result<AutomationLaneConfig, String> {
     let mut events = Vec::new();
     for line in csv_content.lines() {
         let line = line.trim();
@@ -856,8 +954,14 @@ pub fn import_automation_csv(param_id: &str, track_id: u64, csv_content: &str) -
         }
         let parts: Vec<&str> = line.split(',').collect();
         if parts.len() >= 2 {
-            let frame: u64 = parts[0].trim().parse().map_err(|e| format!("Invalid frame: {}", e))?;
-            let value: f32 = parts[1].trim().parse().map_err(|e| format!("Invalid value: {}", e))?;
+            let frame: u64 = parts[0]
+                .trim()
+                .parse()
+                .map_err(|e| format!("Invalid frame: {}", e))?;
+            let value: f32 = parts[1]
+                .trim()
+                .parse()
+                .map_err(|e| format!("Invalid value: {}", e))?;
             events.push(crate::schema::AutomationEventConfig { frame, value });
         }
     }
@@ -873,10 +977,16 @@ pub fn export_ableton_live_set(project: &ProjectConfig) -> Result<Vec<u8>, Strin
     let mut xml = String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
     xml.push_str("<Ableton MajorVersion=\"5\" MinorVersion=\"11.0_433\" SchemaChangeCount=\"3\" Creator=\"Summoner DAW 1.0\">\n");
     xml.push_str("  <LiveSet>\n");
-    xml.push_str(&format!("    <Bpm Value=\"{}\" />\n", project.transport.bpm));
+    xml.push_str(&format!(
+        "    <Bpm Value=\"{}\" />\n",
+        project.transport.bpm
+    ));
     xml.push_str("    <Tracks>\n");
     for track in &project.tracks {
-        xml.push_str(&format!("      <AudioTrack Name=\"{}\" Id=\"{}\">\n", track.name, track.id));
+        xml.push_str(&format!(
+            "      <AudioTrack Name=\"{}\" Id=\"{}\">\n",
+            track.name, track.id
+        ));
         xml.push_str(&format!("        <Volume Value=\"{}\" />\n", track.gain));
         xml.push_str("      </AudioTrack>\n");
     }
@@ -926,14 +1036,19 @@ pub fn import_dawproject(zip_bytes: &[u8]) -> Result<ProjectConfig, String> {
     if zip_bytes.is_empty() {
         return Err("Empty DAWproject archive".to_string());
     }
-    let mut project = ProjectConfig::default();
-    project.name = "Imported DAWproject".to_string();
+    let project = ProjectConfig {
+        name: "Imported DAWproject".to_string(),
+        ..Default::default()
+    };
     Ok(project)
 }
 
 /// Step 834: Export to DAWproject format.
 pub fn export_dawproject(project: &ProjectConfig) -> Result<Vec<u8>, String> {
-    let manifest = format!("DAWPROJECT-MANIFEST: name={}, bpm={}\n", project.name, project.transport.bpm);
+    let manifest = format!(
+        "DAWPROJECT-MANIFEST: name={}, bpm={}\n",
+        project.name, project.transport.bpm
+    );
     Ok(manifest.into_bytes())
 }
 
@@ -942,14 +1057,13 @@ pub fn import_midi_file(bytes: &[u8]) -> Result<SequenceConfig, String> {
     if bytes.len() < 14 || &bytes[0..4] != b"MThd" {
         return Err("Invalid MIDI file header".to_string());
     }
-    let mut steps = Vec::new();
-    steps.push(crate::schema::TrackerStepConfig {
+    let steps = vec![crate::schema::TrackerStepConfig {
         active: true,
         note: 60.0,
         velocity: 0.8,
         gate: 0.5,
         ..Default::default()
-    });
+    }];
     Ok(SequenceConfig {
         clip_name: Some("Imported MIDI".to_string()),
         steps,
@@ -996,7 +1110,7 @@ pub fn export_midi_file(sequence: &SequenceConfig, bpm: f64) -> Result<Vec<u8>, 
 pub fn export_adm_bwf(project: &ProjectConfig) -> Result<Vec<u8>, String> {
     let mut wav = Vec::new();
     wav.extend_from_slice(b"RIFF");
-    
+
     let axml_content = format!(
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
         <ebuCoreMain xmlns=\"urn:ebu:metadata-schema:ebuCore_2014\">\n\
@@ -1029,7 +1143,7 @@ pub fn export_adm_bwf(project: &ProjectConfig) -> Result<Vec<u8>, String> {
     // fmt chunk
     wav.extend_from_slice(b"fmt ");
     wav.extend_from_slice(&16u32.to_le_bytes()); // subchunk1 size
-    wav.extend_from_slice(&1u16.to_le_bytes());  // PCM format
+    wav.extend_from_slice(&1u16.to_le_bytes()); // PCM format
     wav.extend_from_slice(&12u16.to_le_bytes()); // 12 channels (7.1.4)
     wav.extend_from_slice(&48000u32.to_le_bytes()); // sample rate 48kHz
     wav.extend_from_slice(&(48000u32 * 12 * 2).to_le_bytes()); // byte rate
@@ -1047,7 +1161,6 @@ pub fn export_adm_bwf(project: &ProjectConfig) -> Result<Vec<u8>, String> {
 
     Ok(wav)
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -1091,8 +1204,15 @@ mod tests {
 
     #[test]
     fn test_export_node_graph_svg() {
-        let nodes = vec![NodeConfig { kind: "OscSine".to_string(), params: std::collections::HashMap::new(), plugin_state: None }];
-        let conns = vec![ConnectionConfig { from: "n1".to_string(), to: "out".to_string() }];
+        let nodes = vec![NodeConfig {
+            kind: "OscSine".to_string(),
+            params: std::collections::HashMap::new(),
+            plugin_state: None,
+        }];
+        let conns = vec![ConnectionConfig {
+            from: "n1".to_string(),
+            to: "out".to_string(),
+        }];
         let svg = export_node_graph_svg(&nodes, &conns);
         assert!(svg.contains("<svg"));
         assert!(svg.contains("OscSine"));
@@ -1104,8 +1224,14 @@ mod tests {
             param_id: "cutoff".to_string(),
             track_id: 1,
             events: vec![
-                crate::schema::AutomationEventConfig { frame: 0, value: 0.2 },
-                crate::schema::AutomationEventConfig { frame: 1000, value: 0.8 },
+                crate::schema::AutomationEventConfig {
+                    frame: 0,
+                    value: 0.2,
+                },
+                crate::schema::AutomationEventConfig {
+                    frame: 1000,
+                    value: 0.8,
+                },
             ],
         };
         let csv = export_automation_csv(&lane);
@@ -1119,7 +1245,11 @@ mod tests {
     #[test]
     fn test_export_ableton_and_reaper_projects() {
         let mut proj = ProjectConfig::default();
-        proj.tracks.push(crate::schema::TrackConfig { id: 1, name: "Synth".to_string(), ..Default::default() });
+        proj.tracks.push(crate::schema::TrackConfig {
+            id: 1,
+            name: "Synth".to_string(),
+            ..Default::default()
+        });
         let als = export_ableton_live_set(&proj).unwrap();
         let als_str = String::from_utf8(als).unwrap();
         assert!(als_str.contains("<Ableton"));
@@ -1141,15 +1271,21 @@ mod tests {
         assert_eq!(imported_proj.name, "Imported DAWproject");
 
         let exported_daw = export_dawproject(&imported_proj).unwrap();
-        assert!(String::from_utf8(exported_daw).unwrap().contains("DAWPROJECT-MANIFEST"));
+        assert!(String::from_utf8(exported_daw)
+            .unwrap()
+            .contains("DAWPROJECT-MANIFEST"));
     }
 
     #[test]
     fn test_export_import_midi_file_round_trip() {
         let seq = SequenceConfig {
-            steps: vec![
-                crate::schema::TrackerStepConfig { active: true, note: 64.0, velocity: 0.9, gate: 0.5, ..Default::default() },
-            ],
+            steps: vec![crate::schema::TrackerStepConfig {
+                active: true,
+                note: 64.0,
+                velocity: 0.9,
+                gate: 0.5,
+                ..Default::default()
+            }],
             ..Default::default()
         };
         let midi_bytes = export_midi_file(&seq, 120.0).unwrap();
@@ -1229,5 +1365,3 @@ mod tests {
         let _ = fs::remove_dir_all(&temp_dir);
     }
 }
-
-

@@ -37,7 +37,7 @@ impl SignalProcessor for MathAdd {
         }
 
         let num_samples = outputs[0].len();
-        
+
         #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
         {
             use wide::f32x4;
@@ -46,7 +46,12 @@ impl SignalProcessor for MathAdd {
                 let mut sum = f32x4::splat(0.0);
                 for input_ch in inputs.iter() {
                     if i + 3 < input_ch.len() {
-                        let val = f32x4::new([input_ch[i], input_ch[i+1], input_ch[i+2], input_ch[i+3]]);
+                        let val = f32x4::new([
+                            input_ch[i],
+                            input_ch[i + 1],
+                            input_ch[i + 2],
+                            input_ch[i + 3],
+                        ]);
                         sum += val;
                     }
                 }
@@ -54,9 +59,9 @@ impl SignalProcessor for MathAdd {
                 for out_ch in outputs.iter_mut() {
                     if i + 3 < out_ch.len() {
                         out_ch[i] = arr[0];
-                        out_ch[i+1] = arr[1];
-                        out_ch[i+2] = arr[2];
-                        out_ch[i+3] = arr[3];
+                        out_ch[i + 1] = arr[1];
+                        out_ch[i + 2] = arr[2];
+                        out_ch[i + 3] = arr[3];
                     }
                 }
                 i += 4;
@@ -77,7 +82,7 @@ impl SignalProcessor for MathAdd {
                 i += 1;
             }
         }
-        
+
         #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
         {
             for i in 0..num_samples {
@@ -219,7 +224,13 @@ mod tests {
         for i in 0..64 {
             let expected = in1[i] + in2[i];
             let diff = (outputs[0][i] - expected).abs();
-            assert!(diff < 1e-6, "MathAdd mismatch at {}: output {} vs expected {}", i, outputs[0][i], expected);
+            assert!(
+                diff < 1e-6,
+                "MathAdd mismatch at {}: output {} vs expected {}",
+                i,
+                outputs[0][i],
+                expected
+            );
         }
     }
 }

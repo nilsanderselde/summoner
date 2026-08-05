@@ -52,7 +52,11 @@ pub struct VoicePool<V: PolyphonicVoice, const MAX_VOICES: usize> {
 
 impl<V: PolyphonicVoice, const MAX_VOICES: usize> VoicePool<V, MAX_VOICES> {
     /// Create a new voice pool with factory function to initialize voices.
-    pub fn new(name: impl Into<String>, voice_factory: impl Fn() -> V, max_block_size: usize) -> Self {
+    pub fn new(
+        name: impl Into<String>,
+        voice_factory: impl Fn() -> V,
+        max_block_size: usize,
+    ) -> Self {
         let mut voices = Vec::with_capacity(MAX_VOICES);
         for _ in 0..MAX_VOICES {
             voices.push(voice_factory());
@@ -72,7 +76,12 @@ impl<V: PolyphonicVoice, const MAX_VOICES: usize> VoicePool<V, MAX_VOICES> {
     pub fn dispatch_mpe(&mut self, event: MpeEvent) {
         self.global_age += 1;
         match event {
-            MpeEvent::NoteOn { channel, note, velocity, .. } => {
+            MpeEvent::NoteOn {
+                channel,
+                note,
+                velocity,
+                ..
+            } => {
                 let target_slot = self
                     .find_inactive_slot()
                     .unwrap_or_else(|| self.find_oldest_slot());
@@ -84,17 +93,27 @@ impl<V: PolyphonicVoice, const MAX_VOICES: usize> VoicePool<V, MAX_VOICES> {
                 };
                 self.voices[target_slot].note_on(note as u8, velocity);
             }
-            MpeEvent::NoteOff { channel, release_velocity, .. } => {
+            MpeEvent::NoteOff {
+                channel,
+                release_velocity,
+                ..
+            } => {
                 if let Some(slot) = self.find_slot_by_channel(channel) {
                     self.metadata[slot].active = false;
                     self.voices[slot].note_off(release_velocity);
                 }
             }
-            MpeEvent::PitchBend { voice_id, semitones, .. } => {
+            MpeEvent::PitchBend {
+                voice_id,
+                semitones,
+                ..
+            } => {
                 let slot = (voice_id as usize) % MAX_VOICES;
                 self.voices[slot].set_pitch_bend(semitones);
             }
-            MpeEvent::Pressure { voice_id, pressure, .. } => {
+            MpeEvent::Pressure {
+                voice_id, pressure, ..
+            } => {
                 let slot = (voice_id as usize) % MAX_VOICES;
                 self.voices[slot].set_pressure(pressure);
             }
@@ -116,7 +135,9 @@ impl<V: PolyphonicVoice, const MAX_VOICES: usize> VoicePool<V, MAX_VOICES> {
     }
 
     fn find_slot_by_channel(&self, channel: u8) -> Option<usize> {
-        self.metadata.iter().position(|meta| meta.active && meta.channel == channel)
+        self.metadata
+            .iter()
+            .position(|meta| meta.active && meta.channel == channel)
     }
 
     /// Get current count of active rendering voices.
@@ -191,12 +212,17 @@ mod tests {
 
     impl TestVoice {
         fn new() -> Self {
-            Self { active: false, frequency: 440.0 }
+            Self {
+                active: false,
+                frequency: 440.0,
+            }
         }
     }
 
     impl AudioNode for TestVoice {
-        fn name(&self) -> &str { "TestVoice" }
+        fn name(&self) -> &str {
+            "TestVoice"
+        }
         fn process(&mut self, _in: &[&[Sample]], out: &mut [&mut [Sample]], _ctx: &ProcessContext) {
             if self.active {
                 for ch in out.iter_mut() {
@@ -209,11 +235,18 @@ mod tests {
     }
 
     impl PolyphonicVoice for TestVoice {
-        fn note_on(&mut self, note: u8, _vel: f32) { self.active = true; self.frequency = note as f32 * 10.0; }
-        fn note_off(&mut self, _vel: f32) { self.active = false; }
+        fn note_on(&mut self, note: u8, _vel: f32) {
+            self.active = true;
+            self.frequency = note as f32 * 10.0;
+        }
+        fn note_off(&mut self, _vel: f32) {
+            self.active = false;
+        }
         fn set_pitch_bend(&mut self, _sb: f32) {}
         fn set_pressure(&mut self, _p: f32) {}
-        fn is_active(&self) -> bool { self.active }
+        fn is_active(&self) -> bool {
+            self.active
+        }
     }
 
     #[test]

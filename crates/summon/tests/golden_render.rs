@@ -1,12 +1,12 @@
 // Summoner - Deterministic Golden WAV Render Tests
 // Copyright (C) 2026 nilsanderselde
 
-use summoner_core::audio::FixedAudioBuffer;
-use summoner_core::node::{AudioNode, GainNode, SineOscillatorNode};
-use summoner_core::transport::Transport;
 use blake3::Hasher;
 use std::fs;
 use std::path::Path;
+use summoner_core::audio::FixedAudioBuffer;
+use summoner_core::node::{AudioNode, GainNode, SineOscillatorNode};
+use summoner_core::transport::Transport;
 
 #[test]
 fn test_deterministic_golden_sine_render() {
@@ -23,7 +23,8 @@ fn test_deterministic_golden_sine_render() {
 
     let mut hasher = Hasher::new();
 
-    for _ in 0..16 { // 1024 samples
+    for _ in 0..16 {
+        // 1024 samples
         mid_buf.set_active_frames(BLOCK_SIZE);
         out_buf.set_active_frames(BLOCK_SIZE);
         mid_buf.clear();
@@ -58,7 +59,10 @@ fn test_deterministic_golden_sine_render() {
 
     let hash_file = golden_dir.join("sine_osc.blake3");
     if hash_file.exists() {
-        let expected = fs::read_to_string(&hash_file).expect("Failed to read golden hash").trim().to_string();
+        let expected = fs::read_to_string(&hash_file)
+            .expect("Failed to read golden hash")
+            .trim()
+            .to_string();
         assert_eq!(digest, expected, "Golden sine render BLAKE3 mismatch!");
     } else {
         fs::write(&hash_file, &digest).expect("Failed to write golden hash");
@@ -81,7 +85,8 @@ fn test_golden_default_project_render() {
 
     let mut hasher = Hasher::new();
 
-    for _ in 0..32 { // 2048 samples
+    for _ in 0..32 {
+        // 2048 samples
         mid_buf.set_active_frames(BLOCK_SIZE);
         out_buf.set_active_frames(BLOCK_SIZE);
         mid_buf.clear();
@@ -114,8 +119,14 @@ fn test_golden_default_project_render() {
 
     let hash_file = golden_dir.join("default_project.blake3");
     if hash_file.exists() {
-        let expected = fs::read_to_string(&hash_file).expect("Failed to read golden hash").trim().to_string();
-        assert_eq!(digest, expected, "Golden default project render BLAKE3 mismatch!");
+        let expected = fs::read_to_string(&hash_file)
+            .expect("Failed to read golden hash")
+            .trim()
+            .to_string();
+        assert_eq!(
+            digest, expected,
+            "Golden default project render BLAKE3 mismatch!"
+        );
     } else {
         fs::write(&hash_file, &digest).expect("Failed to write golden hash");
     }

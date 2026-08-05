@@ -60,8 +60,16 @@ impl SignalProcessor for MidSideNode {
         let is_stereo_out = outputs.len() > 1;
 
         for i in 0..num_samples {
-            let l = if !inputs[0].is_empty() && i < inputs[0].len() { inputs[0][i] } else { 0.0 };
-            let r = if is_stereo_in && !inputs[1].is_empty() && i < inputs[1].len() { inputs[1][i] } else { l };
+            let l = if !inputs[0].is_empty() && i < inputs[0].len() {
+                inputs[0][i]
+            } else {
+                0.0
+            };
+            let r = if is_stereo_in && !inputs[1].is_empty() && i < inputs[1].len() {
+                inputs[1][i]
+            } else {
+                l
+            };
 
             let mid = 0.5 * (l + r);
             let side = 0.5 * (l - r) * self.width;
@@ -114,8 +122,10 @@ impl StereoImager {
         self.l_buffer[self.l_pos] = left;
         self.r_buffer[self.r_pos] = right;
 
-        let l_delay_samples = ((self.l_delay_ms * 0.001 * self.sample_rate as f32) as usize).min(max_len - 1);
-        let r_delay_samples = ((self.r_delay_ms * 0.001 * self.sample_rate as f32) as usize).min(max_len - 1);
+        let l_delay_samples =
+            ((self.l_delay_ms * 0.001 * self.sample_rate as f32) as usize).min(max_len - 1);
+        let r_delay_samples =
+            ((self.r_delay_ms * 0.001 * self.sample_rate as f32) as usize).min(max_len - 1);
 
         let l_read_idx = (self.l_pos + max_len - l_delay_samples) % max_len;
         let r_read_idx = (self.r_pos + max_len - r_delay_samples) % max_len;
@@ -155,7 +165,11 @@ mod tests {
         let mut l_out = vec![0.0f32; 64];
         let mut r_out = vec![0.0f32; 64];
 
-        ms.process_block(&[&l_in[..], &r_in[..]], &mut [&mut l_out[..], &mut r_out[..]], &ctx);
+        ms.process_block(
+            &[&l_in[..], &r_in[..]],
+            &mut [&mut l_out[..], &mut r_out[..]],
+            &ctx,
+        );
 
         // Mono width = 0.0 results in L_out == R_out == 0.0 (since L+R = 0)
         assert_eq!(l_out[0], 0.0);
@@ -172,4 +186,3 @@ mod tests {
         assert!(out_r.is_finite());
     }
 }
-

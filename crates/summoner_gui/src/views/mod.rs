@@ -1,13 +1,11 @@
 pub mod arranger;
-pub mod node_graph;
-pub mod piano_roll;
-pub mod macro_rack;
-pub mod mixer;
 pub mod chord_suggestion_panel;
-pub mod scala_browser;
-pub mod patch_browser;
 pub mod co_producer;
+pub mod macro_rack;
 pub mod midi_panel;
+pub mod mixer;
+pub mod node_graph;
+pub mod patch_browser;
+pub mod piano_roll;
+pub mod scala_browser;
 pub mod spatial_panner_view;
-
-

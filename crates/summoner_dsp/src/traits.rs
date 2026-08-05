@@ -48,12 +48,7 @@ impl<T: SignalProcessor> AudioNode for ProcessorNodeAdapter<T> {
         self.processor.name()
     }
 
-    fn process(
-        &mut self,
-        input: &[&[Sample]],
-        output: &mut [&mut [Sample]],
-        ctx: &ProcessContext,
-    ) {
+    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
         self.processor.process_block(input, output, ctx);
     }
 }

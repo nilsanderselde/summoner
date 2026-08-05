@@ -20,9 +20,9 @@ use summoner_core::node::ProcessContext;
 /// Bitcrusher DSP node for sample-rate reduction and bit-depth quantization.
 #[derive(Debug)]
 pub struct BitcrusherNode {
-    pub bit_depth: u8,            // Bit depth 1 to 16
-    pub sample_rate_reduction: u32,// Downsampling factor 1 to 64
-    pub mix: f32,                 // Dry/Wet mix 0.0 to 1.0
+    pub bit_depth: u8,              // Bit depth 1 to 16
+    pub sample_rate_reduction: u32, // Downsampling factor 1 to 64
+    pub mix: f32,                   // Dry/Wet mix 0.0 to 1.0
     counter: u32,
     held_sample: f32,
 }

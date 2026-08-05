@@ -149,7 +149,6 @@ impl GitSessionDag {
         }
     }
 
-
     /// Export a unified Git patch string representation comparing initial state against current head.
     pub fn export_patch(&self) -> String {
         let root_toml = serialize_project_toml(&self.history[0].state).unwrap_or_default();
@@ -199,14 +198,13 @@ pub fn commit_project_state(
     project: &ProjectConfig,
     message: &str,
 ) -> Result<git2::Oid, git2::Error> {
-    let toml_str = serialize_project_toml(project)
-        .map_err(|e| git2::Error::from_str(&e.to_string()))?;
-    
+    let toml_str =
+        serialize_project_toml(project).map_err(|e| git2::Error::from_str(&e.to_string()))?;
+
     let session_filename = "summoner_session.toml";
     let workdir = repo.workdir().unwrap_or_else(|| repo.path());
     let file_path = workdir.join(session_filename);
-    std::fs::write(&file_path, toml_str)
-        .map_err(|e| git2::Error::from_str(&e.to_string()))?;
+    std::fs::write(&file_path, toml_str).map_err(|e| git2::Error::from_str(&e.to_string()))?;
 
     let mut index = repo.index()?;
     index.add_path(std::path::Path::new(session_filename))?;
@@ -219,16 +217,8 @@ pub fn commit_project_state(
     let parent_commit = repo.head().ok().and_then(|h| h.peel_to_commit().ok());
     let parents: Vec<&git2::Commit> = parent_commit.as_ref().map(|p| vec![p]).unwrap_or_default();
 
-    repo.commit(
-        Some("HEAD"),
-        &sig,
-        &sig,
-        message,
-        &tree,
-        &parents[..],
-    )
+    repo.commit(Some("HEAD"), &sig, &sig, message, &tree, &parents[..])
 }
-
 
 /// Undo: Reset repository hard to HEAD~1.
 pub fn undo(repo: &git2::Repository) -> Result<(), git2::Error> {
@@ -311,7 +301,13 @@ mod tests {
 
     #[test]
     fn test_git_commit_and_undo() {
-        let temp_dir = std::env::temp_dir().join(format!("summoner_git_test_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+        let temp_dir = std::env::temp_dir().join(format!(
+            "summoner_git_test_{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
         let repo = open_or_init_repo(&temp_dir).expect("Failed to init repo");
 
         let mut proj1 = create_default_project("Git Commit Proj 1");
@@ -333,7 +329,13 @@ mod tests {
 
     #[test]
     fn test_git_undo_redo_cycle() {
-        let temp_dir = std::env::temp_dir().join(format!("summoner_git_cycle_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+        let temp_dir = std::env::temp_dir().join(format!(
+            "summoner_git_cycle_{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
         let repo = open_or_init_repo(&temp_dir).expect("Failed to init repo");
 
         let mut proj = create_default_project("State 1");
@@ -360,4 +362,3 @@ mod tests {
         let _ = std::fs::remove_dir_all(temp_dir);
     }
 }
-

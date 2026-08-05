@@ -8,10 +8,10 @@
 
 #[cfg(test)]
 mod tests {
-    use summoner_project::media_export::*;
-    use summoner_project::schema::{ProjectConfig, TrackConfig, SequenceConfig, TrackerStepConfig};
     use crate::gpu_waveform::*;
     use std::path::Path;
+    use summoner_project::media_export::*;
+    use summoner_project::schema::{ProjectConfig, SequenceConfig, TrackConfig, TrackerStepConfig};
 
     #[test]
     fn test_step_841_audio_watermarking() {
@@ -38,7 +38,11 @@ mod tests {
             id: 1,
             name: "Bass".to_string(),
             clips: vec![SequenceConfig {
-                steps: vec![TrackerStepConfig { active: true, note: 48.0, ..Default::default() }],
+                steps: vec![TrackerStepConfig {
+                    active: true,
+                    note: 48.0,
+                    ..Default::default()
+                }],
                 ..Default::default()
             }],
             ..Default::default()

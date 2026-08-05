@@ -1,12 +1,15 @@
 // Summoner DAW - Project Asset Management, Track Freezing & Routing Tools (Steps 681-686, 690, 695)
 // Copyright (C) 2026 nilsanderselde - AGPLv3 License
 
+use crate::schema::{NodeConfig, ProjectConfig, TrackConfig};
 use std::fs;
 use std::path::{Path, PathBuf};
-use crate::schema::{NodeConfig, ProjectConfig, TrackConfig};
 
 /// Step 681: Clean Project tool -- removes unused sample assets from project assets directory.
-pub fn clean_project(project: &mut ProjectConfig, project_dir: &Path) -> Result<Vec<String>, String> {
+pub fn clean_project(
+    project: &mut ProjectConfig,
+    project_dir: &Path,
+) -> Result<Vec<String>, String> {
     let assets_dir = project_dir.join("assets");
     if !assets_dir.exists() || !assets_dir.is_dir() {
         return Ok(Vec::new());
@@ -37,10 +40,9 @@ pub fn clean_project(project: &mut ProjectConfig, project_dir: &Path) -> Result<
         let path = entry.path();
         if path.is_file() {
             if let Some(filename) = path.file_name().and_then(|n| n.to_str()) {
-                if !referenced_names.contains(filename)
-                    && fs::remove_file(&path).is_ok() {
-                        removed.push(filename.to_string());
-                    }
+                if !referenced_names.contains(filename) && fs::remove_file(&path).is_ok() {
+                    removed.push(filename.to_string());
+                }
             }
         }
     }
@@ -95,7 +97,10 @@ pub fn unfreeze_track(track: &mut TrackConfig) {
 }
 
 /// Step 684: Add Parallel Compression template for a given track.
-pub fn apply_parallel_compression_template(project: &mut ProjectConfig, track_id: u64) -> Result<u64, String> {
+pub fn apply_parallel_compression_template(
+    project: &mut ProjectConfig,
+    track_id: u64,
+) -> Result<u64, String> {
     let track_name = match project.tracks.iter().find(|t| t.id == track_id) {
         Some(t) => t.name.clone(),
         None => return Err(format!("Track with ID {} not found", track_id)),

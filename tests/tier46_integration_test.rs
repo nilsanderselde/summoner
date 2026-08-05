@@ -6,8 +6,8 @@ use summoner_dsp::spatial_audio::{
     AcousticMaterial, Position3D, ProceduralSpatialIrGenerator, RoomAcousticModel, SpatialIrConfig,
 };
 use summoner_dsp::spectrogram_art::{
-    ColorMappingMode, FrequencyMapping, SpectralMorphConfig, SpectralMorphMode, SpectrogramArtConfig,
-    SpectrogramArtMorphNode, SpectrogramArtMorpher, SpectrogramImage,
+    ColorMappingMode, FrequencyMapping, SpectralMorphConfig, SpectralMorphMode,
+    SpectrogramArtConfig, SpectrogramArtMorphNode, SpectrogramArtMorpher, SpectrogramImage,
 };
 
 #[test]
@@ -29,10 +29,17 @@ fn test_tier46_spatial_impulse_response_generator_integration() {
 
     let rect_gen = ProceduralSpatialIrGenerator::new(rect_config);
     let rt60_rect = rect_gen.calculate_sabine_rt60();
-    assert!(rt60_rect > 0.05 && rt60_rect < 5.0, "RT60 out of expected range: {}", rt60_rect);
+    assert!(
+        rt60_rect > 0.05 && rt60_rect < 5.0,
+        "RT60 out of expected range: {}",
+        rt60_rect
+    );
 
     let ir_rect = rect_gen.generate();
-    assert!(!ir_rect.is_empty(), "IR left/right channels should not be empty");
+    assert!(
+        !ir_rect.is_empty(),
+        "IR left/right channels should not be empty"
+    );
     assert_eq!(ir_rect.sample_rate, 44100);
     assert!(ir_rect.direct_delay_ms > 0.0);
     assert!(ir_rect.left.iter().any(|&s| s.abs() > 0.01));
@@ -108,8 +115,8 @@ fn test_tier46_spectral_morphing_engine_integration() {
     let mut img_b = SpectrogramImage::new(16, 16);
 
     for i in 0..16 {
-        img_a.set_pixel(i, i, 255, 0, 0);          // Red diagonal
-        img_b.set_pixel(i, 15 - i, 0, 255, 255);    // Cyan anti-diagonal
+        img_a.set_pixel(i, i, 255, 0, 0); // Red diagonal
+        img_b.set_pixel(i, 15 - i, 0, 255, 255); // Cyan anti-diagonal
     }
 
     for mode in modes {
@@ -136,12 +143,22 @@ fn test_tier46_spectral_morphing_engine_integration() {
                 }
             }
         }
-        assert!(non_zero_pixels > 0, "Morphed image should contain blended content for mode {:?}", mode);
+        assert!(
+            non_zero_pixels > 0,
+            "Morphed image should contain blended content for mode {:?}",
+            mode
+        );
 
         // Synthesize morphed offline PCM audio buffer
         let pcm_audio = morpher.generate_morphed_audio_buffer(&img_a, &img_b, 0.5, 44100, 0.1);
-        assert!(!pcm_audio.is_empty(), "Generated audio buffer should not be empty");
-        assert!(pcm_audio.iter().any(|&s| s.abs() > 0.01), "Audio signal should be synthesized");
+        assert!(
+            !pcm_audio.is_empty(),
+            "Generated audio buffer should not be empty"
+        );
+        assert!(
+            pcm_audio.iter().any(|&s| s.abs() > 0.01),
+            "Audio signal should be synthesized"
+        );
     }
 }
 
@@ -257,6 +274,12 @@ fn test_tier46_spatial_morphing_audio_pipeline_integration() {
     let rms_wet_l: f32 = (wet_l.iter().map(|s| s * s).sum::<f32>() / conv_len as f32).sqrt();
     let rms_wet_r: f32 = (wet_r.iter().map(|s| s * s).sum::<f32>() / conv_len as f32).sqrt();
 
-    assert!(rms_wet_l > 0.0001, "Processed left channel should have non-zero energy");
-    assert!(rms_wet_r > 0.0001, "Processed right channel should have non-zero energy");
+    assert!(
+        rms_wet_l > 0.0001,
+        "Processed left channel should have non-zero energy"
+    );
+    assert!(
+        rms_wet_r > 0.0001,
+        "Processed right channel should have non-zero energy"
+    );
 }

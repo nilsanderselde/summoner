@@ -23,7 +23,10 @@ pub fn show_chord_suggestion_panel(
         let active_chord = harmonic_ctx.analyze_active_chord();
         ui.horizontal(|ui| {
             ui.label("Current Active Chord:");
-            ui.colored_label(egui::Color32::from_rgb(26, 140, 255), egui::RichText::new(&active_chord).strong());
+            ui.colored_label(
+                egui::Color32::from_rgb(26, 140, 255),
+                egui::RichText::new(&active_chord).strong(),
+            );
         });
 
         ui.separator();

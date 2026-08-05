@@ -27,10 +27,16 @@ pub fn generate_melody_onnx(seed_notes: &[u8], length: usize) -> Vec<u8> {
     while melody.len() < length {
         let n = melody.len();
         let prev_pitch = melody[n - 1] as f32;
-        let p_prev = if n >= 2 { melody[n - 2] as f32 } else { prev_pitch };
+        let p_prev = if n >= 2 {
+            melody[n - 2] as f32
+        } else {
+            prev_pitch
+        };
 
         // Neural activation feature calculation based on ONNX model weights
-        prng_seed = prng_seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        prng_seed = prng_seed
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         let r = (prng_seed >> 33) as f32 / 2147483648.0;
 
         let delta = ((prev_pitch - p_prev) * 0.5 + (r - 0.5) * 6.0).round() as i32;
@@ -90,7 +96,9 @@ impl MarkovChain2 {
 
         let mut current_prng = rng_seed;
         let mut prng_next = || {
-            current_prng = current_prng.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            current_prng = current_prng
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             (current_prng >> 33) as f32 / 2147483648.0
         };
 
@@ -149,7 +157,10 @@ impl GenerativeEngine {
     }
 
     fn next_prng(&mut self) -> f32 {
-        self.seed = self.seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        self.seed = self
+            .seed
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         (self.seed >> 33) as f32 / 2147483648.0
     }
 
@@ -177,7 +188,11 @@ impl GenerativeEngine {
     }
 
     /// 1D Cellular Automata rhythm generator over multiple generations using two fixed 128-bool ping-pong buffers.
-    pub fn cellular_automata_multi_gen(initial: &[bool], rule: u8, generations: usize) -> Vec<bool> {
+    pub fn cellular_automata_multi_gen(
+        initial: &[bool],
+        rule: u8,
+        generations: usize,
+    ) -> Vec<bool> {
         let mut ping = [false; 128];
         let mut pong = [false; 128];
 
@@ -190,7 +205,11 @@ impl GenerativeEngine {
 
         let mut use_ping = true;
         for _ in 0..generations {
-            let (src, dst) = if use_ping { (&ping, &mut pong) } else { (&pong, &mut ping) };
+            let (src, dst) = if use_ping {
+                (&ping, &mut pong)
+            } else {
+                (&pong, &mut ping)
+            };
             for i in 0..len {
                 let left = src[(i + len - 1) % len];
                 let center = src[i];
@@ -221,7 +240,10 @@ impl GenerativeEngine {
     }
 
     /// Applies a boolean rhythm mask to step configs.
-    pub fn apply_rhythm_to_sequence(rhythm: &[bool], steps: &mut [summoner_project::schema::TrackerStepConfig]) {
+    pub fn apply_rhythm_to_sequence(
+        rhythm: &[bool],
+        steps: &mut [summoner_project::schema::TrackerStepConfig],
+    ) {
         for (idx, &active) in rhythm.iter().enumerate() {
             if idx < steps.len() {
                 steps[idx].gate = if active { 0.8 } else { 0.0 };
@@ -259,9 +281,18 @@ impl GenerativeEngine {
                 }
             }
             MutationStrategy::Markov2ndOrder => {
-                let active_notes: Vec<u8> = mutated.steps.iter().filter(|s| s.active).map(|s| s.note as u8).collect();
+                let active_notes: Vec<u8> = mutated
+                    .steps
+                    .iter()
+                    .filter(|s| s.active)
+                    .map(|s| s.note as u8)
+                    .collect();
                 if active_notes.len() >= 3 {
-                    let gen_notes = Self::mutate_sequence_markov2(&active_notes, mutated.steps.len(), self.seed);
+                    let gen_notes = Self::mutate_sequence_markov2(
+                        &active_notes,
+                        mutated.steps.len(),
+                        self.seed,
+                    );
                     for (i, &note) in gen_notes.iter().enumerate() {
                         if i < mutated.steps.len() {
                             mutated.steps[i].note = note as f32;

@@ -5,9 +5,9 @@
 
 #[cfg(test)]
 mod tests {
-    use summoner_dsp::neuro_synthesis::*;
     use summoner_core::node::{AudioNode, ProcessContext};
     use summoner_core::transport::Transport;
+    use summoner_dsp::neuro_synthesis::*;
 
     #[test]
     fn test_step_1181_bci_eeg_decoder_node() {

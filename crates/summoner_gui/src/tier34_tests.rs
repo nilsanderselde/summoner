@@ -6,23 +6,27 @@
 
 #[cfg(test)]
 mod tests {
-    use summoner_project::media_export::{
-        apply_audio_watermark, extract_audio_watermark, export_waveform_png, export_spectrogram_png,
-        export_piano_roll_png, export_project_layout_pdf, export_session_notes_pdf,
-        encrypt_project_aes256, decrypt_project_aes256, resolve_project_toml_conflict,
-        export_stems_video_metadata, LuaScriptEngine,
-    };
     use crate::gpu_waveform::{
-        GpuWaveformRenderer, MultiScaleLodPyramid, LodWaveformPreRenderCache,
-        GpuSpectrumAnalyzer, LuaEditorState,
+        GpuSpectrumAnalyzer, GpuWaveformRenderer, LodWaveformPreRenderCache, LuaEditorState,
+        MultiScaleLodPyramid,
     };
-    use summoner_project::schema::{ProjectConfig, TrackConfig, SequenceConfig, TrackerStepConfig};
+    use summoner_project::media_export::{
+        apply_audio_watermark, decrypt_project_aes256, encrypt_project_aes256,
+        export_piano_roll_png, export_project_layout_pdf, export_session_notes_pdf,
+        export_spectrogram_png, export_stems_video_metadata, export_waveform_png,
+        extract_audio_watermark, resolve_project_toml_conflict, LuaScriptEngine,
+    };
+    use summoner_project::schema::{ProjectConfig, SequenceConfig, TrackConfig, TrackerStepConfig};
 
     #[test]
     fn test_tier34_audio_watermarking() {
         let mut buffer = vec![0.5f32; 44100];
         apply_audio_watermark(&mut buffer, "SUMMONER-WATERMARK-2026", 44100);
-        assert!(extract_audio_watermark(&buffer, "SUMMONER-WATERMARK-2026", 44100));
+        assert!(extract_audio_watermark(
+            &buffer,
+            "SUMMONER-WATERMARK-2026",
+            44100
+        ));
         assert!(!extract_audio_watermark(&buffer, "WRONG-KEY", 44100));
     }
 
@@ -39,7 +43,11 @@ mod tests {
             id: 1,
             name: "Lead".to_string(),
             clips: vec![SequenceConfig {
-                steps: vec![TrackerStepConfig { active: true, note: 60.0, ..Default::default() }],
+                steps: vec![TrackerStepConfig {
+                    active: true,
+                    note: 60.0,
+                    ..Default::default()
+                }],
                 ..Default::default()
             }],
             ..Default::default()

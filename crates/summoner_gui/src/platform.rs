@@ -21,8 +21,12 @@ use std::env;
 pub enum AudioBackendKind {
     #[default]
     Auto,
-    Wasapi { exclusive: bool },
-    CoreAudio { exclusive: bool },
+    Wasapi {
+        exclusive: bool,
+    },
+    CoreAudio {
+        exclusive: bool,
+    },
     PipeWire,
     Jack,
     Alsa,
@@ -95,9 +99,17 @@ pub fn detect_display_server() -> DisplayServer {
         DisplayServer::WindowsDesktop
     } else if cfg!(target_os = "macos") {
         DisplayServer::MacOsQuartz
-    } else if env::var("WAYLAND_DISPLAY").is_ok() || env::var("XDG_SESSION_TYPE").map(|v| v == "wayland").unwrap_or(false) {
+    } else if env::var("WAYLAND_DISPLAY").is_ok()
+        || env::var("XDG_SESSION_TYPE")
+            .map(|v| v == "wayland")
+            .unwrap_or(false)
+    {
         DisplayServer::Wayland
-    } else if env::var("DISPLAY").is_ok() || env::var("XDG_SESSION_TYPE").map(|v| v == "x11").unwrap_or(false) {
+    } else if env::var("DISPLAY").is_ok()
+        || env::var("XDG_SESSION_TYPE")
+            .map(|v| v == "x11")
+            .unwrap_or(false)
+    {
         DisplayServer::X11
     } else {
         DisplayServer::Unknown
@@ -171,7 +183,9 @@ impl SteamDeckControllerState {
     pub fn detect() -> Self {
         let is_steam_deck = env::var("STEAM_DECK").is_ok()
             || env::var("SteamDeck").is_ok()
-            || env::var("XDG_CURRENT_DESKTOP").map(|v| v.to_lowercase().contains("steam")).unwrap_or(false);
+            || env::var("XDG_CURRENT_DESKTOP")
+                .map(|v| v.to_lowercase().contains("steam"))
+                .unwrap_or(false);
 
         Self {
             is_steam_deck,

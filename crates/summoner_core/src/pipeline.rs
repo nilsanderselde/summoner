@@ -104,7 +104,8 @@ impl MultiTenantRenderQueue {
                 let _guard = AllocGuard::new();
 
                 while frames_processed < job.num_frames {
-                    let block_frames = ((job.num_frames - frames_processed) as usize).min(BLOCK_SIZE);
+                    let block_frames =
+                        ((job.num_frames - frames_processed) as usize).min(BLOCK_SIZE);
                     mid_buffer.set_active_frames(block_frames);
                     out_buffer.set_active_frames(block_frames);
 
@@ -155,8 +156,22 @@ mod tests {
     #[test]
     fn test_multi_tenant_pipeline_determinism() {
         let mut queue1 = MultiTenantRenderQueue::new();
-        queue1.enqueue(RenderJob::new("job-101", "tenant-alpha", 1024, 44100, 120.0, 440.0));
-        queue1.enqueue(RenderJob::new("job-102", "tenant-beta", 2048, 48000, 128.0, 880.0));
+        queue1.enqueue(RenderJob::new(
+            "job-101",
+            "tenant-alpha",
+            1024,
+            44100,
+            120.0,
+            440.0,
+        ));
+        queue1.enqueue(RenderJob::new(
+            "job-102",
+            "tenant-beta",
+            2048,
+            48000,
+            128.0,
+            880.0,
+        ));
 
         let res1 = queue1.process_all();
         assert_eq!(res1.len(), 2);

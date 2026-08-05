@@ -11,7 +11,6 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Affero General Public License for more details.
 
-
 pub struct KbmMapping {
     pub map_size: usize,
     pub first_midi_note: i32,
@@ -25,16 +24,53 @@ pub struct KbmMapping {
 
 impl KbmMapping {
     pub fn parse(content: &str) -> Result<Self, &'static str> {
-        let mut lines = content.lines().filter(|l| !l.trim().starts_with('!') && !l.trim().is_empty());
-        
-        let map_size: usize = lines.next().ok_or("err")?.trim().parse().map_err(|_| "err")?;
-        let first_midi_note: i32 = lines.next().ok_or("err")?.trim().parse().map_err(|_| "err")?;
-        let last_midi_note: i32 = lines.next().ok_or("err")?.trim().parse().map_err(|_| "err")?;
-        let middle_note: i32 = lines.next().ok_or("err")?.trim().parse().map_err(|_| "err")?;
-        let reference_note: i32 = lines.next().ok_or("err")?.trim().parse().map_err(|_| "err")?;
-        let reference_freq: f64 = lines.next().ok_or("err")?.trim().parse().map_err(|_| "err")?;
-        let scale_degree: i32 = lines.next().ok_or("err")?.trim().parse().map_err(|_| "err")?;
-        
+        let mut lines = content
+            .lines()
+            .filter(|l| !l.trim().starts_with('!') && !l.trim().is_empty());
+
+        let map_size: usize = lines
+            .next()
+            .ok_or("err")?
+            .trim()
+            .parse()
+            .map_err(|_| "err")?;
+        let first_midi_note: i32 = lines
+            .next()
+            .ok_or("err")?
+            .trim()
+            .parse()
+            .map_err(|_| "err")?;
+        let last_midi_note: i32 = lines
+            .next()
+            .ok_or("err")?
+            .trim()
+            .parse()
+            .map_err(|_| "err")?;
+        let middle_note: i32 = lines
+            .next()
+            .ok_or("err")?
+            .trim()
+            .parse()
+            .map_err(|_| "err")?;
+        let reference_note: i32 = lines
+            .next()
+            .ok_or("err")?
+            .trim()
+            .parse()
+            .map_err(|_| "err")?;
+        let reference_freq: f64 = lines
+            .next()
+            .ok_or("err")?
+            .trim()
+            .parse()
+            .map_err(|_| "err")?;
+        let scale_degree: i32 = lines
+            .next()
+            .ok_or("err")?
+            .trim()
+            .parse()
+            .map_err(|_| "err")?;
+
         let mut mapping = Vec::new();
         for _ in 0..map_size {
             let val_str = lines.next().ok_or("err")?.trim();
@@ -45,7 +81,7 @@ impl KbmMapping {
                 mapping.push(Some(deg));
             }
         }
-        
+
         Ok(Self {
             map_size,
             first_midi_note,

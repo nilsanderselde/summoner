@@ -87,7 +87,6 @@ pub fn create_github_pr(
         .send_string(&payload)
         .map_err(|e| format!("GitHub API HTTP request failed: {}", e))?;
 
-
     let resp_str = resp
         .into_string()
         .map_err(|e| format!("Failed to read GitHub response: {}", e))?;
@@ -101,7 +100,13 @@ mod tests {
 
     #[test]
     fn test_create_patch_branch() {
-        let temp_dir = std::env::temp_dir().join(format!("summoner_branch_test_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+        let temp_dir = std::env::temp_dir().join(format!(
+            "summoner_branch_test_{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
         let repo = summoner_project::git_dag::open_or_init_repo(&temp_dir).unwrap();
         let proj = summoner_project::create_default_project("Branch Test");
         summoner_project::git_dag::commit_project_state(&repo, &proj, "Initial").unwrap();

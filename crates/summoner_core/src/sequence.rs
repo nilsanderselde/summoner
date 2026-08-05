@@ -97,12 +97,21 @@ pub struct SequenceTrack {
 }
 
 impl SequenceTrack {
-    pub fn new(id: u64, name: impl Into<String>, step_division: f64, steps: Vec<TrackerStep>) -> Self {
+    pub fn new(
+        id: u64,
+        name: impl Into<String>,
+        step_division: f64,
+        steps: Vec<TrackerStep>,
+    ) -> Self {
         Self {
             id,
             name: name.into(),
             time_signature: TimeSignature::default(),
-            step_division: if step_division <= 0.0 { 0.25 } else { step_division },
+            step_division: if step_division <= 0.0 {
+                0.25
+            } else {
+                step_division
+            },
             steps,
         }
     }

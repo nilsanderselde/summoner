@@ -8,12 +8,12 @@
 #[cfg(test)]
 mod tests {
     use summoner_project::media_export::{
-        LuaTestRunner, generate_lua_docs, LuaLspServer, export_lua_api_reference_markdown,
-        LuaScriptMarketplace, MarketplaceScriptEntry, LuaScriptSandboxMode, LuaScriptAnalytics,
-        LuaAutomationOnlyGuard, import_lua_script_file, export_lua_script_file,
-        backup_lua_scripts_to_zip, LuaGitScriptTracker, get_script_line_blame,
-        ScriptExecutionLog, detect_script_merge_conflicts, reset_device_default_script,
-        LuaScriptInspectorState,
+        backup_lua_scripts_to_zip, detect_script_merge_conflicts,
+        export_lua_api_reference_markdown, export_lua_script_file, generate_lua_docs,
+        get_script_line_blame, import_lua_script_file, reset_device_default_script,
+        LuaAutomationOnlyGuard, LuaGitScriptTracker, LuaLspServer, LuaScriptAnalytics,
+        LuaScriptInspectorState, LuaScriptMarketplace, LuaScriptSandboxMode, LuaTestRunner,
+        MarketplaceScriptEntry, ScriptExecutionLog,
     };
 
     #[test]
@@ -56,7 +56,9 @@ mod tests {
         let mut mp = LuaScriptMarketplace::new_with_defaults();
         assert_eq!(mp.entries.len(), 1);
 
-        let forked = mp.fork_script("community-euclidean-1", "user_alice").unwrap();
+        let forked = mp
+            .fork_script("community-euclidean-1", "user_alice")
+            .unwrap();
         assert_eq!(forked.author, "user_alice");
         assert!(forked.name.contains("(Fork)"));
 
@@ -99,7 +101,9 @@ mod tests {
 
     #[test]
     fn test_step_912_automation_only_guard() {
-        let guard = LuaAutomationOnlyGuard { automation_only: true };
+        let guard = LuaAutomationOnlyGuard {
+            automation_only: true,
+        };
         assert!(guard.allow_execution("automation"));
         assert!(!guard.allow_execution("dsp"));
         assert!(!guard.allow_execution("ui"));
@@ -135,16 +139,14 @@ mod tests {
 
     #[test]
     fn test_step_917_script_line_blame() {
-        let logs = vec![
-            ScriptExecutionLog {
-                script_name: "macro.lua".to_string(),
-                line_number: 14,
-                param_id: "cutoff".to_string(),
-                timestamp_ms: 1000,
-                previous_value: 400.0,
-                new_value: 800.0,
-            }
-        ];
+        let logs = vec![ScriptExecutionLog {
+            script_name: "macro.lua".to_string(),
+            line_number: 14,
+            param_id: "cutoff".to_string(),
+            timestamp_ms: 1000,
+            previous_value: 400.0,
+            new_value: 800.0,
+        }];
         let blame = get_script_line_blame("cutoff", &logs).unwrap();
         assert_eq!(blame.script_name, "macro.lua");
         assert_eq!(blame.line_number, 14);
@@ -174,7 +176,10 @@ mod tests {
     fn test_step_920_lua_script_inspector_state() {
         let mut inspector = LuaScriptInspectorState::default();
         inspector.update_variable("cutoff_freq", "800.0 Hz", 128);
-        assert_eq!(inspector.variable_values.get("cutoff_freq").unwrap(), "800.0 Hz");
+        assert_eq!(
+            inspector.variable_values.get("cutoff_freq").unwrap(),
+            "800.0 Hz"
+        );
         assert_eq!(inspector.last_updated_frame, 128);
     }
 }

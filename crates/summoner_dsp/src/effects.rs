@@ -160,7 +160,6 @@ impl EffectReverb {
             self.allpass_buffers[a][pos] = new_val;
             ap_out = delayed - new_val * 0.5;
 
-
             self.allpass_pos[a] = (pos + 1) % buf_len;
         }
 
@@ -254,7 +253,11 @@ impl SignalProcessor for NoiseGateNode {
             return;
         }
         let num_samples = inputs[0].len().min(outputs[0].len());
-        let sr = if ctx.sample_rate > 0 { ctx.sample_rate as f32 } else { 44100.0 };
+        let sr = if ctx.sample_rate > 0 {
+            ctx.sample_rate as f32
+        } else {
+            44100.0
+        };
         let dt = 1.0 / sr;
         let attack_coeff = (-dt / self.attack.max(0.0001)).exp();
         let release_coeff = (-dt / self.release.max(0.001)).exp();
@@ -264,7 +267,11 @@ impl SignalProcessor for NoiseGateNode {
             let abs_level = sample.abs().max(1e-6);
             let level_db = 20.0 * abs_level.log10();
 
-            let coeff = if level_db > self.env_db { attack_coeff } else { release_coeff };
+            let coeff = if level_db > self.env_db {
+                attack_coeff
+            } else {
+                release_coeff
+            };
             self.env_db = self.env_db * coeff + level_db * (1.0 - coeff);
 
             let gain = if self.env_db < self.threshold_db {
@@ -335,7 +342,11 @@ impl SignalProcessor for DeesserNode {
             return;
         }
         let num_samples = inputs[0].len().min(outputs[0].len());
-        let sr = if ctx.sample_rate > 0 { ctx.sample_rate as f32 } else { 44100.0 };
+        let sr = if ctx.sample_rate > 0 {
+            ctx.sample_rate as f32
+        } else {
+            44100.0
+        };
         let dt = 1.0 / sr;
         let attack_coeff = (-dt / self.attack.max(0.0001)).exp();
         let release_coeff = (-dt / self.release.max(0.001)).exp();
@@ -347,7 +358,11 @@ impl SignalProcessor for DeesserNode {
             self.filter_state = self.filter_state * hp_alpha + in_sample * (1.0 - hp_alpha);
 
             let sib_db = 20.0 * high_freq.abs().max(1e-6).log10();
-            let coeff = if sib_db > self.env_db { attack_coeff } else { release_coeff };
+            let coeff = if sib_db > self.env_db {
+                attack_coeff
+            } else {
+                release_coeff
+            };
             self.env_db = self.env_db * coeff + sib_db * (1.0 - coeff);
 
             let gain_reduction = if self.env_db > self.threshold_db {
@@ -413,7 +428,11 @@ impl SignalProcessor for HarmonicExciterNode {
             return;
         }
         let num_samples = inputs[0].len().min(outputs[0].len());
-        let sr = if ctx.sample_rate > 0 { ctx.sample_rate as f32 } else { 44100.0 };
+        let sr = if ctx.sample_rate > 0 {
+            ctx.sample_rate as f32
+        } else {
+            44100.0
+        };
         let dt = 1.0 / sr;
         let hp_alpha = (-2.0 * std::f32::consts::PI * self.frequency * dt).exp();
 

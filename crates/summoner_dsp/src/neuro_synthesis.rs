@@ -17,7 +17,7 @@ pub struct EegBands {
     pub delta: f32, // 0.5 - 3.5 Hz
     pub theta: f32, // 4.0 - 7.5 Hz
     pub alpha: f32, // 8.0 - 12.5 Hz
-    pub beta:  f32, // 13.0 - 30.0 Hz
+    pub beta: f32,  // 13.0 - 30.0 Hz
     pub gamma: f32, // 30.0 - 100.0 Hz
 }
 
@@ -41,7 +41,7 @@ pub struct BciEegDecoderNode {
     // Bandpass biquad states per band
     theta_state: f32,
     alpha_state: f32,
-    beta_state:  f32,
+    beta_state: f32,
     gamma_state: f32,
     delta_state: f32,
 }
@@ -66,20 +66,20 @@ impl BciEegDecoderNode {
         let delta_val = eeg_raw * 0.1;
         let theta_val = (eeg_raw * 0.2).sin();
         let alpha_val = (eeg_raw * 0.4).cos();
-        let beta_val  = (eeg_raw * 0.8).abs();
+        let beta_val = (eeg_raw * 0.8).abs();
         let gamma_val = (eeg_raw * 1.5).abs().min(1.0);
 
         self.delta_state += alpha_coeff * (delta_val.abs() - self.delta_state);
         self.theta_state += alpha_coeff * (theta_val.abs() - self.theta_state);
         self.alpha_state += alpha_coeff * (alpha_val.abs() - self.alpha_state);
-        self.beta_state  += alpha_coeff * (beta_val.abs()  - self.beta_state);
+        self.beta_state += alpha_coeff * (beta_val.abs() - self.beta_state);
         self.gamma_state += alpha_coeff * (gamma_val.abs() - self.gamma_state);
 
         self.current_bands = EegBands {
             delta: self.delta_state.clamp(0.0, 1.0),
             theta: self.theta_state.clamp(0.0, 1.0),
             alpha: self.alpha_state.clamp(0.0, 1.0),
-            beta:  self.beta_state.clamp(0.0, 1.0),
+            beta: self.beta_state.clamp(0.0, 1.0),
             gamma: self.gamma_state.clamp(0.0, 1.0),
         };
         self.current_bands
@@ -91,13 +91,22 @@ impl AudioNode for BciEegDecoderNode {
         "BciEegDecoderNode"
     }
 
-    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], _ctx: &ProcessContext) {
+    fn process(
+        &mut self,
+        input: &[&[Sample]],
+        output: &mut [&mut [Sample]],
+        _ctx: &ProcessContext,
+    ) {
         if output.is_empty() {
             return;
         }
         let num_samples = output[0].len();
         for i in 0..num_samples {
-            let in_sample = if !input.is_empty() && i < input[0].len() { input[0][i] } else { 0.0 };
+            let in_sample = if !input.is_empty() && i < input[0].len() {
+                input[0][i]
+            } else {
+                0.0
+            };
             let _bands = self.process_eeg_sample(in_sample);
             for out_ch in output.iter_mut() {
                 if i < out_ch.len() {
@@ -144,7 +153,8 @@ impl NeuroAffectiveAnalyzer {
     pub fn analyze(&mut self, bands: &EegBands) -> NeuroAffectiveState {
         let denom = (bands.alpha + bands.theta).max(0.001);
         let focus = (bands.beta / denom).clamp(0.0, 1.0);
-        let valence = ((bands.alpha - bands.beta) / (bands.alpha + bands.beta + 0.001)).clamp(-1.0, 1.0);
+        let valence =
+            ((bands.alpha - bands.beta) / (bands.alpha + bands.beta + 0.001)).clamp(-1.0, 1.0);
         let arousal = (bands.gamma * 0.6 + bands.beta * 0.4).clamp(0.0, 1.0);
 
         self.state = NeuroAffectiveState {
@@ -176,7 +186,8 @@ pub struct AuditoryCortexIrSynthesizer {
 
 impl AuditoryCortexIrSynthesizer {
     pub fn new(sample_rate: u32, cortical_delay_ms: f32, feedback_gain: f32) -> Self {
-        let max_samples = (sample_rate as f32 * (cortical_delay_ms / 1000.0).max(0.001)) as usize + 64;
+        let max_samples =
+            (sample_rate as f32 * (cortical_delay_ms / 1000.0).max(0.001)) as usize + 64;
         Self {
             sample_rate,
             cortical_delay_ms,
@@ -205,13 +216,22 @@ impl AudioNode for AuditoryCortexIrSynthesizer {
         "AuditoryCortexIrSynthesizer"
     }
 
-    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], _ctx: &ProcessContext) {
+    fn process(
+        &mut self,
+        input: &[&[Sample]],
+        output: &mut [&mut [Sample]],
+        _ctx: &ProcessContext,
+    ) {
         if output.is_empty() {
             return;
         }
         let num_samples = output[0].len();
         for i in 0..num_samples {
-            let in_sample = if !input.is_empty() && i < input[0].len() { input[0][i] } else { 0.0 };
+            let in_sample = if !input.is_empty() && i < input[0].len() {
+                input[0][i]
+            } else {
+                0.0
+            };
             let out_sample = self.process_sample(in_sample);
             for out_ch in output.iter_mut() {
                 if i < out_ch.len() {
@@ -264,7 +284,12 @@ impl AudioNode for HolographicSpatializer {
         "HolographicSpatializer"
     }
 
-    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], _ctx: &ProcessContext) {
+    fn process(
+        &mut self,
+        input: &[&[Sample]],
+        output: &mut [&mut [Sample]],
+        _ctx: &ProcessContext,
+    ) {
         if output.is_empty() {
             return;
         }
@@ -272,7 +297,11 @@ impl AudioNode for HolographicSpatializer {
         let num_out_channels = output.len();
 
         for i in 0..num_samples {
-            let in_sample = if !input.is_empty() && i < input[0].len() { input[0][i] } else { 0.0 };
+            let in_sample = if !input.is_empty() && i < input[0].len() {
+                input[0][i]
+            } else {
+                0.0
+            };
             let mut quad = [0.0f32; 4];
             self.process_quad(in_sample, &mut quad);
 
@@ -436,7 +465,12 @@ impl AudioNode for NeuroFeedbackOscillator {
         "NeuroFeedbackOscillator"
     }
 
-    fn process(&mut self, _input: &[&[Sample]], output: &mut [&mut [Sample]], _ctx: &ProcessContext) {
+    fn process(
+        &mut self,
+        _input: &[&[Sample]],
+        output: &mut [&mut [Sample]],
+        _ctx: &ProcessContext,
+    ) {
         if output.is_empty() {
             return;
         }
@@ -485,18 +519,27 @@ impl AudioNode for AcousticHologramFilter {
         "AcousticHologramFilter"
     }
 
-    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], _ctx: &ProcessContext) {
+    fn process(
+        &mut self,
+        input: &[&[Sample]],
+        output: &mut [&mut [Sample]],
+        _ctx: &ProcessContext,
+    ) {
         if output.is_empty() {
             return;
         }
         let num_samples = output[0].len();
         for i in 0..num_samples {
-            let in_sample = if !input.is_empty() && i < input[0].len() { input[0][i] } else { 0.0 };
+            let in_sample = if !input.is_empty() && i < input[0].len() {
+                input[0][i]
+            } else {
+                0.0
+            };
             let num_spk = self.num_speakers.min(output.len());
-            for ch in 0..num_spk {
+            for (ch, out_ch) in output.iter_mut().enumerate().take(num_spk) {
                 let dist = self.speaker_distances.get(ch).copied().unwrap_or(1.0);
-                if i < output[ch].len() {
-                    output[ch][i] = in_sample * (1.0 / dist.sqrt());
+                if i < out_ch.len() {
+                    out_ch[i] = in_sample * (1.0 / dist.sqrt());
                 }
             }
         }
@@ -581,13 +624,22 @@ impl AudioNode for NeuroFatigueDetector {
         "NeuroFatigueDetector"
     }
 
-    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], _ctx: &ProcessContext) {
+    fn process(
+        &mut self,
+        input: &[&[Sample]],
+        output: &mut [&mut [Sample]],
+        _ctx: &ProcessContext,
+    ) {
         if output.is_empty() {
             return;
         }
         let num_samples = output[0].len();
         for i in 0..num_samples {
-            let in_sample = if !input.is_empty() && i < input[0].len() { input[0][i] } else { 0.0 };
+            let in_sample = if !input.is_empty() && i < input[0].len() {
+                input[0][i]
+            } else {
+                0.0
+            };
             let out_sample = self.process_sample(in_sample);
             for out_ch in output.iter_mut() {
                 if i < out_ch.len() {
@@ -631,13 +683,22 @@ impl AudioNode for AudiogramLoudnessModel {
         "AudiogramLoudnessModel"
     }
 
-    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], _ctx: &ProcessContext) {
+    fn process(
+        &mut self,
+        input: &[&[Sample]],
+        output: &mut [&mut [Sample]],
+        _ctx: &ProcessContext,
+    ) {
         if output.is_empty() {
             return;
         }
         let num_samples = output[0].len();
         for i in 0..num_samples {
-            let in_sample = if !input.is_empty() && i < input[0].len() { input[0][i] } else { 0.0 };
+            let in_sample = if !input.is_empty() && i < input[0].len() {
+                input[0][i]
+            } else {
+                0.0
+            };
             let out_sample = self.process_sample(in_sample);
             for out_ch in output.iter_mut() {
                 if i < out_ch.len() {
@@ -694,7 +755,12 @@ impl AudioNode for BinauralEntrainmentGen {
         "BinauralEntrainmentGen"
     }
 
-    fn process(&mut self, _input: &[&[Sample]], output: &mut [&mut [Sample]], _ctx: &ProcessContext) {
+    fn process(
+        &mut self,
+        _input: &[&[Sample]],
+        output: &mut [&mut [Sample]],
+        _ctx: &ProcessContext,
+    ) {
         if output.len() < 2 {
             return;
         }
@@ -735,7 +801,10 @@ impl NeuroAestheticScorer {
             return (0.0, 0.5);
         }
         let rms = (samples.iter().map(|s| s * s).sum::<f32>() / samples.len() as f32).sqrt();
-        let zero_crossings = samples.windows(2).filter(|w| (w[0] > 0.0) != (w[1] > 0.0)).count();
+        let zero_crossings = samples
+            .windows(2)
+            .filter(|w| (w[0] > 0.0) != (w[1] > 0.0))
+            .count();
         let zcr = zero_crossings as f32 / samples.len() as f32;
 
         let arousal = (rms * 2.0 + zcr * 0.5).clamp(0.0, 1.0);
@@ -779,13 +848,22 @@ impl AudioNode for HapticTransducerNode {
         "HapticTransducerNode"
     }
 
-    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], _ctx: &ProcessContext) {
+    fn process(
+        &mut self,
+        input: &[&[Sample]],
+        output: &mut [&mut [Sample]],
+        _ctx: &ProcessContext,
+    ) {
         if output.is_empty() {
             return;
         }
         let num_samples = output[0].len();
         for i in 0..num_samples {
-            let in_sample = if !input.is_empty() && i < input[0].len() { input[0][i] } else { 0.0 };
+            let in_sample = if !input.is_empty() && i < input[0].len() {
+                input[0][i]
+            } else {
+                0.0
+            };
             let out_sample = self.process_sample(in_sample);
             for out_ch in output.iter_mut() {
                 if i < out_ch.len() {

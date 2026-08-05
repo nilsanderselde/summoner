@@ -5,17 +5,17 @@
 
 #[cfg(test)]
 mod tests {
-    use summoner_dsp::quantum_audio::{
-        Complex32, QuantumStateVectorOscillator, HyperDimensionalTensorSpatializer,
-        QuantumEntanglementRouter, NeuralQuantumAnnealer, SubHarmonicQuantumTunnelingFilter,
-        RelativisticDopplerShiftNode, StochasticQuantumDecoherenceNoise, HyperbolicReverbNode,
-        QuantumTomographyData, QuantumErrorCorrectionCodec, QuantumHarmonicOscillatorVoice,
-        HyperDimensionalHrtfLoader, QuantumPhaseEstimationPitchTracker,
-        ChaoticFractalAttractorModulator, QuantumTeleportationBufferBus,
-    };
     use crate::visualizer::QuantumTomographyVisualizer;
-    use summoner_core::node::AudioNode;
     use std::f32::consts::PI;
+    use summoner_core::node::AudioNode;
+    use summoner_dsp::quantum_audio::{
+        ChaoticFractalAttractorModulator, Complex32, HyperDimensionalHrtfLoader,
+        HyperDimensionalTensorSpatializer, HyperbolicReverbNode, NeuralQuantumAnnealer,
+        QuantumEntanglementRouter, QuantumErrorCorrectionCodec, QuantumHarmonicOscillatorVoice,
+        QuantumPhaseEstimationPitchTracker, QuantumStateVectorOscillator,
+        QuantumTeleportationBufferBus, QuantumTomographyData, RelativisticDopplerShiftNode,
+        StochasticQuantumDecoherenceNoise, SubHarmonicQuantumTunnelingFilter,
+    };
 
     #[test]
     fn test_step_1141_quantum_state_vector_oscillator() {

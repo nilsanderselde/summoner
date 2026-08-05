@@ -27,7 +27,10 @@ fn find_crate_path(crate_name: &str) -> String {
     format!("../{}", crate_name)
 }
 
-pub fn generate_clap_plugin(project_toml_path: &Path, output_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
+pub fn generate_clap_plugin(
+    project_toml_path: &Path,
+    output_dir: &Path,
+) -> Result<(), Box<dyn std::error::Error>> {
     let cargo_template = include_str!("clap_plugin_template/Cargo.toml.template");
     let lib_template = include_str!("clap_plugin_template/lib.rs.template");
 
@@ -63,9 +66,18 @@ pub fn generate_clap_plugin(project_toml_path: &Path, output_dir: &Path) -> Resu
         .replace("{{plugin_id}}", &plugin_id)
         .replace("{{plugin_name}}", plugin_name)
         .replace("{{instrument_name}}", instrument_name)
-        .replace("{{preset_toml}}", &raw_toml.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n"))
+        .replace(
+            "{{preset_toml}}",
+            &raw_toml
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n"),
+        )
         .replace("{{plugin_version}}", plugin_version)
-        .replace("{{project_path_str}}", &project_toml_path.to_string_lossy().replace("\\", "/"));
+        .replace(
+            "{{project_path_str}}",
+            &project_toml_path.to_string_lossy().replace("\\", "/"),
+        );
 
     let plugin_dir = output_dir.join(plugin_name);
     let src_dir = plugin_dir.join("src");
@@ -73,10 +85,19 @@ pub fn generate_clap_plugin(project_toml_path: &Path, output_dir: &Path) -> Resu
     fs::create_dir_all(&src_dir)?;
     fs::write(plugin_dir.join("Cargo.toml"), cargo_toml)?;
     fs::write(src_dir.join("lib.rs"), lib_rs)?;
-    fs::write(plugin_dir.join("build.sh"), "#!/bin/sh\ncargo build --release\n")?;
-    fs::write(plugin_dir.join("build.bat"), "@echo off\r\ncargo build --release\r\n")?;
+    fs::write(
+        plugin_dir.join("build.sh"),
+        "#!/bin/sh\ncargo build --release\n",
+    )?;
+    fs::write(
+        plugin_dir.join("build.bat"),
+        "@echo off\r\ncargo build --release\r\n",
+    )?;
 
-    println!("Successfully generated CLAP plugin template at {}", plugin_dir.display());
+    println!(
+        "Successfully generated CLAP plugin template at {}",
+        plugin_dir.display()
+    );
 
     Ok(())
 }

@@ -1,11 +1,11 @@
 // Summoner DAW - Automated Project Backup Snapshot Manager (Step 1266 & Step 1273)
 // Copyright (C) 2026 nilsanderselde - AGPLv3 License
 
+use crate::schema::ProjectConfig;
+use crate::{parse_project_toml, serialize_project_toml};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
-use crate::schema::ProjectConfig;
-use crate::{parse_project_toml, serialize_project_toml};
 
 /// Automated project backup snapshot creator and manager.
 #[derive(Debug, Clone)]

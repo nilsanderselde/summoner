@@ -1,9 +1,9 @@
 #![allow(clippy::all)]
 
-use summoner_core::audio::Sample;
-use summoner_core::node::ProcessContext;
 use crate::traits::SignalProcessor;
 use std::sync::Arc;
+use summoner_core::audio::Sample;
+use summoner_core::node::ProcessContext;
 
 /// Loop mode for sample playback.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -102,12 +102,17 @@ impl MultiSampleBank {
             let lokey = if i == 0 {
                 0
             } else {
-                ((self.regions[i - 1].pitch_keycenter as u16 + self.regions[i].pitch_keycenter as u16) / 2 + 1) as u8
+                ((self.regions[i - 1].pitch_keycenter as u16
+                    + self.regions[i].pitch_keycenter as u16)
+                    / 2
+                    + 1) as u8
             };
             let hikey = if i == n - 1 {
                 127
             } else {
-                ((self.regions[i].pitch_keycenter as u16 + self.regions[i + 1].pitch_keycenter as u16) / 2) as u8
+                ((self.regions[i].pitch_keycenter as u16
+                    + self.regions[i + 1].pitch_keycenter as u16)
+                    / 2) as u8
             };
             self.regions[i].lokey = lokey;
             self.regions[i].hikey = hikey;
@@ -142,22 +147,26 @@ pub fn load_flac(path: &std::path::Path) -> Result<SampleBuffer, String> {
     let mut reader = claxon::FlacReader::open(path).map_err(|e| e.to_string())?;
     let info = reader.streaminfo();
     let mut data = Vec::new();
-    
+
     let scale = 1.0 / (1i64 << (info.bits_per_sample - 1)) as f32;
-    
+
     for sample in reader.samples() {
         let s = sample.map_err(|e| e.to_string())?;
         data.push(s as f32 * scale);
     }
-    
-    Ok(SampleBuffer::new(data, info.sample_rate, info.channels as usize))
+
+    Ok(SampleBuffer::new(
+        data,
+        info.sample_rate,
+        info.channels as usize,
+    ))
 }
 
 pub fn load_wav(path: &std::path::Path) -> Result<SampleBuffer, String> {
     let mut reader = hound::WavReader::open(path).map_err(|e| e.to_string())?;
     let spec = reader.spec();
     let mut data = Vec::new();
-    
+
     if spec.sample_format == hound::SampleFormat::Float {
         for sample in reader.samples::<f32>() {
             data.push(sample.map_err(|e| e.to_string())?);
@@ -169,8 +178,12 @@ pub fn load_wav(path: &std::path::Path) -> Result<SampleBuffer, String> {
             data.push(s as f32 * scale);
         }
     }
-    
-    Ok(SampleBuffer::new(data, spec.sample_rate, spec.channels as usize))
+
+    Ok(SampleBuffer::new(
+        data,
+        spec.sample_rate,
+        spec.channels as usize,
+    ))
 }
 
 pub fn load_sample_file(path: &std::path::Path) -> Result<SampleBuffer, String> {
@@ -225,7 +238,7 @@ impl SamplerNode {
         self.playback_position = 0.0;
         self.playing = true;
     }
-    
+
     pub fn stop(&mut self) {
         self.playing = false;
     }
@@ -252,11 +265,11 @@ impl SignalProcessor for SamplerNode {
             if self.playing {
                 let channels = outputs.len().min(buf.channels);
                 let total_frames = buf.data.len() / buf.channels;
-                
+
                 for i in 0..block_size {
                     let pos_floor = self.playback_position.floor() as usize;
                     let frac = (self.playback_position - pos_floor as f64) as f32;
-                    
+
                     if pos_floor >= total_frames {
                         self.playing = false;
                         for ch in 0..outputs.len() {
@@ -264,14 +277,14 @@ impl SignalProcessor for SamplerNode {
                         }
                         break;
                     }
-                    
+
                     let next_pos = (pos_floor + 1).min(total_frames - 1);
                     for ch in 0..channels {
                         let s0 = buf.data[pos_floor * buf.channels + ch];
                         let s1 = buf.data[next_pos * buf.channels + ch];
                         outputs[ch][i] = s0 + frac * (s1 - s0);
                     }
-                    
+
                     self.playback_position += self.playback_rate;
                 }
             } else {
@@ -314,7 +327,9 @@ impl MultiSamplerNode {
 
     pub fn trigger_note(&mut self, note: u8, velocity: u8) {
         if let Some(region) = self.bank.find_nearest_region(note, velocity) {
-            if let Some(idx) = self.bank.regions.iter().position(|r| r.sample_path == region.sample_path && r.pitch_keycenter == region.pitch_keycenter) {
+            if let Some(idx) = self.bank.regions.iter().position(|r| {
+                r.sample_path == region.sample_path && r.pitch_keycenter == region.pitch_keycenter
+            }) {
                 let semitone_diff = note as f64 - region.pitch_keycenter as f64;
                 self.playback_rate = 2.0f64.powf(semitone_diff / 12.0);
                 self.active_region_idx = Some(idx);
@@ -371,14 +386,17 @@ impl SignalProcessor for MultiSamplerNode {
                         let pos_floor = self.playback_position.floor() as usize;
                         let frac = (self.playback_position - pos_floor as f64) as f32;
 
-                        let is_looping_mode = matches!(
-                            region.loop_mode,
-                            LoopMode::Loop | LoopMode::LoopContinuous
-                        ) || (region.loop_mode == LoopMode::LoopRelease && !self.key_released);
+                        let is_looping_mode =
+                            matches!(region.loop_mode, LoopMode::Loop | LoopMode::LoopContinuous)
+                                || (region.loop_mode == LoopMode::LoopRelease
+                                    && !self.key_released);
 
                         let is_pingpong = region.loop_mode == LoopMode::PingPong;
 
-                        if (is_looping_mode || is_pingpong) && region.loop_end > region.loop_start && region.loop_end <= total_frames {
+                        if (is_looping_mode || is_pingpong)
+                            && region.loop_end > region.loop_start
+                            && region.loop_end <= total_frames
+                        {
                             let loop_start_f = region.loop_start as f64;
                             let loop_end_f = region.loop_end as f64;
                             let loop_len = loop_end_f - loop_start_f;
@@ -388,13 +406,16 @@ impl SignalProcessor for MultiSamplerNode {
                                     self.playback_reverse = true;
                                     let over = self.playback_position - loop_end_f;
                                     self.playback_position = (loop_end_f - over).max(loop_start_f);
-                                } else if self.playback_reverse && self.playback_position <= loop_start_f {
+                                } else if self.playback_reverse
+                                    && self.playback_position <= loop_start_f
+                                {
                                     self.playback_reverse = false;
                                     let under = loop_start_f - self.playback_position;
                                     self.playback_position = (loop_start_f + under).min(loop_end_f);
                                 }
                             } else if pos_floor >= region.loop_end {
-                                self.playback_position = loop_start_f + ((self.playback_position - loop_start_f) % loop_len);
+                                self.playback_position = loop_start_f
+                                    + ((self.playback_position - loop_start_f) % loop_len);
                             }
                         } else if pos_floor >= total_frames || self.playback_position < 0.0 {
                             self.playing = false;
@@ -445,7 +466,9 @@ mod tests {
         let mut bank = MultiSampleBank::new();
         let mut reg = SampleRegion::new(60, 72, 60, "samples/Piano/C4.wav");
 
-        let sin_data: Vec<f32> = (0..44100).map(|i| (i as f32 * 440.0 * 2.0 * std::f32::consts::PI / 44100.0).sin()).collect();
+        let sin_data: Vec<f32> = (0..44100)
+            .map(|i| (i as f32 * 440.0 * 2.0 * std::f32::consts::PI / 44100.0).sin())
+            .collect();
         reg.buffer = Some(Arc::new(SampleBuffer::new(sin_data, 44100, 1)));
 
         bank.add_region(reg);
@@ -460,8 +483,8 @@ mod tests {
     }
     #[test]
     fn test_wav_file_loading() {
-        use hound::{WavSpec, WavWriter, SampleFormat};
-        
+        use hound::{SampleFormat, WavSpec, WavWriter};
+
         let file_path = std::env::temp_dir().join("test_load.wav");
         let spec = WavSpec {
             channels: 1,
@@ -469,7 +492,7 @@ mod tests {
             bits_per_sample: 16,
             sample_format: SampleFormat::Int,
         };
-        
+
         let mut writer = WavWriter::create(&file_path, spec).unwrap();
         // Generate a 440 Hz sine wave
         for t in 0..44100 {
@@ -478,24 +501,24 @@ mod tests {
             writer.write_sample((sample * amplitude) as i16).unwrap();
         }
         writer.finalize().unwrap();
-        
+
         let buffer = super::load_wav(&file_path).unwrap();
         assert_eq!(buffer.sample_rate, 44100);
         assert_eq!(buffer.channels, 1);
         assert_eq!(buffer.data.len(), 44100);
-        
+
         // Check first few samples
         for t in 0..10 {
             let expected = (t as f32 * 440.0 * 2.0 * std::f32::consts::PI / 44100.0).sin();
             assert!((buffer.data[t] - expected).abs() < 1e-4);
         }
-        
+
         std::fs::remove_file(file_path).unwrap();
     }
 
     #[test]
     fn test_load_bank_buffers_fills_regions() {
-        use hound::{WavSpec, WavWriter, SampleFormat};
+        use hound::{SampleFormat, WavSpec, WavWriter};
         let temp_dir = std::env::temp_dir();
         let wav_path = temp_dir.join("bank_test.wav");
         let spec = WavSpec {
@@ -513,16 +536,23 @@ mod tests {
         bank.add_region(reg);
 
         let errs = load_bank_buffers(&mut bank, &temp_dir);
-        assert!(errs.is_empty(), "load_bank_buffers returned errors: {:?}", errs);
-        assert!(bank.regions[0].buffer.is_some(), "Region buffer should be loaded");
+        assert!(
+            errs.is_empty(),
+            "load_bank_buffers returned errors: {:?}",
+            errs
+        );
+        assert!(
+            bank.regions[0].buffer.is_some(),
+            "Region buffer should be loaded"
+        );
 
         let _ = std::fs::remove_file(wav_path);
     }
 
     #[test]
     fn test_load_wav_round_trip() {
-        use hound::{WavSpec, WavWriter, SampleFormat};
-        
+        use hound::{SampleFormat, WavSpec, WavWriter};
+
         let file_path = std::env::temp_dir().join("test_load_wav_round_trip.wav");
         let spec = WavSpec {
             channels: 2,
@@ -530,25 +560,27 @@ mod tests {
             bits_per_sample: 16,
             sample_format: SampleFormat::Int,
         };
-        
+
         let mut writer = WavWriter::create(&file_path, spec).unwrap();
         for t in 0..100 {
             writer.write_sample((t * 100) as i16).unwrap();
             writer.write_sample((-t * 100) as i16).unwrap();
         }
         writer.finalize().unwrap();
-        
+
         let buffer = load_wav(&file_path).unwrap();
         assert_eq!(buffer.sample_rate, 48000);
         assert_eq!(buffer.channels, 2);
         assert_eq!(buffer.data.len(), 200);
-        
+
         let _ = std::fs::remove_file(file_path);
     }
 
     #[test]
     fn test_load_flac_round_trip() {
-        let flac_path = std::path::Path::new("local/FreePatsGM-SFZ+FLAC-20221026/samples/Applause/Applause.flac");
+        let flac_path = std::path::Path::new(
+            "local/FreePatsGM-SFZ+FLAC-20221026/samples/Applause/Applause.flac",
+        );
         if flac_path.exists() {
             let buffer = load_flac(flac_path).unwrap();
             assert!(buffer.sample_rate > 0);
@@ -559,7 +591,7 @@ mod tests {
 
     #[test]
     fn test_load_sample_file_wav() {
-        use hound::{WavSpec, WavWriter, SampleFormat};
+        use hound::{SampleFormat, WavSpec, WavWriter};
         let file_path = std::env::temp_dir().join("test_sample_file.wav");
         let spec = WavSpec {
             channels: 1,
@@ -580,7 +612,9 @@ mod tests {
 
     #[test]
     fn test_load_sample_file_flac() {
-        let flac_path = std::path::Path::new("local/FreePatsGM-SFZ+FLAC-20221026/samples/Applause/Applause.flac");
+        let flac_path = std::path::Path::new(
+            "local/FreePatsGM-SFZ+FLAC-20221026/samples/Applause/Applause.flac",
+        );
         if flac_path.exists() {
             let buffer = load_sample_file(flac_path).unwrap();
             assert!(buffer.sample_rate > 0);
@@ -651,5 +685,3 @@ mod tests {
         assert!(node.playing);
     }
 }
-
-

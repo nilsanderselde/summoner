@@ -92,7 +92,10 @@ impl<const CHANNELS: usize, const MAX_FRAMES: usize> FixedAudioBuffer<CHANNELS, 
     }
 
     pub fn set_active_frames(&mut self, frames: usize) {
-        assert!(frames <= MAX_FRAMES, "active frames exceeds MAX_FRAMES capacity");
+        assert!(
+            frames <= MAX_FRAMES,
+            "active frames exceeds MAX_FRAMES capacity"
+        );
         self.active_frames = frames;
     }
 
@@ -132,7 +135,9 @@ impl<const CHANNELS: usize, const MAX_FRAMES: usize> FixedAudioBuffer<CHANNELS, 
     }
 }
 
-impl<const CHANNELS: usize, const MAX_FRAMES: usize> Default for FixedAudioBuffer<CHANNELS, MAX_FRAMES> {
+impl<const CHANNELS: usize, const MAX_FRAMES: usize> Default
+    for FixedAudioBuffer<CHANNELS, MAX_FRAMES>
+{
     fn default() -> Self {
         Self::new()
     }
@@ -175,7 +180,9 @@ impl ChannelLayout {
             Self::Stereo => vec!["L", "R"],
             Self::Surround5_1 => vec!["L", "R", "C", "LFE", "Ls", "Rs"],
             Self::Surround7_1 => vec!["L", "R", "C", "LFE", "Ls", "Rs", "Lb", "Rb"],
-            Self::Surround7_1_4 => vec!["L", "R", "C", "LFE", "Ls", "Rs", "Lb", "Rb", "Tfl", "Tfr", "Tbl", "Tbr"],
+            Self::Surround7_1_4 => vec![
+                "L", "R", "C", "LFE", "Ls", "Rs", "Lb", "Rb", "Tfl", "Tfr", "Tbl", "Tbr",
+            ],
             Self::Custom(n) => (0..*n).map(|_| "Ch").collect(),
         }
     }
@@ -219,7 +226,10 @@ impl MultichannelAudioBuffer {
     }
 
     pub fn set_active_frames(&mut self, frames: usize) {
-        assert!(frames <= self.max_frames, "active frames exceeds MAX_FRAMES");
+        assert!(
+            frames <= self.max_frames,
+            "active frames exceeds MAX_FRAMES"
+        );
         self.active_frames = frames;
     }
 
@@ -258,38 +268,40 @@ impl MultichannelAudioBuffer {
         let weights: Vec<(f32, f32)> = match self.layout {
             ChannelLayout::Stereo => vec![(1.0, 0.0), (0.0, 1.0)],
             ChannelLayout::Surround5_1 => vec![
-                (1.0, 0.0),    // L
-                (0.0, 1.0),    // R
-                (0.707, 0.707),// C
-                (0.0, 0.0),    // LFE
-                (0.707, 0.0),  // Ls
-                (0.0, 0.707),  // Rs
+                (1.0, 0.0),     // L
+                (0.0, 1.0),     // R
+                (0.707, 0.707), // C
+                (0.0, 0.0),     // LFE
+                (0.707, 0.0),   // Ls
+                (0.0, 0.707),   // Rs
             ],
             ChannelLayout::Surround7_1 => vec![
-                (1.0, 0.0),    // L
-                (0.0, 1.0),    // R
-                (0.707, 0.707),// C
-                (0.0, 0.0),    // LFE
-                (0.707, 0.0),  // Ls
-                (0.0, 0.707),  // Rs
-                (0.5, 0.0),    // Lb
-                (0.0, 0.5),    // Rb
+                (1.0, 0.0),     // L
+                (0.0, 1.0),     // R
+                (0.707, 0.707), // C
+                (0.0, 0.0),     // LFE
+                (0.707, 0.0),   // Ls
+                (0.0, 0.707),   // Rs
+                (0.5, 0.0),     // Lb
+                (0.0, 0.5),     // Rb
             ],
             ChannelLayout::Surround7_1_4 => vec![
-                (1.0, 0.0),    // L
-                (0.0, 1.0),    // R
-                (0.707, 0.707),// C
-                (0.0, 0.0),    // LFE
-                (0.707, 0.0),  // Ls
-                (0.0, 0.707),  // Rs
-                (0.5, 0.0),    // Lb
-                (0.0, 0.5),    // Rb
-                (0.5, 0.0),    // Tfl
-                (0.0, 0.5),    // Tfr
-                (0.35, 0.0),   // Tbl
-                (0.0, 0.35),   // Tbr
+                (1.0, 0.0),     // L
+                (0.0, 1.0),     // R
+                (0.707, 0.707), // C
+                (0.0, 0.0),     // LFE
+                (0.707, 0.0),   // Ls
+                (0.0, 0.707),   // Rs
+                (0.5, 0.0),     // Lb
+                (0.0, 0.5),     // Rb
+                (0.5, 0.0),     // Tfl
+                (0.0, 0.5),     // Tfr
+                (0.35, 0.0),    // Tbl
+                (0.0, 0.35),    // Tbr
             ],
-            _ => (0..chs).map(|i| if i % 2 == 0 { (1.0, 0.0) } else { (0.0, 1.0) }).collect(),
+            _ => (0..chs)
+                .map(|i| if i % 2 == 0 { (1.0, 0.0) } else { (0.0, 1.0) })
+                .collect(),
         };
 
         for (ch_idx, (wl, wr)) in weights.iter().enumerate().take(chs) {
@@ -301,4 +313,3 @@ impl MultichannelAudioBuffer {
         }
     }
 }
-

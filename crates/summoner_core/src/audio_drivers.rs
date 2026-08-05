@@ -132,7 +132,8 @@ impl WasapiDriver {
     /// Update calculated roundtrip latency based on buffer size and exclusive mode status.
     fn update_latency(&mut self) {
         let multiplier = if self.exclusive_mode { 1.5 } else { 2.5 };
-        self.measured_latency_ms = (self.buffer_size_frames as f32 / self.sample_rate as f32) * 1000.0 * multiplier;
+        self.measured_latency_ms =
+            (self.buffer_size_frames as f32 / self.sample_rate as f32) * 1000.0 * multiplier;
     }
 
     /// Tune the WASAPI buffer size in frames and recalculate latency.
@@ -205,7 +206,8 @@ impl AsapiDriver {
     }
 
     fn update_latency(&mut self) {
-        self.measured_latency_ms = (self.buffer_size_frames as f32 / self.sample_rate as f32) * 1000.0 * 2.0;
+        self.measured_latency_ms =
+            (self.buffer_size_frames as f32 / self.sample_rate as f32) * 1000.0 * 2.0;
     }
 
     /// Tune the ASAPI / ASIO driver to match hardware preferred buffer size.
@@ -345,7 +347,8 @@ impl NativeAudioDriverTuner {
         match &mut self.driver {
             NativeAudioDriver::AAudio(d) => {
                 d.buffer_size_frames = d.buffer_size_frames.min(128);
-                d.measured_latency_ms = (d.buffer_size_frames as f32 / d.sample_rate as f32) * 1000.0 * 2.0;
+                d.measured_latency_ms =
+                    (d.buffer_size_frames as f32 / d.sample_rate as f32) * 1000.0 * 2.0;
             }
             NativeAudioDriver::AudioUnit(d) => {
                 d.frame_capacity = d.frame_capacity.min(128);
@@ -367,7 +370,9 @@ impl NativeAudioDriverTuner {
     pub fn measured_latency_ms(&self) -> f32 {
         match &self.driver {
             NativeAudioDriver::AAudio(d) => d.latency_ms(),
-            NativeAudioDriver::AudioUnit(d) => (d.frame_capacity as f32 / d.sample_rate as f32) * 1000.0 * 2.0,
+            NativeAudioDriver::AudioUnit(d) => {
+                (d.frame_capacity as f32 / d.sample_rate as f32) * 1000.0 * 2.0
+            }
             NativeAudioDriver::Wasapi(d) => d.latency_ms(),
             NativeAudioDriver::Asapi(d) => d.latency_ms(),
             NativeAudioDriver::Alsa(d) => d.latency_ms(),
@@ -468,4 +473,3 @@ mod tests {
         assert!(tuner.is_active());
     }
 }
-

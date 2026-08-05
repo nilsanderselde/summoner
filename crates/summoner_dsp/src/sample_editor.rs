@@ -67,8 +67,16 @@ pub fn audition_sample_at_c4(sample_buffer: &SampleBuffer, target_note: u8) -> S
         let read_pos = i as f32 * ratio;
         let idx0 = read_pos.floor() as usize;
         let frac = read_pos - idx0 as f32;
-        let s0 = if idx0 < orig_len { sample_buffer.data[idx0] } else { 0.0 };
-        let s1 = if idx0 + 1 < orig_len { sample_buffer.data[idx0 + 1] } else { 0.0 };
+        let s0 = if idx0 < orig_len {
+            sample_buffer.data[idx0]
+        } else {
+            0.0
+        };
+        let s1 = if idx0 + 1 < orig_len {
+            sample_buffer.data[idx0 + 1]
+        } else {
+            0.0
+        };
         resampled.push(s0 + frac * (s1 - s0));
     }
 
@@ -87,9 +95,13 @@ pub fn trim_sample(buffer: &mut Vec<f32>, start_sample: usize, end_sample: usize
 }
 
 pub fn normalize_sample(buffer: &mut [f32], target_peak_db: f32) {
-    if buffer.is_empty() { return; }
+    if buffer.is_empty() {
+        return;
+    }
     let max_peak = buffer.iter().map(|s| s.abs()).fold(0.0f32, f32::max);
-    if max_peak < 1e-6 { return; }
+    if max_peak < 1e-6 {
+        return;
+    }
     let target_linear = 10.0f32.powf(target_peak_db / 20.0);
     let scale = target_linear / max_peak;
     for s in buffer.iter_mut() {
@@ -103,17 +115,21 @@ pub fn reverse_sample(buffer: &mut [f32]) {
 
 pub fn fade_in_sample(buffer: &mut [f32], fade_len: usize) {
     let len = fade_len.min(buffer.len());
-    if len == 0 { return; }
-    for i in 0..len {
+    if len == 0 {
+        return;
+    }
+    for (i, val) in buffer.iter_mut().enumerate().take(len) {
         let t = i as f32 / len as f32;
-        buffer[i] *= t;
+        *val *= t;
     }
 }
 
 pub fn fade_out_sample(buffer: &mut [f32], fade_len: usize) {
     let len = fade_len.min(buffer.len());
     let total = buffer.len();
-    if len == 0 || total == 0 { return; }
+    if len == 0 || total == 0 {
+        return;
+    }
     let divisor = if len > 1 { (len - 1) as f32 } else { 1.0 };
     for i in 0..len {
         let idx = total - len + i;
@@ -123,7 +139,9 @@ pub fn fade_out_sample(buffer: &mut [f32], fade_len: usize) {
 }
 
 pub fn remove_dc_offset_sample(buffer: &mut [f32]) {
-    if buffer.is_empty() { return; }
+    if buffer.is_empty() {
+        return;
+    }
     let mean: f32 = buffer.iter().sum::<f32>() / buffer.len() as f32;
     for s in buffer.iter_mut() {
         *s -= mean;
@@ -132,7 +150,7 @@ pub fn remove_dc_offset_sample(buffer: &mut [f32]) {
 
 /// Sample loop editor with crossfade loop around loop boundary (Step 698).
 pub fn crossfade_sample_loop(
-    buffer: &mut Vec<f32>,
+    buffer: &mut [f32],
     loop_start: usize,
     loop_end: usize,
     crossfade_len: usize,
@@ -142,7 +160,9 @@ pub fn crossfade_sample_loop(
         return;
     }
     let xfade = crossfade_len.min(loop_start).min(loop_end - loop_start);
-    if xfade == 0 { return; }
+    if xfade == 0 {
+        return;
+    }
 
     for i in 0..xfade {
         let alpha = i as f32 / xfade as f32;
@@ -156,30 +176,38 @@ pub fn crossfade_sample_loop(
 }
 
 /// Chop sample to pads (up to 16 region start/end sample ranges) (Step 700).
-pub fn chop_sample_to_pads(buffer: &[f32], sample_rate: u32, max_pads: usize) -> Vec<(usize, usize)> {
+pub fn chop_sample_to_pads(
+    buffer: &[f32],
+    sample_rate: u32,
+    max_pads: usize,
+) -> Vec<(usize, usize)> {
     if buffer.is_empty() {
         return Vec::new();
     }
     let sample_buf = SampleBuffer::new(buffer.to_vec(), sample_rate, 1);
     let slicer = AutoSlicer::new(0.12, crate::slicer::SliceAlgorithm::EnergyDerivative);
     let markers = slicer.detect_slices(&sample_buf);
-    
-    let pad_count = max_pads.min(16).max(1);
+
+    let pad_count = max_pads.clamp(1, 16);
     let mut regions = Vec::new();
     for marker in markers.iter().take(pad_count) {
         if marker.start_sample < marker.end_sample {
             regions.push((marker.start_sample, marker.end_sample));
         }
     }
-    
+
     if regions.is_empty() {
         let chunk_size = buffer.len() / pad_count;
         for p in 0..pad_count {
             let start = p * chunk_size;
-            let end = if p == pad_count - 1 { buffer.len() } else { (p + 1) * chunk_size };
+            let end = if p == pad_count - 1 {
+                buffer.len()
+            } else {
+                (p + 1) * chunk_size
+            };
             regions.push((start, end));
         }
     }
-    
+
     regions
 }

@@ -137,7 +137,10 @@ impl QuantumStateVectorOscillator {
 
         let rot = Complex32::from_polar(1.0, self.phase);
         let s0 = self.alpha.mul(rot).re;
-        let s1 = self.beta.mul(rot.mul(Complex32::from_polar(1.0, self.phase))).re;
+        let s1 = self
+            .beta
+            .mul(rot.mul(Complex32::from_polar(1.0, self.phase)))
+            .re;
         (s0 + s1) * 0.5
     }
 }
@@ -257,11 +260,7 @@ impl QuantumEntanglementRouter {
     }
 
     /// Process quantum Bell-state non-local correlation on two audio track buffers.
-    pub fn route_entanglement(
-        &self,
-        track_a_samples: &mut [f32],
-        track_b_samples: &mut [f32],
-    ) {
+    pub fn route_entanglement(&self, track_a_samples: &mut [f32], track_b_samples: &mut [f32]) {
         let len = track_a_samples.len().min(track_b_samples.len());
         let alpha = 1.0 / 2.0f32.sqrt();
 
@@ -506,9 +505,8 @@ impl StochasticQuantumDecoherenceNoise {
     pub fn process_block(&mut self, input: &[Sample], output: &mut [Sample]) {
         for i in 0..input.len().min(output.len()) {
             let noise = self.lcg_rand();
-            self.density_matrix_purity = (self.density_matrix_purity
-                * (-self.decoherence_rate * 0.001).exp())
-                .max(0.5);
+            self.density_matrix_purity =
+                (self.density_matrix_purity * (-self.decoherence_rate * 0.001).exp()).max(0.5);
 
             let organic_warmth = noise * (1.0 - self.density_matrix_purity) * 0.05;
             output[i] = input[i] + organic_warmth;
@@ -549,7 +547,7 @@ pub struct HyperbolicReverbNode {
 impl HyperbolicReverbNode {
     pub fn new(room_radius: f32, length_samples: usize) -> Self {
         let mut ir = vec![0.0f32; length_samples];
-        for i in 0..length_samples {
+        for (i, val_ref) in ir.iter_mut().enumerate().take(length_samples) {
             let t = i as f32 / length_samples as f32;
             let u = t * room_radius * 0.9;
             // Hyperbolic geodesic distance: acosh(1 + 2u^2 / (1 - u^2)^2)
@@ -558,7 +556,7 @@ impl HyperbolicReverbNode {
             let dist_h = (1.0 + numer / denom).acosh();
 
             let attenuation = (-dist_h * 0.5).exp();
-            ir[i] = (i as f32 * 0.1).sin() * attenuation;
+            *val_ref = (i as f32 * 0.1).sin() * attenuation;
         }
 
         Self {
@@ -665,9 +663,7 @@ impl QuantumErrorCorrectionCodec {
             .map(|frame| {
                 let [a, b, c] = *frame;
                 // Majority voting syndrome decode
-                if (a - b).abs() < 1e-4 {
-                    a
-                } else if (a - c).abs() < 1e-4 {
+                if (a - b).abs() < 1e-4 || (a - c).abs() < 1e-4 {
                     a
                 } else {
                     b
@@ -833,9 +829,9 @@ impl QuantumPhaseEstimationPitchTracker {
 
         // Find global maximum
         let mut max_val = -1.0f32;
-        for lag in min_lag..=max_lag {
-            if autocorrs[lag] > max_val {
-                max_val = autocorrs[lag];
+        for &val in autocorrs.iter().take(max_lag + 1).skip(min_lag) {
+            if val > max_val {
+                max_val = val;
             }
         }
 
@@ -847,7 +843,10 @@ impl QuantumPhaseEstimationPitchTracker {
         let thresh = 0.8 * max_val;
         let mut best_lag = min_lag;
         for lag in (min_lag + 1)..max_lag {
-            if autocorrs[lag] >= thresh && autocorrs[lag] >= autocorrs[lag - 1] && autocorrs[lag] >= autocorrs[lag + 1] {
+            if autocorrs[lag] >= thresh
+                && autocorrs[lag] >= autocorrs[lag - 1]
+                && autocorrs[lag] >= autocorrs[lag + 1]
+            {
                 best_lag = lag;
                 break;
             }
@@ -1091,7 +1090,11 @@ mod tests {
             *sample = (2.0 * PI * 440.0 * (i as f32) / 44100.0).sin();
         }
         let est = tracker.estimate_pitch(&sig, 44100);
-        assert!((est - 440.0).abs() < 20.0, "Expected est near 440.0, got {}", est);
+        assert!(
+            (est - 440.0).abs() < 20.0,
+            "Expected est near 440.0, got {}",
+            est
+        );
     }
 
     #[test]

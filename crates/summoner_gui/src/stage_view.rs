@@ -12,9 +12,9 @@
 // GNU Affero General Public License for more details.
 
 use eframe::egui;
+use std::time::Instant;
 use summoner_core::transport::Transport;
 use summoner_project::schema::ProjectConfig;
-use std::time::Instant;
 
 #[derive(Clone, Debug)]
 pub struct PatternSlot {
@@ -57,7 +57,12 @@ impl StageView {
     }
 
     /// Step 322: Calculate next launch frame position rounded to quantize boundary.
-    pub fn calculate_next_fire_frame(current_frame: u64, sample_rate: u32, bpm: f64, quantize_beats: u32) -> u64 {
+    pub fn calculate_next_fire_frame(
+        current_frame: u64,
+        sample_rate: u32,
+        bpm: f64,
+        quantize_beats: u32,
+    ) -> u64 {
         if sample_rate == 0 || bpm <= 0.0 || quantize_beats == 0 {
             return current_frame;
         }
@@ -99,13 +104,15 @@ impl StageView {
     }
 
     pub fn register_tap(&mut self, now: Instant) -> Option<f64> {
-        self.tap_history.retain(|t| now.duration_since(*t).as_secs_f32() < 3.0);
+        self.tap_history
+            .retain(|t| now.duration_since(*t).as_secs_f32() < 3.0);
         self.tap_history.push(now);
         if self.tap_history.len() > 4 {
             self.tap_history.remove(0);
         }
         if self.tap_history.len() >= 2 {
-            let intervals: Vec<f64> = self.tap_history
+            let intervals: Vec<f64> = self
+                .tap_history
                 .windows(2)
                 .map(|w| w[1].duration_since(w[0]).as_secs_f64())
                 .collect();
@@ -132,7 +139,7 @@ impl StageView {
     pub fn trigger_panic(&mut self) {
         self.panic_mode = true;
     }
-    
+
     pub fn clear_panic(&mut self) {
         self.panic_mode = false;
     }
@@ -162,10 +169,22 @@ fn key_to_slot_index(key: egui::Key) -> Option<usize> {
 
 fn slot_hotkey_label(idx: usize) -> &'static str {
     match idx {
-        0 => "1", 1 => "2", 2 => "3", 3 => "4",
-        4 => "5", 5 => "6", 6 => "7", 7 => "8",
-        8 => "9", 9 => "0", 10 => "A", 11 => "B",
-        12 => "C", 13 => "D", 14 => "E", 15 => "F",
+        0 => "1",
+        1 => "2",
+        2 => "3",
+        3 => "4",
+        4 => "5",
+        5 => "6",
+        6 => "7",
+        7 => "8",
+        8 => "9",
+        9 => "0",
+        10 => "A",
+        11 => "B",
+        12 => "C",
+        13 => "D",
+        14 => "E",
+        15 => "F",
         _ => "",
     }
 }
@@ -185,7 +204,12 @@ fn trigger_slot_launch(idx: usize, stage: &mut StageView, transport: &mut Transp
         } else {
             if transport.is_playing {
                 let target = ((current_beat / q).floor() + 1.0) * q;
-                let target_frame = StageView::calculate_next_fire_frame(transport.frame_position, transport.sample_rate, transport.bpm, stage.quantize_beats);
+                let target_frame = StageView::calculate_next_fire_frame(
+                    transport.frame_position,
+                    transport.sample_rate,
+                    transport.bpm,
+                    stage.quantize_beats,
+                );
                 slot.pending_fire = true;
                 slot.target_fire_beat = Some(target);
                 stage.pending_launch = Some((idx, target_frame));
@@ -228,10 +252,22 @@ pub fn show_stage_view(ui: &mut egui::Ui, stage: &mut StageView, transport: &mut
 
     // Step 143: Keyboard shortcuts for pattern slots (1-9, 0, A-F)
     let hotkeys = [
-        egui::Key::Num1, egui::Key::Num2, egui::Key::Num3, egui::Key::Num4,
-        egui::Key::Num5, egui::Key::Num6, egui::Key::Num7, egui::Key::Num8,
-        egui::Key::Num9, egui::Key::Num0, egui::Key::A, egui::Key::B,
-        egui::Key::C, egui::Key::D, egui::Key::E, egui::Key::F,
+        egui::Key::Num1,
+        egui::Key::Num2,
+        egui::Key::Num3,
+        egui::Key::Num4,
+        egui::Key::Num5,
+        egui::Key::Num6,
+        egui::Key::Num7,
+        egui::Key::Num8,
+        egui::Key::Num9,
+        egui::Key::Num0,
+        egui::Key::A,
+        egui::Key::B,
+        egui::Key::C,
+        egui::Key::D,
+        egui::Key::E,
+        egui::Key::F,
     ];
     for key in hotkeys {
         if ui.input(|i| i.key_pressed(key)) {
@@ -263,16 +299,22 @@ pub fn show_stage_view(ui: &mut egui::Ui, stage: &mut StageView, transport: &mut
     egui::Frame::none().fill(dark_bg).show(ui, |ui| {
         ui.vertical_centered(|ui| {
             ui.add_space(20.0);
-            
+
             // BPM, Tap Tempo, BPM Step & Quantize Header
             ui.horizontal(|ui| {
                 ui.add_space(20.0);
 
                 // Step 138: Tap tempo button with BPM display
                 let bpm_str = format!("BPM: {:.1}", stage.bpm_display);
-                let bpm_btn = ui.add(egui::Button::new(
-                    egui::RichText::new(&bpm_str).size(40.0).strong().color(egui::Color32::WHITE)
-                ).fill(egui::Color32::from_gray(25)));
+                let bpm_btn = ui.add(
+                    egui::Button::new(
+                        egui::RichText::new(&bpm_str)
+                            .size(40.0)
+                            .strong()
+                            .color(egui::Color32::WHITE),
+                    )
+                    .fill(egui::Color32::from_gray(25)),
+                );
 
                 if bpm_btn.clicked() {
                     if let Some(new_bpm) = stage.register_tap(Instant::now()) {
@@ -292,11 +334,17 @@ pub fn show_stage_view(ui: &mut egui::Ui, stage: &mut StageView, transport: &mut
                 ui.add_space(10.0);
 
                 // Step 144: BPM nudge +/- buttons and step selector
-                if ui.button(egui::RichText::new("-").size(24.0).strong()).clicked() {
+                if ui
+                    .button(egui::RichText::new("-").size(24.0).strong())
+                    .clicked()
+                {
                     stage.bpm_display = (stage.bpm_display - stage.bpm_step).max(20.0);
                     transport.bpm = stage.bpm_display;
                 }
-                if ui.button(egui::RichText::new("+").size(24.0).strong()).clicked() {
+                if ui
+                    .button(egui::RichText::new("+").size(24.0).strong())
+                    .clicked()
+                {
                     stage.bpm_display = (stage.bpm_display + stage.bpm_step).min(300.0);
                     transport.bpm = stage.bpm_display;
                 }
@@ -324,94 +372,123 @@ pub fn show_stage_view(ui: &mut egui::Ui, stage: &mut StageView, transport: &mut
             ui.add_space(30.0);
 
             // 4x4 Grid
-            egui::Grid::new("stage_grid").spacing(egui::vec2(20.0, 20.0)).show(ui, |ui| {
-                for row in 0..4 {
-                    for col in 0..4 {
-                        let idx = row * 4 + col;
-                        let hk = slot_hotkey_label(idx);
-                        
-                        let (text, color, is_armed, is_pending) = if let Some(s) = &stage.pattern_slots[idx] {
-                            (format!("[{}] {}", hk, s.pattern_name), s.color, s.armed, s.pending_fire)
-                        } else {
-                            (format!("[{}] Empty", hk), egui::Color32::from_gray(30), false, false)
-                        };
+            egui::Grid::new("stage_grid")
+                .spacing(egui::vec2(20.0, 20.0))
+                .show(ui, |ui| {
+                    for row in 0..4 {
+                        for col in 0..4 {
+                            let idx = row * 4 + col;
+                            let hk = slot_hotkey_label(idx);
 
-                        let button_rect = ui.allocate_space(egui::vec2(120.0, 120.0)).1;
-                        let response = ui.interact(button_rect, ui.id().with(idx), egui::Sense::click());
-                        
-                        let fill_color = if is_pending {
-                            // Blinking amber for pending launch
-                            let time = ui.input(|i| i.time);
-                            let blink = (time * 10.0).sin().abs() as f32;
-                            ui.ctx().request_repaint();
-                            egui::Color32::from_rgb(220, 160, 40).linear_multiply(0.4 + 0.6 * blink)
-                        } else if is_armed {
-                            // Pulsing glow animation
-                            let time = ui.input(|i| i.time);
-                            let pulse = (time * 5.0).sin().abs() as f32;
-                            ui.ctx().request_repaint();
-                            color.linear_multiply(0.5 + 0.5 * pulse)
-                        } else {
-                            color.linear_multiply(0.3)
-                        };
+                            let (text, color, is_armed, is_pending) =
+                                if let Some(s) = &stage.pattern_slots[idx] {
+                                    (
+                                        format!("[{}] {}", hk, s.pattern_name),
+                                        s.color,
+                                        s.armed,
+                                        s.pending_fire,
+                                    )
+                                } else {
+                                    (
+                                        format!("[{}] Empty", hk),
+                                        egui::Color32::from_gray(30),
+                                        false,
+                                        false,
+                                    )
+                                };
 
-                        ui.painter().rect_filled(button_rect, 10.0, fill_color);
-                        
-                        let stroke_color = if response.hovered() {
-                            egui::Color32::WHITE
-                        } else if is_pending {
-                            egui::Color32::YELLOW
-                        } else {
-                            color
-                        };
-                        ui.painter().rect_stroke(button_rect, 10.0, egui::Stroke::new(2.0f32, stroke_color));
-                        
-                        let display_text = if is_pending {
-                            format!("{}\n(WAIT)", text)
-                        } else {
-                            text
-                        };
-                        ui.painter().text(
-                            button_rect.center(),
-                            egui::Align2::CENTER_CENTER,
-                            display_text,
-                            egui::FontId::proportional(18.0),
-                            egui::Color32::WHITE,
-                        );
+                            let button_rect = ui.allocate_space(egui::vec2(120.0, 120.0)).1;
+                            let response =
+                                ui.interact(button_rect, ui.id().with(idx), egui::Sense::click());
 
-                        // Step 145: Loop progress bar indicator inside each lit/armed slot
-                        if is_armed {
-                            let q = stage.quantize_beats as f64;
-                            let progress = ((current_beat % q) / q) as f32;
-                            let progress_width = (button_rect.width() - 16.0) * progress;
-                            let bar_rect = egui::Rect::from_min_max(
-                                egui::pos2(button_rect.left() + 8.0, button_rect.bottom() - 12.0),
-                                egui::pos2(button_rect.left() + 8.0 + progress_width, button_rect.bottom() - 6.0),
+                            let fill_color = if is_pending {
+                                // Blinking amber for pending launch
+                                let time = ui.input(|i| i.time);
+                                let blink = (time * 10.0).sin().abs() as f32;
+                                ui.ctx().request_repaint();
+                                egui::Color32::from_rgb(220, 160, 40)
+                                    .linear_multiply(0.4 + 0.6 * blink)
+                            } else if is_armed {
+                                // Pulsing glow animation
+                                let time = ui.input(|i| i.time);
+                                let pulse = (time * 5.0).sin().abs() as f32;
+                                ui.ctx().request_repaint();
+                                color.linear_multiply(0.5 + 0.5 * pulse)
+                            } else {
+                                color.linear_multiply(0.3)
+                            };
+
+                            ui.painter().rect_filled(button_rect, 10.0, fill_color);
+
+                            let stroke_color = if response.hovered() {
+                                egui::Color32::WHITE
+                            } else if is_pending {
+                                egui::Color32::YELLOW
+                            } else {
+                                color
+                            };
+                            ui.painter().rect_stroke(
+                                button_rect,
+                                10.0,
+                                egui::Stroke::new(2.0f32, stroke_color),
                             );
-                            ui.painter().rect_filled(bar_rect, 3.0, egui::Color32::WHITE);
-                            ui.ctx().request_repaint();
-                        }
 
-                        // Step 146: Flashing border transition animation when pattern fires
-                        if let Some(slot) = &stage.pattern_slots[idx] {
-                            if let Some(fired_t) = slot.last_fired_time {
-                                let elapsed = fired_t.elapsed().as_secs_f32();
-                                if elapsed < 0.3 {
-                                    let alpha = 1.0 - (elapsed / 0.3);
-                                    let flash_stroke = egui::Stroke::new(4.0f32, egui::Color32::WHITE.linear_multiply(alpha));
-                                    ui.painter().rect_stroke(button_rect, 10.0, flash_stroke);
-                                    ui.ctx().request_repaint();
+                            let display_text = if is_pending {
+                                format!("{}\n(WAIT)", text)
+                            } else {
+                                text
+                            };
+                            ui.painter().text(
+                                button_rect.center(),
+                                egui::Align2::CENTER_CENTER,
+                                display_text,
+                                egui::FontId::proportional(18.0),
+                                egui::Color32::WHITE,
+                            );
+
+                            // Step 145: Loop progress bar indicator inside each lit/armed slot
+                            if is_armed {
+                                let q = stage.quantize_beats as f64;
+                                let progress = ((current_beat % q) / q) as f32;
+                                let progress_width = (button_rect.width() - 16.0) * progress;
+                                let bar_rect = egui::Rect::from_min_max(
+                                    egui::pos2(
+                                        button_rect.left() + 8.0,
+                                        button_rect.bottom() - 12.0,
+                                    ),
+                                    egui::pos2(
+                                        button_rect.left() + 8.0 + progress_width,
+                                        button_rect.bottom() - 6.0,
+                                    ),
+                                );
+                                ui.painter()
+                                    .rect_filled(bar_rect, 3.0, egui::Color32::WHITE);
+                                ui.ctx().request_repaint();
+                            }
+
+                            // Step 146: Flashing border transition animation when pattern fires
+                            if let Some(slot) = &stage.pattern_slots[idx] {
+                                if let Some(fired_t) = slot.last_fired_time {
+                                    let elapsed = fired_t.elapsed().as_secs_f32();
+                                    if elapsed < 0.3 {
+                                        let alpha = 1.0 - (elapsed / 0.3);
+                                        let flash_stroke = egui::Stroke::new(
+                                            4.0f32,
+                                            egui::Color32::WHITE.linear_multiply(alpha),
+                                        );
+                                        ui.painter().rect_stroke(button_rect, 10.0, flash_stroke);
+                                        ui.ctx().request_repaint();
+                                    }
                                 }
                             }
-                        }
 
-                        if response.clicked() {
-                            trigger_slot_launch(idx, stage, transport);
+                            if response.clicked() {
+                                trigger_slot_launch(idx, stage, transport);
+                            }
                         }
+                        ui.end_row();
                     }
-                    ui.end_row();
-                }
-            });
+                });
 
             ui.add_space(40.0);
 
@@ -421,7 +498,8 @@ pub fn show_stage_view(ui: &mut egui::Ui, stage: &mut StageView, transport: &mut
 
                 // Step 142: ALL STOP Button
                 let stop_rect = ui.allocate_space(egui::vec2(220.0, 60.0)).1;
-                let stop_response = ui.interact(stop_rect, ui.id().with("all_stop"), egui::Sense::click());
+                let stop_response =
+                    ui.interact(stop_rect, ui.id().with("all_stop"), egui::Sense::click());
                 let stop_color = if stop_response.hovered() {
                     egui::Color32::from_rgb(240, 120, 40)
                 } else {
@@ -443,13 +521,14 @@ pub fn show_stage_view(ui: &mut egui::Ui, stage: &mut StageView, transport: &mut
 
                 // Panic Button
                 let panic_rect = ui.allocate_space(egui::vec2(220.0, 60.0)).1;
-                let panic_response = ui.interact(panic_rect, ui.id().with("panic"), egui::Sense::click());
+                let panic_response =
+                    ui.interact(panic_rect, ui.id().with("panic"), egui::Sense::click());
                 let panic_color = if panic_response.hovered() {
                     egui::Color32::from_rgb(255, 100, 100)
                 } else {
                     egui::Color32::from_rgb(200, 0, 0)
                 };
-                
+
                 ui.painter().rect_filled(panic_rect, 12.0, panic_color);
                 ui.painter().text(
                     panic_rect.center(),
@@ -458,7 +537,7 @@ pub fn show_stage_view(ui: &mut egui::Ui, stage: &mut StageView, transport: &mut
                     egui::FontId::proportional(24.0),
                     egui::Color32::WHITE,
                 );
-                
+
                 if panic_response.clicked() || ui.input(|i| i.key_pressed(egui::Key::Escape)) {
                     stage.trigger_panic();
                 }
@@ -495,17 +574,20 @@ mod tests {
             last_fired_beat: None,
             last_fired_time: None,
         });
-        
+
         let mut transport = Transport::new(44100, 120.0);
-        
+
         let ctx = egui::Context::default();
         let _ = ctx.run(egui::RawInput::default(), |ctx| {
             egui::CentralPanel::default().show(ctx, |ui| {
                 show_stage_view(ui, &mut stage, &mut transport);
             });
         });
-        
-        assert_eq!(stage.pattern_slots.iter().filter(|s| s.is_some()).count(), 2);
+
+        assert_eq!(
+            stage.pattern_slots.iter().filter(|s| s.is_some()).count(),
+            2
+        );
     }
 
     #[test]
@@ -578,9 +660,15 @@ mod tests {
         stage.populate_from_project(&project);
 
         assert!(stage.pattern_slots[0].is_some());
-        assert_eq!(stage.pattern_slots[0].as_ref().unwrap().pattern_name, "Bass Synthesizer");
+        assert_eq!(
+            stage.pattern_slots[0].as_ref().unwrap().pattern_name,
+            "Bass Synthesizer"
+        );
         assert!(stage.pattern_slots[1].is_some());
-        assert_eq!(stage.pattern_slots[1].as_ref().unwrap().pattern_name, "Lead Synth");
+        assert_eq!(
+            stage.pattern_slots[1].as_ref().unwrap().pattern_name,
+            "Lead Synth"
+        );
     }
 
     #[test]
@@ -621,4 +709,3 @@ mod tests {
         assert_eq!(target_frame_exact, 88200);
     }
 }
-

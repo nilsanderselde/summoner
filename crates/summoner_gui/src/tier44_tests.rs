@@ -5,9 +5,9 @@
 
 #[cfg(test)]
 mod tests {
-    use summoner_dsp::zero_gravity_fluid::*;
     use summoner_core::node::{AudioNode, ProcessContext};
     use summoner_core::transport::Transport;
+    use summoner_dsp::zero_gravity_fluid::*;
 
     #[test]
     fn test_step_1201_navier_stokes_fluid_node() {

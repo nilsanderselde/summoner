@@ -27,7 +27,7 @@ impl AdaptiveBufferScaler {
     /// Create a new adaptive buffer scaler for the given sample rate and initial buffer size.
     pub fn new(sample_rate: u32, initial_buffer_size: usize) -> Self {
         Self {
-            min_buffer_size: 16,  // ~0.33 ms @ 48kHz for sub-millisecond latency
+            min_buffer_size: 16, // ~0.33 ms @ 48kHz for sub-millisecond latency
             max_buffer_size: 1024,
             current_buffer_size: initial_buffer_size.clamp(16, 1024),
             sample_rate: sample_rate.max(8000),
@@ -50,11 +50,15 @@ impl AdaptiveBufferScaler {
             let block_time_sec = self.current_buffer_size as f32 / self.sample_rate as f32;
             let actual_time_sec = duration.as_secs_f32();
             if block_time_sec > 0.0 {
-                self.cpu_load_percent = 0.9 * self.cpu_load_percent + 0.1 * ((actual_time_sec / block_time_sec) * 100.0);
+                self.cpu_load_percent = 0.9 * self.cpu_load_percent
+                    + 0.1 * ((actual_time_sec / block_time_sec) * 100.0);
             }
 
             // Auto-scale down if CPU load is low and stable for 50 consecutive blocks
-            if self.success_blocks > 50 && self.cpu_load_percent < 40.0 && self.current_buffer_size > self.min_buffer_size {
+            if self.success_blocks > 50
+                && self.cpu_load_percent < 40.0
+                && self.current_buffer_size > self.min_buffer_size
+            {
                 self.current_buffer_size = (self.current_buffer_size / 2).max(self.min_buffer_size);
                 self.success_blocks = 0;
             }

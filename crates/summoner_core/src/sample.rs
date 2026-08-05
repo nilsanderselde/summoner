@@ -69,7 +69,12 @@ pub struct SampleSlice {
 }
 
 impl SampleSlice {
-    pub fn new(content_hash: SampleHash, start_frame: usize, end_frame: usize, channels: usize) -> Self {
+    pub fn new(
+        content_hash: SampleHash,
+        start_frame: usize,
+        end_frame: usize,
+        channels: usize,
+    ) -> Self {
         assert!(start_frame <= end_frame, "start_frame must be <= end_frame");
         Self {
             content_hash,

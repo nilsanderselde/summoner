@@ -11,7 +11,12 @@ pub enum DitherType {
 }
 
 /// Applies dithering to an f32 audio sample before quantizing to target bit depth.
-pub fn apply_dither(sample: f32, bit_depth: u8, dither_type: DitherType, prng_state: &mut u32) -> f32 {
+pub fn apply_dither(
+    sample: f32,
+    bit_depth: u8,
+    dither_type: DitherType,
+    prng_state: &mut u32,
+) -> f32 {
     if bit_depth >= 32 || dither_type == DitherType::None {
         return sample;
     }

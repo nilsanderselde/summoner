@@ -71,7 +71,8 @@ impl SignalProcessor for EffectDelay {
         }
 
         let max_samples = MAX_DELAY_SAMPLES as f32;
-        let delay_samples = (self.delay_time_sec * ctx.sample_rate as f32).clamp(1.0, max_samples - 1.0);
+        let delay_samples =
+            (self.delay_time_sec * ctx.sample_rate as f32).clamp(1.0, max_samples - 1.0);
 
         let num_samples = outputs[0].len();
         for i in 0..num_samples {

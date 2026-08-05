@@ -5,14 +5,13 @@
 
 #[cfg(test)]
 mod tests {
-    use summoner_project::media_export::{
-        read_json, write_json, lua_http_get, lua_http_post, lua_osc_send, LuaOscServer,
-        LuaMidiInputSubscriber, lua_midi_out_send, LuaMidiMessage, lua_spawn_process,
-        LuaClipboard, lua_env_get, LuaFileWatcher, lua_fft, lua_ifft, lua_autocorrelate,
-        lua_spectral_centroid, lua_rms, lua_find_peaks, lua_detect_onsets, lua_detect_pitch,
-        lua_detect_tempo,
-    };
     use std::path::Path;
+    use summoner_project::media_export::{
+        lua_autocorrelate, lua_detect_onsets, lua_detect_pitch, lua_detect_tempo, lua_env_get,
+        lua_fft, lua_find_peaks, lua_http_get, lua_http_post, lua_ifft, lua_midi_out_send,
+        lua_osc_send, lua_rms, lua_spawn_process, lua_spectral_centroid, read_json, write_json,
+        LuaClipboard, LuaFileWatcher, LuaMidiInputSubscriber, LuaMidiMessage, LuaOscServer,
+    };
 
     #[test]
     fn test_step_941_read_json() {
@@ -66,10 +65,20 @@ mod tests {
 
     #[test]
     fn test_step_947_lua_midi_out_send() {
-        let msg = LuaMidiMessage { channel: 0, status: 0x90, data1: 60, data2: 100 };
+        let msg = LuaMidiMessage {
+            channel: 0,
+            status: 0x90,
+            data1: 60,
+            data2: 100,
+        };
         assert!(lua_midi_out_send(0, &msg).is_ok());
 
-        let invalid_msg = LuaMidiMessage { channel: 16, status: 0x90, data1: 60, data2: 100 };
+        let invalid_msg = LuaMidiMessage {
+            channel: 16,
+            status: 0x90,
+            data1: 60,
+            data2: 100,
+        };
         assert!(lua_midi_out_send(0, &invalid_msg).is_err());
     }
 
@@ -107,7 +116,9 @@ mod tests {
 
     #[test]
     fn test_step_952_lua_fft() {
-        let samples = vec![0.0f32, 1.0, 0.0, -1.0, 0.0, 1.0, 0.0, -1.0, 0.0, 1.0, 0.0, -1.0, 0.0, 1.0, 0.0, -1.0];
+        let samples = vec![
+            0.0f32, 1.0, 0.0, -1.0, 0.0, 1.0, 0.0, -1.0, 0.0, 1.0, 0.0, -1.0, 0.0, 1.0, 0.0, -1.0,
+        ];
         let (mags, phases) = lua_fft(&samples, "hann");
         assert!(!mags.is_empty());
         assert_eq!(mags.len(), phases.len());

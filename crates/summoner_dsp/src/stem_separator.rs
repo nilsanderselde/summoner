@@ -4,8 +4,8 @@
 
 //! Stem separation engine utilizing ONNX spectral mask decomposition.
 
-use std::collections::HashMap;
 use crate::sampler::SampleBuffer;
+use std::collections::HashMap;
 
 /// Bundled ONNX model weights for 4-stem separation (drums, bass, melody, other).
 pub const ONNX_STEM_SEPARATOR_MODEL_BYTES: &[u8] = b"ONNX_STEM_SEPARATOR_V1_STUB_TRACT_EMBEDDED";
@@ -34,7 +34,7 @@ impl StemSeparator {
         let sample_rate = buffer.sample_rate;
         let channels = buffer.channels.max(1);
         let num_samples = buffer.data.len();
-        
+
         let mut drums = vec![0.0f32; num_samples];
         let mut bass = vec![0.0f32; num_samples];
         let mut melody = vec![0.0f32; num_samples];
@@ -78,10 +78,22 @@ impl StemSeparator {
         }
 
         let mut map = HashMap::new();
-        map.insert("drums".to_string(), SampleBuffer::new(drums, sample_rate, channels));
-        map.insert("bass".to_string(), SampleBuffer::new(bass, sample_rate, channels));
-        map.insert("melody".to_string(), SampleBuffer::new(melody, sample_rate, channels));
-        map.insert("other".to_string(), SampleBuffer::new(other, sample_rate, channels));
+        map.insert(
+            "drums".to_string(),
+            SampleBuffer::new(drums, sample_rate, channels),
+        );
+        map.insert(
+            "bass".to_string(),
+            SampleBuffer::new(bass, sample_rate, channels),
+        );
+        map.insert(
+            "melody".to_string(),
+            SampleBuffer::new(melody, sample_rate, channels),
+        );
+        map.insert(
+            "other".to_string(),
+            SampleBuffer::new(other, sample_rate, channels),
+        );
         map
     }
 }
@@ -141,7 +153,8 @@ impl MultiTrackAudioRouter {
 
             if let Some(stem_buf) = stems.get(&meta.stem_name) {
                 let gain_factor = 10.0f32.powf(meta.gain_db / 20.0);
-                let routed_data: Vec<f32> = stem_buf.data.iter().map(|&s| s * gain_factor).collect();
+                let routed_data: Vec<f32> =
+                    stem_buf.data.iter().map(|&s| s * gain_factor).collect();
                 let buf = SampleBuffer::new(routed_data, stem_buf.sample_rate, stem_buf.channels);
 
                 if let Some(existing) = &mut track_buffers[meta.target_track_index] {

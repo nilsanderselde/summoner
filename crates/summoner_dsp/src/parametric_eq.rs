@@ -69,9 +69,23 @@ impl ParametricEqNode {
         eq
     }
 
-    pub fn set_band(&mut self, idx: usize, filter_type: FilterType, freq: f32, gain_db: f32, q: f32, enabled: bool) {
+    pub fn set_band(
+        &mut self,
+        idx: usize,
+        filter_type: FilterType,
+        freq: f32,
+        gain_db: f32,
+        q: f32,
+        enabled: bool,
+    ) {
         if idx < 8 {
-            self.bands[idx] = EqBand { filter_type, freq: freq.clamp(20.0, 20000.0), gain_db, q: q.max(0.1), enabled };
+            self.bands[idx] = EqBand {
+                filter_type,
+                freq: freq.clamp(20.0, 20000.0),
+                gain_db,
+                q: q.max(0.1),
+                enabled,
+            };
             self.biquads[idx].filter_type = filter_type;
             self.biquads[idx].freq = freq;
             self.biquads[idx].gain_db = gain_db;
@@ -83,46 +97,49 @@ impl ParametricEqNode {
     /// Calculate combined magnitude response in dB for a slice of frequencies at given sample rate.
     pub fn response_curve(&self, freqs: &[f32], sample_rate: u32) -> Vec<f32> {
         let sr = sample_rate as f32;
-        freqs.iter().map(|&f| {
-            let mut total_db = 0.0;
-            for band in &self.bands {
-                if !band.enabled || band.gain_db == 0.0 {
-                    continue;
+        freqs
+            .iter()
+            .map(|&f| {
+                let mut total_db = 0.0;
+                for band in &self.bands {
+                    if !band.enabled || band.gain_db == 0.0 {
+                        continue;
+                    }
+                    let ratio = f / band.freq.max(1.0);
+                    match band.filter_type {
+                        FilterType::Peaking => {
+                            let bell = 1.0 / (1.0 + (ratio - 1.0 / ratio).powi(2) * band.q.powi(2));
+                            total_db += band.gain_db * bell;
+                        }
+                        FilterType::LowShelf => {
+                            if f < band.freq {
+                                total_db += band.gain_db;
+                            } else if f < band.freq * 2.0 {
+                                let factor = 1.0 - (f - band.freq) / band.freq;
+                                total_db += band.gain_db * factor.max(0.0);
+                            }
+                        }
+                        FilterType::HighShelf => {
+                            if f > band.freq {
+                                total_db += band.gain_db;
+                            } else if f > band.freq * 0.5 {
+                                let factor = (f - band.freq * 0.5) / (band.freq * 0.5);
+                                total_db += band.gain_db * factor.max(0.0);
+                            }
+                        }
+                        FilterType::Notch => {
+                            if (f - band.freq).abs() < band.freq * 0.1 {
+                                total_db -= 24.0;
+                            }
+                        }
+                        _ => {
+                            let _ = sr;
+                        }
+                    }
                 }
-                let ratio = f / band.freq.max(1.0);
-                match band.filter_type {
-                    FilterType::Peaking => {
-                        let bell = 1.0 / (1.0 + (ratio - 1.0 / ratio).powi(2) * band.q.powi(2));
-                        total_db += band.gain_db * bell;
-                    }
-                    FilterType::LowShelf => {
-                        if f < band.freq {
-                            total_db += band.gain_db;
-                        } else if f < band.freq * 2.0 {
-                            let factor = 1.0 - (f - band.freq) / band.freq;
-                            total_db += band.gain_db * factor.max(0.0);
-                        }
-                    }
-                    FilterType::HighShelf => {
-                        if f > band.freq {
-                            total_db += band.gain_db;
-                        } else if f > band.freq * 0.5 {
-                            let factor = (f - band.freq * 0.5) / (band.freq * 0.5);
-                            total_db += band.gain_db * factor.max(0.0);
-                        }
-                    }
-                    FilterType::Notch => {
-                        if (f - band.freq).abs() < band.freq * 0.1 {
-                            total_db -= 24.0;
-                        }
-                    }
-                    _ => {
-                        let _ = sr;
-                    }
-                }
-            }
-            total_db
-        }).collect()
+                total_db
+            })
+            .collect()
     }
 }
 
@@ -148,7 +165,11 @@ impl SignalProcessor for ParametricEqNode {
         }
 
         let num_samples = outputs[0].len();
-        let sr = if ctx.sample_rate > 0 { ctx.sample_rate as f32 } else { 44100.0 };
+        let sr = if ctx.sample_rate > 0 {
+            ctx.sample_rate as f32
+        } else {
+            44100.0
+        };
 
         for b in self.biquads.iter_mut() {
             if b.sample_rate != sr {
@@ -158,7 +179,11 @@ impl SignalProcessor for ParametricEqNode {
         }
 
         for i in 0..num_samples {
-            let mut sample = if !inputs[0].is_empty() && i < inputs[0].len() { inputs[0][i] } else { 0.0 };
+            let mut sample = if !inputs[0].is_empty() && i < inputs[0].len() {
+                inputs[0][i]
+            } else {
+                0.0
+            };
 
             for (b_idx, band) in self.bands.iter().enumerate() {
                 if band.enabled {
@@ -188,6 +213,9 @@ mod tests {
         let curve = eq.response_curve(&freqs, 44100);
 
         assert_eq!(curve.len(), 3);
-        assert!((curve[1] - 6.0).abs() < 0.1, "1000Hz response should match peak gain");
+        assert!(
+            (curve[1] - 6.0).abs() < 0.1,
+            "1000Hz response should match peak gain"
+        );
     }
 }

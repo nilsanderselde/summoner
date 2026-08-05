@@ -17,8 +17,8 @@ use crate::audio::Sample;
 use crate::transport::Transport;
 use std::f32::consts::TAU;
 
-use std::sync::Arc;
 use crate::param_bus::ParamBus;
+use std::sync::Arc;
 
 /// Contextual metadata passed to `AudioNode::process` during DSP render evaluation.
 #[derive(Debug, Clone)]
@@ -83,12 +83,7 @@ pub trait AudioNode: Send {
 
     /// Process an input sample buffer slice into output sample buffer slice.
     /// MUST NOT perform heap allocations (`malloc`/`free`) or block on locks.
-    fn process(
-        &mut self,
-        input: &[&[Sample]],
-        output: &mut [&mut [Sample]],
-        ctx: &ProcessContext,
-    );
+    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext);
 }
 
 /// A transparent audio node that copies inputs directly to outputs.

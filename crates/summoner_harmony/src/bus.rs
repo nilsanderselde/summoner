@@ -127,5 +127,3 @@ mod tests {
         assert!(!suggestion.is_empty());
     }
 }
-
-

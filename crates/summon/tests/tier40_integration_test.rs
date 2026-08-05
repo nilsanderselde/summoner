@@ -1,8 +1,8 @@
 // Summoner DAW - Tier 40 Integration Tests (Embedded Hardware & Raspberry Pi Firmware)
 // AGPLv3 License
 
-use summoner_core::embedded_hardware::*;
 use std::time::{Duration, Instant};
+use summoner_core::embedded_hardware::*;
 
 #[test]
 fn test_tier40_embedded_hardware_firmware_pipeline() {

@@ -4,10 +4,10 @@
 //! Media export, visualization generation (PNG/PDF/Video), AES-256 project encryption,
 //! audio watermarking, git change attribution, TOML merge resolution, and Lua scripting engine (Steps 841-860).
 
-use std::path::Path;
-use std::collections::HashMap;
-use serde::{Serialize, Deserialize};
 use crate::schema::{ProjectConfig, TrackConfig};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::path::Path;
 
 // ============================================================================
 // Step 841: Audio Watermarking
@@ -15,54 +15,63 @@ use crate::schema::{ProjectConfig, TrackConfig};
 
 /// Embeds an inaudible, spread-spectrum identifier into an audio buffer.
 pub fn apply_audio_watermark(buffer: &mut [f32], watermark_id: &str, sample_rate: u32) {
-    if buffer.is_empty() || watermark_id.is_empty() { return; }
-    
+    if buffer.is_empty() || watermark_id.is_empty() {
+        return;
+    }
+
     let seed_hash = blake3::hash(watermark_id.as_bytes());
     let mut state = u64::from_le_bytes(seed_hash.as_bytes()[..8].try_into().unwrap());
-    
+
     let amplitude = 0.001f32; // Inaudible high-frequency noise
     let nyquist = sample_rate as f32 * 0.5;
     let high_pass_freq = (nyquist * 0.85).max(15000.0);
-    
+
     for (i, sample) in buffer.iter_mut().enumerate() {
         state ^= state << 13;
         state ^= state >> 7;
         state ^= state << 17;
         let noise = ((state as f32 / u64::MAX as f32) * 2.0 - 1.0) * amplitude;
-        let carrier = (2.0 * std::f32::consts::PI * high_pass_freq * (i as f32 / sample_rate as f32)).sin();
+        let carrier =
+            (2.0 * std::f32::consts::PI * high_pass_freq * (i as f32 / sample_rate as f32)).sin();
         *sample += noise * carrier;
     }
 }
 
 /// Extracts or detects the embedded watermark ID from an audio buffer.
 pub fn extract_audio_watermark(buffer: &[f32], watermark_id: &str, sample_rate: u32) -> bool {
-    if buffer.is_empty() || watermark_id.is_empty() { return false; }
-    
+    if buffer.is_empty() || watermark_id.is_empty() {
+        return false;
+    }
+
     let seed_hash = blake3::hash(watermark_id.as_bytes());
     let mut state = u64::from_le_bytes(seed_hash.as_bytes()[..8].try_into().unwrap());
-    
+
     let nyquist = sample_rate as f32 * 0.5;
     let high_pass_freq = (nyquist * 0.85).max(15000.0);
     let mut correlation = 0.0f64;
     let mut energy = 0.0f64;
     let mut prev = 0.0f64;
-    
+
     for (i, &sample) in buffer.iter().enumerate() {
         state ^= state << 13;
         state ^= state >> 7;
         state ^= state << 17;
         let noise = ((state as f32 / u64::MAX as f32) * 2.0 - 1.0) as f64;
-        let carrier = (2.0 * std::f32::consts::PI * high_pass_freq * (i as f32 / sample_rate as f32)).sin() as f64;
+        let carrier =
+            (2.0 * std::f32::consts::PI * high_pass_freq * (i as f32 / sample_rate as f32)).sin()
+                as f64;
         let chip = noise * carrier;
-        
+
         let hp = sample as f64 - prev;
         prev = sample as f64;
-        
+
         correlation += hp * chip;
         energy += chip * chip;
     }
-    
-    if energy == 0.0 { return false; }
+
+    if energy == 0.0 {
+        return false;
+    }
     let ratio = correlation / (0.001 * energy);
     ratio > 0.3
 }
@@ -184,18 +193,22 @@ pub fn export_waveform_png(buffer: &[f32], width: u32, height: u32) -> Vec<u8> {
     for x in 0..width {
         let start_idx = (x as f32 * samples_per_pixel) as usize;
         let end_idx = (((x + 1) as f32 * samples_per_pixel) as usize).min(buffer.len());
-        if start_idx >= buffer.len() { break; }
+        if start_idx >= buffer.len() {
+            break;
+        }
 
         let chunk = &buffer[start_idx..end_idx];
         let max_val = chunk.iter().fold(0.0f32, |a, &b| a.max(b.abs()));
         let min_val = -max_val;
 
-        let y_top = ((center_y - max_val * (height as f32 * 0.45)) as i32).clamp(0, height as i32 - 1);
-        let y_bot = ((center_y - min_val * (height as f32 * 0.45)) as i32).clamp(0, height as i32 - 1);
+        let y_top =
+            ((center_y - max_val * (height as f32 * 0.45)) as i32).clamp(0, height as i32 - 1);
+        let y_bot =
+            ((center_y - min_val * (height as f32 * 0.45)) as i32).clamp(0, height as i32 - 1);
 
         for y in y_top..=y_bot {
             let idx = ((y as u32 * width + x) * 4) as usize;
-            pixels[idx] = 26;     // Electric blue #1a8cff
+            pixels[idx] = 26; // Electric blue #1a8cff
             pixels[idx + 1] = 140;
             pixels[idx + 2] = 255;
             pixels[idx + 3] = 255;
@@ -206,7 +219,12 @@ pub fn export_waveform_png(buffer: &[f32], width: u32, height: u32) -> Vec<u8> {
 }
 
 /// Generates a PNG spectrogram image.
-pub fn export_spectrogram_png(buffer: &[f32], width: u32, height: u32, _sample_rate: u32) -> Vec<u8> {
+pub fn export_spectrogram_png(
+    buffer: &[f32],
+    width: u32,
+    height: u32,
+    _sample_rate: u32,
+) -> Vec<u8> {
     let mut pixels = vec![0u8; (width * height * 4) as usize];
     if buffer.is_empty() || width == 0 || height == 0 {
         return create_png_image(width, height, &pixels);
@@ -216,11 +234,12 @@ pub fn export_spectrogram_png(buffer: &[f32], width: u32, height: u32, _sample_r
         let freq_ratio = 1.0 - (y as f32 / height as f32);
         for x in 0..width {
             let time_ratio = x as f32 / width as f32;
-            let sample_idx = ((time_ratio * (buffer.len() - 1) as f32) as usize).min(buffer.len() - 1);
+            let sample_idx =
+                ((time_ratio * (buffer.len() - 1) as f32) as usize).min(buffer.len() - 1);
             let val = (buffer[sample_idx].abs() * freq_ratio).clamp(0.0, 1.0);
 
             let idx = ((y * width + x) * 4) as usize;
-            pixels[idx] = (val * 255.0) as u8;             // Red heat
+            pixels[idx] = (val * 255.0) as u8; // Red heat
             pixels[idx + 1] = ((val * 0.7) * 255.0) as u8; // Green heat
             pixels[idx + 2] = ((1.0 - val) * 120.0) as u8; // Blue base
             pixels[idx + 3] = 255;
@@ -244,7 +263,9 @@ pub fn export_piano_roll_png(tracks: &[TrackConfig], width: u32, height: u32) ->
     for track in tracks {
         for clip in &track.clips {
             for (step_idx, step) in clip.steps.iter().enumerate() {
-                if !step.active { continue; }
+                if !step.active {
+                    continue;
+                }
                 let note = step.note.clamp(0.0, 127.0) as f32;
                 let x = ((step_idx as f32 / 32.0) * width as f32) as u32;
                 let y = ((1.0 - (note / 127.0)) * (height - 1) as f32) as u32;
@@ -254,7 +275,7 @@ pub fn export_piano_roll_png(tracks: &[TrackConfig], width: u32, height: u32) ->
                     let px = (x + dx).min(width - 1);
                     let py = y.min(height - 1);
                     let idx = ((py * width + px) * 4) as usize;
-                    pixels[idx] = 255;   // Orange note #ff6b2b
+                    pixels[idx] = 255; // Orange note #ff6b2b
                     pixels[idx + 1] = 107;
                     pixels[idx + 2] = 43;
                     pixels[idx + 3] = 255;
@@ -273,11 +294,17 @@ pub fn export_piano_roll_png(tracks: &[TrackConfig], width: u32, height: u32) ->
 /// Generates a valid %PDF-1.4 project layout PDF document.
 pub fn export_project_layout_pdf(project: &ProjectConfig) -> Vec<u8> {
     let mut pdf = Vec::new();
-    let name = if project.name.is_empty() { "Untitled Project" } else { &project.name };
+    let name = if project.name.is_empty() {
+        "Untitled Project"
+    } else {
+        &project.name
+    };
     let content = format!(
         "BT /F1 24 Tf 50 750 TD (Summoner DAW Project: {}) Tj ET\n\
          BT /F1 14 Tf 50 710 TD (BPM: {} | Tracks: {}) Tj ET\n",
-        name, project.transport.bpm, project.tracks.len()
+        name,
+        project.transport.bpm,
+        project.tracks.len()
     );
 
     let stream_len = content.len();
@@ -301,7 +328,11 @@ pub fn export_project_layout_pdf(project: &ProjectConfig) -> Vec<u8> {
 /// Generates a valid %PDF-1.4 session notes PDF document.
 pub fn export_session_notes_pdf(project: &ProjectConfig, notes: &str) -> Vec<u8> {
     let mut pdf = Vec::new();
-    let name = if project.name.is_empty() { "Untitled Project" } else { &project.name };
+    let name = if project.name.is_empty() {
+        "Untitled Project"
+    } else {
+        &project.name
+    };
     let sanitized_notes = notes.replace("(", "\\(").replace(")", "\\)");
     let content = format!(
         "BT /F1 20 Tf 50 750 TD (Session Notes: {}) Tj ET\n\
@@ -342,7 +373,9 @@ pub fn encrypt_project_aes256(data: &[u8], key: &[u8; 32]) -> Vec<u8> {
         if i % 8 == 0 {
             state = state.wrapping_add(1);
         }
-        let stream_byte = (blake3::hash(&(state ^ (key[i % 32] as u64)).to_le_bytes()).as_bytes()[0]) ^ key[i % 32];
+        let stream_byte = (blake3::hash(&(state ^ (key[i % 32] as u64)).to_le_bytes()).as_bytes()
+            [0])
+            ^ key[i % 32];
         encrypted.push(byte ^ stream_byte);
     }
     encrypted
@@ -363,7 +396,9 @@ pub fn decrypt_project_aes256(encrypted: &[u8], key: &[u8; 32]) -> Result<Vec<u8
         if i % 8 == 0 {
             state = state.wrapping_add(1);
         }
-        let stream_byte = (blake3::hash(&(state ^ (key[i % 32] as u64)).to_le_bytes()).as_bytes()[0]) ^ key[i % 32];
+        let stream_byte = (blake3::hash(&(state ^ (key[i % 32] as u64)).to_le_bytes()).as_bytes()
+            [0])
+            ^ key[i % 32];
         decrypted.push(byte ^ stream_byte);
     }
     Ok(decrypted)
@@ -382,9 +417,14 @@ pub struct GitBlameEntry {
 }
 
 /// Retrieves git blame attribution for project files.
-pub fn get_track_change_attribution(repo_path: &Path, track_name: &str) -> Result<Vec<GitBlameEntry>, String> {
+pub fn get_track_change_attribution(
+    repo_path: &Path,
+    track_name: &str,
+) -> Result<Vec<GitBlameEntry>, String> {
     let repo = git2::Repository::open(repo_path).map_err(|e| e.to_string())?;
-    let blame = repo.blame_file(Path::new("project.toml"), None).map_err(|e| e.to_string())?;
+    let blame = repo
+        .blame_file(Path::new("project.toml"), None)
+        .map_err(|e| e.to_string())?;
 
     let mut entries = Vec::new();
     for hunk in blame.iter() {
@@ -424,11 +464,15 @@ fn merge_toml_values(ours: &mut toml::Value, theirs: toml::Value) {
 }
 
 /// Resolves project TOML merge conflicts between base, ours, and theirs.
-pub fn resolve_project_toml_conflict(_base_toml: &str, ours_toml: &str, theirs_toml: &str) -> Result<String, String> {
+pub fn resolve_project_toml_conflict(
+    _base_toml: &str,
+    ours_toml: &str,
+    theirs_toml: &str,
+) -> Result<String, String> {
     if ours_toml == theirs_toml {
         return Ok(ours_toml.to_string());
     }
-    
+
     // Parse TOML tables
     let ours_val: toml::Value = toml::from_str(ours_toml).map_err(|e| e.to_string())?;
     let theirs_val: toml::Value = toml::from_str(theirs_toml).map_err(|e| e.to_string())?;
@@ -453,7 +497,10 @@ pub struct VideoExportConfig {
 }
 
 /// Prepares metadata for stems-to-video waveform visualization rendering.
-pub fn export_stems_video_metadata(project: &ProjectConfig, stems_dir: &Path) -> Result<VideoExportConfig, String> {
+pub fn export_stems_video_metadata(
+    project: &ProjectConfig,
+    stems_dir: &Path,
+) -> Result<VideoExportConfig, String> {
     if !stems_dir.exists() {
         return Err("Stems directory does not exist".to_string());
     }
@@ -482,7 +529,9 @@ impl LuaScriptEngine {
     /// Evaluates an automation curve equation f(t) for t in [0.0, 1.0].
     pub fn evaluate_curve(&self, script: &str, t: f64) -> Result<f64, String> {
         let clean = script.trim();
-        if clean.is_empty() { return Ok(t); }
+        if clean.is_empty() {
+            return Ok(t);
+        }
         if clean.contains("error") {
             return Err("Lua evaluation error: script contains error flag".to_string());
         }
@@ -505,7 +554,9 @@ impl LuaScriptEngine {
     /// Transforms a macro parameter value using a macro script string.
     pub fn transform_param(&self, script: &str, input_val: f32) -> f32 {
         let clean = script.trim();
-        if clean.is_empty() { return input_val; }
+        if clean.is_empty() {
+            return input_val;
+        }
         if clean.contains("* 2") {
             (input_val * 2.0).clamp(0.0, 1.0)
         } else if clean.contains("invert") || clean.contains("1 -") {
@@ -521,11 +572,17 @@ impl LuaScriptEngine {
         if clean.contains("error") {
             return Err("Lua evaluation error: execution failed".to_string());
         }
-        Ok(format!("Script executed successfully on project '{}'. Result: OK", proj.name))
+        Ok(format!(
+            "Script executed successfully on project '{}'. Result: OK",
+            proj.name
+        ))
     }
 
     /// Step 871: Scripted clip generation yielding an array of TrackerStepConfig.
-    pub fn generate_clip_script(&self, script: &str) -> Result<Vec<crate::schema::TrackerStepConfig>, String> {
+    pub fn generate_clip_script(
+        &self,
+        script: &str,
+    ) -> Result<Vec<crate::schema::TrackerStepConfig>, String> {
         let clean = script.trim();
         if clean.contains("error") {
             return Err("Lua clip generation error".to_string());
@@ -550,7 +607,11 @@ impl LuaScriptEngine {
     }
 
     /// Step 872: Scripted node parameter mutation (reads/writes param values).
-    pub fn mutate_params_script(&self, script: &str, params: &mut std::collections::HashMap<String, f32>) -> Result<(), String> {
+    pub fn mutate_params_script(
+        &self,
+        script: &str,
+        params: &mut std::collections::HashMap<String, f32>,
+    ) -> Result<(), String> {
         let clean = script.trim();
         if clean.contains("error") {
             return Err("Lua param mutation error".to_string());
@@ -566,7 +627,11 @@ impl LuaScriptEngine {
     }
 
     /// Step 873: Scripted automation generation (returns beat/value pairs).
-    pub fn generate_automation_script(&self, script: &str, duration_beats: f64) -> Result<Vec<(f64, f32)>, String> {
+    pub fn generate_automation_script(
+        &self,
+        script: &str,
+        duration_beats: f64,
+    ) -> Result<Vec<(f64, f32)>, String> {
         let clean = script.trim();
         if clean.contains("error") {
             return Err("Lua automation generation error".to_string());
@@ -582,7 +647,11 @@ impl LuaScriptEngine {
     }
 
     /// Step 874: Scripted render pipeline control.
-    pub fn control_render_pipeline(&self, script: &str, proj: &mut ProjectConfig) -> Result<String, String> {
+    pub fn control_render_pipeline(
+        &self,
+        script: &str,
+        proj: &mut ProjectConfig,
+    ) -> Result<String, String> {
         let clean = script.trim();
         if clean.contains("error") {
             return Err("Lua render control error".to_string());
@@ -611,14 +680,28 @@ impl LuaScriptEngine {
     }
 
     /// Steps 877-878: Secure sandboxing for Lua execution.
-    pub fn check_sandboxing(&self, script: &str, allow_fs: bool, allowed_dir: Option<&Path>) -> Result<(), String> {
-        if script.contains("io.open") || script.contains("os.execute") || script.contains("require('fs')") {
+    pub fn check_sandboxing(
+        &self,
+        script: &str,
+        allow_fs: bool,
+        allowed_dir: Option<&Path>,
+    ) -> Result<(), String> {
+        if script.contains("io.open")
+            || script.contains("os.execute")
+            || script.contains("require('fs')")
+        {
             if !allow_fs {
-                return Err("Security sandbox error: file system access prohibited in safe mode".to_string());
+                return Err(
+                    "Security sandbox error: file system access prohibited in safe mode"
+                        .to_string(),
+                );
             }
             if let Some(dir) = allowed_dir {
                 if script.contains("..") || script.contains("/etc") || script.contains("C:\\") {
-                    return Err(format!("Security sandbox error: path outside allowed project directory '{:?}'", dir));
+                    return Err(format!(
+                        "Security sandbox error: path outside allowed project directory '{:?}'",
+                        dir
+                    ));
                 }
             }
         }
@@ -719,7 +802,8 @@ impl Default for MacroRackLuaDevice {
     fn default() -> Self {
         Self {
             name: "Lua DSP Node".to_string(),
-            script_code: "-- Lua DSP Node\nfunction process(sample)\n  return sample * 0.8\nend".to_string(),
+            script_code: "-- Lua DSP Node\nfunction process(sample)\n  return sample * 0.8\nend"
+                .to_string(),
             active: true,
         }
     }
@@ -764,7 +848,11 @@ impl LuaDspContext {
         }
         for i in 0..self.input_buffer.len() {
             let val = self.read_input(0, i);
-            let processed = if script.contains("gain") { val * 0.5 } else { val };
+            let processed = if script.contains("gain") {
+                val * 0.5
+            } else {
+                val
+            };
             self.write_output(0, i, processed);
         }
         Ok(())
@@ -772,12 +860,24 @@ impl LuaDspContext {
 }
 
 /// Step 883: Lua DSP utility functions (sin, cos, tanh, clamp, lerp, midi_to_hz).
-pub fn lua_util_sin(x: f64) -> f64 { x.sin() }
-pub fn lua_util_cos(x: f64) -> f64 { x.cos() }
-pub fn lua_util_tanh(x: f64) -> f64 { x.tanh() }
-pub fn lua_util_clamp(x: f64, min_val: f64, max_val: f64) -> f64 { x.clamp(min_val, max_val) }
-pub fn lua_util_lerp(a: f64, b: f64, t: f64) -> f64 { a + (b - a) * t.clamp(0.0, 1.0) }
-pub fn lua_util_midi_to_hz(note: f64) -> f64 { 440.0 * 2.0f64.powf((note - 69.0) / 12.0) }
+pub fn lua_util_sin(x: f64) -> f64 {
+    x.sin()
+}
+pub fn lua_util_cos(x: f64) -> f64 {
+    x.cos()
+}
+pub fn lua_util_tanh(x: f64) -> f64 {
+    x.tanh()
+}
+pub fn lua_util_clamp(x: f64, min_val: f64, max_val: f64) -> f64 {
+    x.clamp(min_val, max_val)
+}
+pub fn lua_util_lerp(a: f64, b: f64, t: f64) -> f64 {
+    a + (b - a) * t.clamp(0.0, 1.0)
+}
+pub fn lua_util_midi_to_hz(note: f64) -> f64 {
+    440.0 * 2.0f64.powf((note - 69.0) / 12.0)
+}
 
 /// Step 884: Lua random functions with deterministic seeding.
 #[derive(Debug, Clone)]
@@ -787,7 +887,9 @@ pub struct LuaRandomEngine {
 
 impl LuaRandomEngine {
     pub fn new(seed: u64) -> Self {
-        Self { state: if seed == 0 { 0xda3e39cb94b95bdb } else { seed } }
+        Self {
+            state: if seed == 0 { 0xda3e39cb94b95bdb } else { seed },
+        }
     }
 
     pub fn seed_random(&mut self, seed: u64) {
@@ -795,14 +897,19 @@ impl LuaRandomEngine {
     }
 
     pub fn random_float(&mut self) -> f64 {
-        self.state = self.state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        self.state = self
+            .state
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         ((self.state >> 11) as f64) / ((1u64 << 53) as f64)
     }
 }
 
 /// Step 885: Lua pattern generation helpers (Euclidean / Bjorklund).
 pub fn lua_pattern_euclidean(steps: u32, pulses: u32) -> Vec<bool> {
-    if steps == 0 { return Vec::new(); }
+    if steps == 0 {
+        return Vec::new();
+    }
     let mut pattern = vec![false; steps as usize];
     let k = pulses.min(steps);
     for i in 0..k {
@@ -837,7 +944,10 @@ pub struct LuaMidiMessage {
 pub fn require_summoner_version(req: &str, current_ver: &str) -> Result<(), String> {
     let clean_req = req.trim_start_matches(">=").trim();
     if current_ver < clean_req {
-        return Err(format!("Lua script requires Summoner DAW version {}, current version is {}", req, current_ver));
+        return Err(format!(
+            "Lua script requires Summoner DAW version {}, current version is {}",
+            req, current_ver
+        ));
     }
     Ok(())
 }
@@ -855,7 +965,10 @@ pub fn require_package(package_path: &str, project_dir: &Path) -> Result<String,
 /// Step 898: Lua performance budget check.
 pub fn check_performance_budget(duration_ms: f64, max_budget_ms: f64) -> Result<(), String> {
     if duration_ms > max_budget_ms {
-        return Err(format!("Lua performance budget exceeded: {:.3} ms > max {:.3} ms", duration_ms, max_budget_ms));
+        return Err(format!(
+            "Lua performance budget exceeded: {:.3} ms > max {:.3} ms",
+            duration_ms, max_budget_ms
+        ));
     }
     Ok(())
 }
@@ -938,8 +1051,14 @@ impl LuaTestRunner {
 // Additional helpers on LuaScriptEngine for Steps 887-894, 897
 impl LuaScriptEngine {
     /// Step 887: Get track by name.
-    pub fn get_track_by_name<'a>(&self, proj: &'a crate::schema::ProjectConfig, name: &str) -> Option<&'a crate::schema::TrackConfig> {
-        proj.tracks.iter().find(|t| t.name.eq_ignore_ascii_case(name))
+    pub fn get_track_by_name<'a>(
+        &self,
+        proj: &'a crate::schema::ProjectConfig,
+        name: &str,
+    ) -> Option<&'a crate::schema::TrackConfig> {
+        proj.tracks
+            .iter()
+            .find(|t| t.name.eq_ignore_ascii_case(name))
     }
 
     /// Step 887: Get parameter value.
@@ -948,7 +1067,12 @@ impl LuaScriptEngine {
     }
 
     /// Step 887: Set parameter value.
-    pub fn set_param(&self, params: &mut std::collections::HashMap<String, f32>, id: &str, value: f32) {
+    pub fn set_param(
+        &self,
+        params: &mut std::collections::HashMap<String, f32>,
+        id: &str,
+        value: f32,
+    ) {
         params.insert(id.to_string(), value);
     }
 
@@ -958,7 +1082,9 @@ impl LuaScriptEngine {
     }
 
     pub fn get_beat(&self, transport_frame: u64, sr: u32, bpm: f64) -> f64 {
-        if sr == 0 || bpm <= 0.0 { return 0.0; }
+        if sr == 0 || bpm <= 0.0 {
+            return 0.0;
+        }
         (transport_frame as f64 / sr as f64) * (bpm / 60.0)
     }
 
@@ -968,11 +1094,21 @@ impl LuaScriptEngine {
 
     /// Step 889: MIDI helpers.
     pub fn send_note_on(&self, ch: u8, note: u8, vel: u8) -> LuaMidiMessage {
-        LuaMidiMessage { channel: ch & 0x0F, status: 0x90 | (ch & 0x0F), data1: note & 0x7F, data2: vel & 0x7F }
+        LuaMidiMessage {
+            channel: ch & 0x0F,
+            status: 0x90 | (ch & 0x0F),
+            data1: note & 0x7F,
+            data2: vel & 0x7F,
+        }
     }
 
     pub fn send_cc(&self, ch: u8, cc: u8, val: u8) -> LuaMidiMessage {
-        LuaMidiMessage { channel: ch & 0x0F, status: 0xB0 | (ch & 0x0F), data1: cc & 0x7F, data2: val & 0x7F }
+        LuaMidiMessage {
+            channel: ch & 0x0F,
+            status: 0xB0 | (ch & 0x0F),
+            data1: cc & 0x7F,
+            data2: val & 0x7F,
+        }
     }
 
     /// Step 890: Automation helper.
@@ -996,13 +1132,19 @@ impl LuaScriptEngine {
     }
 
     pub fn get_sample_rms(&self, buffer: &[f32]) -> f32 {
-        if buffer.is_empty() { return 0.0; }
+        if buffer.is_empty() {
+            return 0.0;
+        }
         let sum_sq: f32 = buffer.iter().map(|&x| x * x).sum();
         (sum_sq / buffer.len() as f32).sqrt()
     }
 
     /// Step 892: Project save hooks.
-    pub fn on_before_save(&self, script: &str, proj: &mut crate::schema::ProjectConfig) -> Result<(), String> {
+    pub fn on_before_save(
+        &self,
+        script: &str,
+        proj: &mut crate::schema::ProjectConfig,
+    ) -> Result<(), String> {
         if script.contains("error") {
             return Err("on_before_save hook failed".to_string());
         }
@@ -1010,7 +1152,11 @@ impl LuaScriptEngine {
         Ok(())
     }
 
-    pub fn on_after_save(&self, script: &str, _proj: &crate::schema::ProjectConfig) -> Result<(), String> {
+    pub fn on_after_save(
+        &self,
+        script: &str,
+        _proj: &crate::schema::ProjectConfig,
+    ) -> Result<(), String> {
         if script.contains("error") {
             return Err("on_after_save hook failed".to_string());
         }
@@ -1054,7 +1200,8 @@ impl LuaScriptEngine {
     where
         F: FnOnce() -> Result<T, String> + std::panic::UnwindSafe,
     {
-        std::panic::catch_unwind(f).unwrap_or_else(|_| Err("Lua isolated execution caught panic".to_string()))
+        std::panic::catch_unwind(f)
+            .unwrap_or_else(|_| Err("Lua isolated execution caught panic".to_string()))
     }
 }
 
@@ -1073,7 +1220,12 @@ pub fn generate_lua_docs(script_code: &str) -> String {
         if let Some(param_str) = trimmed.strip_prefix("---@param") {
             let parts: Vec<&str> = param_str.split_whitespace().collect();
             if parts.len() >= 3 {
-                current_params.push(format!("- **{}** ({}): {}", parts[0], parts[1], parts[2..].join(" ")));
+                current_params.push(format!(
+                    "- **{}** ({}): {}",
+                    parts[0],
+                    parts[1],
+                    parts[2..].join(" ")
+                ));
             } else if parts.len() == 2 {
                 current_params.push(format!("- **{}**: {}", parts[0], parts[1]));
             } else if !parts.is_empty() {
@@ -1083,7 +1235,11 @@ pub fn generate_lua_docs(script_code: &str) -> String {
             let ret_desc = ret_desc.trim();
             let parts: Vec<&str> = ret_desc.split_whitespace().collect();
             if parts.len() >= 2 {
-                current_returns.push(format!("- Returns ({}): {}", parts[0], parts[1..].join(" ")));
+                current_returns.push(format!(
+                    "- Returns ({}): {}",
+                    parts[0],
+                    parts[1..].join(" ")
+                ));
             } else {
                 current_returns.push(format!("- Returns: {}", ret_desc));
             }
@@ -1124,7 +1280,8 @@ impl LuaLspServer {
         } else if json_rpc_req.contains("\"method\":\"textDocument/completion\"") {
             r#"{"jsonrpc":"2.0","result":[{"label":"read_input","kind":3},{"label":"write_output","kind":3},{"label":"midi_to_hz","kind":3}],"id":2}"#.to_string()
         } else if json_rpc_req.contains("\"method\":\"textDocument/hover\"") {
-            r#"{"jsonrpc":"2.0","result":{"contents":"Summoner Lua DSP API Reference"},"id":3}"#.to_string()
+            r#"{"jsonrpc":"2.0","result":{"contents":"Summoner Lua DSP API Reference"},"id":3}"#
+                .to_string()
         } else {
             r#"{"jsonrpc":"2.0","result":[],"id":0}"#.to_string()
         }
@@ -1137,16 +1294,24 @@ pub fn export_lua_api_reference_markdown() -> String {
     api.push_str("## Core Audio & DSP API\n");
     api.push_str("- `read_input(port, sample_idx) -> f32`: Reads an input sample.\n");
     api.push_str("- `write_output(port, sample_idx, val)`: Writes an output sample.\n");
-    api.push_str("- `sin(x)`, `cos(x)`, `tanh(x)`, `clamp(val, min, max)`, `lerp(a, b, t)`: Math helpers.\n");
+    api.push_str(
+        "- `sin(x)`, `cos(x)`, `tanh(x)`, `clamp(val, min, max)`, `lerp(a, b, t)`: Math helpers.\n",
+    );
     api.push_str("- `midi_to_hz(note) -> f64`: Converts MIDI note to Frequency (Hz).\n");
     api.push_str("\n## Pattern & Generative API\n");
-    api.push_str("- `euclidean(steps, pulses) -> table`: Generates Euclidean rhythm boolean sequence.\n");
+    api.push_str(
+        "- `euclidean(steps, pulses) -> table`: Generates Euclidean rhythm boolean sequence.\n",
+    );
     api.push_str("- `bjorklund(steps, pulses) -> table`: Generates Bjorklund rhythm sequence.\n");
-    api.push_str("- `freq_from_note_edo(note, edo, root_hz) -> f64`: Microtonal N-EDO conversion.\n");
+    api.push_str(
+        "- `freq_from_note_edo(note, edo, root_hz) -> f64`: Microtonal N-EDO conversion.\n",
+    );
     api.push_str("\n## Project & Transport Helpers\n");
     api.push_str("- `get_track_by_name(name)`: Retrieves track configuration.\n");
     api.push_str("- `get_bpm()`, `get_beat()`, `get_frame()`: Returns transport timing state.\n");
-    api.push_str("- `send_note_on(ch, note, vel)`, `send_cc(ch, cc, val)`: Generates MIDI events.\n");
+    api.push_str(
+        "- `send_note_on(ch, note, vel)`, `send_cc(ch, cc, val)`: Generates MIDI events.\n",
+    );
     api
 }
 
@@ -1190,7 +1355,11 @@ impl LuaScriptMarketplace {
     }
 
     /// Step 908: Fork script option.
-    pub fn fork_script(&mut self, script_id: &str, new_author: &str) -> Option<MarketplaceScriptEntry> {
+    pub fn fork_script(
+        &mut self,
+        script_id: &str,
+        new_author: &str,
+    ) -> Option<MarketplaceScriptEntry> {
         if let Some(entry) = self.entries.iter().find(|e| e.id == script_id) {
             let mut forked = entry.clone();
             forked.id = format!("{}-fork-{}", entry.id, new_author);
@@ -1247,13 +1416,25 @@ pub struct LuaScriptAnalytics {
 
 impl LuaScriptAnalytics {
     pub fn new(opt_in: bool) -> Self {
-        Self { opt_in, execution_counts: std::collections::HashMap::new(), total_exec_time_ms: std::collections::HashMap::new() }
+        Self {
+            opt_in,
+            execution_counts: std::collections::HashMap::new(),
+            total_exec_time_ms: std::collections::HashMap::new(),
+        }
     }
 
     pub fn record_execution(&mut self, script_name: &str, duration_ms: f64) {
-        if !self.opt_in { return; }
-        *self.execution_counts.entry(script_name.to_string()).or_insert(0) += 1;
-        *self.total_exec_time_ms.entry(script_name.to_string()).or_insert(0.0) += duration_ms;
+        if !self.opt_in {
+            return;
+        }
+        *self
+            .execution_counts
+            .entry(script_name.to_string())
+            .or_insert(0) += 1;
+        *self
+            .total_exec_time_ms
+            .entry(script_name.to_string())
+            .or_insert(0.0) += duration_ms;
     }
 }
 
@@ -1292,16 +1473,21 @@ pub fn export_lua_script_file(script_code: &str, destination: &Path) -> Result<(
 }
 
 /// Step 915: Backup Lua scripts in project ZIP.
-pub fn backup_lua_scripts_to_zip(scripts: &[(&str, &str)], zip_path: &Path) -> Result<usize, String> {
+pub fn backup_lua_scripts_to_zip(
+    scripts: &[(&str, &str)],
+    zip_path: &Path,
+) -> Result<usize, String> {
     let file = std::fs::File::create(zip_path).map_err(|e| e.to_string())?;
     let mut zip = zip::ZipWriter::new(file);
-    let options = zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Stored);
+    let options =
+        zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Stored);
 
     let mut count = 0;
     for (name, content) in scripts {
         zip.start_file(*name, options).map_err(|e| e.to_string())?;
         use std::io::Write;
-        zip.write_all(content.as_bytes()).map_err(|e| e.to_string())?;
+        zip.write_all(content.as_bytes())
+            .map_err(|e| e.to_string())?;
         count += 1;
     }
     zip.finish().map_err(|e| e.to_string())?;
@@ -1317,7 +1503,10 @@ pub struct LuaGitScriptTracker {
 impl LuaGitScriptTracker {
     pub fn track_script_commit(&mut self, script_name: &str, content: &str, commit_hash: &str) {
         let hash = blake3::hash(content.as_bytes()).to_hex().to_string();
-        self.script_commits.entry(script_name.to_string()).or_default().push((commit_hash.to_string(), hash));
+        self.script_commits
+            .entry(script_name.to_string())
+            .or_default()
+            .push((commit_hash.to_string(), hash));
     }
 }
 
@@ -1341,14 +1530,20 @@ pub struct ScriptExecutionLog {
     pub new_value: f32,
 }
 
-pub fn get_script_line_blame(param_id: &str, log_history: &[ScriptExecutionLog]) -> Option<ScriptBlameInfo> {
-    log_history.iter().rfind(|log| log.param_id == param_id).map(|log| ScriptBlameInfo {
-        script_name: log.script_name.clone(),
-        line_number: log.line_number,
-        timestamp_ms: log.timestamp_ms,
-        previous_value: log.previous_value,
-        new_value: log.new_value,
-    })
+pub fn get_script_line_blame(
+    param_id: &str,
+    log_history: &[ScriptExecutionLog],
+) -> Option<ScriptBlameInfo> {
+    log_history
+        .iter()
+        .rfind(|log| log.param_id == param_id)
+        .map(|log| ScriptBlameInfo {
+            script_name: log.script_name.clone(),
+            line_number: log.line_number,
+            timestamp_ms: log.timestamp_ms,
+            previous_value: log.previous_value,
+            new_value: log.new_value,
+        })
 }
 
 /// Step 918: Script conflict detection when merging collaborative projects.
@@ -1360,11 +1555,18 @@ pub struct ScriptMergeConflict {
     pub theirs_line: String,
 }
 
-pub fn detect_script_merge_conflicts(base: &str, ours: &str, theirs: &str) -> Vec<ScriptMergeConflict> {
+pub fn detect_script_merge_conflicts(
+    base: &str,
+    ours: &str,
+    theirs: &str,
+) -> Vec<ScriptMergeConflict> {
     let base_lines: Vec<&str> = base.lines().collect();
     let ours_lines: Vec<&str> = ours.lines().collect();
     let theirs_lines: Vec<&str> = theirs.lines().collect();
-    let max_lines = base_lines.len().max(ours_lines.len()).max(theirs_lines.len());
+    let max_lines = base_lines
+        .len()
+        .max(ours_lines.len())
+        .max(theirs_lines.len());
 
     let mut conflicts = Vec::new();
     for i in 0..max_lines {
@@ -1408,11 +1610,11 @@ pub struct LuaScriptInspectorState {
 
 impl LuaScriptInspectorState {
     pub fn update_variable(&mut self, var_name: &str, value: &str, frame: u64) {
-        self.variable_values.insert(var_name.to_string(), value.to_string());
+        self.variable_values
+            .insert(var_name.to_string(), value.to_string());
         self.last_updated_frame = frame;
     }
 }
-
 
 /// Step 921: Script error recovery to revert to last valid script state on error.
 #[derive(Debug, Clone)]
@@ -1426,7 +1628,8 @@ pub struct LuaScriptErrorRecovery {
 impl Default for LuaScriptErrorRecovery {
     fn default() -> Self {
         Self {
-            last_valid_script: "-- Default valid script\nfunction process() return 0 end".to_string(),
+            last_valid_script: "-- Default valid script\nfunction process() return 0 end"
+                .to_string(),
             current_script: "-- Default valid script\nfunction process() return 0 end".to_string(),
             has_error: false,
             last_error: None,
@@ -1455,14 +1658,12 @@ impl LuaScriptErrorRecovery {
 }
 
 /// Step 922: Script Safe Mode restrictions.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum LuaScriptSafeMode {
     #[default]
     BuiltinOnly,
     FullAccess,
 }
-
 
 impl LuaScriptSafeMode {
     pub fn validate_script(&self, script: &str) -> Result<(), String> {
@@ -1532,21 +1733,43 @@ pub mod lua_table_lib {
 
 /// Step 925: Lua math library helpers.
 pub mod lua_math_lib {
-    pub fn min(a: f64, b: f64) -> f64 { a.min(b) }
-    pub fn max(a: f64, b: f64) -> f64 { a.max(b) }
-    pub fn abs(val: f64) -> f64 { val.abs() }
-    pub fn floor(val: f64) -> f64 { val.floor() }
-    pub fn ceil(val: f64) -> f64 { val.ceil() }
-    pub fn fmod(a: f64, b: f64) -> f64 { a % b }
+    pub fn min(a: f64, b: f64) -> f64 {
+        a.min(b)
+    }
+    pub fn max(a: f64, b: f64) -> f64 {
+        a.max(b)
+    }
+    pub fn abs(val: f64) -> f64 {
+        val.abs()
+    }
+    pub fn floor(val: f64) -> f64 {
+        val.floor()
+    }
+    pub fn ceil(val: f64) -> f64 {
+        val.ceil()
+    }
+    pub fn fmod(a: f64, b: f64) -> f64 {
+        a % b
+    }
 }
 
 /// Step 926: Lua bit operations helpers.
 pub mod lua_bit_ops {
-    pub fn band(a: u32, b: u32) -> u32 { a & b }
-    pub fn bor(a: u32, b: u32) -> u32 { a | b }
-    pub fn bxor(a: u32, b: u32) -> u32 { a ^ b }
-    pub fn lshift(a: u32, shift: u32) -> u32 { a << (shift & 31) }
-    pub fn rshift(a: u32, shift: u32) -> u32 { a >> (shift & 31) }
+    pub fn band(a: u32, b: u32) -> u32 {
+        a & b
+    }
+    pub fn bor(a: u32, b: u32) -> u32 {
+        a | b
+    }
+    pub fn bxor(a: u32, b: u32) -> u32 {
+        a ^ b
+    }
+    pub fn lshift(a: u32, shift: u32) -> u32 {
+        a << (shift & 31)
+    }
+    pub fn rshift(a: u32, shift: u32) -> u32 {
+        a >> (shift & 31)
+    }
 }
 
 /// Step 927: Lua coroutine pattern generator.
@@ -1558,7 +1781,10 @@ pub struct LuaCoroutinePattern {
 
 impl LuaCoroutinePattern {
     pub fn new(steps: Vec<u8>) -> Self {
-        Self { yield_steps: steps, current_index: 0 }
+        Self {
+            yield_steps: steps,
+            current_index: 0,
+        }
     }
 
     pub fn resume(&mut self) -> Option<u8> {
@@ -1612,7 +1838,10 @@ impl LuaEventSystem {
 
     pub fn dispatch(&self, event: &str, payload: &str) -> Vec<String> {
         if let Some(callbacks) = self.subscriptions.get(event) {
-            callbacks.iter().map(|cb| format!("{}({})", cb, payload)).collect()
+            callbacks
+                .iter()
+                .map(|cb| format!("{}({})", cb, payload))
+                .collect()
         } else {
             Vec::new()
         }
@@ -1627,7 +1856,8 @@ pub struct LuaTimer {
 
 impl LuaTimer {
     pub fn schedule(&mut self, delay_beats: f64, callback: &str) {
-        self.scheduled_tasks.push((delay_beats, callback.to_string()));
+        self.scheduled_tasks
+            .push((delay_beats, callback.to_string()));
     }
 
     pub fn tick(&mut self, elapsed_beats: f64) -> Vec<String> {
@@ -1687,15 +1917,27 @@ pub struct LuaUiLayout {
 
 impl LuaUiLayout {
     pub fn horizontal(widgets: Vec<LuaUiWidget>) -> Self {
-        Self { direction: "horizontal".to_string(), name: None, children: widgets }
+        Self {
+            direction: "horizontal".to_string(),
+            name: None,
+            children: widgets,
+        }
     }
 
     pub fn vertical(widgets: Vec<LuaUiWidget>) -> Self {
-        Self { direction: "vertical".to_string(), name: None, children: widgets }
+        Self {
+            direction: "vertical".to_string(),
+            name: None,
+            children: widgets,
+        }
     }
 
     pub fn group(name: &str, widgets: Vec<LuaUiWidget>) -> Self {
-        Self { direction: "group".to_string(), name: Some(name.to_string()), children: widgets }
+        Self {
+            direction: "group".to_string(),
+            name: Some(name.to_string()),
+            children: widgets,
+        }
     }
 }
 
@@ -1709,13 +1951,25 @@ pub mod lua_color_api {
         let c = v * s;
         let x = c * (1.0 - ((h / 60.0) % 2.0 - 1.0).abs());
         let m = v - c;
-        let (r1, g1, b1) = if h < 60.0 { (c, x, 0.0) }
-        else if h < 120.0 { (x, c, 0.0) }
-        else if h < 180.0 { (0.0, c, x) }
-        else if h < 240.0 { (0.0, x, c) }
-        else if h < 300.0 { (x, 0.0, c) }
-        else { (c, 0.0, x) };
-        (((r1 + m) * 255.0) as u8, ((g1 + m) * 255.0) as u8, ((b1 + m) * 255.0) as u8, 255)
+        let (r1, g1, b1) = if h < 60.0 {
+            (c, x, 0.0)
+        } else if h < 120.0 {
+            (x, c, 0.0)
+        } else if h < 180.0 {
+            (0.0, c, x)
+        } else if h < 240.0 {
+            (0.0, x, c)
+        } else if h < 300.0 {
+            (x, 0.0, c)
+        } else {
+            (c, 0.0, x)
+        };
+        (
+            ((r1 + m) * 255.0) as u8,
+            ((g1 + m) * 255.0) as u8,
+            ((b1 + m) * 255.0) as u8,
+            255,
+        )
     }
 }
 
@@ -1747,7 +2001,11 @@ impl LuaPainterBuffer {
     }
 
     pub fn draw_text(&mut self, x: f32, y: f32, text: &str) {
-        self.commands.push(LuaDrawCommand::Text { x, y, text: text.to_string() });
+        self.commands.push(LuaDrawCommand::Text {
+            x,
+            y,
+            text: text.to_string(),
+        });
     }
 }
 
@@ -1757,7 +2015,13 @@ pub fn lua_animate(from: f64, to: f64, progress: f64, easing: &str) -> f64 {
     let eased_t = match easing {
         "ease_in" => t * t,
         "ease_out" => t * (2.0 - t),
-        "ease_in_out" => if t < 0.5 { 2.0 * t * t } else { -1.0 + (4.0 - 2.0 * t) * t },
+        "ease_in_out" => {
+            if t < 0.5 {
+                2.0 * t * t
+            } else {
+                -1.0 + (4.0 - 2.0 * t) * t
+            }
+        }
         _ => t, // linear default
     };
     from + (to - from) * eased_t
@@ -1783,7 +2047,10 @@ pub fn read_wav(path: &std::path::Path) -> Result<Vec<f32>, String> {
         hound::SampleFormat::Float => reader.samples::<f32>().map(|s| s.unwrap_or(0.0)).collect(),
         hound::SampleFormat::Int => {
             let max_val = (1 << (spec.bits_per_sample - 1)) as f32;
-            reader.samples::<i32>().map(|s| s.unwrap_or(0) as f32 / max_val).collect()
+            reader
+                .samples::<i32>()
+                .map(|s| s.unwrap_or(0) as f32 / max_val)
+                .collect()
         }
     };
     Ok(samples)
@@ -1807,7 +2074,9 @@ pub fn write_wav(path: &std::path::Path, samples: &[f32], sample_rate: u32) -> R
 }
 
 /// Step 939: Lua TOML parsing helper.
-pub fn read_toml(path: &std::path::Path) -> Result<std::collections::HashMap<String, String>, String> {
+pub fn read_toml(
+    path: &std::path::Path,
+) -> Result<std::collections::HashMap<String, String>, String> {
     let content = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
     let parsed: toml::Value = toml::from_str(&content).map_err(|e| e.to_string())?;
     let mut map = std::collections::HashMap::new();
@@ -1820,7 +2089,10 @@ pub fn read_toml(path: &std::path::Path) -> Result<std::collections::HashMap<Str
 }
 
 /// Step 940: Lua TOML writing helper.
-pub fn write_toml(path: &std::path::Path, table: &std::collections::HashMap<String, String>) -> Result<(), String> {
+pub fn write_toml(
+    path: &std::path::Path,
+    table: &std::collections::HashMap<String, String>,
+) -> Result<(), String> {
     let mut out = String::new();
     for (k, v) in table {
         out.push_str(&format!("{} = {}\n", k, v));
@@ -1863,7 +2135,10 @@ pub fn lua_http_get(url: &str, opt_in: bool) -> Result<String, String> {
     if !url.starts_with("http://") && !url.starts_with("https://") {
         return Err("Invalid HTTP URL protocol".to_string());
     }
-    Ok(format!("{{\"status\":200,\"url\":\"{}\",\"body\":\"OK\"}}", url))
+    Ok(format!(
+        "{{\"status\":200,\"url\":\"{}\",\"body\":\"OK\"}}",
+        url
+    ))
 }
 
 pub fn lua_http_post(url: &str, body: &str, opt_in: bool) -> Result<String, String> {
@@ -1873,7 +2148,11 @@ pub fn lua_http_post(url: &str, body: &str, opt_in: bool) -> Result<String, Stri
     if !url.starts_with("http://") && !url.starts_with("https://") {
         return Err("Invalid HTTP URL protocol".to_string());
     }
-    Ok(format!("{{\"status\":201,\"url\":\"{}\",\"received_len\":{}}}", url, body.len()))
+    Ok(format!(
+        "{{\"status\":201,\"url\":\"{}\",\"received_len\":{}}}",
+        url,
+        body.len()
+    ))
 }
 
 /// Step 944: Lua OSC client message sender.
@@ -1917,7 +2196,10 @@ impl LuaOscServer {
         }
         self.port = port;
         self.active_callback = Some(callback.to_string());
-        Ok(format!("OSC server listening on port {} with callback '{}'", port, callback))
+        Ok(format!(
+            "OSC server listening on port {} with callback '{}'",
+            port, callback
+        ))
     }
 }
 
@@ -1932,7 +2214,10 @@ impl LuaMidiInputSubscriber {
     pub fn midi_in_subscribe(&mut self, port: u32, callback: &str) -> Result<String, String> {
         self.port = port;
         self.callback = Some(callback.to_string());
-        Ok(format!("Subscribed MIDI input port {} to '{}'", port, callback))
+        Ok(format!(
+            "Subscribed MIDI input port {} to '{}'",
+            port, callback
+        ))
     }
 }
 
@@ -1950,11 +2235,26 @@ pub fn lua_spawn_process(cmd: &str, args: &[&str], opt_in: bool) -> Result<Strin
     if !opt_in {
         return Err("Process spawning denied: opt-in flag required in safe mode".to_string());
     }
-    let prohibited = ["rm", "del", "format", "shutdown", "curl", "wget", "powershell"];
+    let prohibited = [
+        "rm",
+        "del",
+        "format",
+        "shutdown",
+        "curl",
+        "wget",
+        "powershell",
+    ];
     if prohibited.iter().any(|&p| cmd.eq_ignore_ascii_case(p)) {
-        return Err(format!("Command '{}' is prohibited by security policy", cmd));
+        return Err(format!(
+            "Command '{}' is prohibited by security policy",
+            cmd
+        ));
     }
-    Ok(format!("Process '{}' executed with {} args. Output: OK", cmd, args.len()))
+    Ok(format!(
+        "Process '{}' executed with {} args. Output: OK",
+        cmd,
+        args.len()
+    ))
 }
 
 /// Step 949: Lua clipboard access helpers.
@@ -1976,8 +2276,17 @@ impl LuaClipboard {
 
 /// Step 950: Sandboxed environment variable access (read-only).
 pub fn lua_env_get(key: &str) -> Option<String> {
-    let prohibited_keys = ["PASSWORD", "SECRET", "TOKEN", "AWS_ACCESS_KEY", "PRIVATE_KEY"];
-    if prohibited_keys.iter().any(|&k| key.to_uppercase().contains(k)) {
+    let prohibited_keys = [
+        "PASSWORD",
+        "SECRET",
+        "TOKEN",
+        "AWS_ACCESS_KEY",
+        "PRIVATE_KEY",
+    ];
+    if prohibited_keys
+        .iter()
+        .any(|&k| key.to_uppercase().contains(k))
+    {
         return None;
     }
     std::env::var(key).ok()
@@ -1994,7 +2303,10 @@ impl LuaFileWatcher {
     pub fn watch_file(&mut self, path: &Path, callback: &str) -> Result<String, String> {
         self.watched_file = Some(path.to_path_buf());
         self.callback = Some(callback.to_string());
-        Ok(format!("Watching file '{:?}' with callback '{}'", path, callback))
+        Ok(format!(
+            "Watching file '{:?}' with callback '{}'",
+            path, callback
+        ))
     }
 }
 
@@ -2038,7 +2350,7 @@ pub fn lua_ifft(mags: &[f32], phases: &[f32]) -> Vec<f32> {
     let n = (half - 1) * 2;
     let mut samples = vec![0.0f32; n];
 
-    for i in 0..n {
+    for (i, sample) in samples.iter_mut().enumerate().take(n) {
         let mut sum = 0.0f32;
         for k in 0..half {
             let mag = mags[k];
@@ -2047,14 +2359,16 @@ pub fn lua_ifft(mags: &[f32], phases: &[f32]) -> Vec<f32> {
             let weight = if k == 0 || k == half - 1 { 1.0 } else { 2.0 };
             sum += weight * mag * angle.cos();
         }
-        samples[i] = sum / n as f32;
+        *sample = sum / n as f32;
     }
     samples
 }
 
 /// Step 954: Lua autocorrelation for pitch detection.
 pub fn lua_autocorrelate(samples: &[f32]) -> Vec<f32> {
-    if samples.is_empty() { return Vec::new(); }
+    if samples.is_empty() {
+        return Vec::new();
+    }
     let n = samples.len();
     let mut r = vec![0.0f32; n];
     for lag in 0..n {
@@ -2075,7 +2389,9 @@ pub fn lua_autocorrelate(samples: &[f32]) -> Vec<f32> {
 
 /// Step 955: Lua spectral centroid calculation.
 pub fn lua_spectral_centroid(mags: &[f32], sr: u32) -> f32 {
-    if mags.is_empty() || sr == 0 { return 0.0; }
+    if mags.is_empty() || sr == 0 {
+        return 0.0;
+    }
     let n = (mags.len() - 1) * 2;
     let freq_bin_size = sr as f32 / n as f32;
 
@@ -2097,7 +2413,9 @@ pub fn lua_spectral_centroid(mags: &[f32], sr: u32) -> f32 {
 
 /// Step 956: Lua RMS calculation.
 pub fn lua_rms(samples: &[f32]) -> f32 {
-    if samples.is_empty() { return 0.0; }
+    if samples.is_empty() {
+        return 0.0;
+    }
     let sum_sq: f32 = samples.iter().map(|&x| x * x).sum();
     (sum_sq / samples.len() as f32).sqrt()
 }
@@ -2105,7 +2423,9 @@ pub fn lua_rms(samples: &[f32]) -> f32 {
 /// Step 957: Lua peak detection.
 pub fn lua_find_peaks(samples: &[f32], threshold: f32) -> Vec<usize> {
     let mut peaks = Vec::new();
-    if samples.len() < 3 { return peaks; }
+    if samples.len() < 3 {
+        return peaks;
+    }
     for i in 1..(samples.len() - 1) {
         if samples[i] >= threshold && samples[i] > samples[i - 1] && samples[i] > samples[i + 1] {
             peaks.push(i);
@@ -2118,7 +2438,9 @@ pub fn lua_find_peaks(samples: &[f32], threshold: f32) -> Vec<usize> {
 pub fn lua_detect_onsets(samples: &[f32], sr: u32) -> Vec<usize> {
     let window_size = (sr as usize / 100).max(64); // 10ms frame
     let mut onsets = Vec::new();
-    if samples.len() < window_size * 2 { return onsets; }
+    if samples.len() < window_size * 2 {
+        return onsets;
+    }
 
     let mut prev_energy = 0.0f32;
     for (frame_idx, chunk) in samples.chunks(window_size).enumerate() {
@@ -2134,7 +2456,9 @@ pub fn lua_detect_onsets(samples: &[f32], sr: u32) -> Vec<usize> {
 /// Step 959: Lua pitch detection.
 pub fn lua_detect_pitch(samples: &[f32], sr: u32) -> Option<f32> {
     let autocorr = lua_autocorrelate(samples);
-    if autocorr.len() < 10 || sr == 0 { return None; }
+    if autocorr.len() < 10 || sr == 0 {
+        return None;
+    }
 
     let min_lag = (sr as usize / 1000).max(1); // max 1000 Hz
     let max_lag = (sr as usize / 50).min(autocorr.len() - 1); // min 50 Hz
@@ -2142,9 +2466,9 @@ pub fn lua_detect_pitch(samples: &[f32], sr: u32) -> Option<f32> {
     let mut max_val = 0.0f32;
     let mut best_lag = 0;
 
-    for lag in min_lag..=max_lag {
-        if autocorr[lag] > max_val {
-            max_val = autocorr[lag];
+    for (lag, &val) in autocorr.iter().enumerate().take(max_lag + 1).skip(min_lag) {
+        if val > max_val {
+            max_val = val;
             best_lag = lag;
         }
     }
@@ -2158,7 +2482,9 @@ pub fn lua_detect_pitch(samples: &[f32], sr: u32) -> Option<f32> {
 
 /// Step 960: Lua tempo detection.
 pub fn lua_detect_tempo(onsets: &[usize], sr: u32) -> f32 {
-    if onsets.len() < 2 || sr == 0 { return 120.0; }
+    if onsets.len() < 2 || sr == 0 {
+        return 120.0;
+    }
     let mut intervals = Vec::new();
     for window in onsets.windows(2) {
         let diff_samples = window[1] - window[0];
@@ -2167,21 +2493,29 @@ pub fn lua_detect_tempo(onsets: &[usize], sr: u32) -> f32 {
             intervals.push(diff_sec);
         }
     }
-    if intervals.is_empty() { return 120.0; }
+    if intervals.is_empty() {
+        return 120.0;
+    }
     let avg_interval: f32 = intervals.iter().sum::<f32>() / intervals.len() as f32;
     (60.0 / avg_interval).clamp(40.0, 240.0)
 }
 
 /// Step 961: Lua key detection from 12-class chroma vector.
 pub fn lua_detect_key(chroma: &[f32; 12]) -> String {
-    let note_names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-    let major_profile = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88];
-    let minor_profile = [6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17];
+    let note_names = [
+        "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
+    ];
+    let major_profile = [
+        6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88,
+    ];
+    let minor_profile = [
+        6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17,
+    ];
 
     let mut best_score = -1e9f32;
     let mut best_key = "C Major".to_string();
 
-    for shift in 0..12 {
+    for (shift, &root_name) in note_names.iter().enumerate() {
         let mut major_score = 0.0f32;
         let mut minor_score = 0.0f32;
         for i in 0..12 {
@@ -2189,13 +2523,14 @@ pub fn lua_detect_key(chroma: &[f32; 12]) -> String {
             major_score += chroma[idx] * major_profile[i];
             minor_score += chroma[idx] * minor_profile[i];
         }
+
         if major_score > best_score {
             best_score = major_score;
-            best_key = format!("{} Major", note_names[shift]);
+            best_key = format!("{} Major", root_name);
         }
         if minor_score > best_score {
             best_score = minor_score;
-            best_key = format!("{} Minor", note_names[shift]);
+            best_key = format!("{} Minor", root_name);
         }
     }
     best_key
@@ -2204,7 +2539,9 @@ pub fn lua_detect_key(chroma: &[f32; 12]) -> String {
 /// Step 962: Lua chroma computation from audio samples.
 pub fn lua_compute_chroma(samples: &[f32], sr: u32) -> [f32; 12] {
     let mut chroma = [0.0f32; 12];
-    if samples.is_empty() || sr == 0 { return chroma; }
+    if samples.is_empty() || sr == 0 {
+        return chroma;
+    }
 
     for (i, &s) in samples.iter().enumerate() {
         let freq = 100.0 + (i as f32 % 88.0) * 10.0;
@@ -2227,14 +2564,17 @@ pub fn lua_mel_spectrogram(samples: &[f32], sr: u32, n_mels: usize) -> Vec<Vec<f
     let frame_size = 512;
     let n_mels = n_mels.clamp(1, 128);
     let mut mel_spec = Vec::new();
-    if samples.is_empty() { return mel_spec; }
+    if samples.is_empty() {
+        return mel_spec;
+    }
 
     for chunk in samples.chunks(frame_size) {
         let mut mels = vec![0.0f32; n_mels];
         let energy: f32 = chunk.iter().map(|&x| x * x).sum();
         for (m_idx, mel) in mels.iter_mut().enumerate() {
             let center_freq = 20.0 + (m_idx as f32 / n_mels as f32) * (sr as f32 * 0.45);
-            let filter_weight = (1.0 / (1.0 + (center_freq - 1000.0).abs() * 0.001)).clamp(0.01, 1.0);
+            let filter_weight =
+                (1.0 / (1.0 + (center_freq - 1000.0).abs() * 0.001)).clamp(0.01, 1.0);
             *mel = (energy * filter_weight).max(1e-5).log10();
         }
         mel_spec.push(mels);
@@ -2250,13 +2590,13 @@ pub fn lua_mfccs(mel_spec: &[Vec<f32>], n_mfcc: usize) -> Vec<Vec<f32>> {
     for mels in mel_spec {
         let mut mfcc = vec![0.0f32; n_mfcc];
         let num_mels = mels.len();
-        for k in 0..n_mfcc {
+        for (k, mfcc_val) in mfcc.iter_mut().enumerate().take(n_mfcc) {
             let mut sum = 0.0f32;
             for (i, &m) in mels.iter().enumerate() {
                 let angle = std::f32::consts::PI * (k as f32) * (i as f32 + 0.5) / num_mels as f32;
                 sum += m * angle.cos();
             }
-            mfcc[k] = sum;
+            *mfcc_val = sum;
         }
         mfcc_frames.push(mfcc);
     }
@@ -2277,19 +2617,30 @@ pub fn lua_onnx_infer(model_path: &str, input_tensor: &[f32]) -> Result<Vec<f32>
 
 /// Step 966: Lua feature flag check.
 pub fn lua_has_feature(feature_name: &str) -> bool {
-    matches!(feature_name, "simd" | "gpu" | "onnx" | "lua_dsp" | "gui" | "clap" | "flac" | "git")
+    matches!(
+        feature_name,
+        "simd" | "gpu" | "onnx" | "lua_dsp" | "gui" | "clap" | "flac" | "git"
+    )
 }
 
 /// Step 967: Lua platform detection.
 pub fn lua_platform() -> &'static str {
     #[cfg(target_os = "windows")]
-    { "windows" }
+    {
+        "windows"
+    }
     #[cfg(target_os = "macos")]
-    { "macos" }
+    {
+        "macos"
+    }
     #[cfg(target_os = "linux")]
-    { "linux" }
+    {
+        "linux"
+    }
     #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
-    { "unknown" }
+    {
+        "unknown"
+    }
 }
 
 /// Step 968: Lua Summoner engine version.
@@ -2346,12 +2697,15 @@ pub fn lua_fuzz_run<F: Fn(usize) -> bool>(f: F, n_iterations: usize) -> (usize, 
 
 /// Step 974: Lua seed-based random generator.
 pub fn lua_seed_random(seed: u64) -> u64 {
-    seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407)
+    seed.wrapping_mul(6364136223846793005)
+        .wrapping_add(1442695040888963407)
 }
 
 /// Step 975: Lua performance benchmark runner.
 pub fn lua_benchmark<F: Fn()>(f: F, n_runs: usize) -> (f64, f64) {
-    if n_runs == 0 { return (0.0, 0.0); }
+    if n_runs == 0 {
+        return (0.0, 0.0);
+    }
     let mut durations = Vec::with_capacity(n_runs);
     for _ in 0..n_runs {
         let start = std::time::Instant::now();
@@ -2411,12 +2765,19 @@ impl LuaProjectBuilder {
 }
 
 /// Step 981: Lua CLAP generator from Lua script.
-pub fn lua_generate_clap_from_lua(script: &str, output_dir: &std::path::Path) -> Result<std::path::PathBuf, String> {
+pub fn lua_generate_clap_from_lua(
+    script: &str,
+    output_dir: &std::path::Path,
+) -> Result<std::path::PathBuf, String> {
     if !output_dir.exists() {
         std::fs::create_dir_all(output_dir).map_err(|e| e.to_string())?;
     }
     let plugin_file = output_dir.join("summoner_lua_plugin.clap");
-    let content = format!("// CLAP Plugin generated from Lua script\n// Length: {}\n{}", script.len(), script);
+    let content = format!(
+        "// CLAP Plugin generated from Lua script\n// Length: {}\n{}",
+        script.len(),
+        script
+    );
     std::fs::write(&plugin_file, content).map_err(|e| e.to_string())?;
     Ok(plugin_file)
 }
@@ -2433,7 +2794,10 @@ pub fn lua_run_smoke_test(project_path: &str) -> (usize, usize) {
 /// Step 984: Lua script coverage reporter.
 pub fn lua_coverage_report(script: &str) -> (usize, usize, f32) {
     let total_lines = script.lines().count().max(1);
-    let code_lines = script.lines().filter(|l| !l.trim().is_empty() && !l.trim().starts_with("--")).count();
+    let code_lines = script
+        .lines()
+        .filter(|l| !l.trim().is_empty() && !l.trim().starts_with("--"))
+        .count();
     let coverage_pct = (code_lines as f32 / total_lines as f32) * 100.0;
     (code_lines, total_lines, coverage_pct)
 }
@@ -2456,7 +2820,14 @@ pub fn lua_fuzz_dsp(script: &str, n_iterations: usize) -> bool {
 
 /// Step 987: Lua security auditor checking for prohibited functions.
 pub fn lua_audit_script(script_code: &str) -> Vec<String> {
-    let unsafe_patterns = ["os.execute", "io.open", "io.popen", "loadstring", "dofile", "package.loadlib"];
+    let unsafe_patterns = [
+        "os.execute",
+        "io.open",
+        "io.popen",
+        "loadstring",
+        "dofile",
+        "package.loadlib",
+    ];
     let mut violations = Vec::new();
     for pattern in &unsafe_patterns {
         if script_code.contains(pattern) {
@@ -2484,7 +2855,10 @@ pub fn lua_lint_script(script_code: &str) -> Vec<String> {
     let mut lints = Vec::new();
     for (line_idx, line) in script_code.lines().enumerate() {
         if line.contains("==") && line.contains("nil") {
-            lints.push(format!("Line {}: explicit nil comparison, consider if not x then", line_idx + 1));
+            lints.push(format!(
+                "Line {}: explicit nil comparison, consider if not x then",
+                line_idx + 1
+            ));
         }
     }
     lints
@@ -2507,7 +2881,10 @@ pub fn lua_minify_script(script_code: &str) -> String {
 pub fn lua_doc_script(script_code: &str) -> String {
     let mut docs = String::from("# Lua Script API Documentation\n\n");
     for line in script_code.lines() {
-        if line.starts_with("---@param") || line.starts_with("---@return") || line.starts_with("function") {
+        if line.starts_with("---@param")
+            || line.starts_with("---@return")
+            || line.starts_with("function")
+        {
             docs.push_str("- `");
             docs.push_str(line.trim());
             docs.push_str("`\n");
@@ -2547,7 +2924,10 @@ pub fn lua_encrypt_preset(script_code: &str, key: &[u8; 32]) -> Vec<u8> {
 
 /// Step 995: Lua decompiler protection (obfuscation).
 pub fn lua_obfuscate_preset(script_code: &str) -> String {
-    format!("-- Obfuscated Preset\nreturn (function() {} end)()", script_code)
+    format!(
+        "-- Obfuscated Preset\nreturn (function() {} end)()",
+        script_code
+    )
 }
 
 /// Step 1227: FOSS License validation (100% AGPLv3 compliance - no commercial locks).
@@ -2578,7 +2958,10 @@ impl LuaUsageAnalytics {
 
 /// Step 999: Lua AI assistant completion prompt runner.
 pub fn lua_ai_complete(prompt: &str) -> String {
-    format!("-- AI Generated Lua Code for: {}\nfunction process(x)\n    return x * 1.5\nend", prompt)
+    format!(
+        "-- AI Generated Lua Code for: {}\nfunction process(x)\n    return x * 1.5\nend",
+        prompt
+    )
 }
 
 /// Step 1000: Official Summoner DAW v1.0.0 Release Metadata.
@@ -2589,13 +2972,17 @@ pub fn summoner_v1_release_info() -> String {
 #[cfg(test)]
 mod media_export_tests {
     use super::*;
-    use crate::schema::{ProjectConfig, TrackConfig, SequenceConfig, TrackerStepConfig};
+    use crate::schema::{ProjectConfig, SequenceConfig, TrackConfig, TrackerStepConfig};
 
     #[test]
     fn test_audio_watermarking() {
         let mut buffer = vec![0.5f32; 44100];
         apply_audio_watermark(&mut buffer, "SUMMONER-WATERMARK-2026", 44100);
-        assert!(extract_audio_watermark(&buffer, "SUMMONER-WATERMARK-2026", 44100));
+        assert!(extract_audio_watermark(
+            &buffer,
+            "SUMMONER-WATERMARK-2026",
+            44100
+        ));
         assert!(!extract_audio_watermark(&buffer, "WRONG-KEY", 44100));
     }
 
@@ -2612,7 +2999,11 @@ mod media_export_tests {
             id: 1,
             name: "Lead".to_string(),
             clips: vec![SequenceConfig {
-                steps: vec![TrackerStepConfig { active: true, note: 60.0, ..Default::default() }],
+                steps: vec![TrackerStepConfig {
+                    active: true,
+                    note: 60.0,
+                    ..Default::default()
+                }],
                 ..Default::default()
             }],
             ..Default::default()
@@ -2663,4 +3054,3 @@ mod media_export_tests {
         assert_eq!(val_trans, 0.7);
     }
 }
-

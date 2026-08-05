@@ -131,7 +131,10 @@ mod tests {
         renderer.submit_waveform(1, 100.0, 400.0, 1000);
         assert_eq!(renderer.active_commands().len(), 1);
 
-        if let RenderCommand::DrawWaveform { sample_count, lod, .. } = &renderer.active_commands()[0] {
+        if let RenderCommand::DrawWaveform {
+            sample_count, lod, ..
+        } = &renderer.active_commands()[0]
+        {
             assert_eq!(*lod, LodLevel::Full);
             assert_eq!(*sample_count, 1000);
         } else {

@@ -43,7 +43,10 @@ impl TouchGestureManager {
 
     /// Step 745: Scale button or widget hit dimensions for touch compatibility.
     pub fn scaled_target_size(&self, base_size: (f32, f32)) -> (f32, f32) {
-        (base_size.0 * self.hit_target_scale, base_size.1 * self.hit_target_scale)
+        (
+            base_size.0 * self.hit_target_scale,
+            base_size.1 * self.hit_target_scale,
+        )
     }
 
     /// Step 745: Detect swipe direction given start and end touch coordinates.
@@ -81,8 +84,16 @@ impl TouchGestureManager {
     }
 
     /// Step 747: Detect three-finger horizontal swipe gesture to switch GUI view mode.
-    pub fn three_finger_swipe(starts: &[(f32, f32); 3], ends: &[(f32, f32); 3]) -> Option<ViewModeDirection> {
-        let avg_dx: f32 = starts.iter().zip(ends.iter()).map(|(s, e)| e.0 - s.0).sum::<f32>() / 3.0;
+    pub fn three_finger_swipe(
+        starts: &[(f32, f32); 3],
+        ends: &[(f32, f32); 3],
+    ) -> Option<ViewModeDirection> {
+        let avg_dx: f32 = starts
+            .iter()
+            .zip(ends.iter())
+            .map(|(s, e)| e.0 - s.0)
+            .sum::<f32>()
+            / 3.0;
         let threshold = 40.0;
 
         if avg_dx > threshold {

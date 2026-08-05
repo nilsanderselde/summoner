@@ -40,11 +40,11 @@ pub enum DistortionType {
 pub struct DistortionNode {
     pub distortion_type: DistortionType,
     pub drive: f32,
-    pub tone: f32,            // Lowpass cutoff multiplier 0.1 to 1.0
-    pub mix: f32,             // Dry/Wet blend 0.0 to 1.0
-    pub bit_depth: u8,        // Bitcrusher depth 1 to 16
-    pub sample_reduction: u32,// Downsampling factor 1 to 32
-    pub oversample_factor: u8,// 1 (off), 2, 4, or 8
+    pub tone: f32,             // Lowpass cutoff multiplier 0.1 to 1.0
+    pub mix: f32,              // Dry/Wet blend 0.0 to 1.0
+    pub bit_depth: u8,         // Bitcrusher depth 1 to 16
+    pub sample_reduction: u32, // Downsampling factor 1 to 32
+    pub oversample_factor: u8, // 1 (off), 2, 4, or 8
     lp_state: f32,
     downsample_counter: u32,
     held_sample: f32,

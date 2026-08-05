@@ -10,12 +10,12 @@
 //! multi-band neural transient shaper, polyphonic chord extraction, real-time neural bass generator,
 //! automatic audio phase alignment, TTS singing synthesis, and neural room acoustic matcher.
 
-use std::collections::HashMap;
+use crate::sampler::SampleBuffer;
+use crate::traits::SignalProcessor;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use summoner_core::audio::Sample;
 use summoner_core::node::{AudioNode, ProcessContext};
-use crate::traits::SignalProcessor;
-use crate::sampler::SampleBuffer;
 
 // ============================================================================
 // 1101: Multi-Stem AI Neural Audio Separator (Demucs / Hybrid Spectrogram Transformer v4)
@@ -98,12 +98,30 @@ impl DemucsV4Separator {
         }
 
         let mut map = HashMap::new();
-        map.insert("vocals".to_string(), SampleBuffer::new(vocals, sample_rate, channels));
-        map.insert("drums".to_string(), SampleBuffer::new(drums, sample_rate, channels));
-        map.insert("bass".to_string(), SampleBuffer::new(bass, sample_rate, channels));
-        map.insert("guitar".to_string(), SampleBuffer::new(guitar, sample_rate, channels));
-        map.insert("piano".to_string(), SampleBuffer::new(piano, sample_rate, channels));
-        map.insert("other".to_string(), SampleBuffer::new(other, sample_rate, channels));
+        map.insert(
+            "vocals".to_string(),
+            SampleBuffer::new(vocals, sample_rate, channels),
+        );
+        map.insert(
+            "drums".to_string(),
+            SampleBuffer::new(drums, sample_rate, channels),
+        );
+        map.insert(
+            "bass".to_string(),
+            SampleBuffer::new(bass, sample_rate, channels),
+        );
+        map.insert(
+            "guitar".to_string(),
+            SampleBuffer::new(guitar, sample_rate, channels),
+        );
+        map.insert(
+            "piano".to_string(),
+            SampleBuffer::new(piano, sample_rate, channels),
+        );
+        map.insert(
+            "other".to_string(),
+            SampleBuffer::new(other, sample_rate, channels),
+        );
         map
     }
 }
@@ -157,7 +175,9 @@ impl SpectralNeuralResynthesizerNode {
 
         let synthesized = match self.target_timbre {
             TargetTimbre::Violin => {
-                self.phase.sin() * 0.6 + (self.phase * 2.0).sin() * 0.3 + (self.phase * 3.0).sin() * 0.1
+                self.phase.sin() * 0.6
+                    + (self.phase * 2.0).sin() * 0.3
+                    + (self.phase * 3.0).sin() * 0.1
             }
             TargetTimbre::Brass => {
                 let saw = 1.0 - (self.phase / std::f32::consts::PI);
@@ -209,12 +229,7 @@ impl AudioNode for SpectralNeuralResynthesizerNode {
         "SpectralNeuralResynthesizerNode"
     }
 
-    fn process(
-        &mut self,
-        input: &[&[Sample]],
-        output: &mut [&mut [Sample]],
-        ctx: &ProcessContext,
-    ) {
+    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
         self.process_block(input, output, ctx);
     }
 }
@@ -270,7 +285,9 @@ impl AiAutonomousMasteringEngine {
         let num_samples = data.len();
 
         // 1. Estimate current RMS / LUFS
-        let rms = (data.iter().map(|&x| x * x).sum::<f32>() / num_samples as f32).sqrt().max(1e-6);
+        let rms = (data.iter().map(|&x| x * x).sum::<f32>() / num_samples as f32)
+            .sqrt()
+            .max(1e-6);
         let current_lufs = 20.0 * rms.log10();
         let gain_db = (self.target_lufs - current_lufs).clamp(-12.0, 18.0);
         let gain_linear = 10.0f32.powf(gain_db / 20.0);
@@ -293,7 +310,8 @@ impl AiAutonomousMasteringEngine {
 
             // Soft-knee brickwall peak limiter
             let limited = if processed.abs() > ceiling_linear {
-                processed.signum() * (ceiling_linear + (processed.abs() - ceiling_linear).tanh() * 0.05)
+                processed.signum()
+                    * (ceiling_linear + (processed.abs() - ceiling_linear).tanh() * 0.05)
             } else {
                 processed
             };
@@ -313,7 +331,7 @@ impl AiAutonomousMasteringEngine {
 #[derive(Debug, Clone)]
 pub struct VocalPitchFormantCorrectorNode {
     pub target_scale: Vec<f32>, // Target frequencies in Hz
-    pub correction_speed: f32, // 0.0 (off) to 1.0 (instant autotune)
+    pub correction_speed: f32,  // 0.0 (off) to 1.0 (instant autotune)
     pub formant_shift: f32,     // 0.5 (octave down) to 2.0 (octave up)
     delay_line: Vec<f32>,
     write_idx: usize,
@@ -345,11 +363,13 @@ impl VocalPitchFormantCorrectorNode {
 
         // Formant shifted read-out
         let read_offset = (self.formant_shift * 128.0) as usize % self.delay_line.len();
-        let read_idx = (self.write_idx + self.delay_line.len() - read_offset) % self.delay_line.len();
+        let read_idx =
+            (self.write_idx + self.delay_line.len() - read_offset) % self.delay_line.len();
         let delayed = self.delay_line[read_idx];
 
         // Blend pitch corrected formant sample
-        (input * (1.0 - self.correction_speed * 0.5) + delayed * self.correction_speed * 0.5).clamp(-1.0, 1.0)
+        (input * (1.0 - self.correction_speed * 0.5) + delayed * self.correction_speed * 0.5)
+            .clamp(-1.0, 1.0)
     }
 }
 
@@ -384,12 +404,7 @@ impl AudioNode for VocalPitchFormantCorrectorNode {
         "VocalPitchFormantCorrectorNode"
     }
 
-    fn process(
-        &mut self,
-        input: &[&[Sample]],
-        output: &mut [&mut [Sample]],
-        ctx: &ProcessContext,
-    ) {
+    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
         self.process_block(input, output, ctx);
     }
 }
@@ -470,12 +485,7 @@ impl AudioNode for NeuralAudioRepairNode {
         "NeuralAudioRepairNode"
     }
 
-    fn process(
-        &mut self,
-        input: &[&[Sample]],
-        output: &mut [&mut [Sample]],
-        ctx: &ProcessContext,
-    ) {
+    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
         self.process_block(input, output, ctx);
     }
 }
@@ -511,7 +521,7 @@ impl AiMixBalanceAnalyzer {
         let mut band_overlap = vec![0.0f32; num_bands];
         let frame_size = min_len / num_bands;
 
-        for b in 0..num_bands {
+        for (b, overlap) in band_overlap.iter_mut().enumerate().take(num_bands) {
             let start = b * frame_size;
             let end = (start + frame_size).min(min_len);
 
@@ -519,7 +529,7 @@ impl AiMixBalanceAnalyzer {
             let energy_b: f32 = track_b.data[start..end].iter().map(|&x| x * x).sum();
 
             let product = (energy_a * energy_b).sqrt();
-            band_overlap[b] = product / (energy_a + energy_b + 1e-6);
+            *overlap = product / (energy_a + energy_b + 1e-6);
         }
 
         let max_overlap = band_overlap.iter().copied().fold(0.0f32, f32::max);
@@ -532,7 +542,10 @@ impl AiMixBalanceAnalyzer {
         }
 
         let rec = if max_overlap > 0.45 {
-            format!("High frequency masking detected around {}Hz. Apply sidechain dynamic EQ cut.", conflicts.first().copied().unwrap_or(250.0) as u32)
+            format!(
+                "High frequency masking detected around {}Hz. Apply sidechain dynamic EQ cut.",
+                conflicts.first().copied().unwrap_or(250.0) as u32
+            )
         } else {
             "Mix balance clear; minimal frequency masking between tracks.".to_string()
         };
@@ -601,7 +614,8 @@ impl AutomatedDrumReplacer {
 
             if s.abs() > thresh_linear && can_trigger {
                 let vel = ((s.abs().min(1.0)) * 127.0) as u8;
-                let sfz_path = self.sfz_layer_paths
+                let sfz_path = self
+                    .sfz_layer_paths
                     .iter()
                     .find(|(v, _)| *v >= vel)
                     .map(|(_, p)| p.clone())
@@ -692,12 +706,7 @@ impl AudioNode for NeuralHarmonicExciterNode {
         "NeuralHarmonicExciterNode"
     }
 
-    fn process(
-        &mut self,
-        input: &[&[Sample]],
-        output: &mut [&mut [Sample]],
-        ctx: &ProcessContext,
-    ) {
+    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
         self.process_block(input, output, ctx);
     }
 }
@@ -737,11 +746,31 @@ impl AiSongStructureDetector {
 
         let chunk = total_sec / 5.0;
         vec![
-            SongSection { section_type: SongSectionType::Intro, start_sec: 0.0, end_sec: chunk },
-            SongSection { section_type: SongSectionType::Verse, start_sec: chunk, end_sec: chunk * 2.0 },
-            SongSection { section_type: SongSectionType::Chorus, start_sec: chunk * 2.0, end_sec: chunk * 3.5 },
-            SongSection { section_type: SongSectionType::Bridge, start_sec: chunk * 3.5, end_sec: chunk * 4.2 },
-            SongSection { section_type: SongSectionType::Outro, start_sec: chunk * 4.2, end_sec: total_sec },
+            SongSection {
+                section_type: SongSectionType::Intro,
+                start_sec: 0.0,
+                end_sec: chunk,
+            },
+            SongSection {
+                section_type: SongSectionType::Verse,
+                start_sec: chunk,
+                end_sec: chunk * 2.0,
+            },
+            SongSection {
+                section_type: SongSectionType::Chorus,
+                start_sec: chunk * 2.0,
+                end_sec: chunk * 3.5,
+            },
+            SongSection {
+                section_type: SongSectionType::Bridge,
+                start_sec: chunk * 3.5,
+                end_sec: chunk * 4.2,
+            },
+            SongSection {
+                section_type: SongSectionType::Outro,
+                start_sec: chunk * 4.2,
+                end_sec: total_sec,
+            },
         ]
     }
 }
@@ -779,7 +808,8 @@ impl AutomatedDynamicEqNode {
     pub fn process_sample_with_sidechain(&mut self, main_in: f32, sidechain_in: f32) -> f32 {
         let side_level = sidechain_in.abs();
         let cut_amount = if side_level > self.sidechain_threshold {
-            let ratio = (side_level - self.sidechain_threshold) / (1.0 - self.sidechain_threshold + 1e-6);
+            let ratio =
+                (side_level - self.sidechain_threshold) / (1.0 - self.sidechain_threshold + 1e-6);
             10.0f32.powf((self.max_cut_db * ratio.clamp(0.0, 1.0)) / 20.0)
         } else {
             1.0
@@ -810,7 +840,11 @@ impl SignalProcessor for AutomatedDynamicEqNode {
         if inputs.is_empty() || outputs.is_empty() {
             return;
         }
-        let sidechain = if inputs.len() > 1 { inputs[1] } else { inputs[0] };
+        let sidechain = if inputs.len() > 1 {
+            inputs[1]
+        } else {
+            inputs[0]
+        };
         let len = outputs[0].len().min(inputs[0].len());
         for i in 0..len {
             let sc_val = sidechain.get(i).copied().unwrap_or(0.0);
@@ -829,12 +863,7 @@ impl AudioNode for AutomatedDynamicEqNode {
         "AutomatedDynamicEqNode"
     }
 
-    fn process(
-        &mut self,
-        input: &[&[Sample]],
-        output: &mut [&mut [Sample]],
-        ctx: &ProcessContext,
-    ) {
+    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
         self.process_block(input, output, ctx);
     }
 }
@@ -846,7 +875,7 @@ impl AudioNode for AutomatedDynamicEqNode {
 /// Neural transient shaper with frequency-dependent attack/decay controls.
 #[derive(Debug, Clone)]
 pub struct NeuralTransientShaperNode {
-    pub attack_gain: f32, // Attack multiplier (0.5 to 2.0)
+    pub attack_gain: f32,  // Attack multiplier (0.5 to 2.0)
     pub sustain_gain: f32, // Sustain multiplier (0.5 to 2.0)
     env_fast: f32,
     env_slow: f32,
@@ -877,7 +906,8 @@ impl NeuralTransientShaperNode {
         let transient = (self.env_fast - self.env_slow).max(0.0);
         let sustain = self.env_slow;
 
-        let shaped = input * (1.0 + transient * (self.attack_gain - 1.0) + sustain * (self.sustain_gain - 1.0));
+        let shaped = input
+            * (1.0 + transient * (self.attack_gain - 1.0) + sustain * (self.sustain_gain - 1.0));
         shaped.clamp(-1.0, 1.0)
     }
 }
@@ -913,12 +943,7 @@ impl AudioNode for NeuralTransientShaperNode {
         "NeuralTransientShaperNode"
     }
 
-    fn process(
-        &mut self,
-        input: &[&[Sample]],
-        output: &mut [&mut [Sample]],
-        ctx: &ProcessContext,
-    ) {
+    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
         self.process_block(input, output, ctx);
     }
 }
@@ -950,10 +975,12 @@ impl AiPolyphonicChordExtractor {
         let total_sec = buffer.data.len() as f32 / sample_rate;
         let num_chords = ((total_sec / 1.0).floor() as usize).max(1);
 
-        let chord_prog = [("C Major", vec![60, 64, 67]),
+        let chord_prog = [
+            ("C Major", vec![60, 64, 67]),
             ("G Major", vec![67, 71, 74]),
             ("A Minor", vec![57, 60, 64]),
-            ("F Major", vec![53, 57, 60])];
+            ("F Major", vec![53, 57, 60]),
+        ];
 
         let mut events = Vec::with_capacity(num_chords);
         for i in 0..num_chords {
@@ -1042,12 +1069,7 @@ impl AudioNode for NeuralBassGeneratorNode {
         "NeuralBassGeneratorNode"
     }
 
-    fn process(
-        &mut self,
-        input: &[&[Sample]],
-        output: &mut [&mut [Sample]],
-        ctx: &ProcessContext,
-    ) {
+    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
         self.process_block(input, output, ctx);
     }
 }
@@ -1186,7 +1208,13 @@ impl NeuralRoomAcousticMatcher {
 
         // Estimate energy decay curve
         let initial_energy = ir_target.data.iter().take(512).map(|&x| x * x).sum::<f32>();
-        let tail_energy = ir_target.data.iter().rev().take(512).map(|&x| x * x).sum::<f32>();
+        let tail_energy = ir_target
+            .data
+            .iter()
+            .rev()
+            .take(512)
+            .map(|&x| x * x)
+            .sum::<f32>();
 
         let decay_ratio = (tail_energy / (initial_energy + 1e-6)).sqrt();
         let rt60 = (duration_sec * (1.0 + decay_ratio)).clamp(0.1, 5.0);
@@ -1390,4 +1418,3 @@ mod tests {
         assert!(out_buf.iter().all(|s| s.is_finite()));
     }
 }
-

@@ -103,8 +103,10 @@ impl NodeGraph {
     pub fn add_node(&mut self, node: Box<dyn AudioNode>) -> usize {
         let idx = self.nodes.len();
         self.nodes.push(node);
-        self.buffers.push(vec![vec![0.0; self.max_block_size]; self.max_channels]);
-        self.input_buffers.push(vec![vec![0.0; self.max_block_size]; self.max_channels]);
+        self.buffers
+            .push(vec![vec![0.0; self.max_block_size]; self.max_channels]);
+        self.input_buffers
+            .push(vec![vec![0.0; self.max_block_size]; self.max_channels]);
         self.node_timings.push(std::time::Duration::ZERO);
         idx
     }
@@ -222,10 +224,14 @@ impl AudioNode for NodeGraph {
                     level_nodes.par_iter().for_each(|&node_idx| {
                         let start_time = std::time::Instant::now();
                         unsafe {
-                            let node: &mut Box<dyn AudioNode> = &mut *(nodes_ptr as *mut Box<dyn AudioNode>).add(node_idx);
-                            let input_buf: &Vec<Vec<Sample>> = &*(input_bufs_ptr as *const Vec<Vec<Sample>>).add(node_idx);
-                            let node_buf: &mut Vec<Vec<Sample>> = &mut *(bufs_ptr as *mut Vec<Vec<Sample>>).add(node_idx);
-                            let timings: &mut std::time::Duration = &mut *(timings_ptr as *mut std::time::Duration).add(node_idx);
+                            let node: &mut Box<dyn AudioNode> =
+                                &mut *(nodes_ptr as *mut Box<dyn AudioNode>).add(node_idx);
+                            let input_buf: &Vec<Vec<Sample>> =
+                                &*(input_bufs_ptr as *const Vec<Vec<Sample>>).add(node_idx);
+                            let node_buf: &mut Vec<Vec<Sample>> =
+                                &mut *(bufs_ptr as *mut Vec<Vec<Sample>>).add(node_idx);
+                            let timings: &mut std::time::Duration =
+                                &mut *(timings_ptr as *mut std::time::Duration).add(node_idx);
 
                             let in_slices: Vec<&[Sample]> = input_buf
                                 .iter()
@@ -301,7 +307,6 @@ impl AudioNode for NodeGraph {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -329,7 +334,10 @@ mod tests {
 
         graph.process(&[], &mut [&mut out_l[..], &mut out_r[..]], &ctx);
 
-        assert!(out_l.iter().any(|&s| s != 0.0), "Graph output should contain non-zero audio");
+        assert!(
+            out_l.iter().any(|&s| s != 0.0),
+            "Graph output should contain non-zero audio"
+        );
     }
 
     #[test]
@@ -345,10 +353,30 @@ mod tests {
             let gain2 = graph.add_node(Box::new(GainNode::new(0.3)));
             let mixer = graph.add_node(Box::new(GainNode::new(1.0)));
 
-            graph.add_edge(Edge { from_node: osc1, from_port: 0, to_node: gain1, to_port: 0 });
-            graph.add_edge(Edge { from_node: osc2, from_port: 0, to_node: gain2, to_port: 0 });
-            graph.add_edge(Edge { from_node: gain1, from_port: 0, to_node: mixer, to_port: 0 });
-            graph.add_edge(Edge { from_node: gain2, from_port: 0, to_node: mixer, to_port: 1 });
+            graph.add_edge(Edge {
+                from_node: osc1,
+                from_port: 0,
+                to_node: gain1,
+                to_port: 0,
+            });
+            graph.add_edge(Edge {
+                from_node: osc2,
+                from_port: 0,
+                to_node: gain2,
+                to_port: 0,
+            });
+            graph.add_edge(Edge {
+                from_node: gain1,
+                from_port: 0,
+                to_node: mixer,
+                to_port: 0,
+            });
+            graph.add_edge(Edge {
+                from_node: gain2,
+                from_port: 0,
+                to_node: mixer,
+                to_port: 1,
+            });
 
             graph
         };
@@ -357,16 +385,29 @@ mod tests {
         graph_serial.parallel_execution = false;
         let mut out_l_serial = vec![0.0f32; 512];
         let mut out_r_serial = vec![0.0f32; 512];
-        graph_serial.process(&[], &mut [&mut out_l_serial[..], &mut out_r_serial[..]], &ctx);
+        graph_serial.process(
+            &[],
+            &mut [&mut out_l_serial[..], &mut out_r_serial[..]],
+            &ctx,
+        );
 
         let mut graph_parallel = create_test_graph();
         graph_parallel.parallel_execution = true;
         let mut out_l_parallel = vec![0.0f32; 512];
         let mut out_r_parallel = vec![0.0f32; 512];
-        graph_parallel.process(&[], &mut [&mut out_l_parallel[..], &mut out_r_parallel[..]], &ctx);
+        graph_parallel.process(
+            &[],
+            &mut [&mut out_l_parallel[..], &mut out_r_parallel[..]],
+            &ctx,
+        );
 
-        assert_eq!(out_l_serial, out_l_parallel, "Parallel output must be bit-identical to serial output");
-        assert_eq!(out_r_serial, out_r_parallel, "Parallel output must be bit-identical to serial output");
+        assert_eq!(
+            out_l_serial, out_l_parallel,
+            "Parallel output must be bit-identical to serial output"
+        );
+        assert_eq!(
+            out_r_serial, out_r_parallel,
+            "Parallel output must be bit-identical to serial output"
+        );
     }
 }
-

@@ -107,8 +107,7 @@ impl AtomicParam {
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum AutomationMode {
     #[default]
     Read,
@@ -116,7 +115,6 @@ pub enum AutomationMode {
     Touch,
     Latch,
 }
-
 
 /// Central registry for all automatable parameters across the DAW.
 /// Supports the "Record All" toggle for live performance capturing.
@@ -226,4 +224,3 @@ mod tests {
         assert_eq!(buffer.as_slice()[0].frame, 100);
     }
 }
-

@@ -9,13 +9,13 @@
 //! isolated plugin scanner, plugin parameter automap, CV/Gate generator, DIN Sync (Sync24) pulse output,
 //! and Bluetooth LE MIDI (BLE-MIDI) controller driver (Steps 1041-1060).
 
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use serde::{Deserialize, Serialize};
 
+use crate::plugin_host::{PluginDescriptor, PluginFormat, PluginParamInfo};
 use summoner_core::audio::Sample;
 use summoner_core::node::{AudioNode, ProcessContext};
-use crate::plugin_host::{PluginDescriptor, PluginFormat, PluginParamInfo};
 
 // ============================================================================
 // 1041: VST3 Custom GUI Window Embedding
@@ -176,7 +176,11 @@ impl ClapHostEngine {
 
         // Process audio channels
         let gain = *self.parameters.get(&0).unwrap_or(&1.0);
-        for (in_ch, out_ch) in buffer.input_channels.iter().zip(buffer.output_channels.iter_mut()) {
+        for (in_ch, out_ch) in buffer
+            .input_channels
+            .iter()
+            .zip(buffer.output_channels.iter_mut())
+        {
             for (i, &s) in in_ch.iter().enumerate() {
                 out_ch[i] = s * gain;
             }
@@ -317,14 +321,12 @@ impl Default for NksIntegrationDriver {
     fn default() -> Self {
         Self {
             light_guide: [(0, 0, 0); 88],
-            parameter_pages: vec![
-                vec![
-                    ("Cutoff".to_string(), 0.75),
-                    ("Resonance".to_string(), 0.3),
-                    ("Env Amount".to_string(), 0.5),
-                    ("Attack".to_string(), 0.1),
-                ],
-            ],
+            parameter_pages: vec![vec![
+                ("Cutoff".to_string(), 0.75),
+                ("Resonance".to_string(), 0.3),
+                ("Env Amount".to_string(), 0.5),
+                ("Attack".to_string(), 0.1),
+            ]],
             current_page: 0,
         }
     }
@@ -363,9 +365,9 @@ impl NksIntegrationDriver {
 /// Protocol driver for Mackie Control Universal (MCU) hardware.
 #[derive(Debug, Clone)]
 pub struct McuControllerDriver {
-    pub faders: [f32; 9], // 8 channel faders + 1 master fader (0.0 to 1.0)
+    pub faders: [f32; 9],          // 8 channel faders + 1 master fader (0.0 to 1.0)
     pub vpot_rings: [(u8, u8); 8], // (mode, value_0_11)
-    pub lcd_display: [char; 112], // 2 rows x 56 characters
+    pub lcd_display: [char; 112],  // 2 rows x 56 characters
 }
 
 impl Default for McuControllerDriver {
@@ -412,7 +414,15 @@ impl McuControllerDriver {
                 self.lcd_display[idx] = ch;
             }
         }
-        let mut sys_ex = vec![0xF0, 0x00, 0x00, 0x66, 0x14, 0x12, (row_start + offset) as u8];
+        let mut sys_ex = vec![
+            0xF0,
+            0x00,
+            0x00,
+            0x66,
+            0x14,
+            0x12,
+            (row_start + offset) as u8,
+        ];
         sys_ex.extend(text.bytes());
         sys_ex.push(0xF7);
         sys_ex
@@ -449,14 +459,21 @@ impl OscMappingEngine {
     }
 
     pub fn process_incoming_osc(&self, path: &str, normalized_val: f32) -> Option<(String, f32)> {
-        let rule = self.rules.iter().find(|r| r.osc_path.eq_ignore_ascii_case(path))?;
+        let rule = self
+            .rules
+            .iter()
+            .find(|r| r.osc_path.eq_ignore_ascii_case(path))?;
         let mapped = rule.min_val + normalized_val.clamp(0.0, 1.0) * (rule.max_val - rule.min_val);
         Some((rule.param_id.clone(), mapped))
     }
 
     pub fn format_outgoing_osc(&self, param_id: &str, raw_val: f32) -> Option<(String, Vec<u8>)> {
-        let rule = self.rules.iter().find(|r| r.param_id.eq_ignore_ascii_case(param_id) && r.bidirectional)?;
-        let norm = ((raw_val - rule.min_val) / (rule.max_val - rule.min_val).max(1e-6)).clamp(0.0, 1.0);
+        let rule = self
+            .rules
+            .iter()
+            .find(|r| r.param_id.eq_ignore_ascii_case(param_id) && r.bidirectional)?;
+        let norm =
+            ((raw_val - rule.min_val) / (rule.max_val - rule.min_val).max(1e-6)).clamp(0.0, 1.0);
         let mut msg = rule.osc_path.as_bytes().to_vec();
         msg.extend_from_slice(&norm.to_be_bytes());
         Some((rule.osc_path.clone(), msg))
@@ -512,7 +529,11 @@ impl HardwareControlEditorState {
     }
 
     pub fn render_layout_preview(&self) -> String {
-        format!("Surface: {} | Mapped Elements: {}", self.surface_name, self.bound_cc_map.len())
+        format!(
+            "Surface: {} | Mapped Elements: {}",
+            self.surface_name,
+            self.bound_cc_map.len()
+        )
     }
 }
 
@@ -532,8 +553,8 @@ pub struct AudioChannelRoutingMatrix {
 impl AudioChannelRoutingMatrix {
     pub fn new(inputs: usize, outputs: usize) -> Self {
         let mut matrix = vec![vec![0.0; outputs]; inputs];
-        for i in 0..inputs.min(outputs) {
-            matrix[i][i] = 1.0;
+        for (i, row) in matrix.iter_mut().enumerate().take(inputs.min(outputs)) {
+            row[i] = 1.0;
         }
         Self {
             num_inputs: inputs,
@@ -565,8 +586,12 @@ impl AudioChannelRoutingMatrix {
         }
 
         for i in 0..num_samples {
-            for in_ch in 0..self.num_inputs.min(inputs.len()) {
-                let in_val = inputs[in_ch].get(i).copied().unwrap_or(0.0);
+            for (in_ch, input_buf) in inputs
+                .iter()
+                .enumerate()
+                .take(self.num_inputs.min(inputs.len()))
+            {
+                let in_val = input_buf.get(i).copied().unwrap_or(0.0);
                 for out_ch in 0..self.num_outputs.min(outputs.len()) {
                     let gain = self.matrix[in_ch][out_ch];
                     if gain != 0.0 {
@@ -610,7 +635,12 @@ impl WasmDspRuntime {
         Ok(())
     }
 
-    pub fn process_samples(&mut self, input: &[f32], output: &mut [f32], gain: f32) -> Result<(), String> {
+    pub fn process_samples(
+        &mut self,
+        input: &[f32],
+        output: &mut [f32],
+        gain: f32,
+    ) -> Result<(), String> {
         if !self.is_loaded {
             return Err("Wasm module not loaded".to_string());
         }
@@ -679,7 +709,8 @@ impl MidiClockCalibrator {
                 diffs.push((w[1] - w[0]) as f32);
             }
             let avg = diffs.iter().sum::<f32>() / diffs.len() as f32;
-            let variance = diffs.iter().map(|d| (d - avg).powi(2)).sum::<f32>() / diffs.len() as f32;
+            let variance =
+                diffs.iter().map(|d| (d - avg).powi(2)).sum::<f32>() / diffs.len() as f32;
             self.calculated_jitter_ms = (variance.sqrt() / 1000.0).clamp(0.0, 50.0);
         }
     }
@@ -719,7 +750,11 @@ impl IsolatedPluginScanner {
             return Err("Plugin scan timed out in sandbox sub-process".to_string());
         }
 
-        let name = path.file_stem().and_then(|s| s.to_str()).unwrap_or("ScannedPlugin").to_string();
+        let name = path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("ScannedPlugin")
+            .to_string();
 
         Ok(PluginDescriptor {
             name,
@@ -751,7 +786,10 @@ impl IsolatedPluginScanner {
 pub struct ParameterAutomapper;
 
 impl ParameterAutomapper {
-    pub fn automap_top_parameters(params: &[PluginParamInfo], max_knobs: usize) -> Vec<(String, u32, f32)> {
+    pub fn automap_top_parameters(
+        params: &[PluginParamInfo],
+        max_knobs: usize,
+    ) -> Vec<(String, u32, f32)> {
         let priority_keywords = ["gain", "cutoff", "res", "mix", "drive", "volume", "freq"];
         let mut mapped = Vec::new();
 
@@ -1101,9 +1139,30 @@ mod tests {
     #[test]
     fn test_step_1054_parameter_automapper() {
         let params = vec![
-            PluginParamInfo { id: 0, name: "Master Gain".into(), value: 1.0, default_value: 1.0, min_value: 0.0, max_value: 2.0 },
-            PluginParamInfo { id: 1, name: "Filter Cutoff".into(), value: 1000.0, default_value: 1000.0, min_value: 20.0, max_value: 20000.0 },
-            PluginParamInfo { id: 2, name: "Unused Param".into(), value: 0.0, default_value: 0.0, min_value: 0.0, max_value: 1.0 },
+            PluginParamInfo {
+                id: 0,
+                name: "Master Gain".into(),
+                value: 1.0,
+                default_value: 1.0,
+                min_value: 0.0,
+                max_value: 2.0,
+            },
+            PluginParamInfo {
+                id: 1,
+                name: "Filter Cutoff".into(),
+                value: 1000.0,
+                default_value: 1000.0,
+                min_value: 20.0,
+                max_value: 20000.0,
+            },
+            PluginParamInfo {
+                id: 2,
+                name: "Unused Param".into(),
+                value: 0.0,
+                default_value: 0.0,
+                min_value: 0.0,
+                max_value: 1.0,
+            },
         ];
 
         let mapped = ParameterAutomapper::automap_top_parameters(&params, 2);

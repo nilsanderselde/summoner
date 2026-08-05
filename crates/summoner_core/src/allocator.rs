@@ -37,7 +37,6 @@ impl Default for AllocGuard {
     }
 }
 
-
 impl Drop for AllocGuard {
     fn drop(&mut self) {
         ALLOC_FORBIDDEN.with(|f| f.set(false));

@@ -76,6 +76,12 @@ pub struct GpioDriver {
     pub press_timestamps: HashMap<u8, Instant>,
 }
 
+impl Default for GpioDriver {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl GpioDriver {
     /// Create new GPIO driver with default Pi audio hat mapping.
     pub fn new() -> Self {
@@ -99,7 +105,12 @@ impl GpioDriver {
     }
 
     /// Process physical GPIO pin state change event.
-    pub fn process_pin_change(&mut self, pin: u8, is_high: bool, now: Instant) -> Option<GpioEvent> {
+    pub fn process_pin_change(
+        &mut self,
+        pin: u8,
+        is_high: bool,
+        now: Instant,
+    ) -> Option<GpioEvent> {
         let _action = self.pin_mappings.get(&pin)?;
         let was_pressed = *self.pin_states.get(&pin).unwrap_or(&false);
 
@@ -109,7 +120,9 @@ impl GpioDriver {
             Some(GpioEvent::ButtonPressed(pin))
         } else if !is_high && was_pressed {
             self.pin_states.insert(pin, false);
-            let press_duration = self.press_timestamps.remove(&pin)
+            let press_duration = self
+                .press_timestamps
+                .remove(&pin)
                 .map(|start| now.duration_since(start))
                 .unwrap_or(Duration::from_secs(0));
 
@@ -192,7 +205,10 @@ impl OledDisplayDriver {
     /// Export ASCII representation of display screen (top bar status + mini scope).
     pub fn export_ascii_render(&self) -> String {
         let mut out = String::new();
-        out.push_str(&format!("[P: {:<12} | VOL: {:>3}% | CPU: {:>2}%]\n", self.patch_name, self.volume_pct, self.cpu_load_pct));
+        out.push_str(&format!(
+            "[P: {:<12} | VOL: {:>3}% | CPU: {:>2}%]\n",
+            self.patch_name, self.volume_pct, self.cpu_load_pct
+        ));
         out.push_str("+----------------------------------------+\n");
 
         // Compress 128x64 into 40x8 ASCII character grid
@@ -269,6 +285,12 @@ pub struct MidiUsbGadgetMode {
     pub tx_buffer: Vec<[u8; 3]>,
 }
 
+impl Default for MidiUsbGadgetMode {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MidiUsbGadgetMode {
     /// Create new USB MIDI gadget driver configuration.
     pub fn new() -> Self {
@@ -306,6 +328,12 @@ pub struct EurorackCvGateInterface {
     pub gate_out_high: [bool; 4],
     /// External CV input voltage readings (-5.0 V to +5.0 V).
     pub cv_in_volts: [f32; 4],
+}
+
+impl Default for EurorackCvGateInterface {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl EurorackCvGateInterface {
@@ -446,6 +474,12 @@ pub struct EepromPresetStore {
     pub eeprom_memory: Vec<u8>,
     /// Saved preset slots: slot index -> preset name.
     pub preset_slots: HashMap<u8, String>,
+}
+
+impl Default for EepromPresetStore {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl EepromPresetStore {
@@ -729,6 +763,12 @@ pub struct HardwareEmulationHarness {
     pub thermal: ThermalThrottlingListener,
 }
 
+impl Default for HardwareEmulationHarness {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl HardwareEmulationHarness {
     /// Create end-to-end hardware emulation harness for CI testing.
     pub fn new() -> Self {
@@ -746,11 +786,15 @@ impl HardwareEmulationHarness {
     pub fn run_boot_verification(&mut self) -> Result<bool, String> {
         let boot_time = self.boot_engine.complete_boot();
         if boot_time > 5.0 {
-            return Err(format!("Cold boot execution exceeded 5s target: {:.2}s", boot_time));
+            return Err(format!(
+                "Cold boot execution exceeded 5s target: {:.2}s",
+                boot_time
+            ));
         }
 
         // Test display output
-        self.oled.render_oscilloscope(&[0.1, 0.5, -0.5, -0.1], "Init Patch", 15, 80);
+        self.oled
+            .render_oscilloscope(&[0.1, 0.5, -0.5, -0.1], "Init Patch", 15, 80);
         let ascii = self.oled.export_ascii_render();
         if ascii.is_empty() {
             return Err("OLED display rendering failed".to_string());

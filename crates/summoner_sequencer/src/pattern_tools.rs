@@ -13,12 +13,17 @@
 
 //! Pattern editing and MIDI export/import tools for sequence manipulation (Steps 616-625).
 
-use summoner_project::schema::{SequenceConfig, TrackerStepConfig};
 use std::fs;
 use std::path::Path;
+use summoner_project::schema::{SequenceConfig, TrackerStepConfig};
 
 /// Randomizes sequence steps using a deterministic pseudo-random seed.
-pub fn randomize_pattern(sequence: &mut SequenceConfig, seed: u64, density: f32, note_range: (u8, u8)) {
+pub fn randomize_pattern(
+    sequence: &mut SequenceConfig,
+    seed: u64,
+    density: f32,
+    note_range: (u8, u8),
+) {
     let mut state = seed.wrapping_add(12345);
     let min_note = note_range.0.min(note_range.1) as f64;
     let max_note = note_range.0.max(note_range.1) as f64;
@@ -26,7 +31,9 @@ pub fn randomize_pattern(sequence: &mut SequenceConfig, seed: u64, density: f32,
 
     for step in sequence.steps.iter_mut() {
         // LCG PRNG step
-        state = state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        state = state
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         let rand_val = (state >> 33) as f32 / (u32::MAX as f32);
 
         let active = rand_val < density;
@@ -34,11 +41,15 @@ pub fn randomize_pattern(sequence: &mut SequenceConfig, seed: u64, density: f32,
         step.muted = false;
 
         if active {
-            state = state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            state = state
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             let note_frac = (state >> 33) as f64 / (u32::MAX as f64);
             step.note = (min_note + note_frac * range).round();
 
-            state = state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            state = state
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             let vel_frac = (state >> 33) as f32 / (u32::MAX as f32);
             step.velocity = (0.3 + vel_frac * 0.7).clamp(0.1, 1.0);
 
@@ -52,7 +63,13 @@ pub fn randomize_pattern(sequence: &mut SequenceConfig, seed: u64, density: f32,
 
 /// Filter/proportionally reduces active steps based on density threshold (0.0 to 1.0).
 pub fn apply_pattern_density(sequence: &mut SequenceConfig, density: f32) {
-    let active_indices: Vec<usize> = sequence.steps.iter().enumerate().filter(|(_, s)| s.active && !s.muted).map(|(i, _)| i).collect();
+    let active_indices: Vec<usize> = sequence
+        .steps
+        .iter()
+        .enumerate()
+        .filter(|(_, s)| s.active && !s.muted)
+        .map(|(i, _)| i)
+        .collect();
     if active_indices.is_empty() {
         return;
     }
@@ -89,7 +106,11 @@ pub fn quantize_velocities(sequence: &mut SequenceConfig, levels: &[f32]) {
 /// Sets the step resolution division (e.g. 0.25 for 1/4, 0.125 for 1/8) and optional triplet mode.
 pub fn set_pattern_resolution(sequence: &mut SequenceConfig, division: f64, is_triplet: bool) {
     let base_div = division.max(0.001);
-    sequence.step_division = if is_triplet { base_div * (2.0 / 3.0) } else { base_div };
+    sequence.step_division = if is_triplet {
+        base_div * (2.0 / 3.0)
+    } else {
+        base_div
+    };
 }
 
 /// Sets the length (number of steps) of a pattern, truncating or extending with default inactive steps.
@@ -174,7 +195,11 @@ pub fn export_pattern_to_midi_bytes(sequence: &SequenceConfig, bpm: f64) -> Vec<
 }
 
 /// Writes pattern as standard MIDI file to disk.
-pub fn export_pattern_to_midi_file(sequence: &SequenceConfig, bpm: f64, path: &Path) -> Result<(), String> {
+pub fn export_pattern_to_midi_file(
+    sequence: &SequenceConfig,
+    bpm: f64,
+    path: &Path,
+) -> Result<(), String> {
     let bytes = export_pattern_to_midi_bytes(sequence, bpm);
     fs::write(path, bytes).map_err(|e| e.to_string())
 }
@@ -186,15 +211,31 @@ pub fn import_pattern_from_midi_bytes(bytes: &[u8]) -> Result<SequenceConfig, St
     }
 
     let ticks_per_quarter = u16::from_be_bytes([bytes[12], bytes[13]]) as f64;
-    let ticks_per_quarter = if ticks_per_quarter == 0.0 { 480.0 } else { ticks_per_quarter };
+    let ticks_per_quarter = if ticks_per_quarter == 0.0 {
+        480.0
+    } else {
+        ticks_per_quarter
+    };
 
     let mut pos = 14;
     while pos + 8 <= bytes.len() {
         if &bytes[pos..pos + 4] == b"MTrk" {
-            let track_len = u32::from_be_bytes([bytes[pos+4], bytes[pos+5], bytes[pos+6], bytes[pos+7]]) as usize;
+            let track_len = u32::from_be_bytes([
+                bytes[pos + 4],
+                bytes[pos + 5],
+                bytes[pos + 6],
+                bytes[pos + 7],
+            ]) as usize;
             let track_data = &bytes[pos + 8..(pos + 8 + track_len).min(bytes.len())];
 
-            let mut steps = vec![TrackerStepConfig { active: false, gate: 0.0, ..Default::default() }; 16];
+            let mut steps = vec![
+                TrackerStepConfig {
+                    active: false,
+                    gate: 0.0,
+                    ..Default::default()
+                };
+                16
+            ];
             let mut curr_tick = 0u64;
             let mut cursor = 0;
 
@@ -203,7 +244,9 @@ pub fn import_pattern_from_midi_bytes(bytes: &[u8]) -> Result<SequenceConfig, St
                 cursor += len;
                 curr_tick += delta as u64;
 
-                if cursor >= track_data.len() { break; }
+                if cursor >= track_data.len() {
+                    break;
+                }
                 let status = track_data[cursor];
                 cursor += 1;
 
@@ -227,7 +270,14 @@ pub fn import_pattern_from_midi_bytes(bytes: &[u8]) -> Result<SequenceConfig, St
                             let beat = curr_tick as f64 / ticks_per_quarter;
                             let step_idx = (beat / 0.25).round() as usize;
                             if step_idx >= steps.len() {
-                                steps.resize(step_idx + 1, TrackerStepConfig { active: false, gate: 0.0, ..Default::default() });
+                                steps.resize(
+                                    step_idx + 1,
+                                    TrackerStepConfig {
+                                        active: false,
+                                        gate: 0.0,
+                                        ..Default::default()
+                                    },
+                                );
                             }
                             steps[step_idx] = TrackerStepConfig {
                                 note: note as f64,
@@ -279,7 +329,9 @@ fn write_varlen(buf: &mut Vec<u8>, mut val: u64) {
         buffer[count] = (val & 0x7F) as u8;
         val >>= 7;
         count += 1;
-        if val == 0 { break; }
+        if val == 0 {
+            break;
+        }
     }
     for i in (0..count).rev() {
         let b = if i > 0 { buffer[i] | 0x80 } else { buffer[i] };
@@ -293,7 +345,9 @@ fn read_varlen(buf: &[u8]) -> (usize, usize) {
     for &byte in buf {
         count += 1;
         result = (result << 7) | (byte & 0x7F) as usize;
-        if (byte & 0x80) == 0 || count >= 4 { break; }
+        if (byte & 0x80) == 0 || count >= 4 {
+            break;
+        }
     }
     (result, count)
 }
@@ -319,25 +373,44 @@ pub fn detect_chord_name_from_notes(notes: &[f64]) -> String {
         return "Silence".to_string();
     }
     if notes.len() == 1 {
-        let note_names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+        let note_names = [
+            "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
+        ];
         let pc = (notes[0].round() as i32).rem_euclid(12) as usize;
         let octave = ((notes[0].round() as i32) / 12) - 1;
         return format!("{}{}", note_names[pc], octave);
     }
 
-    let note_names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-    let mut pcs: Vec<i32> = notes.iter().map(|&n| (n.round() as i32).rem_euclid(12)).collect();
+    let note_names = [
+        "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
+    ];
+    let mut pcs: Vec<i32> = notes
+        .iter()
+        .map(|&n| (n.round() as i32).rem_euclid(12))
+        .collect();
     pcs.sort_unstable();
     pcs.dedup();
 
     if pcs.len() == 2 {
         let diff = (pcs[1] - pcs[0]).rem_euclid(12);
         let interval_name = match diff {
-            1 => "m2", 2 => "M2", 3 => "m3", 4 => "M3", 5 => "P4",
-            6 => "TT", 7 => "P5", 8 => "m6", 9 => "M6", 10 => "m7", 11 => "M7",
+            1 => "m2",
+            2 => "M2",
+            3 => "m3",
+            4 => "M3",
+            5 => "P4",
+            6 => "TT",
+            7 => "P5",
+            8 => "m6",
+            9 => "M6",
+            10 => "m7",
+            11 => "M7",
             _ => "Unison",
         };
-        return format!("{}-{} ({})", note_names[pcs[0] as usize], note_names[pcs[1] as usize], interval_name);
+        return format!(
+            "{}-{} ({})",
+            note_names[pcs[0] as usize], note_names[pcs[1] as usize], interval_name
+        );
     }
 
     // Try each pitch as candidate root note
@@ -395,7 +468,10 @@ mod tests {
         randomize_pattern(&mut seq1, 42, 0.5, (48, 72));
         randomize_pattern(&mut seq2, 42, 0.5, (48, 72));
 
-        assert_eq!(seq1.steps, seq2.steps, "Same seed should generate identical randomized pattern");
+        assert_eq!(
+            seq1.steps, seq2.steps,
+            "Same seed should generate identical randomized pattern"
+        );
         assert!(seq1.steps.iter().any(|s| s.active));
     }
 
@@ -403,25 +479,48 @@ mod tests {
     fn test_apply_pattern_density() {
         let mut seq = SequenceConfig {
             steps: vec![
-                TrackerStepConfig { active: true, ..Default::default() },
-                TrackerStepConfig { active: true, ..Default::default() },
-                TrackerStepConfig { active: true, ..Default::default() },
-                TrackerStepConfig { active: true, ..Default::default() },
+                TrackerStepConfig {
+                    active: true,
+                    ..Default::default()
+                },
+                TrackerStepConfig {
+                    active: true,
+                    ..Default::default()
+                },
+                TrackerStepConfig {
+                    active: true,
+                    ..Default::default()
+                },
+                TrackerStepConfig {
+                    active: true,
+                    ..Default::default()
+                },
             ],
             ..Default::default()
         };
 
         apply_pattern_density(&mut seq, 0.5);
         let active_count = seq.steps.iter().filter(|s| s.active).count();
-        assert_eq!(active_count, 2, "Density 0.5 should reduce 4 active steps to 2");
+        assert_eq!(
+            active_count, 2,
+            "Density 0.5 should reduce 4 active steps to 2"
+        );
     }
 
     #[test]
     fn test_quantize_velocities() {
         let mut seq = SequenceConfig {
             steps: vec![
-                TrackerStepConfig { active: true, velocity: 0.23, ..Default::default() },
-                TrackerStepConfig { active: true, velocity: 0.88, ..Default::default() },
+                TrackerStepConfig {
+                    active: true,
+                    velocity: 0.23,
+                    ..Default::default()
+                },
+                TrackerStepConfig {
+                    active: true,
+                    velocity: 0.88,
+                    ..Default::default()
+                },
             ],
             ..Default::default()
         };
@@ -456,8 +555,20 @@ mod tests {
             name: "Test Midi".to_string(),
             is_unique: true,
             steps: vec![
-                TrackerStepConfig { note: 60.0, velocity: 0.8, gate: 0.5, active: true, ..Default::default() },
-                TrackerStepConfig { note: 64.0, velocity: 0.9, gate: 0.5, active: true, ..Default::default() },
+                TrackerStepConfig {
+                    note: 60.0,
+                    velocity: 0.8,
+                    gate: 0.5,
+                    active: true,
+                    ..Default::default()
+                },
+                TrackerStepConfig {
+                    note: 64.0,
+                    velocity: 0.9,
+                    gate: 0.5,
+                    active: true,
+                    ..Default::default()
+                },
             ],
             ..Default::default()
         };
@@ -465,7 +576,8 @@ mod tests {
         let midi_bytes = export_pattern_to_midi_bytes(&seq_orig, 120.0);
         assert!(!midi_bytes.is_empty());
 
-        let seq_imported = import_pattern_from_midi_bytes(&midi_bytes).expect("MIDI import should succeed");
+        let seq_imported =
+            import_pattern_from_midi_bytes(&midi_bytes).expect("MIDI import should succeed");
         assert!(seq_imported.steps.len() >= 2);
         assert_eq!(seq_imported.steps[0].note, 60.0);
         assert_eq!(seq_imported.steps[1].note, 64.0);

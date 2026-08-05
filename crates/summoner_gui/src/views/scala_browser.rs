@@ -159,7 +159,8 @@ impl HistoricalScale {
             },
             Self {
                 name: "Just Intonation (5-Limit Diatonic)".to_string(),
-                description: "Pure harmonic ratios (1/1, 9/8, 5/4, 4/3, 3/2, 5/3, 15/8)".to_string(),
+                description: "Pure harmonic ratios (1/1, 9/8, 5/4, 4/3, 3/2, 5/3, 15/8)"
+                    .to_string(),
                 degrees: vec![0, 2, 4, 5, 7, 9, 11],
                 divisions: 12,
             },
@@ -282,29 +283,33 @@ pub fn show_custom_scale_builder_panel(
 
     ui.label("Cent Values per Step:");
     let len = builder.cents.len();
-    egui::ScrollArea::vertical().max_height(140.0).show(ui, |ui| {
-        egui::Grid::new("custom_cents_grid").striped(true).show(ui, |ui| {
-            for i in 0..len {
-                ui.label(format!("Step {}:", i));
-                ui.add(
-                    egui::DragValue::new(&mut builder.cents[i])
-                        .speed(0.1)
-                        .clamp_range(0.0..=2400.0)
-                        .suffix("¢"),
-                );
+    egui::ScrollArea::vertical()
+        .max_height(140.0)
+        .show(ui, |ui| {
+            egui::Grid::new("custom_cents_grid")
+                .striped(true)
+                .show(ui, |ui| {
+                    for i in 0..len {
+                        ui.label(format!("Step {}:", i));
+                        ui.add(
+                            egui::DragValue::new(&mut builder.cents[i])
+                                .speed(0.1)
+                                .clamp_range(0.0..=2400.0)
+                                .suffix("¢"),
+                        );
 
-                if i > 0 && i < len - 1 {
-                    let interval = builder.cents[i] - builder.cents[i - 1];
-                    ui.label(format!("(+{:.1}¢)", interval));
-                } else if i == 0 {
-                    ui.label("(Root)");
-                } else {
-                    ui.label("(Octave / Period)");
-                }
-                ui.end_row();
-            }
+                        if i > 0 && i < len - 1 {
+                            let interval = builder.cents[i] - builder.cents[i - 1];
+                            ui.label(format!("(+{:.1}¢)", interval));
+                        } else if i == 0 {
+                            ui.label("(Root)");
+                        } else {
+                            ui.label("(Octave / Period)");
+                        }
+                        ui.end_row();
+                    }
+                });
         });
-    });
 
     ui.separator();
 
@@ -350,7 +355,11 @@ pub fn show_custom_keyboard_visual(ui: &mut egui::Ui, builder: &mut CustomScaleB
             egui::Color32::from_rgb(45, 65, 95)
         };
 
-        let key_interact = ui.interact(key_rect, ui.id().with(("custom_key", i)), egui::Sense::click());
+        let key_interact = ui.interact(
+            key_rect,
+            ui.id().with(("custom_key", i)),
+            egui::Sense::click(),
+        );
         if key_interact.clicked() {
             builder.selected_step = Some(i);
         }
@@ -386,7 +395,9 @@ pub fn show_custom_keyboard_visual(ui: &mut egui::Ui, builder: &mut CustomScaleB
 /// Renders the 2D Just Intonation Lattice View (Step 479).
 pub fn show_ji_lattice_view(ui: &mut egui::Ui, state: &mut JiLatticeState) {
     ui.label(egui::RichText::new("🕸 Just Intonation 2D Harmonic Lattice").strong());
-    ui.label("Horizontal axis = Perfect Fifths (3:2, ~702¢) | Vertical axis = Major Thirds (5:4, ~386¢)");
+    ui.label(
+        "Horizontal axis = Perfect Fifths (3:2, ~702¢) | Vertical axis = Major Thirds (5:4, ~386¢)",
+    );
 
     let m_range = -2..=2; // Fifths
     let n_range = -2..=2; // Thirds
@@ -452,8 +463,18 @@ pub fn show_ji_lattice_view(ui: &mut egui::Ui, state: &mut JiLatticeState) {
                 egui::Color32::from_rgb(40, 50, 70)
             };
 
-            let node_rect = egui::Rect::from_center_size(egui::pos2(x, y), egui::vec2(node_radius * 2.0, node_radius * 2.0));
-            if ui.interact(node_rect, ui.id().with(("ji_node", m, n)), egui::Sense::click()).clicked() {
+            let node_rect = egui::Rect::from_center_size(
+                egui::pos2(x, y),
+                egui::vec2(node_radius * 2.0, node_radius * 2.0),
+            );
+            if ui
+                .interact(
+                    node_rect,
+                    ui.id().with(("ji_node", m, n)),
+                    egui::Sense::click(),
+                )
+                .clicked()
+            {
                 state.selected_node = Some((m, n));
             }
 
@@ -486,7 +507,10 @@ pub fn show_ji_lattice_view(ui: &mut egui::Ui, state: &mut JiLatticeState) {
         if cents < 0.0 {
             cents += 1200.0;
         }
-        ui.label(format!("Selected Lattice Node ({}, {}): {:.2} cents above root", m, n, cents));
+        ui.label(format!(
+            "Selected Lattice Node ({}, {}): {:.2} cents above root",
+            m, n, cents
+        ));
     }
 }
 
@@ -578,4 +602,3 @@ mod tests {
         assert!((builder.cents[1] - 1200.0 / 19.0).abs() < 1e-3);
     }
 }
-

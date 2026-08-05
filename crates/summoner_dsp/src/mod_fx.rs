@@ -11,10 +11,10 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Affero General Public License for more details.
 
-use summoner_core::audio::Sample;
-use summoner_core::node::ProcessContext;
 use crate::traits::SignalProcessor;
 use std::f32::consts::TAU;
+use summoner_core::audio::Sample;
+use summoner_core::node::ProcessContext;
 
 const CHORUS_BUF_SIZE: usize = 4800; // ~100ms at 48kHz
 const FLANGER_BUF_SIZE: usize = 1024; // ~20ms at 48kHz
@@ -55,11 +55,20 @@ impl SignalProcessor for EffectChorus {
         "EffectChorus"
     }
 
-    fn process_block(&mut self, inputs: &[&[Sample]], outputs: &mut [&mut [Sample]], ctx: &ProcessContext) {
+    fn process_block(
+        &mut self,
+        inputs: &[&[Sample]],
+        outputs: &mut [&mut [Sample]],
+        ctx: &ProcessContext,
+    ) {
         if outputs.is_empty() {
             return;
         }
-        let sample_rate = if ctx.sample_rate > 0 { ctx.sample_rate as f32 } else { 44100.0 };
+        let sample_rate = if ctx.sample_rate > 0 {
+            ctx.sample_rate as f32
+        } else {
+            44100.0
+        };
         let num_samples = outputs[0].len();
         let dt = self.rate_hz / sample_rate;
 
@@ -76,7 +85,8 @@ impl SignalProcessor for EffectChorus {
             self.lfo_phase = (self.lfo_phase + dt) % 1.0;
 
             let delay_samples = (0.010 + lfo_val * 0.015 * self.depth) * sample_rate; // 10ms..25ms delay
-            let read_pos = (self.write_pos as f32 + CHORUS_BUF_SIZE as f32 - delay_samples) % CHORUS_BUF_SIZE as f32;
+            let read_pos = (self.write_pos as f32 + CHORUS_BUF_SIZE as f32 - delay_samples)
+                % CHORUS_BUF_SIZE as f32;
 
             let r_floor = read_pos.floor() as usize;
             let frac = read_pos - r_floor as f32;
@@ -134,11 +144,20 @@ impl SignalProcessor for EffectFlanger {
         "EffectFlanger"
     }
 
-    fn process_block(&mut self, inputs: &[&[Sample]], outputs: &mut [&mut [Sample]], ctx: &ProcessContext) {
+    fn process_block(
+        &mut self,
+        inputs: &[&[Sample]],
+        outputs: &mut [&mut [Sample]],
+        ctx: &ProcessContext,
+    ) {
         if outputs.is_empty() {
             return;
         }
-        let sample_rate = if ctx.sample_rate > 0 { ctx.sample_rate as f32 } else { 44100.0 };
+        let sample_rate = if ctx.sample_rate > 0 {
+            ctx.sample_rate as f32
+        } else {
+            44100.0
+        };
         let num_samples = outputs[0].len();
         let dt = self.rate_hz / sample_rate;
 
@@ -153,7 +172,8 @@ impl SignalProcessor for EffectFlanger {
             self.lfo_phase = (self.lfo_phase + dt) % 1.0;
 
             let delay_samples = (0.001 + lfo_val * 0.005 * self.depth) * sample_rate; // 1ms..6ms delay
-            let read_pos = (self.write_pos as f32 + FLANGER_BUF_SIZE as f32 - delay_samples) % FLANGER_BUF_SIZE as f32;
+            let read_pos = (self.write_pos as f32 + FLANGER_BUF_SIZE as f32 - delay_samples)
+                % FLANGER_BUF_SIZE as f32;
 
             let r_floor = read_pos.floor() as usize;
             let frac = read_pos - r_floor as f32;
@@ -228,11 +248,20 @@ impl SignalProcessor for EffectPhaser {
         "EffectPhaser"
     }
 
-    fn process_block(&mut self, inputs: &[&[Sample]], outputs: &mut [&mut [Sample]], ctx: &ProcessContext) {
+    fn process_block(
+        &mut self,
+        inputs: &[&[Sample]],
+        outputs: &mut [&mut [Sample]],
+        ctx: &ProcessContext,
+    ) {
         if outputs.is_empty() {
             return;
         }
-        let sample_rate = if ctx.sample_rate > 0 { ctx.sample_rate as f32 } else { 44100.0 };
+        let sample_rate = if ctx.sample_rate > 0 {
+            ctx.sample_rate as f32
+        } else {
+            44100.0
+        };
         let num_samples = outputs[0].len();
         let dt = self.rate_hz / sample_rate;
         let num_stages = (self.stages as usize).clamp(1, MAX_PHASER_STAGES);
@@ -289,13 +318,21 @@ mod tests {
         let mut out_buf = vec![0.0f32; 512];
 
         chorus.process_block(&[&input_buf[..]], &mut [&mut out_buf[..]], &ctx);
-        assert!(out_buf.iter().any(|&v| v != 0.0), "Chorus output should not be zero");
+        assert!(
+            out_buf.iter().any(|&v| v != 0.0),
+            "Chorus output should not be zero"
+        );
 
         flanger.process_block(&[&input_buf[..]], &mut [&mut out_buf[..]], &ctx);
-        assert!(out_buf.iter().any(|&v| v != 0.0), "Flanger output should not be zero");
+        assert!(
+            out_buf.iter().any(|&v| v != 0.0),
+            "Flanger output should not be zero"
+        );
 
         phaser.process_block(&[&input_buf[..]], &mut [&mut out_buf[..]], &ctx);
-        assert!(out_buf.iter().any(|&v| v != 0.0), "Phaser output should not be zero");
+        assert!(
+            out_buf.iter().any(|&v| v != 0.0),
+            "Phaser output should not be zero"
+        );
     }
 }
-

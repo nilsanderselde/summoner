@@ -2,10 +2,10 @@
 
 #[cfg(test)]
 mod tests {
-    use summoner_project::session_markers::{
-        SessionMarkerNavigationManager, ChapterType, NavigationCommand,
-    };
     use summoner_project::create_default_project;
+    use summoner_project::session_markers::{
+        ChapterType, NavigationCommand, SessionMarkerNavigationManager,
+    };
 
     #[test]
     fn test_step_1246_session_marker_hotkey_bindings_and_chapter_navigation() {
@@ -40,7 +40,13 @@ mod tests {
 
         // 5. Test loop active chapter command
         let cmd_loop = nav.handle_key_input("L", 48.0);
-        assert_eq!(cmd_loop, Some(NavigationCommand::LoopChapter { start_beat: 48.0, end_beat: 64.0 }));
+        assert_eq!(
+            cmd_loop,
+            Some(NavigationCommand::LoopChapter {
+                start_beat: 48.0,
+                end_beat: 64.0
+            })
+        );
 
         // 6. Test project synchronization
         let mut proj = create_default_project("Session Nav Test");
@@ -49,7 +55,10 @@ mod tests {
 
         let restored = SessionMarkerNavigationManager::from_project(&proj);
         assert_eq!(restored.len(), 5);
-        assert_eq!(restored.get_marker(3).unwrap().chapter_type, ChapterType::Chorus);
+        assert_eq!(
+            restored.get_marker(3).unwrap().chapter_type,
+            ChapterType::Chorus
+        );
 
         // 7. Test CUE sheet and YouTube timestamp export
         let timestamps = restored.export_chapter_timestamps_text(120.0);
@@ -57,7 +66,8 @@ mod tests {
         assert!(timestamps.contains("00:08 Verse 1"));
         assert!(timestamps.contains("00:32 Chorus 1"));
 
-        let cue = restored.export_cue_sheet("Chapter Master", "Summoner Producer", "master.wav", 120.0);
+        let cue =
+            restored.export_cue_sheet("Chapter Master", "Summoner Producer", "master.wav", 120.0);
         assert!(cue.contains("TITLE \"Chapter Master\""));
         assert!(cue.contains("PERFORMER \"Summoner Producer\""));
         assert!(cue.contains("TRACK 04 AUDIO"));
@@ -66,9 +76,7 @@ mod tests {
 
     #[test]
     fn test_step_1247_offline_crash_dump_analyzer() {
-        use summoner_project::crash_analyzer::{
-            CrashDump, CrashDumpAnalyzer, CrashSeverity,
-        };
+        use summoner_project::crash_analyzer::{CrashDump, CrashDumpAnalyzer, CrashSeverity};
 
         let dump1 = CrashDump::new(
             "dump-20260805-001",
@@ -98,10 +106,14 @@ mod tests {
         assert_eq!(res1.dump_id, "dump-20260805-001");
         assert!(res1.is_offline_safe);
         assert!(res1.probable_root_cause.contains("Memory Access Violation"));
-        assert!(res1.formatted_report.contains("OFFLINE CRASH REPORT DUMP ANALYZER"));
+        assert!(res1
+            .formatted_report
+            .contains("OFFLINE CRASH REPORT DUMP ANALYZER"));
 
         let res2 = CrashDumpAnalyzer::analyze_dump(&dump2);
-        assert!(res2.probable_root_cause.contains("Buffer Processing Underflow"));
+        assert!(res2
+            .probable_root_cause
+            .contains("Buffer Processing Underflow"));
 
         let temp_dir = std::env::temp_dir().join("summoner_crash_dumps_tier46");
         dump1.save_to_file(&temp_dir.join("dump1.json")).unwrap();
@@ -109,7 +121,9 @@ mod tests {
 
         let summary = CrashDumpAnalyzer::analyze_dumps_directory(&temp_dir).unwrap();
         assert_eq!(summary.total_dumps_analyzed, 2);
-        assert!(summary.formatted_summary.contains("LOCAL DISK CRASH REPORT DUMP SUMMARY"));
+        assert!(summary
+            .formatted_summary
+            .contains("LOCAL DISK CRASH REPORT DUMP SUMMARY"));
         assert!(!summary.recommendations.is_empty());
 
         let _ = std::fs::remove_dir_all(&temp_dir);
@@ -201,7 +215,8 @@ mod tests {
     #[test]
     fn test_step_1249_multi_track_stems_auto_naming_and_export_preset_manager() {
         use summoner_project::export::{
-            format_stem_filename, BitDepth, ExportPreset, ExportPresetManager, StemExportFormat, ExportSettings,
+            format_stem_filename, BitDepth, ExportPreset, ExportPresetManager, ExportSettings,
+            StemExportFormat,
         };
         use summoner_project::schema::{ProjectConfig, TrackConfig, TransportConfig};
 
@@ -217,7 +232,10 @@ mod tests {
             BitDepth::Bit24,
             "wav",
         );
-        assert_eq!(filename_wav, "Solar_Odyssey_01_Synth_Lead_Melodic_Bus_48000Hz_24bit.wav");
+        assert_eq!(
+            filename_wav,
+            "Solar_Odyssey_01_Synth_Lead_Melodic_Bus_48000Hz_24bit.wav"
+        );
 
         let filename_flac = format_stem_filename(
             "{index}_{name}",
@@ -273,7 +291,9 @@ mod tests {
         manager.save_to_json_file(&json_path).unwrap();
 
         let restored_manager = ExportPresetManager::load_from_json_file(&json_path).unwrap();
-        assert!(restored_manager.get_preset("Custom Techno OGG Stems").is_some());
+        assert!(restored_manager
+            .get_preset("Custom Techno OGG Stems")
+            .is_some());
 
         // 5. Build mock project and test stem export execution
         let proj = ProjectConfig {
@@ -302,7 +322,9 @@ mod tests {
         };
 
         let export_dir = temp_dir.join("stems_out");
-        let report = restored_manager.export_stems(&custom_preset, &proj, &export_dir, None).unwrap();
+        let report = restored_manager
+            .export_stems(&custom_preset, &proj, &export_dir, None)
+            .unwrap();
 
         assert_eq!(report.total_stems, 3); // 2 tracks + 1 master
         assert_eq!(report.format, "ogg");
@@ -319,9 +341,7 @@ mod tests {
 
     #[test]
     fn test_step_1250_audio_graph_benchmark_suite() {
-        use summoner_project::benchmark::{
-            AudioGraphBenchmarkConfig, AudioGraphBenchmarkSuite,
-        };
+        use summoner_project::benchmark::{AudioGraphBenchmarkConfig, AudioGraphBenchmarkSuite};
         use summoner_project::create_default_project;
 
         let proj = create_default_project("Benchmark Test Session");
@@ -346,7 +366,9 @@ mod tests {
         assert!(report.best_block_size > 0);
 
         // 2. Verify summary text table and JSON reporting output
-        assert!(report.formatted_summary.contains("SUMMONER AUDIO GRAPH BUFFER PROCESSING THROUGHPUT BENCHMARK"));
+        assert!(report
+            .formatted_summary
+            .contains("SUMMONER AUDIO GRAPH BUFFER PROCESSING THROUGHPUT BENCHMARK"));
         assert!(report.formatted_summary.contains("Block Size"));
         assert!(report.formatted_summary.contains("Speed Factor"));
         assert!(report.formatted_json.contains("best_block_size"));
@@ -380,7 +402,8 @@ mod tests {
         use summoner_project::dependency_audit::WorkspaceDependencyAuditor;
 
         let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-        let report = WorkspaceDependencyAuditor::audit_workspace_manifests(&root).expect("Workspace audit failed");
+        let report = WorkspaceDependencyAuditor::audit_workspace_manifests(&root)
+            .expect("Workspace audit failed");
 
         assert_eq!(report.total_workspace_crates, 7);
         assert!(report.total_dependencies_audited > 0);
@@ -389,10 +412,11 @@ mod tests {
         assert_eq!(report.telemetry_dependencies_found, 0);
         assert_eq!(report.non_foss_licenses_found, 0);
         assert!(report.is_security_compliant);
-        assert!(report.formatted_summary.contains("SUMMONER DAW - WORKSPACE DEPENDENCY SECURITY AUDIT"));
-        assert!(report.formatted_summary.contains("Compliance Status          : VERIFIED PASS"));
+        assert!(report
+            .formatted_summary
+            .contains("SUMMONER DAW - WORKSPACE DEPENDENCY SECURITY AUDIT"));
+        assert!(report
+            .formatted_summary
+            .contains("Compliance Status          : VERIFIED PASS"));
     }
 }
-
-
-

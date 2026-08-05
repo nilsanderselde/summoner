@@ -207,7 +207,8 @@ impl MidiFilterEngine {
                 }
                 if velocity == 0 {
                     // Velocity 0 Note On handled as Note Off
-                    let transposed = (note as i16 + self.filter.transpose as i16).clamp(0, 127) as u8;
+                    let transposed =
+                        (note as i16 + self.filter.transpose as i16).clamp(0, 127) as u8;
                     return Some(MidiEvent::NoteOn(channel, transposed, 0));
                 }
                 if note < self.filter.min_note || note > self.filter.max_note {
@@ -306,7 +307,11 @@ impl MidiFilterEngine {
             MidiEvent::NoteOn(ch, n, v) => [0x90 | (ch & 0x0F), n & 0x7F, v & 0x7F],
             MidiEvent::NoteOff(ch, n, v) => [0x80 | (ch & 0x0F), n & 0x7F, v & 0x7F],
             MidiEvent::ControlChange(ch, cc, v) => [0xB0 | (ch & 0x0F), cc & 0x7F, v & 0x7F],
-            MidiEvent::PitchBend(ch, val) => [0xE0 | (ch & 0x0F), (val & 0x7F) as u8, ((val >> 7) & 0x7F) as u8],
+            MidiEvent::PitchBend(ch, val) => [
+                0xE0 | (ch & 0x0F),
+                (val & 0x7F) as u8,
+                ((val >> 7) & 0x7F) as u8,
+            ],
             MidiEvent::ProgramChange(ch, p) => [0xC0 | (ch & 0x0F), p & 0x7F, 0],
             MidiEvent::Aftertouch(ch, p) => [0xD0 | (ch & 0x0F), p & 0x7F, 0],
             MidiEvent::PolyPressure(ch, n, p) => [0xA0 | (ch & 0x0F), n & 0x7F, p & 0x7F],
@@ -373,10 +378,18 @@ mod tests {
 
         let engine = MidiFilterEngine::new(filter);
 
-        assert!(engine.process_event(&MidiEvent::NoteOn(0, 59, 100)).is_none());
-        assert!(engine.process_event(&MidiEvent::NoteOn(0, 64, 100)).is_some());
-        assert!(engine.process_event(&MidiEvent::ControlChange(0, 1, 127)).is_none());
-        assert!(engine.process_event(&MidiEvent::ControlChange(0, 7, 127)).is_some());
+        assert!(engine
+            .process_event(&MidiEvent::NoteOn(0, 59, 100))
+            .is_none());
+        assert!(engine
+            .process_event(&MidiEvent::NoteOn(0, 64, 100))
+            .is_some());
+        assert!(engine
+            .process_event(&MidiEvent::ControlChange(0, 1, 127))
+            .is_none());
+        assert!(engine
+            .process_event(&MidiEvent::ControlChange(0, 7, 127))
+            .is_some());
     }
 
     #[test]

@@ -7,16 +7,15 @@
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+    use std::path::Path;
     use summoner_project::media_export::{
-        MacroRackLuaDevice, LuaDspContext, lua_util_sin, lua_util_cos, lua_util_tanh,
-        lua_util_clamp, lua_util_lerp, lua_util_midi_to_hz, LuaRandomEngine,
-        lua_pattern_euclidean, lua_pattern_bjorklund, lua_freq_from_note_edo,
-        require_summoner_version, require_package, check_performance_budget,
-        LuaHotReloader, LuaTestRunner, LuaScriptEngine,
+        check_performance_budget, lua_freq_from_note_edo, lua_pattern_bjorklund,
+        lua_pattern_euclidean, lua_util_clamp, lua_util_cos, lua_util_lerp, lua_util_midi_to_hz,
+        lua_util_sin, lua_util_tanh, require_package, require_summoner_version, LuaDspContext,
+        LuaHotReloader, LuaRandomEngine, LuaScriptEngine, LuaTestRunner, MacroRackLuaDevice,
     };
     use summoner_project::schema::{ProjectConfig, TrackConfig};
-    use std::path::Path;
-    use std::collections::HashMap;
 
     #[test]
     fn test_step_881_macro_rack_lua_device() {
@@ -150,10 +149,14 @@ mod tests {
             ..Default::default()
         };
 
-        engine.on_before_save("function on_before_save() end", &mut proj).unwrap();
+        engine
+            .on_before_save("function on_before_save() end", &mut proj)
+            .unwrap();
         assert!(proj.name.contains("(Saved)"));
 
-        engine.on_after_save("function on_after_save() end", &proj).unwrap();
+        engine
+            .on_after_save("function on_after_save() end", &proj)
+            .unwrap();
     }
 
     #[test]
@@ -188,9 +191,7 @@ mod tests {
     #[test]
     fn test_step_897_lua_error_isolation() {
         let engine = LuaScriptEngine::new();
-        let res = engine.run_isolated(|| {
-            Ok(42)
-        });
+        let res = engine.run_isolated(|| Ok(42));
         assert_eq!(res.unwrap(), 42);
     }
 

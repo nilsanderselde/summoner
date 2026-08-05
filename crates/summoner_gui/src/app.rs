@@ -1,16 +1,16 @@
-use std::sync::Arc;
+use eframe::egui;
 use std::path::PathBuf;
+use std::sync::Arc;
 use summoner_core::param_bus::ParamBus;
 use summoner_project::schema::ProjectConfig;
-use eframe::egui;
 
+use crate::command_palette::CommandPalette;
+use crate::stage_view::{show_stage_view, StageView};
 use crate::views::arranger::show_arranger;
+use crate::views::macro_rack::show_macro_rack;
+use crate::views::mixer::show_mixer;
 use crate::views::node_graph::{show_node_graph, NodeGraphState};
 use crate::views::piano_roll::{show_piano_roll, PianoRollState, Viewport};
-use crate::views::mixer::show_mixer;
-use crate::views::macro_rack::show_macro_rack;
-use crate::stage_view::{show_stage_view, StageView};
-use crate::command_palette::CommandPalette;
 use summoner_core::graph::NodeGraph;
 use summoner_core::transport::Transport;
 use summoner_harmony::edo::EdoTuning;
@@ -19,8 +19,8 @@ use summoner_sequencer::automation_timeline::AutomationTimeline;
 
 use summoner_harmony::bus::HarmonicContext;
 
-use std::collections::HashMap;
 use crate::visualizer::{Oscilloscope, SpectrumAnalyzer};
+use std::collections::HashMap;
 
 #[derive(PartialEq, Debug, Clone, serde::Serialize, serde::Deserialize, Default)]
 pub enum ViewMode {
@@ -79,14 +79,28 @@ pub struct GuiState {
     pub show_project_notes_panel: bool,
 }
 
-fn default_panel_dock_edge() -> String { "Left".to_string() }
+fn default_panel_dock_edge() -> String {
+    "Left".to_string()
+}
 
-fn default_macro_rack_height() -> f32 { 200.0 }
-fn default_track_header_width() -> f32 { 180.0 }
-fn default_dark_theme() -> bool { true }
-fn default_true() -> bool { true }
-fn default_font_size() -> f32 { 14.0 }
-fn default_auto_save_interval() -> u64 { 300 }
+fn default_macro_rack_height() -> f32 {
+    200.0
+}
+fn default_track_header_width() -> f32 {
+    180.0
+}
+fn default_dark_theme() -> bool {
+    true
+}
+fn default_true() -> bool {
+    true
+}
+fn default_font_size() -> f32 {
+    14.0
+}
+fn default_auto_save_interval() -> u64 {
+    300
+}
 
 impl GuiState {
     pub const STATE_FILE: &'static str = ".summoner_gui_state.toml";
@@ -302,11 +316,15 @@ impl SummonerApp {
             dragged_clip_info: None,
             dragged_preset_id: None,
             show_project_notes_panel: false,
-            project_notes_text: String::from("# Project Notes\n\nAdd session notes, lyrics, or ideas here."),
+            project_notes_text: String::from(
+                "# Project Notes\n\nAdd session notes, lyrics, or ideas here.",
+            ),
             last_share_action_message: None,
             display_mode: GuiDisplayMode::SimpleMode,
             live_session_recorder: summoner_dsp::LiveSessionRecorder::new(),
-            spectrogram_art_engine: summoner_dsp::SpectrogramArtEngine::new(summoner_dsp::SpectrogramArtConfig::default()),
+            spectrogram_art_engine: summoner_dsp::SpectrogramArtEngine::new(
+                summoner_dsp::SpectrogramArtConfig::default(),
+            ),
             visualizer_engine: summoner_dsp::VisualizerIntegrationEngine::new(),
         };
 
@@ -373,17 +391,23 @@ impl SummonerApp {
 
     /// Step 823: Handle dropped files from desktop (.wav, .flac, .toml).
     pub fn handle_dropped_file(&mut self, path: &std::path::Path) -> Result<String, String> {
-        let ext = path.extension().and_then(|s| s.to_str()).unwrap_or("").to_lowercase();
+        let ext = path
+            .extension()
+            .and_then(|s| s.to_str())
+            .unwrap_or("")
+            .to_lowercase();
         match ext.as_str() {
             "wav" | "flac" => {
                 let asset_id = format!("asset_{}", self.project.assets.len() + 1);
-                self.project.assets.push(summoner_project::schema::AssetConfig {
-                    id: asset_id.clone(),
-                    hash: "blake3_stub".to_string(),
-                    path: path.to_string_lossy().to_string(),
-                    auto_slice: false,
-                    slice_threshold: 0.15,
-                });
+                self.project
+                    .assets
+                    .push(summoner_project::schema::AssetConfig {
+                        id: asset_id.clone(),
+                        hash: "blake3_stub".to_string(),
+                        path: path.to_string_lossy().to_string(),
+                        auto_slice: false,
+                        slice_threshold: 0.15,
+                    });
                 Ok(format!("Added audio asset: {}", asset_id))
             }
             "toml" => {
@@ -398,8 +422,18 @@ impl SummonerApp {
     }
 
     /// Step 824: Move clip between tracks in Arranger.
-    pub fn move_clip_between_tracks(&mut self, src_track_id: u64, clip_idx: usize, dst_track_id: u64) -> Result<(), String> {
-        let clip = if let Some(src_track) = self.project.tracks.iter_mut().find(|t| t.id == src_track_id) {
+    pub fn move_clip_between_tracks(
+        &mut self,
+        src_track_id: u64,
+        clip_idx: usize,
+        dst_track_id: u64,
+    ) -> Result<(), String> {
+        let clip = if let Some(src_track) = self
+            .project
+            .tracks
+            .iter_mut()
+            .find(|t| t.id == src_track_id)
+        {
             if clip_idx < src_track.clips.len() {
                 src_track.clips.remove(clip_idx)
             } else {
@@ -409,7 +443,12 @@ impl SummonerApp {
             return Err("Source track not found".to_string());
         };
 
-        if let Some(dst_track) = self.project.tracks.iter_mut().find(|t| t.id == dst_track_id) {
+        if let Some(dst_track) = self
+            .project
+            .tracks
+            .iter_mut()
+            .find(|t| t.id == dst_track_id)
+        {
             dst_track.clips.push(clip);
             Ok(())
         } else {
@@ -436,12 +475,18 @@ impl SummonerApp {
 
     /// Step 826: Get doc URL for Node Graph "Go to Definition".
     pub fn get_node_doc_url(&self, node_kind: &str) -> String {
-        format!("https://summoner.audio/docs/nodes/{}", node_kind.to_lowercase())
+        format!(
+            "https://summoner.audio/docs/nodes/{}",
+            node_kind.to_lowercase()
+        )
     }
 
     /// Step 839: Share button helper.
     pub fn share_project_export(&mut self, export_path: &std::path::Path) {
-        self.last_share_action_message = Some(format!("Export ready for sharing: {}", export_path.display()));
+        self.last_share_action_message = Some(format!(
+            "Export ready for sharing: {}",
+            export_path.display()
+        ));
     }
 
     /// Step 1226: Toggle between Simple Mode and Advanced Mode GUI interface.
@@ -451,7 +496,6 @@ impl SummonerApp {
             GuiDisplayMode::AdvancedMode => GuiDisplayMode::SimpleMode,
         };
     }
-
 
     pub fn add_recent_project(&mut self, path: PathBuf) {
         self.recent_projects.retain(|p| p != &path);
@@ -490,7 +534,9 @@ impl SummonerApp {
     }
 
     pub fn check_auto_save(&mut self) {
-        if self.auto_save_interval_secs > 0 && self.last_auto_save.elapsed().as_secs() >= self.auto_save_interval_secs {
+        if self.auto_save_interval_secs > 0
+            && self.last_auto_save.elapsed().as_secs() >= self.auto_save_interval_secs
+        {
             self.last_auto_save = std::time::Instant::now();
             if let Ok(content) = summoner_project::serialize_project_toml(&self.project) {
                 let path = std::path::Path::new(".summoner_autosave.toml");
@@ -510,7 +556,8 @@ impl SummonerApp {
         self.transport_running = false;
         self.oscilloscope_buffers.clear();
         for track in &self.project.tracks {
-            self.oscilloscope_buffers.insert(track.id, Arc::new(Oscilloscope::new()));
+            self.oscilloscope_buffers
+                .insert(track.id, Arc::new(Oscilloscope::new()));
         }
         self.stage_view.populate_from_project(&self.project);
         self.status_message = Some("Created new session".to_string());
@@ -518,7 +565,10 @@ impl SummonerApp {
 
     pub fn open_session(&mut self) {
         #[cfg(feature = "gui")]
-        if let Some(path) = rfd::FileDialog::new().add_filter("Project TOML", &["toml"]).pick_file() {
+        if let Some(path) = rfd::FileDialog::new()
+            .add_filter("Project TOML", &["toml"])
+            .pick_file()
+        {
             self.load_session_from_path(path);
         }
     }
@@ -530,7 +580,8 @@ impl SummonerApp {
                 self.project_path = Some(path.clone());
                 self.oscilloscope_buffers.clear();
                 for track in &self.project.tracks {
-                    self.oscilloscope_buffers.insert(track.id, Arc::new(Oscilloscope::new()));
+                    self.oscilloscope_buffers
+                        .insert(track.id, Arc::new(Oscilloscope::new()));
                 }
                 self.stage_view.populate_from_project(&self.project);
                 self.status_message = Some(format!("Loaded session: {}", path.display()));
@@ -560,7 +611,11 @@ impl SummonerApp {
 
     pub fn save_session_as(&mut self) {
         #[cfg(feature = "gui")]
-        if let Some(path) = rfd::FileDialog::new().add_filter("Project TOML", &["toml"]).set_file_name("project.toml").save_file() {
+        if let Some(path) = rfd::FileDialog::new()
+            .add_filter("Project TOML", &["toml"])
+            .set_file_name("project.toml")
+            .save_file()
+        {
             if let Ok(content) = summoner_project::serialize_project_toml(&self.project) {
                 if std::fs::write(&path, content).is_ok() {
                     self.project_path = Some(path.clone());
@@ -578,7 +633,10 @@ impl SummonerApp {
     pub fn export_wav(&mut self) {
         #[cfg(feature = "gui")]
         {
-            let save_path = rfd::FileDialog::new().add_filter("WAV Audio", &["wav"]).set_file_name("render.wav").save_file();
+            let save_path = rfd::FileDialog::new()
+                .add_filter("WAV Audio", &["wav"])
+                .set_file_name("render.wav")
+                .save_file();
             if let Some(path) = save_path {
                 let proj = self.project.clone();
                 self.status_message = Some(format!("Exporting WAV to {}...", path.display()));
@@ -591,7 +649,8 @@ impl SummonerApp {
                     };
                     if let Ok(mut writer) = hound::WavWriter::create(&path, spec) {
                         let duration_secs = 4.0;
-                        let total_samples = (proj.transport.sample_rate as f64 * duration_secs) as usize;
+                        let total_samples =
+                            (proj.transport.sample_rate as f64 * duration_secs) as usize;
                         for _ in 0..total_samples {
                             let _ = writer.write_sample(0.0f32);
                             let _ = writer.write_sample(0.0f32);
@@ -632,14 +691,19 @@ impl eframe::App for SummonerApp {
                 if path.extension().is_some_and(|e| e == "toml") {
                     self.load_session_from_path(path);
                 } else if path.extension().is_some_and(|e| e == "wav" || e == "flac") {
-                    let id = path.file_stem().map(|s| s.to_string_lossy().to_string()).unwrap_or_else(|| "asset".to_string());
-                    self.project.assets.push(summoner_project::schema::AssetConfig {
-                        id,
-                        hash: "dropped_hash".to_string(),
-                        path: path.to_string_lossy().to_string(),
-                        auto_slice: false,
-                        slice_threshold: 0.15,
-                    });
+                    let id = path
+                        .file_stem()
+                        .map(|s| s.to_string_lossy().to_string())
+                        .unwrap_or_else(|| "asset".to_string());
+                    self.project
+                        .assets
+                        .push(summoner_project::schema::AssetConfig {
+                            id,
+                            hash: "dropped_hash".to_string(),
+                            path: path.to_string_lossy().to_string(),
+                            auto_slice: false,
+                            slice_threshold: 0.15,
+                        });
                     self.status_message = Some(format!("Added asset: {}", path.display()));
                 }
             }
@@ -676,8 +740,17 @@ impl eframe::App for SummonerApp {
 
         // Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y Undo and Redo
         if is_ctrl && ctx.input(|i| i.key_pressed(egui::Key::Z)) {
-            let path = self.project_path.clone().unwrap_or_else(|| std::path::PathBuf::from("."));
-            let dir = if path.is_dir() { path } else { path.parent().unwrap_or_else(|| std::path::Path::new(".")).to_path_buf() };
+            let path = self
+                .project_path
+                .clone()
+                .unwrap_or_else(|| std::path::PathBuf::from("."));
+            let dir = if path.is_dir() {
+                path
+            } else {
+                path.parent()
+                    .unwrap_or_else(|| std::path::Path::new("."))
+                    .to_path_buf()
+            };
             if let Ok(repo) = summoner_project::git_dag::open_or_init_repo(&dir) {
                 if is_shift {
                     if summoner_project::git_dag::redo(&repo).is_ok() {
@@ -699,8 +772,17 @@ impl eframe::App for SummonerApp {
             }
         }
         if is_ctrl && ctx.input(|i| i.key_pressed(egui::Key::Y)) {
-            let path = self.project_path.clone().unwrap_or_else(|| std::path::PathBuf::from("."));
-            let dir = if path.is_dir() { path } else { path.parent().unwrap_or_else(|| std::path::Path::new(".")).to_path_buf() };
+            let path = self
+                .project_path
+                .clone()
+                .unwrap_or_else(|| std::path::PathBuf::from("."));
+            let dir = if path.is_dir() {
+                path
+            } else {
+                path.parent()
+                    .unwrap_or_else(|| std::path::Path::new("."))
+                    .to_path_buf()
+            };
             if let Ok(repo) = summoner_project::git_dag::open_or_init_repo(&dir) {
                 if summoner_project::git_dag::redo(&repo).is_ok() {
                     self.load_session_from_path(dir.join("summoner_session.toml"));
@@ -720,7 +802,11 @@ impl eframe::App for SummonerApp {
             if let Some(tid) = selected_id {
                 if let Some(track) = self.project.tracks.iter_mut().find(|t| t.id == tid) {
                     track.soloed = !track.soloed;
-                    self.status_message = Some(format!("Track '{}' solo: {}", track.name, if track.soloed { "ON" } else { "OFF" }));
+                    self.status_message = Some(format!(
+                        "Track '{}' solo: {}",
+                        track.name,
+                        if track.soloed { "ON" } else { "OFF" }
+                    ));
                 }
             }
         }
@@ -731,7 +817,11 @@ impl eframe::App for SummonerApp {
             if let Some(tid) = selected_id {
                 if let Some(track) = self.project.tracks.iter_mut().find(|t| t.id == tid) {
                     track.muted = !track.muted;
-                    self.status_message = Some(format!("Track '{}' mute: {}", track.name, if track.muted { "ON" } else { "OFF" }));
+                    self.status_message = Some(format!(
+                        "Track '{}' mute: {}",
+                        track.name,
+                        if track.muted { "ON" } else { "OFF" }
+                    ));
                 }
             }
         }
@@ -742,7 +832,15 @@ impl eframe::App for SummonerApp {
             if let Some(tid) = selected_id {
                 if let Some(track) = self.project.tracks.iter_mut().find(|t| t.id == tid) {
                     track.record_armed = !track.record_armed;
-                    self.status_message = Some(format!("Track '{}' record arm: {}", track.name, if track.record_armed { "ARMED" } else { "DISARMED" }));
+                    self.status_message = Some(format!(
+                        "Track '{}' record arm: {}",
+                        track.name,
+                        if track.record_armed {
+                            "ARMED"
+                        } else {
+                            "DISARMED"
+                        }
+                    ));
                 }
             }
         }
@@ -753,16 +851,19 @@ impl eframe::App for SummonerApp {
             if let Some(tid) = selected_id {
                 if let Some(track) = self.project.tracks.iter_mut().find(|t| t.id == tid) {
                     track.gain = (track.gain + 0.05).min(2.0);
-                    self.status_message = Some(format!("Track '{}' gain: {:.2}", track.name, track.gain));
+                    self.status_message =
+                        Some(format!("Track '{}' gain: {:.2}", track.name, track.gain));
                 }
             }
         }
-        if !wants_kb && !is_ctrl && !is_shift && ctx.input(|i| i.key_pressed(egui::Key::ArrowDown)) {
+        if !wants_kb && !is_ctrl && !is_shift && ctx.input(|i| i.key_pressed(egui::Key::ArrowDown))
+        {
             let selected_id = self.selected_track_id;
             if let Some(tid) = selected_id {
                 if let Some(track) = self.project.tracks.iter_mut().find(|t| t.id == tid) {
                     track.gain = (track.gain - 0.05).max(0.0);
-                    self.status_message = Some(format!("Track '{}' gain: {:.2}", track.name, track.gain));
+                    self.status_message =
+                        Some(format!("Track '{}' gain: {:.2}", track.name, track.gain));
                 }
             }
         }
@@ -770,15 +871,27 @@ impl eframe::App for SummonerApp {
         // 805. Tab / Shift+Tab: cycle track selection
         if !wants_kb && !is_ctrl && ctx.input(|i| i.key_pressed(egui::Key::Tab)) {
             if !self.project.tracks.is_empty() {
-                let current_idx = self.project.tracks.iter().position(|t| Some(t.id) == self.selected_track_id).unwrap_or(0);
+                let current_idx = self
+                    .project
+                    .tracks
+                    .iter()
+                    .position(|t| Some(t.id) == self.selected_track_id)
+                    .unwrap_or(0);
                 let next_idx = if is_shift {
-                    if current_idx == 0 { self.project.tracks.len() - 1 } else { current_idx - 1 }
+                    if current_idx == 0 {
+                        self.project.tracks.len() - 1
+                    } else {
+                        current_idx - 1
+                    }
                 } else {
                     (current_idx + 1) % self.project.tracks.len()
                 };
                 let new_id = self.project.tracks[next_idx].id;
                 self.selected_track_id = Some(new_id);
-                self.status_message = Some(format!("Selected track: {}", self.project.tracks[next_idx].name));
+                self.status_message = Some(format!(
+                    "Selected track: {}",
+                    self.project.tracks[next_idx].name
+                ));
             }
         }
 
@@ -798,28 +911,31 @@ impl eframe::App for SummonerApp {
         if is_ctrl && !is_shift && ctx.input(|i| i.key_pressed(egui::Key::T)) {
             let next_id = self.project.tracks.iter().map(|t| t.id).max().unwrap_or(0) + 1;
             let name = format!("Track {}", next_id);
-            self.project.tracks.push(summoner_project::schema::TrackConfig {
-                id: next_id,
-                name: name.clone(),
-                channels: 2,
-                gain: 1.0,
-                pan: 0.0,
-                muted: false,
-                soloed: false,
-                send_level: 0.0,
-                nodes: Vec::new(),
-                sequence: None,
-                clips: Vec::new(),
-                connections: Vec::new(),
-                tuning_edo: None,
-                tuning_root_hz: None,
-                tuning_scl_path: None,
-                record_armed: false,
-                send_to_master: true,
-                ..Default::default()
-            });
+            self.project
+                .tracks
+                .push(summoner_project::schema::TrackConfig {
+                    id: next_id,
+                    name: name.clone(),
+                    channels: 2,
+                    gain: 1.0,
+                    pan: 0.0,
+                    muted: false,
+                    soloed: false,
+                    send_level: 0.0,
+                    nodes: Vec::new(),
+                    sequence: None,
+                    clips: Vec::new(),
+                    connections: Vec::new(),
+                    tuning_edo: None,
+                    tuning_root_hz: None,
+                    tuning_scl_path: None,
+                    record_armed: false,
+                    send_to_master: true,
+                    ..Default::default()
+                });
             self.selected_track_id = Some(next_id);
-            self.oscilloscope_buffers.insert(next_id, Arc::new(Oscilloscope::new()));
+            self.oscilloscope_buffers
+                .insert(next_id, Arc::new(Oscilloscope::new()));
             self.status_message = Some(format!("Added new track: {}", name));
         }
 
@@ -850,7 +966,8 @@ impl eframe::App for SummonerApp {
                     dup.name = format!("{} (Copy)", dup.name);
                     self.project.tracks.push(dup.clone());
                     self.selected_track_id = Some(next_id);
-                    self.oscilloscope_buffers.insert(next_id, Arc::new(Oscilloscope::new()));
+                    self.oscilloscope_buffers
+                        .insert(next_id, Arc::new(Oscilloscope::new()));
                     self.status_message = Some(format!("Duplicated track: {}", dup.name));
                 }
             }
@@ -881,7 +998,14 @@ impl eframe::App for SummonerApp {
         // 813. L key: toggle loop
         if !wants_kb && !is_ctrl && !is_shift && ctx.input(|i| i.key_pressed(egui::Key::L)) {
             self.project.loop_enabled = !self.project.loop_enabled;
-            self.status_message = Some(format!("Looping: {}", if self.project.loop_enabled { "Enabled" } else { "Disabled" }));
+            self.status_message = Some(format!(
+                "Looping: {}",
+                if self.project.loop_enabled {
+                    "Enabled"
+                } else {
+                    "Disabled"
+                }
+            ));
         }
 
         // 814. Ctrl+[ and Ctrl+]: set loop start and loop end
@@ -901,7 +1025,13 @@ impl eframe::App for SummonerApp {
             self.status_message = Some("Jumped to song start".to_string());
         }
         if !wants_kb && ctx.input(|i| i.key_pressed(egui::Key::End)) {
-            let max_beat = self.project.tracks.iter().flat_map(|t| t.clips.iter()).map(|c| c.start_beat + c.steps.len() as f64 * 0.25).fold(16.0f64, f64::max);
+            let max_beat = self
+                .project
+                .tracks
+                .iter()
+                .flat_map(|t| t.clips.iter())
+                .map(|c| c.start_beat + c.steps.len() as f64 * 0.25)
+                .fold(16.0f64, f64::max);
             self.playhead_beat = max_beat;
             self.current_beat = max_beat;
             self.status_message = Some(format!("Jumped to song end (beat {:.1})", max_beat));
@@ -915,21 +1045,37 @@ impl eframe::App for SummonerApp {
         // 817. Ctrl+Shift+H: toggle half speed playback
         if is_ctrl && is_shift && ctx.input(|i| i.key_pressed(egui::Key::H)) {
             self.half_speed_playback = !self.half_speed_playback;
-            self.status_message = Some(format!("Half-speed playback: {}", if self.half_speed_playback { "ON" } else { "OFF" }));
+            self.status_message = Some(format!(
+                "Half-speed playback: {}",
+                if self.half_speed_playback {
+                    "ON"
+                } else {
+                    "OFF"
+                }
+            ));
         }
 
         // 818. Ctrl+Shift+M: toggle metronome click
         if is_ctrl && is_shift && ctx.input(|i| i.key_pressed(egui::Key::M)) {
             self.metronome_enabled = !self.metronome_enabled;
-            self.status_message = Some(format!("Metronome: {}", if self.metronome_enabled { "ON" } else { "OFF" }));
+            self.status_message = Some(format!(
+                "Metronome: {}",
+                if self.metronome_enabled { "ON" } else { "OFF" }
+            ));
         }
 
         // 819. Ctrl+Shift+K: toggle virtual MIDI keyboard input panel
         if is_ctrl && is_shift && ctx.input(|i| i.key_pressed(egui::Key::K)) {
             self.show_virtual_keyboard = !self.show_virtual_keyboard;
-            self.status_message = Some(format!("Virtual Keyboard: {}", if self.show_virtual_keyboard { "Shown" } else { "Hidden" }));
+            self.status_message = Some(format!(
+                "Virtual Keyboard: {}",
+                if self.show_virtual_keyboard {
+                    "Shown"
+                } else {
+                    "Hidden"
+                }
+            ));
         }
-
 
         // Execute command palette actions
         if let Some(action) = self.command_palette.show(ctx) {
@@ -965,24 +1111,26 @@ impl eframe::App for SummonerApp {
                 }
                 "add_track" => {
                     let next_id = self.project.tracks.len() as u64 + 1;
-                    self.project.tracks.push(summoner_project::schema::TrackConfig {
-                        id: next_id,
-                        name: format!("Track {}", next_id),
-                        channels: 2,
-                        gain: 1.0,
-                        pan: 0.0,
-                        muted: false,
-                        soloed: false,
-                        send_level: 0.0,
-                        nodes: Vec::new(),
-                        sequence: None,
-                        clips: Vec::new(),
-                        connections: Vec::new(),
-                        tuning_edo: None,
-                        tuning_root_hz: None,
-                        tuning_scl_path: None,
-                        ..Default::default()
-                    });
+                    self.project
+                        .tracks
+                        .push(summoner_project::schema::TrackConfig {
+                            id: next_id,
+                            name: format!("Track {}", next_id),
+                            channels: 2,
+                            gain: 1.0,
+                            pan: 0.0,
+                            muted: false,
+                            soloed: false,
+                            send_level: 0.0,
+                            nodes: Vec::new(),
+                            sequence: None,
+                            clips: Vec::new(),
+                            connections: Vec::new(),
+                            tuning_edo: None,
+                            tuning_root_hz: None,
+                            tuning_scl_path: None,
+                            ..Default::default()
+                        });
                 }
                 "render_wav" => {
                     self.export_wav();
@@ -992,11 +1140,25 @@ impl eframe::App for SummonerApp {
                 }
                 "toggle_high_contrast" => {
                     self.high_contrast_mode = !self.high_contrast_mode;
-                    self.status_message = Some(format!("High Contrast Mode: {}", if self.high_contrast_mode { "Enabled" } else { "Disabled" }));
+                    self.status_message = Some(format!(
+                        "High Contrast Mode: {}",
+                        if self.high_contrast_mode {
+                            "Enabled"
+                        } else {
+                            "Disabled"
+                        }
+                    ));
                 }
                 "toggle_reduce_motion" => {
                     self.reduce_motion = !self.reduce_motion;
-                    self.status_message = Some(format!("Reduce Motion Mode: {}", if self.reduce_motion { "Enabled" } else { "Disabled" }));
+                    self.status_message = Some(format!(
+                        "Reduce Motion Mode: {}",
+                        if self.reduce_motion {
+                            "Enabled"
+                        } else {
+                            "Disabled"
+                        }
+                    ));
                 }
                 "open_accessibility_settings" => {
                     self.show_accessibility_modal = true;
@@ -1033,9 +1195,11 @@ impl eframe::App for SummonerApp {
             self.current_beat = self.playhead_beat;
 
             if self.recording_all {
-                self.automation_timeline.record_beat(&mut self.automation_registry, self.current_beat);
+                self.automation_timeline
+                    .record_beat(&mut self.automation_registry, self.current_beat);
             } else {
-                self.automation_timeline.apply_beat(&self.automation_registry, self.current_beat);
+                self.automation_timeline
+                    .apply_beat(&self.automation_registry, self.current_beat);
             }
         }
 
@@ -1051,16 +1215,27 @@ impl eframe::App for SummonerApp {
                         ui.close_menu();
                     }
                     ui.menu_button("✨ New From Template...", |ui| {
-                        for template_name in &["Synth + Drums", "Microtonal Exploration", "Ambient Soundscape"] {
+                        for template_name in &[
+                            "Synth + Drums",
+                            "Microtonal Exploration",
+                            "Ambient Soundscape",
+                        ] {
                             if ui.button(*template_name).clicked() {
-                                self.project = summoner_project::create_project_from_template("Template Session", template_name);
+                                self.project = summoner_project::create_project_from_template(
+                                    "Template Session",
+                                    template_name,
+                                );
                                 self.project_path = None;
                                 self.oscilloscope_buffers.clear();
                                 for track in &self.project.tracks {
-                                    self.oscilloscope_buffers.insert(track.id, Arc::new(Oscilloscope::new()));
+                                    self.oscilloscope_buffers
+                                        .insert(track.id, Arc::new(Oscilloscope::new()));
                                 }
                                 self.stage_view.populate_from_project(&self.project);
-                                self.status_message = Some(format!("Created session from template: {}", template_name));
+                                self.status_message = Some(format!(
+                                    "Created session from template: {}",
+                                    template_name
+                                ));
                                 ui.close_menu();
                             }
                         }
@@ -1075,8 +1250,15 @@ impl eframe::App for SummonerApp {
                         } else {
                             let recents = self.recent_projects.clone();
                             for path in recents {
-                                let label = path.file_name().map(|f| f.to_string_lossy().to_string()).unwrap_or_else(|| path.display().to_string());
-                                if ui.button(format!("📄 {}", label)).on_hover_text(path.display().to_string()).clicked() {
+                                let label = path
+                                    .file_name()
+                                    .map(|f| f.to_string_lossy().to_string())
+                                    .unwrap_or_else(|| path.display().to_string());
+                                if ui
+                                    .button(format!("📄 {}", label))
+                                    .on_hover_text(path.display().to_string())
+                                    .clicked()
+                                {
                                     self.load_session_from_path(path);
                                     ui.close_menu();
                                 }
@@ -1117,11 +1299,17 @@ impl eframe::App for SummonerApp {
                 });
 
                 ui.menu_button("View", |ui| {
-                    if ui.selectable_label(self.dark_theme, "🌙 Dark Theme").clicked() {
+                    if ui
+                        .selectable_label(self.dark_theme, "🌙 Dark Theme")
+                        .clicked()
+                    {
                         self.dark_theme = true;
                         ui.close_menu();
                     }
-                    if ui.selectable_label(!self.dark_theme, "☀️ Light Theme").clicked() {
+                    if ui
+                        .selectable_label(!self.dark_theme, "☀️ Light Theme")
+                        .clicked()
+                    {
                         self.dark_theme = false;
                         ui.close_menu();
                     }
@@ -1140,13 +1328,29 @@ impl eframe::App for SummonerApp {
 
                 let active_tid = self.selected_track_id.unwrap_or(1);
                 ui.selectable_value(&mut self.current_view, ViewMode::Arranger, "Arranger");
-                ui.selectable_value(&mut self.current_view, ViewMode::PianoRoll(active_tid), "Piano Roll");
+                ui.selectable_value(
+                    &mut self.current_view,
+                    ViewMode::PianoRoll(active_tid),
+                    "Piano Roll",
+                );
                 if !self.beginner_mode {
-                    ui.selectable_value(&mut self.current_view, ViewMode::NodeGraph(active_tid), "Node Graph");
+                    ui.selectable_value(
+                        &mut self.current_view,
+                        ViewMode::NodeGraph(active_tid),
+                        "Node Graph",
+                    );
                 }
                 ui.selectable_value(&mut self.current_view, ViewMode::Mixer, "Console Mixer");
-                ui.selectable_value(&mut self.current_view, ViewMode::Performance, "Stage Performance");
-                ui.selectable_value(&mut self.current_view, ViewMode::CoProducer, "🤖 AI Co-Producer");
+                ui.selectable_value(
+                    &mut self.current_view,
+                    ViewMode::Performance,
+                    "Stage Performance",
+                );
+                ui.selectable_value(
+                    &mut self.current_view,
+                    ViewMode::CoProducer,
+                    "🤖 AI Co-Producer",
+                );
 
                 ui.separator();
 
@@ -1185,13 +1389,20 @@ impl eframe::App for SummonerApp {
         // Scala Scale Browser Modal (Step 360)
         if self.show_scala_browser_modal {
             let mut is_open = self.show_scala_browser_modal;
-            let mut track_copy = self.selected_track_id.and_then(|tid| self.project.tracks.iter_mut().find(|t| t.id == tid));
+            let mut track_copy = self
+                .selected_track_id
+                .and_then(|tid| self.project.tracks.iter_mut().find(|t| t.id == tid));
             egui::Window::new("📜 Scala Historical Scale Browser")
                 .open(&mut is_open)
                 .resizable(true)
                 .default_size([580.0, 360.0])
                 .show(ctx, |ui| {
-                    crate::views::scala_browser::show_scala_browser_with_state(ui, &mut self.scala_browser_state, track_copy.as_deref_mut(), &mut self.harmonic_context);
+                    crate::views::scala_browser::show_scala_browser_with_state(
+                        ui,
+                        &mut self.scala_browser_state,
+                        track_copy.as_deref_mut(),
+                        &mut self.harmonic_context,
+                    );
                 });
             self.show_scala_browser_modal = is_open;
         }
@@ -1221,20 +1432,33 @@ impl eframe::App for SummonerApp {
                         ("Ctrl + K", "Command Palette"),
                         ("Ctrl + Z", "Undo micro-commit"),
                         ("Ctrl + Shift + Z", "Redo micro-commit"),
-                        ("Delete / Backspace", "Delete selected node(s) in Node Graph"),
+                        (
+                            "Delete / Backspace",
+                            "Delete selected node(s) in Node Graph",
+                        ),
                         ("Ctrl + Scroll", "Zoom Arranger Timeline / Node Graph"),
                     ];
                     let query = self.shortcut_search_query.to_lowercase();
                     egui::ScrollArea::vertical().show(ui, |ui| {
-                        egui::Grid::new("shortcuts_grid").striped(true).min_col_width(140.0).show(ui, |ui| {
-                            for (key, desc) in shortcuts {
-                                if query.is_empty() || key.to_lowercase().contains(&query) || desc.to_lowercase().contains(&query) {
-                                    ui.label(egui::RichText::new(key).strong().color(egui::Color32::from_rgb(26, 140, 255)));
-                                    ui.label(desc);
-                                    ui.end_row();
+                        egui::Grid::new("shortcuts_grid")
+                            .striped(true)
+                            .min_col_width(140.0)
+                            .show(ui, |ui| {
+                                for (key, desc) in shortcuts {
+                                    if query.is_empty()
+                                        || key.to_lowercase().contains(&query)
+                                        || desc.to_lowercase().contains(&query)
+                                    {
+                                        ui.label(
+                                            egui::RichText::new(key)
+                                                .strong()
+                                                .color(egui::Color32::from_rgb(26, 140, 255)),
+                                        );
+                                        ui.label(desc);
+                                        ui.end_row();
+                                    }
                                 }
-                            }
-                        });
+                            });
                     });
                 });
             self.show_shortcuts_modal = is_open;
@@ -1259,25 +1483,37 @@ impl eframe::App for SummonerApp {
                         .show(ui, |ui| {
                             ui.label("High Contrast Mode:");
                             ui.push_id("acc_high_contrast_toggle", |ui| {
-                                ui.checkbox(&mut self.high_contrast_mode, "Enable High Contrast Palette (Step 520)");
+                                ui.checkbox(
+                                    &mut self.high_contrast_mode,
+                                    "Enable High Contrast Palette (Step 520)",
+                                );
                             });
                             ui.end_row();
 
                             ui.label("Font Size Scaling (px):");
                             ui.push_id("acc_font_size_slider", |ui| {
-                                ui.add(egui::Slider::new(&mut self.font_size, 10.0..=24.0).text("px (Step 521)"));
+                                ui.add(
+                                    egui::Slider::new(&mut self.font_size, 10.0..=24.0)
+                                        .text("px (Step 521)"),
+                                );
                             });
                             ui.end_row();
 
                             ui.label("Reduce Motion:");
                             ui.push_id("acc_reduce_motion_toggle", |ui| {
-                                ui.checkbox(&mut self.reduce_motion, "Disable UI Animations (Step 523)");
+                                ui.checkbox(
+                                    &mut self.reduce_motion,
+                                    "Disable UI Animations (Step 523)",
+                                );
                             });
                             ui.end_row();
 
                             ui.label("Keyboard Navigation:");
                             ui.push_id("acc_keyboard_nav_toggle", |ui| {
-                                ui.checkbox(&mut self.keyboard_navigation, "High-Visibility Focus Rings (Step 518/522)");
+                                ui.checkbox(
+                                    &mut self.keyboard_navigation,
+                                    "High-Visibility Focus Rings (Step 518/522)",
+                                );
                             });
                             ui.end_row();
                         });
@@ -1305,9 +1541,16 @@ impl eframe::App for SummonerApp {
                     ui.horizontal(|ui| {
                         ui.label(format!("Primary Text Contrast Ratio: {:.1}:1", ratio));
                         if meets_aa {
-                            ui.label(egui::RichText::new("✓ WCAG AA Pass (≥ 4.5:1)").color(egui::Color32::GREEN).strong());
+                            ui.label(
+                                egui::RichText::new("✓ WCAG AA Pass (≥ 4.5:1)")
+                                    .color(egui::Color32::GREEN)
+                                    .strong(),
+                            );
                         } else {
-                            ui.label(egui::RichText::new("⚠ WCAG AA Warning").color(egui::Color32::YELLOW));
+                            ui.label(
+                                egui::RichText::new("⚠ WCAG AA Warning")
+                                    .color(egui::Color32::YELLOW),
+                            );
                         }
                     });
 
@@ -1332,7 +1575,10 @@ impl eframe::App for SummonerApp {
                     ui.label("Next-generation microtonal DAW & generative audio engine.");
                     ui.separator();
                     ui.label("License: AGPL-3.0-or-later");
-                    ui.hyperlink_to("GitHub Repository", "https://github.com/nilsanderselde/summoner");
+                    ui.hyperlink_to(
+                        "GitHub Repository",
+                        "https://github.com/nilsanderselde/summoner",
+                    );
                     ui.add_space(10.0);
                     if ui.button("Close").clicked() {
                         close_clicked = true;
@@ -1357,7 +1603,8 @@ impl eframe::App for SummonerApp {
                             let path = std::path::PathBuf::from(".summoner_autosave.toml");
                             if path.exists() {
                                 self.load_session_from_path(path);
-                                self.status_message = Some("Restored session from auto-save".to_string());
+                                self.status_message =
+                                    Some("Restored session from auto-save".to_string());
                             } else {
                                 self.status_message = Some("No auto-save file found".to_string());
                             }
@@ -1381,7 +1628,10 @@ impl eframe::App for SummonerApp {
                 .collapsible(false)
                 .default_size([480.0, 320.0])
                 .show(ctx, |ui| {
-                    ui.heading(format!("Step {} of 4: Setup Your Project", self.wizard_step + 1));
+                    ui.heading(format!(
+                        "Step {} of 4: Setup Your Project",
+                        self.wizard_step + 1
+                    ));
                     ui.separator();
                     match self.wizard_step {
                         0 => {
@@ -1393,22 +1643,50 @@ impl eframe::App for SummonerApp {
                             });
                             ui.horizontal(|ui| {
                                 ui.label("BPM:");
-                                ui.add(egui::DragValue::new(&mut self.wizard_bpm).speed(1.0).range(30.0..=300.0));
+                                ui.add(
+                                    egui::DragValue::new(&mut self.wizard_bpm)
+                                        .speed(1.0)
+                                        .range(30.0..=300.0),
+                                );
                             });
                         }
                         1 => {
                             ui.label("Select initial track style:");
                             ui.add_space(8.0);
-                            ui.radio_value(&mut self.wizard_track_type, "Synth Lead".to_string(), "Synth Lead (AetherSynth)");
-                            ui.radio_value(&mut self.wizard_track_type, "Sampler Instrument".to_string(), "Sampler Instrument (MultiSampleBank)");
-                            ui.radio_value(&mut self.wizard_track_type, "Drum Beat".to_string(), "Drum Beat (Sequenced)");
+                            ui.radio_value(
+                                &mut self.wizard_track_type,
+                                "Synth Lead".to_string(),
+                                "Synth Lead (AetherSynth)",
+                            );
+                            ui.radio_value(
+                                &mut self.wizard_track_type,
+                                "Sampler Instrument".to_string(),
+                                "Sampler Instrument (MultiSampleBank)",
+                            );
+                            ui.radio_value(
+                                &mut self.wizard_track_type,
+                                "Drum Beat".to_string(),
+                                "Drum Beat (Sequenced)",
+                            );
                         }
                         2 => {
                             ui.label("Choose initial preset:");
                             ui.add_space(8.0);
-                            ui.radio_value(&mut self.wizard_preset, "Default Sine".to_string(), "Default Sine Wave");
-                            ui.radio_value(&mut self.wizard_preset, "AetherSynth Pad".to_string(), "AetherSynth Soft Pad");
-                            ui.radio_value(&mut self.wizard_preset, "Sub Bass".to_string(), "Sub Bass Synth");
+                            ui.radio_value(
+                                &mut self.wizard_preset,
+                                "Default Sine".to_string(),
+                                "Default Sine Wave",
+                            );
+                            ui.radio_value(
+                                &mut self.wizard_preset,
+                                "AetherSynth Pad".to_string(),
+                                "AetherSynth Soft Pad",
+                            );
+                            ui.radio_value(
+                                &mut self.wizard_preset,
+                                "Sub Bass".to_string(),
+                                "Sub Bass Synth",
+                            );
                         }
                         3 => {
                             ui.label("Ready to launch Summoner!");
@@ -1430,11 +1708,15 @@ impl eframe::App for SummonerApp {
                             self.wizard_step += 1;
                         }
                         if self.wizard_step == 3 && ui.button("🚀 Launch Session").clicked() {
-                            self.project = summoner_project::create_project_from_template(&self.wizard_project_name, &self.wizard_track_type);
+                            self.project = summoner_project::create_project_from_template(
+                                &self.wizard_project_name,
+                                &self.wizard_track_type,
+                            );
                             self.project.transport.bpm = self.wizard_bpm;
                             self.oscilloscope_buffers.clear();
                             for track in &self.project.tracks {
-                                self.oscilloscope_buffers.insert(track.id, Arc::new(Oscilloscope::new()));
+                                self.oscilloscope_buffers
+                                    .insert(track.id, Arc::new(Oscilloscope::new()));
                             }
                             self.stage_view.populate_from_project(&self.project);
                             self.show_first_run_wizard = false;
@@ -1470,7 +1752,10 @@ impl eframe::App for SummonerApp {
                 .collapsible(false)
                 .default_size([420.0, 200.0])
                 .show(ctx, |ui| {
-                    ui.label(egui::RichText::new(format!("Tip #{}:", self.current_tip_index + 1)).strong());
+                    ui.label(
+                        egui::RichText::new(format!("Tip #{}:", self.current_tip_index + 1))
+                            .strong(),
+                    );
                     ui.add_space(6.0);
                     ui.label(PRODUCTIVITY_TIPS[self.current_tip_index % PRODUCTIVITY_TIPS.len()]);
                     ui.add_space(16.0);
@@ -1484,10 +1769,12 @@ impl eframe::App for SummonerApp {
                             }
                         }
                         if ui.button("🎲 Random").clicked() {
-                            self.current_tip_index = (self.current_tip_index + 3) % PRODUCTIVITY_TIPS.len();
+                            self.current_tip_index =
+                                (self.current_tip_index + 3) % PRODUCTIVITY_TIPS.len();
                         }
                         if ui.button("Next ➡").clicked() {
-                            self.current_tip_index = (self.current_tip_index + 1) % PRODUCTIVITY_TIPS.len();
+                            self.current_tip_index =
+                                (self.current_tip_index + 1) % PRODUCTIVITY_TIPS.len();
                         }
                     });
                 });
@@ -1507,14 +1794,25 @@ impl eframe::App for SummonerApp {
             }
 
             ui.horizontal(|ui| {
-                if ui.button(if self.transport_running { "⏹ Stop" } else { "▶ Play" }).clicked() {
+                if ui
+                    .button(if self.transport_running {
+                        "⏹ Stop"
+                    } else {
+                        "▶ Play"
+                    })
+                    .clicked()
+                {
                     self.transport_running = !self.transport_running;
                     if !self.transport_running {
                         self.automation_registry.stop_record_all();
                     }
                 }
 
-                let mut record_btn = ui.button(if self.recording_all { "🔴 Recording All" } else { "⏺ Record All (Shift+R)" });
+                let mut record_btn = ui.button(if self.recording_all {
+                    "🔴 Recording All"
+                } else {
+                    "⏺ Record All (Shift+R)"
+                });
                 if self.recording_all {
                     record_btn = record_btn.highlight();
                 }
@@ -1534,20 +1832,32 @@ impl eframe::App for SummonerApp {
                     self.tap_tempo();
                 }
                 ui.label("Min:");
-                ui.add(egui::DragValue::new(&mut self.min_bpm).speed(1.0).range(10.0..=100.0));
+                ui.add(
+                    egui::DragValue::new(&mut self.min_bpm)
+                        .speed(1.0)
+                        .range(10.0..=100.0),
+                );
                 ui.label("Max:");
-                ui.add(egui::DragValue::new(&mut self.max_bpm).speed(1.0).range(100.0..=500.0));
-                self.project.transport.bpm = self.project.transport.bpm.clamp(self.min_bpm, self.max_bpm);
+                ui.add(
+                    egui::DragValue::new(&mut self.max_bpm)
+                        .speed(1.0)
+                        .range(100.0..=500.0),
+                );
+                self.project.transport.bpm =
+                    self.project.transport.bpm.clamp(self.min_bpm, self.max_bpm);
 
                 ui.separator();
 
                 // Harmonic Context & Status Bar info (Steps 358 & 359)
                 let active_chord = self.harmonic_context.analyze_active_chord();
                 let active_voices = self.harmonic_context.active_notes.len();
-                ui.label(egui::RichText::new(format!(
-                    "🎵 Chord: {} (Root: C) | Active Voices: {}",
-                    active_chord, active_voices
-                )).color(egui::Color32::from_rgb(46, 204, 113)));
+                ui.label(
+                    egui::RichText::new(format!(
+                        "🎵 Chord: {} (Root: C) | Active Voices: {}",
+                        active_chord, active_voices
+                    ))
+                    .color(egui::Color32::from_rgb(46, 204, 113)),
+                );
 
                 ui.separator();
 
@@ -1559,13 +1869,17 @@ impl eframe::App for SummonerApp {
                 } else {
                     egui::Color32::from_rgb(231, 76, 60) // Red
                 };
-                ui.label(egui::RichText::new(format!("💻 CPU: {:.1}%", self.cpu_usage)).color(cpu_color));
+                ui.label(
+                    egui::RichText::new(format!("💻 CPU: {:.1}%", self.cpu_usage)).color(cpu_color),
+                );
 
                 ui.separator();
 
                 // Status bar & MIDI Learn indicator (steps 307, 317, 318)
                 if self.midi_learn_mode {
-                    ui.label(egui::RichText::new("🎛️ MIDI Learn Active").color(egui::Color32::YELLOW));
+                    ui.label(
+                        egui::RichText::new("🎛️ MIDI Learn Active").color(egui::Color32::YELLOW),
+                    );
                     if ui.button("Cancel").clicked() {
                         self.midi_learn_mode = false;
                         self.midi_learn_target = None;
@@ -1587,13 +1901,20 @@ impl eframe::App for SummonerApp {
 
         // Left Side Panel: Patch Browser (Step 465)
         if self.show_patch_browser {
-            let mut track_copy = self.selected_track_id.and_then(|tid| self.project.tracks.iter_mut().find(|t| t.id == tid));
+            let mut track_copy = self
+                .selected_track_id
+                .and_then(|tid| self.project.tracks.iter_mut().find(|t| t.id == tid));
             let bus_ref = Arc::clone(&self.param_bus);
             egui::SidePanel::left("patch_browser_side_panel")
                 .default_width(260.0)
                 .resizable(true)
                 .show(ctx, |ui| {
-                    crate::views::patch_browser::show_patch_browser(ui, &mut self.patch_browser_state, track_copy.as_deref_mut(), &bus_ref);
+                    crate::views::patch_browser::show_patch_browser(
+                        ui,
+                        &mut self.patch_browser_state,
+                        track_copy.as_deref_mut(),
+                        &bus_ref,
+                    );
                 });
         }
 
@@ -1759,7 +2080,9 @@ impl eframe::App for SummonerApp {
 mod tests {
     use super::*;
     use summoner_project::create_default_project;
-    use summoner_sequencer::automation_timeline::{AutomationCurve, AutomationLane, AutomationPoint, Interpolation};
+    use summoner_sequencer::automation_timeline::{
+        AutomationCurve, AutomationLane, AutomationPoint, Interpolation,
+    };
 
     #[test]
     fn test_record_all_toggle_wires_registry() {
@@ -1779,7 +2102,8 @@ mod tests {
         cutoff.set(0.8);
 
         // Record beat at 1.0
-        app.automation_timeline.record_beat(&mut app.automation_registry, 1.0);
+        app.automation_timeline
+            .record_beat(&mut app.automation_registry, 1.0);
 
         // Verify lane created and recorded point
         assert!(app.automation_timeline.lanes.contains_key("cutoff"));
@@ -1804,8 +2128,16 @@ mod tests {
 
         // Build automation curve with points at beat 0 (0.2) and beat 4 (0.9)
         let curve = AutomationCurve::new(vec![
-            AutomationPoint { beat: 0.0, value: 0.2, interp: Interpolation::Linear },
-            AutomationPoint { beat: 4.0, value: 0.9, interp: Interpolation::Linear },
+            AutomationPoint {
+                beat: 0.0,
+                value: 0.2,
+                interp: Interpolation::Linear,
+            },
+            AutomationPoint {
+                beat: 4.0,
+                value: 0.9,
+                interp: Interpolation::Linear,
+            },
         ]);
         app.automation_timeline.add_lane(AutomationLane {
             param_id: "gain".to_string(),
@@ -1814,7 +2146,8 @@ mod tests {
 
         // Replay at beat 2.0 (midpoint linear should give ~0.55)
         app.current_beat = 2.0;
-        app.automation_timeline.apply_beat(&app.automation_registry, app.current_beat);
+        app.automation_timeline
+            .apply_beat(&app.automation_registry, app.current_beat);
 
         let val = gain_param.get();
         assert!((val - 0.55).abs() < 1e-4);
@@ -1835,7 +2168,8 @@ mod tests {
         assert_eq!(app.status_message.as_deref(), Some("Created new session"));
 
         // Save GUI state persistence round-trip check with isolated temp file
-        let temp_path = std::env::temp_dir().join(format!("test_gui_state_{}.toml", std::process::id()));
+        let temp_path =
+            std::env::temp_dir().join(format!("test_gui_state_{}.toml", std::process::id()));
         let state = GuiState {
             current_view: app.current_view.clone(),
             selected_track_id: app.selected_track_id,
@@ -1877,7 +2211,8 @@ mod tests {
             ViewMode::Performance,
         ];
 
-        let temp_path = std::env::temp_dir().join(format!("test_gui_nav_{}.toml", std::process::id()));
+        let temp_path =
+            std::env::temp_dir().join(format!("test_gui_nav_{}.toml", std::process::id()));
 
         for mode in modes {
             app.current_view = mode.clone();
@@ -2012,7 +2347,7 @@ mod tests {
         // Test track operations (steps 801-804)
         assert!(app.project.tracks.len() >= 1);
         let tid = app.selected_track_id.unwrap();
-        
+
         let track = app.project.tracks.iter_mut().find(|t| t.id == tid).unwrap();
         assert!(!track.soloed);
         assert!(!track.muted);
@@ -2066,5 +2401,3 @@ mod tests {
         let _ = std::fs::remove_file(&temp_path);
     }
 }
-
-

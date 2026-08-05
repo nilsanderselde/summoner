@@ -61,9 +61,17 @@ impl ApiChangelogGenerator {
     }
 
     /// Compare crate symbol signatures and generate markdown changelog.
-    pub fn generate_changelog(&self, crate_name: &str, added_symbols: &[&str], deprecated_symbols: &[&str]) -> String {
+    pub fn generate_changelog(
+        &self,
+        crate_name: &str,
+        added_symbols: &[&str],
+        deprecated_symbols: &[&str],
+    ) -> String {
         let mut out = String::new();
-        out.push_str(&format!("# API Changelog for `{}` (v{} -> v{})\n\n", crate_name, self.old_version, self.new_version));
+        out.push_str(&format!(
+            "# API Changelog for `{}` (v{} -> v{})\n\n",
+            crate_name, self.old_version, self.new_version
+        ));
         out.push_str("## Added Public Symbols\n");
         for sym in added_symbols {
             out.push_str(&format!("- `pub fn {}` / `pub struct {}`\n", sym, sym));

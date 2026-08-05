@@ -3,9 +3,9 @@
 
 //! Audio graph buffer processing throughput benchmark suite (Step 1250).
 
+use crate::schema::ProjectConfig;
 use serde::{Deserialize, Serialize};
 use std::time::Instant;
-use crate::schema::ProjectConfig;
 
 /// Configuration for audio graph buffer processing benchmark runs.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -93,9 +93,8 @@ impl AudioGraphBenchmarkSuite {
 
         for &block_size in &config.block_sizes {
             let bs = block_size.max(1);
-            let mut scratch_buffers: Vec<Vec<f32>> = (0..channels)
-                .map(|_| vec![0.0f32; bs])
-                .collect();
+            let mut scratch_buffers: Vec<Vec<f32>> =
+                (0..channels).map(|_| vec![0.0f32; bs]).collect();
 
             // 1. Warmup runs
             for _ in 0..config.warmup_runs {
@@ -150,7 +149,10 @@ impl AudioGraphBenchmarkSuite {
             // Statistics calculation
             let n = run_durations_ms.len() as f64;
             let avg_ms = run_durations_ms.iter().sum::<f64>() / n;
-            let min_ms = run_durations_ms.iter().cloned().fold(f64::INFINITY, f64::min);
+            let min_ms = run_durations_ms
+                .iter()
+                .cloned()
+                .fold(f64::INFINITY, f64::min);
             let max_ms = run_durations_ms.iter().cloned().fold(0.0f64, f64::max);
 
             let variance = run_durations_ms
@@ -165,13 +167,15 @@ impl AudioGraphBenchmarkSuite {
             let samples_per_sec = (config.frames_to_process * channels) as f64 / avg_sec;
             let megabytes_per_sec = (samples_per_sec * 4.0) / (1024.0 * 1024.0);
 
-            block_latencies_us.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+            block_latencies_us
+                .sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
             let avg_block_us = if !block_latencies_us.is_empty() {
                 block_latencies_us.iter().sum::<f64>() / block_latencies_us.len() as f64
             } else {
                 0.0
             };
-            let p95_idx = ((block_latencies_us.len() as f64 * 0.95) as usize).min(block_latencies_us.len().saturating_sub(1));
+            let p95_idx = ((block_latencies_us.len() as f64 * 0.95) as usize)
+                .min(block_latencies_us.len().saturating_sub(1));
             let p95_block_us = block_latencies_us.get(p95_idx).copied().unwrap_or(0.0);
 
             block_results.push(BlockSizePerformance {
@@ -193,7 +197,11 @@ impl AudioGraphBenchmarkSuite {
         // Determine best block size based on real-time speed factor
         let (best_block_size, peak_realtime, peak_mb_s) = block_results
             .iter()
-            .max_by(|a, b| a.realtime_factor.partial_cmp(&b.realtime_factor).unwrap_or(std::cmp::Ordering::Equal))
+            .max_by(|a, b| {
+                a.realtime_factor
+                    .partial_cmp(&b.realtime_factor)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
             .map(|r| (r.block_size, r.realtime_factor, r.megabytes_per_sec))
             .unwrap_or((64, 0.0, 0.0));
 
@@ -265,6 +273,7 @@ impl AudioGraphBenchmarkSuite {
         )
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn format_cli_table(
         project_name: &str,
         track_count: usize,
@@ -277,9 +286,13 @@ impl AudioGraphBenchmarkSuite {
         peak_mb_s: f64,
     ) -> String {
         let mut out = String::new();
-        out.push_str("================================================================================\n");
+        out.push_str(
+            "================================================================================\n",
+        );
         out.push_str("SUMMONER AUDIO GRAPH BUFFER PROCESSING THROUGHPUT BENCHMARK\n");
-        out.push_str("================================================================================\n");
+        out.push_str(
+            "================================================================================\n",
+        );
         out.push_str(&format!(
             "Project: {} | Tracks: {} | Nodes: {} | SR: {} Hz | Channels: {}\n",
             project_name, track_count, node_count, config.sample_rate, config.channels
@@ -288,9 +301,15 @@ impl AudioGraphBenchmarkSuite {
             "Audio Duration: {:.2}s ({} frames) | Runs per block size: {}\n",
             audio_duration_sec, config.frames_to_process, config.runs_per_block_size
         ));
-        out.push_str("--------------------------------------------------------------------------------\n");
-        out.push_str("Block Size | Avg Time (ms) | Speed Factor | Throughput     | MB/s    | P95 (us)\n");
-        out.push_str("--------------------------------------------------------------------------------\n");
+        out.push_str(
+            "--------------------------------------------------------------------------------\n",
+        );
+        out.push_str(
+            "Block Size | Avg Time (ms) | Speed Factor | Throughput     | MB/s    | P95 (us)\n",
+        );
+        out.push_str(
+            "--------------------------------------------------------------------------------\n",
+        );
 
         for r in block_results {
             let throughput_str = if r.samples_per_sec >= 1_000_000.0 {
@@ -310,12 +329,16 @@ impl AudioGraphBenchmarkSuite {
             ));
         }
 
-        out.push_str("--------------------------------------------------------------------------------\n");
+        out.push_str(
+            "--------------------------------------------------------------------------------\n",
+        );
         out.push_str(&format!(
             "Peak Throughput: {:.1}x Real-Time @ Block Size {} ({:.1} MB/s)\n",
             peak_realtime, best_block_size, peak_mb_s
         ));
-        out.push_str("================================================================================\n");
+        out.push_str(
+            "================================================================================\n",
+        );
         out
     }
 }

@@ -40,7 +40,11 @@ impl Default for AutoTuneNode {
 }
 
 impl AutoTuneNode {
-    pub fn new(target_pitch_classes: Vec<u8>, correction_speed: f32, formant_preservation: bool) -> Self {
+    pub fn new(
+        target_pitch_classes: Vec<u8>,
+        correction_speed: f32,
+        formant_preservation: bool,
+    ) -> Self {
         Self {
             target_pitch_classes: if target_pitch_classes.is_empty() {
                 vec![0, 2, 4, 5, 7, 9, 11]
@@ -89,11 +93,13 @@ impl AutoTuneNode {
     pub fn update_pitch_correction(&mut self, input_slice: &[f32], sample_rate: f32) {
         if let Some(tuner_res) = detect_chromatic_pitch(input_slice, sample_rate) {
             let target_note = self.snap_to_target(tuner_res.midi_note);
-            let raw_target_shift = target_note as f32 - (tuner_res.midi_note as f32 + tuner_res.cents_dev / 100.0);
-            
+            let raw_target_shift =
+                target_note as f32 - (tuner_res.midi_note as f32 + tuner_res.cents_dev / 100.0);
+
             // Smooth adjustment by correction speed
-            self.active_shift_semitones += (raw_target_shift - self.active_shift_semitones) * self.correction_speed;
-            
+            self.active_shift_semitones +=
+                (raw_target_shift - self.active_shift_semitones) * self.correction_speed;
+
             // Step 658: Formant preservation filter adjustment multiplier
             let effective_shift = if self.formant_preservation {
                 self.active_shift_semitones * 0.95 // Formant compensation factor
@@ -111,12 +117,7 @@ impl AudioNode for AutoTuneNode {
         "AutoTuneNode"
     }
 
-    fn process(
-        &mut self,
-        input: &[&[Sample]],
-        output: &mut [&mut [Sample]],
-        ctx: &ProcessContext,
-    ) {
+    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
         let sample_rate = ctx.sample_rate as f32;
 
         if let (Some(in_ch0), Some(out_ch0)) = (input.first(), output.first_mut()) {

@@ -3,10 +3,10 @@
 
 //! Multi-Channel Spectral Equalizer Node with Live FFT Visual Feedback (Step 1262).
 
-use summoner_core::audio::Sample;
-use summoner_core::node::{AudioNode, ProcessContext};
 use crate::traits::SignalProcessor;
 use std::f32::consts::PI;
+use summoner_core::audio::Sample;
+use summoner_core::node::{AudioNode, ProcessContext};
 
 /// Multi-channel spectral equalizer with band gains and live FFT analysis.
 #[derive(Debug, Clone)]
@@ -52,7 +52,7 @@ impl MultiChannelSpectralEqualizerNode {
         let n = self.fft_size;
         let half = n / 2;
         let buf = &self.buffer[ch];
-        
+
         for k in 0..half {
             let mut re = 0.0f32;
             let mut im = 0.0f32;
@@ -130,9 +130,12 @@ impl AudioNode for MultiChannelSpectralEqualizerNode {
             for i in 0..block_size {
                 let sample = if i < in_ch.len() { in_ch[i] } else { 0.0 };
                 self.buffer[ch][self.write_pos] = sample;
-                
+
                 // Multi-band gain shaping
-                let band_idx = ((i % self.num_bands) as f32 * (self.num_bands as f32 / block_size as f32)) as usize % self.num_bands;
+                let band_idx = ((i % self.num_bands) as f32
+                    * (self.num_bands as f32 / block_size as f32))
+                    as usize
+                    % self.num_bands;
                 let gain_db = self.band_gains[band_idx];
                 let factor = 10.0f32.powf(gain_db / 20.0);
                 out_ch[i] = sample * factor;

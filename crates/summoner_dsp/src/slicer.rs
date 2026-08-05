@@ -40,14 +40,22 @@ pub struct AutoSlicer {
 
 impl AutoSlicer {
     pub fn new(threshold: f32, algorithm: SliceAlgorithm) -> Self {
-        Self { threshold, algorithm }
+        Self {
+            threshold,
+            algorithm,
+        }
     }
 
     pub fn detect_slices(&self, buffer: &SampleBuffer) -> Vec<SliceMarker> {
         self.detect_slices_algorithm(buffer, self.threshold, self.algorithm)
     }
 
-    pub fn detect_slices_algorithm(&self, buffer: &SampleBuffer, threshold: f32, algorithm: SliceAlgorithm) -> Vec<SliceMarker> {
+    pub fn detect_slices_algorithm(
+        &self,
+        buffer: &SampleBuffer,
+        threshold: f32,
+        algorithm: SliceAlgorithm,
+    ) -> Vec<SliceMarker> {
         match algorithm {
             SliceAlgorithm::EnergyDerivative => self.detect_energy_derivative(buffer, threshold),
             SliceAlgorithm::SpectralFlux => self.detect_spectral_flux(buffer, threshold),
@@ -71,7 +79,7 @@ impl AutoSlicer {
             let window = &buffer.data[offset..offset + window_size];
             let energy: f32 = window.iter().map(|&s| s * s).sum::<f32>() / window_size as f32;
             let onset_diff = (energy - prev_feature_activation).max(0.0);
-            
+
             // ONNX model weight activation simulation
             let neural_activation = onset_diff * 1.25;
             if neural_activation > threshold {
@@ -92,7 +100,10 @@ impl AutoSlicer {
             } else {
                 buffer.data.len()
             };
-            slices.push(SliceMarker { start_sample: start, end_sample: end });
+            slices.push(SliceMarker {
+                start_sample: start,
+                end_sample: end,
+            });
         }
 
         slices
@@ -103,23 +114,23 @@ impl AutoSlicer {
         if buffer.data.is_empty() {
             return slices;
         }
-        
+
         let window_size = 512;
         let mut prev_energy = 0.0;
         let mut current_start = 0;
         let mut is_in_slice = false;
-        
+
         let data = &buffer.data;
-        
+
         for i in (0..data.len()).step_by(window_size) {
             let end = (i + window_size).min(data.len());
             let mut energy = 0.0;
             for j in i..end {
                 energy += data[j] * data[j];
             }
-            
+
             let derivative = energy - prev_energy;
-            
+
             if derivative > threshold && !is_in_slice {
                 if !slices.is_empty() {
                     if let Some(last) = slices.last_mut() {
@@ -128,7 +139,7 @@ impl AutoSlicer {
                         }
                     }
                 }
-                
+
                 current_start = i;
                 is_in_slice = true;
             } else if energy < threshold * 0.1 && is_in_slice {
@@ -138,20 +149,20 @@ impl AutoSlicer {
                 });
                 is_in_slice = false;
             }
-            
+
             prev_energy = energy;
         }
-        
+
         if is_in_slice {
             slices.push(SliceMarker {
                 start_sample: current_start,
                 end_sample: data.len(),
             });
         } else if !slices.is_empty() && slices.last().unwrap().end_sample == 0 {
-             let last = slices.last_mut().unwrap();
-             last.end_sample = data.len();
+            let last = slices.last_mut().unwrap();
+            last.end_sample = data.len();
         }
-        
+
         slices
     }
 
@@ -160,11 +171,11 @@ impl AutoSlicer {
         if buffer.data.is_empty() {
             return slices;
         }
-        
+
         let window_size = 2048;
         let hop_size = 512;
         let data = &buffer.data;
-        
+
         if data.len() < window_size {
             return slices;
         }
@@ -176,10 +187,13 @@ impl AutoSlicer {
         for start in (0..data.len().saturating_sub(window_size)).step_by(hop_size) {
             let mut real = vec![0.0; window_size];
             let mut imag = vec![0.0; window_size];
-            
+
             // Hann window and copy
             for i in 0..window_size {
-                let window = 0.5 * (1.0 - (2.0 * core::f32::consts::PI * i as f32 / (window_size - 1) as f32).cos());
+                let window = 0.5
+                    * (1.0
+                        - (2.0 * core::f32::consts::PI * i as f32 / (window_size - 1) as f32)
+                            .cos());
                 real[i] = data[start + i] * window;
             }
 
@@ -194,7 +208,7 @@ impl AutoSlicer {
                 }
                 prev_mags[i] = mag;
             }
-            
+
             flux_curve.push((start, flux));
         }
 
@@ -204,7 +218,7 @@ impl AutoSlicer {
             let (start, flux) = flux_curve[i];
             let prev_flux = flux_curve[i - 1].1;
             let next_flux = flux_curve[i + 1].1;
-            
+
             if flux > threshold && flux > prev_flux && flux > next_flux {
                 // It's a peak above threshold
                 if let Some(last) = slices.last_mut() {
@@ -216,20 +230,20 @@ impl AutoSlicer {
                     start_sample: start,
                     end_sample: 0,
                 });
-                
+
                 // Skip the next few frames to avoid double-triggering
                 i += 4;
             } else {
                 i += 1;
             }
         }
-        
+
         if let Some(last) = slices.last_mut() {
             if last.end_sample == 0 {
                 last.end_sample = data.len();
             }
         }
-        
+
         slices
     }
 
@@ -292,7 +306,7 @@ mod tests {
         let sample_rate = 44100;
         let num_samples = sample_rate * 2; // 2 seconds
         let mut data = vec![0.0; num_samples as usize];
-        
+
         let transient_interval = 11025;
         for i in 1..8 {
             let idx = i * transient_interval;
@@ -306,25 +320,35 @@ mod tests {
                 }
             }
         }
-        
+
         let buffer = SampleBuffer {
             data,
             channels: 1,
             sample_rate,
         };
-        
+
         let slicer = AutoSlicer::new(2.0, SliceAlgorithm::SpectralFlux);
         let slices = slicer.detect_slices(&buffer);
-        
+
         // We expect 7 transients + the final slice
-        assert!(slices.len() >= 7, "Expected at least 7 slices, found {}", slices.len());
-        
+        assert!(
+            slices.len() >= 7,
+            "Expected at least 7 slices, found {}",
+            slices.len()
+        );
+
         // Check if the slices roughly align with the transients
         for i in 1..=7 {
             let expected_start = i * transient_interval;
             let slice = &slices[i - 1];
             let diff = (slice.start_sample as i32 - expected_start as i32).abs();
-            assert!(diff < 2048, "Slice {} start {} is too far from expected {}", i, slice.start_sample, expected_start);
+            assert!(
+                diff < 2048,
+                "Slice {} start {} is too far from expected {}",
+                i,
+                slice.start_sample,
+                expected_start
+            );
         }
     }
 }

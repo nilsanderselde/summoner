@@ -61,8 +61,10 @@ impl PitchShifterNode {
         let win_a = (phase_a * std::f32::consts::PI).sin();
         let win_b = (phase_b * std::f32::consts::PI).sin();
 
-        let idx_a = (self.write_pos as f32 - self.read_pos_a + BUFFER_SIZE as f32) % BUFFER_SIZE as f32;
-        let idx_b = (self.write_pos as f32 - self.read_pos_b + BUFFER_SIZE as f32) % BUFFER_SIZE as f32;
+        let idx_a =
+            (self.write_pos as f32 - self.read_pos_a + BUFFER_SIZE as f32) % BUFFER_SIZE as f32;
+        let idx_b =
+            (self.write_pos as f32 - self.read_pos_b + BUFFER_SIZE as f32) % BUFFER_SIZE as f32;
 
         let sample_a = self.buffer[idx_a.floor() as usize % BUFFER_SIZE];
         let sample_b = self.buffer[idx_b.floor() as usize % BUFFER_SIZE];

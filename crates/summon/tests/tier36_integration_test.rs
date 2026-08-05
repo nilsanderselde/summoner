@@ -70,7 +70,10 @@ fn test_tier36_push_controller_encoding() {
 fn test_tier36_launchpad_pro_sysex_encoding() {
     let mut lp = LaunchpadProDriver::new();
     let programmer_sysex = lp.set_mode(LaunchpadMode::Programmer);
-    assert_eq!(programmer_sysex, vec![0xF0, 0x00, 0x20, 0x29, 0x02, 0x10, 0x0E, 0x03, 0xF7]);
+    assert_eq!(
+        programmer_sysex,
+        vec![0xF0, 0x00, 0x20, 0x29, 0x02, 0x10, 0x0E, 0x03, 0xF7]
+    );
 
     let led_cmd = lp.set_grid_led(7, 7, 45);
     assert_eq!(led_cmd, vec![0x90, 88, 45]);
@@ -171,7 +174,9 @@ fn test_tier36_multitrack_routing_matrix() {
 #[test]
 fn test_tier36_wasm_dsp_runtime() {
     let mut wasm = WasmDspRuntime::new("WasmDelayPlugin", 8);
-    assert!(wasm.load_wasm_bytes(&[0x00, 0x61, 0x73, 0x6d, 0x01]).is_ok());
+    assert!(wasm
+        .load_wasm_bytes(&[0x00, 0x61, 0x73, 0x6d, 0x01])
+        .is_ok());
     assert!(wasm.is_loaded);
 
     let input = vec![0.8f32; 128];
