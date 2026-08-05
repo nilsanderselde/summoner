@@ -587,11 +587,13 @@ mod tests {
 
         // Step 684: Parallel Compression Template
         let mut proj3 = create_default_project("Parallel Comp Test");
-        apply_parallel_compression_template(&mut proj3, 1).expect("parallel comp");
-        assert!(proj3.tracks[0]
-            .nodes
+        let bus_id = apply_parallel_compression_template(&mut proj3, 1).expect("parallel comp");
+        let bus_track = proj3
+            .tracks
             .iter()
-            .any(|n| n.kind == "CompressorNode"));
+            .find(|t| t.id == bus_id)
+            .expect("bus track should exist");
+        assert!(bus_track.nodes.iter().any(|n| n.kind == "CompressorNode"));
 
         // Steps 685-689 & 693-694: Sidechain, Bus Target, Phase Flip, DC Block, Quick Filters, Gain Trims
         let mut track2 = TrackConfig::default();
