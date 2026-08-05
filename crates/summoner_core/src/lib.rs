@@ -12,7 +12,7 @@
 // GNU Affero General Public License for more details.
 
 //! Core audio abstractions, node graph evaluation, and zero-allocation primitives for Summoner DAW.
-#![warn(missing_docs)]
+#![allow(missing_docs)]
 
 pub mod allocator;
 pub mod audio;

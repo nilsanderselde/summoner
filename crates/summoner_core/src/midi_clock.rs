@@ -94,6 +94,11 @@ impl MidiClockReceiver {
         }
     }
 
+    /// Return the configured sample rate.
+    pub fn sample_rate(&self) -> u32 {
+        self.sample_rate
+    }
+
     /// Process incoming MIDI byte. Returns `Some(bpm)` when new tempo calculation is available.
     pub fn process_byte(&mut self, byte: u8, now: Instant) -> Option<f64> {
         if byte != MIDI_CLOCK_BYTE {

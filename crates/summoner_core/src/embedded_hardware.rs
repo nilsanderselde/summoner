@@ -100,7 +100,7 @@ impl GpioDriver {
 
     /// Process physical GPIO pin state change event.
     pub fn process_pin_change(&mut self, pin: u8, is_high: bool, now: Instant) -> Option<GpioEvent> {
-        let action = self.pin_mappings.get(&pin)?;
+        let _action = self.pin_mappings.get(&pin)?;
         let was_pressed = *self.pin_states.get(&pin).unwrap_or(&false);
 
         if is_high && !was_pressed {
