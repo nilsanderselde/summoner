@@ -315,16 +315,22 @@ impl AlsaDriver {
 /// Native audio driver wrapper enum for cross-platform low-latency tuning (Step 1242).
 #[derive(Debug, Clone)]
 pub enum NativeAudioDriver {
+    /// Android AAudio NDK low-latency driver.
     AAudio(AAudioDriver),
+    /// iOS AudioUnit / CoreAudio low-latency driver.
     AudioUnit(AudioUnitDriver),
+    /// Windows WASAPI native audio driver.
     Wasapi(WasapiDriver),
+    /// Windows ASAPI low-latency driver.
     Asapi(AsapiDriver),
+    /// Linux ALSA native audio driver.
     Alsa(AlsaDriver),
 }
 
 /// Unified tuner for native low-latency audio driver backends (Step 1242).
 #[derive(Debug, Clone)]
 pub struct NativeAudioDriverTuner {
+    /// Configured native audio driver instance.
     pub driver: NativeAudioDriver,
 }
 

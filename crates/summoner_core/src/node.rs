@@ -234,7 +234,8 @@ pub const KNOWN_NODE_TYPES: &[&str] = &[
     "EffectReverb",
     "NoiseGateNode",
     "DeesserNode",
-    "HarmonicExciterNode",
+    "SimdPolyWavetableOscillator",
+    "MultiChannelSpectralEqualizerNode",
     "PassthroughNode",
 ];
 

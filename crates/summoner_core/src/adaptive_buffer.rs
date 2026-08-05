@@ -8,10 +8,15 @@ use std::time::Duration;
 /// Adaptive buffer size scaler for dynamic latency optimization.
 #[derive(Debug, Clone)]
 pub struct AdaptiveBufferScaler {
+    /// Minimum allowed buffer size in frames.
     pub min_buffer_size: usize,
+    /// Maximum allowed buffer size in frames.
     pub max_buffer_size: usize,
+    /// Current dynamic buffer size in frames.
     pub current_buffer_size: usize,
+    /// Target sample rate in Hz.
     pub sample_rate: u32,
+    /// Target roundtrip latency in milliseconds.
     pub target_latency_ms: f32,
     underrun_count: u64,
     success_blocks: u64,
@@ -19,6 +24,7 @@ pub struct AdaptiveBufferScaler {
 }
 
 impl AdaptiveBufferScaler {
+    /// Create a new adaptive buffer scaler for the given sample rate and initial buffer size.
     pub fn new(sample_rate: u32, initial_buffer_size: usize) -> Self {
         Self {
             min_buffer_size: 16,  // ~0.33 ms @ 48kHz for sub-millisecond latency
@@ -32,6 +38,7 @@ impl AdaptiveBufferScaler {
         }
     }
 
+    /// Record a processed audio block's duration and underrun status to adjust buffer scale.
     pub fn record_block_processing(&mut self, duration: Duration, underrun: bool) {
         if underrun {
             self.underrun_count += 1;
@@ -54,14 +61,17 @@ impl AdaptiveBufferScaler {
         }
     }
 
+    /// Get current roundtrip latency in milliseconds.
     pub fn current_latency_ms(&self) -> f32 {
         (self.current_buffer_size as f32 / self.sample_rate as f32) * 1000.0
     }
 
+    /// Get total count of recorded buffer underruns.
     pub fn underrun_count(&self) -> u64 {
         self.underrun_count
     }
 
+    /// Check if current roundtrip latency is sub-millisecond (< 1.0 ms).
     pub fn is_sub_millisecond(&self) -> bool {
         self.current_latency_ms() < 1.0
     }

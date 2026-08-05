@@ -220,12 +220,47 @@ fn main() {
             }
         }
         "init" => {
+            let mut target_name = "summoner_session.toml".to_string();
+            let mut template_name = "Default".to_string();
 
-            let path_str = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
-            let project = create_default_project("New Session");
-            let serialized = serialize_project_toml(&project).expect("Failed to serialize default project");
-            fs::write(path_str, serialized).expect("Failed to write project file");
-            println!("Initialized new Summoner session at: {}", path_str);
+            let mut i = 2;
+            while i < args.len() {
+                let arg = &args[i];
+                if arg.starts_with("--template=") {
+                    template_name = arg.trim_start_matches("--template=").to_string();
+                } else if !arg.starts_with('-') {
+                    target_name = arg.clone();
+                }
+                i += 1;
+            }
+
+            let (target_dir, file_path) = if target_name.ends_with(".toml") {
+                let p = Path::new(&target_name);
+                let dir = p.parent().unwrap_or_else(|| Path::new("."));
+                (dir.to_path_buf(), p.to_path_buf())
+            } else {
+                let dir = PathBuf::from(&target_name);
+                (dir.clone(), dir.join("summoner_session.toml"))
+            };
+
+            if !target_dir.as_os_str().is_empty() && !target_dir.exists() {
+                fs::create_dir_all(&target_dir).expect("Failed to create project directory");
+            }
+
+            let proj_title = target_dir.file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("New Session");
+
+            let project = summoner_project::create_project_from_template(proj_title, &template_name);
+            let serialized = serialize_project_toml(&project).expect("Failed to serialize project");
+            fs::write(&file_path, serialized).expect("Failed to write project file");
+
+            let mut auto_save = summoner_project::ProjectAutoSaveManager::new(&target_dir, 300, 10);
+            let _ = auto_save.create_backup_snapshot(&project);
+
+            println!("Initialized new Summoner session at: {}", file_path.display());
+            println!("  Template: {}", template_name);
+            println!("  Backup storage: {}", auto_save.backup_dir.display());
         }
         "patch-export" => {
             let path_str = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");

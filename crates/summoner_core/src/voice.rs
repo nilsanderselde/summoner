@@ -17,11 +17,17 @@ use crate::audio::Sample;
 use crate::mpe::MpeEvent;
 use crate::node::{AudioNode, ProcessContext};
 
+/// Trait representing a single polyphonic voice node that responds to note and expression events.
 pub trait PolyphonicVoice: AudioNode + Send {
+    /// Trigger note on with note number and velocity (0.0 to 1.0).
     fn note_on(&mut self, note: u8, velocity: f32);
+    /// Trigger note off with release velocity.
     fn note_off(&mut self, velocity: f32);
+    /// Set per-voice pitch bend in semitones.
     fn set_pitch_bend(&mut self, semitones: f32);
+    /// Set per-voice MPE pressure (channel pressure / aftertouch).
     fn set_pressure(&mut self, pressure: f32);
+    /// Return true if the voice is actively rendering audio.
     fn is_active(&self) -> bool;
 }
 
@@ -32,7 +38,9 @@ struct VoiceSlotMetadata {
     active: bool,
 }
 
+/// Fixed-capacity polyphonic voice pool with MPE event dispatching and voice stealing.
 pub struct VoicePool<V: PolyphonicVoice, const MAX_VOICES: usize> {
+    /// Pool name identifier.
     pub name: String,
     voices: Vec<V>,
     metadata: [VoiceSlotMetadata; MAX_VOICES],
@@ -43,6 +51,7 @@ pub struct VoicePool<V: PolyphonicVoice, const MAX_VOICES: usize> {
 }
 
 impl<V: PolyphonicVoice, const MAX_VOICES: usize> VoicePool<V, MAX_VOICES> {
+    /// Create a new voice pool with factory function to initialize voices.
     pub fn new(name: impl Into<String>, voice_factory: impl Fn() -> V, max_block_size: usize) -> Self {
         let mut voices = Vec::with_capacity(MAX_VOICES);
         for _ in 0..MAX_VOICES {
@@ -59,6 +68,7 @@ impl<V: PolyphonicVoice, const MAX_VOICES: usize> VoicePool<V, MAX_VOICES> {
         }
     }
 
+    /// Dispatch incoming MPE expression event to allocated voice slot.
     pub fn dispatch_mpe(&mut self, event: MpeEvent) {
         self.global_age += 1;
         match event {
@@ -109,6 +119,7 @@ impl<V: PolyphonicVoice, const MAX_VOICES: usize> VoicePool<V, MAX_VOICES> {
         self.metadata.iter().position(|meta| meta.active && meta.channel == channel)
     }
 
+    /// Get current count of active rendering voices.
     pub fn active_voice_count(&self) -> usize {
         self.metadata.iter().filter(|m| m.active).count()
     }

@@ -17,21 +17,34 @@ use crate::audio::Sample;
 use crate::node::{AudioNode, ProcessContext};
 use std::collections::VecDeque;
 
+/// Audio graph connection edge between two nodes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Edge {
+    /// Source node index.
     pub from_node: usize,
+    /// Source output port index.
     pub from_port: usize,
+    /// Target node index.
     pub to_node: usize,
+    /// Target input port index.
     pub to_port: usize,
 }
 
+/// Directed acyclic audio processing graph container.
 pub struct NodeGraph {
+    /// Graph name identifier.
     pub name: String,
+    /// List of audio nodes in graph.
     pub nodes: Vec<Box<dyn AudioNode>>,
+    /// List of connection edges between nodes.
     pub edges: Vec<Edge>,
+    /// Flag indicating whether the graph contains a cyclic dependency.
     pub has_cycle: bool,
+    /// Topological execution levels for parallel multi-threaded scheduling.
     pub levels: Vec<Vec<usize>>,
+    /// Multi-threaded parallel execution flag.
     pub parallel_execution: bool,
+    /// Per-node processing duration timings for profiling.
     pub node_timings: Vec<std::time::Duration>,
     evaluation_order: Vec<usize>,
     // Pre-allocated buffers for each node's output: buffers[node_index][channel][sample_index]
@@ -57,6 +70,7 @@ impl std::fmt::Debug for NodeGraph {
 }
 
 impl NodeGraph {
+    /// Create a new audio node graph instance with pre-allocated max block size and max channels.
     pub fn new(name: impl Into<String>, max_block_size: usize, max_channels: usize) -> Self {
         Self {
             name: name.into(),
@@ -95,6 +109,7 @@ impl NodeGraph {
         idx
     }
 
+    /// Add a connection edge between two nodes in the graph and recompile topological execution order.
     pub fn add_edge(&mut self, edge: Edge) {
         self.edges.push(edge);
         self.compile();
@@ -322,7 +337,7 @@ mod tests {
         let transport = Transport::new(44100, 120.0);
         let ctx = ProcessContext::from_transport(&transport);
 
-        let mut create_test_graph = || {
+        let create_test_graph = || {
             let mut graph = NodeGraph::new("BitIdenticalGraph", 512, 2);
             let osc1 = graph.add_node(Box::new(SineOscillatorNode::new(440.0)));
             let osc2 = graph.add_node(Box::new(SineOscillatorNode::new(880.0)));

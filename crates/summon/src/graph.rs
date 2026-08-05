@@ -88,6 +88,8 @@ impl NodeFactory {
                 *params.get("width").unwrap_or(&1.0)
             )))),
             "ParametricEqNode" => Some(Box::new(ProcessorNodeAdapter::new(ParametricEqNode::new()))),
+            "MultiChannelSpectralEqualizerNode" | "SpectralEqualizer" => Some(Box::new(ProcessorNodeAdapter::new(summoner_dsp::MultiChannelSpectralEqualizerNode::new(44100, 2, 8)))),
+            "SimdPolyWavetableOscillator" | "SimdWavetableOscillator" => Some(Box::new(ProcessorNodeAdapter::new(summoner_dsp::oscillators::SimdPolyWavetableOscillator::new(44100)))),
             "MultibandCompressorNode" | "MultibandCompressor" => Some(Box::new(ProcessorNodeAdapter::new(summoner_dsp::MultibandCompressorNode::new()))),
             "TapeSaturationNode" | "TapeSaturation" => Some(Box::new(ProcessorNodeAdapter::new(summoner_dsp::TapeSaturationNode::new(
                 *params.get("drive").unwrap_or(&2.0),

@@ -320,6 +320,140 @@ pub fn show_quantum_tomography(
     response
 }
 
+/// Render Peak Headroom Analyzer & EBU R128 Loudness Metering Display Component (Step 1270 & Step 1272).
+#[cfg(feature = "gui")]
+pub fn show_ebu_r128_loudness_meter(
+    ui: &mut egui::Ui,
+    meter: &summoner_dsp::EbuR128LoudnessMeter,
+    analyzer: &summoner_dsp::PeakHeadroomAnalyzer,
+    width: f32,
+    height: f32,
+) -> egui::Response {
+    let (rect, response) = ui.allocate_exact_size(egui::vec2(width, height), egui::Sense::hover());
+    if ui.is_rect_visible(rect) {
+        let painter = ui.painter_at(rect);
+        painter.rect_filled(rect, 4.0, egui::Color32::from_rgb(14, 16, 22));
+        painter.rect_stroke(rect, 4.0, egui::Stroke::new(1.0, egui::Color32::from_rgb(50, 70, 100)));
+
+        let m_lufs = meter.momentary_lufs;
+        let s_lufs = meter.short_term_lufs;
+        let i_lufs = meter.integrated_lufs;
+        let true_peak = analyzer.true_peak_db;
+
+        let status_text = format!(
+            "M: {:.1} LUFS | S: {:.1} LUFS | I: {:.1} LUFS | Peak: {:.1} dB",
+            m_lufs, s_lufs, i_lufs, true_peak
+        );
+
+        painter.text(
+            egui::pos2(rect.min.x + 8.0, rect.min.y + 6.0),
+            egui::Align2::LEFT_TOP,
+            status_text,
+            egui::FontId::proportional(11.0),
+            egui::Color32::from_rgb(0, 220, 255),
+        );
+    }
+    response
+}
+
+/// Audio driver configuration and device selector UI panel state (Step 1269).
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct AudioDriverSelectorPanel {
+    /// Active driver backend name (e.g. WASAPI, ASAPI, ALSA, AAudio, AudioUnit).
+    pub selected_driver_name: String,
+    /// Sample rate in Hz.
+    pub sample_rate: u32,
+    /// Buffer size in frames.
+    pub buffer_size: usize,
+    /// Exclusive mode toggle.
+    pub exclusive_mode: bool,
+    /// List of available audio output devices.
+    pub device_list: Vec<String>,
+    /// Index of selected output device.
+    pub selected_device_index: usize,
+}
+
+impl Default for AudioDriverSelectorPanel {
+    fn default() -> Self {
+        Self {
+            selected_driver_name: "WASAPI".to_string(),
+            sample_rate: 48000,
+            buffer_size: 256,
+            exclusive_mode: false,
+            device_list: vec![
+                "Default High Definition Audio Endpoint".to_string(),
+                "WASAPI Low Latency Endpoint".to_string(),
+                "ASAPI Direct Out Device".to_string(),
+                "ALSA Hardware Device (HW:0)".to_string(),
+            ],
+            selected_device_index: 0,
+        }
+    }
+}
+
+/// Render WASAPI / ASAPI / ALSA driver device selector UI panel (Step 1269).
+#[cfg(feature = "gui")]
+pub fn show_audio_driver_selector_panel(
+    ui: &mut egui::Ui,
+    panel: &mut AudioDriverSelectorPanel,
+) {
+    ui.group(|ui| {
+        ui.heading("Audio Driver Settings & Device Selector");
+        ui.separator();
+
+        ui.horizontal(|ui| {
+            ui.label("Driver API:");
+            egui::ComboBox::from_id_source("driver_api_combo")
+                .selected_text(&panel.selected_driver_name)
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(&mut panel.selected_driver_name, "WASAPI".to_string(), "WASAPI (Windows Native)");
+                    ui.selectable_value(&mut panel.selected_driver_name, "ASAPI".to_string(), "ASAPI (Low Latency)");
+                    ui.selectable_value(&mut panel.selected_driver_name, "ALSA".to_string(), "ALSA (Linux Audio)");
+                    ui.selectable_value(&mut panel.selected_driver_name, "AAudio".to_string(), "AAudio (Android NDK)");
+                    ui.selectable_value(&mut panel.selected_driver_name, "AudioUnit".to_string(), "AudioUnit (iOS CoreAudio)");
+                });
+        });
+
+        ui.horizontal(|ui| {
+            ui.label("Device:");
+            if !panel.device_list.is_empty() {
+                let current_device = panel.device_list[panel.selected_device_index % panel.device_list.len()].clone();
+                egui::ComboBox::from_id_source("driver_device_combo")
+                    .selected_text(current_device)
+                    .show_ui(ui, |ui| {
+                        for (idx, dev) in panel.device_list.iter().enumerate() {
+                            ui.selectable_value(&mut panel.selected_device_index, idx, dev);
+                        }
+                    });
+            }
+        });
+
+        ui.horizontal(|ui| {
+            ui.label("Sample Rate:");
+            egui::ComboBox::from_id_source("sample_rate_combo")
+                .selected_text(format!("{} Hz", panel.sample_rate))
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(&mut panel.sample_rate, 44100, "44100 Hz");
+                    ui.selectable_value(&mut panel.sample_rate, 48000, "48000 Hz");
+                    ui.selectable_value(&mut panel.sample_rate, 96000, "96000 Hz");
+                });
+
+            ui.separator();
+            ui.label("Buffer Size:");
+            egui::ComboBox::from_id_source("buffer_size_combo")
+                .selected_text(format!("{} frames", panel.buffer_size))
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(&mut panel.buffer_size, 64, "64 frames (1.3 ms)");
+                    ui.selectable_value(&mut panel.buffer_size, 128, "128 frames (2.6 ms)");
+                    ui.selectable_value(&mut panel.buffer_size, 256, "256 frames (5.3 ms)");
+                    ui.selectable_value(&mut panel.buffer_size, 512, "512 frames (10.6 ms)");
+                });
+        });
+
+        ui.checkbox(&mut panel.exclusive_mode, "Exclusive Hardware Mode");
+    });
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

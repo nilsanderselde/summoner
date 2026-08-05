@@ -11,13 +11,18 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Affero General Public License for more details.
 
+/// Parameter smoother using one-pole low-pass exponential smoothing filter.
 pub struct SmoothParam {
+    /// Target parameter value.
     pub target: f32,
+    /// Current smoothed parameter value.
     pub current: f32,
+    /// Exponential smoothing coefficient factor.
     pub smoothing_factor: f32,
 }
 
 impl SmoothParam {
+    /// Create a new parameter smoother initialized with starting value, sample rate, and transition time in ms.
     pub fn new(initial: f32, sample_rate: f32, time_ms: f32) -> Self {
         let factor = (-1.0 / (time_ms * 0.001 * sample_rate)).exp();
         Self {
@@ -27,10 +32,12 @@ impl SmoothParam {
         }
     }
     
+    /// Set new target parameter value.
     pub fn set_target(&mut self, target: f32) {
         self.target = target;
     }
     
+    /// Advance smoother by one sample and return smoothed parameter value.
     pub fn next_sample(&mut self) -> f32 {
         self.current = self.current * self.smoothing_factor + self.target * (1.0 - self.smoothing_factor);
         self.current

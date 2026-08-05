@@ -27,6 +27,7 @@ pub struct ParamId(pub u32);
 /// A single atomic floating-point parameter.
 #[derive(Debug)]
 pub struct AtomicParam {
+    /// Parameter identifier.
     pub id: ParamId,
     value: AtomicU32,
 }
