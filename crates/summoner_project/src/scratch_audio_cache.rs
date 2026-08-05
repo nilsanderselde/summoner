@@ -91,11 +91,10 @@ impl ScratchAudioCache {
         let entries = fs::read_dir(&self.cache_dir).map_err(|e| e.to_string())?;
         let mut count = 0;
         for entry in entries.flatten() {
-            if entry.path().is_file() {
-                if let Ok(_) = fs::remove_file(entry.path()) {
+            if entry.path().is_file()
+                && fs::remove_file(entry.path()).is_ok() {
                     count += 1;
                 }
-            }
         }
         Ok(count)
     }

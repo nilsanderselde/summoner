@@ -13,7 +13,7 @@ def build_prompt(latest_roadmap):
         f"Proceed with implementing the next incomplete logical step on {latest_roadmap}, "
         f"edit the code, run tests to verify, and commit all changes with a detailed commit message. "
         f"If all tasks in {latest_roadmap} are complete, create a new roadmap file "
-        f"local/ROADMAP_YYYYMMDD.md for subsequent steps before finishing."
+        f"local/ROADMAP_YYYYMMDD_HHMMSS.md for subsequent steps before finishing."
     )
 
 if __name__ == "__main__":

@@ -145,8 +145,10 @@ mod tests {
     #[test]
     fn test_step_892_lua_project_save_hooks() {
         let engine = LuaScriptEngine::new();
-        let mut proj = ProjectConfig::default();
-        proj.name = "MySong".to_string();
+        let mut proj = ProjectConfig {
+            name: "MySong".to_string(),
+            ..Default::default()
+        };
 
         engine.on_before_save("function on_before_save() end", &mut proj).unwrap();
         assert!(proj.name.contains("(Saved)"));

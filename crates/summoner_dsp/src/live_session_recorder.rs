@@ -46,6 +46,12 @@ impl std::fmt::Debug for LiveSessionRecorder {
     }
 }
 
+impl Default for LiveSessionRecorder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LiveSessionRecorder {
     pub fn new() -> Self {
         Self {

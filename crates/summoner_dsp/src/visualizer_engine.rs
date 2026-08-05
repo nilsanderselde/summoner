@@ -51,6 +51,12 @@ pub struct VisualizerIntegrationEngine {
     pub frame_counter: u64,
 }
 
+impl Default for VisualizerIntegrationEngine {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl VisualizerIntegrationEngine {
     pub fn new() -> Self {
         Self {

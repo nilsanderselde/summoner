@@ -75,7 +75,7 @@ impl DemucsV4Separator {
                     // High frequency transients & cymbals
                     drums[idx] = s * 0.70;
                     other[idx] = s * 0.30;
-                } else if norm_freq >= 0.25 && norm_freq <= 0.55 && phase > 0.4 {
+                } else if (0.25..=0.55).contains(&norm_freq) && phase > 0.4 {
                     // Mid-range formants (Vocals)
                     vocals[idx] = s * 0.80;
                     guitar[idx] = s * 0.20;
@@ -83,7 +83,7 @@ impl DemucsV4Separator {
                     // Piano percussive harmonics
                     piano[idx] = s * 0.75;
                     guitar[idx] = s * 0.25;
-                } else if phase >= 0.25 && phase <= 0.4 {
+                } else if (0.25..=0.4).contains(&phase) {
                     // Guitar riff harmonics
                     guitar[idx] = s * 0.70;
                     other[idx] = s * 0.30;
@@ -950,12 +950,10 @@ impl AiPolyphonicChordExtractor {
         let total_sec = buffer.data.len() as f32 / sample_rate;
         let num_chords = ((total_sec / 1.0).floor() as usize).max(1);
 
-        let chord_prog = vec![
-            ("C Major", vec![60, 64, 67]),
+        let chord_prog = [("C Major", vec![60, 64, 67]),
             ("G Major", vec![67, 71, 74]),
             ("A Minor", vec![57, 60, 64]),
-            ("F Major", vec![53, 57, 60]),
-        ];
+            ("F Major", vec![53, 57, 60])];
 
         let mut events = Vec::with_capacity(num_chords);
         for i in 0..num_chords {

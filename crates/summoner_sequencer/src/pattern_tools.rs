@@ -215,7 +215,7 @@ pub fn import_pattern_from_midi_bytes(bytes: &[u8]) -> Result<SequenceConfig, St
                         let (meta_len, vlen) = read_varlen(&track_data[cursor..]);
                         cursor += vlen + meta_len;
                     }
-                } else if status >= 0x80 && status <= 0x9F {
+                } else if (0x80..=0x9F).contains(&status) {
                     // Note On / Note Off
                     if cursor + 2 <= track_data.len() {
                         let note = track_data[cursor];
@@ -244,9 +244,9 @@ pub fn import_pattern_from_midi_bytes(bytes: &[u8]) -> Result<SequenceConfig, St
                             };
                         }
                     }
-                } else if status >= 0xA0 && status <= 0xDF {
+                } else if (0xA0..=0xDF).contains(&status) {
                     cursor += 2;
-                } else if status >= 0xE0 && status <= 0xEF {
+                } else if (0xE0..=0xEF).contains(&status) {
                     cursor += 2;
                 }
             }

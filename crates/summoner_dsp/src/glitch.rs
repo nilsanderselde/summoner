@@ -375,8 +375,8 @@ mod tests {
         let mut out_buf = vec![0.0f32; 64];
 
         gate.process_block(&[&in_buf[..]], &mut [&mut out_buf[..]], &ctx);
-        assert!(out_buf.iter().any(|v| *v == 1.0));
-        assert!(out_buf.iter().any(|v| *v == 0.0));
+        assert!(out_buf.contains(&1.0));
+        assert!(out_buf.contains(&0.0));
     }
 
 

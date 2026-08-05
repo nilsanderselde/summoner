@@ -5,7 +5,7 @@ use summoner_core::node::ProcessContext;
 
 fn bench_osc_saw_scalar(c: &mut Criterion) {
     let mut osc = OscSaw::new(440.0);
-    let mut outputs = vec![vec![0.0; 4096]];
+    let mut outputs = [vec![0.0; 4096]];
     let mut output_slices: Vec<&mut [f32]> = outputs.iter_mut().map(|v| v.as_mut_slice()).collect();
     
     let ctx = ProcessContext {
@@ -30,7 +30,7 @@ fn bench_osc_saw_scalar(c: &mut Criterion) {
 
 fn bench_osc_saw_simd(c: &mut Criterion) {
     let mut osc = OscSaw::new(440.0);
-    let mut outputs = vec![vec![0.0; 4096]];
+    let mut outputs = [vec![0.0; 4096]];
     let mut output_slices: Vec<&mut [f32]> = outputs.iter_mut().map(|v| v.as_mut_slice()).collect();
     
     let ctx = ProcessContext {

@@ -439,7 +439,7 @@ fn main() {
         "test-scripts" => {
             let proj_path = args.get(2).map(|s| s.as_str()).unwrap_or("summoner_session.toml");
             println!("Running Lua script unit tests for project '{}'...", proj_path);
-            let runner = summoner_project::media_export::LuaTestRunner::default();
+            let runner = summoner_project::media_export::LuaTestRunner;
             let res = runner.test_block("default_macro_test", "function process(in_sample) return in_sample end");
             if res.passed {
                 println!("✓ {} PASS: {}", res.test_name, res.message);
@@ -1196,7 +1196,7 @@ fn main() {
                 if let Ok(mut proj) = parse_project_toml(&content) {
                     let mut rng_state = 12345u64;
                     for track in &mut proj.tracks {
-                        if track_filter.map_or(true, |f| f == "all" || f == track.id.to_string()) {
+                        if track_filter.is_none_or(|f| f == "all" || f == track.id.to_string()) {
                             if let Some(ref mut seq) = track.sequence {
                                 for step in &mut seq.steps {
                                     rng_state = rng_state.wrapping_mul(6364136223846793005).wrapping_add(1);
@@ -1611,8 +1611,7 @@ fn main() {
                 # Target: {}\n",
                 target
             );
-            let service_unit = format!(
-                "[Unit]\n\
+            let service_unit = "[Unit]\n\
                 Description=Summoner DAW Headless Audio Engine Watchdog\n\
                 After=sound.target network.target\n\
                 \n\
@@ -1625,8 +1624,7 @@ fn main() {
                 MemoryMax=128M\n\
                 \n\
                 [Install]\n\
-                WantedBy=multi-user.target\n"
-            );
+                WantedBy=multi-user.target\n".to_string();
 
             let _ = fs::write(Path::new(out_dir).join("config.txt"), config_txt);
             let _ = fs::write(Path::new(out_dir).join("summoner-synth.service"), service_unit);

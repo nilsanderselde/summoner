@@ -43,12 +43,12 @@ def log(msg, color="\033[36m"):
 
 def get_latest_roadmap_path():
     """
-    Finds the latest dated roadmap file in local/ matching ROADMAP_YYYYMMDD.md
+    Finds the latest dated roadmap file in local/ matching ROADMAP_YYYYMMDD*.md
     or ROADMAP*.md, sorting by date/name.
     """
     base_dir = os.path.dirname(SCRIPT_DIR)
     local_dir = os.path.join(base_dir, "local")
-    dated_roadmaps = glob.glob(os.path.join(local_dir, "ROADMAP_[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9].md"))
+    dated_roadmaps = glob.glob(os.path.join(local_dir, "ROADMAP_[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]*.md"))
     
     if dated_roadmaps:
         latest = sorted(dated_roadmaps)[-1]

@@ -153,9 +153,7 @@ mod tests {
     #[test]
     fn test_step_958_lua_detect_onsets() {
         let mut samples = vec![0.001f32; 4410];
-        for i in 1000..1050 {
-            samples[i] = 0.8;
-        }
+        samples[1000..1050].fill(0.8);
         let onsets = lua_detect_onsets(&samples, 44100);
         assert!(!onsets.is_empty());
     }

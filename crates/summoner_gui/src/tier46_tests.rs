@@ -110,7 +110,7 @@ mod tests {
         let summary = CrashDumpAnalyzer::analyze_dumps_directory(&temp_dir).unwrap();
         assert_eq!(summary.total_dumps_analyzed, 2);
         assert!(summary.formatted_summary.contains("LOCAL DISK CRASH REPORT DUMP SUMMARY"));
-        assert!(summary.recommendations.len() > 0);
+        assert!(!summary.recommendations.is_empty());
 
         let _ = std::fs::remove_dir_all(&temp_dir);
     }
@@ -183,9 +183,9 @@ mod tests {
         let res_val = matrix.get_modulated_value(target_res).unwrap();
         let pitch_val = matrix.get_modulated_value(target_pitch).unwrap();
 
-        assert!(cutoff_val >= 20.0 && cutoff_val <= 20000.0);
-        assert!(res_val >= 0.1 && res_val <= 10.0);
-        assert!(pitch_val >= 110.0 && pitch_val <= 1760.0);
+        assert!((20.0..=20000.0).contains(&cutoff_val));
+        assert!((0.1..=10.0).contains(&res_val));
+        assert!((110.0..=1760.0).contains(&pitch_val));
 
         // 5. Test assignment modification and disable toggle
         matrix.set_assignment_enabled(assign_1, false);

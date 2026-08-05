@@ -72,8 +72,8 @@ fn test_fm_operator_pair_rms_nonzero() {
 fn test_granular_synth_rms_nonzero() {
     let sample_rate = 44100;
     let mut data = vec![0.0f32; sample_rate * 2];
-    for i in 0..data.len() {
-        data[i] = (2.0 * std::f32::consts::PI * 440.0 * i as f32 / sample_rate as f32).sin();
+    for (i, sample) in data.iter_mut().enumerate() {
+        *sample = (2.0 * std::f32::consts::PI * 440.0 * i as f32 / sample_rate as f32).sin();
     }
     let buf = Arc::new(SampleBuffer::new(data, sample_rate as u32, 1));
     let mut granular = GranularSynthNode::new(sample_rate as u32);

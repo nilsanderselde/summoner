@@ -167,8 +167,8 @@ mod tests {
     fn test_step_1153_quantum_phase_estimation_pitch_tracking() {
         let tracker = QuantumPhaseEstimationPitchTracker::new();
         let mut signal = vec![0.0f32; 512];
-        for i in 0..512 {
-            signal[i] = (2.0 * PI * 220.0 * (i as f32) / 44100.0).sin();
+        for (i, sample) in signal.iter_mut().enumerate() {
+            *sample = (2.0 * PI * 220.0 * (i as f32) / 44100.0).sin();
         }
 
         let pitch = tracker.estimate_pitch(&signal, 44100);

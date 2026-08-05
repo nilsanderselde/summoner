@@ -130,7 +130,7 @@ impl DevicePreset {
         }
 
         // If URL points to local or raw string representation, parse directly or create stub preset
-        let preset_name = url.split('/').last().unwrap_or("URL_Preset").trim_end_matches(".preset.toml");
+        let preset_name = url.split('/').next_back().unwrap_or("URL_Preset").trim_end_matches(".preset.toml");
         let mut preset = Self::new(preset_name, "AetherSynth");
         preset.comment = format!("Imported from {}", url);
         preset.tags.push("cloud".to_string());
@@ -177,7 +177,7 @@ impl DevicePreset {
     /// Step 715: Extract ZIP file and load preset into destination directory
     pub fn install_zip<P: AsRef<Path>>(zip_path: P, dest_dir: P) -> Result<Self, String> {
         let zip_bytes = fs::read(zip_path).map_err(|e| e.to_string())?;
-        if zip_bytes.len() < 30 || &zip_bytes[0..4] != &[0x50, 0x4b, 0x03, 0x04] {
+        if zip_bytes.len() < 30 || zip_bytes[0..4] != [0x50, 0x4b, 0x03, 0x04] {
             return Err("Invalid ZIP header format".to_string());
         }
 

@@ -259,7 +259,7 @@ impl OpusAudioRelay {
     }
 
     pub fn decrypt_and_decode_frame(&self, payload: &[u8]) -> Result<Vec<f32>, String> {
-        if payload.len() % 4 != 0 {
+        if !payload.len().is_multiple_of(4) {
             return Err("Invalid Opus relay frame length.".to_string());
         }
         let key_bytes = self.encryption_key.as_bytes();
@@ -674,16 +674,14 @@ impl GitHubActionsBotIntegration {
     }
 
     pub fn generate_workflow_yml(&self) -> String {
-        format!(
-            "name: Summoner Mix Render Bot\n\
+        "name: Summoner Mix Render Bot\n\
              on: [pull_request]\n\
              jobs:\n\
                render:\n\
                  runs-on: ubuntu-latest\n\
                  steps:\n\
                    - uses: actions/checkout@v3\n\
-                   - run: cargo run --bin summon -- export-render project.toml output.wav\n"
-        )
+                   - run: cargo run --bin summon -- export-render project.toml output.wav\n".to_string()
     }
 
     pub fn trigger_pr_render_build(&self, pr_number: u32) -> String {

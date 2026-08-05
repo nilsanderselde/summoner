@@ -89,7 +89,7 @@ impl PeerMeshNetwork {
             if peer.connected {
                 self.pending_buffers
                     .entry(peer_id.clone())
-                    .or_insert_with(Vec::new)
+                    .or_default()
                     .push(packet.clone());
                 count += 1;
             }
@@ -600,8 +600,8 @@ impl PtpSyncClock {
     pub fn process_ptp_timestamps(&mut self, t1: u64, t2: u64, t3: u64, t4: u64) -> (i64, i64) {
         // Offset = ((t2 - t1) + (t3 - t4)) / 2
         // Delay  = ((t2 - t1) + (t4 - t3)) / 2
-        let offset = (((t2 as i64 - t1 as i64) + (t3 as i64 - t4 as i64))) / 2;
-        let delay = (((t2 as i64 - t1 as i64) + (t4 as i64 - t3 as i64))) / 2;
+        let offset = ((t2 as i64 - t1 as i64) + (t3 as i64 - t4 as i64)) / 2;
+        let delay = ((t2 as i64 - t1 as i64) + (t4 as i64 - t3 as i64)) / 2;
 
         let diff = (offset - self.clock_offset_ns).abs() as f64;
         self.jitter_ns = 0.9 * self.jitter_ns + 0.1 * diff;

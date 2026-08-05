@@ -149,8 +149,8 @@ mod tests {
         let scorer = NeuroAestheticScorer::new();
         let samples = vec![0.1, 0.4, -0.3, 0.5, -0.2];
         let (v, a) = scorer.score_block(&samples);
-        assert!(v >= -1.0 && v <= 1.0);
-        assert!(a >= 0.0 && a <= 1.0);
+        assert!((-1.0..=1.0).contains(&v));
+        assert!((0.0..=1.0).contains(&a));
     }
 
     #[test]

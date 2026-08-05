@@ -400,7 +400,7 @@ mod tests {
             AutomationPoint { beat: 4.0, value: 1.0, interp: Interpolation::Logarithmic },
         ]);
         let log_mid = log_curve.evaluate_at_beat(2.0); // sqrt(0.5) approx 0.7071
-        assert!((log_mid - 0.7071).abs() < 1e-3);
+        assert!((log_mid - std::f32::consts::FRAC_1_SQRT_2).abs() < 1e-3);
     }
 
     #[test]

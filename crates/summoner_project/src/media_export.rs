@@ -880,7 +880,7 @@ impl LuaHotReloader {
     pub fn reload_if_modified(&mut self) -> Option<String> {
         if let Ok(meta) = std::fs::metadata(&self.script_path) {
             if let Ok(modified) = meta.modified() {
-                if self.last_modified.map_or(true, |prev| modified > prev) {
+                if self.last_modified.is_none_or(|prev| modified > prev) {
                     self.last_modified = Some(modified);
                     return std::fs::read_to_string(&self.script_path).ok();
                 }
@@ -1071,7 +1071,7 @@ pub fn generate_lua_docs(script_code: &str) -> String {
     for line in script_code.lines() {
         let trimmed = line.trim();
         if trimmed.starts_with("---@param") {
-            let parts: Vec<&str> = trimmed["---@param".len()..].trim().split_whitespace().collect();
+            let parts: Vec<&str> = trimmed["---@param".len()..].split_whitespace().collect();
             if parts.len() >= 3 {
                 current_params.push(format!("- **{}** ({}): {}", parts[0], parts[1], parts[2..].join(" ")));
             } else if parts.len() == 2 {
@@ -1456,16 +1456,13 @@ impl LuaScriptErrorRecovery {
 
 /// Step 922: Script Safe Mode restrictions.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Default)]
 pub enum LuaScriptSafeMode {
+    #[default]
     BuiltinOnly,
     FullAccess,
 }
 
-impl Default for LuaScriptSafeMode {
-    fn default() -> Self {
-        LuaScriptSafeMode::BuiltinOnly
-    }
-}
 
 impl LuaScriptSafeMode {
     pub fn validate_script(&self, script: &str) -> Result<(), String> {

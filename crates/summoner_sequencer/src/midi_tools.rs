@@ -387,17 +387,11 @@ impl Strummer {
 
 /// Chord Memory manager: save up to 8 chords, trigger by slot index (0..7) or MIDI note 1..8 (Step 651).
 #[derive(Debug, Clone)]
+#[derive(Default)]
 pub struct ChordMemory {
     pub slots: [Vec<u8>; 8],
 }
 
-impl Default for ChordMemory {
-    fn default() -> Self {
-        Self {
-            slots: Default::default(),
-        }
-    }
-}
 
 impl ChordMemory {
     pub fn new() -> Self {

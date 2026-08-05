@@ -696,12 +696,12 @@ mod tests {
         let modulated_gain = matrix.get_modulated_value(amp_gain).unwrap();
 
         assert!(
-            modulated_cutoff >= 20.0 && modulated_cutoff <= 20000.0,
+            (20.0..=20000.0).contains(&modulated_cutoff),
             "Modulated cutoff out of bounds: {}",
             modulated_cutoff
         );
         assert!(
-            modulated_gain >= 0.0 && modulated_gain <= 1.0,
+            (0.0..=1.0).contains(&modulated_gain),
             "Modulated gain out of bounds: {}",
             modulated_gain
         );

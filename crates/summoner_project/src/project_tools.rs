@@ -37,11 +37,10 @@ pub fn clean_project(project: &mut ProjectConfig, project_dir: &Path) -> Result<
         let path = entry.path();
         if path.is_file() {
             if let Some(filename) = path.file_name().and_then(|n| n.to_str()) {
-                if !referenced_names.contains(filename) {
-                    if fs::remove_file(&path).is_ok() {
+                if !referenced_names.contains(filename)
+                    && fs::remove_file(&path).is_ok() {
                         removed.push(filename.to_string());
                     }
-                }
             }
         }
     }

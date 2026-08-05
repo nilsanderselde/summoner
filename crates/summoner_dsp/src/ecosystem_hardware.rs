@@ -1131,7 +1131,7 @@ mod tests {
 
         din.process_block(&mut clock, &mut run, true);
         assert_eq!(run[0], 1.0);
-        assert!(clock.iter().any(|&s| s == 1.0));
+        assert!(clock.contains(&1.0));
     }
 
     #[test]

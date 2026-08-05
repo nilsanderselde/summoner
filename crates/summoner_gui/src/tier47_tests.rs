@@ -142,8 +142,8 @@ mod tests {
         let val_log = editor.map_expression_value(0.5, ExpressionCurveType::Logarithmic);
 
         assert!((val_lin - 0.5).abs() < 1e-5);
-        assert!(val_exp >= 0.0 && val_exp <= 1.0);
-        assert!(val_log >= 0.0 && val_log <= 1.0);
+        assert!((0.0..=1.0).contains(&val_exp));
+        assert!((0.0..=1.0).contains(&val_log));
     }
 
     #[test]

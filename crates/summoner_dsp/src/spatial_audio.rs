@@ -166,6 +166,12 @@ pub struct AmbisonicsEncoder3D {
     pub position: Position3D,
 }
 
+impl Default for AmbisonicsEncoder3D {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AmbisonicsEncoder3D {
     pub fn new() -> Self {
         Self { position: Position3D::new(0.0, 1.0, 0.0) }
@@ -354,6 +360,12 @@ pub struct HeadTrackerReceiver {
     pub roll_deg: f32,  // Rotation around Y (tilt left/right)
 }
 
+impl Default for HeadTrackerReceiver {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl HeadTrackerReceiver {
     pub fn new() -> Self {
         Self { yaw_deg: 0.0, pitch_deg: 0.0, roll_deg: 0.0 }
@@ -399,6 +411,12 @@ pub struct SurroundLimiterAndLoudness {
     pub short_term_lufs: f32,
     pub true_peak_db: f32,
     pub k_filter_states: Vec<(f32, f32)>,
+}
+
+impl Default for SurroundLimiterAndLoudness {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl SurroundLimiterAndLoudness {
@@ -506,6 +524,12 @@ pub struct BrirConvolutionNode {
     pub brir_r: Vec<f32>,
 }
 
+impl Default for BrirConvolutionNode {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BrirConvolutionNode {
     pub fn new() -> Self {
         // Minimal exponential decay room impulse response
@@ -544,6 +568,12 @@ impl BrirConvolutionNode {
 #[derive(Debug, Clone)]
 pub struct SpatialObjectAutomation {
     pub keyframes: Vec<(u64, Position3D)>, // Frame index, 3D Position
+}
+
+impl Default for SpatialObjectAutomation {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl SpatialObjectAutomation {
@@ -589,6 +619,12 @@ impl SpatialObjectAutomation {
 pub struct SurroundStemSplitterBedObject {
     pub bed_layout: ChannelLayout,
     pub num_objects: usize,
+}
+
+impl Default for SurroundStemSplitterBedObject {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl SurroundStemSplitterBedObject {
@@ -897,8 +933,8 @@ impl ProceduralSpatialIrGenerator {
             let sample_t = i as f32;
 
             // Deterministic pseudo-noise sequence for reproducibility
-            let n_l = ((sample_t * 12.9898 + 78.233).sin() * 43758.5453).fract() * 2.0 - 1.0;
-            let n_r = ((sample_t * 39.3461 + 11.619).sin() * 24614.6143).fract() * 2.0 - 1.0;
+            let n_l = ((sample_t * 12.9898 + 78.233).sin() * 43_758.547).fract() * 2.0 - 1.0;
+            let n_r = ((sample_t * 39.3461 + 11.619).sin() * 24_614.615).fract() * 2.0 - 1.0;
 
             let diffuse_scale = 0.15 * wall_reflect;
             left[i] += n_l * env * air_loss * diffuse_scale;

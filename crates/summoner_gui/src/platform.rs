@@ -17,20 +17,15 @@
 use std::env;
 
 /// Step 524-526: Platform Audio Backend specification.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub enum AudioBackendKind {
+    #[default]
     Auto,
     Wasapi { exclusive: bool },
     CoreAudio { exclusive: bool },
     PipeWire,
     Jack,
     Alsa,
-}
-
-impl Default for AudioBackendKind {
-    fn default() -> Self {
-        Self::Auto
-    }
 }
 
 /// Audio backend configuration settings.

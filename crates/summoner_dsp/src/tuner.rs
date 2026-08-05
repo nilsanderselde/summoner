@@ -100,8 +100,8 @@ mod tests {
     fn test_tuner_a440_detection() {
         let sr = 44100.0;
         let mut buf = vec![0.0f32; 2048];
-        for i in 0..buf.len() {
-            buf[i] = (2.0 * std::f32::consts::PI * 440.0 * (i as f32) / sr).sin();
+        for (i, sample) in buf.iter_mut().enumerate() {
+            *sample = (2.0 * std::f32::consts::PI * 440.0 * (i as f32) / sr).sin();
         }
 
         let res = detect_chromatic_pitch(&buf, sr).expect("Should detect A440");

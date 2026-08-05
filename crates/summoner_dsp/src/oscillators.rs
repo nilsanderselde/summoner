@@ -938,11 +938,11 @@ mod tests {
             tuning_edo_divisions: 12,
         };
         
-        let mut outputs_simd = vec![vec![0.0; 1024]];
+        let mut outputs_simd = [vec![0.0; 1024]];
         let mut slices_simd: Vec<&mut [f32]> = outputs_simd.iter_mut().map(|v| v.as_mut_slice()).collect();
         osc_simd.process_block_simd(&mut slices_simd, &ctx);
         
-        let mut outputs_scalar = vec![vec![0.0; 1024]];
+        let mut outputs_scalar = [vec![0.0; 1024]];
         let mut i = 0;
         while i < 1024 {
             let val = osc_scalar.process_sample(ctx.sample_rate);
@@ -969,7 +969,7 @@ mod tests {
         let sample = osc.process_sample(44100);
         assert!(sample.abs() <= 1.0);
 
-        let mut output = vec![vec![0.0f32; 512]];
+        let mut output = [vec![0.0f32; 512]];
         let mut slices: Vec<&mut [f32]> = output.iter_mut().map(|v| v.as_mut_slice()).collect();
         let ctx = ProcessContext::new(44100, 120.0, 0);
         osc.process_block(&[], &mut slices, &ctx);
@@ -1004,7 +1004,7 @@ mod tests {
         synth.note_on(71, 0.8);
         assert_eq!(synth.active_voice_count(), 4);
 
-        let mut block = vec![vec![0.0f32; 256]];
+        let mut block = [vec![0.0f32; 256]];
         let mut slices: Vec<&mut [f32]> = block.iter_mut().map(|v| v.as_mut_slice()).collect();
         let ctx = ProcessContext::new(44100, 120.0, 0);
 

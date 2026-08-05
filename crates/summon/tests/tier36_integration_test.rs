@@ -149,15 +149,15 @@ fn test_tier36_multitrack_routing_matrix() {
     let mut matrix = AudioChannelRoutingMatrix::new(4, 4);
     matrix.set_route(0, 2, 0.5); // Route In 0 -> Out 2 with 0.5 gain
 
-    let in0 = vec![1.0f32; 32];
-    let in1 = vec![0.0f32; 32];
-    let in2 = vec![0.0f32; 32];
-    let in3 = vec![0.0f32; 32];
+    let in0 = [1.0f32; 32];
+    let in1 = [0.0f32; 32];
+    let in2 = [0.0f32; 32];
+    let in3 = [0.0f32; 32];
 
-    let mut out0 = vec![0.0f32; 32];
-    let mut out1 = vec![0.0f32; 32];
-    let mut out2 = vec![0.0f32; 32];
-    let mut out3 = vec![0.0f32; 32];
+    let mut out0 = [0.0f32; 32];
+    let mut out1 = [0.0f32; 32];
+    let mut out2 = [0.0f32; 32];
+    let mut out3 = [0.0f32; 32];
 
     matrix.process_matrix(
         &[&in0[..], &in1[..], &in2[..], &in3[..]],
@@ -229,8 +229,8 @@ fn test_tier36_din_sync_generator() {
 
     din.process_block(&mut clock_buf, &mut run_buf, true);
     assert_eq!(run_buf[0], 1.0);
-    assert!(clock_buf.iter().any(|&s| s == 1.0));
-    assert!(clock_buf.iter().any(|&s| s == 0.0));
+    assert!(clock_buf.contains(&1.0));
+    assert!(clock_buf.contains(&0.0));
 }
 
 #[test]

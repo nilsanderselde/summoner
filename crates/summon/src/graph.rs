@@ -183,7 +183,7 @@ impl NodeFactory {
 pub fn graph_from_project(project: &ProjectConfig, max_block_size: usize) -> NodeGraph {
     let mut graph = NodeGraph::new(project.name.clone(), max_block_size, 2);
     
-    if let Some(track) = project.tracks.get(0) {
+    if let Some(track) = project.tracks.first() {
         for nc in &track.nodes {
             if let Some(node) = NodeFactory::create_node(nc) {
                 graph.add_node(node);

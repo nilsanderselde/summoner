@@ -221,8 +221,8 @@ fn test_tier43_step_1194_neuro_aesthetic_scorer() {
     let scorer = NeuroAestheticScorer::new();
     let samples = vec![0.1, 0.5, -0.4, 0.2, -0.6, 0.3];
     let (valence, arousal) = scorer.score_block(&samples);
-    assert!(valence >= -1.0 && valence <= 1.0);
-    assert!(arousal >= 0.0 && arousal <= 1.0);
+    assert!((-1.0..=1.0).contains(&valence));
+    assert!((0.0..=1.0).contains(&arousal));
 }
 
 #[test]

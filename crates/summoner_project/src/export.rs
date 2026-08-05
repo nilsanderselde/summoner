@@ -564,17 +564,13 @@ pub fn read_audio_file(path: &Path) -> Result<(Vec<f32>, u32, u16), String> {
                 let spec = reader.spec();
                 let mut samples = Vec::new();
                 if spec.sample_format == SampleFormat::Float {
-                    for s in reader.samples::<f32>() {
-                        if let Ok(val) = s {
-                            samples.push(val);
-                        }
+                    for val in reader.samples::<f32>().flatten() {
+                        samples.push(val);
                     }
                 } else {
                     let scale = 1.0 / (1i64 << (spec.bits_per_sample.min(31) - 1)) as f32;
-                    for s in reader.samples::<i32>() {
-                        if let Ok(val) = s {
-                            samples.push(val as f32 * scale);
-                        }
+                    for val in reader.samples::<i32>().flatten() {
+                        samples.push(val as f32 * scale);
                     }
                 }
                 let channels = spec.channels.max(1);
@@ -592,10 +588,8 @@ pub fn read_audio_file(path: &Path) -> Result<(Vec<f32>, u32, u16), String> {
                 let bits = info.bits_per_sample.min(31);
                 let scale = if bits > 1 { 1.0 / (1i64 << (bits - 1)) as f32 } else { 1.0 };
                 let mut samples = Vec::new();
-                for s in reader.samples() {
-                    if let Ok(val) = s {
-                        samples.push(val as f32 * scale);
-                    }
+                for val in reader.samples().flatten() {
+                    samples.push(val as f32 * scale);
                 }
                 let channels = (info.channels as u16).max(1);
                 Ok((samples, info.sample_rate, channels))

@@ -108,18 +108,15 @@ impl AtomicParam {
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Default)]
 pub enum AutomationMode {
+    #[default]
     Read,
     Write,
     Touch,
     Latch,
 }
 
-impl Default for AutomationMode {
-    fn default() -> Self {
-        AutomationMode::Read
-    }
-}
 
 /// Central registry for all automatable parameters across the DAW.
 /// Supports the "Record All" toggle for live performance capturing.

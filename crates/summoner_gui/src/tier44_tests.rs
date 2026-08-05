@@ -60,7 +60,7 @@ mod tests {
         let node = QuantumDotTransducerNode::new(500.0);
         assert_eq!(node.name(), "QuantumDotTransducerNode");
         let freq = node.wavelength_to_audio_freq();
-        assert!(freq >= 100.0 && freq <= 4000.0);
+        assert!((100.0..=4000.0).contains(&freq));
     }
 
     #[test]

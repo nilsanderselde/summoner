@@ -124,6 +124,12 @@ pub struct NeuroAffectiveAnalyzer {
     pub state: NeuroAffectiveState,
 }
 
+impl Default for NeuroAffectiveAnalyzer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl NeuroAffectiveAnalyzer {
     pub fn new() -> Self {
         Self {
@@ -508,6 +514,12 @@ pub struct EmgGestureDriver {
     pub expression: f32,
 }
 
+impl Default for EmgGestureDriver {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EmgGestureDriver {
     pub fn new() -> Self {
         Self {
@@ -706,6 +718,12 @@ impl AudioNode for BinauralEntrainmentGen {
 #[derive(Debug, Clone)]
 pub struct NeuroAestheticScorer;
 
+impl Default for NeuroAestheticScorer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl NeuroAestheticScorer {
     pub fn new() -> Self {
         Self
@@ -734,6 +752,12 @@ impl NeuroAestheticScorer {
 #[derive(Debug, Clone)]
 pub struct HapticTransducerNode {
     lp_state: f32,
+}
+
+impl Default for HapticTransducerNode {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl HapticTransducerNode {

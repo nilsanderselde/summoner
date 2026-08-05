@@ -18,7 +18,7 @@ mod tests {
 
     #[test]
     fn test_step_901_lua_test_runner_panel_display() {
-        let runner = LuaTestRunner::default();
+        let runner = LuaTestRunner;
         let res = runner.test_block("unit_test_1", "function process() return 1 end");
         assert!(res.passed);
         assert_eq!(res.test_name, "unit_test_1");
@@ -35,7 +35,7 @@ mod tests {
 
     #[test]
     fn test_step_904_lua_lsp_server_integration() {
-        let lsp = LuaLspServer::default();
+        let lsp = LuaLspServer;
         let init_resp = lsp.handle_lsp_request(r#"{"method":"initialize"}"#);
         assert!(init_resp.contains("hoverProvider"));
 

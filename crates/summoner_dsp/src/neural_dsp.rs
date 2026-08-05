@@ -122,7 +122,7 @@ impl NamWaveNetEngine {
             let gate = 1.0 / (1.0 + (-(current * w_g + b)).exp());
             let gated_out = filter * gate;
 
-            current = current + gated_out * 0.35; // Residual connection
+            current += gated_out * 0.35; // Residual connection
         }
 
         self.write_pos = (self.write_pos + 1) % buf_len;
@@ -698,7 +698,7 @@ impl NeuralIrSynthesizer {
         for (i, sample) in ir_data.iter_mut().enumerate() {
             let t = i as f32;
             let env = (-alpha * t).exp();
-            let noise = ((t * 123.456).sin() * 43758.5453).fract() * 2.0 - 1.0;
+            let noise = ((t * 123.456).sin() * 43_758.547).fract() * 2.0 - 1.0;
             *sample = noise * env * (1.0 + (room_size_m3 * 0.01).min(0.5));
         }
 
@@ -743,7 +743,7 @@ impl VocalHarmonyGeneratorNode {
         for v in 0..self.harmony_voices {
             self.delay_buffers[v][self.write_pos] = input;
             let semitone = self.voice_intervals.get(v).copied().unwrap_or(0);
-            let delay_samples = (100 + (semitone.abs() as usize * 20)) % (buf_len / 2);
+            let delay_samples = (100 + (semitone.unsigned_abs() as usize * 20)) % (buf_len / 2);
             let read_pos = (self.write_pos + buf_len - delay_samples) % buf_len;
             let harmony_sample = self.delay_buffers[v][read_pos];
             mixed += harmony_sample * 0.4;
@@ -1265,8 +1265,8 @@ mod tests {
     fn test_drum_transcription_and_ir_synth() {
         let sample_rate = 44100u32;
         let mut buffer_data = vec![0.0f32; sample_rate as usize];
-        for i in 0..1000 {
-            buffer_data[i] = (i as f32 * 0.1).sin();
+        for (i, sample) in buffer_data.iter_mut().take(1000).enumerate() {
+            *sample = (i as f32 * 0.1).sin();
         }
         let buf = SampleBuffer::new(buffer_data, sample_rate, 1);
 

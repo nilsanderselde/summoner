@@ -473,7 +473,7 @@ impl AudioNode for RelativisticDopplerShiftNode {
         if input.is_empty() || output.is_empty() {
             return;
         }
-        self.process_block(input[0], &mut output[0]);
+        self.process_block(input[0], output[0]);
     }
 }
 
@@ -530,7 +530,7 @@ impl AudioNode for StochasticQuantumDecoherenceNoise {
         if input.is_empty() || output.is_empty() {
             return;
         }
-        self.process_block(input[0], &mut output[0]);
+        self.process_block(input[0], output[0]);
     }
 }
 
@@ -604,7 +604,7 @@ impl AudioNode for HyperbolicReverbNode {
         if input.is_empty() || output.is_empty() {
             return;
         }
-        self.process_block(input[0], &mut output[0]);
+        self.process_block(input[0], output[0]);
     }
 }
 
@@ -1087,8 +1087,8 @@ mod tests {
     fn test_step_1153_qpe_pitch_tracker() {
         let tracker = QuantumPhaseEstimationPitchTracker::new();
         let mut sig = vec![0.0f32; 2048];
-        for i in 0..2048 {
-            sig[i] = (2.0 * PI * 440.0 * (i as f32) / 44100.0).sin();
+        for (i, sample) in sig.iter_mut().enumerate() {
+            *sample = (2.0 * PI * 440.0 * (i as f32) / 44100.0).sin();
         }
         let est = tracker.estimate_pitch(&sig, 44100);
         assert!((est - 440.0).abs() < 20.0, "Expected est near 440.0, got {}", est);
@@ -1120,8 +1120,8 @@ mod tests {
         let mut out_buf = [0.0f32; 64];
 
         // Process directly on fixed stack buffers with no heap allocations
-        for i in 0..64 {
-            out_buf[i] = osc.process_sample();
+        for sample in &mut out_buf {
+            *sample = osc.process_sample();
         }
         filter.process_block(&in_buf, &mut out_buf);
         assert!(out_buf.iter().all(|s| s.is_finite()));

@@ -44,9 +44,9 @@ impl Oscilloscope {
     pub fn read_all(&self) -> [f32; 512] {
         let current_pos = self.write_pos.load(Ordering::Relaxed);
         let mut out = [0.0f32; 512];
-        for i in 0..512 {
+        for (i, item) in out.iter_mut().enumerate() {
             let idx = (current_pos + i) % 512;
-            out[i] = f32::from_bits(self.buffer[idx].load(Ordering::Relaxed));
+            *item = f32::from_bits(self.buffer[idx].load(Ordering::Relaxed));
         }
         out
     }
@@ -80,8 +80,8 @@ impl SpectrumAnalyzer {
 
     pub fn read_all(&self) -> [f32; 256] {
         let mut out = [0.0f32; 256];
-        for i in 0..256 {
-            out[i] = f32::from_bits(self.fft_output[i].load(Ordering::Relaxed));
+        for (i, item) in out.iter_mut().enumerate() {
+            *item = f32::from_bits(self.fft_output[i].load(Ordering::Relaxed));
         }
         out
     }
