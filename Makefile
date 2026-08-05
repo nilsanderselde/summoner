@@ -10,10 +10,8 @@ help:
 	@echo "Summoner DAW - Available Make Targets:"
 	@echo ""
 	@echo "  Vibe Coding Autonomous Runners:"
-	@echo "    make vibe                  - Run vibe-coding autonomous loop (Bash: scripts/smart-vibe.sh)"
-	@echo "    make vibe-py               - Run vibe-coding autonomous loop (Python stream: scripts/vibe_runner.py)"
-	@echo "    make vibe-finisher         - Run vibe-finisher autonomous loop (Bash: scripts/smart-vibe-finisher.sh)"
-	@echo "    make vibe-finisher-py      - Run vibe-finisher autonomous loop (Python stream: scripts/vibe_finisher.py)"
+	@echo "    make vibe                  - Run vibe-coding autonomous loop (Python stream: scripts/vibe_runner.py)"
+	@echo "    make vibe-finisher         - Run vibe-finisher autonomous loop (Python stream: scripts/vibe_finisher.py)"
 	@echo ""
 	@echo "  Cargo & Rust Operations:"
 	@echo "    make run         - Run main Summoner application (cargo run -p summon)"
@@ -29,20 +27,18 @@ help:
 	@echo "  Asset & Script Generators:"
 	@echo "    make generate    - Run main audio/preset generator (python generate.py)"
 	@echo "    make presets     - Generate drum presets (python generate_drum_presets.py)"
+	@echo ""
+	@echo "  Deprecated/Alias Targets (Will be removed):"
+	@echo "    make vibe-py               - Run vibe-coding (Alias for make vibe)"
+	@echo "    make vibe-finisher-py      - Run vibe-finisher (Alias for make vibe-finisher)"
 
-## vibe: Run the autonomous vibe coding bash script
+## vibe: Run the streaming Python vibe coding script directly
 vibe:
-	bash ./scripts/smart-vibe.sh
-
-## vibe-py: Run the streaming Python vibe coding script
 vibe-py:
 	python ./scripts/vibe_runner.py
 
-## vibe-finisher: Run the autonomous vibe finisher bash script
+## vibe-finisher: Run the streaming Python vibe finisher script directly
 vibe-finisher:
-	bash ./scripts/smart-vibe-finisher.sh
-
-## vibe-finisher-py: Run the streaming Python vibe finisher script
 vibe-finisher-py:
 	python ./scripts/vibe_finisher.py
 
