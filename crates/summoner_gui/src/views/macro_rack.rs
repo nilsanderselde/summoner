@@ -491,7 +491,7 @@ pub fn show_macro_rack(
                             let (response, painter) = ui.allocate_painter(egui::Vec2::new(160.0, 40.0), egui::Sense::hover());
                             let rect = response.rect;
                             painter.rect_filled(rect, 4.0, egui::Color32::from_rgb(10, 15, 25));
-                            painter.rect_stroke(rect, 4.0, egui::Stroke::new(1.0, egui::Color32::from_rgb(50, 80, 120)));
+                            painter.rect_stroke(rect, 4.0, egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(50, 80, 120)));
 
                             let morph_val = morph.clamp(0.0, 1.0);
                             let points: Vec<egui::Pos2> = (0..50).map(|i| {
@@ -505,7 +505,7 @@ pub fn show_macro_rack(
                             }).collect();
 
                             for window in points.windows(2) {
-                                painter.line_segment([window[0], window[1]], egui::Stroke::new(1.5, egui::Color32::from_rgb(0, 200, 255)));
+                                painter.line_segment([window[0], window[1]], egui::Stroke::new(1.5_f32, egui::Color32::from_rgb(0, 200, 255)));
                             }
                         }
                         _ => {
@@ -607,7 +607,7 @@ pub fn show_fm_matrix_display(ui: &mut egui::Ui, matrix: &[[f32; 4]; 4], width: 
             ui.painter().rect_stroke(
                 cell_rect.shrink(1.0),
                 2.0,
-                egui::Stroke::new(0.5, egui::Color32::from_rgb(40, 60, 90)),
+                egui::Stroke::new(0.5_f32, egui::Color32::from_rgb(40, 60, 90)),
             );
         }
     }
@@ -627,7 +627,7 @@ pub fn show_filter_response_curve(
     ui.painter().rect_stroke(
         rect,
         4.0,
-        egui::Stroke::new(1.0, egui::Color32::from_rgb(40, 60, 90)),
+        egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(40, 60, 90)),
     );
 
     let points: Vec<egui::Pos2> = (0..50)
@@ -646,7 +646,7 @@ pub fn show_filter_response_curve(
     for window in points.windows(2) {
         ui.painter().line_segment(
             [window[0], window[1]],
-            egui::Stroke::new(1.5, egui::Color32::from_rgb(180, 80, 240)),
+            egui::Stroke::new(1.5_f32, egui::Color32::from_rgb(180, 80, 240)),
         );
     }
 }

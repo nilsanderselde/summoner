@@ -6,11 +6,11 @@
 #[cfg(test)]
 mod tests {
     use crate::app::{GuiState, SummonerApp};
-    use std::path::PathBuf;
+    
     use std::sync::Arc;
     use summoner_core::param_bus::ParamBus;
     use summoner_project::schema::{
-        ProjectConfig, ProjectMetadata, SequenceConfig, TrackConfig, TrackerStepConfig,
+        ProjectConfig, ProjectMetadata, SequenceConfig, TrackConfig,
     };
 
     #[test]

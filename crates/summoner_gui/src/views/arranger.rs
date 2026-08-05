@@ -72,7 +72,7 @@ pub fn show_arranger(
     automation_timeline: Option<&summoner_sequencer::automation_timeline::AutomationTimeline>,
     grid_division: &mut f64,
     track_header_width: &mut f32,
-    waveform_cache: &mut crate::waveform_cache::WaveformCache,
+    _waveform_cache: &mut crate::waveform_cache::WaveformCache,
     oscilloscope_buffers: Option<
         &std::collections::HashMap<u64, std::sync::Arc<crate::visualizer::Oscilloscope>>,
     >,
@@ -334,7 +334,7 @@ pub fn show_arranger(
     minimap_painter.rect_stroke(
         view_window_rect,
         1.0,
-        egui::Stroke::new(1.5, egui::Color32::from_rgb(26, 140, 255)),
+        egui::Stroke::new(1.5_f32, egui::Color32::from_rgb(26, 140, 255)),
     );
     let mm_playhead_x = mm_track_x + (*playhead_beat as f32 * ppb);
     if mm_playhead_x <= mm_rect.right() {
@@ -343,7 +343,7 @@ pub fn show_arranger(
                 egui::pos2(mm_playhead_x, mm_rect.top()),
                 egui::pos2(mm_playhead_x, mm_rect.bottom()),
             ],
-            egui::Stroke::new(2.0, egui::Color32::from_rgb(255, 60, 60)),
+            egui::Stroke::new(2.0_f32, egui::Color32::from_rgb(255, 60, 60)),
         );
     }
 
@@ -448,14 +448,14 @@ pub fn show_arranger(
                             egui::pos2(loop_x1, ruler_rect.top()),
                             egui::pos2(loop_x1, ruler_rect.bottom()),
                         ],
-                        egui::Stroke::new(2.5, egui::Color32::from_rgb(26, 140, 255)),
+                        egui::Stroke::new(2.5_f32, egui::Color32::from_rgb(26, 140, 255)),
                     );
                     ruler_painter.line_segment(
                         [
                             egui::pos2(loop_x2, ruler_rect.top()),
                             egui::pos2(loop_x2, ruler_rect.bottom()),
                         ],
-                        egui::Stroke::new(2.5, egui::Color32::from_rgb(26, 140, 255)),
+                        egui::Stroke::new(2.5_f32, egui::Color32::from_rgb(26, 140, 255)),
                     );
                 }
             }
@@ -473,7 +473,7 @@ pub fn show_arranger(
                         egui::pos2(mx, ruler_rect.top()),
                         egui::pos2(mx, ruler_rect.bottom()),
                     ],
-                    egui::Stroke::new(2.0, m_color),
+                    egui::Stroke::new(2.0_f32, m_color),
                 );
                 ruler_painter.text(
                     egui::pos2(mx + 3.0, ruler_rect.top() + 14.0),
@@ -1030,11 +1030,11 @@ pub fn show_arranger(
                             );
                             painter.line_segment(
                                 [xf_rect.left_top(), xf_rect.right_bottom()],
-                                egui::Stroke::new(1.5, egui::Color32::WHITE),
+                                egui::Stroke::new(1.5_f32, egui::Color32::WHITE),
                             );
                             painter.line_segment(
                                 [xf_rect.left_bottom(), xf_rect.right_top()],
-                                egui::Stroke::new(1.5, egui::Color32::WHITE),
+                                egui::Stroke::new(1.5_f32, egui::Color32::WHITE),
                             );
                         }
                     }

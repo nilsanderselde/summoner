@@ -220,7 +220,7 @@ pub fn show_phase_scope(
     painter.rect_stroke(
         rect,
         4.0,
-        egui::Stroke::new(1.0, egui::Color32::from_rgb(40, 60, 90)),
+        egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(40, 60, 90)),
     );
 
     let center = rect.center();
@@ -323,7 +323,7 @@ pub fn show_quantum_tomography(
         painter.rect_stroke(
             rect,
             4.0,
-            egui::Stroke::new(1.0, egui::Color32::from_rgb(80, 120, 220)),
+            egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(80, 120, 220)),
         );
 
         let (x, y, z, purity) = vis.read();
@@ -333,13 +333,13 @@ pub fn show_quantum_tomography(
         painter.circle_stroke(
             center,
             radius,
-            egui::Stroke::new(1.0, egui::Color32::from_rgb(60, 90, 150)),
+            egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(60, 90, 150)),
         );
         let bloch_pos = egui::pos2(center.x + x * radius, center.y - y * radius);
         painter.circle_filled(bloch_pos, 4.0, egui::Color32::from_rgb(0, 240, 255));
         painter.line_segment(
             [center, bloch_pos],
-            egui::Stroke::new(1.5, egui::Color32::from_rgb(0, 240, 255)),
+            egui::Stroke::new(1.5_f32, egui::Color32::from_rgb(0, 240, 255)),
         );
 
         let label = format!("Purity: {:.2} | Z: {:.2}", purity, z);
@@ -370,7 +370,7 @@ pub fn show_ebu_r128_loudness_meter(
         painter.rect_stroke(
             rect,
             4.0,
-            egui::Stroke::new(1.0, egui::Color32::from_rgb(50, 70, 100)),
+            egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(50, 70, 100)),
         );
 
         let m_lufs = meter.momentary_lufs;

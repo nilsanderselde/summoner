@@ -15,7 +15,7 @@
 
 use eframe::egui;
 use summoner_sequencer::midi_tools::{
-    generate_panic_all_note_off, qwerty_key_to_midi_note, transform_velocity,
+    qwerty_key_to_midi_note, transform_velocity,
     MidiControllerMapping, MidiMappingType, MidiMonitorLog, VelocityCurve,
 };
 
@@ -173,7 +173,7 @@ pub fn show_virtual_keyboard_panel(
     ui: &mut egui::Ui,
     state: &mut VirtualKeyboardState,
     on_note_on: &mut impl FnMut(u8, u8),
-    on_note_off: &mut impl FnMut(u8),
+    _on_note_off: &mut impl FnMut(u8),
 ) {
     ui.group(|ui| {
         ui.horizontal(|ui| {
@@ -336,7 +336,7 @@ pub fn show_virtual_keyboard_panel(
                 painter.rect_stroke(
                     key_rect,
                     2.0,
-                    egui::Stroke::new(1.0, egui::Color32::from_rgb(40, 40, 50)),
+                    egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(40, 40, 50)),
                 );
             }
 
@@ -388,7 +388,7 @@ pub fn show_virtual_keyboard_panel(
                 painter.rect_stroke(
                     key_rect,
                     2.0,
-                    egui::Stroke::new(1.0, egui::Color32::from_rgb(10, 10, 15)),
+                    egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(10, 10, 15)),
                 );
             }
         });

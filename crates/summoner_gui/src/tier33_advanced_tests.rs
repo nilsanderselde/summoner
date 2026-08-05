@@ -9,7 +9,7 @@
 #[cfg(test)]
 mod tests {
     use crate::gpu_waveform::*;
-    use std::path::Path;
+    
     use summoner_project::media_export::*;
     use summoner_project::schema::{ProjectConfig, SequenceConfig, TrackConfig, TrackerStepConfig};
 
@@ -103,7 +103,7 @@ mod tests {
         let vertices = renderer.render_waveform_quads(&samples, 400.0, 200.0);
         assert_eq!(vertices, 1600);
 
-        let mut pyramid = MultiScaleLodPyramid::from_buffer(&samples);
+        let pyramid = MultiScaleLodPyramid::from_buffer(&samples);
         assert_eq!(pyramid.get_level_for_zoom(1.0).len(), 512);
         assert_eq!(pyramid.get_level_for_zoom(0.1).len(), 32);
 

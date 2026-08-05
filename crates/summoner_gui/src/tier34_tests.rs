@@ -14,7 +14,7 @@ mod tests {
         apply_audio_watermark, decrypt_project_aes256, encrypt_project_aes256,
         export_piano_roll_png, export_project_layout_pdf, export_session_notes_pdf,
         export_spectrogram_png, export_stems_video_metadata, export_waveform_png,
-        extract_audio_watermark, resolve_project_toml_conflict, LuaScriptEngine,
+        extract_audio_watermark, resolve_project_toml_conflict,
     };
     use summoner_project::schema::{ProjectConfig, SequenceConfig, TrackConfig, TrackerStepConfig};
 

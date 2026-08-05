@@ -8,10 +8,10 @@ mod tests {
     use std::collections::HashSet;
     use std::sync::Arc;
     use summoner_core::param_bus::ParamBus;
-    use summoner_project::cloud_federated::*;
+    
     use summoner_project::project_tools::*;
     use summoner_project::schema::{
-        AssetConfig, ProjectConfig, SequenceConfig, TrackConfig, TrackerStepConfig,
+        ProjectConfig, SequenceConfig, TrackerStepConfig,
     };
 
     #[test]
@@ -1147,7 +1147,7 @@ params = { freq = 220.0 }"#;
     #[test]
     fn test_step684_parallel_compression_template() {
         use summoner_project::{
-            apply_parallel_compression_template, create_default_project, schema::ProjectConfig,
+            apply_parallel_compression_template, create_default_project,
         };
         let mut project = create_default_project("Parallel Comp Test");
         let initial_count = project.tracks.len();
@@ -1621,7 +1621,7 @@ params = { freq = 220.0 }"#;
         assert!(bug_url.contains("Windows%2011"));
 
         // Step 795-800: Preferences panels
-        let mut pref_state = PreferencesState::default();
+        let pref_state = PreferencesState::default();
         assert_eq!(pref_state.active_category, PreferencesCategory::Audio);
 
         let audio_pref = AudioPreferencesConfig::default();

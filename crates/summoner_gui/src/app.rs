@@ -1558,7 +1558,7 @@ impl eframe::App for SummonerApp {
                         ui.label("Auto-save interval (secs):");
                         ui.add(
                             egui::DragValue::new(&mut self.auto_save_interval_secs)
-                                .clamp_range(10..=3600),
+                                .range(10..=3600),
                         );
                     });
                     if ui.button("📸 Create Snapshot Backup Now").clicked() {

@@ -408,7 +408,7 @@ pub fn show_patch_browser(
         let mut patch_action = None;
 
         egui::ScrollArea::vertical().max_height(250.0).show(ui, |ui| {
-            for (idx, patch) in state.patches.iter_mut().enumerate() {
+            for (_idx, patch) in state.patches.iter_mut().enumerate() {
                 if fav_only && !patch.is_favorite {
                     continue;
                 }

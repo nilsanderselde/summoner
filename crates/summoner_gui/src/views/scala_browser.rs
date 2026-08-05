@@ -294,7 +294,7 @@ pub fn show_custom_scale_builder_panel(
                         ui.add(
                             egui::DragValue::new(&mut builder.cents[i])
                                 .speed(0.1)
-                                .clamp_range(0.0..=2400.0)
+                                .range(0.0..=2400.0)
                                 .suffix("¢"),
                         );
 
@@ -365,7 +365,7 @@ pub fn show_custom_keyboard_visual(ui: &mut egui::Ui, builder: &mut CustomScaleB
         }
 
         painter.rect_filled(key_rect, 2.0, fill);
-        painter.rect_stroke(key_rect, 2.0, egui::Stroke::new(1.0, egui::Color32::BLACK));
+        painter.rect_stroke(key_rect, 2.0, egui::Stroke::new(1.0_f32, egui::Color32::BLACK));
 
         let text_color = if i % 2 == 0 && !is_selected {
             egui::Color32::BLACK
@@ -419,7 +419,7 @@ pub fn show_ji_lattice_view(ui: &mut egui::Ui, state: &mut JiLatticeState) {
                 let next_x = center_x + (m + 1) as f32 * spacing_x;
                 painter.line_segment(
                     [egui::pos2(x, y), egui::pos2(next_x, y)],
-                    egui::Stroke::new(1.0, egui::Color32::from_rgb(60, 90, 130)),
+                    egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(60, 90, 130)),
                 );
             }
 
@@ -427,7 +427,7 @@ pub fn show_ji_lattice_view(ui: &mut egui::Ui, state: &mut JiLatticeState) {
                 let next_y = center_y - (n + 1) as f32 * spacing_y;
                 painter.line_segment(
                     [egui::pos2(x, y), egui::pos2(x, next_y)],
-                    egui::Stroke::new(1.0, egui::Color32::from_rgb(130, 90, 60)),
+                    egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(130, 90, 60)),
                 );
             }
 
@@ -482,7 +482,7 @@ pub fn show_ji_lattice_view(ui: &mut egui::Ui, state: &mut JiLatticeState) {
             painter.circle_stroke(
                 egui::pos2(x, y),
                 node_radius,
-                egui::Stroke::new(1.0, egui::Color32::WHITE),
+                egui::Stroke::new(1.0_f32, egui::Color32::WHITE),
             );
 
             painter.text(
