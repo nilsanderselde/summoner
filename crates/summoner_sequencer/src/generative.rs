@@ -186,9 +186,7 @@ impl GenerativeEngine {
             return Vec::new();
         }
 
-        for i in 0..len {
-            ping[i] = initial[i];
-        }
+        ping[..len].copy_from_slice(&initial[..len]);
 
         let mut use_ping = true;
         for _ in 0..generations {

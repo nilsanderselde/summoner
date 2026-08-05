@@ -295,8 +295,10 @@ impl CloudProjectManager {
 
     pub fn cloud_restore_project(cloud_project_id: &str, _account: &UserAccount) -> Result<ProjectConfig, String> {
         let name = cloud_project_id.strip_prefix("offline-local-").unwrap_or(cloud_project_id);
-        let mut proj = ProjectConfig::default();
-        proj.name = name.to_string();
+        let proj = ProjectConfig {
+            name: name.to_string(),
+            ..Default::default()
+        };
         Ok(proj)
     }
 }

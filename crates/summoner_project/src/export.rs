@@ -1062,8 +1062,10 @@ mod tests {
 
     #[test]
     fn test_export_adm_bwf() {
-        let mut proj = ProjectConfig::default();
-        proj.name = "Spatial Session".to_string();
+        let proj = ProjectConfig {
+            name: "Spatial Session".to_string(),
+            ..Default::default()
+        };
         let adm_bytes = export_adm_bwf(&proj).unwrap();
         assert!(adm_bytes.starts_with(b"RIFF"));
         let adm_str = String::from_utf8_lossy(&adm_bytes);

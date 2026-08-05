@@ -277,7 +277,7 @@ impl CrashDumpAnalyzer {
         }
 
         let mut top_root_causes: Vec<(String, usize)> = cause_counts.into_iter().collect();
-        top_root_causes.sort_by(|a, b| b.1.cmp(&a.1));
+        top_root_causes.sort_by_key(|b| std::cmp::Reverse(b.1));
 
         let mut recommendations = Vec::new();
         if let Some((most_frequent_cause, count)) = top_root_causes.first() {

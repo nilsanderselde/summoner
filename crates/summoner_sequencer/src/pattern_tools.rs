@@ -244,9 +244,7 @@ pub fn import_pattern_from_midi_bytes(bytes: &[u8]) -> Result<SequenceConfig, St
                             };
                         }
                     }
-                } else if (0xA0..=0xDF).contains(&status) {
-                    cursor += 2;
-                } else if (0xE0..=0xEF).contains(&status) {
+                } else if (0xA0..=0xEF).contains(&status) {
                     cursor += 2;
                 }
             }

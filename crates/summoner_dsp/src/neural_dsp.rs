@@ -1179,7 +1179,6 @@ impl NeuralAudioStyleTransferPreviewRenderer {
 // ============================================================================
 
 #[cfg(test)]
-
 mod tests {
     use super::*;
 

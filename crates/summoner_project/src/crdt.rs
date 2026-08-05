@@ -758,10 +758,14 @@ pub struct TemplateMarketplace {
 
 impl TemplateMarketplace {
     pub fn fetch_templates() -> Self {
-        let mut t1 = ProjectConfig::default();
-        t1.name = "Orchestral Score Template".to_string();
-        let mut t2 = ProjectConfig::default();
-        t2.name = "Cyberpunk Synthwave".to_string();
+        let t1 = ProjectConfig {
+            name: "Orchestral Score Template".to_string(),
+            ..Default::default()
+        };
+        let t2 = ProjectConfig {
+            name: "Cyberpunk Synthwave".to_string(),
+            ..Default::default()
+        };
 
         Self {
             templates: vec![

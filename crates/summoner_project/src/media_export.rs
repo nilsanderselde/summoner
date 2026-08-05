@@ -1070,8 +1070,8 @@ pub fn generate_lua_docs(script_code: &str) -> String {
 
     for line in script_code.lines() {
         let trimmed = line.trim();
-        if trimmed.starts_with("---@param") {
-            let parts: Vec<&str> = trimmed["---@param".len()..].split_whitespace().collect();
+        if let Some(param_str) = trimmed.strip_prefix("---@param") {
+            let parts: Vec<&str> = param_str.split_whitespace().collect();
             if parts.len() >= 3 {
                 current_params.push(format!("- **{}** ({}): {}", parts[0], parts[1], parts[2..].join(" ")));
             } else if parts.len() == 2 {
@@ -1079,8 +1079,8 @@ pub fn generate_lua_docs(script_code: &str) -> String {
             } else if !parts.is_empty() {
                 current_params.push(format!("- **{}**", parts[0]));
             }
-        } else if trimmed.starts_with("---@return") {
-            let ret_desc = trimmed["---@return".len()..].trim();
+        } else if let Some(ret_desc) = trimmed.strip_prefix("---@return") {
+            let ret_desc = ret_desc.trim();
             let parts: Vec<&str> = ret_desc.split_whitespace().collect();
             if parts.len() >= 2 {
                 current_returns.push(format!("- Returns ({}): {}", parts[0], parts[1..].join(" ")));
@@ -2277,10 +2277,7 @@ pub fn lua_onnx_infer(model_path: &str, input_tensor: &[f32]) -> Result<Vec<f32>
 
 /// Step 966: Lua feature flag check.
 pub fn lua_has_feature(feature_name: &str) -> bool {
-    match feature_name {
-        "simd" | "gpu" | "onnx" | "lua_dsp" | "gui" | "clap" | "flac" | "git" => true,
-        _ => false,
-    }
+    matches!(feature_name, "simd" | "gpu" | "onnx" | "lua_dsp" | "gui" | "clap" | "flac" | "git")
 }
 
 /// Step 967: Lua platform detection.
@@ -2395,8 +2392,10 @@ pub struct LuaProjectBuilder {
 
 impl LuaProjectBuilder {
     pub fn new(name: &str, bpm: f64) -> Self {
-        let mut config = ProjectConfig::default();
-        config.name = name.to_string();
+        let mut config = ProjectConfig {
+            name: name.to_string(),
+            ..Default::default()
+        };
         config.transport.bpm = bpm;
         Self { config }
     }
