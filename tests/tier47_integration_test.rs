@@ -136,7 +136,7 @@ fn test_tier47_mpe_curve_editor_end_to_end() {
     let mapped_lin = editor.map_expression_value(0.7, ExpressionCurveType::Linear);
     let mapped_exp = editor.map_expression_value(0.7, ExpressionCurveType::Exponential);
     assert!((mapped_lin - 0.7).abs() < 1e-5);
-    assert!(mapped_exp >= 0.0 && mapped_exp <= 1.0);
+    assert!((0.0..=1.0).contains(&mapped_exp));
 }
 
 #[test]
