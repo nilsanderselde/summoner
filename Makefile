@@ -33,14 +33,17 @@ help:
 	@echo "    make vibe-finisher-py      - Run vibe-finisher (Alias for make vibe-finisher)"
 
 ## vibe: Run the streaming Python vibe coding script directly
-vibe:
+vibe: vibe-py
+
 vibe-py:
 	python ./scripts/vibe_runner.py
 
 ## vibe-finisher: Run the streaming Python vibe finisher script directly
-vibe-finisher:
+vibe-finisher: vibe-finisher-py
+
 vibe-finisher-py:
 	python ./scripts/vibe_finisher.py
+
 
 
 ## run: Run the main Summoner DAW binary
