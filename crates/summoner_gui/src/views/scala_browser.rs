@@ -246,7 +246,7 @@ pub fn show_scala_browser(
 pub fn show_custom_scale_builder_panel(
     ui: &mut egui::Ui,
     builder: &mut CustomScaleBuilder,
-    mut selected_track: Option<&mut TrackConfig>,
+    selected_track: Option<&mut TrackConfig>,
     harmonic_ctx: &mut HarmonicContext,
 ) {
     ui.label("Enter cent values per step manually to build microtonal scale tunings.");
@@ -321,7 +321,7 @@ pub fn show_custom_scale_builder_panel(
             degrees: (0..num_steps as u16).collect(),
             divisions: num_steps as u16,
         };
-        apply_scale_to_context(&scale_def, selected_track.as_deref_mut(), harmonic_ctx);
+        apply_scale_to_context(&scale_def, selected_track, harmonic_ctx);
     }
 }
 
@@ -365,7 +365,11 @@ pub fn show_custom_keyboard_visual(ui: &mut egui::Ui, builder: &mut CustomScaleB
         }
 
         painter.rect_filled(key_rect, 2.0, fill);
-        painter.rect_stroke(key_rect, 2.0, egui::Stroke::new(1.0_f32, egui::Color32::BLACK));
+        painter.rect_stroke(
+            key_rect,
+            2.0,
+            egui::Stroke::new(1.0_f32, egui::Color32::BLACK),
+        );
 
         let text_color = if i % 2 == 0 && !is_selected {
             egui::Color32::BLACK
@@ -588,8 +592,10 @@ mod tests {
 
     #[test]
     fn test_custom_scale_builder_cents_to_scale() {
-        let mut builder = CustomScaleBuilder::default();
-        builder.cents = vec![0.0, 200.0, 400.0, 700.0, 900.0, 1200.0];
+        let mut builder = CustomScaleBuilder {
+            cents: vec![0.0, 200.0, 400.0, 700.0, 900.0, 1200.0],
+            ..Default::default()
+        };
 
         assert_eq!(builder.cents.len(), 6);
         builder.add_step();

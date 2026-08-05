@@ -15,8 +15,8 @@
 
 use eframe::egui;
 use summoner_sequencer::midi_tools::{
-    qwerty_key_to_midi_note, transform_velocity,
-    MidiControllerMapping, MidiMappingType, MidiMonitorLog, VelocityCurve,
+    qwerty_key_to_midi_note, transform_velocity, MidiControllerMapping, MidiMappingType,
+    MidiMonitorLog, VelocityCurve,
 };
 
 /// State for the dedicated virtual MIDI keyboard panel and window.
@@ -180,16 +180,12 @@ pub fn show_virtual_keyboard_panel(
             ui.heading("🎹 Dedicated Virtual MIDI Keyboard");
             ui.separator();
             ui.label("Octave:");
-            if ui.button("➖ Oct -").clicked() {
-                if state.base_octave > 0 {
-                    state.base_octave -= 1;
-                }
+            if ui.button("➖ Oct -").clicked() && state.base_octave > 0 {
+                state.base_octave -= 1;
             }
             ui.label(format!("C{}", state.base_octave));
-            if ui.button("➕ Oct +").clicked() {
-                if state.base_octave < 8 {
-                    state.base_octave += 1;
-                }
+            if ui.button("➕ Oct +").clicked() && state.base_octave < 8 {
+                state.base_octave += 1;
             }
             ui.separator();
 

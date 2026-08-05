@@ -146,9 +146,9 @@ pub fn show_oscilloscope(
     let num_samples = samples.len();
     let mut points = Vec::with_capacity(num_samples);
 
-    for i in 0..num_samples {
+    for (i, &sample) in samples.iter().enumerate() {
         let x = rect.left() + (i as f32 / num_samples as f32) * rect.width();
-        let sample = samples[i].clamp(-1.0, 1.0);
+        let sample = sample.clamp(-1.0, 1.0);
         let y = rect.center().y - sample * (rect.height() * 0.45);
         points.push(egui::pos2(x, y));
     }
@@ -228,7 +228,7 @@ pub fn show_phase_scope(
 
     let len = left_buf.len().min(right_buf.len());
     if len > 0 {
-        let inv_sqrt2 = 0.70710678f32;
+        let inv_sqrt2 = std::f32::consts::FRAC_1_SQRT_2;
         for i in 0..len {
             let l = left_buf[i].clamp(-1.0, 1.0);
             let r = right_buf[i].clamp(-1.0, 1.0);

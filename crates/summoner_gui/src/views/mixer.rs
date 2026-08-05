@@ -70,7 +70,7 @@ pub fn show_mixer_impl(
     egui::ScrollArea::horizontal().show(ui, |ui| {
         ui.horizontal(|ui| {
             for track in &mut project.tracks {
-                let is_selected = selected_track_id.map_or(false, |id| id == track.id);
+                let is_selected = selected_track_id.is_some_and(|id| id == track.id);
                 let is_dimmed = any_soloed && !track.soloed;
 
                 let bg_color = if is_selected {
@@ -362,7 +362,7 @@ pub fn show_mixer_impl(
             .collapsible(false)
             .resizable(false)
             .show(ui.ctx(), |ui| {
-                ui.label(format!("Select effect node to insert:"));
+                ui.label("Select effect node to insert:".to_string());
                 let effects = [
                     "BiquadFilter",
                     "DistortionNode",

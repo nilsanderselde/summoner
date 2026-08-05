@@ -9,7 +9,7 @@
 #[cfg(test)]
 mod tests {
     use crate::gpu_waveform::*;
-    
+
     use summoner_project::media_export::*;
     use summoner_project::schema::{ProjectConfig, SequenceConfig, TrackConfig, TrackerStepConfig};
 

@@ -370,9 +370,8 @@ pub fn process_insert_fx_with_position(
             }
         }
         InsertFxPosition::PostFader => {
-            for i in 0..out.len() {
-                out[i] = fx_processed[i];
-            }
+            let len = out.len();
+            out.copy_from_slice(&fx_processed[..len]);
         }
     }
     out
@@ -482,17 +481,9 @@ pub fn export_clip_to_sfz(
 }
 
 /// Step 771: Drum Machine 4x16 pad step grid representation.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct DrumMachineGrid {
     pub grid: [[bool; 16]; 4],
-}
-
-impl Default for DrumMachineGrid {
-    fn default() -> Self {
-        Self {
-            grid: [[false; 16]; 4],
-        }
-    }
 }
 
 impl DrumMachineGrid {
@@ -902,8 +893,10 @@ pub struct ProjectStatistics {
 
 impl ProjectStatistics {
     pub fn compute(project: &summoner_project::schema::ProjectConfig) -> Self {
-        let mut stats = Self::default();
-        stats.total_tracks = project.tracks.len();
+        let mut stats = Self {
+            total_tracks: project.tracks.len(),
+            ..Default::default()
+        };
 
         for track in &project.tracks {
             stats.total_clips += track.all_sequences().len();
@@ -1067,19 +1060,14 @@ pub fn generate_bug_report_url(os_info: &str, app_version: &str) -> String {
 }
 
 /// Step 795: Preferences panel categories.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum PreferencesCategory {
+    #[default]
     Audio,
     Midi,
     Appearance,
     Shortcuts,
     Plugins,
-}
-
-impl Default for PreferencesCategory {
-    fn default() -> Self {
-        Self::Audio
-    }
 }
 
 /// Step 796: Audio preferences config.

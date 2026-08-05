@@ -899,30 +899,32 @@ impl eframe::App for SummonerApp {
         }
 
         // 805. Tab / Shift+Tab: cycle track selection
-        if !wants_kb && !is_ctrl && ctx.input(|i| i.key_pressed(egui::Key::Tab)) {
-            if !self.project.tracks.is_empty() {
-                let current_idx = self
-                    .project
-                    .tracks
-                    .iter()
-                    .position(|t| Some(t.id) == self.selected_track_id)
-                    .unwrap_or(0);
-                let next_idx = if is_shift {
-                    if current_idx == 0 {
-                        self.project.tracks.len() - 1
-                    } else {
-                        current_idx - 1
-                    }
+        if !wants_kb
+            && !is_ctrl
+            && ctx.input(|i| i.key_pressed(egui::Key::Tab))
+            && !self.project.tracks.is_empty()
+        {
+            let current_idx = self
+                .project
+                .tracks
+                .iter()
+                .position(|t| Some(t.id) == self.selected_track_id)
+                .unwrap_or(0);
+            let next_idx = if is_shift {
+                if current_idx == 0 {
+                    self.project.tracks.len() - 1
                 } else {
-                    (current_idx + 1) % self.project.tracks.len()
-                };
-                let new_id = self.project.tracks[next_idx].id;
-                self.selected_track_id = Some(new_id);
-                self.status_message = Some(format!(
-                    "Selected track: {}",
-                    self.project.tracks[next_idx].name
-                ));
-            }
+                    current_idx - 1
+                }
+            } else {
+                (current_idx + 1) % self.project.tracks.len()
+            };
+            let new_id = self.project.tracks[next_idx].id;
+            self.selected_track_id = Some(new_id);
+            self.status_message = Some(format!(
+                "Selected track: {}",
+                self.project.tracks[next_idx].name
+            ));
         }
 
         // 806. Ctrl+0: reset zoom
@@ -1454,7 +1456,7 @@ impl eframe::App for SummonerApp {
         // Scala Scale Browser Modal (Step 360)
         if self.show_scala_browser_modal {
             let mut is_open = self.show_scala_browser_modal;
-            let mut track_copy = self
+            let track_copy = self
                 .selected_track_id
                 .and_then(|tid| self.project.tracks.iter_mut().find(|t| t.id == tid));
             egui::Window::new("📜 Scala Historical Scale Browser")
@@ -1465,7 +1467,7 @@ impl eframe::App for SummonerApp {
                     crate::views::scala_browser::show_scala_browser_with_state(
                         ui,
                         &mut self.scala_browser_state,
-                        track_copy.as_deref_mut(),
+                        track_copy,
                         &mut self.harmonic_context,
                     );
                 });
@@ -2197,7 +2199,7 @@ impl eframe::App for SummonerApp {
 
         // Left Side Panel: Patch Browser (Step 465)
         if self.show_patch_browser {
-            let mut track_copy = self
+            let track_copy = self
                 .selected_track_id
                 .and_then(|tid| self.project.tracks.iter_mut().find(|t| t.id == tid));
             let bus_ref = Arc::clone(&self.param_bus);
@@ -2208,7 +2210,7 @@ impl eframe::App for SummonerApp {
                     crate::views::patch_browser::show_patch_browser(
                         ui,
                         &mut self.patch_browser_state,
-                        track_copy.as_deref_mut(),
+                        track_copy,
                         &bus_ref,
                     );
                 });
@@ -2641,7 +2643,7 @@ mod tests {
         let mut app = SummonerApp::new(project, param_bus);
 
         // Test track operations (steps 801-804)
-        assert!(app.project.tracks.len() >= 1);
+        assert!(!app.project.tracks.is_empty());
         let tid = app.selected_track_id.unwrap();
 
         let track = app.project.tracks.iter_mut().find(|t| t.id == tid).unwrap();

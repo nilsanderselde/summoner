@@ -8,11 +8,9 @@ mod tests {
     use std::collections::HashSet;
     use std::sync::Arc;
     use summoner_core::param_bus::ParamBus;
-    
+
     use summoner_project::project_tools::*;
-    use summoner_project::schema::{
-        ProjectConfig, SequenceConfig, TrackerStepConfig,
-    };
+    use summoner_project::schema::{ProjectConfig, SequenceConfig, TrackerStepConfig};
 
     #[test]
     fn test_step577_step578_tap_tempo() {
@@ -67,31 +65,37 @@ mod tests {
 
     #[test]
     fn test_step581_sequence_config_fades() {
-        let mut seq = SequenceConfig::default();
-        seq.fade_in = 2.0;
-        seq.fade_out = 1.5;
+        let seq = SequenceConfig {
+            fade_in: 2.0,
+            fade_out: 1.5,
+            ..Default::default()
+        };
         assert_eq!(seq.fade_in, 2.0);
         assert_eq!(seq.fade_out, 1.5);
     }
 
     #[test]
     fn test_step584_step585_clip_gain_and_pitch() {
-        let mut seq = SequenceConfig::default();
-        seq.gain = 1.5;
-        seq.pitch_offset = 7.0;
+        let seq = SequenceConfig {
+            gain: 1.5,
+            pitch_offset: 7.0,
+            ..Default::default()
+        };
         assert_eq!(seq.gain, 1.5);
         assert_eq!(seq.pitch_offset, 7.0);
     }
 
     #[test]
     fn test_step586_step587_step588_clip_trim_and_restore() {
-        let mut seq = SequenceConfig::default();
-        seq.trim_start = 1.0;
-        seq.trim_end = 2.0;
-        seq.fade_in = 0.5;
-        seq.fade_out = 0.5;
-        seq.gain = 2.0;
-        seq.pitch_offset = 5.0;
+        let mut seq = SequenceConfig {
+            trim_start: 1.0,
+            trim_end: 2.0,
+            fade_in: 0.5,
+            fade_out: 0.5,
+            gain: 2.0,
+            pitch_offset: 5.0,
+            ..Default::default()
+        };
 
         assert_eq!(seq.trim_start, 1.0);
         assert_eq!(seq.trim_end, 2.0);
@@ -228,7 +232,7 @@ mod tests {
         let bytes = export_pattern_to_midi_bytes(&seq, 128.0);
         assert!(!bytes.is_empty());
         let imported = import_pattern_from_midi_bytes(&bytes).expect("MIDI import should succeed");
-        assert!(imported.steps.len() > 0);
+        assert!(!imported.steps.is_empty());
     }
 
     #[test]
@@ -425,8 +429,8 @@ mod tests {
         // Step 656: Chromatic Tuner pitch detection
         let sr = 44100.0;
         let mut buf = vec![0.0f32; 2048];
-        for i in 0..buf.len() {
-            buf[i] = (2.0 * std::f32::consts::PI * 440.0 * (i as f32) / sr).sin();
+        for (i, sample) in buf.iter_mut().enumerate() {
+            *sample = (2.0 * std::f32::consts::PI * 440.0 * (i as f32) / sr).sin();
         }
         let res = detect_chromatic_pitch(&buf, sr).expect("Detect pitch");
         assert_eq!(res.note_name, "A4");
@@ -759,8 +763,10 @@ mod tests {
         assert!(!diffs.is_empty());
 
         // Step 710 & 711: Search & Sort
-        let mut state_sort = PatchBrowserState::default();
-        state_sort.sort_order = SortOrder::Rating;
+        let mut state_sort = PatchBrowserState {
+            sort_order: SortOrder::Rating,
+            ..Default::default()
+        };
         state_sort.apply_sorting();
         assert!(state_sort.patches[0].rating >= state_sort.patches.last().unwrap().rating);
 
@@ -803,8 +809,10 @@ params = { freq = 220.0 }"#;
         let _ = std::fs::remove_file(&thumb_p);
 
         // Step 720: What's New Dialog
-        let mut state_new = PatchBrowserState::default();
-        state_new.show_whats_new = true;
+        let state_new = PatchBrowserState {
+            show_whats_new: true,
+            ..Default::default()
+        };
         assert!(state_new.show_whats_new);
     }
 
@@ -1043,7 +1051,7 @@ params = { freq = 220.0 }"#;
 
         // Step 754: Parameter Randomizer
         let rand_val = randomize_parameter("cutoff", 20.0, 20000.0, 12345);
-        assert!(rand_val >= 20.0 && rand_val <= 20000.0);
+        assert!((20.0..=20000.0).contains(&rand_val));
 
         // Step 755: Param Unit Display
         assert_eq!(ParamUnit::Hz.format_value(440.0), "440.0 Hz");
@@ -1146,9 +1154,7 @@ params = { freq = 220.0 }"#;
 
     #[test]
     fn test_step684_parallel_compression_template() {
-        use summoner_project::{
-            apply_parallel_compression_template, create_default_project,
-        };
+        use summoner_project::{apply_parallel_compression_template, create_default_project};
         let mut project = create_default_project("Parallel Comp Test");
         let initial_count = project.tracks.len();
         let target_id = project.tracks[0].id;

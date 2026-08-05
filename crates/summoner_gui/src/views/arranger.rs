@@ -62,6 +62,7 @@ impl Default for ArrangerState {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn show_arranger(
     ui: &mut egui::Ui,
     project: &mut ProjectConfig,
@@ -532,7 +533,7 @@ pub fn show_arranger(
         let num_tracks = project.tracks.len();
         for t_idx in 0..num_tracks {
             let track = &mut project.tracks[t_idx];
-            let is_selected = selected_track_id.map_or(false, |id| id == track.id);
+            let is_selected = selected_track_id.is_some_and(|id| id == track.id);
             let is_dimmed = any_soloed && !track.soloed;
             let row_height = if track.collapsed { 22.0 } else { 50.0 };
 

@@ -590,8 +590,8 @@ pub fn show_fm_matrix_display(ui: &mut egui::Ui, matrix: &[[f32; 4]; 4], width: 
     let cell_w = rect.width() / 4.0;
     let cell_h = rect.height() / 4.0;
 
-    for row in 0..4 {
-        for col in 0..4 {
+    for (row, row_vec) in matrix.iter().enumerate().take(4) {
+        for (col, &intensity) in row_vec.iter().enumerate().take(4) {
             let cell_rect = egui::Rect::from_min_size(
                 egui::pos2(
                     rect.left() + col as f32 * cell_w,
@@ -599,7 +599,7 @@ pub fn show_fm_matrix_display(ui: &mut egui::Ui, matrix: &[[f32; 4]; 4], width: 
                 ),
                 egui::vec2(cell_w, cell_h),
             );
-            let intensity = matrix[row][col].clamp(0.0, 1.0);
+            let intensity = intensity.clamp(0.0, 1.0);
             let fill_color =
                 egui::Color32::from_rgba_unmultiplied(26, 140, 255, (intensity * 220.0) as u8);
             ui.painter()

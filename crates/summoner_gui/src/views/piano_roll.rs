@@ -789,10 +789,8 @@ pub fn show_piano_roll(
                                     .fill(btn_color)
                                     .min_size(egui::vec2(step_width - 4.0, 14.0)),
                                 );
-                                if pitch_btn.clicked() {
-                                    if state.step_record {
-                                        state.step_record_head = i;
-                                    }
+                                if pitch_btn.clicked() && state.step_record {
+                                    state.step_record_head = i;
                                 }
                             });
                         })
@@ -862,13 +860,13 @@ pub fn show_piano_roll(
                         .rem_euclid(keys_per_octave as i32))
                         as u16;
                     let is_in_scale =
-                        harmonic_ctx.map_or(true, |hc| hc.scale.degrees.contains(&rel_pc));
+                        harmonic_ctx.is_none_or(|hc| hc.scale.degrees.contains(&rel_pc));
                     let scale_name = harmonic_ctx.map_or("Chromatic", |hc| hc.scale.name.as_str());
 
                     let is_black = if keys_per_octave == 12 {
                         matches!(pitch_class, 1 | 3 | 6 | 8 | 10)
                     } else {
-                        pitch_class % 2 != 0
+                        !pitch_class.is_multiple_of(2)
                     };
 
                     let bg_color = if is_in_scale {

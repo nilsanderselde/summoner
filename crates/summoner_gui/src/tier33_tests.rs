@@ -6,12 +6,10 @@
 #[cfg(test)]
 mod tests {
     use crate::app::{GuiState, SummonerApp};
-    
+
     use std::sync::Arc;
     use summoner_core::param_bus::ParamBus;
-    use summoner_project::schema::{
-        ProjectConfig, ProjectMetadata, SequenceConfig, TrackConfig,
-    };
+    use summoner_project::schema::{ProjectConfig, ProjectMetadata, SequenceConfig, TrackConfig};
 
     #[test]
     fn test_tier33_keyboard_shortcuts_and_window_state() {
@@ -151,14 +149,16 @@ mod tests {
 
     #[test]
     fn test_tier33_project_metadata() {
-        let mut proj = ProjectConfig::default();
-        proj.meta = Some(ProjectMetadata {
-            tags: vec!["ambient".to_string(), "synthwave".to_string()],
-            genre: Some("Electronic".to_string()),
-            bpm: Some(124.0),
-            key: Some("F#m".to_string()),
-            notes: Some("Demo project metadata".to_string()),
-        });
+        let proj = ProjectConfig {
+            meta: Some(ProjectMetadata {
+                tags: vec!["ambient".to_string(), "synthwave".to_string()],
+                genre: Some("Electronic".to_string()),
+                bpm: Some(124.0),
+                key: Some("F#m".to_string()),
+                notes: Some("Demo project metadata".to_string()),
+            }),
+            ..Default::default()
+        };
 
         let toml_str = toml::to_string(&proj).unwrap();
         assert!(toml_str.contains("tags = [\"ambient\", \"synthwave\"]"));

@@ -672,8 +672,10 @@ mod tests {
         graph.nodes.push(Box::new(PassthroughNode));
         graph.nodes.push(Box::new(PassthroughNode));
 
-        let mut state = NodeGraphState::default();
-        state.dragging_edge = Some((0, 0, egui::pos2(0.0, 0.0)));
+        let mut state = NodeGraphState {
+            dragging_edge: Some((0, 0, egui::pos2(0.0, 0.0))),
+            ..Default::default()
+        };
         let mut selected_edge = None;
 
         let ctx = egui::Context::default();

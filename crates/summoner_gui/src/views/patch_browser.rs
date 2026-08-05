@@ -219,11 +219,9 @@ impl PatchBrowserState {
     /// Step 711: Sort preset list by Name, Date, Rating, Downloads
     pub fn apply_sorting(&mut self) {
         match self.sort_order {
-            SortOrder::Name => self
-                .patches
-                .sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase())),
-            SortOrder::Rating => self.patches.sort_by(|a, b| b.rating.cmp(&a.rating)),
-            SortOrder::Downloads => self.patches.sort_by(|a, b| b.downloads.cmp(&a.downloads)),
+            SortOrder::Name => self.patches.sort_by_key(|a| a.name.to_lowercase()),
+            SortOrder::Rating => self.patches.sort_by_key(|b| std::cmp::Reverse(b.rating)),
+            SortOrder::Downloads => self.patches.sort_by_key(|b| std::cmp::Reverse(b.downloads)),
             SortOrder::Date => self.patches.sort_by(|a, b| b.version.cmp(&a.version)),
         }
     }
@@ -408,7 +406,7 @@ pub fn show_patch_browser(
         let mut patch_action = None;
 
         egui::ScrollArea::vertical().max_height(250.0).show(ui, |ui| {
-            for (_idx, patch) in state.patches.iter_mut().enumerate() {
+            for patch in state.patches.iter_mut() {
                 if fav_only && !patch.is_favorite {
                     continue;
                 }
@@ -627,8 +625,10 @@ mod tests {
 
     #[test]
     fn test_patch_browser_sorting() {
-        let mut state = PatchBrowserState::default();
-        state.sort_order = SortOrder::Rating;
+        let mut state = PatchBrowserState {
+            sort_order: SortOrder::Rating,
+            ..Default::default()
+        };
         state.apply_sorting();
         assert!(state.patches[0].rating >= state.patches.last().unwrap().rating);
     }
