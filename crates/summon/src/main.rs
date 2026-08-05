@@ -82,6 +82,21 @@ fn print_usage() {
     println!("  summon-build-pi-img [OUTPUT_DIR] [--target pi5|pizero2w]");
 }
 
+fn resolve_project_file_path<P: AsRef<Path>>(input: P) -> PathBuf {
+    let p = input.as_ref();
+    if p.is_dir() {
+        for name in &["summoner_session.toml", "session.toml", "project.toml"] {
+            let candidate = p.join(name);
+            if candidate.exists() {
+                return candidate;
+            }
+        }
+        p.join("summoner_session.toml")
+    } else {
+        p.to_path_buf()
+    }
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {
@@ -1128,14 +1143,15 @@ fn main() {
                 .get(2)
                 .map(|s| s.as_str())
                 .unwrap_or("summoner_session.toml");
-            println!("Validating project file: '{}'...", path_str);
+            let target_file = resolve_project_file_path(path_str);
+            println!("Validating project file: '{}'...", target_file.display());
             let mut errors = 0;
             let mut warnings = 0;
-            if !Path::new(path_str).exists() {
+            if !target_file.exists() {
                 println!("ERROR: File does not exist.");
                 errors += 1;
             } else {
-                let content = fs::read_to_string(path_str).unwrap_or_default();
+                let content = fs::read_to_string(&target_file).unwrap_or_default();
                 match parse_project_toml(&content) {
                     Ok(proj) => {
                         println!("Schema version: {}", proj.version);
