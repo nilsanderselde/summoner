@@ -293,7 +293,7 @@ fn main() {
             let dag = GitSessionDag::new(project, "summon-cli");
             println!("{}", dag.export_patch());
         }
-        "export-clap" => {
+        "patch-export-clap" | "export-clap" => {
             let path_str = args
                 .get(2)
                 .map(|s| s.as_str())
