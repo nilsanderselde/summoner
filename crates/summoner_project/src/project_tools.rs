@@ -163,10 +163,12 @@ pub fn bounce_track_to_new_track(
     source_track_id: u64,
     rendered_samples: Vec<f32>,
 ) -> Result<u64, String> {
-    let source_name = match project.tracks.iter().find(|t| t.id == source_track_id) {
-        Some(t) => t.name.clone(),
+    let source_track = match project.tracks.iter_mut().find(|t| t.id == source_track_id) {
+        Some(t) => t,
         None => return Err(format!("Track with ID {} not found", source_track_id)),
     };
+    source_track.muted = true;
+    let source_name = source_track.name.clone();
 
     let new_id = project.tracks.iter().map(|t| t.id).max().unwrap_or(0) + 1;
     let bounced_track = TrackConfig {

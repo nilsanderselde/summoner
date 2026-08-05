@@ -1276,6 +1276,7 @@ params = { freq = 220.0 }"#;
         assert!(bounced.name.contains("Bounced"));
         assert!(bounced.is_frozen);
         assert_eq!(bounced.frozen_buffer, Some(rendered));
+        assert!(project.tracks[0].muted);
     }
 
     #[test]
