@@ -13,9 +13,7 @@ use summoner_dsp::meter::{EbuR128LoudnessMeter, PeakHeadroomAnalyzer};
 use summoner_dsp::neural_dsp::{AudioStylePreset, NeuralAudioStyleTransferPreviewRenderer};
 use summoner_dsp::oscillators::{OscWavetable, SimdPolyWavetableOscillator};
 use summoner_dsp::sampler::SampleBuffer;
-use summoner_dsp::stem_separator::{
-    MultiTrackAudioRouter, StemMetadata, StemMetadataParser,
-};
+use summoner_dsp::stem_separator::{MultiTrackAudioRouter, StemMetadata, StemMetadataParser};
 use summoner_dsp::{MultiChannelSpectralEqualizerNode, SignalProcessor};
 use summoner_project::backup::ProjectAutoSaveManager;
 use summoner_project::create_project_from_template;
@@ -108,7 +106,9 @@ fn test_tier47_stems_router_and_metadata_end_to_end() {
     ];
 
     let json = parser.export_json(&metadata);
-    let restored = parser.parse_json(&json).expect("Stem metadata JSON restore");
+    let restored = parser
+        .parse_json(&json)
+        .expect("Stem metadata JSON restore");
     assert_eq!(restored.len(), 2);
 
     let router = MultiTrackAudioRouter::new(2);
@@ -186,7 +186,9 @@ fn test_tier47_auto_save_snapshot_manager_end_to_end() {
     let backups = manager.list_backups().expect("List backups");
     assert_eq!(backups.len(), 1);
 
-    let restored = manager.restore_snapshot(&snapshot).expect("Restore snapshot");
+    let restored = manager
+        .restore_snapshot(&snapshot)
+        .expect("Restore snapshot");
     assert_eq!(restored.name, "Tier47 E2E Session");
 
     let _ = fs::remove_dir_all(&temp_dir);
