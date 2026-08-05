@@ -34,3 +34,4 @@ desktop.ini
 /local/*
 local/
 .summoner_gui_state.toml
+.summoner_dirty.lock
