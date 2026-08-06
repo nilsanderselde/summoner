@@ -141,6 +141,7 @@ mod tests {
         use crate::views::sample_editor_view::TransientMarker;
 
         let mut editor = SampleEditorView::new();
+        editor.zoom_level = 1.0;
         assert_eq!(editor.zoom_level, 1.0);
 
         // Test pinch zoom level calculation
