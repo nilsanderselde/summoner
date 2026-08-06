@@ -9,7 +9,8 @@ use summoner_project::schema::{NodeConfig, PluginStateConfig};
 #[test]
 fn test_tier27_vst3_and_clap_hosting_full_pipeline() {
     // 1. Scan plugin directory
-    let temp_dir = std::env::temp_dir().join("summoner_tier27_test");
+    let temp_dir =
+        std::env::temp_dir().join(format!("summoner_tier27_test_{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&temp_dir);
     std::fs::create_dir_all(&temp_dir).unwrap();
 

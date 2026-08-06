@@ -7,9 +7,9 @@ use summoner_project::serialize_project_toml;
 #[test]
 fn test_export_clap_plugin() {
     let mut temp_dir = env::temp_dir();
-    temp_dir.push("summoner_clap_export_test");
+    temp_dir.push(format!("summoner_clap_export_test_{}", std::process::id()));
     if temp_dir.exists() {
-        fs::remove_dir_all(&temp_dir).unwrap();
+        let _ = fs::remove_dir_all(&temp_dir);
     }
     fs::create_dir_all(&temp_dir).unwrap();
 
@@ -51,5 +51,5 @@ fn test_export_clap_plugin() {
         "Generated CLAP plugin failed cargo check"
     );
 
-    fs::remove_dir_all(&temp_dir).unwrap();
+    let _ = fs::remove_dir_all(&temp_dir);
 }
