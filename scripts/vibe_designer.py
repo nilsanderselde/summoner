@@ -20,7 +20,7 @@ def build_prompt(latest_roadmap):
         f"6. VERIFICATION: If the framework allows, write layout unit tests. Otherwise, explain exactly how a human should visually test the new layout. "
         f"7. FAN-OUT / DELEGATION: You must heavily utilize subagents to fan out your work. Delegate modular tasks (e.g., building isolated widgets, prototyping specific layout components, or writing isolated tests) to subagents concurrently to accelerate the design process. "
         f"Edit the code, verify compile/syntax checks, and commit all changes with a detailed commit message. "
-        f"If all GUI tasks in {latest_roadmap} are complete, do not add unrelated backend features."
+        f"If all tasks in {latest_roadmap} are complete, create a new roadmap file local/ROADMAP_YYYYMMDD_HHMMSS.md containing the next phase of GUI-focused milestones before finishing. Do not add unrelated backend features."
     )
 
 if __name__ == "__main__":

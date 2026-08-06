@@ -16,10 +16,14 @@
 #![allow(clippy::new_without_default)]
 
 pub mod ascii_renderer;
+pub mod docking_layout;
 pub mod gpu_waveform;
+pub mod layout_math;
 pub mod lod;
+pub mod oscilloscope_view;
 pub mod platform;
 pub mod renderer;
+pub mod touch_controls;
 pub mod visualizer;
 pub mod waveform_cache;
 
@@ -29,6 +33,8 @@ pub mod app;
 pub mod command_palette;
 #[cfg(feature = "gui")]
 pub mod param_controls;
+#[cfg(feature = "gui")]
+pub mod patch_matrix;
 #[cfg(feature = "gui")]
 pub mod stage_view;
 #[cfg(feature = "gui")]
@@ -54,7 +60,11 @@ pub mod tier45_tests;
 pub mod tier46_tests;
 pub mod tier47_tests;
 #[cfg(feature = "gui")]
+pub mod tier48_tests;
+#[cfg(feature = "gui")]
 pub mod touch_gestures;
+#[cfg(feature = "gui")]
+pub mod transport_bar;
 #[cfg(feature = "gui")]
 pub mod views;
 

@@ -235,6 +235,16 @@ pub struct SummonerApp {
     pub show_style_transfer_modal: bool,
     pub spectral_eq: summoner_dsp::MultiChannelSpectralEqualizerNode,
     pub show_spectral_eq_modal: bool,
+    // Tier 48 fields (Steps 1281-1300)
+    pub docking_manager: crate::docking_layout::DockingLayoutManager,
+    pub show_docking_layout_modal: bool,
+    pub patch_matrix: crate::patch_matrix::PatchMatrixView,
+    pub show_patch_matrix_modal: bool,
+    pub oscilloscope_view: crate::oscilloscope_view::OscilloscopeView,
+    pub show_oscilloscope_modal: bool,
+    pub transport_bar: crate::transport_bar::TransportBarView,
+    pub show_transport_bar: bool,
+    pub show_touch_controls_modal: bool,
 }
 
 impl SummonerApp {
@@ -356,6 +366,15 @@ impl SummonerApp {
             show_style_transfer_modal: false,
             spectral_eq: summoner_dsp::MultiChannelSpectralEqualizerNode::new(sample_rate, 2, 8),
             show_spectral_eq_modal: false,
+            docking_manager: crate::docking_layout::DockingLayoutManager::new(),
+            show_docking_layout_modal: false,
+            patch_matrix: crate::patch_matrix::PatchMatrixView::new(),
+            show_patch_matrix_modal: false,
+            oscilloscope_view: crate::oscilloscope_view::OscilloscopeView::new(),
+            show_oscilloscope_modal: false,
+            transport_bar: crate::transport_bar::TransportBarView::new(),
+            show_transport_bar: true,
+            show_touch_controls_modal: false,
         };
 
         if let Some(state) = GuiState::load() {

@@ -225,6 +225,36 @@ impl CommandPalette {
                 action_id: "open_spectral_eq".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Docking Grid Layout Manager".into(),
+                category: "GUI".into(),
+                action_id: "open_docking_layout".into(),
+                shortcut_hint: Some("Ctrl+D".into()),
+            },
+            CommandAction {
+                label: "Open Modular Synth Patch Matrix".into(),
+                category: "GUI".into(),
+                action_id: "open_patch_matrix".into(),
+                shortcut_hint: Some("Ctrl+M".into()),
+            },
+            CommandAction {
+                label: "Open High-DPI Multi-Track Oscilloscope".into(),
+                category: "GUI".into(),
+                action_id: "open_oscilloscope".into(),
+                shortcut_hint: Some("Ctrl+O".into()),
+            },
+            CommandAction {
+                label: "Toggle DAW Transport Header Bar".into(),
+                category: "GUI".into(),
+                action_id: "toggle_transport_bar".into(),
+                shortcut_hint: Some("Ctrl+H".into()),
+            },
+            CommandAction {
+                label: "Open Touch Control & Slider Rack".into(),
+                category: "GUI".into(),
+                action_id: "open_touch_controls".into(),
+                shortcut_hint: Some("Ctrl+K".into()),
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES
