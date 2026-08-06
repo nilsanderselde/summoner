@@ -66,9 +66,29 @@ build:
 release:
 	cargo build --workspace --release
 
+## build-gui: Build workspace with GUI feature enabled
+build-gui:
+	cargo build --workspace --features gui
+
+## build-gui-release: Build release workspace with GUI feature enabled
+build-gui-release:
+	cargo build --workspace --features gui --release
+
+## build-gui-windows: Cross-compile/Build GUI release binary for Windows
+build-gui-windows:
+	cargo build --workspace --features gui --release --target x86_64-pc-windows-msvc
+
+## build-gui-linux: Cross-compile/Build GUI release binary for Linux (Debian/Arch)
+build-gui-linux:
+	cargo build --workspace --features gui --release --target x86_64-unknown-linux-gnu
+
+## build-gui-macos: Cross-compile/Build GUI release binary for macOS
+build-gui-macos:
+	cargo build --workspace --features gui --release --target x86_64-apple-darwin
+
 ## test: Run all tests in the workspace
 test:
-	cargo test --workspace
+	cargo test --workspace --features gui
 
 ## check: Check compilation without producing binaries
 check:

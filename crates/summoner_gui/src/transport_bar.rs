@@ -47,6 +47,12 @@ impl TimeSignature {
     }
 }
 
+impl std::fmt::Display for TimeSignature {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.display_name())
+    }
+}
+
 /// GUI visual themes for theme switching.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum SelectedTheme {
@@ -76,6 +82,7 @@ pub struct TransportBarView {
     pub time_signature: TimeSignature,
 
     pub tap_timestamps: Vec<Instant>,
+    pub last_tap_ms: Option<f32>,
 
     pub master_volume_db: f32,
     pub master_peak_l: f32,
@@ -99,6 +106,7 @@ impl Default for TransportBarView {
             bpm: 120.0,
             time_signature: TimeSignature::FourFour,
             tap_timestamps: Vec::new(),
+            last_tap_ms: None,
             master_volume_db: 0.0,
             master_peak_l: 0.0,
             master_peak_r: 0.0,
@@ -163,12 +171,28 @@ impl TransportBarView {
         }
     }
 
-    /// Calculate BPM directly from interval in milliseconds (useful for testing or MIDI clock sync).
+    /// Calculate BPM directly from interval or timestamp in milliseconds (useful for testing or MIDI clock sync).
     pub fn tap_tempo_with_interval_ms(&mut self, interval_ms: f32) {
         if interval_ms > 50.0 {
             let calculated_bpm = 60000.0 / interval_ms;
             self.set_bpm(calculated_bpm);
         }
+    }
+
+    /// Alias method for tap tempo with timestamp or delta.
+    pub fn tap_bpm(&mut self, timestamp_ms: f32) {
+        if let Some(last_ms) = self.last_tap_ms {
+            let delta = timestamp_ms - last_ms;
+            if delta > 50.0 {
+                self.tap_tempo_with_interval_ms(delta);
+            } else if timestamp_ms > 50.0 {
+                self.tap_tempo_with_interval_ms(timestamp_ms);
+            }
+        } else if timestamp_ms > 50.0 {
+            self.tap_tempo_with_interval_ms(timestamp_ms);
+        }
+        self.last_tap_ms = Some(timestamp_ms);
+        self.tap_timestamps.push(Instant::now());
     }
 
     /// Get platform-aware system toolbar padding / margin bounds.

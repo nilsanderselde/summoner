@@ -366,7 +366,7 @@ impl SummonerApp {
             show_style_transfer_modal: false,
             spectral_eq: summoner_dsp::MultiChannelSpectralEqualizerNode::new(sample_rate, 2, 8),
             show_spectral_eq_modal: false,
-            docking_manager: crate::docking_layout::DockingLayoutManager::new(),
+            docking_manager: crate::docking_layout::DockingLayoutManager::default(),
             show_docking_layout_modal: false,
             patch_matrix: crate::patch_matrix::PatchMatrixView::new(),
             show_patch_matrix_modal: false,

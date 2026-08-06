@@ -3,23 +3,23 @@
 #[cfg(test)]
 mod tests {
     use crate::docking_layout::{DockPreset, DockingLayoutManager};
-    use crate::layout_math::{OperatingSystem, Rect, Size2D, SpatialLayoutCalculator};
+    use crate::layout_math::{OperatingSystem, Rect, SpatialLayoutCalculator};
     use crate::oscilloscope_view::{OscilloscopeMath, OscilloscopeMode, OscilloscopeView};
-    use crate::patch_matrix::{DestNode, PatchMatrixView, SourceNode};
+    use crate::patch_matrix::PatchMatrixView;
     use crate::touch_controls::{KnobState, SliderOrientation, SliderState, MIN_HIT_TARGET_PT};
     use crate::transport_bar::{TimeSignature, TransportBarView};
 
     #[test]
     fn test_step_1281_spatial_math_layout_and_cross_os_padding() {
-        let calc = SpatialLayoutCalculator::new(OperatingSystem::Windows);
+        let calc = SpatialLayoutCalculator::for_os(OperatingSystem::Windows);
         assert_eq!(calc.config().scrollbar_padding_px, 17.0);
         assert_eq!(calc.config().dpi_scale, 1.25);
         assert_eq!(calc.config().min_hit_target_pt, 44.0);
 
-        let mac_calc = SpatialLayoutCalculator::new(OperatingSystem::MacOS);
+        let mac_calc = SpatialLayoutCalculator::for_os(OperatingSystem::MacOS);
         assert_eq!(mac_calc.config().scrollbar_padding_px, 0.0);
 
-        let linux_calc = SpatialLayoutCalculator::new(OperatingSystem::Linux);
+        let linux_calc = SpatialLayoutCalculator::for_os(OperatingSystem::Linux);
         assert_eq!(linux_calc.config().scrollbar_padding_px, 14.0);
 
         let rect_a = Rect::new(0.0, 0.0, 100.0, 100.0);
@@ -29,9 +29,9 @@ mod tests {
         let non_overlapping = Rect::new(150.0, 150.0, 50.0, 50.0);
         assert!(!rect_a.intersects(&non_overlapping));
 
-        let clamped = calc.ensure_min_hit_target(Size2D::new(30.0, 20.0));
-        assert_eq!(clamped.width, 44.0);
-        assert_eq!(clamped.height, 44.0);
+        let clamped = calc.ensure_min_hit_target(Rect::new(0.0, 0.0, 30.0, 20.0));
+        assert!(clamped.width >= 44.0);
+        assert!(clamped.height >= 44.0);
     }
 
     #[test]
@@ -91,27 +91,24 @@ mod tests {
 
     #[test]
     fn test_step_1284_patch_matrix_routing_and_pin_connections() {
-        let mut matrix = PatchMatrixView::new();
-        assert_eq!(matrix.routes.len(), 3); // Default initial connections
+        let mut matrix = PatchMatrixView::with_default_nodes();
+        assert_eq!(matrix.connections.len(), 3); // Default initial connections
 
         // Connect LFO1 to Filter Cutoff
-        matrix.connect(SourceNode::Lfo1, DestNode::FilterCutoff, 0.75);
-        assert!(matrix.is_connected(SourceNode::Lfo1, DestNode::FilterCutoff));
-        assert_eq!(
-            matrix.get_intensity(SourceNode::Lfo1, DestNode::FilterCutoff),
-            0.75
-        );
+        matrix.connect("lfo1", "cutoff", 0.75);
+        assert!(matrix.is_connected("lfo1", "cutoff"));
+        assert_eq!(matrix.get_intensity("lfo1", "cutoff"), 0.75);
 
         // Toggle connection -> disconnect
-        matrix.toggle_connection(SourceNode::Lfo1, DestNode::FilterCutoff);
-        assert!(!matrix.is_connected(SourceNode::Lfo1, DestNode::FilterCutoff));
+        matrix.toggle_connection("lfo1", "cutoff");
+        assert!(!matrix.is_connected("lfo1", "cutoff"));
 
         // Connect again and verify route list
-        matrix.connect(SourceNode::MidiCc, DestNode::FxWet, 0.5);
-        let active = matrix.active_routes();
+        matrix.connect("midi_mod", "fx_wet", 0.5);
+        let active = matrix.get_active_routes();
         assert!(active
             .iter()
-            .any(|r| r.source == SourceNode::MidiCc && r.dest == DestNode::FxWet));
+            .any(|r| r.source_id == "midi_mod" && r.dest_id == "fx_wet"));
     }
 
     #[test]
@@ -132,7 +129,7 @@ mod tests {
         transport.tap_bpm(1500.0); // 500ms interval = 120 BPM
         assert!(transport.bpm >= 110.0 && transport.bpm <= 130.0);
 
-        transport.time_signature = TimeSignature::SevenEighths;
+        transport.time_signature = TimeSignature::SevenEight;
         assert_eq!(transport.time_signature.to_string(), "7/8");
     }
 

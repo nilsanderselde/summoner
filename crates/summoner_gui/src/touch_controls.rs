@@ -221,9 +221,14 @@ impl KnobState {
             self.sensitivity
         };
         let range = self.max - self.min;
-        let delta_val = -delta_y * sensitivity * range;
-        self.value += delta_val;
+        let change = -delta_y * sensitivity * range;
+        self.value += change;
         self.clamp_value();
+    }
+
+    /// Alias method for drag_update.
+    pub fn update_from_drag_delta(&mut self, delta_y: f32, fine_control: bool) {
+        self.drag_update(delta_y, fine_control);
     }
 }
 

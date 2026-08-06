@@ -301,6 +301,10 @@ impl SpatialLayoutCalculator {
         Self { config }
     }
 
+    pub fn for_os(os: OperatingSystem) -> Self {
+        Self::new(PlatformStyleConfig::for_os(os))
+    }
+
     pub fn config(&self) -> &PlatformStyleConfig {
         &self.config
     }

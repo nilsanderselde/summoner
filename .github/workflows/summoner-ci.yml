@@ -1,0 +1,77 @@
+name: Summoner CI
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+  schedule:
+    - cron: '0 2 * * *'
+
+jobs:
+  test:
+    name: Build & Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Install Linux GUI Dependencies (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libx11-dev libxcb1-dev libxcursor-dev libxrandr-dev libxi-dev libasound2-dev libudev-dev pkg-config
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check Formatting
+        run: cargo fmt --check
+
+      - name: Run Clippy
+        run: cargo clippy --workspace --all-targets --features gui -- -D warnings
+
+      - name: Build GUI Release Workspace
+        run: cargo build --workspace --features gui --release
+
+      - name: Run Tests
+        run: cargo test --workspace --all-targets --features gui
+
+  cargo-deny:
+    name: Cargo Deny License & Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Run Cargo Deny Check
+        uses: EmbarkStudios/cargo-deny-action@v1
+        with:
+          command: check
+
+  packaging-artifacts:
+    name: Platform Packaging Verification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Verify Installer Scripts and Manifests Exist
+        run: |
+          test -f packaging/windows/installer.nsi
+          test -f packaging/macos/create_dmg.sh
+          test -f packaging/linux/build_appimage.sh
+          test -f packaging/linux/debian/control
+          test -f packaging/flatpak/org.summoner.SummonerDAW.yml
+          test -f packaging/homebrew/summoner.rb
+          test -f packaging/winget/manifests/s/SummonerDAW/Summoner/1.0.0/SummonerDAW.Summoner.yaml
+          echo "All platform packaging scripts and manifests validated."

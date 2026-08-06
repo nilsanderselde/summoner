@@ -18,6 +18,7 @@
 pub mod ascii_renderer;
 pub mod docking_layout;
 pub mod gpu_waveform;
+pub mod hud_overlay;
 pub mod layout_math;
 pub mod lod;
 pub mod oscilloscope_view;
@@ -62,11 +63,20 @@ pub mod tier47_tests;
 #[cfg(feature = "gui")]
 pub mod tier48_tests;
 #[cfg(feature = "gui")]
+pub mod tier49_tests;
+#[cfg(feature = "gui")]
 pub mod touch_gestures;
 #[cfg(feature = "gui")]
 pub mod transport_bar;
 #[cfg(feature = "gui")]
 pub mod views;
+
+#[cfg(feature = "gui")]
+pub use views::sample_editor_view;
+#[cfg(feature = "gui")]
+pub use views::sample_editor_view::SampleEditorView;
+#[cfg(feature = "gui")]
+pub use views::spatial_panner_view::SpatialPannerView;
 
 #[cfg(feature = "gui")]
 pub fn launch(
