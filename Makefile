@@ -12,6 +12,7 @@ help:
 	@echo "  Vibe Coding Autonomous Runners:"
 	@echo "    make vibe                  - Run vibe-coding autonomous loop (Python stream: scripts/vibe_runner.py)"
 	@echo "    make vibe-finisher         - Run vibe-finisher autonomous loop (Python stream: scripts/vibe_finisher.py)"
+	@echo "    make vibe-designer         - Run vibe-designer autonomous loop (Python stream: scripts/vibe_designer.py)"
 	@echo ""
 	@echo "  Cargo & Rust Operations:"
 	@echo "    make run         - Run main Summoner application (cargo run -p summon)"
@@ -31,6 +32,7 @@ help:
 	@echo "  Deprecated/Alias Targets (Will be removed):"
 	@echo "    make vibe-py               - Run vibe-coding (Alias for make vibe)"
 	@echo "    make vibe-finisher-py      - Run vibe-finisher (Alias for make vibe-finisher)"
+	@echo "    make vibe-designer-py      - Run vibe-designer (Alias for make vibe-designer)"
 
 ## vibe: Run the streaming Python vibe coding script directly
 vibe: vibe-py
@@ -43,6 +45,12 @@ vibe-finisher: vibe-finisher-py
 
 vibe-finisher-py:
 	python ./scripts/vibe_finisher.py
+
+## vibe-designer: Run the streaming Python vibe GUI designer script directly
+vibe-designer: vibe-designer-py
+
+vibe-designer-py:
+	python ./scripts/vibe_designer.py
 
 
 
