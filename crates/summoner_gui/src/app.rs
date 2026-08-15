@@ -245,6 +245,26 @@ pub struct SummonerApp {
     pub transport_bar: crate::transport_bar::TransportBarView,
     pub show_transport_bar: bool,
     pub show_touch_controls_modal: bool,
+    // Tier 49 fields (Steps 1301-1310)
+    pub spatial_panner: crate::views::spatial_panner_view::SpatialPannerView,
+    pub show_spatial_panner_modal: bool,
+    pub sample_editor: crate::views::sample_editor_view::SampleEditorView,
+    pub show_sample_editor_modal: bool,
+    pub theme_customizer: crate::views::theme_customizer::ThemeCustomizerView,
+    pub show_theme_customizer_modal: bool,
+    pub hud_overlay: crate::hud_overlay::HudOverlayView,
+    pub show_hud_overlay: bool,
+    // Tier 50 fields (Steps 1321-1330)
+    pub live_macro_rack: crate::views::live_macro_rack::LiveMacroRackView,
+    pub show_live_macro_rack_modal: bool,
+    pub spectrogram_3d: crate::views::spectrogram_3d_view::Spectrogram3DView,
+    pub show_spectrogram_3d_modal: bool,
+    pub keybinding_editor: crate::views::keybinding_editor::KeybindingEditorView,
+    pub show_keybinding_editor_modal: bool,
+    pub meter_bridge: crate::views::meter_bridge_view::MeterBridgeView,
+    pub show_meter_bridge_modal: bool,
+    pub dpi_scale_panel: crate::views::dpi_scale_panel::DpiScalePanelView,
+    pub show_dpi_scale_panel_modal: bool,
 }
 
 impl SummonerApp {
@@ -375,6 +395,32 @@ impl SummonerApp {
             transport_bar: crate::transport_bar::TransportBarView::new(),
             show_transport_bar: true,
             show_touch_controls_modal: false,
+            // Tier 49 (Steps 1301-1310)
+            spatial_panner: crate::views::spatial_panner_view::SpatialPannerView::new(
+                summoner_core::audio::ChannelLayout::Surround7_1_4,
+            ),
+            show_spatial_panner_modal: false,
+            sample_editor: crate::views::sample_editor_view::SampleEditorView::new(),
+            show_sample_editor_modal: false,
+            theme_customizer: crate::views::theme_customizer::ThemeCustomizerView::new(),
+            show_theme_customizer_modal: false,
+            hud_overlay: crate::hud_overlay::HudOverlayView::new(),
+            show_hud_overlay: false,
+            // Tier 50 (Steps 1321-1330)
+            live_macro_rack: crate::views::live_macro_rack::LiveMacroRackView::new(),
+            show_live_macro_rack_modal: false,
+            spectrogram_3d: crate::views::spectrogram_3d_view::Spectrogram3DView::new(),
+            show_spectrogram_3d_modal: false,
+            keybinding_editor: crate::views::keybinding_editor::KeybindingEditorView::new(
+                crate::layout_math::OperatingSystem::current(),
+            ),
+            show_keybinding_editor_modal: false,
+            meter_bridge: crate::views::meter_bridge_view::MeterBridgeView::new(),
+            show_meter_bridge_modal: false,
+            dpi_scale_panel: crate::views::dpi_scale_panel::DpiScalePanelView::new(
+                crate::layout_math::OperatingSystem::current(),
+            ),
+            show_dpi_scale_panel_modal: false,
         };
 
         if let Some(state) = GuiState::load() {
@@ -1222,6 +1268,15 @@ impl eframe::App for SummonerApp {
                 "open_backup_manager" => self.show_backup_manager_modal = true,
                 "open_style_transfer" => self.show_style_transfer_modal = true,
                 "open_spectral_eq" => self.show_spectral_eq_modal = true,
+                "open_spatial_panner" => self.show_spatial_panner_modal = true,
+                "open_sample_editor" => self.show_sample_editor_modal = true,
+                "open_theme_customizer" => self.show_theme_customizer_modal = true,
+                "toggle_hud_overlay" => self.show_hud_overlay = !self.show_hud_overlay,
+                "open_live_macro_rack" => self.show_live_macro_rack_modal = true,
+                "open_spectrogram_3d" => self.show_spectrogram_3d_modal = true,
+                "open_keybinding_editor" => self.show_keybinding_editor_modal = true,
+                "open_meter_bridge" => self.show_meter_bridge_modal = true,
+                "open_dpi_scale_panel" => self.show_dpi_scale_panel_modal = true,
                 "sfz_convert" | "auto_slice" | "load_preset" | "export_clap" | "toggle_simd" => {
                     println!("Command palette action executed: {}", action);
                 }
@@ -1386,6 +1441,34 @@ impl eframe::App for SummonerApp {
                     }
                     if ui.button("📊 Peak Headroom & Loudness Meter").clicked() {
                         self.show_loudness_meter_panel = !self.show_loudness_meter_panel;
+                        ui.close_menu();
+                    }
+                    if ui.button("🎧 3D Spatial Audio Panner...").clicked() {
+                        self.show_spatial_panner_modal = true;
+                        ui.close_menu();
+                    }
+                    if ui.button("✂ Sample Editor & Transient Slicer...").clicked() {
+                        self.show_sample_editor_modal = true;
+                        ui.close_menu();
+                    }
+                    if ui.button("🎛 Live Performance Macro Rack...").clicked() {
+                        self.show_live_macro_rack_modal = true;
+                        ui.close_menu();
+                    }
+                    if ui.button("🌊 3D Waterfall Spectrogram...").clicked() {
+                        self.show_spectrogram_3d_modal = true;
+                        ui.close_menu();
+                    }
+                    if ui.button("📊 Multi-Track Meter Bridge...").clicked() {
+                        self.show_meter_bridge_modal = true;
+                        ui.close_menu();
+                    }
+                    if ui.button("🖥 High-DPI Scaling Panel...").clicked() {
+                        self.show_dpi_scale_panel_modal = true;
+                        ui.close_menu();
+                    }
+                    if ui.button("⌨ Keyboard Shortcuts Editor...").clicked() {
+                        self.show_keybinding_editor_modal = true;
                         ui.close_menu();
                     }
                     ui.checkbox(&mut self.show_patch_browser, "🎛 Patch Browser (Ctrl+B)");
@@ -1722,6 +1805,97 @@ impl eframe::App for SummonerApp {
                     });
                 });
             self.show_spectral_eq_modal = is_open;
+        }
+
+        // 3D Spatial Audio Panner Canvas Modal (Step 1301)
+        if self.show_spatial_panner_modal {
+            let mut is_open = self.show_spatial_panner_modal;
+            egui::Window::new("🎧 3D Spatial Audio Panner Canvas")
+                .open(&mut is_open)
+                .resizable(true)
+                .default_size([520.0, 480.0])
+                .show(ctx, |ui| {
+                    self.spatial_panner.show(ui);
+                });
+            self.show_spatial_panner_modal = is_open;
+        }
+
+        // Sample Editor & Transient Slicer Modal (Step 1302)
+        if self.show_sample_editor_modal {
+            let mut is_open = self.show_sample_editor_modal;
+            egui::Window::new("✂ Sample Editor & Transient Slicer")
+                .open(&mut is_open)
+                .resizable(true)
+                .default_size([600.0, 400.0])
+                .show(ctx, |ui| {
+                    self.sample_editor.show(ui);
+                });
+            self.show_sample_editor_modal = is_open;
+        }
+
+        // Live Performance Macro Rack Modal (Step 1321)
+        if self.show_live_macro_rack_modal {
+            let mut is_open = self.show_live_macro_rack_modal;
+            egui::Window::new("🎛 Live Performance Macro Rack")
+                .open(&mut is_open)
+                .resizable(true)
+                .default_size([720.0, 480.0])
+                .show(ctx, |ui| {
+                    self.live_macro_rack.show(ui);
+                });
+            self.show_live_macro_rack_modal = is_open;
+        }
+
+        // 3D FFT Waterfall Spectrogram Modal (Step 1322)
+        if self.show_spectrogram_3d_modal {
+            let mut is_open = self.show_spectrogram_3d_modal;
+            egui::Window::new("🌊 3D FFT Waterfall Spectrogram")
+                .open(&mut is_open)
+                .resizable(true)
+                .default_size([680.0, 440.0])
+                .show(ctx, |ui| {
+                    self.spectrogram_3d.show(ui);
+                });
+            self.show_spectrogram_3d_modal = is_open;
+        }
+
+        // Keybinding Editor Modal (Step 1323)
+        if self.show_keybinding_editor_modal {
+            let mut is_open = self.show_keybinding_editor_modal;
+            egui::Window::new("⌨ DAW Shortcuts & Keybinding Editor")
+                .open(&mut is_open)
+                .resizable(true)
+                .default_size([700.0, 460.0])
+                .show(ctx, |ui| {
+                    self.keybinding_editor.show(ui);
+                });
+            self.show_keybinding_editor_modal = is_open;
+        }
+
+        // Multi-Track Peak Meter Bridge Modal (Step 1324)
+        if self.show_meter_bridge_modal {
+            let mut is_open = self.show_meter_bridge_modal;
+            egui::Window::new("📊 Multi-Track Peak Metering Bridge")
+                .open(&mut is_open)
+                .resizable(true)
+                .default_size([640.0, 420.0])
+                .show(ctx, |ui| {
+                    self.meter_bridge.show(ui);
+                });
+            self.show_meter_bridge_modal = is_open;
+        }
+
+        // High-DPI Display Scaling Panel Modal (Step 1325)
+        if self.show_dpi_scale_panel_modal {
+            let mut is_open = self.show_dpi_scale_panel_modal;
+            egui::Window::new("🖥 High-DPI Display Scaling & Calibration")
+                .open(&mut is_open)
+                .resizable(true)
+                .default_size([600.0, 400.0])
+                .show(ctx, |ui| {
+                    self.dpi_scale_panel.show(ui);
+                });
+            self.show_dpi_scale_panel_modal = is_open;
         }
 
         // Keyboard Shortcuts searchable modal (step 312)

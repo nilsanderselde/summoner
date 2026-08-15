@@ -255,6 +255,62 @@ impl CommandPalette {
                 action_id: "open_touch_controls".into(),
                 shortcut_hint: Some("Ctrl+K".into()),
             },
+            // Tier 49 Actions (Steps 1301-1305)
+            CommandAction {
+                label: "Open 3D Spatial Audio Panner Canvas".into(),
+                category: "GUI".into(),
+                action_id: "open_spatial_panner".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Sample Editor & Transient Slicer".into(),
+                category: "GUI".into(),
+                action_id: "open_sample_editor".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Theme Customizer & Contrast Preview".into(),
+                category: "GUI".into(),
+                action_id: "open_theme_customizer".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Toggle Performance HUD Telemetry Overlay".into(),
+                category: "GUI".into(),
+                action_id: "toggle_hud_overlay".into(),
+                shortcut_hint: None,
+            },
+            // Tier 50 Actions (Steps 1321-1325)
+            CommandAction {
+                label: "Open Touch-Optimized Live Performance Macro Rack".into(),
+                category: "GUI".into(),
+                action_id: "open_live_macro_rack".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Real-Time 3D FFT Waterfall Spectrogram".into(),
+                category: "GUI".into(),
+                action_id: "open_spectrogram_3d".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Keyboard Shortcuts & Keybinding Editor".into(),
+                category: "GUI".into(),
+                action_id: "open_keybinding_editor".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Multi-Track Peak Metering Bridge Panel".into(),
+                category: "GUI".into(),
+                action_id: "open_meter_bridge".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open High-DPI Display Scaling & Calibration".into(),
+                category: "GUI".into(),
+                action_id: "open_dpi_scale_panel".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

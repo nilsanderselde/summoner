@@ -35,3 +35,5 @@ desktop.ini
 local/
 .summoner_gui_state.toml
 .summoner_dirty.lock
+CODE_OF_CONDUCT.md
+GOVERNANCE.md

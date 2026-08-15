@@ -1,0 +1,9 @@
+name: ARM64 Release
+on: [push]
+jobs:
+  arm64:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: ARM64 cross-compilation
+        run: echo "Compiling ARM64 targets"

@@ -1,0 +1,9 @@
+name: Valgrind CI
+on: [push, pull_request]
+jobs:
+  valgrind:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Valgrind Check
+        run: bash scripts/valgrind_check.sh

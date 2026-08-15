@@ -65,6 +65,10 @@ pub mod tier48_tests;
 #[cfg(feature = "gui")]
 pub mod tier49_tests;
 #[cfg(feature = "gui")]
+pub mod tier50_tests;
+#[cfg(feature = "gui")]
+pub mod tier51_tests;
+#[cfg(feature = "gui")]
 pub mod touch_gestures;
 #[cfg(feature = "gui")]
 pub mod transport_bar;
@@ -72,11 +76,31 @@ pub mod transport_bar;
 pub mod views;
 
 #[cfg(feature = "gui")]
+pub use views::accessibility_announcer::AccessibilityAnnouncerView;
+#[cfg(feature = "gui")]
+pub use views::detachable_window_manager::DetachableWindowManagerView;
+#[cfg(feature = "gui")]
+pub use views::dpi_scale_panel::DpiScalePanelView;
+#[cfg(feature = "gui")]
+pub use views::dsp_rack_dock::DspRackDockView;
+#[cfg(feature = "gui")]
+pub use views::harmonic_tension_map::HarmonicTensionMapView;
+#[cfg(feature = "gui")]
+pub use views::keybinding_editor::KeybindingEditorView;
+#[cfg(feature = "gui")]
+pub use views::live_macro_rack::LiveMacroRackView;
+#[cfg(feature = "gui")]
+pub use views::macro_rotary_dial::MacroRotaryDialView;
+#[cfg(feature = "gui")]
+pub use views::meter_bridge_view::MeterBridgeView;
+#[cfg(feature = "gui")]
 pub use views::sample_editor_view;
 #[cfg(feature = "gui")]
 pub use views::sample_editor_view::SampleEditorView;
 #[cfg(feature = "gui")]
 pub use views::spatial_panner_view::SpatialPannerView;
+#[cfg(feature = "gui")]
+pub use views::spectrogram_3d_view::Spectrogram3DView;
 
 #[cfg(feature = "gui")]
 pub fn launch(
