@@ -10,6 +10,7 @@ from vibe_core import run_vibe_loop
 def build_prompt(latest_roadmap):
     return (
         f"Identify and read the latest roadmap file in local/ ({latest_roadmap}) as authoritative. "
+        f"Additionally, you MUST read the GUI architectural rules defined in local/rules/GUI_RULES.md (routed from local/DESIGN.md) to ensure compliance with the project's vector UI and component standards. "
         f"Your SOLE purpose is GUI DESIGN, UI layout, and UX behavior for the next logical GUI step. "
         f"To overcome the AI obstacle of 'visualizing' the final result, you MUST employ a Vision Agent approach and adhere to the following rules: "
         f"1. MENTAL & VISUAL WIREFRAMING: Before writing code, draw a spatial map/wireframe of the target layout. Establish exact layout dimensions and visual hierarchy. "
