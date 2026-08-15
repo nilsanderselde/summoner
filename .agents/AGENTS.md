@@ -21,3 +21,6 @@
 - **Mandatory Self-Correction Loop**: Every agent *must* run `cargo check`, `cargo clippy`, and `cargo test` after modifying Rust code. They must self-correct any warnings or errors *before* finishing their turn.
 - **State Source of Truth**: `summoner_project` is the absolute source of truth. The GUI is strictly a deterministic projection and cannot hold non-ephemeral semantic state. All state mutations must be routed to `summoner_project`.
 - **Extreme Isolation (Codebase Seams)**: Subagents tasked with building components (GUI widgets, DSP nodes) MUST build them in isolation with unit tests. They are forbidden from wiring them into monolithic states (`app.rs` / graph topologies) unless specifically tasked as an integration agent.
+
+## General Project Rules
+- **Prohibited Files**: Do NOT ever create, add, or suggest adding a `CODE_OF_CONDUCT.md` file to this repository.
