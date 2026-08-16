@@ -16,7 +16,7 @@ def build_prompt(latest_roadmap):
         f"Do NOT add new speculative features; instead prioritize fixing incomplete wiring, broken UI layouts, "
         f"unhandled errors, and missing tests. "
         f"Edit the code, run tests/checks to verify that everything works as expected, "
-        f"and commit all changes with a clear, detailed commit message. "
+        f"and commit all changes intermittently with clear, detailed commit messages after each verified fix. "
         f"If all existing tasks in {latest_roadmap} are verified complete and working, update the roadmap status accordingly."
     )
 

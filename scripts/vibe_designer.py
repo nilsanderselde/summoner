@@ -18,6 +18,7 @@ def build_prompt(latest_roadmap):
         f"   - Spawn a multimodal vision subagent (or use your native vision capabilities via `view_file` on the PNG) to inspect for: text clipping, uneven padding, misaligned grids, or contrast issues. "
         f"   - Iterate on code using this visual feedback until perfect. "
         f"4. FAN-OUT: Use subagents concurrently to accelerate prototyping or test writing. "
+        f"5. INTERMITTENT VERIFIED COMMITS: Do NOT accumulate uncommitted changes. After implementing and visually/unit verifying each view, widget, or layout milestone, run tests/checks (`cargo check --workspace`, `cargo test --workspace --features gui`) and immediately `git commit` all modified files with a clear, detailed commit message describing the exact GUI changes. Commit intermittently after each unit of progress so uncommitted changes are never lost if quota runs out. "
         f"Once tasks in {latest_roadmap} are complete, create the next local/ROADMAP_YYYYMMDD_HHMMSS.md. Do not touch backend features."
     )
 

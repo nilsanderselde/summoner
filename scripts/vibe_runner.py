@@ -11,7 +11,7 @@ def build_prompt(latest_roadmap):
         f"Identify and read the latest roadmap file in local/ ({latest_roadmap}) as authoritative. "
         f"If needed for context, review older roadmap files in local/. "
         f"Proceed with implementing the next incomplete logical step on {latest_roadmap}, "
-        f"edit the code, run tests to verify, and commit all changes with a detailed commit message. "
+        f"edit the code, run tests to verify, and commit all changes intermittently with clear, detailed commit messages after each verified step. "
         f"If all tasks in {latest_roadmap} are complete, create a new roadmap file "
         f"local/ROADMAP_YYYYMMDD_HHMMSS.md for subsequent steps before finishing."
     )

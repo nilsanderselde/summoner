@@ -15,7 +15,7 @@
 - `make test`, `make check`, `make build`, `make run`, `make clippy`, `make fmt` provide workspace shortcuts.
 
 ## Git Commit Requirement
-- After implementing each step or feature and running tests to verify, commit all changed files with a clear, detailed Git commit message before finishing or beginning the next step.
+- Commit changed files intermittently with a clear, detailed Git commit message immediately after implementing and verifying each step, widget, or sub-feature with tests. Do NOT accumulate uncommitted changes across multiple steps or leave uncommitted edits at the end of turns so work is never lost when quota limits are reached.
 
 ## Subagent Codebase & Verification Directives
 - **Mandatory Self-Correction Loop**: Every agent *must* run `cargo check`, `cargo clippy`, and `cargo test` after modifying Rust code. They must self-correct any warnings or errors *before* finishing their turn.
