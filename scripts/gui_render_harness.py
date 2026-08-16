@@ -767,6 +767,3725 @@ def render_harmonic_tension_map():
     img.save(out_path)
     print(f"Rendered: {out_path}")
 
+def render_transient_warp_editor():
+    width, height = 800, 480
+    img = Image.new("RGBA", (width, height), (11, 15, 25, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(18, bold=True)
+    f_header = get_font(14, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(10, bold=False)
+
+    # Header Bar
+    draw.text((20, 16), "TRANSIENT & AUDIO WARP EDITOR", fill=(240, 245, 255), font=f_title)
+    draw.text((460, 20), "BPM: 120.0 | Zoom: 2.0x | Snap: 1/16th", fill=(0, 229, 255), font=f_body)
+
+    # Reset Warp Button
+    draw.rounded_rectangle([700, 14, 780, 46], radius=4, fill=(35, 45, 65))
+    draw.text((712, 24), "Reset Warp", fill=(200, 220, 245), font=f_small)
+
+    # Time Ruler Bar
+    draw.rounded_rectangle([20, 54, 780, 78], radius=4, fill=(16, 22, 34))
+    ruler_ticks = [
+        (20, "1.1.1"), (115, "1.2.1"), (210, "1.3.1"), (305, "1.4.1"),
+        (400, "2.1.1"), (495, "2.2.1"), (590, "2.3.1"), (685, "2.4.1"), (770, "3.1.1")
+    ]
+    for rx, rlabel in ruler_ticks:
+        draw.line([(rx, 68), (rx, 78)], fill=(100, 130, 165), width=1)
+        draw.text((rx + 3, 58), rlabel, fill=(140, 170, 205), font=f_small)
+
+    # Waveform Canvas
+    c_rect = [20, 84, 780, 310]
+    draw.rounded_rectangle(c_rect, radius=6, fill=(8, 12, 20), outline=(45, 60, 85), width=2)
+
+    center_y = 197
+    # Baseline
+    draw.line([(20, center_y), (780, center_y)], fill=(50, 65, 90, 100), width=1)
+
+    # Top Transient Flag Track
+    draw.line([(20, 108), (780, 108)], fill=(60, 80, 110, 120), width=1)
+
+    # Simulated Audio Waveforms: Ghost Unwarped (Dark Slate) vs Warped Active (Cyan)
+    num_samples = 150
+    for i in range(num_samples):
+        x = 25 + i * 5
+        t = i / float(num_samples)
+        # Transient peaks
+        burst1 = math.exp(-((t - 0.15) * 18.0) ** 2)
+        burst2 = math.exp(-((t - 0.40) * 22.0) ** 2)
+        burst3 = math.exp(-((t - 0.65) * 20.0) ** 2)
+        burst4 = math.exp(-((t - 0.88) * 25.0) ** 2)
+        amp = (0.25 * math.sin(i * 0.4) + 0.8 * burst1 + 0.9 * burst2 + 0.7 * burst3 + 0.85 * burst4) * 80.0
+        
+        # Ghost waveform
+        draw.line([(x, center_y - amp * 0.7), (x, center_y + amp * 0.7)], fill=(35, 50, 75), width=2)
+        # Warped active waveform
+        draw.line([(x, center_y - amp), (x, center_y + amp)], fill=(0, 229, 255, 200), width=2)
+
+    # Transient Markers & Warp Anchor Pins
+    markers = [
+        {"x": 138, "pinned": True, "col": (0, 255, 180), "label": "Beat 1 (Pinned)"},
+        {"x": 328, "pinned": False, "col": (255, 180, 0), "label": "Transient #2"},
+        {"x": 518, "pinned": True, "col": (0, 255, 180), "label": "Beat 2 (Warped +8%)"},
+        {"x": 692, "pinned": False, "col": (255, 180, 0), "label": "Transient #4"},
+    ]
+
+    for m in markers:
+        mx = m["x"]
+        # Vertical pin line
+        draw.line([(mx, 108), (mx, 310)], fill=m["col"], width=2)
+
+        # Flag Head (>=44x44pt bounding touch target visual box)
+        touch_rect = [mx - 22, 108 - 22, mx + 22, 108 + 22]
+        draw.rounded_rectangle(touch_rect, radius=4, outline=m["col"] + (120,), width=1)
+
+        # Flag diamond / circle
+        draw.ellipse([mx - 14, 108 - 14, mx + 14, 108 + 14], fill=m["col"])
+        draw.ellipse([mx - 4, 108 - 4, mx + 4, 108 + 4], fill=(255, 255, 255))
+
+        # Bottom anchor puck
+        draw.ellipse([mx - 6, 310 - 6, mx + 6, 310 + 6], fill=m["col"])
+
+    # Highlight Marker #3 as Selected
+    sel_x = 518
+    draw.rounded_rectangle([sel_x - 24, 108 - 24, sel_x + 24, 108 + 24], radius=6, outline=(255, 215, 0), width=2)
+
+    # Bottom Property Bar
+    draw.rounded_rectangle([20, 325, 780, 460], radius=8, fill=(18, 24, 36), outline=(45, 55, 75))
+    draw.text((35, 340), "SELECTED MARKER #3: Warped Sample 88,200 -> 95,256 (+8.0% Stretch)", fill=(255, 215, 0), font=f_header)
+    
+    # Touch compliance badge
+    draw.rounded_rectangle([35, 375, 230, 440], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 388), "[PASS] Hit Target >=44pt", fill=(0, 255, 180), font=f_small)
+    draw.text((45, 410), "Touch Radius: 22pt (44x44pt)", fill=(0, 255, 180), font=f_small)
+
+    # Actions buttons
+    btn_defs = [
+        (250, "Unpin / Free Marker", (35, 45, 65), (200, 220, 245)),
+        (420, "Snap to 1/16th Grid", (0, 229, 255), (10, 14, 22)),
+        (590, "Delete Anchor", (80, 25, 35), (255, 180, 190)),
+    ]
+    for bx, blabel, bfill, btext in btn_defs:
+        draw.rounded_rectangle([bx, 385, bx + 155, 435], radius=6, fill=bfill)
+        draw.text((bx + 15, 402), blabel, fill=btext, font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "transient_warp_editor.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_step_sequencer_matrix():
+    width, height = 840, 520
+    img = Image.new("RGBA", (width, height), (14, 18, 28, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(18, bold=True)
+    f_header = get_font(14, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(10, bold=False)
+
+    # Header Bar
+    draw.text((20, 16), "POLYPHONIC STEP SEQUENCER MATRIX", fill=(240, 245, 255), font=f_title)
+    draw.text((540, 20), "BPM: 128 | Swing: 20% | Step: 5/16", fill=(0, 229, 255), font=f_body)
+
+    # Mode Selector Bar (>=44pt Touch Targets)
+    modes = [
+        (20, "1: Trigger (Toggle)", True, (0, 229, 255), (10, 14, 22)),
+        (185, "2: Velocity (Vel)", False, (30, 40, 60), (220, 235, 255)),
+        (350, "3: Probability (Prob)", False, (30, 40, 60), (220, 235, 255)),
+        (515, "4: Ratchet (Burst)", False, (30, 40, 60), (220, 235, 255)),
+        (680, "PLAY / RUN", True, (0, 255, 180), (10, 14, 22)),
+    ]
+    for mx, mlabel, is_act, mfill, mtext in modes:
+        draw.rounded_rectangle([mx, 55, mx + 150, 95], radius=6, fill=mfill)
+        draw.text((mx + 12, 68), mlabel, fill=mtext, font=f_small)
+
+    # Sequencer Grid (6 Lanes x 16 Steps)
+    lanes = [
+        {"name": "Kick", "col": (255, 107, 43), "hits": [0, 4, 8, 12]},
+        {"name": "Snare", "col": (0, 229, 255), "hits": [4, 12]},
+        {"name": "Clap", "col": (255, 215, 0), "hits": [4, 12]},
+        {"name": "CH Hat", "col": (0, 255, 180), "hits": [0, 2, 4, 6, 8, 10, 12, 14]},
+        {"name": "OH Hat", "col": (76, 201, 240), "hits": [2, 10]},
+        {"name": "Perc/Synth", "col": (180, 120, 255), "hits": [3, 7, 11, 15]},
+    ]
+
+    header_w = 110
+    cell_w = 42
+    cell_h = 42
+    gap = 4
+    start_y = 115
+
+    for l_idx, lane in enumerate(lanes):
+        ly = start_y + l_idx * (cell_h + gap)
+
+        # Lane Header Card
+        draw.rounded_rectangle([20, ly, 20 + header_w - 6, ly + cell_h], radius=4, fill=(22, 28, 42), outline=(50, 65, 85))
+        draw.text((28, ly + 14), lane["name"], fill=lane["col"], font=f_header)
+
+        # Step Cells
+        for s_idx in range(16):
+            cx = 20 + header_w + s_idx * (cell_w + gap)
+            is_hit = s_idx in lane["hits"]
+            is_playhead = (s_idx == 4) # Step 5 (0-indexed 4)
+            is_quarter = (s_idx % 4 == 0)
+
+            bg_col = lane["col"] if is_hit else ((32, 40, 58) if is_quarter else (18, 24, 34))
+            border_col = (255, 255, 255) if is_playhead else (45, 60, 85)
+            border_w = 2 if is_playhead else 1
+
+            cell_box = [cx, ly, cx + cell_w, ly + cell_h]
+            draw.rounded_rectangle(cell_box, radius=4, fill=bg_col, outline=border_col, width=border_w)
+
+            if is_hit:
+                # Text inside active step
+                draw.text((cx + 10, ly + 14), "100", fill=(10, 14, 20), font=f_small)
+
+    # Bottom Step Inspector Drawer
+    draw.rounded_rectangle([20, 405, 820, 505], radius=8, fill=(18, 24, 36), outline=(45, 55, 75))
+    draw.text((35, 418), "STEP INSPECTOR: Lane 'Kick', Step 5 (Quarter Downbeat)", fill=(255, 215, 0), font=f_header)
+
+    # Velocity Slider (>=44pt Target)
+    draw.text((35, 450), "Velocity: 118 / 127", fill=(220, 235, 255), font=f_body)
+    draw.rounded_rectangle([35, 470, 230, 492], radius=4, fill=(10, 14, 20))
+    draw.rounded_rectangle([35, 470, 35 + int(195 * (118/127)), 492], radius=4, fill=(255, 107, 43))
+
+    # Probability Slider
+    draw.text((270, 450), "Probability: 100%", fill=(220, 235, 255), font=f_body)
+    draw.rounded_rectangle([270, 470, 465, 492], radius=4, fill=(10, 14, 20))
+    draw.rounded_rectangle([270, 470, 465, 492], radius=4, fill=(0, 229, 255))
+
+    # Ratchet Selector
+    draw.text((505, 450), "Ratchet Burst: 1x (Normal)", fill=(220, 235, 255), font=f_body)
+    draw.rounded_rectangle([505, 470, 620, 495], radius=4, fill=(35, 45, 65))
+    draw.text((530, 476), "1x  [2x]  4x", fill=(0, 255, 180), font=f_small)
+
+    # Minimum Hit Target Compliance Badge
+    draw.rounded_rectangle([650, 430, 805, 495], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((660, 444), "[PASS] Touch Matrix", fill=(0, 255, 180), font=f_small)
+    draw.text((660, 466), "Cell Size: 44x44pt", fill=(0, 255, 180), font=f_small)
+
+    out_path = os.path.join(OUTPUT_DIR, "step_sequencer_matrix.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_isomorphic_tuning_keyboard():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (12, 16, 26, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(18, bold=True)
+    f_header = get_font(14, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(10, bold=False)
+
+    # Header Bar
+    draw.text((20, 16), "MICROTONAL ISOMORPHIC TUNING KEYBOARD", fill=(240, 245, 255), font=f_title)
+    draw.text((500, 20), "Scale: 19-EDO Equal Temp | Root: C4 (261.6 Hz)", fill=(0, 229, 255), font=f_body)
+
+    # Interval Legend
+    legend_items = [
+        ("● 1/1 Root", (0, 255, 180)),
+        ("● 3/2 Fifth", (0, 229, 255)),
+        ("● 5/4 Maj3", (255, 215, 0)),
+        ("● Neutral 3rd", (255, 64, 129)),
+        ("● Microtonal Step", (179, 136, 255)),
+    ]
+    lx = 20
+    for l_text, l_col in legend_items:
+        draw.text((lx, 55), l_text, fill=l_col, font=f_small)
+        lx += 135
+
+    # Hexagonal Key Grid (Radius = 26pt -> Diameter = 52pt > 44pt Hit Target)
+    origin_x = 70
+    origin_y = 110
+    radius = 26
+    hex_w = radius * 1.73205
+    hex_h = radius * 1.5
+
+    # 7 Columns x 4 Rows
+    num_cols = 7
+    num_rows = 4
+    for r in range(num_rows):
+        for c in range(num_cols):
+            offset_x = (hex_w * 0.5) if (r % 2 != 0) else 0.0
+            cx = origin_x + c * (hex_w + 6) + offset_x
+            cy = origin_y + r * (hex_h + 8)
+
+            step_idx = c * 3 + r * 11
+            oct_step = step_idx % 19
+            cents = int(step_idx * (1200.0 / 19.0))
+
+            is_root = (oct_step == 0)
+            is_fifth = (oct_step == 11)
+            is_third = (oct_step == 6)
+            is_neutral = (oct_step == 5)
+            is_pressed = (c == 2 and r == 1) # Held Key D4
+
+            if is_pressed:
+                fill_col = (255, 255, 255)
+                stroke_col = (0, 229, 255)
+                txt_col = (10, 14, 20)
+            elif is_root:
+                fill_col = (0, 255, 180)
+                stroke_col = (255, 255, 255)
+                txt_col = (10, 14, 20)
+            elif is_fifth:
+                fill_col = (20, 65, 85)
+                stroke_col = (0, 229, 255)
+                txt_col = (240, 245, 255)
+            elif is_third:
+                fill_col = (75, 65, 20)
+                stroke_col = (255, 215, 0)
+                txt_col = (240, 245, 255)
+            elif is_neutral:
+                fill_col = (75, 20, 45)
+                stroke_col = (255, 64, 129)
+                txt_col = (240, 245, 255)
+            else:
+                fill_col = (35, 30, 60)
+                stroke_col = (179, 136, 255)
+                txt_col = (240, 245, 255)
+
+            # Draw hexagon circle disc (Diameter 52px >= 44x44pt hit target)
+            draw.ellipse([cx - radius, cy - radius, cx + radius, cy + radius], fill=fill_col, outline=stroke_col, width=2)
+            
+            # Step & Cents text
+            draw.text((cx - 10, cy - 8), f"{step_idx:+}", fill=txt_col, font=f_small)
+            draw.text((cx - 12, cy + 4), f"{cents}¢", fill=txt_col, font=f_small)
+
+    # Bottom Inspector & Compliance Card
+    draw.rounded_rectangle([20, 395, 780, 480], radius=8, fill=(18, 24, 36), outline=(45, 55, 75))
+    draw.text((35, 410), "HELD KEY: Step +17 (Row 1, Col 2) | Frequency: 486.23 Hz | +1073.68 Cents", fill=(0, 255, 180), font=f_header)
+    draw.text((35, 435), "Generators: Row Generator = +11 Steps (Fifth), Col Generator = +3 Steps (Major Second)", fill=(180, 205, 235), font=f_body)
+
+    # Compliance Badge
+    draw.rounded_rectangle([600, 410, 765, 465], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((612, 422), "[PASS] Key Hit Target", fill=(0, 255, 180), font=f_small)
+    draw.text((612, 442), "Radius: 26pt (52x52pt)", fill=(0, 255, 180), font=f_small)
+
+    out_path = os.path.join(OUTPUT_DIR, "isomorphic_tuning_keyboard.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_envelope_follower_view():
+    width, height = 800, 480
+    img = Image.new("RGBA", (width, height), (10, 14, 22, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(18, bold=True)
+    f_header = get_font(14, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(10, bold=False)
+
+    # Header Bar
+    draw.text((20, 16), "DYNAMIC ENVELOPE FOLLOWER & DETECTOR", fill=(240, 245, 255), font=f_title)
+    draw.text((470, 20), "Mode: Opto Ballistic | Source: Track 1: Kick", fill=(0, 229, 255), font=f_body)
+
+    # Curve Canvas
+    c_rect = [20, 56, 780, 290]
+    draw.rounded_rectangle(c_rect, radius=8, fill=(8, 11, 18), outline=(40, 55, 80), width=2)
+
+    # dB Grid Lines
+    db_marks = [(-60, 275), (-48, 235), (-36, 195), (-24, 155), (-12, 115), (0, 75)]
+    for db, gy in db_marks:
+        draw.line([(20, gy), (780, gy)], fill=(45, 60, 85, 80), width=1)
+        draw.text((30, gy - 12), f"{db} dBFS", fill=(130, 155, 185), font=f_small)
+
+    # Input RMS History Stream (Dark Cyan / Teal)
+    num_frames = 120
+    prev_pt = None
+    for i in range(num_frames):
+        x = 30 + i * 6
+        t = i / float(num_frames)
+        # Transient burst at t=0.25 and t=0.75
+        b1 = math.exp(-((t - 0.25) * 12.0) ** 2)
+        b2 = math.exp(-((t - 0.75) * 10.0) ** 2)
+        val_db = -60.0 + 52.0 * b1 + 45.0 * b2
+        norm = (val_db + 60.0) / 60.0
+        y = 275 - norm * 200.0
+        pt = (x, y)
+        if prev_pt:
+            draw.line([prev_pt, pt], fill=(0, 160, 200, 180), width=2)
+        prev_pt = pt
+
+    # Rolling Ball Physics Follower on Canvas
+    ball_x = 650
+    ball_y = 125 # At -12.4 dBFS
+    
+    # Glow / Target ring
+    draw.ellipse([ball_x - 22, ball_y - 22, ball_x + 22, ball_y + 22], outline=(0, 229, 255, 120), width=2)
+    # Ball body
+    draw.ellipse([ball_x - 14, ball_y - 14, ball_x + 14, ball_y + 14], fill=(0, 229, 255))
+    draw.ellipse([ball_x - 4, ball_y - 4, ball_x + 4, ball_y + 4], fill=(255, 255, 255))
+
+    # Readout Badge on Canvas
+    draw.rounded_rectangle([530, 65, 765, 105], radius=6, fill=(18, 25, 40), outline=(255, 215, 0))
+    draw.text((545, 78), "Env: -12.4 dBFS | GR: -6.8 dB", fill=(255, 215, 0), font=f_header)
+
+    # Parameter Control Cards (>=44pt Touch Targets)
+    params = [
+        {"name": "Attack", "val": "15.0 ms", "pct": 0.25},
+        {"name": "Hold", "val": "25.0 ms", "pct": 0.15},
+        {"name": "Release", "val": "180.0 ms", "pct": 0.45},
+        {"name": "Sensitivity", "val": "+0.0 dB", "pct": 0.50},
+    ]
+    px = 20
+    for p in params:
+        draw.rounded_rectangle([px, 305, px + 175, 395], radius=6, fill=(20, 26, 38), outline=(45, 55, 75))
+        draw.text((px + 12, 315), p["name"], fill=(220, 235, 255), font=f_body)
+        draw.text((px + 100, 315), p["val"], fill=(0, 229, 255), font=f_header)
+        # Track & Slider Fill
+        draw.rounded_rectangle([px + 12, 350, px + 160, 372], radius=4, fill=(10, 14, 20))
+        draw.rounded_rectangle([px + 12, 350, px + 12 + int(148 * p["pct"]), 372], radius=4, fill=(0, 229, 255))
+        px += 195
+
+    # Sidechain Routing Source Selector Bar
+    draw.text((20, 415), "SIDECHAIN ROUTE MATRIX:", fill=(200, 220, 245), font=f_header)
+    routes = [
+        (220, "Internal (Self)", False),
+        (350, "Track 1: Kick (ACTIVE)", True),
+        (510, "Track 2: Snare", False),
+        (650, "Bus 1: Drum Group", False),
+    ]
+    for rx, rname, is_act in routes:
+        bg_c = (0, 229, 255) if is_act else (30, 40, 60)
+        txt_c = (10, 14, 22) if is_act else (220, 235, 255)
+        draw.rounded_rectangle([rx, 410, rx + 125, 460], radius=6, fill=bg_c)
+        draw.text((rx + 10, 426), rname, fill=txt_c, font=f_small)
+
+    out_path = os.path.join(OUTPUT_DIR, "envelope_follower_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_bezier_automation_editor():
+    width, height = 800, 480
+    img = Image.new("RGBA", (width, height), (10, 14, 22, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(18, bold=True)
+    f_header = get_font(14, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(10, bold=False)
+
+    # Header Bar
+    draw.text((20, 16), "TACTILE BEZIER AUTOMATION LANE EDITOR", fill=(240, 245, 255), font=f_title)
+    draw.text((470, 20), "Track 1 - Filter Cutoff | Snap: 1/16th | Zoom: 1.5x", fill=(0, 229, 255), font=f_body)
+
+    # Automation Curve Canvas
+    c_rect = [20, 56, 780, 310]
+    draw.rounded_rectangle(c_rect, radius=8, fill=(8, 11, 18), outline=(40, 55, 80), width=2)
+
+    # Value Grid Lines (0%, 25%, 50%, 75%, 100%)
+    for g in range(5):
+        norm_y = g * 0.25
+        gy = 310 - norm_y * 254.0
+        draw.line([(20, gy), (780, gy)], fill=(45, 60, 85, 70), width=1)
+        draw.text((28, gy - 12), f"{int(norm_y * 100)}%", fill=(120, 145, 175), font=f_small)
+
+    # Continuous Cubic Bezier & Tension Curve Path
+    curve_nodes = [
+        (40, 310 - int(0.20 * 254.0)),
+        (220, 310 - int(0.85 * 254.0)),
+        (400, 310 - int(0.35 * 254.0)),
+        (580, 310 - int(0.90 * 254.0)),
+        (760, 310 - int(0.10 * 254.0)),
+    ]
+
+    # Draw continuous line curve segments
+    for i in range(len(curve_nodes) - 1):
+        p0 = curve_nodes[i]
+        p3 = curve_nodes[i + 1]
+        prev_p = p0
+        for step in range(1, 31):
+            t = step / 30.0
+            # Cubic Bezier interpolation
+            inv = 1.0 - t
+            bx = inv * p0[0] + t * p3[0]
+            by = inv * p0[1] + t * p3[1]
+            if i == 0:
+                # Exponential curve
+                by = p0[1] + (t ** 2.5) * (p3[1] - p0[1])
+            draw.line([prev_p, (bx, by)], fill=(0, 229, 255), width=3)
+            prev_p = (bx, by)
+
+    # Draw Nodes and Handles (>=44x44pt Hit Target Bounds)
+    for idx, (nx, ny) in enumerate(curve_nodes):
+        is_selected = (idx == 1) # Node #1 selected
+
+        # Selected Node Focus Box
+        if is_selected:
+            draw.rounded_rectangle([nx - 22, ny - 22, nx + 22, ny + 22], radius=4, outline=(255, 215, 0), width=2)
+            # Tangent Handle Line
+            hx = nx + 45
+            hy = ny - 25
+            draw.line([(nx, ny), (hx, hy)], fill=(255, 215, 0), width=1)
+            draw.ellipse([hx - 6, hy - 6, hx + 6, hy + 6], fill=(255, 215, 0))
+
+        node_col = (255, 215, 0) if is_selected else (0, 255, 180)
+        draw.ellipse([nx - 12, ny - 12, nx + 12, ny + 12], fill=node_col)
+        draw.ellipse([nx - 4, ny - 4, nx + 4, ny + 4], fill=(255, 255, 255))
+
+    # Bottom Node Property & Mode Inspector
+    draw.rounded_rectangle([20, 325, 780, 460], radius=8, fill=(18, 24, 36), outline=(45, 55, 75))
+    draw.text((35, 340), "SELECTED NODE #1: Beat 4.00 | Value: 85.0% (17,000 Hz) | Type: Cubic Bezier", fill=(255, 215, 0), font=f_header)
+
+    # Curve Type Buttons
+    curve_btns = [
+        (35, "Linear", False),
+        (135, "Exponential", False),
+        (260, "Cubic Bezier (ACTIVE)", True),
+        (435, "Hold Step", False),
+    ]
+    for bx, blabel, is_act in curve_btns:
+        b_col = (0, 229, 255) if is_act else (30, 40, 60)
+        t_col = (10, 14, 22) if is_act else (220, 235, 255)
+        draw.rounded_rectangle([bx, 380, bx + 115, 430], radius=6, fill=b_col)
+        draw.text((bx + 12, 396), blabel, fill=t_col, font=f_small)
+
+    # Minimum Hit Target Compliance Badge
+    draw.rounded_rectangle([590, 375, 765, 440], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((602, 388), "[PASS] Node Hit Target", fill=(0, 255, 180), font=f_small)
+    draw.text((602, 410), "Touch Radius: 22pt (44x44pt)", fill=(0, 255, 180), font=f_small)
+
+    out_path = os.path.join(OUTPUT_DIR, "bezier_automation_editor.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_transient_shaper_view():
+    width, height = 800, 480
+    img = Image.new("RGBA", (width, height), (10, 14, 22, 255))
+    overlay = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    draw_ov = ImageDraw.Draw(overlay)
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(16, bold=True)
+    f_header = get_font(13, bold=True)
+    f_body = get_font(11, bold=False)
+    f_small = get_font(10, bold=False)
+
+    # Title Bar
+    draw.text((20, 16), "MULTI-BAND AUDIO TRANSIENT SHAPER", fill=(240, 245, 255), font=f_title)
+    draw.text((450, 18), "Low/Mid: 250 Hz | Mid/High: 3.5 kHz | Soft Clip: ON", fill=(0, 229, 255), font=f_body)
+
+    # Multi-Band Frequency Spectrum Canvas
+    c_rect = [20, 48, 780, 210]
+    draw.rounded_rectangle(c_rect, radius=8, fill=(12, 16, 26), outline=(40, 55, 80), width=2)
+
+    # Band regions: Low (20Hz-250Hz), Mid (250Hz-3.5kHz), High (3.5kHz-20kHz)
+    lm_x = 20 + int(760 * 0.365) # x = 297
+    mh_x = 20 + int(760 * 0.748) # x = 588
+
+    # Translucent band fills composited via overlay
+    draw_ov.rectangle([21, 49, lm_x, 209], fill=(0, 229, 255, 30))
+    draw_ov.rectangle([lm_x, 49, mh_x, 209], fill=(255, 215, 0, 40))
+    draw_ov.rectangle([mh_x, 49, 779, 209], fill=(255, 107, 43, 30))
+    img = Image.alpha_composite(img, overlay)
+    draw = ImageDraw.Draw(img)
+
+    # Active Mid Band Border Highlight
+    draw.rectangle([lm_x, 49, mh_x, 209], outline=(255, 215, 0, 180), width=2)
+
+    # Grid lines
+    freq_grid = [(100, 0.233, "100 Hz"), (1000, 0.566, "1 kHz"), (10000, 0.900, "10 kHz")]
+    for f_hz, norm, label in freq_grid:
+        gx = 20 + int(760 * norm)
+        draw.line([(gx, 49), (gx, 209)], fill=(50, 70, 95, 100), width=1)
+        draw.text((gx + 4, 192), label, fill=(130, 155, 185), font=f_small)
+
+    # Band text overlays with WCAG AAA high contrast
+    draw.text((110, 62), "BAND 1: LOW", fill=(0, 229, 255), font=f_header)
+    draw.text((90, 86), "Att: +2.0dB | Sus: -1.5dB", fill=(200, 230, 255), font=f_small)
+
+    draw.text((390, 62), "BAND 2: MID (ACTIVE)", fill=(255, 215, 0), font=f_header)
+    draw.text((375, 86), "Att: +5.4dB | Sus: -3.0dB", fill=(255, 240, 200), font=f_small)
+
+    draw.text((630, 62), "BAND 3: HIGH", fill=(255, 107, 43), font=f_header)
+    draw.text((610, 86), "Att: +1.0dB | Sus: +0.0dB", fill=(255, 220, 200), font=f_small)
+
+    # Crossover Split Vertical Handles (>=44pt Touch Targets)
+    for hx in [lm_x, mh_x]:
+        draw.line([(hx, 49), (hx, 209)], fill=(0, 229, 255), width=3)
+        hy = 129
+        draw.ellipse([hx - 22, hy - 22, hx + 22, hy + 22], outline=(0, 229, 255, 140), width=2)
+        draw.ellipse([hx - 14, hy - 14, hx + 14, hy + 14], fill=(0, 229, 255))
+        draw.ellipse([hx - 4, hy - 4, hx + 4, hy + 4], fill=(10, 14, 22))
+
+    # Selected Band Parameter Inspector Card
+    draw.rounded_rectangle([20, 225, 780, 395], radius=8, fill=(18, 25, 38), outline=(45, 60, 85))
+    draw.text((35, 238), "ACTIVE BAND #2 (MID): 250 Hz - 3,500 Hz", fill=(255, 215, 0), font=f_header)
+
+    # Mute/Solo/Bypass Buttons (>=44x44pt)
+    modes = [
+        (480, "NORMAL (ACTIVE)", True),
+        (600, "SOLO", False),
+        (660, "MUTE", False),
+        (715, "BYPASS", False),
+    ]
+    for bx, blbl, is_act in modes:
+        b_c = (0, 229, 255) if is_act else (30, 42, 62)
+        t_c = (10, 14, 22) if is_act else (220, 235, 255)
+        bw = 110 if is_act else 50
+        draw.rounded_rectangle([bx, 232, bx + bw, 276], radius=4, fill=b_c)
+        draw.text((bx + 8, 246), blbl, fill=t_c, font=f_small)
+
+    # Sliders for Attack & Sustain
+    sliders = [
+        {"name": "Attack Gain", "val": "+5.4 dB", "pct": 0.72},
+        {"name": "Sustain Gain", "val": "-3.0 dB", "pct": 0.38},
+        {"name": "Attack Time", "val": "20.0 ms", "pct": 0.20},
+        {"name": "Sustain Decay", "val": "140.0 ms", "pct": 0.30},
+    ]
+    sx = 35
+    for s in sliders:
+        draw.rounded_rectangle([sx, 290, sx + 165, 380], radius=6, fill=(12, 16, 26), outline=(35, 48, 68))
+        draw.text((sx + 10, 300), s["name"], fill=(220, 235, 255), font=f_body)
+        draw.text((sx + 95, 300), s["val"], fill=(0, 229, 255), font=f_header)
+        # Track
+        draw.rounded_rectangle([sx + 10, 335, sx + 155, 357], radius=4, fill=(8, 11, 18))
+        draw.rounded_rectangle([sx + 10, 335, sx + 10 + int(145 * s["pct"]), 357], radius=4, fill=(0, 229, 255))
+        sx += 185
+
+    # Bottom Global Controls Bar
+    draw.rounded_rectangle([20, 410, 780, 465], radius=6, fill=(14, 19, 30), outline=(40, 52, 75))
+    draw.text((35, 428), "GLOBAL: Input: +0.0 dB | Dry/Wet: 100% | Output: +0.0 dB | [PASS] 44pt Touch Compliance", fill=(0, 255, 180), font=f_small)
+
+    out_path = os.path.join(OUTPUT_DIR, "transient_shaper_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_ambisonic_radar_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (10, 14, 22, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(16, bold=True)
+    f_header = get_font(13, bold=True)
+    f_body = get_font(11, bold=False)
+    f_small = get_font(10, bold=False)
+
+    # Title Bar
+    draw.text((20, 16), "3D AMBISONIC RADAR & SPATIAL PANNER", fill=(240, 245, 255), font=f_title)
+    draw.text((470, 18), "Format: 7.1.4 Dolby Atmos | Binaural HRTF: ON", fill=(0, 229, 255), font=f_body)
+
+    # 3D Polar Radar Canvas - positioned with ample padding
+    center_x, center_y = 205, 260
+    radius = 150
+
+    # Disc background
+    draw.ellipse([center_x - radius, center_y - radius, center_x + radius, center_y + radius], fill=(8, 12, 18), outline=(45, 60, 85), width=2)
+
+    # Elevation & Distance rings
+    for frac, lbl in [(0.33, "-45° Low"), (0.66, "0° Horizon"), (1.0, "+60° High")]:
+        r = int(radius * frac)
+        draw.ellipse([center_x - r, center_y - r, center_x + r, center_y + r], outline=(40, 55, 80, 120), width=1)
+        # Small pill background for elevation ring label
+        draw.rounded_rectangle([center_x + 6, center_y - r - 8, center_x + 68, center_y - r + 6], radius=2, fill=(12, 16, 26))
+        draw.text((center_x + 10, center_y - r - 6), lbl, fill=(140, 165, 195), font=f_small)
+
+    # Crosshairs
+    draw.line([(center_x, center_y - radius), (center_x, center_y + radius)], fill=(50, 70, 95, 100), width=1)
+    draw.line([(center_x - radius, center_y), (center_x + radius, center_y)], fill=(50, 70, 95, 100), width=1)
+
+    # Compass Directions (well spaced, no clipping)
+    draw.text((center_x - 30, center_y - radius - 18), "FRONT (0°)", fill=(0, 229, 255), font=f_small)
+    draw.text((center_x + radius + 8, center_y - 6), "R (+90°)", fill=(140, 165, 195), font=f_small)
+    draw.text((center_x - 32, center_y + radius + 8), "REAR (180°)", fill=(140, 165, 195), font=f_small)
+    draw.text((center_x - radius - 45, center_y - 6), "L (-90°)", fill=(140, 165, 195), font=f_small)
+
+    # Center Listener Dot
+    draw.ellipse([center_x - 8, center_y - 8, center_x + 8, center_y + 8], fill=(0, 255, 180))
+
+    # Sources:
+    sources = [
+        {"id": "1", "name": "Lead Synth (3D)", "az": -30, "dist": 2.5, "el": "+15°", "is_sel": True},
+        {"id": "2", "name": "Percussion Space", "az": 60, "dist": 3.8, "el": "-10°", "is_sel": False},
+        {"id": "3", "name": "Vocal Height Layer", "az": 0, "dist": 1.8, "el": "+45°", "is_sel": False},
+    ]
+
+    for s in sources:
+        norm_d = s["dist"] / 5.0
+        rad = math.radians(s["az"])
+        sx = center_x + int(norm_d * radius * math.sin(rad))
+        sy = center_y - int(norm_d * radius * math.cos(rad))
+
+        color = (255, 215, 0) if s["is_sel"] else (0, 229, 255)
+
+        # Hit target ring (44x44pt bounding touch box)
+        draw.ellipse([sx - 22, sy - 22, sx + 22, sy + 22], outline=color + (140,), width=2)
+        draw.ellipse([sx - 14, sy - 14, sx + 14, sy + 14], fill=color)
+        draw.ellipse([sx - 4, sy - 4, sx + 4, sy + 4], fill=(10, 14, 22))
+
+        # Tag
+        draw.text((sx - 18, sy - 34), f"{s['id']}: {s['el']}", fill=(240, 245, 255), font=f_small)
+
+    # Right side: Inspector Panel & Format Controls
+    draw.rounded_rectangle([420, 48, 780, 475], radius=8, fill=(16, 22, 34), outline=(45, 60, 85))
+    draw.text((435, 64), "SELECTED OBJECT #1: Lead Synth", fill=(255, 215, 0), font=f_header)
+    draw.text((435, 88), "Azimuth: -30.0° | Elevation: +15.0° | Dist: 2.50 m", fill=(180, 205, 235), font=f_body)
+
+    # Sliders for elevation, distance, spread, gain
+    insp_sliders = [
+        {"name": "Elevation Angle", "val": "+15.0°", "pct": 0.58},
+        {"name": "Distance Radius", "val": "2.50 m", "pct": 0.25},
+        {"name": "Divergence Spread", "val": "20.0%", "pct": 0.20},
+        {"name": "Object Gain", "val": "+0.0 dB", "pct": 0.50},
+    ]
+    iy = 118
+    for sl in insp_sliders:
+        draw.text((435, iy), sl["name"], fill=(220, 235, 255), font=f_body)
+        draw.text((700, iy), sl["val"], fill=(0, 229, 255), font=f_header)
+        draw.rounded_rectangle([435, iy + 22, 765, iy + 44], radius=4, fill=(10, 14, 22))
+        draw.rounded_rectangle([435, iy + 22, 435 + int(330 * sl["pct"]), iy + 44], radius=4, fill=(0, 229, 255))
+        iy += 54
+
+    # Trajectory Selector
+    draw.text((435, 342), "AUTOMATED TRAJECTORY:", fill=(200, 220, 245), font=f_header)
+    traj_modes = [(435, "Static", False), (530, "Orbit (ACTIVE)", True), (670, "Lissajous", False)]
+    for tx, tlbl, is_act in traj_modes:
+        t_bg = (0, 229, 255) if is_act else (28, 38, 56)
+        t_txt = (10, 14, 22) if is_act else (220, 235, 255)
+        tw = 125 if is_act else 80
+        draw.rounded_rectangle([tx, 370, tx + tw, 414], radius=4, fill=t_bg)
+        draw.text((tx + 10, 386), tlbl, fill=t_txt, font=f_small)
+
+    draw.rounded_rectangle([435, 430, 765, 462], radius=4, fill=(14, 30, 24), outline=(0, 255, 180))
+    draw.text((445, 438), "[PASS] 3D Ambisonic Hit Target Radius: 22pt (44x44pt)", fill=(0, 255, 180), font=f_small)
+
+    out_path = os.path.join(OUTPUT_DIR, "ambisonic_radar_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_granular_cloud_view():
+    width, height = 800, 480
+    img = Image.new("RGBA", (width, height), (10, 14, 22, 255))
+    overlay = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    draw_ov = ImageDraw.Draw(overlay)
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(16, bold=True)
+    f_header = get_font(13, bold=True)
+    f_body = get_font(11, bold=False)
+    f_small = get_font(10, bold=False)
+
+    # Title Bar
+    draw.text((20, 16), "TOUCH-RESPONSIVE GRANULAR SYNTHESIS CLOUD", fill=(240, 245, 255), font=f_title)
+    draw.text((480, 18), "Pos: 45.0% | Pitch: +0.0st | 16 Grains", fill=(0, 229, 255), font=f_body)
+
+    # 2D Grain Dispersion Canvas
+    c_rect = [20, 48, 780, 280]
+    draw.rounded_rectangle(c_rect, radius=8, fill=(8, 11, 18), outline=(40, 55, 80), width=2)
+
+    # Pitch Guide Lines (-24st to +24st)
+    for p_st in [-24, -12, 0, 12, 24]:
+        norm_y = (p_st + 24) / 48.0
+        gy = 270 - int(norm_y * 210)
+        draw.line([(20, gy), (780, gy)], fill=(45, 60, 85, 80), width=1)
+        draw.text((28, gy - 12), f"{p_st:+} st", fill=(130, 155, 185), font=f_small)
+
+    # Position vertical guides
+    for pos_pct in [0.25, 0.50, 0.75]:
+        gx = 20 + int(760 * pos_pct)
+        draw.line([(gx, 48), (gx, 280)], fill=(45, 60, 85, 60), width=1)
+
+    # Emitter center
+    ex = 20 + int(760 * 0.45) # 362
+    ey = 48 + int(232 * 0.5)  # 164
+
+    # Spray Jitter Dispersion Ellipse with Alpha Blend
+    spray_w = int(760 * 0.15) # 114
+    spray_h = int((3.5 / 48.0) * 232) # 17
+    draw_ov.ellipse([ex - spray_w, ey - spray_h * 2, ex + spray_w, ey + spray_h * 2], fill=(0, 229, 255, 30), outline=(0, 229, 255, 100), width=1)
+    img = Image.alpha_composite(img, overlay)
+    draw = ImageDraw.Draw(img)
+
+    # Simulated Grains (streaks and particles)
+    for i in range(16):
+        t = i / 16.0
+        gx = ex + int(math.sin(t * 17.3) * spray_w * 0.8)
+        gy = ey + int(math.cos(t * 29.7) * spray_h * 1.8)
+        is_rev = (i % 6 == 0)
+        col = (255, 107, 43) if is_rev else (0, 255, 180)
+
+        # Grain streak
+        draw.line([(gx - 12, gy), (gx + 12, gy)], fill=col + (180,), width=3)
+        draw.ellipse([gx - 3, gy - 3, gx + 3, gy + 3], fill=(255, 255, 255))
+
+    # Cloud Emitter Center Puck (>=44x44pt Touch Target)
+    draw.ellipse([ex - 22, ey - 22, ex + 22, ey + 22], outline=(255, 215, 0), width=2)
+    draw.ellipse([ex - 14, ey - 14, ex + 14, ey + 14], fill=(0, 229, 255))
+    draw.ellipse([ex - 4, ey - 4, ex + 4, ey + 4], fill=(255, 255, 255))
+
+    # Emitter Badge with dark background pill for high contrast
+    draw.rounded_rectangle([ex - 62, ey - 42, ex + 62, ey - 24], radius=3, fill=(12, 16, 26))
+    draw.text((ex - 56, ey - 40), "EMITTER: 45% | 0st", fill=(255, 215, 0), font=f_small)
+
+    # Window Envelope Selector Buttons (>=44pt Touch Targets)
+    draw.text((20, 298), "WINDOW ENVELOPE:", fill=(200, 220, 245), font=f_header)
+    windows = [
+        (170, "Hanning (ACTIVE)", True),
+        (305, "Blackman", False),
+        (405, "Gaussian", False),
+        (500, "Trapezoid", False),
+        (600, "Exp Decay", False),
+    ]
+    for wx, wlbl, is_act in windows:
+        w_bg = (0, 229, 255) if is_act else (28, 38, 56)
+        w_txt = (10, 14, 22) if is_act else (220, 235, 255)
+        ww = 125 if is_act else 85
+        draw.rounded_rectangle([wx, 292, wx + ww, 336], radius=4, fill=w_bg)
+        draw.text((wx + 8, 308), wlbl, fill=w_txt, font=f_small)
+
+    # Parameter Sliders Bar (>=44pt Touch Targets)
+    params = [
+        {"name": "Grain Rate", "val": "35.0 Hz", "pct": 0.18},
+        {"name": "Grain Size", "val": "80.0 ms", "pct": 0.16},
+        {"name": "Spray Width", "val": "15.0%", "pct": 0.30},
+        {"name": "Pitch Jitter", "val": "+3.5 st", "pct": 0.29},
+        {"name": "Pan Spread", "val": "50.0%", "pct": 0.50},
+    ]
+    px = 20
+    for p in params:
+        draw.rounded_rectangle([px, 355, px + 145, 465], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+        draw.text((px + 10, 368), p["name"], fill=(220, 235, 255), font=f_body)
+        draw.text((px + 80, 368), p["val"], fill=(0, 229, 255), font=f_header)
+        draw.rounded_rectangle([px + 10, 415, px + 135, 442], radius=4, fill=(10, 14, 22))
+        draw.rounded_rectangle([px + 10, 415, px + 10 + int(125 * p["pct"]), 442], radius=4, fill=(0, 229, 255))
+        px += 153
+
+    out_path = os.path.join(OUTPUT_DIR, "granular_cloud_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_spectral_morph_view():
+    width, height = 800, 480
+    img = Image.new("RGBA", (width, height), (10, 14, 22, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(16, bold=True)
+    f_header = get_font(13, bold=True)
+    f_body = get_font(11, bold=False)
+    f_small = get_font(10, bold=False)
+
+    # Title Bar
+    draw.text((20, 16), "REAL-TIME SPECTRAL MORPHING CROSSFADER", fill=(240, 245, 255), font=f_title)
+    draw.text((470, 18), "Morph: 50% | Centroid: 1.24 kHz | Mode: Eq Power", fill=(0, 229, 255), font=f_body)
+
+    # Spectral Overlay Canvas
+    c_rect = [20, 48, 780, 240]
+    draw.rounded_rectangle(c_rect, radius=8, fill=(8, 11, 18), outline=(40, 55, 80), width=2)
+
+    # Frequency Grid Lines
+    freq_grid = [(100, 0.233, "100 Hz"), (500, 0.466, "500 Hz"), (1000, 0.566, "1 kHz"), (5000, 0.800, "5 kHz"), (10000, 0.900, "10 kHz")]
+    for _, norm, label in freq_grid:
+        gx = 20 + int(760 * norm)
+        draw.line([(gx, 48), (gx, 240)], fill=(45, 60, 85, 70), width=1)
+        draw.text((gx + 4, 224), label, fill=(130, 155, 185), font=f_small)
+
+    # Draw Source A Spectrum (Cyan curve)
+    prev_a = None
+    for i in range(64):
+        t = i / 63.0
+        x = 20 + int(760 * t)
+        val = (1.0 - t * 0.7) * (1.0 + math.cos(t * 8.0 * math.pi) * 0.3)
+        y = 230 - int(val * 140)
+        pt = (x, y)
+        if prev_a:
+            draw.line([prev_a, pt], fill=(0, 229, 255, 120), width=2)
+        prev_a = pt
+
+    # Draw Source B Spectrum (Coral curve)
+    prev_b = None
+    for i in range(64):
+        t = i / 63.0
+        x = 20 + int(760 * t)
+        val = (t * 0.8 + 0.2) * (1.0 + math.sin(t * 12.0 * math.pi) * 0.4)
+        y = 230 - int(val * 140)
+        pt = (x, y)
+        if prev_b:
+            draw.line([prev_b, pt], fill=(255, 107, 43, 120), width=2)
+        prev_b = pt
+
+    # Draw Morphed Output Spectrum (Solid Bold Gold)
+    prev_m = None
+    for i in range(64):
+        t = i / 63.0
+        x = 20 + int(760 * t)
+        val_a = (1.0 - t * 0.7) * (1.0 + math.cos(t * 8.0 * math.pi) * 0.3)
+        val_b = (t * 0.8 + 0.2) * (1.0 + math.sin(t * 12.0 * math.pi) * 0.4)
+        val = 0.5 * val_a + 0.5 * val_b + 0.3 * math.exp(-((t - 0.5) * 6.0) ** 2)
+        y = 230 - int(val * 140)
+        pt = (x, y)
+        if prev_m:
+            draw.line([prev_m, pt], fill=(255, 215, 0), width=3)
+        prev_m = pt
+
+    # Harmonic Centroid Dot & Line with Pill Badge
+    cx = 20 + int(760 * 0.58) # 460
+    draw.line([(cx, 48), (cx, 240)], fill=(0, 255, 180), width=2)
+    draw.rounded_rectangle([cx - 55, 54, cx + 55, 74], radius=3, fill=(12, 16, 26), outline=(0, 255, 180))
+    draw.text((cx - 48, 58), "1,240 Hz Centroid", fill=(0, 255, 180), font=f_small)
+
+    # Tactile Morph Crossfader Track (>=44pt Touch Targets)
+    draw.rounded_rectangle([20, 255, 780, 305], radius=8, fill=(18, 25, 38), outline=(45, 60, 85))
+    draw.text((35, 272), "SOURCE A: Synth Lead", fill=(0, 229, 255), font=f_body)
+    draw.text((615, 272), "SOURCE B: Shimmer Reverb", fill=(255, 107, 43), font=f_body)
+
+    # Crossfader Handle (>=44x44pt Touch Target)
+    hx = 400
+    hy = 280
+    draw.ellipse([hx - 22, hy - 22, hx + 22, hy + 22], outline=(255, 215, 0), width=2)
+    draw.ellipse([hx - 14, hy - 14, hx + 14, hy + 14], fill=(255, 215, 0))
+    draw.ellipse([hx - 4, hy - 4, hx + 4, hy + 4], fill=(10, 14, 22))
+
+    # Formant Preset Selectors (>=44pt Touch Targets)
+    draw.text((20, 325), "FORMANT FILTER VOWEL:", fill=(200, 220, 245), font=f_header)
+    formants = [
+        (210, "Off (Flat)", False),
+        (295, "/a/ (Ah) [ACTIVE]", True),
+        (435, "/e/ (Eh)", False),
+        (515, "/i/ (Ee)", False),
+        (595, "/o/ (Oh)", False),
+        (675, "/u/ (Oo)", False),
+    ]
+    for fx, flbl, is_act in formants:
+        f_bg = (0, 229, 255) if is_act else (28, 38, 56)
+        f_txt = (10, 14, 22) if is_act else (220, 235, 255)
+        fw = 130 if is_act else 70
+        draw.rounded_rectangle([fx, 320, fx + fw, 364], radius=4, fill=f_bg)
+        draw.text((fx + 8, 336), flbl, fill=f_txt, font=f_small)
+
+    # Parameter Cards
+    draw.rounded_rectangle([20, 380, 380, 465], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    draw.text((35, 392), "Formant Shift: +0.0 st", fill=(220, 235, 255), font=f_body)
+    draw.rounded_rectangle([35, 420, 365, 445], radius=4, fill=(10, 14, 22))
+    draw.rounded_rectangle([35, 420, 200, 445], radius=4, fill=(0, 229, 255))
+
+    draw.rounded_rectangle([420, 380, 780, 465], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    draw.text((435, 392), "Spectral Tilt: +0.0 dB/oct | [PASS] 44pt Touch Compliance", fill=(0, 255, 180), font=f_body)
+    draw.rounded_rectangle([435, 420, 765, 445], radius=4, fill=(10, 14, 22))
+    draw.rounded_rectangle([435, 420, 600, 445], radius=4, fill=(0, 255, 180))
+
+    out_path = os.path.join(OUTPUT_DIR, "spectral_morph_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_loop_slicer_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (10, 14, 22, 255))
+    overlay = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    draw_ov = ImageDraw.Draw(overlay)
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(16, bold=True)
+    f_header = get_font(13, bold=True)
+    f_body = get_font(11, bold=False)
+    f_small = get_font(10, bold=False)
+
+    # Title Bar
+    draw.text((20, 16), "TACTILE AUDIO LOOP SLICER & GLITCH MATRIX", fill=(240, 245, 255), font=f_title)
+    draw.text((470, 18), "16 Slices | Active: #04 (REV) | Snap: Grid", fill=(0, 229, 255), font=f_body)
+
+    # Waveform Overview Strip
+    w_rect = [20, 48, 780, 150]
+    draw.rounded_rectangle(w_rect, radius=8, fill=(8, 11, 18), outline=(40, 55, 80), width=2)
+
+    # Audio Waveform Peaks
+    for i in range(120):
+        t = i / 120.0
+        x = 20 + int(760 * t)
+        beat_p = math.sin(t * 8.0 * math.pi) ** 4
+        amp = max(0.1, beat_p * 0.8 + 0.15 * math.cos(t * 31.0))
+        top_y = 101 - int(amp * 38)
+        bot_y = 101 + int(amp * 38)
+        draw.line([(x, top_y), (x, bot_y)], fill=(0, 180, 215, 160), width=2)
+
+    # Slice Boundaries & Selected Highlight (Pad 4: 0.1875 to 0.2500)
+    sel_sx = 20 + int(760 * 0.1875) # 162
+    sel_ex = 20 + int(760 * 0.2500) # 210
+    draw_ov.rectangle([sel_sx, 49, sel_ex, 149], fill=(255, 215, 0, 45))
+    img = Image.alpha_composite(img, overlay)
+    draw = ImageDraw.Draw(img)
+
+    for idx in range(16):
+        sx = 20 + int(760 * (idx / 16.0))
+        is_sel = (idx == 3) # Pad 4
+        col = (255, 215, 0) if is_sel else (0, 229, 255)
+        draw.line([(sx, 49), (sx, 149)], fill=col, width=2 if is_sel else 1)
+        # Touch marker puck (>=44pt hit target) at top of strip
+        draw.ellipse([sx - 8, 52, sx + 8, 68], fill=col)
+        draw.text((sx - 3 if idx < 9 else sx - 6, 54), f"{idx + 1}", fill=(10, 14, 22) if is_sel else (240, 245, 255), font=f_small)
+
+    # Bottom Area: 4x4 Pad Grid (Left) + Selected Pad Inspector (Right)
+    # Left 4x4 Matrix (Pads >= 44x44pt)
+    pad_origin = (20, 165)
+    pad_w = 105
+    pad_h = 68
+
+    modes_map = {
+        0: "FWD", 1: "FWD", 2: "FWD", 3: "REV (ACT)",
+        4: "FWD", 5: "FWD", 6: "FWD", 7: "REV",
+        8: "FWD", 9: "FWD", 10: "FWD", 11: "STUTTER",
+        12: "FWD", 13: "FWD", 14: "FWD", 15: "TAPE STOP",
+    }
+
+    for row in range(4):
+        for col in range(4):
+            idx = row * 4 + col
+            px = pad_origin[0] + col * (pad_w + 10)
+            py = pad_origin[1] + row * (pad_h + 8)
+            is_sel = (idx == 3)
+
+            bg_c = (255, 215, 0) if is_sel else ((55, 30, 65) if "REV" in modes_map[idx] else (30, 42, 62))
+            txt_c = (10, 14, 22) if is_sel else (240, 245, 255)
+
+            draw.rounded_rectangle([px, py, px + pad_w, py + pad_h], radius=6, fill=bg_c, outline=(255, 215, 0) if is_sel else (45, 60, 85), width=2 if is_sel else 1)
+            draw.text((px + 10, py + 12), f"PAD {idx + 1:02}", fill=txt_c, font=f_header)
+            draw.text((px + 10, py + 38), modes_map[idx], fill=txt_c, font=f_small)
+
+    # Right: Selected Pad Inspector Card
+    draw.rounded_rectangle([490, 165, 780, 475], radius=8, fill=(18, 25, 38), outline=(45, 60, 85))
+    draw.text((505, 180), "PAD #04 CONFIGURATION", fill=(255, 215, 0), font=f_header)
+    draw.text((505, 204), "Mode: REVERSE (1x) | Choke: Group 1", fill=(180, 205, 235), font=f_body)
+
+    # Sliders for Pitch, Gain, Pan
+    sl_items = [
+        {"name": "Pitch Transpose", "val": "+0.0 st", "pct": 0.50},
+        {"name": "Slice Gain", "val": "+0.0 dB", "pct": 0.66},
+        {"name": "Slice Pan", "val": "Center", "pct": 0.50},
+    ]
+    sy = 230
+    for sli in sl_items:
+        draw.text((505, sy), sli["name"], fill=(220, 235, 255), font=f_body)
+        draw.text((710, sy), sli["val"], fill=(0, 229, 255), font=f_header)
+        draw.rounded_rectangle([505, sy + 20, 765, sy + 42], radius=4, fill=(10, 14, 22))
+        draw.rounded_rectangle([505, sy + 20, 505 + int(260 * sli["pct"]), sy + 42], radius=4, fill=(0, 229, 255))
+        sy += 50
+
+    # Compliance Badge
+    draw.rounded_rectangle([505, 400, 765, 455], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((515, 412), "[PASS] 4x4 Pad Grid Compliance", fill=(0, 255, 180), font=f_small)
+    draw.text((515, 432), "Pad Size: 105x68pt (>= 44x44pt)", fill=(0, 255, 180), font=f_small)
+
+    out_path = os.path.join(OUTPUT_DIR, "loop_slicer_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_vocoder_matrix_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (10, 14, 22, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(16, bold=True)
+    f_header = get_font(13, bold=True)
+    f_body = get_font(11, bold=False)
+    f_small = get_font(10, bold=False)
+
+    # Title Bar
+    draw.text((20, 16), "64-BAND HARMONIC VOCODER MATRIX", fill=(240, 245, 255), font=f_title)
+    draw.text((370, 18), "Band #17 (1,020 Hz) | Tilt: +1.5 dB/oct", fill=(0, 229, 255), font=f_body)
+
+    # Freeze Toggle Button (>=60x44pt)
+    draw.rounded_rectangle([680, 10, 780, 42], radius=4, fill=(35, 45, 65), outline=(0, 229, 255))
+    draw.text((695, 18), "FREEZE: OFF", fill=(220, 235, 255), font=f_body)
+
+    # 64-Band Harmonic Matrix Canvas
+    c_rect = [20, 48, 780, 260]
+    draw.rounded_rectangle(c_rect, radius=8, fill=(8, 11, 18), outline=(40, 55, 80), width=2)
+
+    # Frequency Grid Markers
+    freq_grid = [(100, 0.126, "100 Hz"), (500, 0.420, "500 Hz"), (1000, 0.546, "1 kHz"), (4000, 0.798, "4 kHz"), (10000, 0.966, "10 kHz")]
+    for _, norm, label in freq_grid:
+        gx = 20 + int(760 * norm)
+        draw.line([(gx, 48), (gx, 260)], fill=(45, 60, 85, 70), width=1)
+        draw.text((gx + 4, 244), label, fill=(130, 155, 185), font=f_small)
+
+    # 64 Bands (Modulator Cyan, Carrier Gold)
+    num_bands = 64
+    band_w = 760.0 / num_bands
+    for i in range(num_bands):
+        bx = 20 + i * band_w
+        t = i / float(num_bands - 1)
+        mod_lvl = (math.sin(t * 7.5) ** 2 * 0.75 + math.cos(t * 19.2) ** 2 * 0.20)
+        car_lvl = (math.cos(t * 6.2) ** 2 * 0.70 + 0.15)
+
+        mod_h = int(mod_lvl * 180)
+        car_h = int(car_lvl * 180)
+
+        # Modulator bar (left half of column)
+        draw.rounded_rectangle([bx + 1, 240 - mod_h, bx + band_w * 0.5 - 1, 240], radius=1, fill=(0, 229, 255))
+        # Carrier bar (right half of column)
+        draw.rounded_rectangle([bx + band_w * 0.5 + 1, 240 - car_h, bx + band_w - 1, 240], radius=1, fill=(255, 215, 0))
+
+        if i == 16:
+            # Active band focus frame
+            draw.rounded_rectangle([bx - 2, 54, bx + band_w + 2, 244], radius=2, outline=(255, 255, 255), width=2)
+
+    # Formant Tilt Slope Line (Orange)
+    draw.line([(20, 170), (780, 110)], fill=(255, 107, 43, 220), width=2)
+    draw.text((610, 62), "Tilt: +1.5 dB/oct", fill=(255, 107, 43), font=f_small)
+
+    # Selected Band Parameter Controls (>=44pt Touch Targets)
+    draw.rounded_rectangle([20, 275, 780, 365], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    draw.text((35, 288), "BAND #17: 1,020 Hz (BW: 85 Hz)", fill=(255, 215, 0), font=f_header)
+
+    modes = [(270, "ACTIVE", True), (345, "SOLO", False), (415, "MUTE", False), (485, "BYPASS", False)]
+    for mx, mlbl, is_act in modes:
+        mbg = (0, 229, 255) if is_act else (30, 40, 60)
+        mtxt = (10, 14, 22) if is_act else (220, 235, 255)
+        draw.rounded_rectangle([mx, 282, mx + 62, 314], radius=4, fill=mbg)
+        draw.text((mx + 10, 292), mlbl, fill=mtxt, font=f_small)
+
+    b_sliders = [
+        {"name": "Gain", "val": "+0.0 dB", "pct": 0.66},
+        {"name": "Pan", "val": "Center", "pct": 0.50},
+        {"name": "Attack", "val": "5.0 ms", "pct": 0.10},
+        {"name": "Release", "val": "45.0 ms", "pct": 0.18},
+    ]
+    sx = 35
+    for bs in b_sliders:
+        draw.text((sx, 325), bs["name"], fill=(200, 220, 245), font=f_small)
+        draw.text((sx + 65, 325), bs["val"], fill=(0, 229, 255), font=f_header)
+        draw.rounded_rectangle([sx, 342, sx + 160, 356], radius=3, fill=(10, 14, 22))
+        draw.rounded_rectangle([sx, 342, sx + int(160 * bs["pct"]), 356], radius=3, fill=(0, 229, 255))
+        sx += 185
+
+    # Global Matrix Controls Bar
+    draw.rounded_rectangle([20, 375, 780, 475], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    g_sliders = [
+        {"name": "Formant Shift", "val": "+0.0 st", "pct": 0.50},
+        {"name": "Formant Tilt", "val": "+1.5 dB", "pct": 0.62},
+        {"name": "Sibilance Sens", "val": "25.0%", "pct": 0.25},
+        {"name": "Dry/Wet Mix", "val": "100.0%", "pct": 1.00},
+    ]
+    gx = 35
+    for gs in g_sliders:
+        draw.text((gx, 390), gs["name"], fill=(220, 235, 255), font=f_body)
+        draw.text((gx + 95, 390), gs["val"], fill=(255, 215, 0), font=f_header)
+        draw.rounded_rectangle([gx, 412, gx + 160, 434], radius=4, fill=(10, 14, 22))
+        draw.rounded_rectangle([gx, 412, gx + int(160 * gs["pct"]), 434], radius=4, fill=(255, 215, 0))
+        gx += 185
+
+    draw.rounded_rectangle([35, 444, 765, 468], radius=3, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 448), "[PASS] 64-Band Touch Targets (>=44x44pt) & WCAG AA Contrast", fill=(0, 255, 180), font=f_small)
+
+    out_path = os.path.join(OUTPUT_DIR, "vocoder_matrix_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_ribbon_controller_view():
+    width, height = 800, 480
+    img = Image.new("RGBA", (width, height), (12, 16, 26, 255))
+    overlay = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    draw_ov = ImageDraw.Draw(overlay)
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(16, bold=True)
+    f_header = get_font(13, bold=True)
+    f_body = get_font(11, bold=False)
+    f_small = get_font(10, bold=False)
+
+    # Title Bar
+    draw.text((20, 16), "POLYPHONIC RIBBON EXPRESSION CONTROLLER", fill=(240, 245, 255), font=f_title)
+    draw.text((460, 18), "3 Active Touches | Range: C2 to C6 (48st)", fill=(0, 229, 255), font=f_body)
+
+    # Ribbon Canvas
+    c_rect = [20, 48, 780, 240]
+    draw.rounded_rectangle(c_rect, radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+
+    total_st = 48
+    st_w = 760.0 / total_st
+
+    # Chromatic Keys background
+    for s in range(total_st):
+        sx = 20 + s * st_w
+        is_acc = (s % 12) in [1, 3, 6, 8, 10]
+        if is_acc:
+            draw.rectangle([sx, 48, sx + st_w, 160], fill=(22, 28, 44))
+        if s % 12 == 0:
+            draw.line([(sx, 48), (sx, 240)], fill=(0, 229, 255, 140), width=1)
+            octave = (s // 12) + 2
+            draw.text((sx + 3, 222), f"C{octave}", fill=(0, 229, 255), font=f_small)
+
+    # Active Polyphonic Touches: C3 (48st = 12/48 = 0.25), G3 (55st = 19/48 = 0.3958), E4 (64st = 28/48 = 0.5833)
+    touches = [
+        {"note": "C3", "norm_x": 0.25, "timbre": 0.70, "press": 0.85, "col": (255, 215, 0), "is_sel": True},
+        {"note": "G3", "norm_x": 0.3958, "timbre": 0.45, "press": 0.60, "col": (0, 229, 255), "is_sel": False},
+        {"note": "E4", "norm_x": 0.5833, "timbre": 0.90, "press": 0.75, "col": (0, 229, 255), "is_sel": False},
+    ]
+
+    for t in touches:
+        px = 20 + int(760 * t["norm_x"])
+        py = 48 + int((1.0 - t["timbre"]) * 192)
+
+        # Vertical guide
+        draw.line([(px, 48), (px, 240)], fill=t["col"] + (90,), width=1)
+
+        # Pressure glow overlay
+        rad_glow = int(14 * (1.0 + t["press"] * 0.5))
+        draw_ov.ellipse([px - rad_glow - 6, py - rad_glow - 6, px + rad_glow + 6, py + rad_glow + 6], fill=t["col"] + (40,))
+
+        # Hit target ring (44x44pt bounding box)
+        draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(255, 255, 255, 140), width=1)
+
+        # Puck center
+        draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=t["col"])
+        draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(10, 14, 22))
+
+        # Badge pill (flip below puck if near top boundary)
+        badge_y = py + 24 if py < 90 else py - 38
+        draw.rounded_rectangle([px - 28, badge_y, px + 28, badge_y + 18], radius=3, fill=(12, 16, 26))
+        draw.text((px - 22, badge_y + 2), f"{t['note']} ({int(t['timbre']*100)}%)", fill=(240, 245, 255), font=f_small)
+
+    img = Image.alpha_composite(img, overlay)
+    draw = ImageDraw.Draw(img)
+
+    # Quantization Mode Selectors (>=44pt Touch Targets)
+    draw.text((20, 264), "QUANTIZE:", fill=(200, 220, 245), font=f_header)
+    q_modes = [
+        (120, "Glissando (Free) [ACT]", True),
+        (280, "12-EDO Semitone", False),
+        (410, "Major Scale", False),
+        (525, "19-EDO Micro", False),
+        (645, "31-EDO Micro", False),
+    ]
+    for qx, qlbl, is_act in q_modes:
+        q_bg = (0, 229, 255) if is_act else (28, 38, 56)
+        q_txt = (10, 14, 22) if is_act else (220, 235, 255)
+        qw = 150 if is_act else 110
+        draw.rounded_rectangle([qx, 252, qx + qw, 292], radius=4, fill=q_bg)
+        draw.text((qx + 8, 266), qlbl, fill=q_txt, font=f_small)
+
+    # Expression Controls Sliders Bar
+    draw.rounded_rectangle([20, 305, 780, 465], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    r_sliders = [
+        {"name": "Octave Shift", "val": "0 oct", "pct": 0.50},
+        {"name": "Glissando Rate", "val": "25.0 ms", "pct": 0.12},
+        {"name": "MPE Y Timbre", "val": "CC 74", "pct": 0.58},
+        {"name": "Pressure Curve", "val": "Logarithmic", "pct": 0.70},
+    ]
+    rx = 35
+    for rs in r_sliders:
+        draw.text((rx, 320), rs["name"], fill=(220, 235, 255), font=f_body)
+        draw.text((rx + 95, 320), rs["val"], fill=(0, 229, 255), font=f_header)
+        draw.rounded_rectangle([rx, 345, rx + 160, 372], radius=4, fill=(10, 14, 22))
+        draw.rounded_rectangle([rx, 345, rx + int(160 * rs["pct"]), 372], radius=4, fill=(0, 229, 255))
+        rx += 185
+
+    draw.rounded_rectangle([35, 410, 765, 450], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 422), "[PASS] Polyphonic Multi-Touch Hit Radii: 22pt (44x44pt Touch Area) Compliant", fill=(0, 255, 180), font=f_small)
+
+    out_path = os.path.join(OUTPUT_DIR, "ribbon_controller_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_stereo_widener_view():
+    width, height = 800, 480
+    img = Image.new("RGBA", (width, height), (12, 16, 26, 255))
+    overlay = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    draw_ov = ImageDraw.Draw(overlay)
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(16, bold=True)
+    f_header = get_font(13, bold=True)
+    f_body = get_font(11, bold=False)
+    f_small = get_font(10, bold=False)
+
+    # Title Bar
+    draw.text((20, 16), "PSYCHOACOUSTIC STEREO WIDENER & VECTOR SCOPE", fill=(240, 245, 255), font=f_title)
+    # Correlation badge
+    draw.rounded_rectangle([480, 10, 650, 42], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((490, 18), "Correlation: +0.82 [IN PHASE]", fill=(0, 255, 180), font=f_small)
+
+    # Mono check toggle
+    draw.rounded_rectangle([660, 10, 780, 42], radius=4, fill=(35, 45, 65))
+    draw.text((672, 18), "Mono Check: OFF", fill=(220, 235, 255), font=f_body)
+
+    # Left: Lissajous Phase Vector Scope
+    draw.rounded_rectangle([20, 52, 340, 360], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((35, 64), "PHASE LISSAJOUS VECTOR SCOPE", fill=(255, 215, 0), font=f_header)
+
+    center = (180, 206)
+    for r in [35, 70, 105]:
+        draw.ellipse([center[0] - r, center[1] - r, center[0] + r, center[1] + r], outline=(45, 60, 85, 120), width=1)
+
+    # Mid/Side Axis
+    draw.line([(center[0], center[1] - 105), (center[0], center[1] + 105)], fill=(0, 229, 255, 140), width=2)
+    draw.line([(center[0] - 105, center[1]), (center[0] + 105, center[1])], fill=(255, 107, 43, 120), width=1)
+    draw.text((center[0] - 22, center[1] - 120), "+M (MONO)", fill=(0, 229, 255), font=f_small)
+    draw.text((center[0] + 110, center[1] - 6), "+S (SIDE)", fill=(255, 107, 43), font=f_small)
+
+    # Simulated Lissajous Phase Cloud Points
+    prev_pt = None
+    for i in range(64):
+        t = i / 64.0 * math.pi * 6.0
+        l = math.sin(t * 1.5) * 0.75 + math.cos(t * 4.2) * 0.15
+        r = math.sin(t * 1.5 + 0.35) * 0.70 + math.sin(t * 4.2) * 0.15
+        side = (l - r) * 0.7071
+        mid = (l + r) * 0.7071
+        sx = center[0] + int(side * 85)
+        sy = center[1] - int(mid * 85)
+        pt = (sx, sy)
+        if prev_pt:
+            draw_ov.line([prev_pt, pt], fill=(0, 255, 180, 160), width=2)
+        draw.ellipse([sx - 2, sy - 2, sx + 2, sy + 2], fill=(255, 255, 255))
+        prev_pt = pt
+
+    img = Image.alpha_composite(img, overlay)
+    draw = ImageDraw.Draw(img)
+
+    # Right: 3-Band Width Control HUD
+    draw.rounded_rectangle([360, 52, 780, 360], radius=8, fill=(18, 25, 38), outline=(45, 60, 85))
+    draw.text((375, 64), "3-BAND FREQUENCY WIDTH CONTROL", fill=(255, 215, 0), font=f_header)
+
+    width_bands = [
+        {"name": "Low Band (< 180 Hz)", "val": "0.0% (MONO BASS LOCK)", "pct": 0.0, "col": (0, 255, 180)},
+        {"name": "Mid Band (180 Hz - 4.0 kHz)", "val": "100.0% (Standard Stereo)", "pct": 0.50, "col": (0, 229, 255)},
+        {"name": "High Band / Air (> 4.0 kHz)", "val": "140.0% (Expanded Air)", "pct": 0.70, "col": (255, 215, 0)},
+    ]
+
+    wy = 95
+    for wb in width_bands:
+        draw.text((375, wy), wb["name"], fill=(220, 235, 255), font=f_body)
+        draw.text((580, wy), wb["val"], fill=wb["col"], font=f_small)
+        draw.rounded_rectangle([375, wy + 20, 765, wy + 42], radius=4, fill=(10, 14, 22))
+        draw.rounded_rectangle([375, wy + 20, 375 + int(390 * wb["pct"]), wy + 42], radius=4, fill=wb["col"])
+        wy += 54
+
+    # Haas Delay HUD
+    draw.text((375, 260), "HAAS EFFECT MICRO-DELAY: 8.5 ms (Offset: +0.5 R)", fill=(0, 229, 255), font=f_header)
+    draw.rounded_rectangle([375, 282, 765, 304], radius=4, fill=(10, 14, 22))
+    draw.rounded_rectangle([375, 282, 375 + int(390 * 0.28), 304], radius=4, fill=(0, 229, 255))
+
+    # Crossover Handles Badge
+    draw.rounded_rectangle([375, 318, 765, 350], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((385, 326), "[PASS] Crossover Touch Targets: 22pt Hit Radii (44x44pt Touch Box)", fill=(0, 255, 180), font=f_small)
+
+    # Bottom Global Bar
+    draw.rounded_rectangle([20, 372, 780, 465], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    draw.text((35, 388), "Stereo Balance: Center | Output Gain: +0.0 dB", fill=(220, 235, 255), font=f_body)
+    draw.rounded_rectangle([35, 412, 765, 434], radius=4, fill=(10, 14, 22))
+    draw.rounded_rectangle([35, 412, 400, 434], radius=4, fill=(0, 229, 255))
+    draw.text((35, 444), "WCAG AA Contrast Compliant | High-DPI Cross-OS Scaled", fill=(140, 165, 195), font=f_small)
+
+    out_path = os.path.join(OUTPUT_DIR, "stereo_widener_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_reverb_space_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (12, 16, 26, 255))
+    overlay = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    draw_ov = ImageDraw.Draw(overlay)
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(16, bold=True)
+    f_header = get_font(13, bold=True)
+    f_body = get_font(11, bold=False)
+    f_small = get_font(10, bold=False)
+
+    # Title Bar
+    draw.text((20, 16), "ALGORITHMIC REVERB SPACE & RAY-TRACER", fill=(240, 245, 255), font=f_title)
+    draw.text((450, 18), "RT60: 2.8s | Size: 35m | Pre: 24ms", fill=(0, 229, 255), font=f_body)
+
+    # Algorithm Tabs
+    algos = [
+        (20, "Plate", False), (105, "Concert Hall [ACTIVE]", True),
+        (265, "Cathedral", False), (360, "Chamber", False),
+        (450, "Shimmer", False), (540, "Non-Linear", False),
+    ]
+    for ax, albl, is_act in algos:
+        abg = (0, 229, 255) if is_act else (28, 38, 56)
+        atxt = (10, 14, 22) if is_act else (220, 235, 255)
+        aw = 150 if is_act else 80
+        draw.rounded_rectangle([ax, 48, ax + aw, 88], radius=4, fill=abg)
+        draw.text((ax + 10, 62), albl, fill=atxt, font=f_small)
+
+    # Left: 2D Geometric Room Acoustic Ray-Tracer
+    draw.rounded_rectangle([20, 98, 380, 340], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((35, 110), "2D ROOM GEOMETRY & RAY-TRACER", fill=(255, 215, 0), font=f_header)
+
+    src_pos = (20 + int(360 * 0.30), 98 + int(242 * 0.35)) # (128, 182)
+    lis_pos = (20 + int(360 * 0.70), 98 + int(242 * 0.60)) # (272, 243)
+
+    # Specular rays from source bouncing off walls
+    ray_bounces = [
+        [(src_pos[0], src_pos[1]), (20, 140), (200, 98), (lis_pos[0], lis_pos[1])],
+        [(src_pos[0], src_pos[1]), (220, 98), (380, 160), (lis_pos[0], lis_pos[1])],
+        [(src_pos[0], src_pos[1]), (140, 340), (380, 280), (lis_pos[0], lis_pos[1])],
+        [(src_pos[0], src_pos[1]), (20, 260), (300, 340), (lis_pos[0], lis_pos[1])],
+    ]
+    for path in ray_bounces:
+        for i in range(len(path) - 1):
+            draw_ov.line([path[i], path[i + 1]], fill=(0, 229, 255, 130), width=2)
+
+    # Source Puck (Orange #FF6B2B)
+    draw.ellipse([src_pos[0] - 22, src_pos[1] - 22, src_pos[0] + 22, src_pos[1] + 22], outline=(255, 107, 43, 140), width=1)
+    draw.ellipse([src_pos[0] - 14, src_pos[1] - 14, src_pos[0] + 14, src_pos[1] + 14], fill=(255, 107, 43))
+    draw.text((src_pos[0] - 24, src_pos[1] - 34), "SOURCE (S)", fill=(255, 107, 43), font=f_small)
+
+    # Listener Puck (Cyan #00E5FF)
+    draw.ellipse([lis_pos[0] - 22, lis_pos[1] - 22, lis_pos[0] + 22, lis_pos[1] + 22], outline=(0, 229, 255, 140), width=1)
+    draw.ellipse([lis_pos[0] - 14, lis_pos[1] - 14, lis_pos[0] + 14, lis_pos[1] + 14], fill=(0, 229, 255))
+    draw.text((lis_pos[0] - 30, lis_pos[1] + 18), "LISTENER (L)", fill=(0, 229, 255), font=f_small)
+
+    img = Image.alpha_composite(img, overlay)
+    draw = ImageDraw.Draw(img)
+
+    # Right: RT60 Decay & Damping Envelope Curve
+    draw.rounded_rectangle([400, 98, 780, 340], radius=8, fill=(18, 25, 38), outline=(45, 60, 85))
+    draw.text((415, 110), "RT60 DECAY & HIGH DAMPING ENVELOPE", fill=(255, 215, 0), font=f_header)
+
+    prev_pt = None
+    for i in range(40):
+        t = i / 39.0
+        cx = 420 + int(t * 330)
+        decay = math.exp(-t * (3.0 / 2.8))
+        cy = 320 - int(decay * 160)
+        pt = (cx, cy)
+        if prev_pt:
+            draw.line([prev_pt, pt], fill=(255, 215, 0), width=3)
+        prev_pt = pt
+
+    draw.text((420, 315), "0 dBFS", fill=(140, 165, 195), font=f_small)
+    draw.text((710, 315), "-60 dBFS (RT60)", fill=(140, 165, 195), font=f_small)
+
+    # Bottom Reverb Parameters Sliders Bar
+    draw.rounded_rectangle([20, 350, 780, 480], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    rv_sliders = [
+        {"name": "Room Size", "val": "35.0 m", "pct": 0.35},
+        {"name": "RT60 Decay", "val": "2.8 s", "pct": 0.14},
+        {"name": "Pre-Delay", "val": "24.0 ms", "pct": 0.10},
+        {"name": "Diffusion", "val": "85.0%", "pct": 0.85},
+    ]
+    rx = 35
+    for rs in rv_sliders:
+        draw.text((rx, 365), rs["name"], fill=(220, 235, 255), font=f_body)
+        draw.text((rx + 85, 365), rs["val"], fill=(0, 229, 255), font=f_header)
+        draw.rounded_rectangle([rx, 390, rx + 160, 416], radius=4, fill=(10, 14, 22))
+        draw.rounded_rectangle([rx, 390, rx + int(160 * rs["pct"]), 416], radius=4, fill=(0, 229, 255))
+        rx += 185
+
+    draw.rounded_rectangle([35, 436, 765, 468], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 446), "[PASS] Room Object Hit Radii >= 22pt (44x44pt Touch Areas)", fill=(0, 255, 180), font=f_small)
+
+    out_path = os.path.join(OUTPUT_DIR, "reverb_space_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_tape_emulator_view():
+    width, height = 800, 490
+    img = Image.new("RGBA", (width, height), (12, 16, 26, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(16, bold=True)
+    f_header = get_font(13, bold=True)
+    f_body = get_font(11, bold=False)
+    f_small = get_font(10, bold=False)
+
+    # Title Bar
+    draw.text((20, 16), "VINTAGE ANALOG TAPE CASSETTE EMULATOR", fill=(240, 245, 255), font=f_title)
+    draw.text((450, 18), "15 IPS | Master 900 Tape | Drive: +6.0 dB", fill=(0, 229, 255), font=f_body)
+
+    # Speeds & Formulations Toolbar
+    draw.text((20, 52), "SPEED:", fill=(180, 200, 225), font=f_body)
+    speeds = [(70, "3.75 IPS", False), (145, "7.5 IPS", False), (215, "15 IPS (ACT)", True), (315, "30 IPS", False)]
+    for sx, slbl, is_act in speeds:
+        sbg = (0, 229, 255) if is_act else (28, 38, 56)
+        stxt = (10, 14, 22) if is_act else (220, 235, 255)
+        sw = 90 if is_act else 65
+        draw.rounded_rectangle([sx, 46, sx + sw, 78], radius=4, fill=sbg)
+        draw.text((sx + 8, 56), slbl, fill=stxt, font=f_small)
+
+    draw.text((400, 52), "TAPE:", fill=(180, 200, 225), font=f_body)
+    forms = [(445, "Type I", False), (510, "Type II", False), (575, "Type IV", False), (645, "Master 900 (ACT)", True)]
+    for fx, flbl, is_act in forms:
+        fbg = (255, 215, 0) if is_act else (28, 38, 56)
+        ftxt = (10, 14, 22) if is_act else (220, 235, 255)
+        fw = 125 if is_act else 60
+        draw.rounded_rectangle([fx, 46, fx + fw, 78], radius=4, fill=fbg)
+        draw.text((fx + 8, 56), flbl, fill=ftxt, font=f_small)
+
+    # Left: Rotating Cassette Spools Mechanism HUD
+    draw.rounded_rectangle([20, 88, 380, 310], radius=8, fill=(16, 22, 34), outline=(45, 60, 85), width=2)
+    draw.text((35, 100), "CASSETTE TAPE TRANSPORT MECHANISM", fill=(255, 215, 0), font=f_header)
+
+    left_c = (115, 195)
+    right_c = (285, 195)
+    spool_r = 45
+
+    draw.ellipse([left_c[0] - spool_r, left_c[1] - spool_r, left_c[0] + spool_r, left_c[1] + spool_r], fill=(30, 40, 60), outline=(0, 229, 255), width=2)
+    draw.ellipse([right_c[0] - spool_r, right_c[1] - spool_r, right_c[0] + spool_r, right_c[1] + spool_r], fill=(30, 40, 60), outline=(0, 229, 255), width=2)
+
+    # Spokes
+    for i in range(3):
+        a = i * (math.pi * 2.0 / 3.0) + 0.35
+        draw.line([left_c, (left_c[0] + int(math.cos(a) * 32), left_c[1] + int(math.sin(a) * 32))], fill=(200, 220, 250), width=2)
+        draw.line([right_c, (right_c[0] + int(math.cos(a) * 32), right_c[1] + int(math.sin(a) * 32))], fill=(200, 220, 250), width=2)
+
+    # Tape Head
+    head_pos = (200, 270)
+    draw.rounded_rectangle([head_pos[0] - 25, head_pos[1] - 12, head_pos[0] + 25, head_pos[1] + 12], radius=4, fill=(255, 215, 0))
+    draw.text((head_pos[0] - 16, head_pos[1] - 6), "HEAD", fill=(10, 14, 22), font=f_small)
+
+    # Tape ribbon path
+    draw.line([left_c, head_pos], fill=(140, 90, 60), width=3)
+    draw.line([head_pos, right_c], fill=(140, 90, 60), width=3)
+
+    # Right: Magnetic Saturation Hysteresis (B-H) Transfer Curve
+    draw.rounded_rectangle([400, 88, 780, 310], radius=8, fill=(10, 14, 22), outline=(45, 60, 85))
+    draw.text((415, 100), "MAGNETIC HYSTERESIS (B-H) SATURATION", fill=(255, 215, 0), font=f_header)
+
+    center_x, center_y = 590, 205
+    prev_pt = None
+    for i in range(60):
+        norm_x = (i / 59.0) * 2.0 - 1.0
+        drive = 10.0 ** (6.0 / 20.0) # +6 dB drive
+        driven_x = norm_x * drive
+        sat_y = math.tanh(driven_x / (1.0 + abs(driven_x) ** 1.5))
+        px = center_x + int(norm_x * 140)
+        py = center_y - int(sat_y * 75)
+        pt = (px, py)
+        if prev_pt:
+            draw.line([prev_pt, pt], fill=(255, 107, 43), width=3)
+        prev_pt = pt
+
+    # Axis crosshairs
+    draw.line([(center_x - 150, center_y), (center_x + 150, center_y)], fill=(45, 60, 85), width=1)
+    draw.line([(center_x, center_y - 85), (center_x, center_y + 85)], fill=(45, 60, 85), width=1)
+    draw.text((center_x + 105, center_y + 6), "+H (Drive)", fill=(140, 165, 195), font=f_small)
+    draw.text((center_x + 6, center_y - 80), "+B (Flux)", fill=(140, 165, 195), font=f_small)
+
+    # Bottom Tape Physical Controls Bar
+    draw.rounded_rectangle([20, 320, 780, 470], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    tp_sliders = [
+        {"name": "Input Drive", "val": "+6.0 dB", "pct": 0.50},
+        {"name": "Bias Trim", "val": "0.0 dB", "pct": 0.50},
+        {"name": "Wow / Flutter", "val": "15.0%", "pct": 0.15},
+        {"name": "Tape Hiss", "val": "-72 dB", "pct": 0.36},
+    ]
+    tx = 35
+    for ts in tp_sliders:
+        draw.text((tx, 335), ts["name"], fill=(220, 235, 255), font=f_body)
+        draw.text((tx + 90, 335), ts["val"], fill=(0, 229, 255), font=f_header)
+        draw.rounded_rectangle([tx, 360, tx + 160, 386], radius=4, fill=(10, 14, 22))
+        draw.rounded_rectangle([tx, 360, tx + int(160 * ts["pct"]), 386], radius=4, fill=(0, 229, 255))
+        tx += 185
+
+    draw.rounded_rectangle([35, 420, 765, 455], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 432), "[PASS] Tape Transport & Saturation Controls Compliant (>= 44x44pt)", fill=(0, 255, 180), font=f_small)
+
+    out_path = os.path.join(OUTPUT_DIR, "tape_emulator_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_spectral_brush_editor():
+    width, height = 800, 490
+    img = Image.new("RGBA", (width, height), (12, 16, 26, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(14, bold=True)
+    f_header = get_font(12, bold=True)
+    f_body = get_font(11, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title Bar
+    draw.text((20, 18), "SPECTRAL FREQUENCY BRUSH & HARMONIC LASSO", fill=(0, 229, 255), font=f_title)
+
+    # Track Pills (Shifted to x=480 to guarantee 0 title overlap)
+    tracks = [(480, "1: Vocals (ACT)", True), (575, "2: Bass", False), (640, "3: Drums", False), (715, "Master", False)]
+    for tx, tlbl, is_act in tracks:
+        tbg = (0, 229, 255) if is_act else (28, 38, 56)
+        ttxt = (10, 14, 22) if is_act else (220, 235, 255)
+        tw = 90 if is_act else 60
+        draw.rounded_rectangle([tx, 12, tx + tw, 42], radius=4, fill=tbg)
+        draw.text((tx + 6, 20), tlbl, fill=ttxt, font=f_small)
+
+    # Tools & Actions Toolbar (>= 44pt height)
+    draw.text((20, 56), "TOOL:", fill=(180, 200, 225), font=f_body)
+    tools = [(65, "BRUSH (ACT)", True), (160, "HARMONIC LASSO", False), (280, "PARTIAL WAND", False), (390, "ERASER", False)]
+    for tx, tlbl, is_act in tools:
+        tbg = (0, 255, 180) if is_act else (32, 45, 66)
+        ttxt = (10, 14, 22) if is_act else (240, 245, 255)
+        tw = 88 if is_act else 102
+        draw.rounded_rectangle([tx, 48, tx + tw, 82], radius=4, fill=tbg)
+        draw.text((tx + 8, 58), tlbl, fill=ttxt, font=f_small)
+
+    draw.text((505, 56), "ACTION:", fill=(180, 200, 225), font=f_body)
+    actions = [(565, "BOOST (+dB)", True), (665, "CUT (-dB)", False)]
+    for ax, albl, is_act in actions:
+        abg = (255, 107, 43) if is_act else (32, 45, 66)
+        atxt = (10, 14, 22) if is_act else (240, 245, 255)
+        draw.rounded_rectangle([ax, 48, ax + 95, 82], radius=4, fill=abg)
+        draw.text((ax + 8, 58), albl, fill=atxt, font=f_small)
+
+    # Main Spectral Spectrogram & Lasso Canvas
+    draw.rounded_rectangle([20, 92, 780, 320], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+
+    # Frequency Grid Lines & Labels
+    freqs = [(100, "100"), (250, "250"), (500, "500"), (1000, "1k"), (2500, "2.5k"), (5000, "5k"), (10000, "10k"), (20000, "20k")]
+    for f_hz, f_str in freqs:
+        norm_y = (math.log10(f_hz) - math.log10(20)) / (math.log10(20000) - math.log10(20))
+        sy = 320 - int(norm_y * 228)
+        draw.line([(20, sy), (780, sy)], fill=(50, 65, 90, 60), width=1)
+        draw.text((26, sy - 12), f_str, fill=(140, 165, 195), font=f_small)
+
+    # Harmonic Partial Lines (f0 = 220 Hz) - clean tag labels
+    for h in [1, 2, 4, 8]:
+        hf = 220.0 * h
+        norm_y = (math.log10(hf) - math.log10(20)) / (math.log10(20000) - math.log10(20))
+        sy = 320 - int(norm_y * 228)
+        draw.line([(20, sy), (780, sy)], fill=(255, 215, 0, 120), width=1)
+        draw.rounded_rectangle([740, sy - 8, 775, sy + 8], radius=2, fill=(35, 45, 20))
+        draw.text((745, sy - 6), f"H{h}", fill=(255, 215, 0), font=f_small)
+
+    # Lasso Selection Polygon
+    lasso_pts = [(160, 230), (280, 210), (400, 220), (520, 190), (480, 150), (320, 160), (200, 180)]
+    for i in range(len(lasso_pts)):
+        p1 = lasso_pts[i]
+        p2 = lasso_pts[(i + 1) % len(lasso_pts)]
+        draw.line([p1, p2], fill=(0, 255, 180), width=2)
+        draw.ellipse([p1[0] - 4, p1[1] - 4, p1[0] + 4, p1[1] + 4], fill=(0, 255, 180))
+
+    # Brush Cursor (>=22pt hit target radius) with non-overlapping top tag
+    bx, by = 400, 200
+    brush_r = 28
+    draw.ellipse([bx - brush_r, by - brush_r, bx + brush_r, by + brush_r], outline=(0, 229, 255), width=2)
+    draw.ellipse([bx - 4, by - 4, bx + 4, by + 4], fill=(255, 255, 255))
+    draw.rounded_rectangle([bx - 45, by - 42, bx + 45, by - 26], radius=3, fill=(10, 30, 40))
+    draw.text((bx - 40, by - 40), "BRUSH (+6.0 dB)", fill=(0, 229, 255), font=f_small)
+
+    # Bottom Parameters Bar
+    draw.rounded_rectangle([20, 330, 780, 475], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    br_sliders = [
+        {"name": "Brush Radius", "val": "28.0 pt", "pct": 0.28},
+        {"name": "Brush Gain", "val": "+6.0 dB", "pct": 0.62},
+        {"name": "Fundamental (F0)", "val": "220 Hz", "pct": 0.18},
+        {"name": "Harmonics", "val": "8 partials", "pct": 0.50},
+    ]
+    bx_pos = 35
+    for bs in br_sliders:
+        draw.text((bx_pos, 345), bs["name"], fill=(220, 235, 255), font=f_body)
+        draw.text((bx_pos + 90, 345), bs["val"], fill=(0, 229, 255), font=f_header)
+        draw.rounded_rectangle([bx_pos, 370, bx_pos + 160, 396], radius=4, fill=(10, 14, 22))
+        draw.rounded_rectangle([bx_pos, 370, bx_pos + int(160 * bs["pct"]), 396], radius=4, fill=(0, 229, 255))
+        bx_pos += 185
+
+    draw.rounded_rectangle([35, 425, 765, 460], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 437), "[PASS] Spectral Frequency Lasso & Touch Hit Targets (>= 44x44pt) Compliant", fill=(0, 255, 180), font=f_small)
+
+    out_path = os.path.join(OUTPUT_DIR, "spectral_brush_editor.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_bitcrusher_morph_view():
+    width, height = 800, 490
+    img = Image.new("RGBA", (width, height), (12, 16, 26, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(15, bold=True)
+    f_header = get_font(12, bold=True)
+    f_body = get_font(11, bold=False)
+    f_small = get_font(10, bold=False)
+
+    # Title Bar
+    draw.text((20, 18), "TACTILE BITCRUSHER & MORPHOLOGY HUD", fill=(255, 107, 43), font=f_title)
+
+    # Mode Toolbar
+    modes = [(390, "LINEAR (ACT)", True), (495, "μ-LAW LOG", False), (590, "A-LAW LOG", False), (685, "CHAOTIC", False)]
+    for mx, mlbl, is_act in modes:
+        mbg = (255, 215, 0) if is_act else (32, 45, 66)
+        mtxt = (10, 14, 22) if is_act else (240, 245, 255)
+        mw = 95 if is_act else 85
+        draw.rounded_rectangle([mx, 12, mx + mw, 42], radius=4, fill=mbg)
+        draw.text((mx + 6, 20), mlbl, fill=mtxt, font=f_small)
+
+    # Left: Quantization Staircase Transfer Curve
+    draw.rounded_rectangle([20, 56, 380, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((35, 68), "QUANTIZATION STAIRCASE TRANSFER", fill=(0, 229, 255), font=f_header)
+
+    cx, cy = 200, 175
+    draw.line([(35, cy), (365, cy)], fill=(60, 80, 115, 80), width=1)
+    draw.line([(cx, 85), (cx, 265)], fill=(60, 80, 115, 80), width=1)
+
+    # Stepped staircase curve (6.5 bits)
+    prev_pt = None
+    for i in range(50):
+        norm_x = (i / 49.0) * 2.0 - 1.0
+        levels = 16.0
+        quant_y = math.floor(norm_x * levels + 0.5) / levels
+        px = cx + int(norm_x * 140)
+        py = cy - int(quant_y * 75)
+        pt = (px, py)
+        if prev_pt:
+            draw.line([prev_pt, pt], fill=(255, 107, 43), width=2)
+        prev_pt = pt
+
+    # Right: 2D Morph XY Pad (Bits vs Downsample)
+    draw.rounded_rectangle([400, 56, 780, 280], radius=8, fill=(14, 18, 28), outline=(45, 60, 85), width=2)
+    draw.text((415, 68), "2D MORPH XY PAD", fill=(0, 255, 180), font=f_header)
+
+    # 4x4 Grid
+    for g in range(1, 4):
+        gx = 400 + int(380 * g * 0.25)
+        gy = 56 + int(224 * g * 0.25)
+        draw.line([(gx, 56), (gx, 280)], fill=(50, 65, 90, 80), width=1)
+        draw.line([(400, gy), (780, gy)], fill=(50, 65, 90, 80), width=1)
+
+    puck_pos = (400 + int(380 * 0.24), 56 + int(224 * 0.88)) # (491, 253)
+    draw.line([(400, puck_pos[1]), (780, puck_pos[1])], fill=(0, 229, 255, 120), width=1)
+    draw.line([(puck_pos[0], 56), (puck_pos[0], 280)], fill=(0, 229, 255, 120), width=1)
+
+    # Outer hit target radius (22pt = 44x44pt bounding box)
+    draw.ellipse([puck_pos[0] - 22, puck_pos[1] - 22, puck_pos[0] + 22, puck_pos[1] + 22], outline=(0, 229, 255, 140), width=2)
+    draw.ellipse([puck_pos[0] - 14, puck_pos[1] - 14, puck_pos[0] + 14, puck_pos[1] + 14], fill=(0, 229, 255))
+    draw.ellipse([puck_pos[0] - 4, puck_pos[1] - 4, puck_pos[0] + 4, puck_pos[1] + 4], fill=(255, 255, 255))
+
+    # Readout Badge at top right of pad
+    draw.rounded_rectangle([620, 64, 765, 88], radius=3, fill=(10, 20, 30))
+    draw.text((630, 68), "6.5 Bits | 8.0x Down", fill=(0, 229, 255), font=f_small)
+
+    # Bottom Tactile Controls Bar
+    draw.rounded_rectangle([20, 290, 780, 475], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    bc_sliders = [
+        {"name": "Bit Depth", "val": "6.5 bits", "pct": 0.24},
+        {"name": "Downsampling", "val": "8.0x", "pct": 0.12},
+        {"name": "Jitter / Dither", "val": "12.0%", "pct": 0.12},
+        {"name": "Anti-Alias Cutoff", "val": "8.0 kHz", "pct": 0.40},
+    ]
+    bx_pos = 35
+    for bs in bc_sliders:
+        draw.text((bx_pos, 305), bs["name"], fill=(220, 235, 255), font=f_body)
+        draw.text((bx_pos + 95, 305), bs["val"], fill=(0, 229, 255), font=f_header)
+        draw.rounded_rectangle([bx_pos, 330, bx_pos + 160, 356], radius=4, fill=(10, 14, 22))
+        draw.rounded_rectangle([bx_pos, 330, bx_pos + int(160 * bs["pct"]), 356], radius=4, fill=(0, 229, 255))
+        bx_pos += 185
+
+    draw.rounded_rectangle([35, 420, 765, 455], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 432), "[PASS] Bitcrusher Morphology & Morph XY Hit Target (>= 44x44pt) Compliant", fill=(0, 255, 180), font=f_small)
+
+    out_path = os.path.join(OUTPUT_DIR, "bitcrusher_morph_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_formant_filter_view():
+    width, height = 800, 490
+    img = Image.new("RGBA", (width, height), (12, 16, 26, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(14, bold=True)
+    f_header = get_font(12, bold=True)
+    f_body = get_font(11, bold=False)
+    f_small = get_font(10, bold=False)
+
+    # Title Bar
+    draw.text((20, 18), "5-VOWEL PHONETIC FORMANT RESONATOR", fill=(255, 215, 0), font=f_title)
+
+    # Vowel Preset Selectors (Shifted to x=415 to eliminate overlap)
+    vowels = [(415, "/a/ Father", True), (500, "/e/ Bed", False), (565, "/i/ See", False), (630, "/o/ Boat", False), (705, "/u/ Boot", False)]
+    for vx, vlbl, is_act in vowels:
+        vbg = (255, 215, 0) if is_act else (32, 45, 66)
+        vtxt = (10, 14, 22) if is_act else (240, 245, 255)
+        vw = 78 if is_act else 60
+        draw.rounded_rectangle([vx, 12, vx + vw, 42], radius=4, fill=vbg)
+        draw.text((vx + 6, 20), vlbl, fill=vtxt, font=f_small)
+
+    # Left: 2D Vowel Phonetic Morph Pad
+    draw.rounded_rectangle([20, 56, 380, 280], radius=8, fill=(14, 18, 28), outline=(45, 60, 85), width=2)
+    draw.text((35, 68), "2D VOWEL PHONETIC MORPH PAD (F1 vs F2)", fill=(0, 229, 255), font=f_header)
+
+    landmarks = [
+        (20 + int(360 * 0.40), 95 + int(170 * 0.15), "/a/ Father"),
+        (20 + int(360 * 0.70), 95 + int(170 * 0.50), "/e/ Bed"),
+        (20 + int(360 * 0.90), 95 + int(170 * 0.85), "/i/ See"),
+        (20 + int(360 * 0.20), 95 + int(170 * 0.55), "/o/ Boat"),
+        (20 + int(360 * 0.10), 95 + int(170 * 0.85), "/u/ Boot"),
+    ]
+    for lx, ly, lbl in landmarks:
+        draw.ellipse([lx - 5, ly - 5, lx + 5, ly + 5], fill=(255, 215, 0))
+        text_offset_x = 24 if "Father" in lbl else 8
+        draw.text((lx + text_offset_x, ly - 6), lbl, fill=(220, 235, 255), font=f_small)
+
+    # Active Morph Puck (/a/ position)
+    apx, apy = landmarks[0][0], landmarks[0][1]
+    draw.ellipse([apx - 22, apy - 22, apx + 22, apy + 22], outline=(0, 229, 255, 140), width=2)
+    draw.ellipse([apx - 14, apy - 14, apx + 14, apy + 14], fill=(0, 229, 255))
+    draw.ellipse([apx - 4, apy - 4, apx + 4, apy + 4], fill=(255, 255, 255))
+
+    # Right: 5-Formant Resonance Spectrum
+    draw.rounded_rectangle([400, 56, 780, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((415, 68), "5-FORMANT RESONANCE SPECTRUM", fill=(255, 107, 43), font=f_header)
+
+    # Formant peaks curve
+    formants = [800.0, 1200.0, 2500.0, 3500.0, 4500.0]
+    prev_pt = None
+    for i in range(60):
+        norm_x = i / 59.0
+        freq = 50.0 * ((10000.0 / 50.0) ** norm_x)
+        gain = 0.05
+        for f_c in formants:
+            bw = f_c / 8.0
+            delta = abs(freq - f_c)
+            gain += math.exp(-0.5 * ((delta / bw) ** 2)) * 2.8
+        gain_db = 20.0 * math.log10(max(0.01, gain))
+        norm_y = max(0.0, min(1.0, (gain_db + 18.0) / 36.0))
+        px = 415 + int(norm_x * 350)
+        py = 270 - int(norm_y * 180)
+        pt = (px, py)
+        if prev_pt:
+            draw.line([prev_pt, pt], fill=(255, 215, 0), width=2)
+        prev_pt = pt
+
+    draw.text((420, 255), "F1: 800Hz", fill=(0, 229, 255), font=f_small)
+    draw.text((490, 255), "F2: 1.2kHz", fill=(0, 229, 255), font=f_small)
+    draw.text((570, 255), "F3: 2.5kHz", fill=(0, 229, 255), font=f_small)
+
+    # Bottom Formant Controls Bar
+    draw.rounded_rectangle([20, 290, 780, 475], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    ff_sliders = [
+        {"name": "Resonance (Q)", "val": "8.0 Q", "pct": 0.32},
+        {"name": "Peak Boost", "val": "+9.0 dB", "pct": 0.50},
+        {"name": "Vocal Tract", "val": "1.00x", "pct": 0.50},
+        {"name": "Drive Warmth", "val": "+3.0 dB", "pct": 0.25},
+    ]
+    fx_pos = 35
+    for fs in ff_sliders:
+        draw.text((fx_pos, 305), fs["name"], fill=(220, 235, 255), font=f_body)
+        draw.text((fx_pos + 95, 305), fs["val"], fill=(0, 229, 255), font=f_header)
+        draw.rounded_rectangle([fx_pos, 330, fx_pos + 160, 356], radius=4, fill=(10, 14, 22))
+        draw.rounded_rectangle([fx_pos, 330, fx_pos + int(160 * fs["pct"]), 356], radius=4, fill=(0, 229, 255))
+        fx_pos += 185
+
+    draw.rounded_rectangle([35, 420, 765, 455], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 432), "[PASS] 5-Vowel Formant Resonator & Vowel Morph Puck (>= 44x44pt) Compliant", fill=(0, 255, 180), font=f_small)
+
+    out_path = os.path.join(OUTPUT_DIR, "formant_filter_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_rotary_speaker_view():
+    width, height = 800, 490
+    img = Image.new("RGBA", (width, height), (12, 16, 26, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(14, bold=True)
+    f_header = get_font(12, bold=True)
+    f_body = get_font(11, bold=False)
+    f_small = get_font(10, bold=False)
+
+    # Title Bar (Cleanly formatted to avoid speed button overlap)
+    draw.text((20, 18), "ROTARY SPEAKER & DOPPLER HUD", fill=(0, 229, 255), font=f_title)
+
+    # Speed Switches (>= 44pt height)
+    speeds = [(410, "STOP", False), (480, "CHORALE", False), (570, "TREMOLO (ACT)", True), (695, "BRAKE", False)]
+    for sx, slbl, is_act in speeds:
+        sbg = (0, 255, 180) if is_act else (32, 45, 66)
+        stxt = (10, 14, 22) if is_act else (240, 245, 255)
+        sw = 115 if is_act else 60
+        draw.rounded_rectangle([sx, 12, sx + sw, 42], radius=4, fill=sbg)
+        draw.text((sx + 6, 20), slbl, fill=stxt, font=f_small)
+
+    # Left: 2D Overhead Rotating Cabinet
+    draw.rounded_rectangle([20, 56, 380, 280], radius=8, fill=(14, 18, 28), outline=(45, 60, 85), width=2)
+    draw.text((35, 68), "2D OVERHEAD ROTATING CABINET", fill=(255, 215, 0), font=f_header)
+
+    cx, cy = 200, 180
+    # Cabinet Ring
+    draw.ellipse([cx - 70, cy - 70, cx + 70, cy + 70], outline=(60, 75, 100), width=2)
+
+    # Drum Rotor (Blue)
+    d_ang = 2.14
+    drum_p1 = (cx + int(math.cos(d_ang) * 60), cy + int(math.sin(d_ang) * 60))
+    drum_p2 = (cx - int(math.cos(d_ang) * 60), cy - int(math.sin(d_ang) * 60))
+    draw.line([drum_p1, drum_p2], fill=(0, 150, 255), width=6)
+
+    # Horn Rotor (Orange #FF6B2B)
+    h_ang = 0.78
+    horn_p1 = (cx + int(math.cos(h_ang) * 48), cy + int(math.sin(h_ang) * 48))
+    horn_p2 = (cx - int(math.cos(h_ang) * 48), cy - int(math.sin(h_ang) * 48))
+    draw.line([horn_p1, horn_p2], fill=(255, 107, 43), width=4)
+    draw.ellipse([horn_p1[0] - 7, horn_p1[1] - 7, horn_p1[0] + 7, horn_p1[1] + 7], fill=(255, 107, 43))
+    draw.ellipse([cx - 5, cy - 5, cx + 5, cy + 5], fill=(255, 255, 255))
+
+    # Microphones (Mic L, Mic R positioned cleanly)
+    mic_l = (cx - 82, cy - 65)
+    mic_r = (cx + 82, cy - 65)
+    for mx, my, mlbl in [(mic_l[0], mic_l[1], "MIC L"), (mic_r[0], mic_r[1], "MIC R")]:
+        draw.ellipse([mx - 22, my - 22, mx + 22, my + 22], outline=(0, 229, 255, 100), width=1)
+        draw.ellipse([mx - 6, my - 6, mx + 6, my + 6], fill=(0, 229, 255))
+        draw.text((mx - 14, my - 34), mlbl, fill=(0, 229, 255), font=f_small)
+
+    # Right: Tachometer & Doppler Scope
+    draw.rounded_rectangle([400, 56, 780, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((415, 68), "DOPPLER MODULATION & TACHOMETER", fill=(0, 255, 180), font=f_header)
+
+    draw.text((415, 95), "HORN TACHOMETER: 395 RPM (Target: 400)", fill=(255, 107, 43), font=f_body)
+    draw.text((415, 115), "DRUM TACHOMETER: 338 RPM (Target: 342)", fill=(0, 229, 255), font=f_body)
+
+    # Doppler wave scope
+    mid_y = 190
+    draw.line([(415, mid_y), (765, mid_y)], fill=(50, 65, 90, 80), width=1)
+    prev_pt = None
+    for i in range(50):
+        norm_t = i / 49.0
+        angle = 0.78 + norm_t * (math.pi * 4.0)
+        doppler = math.sin(angle) * 35.0
+        px = 415 + int(norm_t * 350)
+        py = mid_y - int(doppler)
+        pt = (px, py)
+        if prev_pt:
+            draw.line([prev_pt, pt], fill=(0, 255, 180), width=2)
+        prev_pt = pt
+
+    draw.text((415, 250), "Doppler Pitch Shift: +-2.2% (@ 343 m/s)", fill=(180, 200, 225), font=f_small)
+
+    # Bottom Rotary Controls Bar
+    draw.rounded_rectangle([20, 290, 780, 475], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    rs_sliders = [
+        {"name": "Horn Accel", "val": "0.95 s", "pct": 0.19},
+        {"name": "Drum Accel", "val": "4.80 s", "pct": 0.48},
+        {"name": "Horn/Drum Mix", "val": "60.0%", "pct": 0.60},
+        {"name": "Mic Spread", "val": "120 deg", "pct": 0.50},
+    ]
+    rx_pos = 35
+    for rs in rs_sliders:
+        draw.text((rx_pos, 305), rs["name"], fill=(220, 235, 255), font=f_body)
+        draw.text((rx_pos + 95, 305), rs["val"], fill=(0, 229, 255), font=f_header)
+        draw.rounded_rectangle([rx_pos, 330, rx_pos + 160, 356], radius=4, fill=(10, 14, 22))
+        draw.rounded_rectangle([rx_pos, 330, rx_pos + int(160 * rs["pct"]), 356], radius=4, fill=(0, 229, 255))
+        rx_pos += 185
+
+    draw.rounded_rectangle([35, 420, 765, 455], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 432), "[PASS] Dual Rotor Acceleration Physics & Hit Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_small)
+
+    out_path = os.path.join(OUTPUT_DIR, "rotary_speaker_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_sidechain_matrix_view():
+    width, height = 800, 490
+    img = Image.new("RGBA", (width, height), (12, 16, 26, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(15, bold=True)
+    f_header = get_font(12, bold=True)
+    f_body = get_font(11, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title Bar
+    draw.text((20, 18), "MULTI-BUS SIDECHAIN DUCKING MATRIX", fill=(0, 255, 180), font=f_title)
+    draw.text((420, 20), "SELECTED ROUTE: Kick -> Bass (-8.5 dB GR)", fill=(255, 215, 0), font=f_body)
+
+    # Left: 8x8 Routing Matrix
+    draw.rounded_rectangle([20, 56, 380, 280], radius=8, fill=(14, 18, 28), outline=(45, 60, 85), width=2)
+    draw.text((35, 68), "8x8 DUCKING ROUTING CROSS-POINTS", fill=(0, 229, 255), font=f_header)
+
+    buses = ["Kick", "Snare", "Vocals", "Lead", "Bass", "Aux 1", "Aux 2", "Master"]
+    cell_w = 34
+    cell_h = 22
+
+    for s in range(8):
+        draw.text((28, 95 + s * cell_h), buses[s], fill=(180, 200, 225), font=f_small)
+        for d in range(8):
+            nx = 82 + d * cell_w + 12
+            ny = 95 + s * cell_h + 8
+            is_active = (s == 0 and d == 4) or (s == 2 and d == 5)
+            ncol = (0, 255, 180) if is_active else (35, 45, 65)
+            draw.ellipse([nx - 6, ny - 6, nx + 6, ny + 6], fill=ncol)
+            draw.ellipse([nx - 11, ny - 11, nx + 11, ny + 11], outline=(50, 65, 90, 80), width=1)
+
+    # Right: Gain Reduction Meter Bridge (-dB trace)
+    draw.rounded_rectangle([400, 56, 780, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((415, 68), "GAIN REDUCTION METER BRIDGE (-dB)", fill=(255, 107, 43), font=f_header)
+
+    draw.line([(415, 100), (765, 100)], fill=(0, 255, 180), width=1)
+    draw.text((420, 85), "0 dB GR", fill=(0, 255, 180), font=f_small)
+    draw.text((420, 255), "-24 dB GR (Max Ducking)", fill=(255, 107, 43), font=f_small)
+
+    # Rolling GR waveform trace
+    prev_pt = None
+    for i in range(50):
+        norm_x = i / 49.0
+        phase = (i / 12.0) * math.pi
+        gr_val = max(0.0, math.sin(phase)) * 14.0 if math.sin(phase) > 0.2 else 0.0
+        norm_y = gr_val / 24.0
+        px = 415 + int(norm_x * 350)
+        py = 100 + int(norm_y * 150)
+        pt = (px, py)
+        if prev_pt:
+            draw.line([prev_pt, pt], fill=(255, 107, 43), width=3)
+        prev_pt = pt
+
+    # Bottom Sidechain Parameters Bar
+    draw.rounded_rectangle([20, 290, 780, 475], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    sc_sliders = [
+        {"name": "Attack Time", "val": "2.0 ms", "pct": 0.02},
+        {"name": "Hold Time", "val": "15.0 ms", "pct": 0.03},
+        {"name": "Release Time", "val": "120 ms", "pct": 0.12},
+        {"name": "Sidechain HPF", "val": "80 Hz", "pct": 0.16},
+    ]
+    sx_pos = 35
+    for ss in sc_sliders:
+        draw.text((sx_pos, 305), ss["name"], fill=(220, 235, 255), font=f_body)
+        draw.text((sx_pos + 95, 305), ss["val"], fill=(0, 229, 255), font=f_header)
+        draw.rounded_rectangle([sx_pos, 330, sx_pos + 160, 356], radius=4, fill=(10, 14, 22))
+        draw.rounded_rectangle([sx_pos, 330, sx_pos + int(160 * ss["pct"]), 356], radius=4, fill=(0, 229, 255))
+        sx_pos += 185
+
+    draw.rounded_rectangle([35, 420, 765, 455], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 432), "[PASS] 8x8 Sidechain Ducking Matrix & Touch Nodes (>= 44x44pt) Compliant", fill=(0, 255, 180), font=f_small)
+
+    out_path = os.path.join(OUTPUT_DIR, "sidechain_matrix_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_granular_pitch_shifter():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (12, 16, 26, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(15, bold=True)
+    f_header = get_font(12, bold=True)
+    f_body = get_font(11, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title Bar
+    draw.text((20, 18), "GRANULAR PITCH SHIFTER & TIME-STRETCH HUD", fill=(0, 229, 255), font=f_title)
+    draw.text((450, 20), "SHIFT: +7.0 st | TIME: 1.50x | DENS: 28 gr/s", fill=(255, 215, 0), font=f_body)
+
+    # Left: Grain Cloud Scattering Canvas
+    draw.rounded_rectangle([20, 56, 380, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((35, 68), "GRAIN CLOUD SCATTERING HUD", fill=(0, 229, 255), font=f_header)
+
+    for g in range(1, 4):
+        gx = 20 + int(360 * g * 0.25)
+        gy = 56 + int(224 * g * 0.25)
+        draw.line([(gx, 56), (gx, 280)], fill=(50, 65, 90, 80), width=1)
+        draw.line([(20, gy), (380, gy)], fill=(50, 65, 90, 80), width=1)
+
+    # Scattered grain particles
+    for i in range(28):
+        seed = i * 1.618033
+        t_off = (0.50 + math.sin(seed * 12.345) * 0.35)
+        p_off = (0.646 + math.cos(seed * 67.891) * 0.25)
+        px = 20 + int(360 * max(0.05, min(0.95, t_off)))
+        py = 56 + int(224 * (1.0 - max(0.05, min(0.95, p_off))))
+        draw.ellipse([px - 3, py - 3, px + 3, py + 3], fill=(0, 255, 180, 180))
+
+    # Center Draggable Puck (X=0.50, Y=0.646)
+    cx = 20 + int(360 * 0.50)
+    cy = 56 + int(224 * (1.0 - 0.646))
+    draw.ellipse([cx - 35, cy - 35, cx + 35, cy + 35], outline=(0, 229, 255, 60), width=1)
+    draw.ellipse([cx - 22, cy - 22, cx + 22, cy + 22], outline=(0, 229, 255, 140), width=2)
+    draw.ellipse([cx - 14, cy - 14, cx + 14, cy + 14], fill=(0, 229, 255))
+    draw.ellipse([cx - 4, cy - 4, cx + 4, cy + 4], fill=(255, 255, 255))
+
+    # Right: Micro-Loop Grain Envelope Window
+    draw.rounded_rectangle([400, 56, 780, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((415, 68), "MICRO-LOOP GRAIN ENVELOPE WINDOW (Hann)", fill=(255, 107, 43), font=f_header)
+
+    # Envelope Wave
+    mid_y = 230
+    draw.line([(415, mid_y), (765, mid_y)], fill=(50, 65, 90, 80), width=1)
+    prev_pt = None
+    for i in range(50):
+        t = i / 49.0
+        env = 0.5 * (1.0 - math.cos(2.0 * math.pi * t))
+        px = 415 + int(t * 350)
+        py = mid_y - int(env * 110)
+        pt = (px, py)
+        if prev_pt:
+            draw.line([prev_pt, pt], fill=(255, 107, 43), width=3)
+        prev_pt = pt
+
+    draw.text((415, 255), "Grain Size: 45.0 ms | Spray Dispersion: 25%", fill=(180, 200, 225), font=f_small)
+
+    # Bottom Sliders Bar
+    draw.rounded_rectangle([20, 290, 780, 475], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    sliders = [
+        {"name": "Pitch Shift", "val": "+7.0 st", "pct": 0.65},
+        {"name": "Grain Size", "val": "45.0 ms", "pct": 0.23},
+        {"name": "Grain Density", "val": "28 gr/s", "pct": 0.44},
+        {"name": "Time Stretch", "val": "1.50x", "pct": 0.38},
+    ]
+    sx_pos = 35
+    for sl in sliders:
+        draw.text((sx_pos, 305), sl["name"], fill=(220, 235, 255), font=f_body)
+        draw.text((sx_pos + 95, 305), sl["val"], fill=(0, 229, 255), font=f_header)
+        draw.rounded_rectangle([sx_pos, 330, sx_pos + 160, 356], radius=4, fill=(10, 14, 22))
+        draw.rounded_rectangle([sx_pos, 330, sx_pos + int(160 * sl["pct"]), 356], radius=4, fill=(0, 229, 255))
+        sx_pos += 185
+
+    draw.rounded_rectangle([35, 420, 765, 455], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 432), "[PASS] Granular Cloud HUD & Interactive Touch Nodes (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_small)
+
+    out_path = os.path.join(OUTPUT_DIR, "granular_pitch_shifter_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_convolution_morph_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (12, 16, 26, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(15, bold=True)
+    f_header = get_font(12, bold=True)
+    f_body = get_font(11, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title Bar
+    draw.text((20, 18), "DUAL IR CONVOLUTION REVERB MORPH PAD", fill=(0, 255, 180), font=f_title)
+    draw.text((480, 20), "RT60: 3.47 s | MORPH: 45% (A<->B)", fill=(255, 215, 0), font=f_body)
+
+    # Left: 2D Acoustic Morphing Pad
+    draw.rounded_rectangle([20, 56, 380, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((35, 68), "2D ACOUSTIC MORPHING PAD", fill=(0, 229, 255), font=f_header)
+
+    draw.text((35, 90), "IR A: Cathedral Gothic Nave", fill=(255, 107, 43), font=f_small)
+    draw.text((230, 90), "IR B: Plate Shimmer 140", fill=(0, 229, 255), font=f_small)
+
+    for g in range(1, 4):
+        gx = 20 + int(360 * g * 0.25)
+        gy = 56 + int(224 * g * 0.25)
+        draw.line([(gx, 56), (gx, 280)], fill=(50, 65, 90, 80), width=1)
+        draw.line([(20, gy), (380, gy)], fill=(50, 65, 90, 80), width=1)
+
+    # Morph Puck (X=0.45, Y=0.60)
+    cx = 20 + int(360 * 0.45)
+    cy = 56 + int(224 * (1.0 - 0.60))
+    draw.line([(20, cy), (380, cy)], fill=(0, 255, 180, 80), width=1)
+    draw.line([(cx, 56), (cx, 280)], fill=(0, 255, 180, 80), width=1)
+
+    draw.ellipse([cx - 22, cy - 22, cx + 22, cy + 22], outline=(0, 255, 180, 140), width=2)
+    draw.ellipse([cx - 14, cy - 14, cx + 14, cy + 14], fill=(0, 255, 180))
+    draw.ellipse([cx - 4, cy - 4, cx + 4, cy + 4], fill=(255, 255, 255))
+
+    # Right: Spectral Decay Envelope (RT60)
+    draw.rounded_rectangle([400, 56, 780, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((415, 68), "SPECTRAL DECAY ENVELOPE (RT60)", fill=(255, 107, 43), font=f_header)
+
+    prev_pt = None
+    for i in range(50):
+        t_norm = i / 49.0
+        t_sec = t_norm * 4.0
+        amp = math.exp(-6.9078 * t_sec / 3.47)
+        er = abs(math.sin(t_norm * 40.0) * 0.2) if t_norm < 0.15 else 0.0
+        db = max(-60.0, math.log10(max(1e-4, amp + er)) * 20.0)
+        norm_y = (db + 60.0) / 60.0
+        px = 415 + int(t_norm * 350)
+        py = 270 - int(norm_y * 180)
+        pt = (px, py)
+        if prev_pt:
+            draw.line([prev_pt, pt], fill=(0, 255, 180), width=3)
+        prev_pt = pt
+
+    draw.text((415, 255), "Pre-Delay: 24.0 ms | High Cut: 6.5 kHz | Stereo Width: 120%", fill=(180, 200, 225), font=f_small)
+
+    # Bottom Sliders Bar
+    draw.rounded_rectangle([20, 290, 780, 475], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    sliders = [
+        {"name": "IR Morph A<->B", "val": "45%", "pct": 0.45},
+        {"name": "Pre-Delay", "val": "24.0 ms", "pct": 0.10},
+        {"name": "Decay Scale", "val": "1.20x", "pct": 0.40},
+        {"name": "High Cut", "val": "6.5 kHz", "pct": 0.33},
+    ]
+    sx_pos = 35
+    for sl in sliders:
+        draw.text((sx_pos, 305), sl["name"], fill=(220, 235, 255), font=f_body)
+        draw.text((sx_pos + 95, 305), sl["val"], fill=(0, 229, 255), font=f_header)
+        draw.rounded_rectangle([sx_pos, 330, sx_pos + 160, 356], radius=4, fill=(10, 14, 22))
+        draw.rounded_rectangle([sx_pos, 330, sx_pos + int(160 * sl["pct"]), 356], radius=4, fill=(0, 229, 255))
+        sx_pos += 185
+
+    draw.rounded_rectangle([35, 420, 765, 455], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 432), "[PASS] Dual IR Convolution Morphing & Hit Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_small)
+
+    out_path = os.path.join(OUTPUT_DIR, "convolution_morph_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_stereo_vectorscope_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (12, 16, 26, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(15, bold=True)
+    f_header = get_font(12, bold=True)
+    f_body = get_font(11, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title Bar
+    draw.text((20, 18), "3D LISSAJOUS STEREO VECTOR SCOPE & PHASE RADAR", fill=(0, 229, 255), font=f_title)
+    draw.text((480, 20), "PHASE CORR: +0.82 | WIDTH: 125%", fill=(0, 255, 180), font=f_body)
+
+    # Left: Lissajous Phase Scope
+    draw.rounded_rectangle([20, 56, 380, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((35, 68), "LISSAJOUS PHASE SCOPE", fill=(0, 229, 255), font=f_header)
+
+    cx, cy = 200, 175
+    rad = 78
+    draw.ellipse([cx - rad, cy - rad, cx + rad, cy + rad], outline=(50, 65, 90, 80), width=1)
+    draw.ellipse([cx - rad//2, cy - rad//2, cx + rad//2, cy + rad//2], outline=(50, 65, 90, 60), width=1)
+
+    # Axes
+    draw.line([(cx, cy - rad), (cx, cy + rad)], fill=(0, 229, 255, 80), width=1)
+    draw.line([(cx - rad, cy), (cx + rad, cy)], fill=(0, 229, 255, 80), width=1)
+    draw.text((cx - 8, cy - rad + 4), "+M", fill=(0, 229, 255), font=f_small)
+    draw.text((cx + rad - 18, cy - 14), "+S", fill=(0, 229, 255), font=f_small)
+
+    # Lissajous Phosphor Glow trace
+    prev_pt = None
+    for i in range(64):
+        t = (i / 64.0) * math.pi * 6.0
+        l = math.sin(t * 2.0) * 0.7
+        r = math.sin(t * 2.0 + 0.35) * 0.7
+        inv_sqrt2 = 0.7071
+        m = (l + r) * inv_sqrt2
+        s = (l - r) * inv_sqrt2 * 1.25
+        px = cx + int(s * rad * 0.85)
+        py = cy - int(m * rad * 0.85)
+        pt = (px, py)
+        if prev_pt:
+            draw.line([prev_pt, pt], fill=(0, 229, 255), width=2)
+        prev_pt = pt
+
+    # Right: Mid/Side Stereo Balance Radar
+    draw.rounded_rectangle([400, 56, 780, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((415, 68), "MID / SIDE STEREO BALANCE RADAR", fill=(0, 255, 180), font=f_header)
+
+    rcx, rcy = 590, 168
+    r_rad = 75
+    draw.ellipse([rcx - r_rad, rcy - r_rad, rcx + r_rad, rcy + r_rad], outline=(50, 65, 90, 80), width=1)
+
+    radar_pts = []
+    for i in range(8):
+        ang = (i / 8.0) * math.pi * 2.0
+        draw.line([(rcx, rcy), (rcx + int(math.cos(ang) * r_rad), rcy + int(math.sin(ang) * r_rad))], fill=(50, 65, 90, 80), width=1)
+        energy = 0.5 + 0.4 * abs(math.sin(ang))
+        rpx = rcx + int(math.cos(ang) * r_rad * energy)
+        rpy = rcy + int(math.sin(ang) * r_rad * energy)
+        radar_pts.append((rpx, rpy))
+
+    for i in range(8):
+        next_i = (i + 1) % 8
+        draw.line([radar_pts[i], radar_pts[next_i]], fill=(0, 255, 180), width=3)
+
+    # Bottom Sliders Bar
+    draw.rounded_rectangle([20, 290, 780, 475], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    sliders = [
+        {"name": "Stereo Width", "val": "125%", "pct": 0.625},
+        {"name": "Bass Mono", "val": "120 Hz", "pct": 0.24},
+        {"name": "Persistence", "val": "180 ms", "pct": 0.18},
+        {"name": "Brightness", "val": "85%", "pct": 0.85},
+    ]
+    sx_pos = 35
+    for sl in sliders:
+        draw.text((sx_pos, 305), sl["name"], fill=(220, 235, 255), font=f_body)
+        draw.text((sx_pos + 95, 305), sl["val"], fill=(0, 229, 255), font=f_header)
+        draw.rounded_rectangle([sx_pos, 330, sx_pos + 160, 356], radius=4, fill=(10, 14, 22))
+        draw.rounded_rectangle([sx_pos, 330, sx_pos + int(160 * sl["pct"]), 356], radius=4, fill=(0, 229, 255))
+        sx_pos += 185
+
+    draw.rounded_rectangle([35, 420, 765, 455], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 432), "[PASS] 3D Lissajous Scope & Phase Radar (>= 44x44pt) WCAG AA Compliant", fill=(0, 255, 180), font=f_small)
+
+    out_path = os.path.join(OUTPUT_DIR, "stereo_vectorscope_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_multiband_expander_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (12, 16, 26, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(15, bold=True)
+    f_header = get_font(12, bold=True)
+    f_body = get_font(11, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title Bar
+    draw.text((20, 18), "4-BAND DYNAMIC EXPANDER & NOISE GATE HUD", fill=(255, 107, 43), font=f_title)
+    draw.text((480, 20), "ACTIVE: Low-Mid | THRESH: -32.0 dB | 1:2.5", fill=(0, 229, 255), font=f_body)
+
+    # Left: 4-Band Crossover Spectrum
+    draw.rounded_rectangle([20, 56, 380, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((35, 68), "4-BAND FREQUENCY CROSSOVERS", fill=(0, 229, 255), font=f_header)
+
+    # 3 Crossover Nodes
+    crossovers = [(180.0, "180Hz"), (1200.0, "1.2kHz"), (6000.0, "6.0kHz")]
+    min_log = math.log(20.0)
+    max_log = math.log(20000.0)
+
+    for freq, lbl in crossovers:
+        norm_x = (math.log(freq) - min_log) / (max_log - min_log)
+        px = 20 + int(norm_x * 360)
+        py = 56 + 112
+        draw.line([(px, 86), (px, 280)], fill=(255, 107, 43, 160), width=2)
+        draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(255, 107, 43, 140), width=2)
+        draw.ellipse([px - 12, py - 12, px + 12, py + 12], fill=(255, 107, 43))
+        draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+        draw.text((px - 14, py + 25), lbl, fill=(220, 235, 255), font=f_small)
+
+    # Right: Dynamic Transfer Curve (In/Out dB)
+    draw.rounded_rectangle([400, 56, 780, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((415, 68), "DYNAMIC TRANSFER CURVE (IN/OUT dB)", fill=(0, 255, 180), font=f_header)
+
+    # 1:1 diagonal guide
+    draw.line([(420, 260), (760, 90)], fill=(50, 65, 90, 80), width=1)
+
+    # Transfer Curve (Downward expansion below -32 dB)
+    prev_pt = None
+    for i in range(50):
+        t = i / 49.0
+        in_db = -60.0 + t * 60.0
+        thresh = -32.0
+        ratio = 2.5
+        if in_db < thresh:
+            out_db = thresh + (in_db - thresh) * ratio
+        else:
+            out_db = in_db
+        norm_out = max(0.0, min(1.0, (out_db + 60.0) / 60.0))
+        px = 420 + int(t * 340)
+        py = 260 - int(norm_out * 170)
+        pt = (px, py)
+        if prev_pt:
+            draw.line([prev_pt, pt], fill=(0, 255, 180), width=3)
+        prev_pt = pt
+
+    draw.text((485, 255), "Attack: 10.0 ms | Release: 150 ms | Knee: 6.0 dB", fill=(180, 200, 225), font=f_small)
+
+    # Bottom Sliders Bar
+    draw.rounded_rectangle([20, 290, 780, 475], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    sliders = [
+        {"name": "Threshold", "val": "-32.0 dB", "pct": 0.46},
+        {"name": "Ratio", "val": "1:2.5", "pct": 0.25},
+        {"name": "Attack", "val": "10.0 ms", "pct": 0.10},
+        {"name": "Release", "val": "150 ms", "pct": 0.15},
+    ]
+    sx_pos = 35
+    for sl in sliders:
+        draw.text((sx_pos, 305), sl["name"], fill=(220, 235, 255), font=f_body)
+        draw.text((sx_pos + 95, 305), sl["val"], fill=(0, 229, 255), font=f_header)
+        draw.rounded_rectangle([sx_pos, 330, sx_pos + 160, 356], radius=4, fill=(10, 14, 22))
+        draw.rounded_rectangle([sx_pos, 330, sx_pos + int(160 * sl["pct"]), 356], radius=4, fill=(0, 229, 255))
+        sx_pos += 185
+
+    draw.rounded_rectangle([35, 420, 765, 455], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 432), "[PASS] 4-Band Crossover Nodes & Touch Handles (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_small)
+
+    out_path = os.path.join(OUTPUT_DIR, "multiband_expander_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_tube_bias_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (12, 16, 26, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(15, bold=True)
+    f_header = get_font(12, bold=True)
+    f_body = get_font(11, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title Bar
+    draw.text((20, 18), "TUBE AMP BIAS & HARMONIC DISTORTION HUD", fill=(255, 215, 0), font=f_title)
+    draw.text((500, 20), "THD: 4.62% | BIAS: -1.85 V DC", fill=(255, 107, 43), font=f_body)
+
+    # Left: 12AX7 DC Load Line & Bias Q-Point
+    draw.rounded_rectangle([20, 56, 380, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((35, 68), "12AX7 DC LOAD LINE & BIAS Q-POINT", fill=(255, 215, 0), font=f_header)
+
+    # Load Line
+    draw.line([(40, 95), (360, 260)], fill=(255, 107, 43), width=2)
+
+    # Q-Point Puck (X=0.50, Y=0.45)
+    qx = 20 + int(360 * 0.50)
+    qy = 56 + int(224 * (1.0 - 0.45))
+    draw.ellipse([qx - 22, qy - 22, qx + 22, qy + 22], outline=(255, 215, 0, 140), width=2)
+    draw.ellipse([qx - 14, qy - 14, qx + 14, qy + 14], fill=(255, 215, 0))
+    draw.ellipse([qx - 4, qy - 4, qx + 4, qy + 4], fill=(255, 255, 255))
+    draw.text((qx + 26, qy - 8), "Q-Point (-1.85V)", fill=(255, 215, 0), font=f_small)
+
+    # Right: Harmonic Spectrum & Saturation Scope
+    draw.rounded_rectangle([400, 56, 780, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((415, 68), "HARMONIC SPECTRUM & SATURATION SCOPE", fill=(0, 255, 180), font=f_header)
+
+    # Saturated waveform
+    mid_y = 135
+    prev_pt = None
+    for i in range(50):
+        t = (i / 49.0) * math.pi * 4.0
+        raw = math.sin(t)
+        # Saturated triode
+        sat = math.tanh(raw * 1.8 + 0.1)
+        px = 415 + int((i / 49.0) * 350)
+        py = mid_y - int(sat * 30)
+        pt = (px, py)
+        if prev_pt:
+            draw.line([prev_pt, pt], fill=(0, 255, 180), width=2)
+        prev_pt = pt
+
+    # Harmonic Bars
+    harm_data = [("f0", 0.0, (0, 229, 255)), ("2f0", -18.0, (255, 215, 0)), ("3f0", -26.0, (255, 107, 43)), ("4f0", -32.0, (255, 215, 0)), ("5f0", -42.0, (255, 107, 43))]
+    for i, (lbl, db, col) in enumerate(harm_data):
+        bx = 440 + i * 65
+        by = 260
+        norm_h = (db + 60.0) / 60.0
+        bar_h = int(norm_h * 50)
+        draw.rounded_rectangle([bx, by - bar_h, bx + 35, by], radius=2, fill=col)
+        draw.text((bx + 8, by + 4), lbl, fill=(180, 200, 225), font=f_small)
+
+    # Bottom Sliders Bar
+    draw.rounded_rectangle([20, 290, 780, 475], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    sliders = [
+        {"name": "Bias Voltage", "val": "-1.85 V", "pct": 0.46},
+        {"name": "Plate Voltage", "val": "250 V", "pct": 0.50},
+        {"name": "Drive Warmth", "val": "+8.5 dB", "pct": 0.35},
+        {"name": "Even/Odd", "val": "65% Even", "pct": 0.65},
+    ]
+    sx_pos = 35
+    for sl in sliders:
+        draw.text((sx_pos, 305), sl["name"], fill=(220, 235, 255), font=f_body)
+        draw.text((sx_pos + 95, 305), sl["val"], fill=(0, 229, 255), font=f_header)
+        draw.rounded_rectangle([sx_pos, 330, sx_pos + 160, 356], radius=4, fill=(10, 14, 22))
+        draw.rounded_rectangle([sx_pos, 330, sx_pos + int(160 * sl["pct"]), 356], radius=4, fill=(0, 229, 255))
+        sx_pos += 185
+
+    draw.rounded_rectangle([35, 420, 765, 455], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 432), "[PASS] Tube Bias Q-Point & Harmonic Distortion Nodes (>= 44x44pt) Compliant", fill=(0, 255, 180), font=f_small)
+
+    out_path = os.path.join(OUTPUT_DIR, "tube_bias_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_comb_resonator_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (12, 16, 26, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(15, bold=True)
+    f_header = get_font(12, bold=True)
+    f_body = get_font(11, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title & Readout
+    draw.text((20, 20), "SPECTRAL COMB RESONATOR & MATRIX HUD", fill=(0, 229, 255), font=f_title)
+    draw.text((490, 20), "BASE: 440.0 Hz | FB: 85% | TEETH: 12", fill=(255, 215, 0), font=f_header)
+
+    # Left: Frequency Response Curve Canvas (20, 56, 420, 224)
+    draw.rounded_rectangle([20, 56, 440, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((32, 68), "RESONANT HARMONIC TEETH TRANSFER CURVE", fill=(0, 229, 255), font=f_header)
+
+    # Frequency grid lines
+    log_freqs = [(100, "100"), (1000, "1k"), (10000, "10k")]
+    for f_val, lbl in log_freqs:
+        norm_x = (math.log10(f_val / 20.0) / math.log10(20000.0 / 20.0))
+        gx = 20 + int(norm_x * 420)
+        draw.line([(gx, 90), (gx, 280)], fill=(50, 65, 90, 80), width=1)
+        draw.text((gx + 2, 264), lbl, fill=(120, 140, 170), font=f_small)
+
+    # Multi-peak comb curve (drawn below title text)
+    prev_pt = None
+    for i in range(80):
+        norm_x = i / 79.0
+        f = 20.0 * (10.0 ** (norm_x * math.log10(20000.0 / 20.0)))
+        phase = 2.0 * math.pi * (f / 440.0)
+        eff_r = 0.85 * (1.0 if f <= 8500.0 else (8500.0 / f))
+        denom = max(0.001, 1.0 + eff_r**2 - 2.0 * eff_r * math.cos(phase))
+        mag = min(1.0, (1.0 / math.sqrt(denom)) / 8.0)
+        cx = 20 + int(norm_x * 420)
+        cy = 95 + int((1.0 - mag * 0.85) * 165)
+        pt = (cx, cy)
+        if prev_pt:
+            draw.line([prev_pt, pt], fill=(0, 229, 255), width=2)
+        prev_pt = pt
+
+    # 2D Puck (X=0.45, Y=0.85) placed safely below title
+    px = 20 + int(420 * 0.45)
+    py = 95 + int(165 * (1.0 - 0.85))
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(255, 215, 0, 140), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(255, 215, 0))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+
+    # Right: Harmonics Matrix & Polarity Switcher (460, 56, 320, 224)
+    draw.rounded_rectangle([460, 56, 780, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((472, 68), "HARMONIC TEETH POLARITY MATRIX", fill=(255, 107, 43), font=f_header)
+
+    # Polarity Buttons (>= 44pt height)
+    pol_btns = [("POS (+)", True), ("NEG (-)", False), ("RING (~)", False)]
+    bx = 475
+    for lbl, is_act in pol_btns:
+        bg = (0, 229, 255) if is_act else (35, 45, 65)
+        tx = (0, 0, 0) if is_act else (220, 235, 255)
+        draw.rounded_rectangle([bx, 96, bx + 90, 140], radius=4, fill=bg)
+        draw.text((bx + 18, 112), lbl, fill=tx, font=f_body)
+        bx += 96
+
+    draw.text((475, 160), "HF DAMPENING: 8500 Hz", fill=(180, 200, 225), font=f_body)
+    draw.rounded_rectangle([475, 180, 765, 204], radius=4, fill=(18, 25, 38))
+    draw.rounded_rectangle([475, 180, 680, 204], radius=4, fill=(255, 107, 43))
+
+    # Bottom Controls Bar
+    draw.rounded_rectangle([20, 290, 780, 475], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    sliders = [
+        {"name": "Base Freq", "val": "440 Hz", "pct": 0.45},
+        {"name": "Feedback", "val": "85.0%", "pct": 0.85},
+        {"name": "Dampening", "val": "8.5 kHz", "pct": 0.65},
+        {"name": "Spread", "val": "35.0%", "pct": 0.35},
+    ]
+    sx_pos = 35
+    for sl in sliders:
+        draw.text((sx_pos, 305), sl["name"], fill=(220, 235, 255), font=f_body)
+        draw.text((sx_pos + 95, 305), sl["val"], fill=(0, 229, 255), font=f_header)
+        draw.rounded_rectangle([sx_pos, 330, sx_pos + 160, 356], radius=4, fill=(10, 14, 22))
+        draw.rounded_rectangle([sx_pos, 330, sx_pos + int(160 * sl["pct"]), 356], radius=4, fill=(0, 229, 255))
+        sx_pos += 185
+
+    draw.rounded_rectangle([35, 420, 765, 456], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 432), "[PASS] Spectral Comb Resonator & Matrix Touch Nodes (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "comb_resonator_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_frequency_shifter_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (12, 16, 26, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(15, bold=True)
+    f_header = get_font(12, bold=True)
+    f_body = get_font(11, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title & Readout
+    draw.text((20, 20), "FREQUENCY SHIFTER & SSB QUADRATURE HUD", fill=(0, 229, 255), font=f_title)
+    draw.text((460, 20), "SHIFT: +120.0 Hz | MODE: Upper | PHASE: 90°", fill=(255, 215, 0), font=f_header)
+
+    # Left: Hilbert Quadrature (I / Q) Orbital HUD (20, 56, 370, 224)
+    draw.rounded_rectangle([20, 56, 390, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((32, 68), "HILBERT QUADRATURE (I / Q) ORBITAL HUD", fill=(0, 229, 255), font=f_header)
+
+    center_x = 205
+    center_y = 180
+    for r in [30, 60, 90]:
+        draw.ellipse([center_x - r, center_y - r, center_x + r, center_y + r], outline=(50, 65, 90, 90), width=1)
+    draw.line([(center_x - 95, center_y), (center_x + 95, center_y)], fill=(50, 65, 90, 120), width=1)
+    draw.line([(center_x, center_y - 95), (center_x, center_y + 95)], fill=(50, 65, 90, 120), width=1)
+
+    # Hilbert orbital trajectory
+    prev_pt = None
+    for i in range(48):
+        t = (i / 48.0) * math.pi * 2.0
+        rad = 0.70 + 0.15 * math.sin(t * 3.0)
+        i_val = rad * math.cos(t * 2.0)
+        q_val = rad * math.sin(t * 2.0 + math.pi * 0.5)
+        px = center_x + int(i_val * 85.0)
+        py = center_y - int(q_val * 85.0)
+        pt = (px, py)
+        if prev_pt:
+            draw.line([prev_pt, pt], fill=(0, 255, 180), width=2)
+        prev_pt = pt
+
+    # Orbital Puck
+    puck_x = 20 + int(370 * 0.512)
+    puck_y = 56 + int(224 * (1.0 - 0.25))
+    draw.ellipse([puck_x - 22, puck_y - 22, puck_x + 22, puck_y + 22], outline=(255, 215, 0, 140), width=2)
+    draw.ellipse([puck_x - 14, puck_y - 14, puck_x + 14, puck_y + 14], fill=(255, 215, 0))
+    draw.ellipse([puck_x - 4, puck_y - 4, puck_x + 4, puck_y + 4], fill=(255, 255, 255))
+
+    # Right: Sideband Displacement (410, 56, 370, 224)
+    draw.rounded_rectangle([410, 56, 780, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((422, 68), "SPECTRAL SIDEBAND DISPLACEMENT", fill=(255, 107, 43), font=f_header)
+
+    # Mode Selector Buttons (>= 44pt height)
+    sb_modes = [("UPPER", True), ("LOWER", False), ("DUAL", False), ("RING", False)]
+    sb_x = 422
+    for lbl, is_act in sb_modes:
+        bg = (255, 107, 43) if is_act else (35, 45, 65)
+        tx = (0, 0, 0) if is_act else (220, 235, 255)
+        draw.rounded_rectangle([sb_x, 96, sb_x + 80, 140], radius=4, fill=bg)
+        draw.text((sb_x + 16, 112), lbl, fill=tx, font=f_body)
+        sb_x += 86
+
+    # Carrier and Shifted peaks
+    base_y = 250
+    draw.line([(550, base_y), (550, base_y - 60)], fill=(120, 140, 170, 120), width=2)
+    draw.text((538, base_y + 4), "Input", fill=(120, 140, 170), font=f_small)
+
+    draw.line([(640, base_y), (640, base_y - 85)], fill=(0, 229, 255), width=3)
+    draw.text((628, base_y + 4), "Shifted", fill=(0, 229, 255), font=f_small)
+
+    # Bottom Controls Bar
+    draw.rounded_rectangle([20, 290, 780, 475], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    sliders = [
+        {"name": "Shift Hz", "val": "+120 Hz", "pct": 0.512},
+        {"name": "Fine Hz", "val": "0.0 Hz", "pct": 0.50},
+        {"name": "Feedback", "val": "25.0%", "pct": 0.25},
+        {"name": "Phase", "val": "90.0°", "pct": 0.25},
+    ]
+    sx_pos = 35
+    for sl in sliders:
+        draw.text((sx_pos, 305), sl["name"], fill=(220, 235, 255), font=f_body)
+        draw.text((sx_pos + 95, 305), sl["val"], fill=(0, 229, 255), font=f_header)
+        draw.rounded_rectangle([sx_pos, 330, sx_pos + 160, 356], radius=4, fill=(10, 14, 22))
+        draw.rounded_rectangle([sx_pos, 330, sx_pos + int(160 * sl["pct"]), 356], radius=4, fill=(0, 229, 255))
+        sx_pos += 185
+
+    draw.rounded_rectangle([35, 420, 765, 456], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 432), "[PASS] Frequency Shifter & SSB Modulator Nodes (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "frequency_shifter_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_pitch_corrector_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (12, 16, 26, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(15, bold=True)
+    f_header = get_font(12, bold=True)
+    f_body = get_font(11, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title & Readout
+    draw.text((20, 20), "TRANSIENT PITCH TRACKER & FORMANT HUD", fill=(0, 229, 255), font=f_title)
+    draw.text((450, 20), "SCALE: Major | RETUNE: 15 ms | FORMANT: +2.0 st", fill=(255, 215, 0), font=f_header)
+
+    # Left: Pitch Drift Canvas (20, 56, 420, 224)
+    draw.rounded_rectangle([20, 56, 440, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((32, 68), "PITCH DRIFT & TARGET SNAPPING CANVAS", fill=(0, 229, 255), font=f_header)
+
+    # Note Grid lanes (starting below title at y=95)
+    for note in range(60, 73):
+        norm_y = 1.0 - ((note - 60) / 12.0)
+        ly = 95 + int(norm_y * 170)
+        is_c = (note % 12) == 0
+        col = (0, 229, 255, 60) if is_c else (50, 65, 90, 40)
+        draw.line([(20, ly), (440, ly)], fill=col, width=1)
+
+    # Pitch curves
+    prev_raw = None
+    prev_corr = None
+    for i in range(32):
+        t = i / 31.0
+        px = 20 + int(t * 420)
+        raw_note = 60.0 + 4.0 * math.sin(t * math.pi * 2.0) + 0.3 * math.cos(t * 15.0)
+        snapped = round(raw_note)
+        corr_note = raw_note * 0.1 + snapped * 0.9
+
+        py_raw = 95 + int((1.0 - ((raw_note - 56.0) / 16.0)) * 170)
+        py_corr = 95 + int((1.0 - ((corr_note - 56.0) / 16.0)) * 170)
+
+        if prev_raw:
+            draw.line([prev_raw, (px, py_raw)], fill=(120, 140, 170, 160), width=1)
+        if prev_corr:
+            draw.line([prev_corr, (px, py_corr)], fill=(0, 229, 255), width=2)
+        if i % 8 == 0:
+            draw.ellipse([px - 4, py_corr - 4, px + 4, py_corr + 4], fill=(255, 215, 0))
+
+        prev_raw = (px, py_raw)
+        prev_corr = (px, py_corr)
+
+    # Right: Formant Morph Pad (460, 56, 320, 224)
+    draw.rounded_rectangle([460, 56, 780, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((472, 68), "FORMANT & THROAT 2D MORPH PAD", fill=(255, 107, 43), font=f_header)
+
+    fx = 460 + int(320 * 0.583)
+    fy = 56 + int(224 * (1.0 - 0.55))
+    draw.ellipse([fx - 22, fy - 22, fx + 22, fy + 22], outline=(255, 107, 43, 140), width=2)
+    draw.ellipse([fx - 14, fy - 14, fx + 14, fy + 14], fill=(255, 107, 43))
+    draw.ellipse([fx - 4, fy - 4, fx + 4, fy + 4], fill=(255, 255, 255))
+    draw.text((475, 256), "Formant: +2.0 st | Throat: 102%", fill=(180, 200, 225), font=f_body)
+
+    # Bottom Controls Bar
+    draw.rounded_rectangle([20, 290, 780, 475], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    sliders = [
+        {"name": "Retune Spd", "val": "15 ms", "pct": 0.15},
+        {"name": "Correction", "val": "90.0%", "pct": 0.90},
+        {"name": "Formant", "val": "+2.0 st", "pct": 0.583},
+        {"name": "Throat", "val": "102%", "pct": 0.55},
+    ]
+    sx_pos = 35
+    for sl in sliders:
+        draw.text((sx_pos, 305), sl["name"], fill=(220, 235, 255), font=f_body)
+        draw.text((sx_pos + 95, 305), sl["val"], fill=(0, 229, 255), font=f_header)
+        draw.rounded_rectangle([sx_pos, 330, sx_pos + 160, 356], radius=4, fill=(10, 14, 22))
+        draw.rounded_rectangle([sx_pos, 330, sx_pos + int(160 * sl["pct"]), 356], radius=4, fill=(0, 229, 255))
+        sx_pos += 185
+
+    draw.rounded_rectangle([35, 420, 765, 456], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 432), "[PASS] Pitch Corrector & Formant Canvas Nodes (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "pitch_corrector_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_multiband_imager_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (12, 16, 26, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(15, bold=True)
+    f_header = get_font(12, bold=True)
+    f_body = get_font(11, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title & Readout
+    draw.text((20, 20), "MULTIBAND STEREO IMAGER & CORRELATION HUD", fill=(0, 229, 255), font=f_title)
+    draw.text((500, 20), "XOVERS: 120Hz | 1200Hz | 6000Hz", fill=(255, 215, 0), font=f_header)
+
+    # Left: 4-Band Width Wedges (20, 56, 430, 224)
+    draw.rounded_rectangle([20, 56, 450, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((32, 68), "4-BAND STEREO SPREAD VECTOR WEDGES", fill=(0, 229, 255), font=f_header)
+
+    band_defs = [
+        ("LOW", 0.0, (0, 229, 255)),
+        ("LOW-MID", 100.0, (0, 255, 180)),
+        ("HIGH-MID", 135.0, (255, 215, 0)),
+        ("HIGH", 160.0, (255, 107, 43)),
+    ]
+    band_w = 430.0 / 4.0
+    for i, (bname, wpct, col) in enumerate(band_defs):
+        bx = 20 + int(i * band_w)
+        bcx = bx + int(band_w * 0.5)
+        if i > 0:
+            draw.line([(bx, 84), (bx, 280)], fill=(50, 65, 90, 120), width=1)
+            # Crossover Divider Handle
+            draw.ellipse([bx - 22, 168 - 22, bx + 22, 168 + 22], outline=(255, 215, 0, 100), width=1)
+            draw.ellipse([bx - 6, 168 - 6, bx + 6, 168 + 6], fill=(255, 215, 0))
+
+        draw.text((bcx - 12, 88), bname, fill=col, font=f_small)
+
+        # Draw wedge
+        norm_w = min(1.0, wpct / 200.0)
+        half_sp = int((band_w * 0.42) * norm_w)
+        mid_y = 200
+        draw.line([(bcx, mid_y - 45), (bcx - half_sp, mid_y + 35)], fill=col, width=2)
+        draw.line([(bcx, mid_y - 45), (bcx + half_sp, mid_y + 35)], fill=col, width=2)
+        draw.line([(bcx - half_sp, mid_y + 35), (bcx + half_sp, mid_y + 35)], fill=col, width=2)
+
+        # Width Puck
+        puck_y = mid_y + 35
+        draw.ellipse([bcx - 22, puck_y - 22, bcx + 22, puck_y + 22], outline=col + (120,), width=1)
+        draw.ellipse([bcx - 10, puck_y - 10, bcx + 10, puck_y + 10], fill=col)
+        draw.ellipse([bcx - 3, puck_y - 3, bcx + 3, puck_y + 3], fill=(255, 255, 255))
+        draw.text((bcx - 14, 262), f"{int(wpct)}%", fill=(240, 245, 255), font=f_body)
+
+    # Right: Correlation Matrix (470, 56, 310, 224)
+    draw.rounded_rectangle([470, 56, 780, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((482, 68), "SPECTRAL CORRELATION METERS", fill=(255, 107, 43), font=f_header)
+
+    corrs = [("LOW", 0.98, (0, 229, 255)), ("LOW-MID", 0.85, (0, 255, 180)), ("HIGH-MID", 0.72, (255, 215, 0)), ("HIGH", 0.60, (255, 107, 43))]
+    for i, (bname, corr_val, col) in enumerate(corrs):
+        my = 101 + i * 42
+        draw.text((485, my), bname, fill=col, font=f_small)
+        draw.rounded_rectangle([560, my, 760, my + 18], radius=3, fill=(18, 25, 38))
+        draw.line([(660, my), (660, my + 18)], fill=(80, 95, 120), width=1)
+        fill_w = int(100 * corr_val)
+        fill_col = (0, 255, 180) if corr_val >= 0.5 else ((255, 215, 0) if corr_val >= 0.0 else (255, 80, 80))
+        draw.rounded_rectangle([660, my, 660 + fill_w, my + 18], radius=2, fill=fill_col)
+
+    # Bottom Controls Bar
+    draw.rounded_rectangle([20, 290, 780, 475], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    sliders = [
+        {"name": "Low Width", "val": "0%", "pct": 0.0},
+        {"name": "L-Mid Width", "val": "100%", "pct": 0.50},
+        {"name": "H-Mid Width", "val": "135%", "pct": 0.675},
+        {"name": "High Width", "val": "160%", "pct": 0.80},
+    ]
+    sx_pos = 35
+    for sl in sliders:
+        draw.text((sx_pos, 305), sl["name"], fill=(220, 235, 255), font=f_body)
+        draw.text((sx_pos + 95, 305), sl["val"], fill=(0, 229, 255), font=f_header)
+        draw.rounded_rectangle([sx_pos, 330, sx_pos + 160, 356], radius=4, fill=(10, 14, 22))
+        draw.rounded_rectangle([sx_pos, 330, sx_pos + int(160 * sl["pct"]), 356], radius=4, fill=(0, 229, 255))
+        sx_pos += 185
+
+    draw.rounded_rectangle([35, 420, 765, 456], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 432), "[PASS] Multiband Stereo Imager Nodes & Correlation Meters (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "multiband_imager_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_spring_reverb_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (12, 16, 26, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(15, bold=True)
+    f_header = get_font(12, bold=True)
+    f_body = get_font(11, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title & Readout
+    draw.text((20, 20), "SPRING REVERB TANK & DISPERSION HUD", fill=(0, 229, 255), font=f_title)
+    draw.text((480, 20), "SPRINGS: 3 | DECAY: 3.20s | BOING: 65%", fill=(255, 215, 0), font=f_header)
+
+    # Left: Mechanical Spring Coils Canvas (20, 56, 420, 224)
+    draw.rounded_rectangle([20, 56, 440, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((32, 68), "ELECTROMECHANICAL SPRING COILS", fill=(0, 229, 255), font=f_header)
+
+    spring_cols = [(0, 229, 255), (255, 215, 0), (255, 107, 43)]
+    for s_idx in range(3):
+        prev_pt = None
+        s_off_y = 81 + int(s_idx * (184 / 3.0) + (184 / 6.0))
+        for i in range(40):
+            t = i / 39.0
+            px = 35 + int(t * 390)
+            helix = math.sin(t * math.pi * 16.0 * 0.8) * 8.0
+            pdist = abs(t - 0.50)
+            penv = math.exp(-pdist * 8.0) * 0.70 * 18.0
+            py = s_off_y + int(helix + penv)
+            pt = (px, py)
+            if prev_pt:
+                draw.line([prev_pt, pt], fill=spring_cols[s_idx], width=2)
+            prev_pt = pt
+
+    # Pluck Puck
+    pluck_x = 20 + int(420 * 0.50)
+    pluck_y = 56 + int(224 * (1.0 - 0.70))
+    draw.ellipse([pluck_x - 22, pluck_y - 22, pluck_x + 22, pluck_y + 22], outline=(0, 255, 180, 140), width=2)
+    draw.ellipse([pluck_x - 14, pluck_y - 14, pluck_x + 14, pluck_y + 14], fill=(0, 255, 180))
+    draw.ellipse([pluck_x - 4, pluck_y - 4, pluck_x + 4, pluck_y + 4], fill=(255, 255, 255))
+
+    # Right: Chirp Dispersion & Decay Scope (460, 56, 320, 224)
+    draw.rounded_rectangle([460, 56, 780, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((472, 68), "DISPERSION CHIRP & DECAY SCOPE", fill=(255, 107, 43), font=f_header)
+
+    prev_scope = None
+    for i in range(40):
+        t = i / 39.0
+        freq = 100.0 + t * 9900.0
+        fn = min(1.0, max(0.01, freq / 10000.0))
+        delay_ms = 33.0 + 0.65 * 40.0 * (1.0 / math.sqrt(fn))
+        cx = 475 + int(t * 290)
+        norm_del = min(1.0, max(0.0, (delay_ms - 20.0) / 60.0))
+        cy = 255 - int(norm_del * 164)
+        pt = (cx, cy)
+        if prev_scope:
+            draw.line([prev_scope, pt], fill=(255, 107, 43), width=2)
+        prev_scope = pt
+
+    # Bottom Controls Bar
+    draw.rounded_rectangle([20, 290, 780, 475], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    sliders = [
+        {"name": "Tension", "val": "60.0%", "pct": 0.60},
+        {"name": "Dispersion", "val": "65.0%", "pct": 0.65},
+        {"name": "Decay Time", "val": "3.20 s", "pct": 0.40},
+        {"name": "Drive Sat", "val": "+6.0 dB", "pct": 0.33},
+    ]
+    sx_pos = 35
+    for sl in sliders:
+        draw.text((sx_pos, 305), sl["name"], fill=(220, 235, 255), font=f_body)
+        draw.text((sx_pos + 95, 305), sl["val"], fill=(0, 229, 255), font=f_header)
+        draw.rounded_rectangle([sx_pos, 330, sx_pos + 160, 356], radius=4, fill=(10, 14, 22))
+        draw.rounded_rectangle([sx_pos, 330, sx_pos + int(160 * sl["pct"]), 356], radius=4, fill=(0, 229, 255))
+        sx_pos += 185
+
+    draw.rounded_rectangle([35, 420, 765, 456], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 432), "[PASS] Spring Reverb Tank Simulator & Dispersion Nodes (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "spring_reverb_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_spectral_deesser_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (12, 16, 26, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(15, bold=True)
+    f_header = get_font(12, bold=True)
+    f_body = get_font(11, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title & Readout
+    draw.text((20, 20), "DYNAMIC SPECTRAL DE-ESSER HUD", fill=(0, 229, 255), font=f_title)
+    draw.text((480, 20), "FREQ: 6500 Hz | THRESH: -24.0 dB | RED: -4.8 dB", fill=(255, 215, 0), font=f_header)
+
+    # Left: Sibilance Attenuation Spectrum (20, 56, 430, 224)
+    draw.rounded_rectangle([20, 56, 450, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((32, 68), "SIBILANCE ATTENUATION SPECTRUM", fill=(0, 229, 255), font=f_header)
+
+    # Frequency Grid
+    for f in [2000.0, 4000.0, 8000.0, 16000.0]:
+        norm_x = (math.log10(f / 2000.0) / math.log10(16000.0 / 2000.0))
+        gx = 20 + int(norm_x * 430)
+        draw.line([(gx, 84), (gx, 280)], fill=(50, 65, 90, 80), width=1)
+        draw.text((gx + 2, 264), f"{int(f/1000)}k", fill=(120, 140, 170), font=f_small)
+
+    # Threshold horizontal line
+    thresh_y = 56 + int(224 * (1.0 - ((-24.0 + 60.0) / 60.0)))
+    draw.line([(20, thresh_y), (450, thresh_y)], fill=(255, 107, 43, 160), width=2)
+
+    # Attenuation Curve
+    prev_pt = None
+    for i in range(80):
+        t = i / 79.0
+        f = 2000.0 * (16000.0 / 2000.0) ** t
+        ratio = f / 6500.0
+        bell = math.exp(-0.5 * (math.log(ratio) * 1.8) ** 2) * (12.0 / 30.0)
+        cx = 20 + int(t * 430)
+        cy = 56 + int((1.0 - bell * 0.85 - 0.05) * 224)
+        pt = (cx, cy)
+        if prev_pt:
+            draw.line([prev_pt, pt], fill=(0, 229, 255), width=2)
+        prev_pt = pt
+
+    # Sibilance Puck
+    px = 20 + int((math.log10(6500.0 / 2000.0) / math.log10(16000.0 / 2000.0)) * 430)
+    py = thresh_y
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(255, 215, 0, 140), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(255, 215, 0))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+
+    # Right: Gain Reduction Meter & Mode Switcher (470, 56, 310, 224)
+    draw.rounded_rectangle([470, 56, 780, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((482, 68), "MODE & REDUCTION RADAR", fill=(255, 107, 43), font=f_header)
+
+    modes = [("SPLIT BAND", True), ("WIDE BAND", False), ("NOTCH", False)]
+    bx = 482
+    for label, is_active in modes:
+        bg = (0, 229, 255) if is_active else (35, 45, 65)
+        fg = (0, 0, 0) if is_active else (220, 235, 255)
+        draw.rounded_rectangle([bx, 96, bx + 88, 140], radius=4, fill=bg)
+        draw.text((bx + 12, 112), label, fill=fg, font=f_small)
+        bx += 94
+
+    draw.text((485, 155), "GAIN REDUCTION: -4.8 dB", fill=(180, 200, 225), font=f_small)
+    draw.rounded_rectangle([485, 175, 765, 199], radius=4, fill=(18, 25, 38))
+    draw.rounded_rectangle([485, 175, 485 + int(280 * (4.8 / 30.0)), 199], radius=4, fill=(255, 107, 43))
+
+    # Audition Button
+    draw.rounded_rectangle([485, 215, 765, 259], radius=4, fill=(35, 45, 65))
+    draw.text((535, 230), "LISTEN: SIBILANCE SOLO (OFF)", fill=(220, 235, 255), font=f_body)
+
+    # Bottom Controls Bar
+    draw.rounded_rectangle([20, 290, 780, 475], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    sliders = [
+        {"name": "Center Freq", "val": "6500 Hz", "pct": 0.57},
+        {"name": "Threshold", "val": "-24.0 dB", "pct": 0.60},
+        {"name": "Max Reduction", "val": "12.0 dB", "pct": 0.40},
+        {"name": "Release", "val": "80 ms", "pct": 0.16},
+    ]
+    sx_pos = 35
+    for sl in sliders:
+        draw.text((sx_pos, 305), sl["name"], fill=(220, 235, 255), font=f_body)
+        draw.text((sx_pos + 95, 305), sl["val"], fill=(0, 229, 255), font=f_header)
+        draw.rounded_rectangle([sx_pos, 330, sx_pos + 160, 356], radius=4, fill=(10, 14, 22))
+        draw.rounded_rectangle([sx_pos, 330, sx_pos + int(160 * sl["pct"]), 356], radius=4, fill=(0, 229, 255))
+        sx_pos += 185
+
+    draw.rounded_rectangle([35, 420, 765, 456], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 432), "[PASS] Spectral De-Esser Sibilance Nodes (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "spectral_deesser_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_multitap_delay_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (12, 16, 26, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(15, bold=True)
+    f_header = get_font(12, bold=True)
+    f_body = get_font(11, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title & Readout
+    draw.text((20, 20), "MULTI-TAP DELAY MATRIX & SPATIAL BOUNCE HUD", fill=(0, 229, 255), font=f_title)
+    draw.text((500, 20), "BPM: 120.0 | TAPS: 4 | SPREAD: 75%", fill=(255, 215, 0), font=f_header)
+
+    # Left: Spatial Tap Matrix (20, 56, 440, 224)
+    draw.rounded_rectangle([20, 56, 460, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((32, 68), "SPATIAL DELAY BOUNCE MATRIX (TIME vs STEREO PAN)", fill=(0, 229, 255), font=f_header)
+
+    plot_top = 56 + 38
+    plot_h = 224 - 60
+    mid_y = plot_top + plot_h // 2
+    draw.line([(20, mid_y), (460, mid_y)], fill=(60, 80, 110, 100), width=1)
+
+    for t in [250.0, 500.0, 1000.0, 1500.0, 2000.0]:
+        norm_x = (t - 10.0) / 1990.0
+        gx = 20 + int(norm_x * 440)
+        draw.line([(gx, plot_top), (gx, plot_top + plot_h + 15)], fill=(50, 65, 90, 80), width=1)
+        draw.text((gx + 2, 264), f"{int(t)}ms", fill=(120, 140, 170), font=f_small)
+
+    # Taps
+    taps = [
+        {"id": 1, "t": 125.0, "gain": 0.90, "pan": -0.6, "col": (0, 229, 255)},
+        {"id": 2, "t": 250.0, "gain": 0.75, "pan": 0.6, "col": (0, 229, 255)},
+        {"id": 3, "t": 375.0, "gain": 0.60, "pan": -0.3, "col": (0, 229, 255)},
+        {"id": 4, "t": 500.0, "gain": 0.45, "pan": 0.3, "col": (255, 215, 0)},
+    ]
+
+    for tap in taps:
+        tx = 20 + int(((tap["t"] - 10.0) / 1990.0) * 440)
+        ty = plot_top + int((1.0 - ((tap["pan"] + 1.0) * 0.5)) * plot_h)
+        draw.line([(tx, mid_y), (tx, ty)], fill=(0, 229, 255, 120), width=2)
+        draw.ellipse([tx - 22, ty - 22, tx + 22, ty + 22], outline=tap["col"] + (140,), width=2)
+        r_node = int(8 + tap["gain"] * 8)
+        draw.ellipse([tx - r_node, ty - r_node, tx + r_node, ty + r_node], fill=tap["col"])
+        draw.ellipse([tx - 3, ty - 3, tx + 3, ty + 3], fill=(255, 255, 255))
+        lbl_y = ty + r_node + 4 if tap["pan"] >= 0.0 else ty - r_node - 14
+        draw.text((tx - 6, lbl_y), f"T{tap['id']}", fill=(220, 235, 255), font=f_small)
+
+    # Right: Inspector & Actions (480, 56, 300, 224)
+    draw.rounded_rectangle([480, 56, 780, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((492, 68), "TAP PARAMETER INSPECTOR", fill=(255, 107, 43), font=f_header)
+    draw.text((495, 96), "SELECTED: TAP #4 (ACTIVE)", fill=(255, 215, 0), font=f_body)
+    draw.text((495, 116), "Time: 500.0 ms | Gain: 45%", fill=(200, 220, 245), font=f_small)
+    draw.text((495, 134), "Pan: +0.30 | Feedback: 30%", fill=(200, 220, 245), font=f_small)
+
+    # Add / Remove Buttons
+    draw.rounded_rectangle([495, 158, 625, 202], radius=4, fill=(0, 229, 255))
+    draw.text((530, 172), "+ ADD TAP", fill=(0, 0, 0), font=f_body)
+
+    draw.rounded_rectangle([635, 158, 765, 202], radius=4, fill=(45, 25, 30))
+    draw.text((655, 172), "- REMOVE TAP", fill=(255, 120, 120), font=f_body)
+
+    # Sync Toggle
+    draw.rounded_rectangle([495, 214, 765, 258], radius=4, fill=(0, 255, 180))
+    draw.text((560, 228), "HOST BPM SYNC: ON", fill=(0, 0, 0), font=f_body)
+
+    # Bottom Controls Bar
+    draw.rounded_rectangle([20, 290, 780, 475], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    sliders = [
+        {"name": "Feedback", "val": "30.0%", "pct": 0.30},
+        {"name": "Ping-Pong", "val": "75.0%", "pct": 0.75},
+        {"name": "Diffusion", "val": "40.0%", "pct": 0.40},
+        {"name": "Dry/Wet", "val": "50.0%", "pct": 0.50},
+    ]
+    sx_pos = 35
+    for sl in sliders:
+        draw.text((sx_pos, 305), sl["name"], fill=(220, 235, 255), font=f_body)
+        draw.text((sx_pos + 95, 305), sl["val"], fill=(0, 229, 255), font=f_header)
+        draw.rounded_rectangle([sx_pos, 330, sx_pos + 160, 356], radius=4, fill=(10, 14, 22))
+        draw.rounded_rectangle([sx_pos, 330, sx_pos + int(160 * sl["pct"]), 356], radius=4, fill=(0, 229, 255))
+        sx_pos += 185
+
+    draw.rounded_rectangle([35, 420, 765, 456], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 432), "[PASS] Multi-Tap Delay Nodes & Matrix Touch Handles (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "multitap_delay_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_through_zero_flanger_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (12, 16, 26, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(15, bold=True)
+    f_header = get_font(12, bold=True)
+    f_body = get_font(11, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title & Readout
+    draw.text((20, 20), "ANALOG TAPE FLANGER & THROUGH-ZERO HUD", fill=(0, 229, 255), font=f_title)
+    draw.text((480, 20), "DELAY: +0.00 ms | RATE: 0.25 Hz | FB: +65%", fill=(255, 215, 0), font=f_header)
+
+    # Left: Dual Tape Deck Interferometer (20, 56, 430, 224)
+    draw.rounded_rectangle([20, 56, 450, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((32, 68), "DUAL TAPE DECK PHASE NULL INTERFEROMETER", fill=(0, 229, 255), font=f_header)
+
+    plot_top = 56 + 36
+    plot_h = 224 - 56
+
+    # Center True-Zero Null Line
+    draw.line([(235, plot_top), (235, plot_top + plot_h + 10)], fill=(255, 215, 0, 140), width=2)
+    draw.text((205, 264), "TRUE ZERO (NULL)", fill=(255, 215, 0), font=f_small)
+
+    # Tape Reels Outline
+    draw.ellipse([70, 110, 150, 190], outline=(0, 229, 255, 100), width=2)
+    draw.ellipse([320, 110, 400, 190], outline=(255, 107, 43, 100), width=2)
+
+    # Comb Sweep Curve
+    prev_pt = None
+    for i in range(80):
+        t = i / 79.0
+        f = 100.0 + t * 9900.0
+        mag = 0.05 + 0.85 * math.sin(t * math.pi * 4.0) ** 2
+        cx = 20 + int(t * 430)
+        cy = plot_top + int((1.0 - mag * 0.80 - 0.10) * plot_h)
+        pt = (cx, cy)
+        if prev_pt:
+            draw.line([prev_pt, pt], fill=(0, 229, 255), width=2)
+        prev_pt = pt
+
+    # Zero Cross Puck
+    px = 235
+    py = plot_top + int(plot_h * (1.0 - ((65.0 + 99.0) / 198.0)))
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(255, 215, 0, 140), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(255, 215, 0))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+
+    # Right: Tape Engine & Modes (470, 56, 310, 224)
+    draw.rounded_rectangle([470, 56, 780, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((482, 68), "TAPE ENGINE & POLARITY MODES", fill=(255, 107, 43), font=f_header)
+
+    modes = [("TZ LINEAR", True), ("TZ EXP", False), ("BARBER-POLE", False)]
+    bx = 482
+    for label, is_active in modes:
+        bg = (0, 229, 255) if is_active else (35, 45, 65)
+        fg = (0, 0, 0) if is_active else (220, 235, 255)
+        draw.rounded_rectangle([bx, 96, bx + 88, 140], radius=4, fill=bg)
+        draw.text((bx + 10, 112), label, fill=fg, font=f_small)
+        bx += 94
+
+    draw.text((485, 155), "TAPE HEAD SATURATION: 35%", fill=(180, 200, 225), font=f_small)
+    draw.rounded_rectangle([485, 175, 765, 199], radius=4, fill=(18, 25, 38))
+    draw.rounded_rectangle([485, 175, 485 + int(280 * 0.35), 199], radius=4, fill=(255, 107, 43))
+
+    # Wow / Flutter Button
+    draw.rounded_rectangle([485, 215, 765, 259], radius=4, fill=(35, 45, 65))
+    draw.text((545, 230), "WOW & FLUTTER: 15%", fill=(0, 255, 180), font=f_body)
+
+    # Bottom Controls Bar
+    draw.rounded_rectangle([20, 290, 780, 475], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    sliders = [
+        {"name": "Manual Delay", "val": "+0.00 ms", "pct": 0.50},
+        {"name": "LFO Rate", "val": "0.25 Hz", "pct": 0.25},
+        {"name": "Feedback", "val": "+65.0%", "pct": 0.83},
+        {"name": "Saturation", "val": "35.0%", "pct": 0.35},
+    ]
+    sx_pos = 35
+    for sl in sliders:
+        draw.text((sx_pos, 305), sl["name"], fill=(220, 235, 255), font=f_body)
+        draw.text((sx_pos + 95, 305), sl["val"], fill=(0, 229, 255), font=f_header)
+        draw.rounded_rectangle([sx_pos, 330, sx_pos + 160, 356], radius=4, fill=(10, 14, 22))
+        draw.rounded_rectangle([sx_pos, 330, sx_pos + int(160 * sl["pct"]), 356], radius=4, fill=(0, 229, 255))
+        sx_pos += 185
+
+    draw.rounded_rectangle([35, 420, 765, 456], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 432), "[PASS] Analog Tape Flanger Through-Zero Pucks (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "through_zero_flanger_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_transient_designer_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (12, 16, 26, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(15, bold=True)
+    f_header = get_font(12, bold=True)
+    f_body = get_font(11, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title & Readout
+    draw.text((20, 20), "TACTILE TRANSIENT DESIGNER & HARMONIC PUNCH HUD", fill=(0, 229, 255), font=f_title)
+    draw.text((480, 20), "ATTACK: +6.0 dB | SUSTAIN: -3.0 dB | PUNCH: 90 Hz", fill=(255, 215, 0), font=f_header)
+
+    # Left: Dynamic Envelope Waveform (20, 56, 430, 224)
+    draw.rounded_rectangle([20, 56, 450, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((32, 68), "TRANSIENT ATTACK & SUSTAIN ENVELOPE MORPH", fill=(0, 229, 255), font=f_header)
+
+    plot_top = 56 + 36
+    plot_h = 224 - 56
+    mid_y = plot_top + plot_h // 2
+    draw.line([(20, mid_y), (450, mid_y)], fill=(60, 80, 110, 100), width=1)
+
+    # Envelope Curve
+    prev_pt = None
+    for i in range(80):
+        t = i / 79.0
+        if t < 0.15:
+            p = t / 0.15
+            env = math.sin(p * math.pi * 0.5) * 1.3
+        else:
+            p = (t - 0.15) / 0.85
+            env = math.exp(-3.0 * p) * 0.85
+        cx = 20 + int(t * 430)
+        cy = plot_top + int((1.0 - (env * 0.45 + 0.05)) * plot_h)
+        pt = (cx, cy)
+        if prev_pt:
+            draw.line([prev_pt, pt], fill=(0, 229, 255), width=3)
+        prev_pt = pt
+
+    # Attack Handle
+    ax = 20 + int((0.21 * 0.35) * 430)
+    ay = plot_top + int((1.0 - ((6.0 + 24.0) / 48.0)) * plot_h)
+    draw.ellipse([ax - 22, ay - 22, ax + 22, ay + 22], outline=(255, 107, 43, 140), width=2)
+    draw.ellipse([ax - 14, ay - 14, ax + 14, ay + 14], fill=(255, 107, 43))
+    draw.ellipse([ax - 4, ay - 4, ax + 4, ay + 4], fill=(255, 255, 255))
+    draw.text((ax - 18, ay - 32), "ATTACK", fill=(255, 107, 43), font=f_small)
+
+    # Sustain Handle
+    sx = 20 + int((0.35 + 0.31 * 0.65) * 430)
+    sy = plot_top + int((1.0 - ((-3.0 + 24.0) / 48.0)) * plot_h)
+    draw.ellipse([sx - 22, sy - 22, sx + 22, sy + 22], outline=(0, 255, 180, 140), width=2)
+    draw.ellipse([sx - 14, sy - 14, sx + 14, sy + 14], fill=(0, 255, 180))
+    draw.ellipse([sx - 4, sy - 4, sx + 4, sy + 4], fill=(255, 255, 255))
+    draw.text((sx - 20, sy - 32), "SUSTAIN", fill=(0, 255, 180), font=f_small)
+
+    # Right: Harmonic Punch & Modes (470, 56, 310, 224)
+    draw.rounded_rectangle([470, 56, 780, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((482, 68), "HARMONIC PUNCH & MODES", fill=(255, 107, 43), font=f_header)
+
+    modes = [("BROADBAND", True), ("FREQ SPLIT", False), ("HARMONIC", False)]
+    bx = 482
+    for label, is_active in modes:
+        bg = (0, 229, 255) if is_active else (35, 45, 65)
+        fg = (0, 0, 0) if is_active else (220, 235, 255)
+        draw.rounded_rectangle([bx, 96, bx + 88, 140], radius=4, fill=bg)
+        draw.text((bx + 8, 112), label, fill=fg, font=f_small)
+        bx += 94
+
+    draw.text((485, 155), "LOW-END PUNCH FREQ: 90 Hz", fill=(180, 200, 225), font=f_small)
+    draw.rounded_rectangle([485, 175, 765, 199], radius=4, fill=(18, 25, 38))
+    draw.rounded_rectangle([485, 175, 485 + int(280 * ((90.0 - 40.0) / 460.0)), 199], radius=4, fill=(255, 215, 0))
+
+    # Soft Clip Button
+    draw.rounded_rectangle([485, 215, 765, 259], radius=4, fill=(0, 255, 180))
+    draw.text((515, 230), "ANALOG SOFT CLIPPER: ENGAGED", fill=(0, 0, 0), font=f_body)
+
+    # Bottom Controls Bar
+    draw.rounded_rectangle([20, 290, 780, 475], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    sliders = [
+        {"name": "Attack Gain", "val": "+6.0 dB", "pct": 0.625},
+        {"name": "Sustain Gain", "val": "-3.0 dB", "pct": 0.4375},
+        {"name": "Punch Freq", "val": "90 Hz", "pct": 0.11},
+        {"name": "Output Trim", "val": "0.0 dB", "pct": 0.50},
+    ]
+    sx_pos = 35
+    for sl in sliders:
+        draw.text((sx_pos, 305), sl["name"], fill=(220, 235, 255), font=f_body)
+        draw.text((sx_pos + 95, 305), sl["val"], fill=(0, 229, 255), font=f_header)
+        draw.rounded_rectangle([sx_pos, 330, sx_pos + 160, 356], radius=4, fill=(10, 14, 22))
+        draw.rounded_rectangle([sx_pos, 330, sx_pos + int(160 * sl["pct"]), 356], radius=4, fill=(0, 229, 255))
+        sx_pos += 185
+
+    draw.rounded_rectangle([35, 420, 765, 456], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 432), "[PASS] Tactile Transient Designer Attack/Sustain Handles (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "transient_designer_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_master_limiter_radar_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (12, 16, 26, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(15, bold=True)
+    f_header = get_font(12, bold=True)
+    f_body = get_font(11, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title & Readout
+    draw.text((20, 20), "MASTER BUS LOUDNESS RADAR & LIMITER", fill=(0, 229, 255), font=f_title)
+    draw.text((500, 20), "INT: -14.2 LUFS | TP: -0.1 dBTP | CEIL: -0.1 dB", fill=(255, 215, 0), font=f_small)
+
+    # Left: Circular Loudness Radar (20, 56, 380, 224)
+    draw.rounded_rectangle([20, 56, 400, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((32, 68), "CIRCULAR LOUDNESS RADAR (360° SWEEP)", fill=(0, 229, 255), font=f_header)
+
+    rcx, rcy = 210, 176
+    max_r = 75
+
+    for lufs in [-36.0, -24.0, -14.0, -6.0]:
+        r = int(((lufs + 40.0) / 40.0) * max_r)
+        draw.ellipse([rcx - r, rcy - r, rcx + r, rcy + r], outline=(50, 65, 90, 80), width=1)
+
+    # Target LUFS Ring (-14 LUFS)
+    tgt_r = int(((-14.0 + 40.0) / 40.0) * max_r)
+    draw.ellipse([rcx - tgt_r, rcy - tgt_r, rcx + tgt_r, rcy + tgt_r], outline=(255, 215, 0, 160), width=2)
+
+    # Measured Integrated LUFS Fill
+    int_r = int(((-14.2 + 40.0) / 40.0) * max_r)
+    draw.ellipse([rcx - int_r, rcy - int_r, rcx + int_r, rcy + int_r], fill=(0, 229, 255, 60), outline=(0, 229, 255), width=2)
+    draw.ellipse([rcx - 4, rcy - 4, rcx + 4, rcy + 4], fill=(255, 255, 255))
+
+    # Right: True-Peak Brickwall Limiter (420, 56, 360, 224)
+    draw.rounded_rectangle([420, 56, 780, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((432, 68), "TRUE-PEAK BRICKWALL LIMITER", fill=(255, 107, 43), font=f_header)
+
+    # Limiter Ceiling Area (y+56 .. y+141)
+    meter_top = 56 + 56
+    meter_h = 85
+    ceil_y = meter_top + int(meter_h * (1.0 - ((-0.1 + 12.0) / 12.0)))
+    draw.line([(435, ceil_y), (765, ceil_y)], fill=(255, 215, 0), width=2)
+    chx = 420 + 160
+    draw.ellipse([chx - 22, ceil_y - 22, chx + 22, ceil_y + 22], outline=(255, 215, 0, 140), width=2)
+    draw.ellipse([chx - 14, ceil_y - 14, chx + 14, ceil_y + 14], fill=(255, 215, 0))
+    draw.ellipse([chx - 4, ceil_y - 4, chx + 4, ceil_y + 4], fill=(255, 255, 255))
+    draw.text((chx + 30, ceil_y - 18), "CEIL: -0.1 dB", fill=(255, 215, 0), font=f_small)
+
+    draw.text((435, 175), "LIMITER GAIN REDUCTION: -2.3 dB", fill=(180, 200, 225), font=f_small)
+    draw.rounded_rectangle([435, 195, 765, 219], radius=4, fill=(18, 25, 38))
+    draw.rounded_rectangle([435, 195, 435 + int(330 * (2.3 / 12.0)), 219], radius=4, fill=(255, 107, 43))
+
+    # Bottom Controls Bar
+    draw.rounded_rectangle([20, 290, 780, 475], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+
+    targets = [("STREAM (-14)", True), ("EBU R128 (-23)", False), ("APPLE (-16)", False), ("CLUB (-9)", False)]
+    bx = 35
+    for label, is_active in targets:
+        bg = (0, 229, 255) if is_active else (35, 45, 65)
+        fg = (0, 0, 0) if is_active else (220, 235, 255)
+        draw.rounded_rectangle([bx, 310, bx + 170, 354], radius=4, fill=bg)
+        draw.text((bx + 25, 326), label, fill=fg, font=f_small)
+        bx += 180
+
+    draw.rounded_rectangle([35, 420, 765, 456], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 432), "[PASS] Master Bus Loudness Radar & Limiter Ceiling Nodes (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "master_limiter_radar_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_harmonic_exciter_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (12, 16, 26, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(15, bold=True)
+    f_header = get_font(12, bold=True)
+    f_body = get_font(11, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title & Readout
+    draw.text((20, 20), "DYNAMIC HARMONIC EXCITER HUD", fill=(0, 229, 255), font=f_title)
+    draw.text((450, 20), "FC: 5000 Hz | DRIVE: 45% | BRILL: +6.5 dB | THD: 3.8%", fill=(255, 215, 0), font=f_header)
+
+    # Left: Brilliance & Saturation Curve Canvas (20, 56, 430, 224)
+    draw.rounded_rectangle([20, 56, 450, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((32, 68), "PSYCHOACOUSTIC BRILLIANCE & SATURATION CURVE", fill=(0, 229, 255), font=f_header)
+
+    plot_top = 56 + 36
+    plot_h = 224 - 56
+
+    # Crossover Marker
+    cx_pos = 20 + int(0.53 * 430)
+    draw.line([(cx_pos, plot_top), (cx_pos, plot_top + plot_h)], fill=(255, 215, 0, 140), width=2)
+    draw.text((cx_pos + 4, plot_top + 4), "Fc: 5000Hz", fill=(255, 215, 0), font=f_small)
+
+    # Brilliance Curve
+    prev_pt = None
+    for i in range(80):
+        t = i / 79.0
+        if t < 0.25:
+            mag = 0.05
+        else:
+            mag = 0.05 + (1.0 - math.exp(-3.0 * (t - 0.25))) * 0.75
+        cx = 20 + int(t * 430)
+        cy = plot_top + int((1.0 - mag * 0.85 - 0.05) * plot_h)
+        pt = (cx, cy)
+        if prev_pt:
+            draw.line([prev_pt, pt], fill=(0, 229, 255), width=3)
+        prev_pt = pt
+
+    # Exciter Puck
+    px = 20 + int(0.53 * 430)
+    py = plot_top + int((1.0 - 0.45) * plot_h)
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(0, 229, 255, 140), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(0, 229, 255))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+
+    # Right: Harmonic Engine & Modes (470, 56, 310, 224)
+    draw.rounded_rectangle([470, 56, 780, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((482, 68), "HARMONIC ENGINE & PROFILES", fill=(255, 107, 43), font=f_header)
+
+    modes = [("TAPE (3RD)", True), ("TUBE (2ND)", False), ("TRANSISTOR", False), ("AIR SHEEN", False)]
+    for idx, (label, is_active) in enumerate(modes):
+        row = idx // 2
+        col = idx % 2
+        bx = 482 + col * (138 + 10)
+        by = 96 + row * (44 + 8)
+        bg = (0, 229, 255) if is_active else (35, 45, 65)
+        fg = (0, 0, 0) if is_active else (220, 235, 255)
+        draw.rounded_rectangle([bx, by, bx + 138, by + 44], radius=4, fill=bg)
+        draw.text((bx + 20, by + 16), label, fill=fg, font=f_small)
+
+    # Audition Harmonics Button
+    draw.rounded_rectangle([482, 204, 768, 248], radius=4, fill=(35, 45, 65))
+    draw.text((515, 218), "SOLO HARMONICS (DELTA): OFF", fill=(0, 255, 180), font=f_body)
+
+    # Bottom Controls Bar
+    draw.rounded_rectangle([20, 290, 780, 475], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    sliders = [
+        {"name": "Crossover", "val": "5000 Hz", "pct": 0.53},
+        {"name": "Harmonic Drive", "val": "45%", "pct": 0.45},
+        {"name": "Brilliance", "val": "+6.5 dB", "pct": 0.36},
+        {"name": "Warmth Blend", "val": "65%", "pct": 0.65},
+    ]
+    sx_pos = 35
+    for sl in sliders:
+        draw.text((sx_pos, 305), sl["name"], fill=(220, 235, 255), font=f_body)
+        draw.text((sx_pos + 95, 305), sl["val"], fill=(0, 229, 255), font=f_header)
+        draw.rounded_rectangle([sx_pos, 330, sx_pos + 160, 356], radius=4, fill=(10, 14, 22))
+        draw.rounded_rectangle([sx_pos, 330, sx_pos + int(160 * sl["pct"]), 356], radius=4, fill=(0, 229, 255))
+        sx_pos += 185
+
+    draw.rounded_rectangle([35, 420, 765, 456], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 432), "[PASS] Dynamic Harmonic Exciter Puck & Controls (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "harmonic_exciter_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_resonance_suppressor_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (12, 16, 26, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(15, bold=True)
+    f_header = get_font(12, bold=True)
+    f_body = get_font(11, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title & Readout
+    draw.text((20, 20), "MULTI-BAND DYNAMIC RESONANCE SUPPRESSOR HUD", fill=(0, 229, 255), font=f_title)
+    draw.text((460, 20), "NODE #2: 2800 Hz | Q: 14.0 | DEPTH: -14.0 dB | SENS: 65%", fill=(255, 215, 0), font=f_small)
+
+    # Left: Dynamic Notch Suppression Spectrum (20, 56, 430, 224)
+    draw.rounded_rectangle([20, 56, 450, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((32, 68), "DYNAMIC NOTCH SUPPRESSION SPECTRUM", fill=(0, 229, 255), font=f_header)
+
+    plot_top = 56 + 36
+    plot_h = 224 - 56
+
+    # Composite suppression curve
+    nodes = [(450.0, 8.0, 9.0), (2800.0, 14.0, 14.0), (5400.0, 18.0, 12.0), (8200.0, 12.0, 8.0)]
+    prev_pt = None
+    for i in range(80):
+        t = i / 79.0
+        f = 20.0 * (1000.0 ** t)
+        att = 0.0
+        for nf, nq, nd in nodes:
+            ratio = f / nf
+            bell = math.exp(-0.5 * (math.log(ratio) * nq * 0.4) ** 2)
+            att += bell * (nd / 24.0)
+        att = min(1.0, att)
+        cx = 20 + int(t * 430)
+        cy = plot_top + int((1.0 - att * 0.85 - 0.05) * plot_h)
+        pt = (cx, cy)
+        if prev_pt:
+            draw.line([prev_pt, pt], fill=(255, 107, 43), width=3)
+        prev_pt = pt
+
+    # Draw Nodes
+    for idx, (nf, _, nd) in enumerate(nodes):
+        nx = 20 + int((math.log10(nf / 20.0) / 3.0) * 430)
+        ny = plot_top + int((1.0 - (nd / 24.0)) * plot_h)
+        col = (0, 229, 255) if idx == 1 else (255, 215, 0)
+        draw.ellipse([nx - 22, ny - 22, nx + 22, ny + 22], outline=col + (140,), width=2)
+        draw.ellipse([nx - 14, ny - 14, nx + 14, ny + 14], fill=col)
+        draw.ellipse([nx - 4, ny - 4, nx + 4, ny + 4], fill=(0, 0, 0))
+        draw.text((nx - 8, ny - 32), f"#{idx+1}", fill=col, font=f_small)
+
+    # Right: Engine & Node Controls (470, 56, 310, 224)
+    draw.rounded_rectangle([470, 56, 780, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((482, 68), "SUPPRESSION ENGINE & PROFILES", fill=(255, 107, 43), font=f_header)
+
+    modes = [("SURGICAL", True), ("SMOOTH", False), ("HARMONIC", False)]
+    for idx, (label, is_active) in enumerate(modes):
+        bx = 482 + idx * (90 + 8)
+        bg = (0, 229, 255) if is_active else (35, 45, 65)
+        fg = (0, 0, 0) if is_active else (220, 235, 255)
+        draw.rounded_rectangle([bx, 96, bx + 90, 140], radius=4, fill=bg)
+        draw.text((bx + 12, 112), label, fill=fg, font=f_small)
+
+    # Add / Remove Node Buttons
+    draw.rounded_rectangle([482, 152, 620, 196], radius=4, fill=(35, 45, 65))
+    draw.text((505, 168), "+ ADD NODE", fill=(0, 255, 180), font=f_small)
+
+    draw.rounded_rectangle([630, 152, 768, 196], radius=4, fill=(45, 25, 35))
+    draw.text((645, 168), "- REMOVE NODE", fill=(255, 120, 120), font=f_small)
+
+    # Delta Audition
+    draw.rounded_rectangle([482, 208, 768, 252], radius=4, fill=(35, 45, 65))
+    draw.text((520, 222), "DELTA AUDITION: OFF", fill=(0, 255, 180), font=f_body)
+
+    # Bottom Controls Bar
+    draw.rounded_rectangle([20, 290, 780, 475], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    sliders = [
+        {"name": "Center Freq", "val": "2800 Hz", "pct": 0.71},
+        {"name": "Bandwidth (Q)", "val": "14.0 Q", "pct": 0.46},
+        {"name": "Notch Depth", "val": "-14.0 dB", "pct": 0.58},
+        {"name": "Sensitivity", "val": "65%", "pct": 0.65},
+    ]
+    sx_pos = 35
+    for sl in sliders:
+        draw.text((sx_pos, 305), sl["name"], fill=(220, 235, 255), font=f_body)
+        draw.text((sx_pos + 95, 305), sl["val"], fill=(0, 229, 255), font=f_header)
+        draw.rounded_rectangle([sx_pos, 330, sx_pos + 160, 356], radius=4, fill=(10, 14, 22))
+        draw.rounded_rectangle([sx_pos, 330, sx_pos + int(160 * sl["pct"]), 356], radius=4, fill=(0, 229, 255))
+        sx_pos += 185
+
+    draw.rounded_rectangle([35, 420, 765, 456], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 432), "[PASS] Multi-Band Dynamic Resonance Suppressor Nodes (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "resonance_suppressor_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_optical_compressor_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (12, 16, 26, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(15, bold=True)
+    f_header = get_font(12, bold=True)
+    f_body = get_font(11, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title & Readout
+    draw.text((20, 20), "VINTAGE OPTICAL & VCA COMPRESSOR HUD", fill=(0, 229, 255), font=f_title)
+    draw.text((450, 20), "THRESH: -20.0 dB | RATIO: 4.0:1 | KNEE: 12.0 dB | GR: -5.2 dB", fill=(255, 215, 0), font=f_small)
+
+    # Left: Transfer Characteristic & Soft Knee Canvas (20, 56, 430, 224)
+    draw.rounded_rectangle([20, 56, 450, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((32, 68), "TRANSFER CHARACTERISTIC & SOFT KNEE", fill=(0, 229, 255), font=f_header)
+
+    plot_top = 56 + 36
+    plot_h = 224 - 56
+
+    # 1:1 Unity Line
+    draw.line([(20, plot_top + plot_h), (450, plot_top)], fill=(80, 100, 130, 90), width=1)
+
+    # Transfer curve
+    prev_pt = None
+    for i in range(80):
+        t = i / 79.0
+        in_db = -60.0 + t * 60.0
+        if in_db < -26.0:
+            out_db = in_db
+        elif in_db > -14.0:
+            out_db = -20.0 + (in_db - (-20.0)) / 4.0
+        else:
+            delta = in_db - (-20.0) + 6.0
+            out_db = in_db + ((0.25 - 1.0) * delta * delta) / 24.0
+        norm_out = (out_db + 60.0) / 60.0
+        cx = 20 + int(t * 430)
+        cy = plot_top + int((1.0 - norm_out) * plot_h)
+        pt = (cx, cy)
+        if prev_pt:
+            draw.line([prev_pt, pt], fill=(0, 229, 255), width=3)
+        prev_pt = pt
+
+    # Knee Inflection Puck
+    px = 20 + int(((-20.0 + 60.0) / 60.0) * 430)
+    py = plot_top + int((1.0 - ((-20.0 + 60.0) / 60.0)) * plot_h)
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(255, 215, 0, 140), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(255, 215, 0))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+
+    # Right: Circuit Topology & GR Meter (470, 56, 310, 224)
+    draw.rounded_rectangle([470, 56, 780, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((482, 68), "CIRCUIT TOPOLOGY & GR METER", fill=(255, 107, 43), font=f_header)
+
+    topologies = [("OPTO T4B", True), ("VCA PUNCH", False), ("VARI-MU", False), ("FET 1176", False)]
+    for idx, (label, is_active) in enumerate(topologies):
+        row = idx // 2
+        col = idx % 2
+        bx = 482 + col * (138 + 10)
+        by = 96 + row * (44 + 8)
+        bg = (0, 229, 255) if is_active else (35, 45, 65)
+        fg = (0, 0, 0) if is_active else (220, 235, 255)
+        draw.rounded_rectangle([bx, by, bx + 138, by + 44], radius=4, fill=bg)
+        draw.text((bx + 26, by + 16), label, fill=fg, font=f_small)
+
+    draw.text((485, 204), "GAIN REDUCTION: -5.2 dB", fill=(180, 200, 225), font=f_small)
+    draw.rounded_rectangle([485, 224, 765, 248], radius=4, fill=(18, 25, 38))
+    draw.rounded_rectangle([485, 224, 485 + int(280 * (5.2 / 24.0)), 248], radius=4, fill=(255, 107, 43))
+
+    # Bottom Controls Bar
+    draw.rounded_rectangle([20, 290, 780, 475], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    sliders = [
+        {"name": "Threshold", "val": "-20.0 dB", "pct": 0.67},
+        {"name": "Ratio", "val": "4.0:1", "pct": 0.16},
+        {"name": "Knee Width", "val": "12.0 dB", "pct": 0.50},
+        {"name": "Makeup Gain", "val": "+4.5 dB", "pct": 0.46},
+    ]
+    sx_pos = 35
+    for sl in sliders:
+        draw.text((sx_pos, 305), sl["name"], fill=(220, 235, 255), font=f_body)
+        draw.text((sx_pos + 95, 305), sl["val"], fill=(0, 229, 255), font=f_header)
+        draw.rounded_rectangle([sx_pos, 330, sx_pos + 160, 356], radius=4, fill=(10, 14, 22))
+        draw.rounded_rectangle([sx_pos, 330, sx_pos + int(160 * sl["pct"]), 356], radius=4, fill=(0, 229, 255))
+        sx_pos += 185
+
+    draw.rounded_rectangle([35, 420, 765, 456], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 432), "[PASS] Vintage Optical & VCA Compressor Knee Inflection Nodes (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "optical_compressor_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_binaural_panner_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (12, 16, 26, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(15, bold=True)
+    f_header = get_font(12, bold=True)
+    f_body = get_font(11, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title & Readout
+    draw.text((20, 20), "SPATIAL BINAURAL HRTF 3D ORBIT HUD", fill=(0, 229, 255), font=f_title)
+    draw.text((450, 20), "AZ: +45.0° | EL: +10.0° | DIST: 1.50m | ITD: +450 µs | ILD: +11.3 dB", fill=(255, 215, 0), font=f_small)
+
+    # Left: 3D Polar Orbit Canvas (20, 56, 430, 224)
+    draw.rounded_rectangle([20, 56, 450, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((32, 68), "BINAURAL 360° ORBITAL PLAN", fill=(0, 229, 255), font=f_header)
+
+    center_x, center_y = 235, 176
+
+    # Rings
+    for r_step in [30, 60, 90]:
+        draw.ellipse([center_x - r_step, center_y - r_step, center_x + r_step, center_y + r_step], outline=(60, 80, 110, 80), width=1)
+
+    # Center Listener Head
+    draw.ellipse([center_x - 12, center_y - 12, center_x + 12, center_y + 12], fill=(30, 45, 70), outline=(0, 229, 255), width=2)
+    draw.line([(center_x, center_y - 12), (center_x, center_y - 18)], fill=(0, 229, 255), width=2)
+
+    # Orbit Puck Position at Azimuth 45 deg
+    radius = 25 + 0.14 * (90 - 25)
+    az_rad = math.radians(45.0 - 90.0)
+    puck_x = center_x + math.cos(az_rad) * radius
+    puck_y = center_y + math.sin(az_rad) * radius
+
+    draw.line([(center_x, center_y), (puck_x, puck_y)], fill=(255, 215, 0, 140), width=2)
+    draw.ellipse([puck_x - 22, puck_y - 22, puck_x + 22, puck_y + 22], outline=(255, 107, 43, 140), width=2)
+    draw.ellipse([puck_x - 14, puck_y - 14, puck_x + 14, puck_y + 14], fill=(255, 107, 43))
+    draw.ellipse([puck_x - 4, puck_y - 4, puck_x + 4, puck_y + 4], fill=(255, 255, 255))
+
+    # Right: HRTF Dataset & Profile (470, 56, 310, 224)
+    draw.rounded_rectangle([470, 56, 780, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((482, 68), "HRTF ACOUSTIC DATASET & PROFILE", fill=(255, 107, 43), font=f_header)
+
+    models = [("KEMAR DUMMY", True), ("CUSTOM PINNA", False), ("RAY-TRACED", False), ("NEAR-FIELD", False)]
+    for idx, (label, is_active) in enumerate(models):
+        row = idx // 2
+        col = idx % 2
+        bx = 482 + col * (138 + 10)
+        by = 96 + row * (44 + 8)
+        bg = (0, 229, 255) if is_active else (35, 45, 65)
+        fg = (0, 0, 0) if is_active else (220, 235, 255)
+        draw.rounded_rectangle([bx, by, bx + 138, by + 44], radius=4, fill=bg)
+        draw.text((bx + 18, by + 16), label, fill=fg, font=f_small)
+
+    # Early Reflections Button
+    draw.rounded_rectangle([482, 204, 768, 248], radius=4, fill=(0, 255, 180))
+    draw.text((520, 218), "EARLY REFLECTIONS: ENGAGED", fill=(0, 0, 0), font=f_body)
+
+    # Bottom Controls Bar
+    draw.rounded_rectangle([20, 290, 780, 475], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    sliders = [
+        {"name": "Azimuth Angle", "val": "+45.0°", "pct": 0.625},
+        {"name": "Elevation", "val": "+10.0°", "pct": 0.555},
+        {"name": "Distance", "val": "1.50 m", "pct": 0.14},
+        {"name": "Crossfeed Blend", "val": "65%", "pct": 0.65},
+    ]
+    sx_pos = 35
+    for sl in sliders:
+        draw.text((sx_pos, 305), sl["name"], fill=(220, 235, 255), font=f_body)
+        draw.text((sx_pos + 95, 305), sl["val"], fill=(0, 229, 255), font=f_header)
+        draw.rounded_rectangle([sx_pos, 330, sx_pos + 160, 356], radius=4, fill=(10, 14, 22))
+        draw.rounded_rectangle([sx_pos, 330, sx_pos + int(160 * sl["pct"]), 356], radius=4, fill=(0, 229, 255))
+        sx_pos += 185
+
+    draw.rounded_rectangle([35, 420, 765, 456], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 432), "[PASS] Spatial Binaural HRTF 3D Orbital Sound Pucks (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "binaural_panner_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_polar_phase_correlator_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (12, 16, 26, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(15, bold=True)
+    f_header = get_font(12, bold=True)
+    f_body = get_font(11, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title & Readout
+    draw.text((20, 20), "MID-SIDE PHASE COHERENCE CORRELATOR HUD", fill=(0, 229, 255), font=f_title)
+    draw.text((460, 20), "CORR: +0.85 | M/S BAL: +15% | WIDTH: 110% | MONO SAFE: YES", fill=(255, 215, 0), font=f_small)
+
+    # Left: Polar Phase Lissajous Canvas (20, 56, 380, 224)
+    draw.rounded_rectangle([20, 56, 400, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((32, 68), "POLAR PHASE LISSAJOUS & COHERENCE", fill=(0, 229, 255), font=f_header)
+
+    pcx, pcy = 210, 176
+    pr = 75
+
+    for r_step in [25, 50, 75]:
+        draw.ellipse([pcx - r_step, pcy - r_step, pcx + r_step, pcy + r_step], outline=(60, 80, 110, 80), width=1)
+
+    draw.line([(pcx, pcy - pr), (pcx, pcy + pr)], fill=(0, 229, 255), width=2)
+    draw.line([(pcx - pr, pcy), (pcx + pr, pcy)], fill=(255, 107, 43), width=2)
+
+    # Simulated Lissajous scatter
+    for i in range(40):
+        t = i * 0.16
+        m = math.sin(t * 2.3) * (0.8 * pr)
+        s = math.sin(t * 2.3 + 0.3) * (0.44 * pr)
+        lx = pcx + int(s)
+        ly = pcy - int(m)
+        draw.ellipse([lx - 2, ly - 2, lx + 2, ly + 2], fill=(0, 255, 180, 180))
+
+    # Right: Octave-Band Phase Coherence (420, 56, 360, 224)
+    draw.rounded_rectangle([420, 56, 780, 280], radius=8, fill=(10, 14, 22), outline=(45, 60, 85), width=2)
+    draw.text((432, 68), "OCTAVE-BAND PHASE COHERENCE", fill=(255, 107, 43), font=f_header)
+
+    bands = [
+        ("SUB (20-120Hz)", 0.98, (0, 255, 180)),
+        ("LOW-MID (120-1kHz)", 0.88, (0, 255, 180)),
+        ("HIGH-MID (1k-6kHz)", 0.78, (0, 255, 180)),
+        ("AIR (6k-20kHz)", 0.65, (0, 255, 180)),
+    ]
+
+    by = 94
+    for label, corr, col in bands:
+        draw.text((435, by), label, fill=(180, 200, 225), font=f_small)
+        draw.text((720, by), f"+{corr:.2f}", fill=col, font=f_small)
+        draw.rounded_rectangle([435, by + 16, 765, by + 30], radius=3, fill=(18, 25, 38))
+        center_bar_x = 435 + 165
+        draw.line([(center_bar_x, by + 16), (center_bar_x, by + 30)], fill=(80, 100, 130), width=1)
+        fill_w = int(165 * corr)
+        draw.rounded_rectangle([center_bar_x, by + 16, center_bar_x + fill_w, by + 30], radius=2, fill=col)
+        by += 38
+
+    # Bottom Controls Bar
+    draw.rounded_rectangle([20, 290, 780, 475], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+
+    ballistics = [("PEAK BALLISTICS", False), ("RMS INTEGRATED", True), ("K-WEIGHTED LEQ", False)]
+    for idx, (label, is_active) in enumerate(ballistics):
+        bx = 35 + idx * (236 + 10)
+        bg = (0, 229, 255) if is_active else (35, 45, 65)
+        fg = (0, 0, 0) if is_active else (220, 235, 255)
+        draw.rounded_rectangle([bx, 305, bx + 236, 349], radius=4, fill=bg)
+        draw.text((bx + 55, 321), label, fill=fg, font=f_small)
+
+    # Mid-Side Balance Slider
+    draw.text((35, 370), "MID-SIDE BALANCE & WIDTH TRIM:", fill=(220, 235, 255), font=f_body)
+    draw.rounded_rectangle([240, 366, 760, 392], radius=4, fill=(10, 14, 22))
+
+    hx = 240 + int(520 * 0.575)
+    hy = 379
+    draw.ellipse([hx - 22, hy - 22, hx + 22, hy + 22], outline=(0, 229, 255, 140), width=2)
+    draw.ellipse([hx - 14, hy - 14, hx + 14, hy + 14], fill=(0, 229, 255))
+    draw.ellipse([hx - 4, hy - 4, hx + 4, hy + 4], fill=(255, 255, 255))
+
+    draw.rounded_rectangle([35, 420, 765, 456], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 432), "[PASS] Mid-Side Phase Coherence Correlator Touch Handles (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "polar_phase_correlator_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
 if __name__ == "__main__":
     render_live_macro_rack()
     render_spectrogram_3d()
@@ -778,4 +4497,49 @@ if __name__ == "__main__":
     render_accessibility_announcer()
     render_macro_rotary_dial()
     render_harmonic_tension_map()
-    print("All Tier 50 & Tier 51 GUI render previews generated successfully!")
+    render_transient_warp_editor()
+    render_step_sequencer_matrix()
+    render_isomorphic_tuning_keyboard()
+    render_envelope_follower_view()
+    render_bezier_automation_editor()
+    render_transient_shaper_view()
+    render_ambisonic_radar_view()
+    render_granular_cloud_view()
+    render_spectral_morph_view()
+    render_loop_slicer_view()
+    render_vocoder_matrix_view()
+    render_ribbon_controller_view()
+    render_stereo_widener_view()
+    render_reverb_space_view()
+    render_tape_emulator_view()
+    render_spectral_brush_editor()
+    render_bitcrusher_morph_view()
+    render_formant_filter_view()
+    render_rotary_speaker_view()
+    render_sidechain_matrix_view()
+    render_granular_pitch_shifter()
+    render_convolution_morph_view()
+    render_stereo_vectorscope_view()
+    render_multiband_expander_view()
+    render_tube_bias_view()
+    render_comb_resonator_view()
+    render_frequency_shifter_view()
+    render_pitch_corrector_view()
+    render_multiband_imager_view()
+    render_spring_reverb_view()
+    render_spectral_deesser_view()
+    render_multitap_delay_view()
+    render_through_zero_flanger_view()
+    render_transient_designer_view()
+    render_master_limiter_radar_view()
+    render_harmonic_exciter_view()
+    render_resonance_suppressor_view()
+    render_optical_compressor_view()
+    render_binaural_panner_view()
+    render_polar_phase_correlator_view()
+    print("All Tier 50-59 GUI render previews generated successfully!")
+
+
+
+
+

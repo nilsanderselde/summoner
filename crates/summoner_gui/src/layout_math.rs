@@ -233,6 +233,10 @@ impl Rect {
             && point.y <= self.max_y()
     }
 
+    pub fn contains(&self, x: f32, y: f32) -> bool {
+        self.contains_point(Point2D::new(x, y))
+    }
+
     pub fn intersects(&self, other: &Rect) -> bool {
         self.min_x() < other.max_x()
             && self.max_x() > other.min_x()
