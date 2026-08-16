@@ -85,6 +85,10 @@ pub mod tier58_tests;
 #[cfg(feature = "gui")]
 pub mod tier59_tests;
 #[cfg(feature = "gui")]
+pub mod tier60_tests;
+#[cfg(feature = "gui")]
+pub mod tier61_tests;
+#[cfg(feature = "gui")]
 pub mod touch_gestures;
 #[cfg(feature = "gui")]
 pub mod transport_bar;
@@ -96,6 +100,10 @@ pub use views::accessibility_announcer::AccessibilityAnnouncerView;
 #[cfg(feature = "gui")]
 pub use views::ambisonic_radar_view::AmbisonicRadarView;
 #[cfg(feature = "gui")]
+pub use views::atmos_surround_view::AtmosSurroundView;
+#[cfg(feature = "gui")]
+pub use views::bbd_chorus_view::BbdChorusView;
+#[cfg(feature = "gui")]
 pub use views::bezier_automation_editor::BezierAutomationEditorView;
 #[cfg(feature = "gui")]
 pub use views::binaural_panner_view::BinauralPannerView;
@@ -103,6 +111,8 @@ pub use views::binaural_panner_view::BinauralPannerView;
 pub use views::bitcrusher_morph_view::BitcrusherMorphView;
 #[cfg(feature = "gui")]
 pub use views::comb_resonator_view::CombResonatorView;
+#[cfg(feature = "gui")]
+pub use views::convolution_impulse_view::ConvolutionImpulseView;
 #[cfg(feature = "gui")]
 pub use views::convolution_morph_view::ConvolutionMorphView;
 #[cfg(feature = "gui")]
@@ -130,6 +140,8 @@ pub use views::isomorphic_tuning_keyboard::IsomorphicTuningKeyboardView;
 #[cfg(feature = "gui")]
 pub use views::keybinding_editor::KeybindingEditorView;
 #[cfg(feature = "gui")]
+pub use views::ladder_filter_view::LadderFilterView;
+#[cfg(feature = "gui")]
 pub use views::live_macro_rack::LiveMacroRackView;
 #[cfg(feature = "gui")]
 pub use views::loop_slicer_view::LoopSlicerView;
@@ -143,6 +155,8 @@ pub use views::meter_bridge_view::MeterBridgeView;
 pub use views::multiband_expander_view::MultibandExpanderView;
 #[cfg(feature = "gui")]
 pub use views::multiband_imager_view::MultibandImagerView;
+#[cfg(feature = "gui")]
+pub use views::multiband_spatial_view::MultibandSpatialView;
 #[cfg(feature = "gui")]
 pub use views::multitap_delay_view::MultitapDelayView;
 #[cfg(feature = "gui")]
@@ -158,6 +172,8 @@ pub use views::reverb_space_view::ReverbSpaceView;
 #[cfg(feature = "gui")]
 pub use views::ribbon_controller_view::RibbonControllerView;
 #[cfg(feature = "gui")]
+pub use views::rotary_doppler_view::RotaryDopplerView;
+#[cfg(feature = "gui")]
 pub use views::rotary_speaker_view::RotarySpeakerView;
 #[cfg(feature = "gui")]
 pub use views::sample_editor_view;
@@ -172,7 +188,11 @@ pub use views::spectral_brush_editor::SpectralBrushEditorView;
 #[cfg(feature = "gui")]
 pub use views::spectral_deesser_view::SpectralDeEsserView;
 #[cfg(feature = "gui")]
+pub use views::spectral_matching_eq_view::SpectralMatchingEqView;
+#[cfg(feature = "gui")]
 pub use views::spectral_morph_view::SpectralMorphView;
+#[cfg(feature = "gui")]
+pub use views::spectral_resynthesis_view::SpectralResynthesisView;
 #[cfg(feature = "gui")]
 pub use views::spectrogram_3d_view::Spectrogram3DView;
 #[cfg(feature = "gui")]
@@ -186,9 +206,13 @@ pub use views::stereo_widener_view::StereoWidenerView;
 #[cfg(feature = "gui")]
 pub use views::tape_emulator_view::TapeEmulatorView;
 #[cfg(feature = "gui")]
+pub use views::tape_flutter_view::TapeFlutterView;
+#[cfg(feature = "gui")]
 pub use views::through_zero_flanger_view::ThroughZeroFlangerView;
 #[cfg(feature = "gui")]
 pub use views::transient_designer_view::TransientDesignerView;
+#[cfg(feature = "gui")]
+pub use views::transient_gate_view::TransientGateView;
 #[cfg(feature = "gui")]
 pub use views::transient_shaper_view::TransientShaperView;
 #[cfg(feature = "gui")]
