@@ -109,6 +109,8 @@ pub mod tier70_tests;
 #[cfg(feature = "gui")]
 pub mod tier71_tests;
 #[cfg(feature = "gui")]
+pub mod tier72_tests;
+#[cfg(feature = "gui")]
 pub mod touch_gestures;
 #[cfg(feature = "gui")]
 pub mod transport_bar;
@@ -119,6 +121,8 @@ pub mod views;
 pub use views::accessibility_announcer::AccessibilityAnnouncerView;
 #[cfg(feature = "gui")]
 pub use views::ambisonic_radar_view::AmbisonicRadarView;
+#[cfg(feature = "gui")]
+pub use views::atmos_916_spatializer_view::Atmos916SpatializerView;
 #[cfg(feature = "gui")]
 pub use views::atmos_surround_view::AtmosSurroundView;
 #[cfg(feature = "gui")]
@@ -150,11 +154,17 @@ pub use views::dpi_scale_panel::DpiScalePanelView;
 #[cfg(feature = "gui")]
 pub use views::dsp_rack_dock::DspRackDockView;
 #[cfg(feature = "gui")]
+pub use views::dulcimer_cimbalom_view::DulcimerCimbalomView;
+#[cfg(feature = "gui")]
 pub use views::dynamic_crest_shaper_view::DynamicCrestShaperView;
+#[cfg(feature = "gui")]
+pub use views::dynamic_stereo_width_view::DynamicStereoWidthView;
 #[cfg(feature = "gui")]
 pub use views::ebu_loudness_radar_view::EbuLoudnessRadarView;
 #[cfg(feature = "gui")]
 pub use views::envelope_follower_view::EnvelopeFollowerView;
+#[cfg(feature = "gui")]
+pub use views::equal_loudness_contour_view::EqualLoudnessContourView;
 #[cfg(feature = "gui")]
 pub use views::fm_matrix_view::FmMatrixView;
 #[cfg(feature = "gui")]
@@ -221,6 +231,8 @@ pub use views::multiband_saturator_view::MultibandSaturatorView;
 pub use views::multiband_spatial_view::MultibandSpatialView;
 #[cfg(feature = "gui")]
 pub use views::multitap_delay_view::MultitapDelayView;
+#[cfg(feature = "gui")]
+pub use views::neural_choir_formant_view::NeuralChoirFormantView;
 #[cfg(feature = "gui")]
 pub use views::neural_inpaint_view::NeuralInpaintView;
 #[cfg(feature = "gui")]

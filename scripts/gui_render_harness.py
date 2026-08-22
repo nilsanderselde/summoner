@@ -10209,6 +10209,454 @@ def render_wfs_array_spatializer_view():
     img.save(out_path)
     print(f"Rendered: {out_path}")
 
+def render_dulcimer_cimbalom_view():
+    width, height = 800, 480
+    img = Image.new("RGBA", (width, height), (12, 16, 26, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(13, bold=True)
+    f_header = get_font(10, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title Bar
+    draw.text((20, 18), "PHYSICAL MODELING HAMMERED DULCIMER & CIMBALOM STRING DISPERSION HUD", fill=(240, 245, 255), font=f_title)
+
+    # Tabs (y: 48..92) - 44pt height
+    tabs = [("CIMBALOM (35C)", True), ("DULCIMER (16/15)", False), ("SANTUR (18C)", False), ("YANGQIN (401)", False), ("PSALTERY (15C)", False)]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, is_sel) in enumerate(tabs):
+        bx = 20 + i * (tab_w + 8)
+        bg = (255, 107, 43) if is_sel else (24, 32, 48)
+        fg = (16, 8, 4) if is_sel else (210, 225, 245)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 12, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(8, 12, 22), outline=(45, 65, 95), width=2)
+
+    # Left: Trapezoidal Soundboard & Multi-Bridge Courses
+    left_w = int(760 * 0.55)
+    draw.rounded_rectangle([30, 114, 30 + left_w - 20, 330], radius=4, fill=(14, 18, 30), outline=(35, 55, 85))
+    draw.text((40, 124), "TRAPEZOIDAL SOUNDBOARD & MULTI-BRIDGE STRIKE FIELD", fill=(255, 107, 43), font=f_header)
+
+    # Bridges
+    draw.line([(30 + int(left_w * 0.40), 145), (30 + int(left_w * 0.40) + 15, 305)], fill=(0, 229, 255), width=2)
+    draw.line([(30 + int(left_w * 0.72), 145), (30 + int(left_w * 0.72) + 15, 305)], fill=(255, 215, 0), width=2)
+
+    # Courses
+    for c in range(16):
+        cy = 150 + c * 9
+        wf = 0.55 + 0.45 * (c / 16.0)
+        sx = 45 + int((1.0 - wf) * 40.0)
+        ex = 30 + left_w - 35 - int((1.0 - wf) * 20.0)
+        draw.line([(sx, cy), (ex, cy)], fill=(255, 107, 43) if c == 8 else (140, 160, 185), width=2 if c == 8 else 1)
+
+    # Puck
+    px = 30 + int(0.25 * (left_w - 20))
+    py = 330 - int(0.65 * 216)
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(255, 107, 43, 150), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(255, 107, 43))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+    draw.text((40, 310), "Strike Pos: 0.14L | Hardness: 65% | Course: #18/35 | Decay: 6.5s", fill=(255, 180, 100), font=f_small)
+
+    # Right: Inharmonic Dispersion & Coupled Bridge Modes
+    rx = 30 + left_w
+    rw = int(760 * 0.45) - 20
+    draw.rounded_rectangle([rx, 114, rx + rw, 330], radius=4, fill=(14, 18, 30), outline=(35, 55, 85))
+    draw.text((rx + 10, 124), "STRING INHARMONICITY & BRIDGE COUPLING SPECTRUM", fill=(255, 107, 43), font=f_header)
+
+    amps = [1.0, 0.72, 0.50, 0.35, 0.22, 0.40, 0.28, 0.15]
+    labels = ["f0", "f1(B)", "f2(B)", "f3(B)", "f4(B)", "BRG-L", "BRG-R", "SYMP"]
+    bar_w = int((rw - 30 - 7 * 6) / 8)
+    for i, (amp, lbl) in enumerate(zip(amps, labels)):
+        bx = rx + 15 + i * (bar_w + 6)
+        bh = int(amp * 135)
+        col = (255, 107, 43) if i == 0 else ((0, 229, 255) if i < 5 else (255, 215, 0))
+        draw.rounded_rectangle([bx, 305 - bh, bx + bar_w, 305], radius=2, fill=col)
+        draw.text((bx + 2, 310), lbl, fill=(180, 205, 235), font=f_small)
+
+    # Bottom Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 24, 38), outline=(45, 65, 95))
+    params = [
+        ("STRIKER POS RATIO", "0.14 L (Node)", (255, 107, 43)),
+        ("HAMMER HARDNESS", "65% (Mallet Core)", (255, 215, 0)),
+        ("STRING INHARMONICITY", "0.0035 (Stiff Wire)", (0, 229, 255)),
+        ("BRIDGE COUPLING", "0.45 (Dual Soundboard)", (0, 255, 180)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 185, 215), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=get_font(13, bold=True))
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(14, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Hammered Dulcimer / Cimbalom Multi-Bridge Strike Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "dulcimer_cimbalom_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_equal_loudness_contour_view():
+    width, height = 800, 480
+    img = Image.new("RGBA", (width, height), (12, 16, 26, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(13, bold=True)
+    f_header = get_font(10, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title Bar
+    draw.text((20, 18), "DYNAMIC FLETCHER-MUNSON EQUAL-LOUDNESS CONTOUR & SPECTRAL BALANCE HUD", fill=(240, 245, 255), font=f_title)
+
+    # Tabs (y: 48..92) - 44pt height
+    tabs = [("ISO 226:2003", True), ("FLETCHER-M", False), ("ROBINSON-D", False), ("EBU R128 (K)", False), ("SMPTE X-CURVE", False)]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, is_sel) in enumerate(tabs):
+        bx = 20 + i * (tab_w + 8)
+        bg = (0, 229, 255) if is_sel else (24, 32, 48)
+        fg = (8, 20, 28) if is_sel else (210, 225, 245)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 14, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(8, 12, 22), outline=(45, 65, 95), width=2)
+
+    # Left: Frequency Contour Response Curves
+    left_w = int(760 * 0.55)
+    draw.rounded_rectangle([30, 114, 30 + left_w - 20, 330], radius=4, fill=(14, 18, 30), outline=(35, 55, 85))
+    draw.text((40, 124), "DYNAMIC PHON LEVEL & SPECTRAL COMPENSATION CONTOUR", fill=(0, 229, 255), font=f_header)
+
+    zero_y = 222
+    plot_w = left_w - 70
+    plot_h = 146
+    draw.line([(55, zero_y), (55 + plot_w, zero_y)], fill=(100, 130, 165, 80), width=1)
+
+    # Curve
+    pts = []
+    for p in range(32):
+        t = p / 31.0
+        cx = 55 + int(t * plot_w)
+        bass = max(0.0, (1.0 - t * 2.0)) ** 2 * 6.5
+        dip = math.exp(-((t - 0.65) * 6.0) ** 2) * (-4.5)
+        air = max(0.0, (t - 0.75)) * 4.0 * (3.2 / 4.0)
+        cy = zero_y - int(((bass + dip + air) / 24.0) * (plot_h * 0.45))
+        pts.append((cx, cy))
+
+    for i in range(len(pts) - 1):
+        draw.line([pts[i], pts[i + 1]], fill=(0, 229, 255), width=2)
+
+    # Puck
+    px = 55 + int(0.72 * plot_w)
+    py = 295 - int(0.85 * plot_h)
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(0, 229, 255, 150), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(0, 229, 255))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+    draw.text((40, 310), "Monitoring: 83.0 dB SPL | Comp: 85% | Ref: 83.0 Phon | Bass: +6.5dB", fill=(100, 220, 255), font=f_small)
+
+    # Right: Critical Bark Bands Gain Spectrum
+    rx = 30 + left_w
+    rw = int(760 * 0.45) - 20
+    draw.rounded_rectangle([rx, 114, rx + rw, 330], radius=4, fill=(14, 18, 30), outline=(35, 55, 85))
+    draw.text((rx + 10, 124), "CRITICAL BARK BAND COMPENSATION GAINS (dB)", fill=(0, 229, 255), font=f_header)
+
+    gains = [6.5, 4.2, 2.0, 0.0, -3.8, -1.2, 1.5, 3.2]
+    labels = ["40Hz", "100Hz", "300Hz", "1kHz", "3.5k", "6kHz", "10kHz", "16kHz"]
+    bar_w = int((rw - 30 - 7 * 6) / 8)
+    for i, (gain, lbl) in enumerate(zip(gains, labels)):
+        bx = rx + 15 + i * (bar_w + 6)
+        bh = int((gain / 24.0) * 70)
+        top_y, bot_y = (zero_y - bh, zero_y) if bh >= 0 else (zero_y, zero_y - bh)
+        col = (255, 107, 43) if i < 3 else ((255, 215, 0) if i == 4 else (0, 229, 255))
+        draw.rounded_rectangle([bx, top_y, bx + bar_w, bot_y], radius=2, fill=col)
+        draw.text((bx + 1, 310), lbl, fill=(180, 205, 235), font=f_small)
+
+    # Bottom Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 24, 38), outline=(45, 65, 95))
+    params = [
+        ("MONITORING SPL", "83.0 dB SPL (Listening)", (0, 229, 255)),
+        ("COMPENSATION WEIGHT", "85% (Dynamic)", (255, 215, 0)),
+        ("3.5kHz RESIDUAL DIP", "-3.8 dB (Ear Canal)", (255, 107, 43)),
+        ("SUB-BASS BOOST", "+6.5 dB (Fletcher 40Hz)", (0, 255, 180)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 185, 215), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=get_font(13, bold=True))
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(14, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Dynamic Equal-Loudness Contour Compensation Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "equal_loudness_contour_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_dynamic_stereo_width_view():
+    width, height = 800, 480
+    img = Image.new("RGBA", (width, height), (12, 16, 26, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(13, bold=True)
+    f_header = get_font(10, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title Bar
+    draw.text((20, 18), "MASTERING MULTI-BAND DYNAMIC STEREO WIDTH & SIDE PHASE UNMASKER HUD", fill=(240, 245, 255), font=f_title)
+
+    # Tabs (y: 48..92) - 44pt height
+    tabs = [("BROADCAST", True), ("VINYL (180Hz)", False), ("CINEMATIC WIDE", False), ("NATURAL DEPTH", False), ("EDM HYPER (200%)", False)]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, is_sel) in enumerate(tabs):
+        bx = 20 + i * (tab_w + 8)
+        bg = (255, 215, 0) if is_sel else (24, 32, 48)
+        fg = (20, 16, 4) if is_sel else (210, 225, 245)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 12, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(8, 12, 22), outline=(45, 65, 95), width=2)
+
+    # Left: Goniometer & Phase Correlation Field
+    left_w = int(760 * 0.55)
+    draw.rounded_rectangle([30, 114, 30 + left_w - 20, 330], radius=4, fill=(14, 18, 30), outline=(35, 55, 85))
+    draw.text((40, 124), "POLAR PHASE CORRELATION & STEREO LISSAJOUS FIELD", fill=(255, 215, 0), font=f_header)
+
+    cx, cy = 30 + int(left_w * 0.5), 220
+    draw.line([(cx - 70, cy), (cx + 70, cy)], fill=(120, 140, 170, 90), width=1)
+    draw.line([(cx, cy - 70), (cx, cy + 70)], fill=(120, 140, 170, 90), width=1)
+    draw.ellipse([cx - 45, cy - 65, cx + 45, cy + 65], outline=(0, 229, 255), width=2)
+
+    # Puck
+    px = 30 + int(0.31 * (left_w - 20))
+    py = 330 - int(0.50 * 216)
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(255, 215, 0, 150), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(255, 215, 0))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+    draw.text((40, 310), "Mono Bass: 120 Hz | Width: 125% | Correlation: +0.92 | Mono: 95%", fill=(255, 230, 140), font=f_small)
+
+    # Right: 4-Band Width & Side Level Gauges
+    rx = 30 + left_w
+    rw = int(760 * 0.45) - 20
+    draw.rounded_rectangle([rx, 114, rx + rw, 330], radius=4, fill=(14, 18, 30), outline=(35, 55, 85))
+    draw.text((rx + 10, 124), "4-BAND DYNAMIC STEREO WIDTH & SIDE LEVELS", fill=(255, 215, 0), font=f_header)
+
+    widths = [0.0, 1.0, 1.25, 1.45]
+    names = ["SUB (<120Hz)", "LOW-MID (1k)", "HIGH-MID (6k)", "AIR (20kHz)"]
+    bar_w = int((rw - 30 - 3 * 8) / 4)
+    for i, (w, nm) in enumerate(zip(widths, names)):
+        bx = rx + 15 + i * (bar_w + 8)
+        bh = int((w / 2.5) * 140)
+        col = (0, 255, 180) if i == 0 else ((0, 229, 255) if i == 1 else ((255, 215, 0) if i == 2 else (255, 107, 43)))
+        draw.rounded_rectangle([bx, 305 - bh, bx + bar_w, 305], radius=3, fill=col)
+        draw.text((bx + 2, 310), nm, fill=(180, 205, 235), font=f_small)
+
+    # Bottom Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 24, 38), outline=(45, 65, 95))
+    params = [
+        ("ELLIPTICAL BASS MONO", "120 Hz (Vinyl Guard)", (0, 255, 180)),
+        ("SIDE WIDTH RATIO", "125% (Dynamic)", (255, 215, 0)),
+        ("PHASE CORRELATION", "+0.92 (Coherence)", (0, 229, 255)),
+        ("MONO COMPATIBILITY", "95% (Sum Loss 0dB)", (255, 107, 43)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 185, 215), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=get_font(13, bold=True))
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(14, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Mastering Multi-Band Dynamic Stereo Width Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "dynamic_stereo_width_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_neural_choir_formant_view():
+    width, height = 800, 480
+    img = Image.new("RGBA", (width, height), (12, 16, 26, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(13, bold=True)
+    f_header = get_font(10, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title Bar
+    draw.text((20, 18), "NEURAL POLYPHONIC CHOIR FORMANT MORPHER & VOWEL TRAJECTORY HUD", fill=(240, 245, 255), font=f_title)
+
+    # Tabs (y: 48..92) - 44pt height
+    tabs = [("CLASSICAL SATB", True), ("BULGARIAN CHOIR", False), ("GREGORIAN CHANT", False), ("A CAPPELLA ENSEMBLE", False), ("GOSPEL WALL (48V)", False)]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, is_sel) in enumerate(tabs):
+        bx = 20 + i * (tab_w + 8)
+        bg = (255, 93, 143) if is_sel else (24, 32, 48)
+        fg = (28, 4, 16) if is_sel else (210, 225, 245)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 10, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(8, 12, 22), outline=(45, 65, 95), width=2)
+
+    # Left: 2D Vowel Formant Trajectory Space (F1 vs F2)
+    left_w = int(760 * 0.55)
+    draw.rounded_rectangle([30, 114, 30 + left_w - 20, 330], radius=4, fill=(14, 18, 30), outline=(35, 55, 85))
+    draw.text((40, 124), "2D VOWEL FORMANT SPACE (F1: 200..1000Hz vs F2: 500..3000Hz)", fill=(255, 93, 143), font=f_header)
+
+    plot_w = left_w - 80
+    plot_h = 146
+
+    # Vowels
+    vowels = [("/i/ (beet)", 270, 2300), ("/e/ (bait)", 530, 1850), ("/a/ (father)", 730, 1100), ("/o/ (boat)", 570, 850), ("/u/ (boot)", 300, 870)]
+    for v_lbl, vf1, vf2 in vowels:
+        vx = 60 + int(((vf2 - 500) / 2500.0) * plot_w)
+        vy = 295 - int(((vf1 - 200) / 800.0) * plot_h)
+        draw.ellipse([vx - 8, vy - 8, vx + 8, vy + 8], outline=(120, 145, 180), width=1)
+        draw.text((vx - 20, vy - 18), v_lbl, fill=(160, 185, 215), font=f_small)
+
+    # Puck
+    px = 60 + int(((1400 - 500) / 2500.0) * plot_w)
+    py = 295 - int(((650 - 200) / 800.0) * plot_h)
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(255, 93, 143, 150), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(255, 93, 143))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+    draw.text((40, 310), "F1: 650 Hz | F2: 1400 Hz | F3: 2310 Hz | Voices: 32 | Blend: 88%", fill=(255, 180, 200), font=f_small)
+
+    # Right: Polyphonic Vocal Tract Formants Spectrum
+    rx = 30 + left_w
+    rw = int(760 * 0.45) - 20
+    draw.rounded_rectangle([rx, 114, rx + rw, 330], radius=4, fill=(14, 18, 30), outline=(35, 55, 85))
+    draw.text((rx + 10, 124), "POLYPHONIC VOCAL TRACT FORMANT SPECTRUM", fill=(255, 93, 143), font=f_header)
+
+    f_peaks = [0.95, 0.78, 0.55, 0.38, 0.22]
+    f_lbls = ["F1(Pharynx)", "F2(Oral)", "F3(Singers)", "F4(Nasal)", "F5(Head)"]
+    bar_w = int((rw - 30 - 4 * 6) / 5)
+    for i, (pk, fl) in enumerate(zip(f_peaks, f_lbls)):
+        bx = rx + 15 + i * (bar_w + 6)
+        bh = int((pk / 1.2) * 140)
+        col = (255, 93, 143) if i == 0 else ((157, 78, 221) if i == 1 else ((0, 229, 255) if i == 2 else (255, 215, 0)))
+        draw.rounded_rectangle([bx, 305 - bh, bx + bar_w, 305], radius=3, fill=col)
+        draw.text((bx + 2, 310), fl, fill=(180, 205, 235), font=f_small)
+
+    # Bottom Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 24, 38), outline=(45, 65, 95))
+    params = [
+        ("FORMANT F1 (PHARYNX)", "650 Hz (Vowel Height)", (255, 93, 143)),
+        ("FORMANT F2 (ORAL CAVITY)", "1400 Hz (Vowel Frontness)", (157, 78, 221)),
+        ("CHOIR SPREAD VOICES", "32 Polyphonic Voices", (0, 229, 255)),
+        ("NEURAL TIMBRE MORPH", "88% (Tract Resynthesis)", (255, 215, 0)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 185, 215), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=get_font(13, bold=True))
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(14, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Neural Polyphonic Choir Formant Morpher Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "neural_choir_formant_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_atmos_916_spatializer_view():
+    width, height = 800, 480
+    img = Image.new("RGBA", (width, height), (12, 16, 26, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(13, bold=True)
+    f_header = get_font(10, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title Bar
+    draw.text((20, 18), "DOLBY ATMOS 9.1.6 3D ACOUSTIC ROOM RAYTRACING HUD", fill=(240, 245, 255), font=f_title)
+
+    # Tabs (y: 48..92) - 44pt height
+    tabs = [("MASTERING (9.1.6)", True), ("CINEMA DUB STAGE", False), ("NEARFIELD STUDIO", False), ("BINAURAL HRIR", False), ("AUTO 16-CH CABIN", False)]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, is_sel) in enumerate(tabs):
+        bx = 20 + i * (tab_w + 8)
+        bg = (0, 255, 180) if is_sel else (24, 32, 48)
+        fg = (8, 28, 20) if is_sel else (210, 225, 245)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 10, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(8, 12, 22), outline=(45, 65, 95), width=2)
+
+    # Left: 3D Acoustic Room & 9.1.6 Speaker Layout Field
+    left_w = int(760 * 0.55)
+    draw.rounded_rectangle([30, 114, 30 + left_w - 20, 330], radius=4, fill=(14, 18, 30), outline=(35, 55, 85))
+    draw.text((40, 124), "9.1.6 SPEAKER ARRAY & ACOUSTIC RAYTRACE FIELD", fill=(0, 255, 180), font=f_header)
+
+    cx, cy = 30 + int(left_w * 0.5), 220
+    draw.ellipse([cx - 6, cy - 6, cx + 6, cy + 6], fill=(0, 229, 255))
+    draw.ellipse([cx - 12, cy - 12, cx + 12, cy + 12], outline=(0, 229, 255, 120), width=1)
+
+    # Speaker nodes
+    sp_coords = [("L", -0.7, 0.7), ("C", 0.0, 0.85), ("R", 0.7, 0.7), ("Lw", -0.9, 0.3), ("Rw", 0.9, 0.3), ("Ls", -0.85, -0.2), ("Rs", 0.85, -0.2), ("Lb", -0.5, -0.75), ("Rb", 0.5, -0.75)]
+    for lbl, sx, sy in sp_coords:
+        spx = cx + int(sx * (left_w * 0.42))
+        spy = cy - int(sy * 80)
+        draw.ellipse([spx - 4, spy - 4, spx + 4, spy + 4], fill=(0, 255, 180))
+        draw.text((spx - 5, spy - 14), lbl, fill=(180, 215, 245), font=f_small)
+
+    # Object Puck
+    px = 30 + int(((1.5 + 8.0) / 16.0) * (left_w - 20))
+    py = 330 - int(((2.0 + 8.0) / 16.0) * 216)
+
+    for i, (_lbl, sx, sy) in enumerate(sp_coords):
+        if i % 2 == 0:
+            spx = cx + int(sx * (left_w * 0.42))
+            spy = cy - int(sy * 80)
+            draw.line([(px, py), (spx, spy)], fill=(0, 255, 180, 50), width=1)
+
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(0, 255, 180, 150), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(0, 255, 180))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+    draw.text((40, 310), "Pos: (1.5, 2.0) m | Rays: 128 | RT60: 0.35s | Profile: ATMOS MASTERING (9.1.6)", fill=(120, 255, 200), font=f_small)
+
+    # Right: 16-Channel Level Meter Array
+    rx = 30 + left_w
+    rw = int(760 * 0.45) - 20
+    draw.rounded_rectangle([rx, 114, rx + rw, 330], radius=4, fill=(14, 18, 30), outline=(35, 55, 85))
+    draw.text((rx + 10, 124), "16-CHANNEL 9.1.6 MASTER DISPATCH ENERGY (dBFS)", fill=(0, 255, 180), font=f_header)
+
+    energies = [0.8, 0.6, 0.9, 0.7, 0.5, 0.4, 0.4, 0.3, 0.3, 0.95, 0.7, 0.7, 0.6, 0.6, 0.5, 0.5]
+    ch_lbls = ["L", "C", "R", "Lw", "Rw", "Ls", "Rs", "Lb", "Rb", "LFE", "Ltf", "Rtf", "Ltm", "Rtm", "Ltr", "Rtr"]
+    bar_w = int((rw - 30 - 15 * 3) / 16)
+    for i, (en, cl) in enumerate(zip(energies, ch_lbls)):
+        bx = rx + 15 + i * (bar_w + 3)
+        bh = int(en * 140)
+        col = (255, 107, 43) if i == 9 else ((0, 255, 180) if i < 9 else (0, 229, 255))
+        draw.rounded_rectangle([bx, 305 - bh, bx + bar_w, 305], radius=2, fill=col)
+        if i % 2 == 0:
+            draw.text((bx, 310), cl, fill=(180, 205, 235), font=f_small)
+
+    # Bottom Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 24, 38), outline=(45, 65, 95))
+    params = [
+        ("3D OBJECT POSITION", "(1.50, 2.00, 1.20) m", (0, 255, 180)),
+        ("RAYTRACE COUNT", "128 Image Rays", (59, 130, 246)),
+        ("REVERB RT60 TIME", "0.35 s (Mastering)", (255, 215, 0)),
+        ("ATMOS PROFILE", "9.1.6 Bed + Heights", (0, 229, 255)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 185, 215), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=get_font(13, bold=True))
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(14, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Dolby Atmos 9.1.6 3D Room Raytracer Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "atmos_916_spatializer_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
 if __name__ == "__main__":
     render_live_macro_rack()
     render_spectrogram_3d()
@@ -10320,7 +10768,13 @@ if __name__ == "__main__":
     render_dynamic_crest_shaper_view()
     render_neural_vocal_stylizer_view()
     render_wfs_array_spatializer_view()
-    print("All Tier 50-71 GUI render previews generated successfully!")
+    render_dulcimer_cimbalom_view()
+    render_equal_loudness_contour_view()
+    render_dynamic_stereo_width_view()
+    render_neural_choir_formant_view()
+    render_atmos_916_spatializer_view()
+    print("All Tier 50-72 GUI render previews generated successfully!")
+
 
 
 
