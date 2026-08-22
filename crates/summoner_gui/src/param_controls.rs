@@ -466,7 +466,7 @@ pub fn export_clip_to_sfz(
     };
     let mut writer = hound::WavWriter::create(&wav_path, spec).map_err(|e| e.to_string())?;
     for &sample in pcm_data {
-        let i16_val = (sample.clamp(-1.0, 1.0) * 32767.0) as i16;
+        let i16_val = (sample.clamp(-1.0, 1.0) * i16::MAX as f32).round() as i16;
         writer.write_sample(i16_val).map_err(|e| e.to_string())?;
     }
     writer.finalize().map_err(|e| e.to_string())?;

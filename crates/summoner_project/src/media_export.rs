@@ -2066,7 +2066,7 @@ pub fn write_wav(path: &std::path::Path, samples: &[f32], sample_rate: u32) -> R
     };
     let mut writer = hound::WavWriter::create(path, spec).map_err(|e| e.to_string())?;
     for &sample in samples {
-        let s_i16 = (sample.clamp(-1.0, 1.0) * 32767.0) as i16;
+        let s_i16 = (sample.clamp(-1.0, 1.0) * i16::MAX as f32).round() as i16;
         writer.write_sample(s_i16).map_err(|e| e.to_string())?;
     }
     writer.finalize().map_err(|e| e.to_string())?;

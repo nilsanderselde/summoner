@@ -44,8 +44,7 @@ impl WavWriter {
     pub fn write_interleaved_samples(&mut self, samples: &[f32]) -> io::Result<()> {
         let mut pcm_bytes = Vec::with_capacity(samples.len() * 2);
         for &s in samples {
-            let clamped = s.clamp(-1.0, 1.0);
-            let pcm_val = (clamped * 32767.0) as i16;
+            let pcm_val: i16 = (s.clamp(-1.0, 1.0) * i16::MAX as f32).round() as i16;
             pcm_bytes.extend_from_slice(&pcm_val.to_le_bytes());
         }
         self.file.write_all(&pcm_bytes)?;

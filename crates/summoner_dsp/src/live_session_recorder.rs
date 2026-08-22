@@ -124,8 +124,8 @@ impl LiveSessionRecorder {
         if let Some(writer) = &mut self.wav_writer {
             let num_frames = left.len().min(right.len());
             for i in 0..num_frames {
-                let l_pcm = (left[i].clamp(-1.0, 1.0) * 32767.0) as i16;
-                let r_pcm = (right[i].clamp(-1.0, 1.0) * 32767.0) as i16;
+                let l_pcm = (left[i].clamp(-1.0, 1.0) * i16::MAX as f32).round() as i16;
+                let r_pcm = (right[i].clamp(-1.0, 1.0) * i16::MAX as f32).round() as i16;
                 let _ = writer.write_sample(l_pcm);
                 let _ = writer.write_sample(r_pcm);
             }

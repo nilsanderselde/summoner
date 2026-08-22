@@ -5,6 +5,7 @@ use summoner_core::graph::{Edge, NodeGraph};
 use summoner_core::mpe::{MpeEvent, MpeRouter};
 use summoner_core::node::{GainNode, ProcessContext};
 use summoner_core::param_bus::{ParamBus, ParamId};
+use summoner_core::track::Track;
 use summoner_core::transport::Transport;
 use summoner_core::wav::WavWriter;
 
@@ -472,4 +473,101 @@ fn test_cli_harmony_suggest_returns_notes() {
         !suggestions.is_empty(),
         "Expected non-empty harmony suggestions"
     );
+}
+
+#[test]
+fn test_render_sine_wave_purity_and_continuity() {
+    let sample_rate = 44100;
+    let freq = 440.0;
+    let block_size = 64;
+    let num_blocks = 100;
+    let total_samples = block_size * num_blocks;
+
+    let mut track = Track::new(1, "Sine Track", 2);
+    let osc = summoner_dsp::oscillators::OscSine::new(freq);
+    track.add_node(Box::new(summoner_dsp::traits::ProcessorNodeAdapter::new(osc)));
+
+    let transport = Transport::new(sample_rate, 120.0);
+    let ctx = ProcessContext::from_transport(&transport);
+
+    let mut left_out = vec![0.0f32; total_samples];
+    let mut right_out = vec![0.0f32; total_samples];
+
+    let mut block_l = vec![0.0f32; block_size];
+    let mut block_r = vec![0.0f32; block_size];
+
+    for b in 0..num_blocks {
+        track.process(block_size, &ctx, &mut [&mut block_l[..], &mut block_r[..]]);
+        left_out[b * block_size..(b + 1) * block_size].copy_from_slice(&block_l);
+        right_out[b * block_size..(b + 1) * block_size].copy_from_slice(&block_r);
+    }
+
+    // Verify left and right match exactly
+    assert_eq!(left_out, right_out);
+
+    // Verify waveform continuity using harmonic difference equation (no block boundary glitches)
+    let w0 = 2.0 * std::f64::consts::PI * freq as f64 / sample_rate as f64;
+    let c = 2.0 * w0.cos();
+    for i in 1..(total_samples - 1) {
+        let diff = (left_out[i - 1] as f64 + left_out[i + 1] as f64 - c * left_out[i] as f64).abs();
+        assert!(
+            diff < 1e-3,
+            "Discontinuity or glitch at sample {}: diff = {}",
+            i,
+            diff
+        );
+    }
+}
+
+#[test]
+fn test_render_single_and_multi_cycle_pure_sine_wave() {
+    let sample_rate = 44100;
+    let freq = 100.0; // 1 cycle = 441 samples
+    let samples_per_cycle = (sample_rate as f32 / freq) as usize;
+    let total_samples = samples_per_cycle * 2; // 2 full cycles = 882 samples
+
+    let mut osc = summoner_dsp::oscillators::OscSine::new(freq);
+    let transport = Transport::new(sample_rate, 120.0);
+    let ctx = ProcessContext::from_transport(&transport);
+
+    let mut out_l = vec![0.0f32; total_samples];
+    let mut out_r = vec![0.0f32; total_samples];
+
+    // Process in small arbitrary chunks (e.g. 32 samples) across buffer calls to test phase continuity
+    let chunk_size = 32;
+    let mut processed = 0;
+    while processed < total_samples {
+        let n = (total_samples - processed).min(chunk_size);
+        let mut slice_l = vec![0.0f32; n];
+        let mut slice_r = vec![0.0f32; n];
+        let dummy_in: [&[f32]; 0] = [];
+        osc.process_block(&dummy_in, &mut [&mut slice_l[..], &mut slice_r[..]], &ctx);
+        out_l[processed..processed + n].copy_from_slice(&slice_l);
+        out_r[processed..processed + n].copy_from_slice(&slice_r);
+        processed += n;
+    }
+
+    // Verify sample-by-sample match with mathematical sine wave
+    for i in 0..total_samples {
+        let expected = (2.0 * std::f32::consts::PI * freq * (i as f32) / (sample_rate as f32)).sin();
+        let actual = out_l[i];
+        let err = (actual - expected).abs();
+        assert!(
+            err < 1e-4,
+            "Sample {} mismatch: actual={}, expected={}, err={}",
+            i,
+            actual,
+            expected,
+            err
+        );
+    }
+
+    // Verify exactly 2 zero crossings from positive to negative
+    let mut zero_crossings = 0;
+    for i in 1..total_samples {
+        if out_l[i - 1] >= 0.0 && out_l[i] < 0.0 {
+            zero_crossings += 1;
+        }
+    }
+    assert_eq!(zero_crossings, 2, "Expected exactly 2 cycles / zero crossings");
 }

@@ -708,7 +708,7 @@ pub fn write_audio_file(
             };
             let mut writer = WavWriter::create(path, spec).map_err(|e| e.to_string())?;
             for &s in samples {
-                let pcm = (s.clamp(-1.0, 1.0) * 32767.0) as i16;
+                let pcm = (s.clamp(-1.0, 1.0) * i16::MAX as f32).round() as i16;
                 writer.write_sample(pcm).map_err(|e| e.to_string())?;
             }
             writer.finalize().map_err(|e| e.to_string())?;

@@ -1028,7 +1028,7 @@ fn main() {
                 };
                 if let Ok(mut writer) = hound::WavWriter::create(&stem_file, spec) {
                     for &sample in &stem_buf.data {
-                        let pcm = (sample.clamp(-1.0, 1.0) * 32767.0) as i16;
+                        let pcm = (sample.clamp(-1.0, 1.0) * i16::MAX as f32).round() as i16;
                         let _ = writer.write_sample(pcm);
                     }
                     let _ = writer.finalize();
@@ -1069,8 +1069,8 @@ fn main() {
                             );
                             runner.process_block(frames, &ctx, &mut [&mut block_l, &mut block_r]);
                             for i in 0..frames {
-                                let l = (block_l[i].clamp(-1.0, 1.0) * 32767.0) as i16;
-                                let r = (block_r[i].clamp(-1.0, 1.0) * 32767.0) as i16;
+                                let l = (block_l[i].clamp(-1.0, 1.0) * i16::MAX as f32).round() as i16;
+                                let r = (block_r[i].clamp(-1.0, 1.0) * i16::MAX as f32).round() as i16;
                                 let _ = writer.write_sample(l);
                                 let _ = writer.write_sample(r);
                             }
@@ -1269,11 +1269,13 @@ fn main() {
                             };
                             if let Ok(mut writer) = hound::WavWriter::create(&wav_out, spec) {
                                 for t in 0..44100 {
-                                    let s = ((t as f32 * 440.0 * 2.0 * std::f32::consts::PI
+                                    let s = (((t as f32 * 440.0 * 2.0 * std::f32::consts::PI
                                         / 44100.0)
                                         .sin()
-                                        * 0.5
-                                        * 32767.0)
+                                        * 0.5)
+                                        .clamp(-1.0, 1.0)
+                                        * i16::MAX as f32)
+                                        .round()
                                         as i16;
                                     let _ = writer.write_sample(s);
                                 }

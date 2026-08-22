@@ -79,9 +79,16 @@ impl Track {
         const MAX_TRACK_CHANNELS: usize = 16;
         let channels = self.channels.min(MAX_TRACK_CHANNELS);
 
+        for buf in &mut self.temp_buf_a {
+            buf[..block_size].fill(0.0);
+        }
+        for buf in &mut self.temp_buf_b {
+            buf[..block_size].fill(0.0);
+        }
+
         let mut a_is_input = true;
 
-        for node in &mut self.nodes {
+        for (node_idx, node) in self.nodes.iter_mut().enumerate() {
             let mut in_slices: [&[crate::audio::Sample]; MAX_TRACK_CHANNELS] =
                 [&[]; MAX_TRACK_CHANNELS];
             let mut out_slices: [&mut [crate::audio::Sample]; MAX_TRACK_CHANNELS] =
@@ -94,7 +101,12 @@ impl Track {
                 for (ch, buf) in self.temp_buf_b.iter_mut().take(channels).enumerate() {
                     out_slices[ch] = &mut buf[..block_size];
                 }
-                node.process(&in_slices[..channels], &mut out_slices[..channels], ctx);
+                let in_slice_param: &[&[crate::audio::Sample]] = if node_idx == 0 {
+                    &[]
+                } else {
+                    &in_slices[..channels]
+                };
+                node.process(in_slice_param, &mut out_slices[..channels], ctx);
             } else {
                 for (ch, buf) in self.temp_buf_b.iter().take(channels).enumerate() {
                     in_slices[ch] = &buf[..block_size];
@@ -102,7 +114,12 @@ impl Track {
                 for (ch, buf) in self.temp_buf_a.iter_mut().take(channels).enumerate() {
                     out_slices[ch] = &mut buf[..block_size];
                 }
-                node.process(&in_slices[..channels], &mut out_slices[..channels], ctx);
+                let in_slice_param: &[&[crate::audio::Sample]] = if node_idx == 0 {
+                    &[]
+                } else {
+                    &in_slices[..channels]
+                };
+                node.process(in_slice_param, &mut out_slices[..channels], ctx);
             }
 
             a_is_input = !a_is_input;
