@@ -548,9 +548,8 @@ fn test_render_single_and_multi_cycle_pure_sine_wave() {
     }
 
     // Verify sample-by-sample match with mathematical sine wave
-    for i in 0..total_samples {
+    for (i, &actual) in out_l.iter().enumerate().take(total_samples) {
         let expected = (2.0 * std::f32::consts::PI * freq * (i as f32) / (sample_rate as f32)).sin();
-        let actual = out_l[i];
         let err = (actual - expected).abs();
         assert!(
             err < 1e-4,

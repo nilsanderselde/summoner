@@ -111,6 +111,8 @@ pub mod tier71_tests;
 #[cfg(feature = "gui")]
 pub mod tier72_tests;
 #[cfg(feature = "gui")]
+pub mod tier73_tests;
+#[cfg(feature = "gui")]
 pub mod touch_gestures;
 #[cfg(feature = "gui")]
 pub mod transport_bar;
@@ -125,6 +127,8 @@ pub use views::ambisonic_radar_view::AmbisonicRadarView;
 pub use views::atmos_916_spatializer_view::Atmos916SpatializerView;
 #[cfg(feature = "gui")]
 pub use views::atmos_surround_view::AtmosSurroundView;
+#[cfg(feature = "gui")]
+pub use views::auditory_roughness_view::AuditoryRoughnessView;
 #[cfg(feature = "gui")]
 pub use views::auro3d_spatializer_view::Auro3dSpatializerView;
 #[cfg(feature = "gui")]
@@ -186,6 +190,8 @@ pub use views::harmonic_tension_map::HarmonicTensionMapView;
 #[cfg(feature = "gui")]
 pub use views::hoa4_spatializer_view::Hoa4SpatializerView;
 #[cfg(feature = "gui")]
+pub use views::hoa5_binaural_view::Hoa5BinauralView;
+#[cfg(feature = "gui")]
 pub use views::hoa_spatializer_view::HoaSpatializerView;
 #[cfg(feature = "gui")]
 pub use views::isomorphic_tuning_keyboard::IsomorphicTuningKeyboardView;
@@ -233,6 +239,8 @@ pub use views::multiband_spatial_view::MultibandSpatialView;
 pub use views::multitap_delay_view::MultitapDelayView;
 #[cfg(feature = "gui")]
 pub use views::neural_choir_formant_view::NeuralChoirFormantView;
+#[cfg(feature = "gui")]
+pub use views::neural_dereverb_view::NeuralDereverbView;
 #[cfg(feature = "gui")]
 pub use views::neural_inpaint_view::NeuralInpaintView;
 #[cfg(feature = "gui")]
@@ -312,6 +320,8 @@ pub use views::spectrogram_3d_view::Spectrogram3DView;
 #[cfg(feature = "gui")]
 pub use views::spring_reverb_view::SpringReverbView;
 #[cfg(feature = "gui")]
+pub use views::steelpan_drum_view::SteelpanDrumView;
+#[cfg(feature = "gui")]
 pub use views::step_sequencer_matrix::StepSequencerMatrixView;
 #[cfg(feature = "gui")]
 pub use views::stereo_vectorscope_view::StereoVectorscopeView;
@@ -321,6 +331,8 @@ pub use views::stereo_widener_view::StereoWidenerView;
 pub use views::subharmonic_synth_view::SubharmonicSynthView;
 #[cfg(feature = "gui")]
 pub use views::tape_emulator_view::TapeEmulatorView;
+#[cfg(feature = "gui")]
+pub use views::tape_flux_master_view::TapeFluxMasterView;
 #[cfg(feature = "gui")]
 pub use views::tape_flutter_view::TapeFlutterView;
 #[cfg(feature = "gui")]
