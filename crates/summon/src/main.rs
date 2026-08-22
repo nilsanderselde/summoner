@@ -1069,8 +1069,10 @@ fn main() {
                             );
                             runner.process_block(frames, &ctx, &mut [&mut block_l, &mut block_r]);
                             for i in 0..frames {
-                                let l = (block_l[i].clamp(-1.0, 1.0) * i16::MAX as f32).round() as i16;
-                                let r = (block_r[i].clamp(-1.0, 1.0) * i16::MAX as f32).round() as i16;
+                                let l =
+                                    (block_l[i].clamp(-1.0, 1.0) * i16::MAX as f32).round() as i16;
+                                let r =
+                                    (block_r[i].clamp(-1.0, 1.0) * i16::MAX as f32).round() as i16;
                                 let _ = writer.write_sample(l);
                                 let _ = writer.write_sample(r);
                             }
@@ -1275,8 +1277,7 @@ fn main() {
                                         * 0.5)
                                         .clamp(-1.0, 1.0)
                                         * i16::MAX as f32)
-                                        .round()
-                                        as i16;
+                                        .round() as i16;
                                     let _ = writer.write_sample(s);
                                 }
                                 let _ = writer.finalize();

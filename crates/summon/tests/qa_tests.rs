@@ -485,7 +485,9 @@ fn test_render_sine_wave_purity_and_continuity() {
 
     let mut track = Track::new(1, "Sine Track", 2);
     let osc = summoner_dsp::oscillators::OscSine::new(freq);
-    track.add_node(Box::new(summoner_dsp::traits::ProcessorNodeAdapter::new(osc)));
+    track.add_node(Box::new(summoner_dsp::traits::ProcessorNodeAdapter::new(
+        osc,
+    )));
 
     let transport = Transport::new(sample_rate, 120.0);
     let ctx = ProcessContext::from_transport(&transport);
@@ -549,7 +551,8 @@ fn test_render_single_and_multi_cycle_pure_sine_wave() {
 
     // Verify sample-by-sample match with mathematical sine wave
     for (i, &actual) in out_l.iter().enumerate().take(total_samples) {
-        let expected = (2.0 * std::f32::consts::PI * freq * (i as f32) / (sample_rate as f32)).sin();
+        let expected =
+            (2.0 * std::f32::consts::PI * freq * (i as f32) / (sample_rate as f32)).sin();
         let err = (actual - expected).abs();
         assert!(
             err < 1e-4,
@@ -568,5 +571,8 @@ fn test_render_single_and_multi_cycle_pure_sine_wave() {
             zero_crossings += 1;
         }
     }
-    assert_eq!(zero_crossings, 2, "Expected exactly 2 cycles / zero crossings");
+    assert_eq!(
+        zero_crossings, 2,
+        "Expected exactly 2 cycles / zero crossings"
+    );
 }

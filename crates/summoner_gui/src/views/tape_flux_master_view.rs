@@ -18,11 +18,11 @@ pub const MAX_BIAS_TRIM_DB: f32 = 6.0;
 /// Professional magnetic tape formulations and mastering recorder topologies.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TapeFormulation {
-    Ampex456GrandMaster,  // Classic +6 dB warmth, rich mid-range saturation, warm 3rd harmonic
+    Ampex456GrandMaster, // Classic +6 dB warmth, rich mid-range saturation, warm 3rd harmonic
     StuderA800MasterTape, // Pristine +9 dB ultra-low distortion, wide headroom, smooth top-end
-    QuantegyGP9,          // High-output +9 tape, aggressive dynamic punch, high signal-to-noise
-    CassetteTypeIVMetal,  // Metal particle high-bias cassette, dense HF saturation
-    VintageTubeTape1958,  // Early tube-driven tape recorder with asymmetric 2nd/3rd harmonics
+    QuantegyGP9,         // High-output +9 tape, aggressive dynamic punch, high signal-to-noise
+    CassetteTypeIVMetal, // Metal particle high-bias cassette, dense HF saturation
+    VintageTubeTape1958, // Early tube-driven tape recorder with asymmetric 2nd/3rd harmonics
 }
 
 impl TapeFormulation {
@@ -190,7 +190,8 @@ impl TapeFluxMasterView {
         let hf_roll = (1.0 - (drive / 24.0) * (15.0 / self.tape_speed_ips)).clamp(0.2, 0.9);
 
         self.harmonic_spectrum = [fund, h2, h3, h5, bump, hf_roll];
-        self.hf_compression_pct = ((drive / 18.0) * 80.0 + (30.0 - self.tape_speed_ips) * 1.2).clamp(5.0, 95.0);
+        self.hf_compression_pct =
+            ((drive / 18.0) * 80.0 + (30.0 - self.tape_speed_ips) * 1.2).clamp(5.0, 95.0);
         self.thd_distortion_pct = (h2 * 0.4 + h3 * 0.8 + h5 * 0.3) * 2.5;
     }
 
@@ -378,7 +379,10 @@ impl TapeFluxMasterView {
             let p2 = self.hysteresis_loop_pts[next_idx];
             let pt1 = egui::pos2(bh_center.x + p1.0 * scale_x, bh_center.y - p1.1 * scale_y);
             let pt2 = egui::pos2(bh_center.x + p2.0 * scale_x, bh_center.y - p2.1 * scale_y);
-            painter.line_segment([pt1, pt2], Stroke::new(2.0_f32, Color32::from_rgb(255, 107, 43)));
+            painter.line_segment(
+                [pt1, pt2],
+                Stroke::new(2.0_f32, Color32::from_rgb(255, 107, 43)),
+            );
         }
 
         // Interactive Puck
@@ -443,7 +447,14 @@ impl TapeFluxMasterView {
             Color32::from_rgb(235, 94, 40),
         );
 
-        let harm_labels = ["FUND", "2ND (ASYM)", "3RD (SYM)", "5TH (DRV)", "BUMP (LF)", "HF-ROLL"];
+        let harm_labels = [
+            "FUND",
+            "2ND (ASYM)",
+            "3RD (SYM)",
+            "5TH (DRV)",
+            "BUMP (LF)",
+            "HF-ROLL",
+        ];
         let bar_w = (right_rect.width() - 30.0 - 5.0 * 8.0) / 6.0;
         for (i, &amp) in self.harmonic_spectrum.iter().enumerate() {
             let bx = right_rect.min.x + 15.0 + i as f32 * (bar_w + 8.0);

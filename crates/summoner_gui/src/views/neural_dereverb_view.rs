@@ -18,7 +18,7 @@ pub const MAX_DRR_DB: f32 = 24.0;
 /// Neural dereverberation architecture models and acoustic environments.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DereverbModel {
-    NeuralSpectralMaskUNet,     // Recurrent deep U-Net spectral direct-to-reverberant separation
+    NeuralSpectralMaskUNet, // Recurrent deep U-Net spectral direct-to-reverberant separation
     WeightedPredictionErrorWPE, // Multi-channel statistical linear prediction late echo cancellation
     DiffusionDeconvolution,     // Generative diffusion prior room impulse response inverse filter
     CathedralAcousticHall,      // Long-tail (>4.0s RT60) extreme reverberant soundfield cleaner
@@ -429,7 +429,9 @@ impl NeuralDereverbView {
             Color32::from_rgb(0, 245, 212),
         );
 
-        let subband_labels = ["SUB", "LOW", "L-MID", "MID", "H-MID", "HIGH", "AIR", "DRR-EN"];
+        let subband_labels = [
+            "SUB", "LOW", "L-MID", "MID", "H-MID", "HIGH", "AIR", "DRR-EN",
+        ];
         let bar_w = (right_rect.width() - 30.0 - 7.0 * 6.0) / 8.0;
         for (i, &amp) in self.spectral_mask_bands.iter().enumerate() {
             let bx = right_rect.min.x + 15.0 + i as f32 * (bar_w + 6.0);

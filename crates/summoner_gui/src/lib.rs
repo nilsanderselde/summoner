@@ -332,9 +332,9 @@ pub use views::subharmonic_synth_view::SubharmonicSynthView;
 #[cfg(feature = "gui")]
 pub use views::tape_emulator_view::TapeEmulatorView;
 #[cfg(feature = "gui")]
-pub use views::tape_flux_master_view::TapeFluxMasterView;
-#[cfg(feature = "gui")]
 pub use views::tape_flutter_view::TapeFlutterView;
+#[cfg(feature = "gui")]
+pub use views::tape_flux_master_view::TapeFluxMasterView;
 #[cfg(feature = "gui")]
 pub use views::through_zero_flanger_view::ThroughZeroFlangerView;
 #[cfg(feature = "gui")]

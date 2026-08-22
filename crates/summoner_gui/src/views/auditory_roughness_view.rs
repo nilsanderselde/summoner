@@ -131,7 +131,7 @@ impl AuditoryRoughnessView {
     pub fn normalized_to_freq(norm: f32) -> f32 {
         (MIN_CENTER_FREQ_HZ.ln()
             + norm.clamp(0.0, 1.0) * (MAX_CENTER_FREQ_HZ.ln() - MIN_CENTER_FREQ_HZ.ln()))
-            .exp()
+        .exp()
     }
 
     pub fn interval_to_normalized(semi: f32) -> f32 {
@@ -166,10 +166,10 @@ impl AuditoryRoughnessView {
         // Critical bandwidth CBW approximation: CBW = 25 + 75 * (1 + 1.4 * (f / 1000)^2)^0.69
         let cbw = 25.0 + 75.0 * (1.0 + 1.4 * (f / 1000.0).powi(2)).powf(0.69);
         let delta_f = f * (2.0_f32.powf(semi / 12.0) - 1.0);
-        let s = delta_f / (0.24 * cbw);
+        let s = delta_f / cbw;
 
         // Plomp-Levelt standard dissonance curve: d(s) = e^(-3.5*s) - e^(-5.75*s)
-        let raw_diss = ((-3.5 * s).exp() - (-5.75 * s).exp()).max(0.0) * 4.5;
+        let raw_diss = ((-3.5 * s).exp() - (-5.75 * s).exp()).max(0.0) * 5.6;
         let diss_index = (raw_diss * (1.0 + (partials - 1.0) * 0.15)).clamp(0.0, 1.0);
         let asper = diss_index * 1.85 * (self.modulation_rate_hz / 70.0).min(1.2);
 
@@ -265,7 +265,10 @@ impl AuditoryRoughnessView {
         // Tabs (y: 48..92) - 44pt height
         let tabs = [
             (RoughnessStandard::PlompLevelt1965, "PLOMP-LEVELT"),
-            (RoughnessStandard::KameokaKuriyagawa1969, "KAMEOKA-KURIYAGAWA"),
+            (
+                RoughnessStandard::KameokaKuriyagawa1969,
+                "KAMEOKA-KURIYAGAWA",
+            ),
             (RoughnessStandard::FastlZwicker2007, "FASTL-ZWICKER"),
             (RoughnessStandard::Vassilakis2001, "VASSILAKIS (SPL)"),
             (RoughnessStandard::SetharesMicrotonal, "SETHARES (MICRO)"),
@@ -360,6 +363,31 @@ impl AuditoryRoughnessView {
                 ],
                 Stroke::new(0.8_f32, Color32::from_rgb(35, 55, 85)),
             );
+        }
+
+        // Draw Plomp-Levelt Sensory Dissonance Curve across interval range
+        let num_curve_pts = 32;
+        let mut prev_pt: Option<egui::Pos2> = None;
+        let cbw = 25.0 + 75.0 * (1.0 + 1.4 * (self.center_freq_hz / 1000.0).powi(2)).powf(0.69);
+        for i in 0..=num_curve_pts {
+            let frac = i as f32 / num_curve_pts as f32;
+            let semi = frac * MAX_INTERVAL_SEMITONES;
+            let delta_f = self.center_freq_hz * (2.0_f32.powf(semi / 12.0) - 1.0);
+            let s = delta_f / (0.24 * cbw);
+            let raw_d = ((-3.5 * s).exp() - (-5.75 * s).exp()).max(0.0) * 4.5;
+            let d_norm = (raw_d * 0.9).clamp(0.0, 1.0);
+
+            let pt_x = left_rect.min.x + 15.0 + d_norm * (left_rect.width() - 30.0);
+            let pt_y = left_rect.max.y - 25.0 - frac * (left_rect.height() - 55.0);
+            let cur_pt = egui::pos2(pt_x, pt_y);
+
+            if let Some(p_pt) = prev_pt {
+                painter.line_segment(
+                    [p_pt, cur_pt],
+                    Stroke::new(1.8_f32, Color32::from_rgba_premultiplied(255, 140, 0, 180)),
+                );
+            }
+            prev_pt = Some(cur_pt);
         }
 
         // Interactive Puck
@@ -477,7 +505,10 @@ impl AuditoryRoughnessView {
             ),
             (
                 "DISSONANCE INDEX",
-                format!("{:.1}% (Plomp-Levelt)", self.sensory_dissonance_index * 100.0),
+                format!(
+                    "{:.1}% (Plomp-Levelt)",
+                    self.sensory_dissonance_index * 100.0
+                ),
                 Color32::from_rgb(255, 60, 60),
             ),
             (

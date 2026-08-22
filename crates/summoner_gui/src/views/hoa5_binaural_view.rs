@@ -189,12 +189,23 @@ impl Hoa5BinauralView {
         ch_levels[8] = ((2.0 * az_rad).cos() * cos_el.powi(2) * focus).abs();
 
         // 3rd to 5th Order higher spatial resolutions
-        for ch in 9..HOA5_TOTAL_CHANNELS {
+        for (ch, level) in ch_levels
+            .iter_mut()
+            .enumerate()
+            .take(HOA5_TOTAL_CHANNELS)
+            .skip(9)
+        {
             let m = (ch % 7) as f32;
-            let order_idx = if ch < 16 { 3 } else if ch < 25 { 4 } else { 5 };
+            let order_idx = if ch < 16 {
+                3
+            } else if ch < 25 {
+                4
+            } else {
+                5
+            };
             let spatial_decay = 1.0 / (order_idx as f32 * 0.4 + 1.0);
             let trig = ((m + 1.0) * az_rad).cos() * ((m + 1.0) * el_rad).sin();
-            ch_levels[ch] = (trig.abs() * focus * spatial_decay).clamp(0.02, 1.0);
+            *level = (trig.abs() * focus * spatial_decay).clamp(0.02, 1.0);
         }
 
         self.spherical_harmonics_levels = ch_levels;
@@ -498,7 +509,10 @@ impl Hoa5BinauralView {
         let params = [
             (
                 "AZIMUTH / ELEVATION",
-                format!("{:+.1}° / {:+.1}° (Spherical)", self.azimuth_deg, self.elevation_deg),
+                format!(
+                    "{:+.1}° / {:+.1}° (Spherical)",
+                    self.azimuth_deg, self.elevation_deg
+                ),
                 Color32::from_rgb(157, 78, 221),
             ),
             (

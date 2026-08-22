@@ -24,7 +24,7 @@ pub enum SteelpanType {
     DoubleSecondsPan, // Double Second pair (F#3-B5, warm annular harmonic coupling)
     DoubleGuitarPan,  // Double Guitar tenor pans (C3-G4, thick steel gauge strumming)
     TripleCellosPan,  // Triple Cello 3-barrel set (C2-B3, deep resonant lower mids)
-    SixBassPan,       // Six Bass 55-gallon oil barrels (3 notes per pan, heavy acoustic fundamental)
+    SixBassPan, // Six Bass 55-gallon oil barrels (3 notes per pan, heavy acoustic fundamental)
 }
 
 impl SteelpanType {
@@ -370,9 +370,9 @@ impl SteelpanDrumView {
 
         let bowl_center = egui::pos2(
             left_rect.min.x + left_rect.width() * 0.5,
-            left_rect.min.y + left_rect.height() * 0.52,
+            left_rect.min.y + left_rect.height() * 0.54,
         );
-        let max_bowl_radius = (left_rect.height() * 0.42).min(left_rect.width() * 0.42);
+        let max_bowl_radius = (left_rect.height() * 0.36).min(left_rect.width() * 0.38);
 
         // Draw concentric annular rings
         for ring in 1..=self.annular_ring_count {
@@ -461,9 +461,7 @@ impl SteelpanDrumView {
             Color32::from_rgb(0, 229, 255),
         );
 
-        let mode_labels = [
-            "f0 (Fund)", "f1 (Oct)", "f2 (3rd)", "f3 (5th)", "RIM-MOD", "NOTE-CPL", "SYMP-RIM", "SHELL-AIR",
-        ];
+        let mode_labels = ["f0", "f1", "f2", "f3", "RIM", "CPL", "SYMP", "AIR"];
         let bar_w = (right_rect.width() - 30.0 - 7.0 * 6.0) / 8.0;
         for (i, &amp) in self.modal_amplitudes.iter().enumerate() {
             let bx = right_rect.min.x + 15.0 + i as f32 * (bar_w + 6.0);
@@ -485,7 +483,7 @@ impl SteelpanDrumView {
                 egui::pos2(bx + bar_w * 0.5, right_rect.max.y - 20.0),
                 egui::Align2::CENTER_TOP,
                 mode_labels[i],
-                egui::FontId::proportional(8.0),
+                egui::FontId::proportional(8.5),
                 Color32::from_rgb(180, 205, 235),
             );
         }
