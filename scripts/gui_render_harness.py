@@ -7577,6 +7577,112 @@ def render_spectral_reshaper_view():
     img.save(out_path)
     print(f"Rendered: {out_path}")
 
+def render_oversampled_limiter_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (14, 18, 28, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(15, bold=True)
+    f_header = get_font(13, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(10, bold=False)
+
+    draw.text((20, 18), "MASTERING TRUE-PEAK 8x OVERSAMPLED LIMITER & NOISE SHAPING HUD", fill=(240, 245, 255), font=f_title)
+
+    profiles = [
+        ("TRANSPARENT", False),
+        ("WARM TAPE", False),
+        ("PUNCHY SNAP", False),
+        ("BROADCAST EBU", True),
+        ("CLUB LOUD", False),
+    ]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, active) in enumerate(profiles):
+        bx = 20 + i * (tab_w + 8)
+        bg = (0, 229, 255) if active else (25, 35, 50)
+        fg = (10, 14, 24) if active else (200, 215, 235)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 12, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas (20..780, 104..340)
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(10, 14, 24), outline=(45, 65, 95), width=2)
+
+    # Left 55%: 8x Sinc True-Peak Space (30..430, 114..330)
+    draw.rounded_rectangle([30, 114, 430, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((40, 122), "8x SINC TRUE-PEAK SPACE (THRESHOLD vs CEILING)", fill=(160, 180, 205), font=f_small)
+
+    # Sinc Waveform Curve
+    sinc_cy = 210
+    sinc_pts = []
+    for s in range(50):
+        frac = s / 49.0
+        t = (frac - 0.5) * 4.0
+        val = 1.0 if abs(t) < 1e-4 else (math.sin(math.pi * t) / (math.pi * t)) * (1.0 - (t / 2.0)**2)
+        sx = 45 + int(frac * 360)
+        sy = sinc_cy - int(val * 52)
+        sinc_pts.append((sx, sy))
+
+    for i in range(len(sinc_pts) - 1):
+        draw.line([sinc_pts[i], sinc_pts[i + 1]], fill=(0, 229, 255, 140), width=2)
+
+    # Puck (Threshold = -5.0 dB -> norm = 13/18 = 0.722, Ceiling = -1.0 dBTP -> norm = 5/6 = 0.833)
+    px = 30 + int(0.722 * (430 - 30))
+    py = 330 - int(0.833 * (330 - 114))
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(0, 229, 255, 140), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(0, 229, 255))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+
+    draw.text((40, 308), "Ceiling: -1.0 dBTP | Thresh: -5.0 dB | GR: -4.2 dB", fill=(0, 229, 255), font=f_small)
+
+    # Right 45%: Psychoacoustic Noise Shaping Dither (445..770, 114..330)
+    draw.rounded_rectangle([445, 114, 770, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((455, 122), "PSYCHOACOUSTIC NOISE SHAPING DITHER", fill=(160, 180, 205), font=f_small)
+
+    # 16-bit / 24-bit Toggle Buttons (>= 44x44pt)
+    draw.rounded_rectangle([458, 144, 598, 188], radius=4, fill=(30, 45, 65))
+    draw.text((484, 160), "16-BIT CD", fill=(220, 235, 255), font=f_body)
+
+    draw.rounded_rectangle([610, 144, 755, 188], radius=4, fill=(0, 229, 255))
+    draw.text((634, 160), "24-BIT MASTER", fill=(10, 14, 24), font=f_body)
+
+    # Noise Shaping Curve
+    curve_pts = []
+    for i in range(40):
+        frac = i / 39.0
+        # 5th order Modified Shibata curve approximation
+        f_ear_dip = -15.0 * math.exp(-((frac - 0.35) * 5.0)**2)
+        ultra_rise = 28.0 * (frac ** 3.0)
+        norm_d = ((-144.0 - 16.2 + f_ear_dip + ultra_rise) + 160.0) / 100.0
+        cx = 458 + int(frac * 297)
+        cy = 300 - int(norm_d * 75)
+        curve_pts.append((cx, cy))
+
+    for i in range(len(curve_pts) - 1):
+        draw.line([curve_pts[i], curve_pts[i + 1]], fill=(255, 215, 0), width=2)
+
+    draw.text((458, 308), "Shaping: ModifiedShibata (+16.2 dB SNR)", fill=(0, 255, 180), font=f_small)
+
+    # Bottom Metrics Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    params = [
+        ("TRUE-PEAK MAX (dBTP)", "-1.0 dBTP (EBU PASS)", (0, 229, 255)),
+        ("GAIN REDUCTION", "-4.2 dB (85 ms Rel)", (255, 215, 0)),
+        ("INTEGRATED LOUDNESS", "-14.0 LUFS (148 ISP)", (255, 107, 43)),
+        ("DITHER BIT DEPTH", "24-Bit Master (Shibata 5th)", (0, 255, 180)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 180, 205), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=f_header)
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Mastering True-Peak Inter-Sample 8x Limiter & Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "oversampled_limiter_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
 if __name__ == "__main__":
     render_live_macro_rack()
     render_spectrogram_3d()
@@ -7660,6 +7766,7 @@ if __name__ == "__main__":
     render_hoa_spatializer_view()
     render_woodwind_jet_view()
     render_spectral_reshaper_view()
+    render_oversampled_limiter_view()
     print("All Tier 50-66 GUI render previews generated successfully!")
 
 

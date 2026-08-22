@@ -192,6 +192,8 @@ pub use views::neural_vocoder_morph_view::NeuralVocoderMorphView;
 #[cfg(feature = "gui")]
 pub use views::optical_compressor_view::OpticalCompressorView;
 #[cfg(feature = "gui")]
+pub use views::oversampled_limiter_view::OversampledLimiterView;
+#[cfg(feature = "gui")]
 pub use views::pitch_corrector_view::PitchCorrectorView;
 #[cfg(feature = "gui")]
 pub use views::polar_phase_correlator_view::PolarPhaseCorrelatorView;
