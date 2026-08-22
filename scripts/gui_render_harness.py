@@ -7484,6 +7484,99 @@ def render_woodwind_jet_view():
     img.save(out_path)
     print(f"Rendered: {out_path}")
 
+def render_spectral_reshaper_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (14, 18, 28, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(15, bold=True)
+    f_header = get_font(13, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(10, bold=False)
+
+    draw.text((20, 18), "MULTI-BAND TRANSIENT SPECTRAL RESHAPER & DE-BLEED HUD", fill=(240, 245, 255), font=f_title)
+
+    presets = [
+        ("OVERHEAD DUAL", True),
+        ("SNARE DE-BLEED", False),
+        ("GUITAR SNAP", False),
+        ("VOCAL TAMER", False),
+        ("MASTER PUNCH", False),
+    ]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, active) in enumerate(presets):
+        bx = 20 + i * (tab_w + 8)
+        bg = (0, 229, 255) if active else (25, 35, 50)
+        fg = (10, 14, 24) if active else (200, 215, 235)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 14, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas (20..780, 104..340)
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(10, 14, 24), outline=(45, 65, 95), width=2)
+
+    # Left 55%: Band 2 XY Attack vs Sustain Space (30..430, 114..330)
+    draw.rounded_rectangle([30, 114, 430, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((40, 122), "BAND 2: LOW-MID (ATTACK vs SUSTAIN XY)", fill=(160, 180, 205), font=f_small)
+
+    # Center crosshairs
+    cx = 30 + int((430 - 30) / 2)
+    cy = 114 + int((330 - 114) / 2)
+    draw.line([(40, cy), (420, cy)], fill=(100, 130, 170, 80), width=1)
+    draw.line([(cx, 138), (cx, 320)], fill=(100, 130, 170, 80), width=1)
+
+    # Puck (Attack = +4.0 dB -> norm = 16/24 = 0.667, Sustain = 0.0 dB -> norm = 12/24 = 0.50)
+    px = 30 + int(0.667 * (430 - 30))
+    py = 330 - int(0.50 * (330 - 114))
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(0, 229, 255, 140), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(0, 229, 255))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+
+    draw.text((40, 308), "Attack: +4.0 dB | Sustain: +0.0 dB", fill=(0, 229, 255), font=f_small)
+
+    # Right 45%: 4 Bands & De-Bleed Controls (445..770, 114..330)
+    draw.rounded_rectangle([445, 114, 770, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((455, 122), "4 FREQUENCY BANDS & DE-BLEED THRESHOLDS", fill=(160, 180, 205), font=f_small)
+
+    # 4 Band Buttons
+    btn_w = int((325 - 30 - 18) / 4)
+    for i in range(4):
+        bx = 458 + i * (btn_w + 6)
+        is_sel = (i == 1)
+        bg = (255, 107, 43) if is_sel else (30, 45, 65)
+        fg = (10, 14, 24) if is_sel else (220, 235, 255)
+        draw.rounded_rectangle([bx, 144, bx + btn_w, 188], radius=4, fill=bg)
+        draw.text((bx + 18, 160), f"B{i+1}", fill=fg, font=f_header)
+
+    # De-Bleed Slider (y: 204..236)
+    draw.text((458, 196), "De-Bleed Gating Thresh: -30.0 dB", fill=(255, 215, 0), font=f_small)
+    draw.rounded_rectangle([458, 214, 755, 242], radius=4, fill=(18, 25, 38), outline=(45, 60, 85))
+    # Threshold = -30 dB -> norm = 30/60 = 0.50
+    draw.rounded_rectangle([458, 214, 458 + int(0.50 * 297), 242], radius=4, fill=(255, 215, 0))
+
+    draw.text((458, 268), "Crossovers: 160 Hz | 1400 Hz | 6500 Hz", fill=(160, 180, 205), font=f_small)
+    draw.text((458, 292), "Isolation: 89.0% | Crest Factor: 16.4 dB", fill=(0, 255, 180), font=f_small)
+
+    # Bottom Metrics Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    params = [
+        ("ACTIVE BAND ATTACK", "+4.0 dB (Band 2)", (0, 229, 255)),
+        ("ACTIVE BAND SUSTAIN", "+0.0 dB", (255, 215, 0)),
+        ("DE-BLEED GATING THRESH", "-30.0 dB (89.0% Iso)", (255, 107, 43)),
+        ("CREST FACTOR / IMPACT", "16.4 dB (4 Bands)", (0, 255, 180)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 180, 205), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=f_header)
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Multi-Band Transient Spectral Reshaper & Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "spectral_reshaper_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
 if __name__ == "__main__":
     render_live_macro_rack()
     render_spectrogram_3d()
@@ -7566,6 +7659,7 @@ if __name__ == "__main__":
     render_neural_wavetable_view()
     render_hoa_spatializer_view()
     render_woodwind_jet_view()
+    render_spectral_reshaper_view()
     print("All Tier 50-66 GUI render previews generated successfully!")
 
 

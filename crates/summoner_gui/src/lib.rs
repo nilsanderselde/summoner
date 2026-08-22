@@ -228,6 +228,8 @@ pub use views::spectral_matching_eq_view::SpectralMatchingEqView;
 #[cfg(feature = "gui")]
 pub use views::spectral_morph_view::SpectralMorphView;
 #[cfg(feature = "gui")]
+pub use views::spectral_reshaper_view::SpectralReshaperView;
+#[cfg(feature = "gui")]
 pub use views::spectral_resynthesis_view::SpectralResynthesisView;
 #[cfg(feature = "gui")]
 pub use views::spectrogram_3d_view::Spectrogram3DView;
