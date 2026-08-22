@@ -117,6 +117,8 @@ pub mod tier74_tests;
 #[cfg(feature = "gui")]
 pub mod tier75_tests;
 #[cfg(feature = "gui")]
+pub mod tier76_tests;
+#[cfg(feature = "gui")]
 pub mod touch_gestures;
 #[cfg(feature = "gui")]
 pub mod transport_bar;
@@ -232,6 +234,8 @@ pub use views::membrane_resonator_view::MembraneResonatorView;
 #[cfg(feature = "gui")]
 pub use views::meter_bridge_view::MeterBridgeView;
 #[cfg(feature = "gui")]
+pub use views::midside_focuser_view::MidSideFocuserView;
+#[cfg(feature = "gui")]
 pub use views::mpegh_3d_spatializer_view::Mpegh3DSpatializerView;
 #[cfg(feature = "gui")]
 pub use views::mpegh_spatializer_view::MpeghSpatializerView;
@@ -274,6 +278,8 @@ pub use views::neural_vocoder_morph_view::NeuralVocoderMorphView;
 #[cfg(feature = "gui")]
 pub use views::neural_wavetable_view::NeuralWavetableView;
 #[cfg(feature = "gui")]
+pub use views::nhk222_immersion_view::Nhk222ImmersionView;
+#[cfg(feature = "gui")]
 pub use views::nhk222_spatializer_view::Nhk222SpatializerView;
 #[cfg(feature = "gui")]
 pub use views::optical_compressor_view::OpticalCompressorView;
@@ -306,6 +312,8 @@ pub use views::sample_editor_view;
 #[cfg(feature = "gui")]
 pub use views::sample_editor_view::SampleEditorView;
 #[cfg(feature = "gui")]
+pub use views::shakuhachi_view::ShakuhachiView;
+#[cfg(feature = "gui")]
 pub use views::sidechain_matrix_view::SidechainMatrixView;
 #[cfg(feature = "gui")]
 pub use views::sonar_hydrophone_view::SonarHydrophoneView;
@@ -319,6 +327,8 @@ pub use views::spectral_brush_editor::SpectralBrushEditorView;
 pub use views::spectral_debleed_view::SpectralDebleedView;
 #[cfg(feature = "gui")]
 pub use views::spectral_deesser_view::SpectralDeEsserView;
+#[cfg(feature = "gui")]
+pub use views::spectral_flatness_view::SpectralFlatnessView;
 #[cfg(feature = "gui")]
 pub use views::spectral_grain_cloud_view::SpectralGrainCloudView;
 #[cfg(feature = "gui")]
@@ -381,6 +391,8 @@ pub use views::upward_compressor_view::UpwardCompressorView;
 pub use views::vari_mu_master_view::VariMuMasterView;
 #[cfg(feature = "gui")]
 pub use views::vocoder_matrix_view::VocoderMatrixView;
+#[cfg(feature = "gui")]
+pub use views::wavefront_reflection_view::WavefrontReflectionView;
 #[cfg(feature = "gui")]
 pub use views::waveguide_brass_view::WaveguideBrassView;
 #[cfg(feature = "gui")]
