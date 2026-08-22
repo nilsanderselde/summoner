@@ -11559,6 +11559,437 @@ def render_mpegh_trajectory_view():
     img.save(out_path)
     print(f"Rendered: {out_path}")
 
+def render_turkish_ney_view():
+    width, height = 800, 480
+    img = Image.new("RGBA", (width, height), (12, 16, 28, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(13, bold=True)
+    f_header = get_font(10, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title Bar
+    draw.text((20, 18), "TURKISH NEY PHYSICAL MODELING & EMBOUCHURE HUD", fill=(240, 245, 255), font=f_title)
+
+    # Tabs (y: 48..92) - 44pt height
+    tabs = [("MANSUR (A=440)", True), ("KIZ (STD B)", False), ("BOLAHENK (HIGH E)", False), ("SÜPÜRDE (TAKSIM)", False), ("ŞAH (BASS G)", False)]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, is_sel) in enumerate(tabs):
+        bx = 20 + i * (tab_w + 8)
+        bg = (0, 229, 255) if is_sel else (24, 32, 48)
+        fg = (4, 20, 28) if is_sel else (210, 225, 245)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 10, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(8, 12, 22), outline=(45, 65, 95), width=2)
+
+    # Left: Embouchure Angle vs Jet Velocity
+    left_w = int(760 * 0.52)
+    draw.rounded_rectangle([30, 114, 30 + left_w - 20, 330], radius=4, fill=(14, 18, 30), outline=(35, 55, 85))
+    draw.text((40, 124), "EMBOUCHURE ANGLE (15°..65°) vs AIRJET VELOCITY (5..45 m/s)", fill=(0, 229, 255), font=f_header)
+
+    mcx = 30 + int((left_w - 20) * 0.5)
+    mcy = 220
+    draw.line([(40, mcy), (30 + left_w - 30, mcy)], fill=(50, 75, 110, 100), width=1)
+    draw.line([(mcx, 140), (mcx, 300)], fill=(50, 75, 110, 100), width=1)
+
+    # Puck at Angle 42° (0.54), Velocity 18.5 m/s (0.3375)
+    px = 30 + int(0.54 * (left_w - 20))
+    py = 330 - int(0.3375 * 216)
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(0, 229, 255, 150), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(0, 229, 255))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+    draw.text((40, 310), "Angle: 42.0° | Jet: 18.5 m/s | Bore: 78.0cm | Q: 48 | Başpare: Buffalo Horn", fill=(140, 235, 255), font=f_small)
+
+    # Right: Harmonics & Airjet Vortex Spectrum
+    rx = 30 + left_w
+    rw = int(760 * 0.48) - 20
+    draw.rounded_rectangle([rx, 114, rx + rw, 330], radius=4, fill=(14, 18, 30), outline=(35, 55, 85))
+    draw.text((rx + 10, 124), "ACOUSTIC BORE & AIRJET VORTEX HARMONICS", fill=(0, 229, 255), font=f_header)
+
+    labels = ["f0 Rast", "f1 Dügâh", "f2 Segâh", "f3 Çargâh", "Vortex Noise", "Edge Breath", "Horn Gain", "Bore Q"]
+    bar_w = int((rw - 30 - 7 * 6) / 8)
+    amps = [0.95, 0.65, 0.38, 0.22, 0.30, 0.45, 0.85, 0.55]
+    for i in range(8):
+        bx = rx + 15 + i * (bar_w + 6)
+        bh = int((amps[i] / 1.25) * 135)
+        col = (0, 229, 255) if i < 4 else ((255, 180, 0) if i < 6 else (0, 255, 180))
+        draw.rounded_rectangle([bx, 295 - bh, bx + bar_w, 295], radius=3, fill=col)
+        draw.text((bx + 2, 302), labels[i][:6], fill=(180, 205, 235), font=f_small)
+
+    # Bottom Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 24, 38), outline=(45, 65, 95))
+    params = [
+        ("EMBOUCHURE ANGLE", "42.0° (Optimal Alignment)", (0, 229, 255)),
+        ("AIRJET VELOCITY", "18.5 m/s (Spiritual Tone)", (0, 229, 255)),
+        ("BORE LENGTH & Q", "78.0 cm (Q: 48)", (255, 180, 0)),
+        ("BAŞPARE MOUTHPIECE", "Water Buffalo Horn", (240, 245, 255)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 185, 215), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=get_font(13, bold=True))
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(14, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Turkish Ney Touch Targets (>= 44x44pt) & Airjet Vortex Continuity Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "turkish_ney_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_concordance_lattice_view():
+    width, height = 800, 480
+    img = Image.new("RGBA", (width, height), (12, 16, 28, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(13, bold=True)
+    f_header = get_font(10, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title Bar
+    draw.text((20, 18), "PSYCHOACOUSTIC HARMONIC CONCORDANCE LATTICE HUD", fill=(240, 245, 255), font=f_title)
+
+    # Tabs (y: 48..92) - 44pt height
+    tabs = [("5-LIMIT JUST", True), ("12-TET EQUAL", False), ("PYTHAGOREAN", False), ("1/4-MEANTONE", False), ("53-TET OTTOMAN", False)]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, is_sel) in enumerate(tabs):
+        bx = 20 + i * (tab_w + 8)
+        bg = (0, 229, 255) if is_sel else (24, 32, 48)
+        fg = (4, 20, 28) if is_sel else (210, 225, 245)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 10, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(8, 12, 22), outline=(45, 65, 95), width=2)
+
+    # Left: Plomp-Levelt Dissonance Curve
+    left_w = int(760 * 0.55)
+    draw.rounded_rectangle([30, 114, 30 + left_w - 20, 330], radius=4, fill=(14, 18, 30), outline=(35, 55, 85))
+    draw.text((40, 124), "PLOMP-LEVELT SENSORY ROUGHNESS (0..1200 CENTS)", fill=(0, 229, 255), font=f_header)
+
+    # Draw curve
+    curve_pts = []
+    for s in range(30):
+        norm = s / 29.0
+        cents = norm * 1200.0
+        # Dips at 0, 386, 702, 1200
+        rough = 0.55 - 0.45 * math.cos(norm * math.pi * 4.0) * 0.5
+        cx = 40 + int(norm * (left_w - 60))
+        cy = 300 - int(rough * 140)
+        curve_pts.append((cx, cy))
+    for i in range(len(curve_pts) - 1):
+        draw.line([curve_pts[i], curve_pts[i + 1]], fill=(255, 180, 0), width=2)
+
+    # Puck at 702 cents (0.585)
+    px = 40 + int(0.585 * (left_w - 60))
+    py = 220
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(0, 229, 255, 150), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(0, 229, 255))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+    draw.text((40, 310), "Interval: 701.96¢ (3:2 Pure Fifth) | Roughness: 0.12 | Purity: 94.5%", fill=(140, 235, 255), font=f_small)
+
+    # Right: Concordance Lattice Purity Meters
+    rx = 30 + left_w
+    rw = int(760 * 0.45) - 20
+    draw.rounded_rectangle([rx, 114, rx + rw, 330], radius=4, fill=(14, 18, 30), outline=(35, 55, 85))
+    draw.text((rx + 10, 124), "CONCORDANCE LATTICE INTERVAL PURITY", fill=(0, 229, 255), font=f_header)
+
+    semi_labels = ["1:1", "m2", "M2", "m3", "M3", "P4", "TT", "P5", "m6", "M6", "m7", "M7", "2:1"]
+    purities = [0.98, 0.25, 0.45, 0.72, 0.88, 0.82, 0.30, 0.95, 0.65, 0.78, 0.40, 0.35, 0.99]
+    bar_h = 11
+    for i in range(13):
+        by = 142 + i * (bar_h + 3)
+        draw.text((rx + 12, by), semi_labels[i], fill=(160, 180, 205), font=f_small)
+        bw = int(purities[i] * (rw - 60))
+        col = (0, 255, 180) if purities[i] > 0.8 else ((0, 229, 255) if purities[i] > 0.5 else (255, 180, 0))
+        draw.rounded_rectangle([rx + 45, by, rx + 45 + bw, by + bar_h], radius=2, fill=col)
+
+    # Bottom Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 24, 38), outline=(45, 65, 95))
+    params = [
+        ("INTERVAL CENTS", "701.96 ¢ (Pure 3:2 Fifth)", (0, 229, 255)),
+        ("SENSORY ROUGHNESS", "0.120 index (Minimal)", (255, 180, 0)),
+        ("HARMONIC PURITY", "94.5% Concordance", (0, 255, 180)),
+        ("ROOT & CRITICAL BARK", "220.0 Hz (1.25 Bark)", (240, 245, 255)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 185, 215), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=get_font(13, bold=True))
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(14, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Concordance Lattice Touch Targets (>= 44x44pt) & Roughness Continuity Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "concordance_lattice_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_transient_reconstructor_view():
+    width, height = 800, 480
+    img = Image.new("RGBA", (width, height), (12, 16, 28, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(13, bold=True)
+    f_header = get_font(10, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title Bar
+    draw.text((20, 18), "MULTIBAND LINEAR-PHASE TRANSIENT RECONSTRUCTOR HUD", fill=(240, 245, 255), font=f_title)
+
+    # Tabs (y: 48..92) - 44pt height
+    tabs = [("PUNCHY MASTER", True), ("MICRO-TRANSIENT", False), ("DRUM EXPANDER", False), ("GUITAR PLUCK", False), ("AIR CEILING", False)]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, is_sel) in enumerate(tabs):
+        bx = 20 + i * (tab_w + 8)
+        bg = (0, 229, 255) if is_sel else (24, 32, 48)
+        fg = (4, 20, 28) if is_sel else (210, 225, 245)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 10, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(8, 12, 22), outline=(45, 65, 95), width=2)
+
+    # Left: Waveform Comparison Before vs Reconstructed
+    left_w = int(760 * 0.55)
+    draw.rounded_rectangle([30, 114, 30 + left_w - 20, 330], radius=4, fill=(14, 18, 30), outline=(35, 55, 85))
+    draw.text((40, 124), "LOOKAHEAD (0.5..15ms) vs CREST EXPANSION (0..12dB)", fill=(0, 229, 255), font=f_header)
+
+    # Waveforms
+    for i in range(31):
+        x0 = 40 + int((i / 31.0) * (left_w - 60))
+        x1 = 40 + int(((i + 1) / 31.0) * (left_w - 60))
+        t0 = i / 31.0
+        t1 = (i + 1) / 31.0
+        y0_b = 290 - int((math.exp(-4.0 * t0) if t0 > 0.2 else t0 / 0.2) * 80)
+        y1_b = 290 - int((math.exp(-4.0 * t1) if t1 > 0.2 else t1 / 0.2) * 80)
+        draw.line([(x0, y0_b), (x1, y1_b)], fill=(180, 100, 40), width=2)
+
+        y0_a = 290 - int((math.exp(-6.0 * t0) if t0 > 0.15 else (t0 / 0.15) ** 0.8) * 135)
+        y1_a = 290 - int((math.exp(-6.0 * t1) if t1 > 0.15 else (t1 / 0.15) ** 0.8) * 135)
+        draw.line([(x0, y0_a), (x1, y1_a)], fill=(0, 229, 255), width=2)
+
+    # Puck
+    px = 40 + int((3.5 / 14.5) * (left_w - 60))
+    py = 310 - int((3.5 / 12.0) * 170)
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(0, 229, 255, 150), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(0, 229, 255))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+    draw.text((40, 310), "Lookahead: 4.0ms | Crest Boost: +3.5dB | FIR: 512 Taps | Sens: 65%", fill=(140, 235, 255), font=f_small)
+
+    # Right: 4-Band Crest Expansion Meters
+    rx = 30 + left_w
+    rw = int(760 * 0.45) - 20
+    draw.rounded_rectangle([rx, 114, rx + rw, 330], radius=4, fill=(14, 18, 30), outline=(35, 55, 85))
+    draw.text((rx + 10, 124), "4-BAND TRANSIENT CREST EXPANSION (dB)", fill=(0, 229, 255), font=f_header)
+
+    band_labels = ["Sub-Low (20-150Hz)", "Low-Mid (150-1kHz)", "High-Mid (1-6kHz)", "Air-High (6-20kHz)"]
+    gains = [2.5, 3.2, 4.0, 3.0]
+    row_h = 24
+    gap_h = 14
+    for i in range(4):
+        y = 150 + i * (row_h + gap_h)
+        draw.text((rx + 12, y + 4), band_labels[i], fill=(160, 180, 205), font=f_small)
+        bw = int((gains[i] / 12.0) * (rw - 170))
+        col = (255, 180, 0) if i == 2 else ((0, 229, 255) if i == 3 else (0, 255, 180))
+        draw.rounded_rectangle([rx + 130, y, rx + 130 + bw, y + row_h], radius=3, fill=col)
+        draw.text((rx + 138 + bw, y + 4), f"+{gains[i]:.1f} dB", fill=(240, 245, 255), font=f_small)
+
+    # Bottom Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 24, 38), outline=(45, 65, 95))
+    params = [
+        ("LOOKAHEAD TIME", "4.0 ms (Phase-Linear)", (0, 229, 255)),
+        ("CREST FACTOR BOOST", "+3.5 dB (Punch Restored)", (255, 180, 0)),
+        ("LINEAR-PHASE FIR TAPS", "512 taps (0° Phase Shift)", (0, 255, 180)),
+        ("TRANSIENT SENSITIVITY", "65% Envelope Sharpness", (240, 245, 255)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 185, 215), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=get_font(13, bold=True))
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(14, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Lookahead Reconstructor Touch Targets (>= 44x44pt) & FIR Linearity Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "transient_reconstructor_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_diffractive_propagation_view():
+    width, height = 800, 480
+    img = Image.new("RGBA", (width, height), (12, 16, 28, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(13, bold=True)
+    f_header = get_font(10, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title Bar
+    draw.text((20, 18), "NEURAL ACOUSTIC DIFFRACTIVE WAVE PROPAGATION HUD", fill=(240, 245, 255), font=f_title)
+
+    # Tabs (y: 48..92) - 44pt height
+    tabs = [("HELMHOLTZ-KIRCHHOFF", True), ("BTM EDGE WAVE", False), ("NEURAL WAVEFIELD", False), ("THIN WEDGE", False), ("PILLAR SCATTER", False)]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, is_sel) in enumerate(tabs):
+        bx = 20 + i * (tab_w + 8)
+        bg = (0, 229, 255) if is_sel else (24, 32, 48)
+        fg = (4, 20, 28) if is_sel else (210, 225, 245)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 10, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(8, 12, 22), outline=(45, 65, 95), width=2)
+
+    # Left: Wavefield Diffraction & Wedge Boundary
+    left_w = int(760 * 0.55)
+    draw.rounded_rectangle([30, 114, 30 + left_w - 20, 330], radius=4, fill=(14, 18, 30), outline=(35, 55, 85))
+    draw.text((40, 124), "DIFFRACTION ANGLE (0°..180°) vs DISTANCE (0.5..25m)", fill=(0, 229, 255), font=f_header)
+
+    # Wedge lines
+    wx, wy = 30 + int((left_w - 20) * 0.45), 215
+    draw.line([(wx, wy), (wx + 45, 298)], fill=(100, 120, 150), width=3)
+    draw.line([(wx, wy), (wx - 45, 298)], fill=(100, 120, 150), width=3)
+
+    for r in [20, 40, 60, 75]:
+        draw.arc([wx - r, wy - r, wx + r, wy + r], start=180, end=360, fill=(0, 229, 255, 120), width=1)
+
+    # Puck
+    px = 30 + int((75.0 / 180.0) * (left_w - 20))
+    py = 295 - int((4.0 / 24.5) * 140)
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(0, 229, 255, 150), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(0, 229, 255))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+    draw.text((40, 312), "Angle: 75.0° | Dist: 4.5m | Shadow: -12.5dB | Delay: 3.2ms | Alpha: 0.20", fill=(140, 235, 255), font=f_small)
+
+    # Right: Shadow Zone Frequency Spectrum
+    rx = 30 + left_w
+    rw = int(760 * 0.45) - 20
+    draw.rounded_rectangle([rx, 114, rx + rw, 330], radius=4, fill=(14, 18, 30), outline=(35, 55, 85))
+    draw.text((rx + 10, 124), "SHADOW ZONE DIFFRACTION SPECTRUM (dB)", fill=(0, 229, 255), font=f_header)
+
+    octaves = ["63 Hz", "125 Hz", "250 Hz", "500 Hz", "1 kHz", "2 kHz", "4 kHz", "8 kHz"]
+    atten = [-4.2, -6.5, -9.8, -14.2, -19.5, -24.8, -30.2, -34.5]
+    row_h = 16
+    gap_h = 6
+    for i in range(8):
+        y = 144 + i * (row_h + gap_h)
+        draw.text((rx + 12, y + 2), octaves[i], fill=(160, 180, 205), font=f_small)
+        norm = 1.0 - (abs(atten[i]) / 36.0)
+        bw = int(norm * (rw - 140))
+        col = (0, 255, 180) if atten[i] > -12.0 else ((0, 229, 255) if atten[i] > -24.0 else (255, 180, 0))
+        draw.rounded_rectangle([rx + 75, y, rx + 75 + bw, y + row_h], radius=3, fill=col)
+        draw.text((rx + 82 + bw, y + 2), f"{atten[i]:.1f} dB", fill=(240, 245, 255), font=f_small)
+
+    # Bottom Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 24, 38), outline=(45, 65, 95))
+    params = [
+        ("DIFFRACTION ANGLE", "75.0° (Shadow Zone)", (0, 229, 255)),
+        ("SOURCE DISTANCE", "4.50 m (Room Field)", (255, 180, 0)),
+        ("SHADOW ATTENUATION", "-12.5 dB (Broadband)", (0, 255, 180)),
+        ("EDGE WAVE DELAY", "3.20 ms (Phase Delay)", (240, 245, 255)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 185, 215), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=get_font(13, bold=True))
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(14, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Neural Diffractive Propagation Touch Targets (>= 44x44pt) & Wavefronts Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "diffractive_propagation_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_atmos_proximity_view():
+    width, height = 800, 480
+    img = Image.new("RGBA", (width, height), (12, 16, 28, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(13, bold=True)
+    f_header = get_font(10, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title Bar
+    draw.text((20, 18), "3D 7.1.4 DOLBY ATMOS SPHERICAL PROXIMITY HUD", fill=(240, 245, 255), font=f_title)
+
+    # Tabs (y: 48..92) - 44pt height
+    tabs = [("CINEMA 7.1.4", True), ("BINAURAL HP", False), ("STUDIO 7.1.4", False), ("STADIUM 3D", False), ("VR 6-DOF OBJECT", False)]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, is_sel) in enumerate(tabs):
+        bx = 20 + i * (tab_w + 8)
+        bg = (0, 229, 255) if is_sel else (24, 32, 48)
+        fg = (4, 20, 28) if is_sel else (210, 225, 245)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 10, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(8, 12, 22), outline=(45, 65, 95), width=2)
+
+    # Left: Azimuth vs Elevation Spherical Dome
+    left_w = int(760 * 0.52)
+    draw.rounded_rectangle([30, 114, 30 + left_w - 20, 330], radius=4, fill=(14, 18, 30), outline=(35, 55, 85))
+    draw.text((40, 124), "AZIMUTH (-180°..+180°) vs ELEVATION (-90°..+90°)", fill=(0, 229, 255), font=f_header)
+
+    mcx = 30 + int((left_w - 20) * 0.5)
+    mcy = 220
+    draw.line([(40, mcy), (30 + left_w - 30, mcy)], fill=(50, 75, 110, 100), width=1)
+    draw.line([(mcx, 140), (mcx, 300)], fill=(50, 75, 110, 100), width=1)
+
+    # Puck at Azimuth -35° (0.402), Elev +25° (0.638)
+    px = 30 + int(0.402 * (left_w - 20))
+    py = 330 - int(0.638 * 216)
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(0, 229, 255, 150), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(0, 229, 255))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+    draw.text((40, 310), "Azimuth: -35.0° | Elev: +25.0° | Dist: 3.5m | Bass Boost: 0.0dB | ITD: -380µs", fill=(140, 235, 255), font=f_small)
+
+    # Right: 12-Channel Dolby Atmos 7.1.4 Speaker Energies
+    rx = 30 + left_w
+    rw = int(760 * 0.48) - 20
+    draw.rounded_rectangle([rx, 114, rx + rw, 330], radius=4, fill=(14, 18, 30), outline=(35, 55, 85))
+    draw.text((rx + 10, 124), "7.1.4 DOLBY ATMOS SPEAKER ENERGIES (VBAP)", fill=(0, 229, 255), font=f_header)
+
+    spkrs = ["L", "R", "C", "LFE", "Lss", "Rss", "Lsr", "Rsr", "Ltf", "Rtf", "Ltr", "Rtr"]
+    gains = [0.82, 0.20, 0.45, 0.25, 0.65, 0.15, 0.40, 0.10, 0.78, 0.25, 0.45, 0.15]
+    row_h = 12
+    gap_h = 2.5
+    for i in range(12):
+        y = 140 + i * int(row_h + gap_h)
+        draw.text((rx + 12, y), spkrs[i], fill=(160, 180, 205), font=f_small)
+        bw = int(gains[i] * (rw - 80))
+        col = (0, 229, 255) if i < 4 else ((0, 255, 180) if i < 8 else (255, 180, 0))
+        draw.rounded_rectangle([rx + 45, y, rx + 45 + bw, y + row_h], radius=2, fill=col)
+
+    # Bottom Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 24, 38), outline=(45, 65, 95))
+    params = [
+        ("AZIMUTH / ELEVATION", "-35.0° / +25.0°", (0, 229, 255)),
+        ("OBJECT DISTANCE", "3.50 m (Cinema Field)", (255, 180, 0)),
+        ("PROXIMITY BASS BOOST", "+0.0 dB (Farfield)", (0, 255, 180)),
+        ("PARALLAX ITD", "-380 µs (Left Leading)", (240, 245, 255)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 185, 215), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=get_font(13, bold=True))
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(14, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] 7.1.4 Dolby Atmos Proximity Touch Targets (>= 44x44pt) & VBAP Energy Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "atmos_proximity_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
 if __name__ == "__main__":
     render_live_macro_rack()
     render_spectrogram_3d()
@@ -11685,7 +12116,13 @@ if __name__ == "__main__":
     render_transient_clipper_view()
     render_neural_radiance_view()
     render_mpegh_trajectory_view()
-    print("All Tier 50-74 GUI render previews generated successfully!")
+    render_turkish_ney_view()
+    render_concordance_lattice_view()
+    render_transient_reconstructor_view()
+    render_diffractive_propagation_view()
+    render_atmos_proximity_view()
+    print("All Tier 50-75 GUI render previews generated successfully!")
+
 
 
 

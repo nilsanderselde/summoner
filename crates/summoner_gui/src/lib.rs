@@ -115,6 +115,8 @@ pub mod tier73_tests;
 #[cfg(feature = "gui")]
 pub mod tier74_tests;
 #[cfg(feature = "gui")]
+pub mod tier75_tests;
+#[cfg(feature = "gui")]
 pub mod touch_gestures;
 #[cfg(feature = "gui")]
 pub mod transport_bar;
@@ -127,6 +129,8 @@ pub use views::accessibility_announcer::AccessibilityAnnouncerView;
 pub use views::ambisonic_radar_view::AmbisonicRadarView;
 #[cfg(feature = "gui")]
 pub use views::atmos_916_spatializer_view::Atmos916SpatializerView;
+#[cfg(feature = "gui")]
+pub use views::atmos_proximity_view::AtmosProximityView;
 #[cfg(feature = "gui")]
 pub use views::atmos_surround_view::AtmosSurroundView;
 #[cfg(feature = "gui")]
@@ -148,6 +152,8 @@ pub use views::bowed_string_view::BowedStringView;
 #[cfg(feature = "gui")]
 pub use views::comb_resonator_view::CombResonatorView;
 #[cfg(feature = "gui")]
+pub use views::concordance_lattice_view::ConcordanceLatticeView;
+#[cfg(feature = "gui")]
 pub use views::convolution_impulse_view::ConvolutionImpulseView;
 #[cfg(feature = "gui")]
 pub use views::convolution_morph_view::ConvolutionMorphView;
@@ -155,6 +161,8 @@ pub use views::convolution_morph_view::ConvolutionMorphView;
 pub use views::detachable_window_manager::DetachableWindowManagerView;
 #[cfg(feature = "gui")]
 pub use views::dialog_gating_view::DialogGatingView;
+#[cfg(feature = "gui")]
+pub use views::diffractive_propagation_view::DiffractivePropagationView;
 #[cfg(feature = "gui")]
 pub use views::dpi_scale_panel::DpiScalePanelView;
 #[cfg(feature = "gui")]
@@ -356,6 +364,8 @@ pub use views::transient_designer_view::TransientDesignerView;
 #[cfg(feature = "gui")]
 pub use views::transient_gate_view::TransientGateView;
 #[cfg(feature = "gui")]
+pub use views::transient_reconstructor_view::TransientReconstructorView;
+#[cfg(feature = "gui")]
 pub use views::transient_shaper_view::TransientShaperView;
 #[cfg(feature = "gui")]
 pub use views::transient_unwrapper_view::TransientUnwrapperView;
@@ -363,6 +373,8 @@ pub use views::transient_unwrapper_view::TransientUnwrapperView;
 pub use views::transient_warp_editor::TransientWarpEditorView;
 #[cfg(feature = "gui")]
 pub use views::tube_bias_view::TubeBiasView;
+#[cfg(feature = "gui")]
+pub use views::turkish_ney_view::TurkishNeyView;
 #[cfg(feature = "gui")]
 pub use views::upward_compressor_view::UpwardCompressorView;
 #[cfg(feature = "gui")]
