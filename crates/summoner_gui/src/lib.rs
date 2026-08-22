@@ -97,6 +97,8 @@ pub mod tier64_tests;
 #[cfg(feature = "gui")]
 pub mod tier65_tests;
 #[cfg(feature = "gui")]
+pub mod tier66_tests;
+#[cfg(feature = "gui")]
 pub mod touch_gestures;
 #[cfg(feature = "gui")]
 pub mod transport_bar;
