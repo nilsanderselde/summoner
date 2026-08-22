@@ -103,6 +103,8 @@ pub mod tier67_tests;
 #[cfg(feature = "gui")]
 pub mod tier68_tests;
 #[cfg(feature = "gui")]
+pub mod tier69_tests;
+#[cfg(feature = "gui")]
 pub mod touch_gestures;
 #[cfg(feature = "gui")]
 pub mod transport_bar;
@@ -172,6 +174,8 @@ pub use views::keybinding_editor::KeybindingEditorView;
 #[cfg(feature = "gui")]
 pub use views::ladder_filter_view::LadderFilterView;
 #[cfg(feature = "gui")]
+pub use views::linear_phase_crossover_view::LinearPhaseCrossoverView;
+#[cfg(feature = "gui")]
 pub use views::live_macro_rack::LiveMacroRackView;
 #[cfg(feature = "gui")]
 pub use views::loop_slicer_view::LoopSlicerView;
@@ -185,6 +189,8 @@ pub use views::membrane_plate_view::MembranePlateView;
 pub use views::membrane_resonator_view::MembraneResonatorView;
 #[cfg(feature = "gui")]
 pub use views::meter_bridge_view::MeterBridgeView;
+#[cfg(feature = "gui")]
+pub use views::mpegh_3d_spatializer_view::Mpegh3DSpatializerView;
 #[cfg(feature = "gui")]
 pub use views::mpegh_spatializer_view::MpeghSpatializerView;
 #[cfg(feature = "gui")]
@@ -206,6 +212,8 @@ pub use views::neural_inpaint_view::NeuralInpaintView;
 #[cfg(feature = "gui")]
 pub use views::neural_phoneme_view::NeuralPhonemeView;
 #[cfg(feature = "gui")]
+pub use views::neural_timbre_morph_view::NeuralTimbreMorphView;
+#[cfg(feature = "gui")]
 pub use views::neural_timbre_view::NeuralTimbreView;
 #[cfg(feature = "gui")]
 pub use views::neural_vocoder_morph_view::NeuralVocoderMorphView;
@@ -219,6 +227,8 @@ pub use views::optical_compressor_view::OpticalCompressorView;
 pub use views::oversampled_limiter_view::OversampledLimiterView;
 #[cfg(feature = "gui")]
 pub use views::phase_align_view::PhaseAlignView;
+#[cfg(feature = "gui")]
+pub use views::pipe_organ_view::PipeOrganView;
 #[cfg(feature = "gui")]
 pub use views::pitch_corrector_view::PitchCorrectorView;
 #[cfg(feature = "gui")]
@@ -271,6 +281,8 @@ pub use views::step_sequencer_matrix::StepSequencerMatrixView;
 pub use views::stereo_vectorscope_view::StereoVectorscopeView;
 #[cfg(feature = "gui")]
 pub use views::stereo_widener_view::StereoWidenerView;
+#[cfg(feature = "gui")]
+pub use views::subharmonic_synth_view::SubharmonicSynthView;
 #[cfg(feature = "gui")]
 pub use views::tape_emulator_view::TapeEmulatorView;
 #[cfg(feature = "gui")]
