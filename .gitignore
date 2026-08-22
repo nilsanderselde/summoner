@@ -37,3 +37,4 @@ local/
 .summoner_dirty.lock
 CODE_OF_CONDUCT.md
 GOVERNANCE.md
+simple_track.toml
