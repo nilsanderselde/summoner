@@ -86,6 +86,7 @@ pub mod transient_warp_editor;
 pub mod tube_bias_view;
 pub mod upward_compressor_view;
 pub mod vocoder_matrix_view;
+pub mod waveguide_brass_view;
 
 pub use accessibility_announcer::AccessibilityAnnouncerView;
 pub use ambisonic_radar_view::AmbisonicRadarView;
@@ -164,3 +165,4 @@ pub use transient_warp_editor::TransientWarpEditorView;
 pub use tube_bias_view::TubeBiasView;
 pub use upward_compressor_view::UpwardCompressorView;
 pub use vocoder_matrix_view::VocoderMatrixView;
+pub use waveguide_brass_view::WaveguideBrassView;
