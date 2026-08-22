@@ -63,10 +63,10 @@ impl BrassInstrument {
 #[derive(Debug, Clone)]
 pub struct WaveguideBrassView {
     pub instrument: BrassInstrument,
-    pub lip_tension_hz: f32,          // [50.0 ..= 1200.0 Hz]
-    pub blowing_pressure_kpa: f32,    // [0.20 ..= 8.00 kPa]
-    pub bore_length_m: f32,           // [0.50 ..= 5.50 m]
-    pub valve_state: [bool; 3],       // Valves 1, 2, 3 pressed
+    pub lip_tension_hz: f32,             // [50.0 ..= 1200.0 Hz]
+    pub blowing_pressure_kpa: f32,       // [0.20 ..= 8.00 kPa]
+    pub bore_length_m: f32,              // [0.50 ..= 5.50 m]
+    pub valve_state: [bool; 3],          // Valves 1, 2, 3 pressed
     pub embouchure_puck_pos: (f32, f32), // Normalized (X: lip_tension, Y: blowing_pressure)
     pub is_dragging_puck: bool,
     pub acoustic_impedance_score: f32, // [0.0 ..= 1.0] Coupling efficiency
@@ -173,8 +173,8 @@ impl WaveguideBrassView {
         // Bernoulli aperture modulation: dy = (P_m - P_tube) / (k_lip)
         let pressure_ratio = (self.blowing_pressure_kpa / 4.0).clamp(0.1, 2.5);
         self.lip_aperture_mm = (0.6 * pressure_ratio * coupling + 0.15).clamp(0.05, 2.5);
-        self.acoustic_impedance_score = (coupling * 0.7 + (self.blowing_pressure_kpa / 8.0) * 0.3)
-            .clamp(0.1, 1.0);
+        self.acoustic_impedance_score =
+            (coupling * 0.7 + (self.blowing_pressure_kpa / 8.0) * 0.3).clamp(0.1, 1.0);
 
         self.bell_cutoff_hz = self.instrument.nominal_cutoff_hz();
     }
@@ -185,7 +185,7 @@ impl WaveguideBrassView {
         let gamma = self.instrument.bell_flare_exponent();
         let r0 = 0.12; // Mouthpiece entrance radius
         let r_bell = 1.00; // Normalized bell exit radius
-        // Bessel horn flare function
+                           // Bessel horn flare function
         if x < 0.65 {
             r0 + (x / 0.65) * 0.08
         } else {
@@ -494,8 +494,14 @@ impl WaveguideBrassView {
             let pt_bot = egui::pos2(px, py_bot);
 
             if let (Some(pt_t), Some(pt_b)) = (prev_top, prev_bot) {
-                painter.line_segment([pt_t, pt_top], Stroke::new(2.0_f32, Color32::from_rgb(255, 215, 0)));
-                painter.line_segment([pt_b, pt_bot], Stroke::new(2.0_f32, Color32::from_rgb(255, 215, 0)));
+                painter.line_segment(
+                    [pt_t, pt_top],
+                    Stroke::new(2.0_f32, Color32::from_rgb(255, 215, 0)),
+                );
+                painter.line_segment(
+                    [pt_b, pt_bot],
+                    Stroke::new(2.0_f32, Color32::from_rgb(255, 215, 0)),
+                );
             }
             prev_top = Some(pt_top);
             prev_bot = Some(pt_bot);
@@ -544,7 +550,11 @@ impl WaveguideBrassView {
             ),
             (
                 "BELL RADIATION CUTOFF",
-                format!("{:.0} Hz (γ={:.2})", self.bell_cutoff_hz, self.instrument.bell_flare_exponent()),
+                format!(
+                    "{:.0} Hz (γ={:.2})",
+                    self.bell_cutoff_hz,
+                    self.instrument.bell_flare_exponent()
+                ),
                 Color32::from_rgb(0, 255, 180),
             ),
         ];

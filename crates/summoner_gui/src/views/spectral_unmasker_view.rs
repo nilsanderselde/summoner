@@ -20,11 +20,11 @@ pub const MAX_SENSITIVITY_PCT: f32 = 100.0;
 /// Unmasker Routing Preset Profile.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UnmaskerRouting {
-    KickVsBass,     // Low-end fundamental carving (40-120 Hz)
-    VocalVsSynth,   // Midrange presence & formant unmasking (800-4000 Hz)
-    SnareVsGuitar,  // Snap & body separation (200-2500 Hz)
-    DialogVsBgm,    // Broadcast speech priority ducking (300-3500 Hz)
-    CustomBus,      // Full-range adaptive dynamic sidechain
+    KickVsBass,    // Low-end fundamental carving (40-120 Hz)
+    VocalVsSynth,  // Midrange presence & formant unmasking (800-4000 Hz)
+    SnareVsGuitar, // Snap & body separation (200-2500 Hz)
+    DialogVsBgm,   // Broadcast speech priority ducking (300-3500 Hz)
+    CustomBus,     // Full-range adaptive dynamic sidechain
 }
 
 impl UnmaskerRouting {
@@ -63,13 +63,13 @@ impl UnmaskerRouting {
 #[derive(Debug, Clone)]
 pub struct SpectralUnmaskerView {
     pub routing: UnmaskerRouting,
-    pub collision_freq_hz: f32,       // [20.0 ..= 20000.0 Hz]
-    pub reduction_depth_db: f32,      // [0.0 ..= 18.0 dB]
-    pub sensitivity_pct: f32,         // [0.0 ..= 100.0 %]
+    pub collision_freq_hz: f32,        // [20.0 ..= 20000.0 Hz]
+    pub reduction_depth_db: f32,       // [0.0 ..= 18.0 dB]
+    pub sensitivity_pct: f32,          // [0.0 ..= 100.0 %]
     pub unmasker_puck_pos: (f32, f32), // Normalized (X: log frequency, Y: reduction depth)
     pub is_dragging_puck: bool,
     pub collision_intensity_score: f32, // [0.0 ..= 1.0] Masking overlap ratio
-    pub clarity_gain_pct: f32,        // [0.0 ..= 100.0 %]
+    pub clarity_gain_pct: f32,          // [0.0 ..= 100.0 %]
     pub attack_ms: f32,
     pub release_ms: f32,
     pub color_palette: ContrastColorPalette,
@@ -150,8 +150,7 @@ impl SpectralUnmaskerView {
 
         // Masking overlap model: function of depth and sensitivity
         self.collision_intensity_score = (sens * 0.7 + (depth / 18.0) * 0.3).clamp(0.05, 1.0);
-        self.clarity_gain_pct =
-            (70.0 + (depth * 1.5) * sens + (q * 2.0)).clamp(0.0, 99.9);
+        self.clarity_gain_pct = (70.0 + (depth * 1.5) * sens + (q * 2.0)).clamp(0.0, 99.9);
     }
 
     /// Evaluate dynamic EQ carve transfer gain (in dB) at frequency $f$ (in Hz).
@@ -175,7 +174,8 @@ impl SpectralUnmaskerView {
 
         // Gaussian masking collision around collision frequency
         let log_dist = (freq.log10() - target_f.log10()).abs();
-        let collision_energy = (-0.5 * (log_dist / 0.22).powi(2)).exp() * self.collision_intensity_score;
+        let collision_energy =
+            (-0.5 * (log_dist / 0.22).powi(2)).exp() * self.collision_intensity_score;
         let ducking_gr = self.evaluate_unmasking_filter_response(freq);
 
         (collision_energy, ducking_gr)

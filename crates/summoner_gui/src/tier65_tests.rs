@@ -1,4 +1,4 @@
-﻿// Summoner DAW - Tier 65 GUI Milestones Unit Test Suite (Steps 1521-1530)
+// Summoner DAW - Tier 65 GUI Milestones Unit Test Suite (Steps 1521-1530)
 
 #[cfg(test)]
 mod tests {
@@ -34,7 +34,11 @@ mod tests {
             let norm = WaveguideBrassView::tension_to_normalized(tension);
             assert!((0.0..=1.0).contains(&norm));
             let back = WaveguideBrassView::normalized_to_tension(norm);
-            assert!((back - tension).abs() < 1e-3, "Tension mismatch at {}", tension);
+            assert!(
+                (back - tension).abs() < 1e-3,
+                "Tension mismatch at {}",
+                tension
+            );
         }
 
         // 3. Blowing Pressure Conversion Roundtrip
@@ -42,7 +46,11 @@ mod tests {
             let norm = WaveguideBrassView::pressure_to_normalized(pressure);
             assert!((0.0..=1.0).contains(&norm));
             let back = WaveguideBrassView::normalized_to_pressure(norm);
-            assert!((back - pressure).abs() < 1e-4, "Pressure mismatch at {}", pressure);
+            assert!(
+                (back - pressure).abs() < 1e-4,
+                "Pressure mismatch at {}",
+                pressure
+            );
         }
 
         // 4. Bore Length Conversion Roundtrip
@@ -50,7 +58,11 @@ mod tests {
             let norm = WaveguideBrassView::length_to_normalized(length);
             assert!((0.0..=1.0).contains(&norm));
             let back = WaveguideBrassView::normalized_to_length(norm);
-            assert!((back - length).abs() < 1e-4, "Bore length mismatch at {}", length);
+            assert!(
+                (back - length).abs() < 1e-4,
+                "Bore length mismatch at {}",
+                length
+            );
         }
 
         // 5. Instrument Presets and Acoustic Properties
@@ -67,13 +79,16 @@ mod tests {
             let cutoff = inst.nominal_cutoff_hz();
             assert!(nom_len > 0.0);
             assert!(flare > 0.0 && flare < 1.0);
-            assert!(cutoff >= 300.0 && cutoff <= 2000.0);
+            assert!((300.0..=2000.0).contains(&cutoff));
         }
 
         // 6. Radiation Reflection Evaluation
         let refl_low = brass.evaluate_radiation_reflection(100.0);
         let refl_high = brass.evaluate_radiation_reflection(2000.0);
-        assert!(refl_low >= refl_high, "Low frequency reflection must be higher than high frequency");
+        assert!(
+            refl_low >= refl_high,
+            "Low frequency reflection must be higher than high frequency"
+        );
 
         // 7. Hit Testing on Lip-Reed Puck
         brass.embouchure_puck_pos = (0.5, 0.5);
@@ -101,7 +116,11 @@ mod tests {
             let norm = SpectralUnmaskerView::freq_to_normalized(freq);
             assert!((0.0..=1.0).contains(&norm));
             let back = SpectralUnmaskerView::normalized_to_freq(norm);
-            assert!((back - freq).abs() / freq < 1e-3, "Freq mismatch at {}", freq);
+            assert!(
+                (back - freq).abs() / freq < 1e-3,
+                "Freq mismatch at {}",
+                freq
+            );
         }
 
         // 3. Reduction Depth Conversion Roundtrip
@@ -117,7 +136,11 @@ mod tests {
             let norm = SpectralUnmaskerView::sensitivity_to_normalized(sens);
             assert!((0.0..=1.0).contains(&norm));
             let back = SpectralUnmaskerView::normalized_to_sensitivity(norm);
-            assert!((back - sens).abs() < 1e-4, "Sensitivity mismatch at {}", sens);
+            assert!(
+                (back - sens).abs() < 1e-4,
+                "Sensitivity mismatch at {}",
+                sens
+            );
         }
 
         // 5. Routing Preset Configurations
@@ -132,9 +155,9 @@ mod tests {
             let target_f = routing.target_center_freq_hz();
             let target_q = routing.target_q_factor();
             let nominal_db = routing.nominal_reduction_db();
-            assert!(target_f >= 20.0 && target_f <= 20000.0);
-            assert!(target_q >= 0.5 && target_q <= 10.0);
-            assert!(nominal_db >= 0.0 && nominal_db <= 18.0);
+            assert!((20.0..=20000.0).contains(&target_f));
+            assert!((0.5..=10.0).contains(&target_q));
+            assert!((0.0..=18.0).contains(&nominal_db));
         }
 
         // 6. Hit Testing on Collision Puck
@@ -163,7 +186,11 @@ mod tests {
             let norm = TransientDeclickerView::threshold_to_normalized(thresh);
             assert!((0.0..=1.0).contains(&norm));
             let back = TransientDeclickerView::normalized_to_threshold(norm);
-            assert!((back - thresh).abs() < 1e-4, "Threshold mismatch at {}", thresh);
+            assert!(
+                (back - thresh).abs() < 1e-4,
+                "Threshold mismatch at {}",
+                thresh
+            );
         }
 
         // 3. Click Width Conversion Roundtrip
@@ -186,9 +213,9 @@ mod tests {
             let def_thresh = mode.default_threshold_db();
             let def_w = mode.default_click_width_ms();
             let crossover = mode.linear_phase_crossover_hz();
-            assert!(def_thresh <= 0.0 && def_thresh >= -48.0);
-            assert!(def_w >= 0.05 && def_w <= 5.00);
-            assert!(crossover >= 200.0 && crossover <= 10000.0);
+            assert!((-48.0..=0.0).contains(&def_thresh));
+            assert!((0.05..=5.00).contains(&def_w));
+            assert!((200.0..=10000.0).contains(&crossover));
         }
 
         // 5. Hit Testing on De-Clicker Puck
@@ -233,7 +260,11 @@ mod tests {
             let norm = NeuralWavetableView::radius_to_normalized(radius);
             assert!((0.0..=1.0).contains(&norm));
             let back = NeuralWavetableView::normalized_to_radius(norm);
-            assert!((back - radius).abs() < 1e-4, "Radius mismatch at {}", radius);
+            assert!(
+                (back - radius).abs() < 1e-4,
+                "Radius mismatch at {}",
+                radius
+            );
         }
 
         // 5. Latent Architecture Profiles and FID Score
@@ -246,9 +277,9 @@ mod tests {
         ] {
             neural.architecture = arch;
             let fid = arch.reconstruction_fid_score();
-            assert!(fid >= 95.0 && fid <= 100.0);
+            assert!((95.0..=100.0).contains(&fid));
             let def_speed = arch.default_morph_speed_hz();
-            assert!(def_speed >= 0.01 && def_speed <= 20.0);
+            assert!((0.01..=20.0).contains(&def_speed));
         }
 
         // 6. Wavetable and Harmonics Synthesis Evaluation

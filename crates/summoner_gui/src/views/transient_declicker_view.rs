@@ -63,13 +63,13 @@ impl VinylRestorationMode {
 #[derive(Debug, Clone)]
 pub struct TransientDeclickerView {
     pub mode: VinylRestorationMode,
-    pub threshold_db: f32,            // [-48.0 ..= 0.0 dB]
-    pub click_width_ms: f32,          // [0.05 ..= 5.00 ms]
-    pub crackle_density_pct: f32,     // [0.0 ..= 100.0 %]
+    pub threshold_db: f32,              // [-48.0 ..= 0.0 dB]
+    pub click_width_ms: f32,            // [0.05 ..= 5.00 ms]
+    pub crackle_density_pct: f32,       // [0.0 ..= 100.0 %]
     pub declicker_puck_pos: (f32, f32), // Normalized (X: click_width, Y: threshold)
     pub is_dragging_puck: bool,
-    pub repair_rate_per_sec: f32,     // Calculated clicks repaired per second
-    pub snr_improvement_db: f32,      // Signal-to-noise ratio gain
+    pub repair_rate_per_sec: f32, // Calculated clicks repaired per second
+    pub snr_improvement_db: f32,  // Signal-to-noise ratio gain
     pub listen_difference_mode: bool, // Audition excised click delta
     pub color_palette: ContrastColorPalette,
 }
@@ -129,9 +129,9 @@ impl TransientDeclickerView {
         let thresh_factor = ((-self.threshold_db) / 48.0).clamp(0.1, 1.0);
         let width_factor = (self.click_width_ms / 5.0).clamp(0.1, 1.0);
 
-        self.repair_rate_per_sec =
-            (thresh_factor * 180.0 + width_factor * 40.0 * (self.crackle_density_pct / 100.0))
-                .clamp(1.0, 500.0);
+        self.repair_rate_per_sec = (thresh_factor * 180.0
+            + width_factor * 40.0 * (self.crackle_density_pct / 100.0))
+            .clamp(1.0, 500.0);
         self.snr_improvement_db =
             (thresh_factor * 12.0 + (1.0 - width_factor) * 4.0 + 3.0).clamp(1.0, 24.0);
     }
@@ -404,10 +404,16 @@ impl TransientDeclickerView {
             if let (Some(pd), Some(pr)) = (prev_dam, prev_rep) {
                 // Damaged click spike
                 if (py_dam - py_rep).abs() > 2.0 {
-                    painter.line_segment([pd, pt_dam], Stroke::new(2.0_f32, Color32::from_rgb(255, 69, 58)));
+                    painter.line_segment(
+                        [pd, pt_dam],
+                        Stroke::new(2.0_f32, Color32::from_rgb(255, 69, 58)),
+                    );
                 }
                 // Repaired clean path
-                painter.line_segment([pr, pt_rep], Stroke::new(2.0_f32, Color32::from_rgb(0, 229, 255)));
+                painter.line_segment(
+                    [pr, pt_rep],
+                    Stroke::new(2.0_f32, Color32::from_rgb(0, 229, 255)),
+                );
             }
             prev_dam = Some(pt_dam);
             prev_rep = Some(pt_rep);

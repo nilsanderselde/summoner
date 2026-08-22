@@ -61,36 +61,96 @@ pub struct SpeakerPosition {
 }
 
 pub const ATMOS_714_SPEAKERS: [SpeakerPosition; 12] = [
-    SpeakerPosition { label: "L", azimuth_deg: -30.0, elevation_deg: 0.0, is_ceiling: false },
-    SpeakerPosition { label: "C", azimuth_deg: 0.0, elevation_deg: 0.0, is_ceiling: false },
-    SpeakerPosition { label: "R", azimuth_deg: 30.0, elevation_deg: 0.0, is_ceiling: false },
-    SpeakerPosition { label: "LFE", azimuth_deg: 0.0, elevation_deg: -15.0, is_ceiling: false },
-    SpeakerPosition { label: "Ls", azimuth_deg: -90.0, elevation_deg: 0.0, is_ceiling: false },
-    SpeakerPosition { label: "Rs", azimuth_deg: 90.0, elevation_deg: 0.0, is_ceiling: false },
-    SpeakerPosition { label: "Lb", azimuth_deg: -140.0, elevation_deg: 0.0, is_ceiling: false },
-    SpeakerPosition { label: "Rb", azimuth_deg: 140.0, elevation_deg: 0.0, is_ceiling: false },
-    SpeakerPosition { label: "Tfl", azimuth_deg: -45.0, elevation_deg: 45.0, is_ceiling: true },
-    SpeakerPosition { label: "Tfr", azimuth_deg: 45.0, elevation_deg: 45.0, is_ceiling: true },
-    SpeakerPosition { label: "Tbl", azimuth_deg: -135.0, elevation_deg: 45.0, is_ceiling: true },
-    SpeakerPosition { label: "Tbr", azimuth_deg: 135.0, elevation_deg: 45.0, is_ceiling: true },
+    SpeakerPosition {
+        label: "L",
+        azimuth_deg: -30.0,
+        elevation_deg: 0.0,
+        is_ceiling: false,
+    },
+    SpeakerPosition {
+        label: "C",
+        azimuth_deg: 0.0,
+        elevation_deg: 0.0,
+        is_ceiling: false,
+    },
+    SpeakerPosition {
+        label: "R",
+        azimuth_deg: 30.0,
+        elevation_deg: 0.0,
+        is_ceiling: false,
+    },
+    SpeakerPosition {
+        label: "LFE",
+        azimuth_deg: 0.0,
+        elevation_deg: -15.0,
+        is_ceiling: false,
+    },
+    SpeakerPosition {
+        label: "Ls",
+        azimuth_deg: -90.0,
+        elevation_deg: 0.0,
+        is_ceiling: false,
+    },
+    SpeakerPosition {
+        label: "Rs",
+        azimuth_deg: 90.0,
+        elevation_deg: 0.0,
+        is_ceiling: false,
+    },
+    SpeakerPosition {
+        label: "Lb",
+        azimuth_deg: -140.0,
+        elevation_deg: 0.0,
+        is_ceiling: false,
+    },
+    SpeakerPosition {
+        label: "Rb",
+        azimuth_deg: 140.0,
+        elevation_deg: 0.0,
+        is_ceiling: false,
+    },
+    SpeakerPosition {
+        label: "Tfl",
+        azimuth_deg: -45.0,
+        elevation_deg: 45.0,
+        is_ceiling: true,
+    },
+    SpeakerPosition {
+        label: "Tfr",
+        azimuth_deg: 45.0,
+        elevation_deg: 45.0,
+        is_ceiling: true,
+    },
+    SpeakerPosition {
+        label: "Tbl",
+        azimuth_deg: -135.0,
+        elevation_deg: 45.0,
+        is_ceiling: true,
+    },
+    SpeakerPosition {
+        label: "Tbr",
+        azimuth_deg: 135.0,
+        elevation_deg: 45.0,
+        is_ceiling: true,
+    },
 ];
 
 /// Broadcast Mastering Immersive Dolby Atmos / HOA 7.1.4 3D Spatializer View HUD (Step 1525).
 #[derive(Debug, Clone)]
 pub struct HoaSpatializerView {
     pub format: HoaSpatialFormat,
-    pub azimuth_deg: f32,          // [-180.0 ..= +180.0 deg] (0 = Front/North, +90 = East/Right)
-    pub elevation_deg: f32,        // [-90.0 ..= +90.0 deg] (0 = Horizon, +90 = Zenith, -90 = Nadir)
-    pub distance_m: f32,           // [0.10 ..= 10.00 m]
-    pub head_yaw_deg: f32,         // Head-tracking yaw rotation [-180.0 ..= +180.0 deg]
-    pub head_pitch_deg: f32,       // Head-tracking pitch rotation [-90.0 ..= +90.0 deg]
+    pub azimuth_deg: f32, // [-180.0 ..= +180.0 deg] (0 = Front/North, +90 = East/Right)
+    pub elevation_deg: f32, // [-90.0 ..= +90.0 deg] (0 = Horizon, +90 = Zenith, -90 = Nadir)
+    pub distance_m: f32,  // [0.10 ..= 10.00 m]
+    pub head_yaw_deg: f32, // Head-tracking yaw rotation [-180.0 ..= +180.0 deg]
+    pub head_pitch_deg: f32, // Head-tracking pitch rotation [-90.0 ..= +90.0 deg]
     pub head_tracking_latency_ms: f32, // Tracking telemetry latency (e.g. 0.8 ms)
     pub source_puck_pos: (f32, f32), // Normalized (X: azimuth, Y: distance)
-    pub elevation_puck_norm: f32,    // Normalized elevation [0.0 = -90 deg, 0.5 = 0 deg, 1.0 = +90 deg]
+    pub elevation_puck_norm: f32, // Normalized elevation [0.0 = -90 deg, 0.5 = 0 deg, 1.0 = +90 deg]
     pub is_dragging_source: bool,
     pub is_dragging_elevation: bool,
     pub is_dragging_head_yaw: bool,
-    pub hoa_order: usize,          // Max 3rd order (16 channels)
+    pub hoa_order: usize,               // Max 3rd order (16 channels)
     pub spherical_harmonics: [f32; 16], // 16-channel HOA ACN/N3D harmonic weights
     pub color_palette: ContrastColorPalette,
 }
@@ -178,7 +238,7 @@ impl HoaSpatializerView {
     /// Update 16-Channel HOA 3rd Order Spherical Harmonic Decomposition Y_l^m(theta, phi) with N3D normalization.
     pub fn update_spherical_harmonics(&mut self) {
         let phi = self.effective_relative_azimuth_deg().to_radians(); // Azimuth
-        let theta = (90.0 - self.elevation_deg).to_radians();       // Colatitude / Polar angle
+        let theta = (90.0 - self.elevation_deg).to_radians(); // Colatitude / Polar angle
 
         let sin_t = theta.sin();
         let cos_t = theta.cos();
@@ -196,24 +256,31 @@ impl HoaSpatializerView {
 
         // Order 1 (ACN 1, 2, 3: Y, Z, X)
         self.spherical_harmonics[1] = (3.0_f32).sqrt() * sin_t * sin_p * dist_att; // Y (ACN 1)
-        self.spherical_harmonics[2] = (3.0_f32).sqrt() * cos_t * dist_att;         // Z (ACN 2)
+        self.spherical_harmonics[2] = (3.0_f32).sqrt() * cos_t * dist_att; // Z (ACN 2)
         self.spherical_harmonics[3] = (3.0_f32).sqrt() * sin_t * cos_p * dist_att; // X (ACN 3)
 
         // Order 2 (ACN 4..8)
         self.spherical_harmonics[4] = (15.0_f32).sqrt() * 0.5 * sin_t * sin_t * sin_2p * dist_att; // V (ACN 4)
-        self.spherical_harmonics[5] = (15.0_f32).sqrt() * sin_t * cos_t * sin_p * dist_att;        // T (ACN 5)
-        self.spherical_harmonics[6] = (5.0_f32).sqrt() * 0.5 * (3.0 * cos_t * cos_t - 1.0) * dist_att; // R (ACN 6)
-        self.spherical_harmonics[7] = (15.0_f32).sqrt() * sin_t * cos_t * cos_p * dist_att;        // S (ACN 7)
+        self.spherical_harmonics[5] = (15.0_f32).sqrt() * sin_t * cos_t * sin_p * dist_att; // T (ACN 5)
+        self.spherical_harmonics[6] =
+            (5.0_f32).sqrt() * 0.5 * (3.0 * cos_t * cos_t - 1.0) * dist_att; // R (ACN 6)
+        self.spherical_harmonics[7] = (15.0_f32).sqrt() * sin_t * cos_t * cos_p * dist_att; // S (ACN 7)
         self.spherical_harmonics[8] = (15.0_f32).sqrt() * 0.5 * sin_t * sin_t * cos_2p * dist_att; // U (ACN 8)
 
         // Order 3 (ACN 9..15)
-        self.spherical_harmonics[9] = (35.0_f32 / 8.0).sqrt() * sin_t.powi(3) * sin_3p * dist_att;  // Q (ACN 9)
-        self.spherical_harmonics[10] = (105.0_f32 / 4.0).sqrt() * sin_t * sin_t * cos_t * sin_2p * dist_att; // O (ACN 10)
-        self.spherical_harmonics[11] = (21.0_f32 / 8.0).sqrt() * sin_t * (5.0 * cos_t * cos_t - 1.0) * sin_p * dist_att; // M (ACN 11)
-        self.spherical_harmonics[12] = (7.0_f32 / 4.0).sqrt() * (5.0 * cos_t.powi(3) - 3.0 * cos_t) * dist_att; // K (ACN 12)
-        self.spherical_harmonics[13] = (21.0_f32 / 8.0).sqrt() * sin_t * (5.0 * cos_t * cos_t - 1.0) * cos_p * dist_att; // L (ACN 13)
-        self.spherical_harmonics[14] = (105.0_f32 / 4.0).sqrt() * sin_t * sin_t * cos_t * cos_2p * dist_att; // N (ACN 14)
-        self.spherical_harmonics[15] = (35.0_f32 / 8.0).sqrt() * sin_t.powi(3) * cos_3p * dist_att;  // P (ACN 15)
+        self.spherical_harmonics[9] = (35.0_f32 / 8.0).sqrt() * sin_t.powi(3) * sin_3p * dist_att; // Q (ACN 9)
+        self.spherical_harmonics[10] =
+            (105.0_f32 / 4.0).sqrt() * sin_t * sin_t * cos_t * sin_2p * dist_att; // O (ACN 10)
+        self.spherical_harmonics[11] =
+            (21.0_f32 / 8.0).sqrt() * sin_t * (5.0 * cos_t * cos_t - 1.0) * sin_p * dist_att; // M (ACN 11)
+        self.spherical_harmonics[12] =
+            (7.0_f32 / 4.0).sqrt() * (5.0 * cos_t.powi(3) - 3.0 * cos_t) * dist_att; // K (ACN 12)
+        self.spherical_harmonics[13] =
+            (21.0_f32 / 8.0).sqrt() * sin_t * (5.0 * cos_t * cos_t - 1.0) * cos_p * dist_att; // L (ACN 13)
+        self.spherical_harmonics[14] =
+            (105.0_f32 / 4.0).sqrt() * sin_t * sin_t * cos_t * cos_2p * dist_att; // N (ACN 14)
+        self.spherical_harmonics[15] = (35.0_f32 / 8.0).sqrt() * sin_t.powi(3) * cos_3p * dist_att;
+        // P (ACN 15)
     }
 
     /// Hit-test touch coordinate on the primary 3D source puck.
@@ -406,11 +473,17 @@ impl HoaSpatializerView {
 
         // Crosshairs
         painter.line_segment(
-            [egui::pos2(radar_center.x - max_radius, radar_center.y), egui::pos2(radar_center.x + max_radius, radar_center.y)],
+            [
+                egui::pos2(radar_center.x - max_radius, radar_center.y),
+                egui::pos2(radar_center.x + max_radius, radar_center.y),
+            ],
             Stroke::new(1.0_f32, Color32::from_rgba_premultiplied(45, 65, 95, 90)),
         );
         painter.line_segment(
-            [egui::pos2(radar_center.x, radar_center.y - max_radius), egui::pos2(radar_center.x, radar_center.y + max_radius)],
+            [
+                egui::pos2(radar_center.x, radar_center.y - max_radius),
+                egui::pos2(radar_center.x, radar_center.y + max_radius),
+            ],
             Stroke::new(1.0_f32, Color32::from_rgba_premultiplied(45, 65, 95, 90)),
         );
 
@@ -518,7 +591,10 @@ impl HoaSpatializerView {
         painter.text(
             egui::pos2(right_rect.min.x + 15.0, right_rect.min.y + 26.0),
             egui::Align2::LEFT_TOP,
-            format!("Elevation: {:+.1}° (Nadir -90° .. Zenith +90°)", self.elevation_deg),
+            format!(
+                "Elevation: {:+.1}° (Nadir -90° .. Zenith +90°)",
+                self.elevation_deg
+            ),
             egui::FontId::proportional(10.0),
             Color32::from_rgb(255, 215, 0),
         );
@@ -529,7 +605,11 @@ impl HoaSpatializerView {
             egui::pos2(right_rect.max.x - 15.0, right_rect.min.y + 74.0),
         );
         painter.rect_filled(el_slider_rect, 4.0, Color32::from_rgb(18, 25, 38));
-        painter.rect_stroke(el_slider_rect, 4.0, Stroke::new(1.0_f32, Color32::from_rgb(45, 60, 85)));
+        painter.rect_stroke(
+            el_slider_rect,
+            4.0,
+            Stroke::new(1.0_f32, Color32::from_rgb(45, 60, 85)),
+        );
 
         let el_puck_x = el_slider_rect.min.x + self.elevation_puck_norm * el_slider_rect.width();
         let el_puck_center = egui::pos2(el_puck_x, el_slider_rect.center().y);
@@ -537,7 +617,8 @@ impl HoaSpatializerView {
         if response.dragged() || response.clicked() {
             if let Some(mouse_pos) = response.interact_pointer_pos() {
                 if el_slider_rect.expand(10.0).contains(mouse_pos) {
-                    let norm = ((mouse_pos.x - el_slider_rect.min.x) / el_slider_rect.width()).clamp(0.0, 1.0);
+                    let norm = ((mouse_pos.x - el_slider_rect.min.x) / el_slider_rect.width())
+                        .clamp(0.0, 1.0);
                     self.elevation_puck_norm = norm;
                     self.elevation_deg = Self::normalized_to_elevation(norm);
                     self.update_spherical_harmonics();
@@ -600,7 +681,10 @@ impl HoaSpatializerView {
         let params = [
             (
                 "AZIMUTH / ELEVATION",
-                format!("{:+.1}° / {:+.1}° ({:.2} m)", self.azimuth_deg, self.elevation_deg, self.distance_m),
+                format!(
+                    "{:+.1}° / {:+.1}° ({:.2} m)",
+                    self.azimuth_deg, self.elevation_deg, self.distance_m
+                ),
                 Color32::from_rgb(0, 229, 255),
             ),
             (
@@ -610,7 +694,10 @@ impl HoaSpatializerView {
             ),
             (
                 "HEAD-TRACKING YAW",
-                format!("Yaw: {:+.1}° ({:.1} ms)", self.head_yaw_deg, self.head_tracking_latency_ms),
+                format!(
+                    "Yaw: {:+.1}° ({:.1} ms)",
+                    self.head_yaw_deg, self.head_tracking_latency_ms
+                ),
                 Color32::from_rgb(255, 107, 43),
             ),
             (

@@ -20,11 +20,11 @@ pub const MAX_ORBIT_RADIUS: f32 = 2.00;
 /// Neural Latent Space Generator Architecture Profile.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LatentArchitecture {
-    VaeContinuous,   // Smooth variational autoencoder latent manifold
-    TransformerDyn,  // Attention-guided sequential timbre trajectories
-    DiffusionRes,    // High-resolution spectral denoising flow
-    Hypersphere4D,   // Angular geodesic quaternion wavetable orbit
-    SpectralFlow,    // Continuous normalizing flow invertible manifold
+    VaeContinuous,  // Smooth variational autoencoder latent manifold
+    TransformerDyn, // Attention-guided sequential timbre trajectories
+    DiffusionRes,   // High-resolution spectral denoising flow
+    Hypersphere4D,  // Angular geodesic quaternion wavetable orbit
+    SpectralFlow,   // Continuous normalizing flow invertible manifold
 }
 
 impl LatentArchitecture {
@@ -63,15 +63,15 @@ impl LatentArchitecture {
 #[derive(Debug, Clone)]
 pub struct NeuralWavetableView {
     pub architecture: LatentArchitecture,
-    pub latent_z: (f32, f32, f32),     // 3D latent coordinate (z1, z2, z3)
-    pub morph_speed_hz: f32,           // [0.01 ..= 20.00 Hz]
-    pub orbit_radius: f32,             // [0.00 ..= 2.00]
-    pub orbit_phase_rad: f32,          // Real-time orbital angle [0 .. 2π]
-    pub latent_puck_pos: (f32, f32),   // Normalized (X: z1, Y: z2)
+    pub latent_z: (f32, f32, f32), // 3D latent coordinate (z1, z2, z3)
+    pub morph_speed_hz: f32,       // [0.01 ..= 20.00 Hz]
+    pub orbit_radius: f32,         // [0.00 ..= 2.00]
+    pub orbit_phase_rad: f32,      // Real-time orbital angle [0 .. 2π]
+    pub latent_puck_pos: (f32, f32), // Normalized (X: z1, Y: z2)
     pub is_dragging_puck: bool,
-    pub spectral_entropy_bits: f32,    // Calculated overtone entropy
+    pub spectral_entropy_bits: f32, // Calculated overtone entropy
     pub reconstruction_quality_pct: f32,
-    pub num_harmonics: usize,          // Default 16 harmonics
+    pub num_harmonics: usize, // Default 16 harmonics
     pub color_palette: ContrastColorPalette,
 }
 
@@ -149,7 +149,14 @@ impl NeuralWavetableView {
     }
 
     /// Evaluate 3D perspective projection for latent coordinate $(x, y, z)$ onto 2D canvas pixel coordinates.
-    pub fn project_3d_latent(&self, x: f32, y: f32, z: f32, center: (f32, f32), scale: f32) -> (f32, f32) {
+    pub fn project_3d_latent(
+        &self,
+        x: f32,
+        y: f32,
+        z: f32,
+        center: (f32, f32),
+        scale: f32,
+    ) -> (f32, f32) {
         let yaw = -0.45_f32; // ~-25 deg
         let pitch = 0.35_f32; // ~20 deg
 
@@ -358,9 +365,27 @@ impl NeuralWavetableView {
         let y_axis = self.project_3d_latent(0.0, 2.0, 0.0, center_3d, scale_3d);
         let z_axis = self.project_3d_latent(0.0, 0.0, 2.0, center_3d, scale_3d);
 
-        painter.line_segment([egui::pos2(orig_2d.0, orig_2d.1), egui::pos2(x_axis.0, x_axis.1)], Stroke::new(1.0_f32, Color32::from_rgba_premultiplied(0, 229, 255, 90)));
-        painter.line_segment([egui::pos2(orig_2d.0, orig_2d.1), egui::pos2(y_axis.0, y_axis.1)], Stroke::new(1.0_f32, Color32::from_rgba_premultiplied(255, 215, 0, 90)));
-        painter.line_segment([egui::pos2(orig_2d.0, orig_2d.1), egui::pos2(z_axis.0, z_axis.1)], Stroke::new(1.0_f32, Color32::from_rgba_premultiplied(255, 107, 43, 90)));
+        painter.line_segment(
+            [
+                egui::pos2(orig_2d.0, orig_2d.1),
+                egui::pos2(x_axis.0, x_axis.1),
+            ],
+            Stroke::new(1.0_f32, Color32::from_rgba_premultiplied(0, 229, 255, 90)),
+        );
+        painter.line_segment(
+            [
+                egui::pos2(orig_2d.0, orig_2d.1),
+                egui::pos2(y_axis.0, y_axis.1),
+            ],
+            Stroke::new(1.0_f32, Color32::from_rgba_premultiplied(255, 215, 0, 90)),
+        );
+        painter.line_segment(
+            [
+                egui::pos2(orig_2d.0, orig_2d.1),
+                egui::pos2(z_axis.0, z_axis.1),
+            ],
+            Stroke::new(1.0_f32, Color32::from_rgba_premultiplied(255, 107, 43, 90)),
+        );
 
         // Draw Orbit Loop
         let num_orbit_pts = 32;
@@ -375,7 +400,10 @@ impl NeuralWavetableView {
             let egui_pt = egui::pos2(pt_2d.0, pt_2d.1);
 
             if let Some(po) = prev_orbit {
-                painter.line_segment([po, egui_pt], Stroke::new(1.5_f32, Color32::from_rgb(0, 255, 180)));
+                painter.line_segment(
+                    [po, egui_pt],
+                    Stroke::new(1.5_f32, Color32::from_rgb(0, 255, 180)),
+                );
             }
             prev_orbit = Some(egui_pt);
         }
@@ -441,7 +469,10 @@ impl NeuralWavetableView {
             let py = wave_center_y - sample * 35.0;
             let pt = egui::pos2(px, py);
             if let Some(pw) = prev_w {
-                painter.line_segment([pw, pt], Stroke::new(2.0_f32, Color32::from_rgb(0, 229, 255)));
+                painter.line_segment(
+                    [pw, pt],
+                    Stroke::new(2.0_f32, Color32::from_rgb(0, 229, 255)),
+                );
             }
             prev_w = Some(pt);
         }
@@ -482,7 +513,10 @@ impl NeuralWavetableView {
         let params = [
             (
                 "LATENT VECTOR (z)",
-                format!("({:+.2}, {:+.2}, {:+.2})", self.latent_z.0, self.latent_z.1, self.latent_z.2),
+                format!(
+                    "({:+.2}, {:+.2}, {:+.2})",
+                    self.latent_z.0, self.latent_z.1, self.latent_z.2
+                ),
                 Color32::from_rgb(0, 229, 255),
             ),
             (
