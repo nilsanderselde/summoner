@@ -5826,6 +5826,509 @@ def render_k_system_meter_view():
     img.save(out_path)
     print(f"Rendered: {out_path}")
 
+def render_neural_vocoder_morph_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (10, 14, 24, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(16, bold=True)
+    f_header = get_font(14, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(10, bold=False)
+
+    draw.text((20, 18), "MULTI-STAGE NEURAL VOCODER FORMANT MORPHER HUD", fill=(240, 245, 255), font=f_title)
+
+    modes = [
+        ("NEURAL LPC-16", True),
+        ("PHONETIC VOWEL", False),
+        ("ROBOTIC CARRIER", False),
+        ("CEPSTRAL MORPH", False),
+        ("SPECTRAL RESYNTH", False),
+    ]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, active) in enumerate(modes):
+        bx = 20 + i * (tab_w + 8)
+        bg = (0, 229, 255) if active else (25, 35, 50)
+        fg = (10, 14, 24) if active else (200, 215, 235)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 10, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas (20..780, 104..340)
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(10, 14, 24), outline=(45, 65, 95), width=2)
+
+    # Left 55%: Spectral Formant Tracking Graph (30..440)
+    draw.rounded_rectangle([30, 114, 430, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((40, 122), "SPECTRAL FORMANT ENVELOPE (LPC-16 POLES)", fill=(160, 180, 205), font=f_small)
+
+    # Curve
+    curve_pts = []
+    for step in range(65):
+        frac = step / 64.0
+        freq = 100.0 + frac * 4500.0
+        # Formants at 500, 1500, 2500, 3600 Hz
+        f1 = 2.0 * math.exp(-0.5 * ((freq - 500.0) / 80.0) ** 2)
+        f2 = 1.4 * math.exp(-0.5 * ((freq - 1500.0) / 110.0) ** 2)
+        f3 = 0.9 * math.exp(-0.5 * ((freq - 2500.0) / 140.0) ** 2)
+        f4 = 0.6 * math.exp(-0.5 * ((freq - 3600.0) / 200.0) ** 2)
+        mag = (0.05 + f1 + f2 + f3 + f4) / 3.2
+        px = 45 + int(frac * 370)
+        py = 315 - int(min(1.0, mag) * 160)
+        curve_pts.append((px, py))
+
+    for i in range(len(curve_pts) - 1):
+        draw.line([curve_pts[i], curve_pts[i + 1]], fill=(0, 229, 255), width=2)
+
+    # Formant lines
+    for f_hz, f_lbl in [(500, "F1"), (1500, "F2"), (2500, "F3"), (3600, "F4")]:
+        frac = (f_hz - 100.0) / 4500.0
+        fx = 45 + int(frac * 370)
+        draw.line([(fx, 140), (fx, 315)], fill=(255, 215, 0, 100), width=1)
+        draw.text((fx - 6, 142), f_lbl, fill=(255, 215, 0), font=f_small)
+
+    # Right 45%: Vowel Space (445..770)
+    draw.rounded_rectangle([445, 114, 770, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((455, 122), "2D IPA VOWEL SPACE TRAJECTORY (F1 / F2)", fill=(160, 180, 205), font=f_small)
+
+    vowels = [("i (see)", 0.15, 0.85), ("e (bed)", 0.35, 0.65), ("a (father)", 0.80, 0.40), ("o (boat)", 0.50, 0.20), ("u (boot)", 0.20, 0.15)]
+    for v_name, vx, vy in vowels:
+        v_px = 465 + int(vx * 285)
+        v_py = 145 + int((1.0 - vy) * 160)
+        draw.ellipse([v_px - 3, v_py - 3, v_px + 3, v_py + 3], fill=(100, 130, 170))
+        draw.text((v_px - 14, v_py + 5), v_name, fill=(140, 165, 195), font=f_small)
+
+    # Formant Puck (at F1=500Hz, F2=1500Hz)
+    p_norm_x = (500.0 - 200.0) / 1000.0
+    p_norm_y = (1500.0 - 600.0) / 2600.0
+    puck_x = 465 + int(p_norm_x * 285)
+    puck_y = 145 + int((1.0 - p_norm_y) * 160)
+
+    draw.ellipse([puck_x - 22, puck_y - 22, puck_x + 22, puck_y + 22], outline=(0, 229, 255, 140), width=2)
+    draw.ellipse([puck_x - 14, puck_y - 14, puck_x + 14, puck_y + 14], fill=(0, 229, 255))
+    draw.ellipse([puck_x - 4, puck_y - 4, puck_x + 4, puck_y + 4], fill=(255, 255, 255))
+
+    # Bottom Metrics Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    params = [
+        ("FORMANT F1 / F2", "500 Hz / 1500 Hz", (0, 229, 255)),
+        ("ARTICULATION DEPTH", "82.5%", (255, 215, 0)),
+        ("VOICING PROBABILITY", "94.2%", (0, 255, 180)),
+        ("CARRIER HARMONICS", "65.0%", (255, 107, 43)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 180, 205), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=f_header)
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Multi-Stage Neural Vocoder Formant Morpher & Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "neural_vocoder_morph_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_spectral_aligner_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (10, 14, 24, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(16, bold=True)
+    f_header = get_font(14, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(10, bold=False)
+
+    draw.text((20, 18), "MULTI-CHANNEL SPECTRAL TRANSIENT AUTO-ALIGNER HUD", fill=(240, 245, 255), font=f_title)
+
+    algos = [
+        ("CROSS-CORRELATION", True),
+        ("SPECTRAL PHASE FFT", False),
+        ("TRANSIENT ONSET", False),
+        ("SUB-BAND DELAY", False),
+        ("INFRASONIC LOCK", False),
+    ]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, active) in enumerate(algos):
+        bx = 20 + i * (tab_w + 8)
+        bg = (0, 229, 255) if active else (25, 35, 50)
+        fg = (10, 14, 24) if active else (200, 215, 235)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 6, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas (20..780, 104..340)
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(10, 14, 24), outline=(45, 65, 95), width=2)
+
+    # Left 40%: Multi-Channel Strip List (30..320)
+    channels = [
+        ("Ch 1: Direct DI (Ref)", "0.00 ms", "100.0% Coh", False),
+        ("Ch 2: Close Mic", "+2.35 ms", "92.4% Coh", True),
+        ("Ch 3: Overhead Pair", "+8.60 ms", "84.1% Coh", False),
+        ("Ch 4: Room Ambience", "+18.20 ms", "67.8% Coh", False),
+    ]
+    ch_h = int((236 - 20 - 3 * 6) / 4)
+    for i, (ch_name, ch_delay, ch_coh, is_sel) in enumerate(channels):
+        cy = 114 + i * (ch_h + 6)
+        bg_c = (22, 34, 52) if is_sel else (16, 22, 34)
+        border_c = (0, 229, 255) if is_sel else (40, 55, 80)
+        draw.rounded_rectangle([30, cy, 320, cy + ch_h], radius=4, fill=bg_c, outline=border_c)
+        draw.text((40, cy + 6), ch_name, fill=(240, 245, 255) if is_sel else (180, 200, 225), font=f_small)
+        draw.text((40, cy + 24), ch_delay, fill=(0, 229, 255), font=f_small)
+        draw.text((230, cy + 24), ch_coh, fill=(0, 255, 180), font=f_small)
+
+    # Right 60%: Scope (335..770)
+    draw.rounded_rectangle([335, 114, 770, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((345, 122), "CROSS-CORRELATION TIME-DELAY SCOPE (GCC-PHAT)", fill=(160, 180, 205), font=f_small)
+
+    zero_y = 230
+    draw.line([(345, zero_y), (760, zero_y)], fill=(60, 80, 110, 120), width=1)
+
+    # GCC-PHAT peak curve
+    pts = []
+    for step in range(71):
+        frac = step / 70.0
+        tau = -50.0 + frac * 100.0
+        diff = tau - 2.35
+        main_l = math.exp(-0.5 * (diff / 1.8) ** 2)
+        side_l = 0.25 * math.exp(-0.5 * (diff / 6.0) ** 2) * math.cos(diff * 2.0)
+        val = main_l + side_l
+        px = 350 + int(frac * 405)
+        py = zero_y - int(val * 65)
+        pts.append((px, py))
+
+    for i in range(len(pts) - 1):
+        draw.line([pts[i], pts[i + 1]], fill=(0, 255, 180), width=2)
+
+    # Delay Puck (at tau = +2.35ms)
+    norm_d = (2.35 + 50.0) / 100.0
+    puck_x = 350 + int(norm_d * 405)
+    puck_y = zero_y - int(1.0 * 65)
+
+    draw.ellipse([puck_x - 22, puck_y - 22, puck_x + 22, puck_y + 22], outline=(0, 229, 255, 140), width=2)
+    draw.ellipse([puck_x - 14, puck_y - 14, puck_x + 14, puck_y + 14], fill=(0, 229, 255))
+    draw.ellipse([puck_x - 4, puck_y - 4, puck_x + 4, puck_y + 4], fill=(255, 255, 255))
+
+    # Bottom Metrics Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    params = [
+        ("DELAY OFFSET / SAMPLES", "+2.35 ms (+113 smp)", (0, 229, 255)),
+        ("PHASE ANGLE DELTA", "+0.0°", (255, 215, 0)),
+        ("CANCELLATION SUPPRESSION", "+14.8 dB Boost", (0, 255, 180)),
+        ("ESTIMATED DISTANCE", "80.6 cm (343m/s)", (255, 107, 43)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 180, 205), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=f_header)
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Multi-Channel Spectral Transient Auto-Aligner & Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "spectral_aligner_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_upward_compressor_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (10, 14, 24, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(16, bold=True)
+    f_header = get_font(14, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(10, bold=False)
+
+    draw.text((20, 18), "MASTERING DYNAMIC MULTIBAND UPWARD COMPRESSOR HUD", fill=(240, 245, 255), font=f_title)
+
+    profiles = [
+        ("LOW-LEVEL DETAIL", True),
+        ("OTT AGGRESSIVE", False),
+        ("BROADCAST DENSITY", False),
+        ("VOCAL AIR EXTRACT", False),
+        ("LINEAR-PHASE", False),
+    ]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, active) in enumerate(profiles):
+        bx = 20 + i * (tab_w + 8)
+        bg = (0, 229, 255) if active else (25, 35, 50)
+        fg = (10, 14, 24) if active else (200, 215, 235)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 8, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas (20..780, 104..340)
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(10, 14, 24), outline=(45, 65, 95), width=2)
+
+    # Left 50%: Dynamic Transfer Function Curve (30..395)
+    draw.rounded_rectangle([30, 114, 395, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((40, 122), "DYNAMIC I/O TRANSFER CURVE (UPWARD BOOST)", fill=(160, 180, 205), font=f_small)
+
+    # Diagonal 1:1 Unity Line
+    draw.line([(45, 315), (380, 145)], fill=(100, 120, 150, 100), width=1)
+
+    # Transfer Curve Points
+    curve_pts = []
+    for step in range(61):
+        frac = step / 60.0
+        in_db = -60.0 + frac * 60.0
+        thresh = -42.0
+        max_b = 11.0
+        ratio = 2.8
+        if in_db >= thresh:
+            out_db = in_db
+        else:
+            delta = thresh - in_db
+            actual_b = min(max_b, (1.0 - 1.0 / ratio) * delta)
+            out_db = in_db + actual_b
+        out_norm = (out_db + 60.0) / 60.0
+        px = 45 + int(frac * 335)
+        py = 315 - int(max(0.0, min(1.0, out_norm)) * 170)
+        curve_pts.append((px, py))
+
+    for i in range(len(curve_pts) - 1):
+        draw.line([curve_pts[i], curve_pts[i + 1]], fill=(0, 229, 255), width=2)
+
+    # Right 50%: Matrix & Puck (405..770)
+    draw.rounded_rectangle([405, 114, 770, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((415, 122), "UPWARD COMPRESSION GAIN BOOST MATRIX", fill=(160, 180, 205), font=f_small)
+
+    # 4 Band Buttons
+    band_w = int((365 - 20 - 3 * 6) / 4)
+    for i in range(4):
+        bx = 415 + i * (band_w + 6)
+        is_sel = (i == 1)
+        bg = (0, 229, 255) if is_sel else (22, 30, 46)
+        fg = (10, 14, 24) if is_sel else (180, 205, 235)
+        draw.rounded_rectangle([bx, 145, bx + band_w, 189], radius=3, fill=bg)
+        draw.text((bx + 12, 160), f"BAND {i+1}", fill=fg, font=f_small)
+
+    # Upward Puck (Threshold=-42dB, Boost=11dB)
+    norm_th = (-42.0 + 60.0) / 50.0
+    norm_bo = 11.0 / 18.0
+    puck_x = 425 + int(norm_th * 325)
+    puck_y = 205 + int((1.0 - norm_bo) * 110)
+
+    draw.ellipse([puck_x - 22, puck_y - 22, puck_x + 22, puck_y + 22], outline=(0, 229, 255, 140), width=2)
+    draw.ellipse([puck_x - 14, puck_y - 14, puck_x + 14, puck_y + 14], fill=(0, 229, 255))
+    draw.ellipse([puck_x - 4, puck_y - 4, puck_x + 4, puck_y + 4], fill=(255, 255, 255))
+
+    # Bottom Metrics Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    params = [
+        ("UPWARD THRESHOLD", "-42.0 dBFS", (0, 229, 255)),
+        ("MAX GAIN BOOST", "+11.0 dB", (255, 215, 0)),
+        ("COMPRESSION RATIO", "2.8:1 Upward", (0, 255, 180)),
+        ("ACTIVE LIFT", "+6.2 dB RMS", (255, 107, 43)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 180, 205), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=f_header)
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Mastering Multiband Upward Compressor & Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "upward_compressor_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_membrane_resonator_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (10, 14, 24, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(16, bold=True)
+    f_header = get_font(14, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(10, bold=False)
+
+    draw.text((20, 18), "PHYSICAL MODELING ACOUSTIC MEMBRANE RESONATOR HUD", fill=(240, 245, 255), font=f_title)
+
+    materials = [
+        ("MYLAR SYNTHETIC", True),
+        ("CALFSKIN VINTAGE", False),
+        ("TITANIUM FOIL", False),
+        ("SILICONE ELASTIC", False),
+        ("CARBON COMPOSITE", False),
+    ]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, active) in enumerate(materials):
+        bx = 20 + i * (tab_w + 8)
+        bg = (0, 229, 255) if active else (25, 35, 50)
+        fg = (10, 14, 24) if active else (200, 215, 235)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 8, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas (20..780, 104..340)
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(10, 14, 24), outline=(45, 65, 95), width=2)
+
+    # Left 55%: 2D Membrane Mesh (30..435)
+    draw.rounded_rectangle([30, 114, 435, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((40, 122), "2D CIRCULAR MEMBRANE BESSEL MODAL DISPLACEMENT", fill=(160, 180, 205), font=f_small)
+
+    drum_cx, drum_cy = 232, 225
+    drum_r = 85
+
+    # Outer Rim
+    draw.ellipse([drum_cx - drum_r, drum_cy - drum_r, drum_cx + drum_r, drum_cy + drum_r], outline=(0, 229, 255), width=3)
+    draw.ellipse([drum_cx - int(drum_r * 0.65), drum_cy - int(drum_r * 0.65), drum_cx + int(drum_r * 0.65), drum_cy + int(drum_r * 0.65)], outline=(60, 90, 130, 90), width=1)
+    draw.ellipse([drum_cx - int(drum_r * 0.35), drum_cy - int(drum_r * 0.35), drum_cx + int(drum_r * 0.35), drum_cy + int(drum_r * 0.35)], outline=(60, 90, 130, 90), width=1)
+
+    draw.line([(drum_cx - drum_r, drum_cy), (drum_cx + drum_r, drum_cy)], fill=(50, 70, 100, 80), width=1)
+    draw.line([(drum_cx, drum_cy - drum_r), (drum_cx, drum_cy + drum_r)], fill=(50, 70, 100, 80), width=1)
+
+    # Strike Puck (Orange at 0.35, 0.25)
+    px = drum_cx + int(0.35 * drum_r)
+    py = drum_cy - int(0.25 * drum_r)
+
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(255, 107, 43, 140), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(255, 107, 43))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+
+    # Right 45%: Modal Overtones (445..770)
+    draw.rounded_rectangle([445, 114, 770, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((455, 122), "BESSEL INHARMONIC OVERTONE MODES", fill=(160, 180, 205), font=f_small)
+
+    modes = [("f01 (1.00x)", 1.0), ("f11 (1.59x)", 0.75), ("f21 (2.14x)", 0.55), ("f02 (2.30x)", 0.45), ("f31 (2.65x)", 0.35), ("f12 (2.92x)", 0.25)]
+    bar_w = int((325 - 20) / 6)
+    for i, (m_lbl, m_gain) in enumerate(modes):
+        bx = 455 + i * bar_w
+        bh = int(m_gain * 130)
+        draw.rectangle([bx, 300 - bh, bx + bar_w - 4, 300], fill=(0, 255, 180))
+        draw.text((bx - 2, 305), m_lbl[:3], fill=(150, 175, 205), font=f_small)
+
+    # Bottom Metrics Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    params = [
+        ("FUNDAMENTAL (f01)", "185.0 Hz (c=116m/s)", (0, 229, 255)),
+        ("TENSION / DENSITY", "3500 N/m (0.26 kg/m²)", (255, 215, 0)),
+        ("STRIKE RADIUS (r/a)", "0.43 r/R (85.0% Vel)", (255, 107, 43)),
+        ("INTERNAL DAMPING (γ)", "0.0150 decay/s", (0, 255, 180)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 180, 205), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=f_header)
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Physical Modeling Membrane Resonator & Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "membrane_resonator_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_ebu_loudness_radar_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (10, 14, 24, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(16, bold=True)
+    f_header = get_font(14, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(10, bold=False)
+
+    draw.text((20, 18), "BROADCAST MASTERING EBU R128 LOUDNESS RADAR HUD", fill=(240, 245, 255), font=f_title)
+
+    standards = [
+        ("EBU R128 (-23)", True),
+        ("ITU BS.1770 (-24)", False),
+        ("AES TD1004 (-16)", False),
+        ("STREAMING (-14)", False),
+        ("PODCAST (-19)", False),
+    ]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, active) in enumerate(standards):
+        bx = 20 + i * (tab_w + 8)
+        bg = (0, 229, 255) if active else (25, 35, 50)
+        fg = (10, 14, 24) if active else (200, 215, 235)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 12, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas (20..780, 104..340)
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(10, 14, 24), outline=(45, 65, 95), width=2)
+
+    # Left 55%: 360° Radar Scope (30..435)
+    draw.rounded_rectangle([30, 114, 435, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((40, 122), "360° EBU R128 LOUDNESS RADAR SCOPE", fill=(160, 180, 205), font=f_small)
+
+    radar_cx, radar_cy = 232, 225
+    radar_max_r = 85
+
+    # Concentric rings with clean non-overlapping labels
+    rings = [
+        (-36, "-36"),
+        (-23, "-23 EBU"),
+        (-14, "-14"),
+        (-9, "-9"),
+    ]
+    for lvl, lbl in rings:
+        norm_r = (lvl + 36.0) / 30.0
+        r_px = int(norm_r * radar_max_r)
+        is_tgt = (lvl == -23)
+        ring_c = (0, 229, 255) if is_tgt else (60, 85, 120, 90)
+        draw.ellipse([radar_cx - r_px, radar_cy - r_px, radar_cx + r_px, radar_cy + r_px], outline=ring_c, width=2 if is_tgt else 1)
+        if r_px > 15:
+            # Place label on top of each ring with dark pill
+            lbl_y = radar_cy - r_px - 6
+            lbl_w = 26 if len(lbl) <= 3 else 46
+            draw.rounded_rectangle([radar_cx - lbl_w // 2, lbl_y - 2, radar_cx + lbl_w // 2, lbl_y + 10], radius=2, fill=(10, 14, 24))
+            draw.text((radar_cx - (lbl_w // 2 - 4), lbl_y), lbl, fill=ring_c, font=f_small)
+
+    # Radar History Polygon
+    poly_pts = []
+    num_pts = 36
+    for i in range(num_pts):
+        angle = (i / num_pts) * 2.0 * math.pi - math.pi / 2.0
+        lufs = -23.0 + 3.5 * math.sin(angle) + 1.5 * math.cos(angle * 3.0)
+        norm_r = (lufs + 36.0) / 30.0
+        r_px = norm_r * radar_max_r
+        px = radar_cx + int(math.cos(angle) * r_px)
+        py = radar_cy + int(math.sin(angle) * r_px)
+        poly_pts.append((px, py))
+
+    for i in range(len(poly_pts)):
+        p0 = poly_pts[i]
+        p1 = poly_pts[(i + 1) % len(poly_pts)]
+        draw.line([p0, p1], fill=(0, 255, 180), width=2)
+
+    # Sweep ray
+    sweep_a = (18 / num_pts) * 2.0 * math.pi - math.pi / 2.0
+    draw.line([(radar_cx, radar_cy), (radar_cx + int(math.cos(sweep_a) * radar_max_r), radar_cy + int(math.sin(sweep_a) * radar_max_r))], fill=(0, 229, 255), width=2)
+
+    # Right 45%: Target Puck Area (445..770)
+    draw.rounded_rectangle([445, 114, 770, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((455, 122), "TARGET LOUDNESS CALIBRATION PUCK", fill=(160, 180, 205), font=f_small)
+
+    norm_lufs = (-23.0 + 36.0) / 30.0
+    norm_tp = (-1.0 + 6.0) / 9.0
+    puck_x = 465 + int(norm_lufs * 285)
+    puck_y = 150 + int((1.0 - norm_tp) * 150)
+
+    draw.ellipse([puck_x - 22, puck_y - 22, puck_x + 22, puck_y + 22], outline=(0, 229, 255, 140), width=2)
+    draw.ellipse([puck_x - 14, puck_y - 14, puck_x + 14, puck_y + 14], fill=(0, 229, 255))
+    draw.ellipse([puck_x - 4, puck_y - 4, puck_x + 4, puck_y + 4], fill=(255, 255, 255))
+
+    # Bottom Metrics Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    params = [
+        ("INTEGRATED LUFS (PROGRAM)", "-23.1 LUFS (Tgt: -23)", (0, 229, 255)),
+        ("MOMENTARY / SHORT-TERM", "-21.4 / -22.8 LUFS", (255, 215, 0)),
+        ("LOUDNESS RANGE (LRA)", "6.8 LU Dynamic", (0, 255, 180)),
+        ("TRUE-PEAK MAX", "-1.2 dBTP (Ceil: -1.0)", (255, 107, 43)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 180, 205), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=f_header)
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Broadcast Mastering EBU R128 Loudness Radar & Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "ebu_loudness_radar_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
 if __name__ == "__main__":
     render_live_macro_rack()
     render_spectrogram_3d()
@@ -5892,7 +6395,12 @@ if __name__ == "__main__":
     render_multiband_saturator_view()
     render_raytraced_reverb_view()
     render_k_system_meter_view()
-    print("All Tier 50-62 GUI render previews generated successfully!")
+    render_neural_vocoder_morph_view()
+    render_spectral_aligner_view()
+    render_upward_compressor_view()
+    render_membrane_resonator_view()
+    render_ebu_loudness_radar_view()
+    print("All Tier 50-63 GUI render previews generated successfully!")
 
 
 

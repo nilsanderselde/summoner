@@ -91,6 +91,8 @@ pub mod tier61_tests;
 #[cfg(feature = "gui")]
 pub mod tier62_tests;
 #[cfg(feature = "gui")]
+pub mod tier63_tests;
+#[cfg(feature = "gui")]
 pub mod touch_gestures;
 #[cfg(feature = "gui")]
 pub mod transport_bar;
@@ -124,6 +126,8 @@ pub use views::dpi_scale_panel::DpiScalePanelView;
 #[cfg(feature = "gui")]
 pub use views::dsp_rack_dock::DspRackDockView;
 #[cfg(feature = "gui")]
+pub use views::ebu_loudness_radar_view::EbuLoudnessRadarView;
+#[cfg(feature = "gui")]
 pub use views::envelope_follower_view::EnvelopeFollowerView;
 #[cfg(feature = "gui")]
 pub use views::fm_matrix_view::FmMatrixView;
@@ -156,6 +160,8 @@ pub use views::macro_rotary_dial::MacroRotaryDialView;
 #[cfg(feature = "gui")]
 pub use views::master_limiter_radar_view::MasterLimiterRadarView;
 #[cfg(feature = "gui")]
+pub use views::membrane_resonator_view::MembraneResonatorView;
+#[cfg(feature = "gui")]
 pub use views::meter_bridge_view::MeterBridgeView;
 #[cfg(feature = "gui")]
 pub use views::multiband_expander_view::MultibandExpanderView;
@@ -167,6 +173,8 @@ pub use views::multiband_saturator_view::MultibandSaturatorView;
 pub use views::multiband_spatial_view::MultibandSpatialView;
 #[cfg(feature = "gui")]
 pub use views::multitap_delay_view::MultitapDelayView;
+#[cfg(feature = "gui")]
+pub use views::neural_vocoder_morph_view::NeuralVocoderMorphView;
 #[cfg(feature = "gui")]
 pub use views::optical_compressor_view::OpticalCompressorView;
 #[cfg(feature = "gui")]
@@ -193,6 +201,8 @@ pub use views::sample_editor_view::SampleEditorView;
 pub use views::sidechain_matrix_view::SidechainMatrixView;
 #[cfg(feature = "gui")]
 pub use views::spatial_panner_view::SpatialPannerView;
+#[cfg(feature = "gui")]
+pub use views::spectral_aligner_view::SpectralAlignerView;
 #[cfg(feature = "gui")]
 pub use views::spectral_brush_editor::SpectralBrushEditorView;
 #[cfg(feature = "gui")]
@@ -231,6 +241,8 @@ pub use views::transient_shaper_view::TransientShaperView;
 pub use views::transient_warp_editor::TransientWarpEditorView;
 #[cfg(feature = "gui")]
 pub use views::tube_bias_view::TubeBiasView;
+#[cfg(feature = "gui")]
+pub use views::upward_compressor_view::UpwardCompressorView;
 #[cfg(feature = "gui")]
 pub use views::vocoder_matrix_view::VocoderMatrixView;
 
