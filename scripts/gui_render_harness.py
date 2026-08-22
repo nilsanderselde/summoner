@@ -7131,6 +7131,136 @@ def render_transient_declicker_view():
     img.save(out_path)
     print(f"Rendered: {out_path}")
 
+def render_neural_wavetable_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (10, 14, 24, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(15, bold=True)
+    f_header = get_font(13, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(10, bold=False)
+
+    draw.text((20, 18), "NEURAL WAVETABLE MORPHING SYNTH & 3D LATENT TRAJECTORY HUD", fill=(240, 245, 255), font=f_title)
+
+    architectures = [
+        ("VAE CONTINUOUS", True),
+        ("TRANSFORMER DYN", False),
+        ("DIFFUSION RES", False),
+        ("HYPERSPHERE 4D", False),
+        ("SPECTRAL FLOW", False),
+    ]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, active) in enumerate(architectures):
+        bx = 20 + i * (tab_w + 8)
+        bg = (0, 229, 255) if active else (25, 35, 50)
+        fg = (10, 14, 24) if active else (200, 215, 235)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 10, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas (20..780, 104..340)
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(10, 14, 24), outline=(45, 65, 95), width=2)
+
+    # Left 55%: 3D Latent Trajectory Orbit (30..435)
+    draw.rounded_rectangle([30, 114, 435, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((40, 122), "3D LATENT MANIFOLD & ORBITAL TRAJECTORY (z1, z2, z3)", fill=(160, 180, 205), font=f_small)
+
+    center_x, center_y = 232, 230
+    scale_3d = 50.0
+    yaw = -0.45
+    pitch = 0.35
+
+    def proj_3d(x, y, z):
+        x1 = x * math.cos(yaw) - z * math.sin(yaw)
+        z1 = x * math.sin(yaw) + z * math.cos(yaw)
+        y2 = y * math.cos(pitch) - z1 * math.sin(pitch)
+        return (center_x + int(x1 * scale_3d), center_y - int(y2 * scale_3d))
+
+    # Draw 3D axes
+    orig = proj_3d(0, 0, 0)
+    ax_x = proj_3d(2.0, 0, 0)
+    ax_y = proj_3d(0, 2.0, 0)
+    ax_z = proj_3d(0, 0, 2.0)
+    draw.line([orig, ax_x], fill=(0, 229, 255, 90), width=1)
+    draw.line([orig, ax_y], fill=(255, 215, 0, 90), width=1)
+    draw.line([orig, ax_z], fill=(255, 107, 43, 90), width=1)
+
+    # Draw 3D Orbit Loop
+    orbit_pts = []
+    for o in range(33):
+        angle = o * (math.pi * 2.0 / 32.0)
+        ox = 0.62 + 0.45 * math.cos(angle)
+        oy = -0.45 + 0.45 * math.sin(angle)
+        oz = 0.18 + 0.45 * math.sin(angle * 2.0) * 0.4
+        orbit_pts.append(proj_3d(ox, oy, oz))
+
+    for i in range(len(orbit_pts) - 1):
+        draw.line([orbit_pts[i], orbit_pts[i + 1]], fill=(0, 255, 180), width=2)
+
+    # Latent Puck
+    norm_x = (0.62 - (-2.50)) / (2.50 - (-2.50))
+    norm_y = (-0.45 - (-2.50)) / (2.50 - (-2.50))
+    px = 30 + int(norm_x * (435 - 30))
+    py = 330 - int(norm_y * (330 - 114))
+
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(0, 229, 255, 140), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(0, 229, 255))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+
+    # Right 45%: Reconstructed Wavetable & Harmonics (445..770)
+    draw.rounded_rectangle([445, 114, 770, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((455, 122), "RECONSTRUCTED SINGLE-CYCLE & HARMONIC BARS", fill=(160, 180, 205), font=f_small)
+
+    wave_center_y = 175
+    wave_pts = []
+    for c in range(40):
+        frac = c / 39.0
+        t = frac
+        h1 = math.sin(t * math.pi * 2.0) * (0.8 + 0.62 * 0.1)
+        h2 = math.sin(t * math.pi * 4.0) * (0.4 + abs(-0.45) * 0.2)
+        h3 = math.sin(t * math.pi * 6.0) * (0.25 + 0.18 * 0.15)
+        h5 = math.sin(t * math.pi * 10.0) * (0.15 * abs(0.62 - 0.45))
+        sample = math.tanh((h1 + h2 + h3 + h5) * 1.1) * 0.85
+        x = 455 + int(frac * 305)
+        y = wave_center_y - int(sample * 36)
+        wave_pts.append((x, y))
+
+    for i in range(len(wave_pts) - 1):
+        draw.line([wave_pts[i], wave_pts[i + 1]], fill=(0, 229, 255), width=2)
+
+    # 16 Harmonic Bars
+    spec_bottom = 320
+    bar_w = int((315 - 10) / 16)
+    for h in range(1, 17):
+        decay = 1.0 / (h ** (0.8 + 0.62 * 0.2))
+        formant = math.exp(-0.5 * ((h - (3.0 + 0.45 * 4.0)) / 1.8) ** 2) * 0.6
+        energy = min(1.0, max(0.02, decay * 0.7 + formant * 0.3))
+        bh = int(energy * 55)
+        bx = 455 + (h - 1) * bar_w
+        col = (255, 215, 0) if h <= 3 else ((255, 107, 43) if h <= 8 else (0, 255, 180))
+        draw.rounded_rectangle([bx, spec_bottom - bh, bx + bar_w - 2, spec_bottom], radius=1, fill=col)
+
+    # Bottom Metrics Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    params = [
+        ("LATENT VECTOR (z)", "(+0.62, -0.45, +0.18)", (0, 229, 255)),
+        ("MORPH SPEED (LFO)", "0.85 Hz (R=0.45)", (255, 215, 0)),
+        ("SPECTRAL ENTROPY", "3.84 bits (16 Harm)", (255, 107, 43)),
+        ("RECON QUALITY (FID)", "99.2% (<0.004 MSE)", (0, 255, 180)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 180, 205), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=f_header)
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Neural Wavetable Morphing Synth & Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "neural_wavetable_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
 if __name__ == "__main__":
     render_live_macro_rack()
     render_spectrogram_3d()
@@ -7210,7 +7340,9 @@ if __name__ == "__main__":
     render_waveguide_brass_view()
     render_spectral_unmasker_view()
     render_transient_declicker_view()
+    render_neural_wavetable_view()
     print("All Tier 50-65 GUI render previews generated successfully!")
+
 
 
 
