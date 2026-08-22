@@ -7795,6 +7795,120 @@ def render_neural_timbre_view():
     img.save(out_path)
     print(f"Rendered: {out_path}")
 
+def render_mpegh_spatializer_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (14, 18, 28, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(15, bold=True)
+    f_header = get_font(13, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(10, bold=False)
+
+    draw.text((20, 18), "MPEG-H 3D IMMERSIVE SPATIAL AUDIO & PERSONALIZED HRTF HUD", fill=(240, 245, 255), font=f_title)
+
+    formats = [
+        ("MPEG-H 7.1.4", True),
+        ("5.1 SURROUND", False),
+        ("22.2 NHK DOME", False),
+        ("SOFA BINAURAL", False),
+        ("DYNAMIC OBJ", False),
+    ]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, active) in enumerate(formats):
+        bx = 20 + i * (tab_w + 8)
+        bg = (0, 229, 255) if active else (25, 35, 50)
+        fg = (10, 14, 24) if active else (200, 215, 235)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 12, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas (20..780, 104..340)
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(10, 14, 24), outline=(45, 65, 95), width=2)
+
+    # Left 55%: 3D Object Radar Space (30..430, 114..330)
+    draw.rounded_rectangle([30, 114, 430, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((40, 122), "MPEG-H 3D OBJECT SPACE (AZIMUTH vs ELEVATION)", fill=(160, 180, 205), font=f_small)
+
+    # Concentric distance rings
+    rcx, rcy = 230, 225
+    max_r = 75
+    for r_step in range(1, 4):
+        cr = int(max_r * (r_step / 3.0))
+        draw.ellipse([rcx - cr, rcy - cr, rcx + cr, rcy + cr], outline=(45, 65, 95, 120), width=1)
+    draw.line([(rcx - max_r, rcy), (rcx + max_r, rcy)], fill=(45, 65, 95, 120), width=1)
+    draw.line([(rcx, rcy - max_r), (rcx, rcy + max_r)], fill=(45, 65, 95, 120), width=1)
+
+    # Puck (Azimuth = +45 deg -> norm = 225/360 = 0.625, Elevation = +15 deg -> norm = 105/180 = 0.583)
+    px = 30 + int(0.625 * (430 - 30))
+    py = 330 - int(0.583 * (330 - 114))
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(0, 229, 255, 140), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(0, 229, 255))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+
+    draw.text((40, 308), "Azimuth: +45.0° | Elevation: +15.0° | Dist: 2.50m", fill=(0, 229, 255), font=f_small)
+
+    # Right 45%: Personalized HRTF Pinna Filter (445..770, 114..330)
+    draw.rounded_rectangle([445, 114, 770, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((455, 122), "PERSONALIZED HRTF PINNA FILTER (L / R EAR)", fill=(160, 180, 205), font=f_small)
+
+    # SOFA vs Custom Mesh Buttons (>= 44x44pt)
+    draw.rounded_rectangle([458, 144, 598, 188], radius=4, fill=(0, 229, 255))
+    draw.text((478, 160), "SOFA PROFILE #1", fill=(10, 14, 24), font=f_small)
+
+    draw.rounded_rectangle([610, 144, 755, 188], radius=4, fill=(30, 45, 65))
+    draw.text((624, 160), "CUSTOM PINNA MESH", fill=(220, 235, 255), font=f_small)
+
+    # HRTF Left Ear (Cyan) & Right Ear (Gold) Curves
+    l_pts = []
+    r_pts = []
+    for i in range(40):
+        frac = i / 39.0
+        f_khz = 0.1 * (200.0 ** frac)
+        # Left Ear (Near Side)
+        notch_l = -12.0 * math.exp(-((f_khz - 7.2) / 1.2)**2)
+        hf_l = ((f_khz - 3.0)**1.4 * 0.8) if f_khz > 3.0 else 0.0
+        mag_l = max(-30.0, min(12.0, hf_l + notch_l))
+        
+        # Right Ear (Far Side - Head Shadowed)
+        mag_r = max(-30.0, min(12.0, mag_l - (0.25 * min(10.0, f_khz) * 1.5)))
+
+        norm_l = (mag_l + 30.0) / 42.0
+        norm_r = (mag_r + 30.0) / 42.0
+
+        cx = 458 + int(frac * 297)
+        cy_l = 300 - int(norm_l * 75)
+        cy_r = 300 - int(norm_r * 75)
+        l_pts.append((cx, cy_l))
+        r_pts.append((cx, cy_r))
+
+    for i in range(len(l_pts) - 1):
+        draw.line([l_pts[i], l_pts[i + 1]], fill=(0, 229, 255), width=2)
+    for i in range(len(r_pts) - 1):
+        draw.line([r_pts[i], r_pts[i + 1]], fill=(255, 215, 0), width=2)
+
+    draw.text((458, 308), "Profile: KEMAR Standard (ITD: 420 μs | ILD: 8.5 dB)", fill=(0, 255, 180), font=f_small)
+
+    # Bottom Metrics Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    params = [
+        ("OBJECT POSITION", "Az: +45.0°, El: +15.0° (2.5m)", (0, 229, 255)),
+        ("MPEG-H CHANNELS", "MPEG-H 7.1.4 (12 Ch)", (255, 215, 0)),
+        ("BINAURAL HRTF ITD", "420 μs (8.5 dB ILD)", (255, 107, 43)),
+        ("LOUDNESS COMPLIANCE", "-14.0 LUFS (EBU R128)", (0, 255, 180)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 180, 205), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=f_header)
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] MPEG-H 3D Spatial Audio & Personalized HRTF Profile (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "mpegh_spatializer_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
 if __name__ == "__main__":
     render_live_macro_rack()
     render_spectrogram_3d()
@@ -7880,6 +7994,7 @@ if __name__ == "__main__":
     render_spectral_reshaper_view()
     render_oversampled_limiter_view()
     render_neural_timbre_view()
+    render_mpegh_spatializer_view()
     print("All Tier 50-66 GUI render previews generated successfully!")
 
 

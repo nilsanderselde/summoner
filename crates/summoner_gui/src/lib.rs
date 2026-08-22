@@ -176,6 +176,8 @@ pub use views::membrane_resonator_view::MembraneResonatorView;
 #[cfg(feature = "gui")]
 pub use views::meter_bridge_view::MeterBridgeView;
 #[cfg(feature = "gui")]
+pub use views::mpegh_spatializer_view::MpeghSpatializerView;
+#[cfg(feature = "gui")]
 pub use views::multiband_clipper_view::MultibandClipperView;
 #[cfg(feature = "gui")]
 pub use views::multiband_expander_view::MultibandExpanderView;
