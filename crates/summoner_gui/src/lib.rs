@@ -113,6 +113,8 @@ pub mod tier72_tests;
 #[cfg(feature = "gui")]
 pub mod tier73_tests;
 #[cfg(feature = "gui")]
+pub mod tier74_tests;
+#[cfg(feature = "gui")]
 pub mod touch_gestures;
 #[cfg(feature = "gui")]
 pub mod transport_bar;
@@ -176,6 +178,8 @@ pub use views::formant_filter_view::FormantFilterView;
 #[cfg(feature = "gui")]
 pub use views::frequency_shifter_view::FrequencyShifterView;
 #[cfg(feature = "gui")]
+pub use views::gamelan_gender_view::GamelanGenderView;
+#[cfg(feature = "gui")]
 pub use views::glass_armonica_view::GlassArmonicaView;
 #[cfg(feature = "gui")]
 pub use views::granular_cloud_view::GranularCloudView;
@@ -224,6 +228,8 @@ pub use views::mpegh_3d_spatializer_view::Mpegh3DSpatializerView;
 #[cfg(feature = "gui")]
 pub use views::mpegh_spatializer_view::MpeghSpatializerView;
 #[cfg(feature = "gui")]
+pub use views::mpegh_trajectory_view::MpeghTrajectoryView;
+#[cfg(feature = "gui")]
 pub use views::multiband_clipper_view::MultibandClipperView;
 #[cfg(feature = "gui")]
 pub use views::multiband_decompressor_view::MultibandDecompressorView;
@@ -245,6 +251,8 @@ pub use views::neural_dereverb_view::NeuralDereverbView;
 pub use views::neural_inpaint_view::NeuralInpaintView;
 #[cfg(feature = "gui")]
 pub use views::neural_phoneme_view::NeuralPhonemeView;
+#[cfg(feature = "gui")]
+pub use views::neural_radiance_view::NeuralRadianceView;
 #[cfg(feature = "gui")]
 pub use views::neural_speech_to_singing_view::NeuralSpeechToSingingView;
 #[cfg(feature = "gui")]
@@ -306,6 +314,8 @@ pub use views::spectral_deesser_view::SpectralDeEsserView;
 #[cfg(feature = "gui")]
 pub use views::spectral_grain_cloud_view::SpectralGrainCloudView;
 #[cfg(feature = "gui")]
+pub use views::spectral_masking_view::SpectralMaskingView;
+#[cfg(feature = "gui")]
 pub use views::spectral_matching_eq_view::SpectralMatchingEqView;
 #[cfg(feature = "gui")]
 pub use views::spectral_morph_view::SpectralMorphView;
@@ -337,6 +347,10 @@ pub use views::tape_flutter_view::TapeFlutterView;
 pub use views::tape_flux_master_view::TapeFluxMasterView;
 #[cfg(feature = "gui")]
 pub use views::through_zero_flanger_view::ThroughZeroFlangerView;
+#[cfg(feature = "gui")]
+pub use views::transient_clipper_view::TransientClipperView;
+#[cfg(feature = "gui")]
+pub use views::transient_declicker_view::TransientDeclickerView;
 #[cfg(feature = "gui")]
 pub use views::transient_designer_view::TransientDesignerView;
 #[cfg(feature = "gui")]

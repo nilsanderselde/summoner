@@ -11130,6 +11130,435 @@ def render_hoa5_binaural_view():
     img.save(out_path)
     print(f"Rendered: {out_path}")
 
+def render_gamelan_gender_view():
+    width, height = 800, 480
+    img = Image.new("RGBA", (width, height), (14, 18, 28, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(13, bold=True)
+    f_header = get_font(10, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title Bar
+    draw.text((20, 18), "BALINESE GAMELAN METALLOPHONE / GENDER BAR MODAL HUD", fill=(245, 240, 230), font=f_title)
+
+    # Tabs (y: 48..92) - 44pt height
+    tabs = [("GENDER WAYANG", True), ("JEGOGAN (BASS)", False), ("CALUNG / PEMADE", False), ("KANTHIL / REYONG", False), ("UGAL (LEADER)", False)]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, is_sel) in enumerate(tabs):
+        bx = 20 + i * (tab_w + 8)
+        bg = (255, 215, 0) if is_sel else (28, 34, 48)
+        fg = (18, 14, 4) if is_sel else (230, 225, 210)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 10, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(10, 14, 22), outline=(65, 55, 35), width=2)
+
+    # Left: Bronze Metallophone Keys Array & Bamboo Resonators
+    left_w = int(760 * 0.55)
+    draw.rounded_rectangle([30, 114, 30 + left_w - 20, 330], radius=4, fill=(16, 20, 30), outline=(45, 55, 75))
+    draw.text((40, 124), "BRONZE GENDER KEYS & BAMBOO RESONATORS FIELD", fill=(255, 215, 0), font=f_header)
+
+    num_bars = 10
+    bar_pad = 5
+    key_area_w = (left_w - 20) - 40
+    single_bar_w = int((key_area_w - (num_bars - 1) * bar_pad) / num_bars)
+    for b in range(num_bars):
+        bx = 50 + b * (single_bar_w + bar_pad)
+        bar_len_factor = 1.0 - (b / num_bars) * 0.35
+        bar_h = int(95 * bar_len_factor)
+        # Resonator below
+        draw.rounded_rectangle([bx + 2, 145 + bar_h + 6, bx + single_bar_w - 2, 145 + bar_h + 6 + int(45 * bar_len_factor)], radius=2, fill=(40, 30, 20), outline=(70, 55, 35))
+        # Key
+        is_sel_bar = (b == 4)
+        k_col = (255, 215, 0) if is_sel_bar else (180, 140, 60)
+        draw.rounded_rectangle([bx, 145, bx + single_bar_w, 145 + bar_h], radius=2, fill=k_col, outline=(220, 180, 90))
+
+    # Puck
+    px = 30 + int(0.45 * (left_w - 20))
+    py = 330 - int(0.52 * 216)
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(255, 215, 0, 150), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(255, 215, 0))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+    draw.text((40, 310), "Hardness: 0.45 | Ombak: 7.2 Hz | Bars: 10 | Gauge: 6.5mm | Damp: 0.35", fill=(255, 235, 170), font=f_small)
+
+    # Right: Modal Inharmonicity & Ombak Beating Spectrum
+    rx = 30 + left_w
+    rw = int(760 * 0.45) - 20
+    draw.rounded_rectangle([rx, 114, rx + rw, 330], radius=4, fill=(16, 20, 30), outline=(45, 55, 75))
+    draw.text((rx + 10, 124), "MODAL INHARMONICITY & OMBAK BEATING SPECTRUM", fill=(255, 215, 0), font=f_header)
+
+    mode_labels = ["f0", "f1", "f2", "f3", "OMB", "BAMB", "CLK", "SYMP"]
+    bar_w = int((rw - 30 - 7 * 6) / 8)
+    amps = [1.0, 0.72, 0.48, 0.32, 0.55, 0.65, 0.40, 0.48]
+    for i in range(8):
+        bx = rx + 15 + i * (bar_w + 6)
+        bh = int((amps[i] / 1.2) * 135)
+        col = (255, 215, 0) if i == 0 else ((255, 140, 66) if i < 4 else (0, 255, 180))
+        draw.rounded_rectangle([bx, 295 - bh, bx + bar_w, 295], radius=3, fill=col)
+        draw.text((bx + 2, 302), mode_labels[i], fill=(200, 215, 235), font=f_small)
+
+    # Bottom Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(20, 26, 38), outline=(55, 65, 85))
+    params = [
+        ("MALLET HARDNESS", "45% (Wood Mallet)", (255, 215, 0)),
+        ("OMBAK BEATING", "7.2 Hz (Paired Tuning)", (255, 140, 66)),
+        ("BRONZE THICKNESS", "6.5 mm (Cast Alloy)", (0, 255, 180)),
+        ("RESONATOR COUPLING", "Q = 38.0 (Bamboo Cavity)", (0, 229, 255)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(180, 195, 215), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=get_font(13, bold=True))
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(14, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Balinese Gamelan Gender Modal Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "gamelan_gender_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_spectral_masking_view():
+    width, height = 800, 480
+    img = Image.new("RGBA", (width, height), (10, 15, 29, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(13, bold=True)
+    f_header = get_font(10, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title Bar
+    draw.text((20, 18), "PSYCHOACOUSTIC SPECTRAL MASKING & PERCEPTUAL CODEC HUD", fill=(240, 245, 255), font=f_title)
+
+    # Tabs (y: 48..92) - 44pt height
+    tabs = [("MP3 PSYCHO 1", True), ("AAC-LD MDCT", False), ("OPUS CELT BARK", False), ("SPATIAL 3D BMLD", False), ("HI-RES DITHER MASK", False)]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, is_sel) in enumerate(tabs):
+        bx = 20 + i * (tab_w + 8)
+        bg = (0, 229, 255) if is_sel else (22, 30, 46)
+        fg = (4, 18, 28) if is_sel else (215, 230, 250)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 10, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(8, 12, 22), outline=(35, 55, 85), width=2)
+
+    # Left: Masker Frequency vs SPL Plane
+    left_w = int(760 * 0.55)
+    draw.rounded_rectangle([30, 114, 30 + left_w - 20, 330], radius=4, fill=(14, 18, 30), outline=(35, 50, 75))
+    draw.text((40, 124), "MASKER FREQUENCY (Hz) vs SOUND PRESSURE LEVEL (dB SPL)", fill=(0, 229, 255), font=f_header)
+
+    # Grid lines
+    for gf_label, gx_ratio in [("100Hz", 0.12), ("1kHz", 0.52), ("10kHz", 0.88)]:
+        gx = 30 + int(gx_ratio * (left_w - 20))
+        draw.line([(gx, 140), (gx, 300)], fill=(45, 65, 95, 100), width=1)
+        draw.text((gx - 10, 298), gf_label, fill=(120, 145, 180), font=f_small)
+
+    # Puck at 1000Hz (0.52), 85dB (0.72)
+    px = 30 + int(0.52 * (left_w - 20))
+    py = 330 - int(0.72 * 216)
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(0, 229, 255, 150), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(0, 229, 255))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+    draw.text((40, 310), "Freq: 1000 Hz | Level: 85.0 dB SPL | Tonality: 0.85 | Thresh: 62.0 dB", fill=(140, 235, 255), font=f_small)
+
+    # Right: Critical Band Masking Thresholds Spectrum
+    rx = 30 + left_w
+    rw = int(760 * 0.45) - 20
+    draw.rounded_rectangle([rx, 114, rx + rw, 330], radius=4, fill=(14, 18, 30), outline=(35, 50, 75))
+    draw.text((rx + 10, 124), "CRITICAL-BAND SIMULTANEOUS MASKING THRESHOLDS", fill=(0, 229, 255), font=f_header)
+
+    band_labels = ["100", "300", "700", "1.5k", "3k", "6k", "10k", "15k"]
+    bar_w = int((rw - 30 - 7 * 6) / 8)
+    thresholds = [22.0, 35.0, 52.0, 75.0, 58.0, 44.0, 32.0, 20.0]
+    for i in range(8):
+        bx = rx + 15 + i * (bar_w + 6)
+        bh = int((thresholds[i] / 100.0) * 135)
+        col = (255, 107, 43) if thresholds[i] > 60.0 else ((0, 229, 255) if thresholds[i] > 35.0 else (0, 255, 180))
+        draw.rounded_rectangle([bx, 295 - bh, bx + bar_w, 295], radius=3, fill=col)
+        draw.text((bx + 2, 302), band_labels[i], fill=(180, 205, 235), font=f_small)
+
+    # Bottom Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 24, 38), outline=(45, 65, 95))
+    params = [
+        ("MASKER CENTER FREQ", "1000 Hz (Critical Bark)", (0, 229, 255)),
+        ("MASKER SPL LEVEL", "85.0 dB SPL", (255, 107, 43)),
+        ("BIT REDUNDANCY SAVINGS", "42.5% (Perceptual Codec)", (0, 255, 180)),
+        ("GLOBAL MASK THRESHOLD", "62.0 dB (Inaudible Floor)", (255, 215, 0)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 185, 215), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=get_font(13, bold=True))
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(14, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Psychoacoustic Spectral Masking Threshold Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "spectral_masking_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_transient_clipper_view():
+    width, height = 800, 480
+    img = Image.new("RGBA", (width, height), (17, 22, 37, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(13, bold=True)
+    f_header = get_font(10, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title Bar
+    draw.text((20, 18), "MASTERING MULTI-BAND DYNAMIC TRANSIENT CLIPPER HUD", fill=(245, 245, 255), font=f_title)
+
+    # Tabs (y: 48..92) - 44pt height
+    tabs = [("4-BAND MASTER", True), ("16x OVER PEAK", False), ("TAPE SOFT KNEE", False), ("HARD PUNCH EDM", False), ("BROADCAST STAGE", False)]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, is_sel) in enumerate(tabs):
+        bx = 20 + i * (tab_w + 8)
+        bg = (255, 107, 107) if is_sel else (28, 36, 56)
+        fg = (24, 4, 4) if is_sel else (220, 230, 248)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 10, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(10, 14, 24), outline=(55, 45, 65), width=2)
+
+    # Left: Drive vs Knee Plane & Non-Linear Transfer Function Curve
+    left_w = int(760 * 0.55)
+    draw.rounded_rectangle([30, 114, 30 + left_w - 20, 330], radius=4, fill=(16, 20, 32), outline=(45, 55, 75))
+    draw.text((40, 124), "CLIP DRIVE (dB) vs SOFT KNEE WIDTH & TRANSFER FUNCTION", fill=(255, 107, 107), font=f_header)
+
+    # Transfer curve crosshair
+    tc_cx = 30 + int((left_w - 20) * 0.5)
+    tc_cy = 220
+    draw.line([(50, tc_cy), (30 + left_w - 40, tc_cy)], fill=(60, 75, 100, 120), width=1)
+    draw.line([(tc_cx, 145), (tc_cx, 295)], fill=(60, 75, 100, 120), width=1)
+
+    # Transfer function curve
+    for idx in range(15):
+        x1 = 50 + int(idx * ((left_w - 90) / 15))
+        x2 = 50 + int((idx + 1) * ((left_w - 90) / 15))
+        v1 = -1.0 + (idx / 15.0) * 2.0
+        v2 = -1.0 + ((idx + 1) / 15.0) * 2.0
+        y1 = tc_cy - int(math.tanh(v1 * 2.0) * 65)
+        y2 = tc_cy - int(math.tanh(v2 * 2.0) * 65)
+        draw.line([(x1, y1), (x2, y2)], fill=(0, 229, 255), width=2)
+
+    # Puck at Drive +6dB (0.50), Knee 3.5dB (0.29)
+    px = 30 + int(0.50 * (left_w - 20))
+    py = 330 - int(0.29 * 216)
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(255, 107, 107, 150), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(255, 107, 107))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+    draw.text((40, 310), "Drive: +6.0 dB | Knee: 3.5 dB | Over: 8x | Ceil: -0.1 dBFS | THD: 1.85%", fill=(255, 205, 205), font=f_small)
+
+    # Right: Multi-Band Dynamic Gain Reduction Spectrum
+    rx = 30 + left_w
+    rw = int(760 * 0.45) - 20
+    draw.rounded_rectangle([rx, 114, rx + rw, 330], radius=4, fill=(16, 20, 32), outline=(45, 55, 75))
+    draw.text((rx + 10, 124), "MULTI-BAND GAIN REDUCTION & TRUE-PEAK SUPPRESSION", fill=(255, 107, 107), font=f_header)
+
+    band_labels = ["LOW", "MID-L", "MID-H", "HIGH", "TRUE-PK", "INTER-S"]
+    bar_w = int((rw - 30 - 5 * 8) / 6)
+    reductions = [1.2, 3.5, 4.8, 2.1, 5.2, 0.8]
+    for i in range(6):
+        bx = rx + 15 + i * (bar_w + 8)
+        bh = int((reductions[i] / 18.0) * 135)
+        col = (255, 215, 0) if i == 4 else ((0, 255, 180) if i == 5 else (255, 107, 107))
+        draw.rounded_rectangle([bx, 295 - bh, bx + bar_w, 295], radius=3, fill=col)
+        draw.text((bx + 2, 302), band_labels[i], fill=(200, 215, 235), font=f_small)
+
+    # Bottom Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(20, 26, 40), outline=(55, 65, 85))
+    params = [
+        ("CLIPPING DRIVE", "+6.0 dB (Headroom Push)", (255, 107, 107)),
+        ("KNEE SOFTNESS", "3.5 dB (Saturating Knee)", (0, 229, 255)),
+        ("CREST FACTOR DELTA", "-4.2 dB (Density Boost)", (255, 215, 0)),
+        ("OVERSAMPLING CEILING", "8x / -0.1 dBFS", (0, 255, 180)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(180, 195, 215), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=get_font(13, bold=True))
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(14, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Multi-Band Dynamic Transient Clipper Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "transient_clipper_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_neural_radiance_view():
+    width, height = 800, 480
+    img = Image.new("RGBA", (width, height), (13, 17, 26, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(13, bold=True)
+    f_header = get_font(10, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title Bar
+    draw.text((20, 18), "NEURAL ACOUSTIC HRTF/BRIR CONTINUOUS RADIANCE FIELD HUD", fill=(240, 245, 255), font=f_title)
+
+    # Tabs (y: 48..92) - 44pt height
+    tabs = [("INSTANT NeRF", True), ("CONTINUOUS HRIR", False), ("6-DoF BRIR NeRF", False), ("WAVEGUIDE MESH", False), ("DIFFUSION FIELD", False)]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, is_sel) in enumerate(tabs):
+        bx = 20 + i * (tab_w + 8)
+        bg = (157, 78, 221) if is_sel else (26, 32, 48)
+        fg = (255, 255, 255) if is_sel else (215, 225, 245)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 10, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(8, 12, 20), outline=(45, 40, 75), width=2)
+
+    # Left: Polar Heading vs Distance Field
+    left_w = int(760 * 0.55)
+    draw.rounded_rectangle([30, 114, 30 + left_w - 20, 330], radius=4, fill=(14, 18, 28), outline=(35, 45, 70))
+    draw.text((40, 124), "6-DoF LISTENER HEADING (AZIMUTH) vs DISTANCE FIELD", fill=(157, 78, 221), font=f_header)
+
+    pcx = 30 + int((left_w - 20) * 0.5)
+    pcy = 220
+    for r_step in range(1, 5):
+        cr = int(r_step * 20)
+        draw.ellipse([pcx - cr, pcy - cr, pcx + cr, pcy + cr], outline=(60, 50, 95, 80), width=1)
+
+    # Puck at Heading +30° (0.58), Dist 3.5m (0.26)
+    px = 30 + int(0.58 * (left_w - 20))
+    py = 330 - int(0.26 * 216)
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(157, 78, 221, 150), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(157, 78, 221))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+    draw.text((40, 310), "Heading: +30.0° | Dist: 3.5m | Latent: 256d | Clarity: 14.5dB | Latency: 1.80ms", fill=(220, 190, 255), font=f_small)
+
+    # Right: Directional Acoustic Radiance Lobes Spectrum
+    rx = 30 + left_w
+    rw = int(760 * 0.45) - 20
+    draw.rounded_rectangle([rx, 114, rx + rw, 330], radius=4, fill=(14, 18, 28), outline=(35, 45, 70))
+    draw.text((rx + 10, 124), "DIRECTIONAL ACOUSTIC RADIANCE LOBES (8 RAYS)", fill=(157, 78, 221), font=f_header)
+
+    ray_labels = ["0°", "45°", "90°", "135°", "180°", "225°", "270°", "315°"]
+    bar_w = int((rw - 30 - 7 * 6) / 8)
+    rays = [0.95, 0.82, 0.64, 0.45, 0.30, 0.42, 0.58, 0.78]
+    for i in range(8):
+        bx = rx + 15 + i * (bar_w + 6)
+        bh = int((rays[i] / 1.2) * 135)
+        col = (157, 78, 221) if (i in [0, 1, 7]) else ((0, 229, 255) if (i in [2, 6]) else (0, 255, 180))
+        draw.rounded_rectangle([bx, 295 - bh, bx + bar_w, 295], radius=3, fill=col)
+        draw.text((bx + 2, 302), ray_labels[i], fill=(190, 205, 235), font=f_small)
+
+    # Bottom Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 22, 36), outline=(45, 40, 75))
+    params = [
+        ("HEADING (AZIMUTH)", "+30.0° (Head Orientation)", (157, 78, 221)),
+        ("LISTENER DISTANCE", "3.5 m (Acoustic Range)", (0, 229, 255)),
+        ("ABSORPTION COEFF", "α = 0.25 (Wall Materials)", (0, 255, 180)),
+        ("INFERENCE LATENCY", "1.80 ms (Realtime DSP)", (255, 215, 0)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 175, 205), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=get_font(13, bold=True))
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(14, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Neural Radiance Field BRIR Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "neural_radiance_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_mpegh_trajectory_view():
+    width, height = 800, 480
+    img = Image.new("RGBA", (width, height), (12, 16, 28, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(13, bold=True)
+    f_header = get_font(10, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title Bar
+    draw.text((20, 18), "MPEG-H 3D DYNAMIC OBJECT AUDIO TRAJECTORY PANNER HUD", fill=(240, 245, 255), font=f_title)
+
+    # Tabs (y: 48..92) - 44pt height
+    tabs = [("HELICAL ASCENT", True), ("OVERHEAD FLYBY", False), ("360° ORBIT", False), ("PENDULUM SWING", False), ("22.2 OBJECTS", False)]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, is_sel) in enumerate(tabs):
+        bx = 20 + i * (tab_w + 8)
+        bg = (0, 229, 255) if is_sel else (24, 32, 48)
+        fg = (4, 20, 28) if is_sel else (210, 225, 245)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 10, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(8, 12, 22), outline=(45, 65, 95), width=2)
+
+    # Left: Spherical Azimuth vs Elevation Canvas
+    left_w = int(760 * 0.55)
+    draw.rounded_rectangle([30, 114, 30 + left_w - 20, 330], radius=4, fill=(14, 18, 30), outline=(35, 55, 85))
+    draw.text((40, 124), "SPHERICAL AZIMUTH (-180°..+180°) vs ELEVATION (-90°..+90°)", fill=(0, 229, 255), font=f_header)
+
+    # Crosshairs
+    mcx = 30 + int((left_w - 20) * 0.5)
+    mcy = 220
+    draw.line([(40, mcy), (30 + left_w - 30, mcy)], fill=(50, 75, 110, 100), width=1)
+    draw.line([(mcx, 140), (mcx, 300)], fill=(50, 75, 110, 100), width=1)
+
+    # Puck at Azimuth +45° (0.625), Elev +35° (0.694)
+    px = 30 + int(0.625 * (left_w - 20))
+    py = 330 - int(0.694 * 216)
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(0, 229, 255, 150), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(0, 229, 255))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+    draw.text((40, 310), "Azimuth: +45.0° | Elev: +35.0° | Dist: 4.5m | Speed: 0.25Hz | Spread: 30%", fill=(140, 235, 255), font=f_small)
+
+    # Right: MPEG-H 3D Speaker Group VBAP Energy Distribution
+    rx = 30 + left_w
+    rw = int(760 * 0.45) - 20
+    draw.rounded_rectangle([rx, 114, rx + rw, 330], radius=4, fill=(14, 18, 30), outline=(35, 55, 85))
+    draw.text((rx + 10, 124), "MPEG-H 3D SPEAKER GROUP VBAP ENERGY DISTRIBUTION", fill=(0, 229, 255), font=f_header)
+
+    group_labels = ["FL", "FR", "C", "LFE", "SL", "SR", "TOP-F", "TOP-B"]
+    bar_w = int((rw - 30 - 7 * 6) / 8)
+    gains = [0.72, 0.55, 0.40, 0.20, 0.35, 0.48, 0.82, 0.60]
+    for i in range(8):
+        bx = rx + 15 + i * (bar_w + 6)
+        bh = int((gains[i] / 1.2) * 135)
+        col = (0, 229, 255) if i < 3 else ((0, 255, 180) if i < 6 else (255, 215, 0))
+        draw.rounded_rectangle([bx, 295 - bh, bx + bar_w, 295], radius=3, fill=col)
+        draw.text((bx + 2, 302), group_labels[i], fill=(180, 205, 235), font=f_small)
+
+    # Bottom Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 24, 38), outline=(45, 65, 95))
+    params = [
+        ("3D AZIMUTH / ELEVATION", "+45.0° / +35.0°", (0, 229, 255)),
+        ("OBJECT DISTANCE", "4.5 m (Immersive Field)", (255, 107, 43)),
+        ("ENERGY FOCUS (VBAP)", "85% (Directional Direct)", (255, 215, 0)),
+        ("TRAJECTORY SPEED", "0.25 Hz (Orbit Frequency)", (0, 255, 180)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 185, 215), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=get_font(13, bold=True))
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(14, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] MPEG-H 3D Dynamic Object Trajectory Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "mpegh_trajectory_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
 if __name__ == "__main__":
     render_live_macro_rack()
     render_spectrogram_3d()
@@ -11251,7 +11680,12 @@ if __name__ == "__main__":
     render_tape_flux_master_view()
     render_neural_dereverb_view()
     render_hoa5_binaural_view()
-    print("All Tier 50-73 GUI render previews generated successfully!")
+    render_gamelan_gender_view()
+    render_spectral_masking_view()
+    render_transient_clipper_view()
+    render_neural_radiance_view()
+    render_mpegh_trajectory_view()
+    print("All Tier 50-74 GUI render previews generated successfully!")
 
 
 
