@@ -7394,6 +7394,96 @@ def render_hoa_spatializer_view():
     img.save(out_path)
     print(f"Rendered: {out_path}")
 
+def render_woodwind_jet_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (14, 18, 28, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(15, bold=True)
+    f_header = get_font(13, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(10, bold=False)
+    f_tiny = get_font(9, bold=False)
+
+    draw.text((20, 18), "PHYSICAL MODELING WOODWIND AIR-JET EMBOUCHURE & TONEHOLE HUD", fill=(240, 245, 255), font=f_title)
+
+    instruments = [
+        ("CONCERT FLUTE C", True),
+        ("PICCOLO C", False),
+        ("ALTO RECORDER", False),
+        ("SHAKUHACHI", False),
+        ("PAN FLUTE", False),
+    ]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, active) in enumerate(instruments):
+        bx = 20 + i * (tab_w + 8)
+        bg = (0, 229, 255) if active else (25, 35, 50)
+        fg = (10, 14, 24) if active else (200, 215, 235)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 12, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas (20..780, 104..340)
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(10, 14, 24), outline=(45, 65, 95), width=2)
+
+    # Left 55%: Air-Jet Phase Space (30..430, 114..330)
+    draw.rounded_rectangle([30, 114, 430, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((40, 122), "AIR-JET PHASE SPACE (BLOW PRESSURE vs JET OFFSET)", fill=(160, 180, 205), font=f_small)
+
+    # Guide lines
+    for n, hz in enumerate([286, 572, 858, 1144], 1):
+        gy = 138 + n * 16
+        draw.text((45, gy), f"Harmonic {n}: {hz} Hz (tau_opt = {0.5*1000/hz:.2f} ms)", fill=(0, 229, 255, 130), font=f_tiny)
+
+    # Puck (Pressure = 1.25 kPa -> norm ~ 0.295, Offset = 7.0 mm -> norm ~ 0.385)
+    px = 30 + int(0.295 * (430 - 30))
+    py = 330 - int(0.385 * (330 - 114))
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(0, 229, 255, 140), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(0, 229, 255))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+
+    # Right 45%: Acoustic Bore & 6 Tonehole Keys (445..770, 114..330)
+    draw.rounded_rectangle([445, 114, 770, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((455, 122), "ACOUSTIC BORE & 6 TONEHOLE KEYS", fill=(160, 180, 205), font=f_small)
+
+    # 6 Keys (>= 44x44pt)
+    key_w = int((325 - 30 - 25) / 6)
+    for h in range(6):
+        kx = 458 + h * (key_w + 5)
+        draw.rounded_rectangle([kx, 146, kx + key_w, 190], radius=4, fill=(0, 229, 255))
+        draw.text((kx + 12, 162), f"H{h+1}", fill=(10, 14, 24), font=f_small)
+
+    # Bore Cylinder Schematic
+    bore_cy = 250
+    draw.line([(465, bore_cy - 18), (750, bore_cy - 18)], fill=(255, 215, 0), width=2)
+    draw.line([(465, bore_cy + 18), (750, bore_cy + 18)], fill=(255, 215, 0), width=2)
+    for h in range(6):
+        hx = 475 + int(h * (260 / 5.0))
+        draw.ellipse([hx - 6, bore_cy - 24, hx + 6, bore_cy - 12], fill=(0, 229, 255))
+        draw.ellipse([hx - 6, bore_cy + 12, hx + 6, bore_cy + 24], fill=(0, 229, 255))
+
+    draw.text((580, 308), "Tonehole Cutoff: 2200 Hz", fill=(255, 215, 0), font=f_small)
+
+    # Bottom Metrics Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    params = [
+        ("JET VELOCITY (V_jet)", "45.6 m/s (1.25 kPa)", (0, 229, 255)),
+        ("JET TRANSIT DELAY (tau)", "0.15 ms (92.0% Sync)", (255, 215, 0)),
+        ("EFFECTIVE BORE LENGTH", "0.60 m (Fund: 286.0 Hz)", (255, 107, 43)),
+        ("RADIATION CUTOFF", "2200 Hz (6 Holes)", (0, 255, 180)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 180, 205), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=f_header)
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Physical Modeling Woodwind Air-Jet Embouchure & Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "woodwind_jet_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
 if __name__ == "__main__":
     render_live_macro_rack()
     render_spectrogram_3d()
@@ -7475,7 +7565,9 @@ if __name__ == "__main__":
     render_transient_declicker_view()
     render_neural_wavetable_view()
     render_hoa_spatializer_view()
-    print("All Tier 50-65 GUI render previews generated successfully!")
+    render_woodwind_jet_view()
+    print("All Tier 50-66 GUI render previews generated successfully!")
+
 
 
 

@@ -259,6 +259,10 @@ pub use views::tube_bias_view::TubeBiasView;
 pub use views::upward_compressor_view::UpwardCompressorView;
 #[cfg(feature = "gui")]
 pub use views::vocoder_matrix_view::VocoderMatrixView;
+#[cfg(feature = "gui")]
+pub use views::waveguide_brass_view::WaveguideBrassView;
+#[cfg(feature = "gui")]
+pub use views::woodwind_jet_view::WoodwindJetView;
 
 #[cfg(feature = "gui")]
 pub fn launch(
