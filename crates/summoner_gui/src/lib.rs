@@ -107,6 +107,8 @@ pub mod tier69_tests;
 #[cfg(feature = "gui")]
 pub mod tier70_tests;
 #[cfg(feature = "gui")]
+pub mod tier71_tests;
+#[cfg(feature = "gui")]
 pub mod touch_gestures;
 #[cfg(feature = "gui")]
 pub mod transport_bar;
@@ -147,6 +149,8 @@ pub use views::dialog_gating_view::DialogGatingView;
 pub use views::dpi_scale_panel::DpiScalePanelView;
 #[cfg(feature = "gui")]
 pub use views::dsp_rack_dock::DspRackDockView;
+#[cfg(feature = "gui")]
+pub use views::dynamic_crest_shaper_view::DynamicCrestShaperView;
 #[cfg(feature = "gui")]
 pub use views::ebu_loudness_radar_view::EbuLoudnessRadarView;
 #[cfg(feature = "gui")]
@@ -192,6 +196,8 @@ pub use views::macro_rotary_dial::MacroRotaryDialView;
 #[cfg(feature = "gui")]
 pub use views::master_limiter_radar_view::MasterLimiterRadarView;
 #[cfg(feature = "gui")]
+pub use views::mbira_kalimba_view::MbiraKalimbaView;
+#[cfg(feature = "gui")]
 pub use views::membrane_plate_view::MembranePlateView;
 #[cfg(feature = "gui")]
 pub use views::membrane_resonator_view::MembraneResonatorView;
@@ -225,6 +231,8 @@ pub use views::neural_speech_to_singing_view::NeuralSpeechToSingingView;
 pub use views::neural_timbre_morph_view::NeuralTimbreMorphView;
 #[cfg(feature = "gui")]
 pub use views::neural_timbre_view::NeuralTimbreView;
+#[cfg(feature = "gui")]
+pub use views::neural_vocal_stylizer_view::NeuralVocalStylizerView;
 #[cfg(feature = "gui")]
 pub use views::neural_vocoder_morph_view::NeuralVocoderMorphView;
 #[cfg(feature = "gui")]
@@ -271,6 +279,8 @@ pub use views::spatial_panner_view::SpatialPannerView;
 pub use views::spectral_aligner_view::SpectralAlignerView;
 #[cfg(feature = "gui")]
 pub use views::spectral_brush_editor::SpectralBrushEditorView;
+#[cfg(feature = "gui")]
+pub use views::spectral_debleed_view::SpectralDebleedView;
 #[cfg(feature = "gui")]
 pub use views::spectral_deesser_view::SpectralDeEsserView;
 #[cfg(feature = "gui")]
@@ -323,6 +333,8 @@ pub use views::vari_mu_master_view::VariMuMasterView;
 pub use views::vocoder_matrix_view::VocoderMatrixView;
 #[cfg(feature = "gui")]
 pub use views::waveguide_brass_view::WaveguideBrassView;
+#[cfg(feature = "gui")]
+pub use views::wfs_array_spatializer_view::WfsArraySpatializerView;
 #[cfg(feature = "gui")]
 pub use views::woodwind_jet_view::WoodwindJetView;
 

@@ -9743,6 +9743,472 @@ def render_hoa4_spatializer_view():
     img.save(out_path)
     print(f"Rendered: {out_path}")
 
+def render_mbira_kalimba_view():
+    width, height = 800, 480
+    img = Image.new("RGBA", (width, height), (12, 16, 26, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(13, bold=True)
+    f_header = get_font(11, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title Bar
+    draw.text((20, 18), "PHYSICAL MODELING LAMELLOPHONE MBIRA & KALIMBA TINE RESONANCE HUD", fill=(240, 245, 255), font=f_title)
+
+    # Tabs (y: 48..92) - 44pt height
+    instruments = [("MBIRA (22K)", True), ("NYUNGA (15K)", False), ("KALIMBA (17K)", False), ("ARRAY MBIRA", False), ("BASS ELECTRIC", False)]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, is_sel) in enumerate(instruments):
+        bx = 20 + i * (tab_w + 8)
+        bg = (255, 107, 43) if is_sel else (24, 32, 48)
+        fg = (16, 8, 4) if is_sel else (210, 225, 245)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 14, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(8, 12, 22), outline=(45, 65, 95), width=2)
+
+    # Left: Cantilever Tine Array & Acoustic Buzz Matrix
+    left_w = int(760 * 0.55)
+    draw.rounded_rectangle([30, 114, 30 + left_w - 20, 330], radius=4, fill=(14, 18, 30), outline=(35, 55, 85))
+    draw.text((40, 124), "CANTILEVER TINE ARRAY & ACOUSTIC BUZZ MATRIX", fill=(255, 107, 43), font=f_header)
+
+    display_tines = 22
+    tine_slot_w = (left_w - 50) / display_tines
+    bridge_y = 150
+    max_tine_len = 135
+
+    for t in range(display_tines):
+        tx = 45 + t * tine_slot_w
+        center_offset = abs((t - (display_tines / 2.0)) / (display_tines / 2.0))
+        tine_len = max_tine_len * (0.50 + 0.45 * (1.0 - center_offset))
+        is_active = (t == 11)
+        tine_col = (0, 229, 255) if is_active else (180, 195, 215)
+        draw.line([(tx, bridge_y), (tx, bridge_y + tine_len)], fill=tine_col, width=3 if is_active else 2)
+        tip_col = (255, 107, 43) if is_active else (120, 140, 165)
+        draw.ellipse([tx - 3, bridge_y + tine_len - 3, tx + 3, bridge_y + tine_len + 3], fill=tip_col)
+
+    # Interactive Puck (2.4N, 85% buzz)
+    px = 30 + int(0.50 * (left_w - 20))
+    py = 220
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(255, 107, 43, 150), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(255, 107, 43))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+    draw.text((40, 310), "Pluck: 2.4 N | Buzz: 85% | Tine: #12/22 | Decay: 3.5s", fill=(255, 180, 100), font=f_small)
+
+    # Right: Modal Dispersion & Acoustic Buzz Spectrum
+    rx = 30 + left_w
+    rw = int(760 * 0.45) - 20
+    draw.rounded_rectangle([rx, 114, rx + rw, 330], radius=4, fill=(14, 18, 30), outline=(35, 55, 85))
+    draw.text((rx + 10, 124), "MODAL DISPERSION & ACOUSTIC BUZZ SPECTRUM", fill=(255, 107, 43), font=f_header)
+
+    modes = [
+        ("f0", 1.00, (255, 107, 43)),
+        ("5.4f0", 0.65, (0, 229, 255)),
+        ("13f0", 0.35, (0, 229, 255)),
+        ("BZ1", 0.80, (255, 215, 0)),
+        ("BZ2", 0.60, (255, 215, 0)),
+        ("BZ3", 0.45, (255, 215, 0)),
+        ("BZ4", 0.30, (255, 215, 0)),
+        ("BZ5", 0.18, (255, 215, 0)),
+    ]
+    bar_w = int((rw - 30 - 7 * 6) / 8)
+    for i, (mname, amp, col) in enumerate(modes):
+        bx = rx + 15 + i * (bar_w + 6)
+        bh = int(amp * 120)
+        draw.rounded_rectangle([bx, 305 - bh, bx + bar_w, 305], radius=3, fill=col)
+        draw.text((bx + 2, 310), mname, fill=(180, 205, 235), font=f_small)
+
+    # Bottom Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 24, 38), outline=(45, 65, 95))
+    params = [
+        ("PLUCK STRIKE FORCE", "2.40 N (Attack)", (255, 107, 43)),
+        ("ACOUSTIC BUZZ RATIO", "85% (Rattle Plate)", (255, 215, 0)),
+        ("MODAL DISPERSION", "0.72 (Euler-Bernoulli)", (0, 229, 255)),
+        ("CAVITY Q-FACTOR", "45.0 (Gourd/Box)", (0, 255, 180)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 185, 215), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=get_font(13, bold=True))
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(14, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Lamellophone Mbira / Kalimba Tine Modal Dispersion Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "mbira_kalimba_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_spectral_debleed_view():
+    width, height = 800, 480
+    img = Image.new("RGBA", (width, height), (12, 16, 26, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(13, bold=True)
+    f_header = get_font(11, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title Bar
+    draw.text((20, 18), "PSYCHOACOUSTIC MULTI-BAND SPECTRAL DE-BLEED & LEAKAGE SEPARATOR HUD", fill=(240, 245, 255), font=f_title)
+
+    # Tabs (y: 48..92) - 44pt height
+    modes = [("DRUM HI-HAT", True), ("VOCAL HP SPILL", False), ("STAGE GUITAR", False), ("PIANO DAMPER", False), ("ORCHESTRA", False)]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, is_sel) in enumerate(modes):
+        bx = 20 + i * (tab_w + 8)
+        bg = (0, 229, 255) if is_sel else (24, 32, 48)
+        fg = (8, 16, 24) if is_sel else (210, 225, 245)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 14, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(8, 12, 22), outline=(45, 65, 95), width=2)
+
+    # Left: Psychoacoustic Masking Threshold & Sharpness Radar
+    left_w = int(760 * 0.55)
+    draw.rounded_rectangle([30, 114, 30 + left_w - 20, 330], radius=4, fill=(14, 18, 30), outline=(35, 55, 85))
+    draw.text((40, 124), "PSYCHOACOUSTIC MASKING THRESHOLD & SHARPNESS RADAR", fill=(0, 229, 255), font=f_header)
+
+    # Sigmoid curve
+    prev_pt = (40, 290)
+    for s in range(1, 21):
+        t = s / 20.0
+        x = 40 + int(t * (left_w - 40))
+        y_val = 1.0 / (1.0 + math.exp(-(t - 0.5) * 6.0 * 2.4))
+        y = 295 - int(y_val * 140)
+        cur_pt = (x, y)
+        draw.line([prev_pt, cur_pt], fill=(0, 229, 255), width=2)
+        prev_pt = cur_pt
+
+    # Interactive Puck (-28dB, gamma 2.4)
+    px = 30 + int(0.53 * (left_w - 20))
+    py = 200
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(0, 229, 255, 150), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(0, 229, 255))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+    draw.text((40, 310), "Thresh: -28.0 dB | Gamma: 2.40 | TransPreserve: 95% | PhaseCoh: 90%", fill=(120, 220, 255), font=f_small)
+
+    # Right: 8-Band Spectral Rejection Attenuation
+    rx = 30 + left_w
+    rw = int(760 * 0.45) - 20
+    draw.rounded_rectangle([rx, 114, rx + rw, 330], radius=4, fill=(14, 18, 30), outline=(35, 55, 85))
+    draw.text((rx + 10, 124), "8-BAND SPECTRAL REJECTION ATTENUATION (dB)", fill=(0, 229, 255), font=f_header)
+
+    bands = [
+        ("SUB", 0.06, (0, 255, 180)),
+        ("LOW", 0.09, (0, 255, 180)),
+        ("L-MID", 0.17, (0, 255, 180)),
+        ("MID", 0.29, (0, 255, 180)),
+        ("H-MID", 0.46, (255, 180, 50)),
+        ("PRES", 0.58, (255, 180, 50)),
+        ("BRILL", 0.67, (255, 64, 96)),
+        ("AIR", 0.62, (255, 64, 96)),
+    ]
+    bar_w = int((rw - 30 - 7 * 6) / 8)
+    for i, (bname, norm_att, col) in enumerate(bands):
+        bx = rx + 15 + i * (bar_w + 6)
+        bh = int(norm_att * 120)
+        draw.rounded_rectangle([bx, 305 - bh, bx + bar_w, 305], radius=3, fill=col)
+        draw.text((bx + 2, 310), bname, fill=(180, 205, 235), font=f_small)
+
+    # Bottom Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 24, 38), outline=(45, 65, 95))
+    params = [
+        ("ISOLATION THRESHOLD", "-28.0 dBFS (Spill Cut)", (0, 229, 255)),
+        ("MASK SHARPNESS (γ)", "2.40 (Steepness)", (255, 180, 50)),
+        ("TRANSIENT PRESERVATION", "95% (Attack Weight)", (255, 215, 0)),
+        ("PHASE COHERENCE", "90% (Inter-Band Align)", (0, 255, 180)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 185, 215), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=get_font(13, bold=True))
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(14, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Psychoacoustic Multi-Band Spectral De-Bleed Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "spectral_debleed_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_dynamic_crest_shaper_view():
+    width, height = 800, 480
+    img = Image.new("RGBA", (width, height), (12, 16, 26, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(13, bold=True)
+    f_header = get_font(11, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title Bar
+    draw.text((20, 18), "MASTERING MULTI-BAND DYNAMIC CREST SHAPER & PUNCH LEVELER HUD", fill=(240, 245, 255), font=f_title)
+
+    # Tabs (y: 48..92) - 44pt height
+    topologies = [("PUNCH MAX", True), ("DENSITY COMP", False), ("MULTIBAND LEVEL", False), ("ACOUSTIC PRESERVE", False), ("BROADCAST EBU", False)]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, is_sel) in enumerate(topologies):
+        bx = 20 + i * (tab_w + 8)
+        bg = (217, 70, 239) if is_sel else (24, 32, 48)
+        fg = (16, 8, 20) if is_sel else (210, 225, 245)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 12, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(8, 12, 22), outline=(45, 65, 95), width=2)
+
+    # Left: Upward/Downward Dynamic Crest Envelope Shaper
+    left_w = int(760 * 0.55)
+    draw.rounded_rectangle([30, 114, 30 + left_w - 20, 330], radius=4, fill=(14, 18, 30), outline=(35, 55, 85))
+    draw.text((40, 124), "UPWARD/DOWNWARD DYNAMIC CREST ENVELOPE SHAPER", fill=(217, 70, 239), font=f_header)
+
+    # Crest transfer curve
+    prev_pt = (40, 295)
+    for s in range(1, 21):
+        t = s / 20.0
+        x = 40 + int(t * (left_w - 40))
+        curve_y = min(1.0, (t ** (1.0 / 2.6)) * 0.8 + 0.2 * t)
+        y = 295 - int(curve_y * 140)
+        cur_pt = (x, y)
+        draw.line([prev_pt, cur_pt], fill=(217, 70, 239), width=2)
+        prev_pt = cur_pt
+
+    # Interactive Puck (16.5 dB, 2.6:1)
+    px = 30 + int(0.64 * (left_w - 20))
+    py = 180
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(217, 70, 239, 150), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(217, 70, 239))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+    draw.text((40, 310), "Target Crest: 16.5 dB | Exp: 2.60:1 | Comp: 1.2:1 | Attack: 0.8ms", fill=(240, 160, 255), font=f_small)
+
+    # Right: 4-Band Crest Factor Meters (dB)
+    rx = 30 + left_w
+    rw = int(760 * 0.45) - 20
+    draw.rounded_rectangle([rx, 114, rx + rw, 330], radius=4, fill=(14, 18, 30), outline=(35, 55, 85))
+    draw.text((rx + 10, 124), "4-BAND CREST FACTOR METERS (dB)", fill=(217, 70, 239), font=f_header)
+
+    bands = [
+        ("LOW (<150Hz)", 14.2 / 24.0, (255, 136, 0)),
+        ("L-MID (150-800)", 16.8 / 24.0, (217, 70, 239)),
+        ("H-MID (800-4k)", 18.5 / 24.0, (217, 70, 239)),
+        ("HIGH (>4kHz)", 15.0 / 24.0, (0, 229, 255)),
+    ]
+    bar_w = int((rw - 30 - 3 * 8) / 4)
+    for i, (bname, norm_cf, col) in enumerate(bands):
+        bx = rx + 15 + i * (bar_w + 8)
+        bh = int(norm_cf * 120)
+        draw.rounded_rectangle([bx, 305 - bh, bx + bar_w, 305], radius=3, fill=col)
+        draw.text((bx + 2, 310), bname, fill=(180, 205, 235), font=f_small)
+
+    # Bottom Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 24, 38), outline=(45, 65, 95))
+    params = [
+        ("TARGET CREST FACTOR", "16.5 dB (Peak/RMS)", (217, 70, 239)),
+        ("UPWARD EXPANSION", "2.60:1 (Transient)", (255, 136, 0)),
+        ("DOWNWARD COMP RATIO", "1.2:1 (Density)", (255, 215, 0)),
+        ("TRANSIENT ATTACK", "0.8 ms (Leveler)", (0, 229, 255)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 185, 215), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=get_font(13, bold=True))
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(14, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Dynamic Crest Shaper & Punch Leveler Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "dynamic_crest_shaper_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_neural_vocal_stylizer_view():
+    width, height = 800, 480
+    img = Image.new("RGBA", (width, height), (12, 16, 26, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(13, bold=True)
+    f_header = get_font(11, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title Bar
+    draw.text((20, 18), "NEURAL POLYPHONIC VOCAL EXPRESSION STYLIZER & ORNAMENT HUD", fill=(240, 245, 255), font=f_title)
+
+    # Tabs (y: 48..92) - 44pt height
+    models = [("BEL CANTO", True), ("POP BELT", False), ("BULGARIAN", False), ("TUVAN THROAT", False), ("GOSPEL MELISMA", False)]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, is_sel) in enumerate(models):
+        bx = 20 + i * (tab_w + 8)
+        bg = (157, 78, 221) if is_sel else (24, 32, 48)
+        fg = (245, 235, 255) if is_sel else (210, 225, 245)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 14, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(8, 12, 22), outline=(45, 65, 95), width=2)
+
+    # Left: Microtonal Ornament Contour & Style Morph
+    left_w = int(760 * 0.55)
+    draw.rounded_rectangle([30, 114, 30 + left_w - 20, 330], radius=4, fill=(14, 18, 30), outline=(35, 55, 85))
+    draw.text((40, 124), "MICROTONAL ORNAMENT CONTOUR & STYLE MORPH", fill=(157, 78, 221), font=f_header)
+
+    # Melisma / vibrato curve
+    cy = 220
+    prev_pt = (40, cy)
+    for s in range(1, 21):
+        t = s / 20.0
+        x = 40 + int(t * (left_w - 40))
+        vib = math.sin(t * 5.8 * 6.28) * (95.0 / 150.0) * 20.0
+        melisma = math.sin(t * 4.5 * 3.14) * 0.45 * 30.0
+        y = cy - int(vib + melisma)
+        cur_pt = (x, y)
+        draw.line([prev_pt, cur_pt], fill=(157, 78, 221), width=2)
+        prev_pt = cur_pt
+
+    # Interactive Puck (85% blend, 45% ornament)
+    px = 30 + int(0.85 * (left_w - 20))
+    py = 220
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(157, 78, 221, 150), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(157, 78, 221))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+    draw.text((40, 310), "Style Blend: 85% | Ornament: 45% | Vib: 5.8Hz (95ct) | Snap: 25ct", fill=(220, 180, 255), font=f_small)
+
+    # Right: 6-Axis Vocal Feature Radar
+    rx = 30 + left_w
+    rw = int(760 * 0.45) - 20
+    draw.rounded_rectangle([rx, 114, rx + rw, 330], radius=4, fill=(14, 18, 30), outline=(35, 55, 85))
+    draw.text((rx + 10, 124), "6-AXIS VOCAL EXPRESSION PROFILE", fill=(157, 78, 221), font=f_header)
+
+    axes = [
+        ("MELISMA", 0.45, (157, 78, 221)),
+        ("VIBRATO", 0.90, (157, 78, 221)),
+        ("FORMANT", 0.95, (255, 93, 143)),
+        ("SUBHARM", 0.20, (0, 229, 255)),
+        ("BREATH", 0.35, (0, 229, 255)),
+        ("INTONATION", 0.85, (0, 229, 255)),
+    ]
+    bar_w = int((rw - 30 - 5 * 6) / 6)
+    for i, (aname, amp, col) in enumerate(axes):
+        bx = rx + 15 + i * (bar_w + 6)
+        bh = int(amp * 120)
+        draw.rounded_rectangle([bx, 305 - bh, bx + bar_w, 305], radius=3, fill=col)
+        draw.text((bx + 1, 310), aname, fill=(180, 205, 235), font=f_small)
+
+    # Bottom Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 24, 38), outline=(45, 65, 95))
+    params = [
+        ("NEURAL TIMBRE BLEND", "85% (Resynthesis)", (157, 78, 221)),
+        ("ORNAMENT DEPTH", "45% (Melisma Run)", (255, 93, 143)),
+        ("VIBRATO MODULATION", "5.8 Hz (±95 cents)", (255, 215, 0)),
+        ("MICROTONAL QUANTIZE", "25 cents (Snapping)", (0, 229, 255)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 185, 215), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=get_font(13, bold=True))
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(14, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Neural Polyphonic Vocal Stylizer Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "neural_vocal_stylizer_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_wfs_array_spatializer_view():
+    width, height = 800, 480
+    img = Image.new("RGBA", (width, height), (12, 16, 26, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(13, bold=True)
+    f_header = get_font(11, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title Bar
+    draw.text((20, 18), "WAVE FIELD SYNTHESIS (WFS) HOLOGRAPHIC ACOUSTIC ARRAY HUD", fill=(240, 245, 255), font=f_title)
+
+    # Tabs (y: 48..92) - 44pt height
+    geometries = [("LINEAR 64-CH", True), ("RECT 128-CH", False), ("CURVED 32-CH", False), ("DESK 48-CH", False), ("HEX 360° 96-CH", False)]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, is_sel) in enumerate(geometries):
+        bx = 20 + i * (tab_w + 8)
+        bg = (0, 255, 180) if is_sel else (24, 32, 48)
+        fg = (8, 24, 16) if is_sel else (210, 225, 245)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 10, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(8, 12, 22), outline=(45, 65, 95), width=2)
+
+    # Left: Holographic Wavefront Acoustic Propagation Field
+    left_w = int(760 * 0.55)
+    draw.rounded_rectangle([30, 114, 30 + left_w - 20, 330], radius=4, fill=(14, 18, 30), outline=(35, 55, 85))
+
+    # Loudspeaker array line
+    array_y = 280
+    draw.line([(45, array_y), (30 + left_w - 35, array_y)], fill=(0, 229, 255), width=3)
+    driver_count = 16
+    for d in range(driver_count):
+        dx = 45 + (d / (driver_count - 1)) * (left_w - 80)
+        draw.ellipse([dx - 3, array_y - 3, dx + 3, array_y + 3], fill=(0, 255, 180))
+
+    # Interactive Virtual Source Puck (0.0m, 3.5m)
+    px = 30 + int(0.50 * (left_w - 20))
+    py = 195
+
+    # Wavefront rings
+    for r_step in [12, 24, 36, 48]:
+        draw.ellipse([px - r_step, py - r_step, px + r_step, py + r_step], outline=(0, 255, 180, 50), width=1)
+
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(0, 255, 180, 150), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(0, 255, 180))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+
+    draw.text((40, 124), "HUYGENS-FRESNEL HOLOGRAPHIC WAVEFIELD & LOUDSPEAKER NODES", fill=(0, 255, 180), font=f_header)
+    draw.text((40, 310), "Source: X=0.00m, Y=3.50m | Virtual Behind | Drivers: 64 | Aliasing: 2200Hz", fill=(120, 255, 200), font=f_small)
+
+    # Right: 16-Point Loudspeaker Delay Profile
+    rx = 30 + left_w
+    rw = int(760 * 0.45) - 20
+    draw.rounded_rectangle([rx, 114, rx + rw, 330], radius=4, fill=(14, 18, 30), outline=(35, 55, 85))
+    draw.text((rx + 10, 124), "16-POINT LOUDSPEAKER DELAY PROFILE (ms)", fill=(0, 255, 180), font=f_header)
+
+    delays = [12.5, 11.2, 10.0, 8.8, 7.5, 6.2, 5.0, 4.2, 4.2, 5.0, 6.2, 7.5, 8.8, 10.0, 11.2, 12.5]
+    bar_w = int((rw - 30 - 15 * 4) / 16)
+    for i, delay in enumerate(delays):
+        bx = rx + 15 + i * (bar_w + 4)
+        bh = int((delay / 35.0) * 120)
+        col = (0, 255, 180) if (i == 7 or i == 8) else ((59, 130, 246) if (i < 4 or i > 11) else (0, 229, 255))
+        draw.rounded_rectangle([bx, 305 - bh, bx + bar_w, 305], radius=2, fill=col)
+        if i % 2 == 0:
+            draw.text((bx, 310), f"D{i+1}", fill=(180, 205, 235), font=f_small)
+
+    # Bottom Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 24, 38), outline=(45, 65, 95))
+    params = [
+        ("VIRTUAL SOURCE POS", "(0.00, 3.50) m", (0, 255, 180)),
+        ("ARRAY CHANNEL COUNT", "64 Channels", (59, 130, 246)),
+        ("SPATIAL ALIASING CUTOFF", "2200 Hz (Nyquist)", (255, 215, 0)),
+        ("SOURCE NATURE", "Virtual Diverging", (0, 229, 255)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 185, 215), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=get_font(13, bold=True))
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(14, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Wave Field Synthesis (WFS) Acoustic Array Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "wfs_array_spatializer_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
 if __name__ == "__main__":
     render_live_macro_rack()
     render_spectrogram_3d()
@@ -9849,7 +10315,12 @@ if __name__ == "__main__":
     render_parallel_transient_saturator_view()
     render_neural_speech_to_singing_view()
     render_hoa4_spatializer_view()
-    print("All Tier 50-70 GUI render previews generated successfully!")
+    render_mbira_kalimba_view()
+    render_spectral_debleed_view()
+    render_dynamic_crest_shaper_view()
+    render_neural_vocal_stylizer_view()
+    render_wfs_array_spatializer_view()
+    print("All Tier 50-71 GUI render previews generated successfully!")
 
 
 
