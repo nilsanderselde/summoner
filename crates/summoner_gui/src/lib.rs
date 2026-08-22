@@ -93,6 +93,8 @@ pub mod tier62_tests;
 #[cfg(feature = "gui")]
 pub mod tier63_tests;
 #[cfg(feature = "gui")]
+pub mod tier64_tests;
+#[cfg(feature = "gui")]
 pub mod touch_gestures;
 #[cfg(feature = "gui")]
 pub mod transport_bar;
@@ -110,9 +112,13 @@ pub use views::bbd_chorus_view::BbdChorusView;
 #[cfg(feature = "gui")]
 pub use views::bezier_automation_editor::BezierAutomationEditorView;
 #[cfg(feature = "gui")]
+pub use views::binaural_brir_view::BinauralBrirView;
+#[cfg(feature = "gui")]
 pub use views::binaural_panner_view::BinauralPannerView;
 #[cfg(feature = "gui")]
 pub use views::bitcrusher_morph_view::BitcrusherMorphView;
+#[cfg(feature = "gui")]
+pub use views::bowed_string_view::BowedStringView;
 #[cfg(feature = "gui")]
 pub use views::comb_resonator_view::CombResonatorView;
 #[cfg(feature = "gui")]
@@ -121,6 +127,8 @@ pub use views::convolution_impulse_view::ConvolutionImpulseView;
 pub use views::convolution_morph_view::ConvolutionMorphView;
 #[cfg(feature = "gui")]
 pub use views::detachable_window_manager::DetachableWindowManagerView;
+#[cfg(feature = "gui")]
+pub use views::dialog_gating_view::DialogGatingView;
 #[cfg(feature = "gui")]
 pub use views::dpi_scale_panel::DpiScalePanelView;
 #[cfg(feature = "gui")]
@@ -137,6 +145,8 @@ pub use views::formant_filter_view::FormantFilterView;
 pub use views::frequency_shifter_view::FrequencyShifterView;
 #[cfg(feature = "gui")]
 pub use views::granular_cloud_view::GranularCloudView;
+#[cfg(feature = "gui")]
+pub use views::granular_freeze_view::GranularFreezeView;
 #[cfg(feature = "gui")]
 pub use views::granular_pitch_shifter_view::GranularPitchShifterView;
 #[cfg(feature = "gui")]
@@ -163,6 +173,8 @@ pub use views::master_limiter_radar_view::MasterLimiterRadarView;
 pub use views::membrane_resonator_view::MembraneResonatorView;
 #[cfg(feature = "gui")]
 pub use views::meter_bridge_view::MeterBridgeView;
+#[cfg(feature = "gui")]
+pub use views::multiband_clipper_view::MultibandClipperView;
 #[cfg(feature = "gui")]
 pub use views::multiband_expander_view::MultibandExpanderView;
 #[cfg(feature = "gui")]

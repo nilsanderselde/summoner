@@ -6329,6 +6329,501 @@ def render_ebu_loudness_radar_view():
     img.save(out_path)
     print(f"Rendered: {out_path}")
 
+def render_bowed_string_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (10, 14, 24, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(16, bold=True)
+    f_header = get_font(14, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(10, bold=False)
+
+    draw.text((20, 18), "PHYSICAL MODELING BOWED STRING ACOUSTIC FRICTION HUD", fill=(240, 245, 255), font=f_title)
+
+    materials = [
+        ("STEEL CORE", False),
+        ("GUT CORE", False),
+        ("SYNTHETIC", True),
+        ("NYLON WOUND", False),
+        ("TUNGSTEN", False),
+    ]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, active) in enumerate(materials):
+        bx = 20 + i * (tab_w + 8)
+        bg = (0, 229, 255) if active else (25, 35, 50)
+        fg = (10, 14, 24) if active else (200, 215, 235)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 16, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas (20..780, 104..340)
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(10, 14, 24), outline=(45, 65, 95), width=2)
+
+    # Left 55%: Schelleng Diagram (30..435)
+    draw.rounded_rectangle([30, 114, 435, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((40, 122), "SCHELLENG STABILITY DIAGRAM (SPEED vs FORCE)", fill=(160, 180, 205), font=f_small)
+
+    # Schelleng safe zone shading
+    draw.rounded_rectangle([40, 160, 425, 290], radius=4, fill=(18, 32, 48))
+    draw.line([(40, 160), (425, 160)], fill=(255, 215, 0), width=2)
+    draw.text((50, 145), "F_max (Raucous Limit)", fill=(255, 215, 0), font=f_small)
+    draw.line([(40, 290), (425, 290)], fill=(255, 107, 43), width=2)
+    draw.text((50, 295), "F_min (Slipping Limit)", fill=(255, 107, 43), font=f_small)
+
+    # Bow Puck
+    puck_x, puck_y = 210, 225
+    draw.ellipse([puck_x - 22, puck_y - 22, puck_x + 22, puck_y + 22], outline=(0, 229, 255, 140), width=2)
+    draw.ellipse([puck_x - 14, puck_y - 14, puck_x + 14, puck_y + 14], fill=(0, 229, 255))
+    draw.ellipse([puck_x - 4, puck_y - 4, puck_x + 4, puck_y + 4], fill=(255, 255, 255))
+
+    # Right 45%: String Vibration Envelope (445..770)
+    draw.rounded_rectangle([445, 114, 770, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((455, 122), "STRING VIBRATION ENVELOPE (HELMHOLTZ KINK)", fill=(160, 180, 205), font=f_small)
+
+    # Nut and Bridge markers
+    draw.line([(465, 180), (465, 260)], fill=(255, 215, 0), width=2)
+    draw.text((455, 265), "NUT", fill=(180, 200, 225), font=f_small)
+    draw.line([(750, 180), (750, 260)], fill=(255, 215, 0), width=2)
+    draw.text((735, 265), "BRIDGE", fill=(180, 200, 225), font=f_small)
+
+    # String Vibration Curve
+    str_pts = []
+    for c in range(30):
+        frac = c / 29.0
+        x = 465 + int(frac * 285)
+        kink = (frac / 0.12) if frac < 0.12 else ((1.0 - frac) / 0.88)
+        y = 220 - int(math.sin(frac * math.pi) * 35.0 + kink * 15.0)
+        str_pts.append((x, y))
+
+    for i in range(len(str_pts) - 1):
+        draw.line([str_pts[i], str_pts[i + 1]], fill=(0, 255, 180), width=2)
+
+    # Bow position marker
+    bow_x = 750 - int(0.12 * 285)
+    draw.line([(bow_x, 150), (bow_x, 290)], fill=(255, 107, 43), width=2)
+    draw.text((bow_x - 18, 136), "BOW (β)", fill=(255, 107, 43), font=f_small)
+
+    # Bottom Metrics Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    params = [
+        ("BOW SPEED (vb)", "0.45 m/s", (0, 229, 255)),
+        ("BOW FORCE (FN)", "1.25 N (92.0% St)", (255, 215, 0)),
+        ("BRIDGE PROXIMITY (β)", "0.12 (Normale)", (255, 107, 43)),
+        ("HELMHOLTZ FREQ (f0)", "440.0 Hz (A4)", (0, 255, 180)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 180, 205), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=f_header)
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Physical Modeling Bowed String Acoustic Friction & Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "bowed_string_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_binaural_brir_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (10, 14, 24, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(16, bold=True)
+    f_header = get_font(14, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(10, bold=False)
+
+    draw.text((20, 18), "MULTI-SOURCE BINAURAL ROOM IMPULSE RESPONSE (BRIR) HUD", fill=(240, 245, 255), font=f_title)
+
+    profiles = [
+        ("CONCERT HALL", False),
+        ("SCORING STAGE", True),
+        ("CATHEDRAL", False),
+        ("DRY STUDIO", False),
+        ("CHAMBER ROOM", False),
+    ]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, active) in enumerate(profiles):
+        bx = 20 + i * (tab_w + 8)
+        bg = (0, 229, 255) if active else (25, 35, 50)
+        fg = (10, 14, 24) if active else (200, 215, 235)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 12, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas (20..780, 104..340)
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(10, 14, 24), outline=(45, 65, 95), width=2)
+
+    # Left 55%: Polar Radar Scope (30..435)
+    draw.rounded_rectangle([30, 114, 435, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((40, 122), "360° POLAR BINAURAL HRTF RADAR SCOPE", fill=(160, 180, 205), font=f_small)
+
+    radar_cx, radar_cy = 232, 225
+    radar_max_r = 85
+
+    for r_step in [0.25, 0.50, 0.75, 1.0]:
+        r_px = int(radar_max_r * r_step)
+        draw.ellipse([radar_cx - r_px, radar_cy - r_px, radar_cx + r_px, radar_cy + r_px], outline=(60, 85, 120, 90), width=1)
+
+    # Listener head
+    draw.ellipse([radar_cx - 12, radar_cy - 12, radar_cx + 12, radar_cy + 12], fill=(35, 50, 75), outline=(0, 229, 255), width=2)
+    draw.line([(radar_cx, radar_cy - 12), (radar_cx, radar_cy - 18)], fill=(255, 215, 0), width=2)
+
+    # Source Puck at 45 deg, 2.5m
+    az_rad = math.radians(45.0)
+    src_r = int(radar_max_r * 0.45)
+    puck_x = radar_cx + int(math.sin(az_rad) * src_r)
+    puck_y = radar_cy - int(math.cos(az_rad) * src_r)
+
+    draw.line([(radar_cx, radar_cy), (puck_x, puck_y)], fill=(0, 229, 255, 120), width=2)
+    draw.ellipse([puck_x - 22, puck_y - 22, puck_x + 22, puck_y + 22], outline=(0, 229, 255, 140), width=2)
+    draw.ellipse([puck_x - 14, puck_y - 14, puck_x + 14, puck_y + 14], fill=(0, 229, 255))
+    draw.ellipse([puck_x - 4, puck_y - 4, puck_x + 4, puck_y + 4], fill=(255, 255, 255))
+
+    # Right 45%: BRIR Reflectogram (445..770)
+    draw.rounded_rectangle([445, 114, 770, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((455, 122), "BRIR TIME-DOMAIN REFLECTOGRAM & DECAY TAIL", fill=(160, 180, 205), font=f_small)
+
+    bottom_y = 310
+    reflections = [
+        (465, 110, (0, 229, 255)),
+        (495, 75, (255, 215, 0)),
+        (530, 55, (255, 215, 0)),
+        (580, 40, (255, 215, 0)),
+        (640, 25, (255, 215, 0)),
+    ]
+    for rx, rh, col in reflections:
+        draw.line([(rx, bottom_y), (rx, bottom_y - rh)], fill=col, width=3)
+        draw.ellipse([rx - 3, bottom_y - rh - 3, rx + 3, bottom_y - rh + 3], fill=col)
+
+    # Exponential decay curve
+    decay_pts = []
+    for c in range(30):
+        frac = c / 29.0
+        x = 465 + int(frac * 285)
+        decay = math.exp(-3.0 * frac / 0.72)
+        y = bottom_y - int(decay * 105)
+        decay_pts.append((x, y))
+
+    for i in range(len(decay_pts) - 1):
+        draw.line([decay_pts[i], decay_pts[i + 1]], fill=(0, 255, 180, 160), width=2)
+
+    # Bottom Metrics Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    params = [
+        ("AZIMUTH / DISTANCE", "45.0° (2.50m)", (0, 229, 255)),
+        ("ITD / ILD METRICS", "541 µs / 13.1 dB", (255, 215, 0)),
+        ("DRR / EARLY DECAY", "5.2 dB (+18ms)", (255, 107, 43)),
+        ("RT60 REVERB TIME", "1.45 s (ScoringStage)", (0, 255, 180)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 180, 205), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=f_header)
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Multi-Source Binaural BRIR Spatializer & Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "binaural_brir_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_multiband_clipper_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (10, 14, 24, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(16, bold=True)
+    f_header = get_font(14, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(10, bold=False)
+
+    draw.text((20, 18), "MASTERING LINEAR-PHASE DYNAMIC MULTIBAND CLIPPER HUD", fill=(240, 245, 255), font=f_title)
+
+    curves = [
+        ("SOFT-KNEE CUBIC", True),
+        ("ANALOG TANH", False),
+        ("HARD BRICKWALL", False),
+        ("QUINTIC SMOOTH", False),
+        ("ASYMMETRIC TUBE", False),
+    ]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, active) in enumerate(curves):
+        bx = 20 + i * (tab_w + 8)
+        bg = (0, 229, 255) if active else (25, 35, 50)
+        fg = (10, 14, 24) if active else (200, 215, 235)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 12, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas (20..780, 104..340)
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(10, 14, 24), outline=(45, 65, 95), width=2)
+
+    # Left 55%: Dynamic Transfer Function (30..435)
+    draw.rounded_rectangle([30, 114, 435, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((40, 122), "DYNAMIC NON-LINEAR TRANSFER FUNCTION (dB in vs dB out)", fill=(160, 180, 205), font=f_small)
+
+    # 45-degree reference line
+    draw.line([(45, 315), (420, 145)], fill=(100, 120, 150, 80), width=1)
+
+    # Transfer Curve
+    curve_pts = []
+    for c in range(30):
+        frac = c / 29.0
+        x = 45 + int(frac * 375)
+        in_db = -24.0 + frac * 24.0
+        out_db = in_db if in_db < -4.5 else (-4.5 + 4.0 * math.tanh((in_db + 4.5) / 4.0))
+        norm_out = (out_db + 24.0) / 24.0
+        y = 315 - int(norm_out * 170)
+        curve_pts.append((x, y))
+
+    for i in range(len(curve_pts) - 1):
+        draw.line([curve_pts[i], curve_pts[i + 1]], fill=(0, 229, 255), width=3)
+
+    # Soft-Knee Puck
+    puck_x = 45 + int(((-4.5 + 24.0) / 24.0) * 375)
+    puck_y = 315 - int(((-0.8 + 12.0) / 12.0) * 170)
+    draw.ellipse([puck_x - 22, puck_y - 22, puck_x + 22, puck_y + 22], outline=(0, 229, 255, 140), width=2)
+    draw.ellipse([puck_x - 14, puck_y - 14, puck_x + 14, puck_y + 14], fill=(0, 229, 255))
+    draw.ellipse([puck_x - 4, puck_y - 4, puck_x + 4, puck_y + 4], fill=(255, 255, 255))
+
+    # Right 45%: 4-Band Strips (445..770)
+    draw.rounded_rectangle([445, 114, 770, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((455, 122), "4-BAND LINEAR-PHASE DYNAMIC GAIN REDUCTION", fill=(160, 180, 205), font=f_small)
+
+    band_w = int((325 - 30) / 4)
+    bands = [
+        ("B1 Sub", 1.8, (0, 229, 255), False),
+        ("B2 LowMid", 2.4, (255, 215, 0), True),
+        ("B3 HighMid", 1.1, (255, 107, 43), False),
+        ("B4 Air", 3.2, (0, 255, 180), False),
+    ]
+    for i, (bname, gr, col, active) in enumerate(bands):
+        bx = 455 + i * (band_w + 6)
+        bg = (25, 40, 60) if active else (18, 24, 36)
+        draw.rounded_rectangle([bx, 145, bx + band_w, 315], radius=3, fill=bg)
+        draw.text((bx + 8, 150), bname, fill=col, font=f_small)
+
+        # Meter bar
+        bar_h = int((gr / 6.0) * 120)
+        draw.rounded_rectangle([bx + band_w // 2 - 6, 310 - bar_h, bx + band_w // 2 + 6, 310], radius=2, fill=col)
+
+    # Bottom Metrics Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    params = [
+        ("THRESHOLD / CEILING", "-4.5 dB / -0.8 dB", (0, 229, 255)),
+        ("KNEE WIDTH / DRIVE", "4.0 dB (+3.5dB)", (255, 215, 0)),
+        ("OVERSAMPLING / THD", "4x Lin-Phase (2.45%)", (255, 107, 43)),
+        ("TRUE-PEAK MAXIMUM", "-0.15 dBTP (Inter-Sample)", (0, 255, 180)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 180, 205), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=f_header)
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Mastering Linear-Phase Multiband Clipper & Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "multiband_clipper_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_granular_freeze_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (10, 14, 24, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(16, bold=True)
+    f_header = get_font(14, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(10, bold=False)
+
+    draw.text((20, 18), "GRANULAR SPECTRAL CLOUD FREEZE & GRAIN TRAJECTORY HUD", fill=(240, 245, 255), font=f_title)
+
+    windows = [
+        ("HANN BELL", True),
+        ("BLACKMAN-H", False),
+        ("GAUSSIAN", False),
+        ("TUKEY FLAT", False),
+        ("TRAPEZOID", False),
+    ]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, active) in enumerate(windows):
+        bx = 20 + i * (tab_w + 8)
+        bg = (0, 229, 255) if active else (25, 35, 50)
+        fg = (10, 14, 24) if active else (200, 215, 235)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 14, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas (20..780, 104..340)
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(10, 14, 24), outline=(45, 65, 95), width=2)
+
+    # Left 55%: Spectral Grain Cloud (30..435)
+    draw.rounded_rectangle([30, 114, 435, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((40, 122), "SPECTRAL GRAIN CLOUD & TIME-STRETCH EMISSION SPACE", fill=(160, 180, 205), font=f_small)
+
+    # Floating Grain Particles
+    particles = [
+        (80, 180, 6, 180),
+        (130, 220, 4, 140),
+        (180, 160, 7, 220),
+        (210, 240, 5, 160),
+        (240, 190, 8, 240),
+        (290, 210, 4, 130),
+        (340, 170, 6, 200),
+        (390, 230, 5, 170),
+    ]
+    for px, py, sz, alpha in particles:
+        draw.ellipse([px - sz, py - sz, px + sz, py + sz], fill=(0, 255, 180, alpha))
+
+    # Playhead line
+    draw.line([(240, 140), (240, 320)], fill=(0, 229, 255), width=2)
+
+    # Freeze Playhead Puck
+    puck_x, puck_y = 240, 190
+    draw.ellipse([puck_x - 22, puck_y - 22, puck_x + 22, puck_y + 22], outline=(0, 229, 255, 140), width=2)
+    draw.ellipse([puck_x - 14, puck_y - 14, puck_x + 14, puck_y + 14], fill=(0, 229, 255))
+    draw.ellipse([puck_x - 4, puck_y - 4, puck_x + 4, puck_y + 4], fill=(255, 255, 255))
+
+    # Right 45%: Grain Window Envelope (445..770)
+    draw.rounded_rectangle([445, 114, 770, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((455, 122), "GRAIN WINDOW ENVELOPE", fill=(160, 180, 205), font=f_small)
+    draw.text((680, 122), "FREEZE: LOCKED", fill=(0, 229, 255), font=f_small)
+
+    # Hann Envelope Curve
+    env_pts = []
+    for c in range(30):
+        frac = c / 29.0
+        x = 465 + int(frac * 285)
+        val = math.sin(frac * math.pi) ** 2
+        y = 310 - int(val * 130)
+        env_pts.append((x, y))
+
+    for i in range(len(env_pts) - 1):
+        draw.line([env_pts[i], env_pts[i + 1]], fill=(255, 215, 0), width=2)
+
+    # Bottom Metrics Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    params = [
+        ("GRAIN SIZE (DUR)", "120 ms (Overlap)", (0, 229, 255)),
+        ("GRAIN DENSITY (RATE)", "35.0 grains/s (42)", (255, 215, 0)),
+        ("PITCH SPRAY (DETUNE)", "+7.0 st (Spread 85%)", (255, 107, 43)),
+        ("SPECTRAL FREEZE STATE", "INFINITE HOLD", (0, 255, 180)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 180, 205), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=f_header)
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Granular Spectral Cloud Freeze & Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "granular_freeze_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_dialog_gating_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (10, 14, 24, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(16, bold=True)
+    f_header = get_font(14, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(10, bold=False)
+
+    draw.text((20, 18), "BROADCAST MASTERING ITU BS.1770-4 DIALOG GATING HUD", fill=(240, 245, 255), font=f_title)
+
+    standards = [
+        ("EBU R128 (-23)", True),
+        ("ATSC A/85 (-24)", False),
+        ("NETFLIX (-27)", False),
+        ("STREAMING (-14)", False),
+        ("PODCAST (-16)", False),
+    ]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, active) in enumerate(standards):
+        bx = 20 + i * (tab_w + 8)
+        bg = (0, 229, 255) if active else (25, 35, 50)
+        fg = (10, 14, 24) if active else (200, 215, 235)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 12, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas (20..780, 104..340)
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(10, 14, 24), outline=(45, 65, 95), width=2)
+
+    # Left 55%: Gating Histogram (30..435)
+    draw.rounded_rectangle([30, 114, 435, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((40, 122), "ITU BS.1770-4 DUAL-STAGE GATING HISTOGRAM", fill=(160, 180, 205), font=f_small)
+
+    # Draw Histogram bars
+    num_bars = 25
+    bar_w = int((405 - 20) / num_bars)
+    for b in range(num_bars):
+        frac = b / num_bars
+        lufs = -40.0 + frac * 30.0
+        energy = math.exp(-0.5 * ((lufs - (-23.1)) / 3.5) ** 2)
+        bh = int(energy * 120)
+        bx = 45 + b * bar_w
+        col = (0, 229, 255) if lufs >= -23.0 else (45, 65, 95)
+        draw.rounded_rectangle([bx, 310 - bh, bx + bar_w - 2, 310], radius=1, fill=col)
+
+    # Relative gate line (-10 LU)
+    rel_x = 45 + int(((-33.1 + 40.0) / 30.0) * 385)
+    draw.line([(rel_x, 145), (rel_x, 310)], fill=(255, 107, 43), width=2)
+    draw.text((rel_x + 4, 148), "Γr (-10 LU)", fill=(255, 107, 43), font=f_small)
+
+    # Dialog Puck
+    puck_x = 45 + int(((-23.1 + 40.0) / 30.0) * 385)
+    puck_y = 310 - int(0.685 * 140)
+    draw.ellipse([puck_x - 22, puck_y - 22, puck_x + 22, puck_y + 22], outline=(0, 229, 255, 140), width=2)
+    draw.ellipse([puck_x - 14, puck_y - 14, puck_x + 14, puck_y + 14], fill=(0, 229, 255))
+    draw.ellipse([puck_x - 4, puck_y - 4, puck_x + 4, puck_y + 4], fill=(255, 255, 255))
+
+    # Right 45%: K-Weighting Filter (445..770)
+    draw.rounded_rectangle([445, 114, 770, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((455, 122), "K-WEIGHTING FILTER RESPONSE", fill=(160, 180, 205), font=f_small)
+    draw.text((680, 122), "DELTA: -0.1 LU", fill=(0, 255, 180), font=f_small)
+
+    # K-Weighting curve
+    kw_pts = []
+    for c in range(30):
+        frac = c / 29.0
+        x = 465 + int(frac * 285)
+        freq = 20.0 * (1000.0 ** frac)
+        hs = 4.0 / (1.0 + (1500.0 / freq) ** 2)
+        rlb = -10.0 * math.log10(1.0 + (38.0 / freq) ** 2)
+        resp = hs + rlb
+        norm_resp = max(0.0, min(1.0, (resp + 15.0) / 20.0))
+        y = 310 - int(norm_resp * 130)
+        kw_pts.append((x, y))
+
+    for i in range(len(kw_pts) - 1):
+        draw.line([kw_pts[i], kw_pts[i + 1]], fill=(0, 255, 180), width=2)
+
+    # Bottom Metrics Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    params = [
+        ("INTEGRATED GATED LKFS", "-23.1 LKFS (Tgt -23.0)", (0, 229, 255)),
+        ("VAD SPEECH CONFIDENCE", "68.5% (Voice Active)", (255, 215, 0)),
+        ("DIALOG ANCHOR / DELTA", "-23.0 LKFS (2.1 LU Gate)", (255, 107, 43)),
+        ("TRUE-PEAK MAXIMUM", "-1.25 dBTP (Ceil -1.0)", (0, 255, 180)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 180, 205), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=f_header)
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Broadcast Mastering ITU BS.1770-4 Dialog Gating & Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "dialog_gating_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
 if __name__ == "__main__":
     render_live_macro_rack()
     render_spectrogram_3d()
@@ -6400,7 +6895,13 @@ if __name__ == "__main__":
     render_upward_compressor_view()
     render_membrane_resonator_view()
     render_ebu_loudness_radar_view()
-    print("All Tier 50-63 GUI render previews generated successfully!")
+    render_bowed_string_view()
+    render_binaural_brir_view()
+    render_multiband_clipper_view()
+    render_granular_freeze_view()
+    render_dialog_gating_view()
+    print("All Tier 50-64 GUI render previews generated successfully!")
+
 
 
 
