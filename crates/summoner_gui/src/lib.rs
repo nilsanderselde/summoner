@@ -99,6 +99,8 @@ pub mod tier65_tests;
 #[cfg(feature = "gui")]
 pub mod tier66_tests;
 #[cfg(feature = "gui")]
+pub mod tier67_tests;
+#[cfg(feature = "gui")]
 pub mod touch_gestures;
 #[cfg(feature = "gui")]
 pub mod transport_bar;
@@ -111,6 +113,8 @@ pub use views::accessibility_announcer::AccessibilityAnnouncerView;
 pub use views::ambisonic_radar_view::AmbisonicRadarView;
 #[cfg(feature = "gui")]
 pub use views::atmos_surround_view::AtmosSurroundView;
+#[cfg(feature = "gui")]
+pub use views::auro3d_spatializer_view::Auro3dSpatializerView;
 #[cfg(feature = "gui")]
 pub use views::bbd_chorus_view::BbdChorusView;
 #[cfg(feature = "gui")]
@@ -174,6 +178,8 @@ pub use views::macro_rotary_dial::MacroRotaryDialView;
 #[cfg(feature = "gui")]
 pub use views::master_limiter_radar_view::MasterLimiterRadarView;
 #[cfg(feature = "gui")]
+pub use views::membrane_plate_view::MembranePlateView;
+#[cfg(feature = "gui")]
 pub use views::membrane_resonator_view::MembraneResonatorView;
 #[cfg(feature = "gui")]
 pub use views::meter_bridge_view::MeterBridgeView;
@@ -181,6 +187,8 @@ pub use views::meter_bridge_view::MeterBridgeView;
 pub use views::mpegh_spatializer_view::MpeghSpatializerView;
 #[cfg(feature = "gui")]
 pub use views::multiband_clipper_view::MultibandClipperView;
+#[cfg(feature = "gui")]
+pub use views::multiband_decompressor_view::MultibandDecompressorView;
 #[cfg(feature = "gui")]
 pub use views::multiband_expander_view::MultibandExpanderView;
 #[cfg(feature = "gui")]
@@ -192,6 +200,8 @@ pub use views::multiband_spatial_view::MultibandSpatialView;
 #[cfg(feature = "gui")]
 pub use views::multitap_delay_view::MultitapDelayView;
 #[cfg(feature = "gui")]
+pub use views::neural_inpaint_view::NeuralInpaintView;
+#[cfg(feature = "gui")]
 pub use views::neural_timbre_view::NeuralTimbreView;
 #[cfg(feature = "gui")]
 pub use views::neural_vocoder_morph_view::NeuralVocoderMorphView;
@@ -199,6 +209,8 @@ pub use views::neural_vocoder_morph_view::NeuralVocoderMorphView;
 pub use views::optical_compressor_view::OpticalCompressorView;
 #[cfg(feature = "gui")]
 pub use views::oversampled_limiter_view::OversampledLimiterView;
+#[cfg(feature = "gui")]
+pub use views::phase_align_view::PhaseAlignView;
 #[cfg(feature = "gui")]
 pub use views::pitch_corrector_view::PitchCorrectorView;
 #[cfg(feature = "gui")]

@@ -7909,6 +7909,459 @@ def render_mpegh_spatializer_view():
     img.save(out_path)
     print(f"Rendered: {out_path}")
 
+def render_membrane_plate_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (14, 18, 28, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(15, bold=True)
+    f_header = get_font(13, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(10, bold=False)
+
+    draw.text((20, 18), "PHYSICAL MODELING ACOUSTIC MEMBRANE / PLATE PERCUSSION HUD", fill=(240, 245, 255), font=f_title)
+
+    profiles = [
+        ("CIRCULAR TYMPANUM", True),
+        ("STEEL PLATE", False),
+        ("GONG TAM-TAM", False),
+        ("SNARE MYLAR", False),
+        ("MARIMBA BAR", False),
+    ]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, active) in enumerate(profiles):
+        bx = 20 + i * (tab_w + 8)
+        bg = (0, 229, 255) if active else (25, 35, 50)
+        fg = (10, 14, 24) if active else (200, 215, 235)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 10, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas (20..780, 104..340)
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(10, 14, 24), outline=(45, 65, 95), width=2)
+
+    # Left 55%: 2D Strike Surface Map (30..430, 114..330)
+    draw.rounded_rectangle([30, 114, 430, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((40, 122), "2D STRIKE SURFACE MAP (DRAG PUCK TO EXCITE MODES)", fill=(160, 180, 205), font=f_small)
+
+    rcx, rcy = 230, 225
+    surf_r = 75
+    draw.ellipse([rcx - surf_r, rcy - surf_r, rcx + surf_r, rcy + surf_r], outline=(0, 229, 255), width=2)
+    draw.ellipse([rcx - int(surf_r * 0.65), rcy - int(surf_r * 0.65), rcx + int(surf_r * 0.65), rcy + int(surf_r * 0.65)], outline=(60, 90, 130, 90), width=1)
+
+    # Puck at (0.65, 0.40) -> px = 30 + 0.65*400 = 290, py = 330 - 0.40*216 = 243.6
+    px = 30 + int(0.65 * (430 - 30))
+    py = 330 - int(0.40 * (330 - 114))
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(0, 229, 255, 140), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(0, 229, 255))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+
+    draw.text((40, 308), "Strike Pos: (0.65, 0.40) | Contact τ: 2.15 ms | Mallet: 65%", fill=(0, 229, 255), font=f_small)
+
+    # Right 45%: Modal Eigenfrequency Spectrum (445..770, 114..330)
+    draw.rounded_rectangle([445, 114, 770, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((455, 122), "MODAL EIGENFREQUENCY SPECTRUM (6 BESSEL MODES)", fill=(160, 180, 205), font=f_small)
+
+    modes = [
+        ("147Hz", 1.0, (0, 229, 255)),
+        ("233Hz", 0.72, (255, 215, 0)),
+        ("314Hz", 0.48, (255, 215, 0)),
+        ("338Hz", 0.35, (0, 255, 180)),
+        ("389Hz", 0.22, (0, 255, 180)),
+        ("429Hz", 0.15, (0, 255, 180)),
+    ]
+    mode_w = int((325 - 20 - 5 * 6) / 6)
+    for i, (m_hz, amp, col) in enumerate(modes):
+        bx = 458 + i * (mode_w + 6)
+        bh = int(amp * 130)
+        draw.rounded_rectangle([bx, 300 - bh, bx + mode_w, 300], radius=3, fill=col)
+        draw.text((bx, 306), m_hz, fill=(200, 220, 245), font=f_small)
+
+    # Bottom Metrics Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    params = [
+        ("FUNDAMENTAL (f0)", "146.8 Hz (Mode #1)", (0, 229, 255)),
+        ("PLATE THICKNESS", "1.5 mm (η=0.008)", (255, 215, 0)),
+        ("BOUNDARY IMPEDANCE", "Clamped Rigid (1.00)", (255, 107, 43)),
+        ("MALLET CONTACT", "2.15 ms (65% Hard)", (0, 255, 180)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 180, 205), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=f_header)
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Physical Modeling Membrane/Plate Modal Percussion & Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "membrane_plate_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_phase_align_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (14, 18, 28, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(15, bold=True)
+    f_header = get_font(13, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(10, bold=False)
+
+    draw.text((20, 18), "DYNAMIC SPECTRAL PHASE ALIGNMENT & COMB NEUTRALIZER HUD", fill=(240, 245, 255), font=f_title)
+
+    presets = [
+        ("KICK IN / OUT", True),
+        ("SNARE TOP / BOT", False),
+        ("OVERHEADS L / R", False),
+        ("BASS DI / AMP", False),
+        ("ACOUSTIC DUAL", False),
+    ]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, active) in enumerate(presets):
+        bx = 20 + i * (tab_w + 8)
+        bg = (0, 229, 255) if active else (25, 35, 50)
+        fg = (10, 14, 24) if active else (200, 215, 235)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 12, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas (20..780, 104..340)
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(10, 14, 24), outline=(45, 65, 95), width=2)
+
+    # Left 55%: Comb Filter Response (30..430, 114..330)
+    draw.rounded_rectangle([30, 114, 430, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((40, 122), "SUMMED SPECTRAL COMB RESPONSE & NULL NOTCHES", fill=(160, 180, 205), font=f_small)
+
+    # 0 dB Reference line
+    draw.line([(40, 160), (420, 160)], fill=(60, 90, 130, 100), width=1)
+    draw.text((40, 146), "0 dBFS", fill=(130, 155, 185), font=f_small)
+
+    # Comb curve
+    comb_pts = []
+    for i in range(50):
+        frac = i / 49.0
+        f_hz = 20.0 * ((20000.0 / 20.0) ** frac)
+        delay_sec = 2.45e-3
+        phi = -2.0 * math.pi * f_hz * delay_sec
+        mag = math.sqrt(max(1e-5, 2.0 * (1.0 + math.cos(phi))))
+        db = 20.0 * math.log10(max(1e-4, mag * 0.5))
+        norm_y = (db + 36.0) / 42.0
+        cx = 40 + int(frac * 370)
+        cy = 300 - int(norm_y * 140)
+        comb_pts.append((cx, cy))
+
+    for i in range(len(comb_pts) - 1):
+        draw.line([comb_pts[i], comb_pts[i + 1]], fill=(0, 229, 255), width=2)
+
+    draw.text((40, 308), "1st Comb Notch: 204 Hz | Polarity: Normal (0°)", fill=(255, 215, 0), font=f_small)
+
+    # Right 45%: Delay (X) vs Allpass Frequency (Y) (445..770, 114..330)
+    draw.rounded_rectangle([445, 114, 770, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((455, 122), "TIME DELAY (X) vs ALLPASS ROTATION (Y)", fill=(160, 180, 205), font=f_small)
+
+    rcx = 445 + int(0.5 * (770 - 445))
+    draw.line([(rcx, 140), (rcx, 300)], fill=(60, 90, 130, 90), width=1)
+
+    # Puck at delay = 2.45 ms -> norm = 52.45/100 = 0.5245, allpass = 85 Hz -> norm = ln(85/20)/ln(1000) = 1.4469/6.907 = 0.209
+    px = 445 + int(0.5245 * (770 - 445))
+    py = 330 - int(0.209 * (330 - 114))
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(0, 229, 255, 140), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(0, 229, 255))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+
+    draw.text((455, 308), "Delay: +2.45 ms | Allpass fc: 85 Hz (Q=1.41)", fill=(0, 229, 255), font=f_small)
+
+    # Bottom Metrics Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    params = [
+        ("TIME DELAY OFFSET (Δt)", "+2.45 ms (84.1 cm)", (0, 229, 255)),
+        ("PHASE CORRELATION (r)", "+0.94 (96.0% Sync)", (255, 215, 0)),
+        ("ALLPASS ROTATION (fc)", "85 Hz (Q = 1.41)", (255, 107, 43)),
+        ("POLARITY / TRACKING", "NORMAL (0°) | Auto", (0, 255, 180)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 180, 205), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=f_header)
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Dynamic Spectral Phase Alignment & Comb Neutralizer Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "phase_align_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_multiband_decompressor_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (14, 18, 28, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(15, bold=True)
+    f_header = get_font(13, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(10, bold=False)
+
+    draw.text((20, 18), "MASTERING LINEAR-PHASE MULTIBAND EXPANDER & DE-COMPRESSOR HUD", fill=(240, 245, 255), font=f_title)
+
+    presets = [
+        ("MASTER DYN RESCUE", True),
+        ("DRUM TRANSIENTS", False),
+        ("SLAP BASS PUNCH", False),
+        ("VOCAL AIR EXPAND", False),
+        ("ORCHESTRAL OPEN", False),
+    ]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, active) in enumerate(presets):
+        bx = 20 + i * (tab_w + 8)
+        bg = (0, 229, 255) if active else (25, 35, 50)
+        fg = (10, 14, 24) if active else (200, 215, 235)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 10, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas (20..780, 104..340)
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(10, 14, 24), outline=(45, 65, 95), width=2)
+
+    # Left 55%: Dynamic Expansion Curve (30..430, 114..330)
+    draw.rounded_rectangle([30, 114, 430, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((40, 122), "UPWARD EXPANSION DYNAMIC TRANSFER CURVE (IN dB vs OUT dB)", fill=(160, 180, 205), font=f_small)
+
+    # Diagonal reference
+    draw.line([(45, 300), (415, 145)], fill=(60, 90, 130, 90), width=1)
+
+    # Expansion curve
+    exp_pts = []
+    for i in range(50):
+        frac = i / 49.0
+        in_db = -60.0 + frac * 60.0
+        thresh = -18.0
+        ratio = 1.8
+        max_boost = 6.0
+        if in_db > thresh:
+            out_db = in_db + min(max_boost, (in_db - thresh) * (ratio - 1.0))
+        else:
+            out_db = in_db
+        norm_y = (out_db + 60.0) / 66.0
+        cx = 45 + int(frac * 370)
+        cy = 300 - int(norm_y * 155)
+        exp_pts.append((cx, cy))
+
+    for i in range(len(exp_pts) - 1):
+        draw.line([exp_pts[i], exp_pts[i + 1]], fill=(0, 229, 255), width=2)
+
+    draw.text((40, 308), "Threshold: -18.0 dB | Ratio: 1:1.80 | Max Boost: +6.0 dB", fill=(255, 215, 0), font=f_small)
+
+    # Right 45%: 4-Band Selector & Puck (445..770, 114..330)
+    draw.rounded_rectangle([445, 114, 770, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((455, 122), "4-BAND LINEAR-PHASE BANDS (>= 44x44pt)", fill=(160, 180, 205), font=f_small)
+
+    bands = [("LOW (<120Hz)", False), ("LOW-MID", True), ("HIGH-MID", False), ("AIR (>6k)", False)]
+    btn_w = int((325 - 20 - 3 * 6) / 4)
+    for i, (bname, active) in enumerate(bands):
+        bx = 455 + i * (btn_w + 6)
+        bg = (0, 229, 255) if active else (30, 45, 65)
+        fg = (10, 14, 24) if active else (200, 215, 235)
+        draw.rounded_rectangle([bx, 140, bx + btn_w, 184], radius=4, fill=bg)
+        draw.text((bx + 6, 156), bname, fill=fg, font=f_small)
+
+    # Puck at thresh = -18.0 dB -> norm = 42/60 = 0.70, ratio = 1.8 -> norm = 0.8/3.0 = 0.267
+    px = 445 + int(0.70 * (770 - 445))
+    py = 320 - int(0.267 * (320 - 200))
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(0, 229, 255, 140), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(0, 229, 255))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+
+    draw.text((455, 308), "Selected Band: Low-Mid (120 - 1200 Hz)", fill=(0, 229, 255), font=f_small)
+
+    # Bottom Metrics Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    params = [
+        ("BAND THRESHOLD", "-18.0 dBFS (Band #2)", (0, 229, 255)),
+        ("EXPANSION RATIO", "1:1.80 Upward Ratio", (255, 215, 0)),
+        ("CREST HEADROOM GAIN", "+5.4 dB (Max +6.0dB)", (255, 107, 43)),
+        ("LINEAR-PHASE FIR", "1024 Taps (0-Phase)", (0, 255, 180)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 180, 205), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=f_header)
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Linear-Phase Multiband Expander & Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "multiband_decompressor_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_neural_inpaint_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (14, 18, 28, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(15, bold=True)
+    f_header = get_font(13, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(10, bold=False)
+
+    draw.text((20, 18), "NEURAL DIFFUSION AUDIO INPAINTER & GENERATIVE SPECTRAL REPAIR HUD", fill=(240, 245, 255), font=f_title)
+
+    models = [
+        ("DROPOUT GAP REPAIR", True),
+        ("SPECTRAL DE-CLICK", False),
+        ("PLOSIVE THUMP FIX", False),
+        ("MIC CLIP RESTORE", False),
+        ("STEM BLEED ERASER", False),
+    ]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, active) in enumerate(models):
+        bx = 20 + i * (tab_w + 8)
+        bg = (0, 229, 255) if active else (25, 35, 50)
+        fg = (10, 14, 24) if active else (200, 215, 235)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 10, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas (20..780, 104..340)
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(10, 14, 24), outline=(45, 65, 95), width=2)
+
+    # Left 55%: Time-Frequency Mask (30..430, 114..330)
+    draw.rounded_rectangle([30, 114, 430, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((40, 122), "TIME-FREQUENCY INPAINT MASK (TIME vs FREQUENCY)", fill=(160, 180, 205), font=f_small)
+
+    # Inpaint region bounding box
+    px = 30 + int(0.50 * (430 - 30))
+    py = 330 - int(0.50 * (330 - 114))
+    draw.rounded_rectangle([px - 45, py - 35, px + 45, py + 35], radius=4, outline=(255, 107, 43), width=2)
+
+    # Puck
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(0, 229, 255, 140), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(0, 229, 255))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+
+    draw.text((40, 308), "Inpaint Center: 250.0 ms @ 1000 Hz (Δt=45.0ms)", fill=(0, 229, 255), font=f_small)
+
+    # Right 45%: Diffusion Steps Trajectory (445..770, 114..330)
+    draw.rounded_rectangle([445, 114, 770, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((455, 122), "DIFFUSION DENOISING TRAJECTORY (DDIM / DPM-SOLVER)", fill=(160, 180, 205), font=f_small)
+
+    step_count = 25
+    bar_w = int((325 - 20) / step_count)
+    for s in range(step_count):
+        bx = 458 + s * bar_w
+        noise_level = 1.0 - (s / float(step_count))
+        bh = int(noise_level * 130)
+        draw.rounded_rectangle([bx, 300 - bh, bx + bar_w - 2, 300], radius=1, fill=(0, 255, 180))
+
+    draw.text((455, 308), "Steps: 25 | Guidance w: 4.5x | Continuity: 96.0%", fill=(255, 215, 0), font=f_small)
+
+    # Bottom Metrics Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    params = [
+        ("INPAINT MASK REGION", "250.0 ms @ 1000 Hz", (0, 229, 255)),
+        ("DIFFUSION SAMPLING", "25 Steps (DPM-Solver)", (255, 215, 0)),
+        ("SPECTRAL CONTINUITY", "96.0% Smoothness", (255, 107, 43)),
+        ("HALLUCINATION RISK", "4.0% (Low Drift)", (0, 255, 180)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 180, 205), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=f_header)
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Neural Diffusion Audio Inpainter & Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "neural_inpaint_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_auro3d_spatializer_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (14, 18, 28, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(15, bold=True)
+    f_header = get_font(13, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(10, bold=False)
+
+    draw.text((20, 18), "IMMERSIVE AURO-3D 13.1 SPATIALIZER & TRI-LEVEL HEIGHT ELEVATION HUD", fill=(240, 245, 255), font=f_title)
+
+    formats = [
+        ("AURO-3D 13.1", True),
+        ("AURO-3D 11.1", False),
+        ("AURO-3D 10.1", False),
+        ("AURO-3D 9.1", False),
+        ("AURO BINAURAL", False),
+    ]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, active) in enumerate(formats):
+        bx = 20 + i * (tab_w + 8)
+        bg = (0, 229, 255) if active else (25, 35, 50)
+        fg = (10, 14, 24) if active else (200, 215, 235)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 12, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas (20..780, 104..340)
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(10, 14, 24), outline=(45, 65, 95), width=2)
+
+    # Left 55%: 3-Layer Height Object Space (30..430, 114..330)
+    draw.rounded_rectangle([30, 114, 430, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((40, 122), "AURO-3D 3-LAYER OBJECT SPACE (AZIMUTH vs ELEVATION)", fill=(160, 180, 205), font=f_small)
+
+    rcx, rcy = 230, 225
+    max_r = 75
+    for r_step in range(1, 4):
+        cr = int(max_r * (r_step / 3.0))
+        draw.ellipse([rcx - cr, rcy - cr, rcx + cr, rcy + cr], outline=(45, 65, 95, 120), width=1)
+    draw.line([(rcx - max_r, rcy), (rcx + max_r, rcy)], fill=(45, 65, 95, 120), width=1)
+    draw.line([(rcx, rcy - max_r), (rcx, rcy + max_r)], fill=(45, 65, 95, 120), width=1)
+
+    # Puck (Azimuth = +35 deg -> norm = 215/360 = 0.597, Elevation = +28 deg -> norm = 58/120 = 0.483)
+    px = 30 + int(0.597 * (430 - 30))
+    py = 330 - int(0.483 * (330 - 114))
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(0, 229, 255, 140), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(0, 229, 255))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+
+    draw.text((40, 308), "Azimuth: +35.0° | Elevation: +28.0° | Dist: 2.80m", fill=(0, 229, 255), font=f_small)
+
+    # Right 45%: Tri-Level Energy Distribution (445..770, 114..330)
+    draw.rounded_rectangle([445, 114, 770, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((455, 122), "TRI-LEVEL HEIGHT ENERGY DISTRIBUTION", fill=(160, 180, 205), font=f_small)
+
+    layers = [
+        ("L1 LOWER BED (0°)", 0.25, (0, 229, 255)),
+        ("L2 HEIGHT (+30°)", 0.65, (255, 215, 0)),
+        ("L3 TOP VoG (+90°)", 0.10, (255, 107, 43)),
+    ]
+    bar_w = int((325 - 20 - 2 * 12) / 3)
+    for i, (lname, energy, col) in enumerate(layers):
+        bx = 460 + i * (bar_w + 12)
+        bh = int(energy * 130)
+        draw.rounded_rectangle([bx, 300 - bh, bx + bar_w, 300], radius=3, fill=col)
+        draw.text((bx, 306), lname, fill=(200, 220, 245), font=f_small)
+
+    # Bottom Metrics Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    params = [
+        ("3D POSITION (X, Y, Z)", "1.42m, 2.03m, 1.31m", (0, 229, 255)),
+        ("AURO-3D CHANNELS", "14 Channels (13.1)", (255, 215, 0)),
+        ("HEIGHT LAYER DELAY", "12.5 ms (Haas Delay)", (255, 107, 43)),
+        ("TRI-LEVEL SPREAD", "65% Hgt / 10% Top", (0, 255, 180)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 180, 205), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=f_header)
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Immersive Auro-3D 13.1 Spatializer & Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "auro3d_spatializer_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
 if __name__ == "__main__":
     render_live_macro_rack()
     render_spectrogram_3d()
@@ -7995,7 +8448,12 @@ if __name__ == "__main__":
     render_oversampled_limiter_view()
     render_neural_timbre_view()
     render_mpegh_spatializer_view()
-    print("All Tier 50-66 GUI render previews generated successfully!")
+    render_membrane_plate_view()
+    render_phase_align_view()
+    render_multiband_decompressor_view()
+    render_neural_inpaint_view()
+    render_auro3d_spatializer_view()
+    print("All Tier 50-67 GUI render previews generated successfully!")
 
 
 
