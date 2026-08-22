@@ -188,6 +188,8 @@ pub use views::multiband_spatial_view::MultibandSpatialView;
 #[cfg(feature = "gui")]
 pub use views::multitap_delay_view::MultitapDelayView;
 #[cfg(feature = "gui")]
+pub use views::neural_timbre_view::NeuralTimbreView;
+#[cfg(feature = "gui")]
 pub use views::neural_vocoder_morph_view::NeuralVocoderMorphView;
 #[cfg(feature = "gui")]
 pub use views::optical_compressor_view::OpticalCompressorView;

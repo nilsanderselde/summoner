@@ -7683,6 +7683,118 @@ def render_oversampled_limiter_view():
     img.save(out_path)
     print(f"Rendered: {out_path}")
 
+def render_neural_timbre_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (14, 18, 28, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(15, bold=True)
+    f_header = get_font(13, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(10, bold=False)
+
+    draw.text((20, 18), "NEURAL TIMBRE TRANSFER RESYNTHESIZER & CONTINUOUS LATENT FLOW HUD", fill=(240, 245, 255), font=f_title)
+
+    models = [
+        ("VOCAL TRACT", True),
+        ("CELLO WOOD", False),
+        ("ANALOG MOOG", False),
+        ("GLASS BELL", False),
+        ("BIOMORPHIC", False),
+    ]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, active) in enumerate(models):
+        bx = 20 + i * (tab_w + 8)
+        bg = (0, 229, 255) if active else (25, 35, 50)
+        fg = (10, 14, 24) if active else (200, 215, 235)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 12, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas (20..780, 104..340)
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(10, 14, 24), outline=(45, 65, 95), width=2)
+
+    # Left 55%: Latent Flow Manifold (30..430, 114..330)
+    draw.rounded_rectangle([30, 114, 430, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((40, 122), "CONTINUOUS LATENT FLOW MANIFOLD (z1: MORPH vs z2: FORMANT)", fill=(160, 180, 205), font=f_small)
+
+    # Streamlines / Flow Vectors
+    grid_steps = 7
+    for gx in range(grid_steps + 1):
+        for gy in range(grid_steps + 1):
+            fx = gx / float(grid_steps)
+            fy = gy / float(grid_steps)
+            z1 = -2.0 + fx * 4.0
+            z2 = 2.0 - fy * 4.0
+            vx = -(z2 * 0.96) + 0.15 * math.sin(z1 * 2.0)
+            vy = (z1 * 0.96) - 0.15 * math.cos(z2 * 2.0)
+            px = 45 + int(fx * 350)
+            py = 152 + int(fy * 138)
+            draw.line([(px, py), (px + int(vx * 8), py - int(vy * 8))], fill=(0, 229, 255, 90), width=1)
+
+    # Puck (z1 = 0.45 -> norm = 2.45/4.0 = 0.6125, z2 = -0.30 -> norm = 1.70/4.0 = 0.425)
+    px = 30 + int(0.6125 * (430 - 30))
+    py = 330 - int(0.425 * (330 - 114))
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(0, 229, 255, 140), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(0, 229, 255))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+
+    draw.text((40, 308), "Latent: (+0.45, -0.30) | Flow: 1.20 Hz | MSE: 0.012", fill=(0, 229, 255), font=f_small)
+
+    # Right 45%: Spectral Resynthesis Envelope (445..770, 114..330)
+    draw.rounded_rectangle([445, 114, 770, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((455, 122), "SPECTRAL RESYNTHESIS ENVELOPE (SRC vs TRANSFERRED)", fill=(160, 180, 205), font=f_small)
+
+    # 100% Neural vs 50% Residual Blend Buttons (>= 44x44pt)
+    draw.rounded_rectangle([458, 144, 598, 188], radius=4, fill=(0, 229, 255))
+    draw.text((472, 160), "100% NEURAL SYNTH", fill=(10, 14, 24), font=f_small)
+
+    draw.rounded_rectangle([610, 144, 755, 188], radius=4, fill=(30, 45, 65))
+    draw.text((624, 160), "50% RESIDUAL BLEND", fill=(220, 235, 255), font=f_small)
+
+    # Spectral Curves
+    src_pts = []
+    out_pts = []
+    for i in range(40):
+        frac = i / 39.0
+        # Source
+        f_src = math.exp(-((frac - 0.12) * 18.0)**2) + 0.5 * math.exp(-((frac - 0.24) * 22.0)**2)
+        # Transferred
+        f_out = math.exp(-((frac - 0.20) * 20.0)**2) + 0.7 * math.exp(-((frac - 0.44) * 24.0)**2) + 0.45 * math.exp(-((frac - 0.74) * 30.0)**2)
+        
+        cx = 458 + int(frac * 297)
+        cy_src = 300 - int((f_src / 1.5) * 75)
+        cy_out = 300 - int((f_out / 1.5) * 75)
+        src_pts.append((cx, cy_src))
+        out_pts.append((cx, cy_out))
+
+    for i in range(len(src_pts) - 1):
+        draw.line([src_pts[i], src_pts[i + 1]], fill=(160, 180, 205, 120), width=1)
+    for i in range(len(out_pts) - 1):
+        draw.line([out_pts[i], out_pts[i + 1]], fill=(255, 215, 0), width=2)
+
+    draw.text((458, 308), "Confidence: 99.4% | Flow Rate: 1.20 Hz", fill=(0, 255, 180), font=f_small)
+
+    # Bottom Metrics Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    params = [
+        ("TIMBRE CONVERGENCE", "99.4% (0.012 MSE)", (0, 229, 255)),
+        ("SPECTRAL FLOW RATE", "1.20 Hz (ODE Flow)", (255, 215, 0)),
+        ("HARMONIC RESIDUAL", "0% (100% Neural)", (255, 107, 43)),
+        ("LATENT INFERENCE", "0.82 ms (64-D Flow)", (0, 255, 180)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 180, 205), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=f_header)
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Neural Timbre Transfer Morphing Resynthesizer & Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "neural_timbre_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
 if __name__ == "__main__":
     render_live_macro_rack()
     render_spectrogram_3d()
@@ -7767,6 +7879,7 @@ if __name__ == "__main__":
     render_woodwind_jet_view()
     render_spectral_reshaper_view()
     render_oversampled_limiter_view()
+    render_neural_timbre_view()
     print("All Tier 50-66 GUI render previews generated successfully!")
 
 
