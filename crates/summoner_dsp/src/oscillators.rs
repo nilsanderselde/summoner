@@ -834,17 +834,21 @@ impl SimdPolyWavetableOscillator {
             return 0.0;
         }
 
-        // Collect indices of active voices
-        let mut active_indices: Vec<usize> = Vec::with_capacity(self.max_voices);
-        for (idx, voice) in self.voices.iter().enumerate() {
+        // Collect indices of active voices without heap allocation
+        let mut active_indices = [0usize; DEFAULT_MAX_VOICES];
+        let mut num_active = 0;
+        for (idx, voice) in self.voices.iter().enumerate().take(DEFAULT_MAX_VOICES) {
             if voice.active {
-                active_indices.push(idx);
+                active_indices[num_active] = idx;
+                num_active += 1;
             }
         }
 
-        if active_indices.is_empty() {
+        if num_active == 0 {
             return 0.0;
         }
+
+        let active_slice = &active_indices[..num_active];
 
         let t1_ref = &self.table;
         let t2_ref = self.table2.as_deref();
@@ -854,7 +858,7 @@ impl SimdPolyWavetableOscillator {
         let mut mix_sample = 0.0f32;
 
         // Process in SIMD 4-wide batches
-        let chunks = active_indices.chunks_exact(4);
+        let chunks = active_slice.chunks_exact(4);
         let remainder = chunks.remainder();
 
         for chunk in chunks {
