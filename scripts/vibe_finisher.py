@@ -30,6 +30,7 @@ def build_prompt(latest_roadmap):
         f"3. ROADMAP CONTINUITY & INTERMITTENT VERIFIED COMMITS:\n"
         f"   - Do NOT leave behind these audio polishing and quality control directives when transitioning or generating new roadmaps.\n"
         f"   - Run `cargo check --workspace`, `cargo clippy --workspace --all-targets`, and `cargo test --workspace --features gui` to ensure 0 warnings and 100% test pass rate.\n"
+        f"   - Tool Usage: When calling `write_to_file` or `replace_file_content` on workspace/source files (e.g. `crates/...`), NEVER pass `ArtifactMetadata` (leave it omitted/empty), as `ArtifactMetadata` is strictly for brain artifacts.\n"
         f"   - Commit all changes intermittently with clear, detailed commit messages immediately after verifying each fix/milestone so work is never lost if quota runs out.\n"
         f"   - Once all tasks in {latest_roadmap} are complete, create the next `local/ROADMAP_YYYYMMDD_HHMMSS.md` preserving all GUI and audio quality mandates."
     )

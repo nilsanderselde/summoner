@@ -12,6 +12,7 @@ def build_prompt(latest_roadmap):
         f"If needed for context, review older roadmap files in local/. "
         f"Proceed with implementing the next incomplete logical step on {latest_roadmap}, "
         f"edit the code, run tests to verify, and commit all changes intermittently with clear, detailed commit messages after each verified step. "
+        f"When calling `write_to_file` on workspace/source files, NEVER pass `ArtifactMetadata`. "
         f"If all tasks in {latest_roadmap} are complete, create a new roadmap file "
         f"local/ROADMAP_YYYYMMDD_HHMMSS.md for subsequent steps before finishing."
     )

@@ -22,5 +22,8 @@
 - **State Source of Truth**: `summoner_project` is the absolute source of truth. The GUI is strictly a deterministic projection and cannot hold non-ephemeral semantic state. All state mutations must be routed to `summoner_project`.
 - **Extreme Isolation (Codebase Seams)**: Subagents tasked with building components (GUI widgets, DSP nodes) MUST build them in isolation with unit tests. They are forbidden from wiring them into monolithic states (`app.rs` / graph topologies) unless specifically tasked as an integration agent.
 
+## Tool Usage Directives
+- **ArtifactMetadata vs Source Code**: When calling `write_to_file` or `replace_file_content` on workspace/project files (e.g. `crates/...`, `src/...`, `scripts/...`, `local/...`), NEVER pass `ArtifactMetadata`. `ArtifactMetadata` is ONLY for internal planning/summary artifacts located inside the brain/artifacts directory. Supplying `ArtifactMetadata` on repository source files causes fatal schema/permission errors.
+
 ## General Project Rules
 - **Prohibited Files**: Do NOT ever create, add, or suggest adding a `CODE_OF_CONDUCT.md` file to this repository.
