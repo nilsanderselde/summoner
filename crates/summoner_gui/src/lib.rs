@@ -105,6 +105,8 @@ pub mod tier68_tests;
 #[cfg(feature = "gui")]
 pub mod tier69_tests;
 #[cfg(feature = "gui")]
+pub mod tier70_tests;
+#[cfg(feature = "gui")]
 pub mod touch_gestures;
 #[cfg(feature = "gui")]
 pub mod transport_bar;
@@ -156,6 +158,8 @@ pub use views::formant_filter_view::FormantFilterView;
 #[cfg(feature = "gui")]
 pub use views::frequency_shifter_view::FrequencyShifterView;
 #[cfg(feature = "gui")]
+pub use views::glass_armonica_view::GlassArmonicaView;
+#[cfg(feature = "gui")]
 pub use views::granular_cloud_view::GranularCloudView;
 #[cfg(feature = "gui")]
 pub use views::granular_freeze_view::GranularFreezeView;
@@ -165,6 +169,10 @@ pub use views::granular_pitch_shifter_view::GranularPitchShifterView;
 pub use views::harmonic_exciter_view::HarmonicExciterView;
 #[cfg(feature = "gui")]
 pub use views::harmonic_tension_map::HarmonicTensionMapView;
+#[cfg(feature = "gui")]
+pub use views::hoa4_spatializer_view::Hoa4SpatializerView;
+#[cfg(feature = "gui")]
+pub use views::hoa_spatializer_view::HoaSpatializerView;
 #[cfg(feature = "gui")]
 pub use views::isomorphic_tuning_keyboard::IsomorphicTuningKeyboardView;
 #[cfg(feature = "gui")]
@@ -212,6 +220,8 @@ pub use views::neural_inpaint_view::NeuralInpaintView;
 #[cfg(feature = "gui")]
 pub use views::neural_phoneme_view::NeuralPhonemeView;
 #[cfg(feature = "gui")]
+pub use views::neural_speech_to_singing_view::NeuralSpeechToSingingView;
+#[cfg(feature = "gui")]
 pub use views::neural_timbre_morph_view::NeuralTimbreMorphView;
 #[cfg(feature = "gui")]
 pub use views::neural_timbre_view::NeuralTimbreView;
@@ -225,6 +235,8 @@ pub use views::nhk222_spatializer_view::Nhk222SpatializerView;
 pub use views::optical_compressor_view::OpticalCompressorView;
 #[cfg(feature = "gui")]
 pub use views::oversampled_limiter_view::OversampledLimiterView;
+#[cfg(feature = "gui")]
+pub use views::parallel_transient_saturator_view::ParallelTransientSaturatorView;
 #[cfg(feature = "gui")]
 pub use views::phase_align_view::PhaseAlignView;
 #[cfg(feature = "gui")]
@@ -271,6 +283,8 @@ pub use views::spectral_morph_view::SpectralMorphView;
 pub use views::spectral_reshaper_view::SpectralReshaperView;
 #[cfg(feature = "gui")]
 pub use views::spectral_resynthesis_view::SpectralResynthesisView;
+#[cfg(feature = "gui")]
+pub use views::spectral_tilt_view::SpectralTiltView;
 #[cfg(feature = "gui")]
 pub use views::spectrogram_3d_view::Spectrogram3DView;
 #[cfg(feature = "gui")]
