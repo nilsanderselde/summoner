@@ -20,11 +20,11 @@ pub const MAX_DISTANCE_M: f32 = 10.00;
 /// MPEG-H 3D Spatial Audio Format Topology.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MpeghFormat {
-    Mpegh714,       // 7.1.4 3D Audio Bed + Heights (12 channels)
-    Mpegh51,        // 5.1 Surround Broadcast (6 channels)
-    Mpegh222Dome,   // 22.2 Super Hi-Vision Dome (24 channels)
-    MpeghBinaural,  // SOFA Personalized Binaural Headphone Render
-    MpeghDynamicObj,// Interactive 6-DoF Scene Dynamic Objects
+    Mpegh714,        // 7.1.4 3D Audio Bed + Heights (12 channels)
+    Mpegh51,         // 5.1 Surround Broadcast (6 channels)
+    Mpegh222Dome,    // 22.2 Super Hi-Vision Dome (24 channels)
+    MpeghBinaural,   // SOFA Personalized Binaural Headphone Render
+    MpeghDynamicObj, // Interactive 6-DoF Scene Dynamic Objects
 }
 
 impl MpeghFormat {
@@ -83,15 +83,15 @@ impl HrtfProfile {
 pub struct MpeghSpatializerView {
     pub format: MpeghFormat,
     pub hrtf_profile: HrtfProfile,
-    pub azimuth_deg: f32,             // [-180.0 ..= 180.0 deg]
-    pub elevation_deg: f32,           // [-90.0 ..= 90.0 deg]
-    pub distance_m: f32,              // [0.10 ..= 10.00 m]
-    pub is_custom_pinna_mode: bool,   // true = Custom 3D Mesh, false = SOFA Profile
-    pub object_puck_pos: (f32, f32),  // Normalized (X: Azimuth, Y: Elevation)
+    pub azimuth_deg: f32,            // [-180.0 ..= 180.0 deg]
+    pub elevation_deg: f32,          // [-90.0 ..= 90.0 deg]
+    pub distance_m: f32,             // [0.10 ..= 10.00 m]
+    pub is_custom_pinna_mode: bool,  // true = Custom 3D Mesh, false = SOFA Profile
+    pub object_puck_pos: (f32, f32), // Normalized (X: Azimuth, Y: Elevation)
     pub is_dragging_puck: bool,
-    pub itd_microseconds: f32,        // Interaural Time Difference (μs)
-    pub ild_db: f32,                  // Interaural Level Difference (dB)
-    pub integrated_lufs: f32,         // Loudness compliance LUFS
+    pub itd_microseconds: f32, // Interaural Time Difference (μs)
+    pub ild_db: f32,           // Interaural Level Difference (dB)
+    pub integrated_lufs: f32,  // Loudness compliance LUFS
     pub color_palette: ContrastColorPalette,
 }
 
@@ -164,9 +164,8 @@ impl MpeghSpatializerView {
         let head_radius_m = 0.0875; // 8.75 cm average adult head radius
         let speed_of_sound_m_s = 343.0;
         let sin_az = az_rad.abs().sin();
-        let itd_sec = (head_radius_m / speed_of_sound_m_s)
-            * (sin_az + az_rad.abs())
-            * el_rad.cos().max(0.1);
+        let itd_sec =
+            (head_radius_m / speed_of_sound_m_s) * (sin_az + az_rad.abs()) * el_rad.cos().max(0.1);
         self.itd_microseconds = (itd_sec * 1_000_000.0).clamp(0.0, 750.0);
 
         // ILD head shadowing approximation (frequency-dependent average)
@@ -185,7 +184,11 @@ impl MpeghSpatializerView {
 
         // Pinna spectral notch (concha resonance dip)
         let notch_dip = -12.0 * (-((f_khz - notch_center) / 1.2).powi(2)).exp();
-        let hf_boost = if f_khz > 3.0 { (f_khz - 3.0).powf(1.4) * 0.8 } else { 0.0 };
+        let hf_boost = if f_khz > 3.0 {
+            (f_khz - 3.0).powf(1.4) * 0.8
+        } else {
+            0.0
+        };
 
         let left_mag = if is_left_side {
             hf_boost + notch_dip
@@ -472,7 +475,11 @@ impl MpeghSpatializerView {
             egui::Align2::CENTER_CENTER,
             "SOFA PROFILE #1",
             egui::FontId::proportional(10.0),
-            if !self.is_custom_pinna_mode { Color32::from_rgb(10, 14, 24) } else { Color32::from_rgb(220, 235, 255) },
+            if !self.is_custom_pinna_mode {
+                Color32::from_rgb(10, 14, 24)
+            } else {
+                Color32::from_rgb(220, 235, 255)
+            },
         );
 
         painter.rect_filled(p2_rect, 4.0, bg_p2);
@@ -481,7 +488,11 @@ impl MpeghSpatializerView {
             egui::Align2::CENTER_CENTER,
             "CUSTOM PINNA MESH",
             egui::FontId::proportional(10.0),
-            if self.is_custom_pinna_mode { Color32::from_rgb(10, 14, 24) } else { Color32::from_rgb(220, 235, 255) },
+            if self.is_custom_pinna_mode {
+                Color32::from_rgb(10, 14, 24)
+            } else {
+                Color32::from_rgb(220, 235, 255)
+            },
         );
 
         if response.clicked() {
@@ -536,7 +547,9 @@ impl MpeghSpatializerView {
             egui::Align2::LEFT_BOTTOM,
             format!(
                 "Profile: {} (ITD: {:.0} μs | ILD: {:.1} dB)",
-                self.hrtf_profile.display_name(), self.itd_microseconds, self.ild_db
+                self.hrtf_profile.display_name(),
+                self.itd_microseconds,
+                self.ild_db
             ),
             egui::FontId::proportional(10.0),
             Color32::from_rgb(0, 255, 180),
@@ -557,17 +570,27 @@ impl MpeghSpatializerView {
         let params = [
             (
                 "OBJECT POSITION",
-                format!("Az: {:+.1}°, El: {:+.1}° ({:.1}m)", self.azimuth_deg, self.elevation_deg, self.distance_m),
+                format!(
+                    "Az: {:+.1}°, El: {:+.1}° ({:.1}m)",
+                    self.azimuth_deg, self.elevation_deg, self.distance_m
+                ),
                 Color32::from_rgb(0, 229, 255),
             ),
             (
                 "MPEG-H CHANNELS",
-                format!("{} ({} Ch)", self.format.display_name(), self.format.channel_count()),
+                format!(
+                    "{} ({} Ch)",
+                    self.format.display_name(),
+                    self.format.channel_count()
+                ),
                 Color32::from_rgb(255, 215, 0),
             ),
             (
                 "BINAURAL HRTF ITD",
-                format!("{:.0} μs ({:.1} dB ILD)", self.itd_microseconds, self.ild_db),
+                format!(
+                    "{:.0} μs ({:.1} dB ILD)",
+                    self.itd_microseconds, self.ild_db
+                ),
                 Color32::from_rgb(255, 107, 43),
             ),
             (

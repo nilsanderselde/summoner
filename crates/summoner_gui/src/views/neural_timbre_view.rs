@@ -20,7 +20,7 @@ pub const MAX_RESIDUAL_BLEND: f32 = 1.00;
 /// Neural Timbre Target Model Profile.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TimbreModel {
-    VocalFormantMorph, // Expressive vocal tract vowel/consonant transfer
+    VocalFormantMorph,  // Expressive vocal tract vowel/consonant transfer
     CelloResonanceFlow, // Acoustic wooden body & bowed string resonance
     AnalogMoogLead,     // Vintage 24dB ladder saturation & analog warmth
     GlassMalletBell,    // Inharmonic metallic crystal mallet struck attack
@@ -63,15 +63,15 @@ impl TimbreModel {
 #[derive(Debug, Clone)]
 pub struct NeuralTimbreView {
     pub model: TimbreModel,
-    pub latent_coord: (f32, f32),     // Latent position (z1: Morph X, z2: Formant Y)
-    pub flow_rate_hz: f32,            // Continuous ODE flow rate [0.05 ..= 10.00 Hz]
-    pub residual_blend: f32,          // Harmonic residual mix [0.0 ..= 1.0]
-    pub is_full_neural_mode: bool,    // true = 100% neural synth, false = blend
-    pub timbre_puck_pos: (f32, f32),  // Normalized coordinate [0.0 ..= 1.0]
+    pub latent_coord: (f32, f32), // Latent position (z1: Morph X, z2: Formant Y)
+    pub flow_rate_hz: f32,        // Continuous ODE flow rate [0.05 ..= 10.00 Hz]
+    pub residual_blend: f32,      // Harmonic residual mix [0.0 ..= 1.0]
+    pub is_full_neural_mode: bool, // true = 100% neural synth, false = blend
+    pub timbre_puck_pos: (f32, f32), // Normalized coordinate [0.0 ..= 1.0]
     pub is_dragging_puck: bool,
-    pub timbre_convergence_pct: f32,  // Confidence score %
-    pub spectral_loss_mse: f32,       // Reconstruction loss MSE
-    pub inference_latency_ms: f32,    // Real-time latent step latency
+    pub timbre_convergence_pct: f32, // Confidence score %
+    pub spectral_loss_mse: f32,      // Reconstruction loss MSE
+    pub inference_latency_ms: f32,   // Real-time latent step latency
     pub color_palette: ContrastColorPalette,
 }
 
@@ -373,10 +373,8 @@ impl NeuralTimbreView {
                     let nx = ((mouse_pos.x - left_rect.min.x) / left_rect.width()).clamp(0.0, 1.0);
                     let ny = ((left_rect.max.y - mouse_pos.y) / left_rect.height()).clamp(0.0, 1.0);
                     self.timbre_puck_pos = (nx, ny);
-                    self.latent_coord = (
-                        Self::normalized_to_coord(nx),
-                        Self::normalized_to_coord(ny),
-                    );
+                    self.latent_coord =
+                        (Self::normalized_to_coord(nx), Self::normalized_to_coord(ny));
                     self.update_neural_metrics();
                 }
             }
@@ -451,7 +449,11 @@ impl NeuralTimbreView {
             egui::Align2::CENTER_CENTER,
             "100% NEURAL SYNTH",
             egui::FontId::proportional(10.0),
-            if self.is_full_neural_mode { Color32::from_rgb(10, 14, 24) } else { Color32::from_rgb(220, 235, 255) },
+            if self.is_full_neural_mode {
+                Color32::from_rgb(10, 14, 24)
+            } else {
+                Color32::from_rgb(220, 235, 255)
+            },
         );
 
         painter.rect_filled(m2_rect, 4.0, bg_m2);
@@ -460,7 +462,11 @@ impl NeuralTimbreView {
             egui::Align2::CENTER_CENTER,
             "50% RESIDUAL BLEND",
             egui::FontId::proportional(10.0),
-            if !self.is_full_neural_mode { Color32::from_rgb(10, 14, 24) } else { Color32::from_rgb(220, 235, 255) },
+            if !self.is_full_neural_mode {
+                Color32::from_rgb(10, 14, 24)
+            } else {
+                Color32::from_rgb(220, 235, 255)
+            },
         );
 
         if response.clicked() {
@@ -490,7 +496,10 @@ impl NeuralTimbreView {
             if let Some(prev) = prev_src {
                 painter.line_segment(
                     [prev, pt_src],
-                    Stroke::new(1.5_f32, Color32::from_rgba_premultiplied(160, 180, 205, 120)),
+                    Stroke::new(
+                        1.5_f32,
+                        Color32::from_rgba_premultiplied(160, 180, 205, 120),
+                    ),
                 );
             }
             if let Some(prev) = prev_out {
@@ -529,7 +538,10 @@ impl NeuralTimbreView {
         let params = [
             (
                 "TIMBRE CONVERGENCE",
-                format!("{:.1}% ({:.3} MSE)", self.timbre_convergence_pct, self.spectral_loss_mse),
+                format!(
+                    "{:.1}% ({:.3} MSE)",
+                    self.timbre_convergence_pct, self.spectral_loss_mse
+                ),
                 Color32::from_rgb(0, 229, 255),
             ),
             (
@@ -539,7 +551,19 @@ impl NeuralTimbreView {
             ),
             (
                 "HARMONIC RESIDUAL",
-                format!("{:.0}% ({})", if self.is_full_neural_mode { 0.0 } else { self.residual_blend * 100.0 }, if self.is_full_neural_mode { "100% Neural" } else { "Blended" }),
+                format!(
+                    "{:.0}% ({})",
+                    if self.is_full_neural_mode {
+                        0.0
+                    } else {
+                        self.residual_blend * 100.0
+                    },
+                    if self.is_full_neural_mode {
+                        "100% Neural"
+                    } else {
+                        "Blended"
+                    }
+                ),
                 Color32::from_rgb(255, 107, 43),
             ),
             (

@@ -20,11 +20,11 @@ pub const MAX_TUBE_LENGTH_M: f32 = 1.20;
 /// Woodwind Instrument Acoustic Profile.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WoodwindInstrument {
-    FluteC,        // Concert transverse flute, open cylinder
-    PiccoloC,      // High register, conical bore taper
-    RecorderAlto,  // Fipple duct flue, cylindrical/reverse-conical
-    Shakuhachi,    // End-blown bamboo flute, wide open embouchure
-    PanFlute,      // Stopped pipe array, pure fundamental resonance
+    FluteC,       // Concert transverse flute, open cylinder
+    PiccoloC,     // High register, conical bore taper
+    RecorderAlto, // Fipple duct flue, cylindrical/reverse-conical
+    Shakuhachi,   // End-blown bamboo flute, wide open embouchure
+    PanFlute,     // Stopped pipe array, pure fundamental resonance
 }
 
 impl WoodwindInstrument {
@@ -67,16 +67,16 @@ impl WoodwindInstrument {
 #[derive(Debug, Clone)]
 pub struct WoodwindJetView {
     pub instrument: WoodwindInstrument,
-    pub jet_pressure_kpa: f32,          // [0.10 ..= 4.00 kPa]
-    pub jet_offset_mm: f32,             // [2.0 ..= 15.0 mm]
-    pub tonehole_state: [bool; 6],      // Holes 1..6 (true = closed, false = open)
-    pub jet_puck_pos: (f32, f32),       // Normalized (X: jet_pressure, Y: jet_offset)
+    pub jet_pressure_kpa: f32,     // [0.10 ..= 4.00 kPa]
+    pub jet_offset_mm: f32,        // [2.0 ..= 15.0 mm]
+    pub tonehole_state: [bool; 6], // Holes 1..6 (true = closed, false = open)
+    pub jet_puck_pos: (f32, f32),  // Normalized (X: jet_pressure, Y: jet_offset)
     pub is_dragging_puck: bool,
-    pub jet_velocity_ms: f32,           // Calculated air-jet velocity (m/s)
-    pub jet_delay_ms: f32,              // Transit time from lip to splitting edge (ms)
-    pub effective_bore_length_m: f32,   // Active acoustic length (m)
-    pub acoustic_coupling_score: f32,   // [0.0 ..= 1.0] Jet-resonator synchronization
-    pub tonehole_cutoff_hz: f32,        // Tonehole lattice radiation cutoff frequency
+    pub jet_velocity_ms: f32,         // Calculated air-jet velocity (m/s)
+    pub jet_delay_ms: f32,            // Transit time from lip to splitting edge (ms)
+    pub effective_bore_length_m: f32, // Active acoustic length (m)
+    pub acoustic_coupling_score: f32, // [0.0 ..= 1.0] Jet-resonator synchronization
+    pub tonehole_cutoff_hz: f32,      // Tonehole lattice radiation cutoff frequency
     pub color_palette: ContrastColorPalette,
 }
 
@@ -118,8 +118,7 @@ impl WoodwindJetView {
 
     /// Convert normalized coordinate [0.0 ..= 1.0] to Jet Pressure [0.10 ..= 4.00 kPa].
     pub fn normalized_to_pressure(norm: f32) -> f32 {
-        MIN_JET_PRESSURE_KPA
-            + norm.clamp(0.0, 1.0) * (MAX_JET_PRESSURE_KPA - MIN_JET_PRESSURE_KPA)
+        MIN_JET_PRESSURE_KPA + norm.clamp(0.0, 1.0) * (MAX_JET_PRESSURE_KPA - MIN_JET_PRESSURE_KPA)
     }
 
     /// Convert Jet Offset [2.0 ..= 15.0 mm] to normalized coordinate [0.0 ..= 1.0].
@@ -255,8 +254,7 @@ impl WoodwindJetView {
 
         // Air-Jet Puck on left half
         let puck_col = ((self.jet_puck_pos.0 * (mid_x - 2) as f32) + 1.0).round() as usize;
-        let puck_row =
-            (((1.0 - self.jet_puck_pos.1) * (height - 3) as f32) + 1.0).round() as usize;
+        let puck_row = (((1.0 - self.jet_puck_pos.1) * (height - 3) as f32) + 1.0).round() as usize;
         if puck_row < height - 1 && puck_col < mid_x {
             grid[puck_row][puck_col] = '@';
         }
@@ -380,9 +378,15 @@ impl WoodwindJetView {
             let opt_tau = 0.5 / f_target;
             let opt_tau_ms = opt_tau * 1000.0;
             painter.text(
-                egui::pos2(left_rect.min.x + 15.0, left_rect.min.y + 24.0 + (n as f32 * 14.0)),
+                egui::pos2(
+                    left_rect.min.x + 15.0,
+                    left_rect.min.y + 24.0 + (n as f32 * 14.0),
+                ),
                 egui::Align2::LEFT_TOP,
-                format!("Harmonic {}: {:.0} Hz (τ_opt = {:.2} ms)", n, f_target, opt_tau_ms),
+                format!(
+                    "Harmonic {}: {:.0} Hz (τ_opt = {:.2} ms)",
+                    n, f_target, opt_tau_ms
+                ),
                 egui::FontId::proportional(9.0),
                 Color32::from_rgba_premultiplied(0, 229, 255, 120),
             );
@@ -481,11 +485,17 @@ impl WoodwindJetView {
         let bore_right = right_rect.max.x - 20.0;
 
         painter.line_segment(
-            [egui::pos2(bore_left, bore_cy - 18.0), egui::pos2(bore_right, bore_cy - 18.0)],
+            [
+                egui::pos2(bore_left, bore_cy - 18.0),
+                egui::pos2(bore_right, bore_cy - 18.0),
+            ],
             Stroke::new(2.0_f32, Color32::from_rgb(255, 215, 0)),
         );
         painter.line_segment(
-            [egui::pos2(bore_left, bore_cy + 18.0), egui::pos2(bore_right, bore_cy + 18.0)],
+            [
+                egui::pos2(bore_left, bore_cy + 18.0),
+                egui::pos2(bore_right, bore_cy + 18.0),
+            ],
             Stroke::new(2.0_f32, Color32::from_rgb(255, 215, 0)),
         );
 
@@ -523,7 +533,10 @@ impl WoodwindJetView {
         let params = [
             (
                 "JET VELOCITY (V_jet)",
-                format!("{:.1} m/s ({:.2} kPa)", self.jet_velocity_ms, self.jet_pressure_kpa),
+                format!(
+                    "{:.1} m/s ({:.2} kPa)",
+                    self.jet_velocity_ms, self.jet_pressure_kpa
+                ),
                 Color32::from_rgb(0, 229, 255),
             ),
             (
@@ -537,7 +550,10 @@ impl WoodwindJetView {
             ),
             (
                 "EFFECTIVE BORE LENGTH",
-                format!("{:.2} m (Fund: {:.1} Hz)", self.effective_bore_length_m, f_fund),
+                format!(
+                    "{:.2} m (Fund: {:.1} Hz)",
+                    self.effective_bore_length_m, f_fund
+                ),
                 Color32::from_rgb(255, 107, 43),
             ),
             (

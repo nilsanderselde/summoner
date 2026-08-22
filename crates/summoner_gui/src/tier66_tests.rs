@@ -222,11 +222,7 @@ mod tests {
             let norm = OversampledLimiterView::release_to_normalized(rel);
             assert!((0.0..=1.0).contains(&norm));
             let back = OversampledLimiterView::normalized_to_release(norm);
-            assert!(
-                (back - rel).abs() < 1e-2,
-                "Release mismatch at {}",
-                rel
-            );
+            assert!((back - rel).abs() < 1e-2, "Release mismatch at {}", rel);
         }
 
         // 5. Limiter Profiles
@@ -240,8 +236,8 @@ mod tests {
             limiter.set_profile(profile);
             let ceil = profile.default_ceiling_dbtp();
             let thr = profile.default_threshold_db();
-            assert!(ceil <= 0.0 && ceil >= -6.0);
-            assert!(thr <= 0.0 && thr >= -18.0);
+            assert!((-6.0..=0.0).contains(&ceil));
+            assert!((-18.0..=0.0).contains(&thr));
         }
 
         // 6. Dither Noise Shaping Curves
@@ -293,11 +289,7 @@ mod tests {
             let norm = NeuralTimbreView::coord_to_normalized(coord);
             assert!((0.0..=1.0).contains(&norm));
             let back = NeuralTimbreView::normalized_to_coord(norm);
-            assert!(
-                (back - coord).abs() < 1e-4,
-                "Coord mismatch at {}",
-                coord
-            );
+            assert!((back - coord).abs() < 1e-4, "Coord mismatch at {}", coord);
         }
 
         // 3. Flow Rate Conversion Roundtrip
@@ -305,11 +297,7 @@ mod tests {
             let norm = NeuralTimbreView::flow_to_normalized(flow);
             assert!((0.0..=1.0).contains(&norm));
             let back = NeuralTimbreView::normalized_to_flow(norm);
-            assert!(
-                (back - flow).abs() < 1e-4,
-                "Flow mismatch at {}",
-                flow
-            );
+            assert!((back - flow).abs() < 1e-4, "Flow mismatch at {}", flow);
         }
 
         // 4. Timbre Models
@@ -362,11 +350,7 @@ mod tests {
             let norm = MpeghSpatializerView::azimuth_to_normalized(az);
             assert!((0.0..=1.0).contains(&norm));
             let back = MpeghSpatializerView::normalized_to_azimuth(norm);
-            assert!(
-                (back - az).abs() < 1e-3,
-                "Azimuth mismatch at {}",
-                az
-            );
+            assert!((back - az).abs() < 1e-3, "Azimuth mismatch at {}", az);
         }
 
         // 3. Elevation Conversion Roundtrip
@@ -374,11 +358,7 @@ mod tests {
             let norm = MpeghSpatializerView::elevation_to_normalized(el);
             assert!((0.0..=1.0).contains(&norm));
             let back = MpeghSpatializerView::normalized_to_elevation(norm);
-            assert!(
-                (back - el).abs() < 1e-3,
-                "Elevation mismatch at {}",
-                el
-            );
+            assert!((back - el).abs() < 1e-3, "Elevation mismatch at {}", el);
         }
 
         // 4. MPEG-H Formats
@@ -410,7 +390,10 @@ mod tests {
         mpegh.azimuth_deg = 90.0;
         mpegh.elevation_deg = 0.0;
         mpegh.update_spatial_calculations();
-        assert!(mpegh.itd_microseconds > 600.0, "ITD at 90 deg must be large (> 600 μs)");
+        assert!(
+            mpegh.itd_microseconds > 600.0,
+            "ITD at 90 deg must be large (> 600 μs)"
+        );
         assert!(mpegh.ild_db > 10.0, "ILD at 90 deg must be large (> 10 dB)");
 
         // 7. HRTF Magnitude Response

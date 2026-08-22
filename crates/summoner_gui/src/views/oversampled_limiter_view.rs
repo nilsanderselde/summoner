@@ -85,18 +85,18 @@ impl DitherShapingCurve {
 #[derive(Debug, Clone)]
 pub struct OversampledLimiterView {
     pub profile: LimiterProfile,
-    pub ceiling_dbtp: f32,             // [-6.0 ..= 0.0 dBTP]
-    pub threshold_db: f32,             // [-18.0 ..= 0.0 dB]
-    pub release_ms: f32,               // [1.0 ..= 1000.0 ms]
-    pub auto_release: bool,            // Program-dependent release
+    pub ceiling_dbtp: f32,  // [-6.0 ..= 0.0 dBTP]
+    pub threshold_db: f32,  // [-18.0 ..= 0.0 dB]
+    pub release_ms: f32,    // [1.0 ..= 1000.0 ms]
+    pub auto_release: bool, // Program-dependent release
     pub dither_curve: DitherShapingCurve,
-    pub is_16_bit_dither: bool,        // true = 16-bit, false = 24-bit
-    pub limiter_puck_pos: (f32, f32),  // Normalized (X: Threshold, Y: Ceiling)
+    pub is_16_bit_dither: bool,       // true = 16-bit, false = 24-bit
+    pub limiter_puck_pos: (f32, f32), // Normalized (X: Threshold, Y: Ceiling)
     pub is_dragging_puck: bool,
-    pub true_peak_max_dbtp: f32,       // Current measured ISP max
-    pub gain_reduction_db: f32,        // Realtime GR (dB)
-    pub integrated_lufs: f32,          // Integrated Loudness LUFS
-    pub isp_overshoot_prevented: u32,  // ISP peak collision count
+    pub true_peak_max_dbtp: f32,      // Current measured ISP max
+    pub gain_reduction_db: f32,       // Realtime GR (dB)
+    pub integrated_lufs: f32,         // Integrated Loudness LUFS
+    pub isp_overshoot_prevented: u32, // ISP peak collision count
     pub color_palette: ContrastColorPalette,
 }
 
@@ -218,20 +218,32 @@ impl OversampledLimiterView {
                 // Dip in 2-5kHz ear sensitivity zone, rise in ultrasonics
                 let f_khz = f / 1000.0;
                 let dip = (-1.0 / (1.0 + ((f_khz - 3.5) / 1.5).powi(2))) * 12.0;
-                let rise = if f_khz > 14.0 { (f_khz - 14.0) * 3.5 } else { 0.0 };
+                let rise = if f_khz > 14.0 {
+                    (f_khz - 14.0) * 3.5
+                } else {
+                    0.0
+                };
                 base_floor - snr_boost + dip + rise
             }
             DitherShapingCurve::FWeighted => {
                 // Steep high shelf above 12kHz
                 let f_khz = f / 1000.0;
-                let rise = if f_khz > 10.0 { (f_khz - 10.0).powf(1.8) * 1.8 } else { 0.0 };
+                let rise = if f_khz > 10.0 {
+                    (f_khz - 10.0).powf(1.8) * 1.8
+                } else {
+                    0.0
+                };
                 base_floor - snr_boost + rise - 6.0
             }
             DitherShapingCurve::ModifiedShibata => {
                 // 5th order psychoacoustic curve
                 let f_khz = f / 1000.0;
                 let f_ear_dip = (-1.0 / (1.0 + ((f_khz - 3.8) / 1.2).powi(2))) * 15.0;
-                let ultra_rise = if f_khz > 15.0 { (f_khz - 15.0).powf(2.0) * 2.2 } else { 0.0 };
+                let ultra_rise = if f_khz > 15.0 {
+                    (f_khz - 15.0).powf(2.0) * 2.2
+                } else {
+                    0.0
+                };
                 base_floor - snr_boost + f_ear_dip + ultra_rise
             }
         }
@@ -502,7 +514,11 @@ impl OversampledLimiterView {
             egui::Align2::CENTER_CENTER,
             "16-BIT CD DITHER",
             egui::FontId::proportional(10.0),
-            if self.is_16_bit_dither { Color32::from_rgb(10, 14, 24) } else { Color32::from_rgb(220, 235, 255) },
+            if self.is_16_bit_dither {
+                Color32::from_rgb(10, 14, 24)
+            } else {
+                Color32::from_rgb(220, 235, 255)
+            },
         );
 
         painter.rect_filled(b24_rect, 4.0, bg_24);
@@ -511,7 +527,11 @@ impl OversampledLimiterView {
             egui::Align2::CENTER_CENTER,
             "24-BIT MASTER",
             egui::FontId::proportional(10.0),
-            if !self.is_16_bit_dither { Color32::from_rgb(10, 14, 24) } else { Color32::from_rgb(220, 235, 255) },
+            if !self.is_16_bit_dither {
+                Color32::from_rgb(10, 14, 24)
+            } else {
+                Color32::from_rgb(220, 235, 255)
+            },
         );
 
         if response.clicked() {
@@ -571,12 +591,23 @@ impl OversampledLimiterView {
         let params = [
             (
                 "TRUE-PEAK MAX (dBTP)",
-                format!("{:.1} dBTP ({})", self.true_peak_max_dbtp, if self.true_peak_max_dbtp <= -1.0 { "EBU PASS" } else { "HOT" }),
+                format!(
+                    "{:.1} dBTP ({})",
+                    self.true_peak_max_dbtp,
+                    if self.true_peak_max_dbtp <= -1.0 {
+                        "EBU PASS"
+                    } else {
+                        "HOT"
+                    }
+                ),
                 Color32::from_rgb(0, 229, 255),
             ),
             (
                 "GAIN REDUCTION",
-                format!("-{:.1} dB ({:.0} ms Rel)", self.gain_reduction_db, self.release_ms),
+                format!(
+                    "-{:.1} dB ({:.0} ms Rel)",
+                    self.gain_reduction_db, self.release_ms
+                ),
                 Color32::from_rgb(255, 215, 0),
             ),
             (
@@ -586,7 +617,14 @@ impl OversampledLimiterView {
             ),
             (
                 "DITHER BIT DEPTH",
-                format!("{} (Shibata 5th)", if self.is_16_bit_dither { "16-Bit CD" } else { "24-Bit Master" }),
+                format!(
+                    "{} (Shibata 5th)",
+                    if self.is_16_bit_dither {
+                        "16-Bit CD"
+                    } else {
+                        "24-Bit Master"
+                    }
+                ),
                 Color32::from_rgb(0, 255, 180),
             ),
         ];

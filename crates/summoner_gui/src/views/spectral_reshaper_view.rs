@@ -73,15 +73,15 @@ impl ReshaperPreset {
 #[derive(Debug, Clone)]
 pub struct SpectralReshaperView {
     pub preset: ReshaperPreset,
-    pub selected_band: usize,             // Active band index [0..3]
-    pub crossovers_hz: [f32; 3],          // Crossover boundaries [Low/Mid, Mid/HighMid, HighMid/Air]
-    pub attack_db: [f32; 4],              // Per-band attack gain [-12.0 ..= +12.0 dB]
-    pub sustain_db: [f32; 4],             // Per-band sustain gain [-12.0 ..= +12.0 dB]
-    pub debleed_thresh_db: [f32; 4],      // Per-band de-bleed threshold [-60.0 ..= 0.0 dB]
-    pub band_puck_pos: (f32, f32),        // Normalized for selected band (X: Attack, Y: Sustain)
+    pub selected_band: usize,        // Active band index [0..3]
+    pub crossovers_hz: [f32; 3],     // Crossover boundaries [Low/Mid, Mid/HighMid, HighMid/Air]
+    pub attack_db: [f32; 4],         // Per-band attack gain [-12.0 ..= +12.0 dB]
+    pub sustain_db: [f32; 4],        // Per-band sustain gain [-12.0 ..= +12.0 dB]
+    pub debleed_thresh_db: [f32; 4], // Per-band de-bleed threshold [-60.0 ..= 0.0 dB]
+    pub band_puck_pos: (f32, f32),   // Normalized for selected band (X: Attack, Y: Sustain)
     pub is_dragging_puck: bool,
-    pub transient_crest_factor_db: f32,   // Overall dynamic transient crest factor (dB)
-    pub debleed_isolation_score: f32,     // [0.0 ..= 1.0] De-bleed separation efficiency
+    pub transient_crest_factor_db: f32, // Overall dynamic transient crest factor (dB)
+    pub debleed_isolation_score: f32,   // [0.0 ..= 1.0] De-bleed separation efficiency
     pub color_palette: ContrastColorPalette,
 }
 
@@ -349,7 +349,12 @@ impl SpectralReshaperView {
             Stroke::new(1.0_f32, Color32::from_rgb(40, 55, 80)),
         );
 
-        let band_names = ["BAND 1: LOW", "BAND 2: LOW-MID", "BAND 3: HIGH-MID", "BAND 4: AIR"];
+        let band_names = [
+            "BAND 1: LOW",
+            "BAND 2: LOW-MID",
+            "BAND 3: HIGH-MID",
+            "BAND 4: AIR",
+        ];
         let b = self.selected_band.clamp(0, 3);
         painter.text(
             egui::pos2(left_rect.min.x + 10.0, left_rect.min.y + 10.0),
@@ -363,11 +368,17 @@ impl SpectralReshaperView {
         let cx = left_rect.center().x;
         let cy = left_rect.center().y;
         painter.line_segment(
-            [egui::pos2(left_rect.min.x + 10.0, cy), egui::pos2(left_rect.max.x - 10.0, cy)],
+            [
+                egui::pos2(left_rect.min.x + 10.0, cy),
+                egui::pos2(left_rect.max.x - 10.0, cy),
+            ],
             Stroke::new(1.0_f32, Color32::from_rgba_premultiplied(100, 130, 170, 70)),
         );
         painter.line_segment(
-            [egui::pos2(cx, left_rect.min.y + 25.0), egui::pos2(cx, left_rect.max.y - 10.0)],
+            [
+                egui::pos2(cx, left_rect.min.y + 25.0),
+                egui::pos2(cx, left_rect.max.y - 10.0),
+            ],
             Stroke::new(1.0_f32, Color32::from_rgba_premultiplied(100, 130, 170, 70)),
         );
 
@@ -475,7 +486,10 @@ impl SpectralReshaperView {
         painter.text(
             egui::pos2(right_rect.min.x + 15.0, right_rect.min.y + 98.0),
             egui::Align2::LEFT_TOP,
-            format!("De-Bleed Gating Thresh: {:.1} dB", self.debleed_thresh_db[b]),
+            format!(
+                "De-Bleed Gating Thresh: {:.1} dB",
+                self.debleed_thresh_db[b]
+            ),
             egui::FontId::proportional(11.0),
             Color32::from_rgb(255, 215, 0),
         );
@@ -494,10 +508,8 @@ impl SpectralReshaperView {
         let thresh_val = self.debleed_thresh_db[b];
         let thresh_norm = Self::thresh_to_normalized(thresh_val);
         let fill_w = thresh_norm * slider_rect.width();
-        let fill_rect = egui::Rect::from_min_size(
-            slider_rect.min,
-            egui::vec2(fill_w, slider_rect.height()),
-        );
+        let fill_rect =
+            egui::Rect::from_min_size(slider_rect.min, egui::vec2(fill_w, slider_rect.height()));
         painter.rect_filled(fill_rect, 4.0, Color32::from_rgb(255, 215, 0));
 
         // Frequency Crossover Readout
@@ -549,7 +561,11 @@ impl SpectralReshaperView {
             ),
             (
                 "DE-BLEED GATING THRESH",
-                format!("{:.1} dB ({:.1}% Iso)", thresh_val, self.debleed_isolation_score * 100.0),
+                format!(
+                    "{:.1} dB ({:.1}% Iso)",
+                    thresh_val,
+                    self.debleed_isolation_score * 100.0
+                ),
                 Color32::from_rgb(255, 107, 43),
             ),
             (
