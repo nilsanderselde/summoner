@@ -314,7 +314,7 @@ impl WfsArraySpatializerView {
         painter.text(
             egui::pos2(left_rect.min.x + 10.0, left_rect.min.y + 10.0),
             egui::Align2::LEFT_TOP,
-            "HUYGENS-FRESNEL HOLOGRAPHIC WAVEFIELD & LOUDSPEAKER NODES",
+            "HUYGENS-FRESNEL HOLOGRAPHIC WAVEFIELD",
             egui::FontId::proportional(10.5),
             Color32::from_rgb(0, 255, 180),
         );

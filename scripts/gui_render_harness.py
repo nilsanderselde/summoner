@@ -10169,7 +10169,7 @@ def render_wfs_array_spatializer_view():
     draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(0, 255, 180))
     draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
 
-    draw.text((40, 124), "HUYGENS-FRESNEL HOLOGRAPHIC WAVEFIELD & LOUDSPEAKER NODES", fill=(0, 255, 180), font=f_header)
+    draw.text((40, 124), "HUYGENS-FRESNEL HOLOGRAPHIC WAVEFIELD", fill=(0, 255, 180), font=f_header)
     draw.text((40, 310), "Source: X=0.00m, Y=3.50m | Virtual Behind | Drivers: 64 | Aliasing: 2200Hz", fill=(120, 255, 200), font=f_small)
 
     # Right: 16-Point Loudspeaker Delay Profile
