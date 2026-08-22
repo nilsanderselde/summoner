@@ -89,6 +89,8 @@ pub mod tier60_tests;
 #[cfg(feature = "gui")]
 pub mod tier61_tests;
 #[cfg(feature = "gui")]
+pub mod tier62_tests;
+#[cfg(feature = "gui")]
 pub mod touch_gestures;
 #[cfg(feature = "gui")]
 pub mod transport_bar;
@@ -124,6 +126,8 @@ pub use views::dsp_rack_dock::DspRackDockView;
 #[cfg(feature = "gui")]
 pub use views::envelope_follower_view::EnvelopeFollowerView;
 #[cfg(feature = "gui")]
+pub use views::fm_matrix_view::FmMatrixView;
+#[cfg(feature = "gui")]
 pub use views::formant_filter_view::FormantFilterView;
 #[cfg(feature = "gui")]
 pub use views::frequency_shifter_view::FrequencyShifterView;
@@ -137,6 +141,8 @@ pub use views::harmonic_exciter_view::HarmonicExciterView;
 pub use views::harmonic_tension_map::HarmonicTensionMapView;
 #[cfg(feature = "gui")]
 pub use views::isomorphic_tuning_keyboard::IsomorphicTuningKeyboardView;
+#[cfg(feature = "gui")]
+pub use views::k_system_meter_view::KSystemMeterView;
 #[cfg(feature = "gui")]
 pub use views::keybinding_editor::KeybindingEditorView;
 #[cfg(feature = "gui")]
@@ -156,6 +162,8 @@ pub use views::multiband_expander_view::MultibandExpanderView;
 #[cfg(feature = "gui")]
 pub use views::multiband_imager_view::MultibandImagerView;
 #[cfg(feature = "gui")]
+pub use views::multiband_saturator_view::MultibandSaturatorView;
+#[cfg(feature = "gui")]
 pub use views::multiband_spatial_view::MultibandSpatialView;
 #[cfg(feature = "gui")]
 pub use views::multitap_delay_view::MultitapDelayView;
@@ -165,6 +173,8 @@ pub use views::optical_compressor_view::OpticalCompressorView;
 pub use views::pitch_corrector_view::PitchCorrectorView;
 #[cfg(feature = "gui")]
 pub use views::polar_phase_correlator_view::PolarPhaseCorrelatorView;
+#[cfg(feature = "gui")]
+pub use views::raytraced_reverb_view::RaytracedReverbView;
 #[cfg(feature = "gui")]
 pub use views::resonance_suppressor_view::ResonanceSuppressorView;
 #[cfg(feature = "gui")]
@@ -187,6 +197,8 @@ pub use views::spatial_panner_view::SpatialPannerView;
 pub use views::spectral_brush_editor::SpectralBrushEditorView;
 #[cfg(feature = "gui")]
 pub use views::spectral_deesser_view::SpectralDeEsserView;
+#[cfg(feature = "gui")]
+pub use views::spectral_grain_cloud_view::SpectralGrainCloudView;
 #[cfg(feature = "gui")]
 pub use views::spectral_matching_eq_view::SpectralMatchingEqView;
 #[cfg(feature = "gui")]

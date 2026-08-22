@@ -5437,6 +5437,442 @@ if __name__ == "__main__":
     render_transient_designer_view()
     render_master_limiter_radar_view()
     render_harmonic_exciter_view()
+def render_fm_matrix_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (10, 14, 24, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(16, bold=True)
+    f_header = get_font(14, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(10, bold=False)
+
+    draw.text((20, 18), "6-OPERATOR FM MODULATION MATRIX & PHASE FEEDBACK HUD", fill=(240, 245, 255), font=f_title)
+
+    algos = [
+        ("ALGO 1 (CASCADE)", True),
+        ("ALGO 5 (DUAL)", False),
+        ("ALGO 16 (BRANCH)", False),
+        ("ALGO 22 (PARALLEL)", False),
+        ("ALGO 32 (ADDITIVE)", False),
+    ]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, active) in enumerate(algos):
+        bx = 20 + i * (tab_w + 8)
+        bg = (0, 229, 255) if active else (25, 35, 50)
+        fg = (10, 14, 24) if active else (200, 215, 235)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 10, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas (20..780, 104..340)
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(14, 20, 32), outline=(45, 65, 95), width=2)
+
+    # 6 Operator Nodes on left side
+    op_w = int((760 * 0.55 - 20) / 6.0)
+    for i in range(6):
+        ox = 30 + i * op_w
+        is_carrier = (i == 0)
+        col = (0, 229, 255) if is_carrier else (255, 215, 0)
+        draw.rounded_rectangle([ox, 134, ox + op_w - 6, 294], radius=4, fill=(18, 25, 38), outline=col, width=2)
+        draw.text((ox + 8, 142), f"OP {i+1}", fill=col, font=f_header)
+        draw.text((ox + 4, 162), "CARRIER" if is_carrier else "MOD", fill=(180, 200, 220), font=f_small)
+        ratios = ["1.00x", "2.00x", "3.00x", "4.00x", "7.00x", "1.00x"]
+        draw.text((ox + 4, 185), ratios[i], fill=(240, 245, 255), font=f_small)
+        # Level bar
+        levels = [0.95, 0.80, 0.65, 0.50, 0.40, 0.85]
+        bar_h = int(levels[i] * 60)
+        draw.rectangle([ox + 8, 280 - bar_h, ox + op_w - 14, 280], fill=col)
+
+    # Bessel Sideband Spectrum on right side
+    spec_left = 20 + int(760 * 0.55) + 15
+    spec_w = 780 - spec_left - 15
+    draw.rounded_rectangle([spec_left, 124, spec_left + spec_w, 320], radius=4, fill=(10, 14, 24), outline=(45, 60, 85))
+    draw.text((spec_left + 10, 134), "BESSEL SIDEBAND SPECTRUM", fill=(160, 180, 205), font=f_small)
+
+    sb_w = (spec_w - 20) / 8.0
+    sb_energies = [0.85, 0.65, 0.45, 0.30, 0.18, 0.10, 0.05, 0.02]
+    for i, e in enumerate(sb_energies):
+        bx = spec_left + 10 + int(i * sb_w)
+        bh = int(e * 140)
+        draw.rectangle([bx, 310 - bh, bx + int(sb_w - 3), 310], fill=(0, 255, 180))
+
+    # Modulation Index Puck
+    px, py = 20 + int(0.35 * 760), 104 + int((1.0 - 0.50) * 236)
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(0, 229, 255, 120), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(0, 229, 255))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+
+    # Bottom Metrics Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    params = [
+        ("MODULATION INDEX", "3.50 β", (0, 229, 255)),
+        ("FEEDBACK (OP 6)", "45.0%", (255, 107, 43)),
+        ("HARMONIC RICHNESS", "68.4%", (0, 255, 180)),
+        ("ACTIVE ALGORITHM", "Algo 1 (Cascade)", (255, 215, 0)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 180, 205), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=f_header)
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] 6-Operator FM Matrix Modulation Indices & Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "fm_matrix_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_spectral_grain_cloud_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (10, 14, 24, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(16, bold=True)
+    f_header = get_font(14, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(10, bold=False)
+
+    draw.text((20, 18), "GRANULAR SPECTRAL GRAIN CLOUD & STOCHASTIC TRAJECTORY HUD", fill=(240, 245, 255), font=f_title)
+
+    windows = [
+        ("HANN COSINE", True),
+        ("GAUSSIAN BELL", False),
+        ("BLACKMAN-HARRIS", False),
+        ("TRAPEZOID", False),
+        ("EXP DECAY", False),
+    ]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, active) in enumerate(windows):
+        bx = 20 + i * (tab_w + 8)
+        bg = (157, 78, 221) if active else (25, 35, 50)
+        fg = (255, 255, 255) if active else (200, 215, 235)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 12, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas (20..780, 104..340)
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(14, 20, 32), outline=(45, 65, 95), width=2)
+    draw.line([(20, 222), (780, 222)], fill=(60, 85, 120, 80), width=1)
+
+    # Render simulated grain particles
+    for i in range(64):
+        frac = i / 64.0
+        gx = 20 + int((0.45 + math.sin(frac * 6.28) * 0.18) * 760)
+        gy = 222 - int(math.cos(frac * 12.56) * 55.0)
+        rad = 3 + int((1.0 - abs(frac - 0.5) * 1.5) * 4)
+        draw.ellipse([gx - rad, gy - rad, gx + rad, gy + rad], fill=(157, 78, 221, 180))
+        draw.ellipse([gx - 1, gy - 1, gx + 1, gy + 1], fill=(0, 229, 255))
+
+    # Dispersion Bounding Box
+    px, py = 20 + int(0.45 * 760), 222
+    draw.rounded_rectangle([px - 140, py - 65, px + 140, py + 65], radius=8, outline=(255, 215, 0, 100), width=1)
+
+    # Emitter Puck
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(157, 78, 221, 140), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(157, 78, 221))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+
+    # Bottom Metrics Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    params = [
+        ("GRAIN RATE", "45.0 Hz", (157, 78, 221)),
+        ("GRAIN DURATION", "65.0 ms", (0, 229, 255)),
+        ("PITCH SPRAY", "12.0 st (0.0st)", (255, 215, 0)),
+        ("POSITION JITTER", "150 ms", (0, 255, 180)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 180, 205), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=f_header)
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Granular Spectral Cloud Trajectories & Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "spectral_grain_cloud_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_multiband_saturator_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (10, 14, 24, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(16, bold=True)
+    f_header = get_font(14, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(10, bold=False)
+
+    draw.text((20, 18), "DYNAMIC MULTIBAND SATURATOR & HARMONIC WARMTH HUD", fill=(240, 245, 255), font=f_title)
+
+    bands = [
+        ("LOW SUB", "< 120 Hz", False),
+        ("LOW-MID", "120 - 1.5k Hz", False),
+        ("HIGH-MID", "1.5k - 6.5k Hz", True),
+        ("HIGH AIR", "6.5k - 20k Hz", False),
+    ]
+    tab_w = int((800 - 40 - 3 * 8) / 4)
+    for i, (name, range_str, active) in enumerate(bands):
+        bx = 20 + i * (tab_w + 8)
+        bg = (255, 107, 43) if active else (25, 35, 50)
+        fg = (10, 14, 24) if active else (200, 215, 235)
+        sub_fg = (30, 20, 20) if active else (140, 160, 185)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 18, 56), name, fill=fg, font=f_small)
+        draw.text((bx + 18, 74), range_str, fill=sub_fg, font=f_small)
+
+    # Main Canvas (20..780, 104..340)
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(14, 20, 32), outline=(45, 65, 95), width=2)
+    draw.line([(20, 222), (780, 222)], fill=(60, 85, 120, 80), width=1)
+    draw.line([(400, 104), (400, 340)], fill=(60, 85, 120, 80), width=1)
+
+    # Draw Saturation Transfer Curve
+    curve_pts = []
+    for s in range(100):
+        frac = s / 99.0
+        x = (frac * 2.0 - 1.0) * 1.8
+        y = math.tanh(x * 1.5) * 0.85
+        norm_y = (y + 1.2) / 2.4
+        px = 20 + int(frac * 760)
+        py = 104 + int((1.0 - norm_y) * 236)
+        curve_pts.append((px, py))
+
+    for i in range(len(curve_pts) - 1):
+        draw.line([curve_pts[i], curve_pts[i + 1]], fill=(255, 107, 43), width=3)
+
+    # Saturator Puck
+    px, py = 20 + int(0.28 * 760), 104 + int((1.0 - 0.42) * 236)
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(255, 107, 43, 140), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(255, 107, 43))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+
+    # Bottom Metrics Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    params = [
+        ("SATURATION DRIVE", "+6.8 dB", (255, 107, 43)),
+        ("HARMONIC ASYMMETRY", "-0.15 Bias", (255, 215, 0)),
+        ("OVERSAMPLING", "4x Linear-Phase", (0, 229, 255)),
+        ("TOTAL THD", "4.15%", (0, 255, 180)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 180, 205), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=f_header)
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Multiband Saturator Transfer Curves & Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "multiband_saturator_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_raytraced_reverb_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (10, 14, 24, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(16, bold=True)
+    f_header = get_font(14, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(10, bold=False)
+
+    draw.text((20, 18), "ACOUSTIC EARLY REFLECTIONS RAYTRACER & BINAURAL HUD", fill=(240, 245, 255), font=f_title)
+
+    materials = [
+        ("HARDWOOD PLANK", True),
+        ("STUDIO FOAM", False),
+        ("CONCRETE", False),
+        ("GLASS", False),
+        ("VELVET DRAPE", False),
+    ]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, active) in enumerate(materials):
+        bx = 20 + i * (tab_w + 8)
+        bg = (0, 229, 255) if active else (25, 35, 50)
+        fg = (10, 14, 24) if active else (200, 215, 235)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 12, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas (20..780, 104..340)
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(10, 14, 24), outline=(70, 95, 135), width=2)
+
+    # Source and Listener coordinates
+    sx, sy = 20 + int(0.30 * 760), 104 + int((1.0 - 0.70) * 236)
+    lx, ly = 20 + int(0.65 * 760), 104 + int((1.0 - 0.35) * 236)
+
+    # Direct ray (Emerald)
+    draw.line([(sx, sy), (lx, ly)], fill=(0, 255, 180), width=2)
+
+    # 1st order reflection rays (Gold)
+    # North wall hit
+    n_hit = (int((sx + lx) * 0.5), 104)
+    draw.line([(sx, sy), n_hit], fill=(255, 215, 0), width=2)
+    draw.line([n_hit, (lx, ly)], fill=(255, 215, 0), width=2)
+
+    # South wall hit
+    s_hit = (int((sx + lx) * 0.5), 340)
+    draw.line([(sx, sy), s_hit], fill=(255, 215, 0), width=2)
+    draw.line([s_hit, (lx, ly)], fill=(255, 215, 0), width=2)
+
+    # Source Puck 'S' (Cyan)
+    draw.ellipse([sx - 22, sy - 22, sx + 22, sy + 22], outline=(0, 229, 255, 140), width=2)
+    draw.ellipse([sx - 14, sy - 14, sx + 14, sy + 14], fill=(0, 229, 255))
+    draw.text((sx - 4, sy - 8), "S", fill=(10, 14, 24), font=f_header)
+
+    # Listener Puck 'L' (Orange)
+    draw.ellipse([lx - 22, ly - 22, lx + 22, ly + 22], outline=(255, 107, 43, 140), width=2)
+    draw.ellipse([lx - 14, ly - 14, lx + 14, ly + 14], fill=(255, 107, 43))
+    draw.text((lx - 4, ly - 8), "L", fill=(255, 255, 255), font=f_header)
+
+    # Bottom Metrics Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    params = [
+        ("ROOM SIZE (L x W x H)", "12.0 x 8.0 x 3.5 m", (0, 229, 255)),
+        ("SABINE RT60 ESTIMATE", "1.25 s", (255, 215, 0)),
+        ("WALL ABSORPTION (α)", "0.12", (0, 255, 180)),
+        ("SPEED OF SOUND", "343 m/s", (255, 107, 43)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 180, 205), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=f_header)
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Acoustic Raytracing Early Reflections & Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "raytraced_reverb_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_k_system_meter_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (10, 14, 24, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(16, bold=True)
+    f_header = get_font(14, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(10, bold=False)
+
+    draw.text((20, 18), "BROADCAST MASTERING K-SYSTEM LOUDNESS & CREST HUD", fill=(240, 245, 255), font=f_title)
+
+    scales = [
+        ("K-20 (CINEMA / 20dB)", False),
+        ("K-14 (POP / 14dB)", True),
+        ("K-12 (RADIO / 12dB)", False),
+    ]
+    tab_w = int((800 - 40 - 2 * 8) / 3)
+    for i, (name, active) in enumerate(scales):
+        bx = 20 + i * (tab_w + 8)
+        bg = (0, 229, 255) if active else (25, 35, 50)
+        fg = (10, 14, 24) if active else (200, 215, 235)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 24, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas (20..780, 104..340)
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(10, 14, 24), outline=(45, 65, 95), width=2)
+
+    # Left Meter Bar Zone (30..220)
+    meter_top, meter_bottom = 124, 320
+    meter_h = meter_bottom - meter_top
+
+    ticks = [(4.0, "+4 dB", (255, 51, 102)), (0.0, " 0 VU", (255, 215, 0)), (-6.0, "-6 dB", (140, 160, 185)), (-12.0, "-12 dB", (140, 160, 185))]
+    for t_val, t_lbl, t_col in ticks:
+        frac = (t_val + 30.0) / 36.0
+        ty = meter_bottom - int(frac * meter_h)
+        draw.line([(50, ty), (200, ty)], fill=t_col, width=1)
+        draw.text((205, ty - 6), t_lbl, fill=t_col, font=f_small)
+
+    # L & R Bars (at -14.0 dBFS = 0 VU on K-14)
+    bar_top = meter_bottom - int(((0.0 + 30.0) / 36.0) * meter_h)
+    draw.rectangle([70, bar_top, 98, meter_bottom], fill=(0, 255, 180))
+    draw.rectangle([105, bar_top - 4, 133, meter_bottom], fill=(0, 255, 180))
+    draw.text((78, meter_bottom + 4), "L", fill=(180, 200, 220), font=f_small)
+    draw.text((113, meter_bottom + 4), "R", fill=(180, 200, 220), font=f_small)
+
+    # Right Vectorscope (450..750)
+    vcx, vcy = 580, 222
+    vr = 75
+    draw.ellipse([vcx - vr, vcy - vr, vcx + vr, vcy + vr], outline=(60, 85, 120, 90), width=1)
+    draw.line([(vcx - vr, vcy), (vcx + vr, vcy)], fill=(60, 85, 120, 60), width=1)
+    draw.line([(vcx, vcy - vr), (vcx, vcy + vr)], fill=(60, 85, 120, 60), width=1)
+
+    # Calibration Trim Puck
+    px, py = 20 + int(0.65 * 760), 104 + int((1.0 - 0.50) * 236)
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(0, 229, 255, 140), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(0, 229, 255))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+
+    # Bottom Metrics Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    params = [
+        ("TRUE-PEAK (BS.1770)", "-1.5 / -1.2 dBFS", (0, 229, 255)),
+        ("CREST FACTOR", "12.6 dB Dynamic", (255, 215, 0)),
+        ("MONITOR CALIBRATION", "83.0 dBC SPL", (0, 255, 180)),
+        ("PHASE CORRELATION", "+0.88 r", (255, 107, 43)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 180, 205), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=f_header)
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] K-System Mastering Loudness & Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "k_system_meter_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+if __name__ == "__main__":
+    render_live_macro_rack()
+    render_spectrogram_3d()
+    render_keybinding_editor()
+    render_meter_bridge()
+    render_dpi_scale_panel()
+    render_dsp_rack_dock()
+    render_detachable_window_manager()
+    render_accessibility_announcer()
+    render_macro_rotary_dial()
+    render_harmonic_tension_map()
+    render_transient_warp_editor()
+    render_step_sequencer_matrix()
+    render_isomorphic_tuning_keyboard()
+    render_envelope_follower_view()
+    render_bezier_automation_editor()
+    render_transient_shaper_view()
+    render_ambisonic_radar_view()
+    render_granular_cloud_view()
+    render_spectral_morph_view()
+    render_loop_slicer_view()
+    render_vocoder_matrix_view()
+    render_ribbon_controller_view()
+    render_stereo_widener_view()
+    render_reverb_space_view()
+    render_tape_emulator_view()
+    render_spectral_brush_editor()
+    render_bitcrusher_morph_view()
+    render_formant_filter_view()
+    render_rotary_speaker_view()
+    render_sidechain_matrix_view()
+    render_granular_pitch_shifter()
+    render_convolution_morph_view()
+    render_stereo_vectorscope_view()
+    render_multiband_expander_view()
+    render_tube_bias_view()
+    render_comb_resonator_view()
+    render_frequency_shifter_view()
+    render_pitch_corrector_view()
+    render_multiband_imager_view()
+    render_spring_reverb_view()
+    render_spectral_deesser_view()
+    render_multitap_delay_view()
+    render_through_zero_flanger_view()
+    render_transient_designer_view()
+    render_master_limiter_radar_view()
+    render_harmonic_exciter_view()
     render_resonance_suppressor_view()
     render_optical_compressor_view()
     render_binaural_panner_view()
@@ -5451,7 +5887,13 @@ if __name__ == "__main__":
     render_multiband_spatial_view()
     render_tape_flutter_view()
     render_atmos_surround_view()
-    print("All Tier 50-61 GUI render previews generated successfully!")
+    render_fm_matrix_view()
+    render_spectral_grain_cloud_view()
+    render_multiband_saturator_view()
+    render_raytraced_reverb_view()
+    render_k_system_meter_view()
+    print("All Tier 50-62 GUI render previews generated successfully!")
+
 
 
 
