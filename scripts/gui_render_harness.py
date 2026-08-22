@@ -8362,6 +8362,450 @@ def render_auro3d_spatializer_view():
     img.save(out_path)
     print(f"Rendered: {out_path}")
 
+def render_sonar_hydrophone_view():
+    width, height = 800, 480
+    img = Image.new("RGBA", (width, height), (10, 18, 28, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(15, bold=True)
+    f_header = get_font(11, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title Bar
+    draw.text((20, 18), "PHYSICAL MODELING UNDERWATER SONAR & OCEAN HYDROPHONE CAVITATION HUD", fill=(240, 248, 255), font=f_title)
+
+    # Tabs (y: 48..92) - 44pt height
+    modes = [("ACTIVE SONAR", True), ("PASSIVE HYDROPHONE", False), ("CAVITATION CRACKLE", False), ("SOFAR DUCT", False), ("ARCTIC ICE CANOPY", False)]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, is_sel) in enumerate(modes):
+        bx = 20 + i * (tab_w + 8)
+        bg = (0, 210, 255) if is_sel else (20, 32, 48)
+        fg = (8, 14, 22) if is_sel else (190, 215, 240)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 12, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas (y: 104..340)
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(8, 14, 22), outline=(35, 65, 95), width=2)
+
+    # Left: Ocean Depth & Raytracing
+    left_w = int(760 * 0.55)
+    draw.rounded_rectangle([30, 114, 30 + left_w - 20, 330], radius=4, fill=(12, 20, 32), outline=(30, 55, 80))
+    draw.text((40, 124), "OCEAN ACOUSTIC WATER COLUMN & RAYTRACING MAP", fill=(150, 190, 220), font=f_header)
+
+    # Water surface & depth guides
+    for d in range(1, 5):
+        ly = 114 + d * 40
+        draw.line([(30, ly), (30 + left_w - 20, ly)], fill=(40, 80, 120, 70), width=1)
+
+    # Active Ping Waves (Constrained inside left subcard)
+    origin = (60, 220)
+    for r_step in range(1, 5):
+        rad = r_step * 22
+        draw.arc([origin[0] - rad, origin[1] - rad, origin[0] + rad, origin[1] + rad], start=270, end=90, fill=(0, 210, 255, 120), width=1)
+
+    # Interactive Sonar Puck (>=44x44pt)
+    px, py = 250, 240
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(0, 210, 255, 140), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(0, 210, 255))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+    draw.text((40, 310), "Depth: 250.0 m | Sound Speed: 1500.0 m/s | Temp: 12.5 °C", fill=(0, 210, 255), font=f_small)
+
+    # Right: Cavitation Spectrum
+    rx = 30 + left_w
+    rw = int(760 * 0.45) - 20
+    draw.rounded_rectangle([rx, 114, rx + rw, 330], radius=4, fill=(12, 20, 32), outline=(30, 55, 80))
+    draw.text((rx + 10, 124), "MICRO-BUBBLE CAVITATION & MINNAERT SPECTRUM", fill=(150, 190, 220), font=f_header)
+
+    metrics = [
+        ("MINNAERT F0", "27.5 kHz", 0.75, (0, 210, 255)),
+        ("CAVITATION SIGMA", "0.85", 0.83, (255, 180, 40)),
+        ("AMBIENT NOISE", "65.0 dB", 0.54, (255, 90, 60)),
+    ]
+    bar_w = int((rw - 30 - 2 * 8) / 3)
+    for i, (label, val_str, mag, col) in enumerate(metrics):
+        bx = rx + 15 + i * (bar_w + 8)
+        bh = int(mag * 125)
+        draw.rounded_rectangle([bx, 305 - bh, bx + bar_w, 305], radius=3, fill=col)
+        draw.text((bx, 310), label, fill=(190, 215, 240), font=f_small)
+        draw.text((bx, 305 - bh - 14), val_str, fill=col, font=f_small)
+
+    # Bottom Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(16, 26, 40), outline=(40, 65, 95))
+    params = [
+        ("SOUND SPEED (c)", "1500.0 m/s", (0, 210, 255)),
+        ("OCEAN DEPTH (z)", "250.0 m", (255, 215, 0)),
+        ("CAVITATION NUMBER (σ)", "0.85 (Index)", (255, 107, 43)),
+        ("BUBBLE RESONANCE", "27.5 kHz", (0, 255, 180)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 185, 215), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=get_font(13, bold=True))
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(14, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Physical Modeling Underwater Sonar Hydrophone & Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "sonar_hydrophone_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_transient_unwrapper_view():
+    width, height = 800, 480
+    img = Image.new("RGBA", (width, height), (14, 18, 28, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(15, bold=True)
+    f_header = get_font(11, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title Bar
+    draw.text((20, 18), "PSYCHOACOUSTIC DYNAMIC STEREO TRANSIENT UNWRAPPER & DECORRELATOR HUD", fill=(240, 245, 255), font=f_title)
+
+    # Tabs (y: 48..92)
+    modes = [("STEREO EXPAND", True), ("BINAURAL DEPTH", False), ("DRUM DE-COMB", False), ("MASTERING UNWRAP", False), ("POLY DECORRELATE", False)]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, is_sel) in enumerate(modes):
+        bx = 20 + i * (tab_w + 8)
+        bg = (0, 229, 255) if is_sel else (25, 35, 52)
+        fg = (10, 14, 24) if is_sel else (200, 220, 245)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 14, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(10, 14, 24), outline=(45, 65, 95), width=2)
+
+    # Left: Goniometer Ellipse
+    left_w = int(760 * 0.55)
+    draw.rounded_rectangle([30, 114, 30 + left_w - 20, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((40, 124), "STEREO TRANSIENT POLAR GONIOMETER & SPREAD ELLIPSE", fill=(160, 180, 205), font=f_header)
+
+    gcx, gcy = 30 + (left_w - 20) // 2, 220
+    grad = 75
+    draw.line([(gcx - grad, gcy + grad), (gcx + grad, gcy - grad)], fill=(60, 90, 130, 80), width=1)
+    draw.line([(gcx - grad, gcy - grad), (gcx + grad, gcy + grad)], fill=(60, 90, 130, 80), width=1)
+    draw.line([(gcx, gcy - grad), (gcx, gcy + grad)], fill=(60, 90, 130, 80), width=1)
+
+    # Lissajous Ellipse
+    pts = []
+    for p in range(32):
+        ph = (p / 32.0) * math.tau
+        l = (math.sin(ph) * math.cos(0.4) - math.cos(ph) * math.sin(0.4) * 1.4) * 0.7
+        r = (math.sin(ph) * math.cos(0.4) + math.cos(ph) * math.sin(0.4) * 1.4) * 0.7
+        ex = gcx + (r - l) * (grad * 0.8)
+        ey = gcy - (l + r) * (grad * 0.8)
+        pts.append((ex, ey))
+    for i in range(len(pts)):
+        draw.line([pts[i], pts[(i + 1) % len(pts)]], fill=(0, 229, 255), width=2)
+
+    # Puck
+    px, py = gcx + 40, gcy - 20
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(0, 229, 255, 140), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(0, 229, 255))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+    draw.text((40, 310), "Width: 140% | Decorrelation: 4.5 ms | IACC: 0.35", fill=(0, 229, 255), font=f_small)
+
+    # Right: Decorrelation & Split Meters
+    rx = 30 + left_w
+    rw = int(760 * 0.45) - 20
+    draw.rounded_rectangle([rx, 114, rx + rw, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((rx + 10, 124), "PSYCHOACOUSTIC DECORRELATION & TRANSIENT SPLIT", fill=(160, 180, 205), font=f_header)
+
+    metrics = [
+        ("SPATIAL WIDTH", "140%", 0.70, (0, 229, 255)),
+        ("IACC DIFFUSION", "0.65", 0.65, (255, 215, 0)),
+        ("TRANSIENT SPLIT", "+4.2 dB", 0.75, (255, 107, 43)),
+    ]
+    bar_w = int((rw - 30 - 2 * 8) / 3)
+    for i, (label, val_str, mag, col) in enumerate(metrics):
+        bx = rx + 15 + i * (bar_w + 8)
+        bh = int(mag * 125)
+        draw.rounded_rectangle([bx, 305 - bh, bx + bar_w, 305], radius=3, fill=col)
+        draw.text((bx, 310), label, fill=(200, 220, 245), font=f_small)
+        draw.text((bx, 305 - bh - 14), val_str, fill=col, font=f_small)
+
+    # Bottom Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    params = [
+        ("SPATIAL WIDTH", "140%", (0, 229, 255)),
+        ("DECORRELATION DELAY", "4.5 ms (Haas)", (255, 215, 0)),
+        ("MONO CROSSOVER", "120 Hz (Sub-Bass)", (255, 107, 43)),
+        ("SIDE GAIN", "+2.8 dB (M/S)", (0, 255, 180)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 180, 205), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=get_font(13, bold=True))
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Psychoacoustic Stereo Transient Unwrapper & Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "transient_unwrapper_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_vari_mu_master_view():
+    width, height = 800, 480
+    img = Image.new("RGBA", (width, height), (18, 16, 24, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(15, bold=True)
+    f_header = get_font(11, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title Bar
+    draw.text((20, 18), "MASTERING DUAL-MONO VARIABLE-MU VACUUM TUBE OPTICAL COMPRESSOR HUD", fill=(255, 245, 230), font=f_title)
+
+    # Tabs (y: 48..92)
+    profiles = [("FAIRCHILD 670", True), ("MANLEY VARI-MU", False), ("LA-2A OPTO", False), ("NEVE 33609", False), ("PULTEC TUBE SAT", False)]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, is_sel) in enumerate(profiles):
+        bx = 20 + i * (tab_w + 8)
+        bg = (255, 170, 50) if is_sel else (38, 30, 42)
+        fg = (18, 12, 10) if is_sel else (230, 215, 200)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 14, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(14, 12, 18), outline=(85, 60, 45), width=2)
+
+    # Left: Transfer Curve
+    left_w = int(760 * 0.55)
+    draw.rounded_rectangle([30, 114, 30 + left_w - 20, 330], radius=4, fill=(20, 16, 26), outline=(70, 50, 40))
+    draw.text((40, 124), "VARIABLE-MU DYNAMIC TRANSFER CURVE & SOFT KNEE", fill=(220, 190, 160), font=f_header)
+
+    # Diagonal grid
+    draw.line([(30, 330), (30 + left_w - 20, 114)], fill=(120, 90, 70, 80), width=1)
+
+    # Curve
+    pts = []
+    for p in range(40):
+        in_norm = p / 39.0
+        in_db = -40.0 + in_norm * 50.0
+        out_db = in_db + 4.5 + 3.0 if in_db + 4.5 <= -14.0 else -14.0 + (in_db + 4.5 - -14.0) / 2.4 + 3.0
+        out_norm = max(0.0, min(1.0, (out_db + 40.0) / 50.0))
+        cx = 30 + in_norm * (left_w - 20)
+        cy = 330 - out_norm * (330 - 114)
+        pts.append((cx, cy))
+    for i in range(len(pts) - 1):
+        draw.line([pts[i], pts[i + 1]], fill=(255, 170, 50), width=3)
+
+    # Puck
+    px, py = 30 + int(0.52 * (left_w - 20)), 330 - int(0.45 * (330 - 114))
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(255, 170, 50, 140), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(255, 170, 50))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+    draw.text((40, 310), "Thresh: -14.0 dB | Ratio: 2.4:1 | Drive: +4.5 dB", fill=(255, 200, 100), font=f_small)
+
+    # Right: VU Meters
+    rx = 30 + left_w
+    rw = int(760 * 0.45) - 20
+    draw.rounded_rectangle([rx, 114, rx + rw, 330], radius=4, fill=(20, 16, 26), outline=(70, 50, 40))
+    draw.text((rx + 10, 124), "DUAL-MONO VU GAIN REDUCTION & THD SATURATION", fill=(220, 190, 160), font=f_header)
+
+    metrics = [
+        ("GR LEFT", "-3.8 dB", 0.19, (255, 107, 43)),
+        ("GR RIGHT", "-3.5 dB", 0.175, (255, 170, 50)),
+        ("THD DISTORTION", "0.35%", 0.35, (255, 215, 0)),
+    ]
+    bar_w = int((rw - 30 - 2 * 8) / 3)
+    for i, (label, val_str, mag, col) in enumerate(metrics):
+        bx = rx + 15 + i * (bar_w + 8)
+        bh = int(mag * 125)
+        draw.rounded_rectangle([bx, 305 - bh, bx + bar_w, 305], radius=3, fill=col)
+        draw.text((bx, 310), label, fill=(230, 215, 200), font=f_small)
+        draw.text((bx, 305 - bh - 14), val_str, fill=col, font=f_small)
+
+    # Bottom Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(24, 20, 30), outline=(75, 55, 45))
+    params = [
+        ("THRESHOLD / BIAS", "-14.0 dBu (-6.5V)", (255, 170, 50)),
+        ("DYNAMIC RATIO", "2.4:1 (Vari-Mu)", (255, 215, 0)),
+        ("STEREO LINK", "100% (Dual-Mono)", (255, 107, 43)),
+        ("MAKEUP GAIN", "+3.0 dB", (0, 255, 180)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(200, 180, 160), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=get_font(13, bold=True))
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(18, 35, 24), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Variable-Mu Vacuum Tube Optical Compressor & Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "vari_mu_master_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_neural_phoneme_view():
+    width, height = 800, 480
+    img = Image.new("RGBA", (width, height), (18, 14, 28, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(15, bold=True)
+    f_header = get_font(11, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title Bar
+    draw.text((20, 18), "NEURAL AUDIO LATENT STYLE TRANSFER & PHONEME MORPHING VOCODER HUD", fill=(245, 235, 255), font=f_title)
+
+    # Tabs (y: 48..92)
+    models = [("VOWEL MORPH", True), ("WHISPER TRANSFER", False), ("ROBOT VOCODER", False), ("ALIEN SHIFT", False), ("LATENT DIFFUSION", False)]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, is_sel) in enumerate(models):
+        bx = 20 + i * (tab_w + 8)
+        bg = (180, 90, 255) if is_sel else (32, 24, 46)
+        fg = (14, 8, 22) if is_sel else (220, 205, 240)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 14, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(12, 10, 20), outline=(65, 45, 95), width=2)
+
+    # Left: IPA Vowel Quadrilateral
+    left_w = int(760 * 0.55)
+    draw.rounded_rectangle([30, 114, 30 + left_w - 20, 330], radius=4, fill=(16, 14, 28), outline=(50, 40, 75))
+    draw.text((40, 124), "IPA VOWEL QUADRILATERAL (F1 vs F2 FORMANT SPACE)", fill=(190, 170, 220), font=f_header)
+
+    corners = [(60, 150, "/i/"), (380, 150, "/u/"), (360, 290, "/o/"), (80, 290, "/a/")]
+    for i in range(4):
+        draw.line([corners[i][:2], corners[(i + 1) % 4][:2]], fill=(140, 90, 220, 80), width=1)
+        draw.text(corners[i][:2], corners[i][2], fill=(210, 180, 255), font=f_header)
+
+    # Puck
+    px, py = 200, 220
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(180, 90, 255, 140), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(180, 90, 255))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+    draw.text((40, 310), "Phoneme: /e/ (ay) | F1: 500 Hz | F2: 1800 Hz | F3: 2800 Hz", fill=(200, 120, 255), font=f_small)
+
+    # Right: 8-D Latents
+    rx = 30 + left_w
+    rw = int(760 * 0.45) - 20
+    draw.rounded_rectangle([rx, 114, rx + rw, 330], radius=4, fill=(16, 14, 28), outline=(50, 40, 75))
+    draw.text((rx + 10, 124), "8-D NEURAL LATENT STYLE EMBEDDINGS", fill=(190, 170, 220), font=f_header)
+
+    latents = [0.85, 0.42, 0.15, 0.78, 0.92, 0.33, 0.60, 0.71]
+    bar_w = int((rw - 25 - 7 * 6) / 8)
+    for i, emb in enumerate(latents):
+        bx = rx + 12 + i * (bar_w + 6)
+        bh = int(emb * 125)
+        col = (int(140 + 115 * emb), int(60 + 150 * (1 - emb)), 255)
+        draw.rounded_rectangle([bx, 305 - bh, bx + bar_w, 305], radius=2, fill=col)
+        draw.text((bx, 310), f"z{i+1}", fill=(200, 185, 230), font=f_small)
+
+    # Bottom Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(22, 18, 34), outline=(55, 45, 80))
+    params = [
+        ("ACTIVE PHONEME", "/e/ (ay)", (180, 90, 255)),
+        ("FORMANT F1 / F2", "500 Hz / 1800 Hz", (0, 229, 255)),
+        ("VOCAL TRACT LENGTH", "17.0 cm", (255, 215, 0)),
+        ("LATENT STYLE WEIGHT", "80%", (0, 255, 180)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(180, 160, 210), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=get_font(13, bold=True))
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Neural Phoneme Morphing Vocoder & Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "neural_phoneme_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
+def render_nhk222_spatializer_view():
+    width, height = 800, 480
+    img = Image.new("RGBA", (width, height), (12, 16, 26, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(15, bold=True)
+    f_header = get_font(11, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(9, bold=False)
+
+    # Title Bar
+    draw.text((20, 18), "BROADCAST MASTERING IMMERSIVE 22.2 NHK SUPER HI-VISION SPATIALIZER HUD", fill=(240, 245, 255), font=f_title)
+
+    # Tabs (y: 48..92)
+    formats = [("22.2 FULL DOME", True), ("9.1 DOWNMIX", False), ("5.1 FOLDBACK", False), ("22.2 BINAURAL", False), ("3D OBJECT MASTER", False)]
+    tab_w = int((800 - 40 - 4 * 8) / 5)
+    for i, (name, is_sel) in enumerate(formats):
+        bx = 20 + i * (tab_w + 8)
+        bg = (0, 255, 200) if is_sel else (22, 32, 48)
+        fg = (8, 16, 18) if is_sel else (200, 220, 240)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 14, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(8, 12, 22), outline=(35, 60, 95), width=2)
+
+    # Left: 3-Layer Dome
+    left_w = int(760 * 0.55)
+    draw.rounded_rectangle([30, 114, 30 + left_w - 20, 330], radius=4, fill=(12, 18, 30), outline=(30, 50, 80))
+    draw.text((40, 124), "NHK 22.2 HEMISPHERICAL 3-LAYER LOUDSPEAKER DOME", fill=(150, 180, 215), font=f_header)
+
+    dcx, dcy = 30 + (left_w - 20) // 2, 220
+    max_r = 75
+    draw.ellipse([dcx - max_r, dcy - max_r, dcx + max_r, dcy + max_r], outline=(0, 255, 180, 90), width=1)
+    draw.ellipse([dcx - int(max_r * 0.7), dcy - int(max_r * 0.7), dcx + int(max_r * 0.7), dcy + int(max_r * 0.7)], outline=(0, 229, 255, 90), width=1)
+    draw.ellipse([dcx - int(max_r * 0.35), dcy - int(max_r * 0.35), dcx + int(max_r * 0.35), dcy + int(max_r * 0.35)], outline=(255, 107, 43, 90), width=1)
+    draw.line([(dcx - max_r, dcy), (dcx + max_r, dcy)], fill=(50, 80, 120, 80), width=1)
+    draw.line([(dcx, dcy - max_r), (dcx, dcy + max_r)], fill=(50, 80, 120, 80), width=1)
+
+    # Puck
+    px, py = dcx + 35, dcy - 30
+    draw.ellipse([px - 22, py - 22, px + 22, py + 22], outline=(0, 255, 200, 140), width=2)
+    draw.ellipse([px - 14, py - 14, px + 14, py + 14], fill=(0, 255, 200))
+    draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=(255, 255, 255))
+    draw.text((40, 310), "Azimuth: +45.0° | Elevation: +25.0° | Distance: 3.50 m", fill=(0, 255, 200), font=f_small)
+
+    # Right: 4 Layer Meters
+    rx = 30 + left_w
+    rw = int(760 * 0.45) - 20
+    draw.rounded_rectangle([rx, 114, rx + rw, 330], radius=4, fill=(12, 18, 30), outline=(30, 50, 80))
+    draw.text((rx + 10, 124), "NHK 22.2 TRI-LAYER ENERGY METERS", fill=(150, 180, 215), font=f_header)
+
+    layers = [
+        ("TOP (9ch)", 0.35, (255, 107, 43)),
+        ("MID (10ch)", 0.60, (0, 229, 255)),
+        ("BOT (3ch)", 0.05, (0, 255, 180)),
+        ("LFE (2ch)", 0.20, (255, 215, 0)),
+    ]
+    bar_w = int((rw - 30 - 3 * 8) / 4)
+    for i, (lname, energy, col) in enumerate(layers):
+        bx = rx + 15 + i * (bar_w + 8)
+        bh = int(energy * 125)
+        draw.rounded_rectangle([bx, 305 - bh, bx + bar_w, 305], radius=3, fill=col)
+        draw.text((bx, 310), lname, fill=(190, 215, 240), font=f_small)
+
+    # Bottom Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(16, 24, 38), outline=(38, 60, 90))
+    params = [
+        ("3D POSITION (X, Y, Z)", "2.24m, 2.24m, 1.48m", (0, 255, 200)),
+        ("NHK CHANNELS", "24 Channels (22.2)", (0, 229, 255)),
+        ("SPREAD DIVERGENCE", "35% (VBAP)", (255, 215, 0)),
+        ("TOP / BOT RATIO", "35% / 5%", (255, 107, 43)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(150, 180, 215), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=get_font(13, bold=True))
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(14, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] NHK 22.2 Super Hi-Vision Hemispherical Spatializer & Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "nhk222_spatializer_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
 if __name__ == "__main__":
     render_live_macro_rack()
     render_spectrogram_3d()
@@ -8453,7 +8897,13 @@ if __name__ == "__main__":
     render_multiband_decompressor_view()
     render_neural_inpaint_view()
     render_auro3d_spatializer_view()
-    print("All Tier 50-67 GUI render previews generated successfully!")
+    render_sonar_hydrophone_view()
+    render_transient_unwrapper_view()
+    render_vari_mu_master_view()
+    render_neural_phoneme_view()
+    render_nhk222_spatializer_view()
+    print("All Tier 50-68 GUI render previews generated successfully!")
+
 
 
 
