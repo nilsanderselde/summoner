@@ -226,6 +226,8 @@ pub use views::macro_rotary_dial::MacroRotaryDialView;
 #[cfg(feature = "gui")]
 pub use views::master_limiter_radar_view::MasterLimiterRadarView;
 #[cfg(feature = "gui")]
+pub use views::mastering_meter::*;
+#[cfg(feature = "gui")]
 pub use views::mbira_kalimba_view::MbiraKalimbaView;
 #[cfg(feature = "gui")]
 pub use views::membrane_plate_view::MembranePlateView;

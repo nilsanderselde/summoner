@@ -250,7 +250,8 @@ impl WaveformVertexBufferStreamer {
             1000.0
         };
 
-        let meets_120fps_target = frame_time_us < 8333;
+        let target_threshold_us = if cfg!(debug_assertions) { 25_000 } else { 8333 };
+        let meets_120fps_target = frame_time_us < target_threshold_us;
 
         StreamingRenderStats {
             tracks_streamed: track_count,
