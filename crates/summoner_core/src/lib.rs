@@ -30,6 +30,7 @@ pub mod param_bus;
 pub mod pipeline;
 pub mod sample;
 pub mod sequence;
+pub mod sidechain_matrix;
 pub mod smoothing;
 pub mod track;
 pub mod transport;
@@ -57,5 +58,6 @@ pub use mpe::{
 };
 pub use node::KNOWN_NODE_TYPES;
 pub use param_bus::{AtomicParam, ParamBus, ParamId};
+pub use sidechain_matrix::*;
 pub use smoothing::SmoothParam;
 pub use voice::{PolyphonicVoice, VoicePool};
