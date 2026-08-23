@@ -1046,7 +1046,7 @@ impl PartitionedBinauralHrtfConvolver {
     pub fn from_stereo_ir(left_ir: &[f32], right_ir: &[f32], partition_size: usize) -> Self {
         let p_size = partition_size.max(16);
         let max_len = left_ir.len().max(right_ir.len()).max(1);
-        let n_parts = (max_len + p_size - 1) / p_size;
+        let n_parts = max_len.div_ceil(p_size);
         let mut convolver = Self::new(p_size, n_parts);
         convolver.load_impulse_response(left_ir, right_ir);
         convolver
@@ -1054,7 +1054,7 @@ impl PartitionedBinauralHrtfConvolver {
 
     pub fn load_impulse_response(&mut self, left_ir: &[f32], right_ir: &[f32]) {
         let max_len = left_ir.len().max(right_ir.len());
-        let required_parts = ((max_len + self.partition_size - 1) / self.partition_size).max(1);
+        let required_parts = max_len.div_ceil(self.partition_size).max(1);
         if required_parts > self.num_partitions {
             self.num_partitions = required_parts;
             self.partitions_left = vec![vec![0.0; self.partition_size]; self.num_partitions];
@@ -1247,8 +1247,8 @@ impl AmbisonicsBinauralConvolver3D {
 
             for (ch, &w) in weights.iter().enumerate().take(16) {
                 let hoa_ch = &self.temp_hoa_buffers[ch];
-                for i in 0..frames {
-                    self.temp_speaker_buffer[i] += hoa_ch[i] * w * inv_speakers;
+                for (i, &hoa_sample) in hoa_ch.iter().enumerate().take(frames) {
+                    self.temp_speaker_buffer[i] += hoa_sample * w * inv_speakers;
                 }
             }
 
@@ -1740,9 +1740,9 @@ mod tests {
             );
         }
 
-        assert!(out_l.iter().all(|&s| s >= -1.0 && s <= 1.0));
-        assert!(out_r.iter().all(|&s| s >= -1.0 && s <= 1.0));
-        assert!(interleaved.iter().all(|&s| s >= -1.0 && s <= 1.0));
+        assert!(out_l.iter().all(|&s| (-1.0..=1.0).contains(&s)));
+        assert!(out_r.iter().all(|&s| (-1.0..=1.0).contains(&s)));
+        assert!(interleaved.iter().all(|&s| (-1.0..=1.0).contains(&s)));
         assert!(interleaved.iter().any(|&s| s.abs() > 0.0));
     }
 }

@@ -51,8 +51,8 @@ impl WsolaTimeStretcher {
 
         // Symmetric Hanning window
         let mut window = vec![0.0f32; win_sz];
-        for i in 0..win_sz {
-            window[i] = 0.5 * (1.0 - (2.0 * PI * i as f32 / win_sz as f32).cos());
+        for (i, val) in window.iter_mut().enumerate() {
+            *val = 0.5 * (1.0 - (2.0 * PI * i as f32 / win_sz as f32).cos());
         }
 
         Self {
@@ -136,11 +136,11 @@ impl WsolaTimeStretcher {
         let mut prev_best_in_pos = 0isize;
 
         // Initialize target grain with first window of input
-        for k in 0..win_sz {
+        for (k, grain_val) in self.target_grain.iter_mut().enumerate().take(win_sz) {
             if k < in_len {
-                self.target_grain[k] = input[k] * self.window[k];
+                *grain_val = input[k] * self.window[k];
             } else {
-                self.target_grain[k] = 0.0;
+                *grain_val = 0.0;
             }
         }
 
@@ -176,12 +176,12 @@ impl WsolaTimeStretcher {
 
         // Normalize by accumulated window weights
         let written = out_len.min(out_pos);
-        for i in 0..written {
+        for (i, out_val) in output.iter_mut().enumerate().take(written) {
             let weight = self.weight_accumulator[i];
             if weight > 1e-4 {
-                output[i] = (self.output_accumulator[i] / weight).clamp(-1.0, 1.0);
+                *out_val = (self.output_accumulator[i] / weight).clamp(-1.0, 1.0);
             } else {
-                output[i] = self.output_accumulator[i].clamp(-1.0, 1.0);
+                *out_val = self.output_accumulator[i].clamp(-1.0, 1.0);
             }
         }
 
@@ -245,10 +245,10 @@ impl ElasticWarpEngine {
 
         // Piecewise stretch across marker segments
         let mut sorted_markers = self.markers.clone();
-        if sorted_markers.first().map_or(true, |m| m.source_frame > 0 || m.target_frame > 0) {
+        if sorted_markers.first().is_none_or(|m| m.source_frame > 0 || m.target_frame > 0) {
             sorted_markers.insert(0, WarpMarker::new(0, 0));
         }
-        if sorted_markers.last().map_or(true, |m| m.target_frame < output_len) {
+        if sorted_markers.last().is_none_or(|m| m.target_frame < output_len) {
             sorted_markers.push(WarpMarker::new(input.len(), output_len));
         }
 

@@ -226,13 +226,15 @@ impl MpeEditorView {
         let mut grid = vec![vec![' '; width]; height];
 
         // Draw border
-        for x in 0..width {
-            grid[0][x] = '-';
-            grid[height - 1][x] = '-';
+        for cell in grid[0].iter_mut().take(width) {
+            *cell = '-';
         }
-        for y in 0..height {
-            grid[y][0] = '|';
-            grid[y][width - 1] = '|';
+        for cell in grid[height - 1].iter_mut().take(width) {
+            *cell = '-';
+        }
+        for row in grid.iter_mut().take(height) {
+            row[0] = '|';
+            row[width - 1] = '|';
         }
 
         // Draw title
@@ -249,8 +251,8 @@ impl MpeEditorView {
                 let end_x = (start_x + ((note.duration_beats / self.total_beats) * (width - 4) as f64) as usize)
                     .min(width - 2);
 
-                for x in start_x..end_x {
-                    grid[note_y][x] = '=';
+                for cell in grid[note_y].iter_mut().take(end_x).skip(start_x) {
+                    *cell = '=';
                 }
                 grid[note_y][start_x] = '[';
                 if end_x > start_x {
@@ -517,7 +519,7 @@ impl MpeEditorView {
                 let py = note_rect.max.y - 6.0 - norm_y * (note_lane_h - 16.0);
                 let handle_pos = Pos2::new(px, py);
 
-                let is_hit = response.hover_pos().map_or(false, |pos| {
+                let is_hit = response.hover_pos().is_some_and(|pos| {
                     (pos - handle_pos).length() <= MPE_NODE_HIT_RADIUS
                 });
 
@@ -669,8 +671,10 @@ mod tests {
 
     #[test]
     fn test_mpe_editor_hit_target_dimensions() {
-        assert!(MPE_NODE_HIT_RADIUS >= 22.0, "Hit target radius must be >= 22pt for 44x44pt target");
-        assert!(MIN_HIT_TARGET_PT >= 44.0, "Minimum hit target must be at least 44pt");
+        const {
+            assert!(MPE_NODE_HIT_RADIUS >= 22.0, "Hit target radius must be >= 22pt for 44x44pt target");
+            assert!(MIN_HIT_TARGET_PT >= 44.0, "Minimum hit target must be at least 44pt");
+        }
     }
 
     #[test]
