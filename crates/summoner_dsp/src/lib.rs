@@ -43,6 +43,7 @@ pub mod neuro_synthesis;
 pub mod oscillators;
 pub mod oversampling;
 pub mod parametric_eq;
+pub mod pitch_shift;
 pub mod pitch_shifter;
 pub mod plugin_host;
 pub mod quantum_audio;
@@ -127,6 +128,7 @@ pub use oscillators::{
 };
 pub use oversampling::Oversampler;
 pub use parametric_eq::{EqBand, ParametricEqNode};
+pub use pitch_shift::{ElasticWarpEngine, WarpMarker, WsolaTimeStretcher};
 pub use pitch_shifter::PitchShifterNode;
 pub use reverb::{ConvolutionReverbNode, EffectReverb};
 pub use ring_mod::{FrequencyShifter, RingModWaveform, RingModulator};

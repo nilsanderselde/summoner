@@ -13,6 +13,7 @@
 
 pub mod automation;
 pub mod automation_timeline;
+pub mod comping;
 pub mod generative;
 pub mod groove;
 pub mod midi_tools;
@@ -20,6 +21,7 @@ pub mod pattern;
 pub mod pattern_tools;
 pub mod timeline;
 
+pub use comping::*;
 pub use generative::{generate_melody_onnx, ONNX_MELODY_MODEL_BYTES};
 pub use groove::{apply_groove_quantize, GrooveTemplate};
 pub use midi_tools::*;
