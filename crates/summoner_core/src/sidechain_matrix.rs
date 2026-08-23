@@ -100,19 +100,10 @@ impl Default for ControlEvent {
 }
 
 /// Routing table snapshot for lock-free atomic hot-swapping.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct SidechainConfig {
     pub routes: Vec<SidechainRoute>,
     pub generation: u64,
-}
-
-impl Default for SidechainConfig {
-    fn default() -> Self {
-        Self {
-            routes: Vec::new(),
-            generation: 0,
-        }
-    }
 }
 
 /// Multi-Bus Lock-Free Event Ring Router for real-time inter-track modulation dispatching.
@@ -328,6 +319,7 @@ impl SidechainMatrix {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::allocator::AllocGuard;
 
     #[test]
     fn test_sidechain_matrix_routing_and_zero_alloc() {

@@ -129,8 +129,8 @@ impl HarmonicProfile {
         let mut amplitudes = [0.0f32; MAX_PARTIALS];
         let mut ratio_multipliers = [1.0f32; MAX_PARTIALS];
         amplitudes[0] = 1.0;
-        for k in 0..MAX_PARTIALS {
-            ratio_multipliers[k] = (k + 1) as f32;
+        for (k, ratio) in ratio_multipliers.iter_mut().enumerate() {
+            *ratio = (k + 1) as f32;
         }
         Self {
             amplitudes,
@@ -511,10 +511,8 @@ impl SignalProcessor for SpectralResynthesisEngine {
                 if i < outputs[1].len() {
                     outputs[1][i] = sample_r;
                 }
-            } else if num_out_channels == 1 {
-                if i < outputs[0].len() {
-                    outputs[0][i] = (sample_l + sample_r) * 0.5;
-                }
+            } else if num_out_channels == 1 && i < outputs[0].len() {
+                outputs[0][i] = (sample_l + sample_r) * 0.5;
             }
         }
     }
@@ -568,8 +566,8 @@ mod tests {
 
         assert!(out_l.iter().any(|&s| s.abs() > 0.0));
         assert!(out_r.iter().any(|&s| s.abs() > 0.0));
-        assert!(out_l.iter().all(|&s| s.is_finite() && s >= -1.0 && s <= 1.0));
-        assert!(out_r.iter().all(|&s| s.is_finite() && s >= -1.0 && s <= 1.0));
+        assert!(out_l.iter().all(|&s| s.is_finite() && (-1.0..=1.0).contains(&s)));
+        assert!(out_r.iter().all(|&s| s.is_finite() && (-1.0..=1.0).contains(&s)));
     }
 
     #[test]
@@ -597,8 +595,8 @@ mod tests {
 
         for _ in 0..10 {
             let (l, r) = engine.process_sample(None);
-            assert!(l.is_finite() && l >= -1.0 && l <= 1.0);
-            assert!(r.is_finite() && r >= -1.0 && r <= 1.0);
+            assert!(l.is_finite() && (-1.0..=1.0).contains(&l));
+            assert!(r.is_finite() && (-1.0..=1.0).contains(&r));
         }
     }
 }

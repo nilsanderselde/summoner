@@ -7,7 +7,7 @@
 //! real-time animated modulation curve inspectors on an 8pt spatial grid,
 //! touch-friendly >=44x44pt hit targets, and WCAG AA/AAA compliant high-contrast UI.
 
-use crate::touch_controls::{ContrastColorPalette, MIN_HIT_TARGET_PT};
+use crate::touch_controls::ContrastColorPalette;
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "gui")]
@@ -279,13 +279,13 @@ impl Default for ModulationMatrixView {
 
 impl ModulationMatrixView {
     pub fn new() -> Self {
-        let mut routes = Vec::new();
-        // Default musical modulation routes
-        routes.push(MatrixModRoute::new(MatrixModSource::Lfo1, MatrixModDest::FilterCutoff, 0.65));
-        routes.push(MatrixModRoute::new(MatrixModSource::Env2Filter, MatrixModDest::FilterCutoff, 0.85));
-        routes.push(MatrixModRoute::new(MatrixModSource::Macro1, MatrixModDest::MorphBlend, 1.0));
-        routes.push(MatrixModRoute::new(MatrixModSource::Velocity, MatrixModDest::VcaLevel, 0.5));
-        routes.push(MatrixModRoute::new(MatrixModSource::Lfo2, MatrixModDest::StereoPan, 0.4));
+        let routes = vec![
+            MatrixModRoute::new(MatrixModSource::Lfo1, MatrixModDest::FilterCutoff, 0.65),
+            MatrixModRoute::new(MatrixModSource::Env2Filter, MatrixModDest::FilterCutoff, 0.85),
+            MatrixModRoute::new(MatrixModSource::Macro1, MatrixModDest::MorphBlend, 1.0),
+            MatrixModRoute::new(MatrixModSource::Velocity, MatrixModDest::VcaLevel, 0.5),
+            MatrixModRoute::new(MatrixModSource::Lfo2, MatrixModDest::StereoPan, 0.4),
+        ];
 
         Self {
             routes,
@@ -590,7 +590,7 @@ impl ModulationMatrixView {
                 Vec2::new(cell_size * 2.0, cell_size),
             );
             painter.rect_filled(pill_rect, 6.0, Color32::from_rgb(30, 42, 64));
-            painter.rect_stroke(pill_rect, 6.0, Stroke::new(1.5, src_col));
+            painter.rect_stroke(pill_rect, 6.0, Stroke::new(1.5_f32, src_col));
             painter.text(
                 pill_rect.center(),
                 egui::Align2::CENTER_CENTER,
@@ -618,11 +618,11 @@ impl ModulationMatrixView {
                         Color32::from_rgb(18, 24, 38)
                     },
                 );
-                painter.rect_stroke(cell_rect, 4.0, Stroke::new(1.0, Color32::from_rgb(50, 65, 90)));
+                painter.rect_stroke(cell_rect, 4.0, Stroke::new(1.0_f32, Color32::from_rgb(50, 65, 90)));
 
                 if let Some(route) = has_route {
                     // Depth Ring Arc
-                    painter.circle_stroke(cell_rect.center(), 14.0, Stroke::new(3.0, src_col));
+                    painter.circle_stroke(cell_rect.center(), 14.0, Stroke::new(3.0_f32, src_col));
                     let depth_pct = format!("{:.0}%", route.depth * 100.0);
                     painter.text(
                         cell_rect.center(),
@@ -641,7 +641,7 @@ impl ModulationMatrixView {
             Vec2::new(rect.width() - 500.0, 380.0),
         );
         painter.rect_filled(inspector_rect, 8.0, Color32::from_rgb(20, 28, 46));
-        painter.rect_stroke(inspector_rect, 8.0, Stroke::new(1.5, Color32::from_rgb(0, 229, 255)));
+        painter.rect_stroke(inspector_rect, 8.0, Stroke::new(1.5_f32, Color32::from_rgb(0, 229, 255)));
 
         painter.text(
             Pos2::new(inspector_rect.min.x + 16.0, inspector_rect.min.y + 16.0),
@@ -772,7 +772,8 @@ mod tests {
 
     #[test]
     fn test_modulation_matrix_hit_targets_and_grid() {
-        assert!(MIN_HIT_TARGET_PT >= 44.0, "Hit target must be >= 44pt for touch accessibility");
+        use crate::touch_controls::MIN_HIT_TARGET_PT;
+        const { assert!(MIN_HIT_TARGET_PT >= 44.0, "Hit target must be >= 44pt for touch accessibility") };
     }
 
     #[test]
