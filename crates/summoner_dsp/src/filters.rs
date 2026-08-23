@@ -721,18 +721,18 @@ mod tests {
         let sample_rate = 48000;
 
         for block in 0..128 {
-            for v in 0..16 {
+            for (v, input) in inputs.iter_mut().enumerate() {
                 let val = ((block * 16 + v) as f32 * 0.03).sin();
-                inputs[v] = wide::f32x8::splat(val);
+                *input = wide::f32x8::splat(val);
             }
             process_filter_ladder_poly_128(&mut voices, &inputs, sample_rate, &mut outputs);
 
-            for v in 0..16 {
-                let arr = outputs[v].to_array();
+            for out_vec in &outputs {
+                let arr = out_vec.to_array();
                 for &sample in &arr {
                     assert!(sample.is_finite(), "128-voice polyphonic output must be finite");
                     assert!(
-                        sample >= -5.0 && sample <= 5.0,
+                        (-5.0..=5.0).contains(&sample),
                         "128-voice polyphonic output bounded"
                     );
                 }

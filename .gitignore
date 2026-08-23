@@ -28,6 +28,8 @@ desktop.ini
 *.raw
 *.wav
 *_session.toml
+scratch/
+crates/*/scratch/
 
 # Agent local temporary state
 .gemini/tmp/

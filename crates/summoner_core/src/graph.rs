@@ -34,7 +34,7 @@ pub struct Edge {
 }
 
 /// Compiled execution schedule representation for lock-free double-buffered hot-swapping.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct GraphSchedule {
     /// Topological evaluation order of node indices.
     pub evaluation_order: Vec<usize>,
@@ -46,18 +46,6 @@ pub struct GraphSchedule {
     pub has_cycle: bool,
     /// Generation counter for anti-pop crossfade triggering.
     pub generation: u64,
-}
-
-impl Default for GraphSchedule {
-    fn default() -> Self {
-        Self {
-            evaluation_order: Vec::new(),
-            levels: Vec::new(),
-            edges: Vec::new(),
-            has_cycle: false,
-            generation: 0,
-        }
-    }
 }
 
 /// Directed acyclic audio processing graph container with lock-free hot-swapping.
@@ -425,21 +413,20 @@ impl AudioNode for NodeGraph {
 
         // 16-sample anti-pop linear crossfade
         if self.crossfade_remaining > 0 {
-            let num_channels = output.len().min(self.prev_output_buffer.len());
             let fade_samples = block_len.min(self.crossfade_remaining);
-            for ch in 0..num_channels {
-                for i in 0..fade_samples {
+            for (out_ch, prev_ch) in output.iter_mut().zip(self.prev_output_buffer.iter()) {
+                for (i, out_sample) in out_ch.iter_mut().take(fade_samples).enumerate() {
                     let t = (16 - self.crossfade_remaining + i + 1) as f32 / 16.0;
-                    output[ch][i] = self.prev_output_buffer[ch][i] * (1.0 - t) + output[ch][i] * t;
+                    *out_sample = prev_ch[i] * (1.0 - t) + *out_sample * t;
                 }
             }
             self.crossfade_remaining = self.crossfade_remaining.saturating_sub(fade_samples);
         }
 
         // Cache output into prev_output_buffer for next potential crossfade
-        for ch in 0..output.len().min(self.prev_output_buffer.len()) {
-            let len = output[ch].len().min(self.prev_output_buffer[ch].len()).min(block_len);
-            self.prev_output_buffer[ch][..len].copy_from_slice(&output[ch][..len]);
+        for (out_ch, prev_ch) in output.iter().zip(self.prev_output_buffer.iter_mut()) {
+            let len = out_ch.len().min(prev_ch.len()).min(block_len);
+            prev_ch[..len].copy_from_slice(&out_ch[..len]);
         }
     }
 }

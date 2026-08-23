@@ -98,8 +98,8 @@ fn bench_filter_ladder_poly_128_scalar(c: &mut Criterion) {
     c.bench_function("FilterLadder 128 Polyphonic Voices Scalar (512 samples)", |b| {
         b.iter(|| {
             for _ in 0..512 {
-                for v in 0..128 {
-                    black_box(voices[v].process_sample(black_box(0.5), sample_rate));
+                for voice in &mut voices {
+                    black_box(voice.process_sample(black_box(0.5), sample_rate));
                 }
             }
         })
