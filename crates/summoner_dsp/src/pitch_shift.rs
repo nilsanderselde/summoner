@@ -8,9 +8,6 @@
 
 //! WSOLA (Waveform Similarity Overlap-Add) Elastic Audio Time-Stretching & Pitch-Shift Engine.
 
-use crate::traits::SignalProcessor;
-use summoner_core::audio::Sample;
-use summoner_core::node::{AudioNode, ProcessContext};
 use std::f32::consts::PI;
 
 /// A warp marker mapping a source frame in an audio asset to a target timeline frame.
@@ -42,7 +39,6 @@ pub struct WsolaTimeStretcher {
     pub stretch_ratio: f32, // Time stretch factor (0.25 to 4.0). 2.0 = twice as long (half speed)
     window: Vec<f32>,
     target_grain: Vec<f32>,
-    candidate_grain: Vec<f32>,
     output_accumulator: Vec<f32>,
     weight_accumulator: Vec<f32>,
 }
@@ -67,7 +63,6 @@ impl WsolaTimeStretcher {
             stretch_ratio: 1.0,
             window,
             target_grain: vec![0.0; win_sz],
-            candidate_grain: vec![0.0; win_sz],
             output_accumulator: Vec::new(),
             weight_accumulator: Vec::new(),
         }

@@ -236,6 +236,8 @@ pub use views::meter_bridge_view::MeterBridgeView;
 #[cfg(feature = "gui")]
 pub use views::midside_focuser_view::MidSideFocuserView;
 #[cfg(feature = "gui")]
+pub use views::mpe_editor::{MpeCurveNode, MpeDimension, MpeEditorView, MpeNoteBlock};
+#[cfg(feature = "gui")]
 pub use views::mpegh_3d_spatializer_view::Mpegh3DSpatializerView;
 #[cfg(feature = "gui")]
 pub use views::mpegh_spatializer_view::MpeghSpatializerView;
