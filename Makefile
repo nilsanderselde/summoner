@@ -40,19 +40,6 @@ vibe: vibe-py
 vibe-py:
 	python ./scripts/vibe_runner.py
 
-## vibe-finisher: Run the streaming Python vibe finisher script directly
-vibe-finisher: vibe-finisher-py
-
-vibe-finisher-py:
-	python ./scripts/vibe_finisher.py
-
-## vibe-designer: Run the streaming Python vibe GUI designer script directly
-vibe-designer: vibe-designer-py
-
-vibe-designer-py:
-	python ./scripts/vibe_designer.py
-
-
 
 ## run: Run the main Summoner DAW binary
 run:
