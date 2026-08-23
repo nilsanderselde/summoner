@@ -241,7 +241,8 @@ def run_vibe_turn(step_num, build_prompt_fn, log_file_path):
         text=True,
         encoding="utf-8",
         errors="replace",
-        bufsize=1
+        bufsize=1,
+        cwd=os.path.dirname(SCRIPT_DIR)
     )
 
     full_output = []
