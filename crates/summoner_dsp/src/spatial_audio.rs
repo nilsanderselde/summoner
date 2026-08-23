@@ -9,6 +9,7 @@
 //! Immersive Audio, Spatial Panning & Multichannel Processing Engine (Tier 37).
 
 use std::f32::consts::PI;
+use crate::traits::SignalProcessor;
 use summoner_core::audio::{ChannelLayout, MultichannelAudioBuffer, Sample};
 use summoner_core::node::{AudioNode, ProcessContext};
 
@@ -1014,9 +1015,537 @@ impl ProceduralSpatialIrGenerator {
     }
 }
 
+/// Partitioned Zero-Latency HRTF / BRIR Convolver.
+///
+/// Divides impulse responses into uniform partitions, guaranteeing zero algorithmic latency
+/// with deterministic, zero-heap-allocation real-time block processing under `AllocGuard`.
+#[derive(Debug, Clone)]
+pub struct PartitionedBinauralHrtfConvolver {
+    pub partition_size: usize,
+    pub num_partitions: usize,
+    partitions_left: Vec<Vec<f32>>,
+    partitions_right: Vec<Vec<f32>>,
+    input_history: Vec<f32>,
+    history_head: usize,
+}
+
+impl PartitionedBinauralHrtfConvolver {
+    pub fn new(partition_size: usize, num_partitions: usize) -> Self {
+        let p_size = partition_size.max(16);
+        let n_parts = num_partitions.max(1);
+        Self {
+            partition_size: p_size,
+            num_partitions: n_parts,
+            partitions_left: vec![vec![0.0; p_size]; n_parts],
+            partitions_right: vec![vec![0.0; p_size]; n_parts],
+            input_history: vec![0.0; p_size * n_parts],
+            history_head: 0,
+        }
+    }
+
+    pub fn from_stereo_ir(left_ir: &[f32], right_ir: &[f32], partition_size: usize) -> Self {
+        let p_size = partition_size.max(16);
+        let max_len = left_ir.len().max(right_ir.len()).max(1);
+        let n_parts = (max_len + p_size - 1) / p_size;
+        let mut convolver = Self::new(p_size, n_parts);
+        convolver.load_impulse_response(left_ir, right_ir);
+        convolver
+    }
+
+    pub fn load_impulse_response(&mut self, left_ir: &[f32], right_ir: &[f32]) {
+        let max_len = left_ir.len().max(right_ir.len());
+        let required_parts = ((max_len + self.partition_size - 1) / self.partition_size).max(1);
+        if required_parts > self.num_partitions {
+            self.num_partitions = required_parts;
+            self.partitions_left = vec![vec![0.0; self.partition_size]; self.num_partitions];
+            self.partitions_right = vec![vec![0.0; self.partition_size]; self.num_partitions];
+            self.input_history = vec![0.0; self.partition_size * self.num_partitions];
+            self.history_head = 0;
+        }
+
+        for p in 0..self.num_partitions {
+            for i in 0..self.partition_size {
+                let idx = p * self.partition_size + i;
+                self.partitions_left[p][i] = if idx < left_ir.len() {
+                    left_ir[idx]
+                } else {
+                    0.0
+                };
+                self.partitions_right[p][i] = if idx < right_ir.len() {
+                    right_ir[idx]
+                } else {
+                    0.0
+                };
+            }
+        }
+    }
+
+    /// Reset internal delay history to silence.
+    pub fn reset(&mut self) {
+        self.input_history.fill(0.0);
+        self.history_head = 0;
+    }
+
+    /// Process a block of mono input into binaural stereo output with zero latency and zero heap allocations.
+    pub fn process_block(&mut self, input: &[Sample], out_l: &mut [Sample], out_r: &mut [Sample]) {
+        let frames = input.len().min(out_l.len()).min(out_r.len());
+        let total_hist = self.input_history.len();
+        let p_size = self.partition_size;
+        let n_parts = self.num_partitions;
+
+        for i in 0..frames {
+            let in_sample = input[i];
+            self.input_history[self.history_head] = in_sample;
+
+            let mut sum_l = 0.0f32;
+            let mut sum_r = 0.0f32;
+
+            // Partition 0 (Direct time-domain convolution for zero latency)
+            let p0_l = &self.partitions_left[0];
+            let p0_r = &self.partitions_right[0];
+            for k in 0..p_size {
+                let hist_idx = (self.history_head + total_hist - k) % total_hist;
+                let x = self.input_history[hist_idx];
+                sum_l += x * p0_l[k];
+                sum_r += x * p0_r[k];
+            }
+
+            // Partitions 1..N (Segmented convolution over delayed partitions)
+            for p in 1..n_parts {
+                let p_l = &self.partitions_left[p];
+                let p_r = &self.partitions_right[p];
+                let p_offset = p * p_size;
+                for k in 0..p_size {
+                    let hist_idx = (self.history_head + total_hist - (p_offset + k)) % total_hist;
+                    let x = self.input_history[hist_idx];
+                    sum_l += x * p_l[k];
+                    sum_r += x * p_r[k];
+                }
+            }
+
+            out_l[i] = sum_l;
+            out_r[i] = sum_r;
+
+            self.history_head = (self.history_head + 1) % total_hist;
+        }
+    }
+}
+
+/// 3rd-Order Ambisonics (HOA 16-channel) to Binaural HRTF Convolver.
+///
+/// Encodes 3D spatial soundfield or point sources and decodes to binaural stereo headphones
+/// using zero-latency partitioned convolution across spherical harmonic channels or virtual speakers.
+#[derive(Debug, Clone)]
+pub struct AmbisonicsBinauralConvolver3D {
+    pub sample_rate: u32,
+    pub encoder: AmbisonicsEncoder3D,
+    virtual_decoders: Vec<AmbisonicsEncoder3D>,
+    convolvers: Vec<PartitionedBinauralHrtfConvolver>,
+    temp_hoa_buffers: Vec<Vec<f32>>,
+    temp_speaker_buffer: Vec<f32>,
+}
+
+impl AmbisonicsBinauralConvolver3D {
+    pub fn new(sample_rate: u32, partition_size: usize) -> Self {
+        // 12-point spherical virtual loudspeaker array (Lebedev / 7.1.4 cube)
+        let speaker_positions = [
+            Position3D::new(-0.866, 0.5, 0.0),    // L (-30 deg)
+            Position3D::new(0.866, 0.5, 0.0),     // R (+30 deg)
+            Position3D::new(0.0, 1.0, 0.0),       // C (0 deg)
+            Position3D::new(-0.866, -0.5, 0.0),   // Ls (-110 deg)
+            Position3D::new(0.866, -0.5, 0.0),    // Rs (+110 deg)
+            Position3D::new(-0.866, -0.866, 0.0), // Lb (-150 deg)
+            Position3D::new(0.866, -0.866, 0.0),  // Rb (+150 deg)
+            Position3D::new(-0.707, 0.707, 0.707), // Top Front Left
+            Position3D::new(0.707, 0.707, 0.707), // Top Front Right
+            Position3D::new(-0.707, -0.707, 0.707), // Top Back Left
+            Position3D::new(0.707, -0.707, 0.707), // Top Back Right
+            Position3D::new(0.0, 0.0, 1.0),       // Top Center
+        ];
+
+        let p_size = partition_size.max(16);
+        let mut convolvers = Vec::with_capacity(speaker_positions.len());
+        let mut virtual_decoders = Vec::with_capacity(speaker_positions.len());
+
+        for pos in &speaker_positions {
+            virtual_decoders.push(AmbisonicsEncoder3D { position: *pos });
+            let az = pos.azimuth();
+            let el = pos.elevation();
+            let sin_az = az.sin();
+            let itd_sec = (0.0875 / 343.0) * (az.abs() + sin_az.abs());
+            let itd_samples = (itd_sec * sample_rate as f32).round() as usize;
+
+            let ild_l = (1.0 - 0.4 * sin_az).clamp(0.1, 1.5);
+            let ild_r = (1.0 + 0.4 * sin_az).clamp(0.1, 1.5);
+
+            let hrir_len = 128;
+            let mut hrir_l = vec![0.0f32; hrir_len];
+            let mut hrir_r = vec![0.0f32; hrir_len];
+
+            let idx_l = if sin_az > 0.0 { itd_samples } else { 0 };
+            let idx_r = if sin_az < 0.0 { itd_samples } else { 0 };
+
+            if idx_l < hrir_len {
+                hrir_l[idx_l] = ild_l;
+            }
+            if idx_r < hrir_len {
+                hrir_r[idx_r] = ild_r;
+            }
+            if idx_l + 4 < hrir_len {
+                hrir_l[idx_l + 4] = -0.2 * ild_l * (1.0 + el.sin());
+            }
+            if idx_r + 4 < hrir_len {
+                hrir_r[idx_r + 4] = -0.2 * ild_r * (1.0 + el.sin());
+            }
+
+            convolvers.push(PartitionedBinauralHrtfConvolver::from_stereo_ir(
+                &hrir_l, &hrir_r, p_size,
+            ));
+        }
+
+        Self {
+            sample_rate,
+            encoder: AmbisonicsEncoder3D::new(),
+            virtual_decoders,
+            convolvers,
+            temp_hoa_buffers: vec![vec![0.0; 256]; 16],
+            temp_speaker_buffer: vec![0.0; 256],
+        }
+    }
+
+    /// Process a mono source positioned at 3D coordinate through 3D HOA encoding and binaural partitioned convolution.
+    pub fn process_source(
+        &mut self,
+        input: &[Sample],
+        position: Position3D,
+        out_l: &mut [Sample],
+        out_r: &mut [Sample],
+    ) {
+        self.encoder.position = position;
+        let frames = input.len().min(out_l.len()).min(out_r.len());
+        if self.temp_speaker_buffer.len() < frames {
+            self.temp_speaker_buffer.resize(frames, 0.0);
+            for b in self.temp_hoa_buffers.iter_mut() {
+                b.resize(frames, 0.0);
+            }
+        }
+
+        // 1. Encode into 16-channel HOA B-format
+        self.encoder
+            .encode(&input[..frames], &mut self.temp_hoa_buffers);
+
+        // 2. Decode each virtual speaker and convolve through partitioned binaural HRIRs
+        out_l[..frames].fill(0.0);
+        out_r[..frames].fill(0.0);
+
+        let num_speakers = self.virtual_decoders.len();
+        let inv_speakers = 1.0 / (num_speakers as f32);
+
+        for (spk_idx, dec) in self.virtual_decoders.iter().enumerate() {
+            let weights = dec.encoding_weights();
+            self.temp_speaker_buffer[..frames].fill(0.0);
+
+            for (ch, &w) in weights.iter().enumerate().take(16) {
+                let hoa_ch = &self.temp_hoa_buffers[ch];
+                for i in 0..frames {
+                    self.temp_speaker_buffer[i] += hoa_ch[i] * w * inv_speakers;
+                }
+            }
+
+            // Zero-allocation partitioned binaural convolution accumulation
+            let conv = &mut self.convolvers[spk_idx];
+            let total_hist = conv.input_history.len();
+            let p_size = conv.partition_size;
+            let n_parts = conv.num_partitions;
+
+            for i in 0..frames {
+                let in_s = self.temp_speaker_buffer[i];
+                conv.input_history[conv.history_head] = in_s;
+
+                let mut s_l = 0.0f32;
+                let mut s_r = 0.0f32;
+
+                for p in 0..n_parts {
+                    let p_l = &conv.partitions_left[p];
+                    let p_r = &conv.partitions_right[p];
+                    let p_offset = p * p_size;
+                    for k in 0..p_size {
+                        let h_idx =
+                            (conv.history_head + total_hist - (p_offset + k)) % total_hist;
+                        let x = conv.input_history[h_idx];
+                        s_l += x * p_l[k];
+                        s_r += x * p_r[k];
+                    }
+                }
+
+                out_l[i] += s_l;
+                out_r[i] += s_r;
+                conv.history_head = (conv.history_head + 1) % total_hist;
+            }
+        }
+    }
+}
+
+impl AudioNode for AmbisonicsBinauralConvolver3D {
+    fn name(&self) -> &str {
+        "AmbisonicsBinauralConvolver3D"
+    }
+
+    fn process(
+        &mut self,
+        input: &[&[Sample]],
+        output: &mut [&mut [Sample]],
+        _ctx: &ProcessContext,
+    ) {
+        if input.is_empty() || output.len() < 2 {
+            return;
+        }
+        let pos = self.encoder.position;
+        let (out_l, out_r) = output.split_at_mut(1);
+        self.process_source(input[0], pos, out_l[0], out_r[0]);
+    }
+}
+
+impl SignalProcessor for AmbisonicsBinauralConvolver3D {
+    fn name(&self) -> &str {
+        "AmbisonicsBinauralConvolver3D"
+    }
+
+    fn process_block(
+        &mut self,
+        inputs: &[&[Sample]],
+        outputs: &mut [&mut [Sample]],
+        _ctx: &ProcessContext,
+    ) {
+        if inputs.is_empty() || outputs.len() < 2 {
+            return;
+        }
+        let pos = self.encoder.position;
+        let (out_l, out_r) = outputs.split_at_mut(1);
+        self.process_source(inputs[0], pos, out_l[0], out_r[0]);
+    }
+}
+
+/// Continuous 360° Azimuth / Elevation 3D Spatial Panner with Real-Time Doppler Pitch Modulation.
+///
+/// Features 4-point cubic Hermite fractional delay interpolation for continuous Doppler modulation,
+/// smoothly tracked phase/position accumulators, air absorption filtering, and distance attenuation.
+#[derive(Debug, Clone)]
+pub struct ContinuousSpatialPannerDoppler3D {
+    pub position: Position3D,
+    pub target_position: Position3D,
+    sample_rate: u32,
+    delay_buffer: Vec<f32>,
+    write_head: usize,
+    current_delay_samples: f32,
+    prev_distance: f32,
+    air_lp_l: f32,
+    air_lp_r: f32,
+    phase_accumulator: f32,
+}
+
+impl ContinuousSpatialPannerDoppler3D {
+    pub fn new(sample_rate: u32) -> Self {
+        Self {
+            position: Position3D::new(0.0, 1.0, 0.0),
+            target_position: Position3D::new(0.0, 1.0, 0.0),
+            sample_rate: sample_rate.max(8000),
+            delay_buffer: vec![0.0; 16384],
+            write_head: 0,
+            current_delay_samples: 0.0,
+            prev_distance: 1.0,
+            air_lp_l: 0.0,
+            air_lp_r: 0.0,
+            phase_accumulator: 0.0,
+        }
+    }
+
+    pub fn set_target_position(&mut self, target: Position3D) {
+        self.target_position = target;
+    }
+
+    /// 4-point cubic Hermite interpolation for smooth fractional delay without artifacts.
+    #[inline(always)]
+    fn interpolate_cubic(p0: f32, p1: f32, p2: f32, p3: f32, t: f32) -> f32 {
+        let c0 = p1;
+        let c1 = 0.5 * (p2 - p0);
+        let c2 = p0 - 2.5 * p1 + 2.0 * p2 - 0.5 * p3;
+        let c3 = 0.5 * (p3 - p0) + 1.5 * (p1 - p2);
+        ((c3 * t + c2) * t + c1) * t + c0
+    }
+
+    /// Process a mono input into continuous 3D spatialized stereo output with Doppler pitch shift.
+    pub fn process_block(&mut self, input: &[Sample], out_l: &mut [Sample], out_r: &mut [Sample]) {
+        let frames = input.len().min(out_l.len()).min(out_r.len());
+        if frames == 0 {
+            return;
+        }
+
+        let speed_of_sound = 343.0; // m/s
+        let head_radius = 0.0875; // meters
+        let buf_len = self.delay_buffer.len();
+        let sr = self.sample_rate as f32;
+
+        // Smooth position interpolation over block
+        let step_x = (self.target_position.x - self.position.x) / frames as f32;
+        let step_y = (self.target_position.y - self.position.y) / frames as f32;
+        let step_z = (self.target_position.z - self.position.z) / frames as f32;
+
+        for i in 0..frames {
+            self.position.x += step_x;
+            self.position.y += step_y;
+            self.position.z += step_z;
+
+            let dist = self.position.distance().max(0.1);
+            let az = self.position.azimuth(); // -PI to +PI
+            let el = self.position.elevation();
+
+            // Continuous phase tracker wrapping modulo 2*PI
+            self.phase_accumulator = (self.phase_accumulator + az.abs()) % (2.0 * PI);
+
+            // Target propagation delay for Doppler calculation
+            let target_delay_sec = dist / speed_of_sound;
+            let target_delay_samples = (target_delay_sec * sr).clamp(0.0, (buf_len - 10) as f32);
+
+            // Smooth delay tracking to produce natural continuous Doppler pitch modulation
+            let delay_smoothing_coeff = 0.005;
+            self.current_delay_samples +=
+                (target_delay_samples - self.current_delay_samples) * delay_smoothing_coeff;
+
+            // Distance gain attenuation (1/r)
+            let distance_gain = (1.0 / dist).clamp(0.05, 2.0);
+
+            // Air absorption lowpass filter cutoff based on distance & elevation
+            let cutoff_hz =
+                (20000.0 / (1.0 + 0.08 * dist * (1.0 - 0.2 * el.sin()))).clamp(800.0, 20000.0);
+            let alpha = (-2.0 * PI * cutoff_hz / sr).exp();
+
+            // Interaural Time Difference (ITD)
+            let sin_az = az.sin();
+            let itd_sec = (head_radius / speed_of_sound) * (az.abs() + sin_az.abs());
+            let itd_samples = itd_sec * sr;
+
+            // Interaural Level Difference (ILD)
+            let ild_l = (1.0 - 0.45 * sin_az).clamp(0.1, 1.6) * distance_gain;
+            let ild_r = (1.0 + 0.45 * sin_az).clamp(0.1, 1.6) * distance_gain;
+
+            // Write input to delay buffer
+            let write_idx = (self.write_head + i) % buf_len;
+            self.delay_buffer[write_idx] = input[i];
+
+            // Left ear read position with ITD
+            let read_pos_l = if az > 0.0 {
+                (write_idx as f32 + buf_len as f32 - (self.current_delay_samples + itd_samples))
+                    % buf_len as f32
+            } else {
+                (write_idx as f32 + buf_len as f32 - self.current_delay_samples) % buf_len as f32
+            };
+
+            // Right ear read position with ITD
+            let read_pos_r = if az < 0.0 {
+                (write_idx as f32 + buf_len as f32 - (self.current_delay_samples + itd_samples))
+                    % buf_len as f32
+            } else {
+                (write_idx as f32 + buf_len as f32 - self.current_delay_samples) % buf_len as f32
+            };
+
+            // 4-point cubic Hermite interpolation for Left
+            let idx_l1 = read_pos_l.floor() as usize % buf_len;
+            let idx_l0 = (idx_l1 + buf_len - 1) % buf_len;
+            let idx_l2 = (idx_l1 + 1) % buf_len;
+            let idx_l3 = (idx_l1 + 2) % buf_len;
+            let frac_l = read_pos_l - read_pos_l.floor();
+
+            let raw_l = Self::interpolate_cubic(
+                self.delay_buffer[idx_l0],
+                self.delay_buffer[idx_l1],
+                self.delay_buffer[idx_l2],
+                self.delay_buffer[idx_l3],
+                frac_l,
+            );
+
+            // 4-point cubic Hermite interpolation for Right
+            let idx_r1 = read_pos_r.floor() as usize % buf_len;
+            let idx_r0 = (idx_r1 + buf_len - 1) % buf_len;
+            let idx_r2 = (idx_r1 + 1) % buf_len;
+            let idx_r3 = (idx_r1 + 2) % buf_len;
+            let frac_r = read_pos_r - read_pos_r.floor();
+
+            let raw_r = Self::interpolate_cubic(
+                self.delay_buffer[idx_r0],
+                self.delay_buffer[idx_r1],
+                self.delay_buffer[idx_r2],
+                self.delay_buffer[idx_r3],
+                frac_r,
+            );
+
+            // Apply air absorption filter & ILD
+            self.air_lp_l = self.air_lp_l * alpha + raw_l * (1.0 - alpha) * ild_l;
+            self.air_lp_r = self.air_lp_r * alpha + raw_r * (1.0 - alpha) * ild_r;
+
+            // Clamped output [-1.0, 1.0]
+            out_l[i] = self.air_lp_l.clamp(-1.0, 1.0);
+            out_r[i] = self.air_lp_r.clamp(-1.0, 1.0);
+        }
+
+        self.write_head = (self.write_head + frames) % buf_len;
+        self.prev_distance = self.position.distance();
+    }
+
+    /// Interleave planar stereo slices into a single interleaved PCM buffer.
+    pub fn interleave_stereo(out_l: &[Sample], out_r: &[Sample], interleaved: &mut [Sample]) {
+        let frames = out_l.len().min(out_r.len()).min(interleaved.len() / 2);
+        for i in 0..frames {
+            interleaved[i * 2] = out_l[i].clamp(-1.0, 1.0);
+            interleaved[i * 2 + 1] = out_r[i].clamp(-1.0, 1.0);
+        }
+    }
+}
+
+impl SignalProcessor for ContinuousSpatialPannerDoppler3D {
+    fn name(&self) -> &str {
+        "ContinuousSpatialPannerDoppler3D"
+    }
+
+    fn process_block(
+        &mut self,
+        inputs: &[&[Sample]],
+        outputs: &mut [&mut [Sample]],
+        _ctx: &ProcessContext,
+    ) {
+        if inputs.is_empty() || outputs.len() < 2 {
+            return;
+        }
+        let in_buf = inputs[0];
+        let (out_l, out_r) = outputs.split_at_mut(1);
+        self.process_block(in_buf, out_l[0], out_r[0]);
+    }
+}
+
+impl AudioNode for ContinuousSpatialPannerDoppler3D {
+    fn name(&self) -> &str {
+        "ContinuousSpatialPannerDoppler3D"
+    }
+
+    fn process(
+        &mut self,
+        input: &[&[Sample]],
+        output: &mut [&mut [Sample]],
+        _ctx: &ProcessContext,
+    ) {
+        if input.is_empty() || output.len() < 2 {
+            return;
+        }
+        let in_buf = input[0];
+        let (out_l, out_r) = output.split_at_mut(1);
+        self.process_block(in_buf, out_l[0], out_r[0]);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use summoner_core::allocator::AllocGuard;
 
     #[test]
     fn test_step_1077_3d_spatial_panner_coordinate_math_and_hrtf() {
@@ -1145,4 +1674,76 @@ mod tests {
         let ir_custom = gen_custom.generate();
         assert!(!ir_custom.is_empty());
     }
+
+    #[test]
+    fn test_partitioned_binaural_hrtf_convolver_zero_alloc() {
+        let left_ir = vec![1.0, 0.5, 0.25, 0.125, 0.0625, 0.0];
+        let right_ir = vec![0.5, 1.0, 0.25, 0.125, 0.0625, 0.0];
+        let mut conv = PartitionedBinauralHrtfConvolver::from_stereo_ir(&left_ir, &right_ir, 4);
+
+        let input = [1.0f32, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+        let mut out_l = [0.0f32; 8];
+        let mut out_r = [0.0f32; 8];
+
+        {
+            let _guard = AllocGuard::new();
+            conv.process_block(&input, &mut out_l, &mut out_r);
+        }
+
+        assert_eq!(out_l[0], 1.0);
+        assert_eq!(out_r[0], 0.5);
+        assert_eq!(out_l[1], 0.5);
+        assert_eq!(out_r[1], 1.0);
+    }
+
+    #[test]
+    fn test_ambisonics_binaural_convolver_3d_zero_alloc() {
+        let mut amb_conv = AmbisonicsBinauralConvolver3D::new(44100, 32);
+        let input = [0.5f32; 64];
+        let mut out_l = [0.0f32; 64];
+        let mut out_r = [0.0f32; 64];
+
+        {
+            let _guard = AllocGuard::new();
+            amb_conv.process_source(
+                &input,
+                Position3D::new(2.0, 1.0, 0.5),
+                &mut out_l,
+                &mut out_r,
+            );
+        }
+
+        assert!(out_l.iter().any(|&s| s.abs() > 0.0));
+        assert!(out_r.iter().any(|&s| s.abs() > 0.0));
+        assert!(out_l.iter().all(|s| s.is_finite()));
+        assert!(out_r.iter().all(|s| s.is_finite()));
+    }
+
+    #[test]
+    fn test_continuous_spatial_panner_doppler_3d_360_degree_panning() {
+        let mut panner = ContinuousSpatialPannerDoppler3D::new(44100);
+        panner.position = Position3D::new(5.0, 0.0, 0.0);
+        panner.set_target_position(Position3D::new(-5.0, 0.0, 0.0));
+
+        let input = [0.8f32; 128];
+        let mut out_l = [0.0f32; 128];
+        let mut out_r = [0.0f32; 128];
+        let mut interleaved = [0.0f32; 256];
+
+        {
+            let _guard = AllocGuard::new();
+            panner.process_block(&input, &mut out_l, &mut out_r);
+            ContinuousSpatialPannerDoppler3D::interleave_stereo(
+                &out_l,
+                &out_r,
+                &mut interleaved,
+            );
+        }
+
+        assert!(out_l.iter().all(|&s| s >= -1.0 && s <= 1.0));
+        assert!(out_r.iter().all(|&s| s >= -1.0 && s <= 1.0));
+        assert!(interleaved.iter().all(|&s| s >= -1.0 && s <= 1.0));
+        assert!(interleaved.iter().any(|&s| s.abs() > 0.0));
+    }
 }
+
