@@ -19,7 +19,7 @@ use summoner_core::audio::Sample;
 use summoner_core::node::ProcessContext;
 
 /// 4-pole (24dB/octave) Moog-style nonlinear ladder filter.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FilterLadder {
     pub cutoff: f32,
     pub resonance: f32,
@@ -79,6 +79,34 @@ impl FilterLadder {
             self.stage[3]
         }
     }
+
+    #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+    pub fn process_block_simd(
+        &mut self,
+        inputs: &[&[Sample]],
+        outputs: &mut [&mut [Sample]],
+        ctx: &ProcessContext,
+    ) {
+        if ctx.sample_rate == 0 || outputs.is_empty() {
+            return;
+        }
+        let num_samples = outputs[0].len();
+        let in_buf = if !inputs.is_empty() && !inputs[0].is_empty() {
+            inputs[0]
+        } else {
+            &[]
+        };
+
+        for i in 0..num_samples {
+            let in_sample = if i < in_buf.len() { in_buf[i] } else { 0.0 };
+            let out_sample = self.process_sample(in_sample, ctx.sample_rate);
+            for out_ch in outputs.iter_mut() {
+                if i < out_ch.len() {
+                    out_ch[i] = out_sample;
+                }
+            }
+        }
+    }
 }
 
 impl SignalProcessor for FilterLadder {
@@ -96,21 +124,137 @@ impl SignalProcessor for FilterLadder {
             return;
         }
 
-        let num_samples = outputs[0].len();
-        for i in 0..num_samples {
-            let in_sample = if !inputs.is_empty() && !inputs[0].is_empty() && i < inputs[0].len() {
-                inputs[0][i]
-            } else {
-                0.0
-            };
+        #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+        {
+            self.process_block_simd(inputs, outputs, ctx);
+        }
+        #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
+        {
+            let num_samples = outputs[0].len();
+            for i in 0..num_samples {
+                let in_sample = if !inputs.is_empty() && !inputs[0].is_empty() && i < inputs[0].len() {
+                    inputs[0][i]
+                } else {
+                    0.0
+                };
 
-            let out_sample = self.process_sample(in_sample, ctx.sample_rate);
-            for out_ch in outputs.iter_mut() {
-                if i < out_ch.len() {
-                    out_ch[i] = out_sample;
+                let out_sample = self.process_sample(in_sample, ctx.sample_rate);
+                for out_ch in outputs.iter_mut() {
+                    if i < out_ch.len() {
+                        out_ch[i] = out_sample;
+                    }
                 }
             }
         }
+    }
+}
+
+#[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+#[inline(always)]
+pub fn tanh_simd8(x: wide::f32x8) -> wide::f32x8 {
+    use wide::{CmpGt, CmpLt};
+    let x2 = x * x;
+    let x4 = x2 * x2;
+    let num = x * (wide::f32x8::splat(945.0) + wide::f32x8::splat(105.0) * x2 + x4);
+    let den = wide::f32x8::splat(945.0) + wide::f32x8::splat(420.0) * x2 + wide::f32x8::splat(15.0) * x4;
+    let approx = num / den;
+    let one = wide::f32x8::splat(1.0);
+    let neg_one = wide::f32x8::splat(-1.0);
+    let clamped_pos = x.cmp_gt(wide::f32x8::splat(4.0)).blend(one, approx);
+    x.cmp_lt(wide::f32x8::splat(-4.0)).blend(neg_one, clamped_pos)
+}
+
+/// 8-lane SIMD 4-pole Moog Ladder Filter for high-capacity polyphonic voice processing.
+#[derive(Debug, Clone)]
+pub struct FilterLadder8 {
+    pub cutoff: wide::f32x8,
+    pub resonance: wide::f32x8,
+    pub stage: [wide::f32x8; 4],
+    pub stage_tanh: [wide::f32x8; 3],
+}
+
+impl FilterLadder8 {
+    pub fn new(cutoff: wide::f32x8, resonance: wide::f32x8) -> Self {
+        Self {
+            cutoff,
+            resonance,
+            stage: [wide::f32x8::splat(0.0); 4],
+            stage_tanh: [wide::f32x8::splat(0.0); 3],
+        }
+    }
+
+    pub fn from_scalars(cutoffs: [f32; 8], resonances: [f32; 8]) -> Self {
+        Self::new(
+            wide::f32x8::new(cutoffs),
+            wide::f32x8::new(resonances),
+        )
+    }
+
+    pub fn reset(&mut self) {
+        self.stage = [wide::f32x8::splat(0.0); 4];
+        self.stage_tanh = [wide::f32x8::splat(0.0); 3];
+    }
+
+    #[inline(always)]
+    pub fn process_sample(&mut self, input: wide::f32x8, sample_rate: u32) -> wide::f32x8 {
+        if sample_rate == 0 {
+            return wide::f32x8::splat(0.0);
+        }
+
+        let sr = sample_rate as f32;
+        let cut_norm = (self.cutoff / wide::f32x8::splat(sr))
+            .min(wide::f32x8::splat(0.49))
+            .max(wide::f32x8::splat(0.0001));
+
+        let cut_arr = cut_norm.to_array();
+        let f_arr = [
+            (PI * cut_arr[0]).sin(),
+            (PI * cut_arr[1]).sin(),
+            (PI * cut_arr[2]).sin(),
+            (PI * cut_arr[3]).sin(),
+            (PI * cut_arr[4]).sin(),
+            (PI * cut_arr[5]).sin(),
+            (PI * cut_arr[6]).sin(),
+            (PI * cut_arr[7]).sin(),
+        ];
+        let f = wide::f32x8::new(f_arr);
+        let k = self.resonance;
+
+        let res_input = input - wide::f32x8::splat(4.0) * k * self.stage[3];
+        let input_tanh = tanh_simd8(res_input);
+
+        self.stage[0] += f * (input_tanh - self.stage_tanh[0]);
+        self.stage_tanh[0] = tanh_simd8(self.stage[0]);
+
+        self.stage[1] += f * (self.stage_tanh[0] - self.stage_tanh[1]);
+        self.stage_tanh[1] = tanh_simd8(self.stage[1]);
+
+        self.stage[2] += f * (self.stage_tanh[1] - self.stage_tanh[2]);
+        self.stage_tanh[2] = tanh_simd8(self.stage[2]);
+
+        self.stage[3] += f * (self.stage_tanh[2] - tanh_simd8(self.stage[3]));
+
+        self.stage[3]
+    }
+
+    /// Process a block of 8-wide SIMD samples.
+    pub fn process_block(&mut self, inputs: &[wide::f32x8], outputs: &mut [wide::f32x8], sample_rate: u32) {
+        let len = inputs.len().min(outputs.len());
+        for i in 0..len {
+            outputs[i] = self.process_sample(inputs[i], sample_rate);
+        }
+    }
+}
+
+/// Helper function to process 128 polyphonic voice filters (16x 8-wide SIMD filter banks).
+pub fn process_filter_ladder_poly_128(
+    voices: &mut [FilterLadder8; 16],
+    inputs: &[wide::f32x8; 16],
+    sample_rate: u32,
+    outputs: &mut [wide::f32x8; 16],
+) {
+    for v in 0..16 {
+        outputs[v] = voices[v].process_sample(inputs[v], sample_rate);
     }
 }
 
@@ -530,6 +674,69 @@ mod tests {
                 simd_out_lp[i],
                 scalar_out_lp[i]
             );
+        }
+    }
+
+    #[test]
+    #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+    fn test_filter_ladder8_simd_agreement() {
+        let cutoffs = [500.0, 1000.0, 1500.0, 2000.0, 2500.0, 3000.0, 4000.0, 8000.0];
+        let resonances = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 3.8];
+
+        let mut simd8 = FilterLadder8::from_scalars(cutoffs, resonances);
+        let mut scalars: Vec<FilterLadder> = (0..8)
+            .map(|i| FilterLadder::new(cutoffs[i], resonances[i]))
+            .collect();
+
+        let sample_rate = 44100;
+        for n in 0..512 {
+            let in_val = (n as f32 * 0.05).sin();
+            let in_simd = wide::f32x8::splat(in_val);
+            let out_simd = simd8.process_sample(in_simd, sample_rate).to_array();
+
+            for ch in 0..8 {
+                let out_scalar = scalars[ch].process_sample(in_val, sample_rate);
+                let diff = (out_simd[ch] - out_scalar).abs();
+                assert!(
+                    diff < 0.015,
+                    "FilterLadder8 mismatch at sample {} lane {}: SIMD {} vs Scalar {} (diff {})",
+                    n, ch, out_simd[ch], out_scalar, diff
+                );
+            }
+        }
+    }
+
+    #[test]
+    #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+    fn test_filter_ladder_poly_128_voices() {
+        let mut voices: [FilterLadder8; 16] = std::array::from_fn(|i| {
+            let base_cutoff = 200.0 + (i as f32 * 100.0);
+            let cutoffs = std::array::from_fn(|lane| base_cutoff + (lane as f32 * 20.0));
+            let resonances = std::array::from_fn(|lane| 0.5 + (lane as f32 * 0.3));
+            FilterLadder8::from_scalars(cutoffs, resonances)
+        });
+
+        let mut inputs = [wide::f32x8::splat(0.0); 16];
+        let mut outputs = [wide::f32x8::splat(0.0); 16];
+        let sample_rate = 48000;
+
+        for block in 0..128 {
+            for v in 0..16 {
+                let val = ((block * 16 + v) as f32 * 0.03).sin();
+                inputs[v] = wide::f32x8::splat(val);
+            }
+            process_filter_ladder_poly_128(&mut voices, &inputs, sample_rate, &mut outputs);
+
+            for v in 0..16 {
+                let arr = outputs[v].to_array();
+                for &sample in &arr {
+                    assert!(sample.is_finite(), "128-voice polyphonic output must be finite");
+                    assert!(
+                        sample >= -5.0 && sample <= 5.0,
+                        "128-voice polyphonic output bounded"
+                    );
+                }
+            }
         }
     }
 }

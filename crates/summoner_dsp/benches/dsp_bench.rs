@@ -54,5 +54,63 @@ fn bench_osc_saw_simd(c: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, bench_osc_saw_scalar, bench_osc_saw_simd);
+fn bench_filter_ladder_poly_128_simd8(c: &mut Criterion) {
+    use summoner_dsp::filters::{process_filter_ladder_poly_128, FilterLadder8};
+
+    let mut voices: [FilterLadder8; 16] = std::array::from_fn(|i| {
+        let base_cutoff = 200.0 + (i as f32 * 100.0);
+        let cutoffs = std::array::from_fn(|lane| base_cutoff + (lane as f32 * 20.0));
+        let resonances = std::array::from_fn(|lane| 0.5 + (lane as f32 * 0.3));
+        FilterLadder8::from_scalars(cutoffs, resonances)
+    });
+
+    let inputs = [wide::f32x8::splat(0.5); 16];
+    let mut outputs = [wide::f32x8::splat(0.0); 16];
+    let sample_rate = 44100;
+
+    c.bench_function("FilterLadder 128 Polyphonic Voices SIMD8 (512 samples)", |b| {
+        b.iter(|| {
+            for _ in 0..512 {
+                process_filter_ladder_poly_128(
+                    black_box(&mut voices),
+                    black_box(&inputs),
+                    sample_rate,
+                    black_box(&mut outputs),
+                );
+            }
+        })
+    });
+}
+
+fn bench_filter_ladder_poly_128_scalar(c: &mut Criterion) {
+    use summoner_dsp::filters::FilterLadder;
+
+    let mut voices: Vec<FilterLadder> = (0..128)
+        .map(|i| {
+            let cutoff = 200.0 + (i as f32 * 25.0);
+            let res = 0.5 + ((i % 10) as f32 * 0.3);
+            FilterLadder::new(cutoff, res)
+        })
+        .collect();
+
+    let sample_rate = 44100;
+
+    c.bench_function("FilterLadder 128 Polyphonic Voices Scalar (512 samples)", |b| {
+        b.iter(|| {
+            for _ in 0..512 {
+                for v in 0..128 {
+                    black_box(voices[v].process_sample(black_box(0.5), sample_rate));
+                }
+            }
+        })
+    });
+}
+
+criterion_group!(
+    benches,
+    bench_osc_saw_scalar,
+    bench_osc_saw_simd,
+    bench_filter_ladder_poly_128_simd8,
+    bench_filter_ladder_poly_128_scalar
+);
 criterion_main!(benches);
