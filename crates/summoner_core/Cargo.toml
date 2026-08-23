@@ -10,4 +10,6 @@ repository.workspace = true
 blake3.workspace = true
 rayon.workspace = true
 serde.workspace = true
+arc-swap = "1.7"
+
 

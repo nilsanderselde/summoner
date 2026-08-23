@@ -48,7 +48,7 @@ pub use embedded_hardware::{
     MidiUsbGadgetMode, OledDisplayDriver, RotaryEncoderDebouncer, ThermalThrottlingListener,
     WebConfigDashboard, PI_FIRMWARE_RELEASE_TAG,
 };
-pub use graph::{Edge, NodeGraph};
+pub use graph::{Edge, GraphSchedule, NodeGraph};
 pub use midi::MidiEvent;
 pub use midi_clock::{MidiClockGenerator, MidiClockReceiver, MIDI_CLOCK_BYTE, MIDI_CLOCK_PPQN};
 pub use midi_filter::{MidiFilterEngine, MidiInputFilter, VelocityCurve};
