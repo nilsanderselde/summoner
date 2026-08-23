@@ -42,7 +42,7 @@ def build_prompt(latest_roadmap):
         f"- Utilize relevant Rust coding skills and patterns from `.agents/skills/`.\n"
         f"- NEVER pass `ArtifactMetadata` when editing workspace code files via `write_to_file` or `replace_file_content`.\n"
         f"- Run `cargo check --workspace` and `cargo test --workspace --features gui` to verify changes.\n"
-        f"- Perform intermittent `git commit` operations immediately after verifying each unit of progress.\n\n"
+        f"- Perform intermittent `git commit` followed by `git push` operations immediately after verifying each unit of progress to sync with the nilsanderselde/summoner remote.\n\n"
         
         f"### 3. ROADMAP TRANSITION\n"
         f"Once all tasks in `{latest_roadmap}` are completed and verified, generate the next consolidated "
