@@ -258,6 +258,10 @@ pub use views::multiband_saturator_view::MultibandSaturatorView;
 #[cfg(feature = "gui")]
 pub use views::multiband_spatial_view::MultibandSpatialView;
 #[cfg(feature = "gui")]
+pub use views::multiband_visualizer::{
+    BandVisualizerState, MultibandVisualizerState, MultibandVisualizerView,
+};
+#[cfg(feature = "gui")]
 pub use views::multitap_delay_view::MultitapDelayView;
 #[cfg(feature = "gui")]
 pub use views::neural_choir_formant_view::NeuralChoirFormantView;

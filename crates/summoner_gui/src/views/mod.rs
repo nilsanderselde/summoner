@@ -71,6 +71,7 @@ pub mod multiband_expander_view;
 pub mod multiband_imager_view;
 pub mod multiband_saturator_view;
 pub mod multiband_spatial_view;
+pub mod multiband_visualizer;
 pub mod multitap_delay_view;
 pub mod neural_choir_formant_view;
 pub mod neural_dereverb_view;

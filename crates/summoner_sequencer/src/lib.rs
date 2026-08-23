@@ -13,6 +13,7 @@
 
 pub mod automation;
 pub mod automation_timeline;
+pub mod clip_matrix;
 pub mod comping;
 pub mod generative;
 pub mod groove;
@@ -22,6 +23,7 @@ pub mod pattern_tools;
 pub mod session_looper;
 pub mod timeline;
 
+pub use clip_matrix::*;
 pub use comping::*;
 pub use generative::{generate_melody_onnx, ONNX_MELODY_MODEL_BYTES};
 pub use groove::{apply_groove_quantize, GrooveTemplate};
