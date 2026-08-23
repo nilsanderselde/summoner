@@ -372,6 +372,8 @@ pub use views::tape_flutter_view::TapeFlutterView;
 #[cfg(feature = "gui")]
 pub use views::tape_flux_master_view::TapeFluxMasterView;
 #[cfg(feature = "gui")]
+pub use views::tape_saturation_view::{TapeSaturationView, TapeViewSpeed};
+#[cfg(feature = "gui")]
 pub use views::through_zero_flanger_view::ThroughZeroFlangerView;
 #[cfg(feature = "gui")]
 pub use views::transient_clipper_view::TransientClipperView;

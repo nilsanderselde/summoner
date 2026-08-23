@@ -148,12 +148,34 @@ impl NodeFactory {
             "MultibandCompressorNode" | "MultibandCompressor" => Some(Box::new(
                 ProcessorNodeAdapter::new(summoner_dsp::MultibandCompressorNode::new()),
             )),
-            "TapeSaturationNode" | "TapeSaturation" => Some(Box::new(ProcessorNodeAdapter::new(
-                summoner_dsp::TapeSaturationNode::new(
+            "TapeSaturationNode" | "TapeSaturation" => {
+                let mut node = summoner_dsp::TapeSaturationNode::new(
                     *params.get("drive").unwrap_or(&2.0),
                     *params.get("saturation").unwrap_or(&0.5),
-                ),
-            ))),
+                );
+                if let Some(&spd) = params.get("speed") {
+                    if spd >= 25.0 {
+                        node.set_speed(summoner_dsp::TapeSpeed::Ips30);
+                    } else if spd <= 10.0 {
+                        node.set_speed(summoner_dsp::TapeSpeed::Ips7_5);
+                    } else {
+                        node.set_speed(summoner_dsp::TapeSpeed::Ips15);
+                    }
+                }
+                if let Some(&bias) = params.get("bias") {
+                    node.bias = bias;
+                }
+                if let Some(&hb) = params.get("head_bump") {
+                    node.head_bump = hb;
+                }
+                if let Some(&wf) = params.get("wow_flutter") {
+                    node.wow_flutter = wf;
+                }
+                if let Some(&hys) = params.get("hysteresis") {
+                    node.hysteresis = hys;
+                }
+                Some(Box::new(ProcessorNodeAdapter::new(node)))
+            }
             "TubeSaturationNode" | "TubeSaturation" => Some(Box::new(ProcessorNodeAdapter::new(
                 summoner_dsp::TubeSaturationNode::new(
                     *params.get("drive").unwrap_or(&2.5),
