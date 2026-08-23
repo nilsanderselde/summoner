@@ -130,7 +130,10 @@ impl WaveformVertexBufferStreamer {
         }
 
         let lane_height = viewport.height / track_count as f32;
-        let visible_samples = viewport.end_sample.saturating_sub(viewport.start_sample).max(1);
+        let visible_samples = viewport
+            .end_sample
+            .saturating_sub(viewport.start_sample)
+            .max(1);
         let pixels_per_sample = viewport.width / visible_samples as f32;
 
         let col_step_px = 1.0f32;
@@ -139,12 +142,18 @@ impl WaveformVertexBufferStreamer {
         let total_quads = track_count * num_cols;
         let req_verts = total_quads * 4;
         let req_indices = total_quads * 6;
-        if self.vertices.capacity() < req_verts {
-            self.vertices.reserve(req_verts.saturating_sub(self.vertices.capacity()));
-        }
-        if self.indices.capacity() < req_indices {
-            self.indices.reserve(req_indices.saturating_sub(self.indices.capacity()));
-        }
+
+        self.vertices.resize(
+            req_verts,
+            WaveformVertex {
+                position: [0.0, 0.0],
+                color: [0.0, 0.0, 0.0, 0.0],
+                uv: [0.0, 0.0],
+            },
+        );
+        self.indices.resize(req_indices, 0);
+
+        let mut quad_idx = 0usize;
 
         for (track_idx, track) in tracks.iter().enumerate() {
             let lane_top = track_idx as f32 * lane_height;
@@ -192,39 +201,44 @@ impl WaveformVertexBufferStreamer {
                 let y_top = lane_mid - (max_val.abs().min(1.0) * max_amp_height).max(0.5);
                 let y_bot = lane_mid + (min_val.abs().min(1.0) * max_amp_height).max(0.5);
 
-                let base_idx = self.vertices.len() as u32;
+                let vert_offset = quad_idx * 4;
+                let idx_offset = quad_idx * 6;
+                let base_idx = vert_offset as u32;
 
-                self.vertices.push(WaveformVertex {
+                self.vertices[vert_offset] = WaveformVertex {
                     position: [x, y_top],
                     color,
                     uv: [0.0, 0.0],
-                });
-                self.vertices.push(WaveformVertex {
+                };
+                self.vertices[vert_offset + 1] = WaveformVertex {
                     position: [x + col_step_px, y_top],
                     color,
                     uv: [1.0, 0.0],
-                });
-                self.vertices.push(WaveformVertex {
+                };
+                self.vertices[vert_offset + 2] = WaveformVertex {
                     position: [x + col_step_px, y_bot],
                     color,
                     uv: [1.0, 1.0],
-                });
-                self.vertices.push(WaveformVertex {
+                };
+                self.vertices[vert_offset + 3] = WaveformVertex {
                     position: [x, y_bot],
                     color,
                     uv: [0.0, 1.0],
-                });
+                };
 
-                self.indices.extend_from_slice(&[
-                    base_idx,
-                    base_idx + 1,
-                    base_idx + 2,
-                    base_idx,
-                    base_idx + 2,
-                    base_idx + 3,
-                ]);
+                self.indices[idx_offset] = base_idx;
+                self.indices[idx_offset + 1] = base_idx + 1;
+                self.indices[idx_offset + 2] = base_idx + 2;
+                self.indices[idx_offset + 3] = base_idx;
+                self.indices[idx_offset + 4] = base_idx + 2;
+                self.indices[idx_offset + 5] = base_idx + 3;
+
+                quad_idx += 1;
             }
         }
+
+        self.vertices.truncate(quad_idx * 4);
+        self.indices.truncate(quad_idx * 6);
 
         let elapsed = start_time.elapsed();
         let frame_time_us = elapsed.as_micros() as u64;
@@ -840,6 +854,9 @@ mod gpu_waveform_tests {
         let render_path = "scratch/renders/waveform_overview.png";
         let res = streamer.render_snapshot_png(render_path, 800, 600);
         assert!(res.is_ok(), "Snapshot render must succeed: {:?}", res);
-        assert!(std::path::Path::new(render_path).exists(), "Rendered PNG must exist");
+        assert!(
+            std::path::Path::new(render_path).exists(),
+            "Rendered PNG must exist"
+        );
     }
 }

@@ -68,18 +68,21 @@ fn bench_filter_ladder_poly_128_simd8(c: &mut Criterion) {
     let mut outputs = [wide::f32x8::splat(0.0); 16];
     let sample_rate = 44100;
 
-    c.bench_function("FilterLadder 128 Polyphonic Voices SIMD8 (512 samples)", |b| {
-        b.iter(|| {
-            for _ in 0..512 {
-                process_filter_ladder_poly_128(
-                    black_box(&mut voices),
-                    black_box(&inputs),
-                    sample_rate,
-                    black_box(&mut outputs),
-                );
-            }
-        })
-    });
+    c.bench_function(
+        "FilterLadder 128 Polyphonic Voices SIMD8 (512 samples)",
+        |b| {
+            b.iter(|| {
+                for _ in 0..512 {
+                    process_filter_ladder_poly_128(
+                        black_box(&mut voices),
+                        black_box(&inputs),
+                        sample_rate,
+                        black_box(&mut outputs),
+                    );
+                }
+            })
+        },
+    );
 }
 
 fn bench_filter_ladder_poly_128_scalar(c: &mut Criterion) {
@@ -95,15 +98,18 @@ fn bench_filter_ladder_poly_128_scalar(c: &mut Criterion) {
 
     let sample_rate = 44100;
 
-    c.bench_function("FilterLadder 128 Polyphonic Voices Scalar (512 samples)", |b| {
-        b.iter(|| {
-            for _ in 0..512 {
-                for voice in &mut voices {
-                    black_box(voice.process_sample(black_box(0.5), sample_rate));
+    c.bench_function(
+        "FilterLadder 128 Polyphonic Voices Scalar (512 samples)",
+        |b| {
+            b.iter(|| {
+                for _ in 0..512 {
+                    for voice in &mut voices {
+                        black_box(voice.process_sample(black_box(0.5), sample_rate));
+                    }
                 }
-            }
-        })
-    });
+            })
+        },
+    );
 }
 
 criterion_group!(

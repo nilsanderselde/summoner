@@ -153,7 +153,8 @@ impl NodeGraph {
         self.node_timings.remove(node_idx);
 
         // Filter out edges connecting to removed node, decrement indices of higher nodes
-        self.edges.retain(|e| e.from_node != node_idx && e.to_node != node_idx);
+        self.edges
+            .retain(|e| e.from_node != node_idx && e.to_node != node_idx);
         for edge in &mut self.edges {
             if edge.from_node > node_idx {
                 edge.from_node -= 1;
@@ -182,6 +183,49 @@ impl NodeGraph {
         } else {
             false
         }
+    }
+
+    /// Connect two nodes with given port indices, returning true if successfully added.
+    pub fn connect(
+        &mut self,
+        from_node: usize,
+        from_port: usize,
+        to_node: usize,
+        to_port: usize,
+    ) -> bool {
+        if from_node < self.nodes.len() && to_node < self.nodes.len() {
+            self.add_edge(Edge {
+                from_node,
+                from_port,
+                to_node,
+                to_port,
+            });
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Disconnect two nodes with given port indices.
+    pub fn disconnect(
+        &mut self,
+        from_node: usize,
+        from_port: usize,
+        to_node: usize,
+        to_port: usize,
+    ) -> bool {
+        self.remove_edge(Edge {
+            from_node,
+            from_port,
+            to_node,
+            to_port,
+        })
+    }
+
+    /// Explicitly compiles and returns the current GraphSchedule snapshot.
+    pub fn compile_schedule(&mut self) -> GraphSchedule {
+        self.compile();
+        (**self.schedule.load()).clone()
     }
 
     /// Atomically hot-swaps the active execution schedule with zero audio thread locks.
@@ -297,8 +341,9 @@ impl AudioNode for NodeGraph {
         }
 
         let block_len = output[0].len().min(self.max_block_size);
+        const MAX_PORTS: usize = 32;
 
-        if self.parallel_execution && !schedule.levels.is_empty() {
+        if !schedule.levels.is_empty() {
             for level_nodes in &schedule.levels {
                 // Copy edge data for nodes in this level
                 for &node_idx in level_nodes {
@@ -313,55 +358,59 @@ impl AudioNode for NodeGraph {
                     }
                 }
 
-                if level_nodes.len() > 1 {
-                    use rayon::prelude::*;
-                    let nodes_ptr = self.nodes.as_mut_ptr() as usize;
-                    let input_bufs_ptr = self.input_buffers.as_ptr() as usize;
-                    let bufs_ptr = self.buffers.as_mut_ptr() as usize;
-                    let timings_ptr = self.node_timings.as_mut_ptr() as usize;
-
-                    level_nodes.par_iter().for_each(|&node_idx| {
-                        let start_time = std::time::Instant::now();
-                        unsafe {
-                            let node: &mut Box<dyn AudioNode> =
-                                &mut *(nodes_ptr as *mut Box<dyn AudioNode>).add(node_idx);
-                            let input_buf: &Vec<Vec<Sample>> =
-                                &*(input_bufs_ptr as *const Vec<Vec<Sample>>).add(node_idx);
-                            let node_buf: &mut Vec<Vec<Sample>> =
-                                &mut *(bufs_ptr as *mut Vec<Vec<Sample>>).add(node_idx);
-                            let timings: &mut std::time::Duration =
-                                &mut *(timings_ptr as *mut std::time::Duration).add(node_idx);
-
-                            let in_slices: Vec<&[Sample]> = input_buf
-                                .iter()
-                                .map(|ch_buf| &ch_buf[..block_len])
-                                .collect();
-
-                            let mut out_slices: Vec<&mut [Sample]> = node_buf
-                                .iter_mut()
-                                .map(|ch_buf| &mut ch_buf[..block_len])
-                                .collect();
-
-                            node.process(&in_slices[..], &mut out_slices[..], ctx);
-                            *timings = start_time.elapsed();
-                        }
-                    });
-                } else if !level_nodes.is_empty() {
-                    let node_idx = level_nodes[0];
+                for &node_idx in level_nodes {
                     if node_idx < self.nodes.len() {
                         let start_time = std::time::Instant::now();
-                        let in_slices: Vec<&[Sample]> = self.input_buffers[node_idx]
-                            .iter()
-                            .map(|ch_buf| &ch_buf[..block_len])
-                            .collect();
+                        let in_buf = &self.input_buffers[node_idx];
+                        let in_ch_count = in_buf.len().min(MAX_PORTS);
+                        let mut in_ptrs: [&[Sample]; MAX_PORTS] = [&[]; MAX_PORTS];
+                        for ch in 0..in_ch_count {
+                            in_ptrs[ch] = &in_buf[ch][..block_len];
+                        }
+                        let in_slices = &in_ptrs[..in_ch_count];
 
                         let node_buf = &mut self.buffers[node_idx];
-                        let mut out_slices: Vec<&mut [Sample]> = node_buf
-                            .iter_mut()
-                            .map(|ch_buf| &mut ch_buf[..block_len])
-                            .collect();
+                        let out_ch_count = node_buf.len().min(MAX_PORTS);
+                        let mut out_ptrs: [&mut [Sample]; MAX_PORTS] = [
+                            &mut [],
+                            &mut [],
+                            &mut [],
+                            &mut [],
+                            &mut [],
+                            &mut [],
+                            &mut [],
+                            &mut [],
+                            &mut [],
+                            &mut [],
+                            &mut [],
+                            &mut [],
+                            &mut [],
+                            &mut [],
+                            &mut [],
+                            &mut [],
+                            &mut [],
+                            &mut [],
+                            &mut [],
+                            &mut [],
+                            &mut [],
+                            &mut [],
+                            &mut [],
+                            &mut [],
+                            &mut [],
+                            &mut [],
+                            &mut [],
+                            &mut [],
+                            &mut [],
+                            &mut [],
+                            &mut [],
+                            &mut [],
+                        ];
+                        for (ch, buf) in node_buf.iter_mut().enumerate().take(MAX_PORTS) {
+                            out_ptrs[ch] = &mut buf[..block_len];
+                        }
+                        let out_slices = &mut out_ptrs[..out_ch_count];
 
-                        self.nodes[node_idx].process(&in_slices[..], &mut out_slices[..], ctx);
+                        self.nodes[node_idx].process(in_slices, out_slices, ctx);
                         self.node_timings[node_idx] = start_time.elapsed();
                     }
                 }
@@ -383,18 +432,56 @@ impl AudioNode for NodeGraph {
                     }
                 }
 
-                let in_slices: Vec<&[Sample]> = self.input_buffers[node_idx]
-                    .iter()
-                    .map(|ch_buf| &ch_buf[..block_len])
-                    .collect();
+                let in_buf = &self.input_buffers[node_idx];
+                let in_ch_count = in_buf.len().min(MAX_PORTS);
+                let mut in_ptrs: [&[Sample]; MAX_PORTS] = [&[]; MAX_PORTS];
+                for ch in 0..in_ch_count {
+                    in_ptrs[ch] = &in_buf[ch][..block_len];
+                }
+                let in_slices = &in_ptrs[..in_ch_count];
 
                 let node_buf = &mut self.buffers[node_idx];
-                let mut out_slices: Vec<&mut [Sample]> = node_buf
-                    .iter_mut()
-                    .map(|ch_buf| &mut ch_buf[..block_len])
-                    .collect();
+                let out_ch_count = node_buf.len().min(MAX_PORTS);
+                let mut out_ptrs: [&mut [Sample]; MAX_PORTS] = [
+                    &mut [],
+                    &mut [],
+                    &mut [],
+                    &mut [],
+                    &mut [],
+                    &mut [],
+                    &mut [],
+                    &mut [],
+                    &mut [],
+                    &mut [],
+                    &mut [],
+                    &mut [],
+                    &mut [],
+                    &mut [],
+                    &mut [],
+                    &mut [],
+                    &mut [],
+                    &mut [],
+                    &mut [],
+                    &mut [],
+                    &mut [],
+                    &mut [],
+                    &mut [],
+                    &mut [],
+                    &mut [],
+                    &mut [],
+                    &mut [],
+                    &mut [],
+                    &mut [],
+                    &mut [],
+                    &mut [],
+                    &mut [],
+                ];
+                for (ch, buf) in node_buf.iter_mut().enumerate().take(MAX_PORTS) {
+                    out_ptrs[ch] = &mut buf[..block_len];
+                }
+                let out_slices = &mut out_ptrs[..out_ch_count];
 
-                self.nodes[node_idx].process(&in_slices[..], &mut out_slices[..], ctx);
+                self.nodes[node_idx].process(in_slices, out_slices, ctx);
                 self.node_timings[node_idx] = start_time.elapsed();
             }
         }
