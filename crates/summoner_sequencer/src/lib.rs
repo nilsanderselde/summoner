@@ -19,6 +19,7 @@ pub mod groove;
 pub mod midi_tools;
 pub mod pattern;
 pub mod pattern_tools;
+pub mod session_looper;
 pub mod timeline;
 
 pub use comping::*;
@@ -26,6 +27,7 @@ pub use generative::{generate_melody_onnx, ONNX_MELODY_MODEL_BYTES};
 pub use groove::{apply_groove_quantize, GrooveTemplate};
 pub use midi_tools::*;
 pub use pattern_tools::*;
+pub use session_looper::*;
 
 #[cfg(test)]
 mod tests {
