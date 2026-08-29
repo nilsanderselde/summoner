@@ -328,6 +328,8 @@ pub use views::sonar_hydrophone_view::SonarHydrophoneView;
 #[cfg(feature = "gui")]
 pub use views::spatial_panner_view::SpatialPannerView;
 #[cfg(feature = "gui")]
+pub use views::spatial_trajectory_view::{SpatialGrainParticle, SpatialTrajectoryView};
+#[cfg(feature = "gui")]
 pub use views::spectral_aligner_view::SpectralAlignerView;
 #[cfg(feature = "gui")]
 pub use views::spectral_brush_editor::SpectralBrushEditorView;
