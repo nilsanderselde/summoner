@@ -16,11 +16,13 @@
 pub mod bus;
 pub mod cadence;
 pub mod edo;
+pub mod isomorphic_router;
 pub mod scale;
 
 pub use bus::{HarmonicBusBridge, HarmonicContext};
 pub use cadence::{CadenceEngine, CadenceType, Chord, HarmonicTension, HarmonicTensionAnalyzer};
 pub use edo::EdoTuning;
+pub use isomorphic_router::*;
 pub use scale::Scale;
 
 pub mod kbm;

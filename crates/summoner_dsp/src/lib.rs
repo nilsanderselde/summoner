@@ -37,6 +37,7 @@ pub mod meter;
 pub mod midside;
 pub mod mod_fx;
 pub mod modal;
+pub mod modal_synthesis;
 pub mod modulators;
 pub mod multiband_compressor;
 pub mod multiband_dynamics;
@@ -69,6 +70,7 @@ pub mod tuner;
 pub mod visualizer_engine;
 pub mod wavefolder;
 pub mod waveguide;
+pub mod waveguide_mesh;
 pub mod zero_gravity_fluid;
 
 pub use ai_mixing::*;
@@ -76,6 +78,7 @@ pub use console_emulation::{ConsoleEmulationNode, ConsoleMode};
 pub use ecosystem_hardware::*;
 pub use granular_cloud::*;
 pub use live_session_recorder::*;
+pub use modal_synthesis::*;
 pub use multiband_compressor::MultibandCompressorNode;
 pub use multiband_dynamics::*;
 pub use neural_dsp::*;
@@ -92,6 +95,7 @@ pub use track_dsp::*;
 pub use true_peak_limiter::*;
 pub use tube_saturation::{TubeChannelState, TubeSaturationNode, TubeTopology};
 pub use visualizer_engine::*;
+pub use waveguide_mesh::*;
 pub use zero_gravity_fluid::*;
 
 pub use plugin_host::{

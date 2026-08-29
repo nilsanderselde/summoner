@@ -121,4 +121,9 @@ impl Scale {
         let snapped_pitch_class = ((best_degree + root) as f64) % divisions;
         octave * divisions + snapped_pitch_class
     }
+
+    /// Checks if the given pitch class step (0..divisions) is contained in this scale.
+    pub fn contains_step(&self, step: u16) -> bool {
+        self.degrees.contains(&step)
+    }
 }
