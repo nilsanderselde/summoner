@@ -11,10 +11,10 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Affero General Public License for more details.
 
-//! Arbitrary N-EDO (Equal Division of the Octave) microtonal tuning systems.
+use serde::{Deserialize, Serialize};
 
 /// N-EDO tuning system configuration.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EdoTuning {
     /// Number of equal divisions of the octave (e.g., 12 for 12-TET, 19, 31, 53).
     pub divisions: u16,

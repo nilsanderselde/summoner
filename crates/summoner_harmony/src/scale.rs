@@ -14,9 +14,10 @@
 //! Musical scale definitions and pitch quantization / snapping helpers.
 
 use crate::edo::EdoTuning;
+use serde::{Deserialize, Serialize};
 
 /// Scale step interval set defined relative to octave divisions.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Scale {
     pub name: String,
     pub degrees: Vec<u16>,

@@ -3958,6 +3958,7 @@ dependencies = [
 name = "summoner_harmony"
 version = "0.1.0"
 dependencies = [
+ "serde",
  "summoner_core",
 ]
 

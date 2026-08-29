@@ -18,8 +18,8 @@ pub mod cadence;
 pub mod edo;
 pub mod scale;
 
-pub use bus::HarmonicContext;
-pub use cadence::{CadenceEngine, CadenceType, Chord};
+pub use bus::{HarmonicBusBridge, HarmonicContext};
+pub use cadence::{CadenceEngine, CadenceType, Chord, HarmonicTension, HarmonicTensionAnalyzer};
 pub use edo::EdoTuning;
 pub use scale::Scale;
 
