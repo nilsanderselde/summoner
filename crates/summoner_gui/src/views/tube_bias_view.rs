@@ -19,26 +19,7 @@ pub const MIN_HIT_TARGET_PT: f32 = 44.0;
 pub const TUBE_PUCK_HIT_RADIUS: f32 = 22.0; // 44x44pt touch bounding box
 pub const NUM_HARMONICS: usize = 5;
 
-/// Vacuum tube model / topology selection.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
-pub enum TubeTopology {
-    #[default]
-    Triode12AX7,
-    PentodeEL34,
-    BeamTetrode6L6,
-    CleanModern,
-}
-
-impl TubeTopology {
-    pub fn label(&self) -> &'static str {
-        match self {
-            TubeTopology::Triode12AX7 => "12AX7 TRIODE (VINTAGE WARMTH)",
-            TubeTopology::PentodeEL34 => "EL34 PENTODE (BRITISH PUNCH)",
-            TubeTopology::BeamTetrode6L6 => "6L6 BEAM TETRODE (AMERICAN HEADROOM)",
-            TubeTopology::CleanModern => "CLEAN MODERN (TRANSPARENT SAT)",
-        }
-    }
-}
+pub use summoner_dsp::tube_saturation::TubeTopology;
 
 /// Physical Tube Amp Bias & Harmonic Distortion HUD View (Milestone 11).
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -498,6 +479,7 @@ impl TubeBiasView {
 // Minimal software rasterizer & PNG encoder helpers for headless verification
 // ----------------------------------------------------------------------------
 
+#[allow(clippy::too_many_arguments)]
 fn fill_rect_tube(buf: &mut [u8], w: u32, h: u32, rx: u32, ry: u32, rw: u32, rh: u32, col: [u8; 4]) {
     for y in ry..(ry + rh).min(h) {
         for x in rx..(rx + rw).min(w) {
@@ -507,6 +489,7 @@ fn fill_rect_tube(buf: &mut [u8], w: u32, h: u32, rx: u32, ry: u32, rw: u32, rh:
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn fill_rounded_rect_tube(
     buf: &mut [u8],
     w: u32,
@@ -547,6 +530,7 @@ fn fill_rounded_rect_tube(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn draw_rect_border_tube(buf: &mut [u8], w: u32, h: u32, rx: u32, ry: u32, rw: u32, rh: u32, col: [u8; 4]) {
     for x in rx..(rx + rw).min(w) {
         if ry < h {
@@ -586,6 +570,7 @@ fn draw_vertical_line_tube(buf: &mut [u8], w: u32, h: u32, x: u32, y0: u32, y1: 
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn draw_line_segment_tube(buf: &mut [u8], w: u32, h: u32, x0: f32, y0: f32, x1: f32, y1: f32, col: [u8; 4]) {
     let dx = x1 - x0;
     let dy = y1 - y0;
