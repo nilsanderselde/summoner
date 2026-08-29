@@ -86,7 +86,7 @@ pub use spectrogram_art::*;
 pub use tape_saturation::*;
 pub use track_dsp::*;
 pub use true_peak_limiter::*;
-pub use tube_saturation::TubeSaturationNode;
+pub use tube_saturation::{TubeChannelState, TubeSaturationNode, TubeTopology};
 pub use visualizer_engine::*;
 pub use zero_gravity_fluid::*;
 

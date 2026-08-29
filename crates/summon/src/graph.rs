@@ -176,18 +176,47 @@ impl NodeFactory {
                 }
                 Some(Box::new(ProcessorNodeAdapter::new(node)))
             }
-            "TubeSaturationNode" | "TubeSaturation" => Some(Box::new(ProcessorNodeAdapter::new(
-                summoner_dsp::TubeSaturationNode::new(
-                    *params.get("drive").unwrap_or(&2.5),
-                    *params.get("bias").unwrap_or(&0.2),
-                ),
-            ))),
-            "ConsoleEmulationNode" | "ConsoleEmulation" => Some(Box::new(
-                ProcessorNodeAdapter::new(summoner_dsp::ConsoleEmulationNode::new(
-                    summoner_dsp::ConsoleMode::from_f32(*params.get("mode").unwrap_or(&0.0)),
-                    *params.get("drive").unwrap_or(&1.0),
-                )),
-            )),
+            "TubeSaturationNode" | "TubeSaturation" => {
+                let drive = *params.get("drive").unwrap_or(&2.5);
+                let bias = *params.get("bias").or_else(|| params.get("bias_voltage_v")).unwrap_or(&-1.85);
+                let mut node = summoner_dsp::TubeSaturationNode::new(drive, bias);
+                if let Some(&topo) = params.get("topology") {
+                    match topo.round() as i32 {
+                        0 => node.topology = summoner_dsp::TubeTopology::Triode12AX7,
+                        1 => node.topology = summoner_dsp::TubeTopology::PentodeEL34,
+                        2 => node.topology = summoner_dsp::TubeTopology::BeamTetrode6L6,
+                        _ => node.topology = summoner_dsp::TubeTopology::CleanModern,
+                    }
+                }
+                if let Some(&plate) = params.get("plate_voltage").or_else(|| params.get("plate_voltage_v")) {
+                    node.plate_voltage_v = plate;
+                }
+                if let Some(&sag) = params.get("sag_compression") {
+                    node.sag_compression = sag;
+                }
+                if let Some(&asym) = params.get("asymmetry") {
+                    node.asymmetry = asym;
+                }
+                if let Some(&warmth) = params.get("warmth") {
+                    node.warmth = warmth;
+                }
+                Some(Box::new(ProcessorNodeAdapter::new(node)))
+            }
+            "ConsoleEmulationNode" | "ConsoleEmulation" => {
+                let mode = summoner_dsp::ConsoleMode::from_f32(*params.get("mode").unwrap_or(&0.0));
+                let drive = *params.get("drive").unwrap_or(&1.5);
+                let mut node = summoner_dsp::ConsoleEmulationNode::new(mode, drive);
+                if let Some(&warmth) = params.get("warmth") {
+                    node.warmth = warmth;
+                }
+                if let Some(&iron) = params.get("transformer_iron").or_else(|| params.get("iron")) {
+                    node.transformer_iron = iron;
+                }
+                if let Some(&crosstalk) = params.get("crosstalk") {
+                    node.crosstalk = crosstalk;
+                }
+                Some(Box::new(ProcessorNodeAdapter::new(node)))
+            }
             "DistortionNode" => Some(Box::new(ProcessorNodeAdapter::new(DistortionNode::new(
                 DistortionType::SoftClipping,
                 *params.get("drive").unwrap_or(&2.0),
