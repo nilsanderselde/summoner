@@ -17,11 +17,12 @@
 //! a GUI or CLI thread while being concurrently read by the real-time audio thread
 //! without locking or allocation.
 
+use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
 
 /// A lightweight, copyable identifier for a registered parameter.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ParamId(pub u32);
 
 /// A single atomic floating-point parameter.

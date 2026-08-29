@@ -3985,6 +3985,7 @@ dependencies = [
  "summoner_core",
  "summoner_harmony",
  "summoner_project",
+ "toml",
 ]
 
 [[package]]

@@ -22,6 +22,7 @@ pub mod midi_tools;
 pub mod pattern;
 pub mod pattern_tools;
 pub mod session_looper;
+pub mod spatial_trajectory;
 pub mod timeline;
 
 pub use clip_matrix::*;
@@ -32,6 +33,7 @@ pub use markov_mutator::*;
 pub use midi_tools::*;
 pub use pattern_tools::*;
 pub use session_looper::*;
+pub use spatial_trajectory::*;
 
 #[cfg(test)]
 mod tests {
