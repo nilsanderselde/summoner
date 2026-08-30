@@ -119,6 +119,8 @@ pub mod tier75_tests;
 #[cfg(feature = "gui")]
 pub mod tier76_tests;
 #[cfg(feature = "gui")]
+pub mod tier77_tests;
+#[cfg(feature = "gui")]
 pub mod touch_gestures;
 #[cfg(feature = "gui")]
 pub mod transport_bar;
@@ -308,6 +310,8 @@ pub use views::pipe_organ_view::PipeOrganView;
 #[cfg(feature = "gui")]
 pub use views::pitch_corrector_view::PitchCorrectorView;
 #[cfg(feature = "gui")]
+pub use views::plucked_string_view::PluckedStringView;
+#[cfg(feature = "gui")]
 pub use views::polar_phase_correlator_view::PolarPhaseCorrelatorView;
 #[cfg(feature = "gui")]
 pub use views::raytraced_reverb_view::RaytracedReverbView;
@@ -360,6 +364,8 @@ pub use views::spectral_resynthesis_view::SpectralResynthesisView;
 #[cfg(feature = "gui")]
 pub use views::spectral_tilt_view::SpectralTiltView;
 #[cfg(feature = "gui")]
+pub use views::spectral_unmasker_view::SpectralUnmaskerView;
+#[cfg(feature = "gui")]
 pub use views::spectrogram_3d_view::Spectrogram3DView;
 #[cfg(feature = "gui")]
 pub use views::spring_reverb_view::SpringReverbView;
@@ -373,6 +379,8 @@ pub use views::stereo_vectorscope_view::StereoVectorscopeView;
 pub use views::stereo_widener_view::StereoWidenerView;
 #[cfg(feature = "gui")]
 pub use views::subharmonic_synth_view::SubharmonicSynthView;
+#[cfg(feature = "gui")]
+pub use views::sympathetic_coupling_view::SympatheticCouplingView;
 #[cfg(feature = "gui")]
 pub use views::tape_emulator_view::TapeEmulatorView;
 #[cfg(feature = "gui")]
