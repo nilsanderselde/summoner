@@ -363,6 +363,22 @@ impl NodeFactory {
                 }
                 Some(Box::new(ProcessorNodeAdapter::new(ep)))
             }
+            "SitarNode" | "Sitar" => {
+                let mut sitar = summoner_dsp::Sitar::new(44100);
+                if let Some(&gain) = params.get("gain") {
+                    sitar.master_gain = gain;
+                }
+                if let Some(&meend) = params.get("meend") {
+                    sitar.set_meend_pull(meend);
+                }
+                if let Some(&gap) = params.get("jawari_gap") {
+                    sitar.jawari.clearance_gap_mm = gap;
+                }
+                if let Some(&bleed) = params.get("tarab_bleed") {
+                    sitar.tarab.coupling_bleed = bleed;
+                }
+                Some(Box::new(ProcessorNodeAdapter::new(sitar)))
+            }
             _ => {
                 eprintln!("Warning: Unknown node kind '{}'", config.kind);
                 Some(Box::new(GainNode::new(0.0)))
