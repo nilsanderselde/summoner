@@ -13,6 +13,7 @@
 
 pub mod automation;
 pub mod automation_timeline;
+pub mod bellows_gesture;
 pub mod bowing_gesture;
 pub mod clip_matrix;
 pub mod clavinet_gesture;
@@ -37,6 +38,7 @@ pub mod spring_gesture;
 pub mod timeline;
 pub mod woodwind_fingering;
 
+pub use bellows_gesture::*;
 pub use bowing_gesture::*;
 pub use clavinet_gesture::*;
 pub use clip_matrix::*;

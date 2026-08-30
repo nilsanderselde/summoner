@@ -19,6 +19,7 @@ pub mod allocator;
 pub mod articulation_bus;
 pub mod audio;
 pub mod audio_drivers;
+pub mod bellows_bus;
 pub mod breath_bus;
 pub mod cadence_bus;
 pub mod clavinet_bus;
@@ -59,6 +60,7 @@ pub use audio_drivers::{
     AAudioDriver, AlsaDriver, AsapiDriver, AudioUnitDriver, NativeAudioDriver,
     NativeAudioDriverTuner, WasapiDriver,
 };
+pub use bellows_bus::*;
 pub use breath_bus::*;
 pub use cadence_bus::*;
 pub use clavinet_bus::*;
