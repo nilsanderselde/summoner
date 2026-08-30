@@ -139,7 +139,7 @@ impl CadenceGraph {
         // Plagal cadences (Subdominant -> Tonic)
         graph.add_edge(idx_iv, idx_i, 1.4, CadenceResolutionType::Plagal, -0.30);
         graph.add_edge(idx_iv_min, idx_i, 1.2, CadenceResolutionType::Plagal, -0.55);
-        graph.add_edge(idx_ii, idx_i, 2.0, CadenceResolutionType::Plagal, -0.35);
+        graph.add_edge(idx_ii, idx_i, 2.2, CadenceResolutionType::Plagal, -0.35);
 
         // Deceptive cadences (Dominant -> Submediant / Subdominant)
         graph.add_edge(idx_v, idx_vi, 1.8, CadenceResolutionType::Deceptive, -0.50);

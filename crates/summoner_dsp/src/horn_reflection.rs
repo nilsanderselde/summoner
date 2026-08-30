@@ -11,7 +11,7 @@
 //! Enforces zero heap allocations in audio processing loops under `AllocGuard`.
 
 use serde::{Deserialize, Serialize};
-use std::f32::consts::PI;
+use std::f32::consts::{FRAC_1_SQRT_2, PI};
 
 /// Preset geometry profiles for brass instrument horn bells.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -224,7 +224,7 @@ impl HornReflectionFilter {
     pub fn update_coefficients(&mut self) {
         let sr = self.sample_rate as f32;
         let fc = self.cutoff_hz.clamp(50.0, sr * 0.45);
-        let q = 0.7071 * (1.0 + 0.3 * (self.flare_coefficient - 0.5));
+        let q = FRAC_1_SQRT_2 * (1.0 + 0.3 * (self.flare_coefficient - 0.5));
         let omega = 2.0 * PI * fc / sr;
         let alpha = (omega * 0.5).sin() / (2.0 * q.max(0.1));
         let cos_w = omega.cos();

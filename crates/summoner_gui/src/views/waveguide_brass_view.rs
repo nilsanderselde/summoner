@@ -597,4 +597,329 @@ impl WaveguideBrassView {
             Color32::from_rgb(0, 255, 180),
         );
     }
+
+    #[cfg(feature = "gui")]
+    pub fn show(&mut self, ui: &mut egui::Ui, rect: Rect) {
+        ui.allocate_ui_at_rect(
+            egui::Rect::from_min_size(
+                egui::pos2(rect.x, rect.y),
+                egui::vec2(rect.width, rect.height),
+            ),
+            |ui| {
+                self.ui(ui);
+            },
+        );
+    }
+
+    /// Render headless PNG snapshot displaying Embouchure Bernoulli puck, Horn flare curve, and metrics.
+    pub fn render_snapshot_png(&self, path: &str, width: u32, height: u32) -> Result<(), String> {
+        if let Some(parent) = std::path::Path::new(path).parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+
+        let mut pixels = vec![0u8; (width * height * 4) as usize];
+
+        // Background: Deep slate/navy (#0A0E18)
+        for y in 0..height {
+            for x in 0..width {
+                let idx = ((y * width + x) * 4) as usize;
+                pixels[idx] = 10;
+                pixels[idx + 1] = 14;
+                pixels[idx + 2] = 24;
+                pixels[idx + 3] = 255;
+            }
+        }
+
+        // Header Panel (y: 10..46, x: 20..width-20)
+        fill_rounded_rect_wb(&mut pixels, width, height, 20, 10, width - 40, 36, 4, [18, 24, 38, 255]);
+        draw_rect_border_wb(&mut pixels, width, height, 20, 10, width - 40, 36, [45, 60, 85, 255]);
+
+        // Left Canvas: Embouchure Space (x: 20..width/2 - 10, y: 56..height - 120)
+        let left_w = (width - 60) / 2;
+        let canvas_h = height - 170;
+        fill_rounded_rect_wb(&mut pixels, width, height, 20, 56, left_w, canvas_h, 6, [14, 20, 32, 255]);
+        draw_rect_border_wb(&mut pixels, width, height, 20, 56, left_w, canvas_h, [45, 60, 85, 255]);
+
+        // Draw Left Grid lines
+        for step in 1..4 {
+            let gx = 20.0 + (step as f32 / 4.0) * left_w as f32;
+            let gy = 56.0 + (step as f32 / 4.0) * canvas_h as f32;
+            draw_line_segment_wb(&mut pixels, width, height, gx, 56.0, gx, 56.0 + canvas_h as f32, [25, 35, 55, 255]);
+            draw_line_segment_wb(&mut pixels, width, height, 20.0, gy, 20.0 + left_w as f32, gy, [25, 35, 55, 255]);
+        }
+
+        // Embouchure Puck (Gold, >= 22pt radius -> 44x44pt touch bounding target)
+        let puck_x = 20.0 + self.embouchure_puck_pos.0 * left_w as f32;
+        let puck_y = 56.0 + (1.0 - self.embouchure_puck_pos.1) * canvas_h as f32;
+        draw_circle_ring_wb(&mut pixels, width, height, puck_x, puck_y, BRASS_PUCK_HIT_RADIUS, [255, 215, 0, 160]);
+        draw_circle_filled_wb(&mut pixels, width, height, puck_x, puck_y, 14.0, [255, 215, 0, 255]);
+        draw_circle_filled_wb(&mut pixels, width, height, puck_x, puck_y, 4.0, [255, 255, 255, 255]);
+
+        // Right Canvas: Horn Bore Flare Profile & Reflection (x: width/2 + 10..width - 20, y: 56..height - 120)
+        let right_x = 20 + left_w + 20;
+        let right_w = left_w;
+        fill_rounded_rect_wb(&mut pixels, width, height, right_x, 56, right_w, canvas_h, 6, [14, 20, 32, 255]);
+        draw_rect_border_wb(&mut pixels, width, height, right_x, 56, right_w, canvas_h, [45, 60, 85, 255]);
+
+        let center_y = 56.0 + canvas_h as f32 * 0.5;
+        let mut prev_pt_top: Option<(f32, f32)> = None;
+        let mut prev_pt_bot: Option<(f32, f32)> = None;
+
+        for step in 0..=32 {
+            let norm_x = step as f32 / 32.0;
+            let px = right_x as f32 + norm_x * right_w as f32;
+            let r_profile = self.evaluate_bore_profile(norm_x);
+            let half_h = r_profile * (canvas_h as f32 * 0.38);
+
+            let pt_top = (px, center_y - half_h);
+            let pt_bot = (px, center_y + half_h);
+
+            if let (Some(prev_t), Some(prev_b)) = (prev_pt_top, prev_pt_bot) {
+                draw_line_segment_wb(&mut pixels, width, height, prev_t.0, prev_t.1, pt_top.0, pt_top.1, [0, 229, 255, 255]);
+                draw_line_segment_wb(&mut pixels, width, height, prev_b.0, prev_b.1, pt_bot.0, pt_bot.1, [255, 215, 0, 255]);
+            }
+            prev_pt_top = Some(pt_top);
+            prev_pt_bot = Some(pt_bot);
+        }
+
+        // Bottom Metrics Dock (x: 20..width - 20, y: height - 100..height - 20)
+        let dock_y = height - 100;
+        let dock_w = width - 40;
+        fill_rounded_rect_wb(&mut pixels, width, height, 20, dock_y, dock_w, 80, 4, [16, 35, 28, 255]);
+        draw_rect_border_wb(&mut pixels, width, height, 20, dock_y, dock_w, 80, [0, 255, 180, 255]);
+
+        encode_minimal_png_wb(path, &pixels, width, height)
+    }
+}
+
+// ----------------------------------------------------------------------------
+// Minimal software rasterizer & PNG encoder helpers for headless verification
+// ----------------------------------------------------------------------------
+
+#[allow(clippy::too_many_arguments)]
+fn fill_rounded_rect_wb(
+    buf: &mut [u8],
+    w: u32,
+    h: u32,
+    rx: u32,
+    ry: u32,
+    rw: u32,
+    rh: u32,
+    radius: u32,
+    col: [u8; 4],
+) {
+    let r = radius as f32;
+    for y in ry..(ry + rh).min(h) {
+        for x in rx..(rx + rw).min(w) {
+            let mut inside = true;
+            if x < rx + radius && y < ry + radius {
+                let dx = (rx + radius - x) as f32;
+                let dy = (ry + radius - y) as f32;
+                inside = dx * dx + dy * dy <= r * r;
+            } else if x >= rx + rw - radius && y < ry + radius {
+                let dx = (x - (rx + rw - radius - 1)) as f32;
+                let dy = (ry + radius - y) as f32;
+                inside = dx * dx + dy * dy <= r * r;
+            } else if x < rx + radius && y >= ry + rh - radius {
+                let dx = (rx + radius - x) as f32;
+                let dy = (y - (ry + rh - radius - 1)) as f32;
+                inside = dx * dx + dy * dy <= r * r;
+            } else if x >= rx + rw - radius && y >= ry + rh - radius {
+                let dx = (x - (rx + rw - radius - 1)) as f32;
+                let dy = (y - (ry + rh - radius - 1)) as f32;
+                inside = dx * dx + dy * dy <= r * r;
+            }
+            if inside {
+                let idx = ((y * w + x) * 4) as usize;
+                buf[idx..idx + 4].copy_from_slice(&col);
+            }
+        }
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn draw_rect_border_wb(buf: &mut [u8], w: u32, h: u32, rx: u32, ry: u32, rw: u32, rh: u32, col: [u8; 4]) {
+    for x in rx..(rx + rw).min(w) {
+        if ry < h {
+            let idx = ((ry * w + x) * 4) as usize;
+            buf[idx..idx + 4].copy_from_slice(&col);
+        }
+        if ry + rh - 1 < h {
+            let idx = (((ry + rh - 1) * w + x) * 4) as usize;
+            buf[idx..idx + 4].copy_from_slice(&col);
+        }
+    }
+    for y in ry..(ry + rh).min(h) {
+        if rx < w {
+            let idx = ((y * w + rx) * 4) as usize;
+            buf[idx..idx + 4].copy_from_slice(&col);
+        }
+        if rx + rw - 1 < w {
+            let idx = ((y * w + rx + rw - 1) * 4) as usize;
+            buf[idx..idx + 4].copy_from_slice(&col);
+        }
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn draw_line_segment_wb(buf: &mut [u8], w: u32, h: u32, x0: f32, y0: f32, x1: f32, y1: f32, col: [u8; 4]) {
+    let dx = x1 - x0;
+    let dy = y1 - y0;
+    let steps = (dx.abs().max(dy.abs()) * 2.0).max(1.0) as u32;
+    for s in 0..=steps {
+        let t = s as f32 / steps as f32;
+        let px = (x0 + t * dx).round() as i32;
+        let py = (y0 + t * dy).round() as i32;
+        if px >= 0 && px < w as i32 && py >= 0 && py < h as i32 {
+            let idx = ((py as u32 * w + px as u32) * 4) as usize;
+            buf[idx..idx + 4].copy_from_slice(&col);
+        }
+    }
+}
+
+fn draw_circle_filled_wb(buf: &mut [u8], w: u32, h: u32, cx: f32, cy: f32, r: f32, col: [u8; 4]) {
+    let min_x = (cx - r).max(0.0) as u32;
+    let max_x = (cx + r).min(w as f32 - 1.0) as u32;
+    let min_y = (cy - r).max(0.0) as u32;
+    let max_y = (cy + r).min(h as f32 - 1.0) as u32;
+
+    for y in min_y..=max_y {
+        for x in min_x..=max_x {
+            let dx = x as f32 - cx;
+            let dy = y as f32 - cy;
+            if dx * dx + dy * dy <= r * r {
+                let idx = ((y * w + x) * 4) as usize;
+                buf[idx..idx + 4].copy_from_slice(&col);
+            }
+        }
+    }
+}
+
+fn draw_circle_ring_wb(buf: &mut [u8], w: u32, h: u32, cx: f32, cy: f32, r: f32, col: [u8; 4]) {
+    let thickness = 2.0f32;
+    let r_inner = (r - thickness).max(0.0);
+    let min_x = (cx - r).max(0.0) as u32;
+    let max_x = (cx + r).min(w as f32 - 1.0) as u32;
+    let min_y = (cy - r).max(0.0) as u32;
+    let max_y = (cy + r).min(h as f32 - 1.0) as u32;
+
+    for y in min_y..=max_y {
+        for x in min_x..=max_x {
+            let dx = x as f32 - cx;
+            let dy = y as f32 - cy;
+            let dist_sq = dx * dx + dy * dy;
+            if dist_sq <= r * r && dist_sq >= r_inner * r_inner {
+                let idx = ((y * w + x) * 4) as usize;
+                buf[idx..idx + 4].copy_from_slice(&col);
+            }
+        }
+    }
+}
+
+fn encode_minimal_png_wb(path: &str, rgba_pixels: &[u8], width: u32, height: u32) -> Result<(), String> {
+    let mut out = Vec::with_capacity((width * height * 4 + 1024) as usize);
+    out.extend_from_slice(b"\x89PNG\r\n\x1a\n");
+
+    let mut ihdr = Vec::with_capacity(13);
+    ihdr.extend_from_slice(&width.to_be_bytes());
+    ihdr.extend_from_slice(&height.to_be_bytes());
+    ihdr.push(8);
+    ihdr.push(6);
+    ihdr.push(0);
+    ihdr.push(0);
+    ihdr.push(0);
+    write_png_chunk_wb(&mut out, b"IHDR", &ihdr);
+
+    let mut raw_data = Vec::with_capacity((height * (width * 4 + 1)) as usize);
+    for y in 0..height {
+        raw_data.push(0);
+        let row_start = (y * width * 4) as usize;
+        let row_end = row_start + (width * 4) as usize;
+        raw_data.extend_from_slice(&rgba_pixels[row_start..row_end]);
+    }
+
+    let mut zlib_data = Vec::with_capacity(raw_data.len() + 128);
+    zlib_data.push(0x78);
+    zlib_data.push(0x01);
+
+    let mut offset = 0;
+    while offset < raw_data.len() {
+        let chunk_len = (raw_data.len() - offset).min(65535);
+        let is_last = (offset + chunk_len) >= raw_data.len();
+        let bfinal_btype = if is_last { 0x01 } else { 0x00 };
+        zlib_data.push(bfinal_btype);
+
+        let len_u16 = chunk_len as u16;
+        let nlen_u16 = !len_u16;
+        zlib_data.extend_from_slice(&len_u16.to_le_bytes());
+        zlib_data.extend_from_slice(&nlen_u16.to_le_bytes());
+        zlib_data.extend_from_slice(&raw_data[offset..offset + chunk_len]);
+        offset += chunk_len;
+    }
+
+    let mut s1: u32 = 1;
+    let mut s2: u32 = 0;
+    for &b in &raw_data {
+        s1 = (s1 + b as u32) % 65521;
+        s2 = (s2 + s1) % 65521;
+    }
+    let adler = (s2 << 16) | s1;
+    zlib_data.extend_from_slice(&adler.to_be_bytes());
+
+    write_png_chunk_wb(&mut out, b"IDAT", &zlib_data);
+    write_png_chunk_wb(&mut out, b"IEND", &[]);
+
+    std::fs::write(path, out).map_err(|e| e.to_string())
+}
+
+fn write_png_chunk_wb(out: &mut Vec<u8>, chunk_type: &[u8; 4], data: &[u8]) {
+    out.extend_from_slice(&(data.len() as u32).to_be_bytes());
+    let type_start = out.len();
+    out.extend_from_slice(chunk_type);
+    out.extend_from_slice(data);
+    let crc = crc32_compute_wb(&out[type_start..]);
+    out.extend_from_slice(&crc.to_be_bytes());
+}
+
+fn crc32_compute_wb(buf: &[u8]) -> u32 {
+    let mut crc = 0xFFFF_FFFFu32;
+    for &b in buf {
+        crc ^= b as u32;
+        for _ in 0..8 {
+            let mask = if (crc & 1) != 0 { 0xEDB8_8320 } else { 0 };
+            crc = (crc >> 1) ^ mask;
+        }
+    }
+    !crc
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::touch_controls::MIN_HIT_TARGET_PT;
+
+    #[test]
+    fn test_waveguide_brass_view_ascii_render() {
+        let view = WaveguideBrassView::new();
+        let ascii = view.render_ascii(80, 16);
+        assert!(!ascii.is_empty());
+        assert_eq!(ascii.len(), 16);
+    }
+
+    #[test]
+    fn test_waveguide_brass_view_hit_target_dimensions() {
+        const {
+            assert!(
+                BRASS_PUCK_HIT_RADIUS * 2.0 >= MIN_HIT_TARGET_PT,
+                "Embouchure puck hit target bounding box must be >= 44pt"
+            );
+        }
+    }
+
+    #[test]
+    fn test_waveguide_brass_view_snapshot_render() {
+        let view = WaveguideBrassView::new();
+        let res = view.render_snapshot_png("scratch/renders/waveguide_brass_view.png", 800, 520);
+        assert!(res.is_ok());
+    }
 }

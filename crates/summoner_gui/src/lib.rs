@@ -152,6 +152,8 @@ pub use views::bitcrusher_morph_view::BitcrusherMorphView;
 #[cfg(feature = "gui")]
 pub use views::bowed_string_view::BowedStringView;
 #[cfg(feature = "gui")]
+pub use views::cadence_flow_view::CadenceFlowView;
+#[cfg(feature = "gui")]
 pub use views::comb_resonator_view::CombResonatorView;
 #[cfg(feature = "gui")]
 pub use views::concordance_lattice_view::ConcordanceLatticeView;
