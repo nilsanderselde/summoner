@@ -328,6 +328,8 @@ pub use views::plucked_string_view::PluckedStringView;
 #[cfg(feature = "gui")]
 pub use views::polar_phase_correlator_view::PolarPhaseCorrelatorView;
 #[cfg(feature = "gui")]
+pub use views::rank_voicing_view::*;
+#[cfg(feature = "gui")]
 pub use views::raytraced_reverb_view::RaytracedReverbView;
 #[cfg(feature = "gui")]
 pub use views::resonance_suppressor_view::ResonanceSuppressorView;

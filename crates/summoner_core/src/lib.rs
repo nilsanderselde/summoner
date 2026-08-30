@@ -35,6 +35,7 @@ pub mod node;
 pub mod panner;
 pub mod param_bus;
 pub mod pipeline;
+pub mod pipe_organ_bus;
 pub mod plectrum_bus;
 pub mod rotary_bus;
 pub mod sample;
@@ -77,6 +78,7 @@ pub use mpe::{
 };
 pub use node::KNOWN_NODE_TYPES;
 pub use param_bus::{AtomicParam, ParamBus, ParamId};
+pub use pipe_organ_bus::*;
 pub use plectrum_bus::*;
 pub use rotary_bus::*;
 pub use sidechain_matrix::*;
