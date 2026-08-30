@@ -18,6 +18,7 @@ pub mod adaptive_buffer;
 pub mod allocator;
 pub mod audio;
 pub mod audio_drivers;
+pub mod cadence_bus;
 pub mod embedded_hardware;
 pub mod graph;
 pub mod midi;
@@ -60,6 +61,7 @@ pub use mpe::{
 };
 pub use node::KNOWN_NODE_TYPES;
 pub use param_bus::{AtomicParam, ParamBus, ParamId};
+pub use cadence_bus::*;
 pub use sidechain_matrix::*;
 pub use smoothing::SmoothParam;
 pub use spatial_bus::*;
