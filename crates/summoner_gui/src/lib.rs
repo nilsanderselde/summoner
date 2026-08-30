@@ -346,8 +346,6 @@ pub use views::sample_editor_view;
 #[cfg(feature = "gui")]
 pub use views::sample_editor_view::SampleEditorView;
 #[cfg(feature = "gui")]
-pub use views::shakuhachi_view::ShakuhachiView;
-#[cfg(feature = "gui")]
 pub use views::sidechain_matrix_view::SidechainMatrixView;
 #[cfg(feature = "gui")]
 pub use views::sonar_hydrophone_view::SonarHydrophoneView;
@@ -383,6 +381,10 @@ pub use views::spectral_tilt_view::SpectralTiltView;
 pub use views::spectral_unmasker_view::SpectralUnmaskerView;
 #[cfg(feature = "gui")]
 pub use views::spectrogram_3d_view::Spectrogram3DView;
+#[cfg(feature = "gui")]
+pub use views::embouchure_angle_view::EmbouchureAngleView;
+#[cfg(feature = "gui")]
+pub use views::shakuhachi_view::ShakuhachiView;
 #[cfg(feature = "gui")]
 pub use views::spring_lattice_view::{
     SpringLatticeView, SpringLatticeViewProfile, SPRING_PUCK_HIT_RADIUS,

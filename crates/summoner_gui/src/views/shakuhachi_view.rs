@@ -1,21 +1,21 @@
 // Summoner - Deterministic, Headless-First DAW
-// Copyright (C) 2026 nilsanderselde
+// Copyright (C) 2026 nilsanderselde - AGPLv3 License
 //
-// Physical Modeling Japanese Shakuhachi Bamboo Flute / Blowing Edge Chiff & Pitch-Bend Microtone HUD (Step 1631).
+// Physical Modeling Japanese Shakuhachi Bamboo Flute / Blowing Edge Chiff & Pitch-Bend Microtone HUD (Milestone 25).
 
 use crate::layout_math::Rect;
 use crate::touch_controls::ContrastColorPalette;
 
 #[cfg(feature = "gui")]
-use eframe::egui::{self, Color32, Stroke};
+use eframe::egui::{self, Color32};
 
 pub const SHAKUHACHI_PUCK_HIT_RADIUS: f32 = 22.0; // 44x44pt touch bounding box
 pub const MIN_JET_VELOCITY_MPS: f32 = 4.0;
 pub const MAX_JET_VELOCITY_MPS: f32 = 42.0;
 pub const MIN_UTAGUCHI_ANGLE_DEG: f32 = 10.0;
 pub const MAX_UTAGUCHI_ANGLE_DEG: f32 = 60.0;
-pub const MIN_MERI_KARI_CENTS: f32 = -200.0;
-pub const MAX_MERI_KARI_CENTS: f32 = 100.0;
+pub const MIN_MERI_KARI_CENTS: f32 = -300.0;
+pub const MAX_MERI_KARI_CENTS: f32 = 200.0;
 
 /// Classical Japanese Shakuhachi flute lengths and pitch reference types.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -202,177 +202,103 @@ impl ShakuhachiView {
         self.update_shakuhachi_simulation();
     }
 
-    pub fn set_fingering(&mut self, note: ShakuhachiFingeringNote) {
-        self.fingering_note = note;
+    pub fn set_fingering(&mut self, fingering: ShakuhachiFingeringNote) {
+        self.fingering_note = fingering;
+        self.update_shakuhachi_simulation();
+    }
+
+    pub fn update_puck_from_normalized(&mut self, norm_x: f32, norm_y: f32) {
+        self.puck_pos = (norm_x.clamp(0.0, 1.0), norm_y.clamp(0.0, 1.0));
+        self.utaguchi_angle_deg = Self::normalized_to_angle(self.puck_pos.0);
+        self.jet_velocity_mps = Self::normalized_to_velocity(self.puck_pos.1);
         self.update_shakuhachi_simulation();
     }
 
     pub fn update_shakuhachi_simulation(&mut self) {
-        let v = self.jet_velocity_mps;
-        let angle = self.utaguchi_angle_deg;
-        let meri_kari = self.meri_kari_cents;
-        let noise = self.chiff_noise_level;
-        let disp = self.bamboo_node_dispersion;
-        let q = self.acoustic_bore_q;
-        let hole_ratio = self.fingering_note.open_hole_ratio();
+        let vel_norm = Self::velocity_to_normalized(self.jet_velocity_mps);
+        let angle_norm = Self::angle_to_normalized(self.utaguchi_angle_deg);
+        let meri_shift = (self.meri_kari_cents / 300.0).clamp(-1.0, 1.0);
+        let open_ratio = self.fingering_note.open_hole_ratio();
 
-        // Utaguchi edge vortex shedding physics
-        let optimal_angle = 38.0;
-        let angle_alignment = (1.0 - ((angle - optimal_angle).abs() / 32.0)).clamp(0.1, 1.0);
-        let jet_pressure = (v / 22.0).clamp(0.2, 1.8);
-        let pitch_bend_factor = 1.0 + (meri_kari / 1200.0) * 0.15;
-
-        let fundamental_f0 = (angle_alignment
-            * jet_pressure
-            * (q / 50.0)
-            * (1.0 - disp * 0.3)
-            * (1.0 + hole_ratio * 0.25)
-            * pitch_bend_factor)
-            .clamp(0.1, 1.25);
-        let octave_kan_mode =
-            ((v / 26.0) * angle_alignment * 0.88 * pitch_bend_factor).clamp(0.0, 1.20);
-        let twelfth_dai_kan = (((v - 18.0).max(0.0) / 20.0) * 0.60).clamp(0.0, 0.95);
-        let double_octave = (((v - 25.0).max(0.0) / 22.0) * 0.40).clamp(0.0, 0.75);
-
-        let blowing_edge_chiff =
-            (noise * (v / 18.0) * (1.0 + (angle - optimal_angle).abs() * 0.025)).clamp(0.05, 1.0);
-        let breath_turbulence = (noise * 0.80 + (1.0 - angle_alignment) * 0.45).clamp(0.05, 1.0);
-        let bamboo_node_resonance = ((1.0 + disp * 0.5) * (q / 50.0) * 0.75).clamp(0.2, 1.2);
-        let meri_kari_inflection = ((meri_kari.abs() / 200.0) * 0.65 + 0.35).clamp(0.1, 1.0);
-
-        self.modal_amplitudes = [
-            fundamental_f0,
-            octave_kan_mode,
-            twelfth_dai_kan,
-            double_octave,
-            blowing_edge_chiff,
-            breath_turbulence,
-            bamboo_node_resonance,
-            meri_kari_inflection,
-        ];
+        // Fundamental
+        self.modal_amplitudes[0] = (1.0 - open_ratio * 0.25 + meri_shift * 0.15).clamp(0.4, 1.0);
+        // 2nd partial (octave)
+        self.modal_amplitudes[1] = (vel_norm * 0.85 + angle_norm * 0.35).clamp(0.1, 0.95);
+        // 3rd partial (12th)
+        self.modal_amplitudes[2] = ((1.0 - vel_norm) * 0.45 + open_ratio * 0.4).clamp(0.05, 0.8);
+        // 4th partial (double octave)
+        self.modal_amplitudes[3] = (vel_norm.powi(2) * 0.65).clamp(0.02, 0.7);
+        // 5th partial
+        self.modal_amplitudes[4] = (0.2 + self.chiff_noise_level * 0.35).clamp(0.05, 0.6);
+        // 6th partial
+        self.modal_amplitudes[5] = (0.15 + angle_norm * 0.3).clamp(0.02, 0.5);
+        // 7th partial
+        self.modal_amplitudes[6] = (self.chiff_noise_level * 0.6).clamp(0.01, 0.7);
+        // 8th partial / Meri-Kari inflection
+        self.modal_amplitudes[7] = (0.25 + meri_shift.abs() * 0.5 + self.chiff_noise_level * 0.25).clamp(0.01, 0.95);
     }
 
     pub fn hit_test_shakuhachi_puck(&self, point: (f32, f32), canvas: Rect) -> bool {
-        let puck_x = canvas.x + self.puck_pos.0 * canvas.width;
-        let puck_y = canvas.y + (1.0 - self.puck_pos.1) * canvas.height;
-        let dx = point.0 - puck_x;
-        let dy = point.1 - puck_y;
+        let center_x = canvas.x + self.puck_pos.0 * canvas.width;
+        let center_y = canvas.y + self.puck_pos.1 * canvas.height;
+        let dx = point.0 - center_x;
+        let dy = point.1 - center_y;
         (dx * dx + dy * dy).sqrt() <= SHAKUHACHI_PUCK_HIT_RADIUS
     }
 
-    #[allow(clippy::needless_range_loop)]
-    pub fn render_ascii(&self, width: usize, height: usize) -> Vec<String> {
-        let mut grid = vec![vec![' '; width]; height];
-
-        for (row_idx, row) in grid.iter_mut().enumerate() {
-            row[0] = '|';
-            row[width - 1] = '|';
-            if row_idx == 0 || row_idx == height - 1 {
-                for col in row.iter_mut().take(width) {
-                    *col = '-';
-                }
-                row[0] = '+';
-                row[width - 1] = '+';
-            }
-        }
-
-        let mid_x = width / 2;
-        for r in 1..height - 1 {
-            grid[r][mid_x] = '|';
-        }
-
-        let left_w = mid_x - 2;
-        let p_row = (((1.0 - self.puck_pos.1) * (height - 5) as f32) + 2.0).round() as usize;
-        let p_col = ((self.puck_pos.0 * (left_w - 4) as f32) + 2.0).round() as usize;
-        if p_row < height - 1 && p_col < mid_x {
-            grid[p_row][p_col] = 'S';
-        }
-
-        let right_w = width - mid_x - 3;
-        for (i, &amp) in self.modal_amplitudes.iter().enumerate().take(height - 4) {
-            let row = 2 + i;
-            let bar_len = ((amp.clamp(0.0, 1.25) / 1.25) * right_w as f32).round() as usize;
-            for c in 0..bar_len {
-                if mid_x + 2 + c < width - 1 {
-                    grid[row][mid_x + 2 + c] = '=';
-                }
-            }
-        }
-
-        grid.into_iter()
-            .map(|r| r.into_iter().collect::<String>())
-            .collect()
-    }
-
     #[cfg(feature = "gui")]
-    pub fn show(&mut self, ui: &mut egui::Ui) {
-        let bg_color = Color32::from_rgb(14, 18, 28);
-        let card_bg = Color32::from_rgb(20, 26, 40);
-        let border_color = Color32::from_rgb(45, 60, 85);
+    pub fn ui(&mut self, ui: &mut egui::Ui) {
         let accent_cyan = Color32::from_rgb(0, 229, 255);
+        let accent_amber = Color32::from_rgb(255, 180, 50);
         let accent_green = Color32::from_rgb(0, 255, 180);
-        let accent_amber = Color32::from_rgb(255, 180, 0);
-        let text_white = Color32::from_rgb(240, 245, 255);
-        let text_dim = Color32::from_rgb(160, 180, 205);
+        let text_white = Color32::from_rgb(240, 244, 255);
+        let text_dim = Color32::from_rgb(140, 150, 170);
 
-        egui::Frame::none().fill(bg_color).show(ui, |ui| {
-            ui.set_min_size(egui::vec2(800.0, 480.0));
-            ui.add_space(8.0);
-
-            // Title and Header
+        ui.vertical(|ui| {
+            // Header
             ui.horizontal(|ui| {
-                ui.add_space(16.0);
-                ui.heading(
-                    egui::RichText::new("JAPANESE SHAKUHACHI PHYSICAL MODELING & CHIFF HUD")
-                        .size(18.0)
-                        .color(text_white)
+                ui.label(
+                    egui::RichText::new("SHAKUHACHI BAMBOO FLUTE & CHIFF HUD")
+                        .size(16.0)
+                        .color(accent_cyan)
                         .strong(),
                 );
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    ui.add_space(16.0);
-                    ui.label(
-                        egui::RichText::new(self.length_type.flute_name())
-                            .size(13.0)
-                            .color(accent_amber)
-                            .strong(),
-                    );
-                });
+                ui.add_space(16.0);
+                ui.label(
+                    egui::RichText::new(format!(
+                        "Jet: {:.1} m/s | Angle: {:.1}° | Meri/Kari: {:+.0} ct | Chiff: {:.2}",
+                        self.jet_velocity_mps, self.utaguchi_angle_deg, self.meri_kari_cents, self.chiff_noise_level
+                    ))
+                    .size(12.0)
+                    .color(text_dim),
+                );
             });
 
-            ui.add_space(6.0);
+            ui.add_space(8.0);
 
-            // Flute length selector tabs (min 44pt touch hit targets)
+            // Flue length selector tabs
             ui.horizontal(|ui| {
-                ui.add_space(16.0);
                 let lengths = [
-                    (ShakuhachiLengthType::IchishakuHassun, "1.8 Standard (D4)"),
-                    (ShakuhachiLengthType::NishakuYonsun, "2.4 Jinashi (A3)"),
-                    (ShakuhachiLengthType::IchishakuRokusun, "1.6 Treble (E4)"),
-                    (ShakuhachiLengthType::NishakuIssun, "2.1 Sankyoku (B3)"),
-                    (ShakuhachiLengthType::SanShakuKyotaku, "3.0 Kyotaku (D3)"),
+                    (ShakuhachiLengthType::IchishakuHassun, "1.8 Shaku (D4)"),
+                    (ShakuhachiLengthType::NishakuYonsun, "2.4 Shaku (A3)"),
+                    (ShakuhachiLengthType::IchishakuRokusun, "1.6 Shaku (E4)"),
+                    (ShakuhachiLengthType::NishakuIssun, "2.1 Shaku (B3)"),
+                    (ShakuhachiLengthType::SanShakuKyotaku, "3.0 Shaku (D3)"),
                 ];
 
-                for (len_type, label) in lengths {
-                    let is_active = self.length_type == len_type;
-                    let btn_bg = if is_active {
-                        accent_cyan
-                    } else {
-                        Color32::from_rgb(32, 44, 66)
-                    };
-                    let btn_fg = if is_active {
-                        Color32::BLACK
-                    } else {
-                        text_white
-                    };
+                for (ltype, label) in lengths {
+                    let is_active = self.length_type == ltype;
+                    let btn_bg = if is_active { accent_green } else { Color32::from_rgb(26, 36, 52) };
+                    let btn_fg = if is_active { Color32::BLACK } else { text_white };
 
                     let btn = egui::Button::new(
                         egui::RichText::new(label).size(12.0).color(btn_fg).strong(),
                     )
                     .fill(btn_bg)
-                    .min_size(egui::vec2(138.0, 44.0));
+                    .min_size(egui::vec2(84.0, 44.0));
 
                     if ui.add(btn).clicked() {
-                        self.set_length_type(len_type);
+                        self.set_length_type(ltype);
                     }
                     ui.add_space(4.0);
                 }
@@ -380,182 +306,8 @@ impl ShakuhachiView {
 
             ui.add_space(8.0);
 
-            // Main interactive 2D Canvas split: Left XY Pad (Utaguchi Angle vs Jet Velocity), Right Modal Resonances
-            let (canvas_rect, response) =
-                ui.allocate_exact_size(egui::vec2(768.0, 230.0), egui::Sense::click_and_drag());
-
-            let painter = ui.painter_at(canvas_rect);
-            painter.rect_filled(canvas_rect, 6.0, card_bg);
-            painter.rect_stroke(canvas_rect, 6.0, Stroke::new(1.5_f32, border_color));
-
-            let left_w = canvas_rect.width() * 0.52;
-            let left_rect = egui::Rect::from_min_size(
-                canvas_rect.min,
-                egui::vec2(left_w, canvas_rect.height()),
-            );
-            let right_rect = egui::Rect::from_min_size(
-                egui::pos2(canvas_rect.min.x + left_w, canvas_rect.min.y),
-                egui::vec2(canvas_rect.width() - left_w, canvas_rect.height()),
-            );
-
-            // Draw Left Section (XY Pad)
-            painter.line_segment(
-                [
-                    egui::pos2(left_rect.max.x, left_rect.min.y + 10.0),
-                    egui::pos2(left_rect.max.x, left_rect.max.y - 10.0),
-                ],
-                Stroke::new(1.0_f32, border_color),
-            );
-
-            // Subdivided Grid
-            for g in 1..4 {
-                let frac = g as f32 * 0.25;
-                let gx = left_rect.min.x + 12.0 + (left_rect.width() - 24.0) * frac;
-                let gy = left_rect.min.y + 12.0 + (left_rect.height() - 24.0) * frac;
-
-                painter.line_segment(
-                    [
-                        egui::pos2(gx, left_rect.min.y + 12.0),
-                        egui::pos2(gx, left_rect.max.y - 12.0),
-                    ],
-                    Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(60, 80, 110, 80)),
-                );
-                painter.line_segment(
-                    [
-                        egui::pos2(left_rect.min.x + 12.0, gy),
-                        egui::pos2(left_rect.max.x - 12.0, gy),
-                    ],
-                    Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(60, 80, 110, 80)),
-                );
-            }
-
-            // XY Puck Handling
-            let pad_inner = egui::Rect::from_min_max(
-                egui::pos2(left_rect.min.x + 16.0, left_rect.min.y + 16.0),
-                egui::pos2(left_rect.max.x - 16.0, left_rect.max.y - 16.0),
-            );
-
-            if response.dragged() || response.clicked() {
-                if let Some(pos) = response.interact_pointer_pos() {
-                    let norm_x = ((pos.x - pad_inner.min.x) / pad_inner.width()).clamp(0.0, 1.0);
-                    let norm_y =
-                        (1.0 - ((pos.y - pad_inner.min.y) / pad_inner.height())).clamp(0.0, 1.0);
-                    self.puck_pos = (norm_x, norm_y);
-                    self.utaguchi_angle_deg = Self::normalized_to_angle(norm_x);
-                    self.jet_velocity_mps = Self::normalized_to_velocity(norm_y);
-                    self.update_shakuhachi_simulation();
-                }
-            }
-
-            let puck_screen_x = pad_inner.min.x + self.puck_pos.0 * pad_inner.width();
-            let puck_screen_y = pad_inner.min.y + (1.0 - self.puck_pos.1) * pad_inner.height();
-            let puck_center = egui::pos2(puck_screen_x, puck_screen_y);
-
-            // Crosshairs
-            painter.line_segment(
-                [
-                    egui::pos2(pad_inner.min.x, puck_center.y),
-                    egui::pos2(pad_inner.max.x, puck_center.y),
-                ],
-                Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(0, 229, 255, 120)),
-            );
-            painter.line_segment(
-                [
-                    egui::pos2(puck_center.x, pad_inner.min.y),
-                    egui::pos2(puck_center.x, pad_inner.max.y),
-                ],
-                Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(0, 229, 255, 120)),
-            );
-
-            // Outer 44pt touch bounding target
-            painter.circle_stroke(
-                puck_center,
-                SHAKUHACHI_PUCK_HIT_RADIUS,
-                Stroke::new(1.5_f32, Color32::from_rgba_unmultiplied(0, 229, 255, 140)),
-            );
-            painter.circle_filled(puck_center, 12.0, accent_cyan);
-            painter.circle_filled(puck_center, 4.0, Color32::WHITE);
-
-            // Pad text annotations
-            painter.text(
-                egui::pos2(pad_inner.min.x, pad_inner.min.y - 12.0),
-                egui::Align2::LEFT_BOTTOM,
-                "UTAGUCHI BLOWING ANGLE / JET VELOCITY",
-                egui::FontId::proportional(11.0),
-                accent_cyan,
-            );
-
-            // Draw Right Section (Acoustic Modal Resonances & Chiff Spectrum)
-            painter.text(
-                egui::pos2(right_rect.min.x + 16.0, right_rect.min.y + 14.0),
-                egui::Align2::LEFT_TOP,
-                "MODAL HARMONICS & CHIFF ENERGY",
-                egui::FontId::proportional(11.0),
-                accent_green,
-            );
-
-            let modal_names = [
-                "Ro Fundamental (f0)",
-                "Kan Octave (2f0)",
-                "Dai-Kan (3f0)",
-                "Double Octave (4f0)",
-                "Utaguchi Chiff",
-                "Breath Turbulence",
-                "Node Resonance",
-                "Meri-Kari Bend",
-            ];
-
-            let bar_y_start = right_rect.min.y + 36.0;
-            let bar_h = 16.0;
-            let bar_spacing = 22.0;
-            let bar_max_w = right_rect.width() - 170.0;
-
-            for (i, &amp) in self.modal_amplitudes.iter().enumerate() {
-                let y = bar_y_start + i as f32 * bar_spacing;
-                let label = modal_names[i];
-
-                painter.text(
-                    egui::pos2(right_rect.min.x + 16.0, y + 8.0),
-                    egui::Align2::LEFT_CENTER,
-                    label,
-                    egui::FontId::proportional(10.0),
-                    text_dim,
-                );
-
-                let bar_x = right_rect.min.x + 130.0;
-                let bar_rect_bg =
-                    egui::Rect::from_min_size(egui::pos2(bar_x, y), egui::vec2(bar_max_w, bar_h));
-                painter.rect_filled(bar_rect_bg, 3.0, Color32::from_rgb(12, 16, 24));
-                painter.rect_stroke(bar_rect_bg, 3.0, Stroke::new(1.0_f32, border_color));
-
-                let fill_w = (amp.clamp(0.0, 1.25) / 1.25) * bar_max_w;
-                let fill_color = if i == 4 || i == 5 {
-                    Color32::from_rgb(255, 107, 43) // Noise chiff / breath in orange
-                } else if i >= 6 {
-                    accent_amber // Resonances
-                } else {
-                    accent_cyan // Pitched modes
-                };
-
-                let bar_fill =
-                    egui::Rect::from_min_size(egui::pos2(bar_x, y), egui::vec2(fill_w, bar_h));
-                painter.rect_filled(bar_fill, 3.0, fill_color);
-
-                let val_str = format!("{:.2}", amp);
-                painter.text(
-                    egui::pos2(bar_x + bar_max_w + 8.0, y + 8.0),
-                    egui::Align2::LEFT_CENTER,
-                    val_str,
-                    egui::FontId::proportional(10.0),
-                    text_white,
-                );
-            }
-
-            ui.add_space(8.0);
-
-            // Bottom controls: Fingering Tabs (Ro, Tsu, Re, Chi, Ri) and Sliders
+            // Fingering notes selector
             ui.horizontal(|ui| {
-                ui.add_space(16.0);
                 ui.label(
                     egui::RichText::new("FINGERING:")
                         .size(12.0)
@@ -604,7 +356,7 @@ impl ShakuhachiView {
                         .color(accent_amber)
                         .strong(),
                 );
-                let meri_slider = egui::Slider::new(&mut self.meri_kari_cents, -200.0..=100.0)
+                let meri_slider = egui::Slider::new(&mut self.meri_kari_cents, -300.0..=200.0)
                     .suffix(" ct")
                     .show_value(true);
                 if ui.add(meri_slider).changed() {
@@ -620,5 +372,288 @@ impl ShakuhachiView {
                 }
             });
         });
+    }
+
+    /// Render ASCII visual preview of the Shakuhachi HUD.
+    pub fn render_ascii(&self, width: usize, height: usize) -> Vec<String> {
+        let mut lines = Vec::with_capacity(height);
+        let w = width.max(40);
+        let h = height.max(10);
+
+        let border = format!("+{}+", "-".repeat(w - 2));
+        lines.push(border.clone());
+
+        let title = format!(" SHAKUHACHI HUD: {} | {} ", self.length_type.flute_name(), self.fingering_note.note_name());
+        let title_padded = if title.len() < w - 2 {
+            format!("|{}{}|", title, " ".repeat(w - 2 - title.len()))
+        } else {
+            format!("|{}|", &title[..w - 2])
+        };
+        lines.push(title_padded);
+
+        let info = format!(
+            "| Jet: {:.1} m/s | Angle: {:.1} deg | Meri/Kari: {:+.0} ct | Chiff: {:.2} |",
+            self.jet_velocity_mps, self.utaguchi_angle_deg, self.meri_kari_cents, self.chiff_noise_level
+        );
+        let info_padded = if info.len() < w - 2 {
+            format!("{}{}|", info, " ".repeat(w - 1 - info.len()))
+        } else {
+            format!("|{}|", &info[1..w - 1])
+        };
+        lines.push(info_padded);
+
+        lines.push(format!("|{}|", "-".repeat(w - 2)));
+
+        // Middle body with standing wave bars
+        let body_height = h.saturating_sub(6);
+        for row in 0..body_height {
+            let threshold = 1.0 - (row as f32 / body_height.max(1) as f32);
+            let mut bar_line = String::from("| ");
+            for &amp in &self.modal_amplitudes {
+                if amp >= threshold {
+                    bar_line.push_str(" [####] ");
+                } else {
+                    bar_line.push_str(" [....] ");
+                }
+            }
+            if bar_line.len() < w - 1 {
+                bar_line.push_str(&" ".repeat(w - 1 - bar_line.len()));
+            }
+            bar_line.push('|');
+            lines.push(bar_line);
+        }
+
+        let footer = "| M1(Fund)  M2(Oct)   M3(12th)  M4(2Oct)  M5(17th)  M6(19th)  M7(Chiff) M8(Noise)|";
+        let footer_padded = if footer.len() < w - 2 {
+            format!("{}{}|", footer, " ".repeat(w - 1 - footer.len()))
+        } else {
+            format!("|{}|", &footer[1..w - 1])
+        };
+        lines.push(footer_padded);
+        lines.push(border);
+
+        lines
+    }
+
+    /// Render headless PNG snapshot representation of the Shakuhachi HUD.
+    pub fn render_snapshot_png(&self, path: &str, width: usize, height: usize) -> Result<(), String> {
+        let mut pixels = vec![0u8; width * height * 4];
+
+        // Background: #0A0E18 (slate navy)
+        for y in 0..height {
+            for x in 0..width {
+                let idx = (y * width + x) * 4;
+                pixels[idx] = 0x0A;
+                pixels[idx + 1] = 0x0E;
+                pixels[idx + 2] = 0x18;
+                pixels[idx + 3] = 0xFF;
+            }
+        }
+
+        let margin = 16;
+        let c_y = 50;
+        let c_h = height.saturating_sub(130);
+        let c_w = (width - margin * 3) / 2;
+
+        // Left canvas: Embouchure Utaguchi puck space (#121824)
+        let c_x1 = margin;
+        for y in c_y..(c_y + c_h) {
+            for x in c_x1..(c_x1 + c_w) {
+                if x < width && y < height {
+                    let idx = (y * width + x) * 4;
+                    pixels[idx] = 0x12;
+                    pixels[idx + 1] = 0x18;
+                    pixels[idx + 2] = 0x24;
+                    pixels[idx + 3] = 0xFF;
+                }
+            }
+        }
+
+        // Draw Left Canvas Puck
+        let px = c_x1 + (self.puck_pos.0 * (c_w as f32 * 0.85)) as usize + (c_w / 10);
+        let py = (c_y + c_h) - (self.puck_pos.1 * (c_h as f32 * 0.85)) as usize - (c_h / 10);
+        let r = 14;
+
+        for dy in -(r as isize)..=(r as isize) {
+            for dx in -(r as isize)..=(r as isize) {
+                if dx * dx + dy * dy <= (r * r) as isize {
+                    let gx = (px as isize + dx) as usize;
+                    let gy = (py as isize + dy) as usize;
+                    if gx < width && gy < height {
+                        let idx = (gy * width + gx) * 4;
+                        // Amber Gold #FFB432
+                        pixels[idx] = 0xFF;
+                        pixels[idx + 1] = 0xB4;
+                        pixels[idx + 2] = 0x32;
+                        pixels[idx + 3] = 0xFF;
+                    }
+                }
+            }
+        }
+
+        // Right canvas: Bore Harmonic Spectrum (#121824)
+        let c_x2 = c_x1 + c_w + margin;
+        for y in c_y..(c_y + c_h) {
+            for x in c_x2..(c_x2 + c_w) {
+                if x < width && y < height {
+                    let idx = (y * width + x) * 4;
+                    pixels[idx] = 0x12;
+                    pixels[idx + 1] = 0x18;
+                    pixels[idx + 2] = 0x24;
+                    pixels[idx + 3] = 0xFF;
+                }
+            }
+        }
+
+        // Draw Harmonic Bars
+        let bar_spacing = c_w / 9;
+        let bar_width = bar_spacing * 3 / 4;
+        for (i, &amp) in self.modal_amplitudes.iter().enumerate() {
+            let bx = c_x2 + 10 + i * bar_spacing;
+            let bar_h = (amp * (c_h as f32 * 0.80)) as usize;
+            let by_start = (c_y + c_h).saturating_sub(bar_h + 10);
+            let by_end = c_y + c_h - 10;
+
+            for y in by_start..by_end {
+                for x in bx..(bx + bar_width) {
+                    if x < width && y < height {
+                        let idx = (y * width + x) * 4;
+                        if i == 0 {
+                            // Mint #00FFB4
+                            pixels[idx] = 0x00;
+                            pixels[idx + 1] = 0xFF;
+                            pixels[idx + 2] = 0xB4;
+                        } else if (i + 1) % 2 == 1 {
+                            // Cyan #00E5FF
+                            pixels[idx] = 0x00;
+                            pixels[idx + 1] = 0xE5;
+                            pixels[idx + 2] = 0xFF;
+                        } else {
+                            // Gold #FFB432
+                            pixels[idx] = 0xFF;
+                            pixels[idx + 1] = 0xB4;
+                            pixels[idx + 2] = 0x32;
+                        }
+                        pixels[idx + 3] = 0xFF;
+                    }
+                }
+            }
+        }
+
+        save_png_file(path, width, height, &pixels)
+    }
+}
+
+fn save_png_file(path: &str, width: usize, height: usize, rgba_pixels: &[u8]) -> Result<(), String> {
+    let mut out = Vec::with_capacity(width * height * 4 + 1024);
+    out.extend_from_slice(&[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]); // PNG Header
+
+    // IHDR Chunk
+    let mut ihdr = Vec::with_capacity(13);
+    ihdr.extend_from_slice(&(width as u32).to_be_bytes());
+    ihdr.extend_from_slice(&(height as u32).to_be_bytes());
+    ihdr.push(8); // Bit depth
+    ihdr.push(6); // Color type: RGBA
+    ihdr.push(0); // Compression method
+    ihdr.push(0); // Filter method
+    ihdr.push(0); // Interlace method
+    write_png_chunk_to(&mut out, b"IHDR", &ihdr);
+
+    // IDAT Chunk (Raw deflate uncompressed blocks)
+    let stride = width * 4;
+    let mut raw_data = Vec::with_capacity((stride + 1) * height);
+    for y in 0..height {
+        raw_data.push(0x00); // Filter type None
+        let row_start = y * stride;
+        let row_end = row_start + stride;
+        raw_data.extend_from_slice(&rgba_pixels[row_start..row_end]);
+    }
+
+    let mut zlib_data = Vec::with_capacity(raw_data.len() + 128);
+    zlib_data.push(0x78);
+    zlib_data.push(0x01);
+
+    let mut offset = 0;
+    while offset < raw_data.len() {
+        let chunk_len = (raw_data.len() - offset).min(65535);
+        let is_last = (offset + chunk_len) >= raw_data.len();
+        let bfinal_btype = if is_last { 0x01 } else { 0x00 };
+        zlib_data.push(bfinal_btype);
+
+        let len_u16 = chunk_len as u16;
+        let nlen_u16 = !len_u16;
+        zlib_data.extend_from_slice(&len_u16.to_le_bytes());
+        zlib_data.extend_from_slice(&nlen_u16.to_le_bytes());
+        zlib_data.extend_from_slice(&raw_data[offset..offset + chunk_len]);
+        offset += chunk_len;
+    }
+
+    let mut s1: u32 = 1;
+    let mut s2: u32 = 0;
+    for &b in &raw_data {
+        s1 = (s1 + b as u32) % 65521;
+        s2 = (s2 + s1) % 65521;
+    }
+    let adler = (s2 << 16) | s1;
+    zlib_data.extend_from_slice(&adler.to_be_bytes());
+
+    write_png_chunk_to(&mut out, b"IDAT", &zlib_data);
+    write_png_chunk_to(&mut out, b"IEND", &[]);
+
+    if let Some(parent) = std::path::Path::new(path).parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    std::fs::write(path, out).map_err(|e| e.to_string())
+}
+
+fn write_png_chunk_to(out: &mut Vec<u8>, chunk_type: &[u8; 4], data: &[u8]) {
+    out.extend_from_slice(&(data.len() as u32).to_be_bytes());
+    let type_start = out.len();
+    out.extend_from_slice(chunk_type);
+    out.extend_from_slice(data);
+    let crc = crc32_compute_to(&out[type_start..]);
+    out.extend_from_slice(&crc.to_be_bytes());
+}
+
+fn crc32_compute_to(buf: &[u8]) -> u32 {
+    let mut crc = 0xFFFF_FFFFu32;
+    for &b in buf {
+        crc ^= b as u32;
+        for _ in 0..8 {
+            let mask = if (crc & 1) != 0 { 0xEDB8_8320 } else { 0 };
+            crc = (crc >> 1) ^ mask;
+        }
+    }
+    !crc
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::touch_controls::MIN_HIT_TARGET_PT;
+
+    #[test]
+    fn test_shakuhachi_view_hit_target_dimensions() {
+        const {
+            assert!(
+                SHAKUHACHI_PUCK_HIT_RADIUS * 2.0 >= MIN_HIT_TARGET_PT,
+                "Shakuhachi puck hit target bounding box must be >= 44pt"
+            );
+        }
+    }
+
+    #[test]
+    fn test_shakuhachi_view_ascii_render() {
+        let view = ShakuhachiView::new();
+        let ascii = view.render_ascii(80, 16);
+        assert_eq!(ascii.len(), 16);
+        assert!(ascii[0].starts_with('+'));
+    }
+
+    #[test]
+    fn test_shakuhachi_view_snapshot_render() {
+        let view = ShakuhachiView::new();
+        let res = view.render_snapshot_png("scratch/renders/shakuhachi_view.png", 800, 520);
+        assert!(res.is_ok());
     }
 }

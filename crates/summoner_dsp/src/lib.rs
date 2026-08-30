@@ -14,6 +14,7 @@
 //! SIMD synthesis primitives & DSP algorithms for Summoner DAW.
 
 pub mod ai_mixing;
+pub mod air_reed;
 pub mod auto_wah;
 pub mod autotune;
 pub mod biquad;
@@ -68,6 +69,7 @@ pub mod ring_mod;
 pub mod sample_editor;
 pub mod rotary_speaker;
 pub mod sampler;
+pub mod shakuhachi;
 pub mod slicer;
 pub mod spatial_audio;
 pub mod spatial_room;
@@ -96,6 +98,10 @@ pub mod woodwind_jet;
 pub mod zero_gravity_fluid;
 
 pub use ai_mixing::*;
+pub use air_reed::{
+    jet_velocity_from_pressure, meri_kari_to_pitch_multiplier, utaguchi_splitting_function,
+    AirReed, AirReedConfig, DEFAULT_PRESSURE_PA, MAX_PRESSURE_PA, MIN_PRESSURE_PA,
+};
 pub use auto_wah::*;
 pub use bowed_string::*;
 pub use clavinet::*;
@@ -119,6 +125,7 @@ pub use plucked_string::*;
 pub use quantum_audio::*;
 pub use rotary_speaker::*;
 pub use sample_editor::*;
+pub use shakuhachi::*;
 pub use spatial_audio::*;
 pub use spatial_room::*;
 pub mod spectral_eq_alias {
