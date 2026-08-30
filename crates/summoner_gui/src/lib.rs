@@ -121,6 +121,8 @@ pub mod tier76_tests;
 #[cfg(feature = "gui")]
 pub mod tier77_tests;
 #[cfg(feature = "gui")]
+pub mod tier78_tests;
+#[cfg(feature = "gui")]
 pub mod touch_gestures;
 #[cfg(feature = "gui")]
 pub mod transport_bar;
@@ -214,6 +216,8 @@ pub use views::hoa5_binaural_view::Hoa5BinauralView;
 #[cfg(feature = "gui")]
 pub use views::hoa_spatializer_view::HoaSpatializerView;
 #[cfg(feature = "gui")]
+pub use views::idiophone_spectrum_view::IdiophoneSpectrumView;
+#[cfg(feature = "gui")]
 pub use views::isomorphic_lattice_view::IsomorphicLatticeView;
 #[cfg(feature = "gui")]
 pub use views::isomorphic_tuning_keyboard::IsomorphicTuningKeyboardView;
@@ -237,6 +241,8 @@ pub use views::master_limiter_radar_view::MasterLimiterRadarView;
 pub use views::mastering_meter::*;
 #[cfg(feature = "gui")]
 pub use views::mbira_kalimba_view::MbiraKalimbaView;
+#[cfg(feature = "gui")]
+pub use views::membrane_cavity_view::MembraneCavityView;
 #[cfg(feature = "gui")]
 pub use views::membrane_plate_view::MembranePlateView;
 #[cfg(feature = "gui")]
