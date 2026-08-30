@@ -190,6 +190,8 @@ pub use views::formant_filter_view::FormantFilterView;
 #[cfg(feature = "gui")]
 pub use views::frequency_shifter_view::FrequencyShifterView;
 #[cfg(feature = "gui")]
+pub use views::friction_orbit_view::FrictionOrbitView;
+#[cfg(feature = "gui")]
 pub use views::gamelan_gender_view::GamelanGenderView;
 #[cfg(feature = "gui")]
 pub use views::glass_armonica_view::GlassArmonicaView;

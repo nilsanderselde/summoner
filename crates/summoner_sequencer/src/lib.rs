@@ -13,6 +13,7 @@
 
 pub mod automation;
 pub mod automation_timeline;
+pub mod bowing_gesture;
 pub mod clip_matrix;
 pub mod comping;
 pub mod generative;
@@ -25,6 +26,7 @@ pub mod session_looper;
 pub mod spatial_trajectory;
 pub mod timeline;
 
+pub use bowing_gesture::*;
 pub use clip_matrix::*;
 pub use comping::*;
 pub use generative::{generate_melody_onnx, ONNX_MELODY_MODEL_BYTES};

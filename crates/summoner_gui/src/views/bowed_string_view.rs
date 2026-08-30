@@ -569,4 +569,315 @@ impl BowedStringView {
             Color32::from_rgb(0, 255, 180),
         );
     }
+
+    /// Renders a high-fidelity headless RGBA PNG snapshot of the Bowed String HUD.
+    pub fn render_snapshot_png(&self, path: &str, width: u32, height: u32) -> Result<(), String> {
+        let mut pixels = vec![0u8; (width * height * 4) as usize];
+        let w = width;
+        let h = height;
+
+        // Background: Deep Slate #0E121C
+        for chunk in pixels.chunks_exact_mut(4) {
+            chunk.copy_from_slice(&[14, 18, 28, 255]);
+        }
+
+        // Header Background bar
+        for y in 0..40 {
+            for x in 0..w {
+                let idx = ((y * w + x) * 4) as usize;
+                pixels[idx..idx + 4].copy_from_slice(&[20, 26, 40, 255]);
+            }
+        }
+
+        // Left 55%: Schelleng Diagram Frame
+        let left_w = (w as f32 * 0.55) as u32;
+        let left_x0 = 20;
+        let left_x1 = left_w - 10;
+        let canvas_y0 = 80;
+        let canvas_y1 = h - 120;
+
+        for y in canvas_y0..canvas_y1 {
+            for x in left_x0..left_x1 {
+                let idx = ((y * w + x) * 4) as usize;
+                pixels[idx..idx + 4].copy_from_slice(&[10, 14, 24, 255]);
+            }
+        }
+
+        // Safe Helmholtz region shading
+        let (f_min, f_max) = self.schelleng_limits();
+        let norm_f_min = Self::force_to_normalized(f_min);
+        let norm_f_max = Self::force_to_normalized(f_max);
+
+        let c_height = (canvas_y1 - canvas_y0) as f32;
+        let y_min_line = (canvas_y1 as f32 - norm_f_min * c_height) as u32;
+        let y_max_line = (canvas_y1 as f32 - norm_f_max * c_height) as u32;
+
+        let safe_top = y_max_line.clamp(canvas_y0, canvas_y1);
+        let safe_bot = y_min_line.clamp(canvas_y0, canvas_y1);
+
+        for y in safe_top..safe_bot {
+            for x in (left_x0 + 2)..(left_x1 - 2) {
+                let idx = ((y * w + x) * 4) as usize;
+                pixels[idx..idx + 4].copy_from_slice(&[14, 35, 48, 255]);
+            }
+        }
+
+        // Schelleng Limit Lines
+        for x in left_x0..left_x1 {
+            if safe_top >= canvas_y0 && safe_top < canvas_y1 {
+                let idx = ((safe_top * w + x) * 4) as usize;
+                pixels[idx..idx + 4].copy_from_slice(&[255, 215, 0, 255]);
+            }
+            if safe_bot >= canvas_y0 && safe_bot < canvas_y1 {
+                let idx = ((safe_bot * w + x) * 4) as usize;
+                pixels[idx..idx + 4].copy_from_slice(&[255, 107, 43, 255]);
+            }
+        }
+
+        // Interactive Puck Position
+        let puck_x = left_x0 as f32 + self.bow_puck_pos.0 * (left_x1 - left_x0) as f32;
+        let puck_y = canvas_y1 as f32 - self.bow_puck_pos.1 * c_height;
+
+        // Draw Touch target boundary (>= 44x44pt bounding box, radius 22pt)
+        draw_circle_ring_bs(&mut pixels, w, h, puck_x, puck_y, BOWED_STRING_PUCK_HIT_RADIUS, [0, 229, 255, 180]);
+        draw_circle_filled_bs(&mut pixels, w, h, puck_x, puck_y, 12.0, [0, 229, 255, 255]);
+        draw_circle_filled_bs(&mut pixels, w, h, puck_x, puck_y, 4.0, [255, 255, 255, 255]);
+
+        // Right 45%: String Vibration Canvas Frame
+        let right_x0 = left_w + 10;
+        let right_x1 = w - 20;
+
+        for y in canvas_y0..canvas_y1 {
+            for x in right_x0..right_x1 {
+                let idx = ((y * w + x) * 4) as usize;
+                pixels[idx..idx + 4].copy_from_slice(&[10, 14, 24, 255]);
+            }
+        }
+
+        // Nut and Bridge markers
+        let nut_x = right_x0 + 15;
+        let bridge_x = right_x1 - 15;
+        for y in (canvas_y0 + 20)..(canvas_y1 - 20) {
+            let idx_n = ((y * w + nut_x) * 4) as usize;
+            pixels[idx_n..idx_n + 4].copy_from_slice(&[255, 215, 0, 255]);
+            let idx_b = ((y * w + bridge_x) * 4) as usize;
+            pixels[idx_b..idx_b + 4].copy_from_slice(&[255, 215, 0, 255]);
+        }
+
+        // Bow Proximity marker line (β)
+        let span_w = (bridge_x - nut_x) as f32;
+        let bow_mark_x = (bridge_x as f32 - self.bridge_proximity_beta * span_w).round() as u32;
+        if bow_mark_x >= right_x0 && bow_mark_x <= right_x1 {
+            for y in (canvas_y0 + 15)..(canvas_y1 - 15) {
+                let idx_m = ((y * w + bow_mark_x) * 4) as usize;
+                pixels[idx_m..idx_m + 4].copy_from_slice(&[255, 107, 43, 255]);
+            }
+        }
+
+        // String Vibration curve
+        let mid_y = (canvas_y0 + canvas_y1) as f32 / 2.0;
+        let num_curve_pts = (bridge_x - nut_x) as usize;
+        let mut prev_pt: Option<(f32, f32)> = None;
+
+        for i in 0..num_curve_pts {
+            let frac = i as f32 / num_curve_pts as f32;
+            let disp = self.evaluate_string_displacement(frac, 0.25);
+            let px = nut_x as f32 + frac * span_w;
+            let py = mid_y - disp * (c_height * 0.35);
+
+            if let Some((x0, y0)) = prev_pt {
+                draw_line_bs(&mut pixels, w, h, x0, y0, px, py, [0, 255, 180, 255]);
+            }
+            prev_pt = Some((px, py));
+        }
+
+        // Bottom Metrics Dock
+        let dock_y0 = h - 100;
+        let dock_y1 = h - 20;
+        for y in dock_y0..dock_y1 {
+            for x in 20..(w - 20) {
+                let idx = ((y * w + x) * 4) as usize;
+                pixels[idx..idx + 4].copy_from_slice(&[18, 25, 38, 255]);
+            }
+        }
+
+        // Pass Badge in dock
+        for y in (dock_y1 - 25)..dock_y1 {
+            for x in 30..(w - 30) {
+                let idx = ((y * w + x) * 4) as usize;
+                pixels[idx..idx + 4].copy_from_slice(&[16, 35, 28, 255]);
+            }
+        }
+
+        // Create parent directory if needed
+        if let Some(parent) = std::path::Path::new(path).parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+
+        encode_minimal_png_bs(path, &pixels, width, height)
+    }
 }
+
+#[allow(clippy::too_many_arguments)]
+fn draw_line_bs(buf: &mut [u8], w: u32, h: u32, x0: f32, y0: f32, x1: f32, y1: f32, col: [u8; 4]) {
+    let dx = x1 - x0;
+    let dy = y1 - y0;
+    let steps = (dx.abs().max(dy.abs()) * 2.0).max(1.0) as u32;
+    for s in 0..=steps {
+        let t = s as f32 / steps as f32;
+        let px = (x0 + t * dx).round() as i32;
+        let py = (y0 + t * dy).round() as i32;
+        if px >= 0 && px < w as i32 && py >= 0 && py < h as i32 {
+            let idx = ((py as u32 * w + px as u32) * 4) as usize;
+            buf[idx..idx + 4].copy_from_slice(&col);
+        }
+    }
+}
+
+fn draw_circle_filled_bs(buf: &mut [u8], w: u32, h: u32, cx: f32, cy: f32, r: f32, col: [u8; 4]) {
+    let min_x = (cx - r).max(0.0) as u32;
+    let max_x = (cx + r).min(w as f32 - 1.0) as u32;
+    let min_y = (cy - r).max(0.0) as u32;
+    let max_y = (cy + r).min(h as f32 - 1.0) as u32;
+
+    for y in min_y..=max_y {
+        for x in min_x..=max_x {
+            let dx = x as f32 - cx;
+            let dy = y as f32 - cy;
+            if dx * dx + dy * dy <= r * r {
+                let idx = ((y * w + x) * 4) as usize;
+                buf[idx..idx + 4].copy_from_slice(&col);
+            }
+        }
+    }
+}
+
+fn draw_circle_ring_bs(buf: &mut [u8], w: u32, h: u32, cx: f32, cy: f32, r: f32, col: [u8; 4]) {
+    let thickness = 2.0f32;
+    let r_inner = (r - thickness).max(0.0);
+    let min_x = (cx - r).max(0.0) as u32;
+    let max_x = (cx + r).min(w as f32 - 1.0) as u32;
+    let min_y = (cy - r).max(0.0) as u32;
+    let max_y = (cy + r).min(h as f32 - 1.0) as u32;
+
+    for y in min_y..=max_y {
+        for x in min_x..=max_x {
+            let dx = x as f32 - cx;
+            let dy = y as f32 - cy;
+            let dist_sq = dx * dx + dy * dy;
+            if dist_sq <= r * r && dist_sq >= r_inner * r_inner {
+                let idx = ((y * w + x) * 4) as usize;
+                buf[idx..idx + 4].copy_from_slice(&col);
+            }
+        }
+    }
+}
+
+fn encode_minimal_png_bs(path: &str, rgba_pixels: &[u8], width: u32, height: u32) -> Result<(), String> {
+    let mut out = Vec::with_capacity((width * height * 4 + 1024) as usize);
+    out.extend_from_slice(b"\x89PNG\r\n\x1a\n");
+
+    let mut ihdr = Vec::with_capacity(13);
+    ihdr.extend_from_slice(&width.to_be_bytes());
+    ihdr.extend_from_slice(&height.to_be_bytes());
+    ihdr.push(8);
+    ihdr.push(6);
+    ihdr.push(0);
+    ihdr.push(0);
+    ihdr.push(0);
+    write_png_chunk_bs(&mut out, b"IHDR", &ihdr);
+
+    let mut raw_data = Vec::with_capacity((height * (width * 4 + 1)) as usize);
+    for y in 0..height {
+        raw_data.push(0);
+        let row_start = (y * width * 4) as usize;
+        let row_end = row_start + (width * 4) as usize;
+        raw_data.extend_from_slice(&rgba_pixels[row_start..row_end]);
+    }
+
+    let mut zlib_data = Vec::with_capacity(raw_data.len() + 128);
+    zlib_data.push(0x78);
+    zlib_data.push(0x01);
+
+    let mut offset = 0;
+    while offset < raw_data.len() {
+        let chunk_len = (raw_data.len() - offset).min(65535);
+        let is_last = (offset + chunk_len) >= raw_data.len();
+        let bfinal_btype = if is_last { 0x01 } else { 0x00 };
+        zlib_data.push(bfinal_btype);
+
+        let len_u16 = chunk_len as u16;
+        let nlen_u16 = !len_u16;
+        zlib_data.extend_from_slice(&len_u16.to_le_bytes());
+        zlib_data.extend_from_slice(&nlen_u16.to_le_bytes());
+        zlib_data.extend_from_slice(&raw_data[offset..offset + chunk_len]);
+        offset += chunk_len;
+    }
+
+    let mut s1: u32 = 1;
+    let mut s2: u32 = 0;
+    for &b in &raw_data {
+        s1 = (s1 + b as u32) % 65521;
+        s2 = (s2 + s1) % 65521;
+    }
+    let adler = (s2 << 16) | s1;
+    zlib_data.extend_from_slice(&adler.to_be_bytes());
+
+    write_png_chunk_bs(&mut out, b"IDAT", &zlib_data);
+    write_png_chunk_bs(&mut out, b"IEND", &[]);
+
+    std::fs::write(path, out).map_err(|e| e.to_string())
+}
+
+fn write_png_chunk_bs(out: &mut Vec<u8>, chunk_type: &[u8; 4], data: &[u8]) {
+    out.extend_from_slice(&(data.len() as u32).to_be_bytes());
+    let type_start = out.len();
+    out.extend_from_slice(chunk_type);
+    out.extend_from_slice(data);
+    let crc = crc32_compute_bs(&out[type_start..]);
+    out.extend_from_slice(&crc.to_be_bytes());
+}
+
+fn crc32_compute_bs(buf: &[u8]) -> u32 {
+    let mut crc = 0xFFFF_FFFFu32;
+    for &b in buf {
+        crc ^= b as u32;
+        for _ in 0..8 {
+            let mask = if (crc & 1) != 0 { 0xEDB8_8320 } else { 0 };
+            crc = (crc >> 1) ^ mask;
+        }
+    }
+    !crc
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::touch_controls::MIN_HIT_TARGET_PT;
+
+    #[test]
+    fn test_bowed_string_view_ascii_render() {
+        let view = BowedStringView::new();
+        let ascii = view.render_ascii(80, 16);
+        assert!(!ascii.is_empty());
+        assert_eq!(ascii.len(), 16);
+    }
+
+    #[test]
+    fn test_bowed_string_view_hit_target_dimensions() {
+        const {
+            assert!(
+                BOWED_STRING_PUCK_HIT_RADIUS * 2.0 >= MIN_HIT_TARGET_PT,
+                "Bow puck hit target bounding box must be >= 44pt"
+            );
+        }
+    }
+
+    #[test]
+    fn test_bowed_string_view_snapshot_render() {
+        let view = BowedStringView::new();
+        let res = view.render_snapshot_png("scratch/renders/bowed_string_view.png", 800, 520);
+        assert!(res.is_ok());
+    }
+}
+
