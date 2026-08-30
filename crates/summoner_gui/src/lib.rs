@@ -384,7 +384,11 @@ pub use views::spectrogram_3d_view::Spectrogram3DView;
 #[cfg(feature = "gui")]
 pub use views::embouchure_angle_view::EmbouchureAngleView;
 #[cfg(feature = "gui")]
+pub use views::grand_piano_view::GrandPianoView;
+#[cfg(feature = "gui")]
 pub use views::shakuhachi_view::ShakuhachiView;
+#[cfg(feature = "gui")]
+pub use views::soundboard_bridge_view::SoundboardBridgeView;
 #[cfg(feature = "gui")]
 pub use views::spring_lattice_view::{
     SpringLatticeView, SpringLatticeViewProfile, SPRING_PUCK_HIT_RADIUS,

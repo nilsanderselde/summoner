@@ -25,6 +25,7 @@ pub mod clavinet_bus;
 pub mod embedded_hardware;
 pub mod ep_bus;
 pub mod formant_bus;
+pub mod grand_piano_bus;
 pub mod graph;
 pub mod mallet_bus;
 pub mod midi;
@@ -69,6 +70,7 @@ pub use embedded_hardware::{
 };
 pub use ep_bus::*;
 pub use formant_bus::*;
+pub use grand_piano_bus::*;
 pub use graph::{Edge, GraphSchedule, NodeGraph};
 pub use mallet_bus::*;
 pub use midi::MidiEvent;
