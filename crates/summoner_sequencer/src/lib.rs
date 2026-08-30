@@ -25,6 +25,7 @@ pub mod pattern_tools;
 pub mod session_looper;
 pub mod spatial_trajectory;
 pub mod timeline;
+pub mod woodwind_fingering;
 
 pub use bowing_gesture::*;
 pub use clip_matrix::*;
@@ -36,6 +37,7 @@ pub use midi_tools::*;
 pub use pattern_tools::*;
 pub use session_looper::*;
 pub use spatial_trajectory::*;
+pub use woodwind_fingering::*;
 
 #[cfg(test)]
 mod tests {

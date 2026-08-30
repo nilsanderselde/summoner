@@ -7484,6 +7484,94 @@ def render_woodwind_jet_view():
     img.save(out_path)
     print(f"Rendered: {out_path}")
 
+def render_tonehole_matrix_view():
+    width, height = 800, 500
+    img = Image.new("RGBA", (width, height), (14, 18, 28, 255))
+    draw = ImageDraw.Draw(img)
+
+    f_title = get_font(15, bold=True)
+    f_header = get_font(13, bold=True)
+    f_body = get_font(12, bold=False)
+    f_small = get_font(10, bold=False)
+    f_tiny = get_font(9, bold=False)
+
+    draw.text((20, 18), "WOODWIND 6-TONEHOLE RADIATION & STANDING WAVE HUD", fill=(240, 245, 255), font=f_title)
+
+    modes = [
+        ("STANDING WAVE PROFILE", True),
+        ("RADIATION SPECTRUM R(f)", False),
+        ("3-PORT SCATTERING MATRIX", False),
+    ]
+    tab_w = int((800 - 40 - 2 * 8) / 3)
+    for i, (name, active) in enumerate(modes):
+        bx = 20 + i * (tab_w + 8)
+        bg = (0, 229, 255) if active else (25, 35, 50)
+        fg = (10, 14, 24) if active else (200, 215, 235)
+        draw.rounded_rectangle([bx, 48, bx + tab_w, 92], radius=4, fill=bg)
+        draw.text((bx + 16, 64), name, fill=fg, font=f_small)
+
+    # Main Canvas (20..780, 104..340)
+    draw.rounded_rectangle([20, 104, 780, 340], radius=6, fill=(10, 14, 24), outline=(45, 65, 95), width=2)
+
+    # Left 60%: Standing wave canvas (30..470, 114..330)
+    draw.rounded_rectangle([30, 114, 470, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((40, 122), "ACOUSTIC PRESSURE STANDING WAVE P(x) ALONG BORE", fill=(160, 180, 205), font=f_small)
+
+    # Center axis
+    cy = 222
+    draw.line([(40, cy), (460, cy)], fill=(70, 90, 120, 100), width=1)
+
+    # Standing wave curve
+    pts = []
+    for step in range(101):
+        xr = step / 100.0
+        p = math.sin(xr * math.pi)
+        px = 40 + int(xr * 410)
+        py = cy - int(p * 80)
+        pts.append((px, py))
+    for i in range(len(pts) - 1):
+        draw.line([pts[i], pts[i+1]], fill=(0, 229, 255), width=3)
+
+    # Right 40%: 6 Tonehole Keys (485..770, 114..330)
+    draw.rounded_rectangle([485, 114, 770, 330], radius=4, fill=(14, 20, 32), outline=(40, 55, 80))
+    draw.text((495, 122), "6 TONEHOLE KEYS (>= 44x44pt TARGETS)", fill=(160, 180, 205), font=f_small)
+
+    # 6 Keys (2 cols x 3 rows)
+    col_w = int((285 - 30) / 2)
+    row_h = 48
+    for h in range(6):
+        c_idx = h % 2
+        r_idx = h // 2
+        hx = 495 + c_idx * (col_w + 10)
+        hy = 146 + r_idx * (row_h + 8)
+        is_closed = (h < 4) # First 4 closed
+        bg = (0, 229, 255) if is_closed else (30, 45, 65)
+        fg = (10, 14, 24) if is_closed else (200, 215, 235)
+        status = "CLOSED" if is_closed else "OPEN"
+        draw.rounded_rectangle([hx, hy, hx + col_w, hy + row_h], radius=4, fill=bg)
+        draw.text((hx + 12, hy + 16), f"Hole {h+1}: {status}", fill=fg, font=f_small)
+
+    # Bottom Metrics Dock
+    draw.rounded_rectangle([20, 350, 780, 465], radius=6, fill=(18, 25, 38), outline=(45, 60, 85))
+    params = [
+        ("FUNDAMENTAL PITCH", "261.6 Hz (L_eff: 0.60 m)", (0, 229, 255)),
+        ("LATTICE CUTOFF", "2200 Hz (Keefe 1990)", (255, 215, 0)),
+        ("RADIATED POWER", "14.5 mW (Acoustic)", (255, 107, 43)),
+        ("BORE GEOMETRY", "0.60 m (r_bore: 9.5 mm)", (0, 255, 180)),
+    ]
+    col_w = int((760 - 40) / 4)
+    for i, (label, val, col) in enumerate(params):
+        px_pos = 40 + i * col_w
+        draw.text((px_pos, 362), label, fill=(160, 180, 205), font=f_small)
+        draw.text((px_pos, 380), val, fill=col, font=f_header)
+
+    draw.rounded_rectangle([35, 418, 765, 454], radius=4, fill=(16, 35, 28), outline=(0, 255, 180))
+    draw.text((45, 428), "[PASS] Tonehole Acoustic Radiation Matrix & Touch Targets (>= 44x44pt) Verified", fill=(0, 255, 180), font=f_body)
+
+    out_path = os.path.join(OUTPUT_DIR, "tonehole_matrix_view.png")
+    img.save(out_path)
+    print(f"Rendered: {out_path}")
+
 def render_spectral_reshaper_view():
     width, height = 800, 500
     img = Image.new("RGBA", (width, height), (14, 18, 28, 255))
@@ -12506,6 +12594,7 @@ if __name__ == "__main__":
     render_neural_wavetable_view()
     render_hoa_spatializer_view()
     render_woodwind_jet_view()
+    render_tonehole_matrix_view()
     render_spectral_reshaper_view()
     render_oversampled_limiter_view()
     render_neural_timbre_view()

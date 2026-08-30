@@ -66,6 +66,7 @@ pub mod spectral_resynthesis;
 pub mod spectrogram_art;
 pub mod stem_separator;
 pub mod tape_saturation;
+pub mod tonehole_grid;
 pub mod track_dsp;
 pub mod traits;
 pub mod true_peak_limiter;
@@ -77,6 +78,7 @@ pub mod wavefolder;
 pub mod waveguide;
 pub mod waveguide_brass;
 pub mod waveguide_mesh;
+pub mod woodwind_jet;
 pub mod zero_gravity_fluid;
 
 pub use ai_mixing::*;
@@ -101,6 +103,7 @@ pub use spectral_eq::MultiChannelSpectralEqualizerNode;
 pub use spectral_resynthesis::*;
 pub use spectrogram_art::*;
 pub use tape_saturation::*;
+pub use tonehole_grid::*;
 pub use track_dsp::*;
 pub use true_peak_limiter::*;
 pub use tube_saturation::{TubeChannelState, TubeSaturationNode, TubeTopology};
@@ -108,6 +111,7 @@ pub use visualizer_engine::*;
 pub use vocal_tract::*;
 pub use waveguide_brass::*;
 pub use waveguide_mesh::*;
+pub use woodwind_jet::*;
 pub use zero_gravity_fluid::*;
 
 pub use plugin_host::{

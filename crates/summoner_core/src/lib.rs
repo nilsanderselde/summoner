@@ -19,6 +19,7 @@ pub mod allocator;
 pub mod articulation_bus;
 pub mod audio;
 pub mod audio_drivers;
+pub mod breath_bus;
 pub mod cadence_bus;
 pub mod embedded_hardware;
 pub mod formant_bus;
@@ -48,6 +49,7 @@ pub use audio_drivers::{
     AAudioDriver, AlsaDriver, AsapiDriver, AudioUnitDriver, NativeAudioDriver,
     NativeAudioDriverTuner, WasapiDriver,
 };
+pub use breath_bus::*;
 pub use embedded_hardware::{
     BatteryMonitor, BleMidiPeripheral, BootToSynthEngine, BypassRelayTrigger, EepromPresetStore,
     EmbeddedHardwareConfig, EurorackCvGateInterface, GpioDriver, GpioEvent,
