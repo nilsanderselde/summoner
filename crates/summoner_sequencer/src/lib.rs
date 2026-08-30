@@ -26,6 +26,7 @@ pub mod pattern_tools;
 pub mod pluck_gesture;
 pub mod session_looper;
 pub mod spatial_trajectory;
+pub mod spring_gesture;
 pub mod timeline;
 pub mod woodwind_fingering;
 
@@ -41,6 +42,7 @@ pub use pattern_tools::*;
 pub use pluck_gesture::*;
 pub use session_looper::*;
 pub use spatial_trajectory::*;
+pub use spring_gesture::*;
 pub use woodwind_fingering::*;
 
 #[cfg(test)]
