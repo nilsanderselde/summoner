@@ -123,6 +123,8 @@ pub mod tier77_tests;
 #[cfg(feature = "gui")]
 pub mod tier78_tests;
 #[cfg(feature = "gui")]
+pub mod tier79_tests;
+#[cfg(feature = "gui")]
 pub mod touch_gestures;
 #[cfg(feature = "gui")]
 pub mod transport_bar;
@@ -230,9 +232,13 @@ pub use views::isomorphic_lattice_view::IsomorphicLatticeView;
 #[cfg(feature = "gui")]
 pub use views::isomorphic_tuning_keyboard::IsomorphicTuningKeyboardView;
 #[cfg(feature = "gui")]
+pub use views::ji_bridge_view::*;
+#[cfg(feature = "gui")]
 pub use views::k_system_meter_view::KSystemMeterView;
 #[cfg(feature = "gui")]
 pub use views::keybinding_editor::KeybindingEditorView;
+#[cfg(feature = "gui")]
+pub use views::koto_view::*;
 #[cfg(feature = "gui")]
 pub use views::ladder_filter_view::LadderFilterView;
 #[cfg(feature = "gui")]
