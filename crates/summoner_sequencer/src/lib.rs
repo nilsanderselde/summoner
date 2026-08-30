@@ -15,6 +15,7 @@ pub mod automation;
 pub mod automation_timeline;
 pub mod bowing_gesture;
 pub mod clip_matrix;
+pub mod clavinet_gesture;
 pub mod comping;
 pub mod ep_gesture;
 pub mod generative;
@@ -33,6 +34,7 @@ pub mod timeline;
 pub mod woodwind_fingering;
 
 pub use bowing_gesture::*;
+pub use clavinet_gesture::*;
 pub use clip_matrix::*;
 pub use comping::*;
 pub use ep_gesture::*;

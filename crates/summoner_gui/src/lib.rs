@@ -144,6 +144,8 @@ pub use views::auditory_roughness_view::AuditoryRoughnessView;
 #[cfg(feature = "gui")]
 pub use views::auro3d_spatializer_view::Auro3dSpatializerView;
 #[cfg(feature = "gui")]
+pub use views::auto_wah_view::*;
+#[cfg(feature = "gui")]
 pub use views::bbd_chorus_view::BbdChorusView;
 #[cfg(feature = "gui")]
 pub use views::bezier_automation_editor::BezierAutomationEditorView;
@@ -157,6 +159,8 @@ pub use views::bitcrusher_morph_view::BitcrusherMorphView;
 pub use views::bowed_string_view::BowedStringView;
 #[cfg(feature = "gui")]
 pub use views::cadence_flow_view::CadenceFlowView;
+#[cfg(feature = "gui")]
+pub use views::clavinet_view::*;
 #[cfg(feature = "gui")]
 pub use views::comb_resonator_view::CombResonatorView;
 #[cfg(feature = "gui")]

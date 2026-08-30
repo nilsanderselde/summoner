@@ -14,10 +14,12 @@
 //! SIMD synthesis primitives & DSP algorithms for Summoner DAW.
 
 pub mod ai_mixing;
+pub mod auto_wah;
 pub mod autotune;
 pub mod biquad;
 pub mod bitcrusher;
 pub mod bowed_string;
+pub mod clavinet;
 pub mod composites;
 pub mod compressor;
 pub mod console_emulation;
@@ -92,7 +94,9 @@ pub mod woodwind_jet;
 pub mod zero_gravity_fluid;
 
 pub use ai_mixing::*;
+pub use auto_wah::*;
 pub use bowed_string::*;
+pub use clavinet::*;
 pub use console_emulation::{ConsoleEmulationNode, ConsoleMode};
 pub use ecosystem_hardware::*;
 pub use electric_piano::*;

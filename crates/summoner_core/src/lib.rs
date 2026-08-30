@@ -21,6 +21,7 @@ pub mod audio;
 pub mod audio_drivers;
 pub mod breath_bus;
 pub mod cadence_bus;
+pub mod clavinet_bus;
 pub mod embedded_hardware;
 pub mod ep_bus;
 pub mod formant_bus;
@@ -55,6 +56,8 @@ pub use audio_drivers::{
     NativeAudioDriverTuner, WasapiDriver,
 };
 pub use breath_bus::*;
+pub use cadence_bus::*;
+pub use clavinet_bus::*;
 pub use embedded_hardware::{
     BatteryMonitor, BleMidiPeripheral, BootToSynthEngine, BypassRelayTrigger, EepromPresetStore,
     EmbeddedHardwareConfig, EurorackCvGateInterface, GpioDriver, GpioEvent,
@@ -75,7 +78,6 @@ pub use mpe::{
 pub use node::KNOWN_NODE_TYPES;
 pub use param_bus::{AtomicParam, ParamBus, ParamId};
 pub use plectrum_bus::*;
-pub use cadence_bus::*;
 pub use rotary_bus::*;
 pub use sidechain_matrix::*;
 pub use smoothing::SmoothParam;
