@@ -219,6 +219,12 @@ pub struct FreeReedVoice {
     pub ranks: [FreeReedOscillator; NUM_REED_RANKS],
 }
 
+impl Default for FreeReedVoice {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FreeReedVoice {
     pub fn new() -> Self {
         Self {

@@ -148,6 +148,8 @@ pub use views::auto_wah_view::*;
 #[cfg(feature = "gui")]
 pub use views::bbd_chorus_view::BbdChorusView;
 #[cfg(feature = "gui")]
+pub use views::bellows_view::*;
+#[cfg(feature = "gui")]
 pub use views::bezier_automation_editor::BezierAutomationEditorView;
 #[cfg(feature = "gui")]
 pub use views::binaural_brir_view::BinauralBrirView;
@@ -195,6 +197,8 @@ pub use views::equal_loudness_contour_view::EqualLoudnessContourView;
 pub use views::fm_matrix_view::FmMatrixView;
 #[cfg(feature = "gui")]
 pub use views::formant_filter_view::FormantFilterView;
+#[cfg(feature = "gui")]
+pub use views::free_reed_view::*;
 #[cfg(feature = "gui")]
 pub use views::frequency_shifter_view::FrequencyShifterView;
 #[cfg(feature = "gui")]
