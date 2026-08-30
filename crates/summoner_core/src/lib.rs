@@ -22,6 +22,7 @@ pub mod audio_drivers;
 pub mod breath_bus;
 pub mod cadence_bus;
 pub mod embedded_hardware;
+pub mod ep_bus;
 pub mod formant_bus;
 pub mod graph;
 pub mod mallet_bus;
@@ -61,6 +62,7 @@ pub use embedded_hardware::{
     MidiUsbGadgetMode, OledDisplayDriver, RotaryEncoderDebouncer, ThermalThrottlingListener,
     WebConfigDashboard, PI_FIRMWARE_RELEASE_TAG,
 };
+pub use ep_bus::*;
 pub use formant_bus::*;
 pub use graph::{Edge, GraphSchedule, NodeGraph};
 pub use mallet_bus::*;

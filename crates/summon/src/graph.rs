@@ -341,6 +341,28 @@ impl NodeFactory {
                 }
                 Some(Box::new(ProcessorNodeAdapter::new(speaker)))
             }
+            "ElectricPianoNode" | "ElectricPiano" => {
+                let mut ep = summoner_dsp::ElectricPiano::new(44100);
+                if let Some(&gain) = params.get("gain") {
+                    ep.master_gain = gain;
+                }
+                if let Some(&hardness) = params.get("hardness") {
+                    ep.hammer_hardness = hardness;
+                }
+                if let Some(&gap) = params.get("air_gap") {
+                    ep.air_gap_mm = gap;
+                }
+                if let Some(&bark) = params.get("bark") {
+                    ep.bark_drive = bark;
+                }
+                if let Some(&tonebar) = params.get("tonebar") {
+                    ep.tonebar_coupling = tonebar;
+                }
+                if let Some(&clunk) = params.get("damper_clunk") {
+                    ep.damper_clunk_volume = clunk;
+                }
+                Some(Box::new(ProcessorNodeAdapter::new(ep)))
+            }
             _ => {
                 eprintln!("Warning: Unknown node kind '{}'", config.kind);
                 Some(Box::new(GainNode::new(0.0)))
