@@ -9,13 +9,13 @@
 //! polyphonic microtonal voice allocation with sample-accurate frequency output.
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use crate::scale::Scale;
 
 /// Standard isomorphic layout topologies.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum IsomorphicLayoutType {
     /// Wicki-Hayden layout (horizontal +2 whole tones, diagonal +7 / +11 fifths).
+    #[default]
     WickiHayden,
     /// Gerhard layout (horizontal +3 minor thirds, diagonal +4 major thirds).
     Gerhard,
@@ -35,12 +35,6 @@ pub enum IsomorphicLayoutType {
         col_steps: i32,
         row_steps: i32,
     },
-}
-
-impl Default for IsomorphicLayoutType {
-    fn default() -> Self {
-        Self::WickiHayden
-    }
 }
 
 impl IsomorphicLayoutType {
@@ -124,8 +118,6 @@ pub struct IsomorphicRouter {
     pub active_scale: Option<Scale>,
     pub max_voices: usize,
     pub voices: Vec<IsomorphicVoiceState>,
-    #[serde(skip)]
-    held_notes: HashMap<HexCoordinate, usize>, // maps hex coord -> voice index
 }
 
 impl Default for IsomorphicRouter {
@@ -163,7 +155,6 @@ impl IsomorphicRouter {
             active_scale: None,
             max_voices: n_voices,
             voices,
-            held_notes: HashMap::new(),
         }
     }
 
@@ -204,13 +195,11 @@ impl IsomorphicRouter {
         let freq = self.step_to_frequency(step);
 
         // If this coordinate is already held, retrigger the same voice
-        if let Some(&voice_idx) = self.held_notes.get(&coord) {
-            if voice_idx < self.voices.len() {
-                self.voices[voice_idx].velocity = velocity;
-                self.voices[voice_idx].active = true;
-                self.voices[voice_idx].age_samples = 0;
-                return Some(voice_idx);
-            }
+        if let Some(voice_idx) = self.voices.iter().position(|v| v.active && v.coord == coord) {
+            self.voices[voice_idx].velocity = velocity;
+            self.voices[voice_idx].active = true;
+            self.voices[voice_idx].age_samples = 0;
+            return Some(voice_idx);
         }
 
         // Find inactive voice or oldest voice to steal
@@ -231,10 +220,6 @@ impl IsomorphicRouter {
 
         let voice_idx = target_idx.unwrap_or(oldest_idx);
 
-        // If stealing, remove old coordinate mapping
-        let old_coord = self.voices[voice_idx].coord;
-        self.held_notes.remove(&old_coord);
-
         self.voices[voice_idx].coord = coord;
         self.voices[voice_idx].step_index = step;
         self.voices[voice_idx].frequency_hz = freq;
@@ -242,19 +227,17 @@ impl IsomorphicRouter {
         self.voices[voice_idx].active = true;
         self.voices[voice_idx].age_samples = 0;
 
-        self.held_notes.insert(coord, voice_idx);
         Some(voice_idx)
     }
 
     /// Releases note at hexagonal coordinate (q, r).
     pub fn note_off(&mut self, coord: HexCoordinate) -> Option<usize> {
-        if let Some(voice_idx) = self.held_notes.remove(&coord) {
-            if voice_idx < self.voices.len() {
-                self.voices[voice_idx].active = false;
-                return Some(voice_idx);
-            }
+        if let Some(voice_idx) = self.voices.iter().position(|v| v.active && v.coord == coord) {
+            self.voices[voice_idx].active = false;
+            Some(voice_idx)
+        } else {
+            None
         }
-        None
     }
 
     /// Releases all active notes.
@@ -262,7 +245,6 @@ impl IsomorphicRouter {
         for voice in &mut self.voices {
             voice.active = false;
         }
-        self.held_notes.clear();
     }
 
     /// Advances voice age by given number of audio frames.

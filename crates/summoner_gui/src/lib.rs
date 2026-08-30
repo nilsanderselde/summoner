@@ -208,6 +208,8 @@ pub use views::hoa5_binaural_view::Hoa5BinauralView;
 #[cfg(feature = "gui")]
 pub use views::hoa_spatializer_view::HoaSpatializerView;
 #[cfg(feature = "gui")]
+pub use views::isomorphic_lattice_view::IsomorphicLatticeView;
+#[cfg(feature = "gui")]
 pub use views::isomorphic_tuning_keyboard::IsomorphicTuningKeyboardView;
 #[cfg(feature = "gui")]
 pub use views::k_system_meter_view::KSystemMeterView;
@@ -407,6 +409,8 @@ pub use views::vocoder_matrix_view::VocoderMatrixView;
 pub use views::wavefront_reflection_view::WavefrontReflectionView;
 #[cfg(feature = "gui")]
 pub use views::waveguide_brass_view::WaveguideBrassView;
+#[cfg(feature = "gui")]
+pub use views::waveguide_mesh_view::WaveguideMeshView;
 #[cfg(feature = "gui")]
 pub use views::wfs_array_spatializer_view::WfsArraySpatializerView;
 #[cfg(feature = "gui")]

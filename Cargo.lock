@@ -3919,6 +3919,7 @@ dependencies = [
  "blake3",
  "rayon",
  "serde",
+ "toml",
 ]
 
 [[package]]
@@ -3960,6 +3961,7 @@ version = "0.1.0"
 dependencies = [
  "serde",
  "summoner_core",
+ "toml",
 ]
 
 [[package]]

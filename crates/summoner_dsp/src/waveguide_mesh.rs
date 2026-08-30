@@ -19,9 +19,10 @@ use crate::traits::SignalProcessor;
 pub const MESH_DIM: usize = 16;
 
 /// Boundary edge condition for the 2D physical mesh.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum MeshBoundaryType {
     /// Zero displacement at edges (drum head rim / clamped plate).
+    #[default]
     Clamped,
     /// Free displacement with zero spatial normal gradient (free plate / chime).
     Free,
@@ -29,27 +30,16 @@ pub enum MeshBoundaryType {
     DampedAbsorption,
 }
 
-impl Default for MeshBoundaryType {
-    fn default() -> Self {
-        Self::Clamped
-    }
-}
-
 /// Geometry and physical material profile of the resonator mesh.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum MeshMaterialProfile {
     /// Elastic circular/rectangular membrane (e.g. tympani, tom-tom).
+    #[default]
     Membrane,
     /// Stiff metallic plate with inharmonic modal dispersion (e.g. gong, cymbal).
     Plate,
     /// 1D acoustic bar / marimba bar geometry.
     AcousticBar,
-}
-
-impl Default for MeshMaterialProfile {
-    fn default() -> Self {
-        Self::Membrane
-    }
 }
 
 /// 2D Physical Waveguide Resonator Mesh.
@@ -159,7 +149,7 @@ impl WaveguideMesh2D {
     #[inline]
     pub fn step_simulation(&mut self) {
         // Courant squared must not exceed 0.5 for 2D standard 5-point stencil stability
-        let c_clamped = self.courant.clamp(0.05, 0.7071);
+        let c_clamped = self.courant.clamp(0.05, std::f32::consts::FRAC_1_SQRT_2);
         let c2 = c_clamped * c_clamped;
         let d = self.damping.clamp(0.00001, 0.1);
         let decay = (1.0 - d).max(0.0);
@@ -352,7 +342,7 @@ mod tests {
             mesh.step_simulation();
             let sample = mesh.sample_pickup(0.5, 0.5);
             assert!(sample.is_finite());
-            assert!(sample >= -1.0 && sample <= 1.0);
+            assert!((-1.0..=1.0).contains(&sample));
         }
 
         let decayed_energy = mesh.calculate_total_energy();

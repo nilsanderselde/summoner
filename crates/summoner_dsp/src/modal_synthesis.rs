@@ -21,9 +21,10 @@ use crate::traits::SignalProcessor;
 pub const MAX_MODAL_BANK_SIZE: usize = 16;
 
 /// Excitation mode for physical modal synthesis.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum ModalExcitationType {
     /// Percussive mallet strike with configurable hardness.
+    #[default]
     Strike,
     /// Continuous friction bowing with slip-stick velocity curve.
     Bow,
@@ -31,16 +32,11 @@ pub enum ModalExcitationType {
     Pluck,
 }
 
-impl Default for ModalExcitationType {
-    fn default() -> Self {
-        Self::Strike
-    }
-}
-
 /// Material resonance profile for modal frequency and damping distribution.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum ModalMaterialPreset {
     /// Metallic bar / vibraphone.
+    #[default]
     MetalBar,
     /// Rosewood marimba bar with parabolic undercut.
     MarimbaWood,
@@ -50,12 +46,6 @@ pub enum ModalMaterialPreset {
     MembraneDrum,
     /// Tibetan singing bowl with rich inharmonic overtones.
     TibetanSingingBowl,
-}
-
-impl Default for ModalMaterialPreset {
-    fn default() -> Self {
-        Self::MetalBar
-    }
 }
 
 impl ModalMaterialPreset {
@@ -96,9 +86,9 @@ impl ModalMaterialPreset {
         };
 
         let mut dampings = [0.0f32; MAX_MODAL_BANK_SIZE];
-        for i in 0..MAX_MODAL_BANK_SIZE {
+        for (i, item) in dampings.iter_mut().enumerate() {
             // High modes damp faster: d_i = d_0 * (1 + 0.15 * i^1.3)
-            dampings[i] = base_damping * (1.0 + 0.15 * (i as f32).powf(1.3));
+            *item = base_damping * (1.0 + 0.15 * (i as f32).powf(1.3));
         }
         dampings
     }
@@ -120,8 +110,6 @@ pub struct ModalSynthesisEngine {
     pub is_excited: bool,
     #[serde(skip)]
     bow_phase: f32,
-    #[serde(skip)]
-    prng_seed: u32,
     pub sample_rate: u32,
 }
 
@@ -146,7 +134,6 @@ impl ModalSynthesisEngine {
             bow_velocity: 0.40,
             is_excited: false,
             bow_phase: 0.0,
-            prng_seed: 0x5A5A5A5A,
             sample_rate: sr,
         };
 
@@ -326,7 +313,7 @@ mod tests {
         for _ in 0..5000 {
             let s = engine.process_sample(0.0);
             assert!(s.is_finite());
-            assert!(s >= -1.0 && s <= 1.0);
+            assert!((-1.0..=1.0).contains(&s));
         }
 
         let decayed_sample = engine.process_sample(0.0);

@@ -18,9 +18,10 @@ use crate::param_bus::{ParamBus, ParamId};
 pub const TUNING_TABLE_SIZE: usize = 128;
 
 /// Remapping mode for dynamic pitch transformation.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum TuningRemapMode {
     /// Exact target frequency per note index.
+    #[default]
     DirectFrequency,
     /// Continuous cent offset added to baseline 12-TET pitch.
     CentOffset,
@@ -28,12 +29,6 @@ pub enum TuningRemapMode {
     TemperamentInterpolation,
     /// Snapped to nearest legal step of a defined microtonal scale.
     ScaleQuantize,
-}
-
-impl Default for TuningRemapMode {
-    fn default() -> Self {
-        Self::DirectFrequency
-    }
 }
 
 mod serde_array_128 {
@@ -174,10 +169,10 @@ impl TuningMatrix {
     /// Dispatches active tuning matrix state to `ParamBus`.
     pub fn dispatch_to_param_bus(&self, param_bus: &ParamBus) {
         if let Some(param_id) = self.param_morph_id {
-            let _ = param_bus.set(param_id, self.morph_alpha);
+            param_bus.set(param_id, self.morph_alpha);
         }
         if let Some(param_id) = self.param_root_id {
-            let _ = param_bus.set(param_id, self.root_frequency_hz);
+            param_bus.set(param_id, self.root_frequency_hz);
         }
     }
 
@@ -202,9 +197,9 @@ pub struct LockFreeTuningRemapper {
 impl LockFreeTuningRemapper {
     pub fn new(matrix: TuningMatrix) -> Self {
         let mut cached = [const { AtomicU32::new(0) }; TUNING_TABLE_SIZE];
-        for i in 0..TUNING_TABLE_SIZE {
+        for (i, item) in cached.iter_mut().enumerate() {
             let f = matrix.note_to_frequency(i as u8);
-            cached[i] = AtomicU32::new(f.to_bits());
+            *item = AtomicU32::new(f.to_bits());
         }
 
         Self {
@@ -223,9 +218,9 @@ impl LockFreeTuningRemapper {
 
     /// Updates matrix configuration and refreshes atomic frequency cache.
     pub fn update_matrix(&mut self, new_matrix: TuningMatrix) {
-        for i in 0..TUNING_TABLE_SIZE {
+        for (i, item) in self.cached_frequencies.iter().enumerate() {
             let f = new_matrix.note_to_frequency(i as u8);
-            self.cached_frequencies[i].store(f.to_bits(), Ordering::Release);
+            item.store(f.to_bits(), Ordering::Release);
         }
         self.matrix = Arc::new(new_matrix);
     }
