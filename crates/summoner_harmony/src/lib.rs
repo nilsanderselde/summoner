@@ -19,6 +19,7 @@ pub mod cadence_graph;
 pub mod edo;
 pub mod isomorphic_router;
 pub mod scale;
+pub mod vowel_graph;
 
 pub use bus::{HarmonicBusBridge, HarmonicContext};
 pub use cadence::{CadenceEngine, CadenceType, Chord, HarmonicTension, HarmonicTensionAnalyzer};
@@ -26,6 +27,7 @@ pub use cadence_graph::*;
 pub use edo::EdoTuning;
 pub use isomorphic_router::*;
 pub use scale::Scale;
+pub use vowel_graph::*;
 
 pub mod kbm;
 pub mod scl;

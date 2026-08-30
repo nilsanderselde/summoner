@@ -406,7 +406,11 @@ pub use views::upward_compressor_view::UpwardCompressorView;
 #[cfg(feature = "gui")]
 pub use views::vari_mu_master_view::VariMuMasterView;
 #[cfg(feature = "gui")]
+pub use views::vocal_tract_view::VocalTractView;
+#[cfg(feature = "gui")]
 pub use views::vocoder_matrix_view::VocoderMatrixView;
+#[cfg(feature = "gui")]
+pub use views::vowel_space_view::VowelSpaceView;
 #[cfg(feature = "gui")]
 pub use views::wavefront_reflection_view::WavefrontReflectionView;
 #[cfg(feature = "gui")]

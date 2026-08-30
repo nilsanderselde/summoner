@@ -20,6 +20,7 @@ pub mod audio;
 pub mod audio_drivers;
 pub mod cadence_bus;
 pub mod embedded_hardware;
+pub mod formant_bus;
 pub mod graph;
 pub mod midi;
 pub mod midi_clock;
@@ -52,6 +53,7 @@ pub use embedded_hardware::{
     MidiUsbGadgetMode, OledDisplayDriver, RotaryEncoderDebouncer, ThermalThrottlingListener,
     WebConfigDashboard, PI_FIRMWARE_RELEASE_TAG,
 };
+pub use formant_bus::*;
 pub use graph::{Edge, GraphSchedule, NodeGraph};
 pub use midi::MidiEvent;
 pub use midi_clock::{MidiClockGenerator, MidiClockReceiver, MIDI_CLOCK_BYTE, MIDI_CLOCK_PPQN};
