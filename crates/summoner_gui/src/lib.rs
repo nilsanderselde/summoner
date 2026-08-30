@@ -408,6 +408,8 @@ pub use views::through_zero_flanger_view::ThroughZeroFlangerView;
 #[cfg(feature = "gui")]
 pub use views::tonehole_matrix_view::ToneholeMatrixView;
 #[cfg(feature = "gui")]
+pub use views::tonewheel_organ_view::TonewheelOrganView;
+#[cfg(feature = "gui")]
 pub use views::transient_clipper_view::TransientClipperView;
 #[cfg(feature = "gui")]
 pub use views::transient_declicker_view::TransientDeclickerView;

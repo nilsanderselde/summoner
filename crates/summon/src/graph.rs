@@ -315,6 +315,32 @@ impl NodeFactory {
                 Some(Box::new(node))
             }
 
+            "TonewheelOrganNode" | "TonewheelOrgan" => {
+                let mut organ = summoner_dsp::TonewheelOrgan::new(44100);
+                if let Some(&gain) = params.get("gain") {
+                    organ.master_gain = gain;
+                }
+                if let Some(&click) = params.get("key_click") {
+                    organ.key_click_amount = click;
+                }
+                if let Some(&leak) = params.get("crosstalk") {
+                    organ.crosstalk_amount = leak;
+                }
+                Some(Box::new(ProcessorNodeAdapter::new(organ)))
+            }
+            "RotarySpeakerNode" | "RotarySpeaker" => {
+                let mut speaker = summoner_dsp::RotarySpeaker::new(44100);
+                if let Some(&drive) = params.get("drive") {
+                    speaker.drive_saturation_db = drive;
+                }
+                if let Some(&mix) = params.get("mix") {
+                    speaker.wet_mix = mix;
+                }
+                if let Some(&bal) = params.get("horn_drum_balance") {
+                    speaker.horn_drum_balance_pct = bal;
+                }
+                Some(Box::new(ProcessorNodeAdapter::new(speaker)))
+            }
             _ => {
                 eprintln!("Warning: Unknown node kind '{}'", config.kind);
                 Some(Box::new(GainNode::new(0.0)))

@@ -445,4 +445,232 @@ impl RotarySpeakerView {
             });
         });
     }
+
+    /// Renders headless snapshot PNG to `path`.
+    pub fn render_snapshot_png(&self, path: &str, width: u32, height: u32) -> Result<(), String> {
+        let mut pixels = vec![0u8; (width * height * 4) as usize];
+
+        let bg = [10, 14, 24, 255]; // Deep slate
+        let cyan = [0, 229, 255, 255];
+        let orange = [255, 107, 43, 255];
+        let amber = [255, 215, 0, 255];
+        let green = [0, 255, 180, 255];
+        let slate = [45, 60, 85, 255];
+
+        for chunk in pixels.chunks_exact_mut(4) {
+            chunk.copy_from_slice(&bg);
+        }
+
+        // Cabinet outer circle
+        let cx = (width as f32) * 0.30;
+        let cy = (height as f32) * 0.50;
+        let radius = 100.0f32;
+
+        draw_circle_stroke_rot(&mut pixels, width, height, cx, cy, radius, slate);
+        draw_circle_stroke_rot(&mut pixels, width, height, cx, cy, radius * 0.7, slate);
+
+        // Bass Drum rotor vector
+        let d_angle = self.drum_angle_rad;
+        let drum_x1 = cx + d_angle.cos() * 70.0;
+        let drum_y1 = cy + d_angle.sin() * 70.0;
+        let drum_x2 = cx - d_angle.cos() * 70.0;
+        let drum_y2 = cy - d_angle.sin() * 70.0;
+        draw_line_segment_rot(&mut pixels, width, height, drum_x1, drum_y1, drum_x2, drum_y2, cyan);
+
+        // Treble Horn rotor vector
+        let h_angle = self.horn_angle_rad;
+        let horn_x1 = cx + h_angle.cos() * 55.0;
+        let horn_y1 = cy + h_angle.sin() * 55.0;
+        let horn_x2 = cx - h_angle.cos() * 55.0;
+        let horn_y2 = cy - h_angle.sin() * 55.0;
+        draw_line_segment_rot(&mut pixels, width, height, horn_x1, horn_y1, horn_x2, horn_y2, orange);
+        draw_circle_filled_rot(&mut pixels, width, height, horn_x1, horn_y1, 8.0, orange);
+        draw_circle_filled_rot(&mut pixels, width, height, cx, cy, 6.0, amber);
+
+        // Microphones
+        let spread_rad = (self.mic_spread_deg * 0.5) * (std::f32::consts::PI / 180.0);
+        let mic_r = 120.0;
+        let mic_l_x = cx - spread_rad.sin() * mic_r;
+        let mic_l_y = cy - spread_rad.cos() * mic_r;
+        let mic_r_x = cx + spread_rad.sin() * mic_r;
+        let mic_r_y = cy - spread_rad.cos() * mic_r;
+
+        draw_circle_filled_rot(&mut pixels, width, height, mic_l_x, mic_l_y, 6.0, green);
+        draw_circle_stroke_rot(&mut pixels, width, height, mic_l_x, mic_l_y, ROTARY_HANDLE_HIT_RADIUS, cyan);
+        draw_circle_filled_rot(&mut pixels, width, height, mic_r_x, mic_r_y, 6.0, green);
+        draw_circle_stroke_rot(&mut pixels, width, height, mic_r_x, mic_r_y, ROTARY_HANDLE_HIT_RADIUS, cyan);
+
+        // Doppler scope curve on right side
+        let scope_x0 = (width as f32) * 0.55;
+        let scope_x1 = (width as f32) * 0.95;
+        let scope_mid_y = cy;
+
+        draw_line_segment_rot(&mut pixels, width, height, scope_x0, scope_mid_y, scope_x1, scope_mid_y, slate);
+
+        let mut prev_pt: Option<(f32, f32)> = None;
+        for i in 0..64 {
+            let t = i as f32 / 63.0;
+            let sx = scope_x0 + t * (scope_x1 - scope_x0);
+            let angle = self.horn_angle_rad + t * 4.0 * std::f32::consts::PI;
+            let sy = scope_mid_y - angle.sin() * (self.horn_rpm / 400.0) * 45.0;
+            if let Some((px, py)) = prev_pt {
+                draw_line_segment_rot(&mut pixels, width, height, px, py, sx, sy, green);
+            }
+            prev_pt = Some((sx, sy));
+        }
+
+        encode_minimal_png_rot(path, &pixels, width, height)
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn draw_line_segment_rot(buf: &mut [u8], w: u32, h: u32, x0: f32, y0: f32, x1: f32, y1: f32, col: [u8; 4]) {
+    let dx = x1 - x0;
+    let dy = y1 - y0;
+    let steps = (dx.abs().max(dy.abs()) as usize).max(1);
+
+    for s in 0..=steps {
+        let t = s as f32 / steps as f32;
+        let x = (x0 + dx * t) as i32;
+        let y = (y0 + dy * t) as i32;
+
+        if x >= 0 && x < w as i32 && y >= 0 && y < h as i32 {
+            let idx = ((y as u32 * w + x as u32) * 4) as usize;
+            buf[idx..idx + 4].copy_from_slice(&col);
+        }
+    }
+}
+
+fn draw_circle_filled_rot(buf: &mut [u8], w: u32, h: u32, cx: f32, cy: f32, r: f32, col: [u8; 4]) {
+    let min_x = (cx - r).max(0.0) as u32;
+    let max_x = (cx + r).min(w as f32 - 1.0) as u32;
+    let min_y = (cy - r).max(0.0) as u32;
+    let max_y = (cy + r).min(h as f32 - 1.0) as u32;
+
+    for y in min_y..=max_y {
+        for x in min_x..=max_x {
+            let dx = x as f32 - cx;
+            let dy = y as f32 - cy;
+            if dx * dx + dy * dy <= r * r {
+                let idx = ((y * w + x) * 4) as usize;
+                buf[idx..idx + 4].copy_from_slice(&col);
+            }
+        }
+    }
+}
+
+fn draw_circle_stroke_rot(buf: &mut [u8], w: u32, h: u32, cx: f32, cy: f32, r: f32, col: [u8; 4]) {
+    let steps = (std::f32::consts::TAU * r) as usize + 8;
+    for i in 0..steps {
+        let a = (i as f32 / steps as f32) * std::f32::consts::TAU;
+        let x = (cx + a.cos() * r) as i32;
+        let y = (cy + a.sin() * r) as i32;
+        if x >= 0 && x < w as i32 && y >= 0 && y < h as i32 {
+            let idx = ((y as u32 * w + x as u32) * 4) as usize;
+            buf[idx..idx + 4].copy_from_slice(&col);
+        }
+    }
+}
+
+fn encode_minimal_png_rot(path: &str, rgba_pixels: &[u8], width: u32, height: u32) -> Result<(), String> {
+    let mut out = Vec::with_capacity((width * height * 4 + 1024) as usize);
+    out.extend_from_slice(b"\x89PNG\r\n\x1a\n");
+
+    let mut ihdr = Vec::with_capacity(13);
+    ihdr.extend_from_slice(&width.to_be_bytes());
+    ihdr.extend_from_slice(&height.to_be_bytes());
+    ihdr.push(8);
+    ihdr.push(6);
+    ihdr.push(0);
+    ihdr.push(0);
+    ihdr.push(0);
+    write_png_chunk_rot(&mut out, b"IHDR", &ihdr);
+
+    let mut raw_data = Vec::with_capacity((height * (width * 4 + 1)) as usize);
+    for y in 0..height {
+        raw_data.push(0);
+        let row_start = (y * width * 4) as usize;
+        let row_end = row_start + (width * 4) as usize;
+        raw_data.extend_from_slice(&rgba_pixels[row_start..row_end]);
+    }
+
+    let mut zlib_data = Vec::with_capacity(raw_data.len() + 128);
+    zlib_data.push(0x78);
+    zlib_data.push(0x01);
+
+    let mut offset = 0;
+    while offset < raw_data.len() {
+        let chunk_len = (raw_data.len() - offset).min(65535);
+        let is_last = (offset + chunk_len) >= raw_data.len();
+        let bfinal_btype = if is_last { 0x01 } else { 0x00 };
+        zlib_data.push(bfinal_btype);
+
+        let len_u16 = chunk_len as u16;
+        let nlen_u16 = !len_u16;
+        zlib_data.extend_from_slice(&len_u16.to_le_bytes());
+        zlib_data.extend_from_slice(&nlen_u16.to_le_bytes());
+        zlib_data.extend_from_slice(&raw_data[offset..offset + chunk_len]);
+        offset += chunk_len;
+    }
+
+    let mut s1: u32 = 1;
+    let mut s2: u32 = 0;
+    for &b in &raw_data {
+        s1 = (s1 + b as u32) % 65521;
+        s2 = (s2 + s1) % 65521;
+    }
+    let adler = (s2 << 16) | s1;
+    zlib_data.extend_from_slice(&adler.to_be_bytes());
+
+    write_png_chunk_rot(&mut out, b"IDAT", &zlib_data);
+    write_png_chunk_rot(&mut out, b"IEND", &[]);
+
+    if let Some(parent) = std::path::Path::new(path).parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    std::fs::write(path, out).map_err(|e| e.to_string())
+}
+
+fn write_png_chunk_rot(out: &mut Vec<u8>, chunk_type: &[u8; 4], data: &[u8]) {
+    out.extend_from_slice(&(data.len() as u32).to_be_bytes());
+    let type_start = out.len();
+    out.extend_from_slice(chunk_type);
+    out.extend_from_slice(data);
+    let crc = crc32_compute_rot(&out[type_start..]);
+    out.extend_from_slice(&crc.to_be_bytes());
+}
+
+fn crc32_compute_rot(buf: &[u8]) -> u32 {
+    let mut crc = 0xFFFF_FFFFu32;
+    for &b in buf {
+        crc ^= b as u32;
+        for _ in 0..8 {
+            let mask = if (crc & 1) != 0 { 0xEDB8_8320 } else { 0 };
+            crc = (crc >> 1) ^ mask;
+        }
+    }
+    !crc
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_rotary_speaker_view_ascii_and_hit_targets() {
+        let view = RotarySpeakerView::new();
+        let ascii = view.render_ascii(64, 16);
+        assert_eq!(ascii.len(), 16);
+        assert!(ascii[0].contains("ROTARY SPEAKER"));
+        const {
+            assert!(ROTARY_HANDLE_HIT_RADIUS * 2.0 >= MIN_HIT_TARGET_PT);
+        }
+    }
+
+    #[test]
+    fn test_rotary_speaker_view_snapshot_render() {
+        let view = RotarySpeakerView::new();
+        let res = view.render_snapshot_png("scratch/renders/rotary_speaker_view.png", 800, 520);
+        assert!(res.is_ok());
+    }
 }
