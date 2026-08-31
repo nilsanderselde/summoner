@@ -26,6 +26,7 @@ pub mod clavinet_bus;
 pub mod embedded_hardware;
 pub mod ep_bus;
 pub mod formant_bus;
+pub mod glass_bus;
 pub mod grand_piano_bus;
 pub mod graph;
 pub mod hurdy_gurdy_bus;
@@ -75,6 +76,7 @@ pub use embedded_hardware::{
 };
 pub use ep_bus::*;
 pub use formant_bus::*;
+pub use glass_bus::*;
 pub use grand_piano_bus::*;
 pub use graph::{Edge, GraphSchedule, NodeGraph};
 pub use hurdy_gurdy_bus::*;

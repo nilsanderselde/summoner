@@ -594,4 +594,287 @@ impl GlassArmonicaView {
             Color32::from_rgb(0, 255, 180),
         );
     }
+
+    /// Render headless PNG snapshot visualizer for layout alignment, touch target verification, and WCAG contrast.
+    pub fn render_snapshot_png(&self, path: &str, width: usize, height: usize) -> Result<(), String> {
+        let mut pixels = vec![0u8; width * height * 4];
+
+        // Background: Deep Slate Navy (#0A0E18)
+        for idx in (0..pixels.len()).step_by(4) {
+            pixels[idx] = 0x0A;
+            pixels[idx + 1] = 0x0E;
+            pixels[idx + 2] = 0x18;
+            pixels[idx + 3] = 0xFF;
+        }
+
+        // Header Panel (8pt grid padding)
+        let header_h = 56;
+        for y in 0..header_h {
+            for x in 0..width {
+                let idx = (y * width + x) * 4;
+                pixels[idx] = 0x13;
+                pixels[idx + 1] = 0x1D;
+                pixels[idx + 2] = 0x2E;
+            }
+        }
+
+        // Title Indicator Bar (Gold #F59E0B)
+        for y in 12..20 {
+            for x in 24..220 {
+                let idx = (y * width + x) * 4;
+                pixels[idx] = 0xF5;
+                pixels[idx + 1] = 0x9E;
+                pixels[idx + 2] = 0x0B;
+            }
+        }
+
+        // Main 2D Puck Canvas Box (Spindle Speed vs Normal Contact Force)
+        let c_left = 24;
+        let c_top = 72;
+        let c_right = width - 24;
+        let c_bottom = height - 88;
+
+        for y in c_top..c_bottom {
+            for x in c_left..c_right {
+                let idx = (y * width + x) * 4;
+                let is_border = x == c_left || x == c_right - 1 || y == c_top || y == c_bottom - 1;
+                if is_border {
+                    pixels[idx] = 0x00;
+                    pixels[idx + 1] = 0xE5;
+                    pixels[idx + 2] = 0xFF; // Bright Cyan border (#00E5FF)
+                } else if x % 32 == 0 || y % 32 == 0 {
+                    pixels[idx] = 0x1E;
+                    pixels[idx + 1] = 0x29;
+                    pixels[idx + 2] = 0x3B; // 8pt grid guide
+                } else {
+                    pixels[idx] = 0x08;
+                    pixels[idx + 1] = 0x0C;
+                    pixels[idx + 2] = 0x16;
+                }
+            }
+        }
+
+        // Concentric Quartz Glass Bowl Rings in left 55%
+        let canvas_w = (c_right - c_left) as f32;
+        let canvas_h_f = (c_bottom - c_top) as f32;
+        let center_x = c_left as f32 + canvas_w * 0.28;
+        let center_y = c_top as f32 + canvas_h_f * 0.50;
+        let max_r = (canvas_h_f * 0.40).min(canvas_w * 0.24);
+
+        for ring_frac in [0.30, 0.55, 0.80, 1.00] {
+            let r = max_r * ring_frac;
+            let num_pts = 180;
+            for i in 0..num_pts {
+                let theta = (i as f32 / num_pts as f32) * 2.0 * std::f32::consts::PI;
+                let px = (center_x + r * theta.cos()) as isize;
+                let py = (center_y + r * theta.sin()) as isize;
+                if px >= c_left as isize && px < c_right as isize && py >= c_top as isize && py < c_bottom as isize {
+                    let idx = (py as usize * width + px as usize) * 4;
+                    pixels[idx] = 0x00;
+                    pixels[idx + 1] = 0xE5;
+                    pixels[idx + 2] = 0xFF;
+                }
+            }
+        }
+
+        // Modal Resonance Spectrum Bars in right 40%
+        let bar_area_left = c_left as f32 + canvas_w * 0.60;
+        let bar_area_right = c_right as f32 - 16.0;
+        let bar_w = (bar_area_right - bar_area_left) / 8.0;
+
+        for (i, &amp) in self.modal_amplitudes.iter().enumerate() {
+            let bx = bar_area_left + i as f32 * bar_w;
+            let bar_h = (amp.clamp(0.0, 1.2) / 1.2) * (canvas_h_f * 0.70);
+            let b_top = c_bottom as f32 - 20.0 - bar_h;
+            let b_bot = c_bottom as f32 - 20.0;
+
+            for y in (b_top as usize)..=(b_bot as usize) {
+                for x in (bx as usize)..((bx + bar_w - 4.0) as usize) {
+                    if x < width && y < height {
+                        let idx = (y * width + x) * 4;
+                        if i == 0 {
+                            pixels[idx] = 0xF5;
+                            pixels[idx + 1] = 0x9E;
+                            pixels[idx + 2] = 0x0B; // Fundamental Gold
+                        } else if i < 6 {
+                            pixels[idx] = 0x00;
+                            pixels[idx + 1] = 0xE5;
+                            pixels[idx + 2] = 0xFF; // Cyan Modes
+                        } else {
+                            pixels[idx] = 0x00;
+                            pixels[idx + 1] = 0xFF;
+                            pixels[idx + 2] = 0xB4; // Emerald Water
+                        }
+                    }
+                }
+            }
+        }
+
+        // Interactive 2D Puck (Radius = 22pt -> 44x44pt touch target)
+        let puck_center_x = c_left + (canvas_w * 0.55 * self.armonica_puck_pos.0) as usize;
+        let puck_center_y = c_top + (canvas_h_f * (1.0 - self.armonica_puck_pos.1)) as usize;
+        let radius = ARMONICA_PUCK_HIT_RADIUS as isize;
+        let inner_radius = (ARMONICA_PUCK_HIT_RADIUS - 3.0) as isize;
+
+        for dy in -radius..=radius {
+            for dx in -radius..=radius {
+                if dx * dx + dy * dy <= radius * radius {
+                    let px = (puck_center_x as isize + dx) as usize;
+                    let py = (puck_center_y as isize + dy) as usize;
+                    if px < width && py < height {
+                        let idx = (py * width + px) * 4;
+                        let dist_sq = dx * dx + dy * dy;
+                        if dist_sq >= inner_radius * inner_radius {
+                            pixels[idx] = 0x00;
+                            pixels[idx + 1] = 0xE5;
+                            pixels[idx + 2] = 0xFF; // Cyan outer ring
+                        } else {
+                            pixels[idx] = 0xF5;
+                            pixels[idx + 1] = 0x9E;
+                            pixels[idx + 2] = 0x0B; // Amber gold center
+                        }
+                    }
+                }
+            }
+        }
+
+        // Bottom Metrics Indicator Bar
+        let bar_y_start = height - 68;
+        let bar_y_end = height - 44;
+        let bar_left = c_left;
+        let bar_right = c_right;
+
+        for y in bar_y_start..bar_y_end {
+            for x in bar_left..bar_right {
+                let idx = (y * width + x) * 4;
+                pixels[idx] = 0x1E;
+                pixels[idx + 1] = 0x29;
+                pixels[idx + 2] = 0x3B;
+            }
+        }
+
+        let water_fill_split = bar_left + ((bar_right - bar_left) as f32 * self.water_level_pct) as usize;
+        for y in bar_y_start..bar_y_end {
+            for x in bar_left..=water_fill_split.min(bar_right) {
+                let idx = (y * width + x) * 4;
+                pixels[idx] = 0x00;
+                pixels[idx + 1] = 0xFF;
+                pixels[idx + 2] = 0xB4; // Water Level (Emerald Teal)
+            }
+        }
+
+        save_png_file(path, width, height, &pixels)
+    }
+}
+
+fn save_png_file(path: &str, width: usize, height: usize, rgba_pixels: &[u8]) -> Result<(), String> {
+    let mut out = Vec::with_capacity(width * height * 4 + 1024);
+    out.extend_from_slice(&[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+
+    let mut ihdr = Vec::with_capacity(13);
+    ihdr.extend_from_slice(&(width as u32).to_be_bytes());
+    ihdr.extend_from_slice(&(height as u32).to_be_bytes());
+    ihdr.push(8);
+    ihdr.push(6);
+    ihdr.push(0);
+    ihdr.push(0);
+    ihdr.push(0);
+    write_png_chunk_to(&mut out, b"IHDR", &ihdr);
+
+    let stride = width * 4;
+    let mut raw_data = Vec::with_capacity((stride + 1) * height);
+    for y in 0..height {
+        raw_data.push(0x00);
+        let row_start = y * stride;
+        let row_end = row_start + stride;
+        raw_data.extend_from_slice(&rgba_pixels[row_start..row_end]);
+    }
+
+    let mut zlib_data = Vec::with_capacity(raw_data.len() + 128);
+    zlib_data.push(0x78);
+    zlib_data.push(0x01);
+
+    let mut offset = 0;
+    while offset < raw_data.len() {
+        let chunk_len = (raw_data.len() - offset).min(65535);
+        let is_last = (offset + chunk_len) >= raw_data.len();
+        let bfinal_btype = if is_last { 0x01 } else { 0x00 };
+        zlib_data.push(bfinal_btype);
+
+        let len_u16 = chunk_len as u16;
+        let nlen_u16 = !len_u16;
+        zlib_data.extend_from_slice(&len_u16.to_le_bytes());
+        zlib_data.extend_from_slice(&nlen_u16.to_le_bytes());
+        zlib_data.extend_from_slice(&raw_data[offset..offset + chunk_len]);
+        offset += chunk_len;
+    }
+
+    let mut s1: u32 = 1;
+    let mut s2: u32 = 0;
+    for &b in &raw_data {
+        s1 = (s1 + b as u32) % 65521;
+        s2 = (s2 + s1) % 65521;
+    }
+    let adler = (s2 << 16) | s1;
+    zlib_data.extend_from_slice(&adler.to_be_bytes());
+
+    write_png_chunk_to(&mut out, b"IDAT", &zlib_data);
+    write_png_chunk_to(&mut out, b"IEND", &[]);
+
+    if let Some(parent) = std::path::Path::new(path).parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    std::fs::write(path, out).map_err(|e| e.to_string())
+}
+
+fn write_png_chunk_to(out: &mut Vec<u8>, chunk_type: &[u8; 4], data: &[u8]) {
+    out.extend_from_slice(&(data.len() as u32).to_be_bytes());
+    let type_start = out.len();
+    out.extend_from_slice(chunk_type);
+    out.extend_from_slice(data);
+    let crc = crc32_compute_to(&out[type_start..]);
+    out.extend_from_slice(&crc.to_be_bytes());
+}
+
+fn crc32_compute_to(buf: &[u8]) -> u32 {
+    let mut crc = 0xFFFF_FFFFu32;
+    for &b in buf {
+        crc ^= b as u32;
+        for _ in 0..8 {
+            let mask = if (crc & 1) != 0 { 0xEDB8_8320 } else { 0 };
+            crc = (crc >> 1) ^ mask;
+        }
+    }
+    !crc
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::touch_controls::MIN_HIT_TARGET_PT;
+
+    #[test]
+    fn test_glass_armonica_view_hit_target_dimensions() {
+        const {
+            assert!(
+                ARMONICA_PUCK_HIT_RADIUS * 2.0 >= MIN_HIT_TARGET_PT,
+                "Glass Armonica puck hit target bounding box must be >= 44pt"
+            );
+        }
+    }
+
+    #[test]
+    fn test_glass_armonica_view_ascii_render() {
+        let view = GlassArmonicaView::new();
+        let ascii = view.render_ascii(80, 16);
+        assert_eq!(ascii.len(), 16);
+        assert!(ascii[0].starts_with('+'));
+    }
+
+    #[test]
+    fn test_glass_armonica_view_snapshot_render() {
+        let view = GlassArmonicaView::new();
+        let res = view.render_snapshot_png("scratch/renders/glass_armonica_view.png", 800, 520);
+        assert!(res.is_ok());
+    }
 }
