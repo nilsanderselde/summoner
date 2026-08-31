@@ -5,12 +5,18 @@
 //! Modern Right Sidebar Inspector for Track/Clip Properties & Microtonal Tuning.
 
 #[cfg(feature = "gui")]
+use crate::dsp_node_ui::DspNodeUi;
+#[cfg(feature = "gui")]
 use eframe::egui::{self, Color32, FontId, RichText, Rounding, Stroke};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModernInspectorState {
     pub target_name: String,
+    #[serde(default)]
+    pub selected_node_kind: Option<String>,
+    #[serde(default)]
+    pub node_param_values: std::collections::HashMap<String, f32>,
     pub gain_db: f32,
     pub pan_val: f32,
     pub is_muted: bool,
@@ -28,6 +34,8 @@ impl Default for ModernInspectorState {
     fn default() -> Self {
         Self {
             target_name: "Synth 1".to_string(),
+            selected_node_kind: Some("AetherSynth".to_string()),
+            node_param_values: std::collections::HashMap::new(),
             gain_db: 0.0,
             pan_val: 0.0,
             is_muted: false,
@@ -210,5 +218,18 @@ pub fn show_modern_inspector(ui: &mut egui::Ui, state: &mut ModernInspectorState
                         });
                     });
             });
+
+            // Surgical DSP Node Inspector Section
+            if let Some(ref node_kind) = state.selected_node_kind {
+                ui.add_space(10.0);
+                ui.separator();
+                ui.add_space(6.0);
+                ui.label(RichText::new("DSP Parameter Inspector").font(FontId::proportional(11.0)).strong().color(Color32::from_rgb(200, 215, 235)));
+                ui.add_space(6.0);
+                let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+                if let Some(descriptor) = registry.get(node_kind) {
+                    descriptor.render_pro_inspector(ui, &mut state.node_param_values, None, 1, 0);
+                }
+            }
         });
 }

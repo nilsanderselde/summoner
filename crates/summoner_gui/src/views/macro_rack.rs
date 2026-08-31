@@ -509,15 +509,73 @@ pub fn show_macro_rack(
                             }
                         }
                         _ => {
-                            // Generic parameters fallback
-                            for (i, (key, default_val)) in node.params.iter_mut().enumerate() {
-                                if key == "bypassed" {
-                                    continue;
+                            let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+                            if let Some(descriptor) = registry.get(node.kind.as_str()) {
+                                ui.label(egui::RichText::new(&descriptor.description).font(egui::FontId::proportional(9.0)).color(egui::Color32::from_rgb(148, 163, 184)));
+                                ui.add_space(4.0);
+                                for (i, param_schema) in descriptor.params.iter().enumerate() {
+                                    let pid = ParamId(track.id as u32 * 1000 + idx as u32 * 20 + i as u32);
+                                    match &param_schema.widget {
+                                        crate::dsp_node_ui::DspWidgetKind::RotaryKnob { min, max, default, unit, .. } => {
+                                            let mut val = param_bus.get(pid).unwrap_or(*node.params.get(&param_schema.id).unwrap_or(default));
+                                            if ui.add(egui::Slider::new(&mut val, *min..=*max).text(format!("{} ({})", param_schema.name, unit))).changed() {
+                                                node.params.insert(param_schema.id.clone(), val);
+                                                if param_bus.get(pid).is_some() {
+                                                    param_bus.set(pid, val);
+                                                }
+                                            }
+                                        }
+                                        crate::dsp_node_ui::DspWidgetKind::VerticalFader { min, max, default, unit } => {
+                                            let mut val = param_bus.get(pid).unwrap_or(*node.params.get(&param_schema.id).unwrap_or(default));
+                                            if ui.add(egui::Slider::new(&mut val, *min..=*max).text(format!("{} ({})", param_schema.name, unit))).changed() {
+                                                node.params.insert(param_schema.id.clone(), val);
+                                                if param_bus.get(pid).is_some() {
+                                                    param_bus.set(pid, val);
+                                                }
+                                            }
+                                        }
+                                        crate::dsp_node_ui::DspWidgetKind::Toggle { default } => {
+                                            let mut b = param_bus.get(pid).map(|v| v > 0.5).unwrap_or_else(|| node.params.get(&param_schema.id).map(|v| *v > 0.5).unwrap_or(*default));
+                                            if ui.checkbox(&mut b, &param_schema.name).changed() {
+                                                let f = if b { 1.0 } else { 0.0 };
+                                                node.params.insert(param_schema.id.clone(), f);
+                                                if param_bus.get(pid).is_some() {
+                                                    param_bus.set(pid, f);
+                                                }
+                                            }
+                                        }
+                                        crate::dsp_node_ui::DspWidgetKind::EnumChoice { choices, default_idx } => {
+                                            let mut cur_idx = param_bus.get(pid).map(|v| v as usize).unwrap_or_else(|| node.params.get(&param_schema.id).map(|v| *v as usize).unwrap_or(*default_idx)).min(choices.len().saturating_sub(1));
+                                            ui.horizontal(|ui| {
+                                                ui.label(&param_schema.name);
+                                                egui::ComboBox::from_id_source(format!("{}_{}_{}", track.id, idx, i))
+                                                    .selected_text(choices.get(cur_idx).cloned().unwrap_or_default())
+                                                    .show_ui(ui, |ui| {
+                                                        for (c_i, choice) in choices.iter().enumerate() {
+                                                            if ui.selectable_value(&mut cur_idx, c_i, choice).clicked() {
+                                                                node.params.insert(param_schema.id.clone(), cur_idx as f32);
+                                                                if param_bus.get(pid).is_some() {
+                                                                    param_bus.set(pid, cur_idx as f32);
+                                                                }
+                                                            }
+                                                        }
+                                                    });
+                                            });
+                                        }
+                                        _ => {}
+                                    }
                                 }
-                                let mut val = param_bus.get(ParamId(track.id as u32 * 100 + i as u32)).unwrap_or(*default_val);
-                                if ui.add(egui::Slider::new(&mut val, 0.0..=1.0).text(key.as_str())).changed() {
-                                    *default_val = val;
-                                    param_bus.set(ParamId(track.id as u32 * 100 + i as u32), val);
+                            } else {
+                                // Generic parameters fallback
+                                for (i, (key, default_val)) in node.params.iter_mut().enumerate() {
+                                    if key == "bypassed" {
+                                        continue;
+                                    }
+                                    let mut val = param_bus.get(ParamId(track.id as u32 * 100 + i as u32)).unwrap_or(*default_val);
+                                    if ui.add(egui::Slider::new(&mut val, 0.0..=1.0).text(key.as_str())).changed() {
+                                        *default_val = val;
+                                        param_bus.set(ParamId(track.id as u32 * 100 + i as u32), val);
+                                    }
                                 }
                             }
                         }

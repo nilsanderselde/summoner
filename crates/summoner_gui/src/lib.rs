@@ -17,6 +17,7 @@
 
 pub mod ascii_renderer;
 pub mod docking_layout;
+pub mod dsp_node_ui;
 pub mod gpu_waveform;
 pub mod hud_overlay;
 pub mod layout_math;
@@ -193,6 +194,7 @@ pub use views::dialog_gating_view::DialogGatingView;
 pub use views::diffractive_propagation_view::DiffractivePropagationView;
 #[cfg(feature = "gui")]
 pub use views::dpi_scale_panel::DpiScalePanelView;
+pub use dsp_node_ui::*;
 #[cfg(feature = "gui")]
 pub use views::dsp_rack_dock::DspRackDockView;
 #[cfg(feature = "gui")]
