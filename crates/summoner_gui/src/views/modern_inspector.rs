@@ -220,13 +220,36 @@ pub fn show_modern_inspector(ui: &mut egui::Ui, state: &mut ModernInspectorState
             });
 
             // Surgical DSP Node Inspector Section
+            ui.add_space(10.0);
+            ui.separator();
+            ui.add_space(6.0);
+            ui.label(RichText::new("DSP Parameter Inspector").font(FontId::proportional(11.0)).strong().color(Color32::from_rgb(200, 215, 235)));
+            ui.add_space(6.0);
+
+            let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+
+            // Module Selector Dropdown
+            let cur_selection = state.selected_node_kind.clone().unwrap_or_else(|| "AetherSynth".to_string());
+            let cur_display = registry.get(&cur_selection).map(|d| format!("{} {}", d.category.icon(), d.display_name)).unwrap_or_else(|| cur_selection.clone());
+
+            ui.horizontal(|ui| {
+                ui.label(RichText::new("Module:").font(FontId::proportional(10.0)).color(Color32::from_rgb(148, 163, 184)));
+                egui::ComboBox::from_id_source("modern_inspector_node_selector")
+                    .selected_text(RichText::new(cur_display).font(FontId::proportional(10.0)).color(Color32::from_rgb(56, 189, 248)))
+                    .show_ui(ui, |ui| {
+                        for desc in registry.list_all() {
+                            let is_sel = state.selected_node_kind.as_deref() == Some(&desc.kind_id);
+                            let label = format!("{} {}", desc.category.icon(), desc.display_name);
+                            if ui.selectable_label(is_sel, label).clicked() {
+                                state.selected_node_kind = Some(desc.kind_id.clone());
+                            }
+                        }
+                    });
+            });
+
+            ui.add_space(8.0);
+
             if let Some(ref node_kind) = state.selected_node_kind {
-                ui.add_space(10.0);
-                ui.separator();
-                ui.add_space(6.0);
-                ui.label(RichText::new("DSP Parameter Inspector").font(FontId::proportional(11.0)).strong().color(Color32::from_rgb(200, 215, 235)));
-                ui.add_space(6.0);
-                let registry = crate::dsp_node_ui::DspNodeRegistry::new();
                 if let Some(descriptor) = registry.get(node_kind) {
                     descriptor.render_pro_inspector(ui, &mut state.node_param_values, None, 1, 0);
                 }

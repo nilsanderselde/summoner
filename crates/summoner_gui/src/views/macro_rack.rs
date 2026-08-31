@@ -102,6 +102,8 @@ pub fn show_macro_rack(
     // Render device blocks based on track nodes with reorder and bypass controls.
     let mut move_left_idx = None;
     let mut move_right_idx = None;
+    let mut remove_node_idx: Option<usize> = None;
+    let mut node_to_add: Option<summoner_project::schema::NodeConfig> = None;
 
     egui::ScrollArea::horizontal().show(ui, |ui| {
         ui.horizontal(|ui| {
@@ -156,6 +158,9 @@ pub fn show_macro_rack(
                         }
 
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            if ui.small_button("🗑").on_hover_text("Remove device from track").clicked() {
+                                remove_node_idx = Some(idx);
+                            }
                             if idx + 1 < num_nodes && ui.button("▶").clicked() {
                                 move_right_idx = Some(idx);
                             }
@@ -582,6 +587,110 @@ pub fn show_macro_rack(
                     }
                 });
             }
+
+            // Add Device Unit Block
+            let add_popup_id = ui.make_persistent_id(format!("add_device_rack_{}", track.id));
+            let mut add_open = ui.data(|d| d.get_temp::<bool>(add_popup_id).unwrap_or(false));
+            let mut filter_cat: Option<crate::dsp_node_ui::DspNodeCategory> = ui.data(|d| d.get_temp(ui.make_persistent_id(format!("add_cat_{}", track.id))));
+
+            let add_frame = egui::Frame::window(ui.style())
+                .fill(egui::Color32::from_rgb(16, 22, 34))
+                .stroke(egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(40, 60, 90)));
+
+            add_frame.show(ui, |ui| {
+                ui.set_width(180.0);
+                ui.vertical_centered(|ui| {
+                    ui.add_space(30.0);
+                    if ui.button(egui::RichText::new("➕ Add DSP Module").font(egui::FontId::proportional(12.0)).strong().color(egui::Color32::from_rgb(56, 189, 248))).clicked() {
+                        add_open = !add_open;
+                        ui.data_mut(|d| d.insert_temp(add_popup_id, add_open));
+                    }
+                    ui.label(egui::RichText::new("Insert into chain").font(egui::FontId::proportional(9.0)).color(egui::Color32::from_rgb(148, 163, 184)));
+                    ui.add_space(30.0);
+                });
+            });
+
+            if add_open {
+                egui::Window::new("🎛️ Add DSP Module to Chain")
+                    .id(add_popup_id)
+                    .collapsible(false)
+                    .resizable(true)
+                    .default_size([420.0, 360.0])
+                    .show(ui.ctx(), |ui| {
+                        let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+
+                        // Category filter tabs
+                        ui.horizontal_wrapped(|ui| {
+                            let is_all = filter_cat.is_none();
+                            if ui.selectable_label(is_all, "All").clicked() {
+                                filter_cat = None;
+                                ui.data_mut(|d| d.insert_temp(ui.make_persistent_id(format!("add_cat_{}", track.id)), filter_cat));
+                            }
+                            let categories = [
+                                crate::dsp_node_ui::DspNodeCategory::Oscillator,
+                                crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel,
+                                crate::dsp_node_ui::DspNodeCategory::FilterEq,
+                                crate::dsp_node_ui::DspNodeCategory::DynamicsMaster,
+                                crate::dsp_node_ui::DspNodeCategory::DistortionSaturation,
+                                crate::dsp_node_ui::DspNodeCategory::TimeSpace,
+                                crate::dsp_node_ui::DspNodeCategory::SpatialSurround,
+                                crate::dsp_node_ui::DspNodeCategory::SpectralResynthesis,
+                                crate::dsp_node_ui::DspNodeCategory::NeuralAi,
+                                crate::dsp_node_ui::DspNodeCategory::CompositeSynth,
+                                crate::dsp_node_ui::DspNodeCategory::SamplerSlicer,
+                            ];
+                            for cat in categories {
+                                let is_sel = filter_cat == Some(cat);
+                                if ui.selectable_label(is_sel, format!("{} {}", cat.icon(), cat.name())).clicked() {
+                                    filter_cat = if is_sel { None } else { Some(cat) };
+                                    ui.data_mut(|d| d.insert_temp(ui.make_persistent_id(format!("add_cat_{}", track.id)), filter_cat));
+                                }
+                            }
+                        });
+
+                        ui.separator();
+
+                        egui::ScrollArea::vertical().max_height(280.0).show(ui, |ui| {
+                            let descriptors = if let Some(cat) = filter_cat {
+                                registry.list_by_category(cat)
+                            } else {
+                                registry.list_all()
+                            };
+
+                            for desc in descriptors {
+                                let (r, g, b) = desc.category.color_rgb();
+                                let cat_color = egui::Color32::from_rgb(r, g, b);
+
+                                egui::Frame::none()
+                                    .fill(egui::Color32::from_rgb(18, 24, 38))
+                                    .stroke(egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(32, 44, 68)))
+                                    .rounding(egui::Rounding::same(4.0))
+                                    .inner_margin(egui::Margin::symmetric(8.0, 6.0))
+                                    .show(ui, |ui| {
+                                        ui.horizontal(|ui| {
+                                            ui.label(egui::RichText::new(desc.category.icon()).font(egui::FontId::proportional(14.0)));
+                                            ui.vertical(|ui| {
+                                                ui.label(egui::RichText::new(&desc.display_name).font(egui::FontId::proportional(11.0)).strong().color(egui::Color32::from_rgb(241, 245, 249)));
+                                                ui.label(egui::RichText::new(&desc.description).font(egui::FontId::proportional(9.0)).color(egui::Color32::from_rgb(148, 163, 184)));
+                                            });
+                                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                                if ui.button(egui::RichText::new("Insert").font(egui::FontId::proportional(10.0)).color(cat_color)).clicked() {
+                                                    node_to_add = Some(desc.default_node_config());
+                                                    ui.data_mut(|d| d.insert_temp(add_popup_id, false));
+                                                }
+                                            });
+                                        });
+                                    });
+                                ui.add_space(4.0);
+                            }
+                        });
+
+                        ui.add_space(8.0);
+                        if ui.button("Close").clicked() {
+                            ui.data_mut(|d| d.insert_temp(add_popup_id, false));
+                        }
+                    });
+            }
         });
     });
 
@@ -594,6 +703,18 @@ pub fn show_macro_rack(
         if idx + 1 < track.nodes.len() {
             track.nodes.swap(idx, idx + 1);
         }
+    }
+
+    // Execute removal if requested
+    if let Some(idx) = remove_node_idx {
+        if idx < track.nodes.len() {
+            track.nodes.remove(idx);
+        }
+    }
+
+    // Execute node addition if requested
+    if let Some(new_node) = node_to_add {
+        track.nodes.push(new_node);
     }
 }
 
