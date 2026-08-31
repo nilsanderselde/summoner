@@ -13,6 +13,10 @@ pub const MIN_KNOB_HIT_RADIUS: f32 = 22.0; // 44x44pt touch bounding target
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModernDeviceRackState {
     pub device_name: String,
+    #[serde(default)]
+    pub selected_node_kind: Option<String>,
+    #[serde(default)]
+    pub node_param_values: std::collections::HashMap<String, f32>,
     pub is_enabled: bool,
     pub is_minimized: bool,
     // Knobs
@@ -37,6 +41,8 @@ impl Default for ModernDeviceRackState {
     fn default() -> Self {
         Self {
             device_name: "Synth 1".to_string(),
+            selected_node_kind: Some("AetherSynth".to_string()),
+            node_param_values: std::collections::HashMap::new(),
             is_enabled: true,
             is_minimized: false,
             cutoff: 0.65,
@@ -75,6 +81,8 @@ pub fn show_modern_device_rack(
         .show(ui, |ui| {
             ui.set_height(rack_height);
 
+            let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+
             // 1. Device Box Header (Rule 2 from GUI_RULES.md)
             ui.horizontal(|ui| {
                 ui.label(RichText::new("Device Rack").font(FontId::proportional(12.0)).strong().color(Color32::from_rgb(241, 245, 249)));
@@ -83,7 +91,23 @@ pub fn show_modern_device_rack(
                 if ui.button(RichText::new("⏻").font(FontId::proportional(12.0)).color(pwr_col)).clicked() {
                     state.is_enabled = !state.is_enabled;
                 }
-                ui.label(RichText::new(&state.device_name).font(FontId::proportional(11.0)).color(Color32::from_rgb(148, 163, 184)));
+
+                // DSP Module Selection Dropdown
+                let cur_selection = state.selected_node_kind.clone().unwrap_or_else(|| "AetherSynth".to_string());
+                let cur_display = registry.get(&cur_selection).map(|d| format!("{} {}", d.category.icon(), d.display_name)).unwrap_or_else(|| state.device_name.clone());
+
+                egui::ComboBox::from_id_source("device_rack_module_selector")
+                    .selected_text(RichText::new(cur_display).font(FontId::proportional(11.0)).color(Color32::from_rgb(56, 189, 248)))
+                    .show_ui(ui, |ui| {
+                        for desc in registry.list_all() {
+                            let is_sel = state.selected_node_kind.as_deref() == Some(&desc.kind_id);
+                            let label = format!("{} {} ({})", desc.category.icon(), desc.display_name, desc.category.name());
+                            if ui.selectable_label(is_sel, label).clicked() {
+                                state.selected_node_kind = Some(desc.kind_id.clone());
+                                state.device_name = desc.display_name.clone();
+                            }
+                        }
+                    });
 
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     let _ = ui.small_button("✕");
@@ -93,7 +117,7 @@ pub fn show_modern_device_rack(
                         .rounding(Rounding::same(3.0))
                         .inner_margin(egui::Margin::symmetric(6.0, 2.0))
                         .show(ui, |ui| {
-                            ui.label(RichText::new("Reusable").font(FontId::proportional(9.0)).color(Color32::from_rgb(148, 163, 184)));
+                            ui.label(RichText::new("Zero CLI Left Behind").font(FontId::proportional(9.0)).color(Color32::from_rgb(148, 163, 184)));
                         });
                 });
             });
@@ -101,6 +125,13 @@ pub fn show_modern_device_rack(
             ui.add_space(6.0);
             ui.separator();
             ui.add_space(6.0);
+
+            if !state.is_enabled {
+                ui.centered_and_justified(|ui| {
+                    ui.label(RichText::new("DEVICE BYPASSED").font(FontId::proportional(14.0)).color(Color32::from_rgb(100, 116, 139)));
+                });
+                return;
+            }
 
             // 2. Chassis Main Body (5 distinct modular sections)
             ui.horizontal(|ui| {
