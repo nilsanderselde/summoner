@@ -30,7 +30,7 @@ impl ModernViewTab {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModernTopBarState {
     pub bpm: f64,
     pub key_signature: String,
@@ -41,6 +41,27 @@ pub struct ModernTopBarState {
     pub is_looping: bool,
     pub master_peak_db: f32,
     pub active_tab: ModernViewTab,
+    #[serde(default = "default_selected_preset")]
+    pub selected_preset: String,
+    #[serde(default = "default_available_presets")]
+    pub available_presets: Vec<String>,
+}
+
+fn default_selected_preset() -> String {
+    "Init Synth 1".to_string()
+}
+
+fn default_available_presets() -> Vec<String> {
+    vec![
+        "Init Synth 1".to_string(),
+        "Aether Warm Pad".to_string(),
+        "808 Sub Kick".to_string(),
+        "Vintage Tape Lead".to_string(),
+        "Karplus Acoustic Pluck".to_string(),
+        "Neural Vocal Demucs".to_string(),
+        "Ambient Crystal Bells".to_string(),
+        "Lo-Fi Breakbeat".to_string(),
+    ]
 }
 
 impl Default for ModernTopBarState {
@@ -55,6 +76,8 @@ impl Default for ModernTopBarState {
             is_looping: true,
             master_peak_db: 1.2,
             active_tab: ModernViewTab::Arranger,
+            selected_preset: default_selected_preset(),
+            available_presets: default_available_presets(),
         }
     }
 }
@@ -97,7 +120,31 @@ pub fn show_modern_top_bar(
                 // Open menu
             }
 
-            ui.add_space(16.0);
+            ui.add_space(12.0);
+
+            // Quick Preset Selector (Novice Top-Level UX)
+            egui::Frame::none()
+                .fill(Color32::from_rgb(14, 20, 32))
+                .stroke(Stroke::new(1.0_f32, Color32::from_rgb(28, 40, 60)))
+                .rounding(Rounding::same(6.0))
+                .inner_margin(egui::Margin::symmetric(8.0, 4.0))
+                .show(ui, |ui| {
+                    ui.horizontal(|ui| {
+                        ui.label(RichText::new("Preset:").font(FontId::proportional(9.0)).color(Color32::from_rgb(100, 116, 139)));
+                        egui::ComboBox::from_id_source("top_bar_preset_selector")
+                            .selected_text(RichText::new(&state.selected_preset).font(FontId::proportional(11.0)).strong().color(Color32::from_rgb(56, 189, 248)))
+                            .show_ui(ui, |ui| {
+                                for preset in &state.available_presets {
+                                    let is_sel = state.selected_preset == *preset;
+                                    if ui.selectable_label(is_sel, preset).clicked() {
+                                        state.selected_preset = preset.clone();
+                                    }
+                                }
+                            });
+                    });
+                });
+
+            ui.add_space(14.0);
 
             // Transport Stats Group (BPM, Key, Sig, CPU)
             egui::Frame::none()
@@ -298,4 +345,31 @@ pub fn show_modern_top_bar(
             });
         },
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_modern_top_bar_defaults() {
+        let state = ModernTopBarState::default();
+        assert_eq!(state.bpm, 120.00);
+        assert_eq!(state.key_signature, "Am");
+        assert_eq!(state.selected_preset, "Init Synth 1");
+        assert!(!state.available_presets.is_empty());
+    }
+
+    #[test]
+    #[cfg(feature = "gui")]
+    fn test_modern_top_bar_headless_rendering() {
+        let mut state = ModernTopBarState::default();
+        let ctx = egui::Context::default();
+
+        let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                show_modern_top_bar(ui, &mut state, || {});
+            });
+        });
+    }
 }

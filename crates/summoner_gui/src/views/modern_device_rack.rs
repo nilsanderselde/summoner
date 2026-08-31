@@ -82,6 +82,7 @@ pub fn show_modern_device_rack(
             ui.set_height(rack_height);
 
             let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+            let cur_selection = state.selected_node_kind.clone().unwrap_or_else(|| "AetherSynth".to_string());
 
             // 1. Device Box Header (Rule 2 from GUI_RULES.md)
             ui.horizontal(|ui| {
@@ -93,7 +94,6 @@ pub fn show_modern_device_rack(
                 }
 
                 // DSP Module Selection Dropdown
-                let cur_selection = state.selected_node_kind.clone().unwrap_or_else(|| "AetherSynth".to_string());
                 let cur_display = registry.get(&cur_selection).map(|d| format!("{} {}", d.category.icon(), d.display_name)).unwrap_or_else(|| state.device_name.clone());
 
                 egui::ComboBox::from_id_source("device_rack_module_selector")
@@ -133,6 +133,10 @@ pub fn show_modern_device_rack(
                 return;
             }
 
+            let opt_desc = registry.get(&cur_selection);
+            let (r, g, b) = opt_desc.map(|d| d.category.color_rgb()).unwrap_or((56, 189, 248));
+            let cat_accent = Color32::from_rgb(r, g, b);
+
             // 2. Chassis Main Body (5 distinct modular sections)
             ui.horizontal(|ui| {
                 // Section 1: Rotary Knobs Grid (2 rows x 3 cols)
@@ -143,23 +147,86 @@ pub fn show_modern_device_rack(
                     .inner_margin(egui::Margin::symmetric(8.0, 6.0))
                     .show(ui, |ui| {
                         ui.vertical(|ui| {
-                            // Top Row Knobs
-                            ui.horizontal(|ui| {
-                                draw_rotary_dial(ui, "Cutoff", &mut state.cutoff, Color32::from_rgb(56, 189, 248));
+                            if let Some(desc) = opt_desc {
+                                let knob_params: Vec<&crate::dsp_node_ui::DspParamSchema> = desc
+                                    .params
+                                    .iter()
+                                    .filter(|p| matches!(p.widget, crate::dsp_node_ui::DspWidgetKind::RotaryKnob { .. } | crate::dsp_node_ui::DspWidgetKind::VerticalFader { .. }))
+                                    .collect();
+
+                                let p_len = knob_params.len();
+                                // Top Row: first 3 parameters
+                                ui.horizontal(|ui| {
+                                    for i in 0..3 {
+                                        if i < p_len {
+                                            let p = knob_params[i];
+                                            let default_norm = match &p.widget {
+                                                crate::dsp_node_ui::DspWidgetKind::RotaryKnob { min, max, default, .. } => {
+                                                    ((*default - *min) / (*max - *min).max(1e-5)).clamp(0.0, 1.0)
+                                                }
+                                                crate::dsp_node_ui::DspWidgetKind::VerticalFader { min, max, default, .. } => {
+                                                    ((*default - *min) / (*max - *min).max(1e-5)).clamp(0.0, 1.0)
+                                                }
+                                                _ => 0.5,
+                                            };
+                                            let val = state.node_param_values.entry(p.id.clone()).or_insert(default_norm);
+                                            let color = if i == 0 { Color32::from_rgb(56, 189, 248) } else { cat_accent };
+                                            draw_rotary_dial(ui, &p.name, val, color);
+                                        } else {
+                                            // Blank indicator for unoccupied slot
+                                            let mut dummy = 0.5;
+                                            draw_rotary_dial(ui, "---", &mut dummy, Color32::from_rgb(45, 55, 75));
+                                        }
+                                        if i < 2 {
+                                            ui.add_space(4.0);
+                                        }
+                                    }
+                                });
                                 ui.add_space(4.0);
-                                draw_rotary_dial(ui, "Reso", &mut state.resonance, Color32::from_rgb(245, 158, 11));
+                                // Bottom Row: next 3 parameters (indices 3..6)
+                                ui.horizontal(|ui| {
+                                    for i in 3..6 {
+                                        if i < p_len {
+                                            let p = knob_params[i];
+                                            let default_norm = match &p.widget {
+                                                crate::dsp_node_ui::DspWidgetKind::RotaryKnob { min, max, default, .. } => {
+                                                    ((*default - *min) / (*max - *min).max(1e-5)).clamp(0.0, 1.0)
+                                                }
+                                                crate::dsp_node_ui::DspWidgetKind::VerticalFader { min, max, default, .. } => {
+                                                    ((*default - *min) / (*max - *min).max(1e-5)).clamp(0.0, 1.0)
+                                                }
+                                                _ => 0.5,
+                                            };
+                                            let val = state.node_param_values.entry(p.id.clone()).or_insert(default_norm);
+                                            let color = if i == 3 { Color32::from_rgb(56, 189, 248) } else { cat_accent };
+                                            draw_rotary_dial(ui, &p.name, val, color);
+                                        } else {
+                                            let mut dummy = 0.5;
+                                            draw_rotary_dial(ui, "---", &mut dummy, Color32::from_rgb(45, 55, 75));
+                                        }
+                                        if i < 5 {
+                                            ui.add_space(4.0);
+                                        }
+                                    }
+                                });
+                            } else {
+                                // Default / Fallback knobs
+                                ui.horizontal(|ui| {
+                                    draw_rotary_dial(ui, "Cutoff", &mut state.cutoff, Color32::from_rgb(56, 189, 248));
+                                    ui.add_space(4.0);
+                                    draw_rotary_dial(ui, "Reso", &mut state.resonance, Color32::from_rgb(245, 158, 11));
+                                    ui.add_space(4.0);
+                                    draw_rotary_dial(ui, "Decay", &mut state.decay, Color32::from_rgb(245, 158, 11));
+                                });
                                 ui.add_space(4.0);
-                                draw_rotary_dial(ui, "Decay", &mut state.decay, Color32::from_rgb(245, 158, 11));
-                            });
-                            ui.add_space(4.0);
-                            // Bottom Row Knobs
-                            ui.horizontal(|ui| {
-                                draw_rotary_dial(ui, "Amt", &mut state.env_decay, Color32::from_rgb(56, 189, 248));
-                                ui.add_space(4.0);
-                                draw_rotary_dial(ui, "Amt", &mut state.mod_amt, Color32::from_rgb(245, 158, 11));
-                                ui.add_space(4.0);
-                                draw_rotary_dial(ui, "Drive", &mut state.drive, Color32::from_rgb(245, 158, 11));
-                            });
+                                ui.horizontal(|ui| {
+                                    draw_rotary_dial(ui, "Amt", &mut state.env_decay, Color32::from_rgb(56, 189, 248));
+                                    ui.add_space(4.0);
+                                    draw_rotary_dial(ui, "Amt", &mut state.mod_amt, Color32::from_rgb(245, 158, 11));
+                                    ui.add_space(4.0);
+                                    draw_rotary_dial(ui, "Drive", &mut state.drive, Color32::from_rgb(245, 158, 11));
+                                });
+                            }
                         });
                     });
 
@@ -427,4 +494,46 @@ fn draw_vertical_fader(ui: &mut egui::Ui, label: &str, value: &mut f32) {
         FontId::proportional(8.0),
         Color32::from_rgb(200, 215, 235),
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_modern_device_rack_defaults() {
+        let state = ModernDeviceRackState::default();
+        assert!(state.is_enabled);
+        assert_eq!(state.selected_node_kind.as_deref(), Some("AetherSynth"));
+        assert_eq!(state.device_name, "Synth 1");
+    }
+
+    #[test]
+    #[cfg(feature = "gui")]
+    fn test_modern_device_rack_headless_rendering_dynamic_modules() {
+        let mut state = ModernDeviceRackState::default();
+        let ctx = egui::Context::default();
+
+        let modules_to_test = [
+            "AetherSynth",
+            "DemucsV4Separator",
+            "SingingSynthesisNode",
+            "AiAutonomousMasteringEngine",
+            "PluckedStringNode",
+            "BowedString",
+            "FilterSVF",
+            "NavierStokesFluidNode",
+        ];
+
+        let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                for mod_kind in modules_to_test {
+                    state.selected_node_kind = Some(mod_kind.to_string());
+                    show_modern_device_rack(ui, &mut state, None);
+                }
+            });
+        });
+
+        assert!(!state.node_param_values.is_empty());
+    }
 }

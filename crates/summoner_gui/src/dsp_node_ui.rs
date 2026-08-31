@@ -2759,6 +2759,313 @@ impl DspNodeRegistry {
             .with_param(DspParamSchema::knob("dry_wet", "Plugin Dry / Wet Mix", 0.0, 1.0, 1.0, "%", MacroRole::Space, "Overall plugin output blend"))
             .with_param(DspParamSchema::knob("output_gain", "Plugin Output Gain", -24.0, 12.0, 0.0, "dB", MacroRole::Punch, "Post-plugin makeup gain"))
         );
+
+        // ==========================================
+        // 24. AI Autonomous Mixing & Neural Stems
+        // ==========================================
+        self.register(
+            DspNodeDescriptor::new(
+                "DemucsV4Separator",
+                "Demucs v4 AI 6-Stem Separator",
+                DspNodeCategory::NeuralAi,
+                "Hybrid Spectrogram Transformer decomposing mixed audio into Vocals, Drums, Bass, Guitar, Piano, and Other.",
+            )
+            .with_param(DspParamSchema::knob("vocals_gain", "Vocals Gain", 0.0, 2.0, 1.0, "x", MacroRole::Tone, "Extracted vocals volume level"))
+            .with_param(DspParamSchema::knob("drums_gain", "Drums Gain", 0.0, 2.0, 1.0, "x", MacroRole::Punch, "Extracted drum track volume level"))
+            .with_param(DspParamSchema::knob("bass_gain", "Bass Gain", 0.0, 2.0, 1.0, "x", MacroRole::Punch, "Extracted bassline volume level"))
+            .with_param(DspParamSchema::knob("guitar_gain", "Guitar Gain", 0.0, 2.0, 1.0, "x", MacroRole::Character, "Extracted guitar volume level"))
+            .with_param(DspParamSchema::knob("piano_gain", "Piano Gain", 0.0, 2.0, 1.0, "x", MacroRole::Character, "Extracted piano/keys volume level"))
+            .with_param(DspParamSchema::knob("other_gain", "Other Gain", 0.0, 2.0, 1.0, "x", MacroRole::Space, "Extracted accompaniment volume level"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "SpectralNeuralResynthesizerNode",
+                "Spectral Neural Resynthesizer",
+                DspNodeCategory::NeuralAi,
+                "Real-time latent auto-encoder spectral re-synthesis with continuous timbre morphing.",
+            )
+            .with_param(DspParamSchema::knob("morph_factor", "Timbre Morph", 0.0, 1.0, 0.5, "%", MacroRole::Character, "Latent interpolation space"))
+            .with_param(DspParamSchema::knob("temperature", "Sampling Temp", 0.1, 2.0, 1.0, "", MacroRole::Tone, "Neural sampling entropy"))
+            .with_param(DspParamSchema::knob("mix", "Dry / Wet Mix", 0.0, 1.0, 0.8, "%", MacroRole::Space, "Re-synthesized signal blend"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "AiAutonomousMasteringEngine",
+                "AI Autonomous Mastering Suite",
+                DspNodeCategory::DynamicsMaster,
+                "Intelligent neural mastering engine targeting EBU R128 integrated loudness with true-peak safety.",
+            )
+            .with_param(DspParamSchema::knob("target_lufs", "Target Loudness", -24.0, -6.0, -14.0, "LUFS", MacroRole::Punch, "EBU R128 Integrated Target"))
+            .with_param(DspParamSchema::knob("ceiling_dbtp", "True-Peak Ceiling", -3.0, 0.0, -1.0, "dBTP", MacroRole::Punch, "Inter-sample peak ceiling"))
+            .with_param(DspParamSchema::knob("dynamic_warmth", "Analog Warmth", 0.0, 1.0, 0.35, "%", MacroRole::Tone, "Tape and tube harmonic color"))
+            .with_param(DspParamSchema::knob("stereo_expansion", "Stereo Imager", 0.0, 1.0, 0.25, "%", MacroRole::Space, "Phase-coherent stereo widening"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "VocalPitchFormantCorrectorNode",
+                "Neural Vocal Pitch & Formant Shifter",
+                DspNodeCategory::NeuralAi,
+                "Deterministic neural vocal processor decoupling pitch tracking from vocal tract formant preservation.",
+            )
+            .with_param(DspParamSchema::knob("correction_speed_ms", "Correction Speed", 0.0, 100.0, 15.0, "ms", MacroRole::Punch, "Pitch snapping response time"))
+            .with_param(DspParamSchema::knob("formant_shift_semitones", "Formant Shift", -12.0, 12.0, 0.0, "st", MacroRole::Tone, "Vocal tract length shift"))
+            .with_param(DspParamSchema::knob("vibrato_depth", "Vibrato Depth", 0.0, 1.0, 0.2, "%", MacroRole::Character, "Natural vibrato modulation"))
+            .with_param(DspParamSchema::knob("neural_smoothing", "Smoothing", 0.0, 1.0, 0.5, "%", MacroRole::Space, "Phase vocoder artifact smoothing"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "NeuralAudioRepairNode",
+                "Neural Audio Restoration & Inpainting",
+                DspNodeCategory::NeuralAi,
+                "Spectral convolutional restoration network removing background noise, clicks, hum, and clipped bursts.",
+            )
+            .with_param(DspParamSchema::knob("denoise_amount", "De-Noise Depth", 0.0, 1.0, 0.6, "%", MacroRole::Tone, "Stationary & dynamic noise reduction"))
+            .with_param(DspParamSchema::knob("declick_sensitivity", "De-Click Sens", 0.0, 1.0, 0.5, "%", MacroRole::Punch, "Transient click detection threshold"))
+            .with_param(DspParamSchema::knob("inpaint_window_ms", "Inpaint Window", 1.0, 50.0, 10.0, "ms", MacroRole::Character, "Neural waveform reconstruction span"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "AiMixBalanceAnalyzer",
+                "AI Dynamic Mix Balance Analyzer",
+                DspNodeCategory::Utility,
+                "Real-time psychoacoustic spectral masking analyzer detecting frequency clashes across active stems.",
+            )
+            .with_param(DspParamSchema::choice("spectral_resolution", "FFT Resolution", &["Standard (512)", "Fine (1024)", "Ultra (2048)"], 1, "Spectral analysis precision"))
+            .with_param(DspParamSchema::knob("masking_threshold_db", "Masking Threshold", -30.0, 0.0, -12.0, "dB", MacroRole::Tone, "Clash detection sensitivity"))
+            .with_param(DspParamSchema::knob("auto_duck_depth", "Auto-Ducking", 0.0, 1.0, 0.4, "%", MacroRole::Punch, "Intelligent conflicting band ducking"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "AutomatedDrumReplacer",
+                "AI Transient Drum Sound Replacer",
+                DspNodeCategory::SamplerSlicer,
+                "Dynamic transient onset tracker triggering replacement drum samples with dynamic velocity matching.",
+            )
+            .with_param(DspParamSchema::knob("trigger_threshold_db", "Threshold", -40.0, 0.0, -18.0, "dB", MacroRole::Punch, "Transient trigger threshold"))
+            .with_param(DspParamSchema::knob("retrigger_holdoff_ms", "Holdoff Gap", 10.0, 200.0, 50.0, "ms", MacroRole::Punch, "Minimum time between hits"))
+            .with_param(DspParamSchema::knob("sample_velocity_dynamic", "Velocity Scaling", 0.0, 1.0, 0.8, "%", MacroRole::Character, "Hit velocity sensitivity"))
+            .with_param(DspParamSchema::knob("blend_original", "Original Bleed", 0.0, 1.0, 0.2, "%", MacroRole::Space, "Acoustic mic bleed blend"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "NeuralHarmonicExciterNode",
+                "Neural Valve & Air Harmonic Exciter",
+                DspNodeCategory::DistortionSaturation,
+                "High-frequency dynamic harmonic generator adding analog air, presence, and vintage warmth.",
+            )
+            .with_param(DspParamSchema::log_knob("air_freq_hz", "Air Band", 5000.0, 20000.0, 12000.0, "Hz", MacroRole::Tone, "Exciter corner frequency"))
+            .with_param(DspParamSchema::knob("drive_db", "Exciter Drive", 0.0, 24.0, 6.0, "dB", MacroRole::Punch, "Harmonic generation drive"))
+            .with_param(DspParamSchema::choice("tube_color", "Harmonic Profile", &["Triode Warmth", "Pentode Sparkle", "Tape Flux", "Transformer"], 0, "Color profile"))
+            .with_param(DspParamSchema::knob("mix", "Dry / Wet Mix", 0.0, 1.0, 0.35, "%", MacroRole::Space, "Exciter signal blend"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "AiSongStructureDetector",
+                "AI Song Structure & Energy Tracker",
+                DspNodeCategory::Utility,
+                "Deep neural audio analyzer detecting Intro, Verse, Chorus, Bridge, Drop, and Outro arrangement boundaries.",
+            )
+            .with_param(DspParamSchema::knob("min_section_bars", "Min Section", 2.0, 32.0, 8.0, "bars", MacroRole::None, "Minimum section duration"))
+            .with_param(DspParamSchema::knob("energy_sensitivity", "Energy Sensitivity", 0.0, 1.0, 0.5, "%", MacroRole::Tone, "Dynamic boundary sensitivity"))
+            .with_param(DspParamSchema::toggle("auto_marker_placement", "Auto Marker Placement", true, "Place timeline marker flags automatically"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "AutomatedDynamicEqNode",
+                "AI Anti-Masking Dynamic Equalizer",
+                DspNodeCategory::FilterEq,
+                "Intelligent multi-band dynamic equalizer suppressing transient frequency clashes in real time.",
+            )
+            .with_param(DspParamSchema::knob("num_dynamic_bands", "Band Count", 1.0, 8.0, 4.0, "bands", MacroRole::Tone, "Active dynamic filter bands"))
+            .with_param(DspParamSchema::knob("max_cut_db", "Max Cut", -18.0, 0.0, -6.0, "dB", MacroRole::Punch, "Maximum dynamic reduction"))
+            .with_param(DspParamSchema::knob("detection_sensitivity", "Sensitivity", 0.0, 1.0, 0.65, "%", MacroRole::Character, "Sidechain detection sensitivity"))
+            .with_param(DspParamSchema::toggle("sidechain_unmask", "Sidechain Unmask", true, "Enable multi-track unmasking"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "NeuralTransientShaperNode",
+                "Neural Multi-Band Transient Shaper",
+                DspNodeCategory::DynamicsMaster,
+                "Frequency-aware neural transient controller shaping punch, attack crack, and tail room decay.",
+            )
+            .with_param(DspParamSchema::knob("attack_gain_db", "Attack Gain", -12.0, 12.0, 3.0, "dB", MacroRole::Punch, "Initial transient punch boost/cut"))
+            .with_param(DspParamSchema::knob("sustain_gain_db", "Sustain Gain", -12.0, 12.0, 0.0, "dB", MacroRole::Space, "Body and tail sustain gain"))
+            .with_param(DspParamSchema::log_knob("transient_split_hz", "Crossover Freq", 100.0, 8000.0, 1200.0, "Hz", MacroRole::Tone, "Split band crossover"))
+            .with_param(DspParamSchema::toggle("neural_detection", "Neural Envelope Tracking", true, "High-precision neural onset tracking"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "AiPolyphonicChordExtractor",
+                "AI Polyphonic Chord & Key Extractor",
+                DspNodeCategory::Utility,
+                "Neural chromagram analyzer extracting polyphonic chord progressions, modal keys, and microtonal roots.",
+            )
+            .with_param(DspParamSchema::choice("chroma_resolution", "Tuning Framework", &["12-Tone Standard", "24-Tone Microtonal", "31-EDO Fokker", "53-EDO JI"], 0, "Chroma detection scale"))
+            .with_param(DspParamSchema::knob("harmonic_confidence_min", "Confidence Gate", 0.0, 1.0, 0.6, "%", MacroRole::Tone, "Minimum detection certainty"))
+            .with_param(DspParamSchema::toggle("auto_midi_export", "Live MIDI Chord Stream", true, "Stream detected chord notes to piano roll"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "NeuralBassGeneratorNode",
+                "Neural Sub-Bass Synthesizer",
+                DspNodeCategory::Oscillator,
+                "Deep sub-harmonic bassline synthesizer generating complementary bottom-end foundation from audio inputs.",
+            )
+            .with_param(DspParamSchema::knob("sub_octave_mix", "Sub Octave Level", 0.0, 1.0, 0.7, "%", MacroRole::Punch, "Synthesized sub-bass volume"))
+            .with_param(DspParamSchema::knob("saturation_drive", "Drive Saturation", 0.0, 1.0, 0.4, "%", MacroRole::Character, "Even/odd harmonic saturation"))
+            .with_param(DspParamSchema::log_knob("lowpass_cutoff_hz", "Cutoff Freq", 40.0, 500.0, 160.0, "Hz", MacroRole::Tone, "Lowpass filter cutoff"))
+            .with_param(DspParamSchema::knob("sidechain_duck", "Kick Ducking", 0.0, 1.0, 0.5, "%", MacroRole::Space, "Transient ducking depth"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "AudioAlignmentTool",
+                "Sub-Sample Phase Aligner & Polarity",
+                DspNodeCategory::Utility,
+                "Sub-sample correlation alignment engine eliminating comb filtering between multi-mic recordings.",
+            )
+            .with_param(DspParamSchema::knob("max_delay_ms", "Delay Correction", 0.0, 50.0, 10.0, "ms", MacroRole::Space, "Time alignment delay"))
+            .with_param(DspParamSchema::toggle("polarity_invert", "Invert Phase (180°)", false, "Flip acoustic polarity"))
+            .with_param(DspParamSchema::toggle("sub_sample_accuracy", "Sinc Interpolation", true, "Fractional sample alignment"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "SingingSynthesisNode",
+                "Neural Text-to-Singing Voice Synthesizer",
+                DspNodeCategory::NeuralAi,
+                "Deep autoregressive vocal synthesizer singing phonetic lyrics with microtonal pitch expressivity.",
+            )
+            .with_param(DspParamSchema::choice("voice_model", "Voice Character", &["Neural Soprano", "Neural Alto", "Neural Tenor", "Neural Baritone", "Synthesizer Voice"], 0, "Vocal identity timbre"))
+            .with_param(DspParamSchema::knob("vibrato_rate_hz", "Vibrato Speed", 2.0, 10.0, 5.5, "Hz", MacroRole::Character, "LFO pitch modulation speed"))
+            .with_param(DspParamSchema::knob("breathiness", "Aspiration Breath", 0.0, 1.0, 0.25, "%", MacroRole::Tone, "Vocal fold unvoiced air"))
+            .with_param(DspParamSchema::knob("consonant_clarity", "Consonant Attack", 0.0, 1.0, 0.75, "%", MacroRole::Punch, "Phoneme transient articulation"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "NeuralRoomAcousticMatcher",
+                "Neural Room Acoustic Matcher",
+                DspNodeCategory::SpatialSurround,
+                "Deep convolutional acoustic matcher recreating the reverberation, reflection, and absorption of reference spaces.",
+            )
+            .with_param(DspParamSchema::knob("rt60_target_sec", "Target RT60", 0.1, 10.0, 1.8, "s", MacroRole::Space, "Decay reverberation time"))
+            .with_param(DspParamSchema::knob("spectral_tilt", "Wall Spectral Tilt", -6.0, 6.0, 0.0, "dB/oct", MacroRole::Tone, "High/low frequency absorption slope"))
+            .with_param(DspParamSchema::knob("direct_to_reverb_ratio", "D/R Ratio", -24.0, 24.0, 0.0, "dB", MacroRole::Punch, "Direct versus diffuse balance"))
+            .with_param(DspParamSchema::knob("ir_length_sec", "IR Tail Length", 0.5, 8.0, 3.0, "s", MacroRole::Character, "Convolution impulse tail duration"))
+        );
+
+        // ==========================================
+        // 25. Neural Voice, AutoTune, Gates & De-Essers
+        // ==========================================
+        self.register(
+            DspNodeDescriptor::new(
+                "AutoTuneNode",
+                "Real-Time AutoTune Pitch Snapper",
+                DspNodeCategory::NeuralAi,
+                "Zero-latency pitch quantization engine snapping input pitch to scale intervals with custom speed.",
+            )
+            .with_param(DspParamSchema::knob("correction_speed", "Retune Speed", 0.0, 1.0, 0.85, "%", MacroRole::Punch, "Pitch snapping response time"))
+            .with_param(DspParamSchema::choice("scale_tuning", "Target Scale", &["Chromatic", "Major", "Minor", "Pentatonic", "Microtonal Scala"], 0, "Musical scale quantization"))
+            .with_param(DspParamSchema::knob("humanize", "Humanize Pitch", 0.0, 1.0, 0.15, "%", MacroRole::Character, "Natural pitch wobble tolerance"))
+            .with_param(DspParamSchema::knob("pitch_amount", "Correction Depth", 0.0, 1.0, 1.0, "%", MacroRole::Tone, "Overall tuning blend"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "RnnoiseNode",
+                "RNNoise Recurrent Neural Denoiser",
+                DspNodeCategory::NeuralAi,
+                "GRU neural network suppressing background microphone noise, fan hiss, and room hum with 0ms latency.",
+            )
+            .with_param(DspParamSchema::choice("suppression_level", "Denoise Profile", &["Mild (-6dB)", "Medium (-12dB)", "Aggressive (-18dB)", "Maximum (-24dB)"], 1, "Noise attenuation strength"))
+            .with_param(DspParamSchema::knob("voice_activity_threshold", "Voice Gate Sens", 0.0, 1.0, 0.5, "%", MacroRole::Punch, "VAD speech probability threshold"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "AiAutoGainNode",
+                "Intelligent Auto-Gain Leveller",
+                DspNodeCategory::DynamicsMaster,
+                "Continuous LUFS loudness normalizer riding vocal and instrument gains smoothly without pumping.",
+            )
+            .with_param(DspParamSchema::knob("target_lufs", "Target Loudness", -24.0, -6.0, -14.0, "LUFS", MacroRole::Punch, "Integrated target level"))
+            .with_param(DspParamSchema::knob("max_gain_boost_db", "Max Boost", 0.0, 18.0, 6.0, "dB", MacroRole::Punch, "Maximum allowable makeup gain"))
+            .with_param(DspParamSchema::knob("response_time_ms", "Riding Window", 50.0, 2000.0, 300.0, "ms", MacroRole::Space, "Gain adjustment integration window"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "DdspTimbreTransferNode",
+                "DDSP Neural Timbre Transfer",
+                DspNodeCategory::NeuralAi,
+                "Differentiable Digital Signal Processing neural synthesizer transforming arbitrary audio into violin, flute, or brass.",
+            )
+            .with_param(DspParamSchema::choice("target_timbre", "Target Instrument", &["Violin", "Flute", "Trumpet", "Cello", "Electric Guitar"], 0, "Target neural model"))
+            .with_param(DspParamSchema::knob("pitch_shift_st", "Pitch Shift", -24.0, 24.0, 0.0, "st", MacroRole::Tone, "Instrument transposition"))
+            .with_param(DspParamSchema::knob("loudness_scale", "Loudness Scale", 0.0, 2.0, 1.0, "x", MacroRole::Punch, "Dynamics scaling"))
+            .with_param(DspParamSchema::knob("confidence_gate", "Confidence Gate", 0.0, 1.0, 0.4, "%", MacroRole::Character, "Unvoiced noise threshold"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "VocalHarmonyGeneratorNode",
+                "Intelligent Polyphonic Vocal Harmonizer",
+                DspNodeCategory::NeuralAi,
+                "Multi-voice vocal harmonizer generating diatonic third, fifth, and octave backing vocal harmonies.",
+            )
+            .with_param(DspParamSchema::choice("harmony_preset", "Harmonic Arrangement", &["Third Above + Fifth Above", "Octave Down + Third Up", "Four-Part Choir", "Barbershop Quartet"], 0, "Vocal voicing preset"))
+            .with_param(DspParamSchema::knob("humanize_pitch_cents", "Pitch Detune", 0.0, 30.0, 8.0, "cents", MacroRole::Character, "Stereo unison micro-detuning"))
+            .with_param(DspParamSchema::knob("harmony_level", "Harmony Level", 0.0, 1.0, 0.6, "%", MacroRole::Space, "Backing vocals balance"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "NeuralSuperResolutionNode",
+                "Neural Audio Super-Resolution",
+                DspNodeCategory::NeuralAi,
+                "Deep generative model predicting high-frequency harmonics and air beyond band-limited audio.",
+            )
+            .with_param(DspParamSchema::choice("upsample_factor", "Bandwidth Target", &["2x High-Frequency", "4x Ultra-Resolution (96kHz)"], 0, "Target bandwidth"))
+            .with_param(DspParamSchema::knob("air_harmonic_boost_db", "Air Boost", 0.0, 12.0, 3.0, "dB", MacroRole::Tone, "Generated top-end boost"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "NoiseGateNode",
+                "Fast Attack Studio Noise Gate",
+                DspNodeCategory::DynamicsMaster,
+                "Downward studio noise gate silencing mic bleed and amplifier hum below an adjustable threshold.",
+            )
+            .with_param(DspParamSchema::knob("threshold_db", "Gate Threshold", -60.0, 0.0, -36.0, "dB", MacroRole::Punch, "Threshold level"))
+            .with_param(DspParamSchema::knob("attack_ms", "Attack Time", 0.1, 50.0, 2.0, "ms", MacroRole::Punch, "Gate opening speed"))
+            .with_param(DspParamSchema::knob("hold_ms", "Hold Time", 1.0, 500.0, 50.0, "ms", MacroRole::Space, "Duration gate stays open"))
+            .with_param(DspParamSchema::knob("release_ms", "Release Time", 10.0, 1000.0, 100.0, "ms", MacroRole::Space, "Gate closing speed"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "DeesserNode",
+                "Split-Band Sibilance De-Esser",
+                DspNodeCategory::DynamicsMaster,
+                "High-frequency dynamic compressor taming harsh 's', 'sh', and 't' vocal sibilance.",
+            )
+            .with_param(DspParamSchema::log_knob("split_frequency_hz", "Split Freq", 3000.0, 12000.0, 6500.0, "Hz", MacroRole::Tone, "Sibilance band detection"))
+            .with_param(DspParamSchema::knob("threshold_db", "Threshold", -36.0, 0.0, -18.0, "dB", MacroRole::Punch, "Detection threshold"))
+            .with_param(DspParamSchema::knob("reduction_amount_db", "Reduction Amount", 0.0, 24.0, 6.0, "dB", MacroRole::Punch, "Maximum sibilance attenuation"))
+        );
     }
 }
 
@@ -2771,7 +3078,7 @@ mod tests {
         let registry = DspNodeRegistry::new();
         let all = registry.list_all();
         assert!(
-            all.len() >= 90,
+            all.len() >= 160,
             "Registry should contain extensive DSP modules (found {})",
             all.len()
         );
@@ -2802,6 +3109,14 @@ mod tests {
 
         let neural = registry.list_by_category(DspNodeCategory::NeuralAi);
         assert!(!neural.is_empty(), "Neural AI nodes must be registered");
+
+        // Verify AI Mixing and Neural Vocal nodes
+        assert!(registry.get("DemucsV4Separator").is_some());
+        assert!(registry.get("SingingSynthesisNode").is_some());
+        assert!(registry.get("AiAutonomousMasteringEngine").is_some());
+        assert!(registry.get("AutoTuneNode").is_some());
+        assert!(registry.get("DdspTimbreTransferNode").is_some());
+        assert!(registry.get("NeuralAudioRepairNode").is_some());
 
         // Verify default node config creation
         let gamelan_desc = registry.get("GamelanGender").expect("GamelanGender must exist");
