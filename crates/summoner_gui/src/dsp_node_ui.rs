@@ -326,6 +326,7 @@ impl DspNodeDescriptor {
         }
     }
 
+    #[cfg(feature = "gui")]
     pub fn to_dsp_rack_module(&self) -> crate::views::dsp_rack_dock::DspRackModule {
         let (r, g, b) = self.category.color_rgb();
         let mut module = crate::views::dsp_rack_dock::DspRackModule::new(
