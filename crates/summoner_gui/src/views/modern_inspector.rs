@@ -5,8 +5,6 @@
 //! Modern Right Sidebar Inspector for Track/Clip Properties & Microtonal Tuning.
 
 #[cfg(feature = "gui")]
-use crate::dsp_node_ui::DspNodeUi;
-#[cfg(feature = "gui")]
 use eframe::egui::{self, Color32, FontId, RichText, Rounding, Stroke};
 use serde::{Deserialize, Serialize};
 
