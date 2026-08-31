@@ -22,31 +22,29 @@ def build_prompt(latest_roadmap):
     
     return (
         f"You are the Lead Systems Architect and Engineering Director for Summoner DAW.\n"
-        f"Read authoritative roadmap `{latest_roadmap}` and identify the next incomplete task.\n\n"
+        f"We are actively REDESIGNING the GUI from the ground up, departing from the text-heavy roadmap for UI work.\n"
+        f"Instead of relying on local minimums in `{latest_roadmap}`, you must work from design first principles and visual references.\n\n"
         
-        f"### 1. DEPARTMENT FAN-OUT & SCOPE ROUTING\n"
-        f"Identify the domain tag of the current task and follow ONLY its departmental mandate:\n"
-        f"- [AUDIO / DSP]: Focus on DSP correctness, zero heap allocation in audio loops (`AllocGuard`), "
-        f"continuous phase state accumulators (`phase % (2.0 * PI)`), float-to-PCM sample clamping "
-        f"`[-1.0, 1.0]`, planar-to-interleaved stereo buffering, and WAV header finalization. "
-        f"Refer to `rules/DSP_RULES.md` if present.\n"
-        f"- [GUI / VISION]: Focus on `egui` native UI, layout math (8pt grid, >=44x44pt hit targets), "
-        f"WCAG AA/AAA contrast, and cross-OS scaling. Render headless snapshots to `scratch/renders/` "
-        f"and use `view_file` to visually verify layout alignment and contrast before completing. "
-        f"Refer to `rules/GUI_RULES.md` if present.\n"
-        f"- [CORE / ENGINE]: Focus on TOML parsing, lock-free buffers (`ParamBus`), `NodeGraph` DAG "
-        f"topological sorting, and deterministic event dispatching. Refer to `rules/CORE_RULES.md`.\n"
-        f"- [QA / VERIFICATION]: Run workspace audits, golden WAV regression tests, and cargo test suites.\n\n"
+        f"### 1. VISION-DRIVEN GUI REDESIGN (HIGHEST PRIORITY)\n"
+        f"The current GUI is terrible, confusing, and broken. Your goal is to build an award-winning UX.\n"
+        f"- **Mockups:** If no official design images exist in `design_docs/`, use the `generate_image` tool to ideate and create a sleek, premium, modern UI mockup (e.g. `award_winning_daw_gui.png`).\n"
+        f"- **Implementation:** Use your vision capabilities (`view_file` on images) to analyze these mockups and translate them directly into `egui` code in `crates/summoner_gui`.\n"
+        f"- **Verification:** Render headless snapshots of your `egui` implementation to `scratch/renders/` and visually compare them against the mockups. Do NOT rely purely on text prompts for layout.\n"
+        f"Refer to `rules/GUI_RULES.md` if present.\n\n"
+
+        f"### 2. OTHER DEPARTMENTS (If GUI is blocked or complete)\n"
+        f"For non-GUI tasks, you may fall back to the roadmap `{latest_roadmap}`:\n"
+        f"- [AUDIO / DSP]: Focus on DSP correctness, zero heap allocation (`AllocGuard`).\n"
+        f"- [CORE / ENGINE]: Focus on lock-free buffers, DAG sorting.\n\n"
         
-        f"### 2. LOCAL SKILLS & TOOL DIRECTIVES\n"
+        f"### 3. LOCAL SKILLS & TOOL DIRECTIVES\n"
         f"- Utilize relevant Rust coding skills and patterns from `.agents/skills/`.\n"
         f"- NEVER pass `ArtifactMetadata` when editing workspace code files via `write_to_file` or `replace_file_content`.\n"
         f"- Run `cargo check --workspace` and `cargo test --workspace --features gui` to verify changes.\n"
-        f"- Perform intermittent `git commit` followed by `git push` operations immediately after verifying each unit of progress to sync with the nilsanderselde/summoner remote.\n\n"
+        f"- Perform intermittent `git commit` followed by `git push` operations after verifying progress.\n\n"
         
-        f"### 3. ROADMAP TRANSITION\n"
-        f"Once all tasks in `{latest_roadmap}` are completed and verified, generate the next consolidated "
-        f"milestone file at `{next_roadmap}` preserving all architectural invariants."
+        f"### 4. ROADMAP TRANSITION\n"
+        f"If you complete tasks from the roadmap, generate the next consolidated milestone file at `{next_roadmap}`."
     )
 
 if __name__ == "__main__":
