@@ -5,11 +5,32 @@
 use eframe::egui::{self, Color32, FontDefinitions, Rounding, Visuals};
 
 #[cfg(feature = "gui")]
-pub const COLOR_PRIMARY: Color32 = Color32::from_rgb(26, 140, 255); // #1a8cff (electric blue)
+pub const COLOR_PRIMARY: Color32 = Color32::from_rgb(56, 189, 248); // #38bdf8 (electric neon cyan)
 #[cfg(feature = "gui")]
-pub const COLOR_ACCENT: Color32 = Color32::from_rgb(255, 107, 43); // #ff6b2b (orange)
+pub const COLOR_ACCENT: Color32 = Color32::from_rgb(245, 158, 11); // #f59e0b (amber gold)
 #[cfg(feature = "gui")]
-pub const COLOR_BG: Color32 = Color32::from_rgb(15, 15, 20); // #0f0f14 (near-black)
+pub const COLOR_BG: Color32 = Color32::from_rgb(10, 14, 24); // #0a0e18 (deep slate background)
+#[cfg(feature = "gui")]
+pub const COLOR_SURFACE: Color32 = Color32::from_rgb(18, 24, 36); // #121824 (panel surface)
+#[cfg(feature = "gui")]
+pub const COLOR_CARD: Color32 = Color32::from_rgb(24, 34, 52); // #182234 (device rack / track card)
+#[cfg(feature = "gui")]
+pub const COLOR_BORDER: Color32 = Color32::from_rgb(36, 50, 74); // #24324a (border divider)
+#[cfg(feature = "gui")]
+pub const COLOR_EMERALD: Color32 = Color32::from_rgb(16, 185, 129); // #10b981 (vibrant emerald green)
+#[cfg(feature = "gui")]
+pub const COLOR_MAGENTA: Color32 = Color32::from_rgb(236, 72, 153); // #ec4899 (neon pink)
+#[cfg(feature = "gui")]
+pub const COLOR_VIOLET: Color32 = Color32::from_rgb(139, 92, 246); // #8b5cf6 (neon purple)
+#[cfg(feature = "gui")]
+pub const COLOR_DANGER: Color32 = Color32::from_rgb(239, 68, 68); // #ef4444 (record arm red)
+
+#[cfg(feature = "gui")]
+pub const COLOR_TEXT_PRIMARY: Color32 = Color32::from_rgb(241, 245, 249); // #f1f5f9
+#[cfg(feature = "gui")]
+pub const COLOR_TEXT_SECONDARY: Color32 = Color32::from_rgb(148, 163, 184); // #94a3b8
+#[cfg(feature = "gui")]
+pub const COLOR_TEXT_MUTED: Color32 = Color32::from_rgb(100, 116, 139); // #64748b
 
 #[cfg(feature = "gui")]
 pub const COLOR_HIGH_CONTRAST_BG: Color32 = Color32::from_rgb(0, 0, 0); // Pure black
@@ -77,19 +98,29 @@ pub fn update_font_styles(ctx: &egui::Context, font_size: f32) {
 pub fn apply_summoner_theme(ctx: &egui::Context, font_size: f32) {
     let mut visuals = Visuals::dark();
 
-    // Custom dark theme colors
+    // Modern Award-Winning Dark Slate Palette
     visuals.panel_fill = COLOR_BG;
-    visuals.window_fill = Color32::from_rgb(22, 22, 30);
-    visuals.extreme_bg_color = Color32::from_rgb(8, 8, 12);
+    visuals.window_fill = COLOR_SURFACE;
+    visuals.extreme_bg_color = Color32::from_rgb(6, 9, 15);
 
-    visuals.widgets.hovered.bg_fill = Color32::from_rgb(50, 80, 130);
+    visuals.widgets.noninteractive.bg_fill = COLOR_SURFACE;
+    visuals.widgets.noninteractive.bg_stroke = egui::Stroke::new(1.0_f32, COLOR_BORDER);
+    visuals.widgets.noninteractive.fg_stroke = egui::Stroke::new(1.0_f32, COLOR_TEXT_PRIMARY);
+
+    visuals.widgets.inactive.bg_fill = COLOR_CARD;
+    visuals.widgets.inactive.bg_stroke = egui::Stroke::new(1.0_f32, COLOR_BORDER);
+    visuals.widgets.inactive.fg_stroke = egui::Stroke::new(1.0_f32, COLOR_TEXT_PRIMARY);
+
+    visuals.widgets.hovered.bg_fill = Color32::from_rgb(30, 48, 76);
+    visuals.widgets.hovered.bg_stroke = egui::Stroke::new(1.5_f32, COLOR_PRIMARY);
+    visuals.widgets.hovered.fg_stroke = egui::Stroke::new(1.5_f32, Color32::WHITE);
+
     visuals.widgets.active.bg_fill = COLOR_PRIMARY;
-    visuals.selection.bg_fill = Color32::from_rgba_unmultiplied(26, 140, 255, 100);
-
-    // Visible focus ring on keyboard-navigated buttons (Step 522)
-    visuals.selection.stroke = egui::Stroke::new(2.5_f32, Color32::from_rgb(255, 215, 0));
-    visuals.widgets.hovered.bg_stroke = egui::Stroke::new(1.5_f32, Color32::from_rgb(255, 215, 0));
     visuals.widgets.active.bg_stroke = egui::Stroke::new(2.0_f32, Color32::WHITE);
+    visuals.widgets.active.fg_stroke = egui::Stroke::new(2.0_f32, Color32::BLACK);
+
+    visuals.selection.bg_fill = Color32::from_rgba_unmultiplied(56, 189, 248, 90);
+    visuals.selection.stroke = egui::Stroke::new(2.0_f32, COLOR_PRIMARY);
 
     visuals.window_rounding = Rounding::same(8.0);
 
@@ -108,7 +139,7 @@ pub fn apply_light_theme(ctx: &egui::Context, font_size: f32) {
     visuals.extreme_bg_color = Color32::from_rgb(225, 230, 238);
     visuals.widgets.hovered.bg_fill = Color32::from_rgb(180, 210, 255);
     visuals.widgets.active.bg_fill = COLOR_PRIMARY;
-    visuals.selection.bg_fill = Color32::from_rgba_unmultiplied(26, 140, 255, 120);
+    visuals.selection.bg_fill = Color32::from_rgba_unmultiplied(56, 189, 248, 120);
 
     visuals.selection.stroke = egui::Stroke::new(2.5_f32, Color32::from_rgb(0, 100, 220));
     visuals.widgets.hovered.bg_stroke = egui::Stroke::new(1.5_f32, Color32::from_rgb(0, 100, 220));
@@ -155,9 +186,9 @@ mod tests {
     fn test_theme_applies_without_panic() {
         let ctx = egui::Context::default();
         apply_summoner_theme(&ctx, 14.0);
-        assert_eq!(COLOR_PRIMARY, Color32::from_rgb(26, 140, 255));
-        assert_eq!(COLOR_ACCENT, Color32::from_rgb(255, 107, 43));
-        assert_eq!(COLOR_BG, Color32::from_rgb(15, 15, 20));
+        assert_eq!(COLOR_PRIMARY, Color32::from_rgb(56, 189, 248));
+        assert_eq!(COLOR_ACCENT, Color32::from_rgb(245, 158, 11));
+        assert_eq!(COLOR_BG, Color32::from_rgb(10, 14, 24));
 
         apply_light_theme(&ctx, 14.0);
         apply_high_contrast_theme(&ctx, 16.0);
@@ -179,3 +210,4 @@ mod tests {
         assert!(meets_wcag_aa(Color32::BLACK, Color32::WHITE));
     }
 }
+

@@ -231,7 +231,8 @@ def run_vibe_turn(step_num, build_prompt_fn, log_file_path):
         "--add-dir", ".",
         "--output-format", "stream-json",
         "--dangerously-skip-permissions",
-        "--log-file", log_file_path
+        "--log-file", log_file_path,
+        "--print-timeout", "30m"
     ]
     
     proc = subprocess.Popen(

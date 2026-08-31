@@ -29,3 +29,8 @@ ureq.workspace = true
 [features]
 default = []
 gui = ["summoner_gui", "summoner_gui/gui"]
+
+[dev-dependencies]
+summoner_gui = { path = "../summoner_gui", features = ["gui"] }
+
+

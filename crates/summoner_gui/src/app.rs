@@ -31,6 +31,7 @@ pub enum ViewMode {
     Mixer,
     Performance,
     CoProducer,
+    ModernStudio,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Default)]
@@ -265,6 +266,7 @@ pub struct SummonerApp {
     pub show_meter_bridge_modal: bool,
     pub dpi_scale_panel: crate::views::dpi_scale_panel::DpiScalePanelView,
     pub show_dpi_scale_panel_modal: bool,
+    pub award_winning_view: crate::views::award_winning_gui_view::AwardWinningGuiView,
 }
 
 impl SummonerApp {
@@ -421,6 +423,7 @@ impl SummonerApp {
                 crate::layout_math::OperatingSystem::current(),
             ),
             show_dpi_scale_panel_modal: false,
+            award_winning_view: crate::views::award_winning_gui_view::AwardWinningGuiView::new(),
         };
 
         if let Some(state) = GuiState::load() {
@@ -1520,6 +1523,11 @@ impl eframe::App for SummonerApp {
                     ViewMode::CoProducer,
                     "🤖 AI Co-Producer",
                 );
+                ui.selectable_value(
+                    &mut self.current_view,
+                    ViewMode::ModernStudio,
+                    "✨ Modern Studio Redesign",
+                );
 
                 ui.separator();
 
@@ -2497,6 +2505,9 @@ impl eframe::App for SummonerApp {
                 }
                 ViewMode::CoProducer => {
                     crate::views::co_producer::show_co_producer_panel(ui, &self.project, &mut self.co_producer_state);
+                }
+                ViewMode::ModernStudio => {
+                    self.award_winning_view.show(ui);
                 }
             }
 

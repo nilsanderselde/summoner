@@ -125,6 +125,8 @@ pub mod tier78_tests;
 #[cfg(feature = "gui")]
 pub mod tier79_tests;
 #[cfg(feature = "gui")]
+pub mod tier80_redesign_tests;
+#[cfg(feature = "gui")]
 pub mod touch_gestures;
 #[cfg(feature = "gui")]
 pub mod transport_bar;
@@ -147,6 +149,16 @@ pub use views::auditory_roughness_view::AuditoryRoughnessView;
 pub use views::auro3d_spatializer_view::Auro3dSpatializerView;
 #[cfg(feature = "gui")]
 pub use views::auto_wah_view::*;
+#[cfg(feature = "gui")]
+pub use views::award_winning_gui_view::*;
+#[cfg(feature = "gui")]
+pub use views::modern_asset_browser::*;
+#[cfg(feature = "gui")]
+pub use views::modern_device_rack::*;
+#[cfg(feature = "gui")]
+pub use views::modern_inspector::*;
+#[cfg(feature = "gui")]
+pub use views::modern_top_bar::*;
 #[cfg(feature = "gui")]
 pub use views::bbd_chorus_view::BbdChorusView;
 #[cfg(feature = "gui")]
