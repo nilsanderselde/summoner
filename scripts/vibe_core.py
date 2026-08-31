@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
 Summoner DAW — Shared Vibe Runner Core Library
-Contains shared execution logic, JSON stream parsing, quota detection,
-exponential backoff, error extraction, and logging for autonomous runners.
+Contains token-optimized execution logic, stream parsing, automated checkpointing,
+quota backoff handling, and error extraction for autonomous runners.
 """
 
 import sys
@@ -21,6 +21,7 @@ if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
 
 QUOTA_PATTERNS = [
     r"resets?\s+in",
@@ -42,42 +43,28 @@ def log(msg, color="\033[36m"):
     print(f"{color}[{timestamp}] {msg}{reset}", flush=True)
 
 def get_latest_roadmap_path():
-    """
-    Finds the latest dated roadmap file in local/ matching ROADMAP_YYYYMMDD*.md
-    or ROADMAP*.md, sorting by date/name.
-    """
-    base_dir = os.path.dirname(SCRIPT_DIR)
-    local_dir = os.path.join(base_dir, "local")
+    """Finds the latest dated roadmap file in local/ matching ROADMAP_*.md."""
+    local_dir = os.path.join(PROJECT_ROOT, "local")
     dated_roadmaps = glob.glob(os.path.join(local_dir, "ROADMAP_[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]*.md"))
     
     if dated_roadmaps:
         latest = sorted(dated_roadmaps)[-1]
-        rel_path = os.path.relpath(latest, base_dir)
+        rel_path = os.path.relpath(latest, PROJECT_ROOT)
         return rel_path.replace("\\", "/")
     
     all_roadmaps = glob.glob(os.path.join(local_dir, "ROADMAP*.md"))
     if all_roadmaps:
         latest = sorted(all_roadmaps)[-1]
-        rel_path = os.path.relpath(latest, base_dir)
+        rel_path = os.path.relpath(latest, PROJECT_ROOT)
         return rel_path.replace("\\", "/")
         
     return "local/ROADMAP_20260729.md"
 
 def parse_quota_reset_seconds(text):
-    """
-    Parses the quota reset time from error output.
-    Strategy (in priority order):
-      1. Explicit "Resets in X" or "Resets at Y" clauses.
-      2. Relative duration strings: "3h18m38s", "45m", "90s" etc.
-      3. Absolute date+time: "M/D/YYYY, H:MM:SS AM/PM"
-      4. Absolute time only: "H:MM:SS AM/PM" or "HH:MM:SS" (Fallback, prone to matching log timestamps)
-    Always adds a 90-second safety buffer. Caps at 24 hours max.
-    """
     now = datetime.now()
-    BUFFER = 90   # seconds of extra cushion after reset time
-    MAX_SLEEP = 86400  # 24 hours hard cap
+    BUFFER = 90
+    MAX_SLEEP = 86400
 
-    # 1. Target explicit "Resets in" or "Resets at" sentences first to avoid log noise
     m_resets = re.search(r"resets?\s+(in|at)\s+(.*?)(?:\.|,|;|:|$)", text, re.IGNORECASE)
     if m_resets:
         preposition = m_resets.group(1).lower()
@@ -113,86 +100,25 @@ def parse_quota_reset_seconds(text):
                 except Exception:
                     pass
 
-    # 2. General Relative duration strings: "2h", "30m", "90s", "3h18m38s"
-    found_any = False
-    h, m, s = 0, 0, 0
-
     m_h = re.search(r"(\d+)\s*(?:h|hr|hour|hours)(?![a-z])", text, re.IGNORECASE)
-    if m_h:
-        h = int(m_h.group(1))
-        found_any = True
-
     m_m = re.search(r"(\d+)\s*(?:m|min|minute|minutes)(?![a-z])", text, re.IGNORECASE)
-    if m_m:
-        m = int(m_m.group(1))
-        found_any = True
-
     m_s = re.search(r"(\d+)\s*(?:s|sec|second|seconds)(?![a-z])", text, re.IGNORECASE)
-    if m_s:
-        s = int(m_s.group(1))
-        found_any = True
+    if m_h or m_m or m_s:
+        h = int(m_h.group(1)) if m_h else 0
+        m = int(m_m.group(1)) if m_m else 0
+        s = int(m_s.group(1)) if s_match else 0
+        return min((h * 3600) + (m * 60) + s + BUFFER, MAX_SLEEP)
 
-    if found_any:
-        total = (h * 3600) + (m * 60) + s + BUFFER
-        return min(total, MAX_SLEEP)
-
-    # 3. Absolute date+time: e.g. "7/29/2026, 4:13:12 PM"
-    m_abs = re.search(
-        r"(\d{1,2})/(\d{1,2})/(\d{4}),?\s+(\d{1,2}):(\d{2}):(\d{2})\s*(AM|PM)?",
-        text, re.IGNORECASE
-    )
-    if m_abs:
-        month, day, year = int(m_abs.group(1)), int(m_abs.group(2)), int(m_abs.group(3))
-        hour, minute, second = int(m_abs.group(4)), int(m_abs.group(5)), int(m_abs.group(6))
-        ampm = (m_abs.group(7) or "").upper()
-        if ampm == "PM" and hour != 12:
-            hour += 12
-        elif ampm == "AM" and hour == 12:
-            hour = 0
-        try:
-            reset_dt = now.replace(year=year, month=month, day=day,
-                                   hour=hour, minute=minute, second=second, microsecond=0)
-            delta = (reset_dt - now).total_seconds() + BUFFER
-            if delta < 0:
-                delta += 86400
-            return min(int(delta), MAX_SLEEP)
-        except Exception:
-            pass
-
-    # 4. Absolute time only: "4:13:12 PM" or "16:13:12"
-    m_time = re.search(
-        r"\b(\d{1,2}):(\d{2}):(\d{2})\s*(AM|PM)?\b",
-        text, re.IGNORECASE
-    )
-    if m_time:
-        hour, minute, second = int(m_time.group(1)), int(m_time.group(2)), int(m_time.group(3))
-        ampm = (m_time.group(4) or "").upper()
-        if ampm == "PM" and hour != 12:
-            hour += 12
-        elif ampm == "AM" and hour == 12:
-            hour = 0
-        try:
-            reset_dt = now.replace(hour=hour, minute=minute, second=second, microsecond=0)
-            delta = (reset_dt - now).total_seconds() + BUFFER
-            if delta < 0:
-                delta += 86400
-            return min(int(delta), MAX_SLEEP)
-        except Exception:
-            pass
-
-    return 60  # Default fallback sleep if we know it's a quota/503 issue but can't parse a time
+    return 60
 
 def is_quota_error(output_text):
-    """Checks if output contains any quota or rate limiting signatures."""
     for pattern in QUOTA_PATTERNS:
         if re.search(pattern, output_text, re.IGNORECASE):
             return True
     return False
 
 def extract_error_snippet(full_output_str, log_file_path):
-    """Extracts non-JSON, explicit error lines, and backend logs from agy log file."""
     extracted = []
-    
     lines = [line.strip() for line in full_output_str.splitlines() if line.strip()]
     for line in lines:
         if line.startswith("{") and line.endswith("}"):
@@ -210,8 +136,7 @@ def extract_error_snippet(full_output_str, log_file_path):
     if os.path.exists(log_file_path):
         try:
             with open(log_file_path, "r", encoding="utf-8", errors="replace") as f:
-                log_lines = f.readlines()
-                for l in log_lines:
+                for l in f.readlines():
                     l_str = l.strip()
                     if (l_str.startswith("E") or "error" in l_str.lower() or "failed" in l_str.lower()) and "singleflight" not in l_str.lower():
                         extracted.append(f"[Backend Log] {l_str}")
@@ -220,15 +145,47 @@ def extract_error_snippet(full_output_str, log_file_path):
 
     return extracted[-8:] if extracted else lines[-8:]
 
+def auto_checkpoint_if_clean_build(step_num):
+    """
+    Checks if `cargo check -p summoner_gui` passes. If so, creates an intermediate
+    safety commit so progress is never lost to timeouts.
+    """
+    try:
+        check_proc = subprocess.run(
+            ["cargo", "check", "-p", "summoner_gui", "--quiet"],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True
+        )
+        if check_proc.returncode == 0:
+            status_proc = subprocess.run(
+                ["git", "status", "--porcelain"],
+                cwd=PROJECT_ROOT,
+                capture_output=True,
+                text=True
+            )
+            if status_proc.stdout.strip():
+                log(f"💾 Changes compile cleanly. Checkpointing Turn #{step_num}...", "\033[34m")
+                subprocess.run(["git", "add", "."], cwd=PROJECT_ROOT, check=True)
+                subprocess.run(
+                    ["git", "commit", "-m", f"chore(vibe): auto-checkpoint clean progress (Turn #{step_num})"],
+                    cwd=PROJECT_ROOT,
+                    check=True
+                )
+    except Exception as e:
+        log(f"Checkpoint check skipped: {e}", "\033[33m")
+
 def run_vibe_turn(step_num, build_prompt_fn, log_file_path):
     latest_roadmap = get_latest_roadmap_path()
-    prompt = build_prompt_fn(latest_roadmap)
+    prompt = build_prompt_fn(latest_roadmap, step_num)
     
     log(f"🤖 Starting Vibe Turn #{step_num} (Active Roadmap: {latest_roadmap})...", "\033[1;36m")
     
     agy_flags = [
         "agy", "-p", prompt,
-        "--add-dir", ".",
+        "--add-dir", "crates",
+        "--add-dir", "design_docs",
+        "--add-dir", "rules",
         "--output-format", "stream-json",
         "--dangerously-skip-permissions",
         "--log-file", log_file_path,
@@ -243,7 +200,7 @@ def run_vibe_turn(step_num, build_prompt_fn, log_file_path):
         encoding="utf-8",
         errors="replace",
         bufsize=1,
-        cwd=os.path.dirname(SCRIPT_DIR)
+        cwd=PROJECT_ROOT
     )
 
     full_output = []
@@ -264,14 +221,13 @@ def run_vibe_turn(step_num, build_prompt_fn, log_file_path):
                 
                 if event == "step_update":
                     update = data.get("step_update", {})
-                    tool_calls = update.get("tool_calls", [])
-                    for call in tool_calls:
+                    for call in update.get("tool_calls", []):
                         fn = call.get("function", {})
                         name = fn.get("name", "unknown_tool")
                         raw_args = fn.get("arguments", "{}")
                         try:
                             args = json.loads(raw_args)
-                            summary = args.get("toolSummary") or args.get("toolAction") or args.get("CommandLine") or args.get("TargetFile") or ""
+                            summary = args.get("toolSummary") or args.get("CommandLine") or args.get("TargetFile") or ""
                         except Exception:
                             summary = ""
                         log(f"  🛠️  Tool: {name} {f'— {summary}' if summary else ''}", "\033[33m")
@@ -288,7 +244,7 @@ def run_vibe_turn(step_num, build_prompt_fn, log_file_path):
                         log(f"  ✅ Turn #{step_num} finished successfully!", "\033[32m")
                     else:
                         err_msg = res.get("error") or res.get("message") or status
-                        log(f"  ⚠️ Turn finished with error status: {status} ({err_msg})", "\033[31m")
+                        log(f"  ⚠️ Turn finished with status: {status} ({err_msg})", "\033[31m")
 
             except json.JSONDecodeError:
                 print(f"  {line_str}", flush=True)
@@ -297,6 +253,8 @@ def run_vibe_turn(step_num, build_prompt_fn, log_file_path):
 
     proc.wait()
     
+    auto_checkpoint_if_clean_build(step_num)
+
     if os.path.exists(log_file_path):
         try:
             with open(log_file_path, "r", encoding="utf-8", errors="replace") as f:
@@ -322,7 +280,6 @@ def run_vibe_loop(build_prompt_fn, log_file_name, runner_title):
             time.sleep(10)
         else:
             consecutive_failures += 1
-            
             log("\n❌ ------------------- TURN ERROR DETECTED -------------------", "\033[1;31m")
             error_snippet = extract_error_snippet(output, log_file_path)
             if error_snippet:
@@ -333,13 +290,12 @@ def run_vibe_loop(build_prompt_fn, log_file_name, runner_title):
             if is_quota_error(output):
                 sleep_seconds = parse_quota_reset_seconds(output)
                 resume_time = (datetime.now() + timedelta(seconds=sleep_seconds)).strftime("%H:%M:%S")
-                log("   Detected Issue: Quota / Rate limit / Backend 503 Service Outage reached.", "\033[1;33m")
-                log(f"   👉 Handling Strategy: Service outage / Quota backoff. Sleeping for {sleep_seconds}s ({sleep_seconds // 60}m). Will resume automatically at ~{resume_time}.", "\033[1;32m")
+                log("   Detected Issue: Quota / Backend Rate Limit reached.", "\033[1;33m")
+                log(f"   👉 Sleeping {sleep_seconds}s. Resuming at ~{resume_time}.", "\033[1;32m")
                 log("----------------------------------------------------------------\n", "\033[1;31m")
                 time.sleep(sleep_seconds)
             else:
                 backoff_seconds = min(30 * (2 ** (consecutive_failures - 1)), 600)
-                log(f"   Detected Issue: Process exited with code {code} (Consecutive failures: {consecutive_failures}).", "\033[1;31m")
-                log(f"   👉 Handling Strategy: Applying exponential backoff. Will retry in {backoff_seconds}s.", "\033[1;33m")
+                log(f"   Turn exited with code {code} (Failures: {consecutive_failures}). Retrying in {backoff_seconds}s.", "\033[1;31m")
                 log("----------------------------------------------------------------\n", "\033[1;31m")
                 time.sleep(backoff_seconds)

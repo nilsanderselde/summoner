@@ -1,56 +1,54 @@
 #!/usr/bin/env python3
 """
-Summoner DAW — Department Fan-Out Vibe Runner
-Autonomous orchestration loop for agy CLI. Dispatches tasks to specialized
-departments (Audio/DSP, GUI/Vision, Engine/Core, QA/Verification) with zero token waste.
+Summoner DAW — Token-Optimized GUI & DSP Architecture Runner
+Orchestrates incremental egui implementation with universal DSP parameter exposure.
 """
 
-import os
 import sys
-from datetime import datetime
 from vibe_core import run_vibe_loop
 
-# Ensure stdout and stderr use UTF-8 on Windows
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
-def build_prompt(latest_roadmap):
-    current_ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    next_roadmap = f"local/ROADMAP_{current_ts}.md"
-    
+def build_prompt(latest_roadmap, step_num):
     return (
-        f"You are the Lead Systems Architect and Engineering Director for Summoner DAW.\n"
-        f"We are actively REDESIGNING the GUI from the ground up, departing from the text-heavy roadmap for UI work.\n"
-        f"Instead of relying on local minimums in `{latest_roadmap}`, you must work from design first principles and visual references.\n\n"
-        
-        f"### 1. VISION-DRIVEN GUI REDESIGN (HIGHEST PRIORITY)\n"
-        f"The current GUI is terrible, confusing, and broken. Your goal is to build an award-winning UX.\n"
-        f"- **Mockups:** If no official design images exist in `design_docs/`, use the `generate_image` tool to ideate and create a sleek, premium, modern UI mockup (e.g. `award_winning_daw_gui.png`).\n"
-        f"- **Implementation:** Use your vision capabilities (`view_file` on images) to analyze these mockups and translate them directly into `egui` code in `crates/summoner_gui`.\n"
-        f"- **Verification:** Render headless snapshots of your `egui` implementation to `scratch/renders/` and visually compare them against the mockups. Do NOT rely purely on text prompts for layout.\n"
-        f"Refer to `rules/GUI_RULES.md` if present.\n\n"
+        f"You are the Lead Systems & GUI Architect for Summoner DAW (Rust + egui).\n"
+        f"Your mission is to deliver a production-grade, intuitive GUI in `crates/summoner_gui` that matches the feature-completeness of the CLI, exposes EVERY DSP module, and remains accessible for novices while providing deep control for power users.\n\n"
 
-        f"### 2. OTHER DEPARTMENTS (If GUI is blocked or complete)\n"
-        f"For non-GUI tasks, you may fall back to the roadmap `{latest_roadmap}`:\n"
-        f"- [AUDIO / DSP]: Focus on DSP correctness, zero heap allocation (`AllocGuard`).\n"
-        f"- [CORE / ENGINE]: Focus on lock-free buffers, DAG sorting.\n\n"
-        
-        f"### 3. LOCAL SKILLS & TOOL DIRECTIVES\n"
-        f"- Utilize relevant Rust coding skills and patterns from `.agents/skills/`.\n"
-        f"- NEVER pass `ArtifactMetadata` when editing workspace code files via `write_to_file` or `replace_file_content`.\n"
-        f"- Run `cargo check --workspace` and `cargo test --workspace --features gui` to verify changes.\n"
-        f"- Perform intermittent `git commit` followed by `git push` operations after verifying progress.\n\n"
-        
-        f"### 4. ROADMAP TRANSITION & WISHLIST\n"
-        f"If you complete tasks from the roadmap, generate the next consolidated milestone file at `{next_roadmap}`.\n"
-        f"ONLY IF the GUI redesign is 100% complete and all roadmap tasks are finished, you may consult `local/WISHLIST.md` for 'nice-to-have' tasks. Do not prioritize wishlist items over a fully working GUI and DSP."
+        f"### 🛑 TOKEN ECONOMY & ATOMIC TURN RULES (CRITICAL)\n"
+        f"1. **Do NOT generate new UI images** if reference mockups already exist in `design_docs/`.\n"
+        f"2. **Work in One Discrete Atomic Slice per turn** (e.g., DSP Rack View, Node Inspector, Patch Matrix, Macro Header, Preset Bar). Do NOT try to build the entire app in one turn.\n"
+        f"3. **Fast Verification**: Run `cargo check -p summoner_gui` and `cargo test -p summoner_gui` first. Only run full workspace tests when crossing crate boundaries.\n"
+        f"4. **No Dead Ends**: Commit working increments immediately.\n\n"
+
+        f"### 🎛️ CORE UX & ARCHITECTURE DIRECTIVES\n"
+        f"**1. Zero CLI Left Behind (Expose ALL DSP Modules):**\n"
+        f"- Query `crates/summoner_dsp` and `crates/summoner_core` to inventory all DSP nodes (oscillators, filters, envelopes, modulators, effects, master chain).\n"
+        f"- Implement a universal `DspNodeUi` trait or parameter reflection view so EVERY node parameter is rendered with tactile egui controls (sliders, rotary knobs, toggles, dropdowns).\n"
+        f"- No DSP function, routing option, or audio parameter should be accessible only via CLI.\n\n"
+
+        f"**2. Two-Tier UX (Novice Simplicity + Pro Depth):**\n"
+        f"- **Novice View (Top-Level Macro Strip & Presets):** Clean header with quick preset browsing, master gain, play/pause transport, and high-level macro knobs (e.g., Tone, Space, Punch).\n"
+        f"- **Pro View (Collapsible Racks, Node Inspector, & Routing Matrix):** Click-to-expand modular rack drawer, surgical parameter inspectors, real-time signal scopes, and modular routing patch cords.\n\n"
+
+        f"**3. egui Design & Theming:**\n"
+        f"- Dark, modern, high-contrast palette with responsive spacing.\n"
+        f"- Smooth drag-value knobs, color-coded audio vs. modulation signal lines, and clear visual hierarchy.\n"
+        f"- Real-time audio engine state bindings without heap allocations on the audio thread.\n\n"
+
+        f"### 📋 EXECUTION PRIORITY FOR TURN #{step_num}\n"
+        f"1. Check the current compile status: `cargo check -p summoner_gui`.\n"
+        f"2. Check existing GUI files in `crates/summoner_gui/src/` to identify missing DSP module views or broken layout bindings.\n"
+        f"3. Implement the next focused GUI component (e.g., register unmapped DSP nodes into the rack/inspector UI).\n"
+        f"4. Verify the build passes `cargo check -p summoner_gui`.\n"
+        f"5. If complete, make a clean git commit with a clear summary message."
     )
 
 if __name__ == "__main__":
     run_vibe_loop(
         build_prompt_fn=build_prompt,
         log_file_name="vibe_runner_last.log",
-        runner_title="Summoner DAW Autonomous Engineering Runner"
+        runner_title="Summoner DAW Progressive GUI & DSP Runner"
     )
