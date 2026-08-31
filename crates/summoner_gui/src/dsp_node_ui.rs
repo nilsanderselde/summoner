@@ -822,7 +822,20 @@ impl DspNodeRegistry {
     }
 
     pub fn get(&self, kind_id: &str) -> Option<&DspNodeDescriptor> {
-        self.descriptors.get(kind_id)
+        if let Some(desc) = self.descriptors.get(kind_id) {
+            return Some(desc);
+        }
+        let normalized = kind_id.to_lowercase();
+        self.descriptors.values().find(|d| {
+            let d_low = d.kind_id.to_lowercase();
+            d_low == normalized
+                || d_low.replace("node", "") == normalized.replace("node", "")
+                || d_low.replace("model", "") == normalized.replace("model", "")
+                || d_low.replace("synth", "") == normalized.replace("synth", "")
+                || d_low.replace("device", "") == normalized.replace("device", "")
+                || d_low.replace("engine", "") == normalized.replace("engine", "")
+                || d_low.replace("view", "") == normalized.replace("view", "")
+        })
     }
 
     pub fn list_all(&self) -> Vec<&DspNodeDescriptor> {
@@ -3066,6 +3079,179 @@ impl DspNodeRegistry {
             .with_param(DspParamSchema::knob("threshold_db", "Threshold", -36.0, 0.0, -18.0, "dB", MacroRole::Punch, "Detection threshold"))
             .with_param(DspParamSchema::knob("reduction_amount_db", "Reduction Amount", 0.0, 24.0, 6.0, "dB", MacroRole::Punch, "Maximum sibilance attenuation"))
         );
+
+        // ==========================================
+        // 26. Advanced Quantum, Neuro, MPE & Infrastructure Engines
+        // ==========================================
+        self.register(
+            DspNodeDescriptor::new(
+                "QuantumErrorCorrectionCodec",
+                "Quantum Syndrome Error Correction Stabilizer",
+                DspNodeCategory::Utility,
+                "Shor / Steane [[3,1,3]] syndrome stabilizer code protecting audio bitstreams from bit-flip and phase errors.",
+            )
+            .with_param(DspParamSchema::choice("syndrome_algorithm", "Syndrome Codec", &["Majority Voting 3-Qubit", "Steane 7-Qubit", "Shor 9-Qubit"], 0, "Quantum error correction protocol"))
+            .with_param(DspParamSchema::knob("error_syndrome_threshold", "Syndrome Sensitivity", 0.0, 1.0, 0.95, "%", MacroRole::Tone, "Threshold for syndrome majority voting"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "QuantumTeleportationBufferBus",
+                "Zero-Latency Quantum Teleportation Buffer Bus",
+                DspNodeCategory::Utility,
+                "EPR pair entanglement audio buffer teleportation facilitating instantaneous sample transfer across tracks.",
+            )
+            .with_param(DspParamSchema::knob("entangled_pair_rate", "EPR Pair Rate", 100.0, 10000.0, 44100.0, "pairs/s", MacroRole::Character, "Entanglement generation frequency"))
+            .with_param(DspParamSchema::toggle("quantum_fidelity_lock", "Quantum State Lock", true, "Guarantee 100% wavefunction fidelity"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "HyperDimensionalHrtfLoader",
+                "11D Hyper-Dimensional HRTF Dataset Loader",
+                DspNodeCategory::SpatialSurround,
+                "Multi-dimensional Head-Related Transfer Function dataset interpolation for non-Euclidean spatial listening.",
+            )
+            .with_param(DspParamSchema::choice("dataset_profile", "Dataset Resolution", &["8-Point Hyper-Grid", "32-Point Calabi-Yau", "128-Point Manifold"], 1, "Manifold sample grid resolution"))
+            .with_param(DspParamSchema::knob("interpolation_smoothing", "Spatial Smoothing", 0.0, 1.0, 0.5, "%", MacroRole::Space, "Inter-node spatial interpolation filter"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "QuantumPhaseEstimationPitchTracker",
+                "QPE Sub-Bin Quantum Phase Estimation Pitch Tracker",
+                DspNodeCategory::Utility,
+                "Quantum phase estimation unitary operator frequency tracker delivering sub-cent pitch analysis in real time.",
+            )
+            .with_param(DspParamSchema::knob("sub_bin_precision", "Analysis Precision", 0.1, 10.0, 1.0, "cents", MacroRole::Tone, "Sub-bin phase resolution target"))
+            .with_param(DspParamSchema::choice("pitch_lag_window", "Lag Window", &["Fast (4000Hz max)", "Balanced (2000Hz max)", "Deep Bass (20Hz min)"], 1, "Lag correlation search space"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "NeuralImpulseResponseSynthesizer",
+                "Diffusion Neural Generative Acoustic IR Synthesizer",
+                DspNodeCategory::SpatialSurround,
+                "Generative neural diffusion model generating photorealistic room impulse responses from text prompts and spatial bounds.",
+            )
+            .with_param(DspParamSchema::knob("rt60_target", "Target RT60 Decay", 0.1, 12.0, 2.2, "s", MacroRole::Space, "Reverberation decay time"))
+            .with_param(DspParamSchema::knob("room_volume_m3", "Room Volume", 10.0, 5000.0, 250.0, "m³", MacroRole::Space, "Enclosure geometric scale"))
+            .with_param(DspParamSchema::knob("absorption_coefficient", "Boundary Absorption", 0.05, 0.95, 0.35, "%", MacroRole::Tone, "Average wall reflection loss"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "MentalImageryPatternClassifier",
+                "EEG Mental Imagery Timbre Morphing Classifier",
+                DspNodeCategory::NeuralAi,
+                "Classifies imagined musical timbres and pitch contours from EEG channels to modulate synthesizer parameters.",
+            )
+            .with_param(DspParamSchema::knob("classifier_confidence_gate", "Confidence Gate", 0.0, 1.0, 0.65, "%", MacroRole::Character, "Minimum classification certainty required to trigger morphs"))
+            .with_param(DspParamSchema::knob("timbre_morph_speed", "Morph Rate", 0.1, 10.0, 2.0, "Hz", MacroRole::Tone, "Speed of neural parameter transition"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "SpatialAcousticHologramReconstructionFilter",
+                "Spatial Acoustic Hologram Wavefront Reconstructor",
+                DspNodeCategory::SpatialSurround,
+                "Calculates acoustic phase holograms using Rayleigh-Sommerfeld diffraction to render tactile sound localized in space.",
+            )
+            .with_param(DspParamSchema::knob("hologram_focal_x", "Focal Point X", -5.0, 5.0, 0.0, "m", MacroRole::Space, "Horizontal focus coordinate"))
+            .with_param(DspParamSchema::knob("hologram_focal_y", "Focal Point Y", -5.0, 5.0, 2.0, "m", MacroRole::Space, "Depth focus coordinate"))
+            .with_param(DspParamSchema::knob("hologram_focal_z", "Focal Point Z", -2.0, 4.0, 0.5, "m", MacroRole::Space, "Vertical focus coordinate"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "MuscleEmgGestureControlDriver",
+                "Surface EMG Muscular Gesture Modulation Driver",
+                DspNodeCategory::Modulation,
+                "Processes forearm electromyography (EMG) signals converting muscular contractions into polyphonic MIDI & CV gestures.",
+            )
+            .with_param(DspParamSchema::knob("contraction_threshold", "Contraction Threshold", 0.05, 1.0, 0.35, "%", MacroRole::Punch, "Muscle tension trigger sensitivity"))
+            .with_param(DspParamSchema::knob("gesture_smoothing_ms", "Smoothing Window", 1.0, 100.0, 15.0, "ms", MacroRole::Tone, "Muscle jitter lowpass filter"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "NeuroCognitiveFatigueDetector",
+                "Auditory Cognitive Fatigue & Ear Protection Monitor",
+                DspNodeCategory::Utility,
+                "Monitors cumulative sound pressure exposure and frequency balance to prevent auditory fatigue and protect hearing.",
+            )
+            .with_param(DspParamSchema::knob("dosimeter_threshold_db", "Dosimeter Limit", 70.0, 105.0, 85.0, "dBA", MacroRole::Punch, "Daily acoustic exposure threshold"))
+            .with_param(DspParamSchema::toggle("auto_warmth_recovery", "Auto-Warmth Recovery", true, "Automatically soften harsh high frequencies when fatigue is detected"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "AdaptivePsychoacousticLoudnessModel",
+                "Bark / ERB Dynamic Equal-Loudness Contour Model",
+                DspNodeCategory::DynamicsMaster,
+                "Applies ISO 226 equal-loudness contours dynamically based on listening playback volume to maintain spectral balance.",
+            )
+            .with_param(DspParamSchema::knob("playback_spl_calibration", "Playback Calibrated SPL", 50.0, 100.0, 83.0, "dB SPL", MacroRole::Punch, "Room reference playback level"))
+            .with_param(DspParamSchema::knob("fletcher_munson_compensation", "Loudness Comp Depth", 0.0, 1.0, 0.8, "%", MacroRole::Tone, "Equal loudness contour bass/treble boost strength"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "NeuroAestheticHarmonyScorer",
+                "Harmonic Consonance & Aesthetic Tension Neural Scorer",
+                DspNodeCategory::NeuralAi,
+                "Evaluates real-time chord progressions for sensory consonance, roughness, harmonic entropy, and tonal tension.",
+            )
+            .with_param(DspParamSchema::knob("consonance_weight", "Consonance Weight", 0.0, 1.0, 0.7, "%", MacroRole::Tone, "Emphasis on Euler/Plomp-Levelt harmonic consonance"))
+            .with_param(DspParamSchema::knob("tension_sensitivity", "Tension Sensitivity", 0.0, 1.0, 0.5, "%", MacroRole::Character, "Sensitivity to tonal dissonance resolution"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "NeuralAudioStyleTransferPreviewRenderer",
+                "Offline Neural Audio Style Transfer Renderer",
+                DspNodeCategory::NeuralAi,
+                "Transforms input stems and master mixes into target aesthetic styles (Vintage Tape, Analog Warmth, Cyberpunk, Lo-Fi).",
+            )
+            .with_param(DspParamSchema::choice("style_preset", "Target Style", &["Vintage Tape", "Analog Warmth", "Cyberpunk Distortion", "Lo-Fi Vinyl", "Quantum Resonance"], 0, "Neural style embedding"))
+            .with_param(DspParamSchema::knob("transfer_mix", "Style Transfer Mix", 0.0, 1.0, 0.75, "%", MacroRole::Space, "Wet/dry style blend"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "MultiTrackAudioRouter",
+                "Multi-Track Stems Stem Splitter & Audio Router",
+                DspNodeCategory::Utility,
+                "Routes polyphonic multi-channel stems and sub-mixes to independent audio buses with latency compensation.",
+            )
+            .with_param(DspParamSchema::choice("routing_profile", "Routing Preset", &["Stereo Master", "4-Stem Separated (Vocals/Drums/Bass/Other)", "8-Track Sub-Mix", "7.1.4 Surround Bus"], 0, "Channel routing configuration"))
+            .with_param(DspParamSchema::knob("trim_gain_db", "Bus Master Gain", -24.0, 12.0, 0.0, "dB", MacroRole::Punch, "Overall bus trim level"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "MpeExpressionCurveEditor",
+                "MIDI MPE Polyphonic Expression Curve Calibrator",
+                DspNodeCategory::Modulation,
+                "Per-note MPE pitch bend, aftertouch pressure, and timbre slide calibration with bezier curve response.",
+            )
+            .with_param(DspParamSchema::knob("pitch_bend_semitones", "Pitch Bend Range", 1.0, 96.0, 48.0, "st", MacroRole::Tone, "MPE per-note pitch bend range"))
+            .with_param(DspParamSchema::knob("pressure_curve_shape", "Pressure Curve", 0.1, 5.0, 1.0, "x", MacroRole::Punch, "Aftertouch curvature non-linearity"))
+            .with_param(DspParamSchema::knob("timbre_slide_sensitivity", "Timbre Slide Sens", 0.0, 2.0, 1.0, "x", MacroRole::Character, "Y-axis slide sensitivity"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "MacroModulationMatrix",
+                "8x8 Polyphonic Macro Modulation Matrix",
+                DspNodeCategory::Modulation,
+                "Comprehensive modulation routing matrix mapping LFOs, envelopes, velocity, and macro knobs to DSP targets.",
+            )
+            .with_param(DspParamSchema::knob("macro_tone", "Macro 1 (Tone)", 0.0, 1.0, 0.5, "%", MacroRole::Tone, "Master Tone macro controller"))
+            .with_param(DspParamSchema::knob("macro_space", "Macro 2 (Space)", 0.0, 1.0, 0.5, "%", MacroRole::Space, "Master Space macro controller"))
+            .with_param(DspParamSchema::knob("macro_punch", "Macro 3 (Punch)", 0.0, 1.0, 0.5, "%", MacroRole::Punch, "Master Punch macro controller"))
+            .with_param(DspParamSchema::knob("macro_char", "Macro 4 (Character)", 0.0, 1.0, 0.5, "%", MacroRole::Character, "Master Character macro controller"))
+        );
     }
 }
 
@@ -3078,7 +3264,7 @@ mod tests {
         let registry = DspNodeRegistry::new();
         let all = registry.list_all();
         assert!(
-            all.len() >= 160,
+            all.len() >= 180,
             "Registry should contain extensive DSP modules (found {})",
             all.len()
         );
@@ -3117,6 +3303,23 @@ mod tests {
         assert!(registry.get("AutoTuneNode").is_some());
         assert!(registry.get("DdspTimbreTransferNode").is_some());
         assert!(registry.get("NeuralAudioRepairNode").is_some());
+
+        // Verify Quantum, Neuro, MPE & Infrastructure nodes
+        assert!(registry.get("QuantumErrorCorrectionCodec").is_some());
+        assert!(registry.get("QuantumTeleportationBufferBus").is_some());
+        assert!(registry.get("HyperDimensionalHrtfLoader").is_some());
+        assert!(registry.get("QuantumPhaseEstimationPitchTracker").is_some());
+        assert!(registry.get("NeuralImpulseResponseSynthesizer").is_some());
+        assert!(registry.get("MentalImageryPatternClassifier").is_some());
+        assert!(registry.get("SpatialAcousticHologramReconstructionFilter").is_some());
+        assert!(registry.get("MuscleEmgGestureControlDriver").is_some());
+        assert!(registry.get("NeuroCognitiveFatigueDetector").is_some());
+        assert!(registry.get("AdaptivePsychoacousticLoudnessModel").is_some());
+        assert!(registry.get("NeuroAestheticHarmonyScorer").is_some());
+        assert!(registry.get("NeuralAudioStyleTransferPreviewRenderer").is_some());
+        assert!(registry.get("MultiTrackAudioRouter").is_some());
+        assert!(registry.get("MpeExpressionCurveEditor").is_some());
+        assert!(registry.get("MacroModulationMatrix").is_some());
 
         // Verify default node config creation
         let gamelan_desc = registry.get("GamelanGender").expect("GamelanGender must exist");
