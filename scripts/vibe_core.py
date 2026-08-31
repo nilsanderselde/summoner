@@ -63,7 +63,7 @@ def get_latest_roadmap_path():
 def parse_quota_reset_seconds(text):
     now = datetime.now()
     BUFFER = 90
-    MAX_SLEEP = 86400
+    MAX_SLEEP = 604800 # 7 days (7 * 24 * 60 * 60)
 
     m_resets = re.search(r"resets?\s+(in|at)\s+(.*?)(?:\.|,|;|:|$)", text, re.IGNORECASE)
     if m_resets:
@@ -106,7 +106,7 @@ def parse_quota_reset_seconds(text):
     if m_h or m_m or m_s:
         h = int(m_h.group(1)) if m_h else 0
         m = int(m_m.group(1)) if m_m else 0
-        s = int(m_s.group(1)) if s_match else 0
+        s = int(m_s.group(1)) if m_s else 0
         return min((h * 3600) + (m * 60) + s + BUFFER, MAX_SLEEP)
 
     return 60
@@ -289,7 +289,7 @@ def run_vibe_loop(build_prompt_fn, log_file_name, runner_title):
             
             if is_quota_error(output):
                 sleep_seconds = parse_quota_reset_seconds(output)
-                resume_time = (datetime.now() + timedelta(seconds=sleep_seconds)).strftime("%H:%M:%S")
+                resume_time = (datetime.now() + timedelta(seconds=sleep_seconds)).strftime("%b %d at %H:%M:%S")
                 log("   Detected Issue: Quota / Backend Rate Limit reached.", "\033[1;33m")
                 log(f"   👉 Sleeping {sleep_seconds}s. Resuming at ~{resume_time}.", "\033[1;32m")
                 log("----------------------------------------------------------------\n", "\033[1;31m")
