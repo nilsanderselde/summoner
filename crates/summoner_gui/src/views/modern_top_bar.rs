@@ -45,6 +45,42 @@ pub struct ModernTopBarState {
     pub selected_preset: String,
     #[serde(default = "default_available_presets")]
     pub available_presets: Vec<String>,
+    #[serde(default = "default_master_gain")]
+    pub master_gain: f32,
+    #[serde(default = "default_macro_tone")]
+    pub macro_tone: f32,
+    #[serde(default = "default_macro_space")]
+    pub macro_space: f32,
+    #[serde(default = "default_macro_punch")]
+    pub macro_punch: f32,
+    #[serde(default = "default_macro_character")]
+    pub macro_character: f32,
+    #[serde(default = "default_true_novice")]
+    pub is_novice_macro_visible: bool,
+}
+
+fn default_master_gain() -> f32 {
+    1.0
+}
+
+fn default_macro_tone() -> f32 {
+    0.65
+}
+
+fn default_macro_space() -> f32 {
+    0.40
+}
+
+fn default_macro_punch() -> f32 {
+    0.55
+}
+
+fn default_macro_character() -> f32 {
+    0.50
+}
+
+fn default_true_novice() -> bool {
+    true
 }
 
 fn default_selected_preset() -> String {
@@ -78,6 +114,12 @@ impl Default for ModernTopBarState {
             active_tab: ModernViewTab::Arranger,
             selected_preset: default_selected_preset(),
             available_presets: default_available_presets(),
+            master_gain: default_master_gain(),
+            macro_tone: default_macro_tone(),
+            macro_space: default_macro_space(),
+            macro_punch: default_macro_punch(),
+            macro_character: default_macro_character(),
+            is_novice_macro_visible: default_true_novice(),
         }
     }
 }
@@ -270,13 +312,54 @@ pub fn show_modern_top_bar(
                 }
             });
 
-            ui.add_space(16.0);
+            // Novice High-Level Macro Strip (Tone, Space, Punch, Character)
+            if state.is_novice_macro_visible {
+                ui.add_space(6.0);
+                egui::Frame::none()
+                    .fill(Color32::from_rgb(14, 20, 32))
+                    .stroke(Stroke::new(1.0_f32, Color32::from_rgb(28, 40, 60)))
+                    .rounding(Rounding::same(6.0))
+                    .inner_margin(egui::Margin::symmetric(6.0, 3.0))
+                    .show(ui, |ui| {
+                        ui.horizontal(|ui| {
+                            draw_top_bar_macro_dial(ui, "Tone", &mut state.macro_tone, Color32::from_rgb(56, 189, 248), "High-level brightness / frequency tone shaper");
+                            ui.add_space(2.0);
+                            draw_top_bar_macro_dial(ui, "Space", &mut state.macro_space, Color32::from_rgb(99, 102, 241), "High-level spatial depth, reverb & delay diffusion");
+                            ui.add_space(2.0);
+                            draw_top_bar_macro_dial(ui, "Punch", &mut state.macro_punch, Color32::from_rgb(239, 68, 68), "High-level transient impact, dynamics & attack");
+                            ui.add_space(2.0);
+                            draw_top_bar_macro_dial(ui, "Char", &mut state.macro_character, Color32::from_rgb(245, 158, 11), "High-level harmonic warmth, saturation & color");
+                        });
+                    });
+            }
 
-            // Master Volume & Multi-Segment Gradient VU Meter
+            ui.add_space(10.0);
+
+            // Master Volume Fader & Multi-Segment Gradient VU Meter
             ui.horizontal(|ui| {
-                ui.label(RichText::new("Master Vol VU Meters").font(FontId::proportional(10.0)).color(Color32::from_rgb(148, 163, 184)));
+                ui.label(RichText::new("Master").font(FontId::proportional(10.0)).color(Color32::from_rgb(148, 163, 184)));
 
-                let (vu_resp, vu_painter) = ui.allocate_painter(Vec2::new(130.0, 10.0), egui::Sense::hover());
+                // Tactile Master Volume Slider
+                let mut norm_gain = (state.master_gain / 2.0).clamp(0.0, 1.0);
+                let (gain_resp, gain_painter) = ui.allocate_painter(Vec2::new(42.0, 10.0), egui::Sense::click_and_drag());
+                let gain_rect = gain_resp.rect;
+                if gain_resp.dragged() {
+                    let d_x = ui.input(|i| i.pointer.delta().x);
+                    norm_gain = (norm_gain + d_x * 0.015).clamp(0.0, 1.0);
+                    state.master_gain = norm_gain * 2.0;
+                }
+                gain_painter.rect_filled(gain_rect, 2.0, Color32::from_rgb(14, 20, 32));
+                gain_painter.rect_stroke(gain_rect, 2.0, Stroke::new(1.0_f32, Color32::from_rgb(28, 40, 60)));
+                let fill_w = gain_rect.width() * norm_gain;
+                if fill_w > 0.0 {
+                    gain_painter.rect_filled(
+                        Rect::from_min_size(gain_rect.min, Vec2::new(fill_w, gain_rect.height())),
+                        2.0,
+                        Color32::from_rgb(56, 189, 248),
+                    );
+                }
+
+                let (vu_resp, vu_painter) = ui.allocate_painter(Vec2::new(80.0, 10.0), egui::Sense::hover());
                 let vu_rect = vu_resp.rect;
                 vu_painter.rect_filled(vu_rect, 2.0, Color32::from_rgb(14, 20, 32));
                 vu_painter.rect_stroke(vu_rect, 2.0, Stroke::new(1.0_f32, Color32::from_rgb(28, 40, 60)));
@@ -347,6 +430,63 @@ pub fn show_modern_top_bar(
     );
 }
 
+#[cfg(feature = "gui")]
+pub fn draw_top_bar_macro_dial(
+    ui: &mut egui::Ui,
+    label: &str,
+    value: &mut f32,
+    accent: Color32,
+    tooltip: &str,
+) {
+    let size = Vec2::new(34.0, 40.0);
+    let (mut resp, painter) = ui.allocate_painter(size, egui::Sense::click_and_drag());
+    let rect = resp.rect;
+
+    if resp.hovered() {
+        resp = resp.on_hover_text(format!("{}\nMacro: {:.0}%", tooltip, *value * 100.0));
+    }
+
+    if resp.dragged() {
+        let delta_y = ui.input(|i| i.pointer.delta().y);
+        *value = (*value - delta_y * 0.015).clamp(0.0, 1.0);
+    }
+
+    let center = egui::pos2(rect.center().x, rect.top() + 14.0);
+    let radius = 11.0;
+
+    // Background circle
+    painter.circle_filled(center, radius, Color32::from_rgb(12, 16, 26));
+    painter.circle_stroke(center, radius, Stroke::new(1.0_f32, Color32::from_rgb(28, 40, 60)));
+
+    // Active arc ring (-135 deg to +135 deg)
+    let start_angle = -std::f32::consts::PI * 0.75;
+    let end_angle = start_angle + (*value * std::f32::consts::PI * 1.5);
+
+    let arc_steps = 12;
+    let mut prev_arc = None;
+    for i in 0..=arc_steps {
+        let a = start_angle + (i as f32 / arc_steps as f32) * (end_angle - start_angle);
+        let pt = egui::pos2(center.x + a.cos() * (radius - 1.5), center.y + a.sin() * (radius - 1.5));
+        if let Some(last) = prev_arc {
+            painter.line_segment([last, pt], Stroke::new(2.0_f32, accent));
+        }
+        prev_arc = Some(pt);
+    }
+
+    // Pointer notch
+    let notch_pt = egui::pos2(center.x + end_angle.cos() * (radius - 2.5), center.y + end_angle.sin() * (radius - 2.5));
+    painter.line_segment([center, notch_pt], Stroke::new(1.5_f32, Color32::WHITE));
+
+    // Label below
+    painter.text(
+        egui::pos2(rect.center().x, rect.top() + 30.0),
+        egui::Align2::CENTER_CENTER,
+        label,
+        FontId::proportional(8.5),
+        Color32::from_rgb(148, 163, 184),
+    );
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -358,6 +498,12 @@ mod tests {
         assert_eq!(state.key_signature, "Am");
         assert_eq!(state.selected_preset, "Init Synth 1");
         assert!(!state.available_presets.is_empty());
+        assert_eq!(state.master_gain, 1.0);
+        assert_eq!(state.macro_tone, 0.65);
+        assert_eq!(state.macro_space, 0.40);
+        assert_eq!(state.macro_punch, 0.55);
+        assert_eq!(state.macro_character, 0.50);
+        assert!(state.is_novice_macro_visible);
     }
 
     #[test]
