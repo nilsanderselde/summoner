@@ -89,6 +89,7 @@ pub struct DspRackDockView {
     pub drop_target_index: Option<usize>,
     pub master_bypass: bool,
     pub color_palette: ContrastColorPalette,
+    pub selected_add_kind: Option<String>,
 }
 
 impl Default for DspRackDockView {
@@ -106,6 +107,7 @@ impl DspRackDockView {
             drop_target_index: None,
             master_bypass: false,
             color_palette: ContrastColorPalette::default(),
+            selected_add_kind: None,
         };
 
         // Initialize with default standard FX chain
@@ -152,6 +154,17 @@ impl DspRackDockView {
 
     pub fn add_module(&mut self, module: DspRackModule) {
         self.modules.push(module);
+    }
+
+    /// Instantiates and appends a module from the central DSP Node Registry.
+    pub fn load_from_registry(&mut self, kind_id: &str) -> bool {
+        let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+        if let Some(desc) = registry.get(kind_id) {
+            self.add_module(desc.to_dsp_rack_module());
+            true
+        } else {
+            false
+        }
     }
 
     pub fn remove_module(&mut self, index: usize) -> Option<DspRackModule> {
@@ -460,7 +473,98 @@ impl DspRackDockView {
             if let Some(remove_idx) = module_to_remove {
                 self.remove_module(remove_idx);
             }
+
+            // Bottom Add Module picker bar
+            ui.add_space(8.0);
+            ui.horizontal(|ui| {
+                let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+                let cur_label = self
+                    .selected_add_kind
+                    .as_deref()
+                    .and_then(|k| registry.get(k))
+                    .map(|d| format!("{} {}", d.category.icon(), d.display_name))
+                    .unwrap_or_else(|| "+ Select DSP Module to Add...".to_string());
+
+                egui::ComboBox::from_id_source("rack_dock_add_picker")
+                    .selected_text(egui::RichText::new(cur_label).size(12.0).color(Color32::from_rgb(0, 229, 255)))
+                    .show_ui(ui, |ui| {
+                        for desc in registry.list_all() {
+                            let label = format!("{} {} ({})", desc.category.icon(), desc.display_name, desc.category.name());
+                            if ui.selectable_label(self.selected_add_kind.as_deref() == Some(&desc.kind_id), label).clicked() {
+                                self.selected_add_kind = Some(desc.kind_id.clone());
+                            }
+                        }
+                    });
+
+                let add_btn = egui::Button::new(
+                    egui::RichText::new("➕ Add Module")
+                        .size(12.0)
+                        .strong()
+                        .color(Color32::from_rgb(240, 245, 255)),
+                )
+                .min_size(Vec2::new(MIN_HIT_TARGET_PT * 2.0, MIN_HIT_TARGET_PT))
+                .fill(Color32::from_rgb(0, 140, 200))
+                .rounding(4.0);
+
+                if ui.add(add_btn).clicked() {
+                    if let Some(kind) = self.selected_add_kind.clone() {
+                        self.load_from_registry(&kind);
+                    }
+                }
+            });
         })
         .response
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_dsp_rack_dock_load_from_registry() {
+        let mut dock = DspRackDockView::new();
+        let initial_count = dock.modules.len();
+
+        assert!(dock.load_from_registry("NavierStokesFluidNode"));
+        assert!(dock.load_from_registry("PercussionMembraneNode"));
+        assert!(dock.load_from_registry("BciEegDecoderNode"));
+        assert!(dock.load_from_registry("PluckSynth"));
+
+        assert_eq!(dock.modules.len(), initial_count + 4);
+
+        let navier = &dock.modules[initial_count];
+        assert_eq!(navier.id, "NavierStokesFluidNode");
+        assert_eq!(navier.name, "Navier-Stokes 3D Acoustic Fluid Dynamics");
+        assert!(!navier.params.is_empty());
+    }
+
+    #[test]
+    fn test_dsp_rack_dock_reordering_and_bounds() {
+        let mut dock = DspRackDockView::new();
+        let bounds = dock.calculate_module_bounds(10.0, 20.0, 300.0);
+        assert_eq!(bounds.len(), dock.modules.len());
+
+        let orig_first = dock.modules[0].id.clone();
+        let orig_second = dock.modules[1].id.clone();
+
+        assert!(dock.reorder_module(0, 2));
+        assert_eq!(dock.modules[0].id, orig_second);
+        assert_eq!(dock.modules[1].id, orig_first);
+    }
+
+    #[test]
+    #[cfg(feature = "gui")]
+    fn test_dsp_rack_dock_ui_rendering_headless() {
+        let mut dock = DspRackDockView::new();
+        dock.load_from_registry("AetherSynth");
+        dock.load_from_registry("TubeSaturationNode");
+
+        let ctx = egui::Context::default();
+        let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                dock.show(ui);
+            });
+        });
     }
 }
