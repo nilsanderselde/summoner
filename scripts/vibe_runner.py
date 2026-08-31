@@ -43,8 +43,9 @@ def build_prompt(latest_roadmap):
         f"- Run `cargo check --workspace` and `cargo test --workspace --features gui` to verify changes.\n"
         f"- Perform intermittent `git commit` followed by `git push` operations after verifying progress.\n\n"
         
-        f"### 4. ROADMAP TRANSITION\n"
-        f"If you complete tasks from the roadmap, generate the next consolidated milestone file at `{next_roadmap}`."
+        f"### 4. ROADMAP TRANSITION & WISHLIST\n"
+        f"If you complete tasks from the roadmap, generate the next consolidated milestone file at `{next_roadmap}`.\n"
+        f"ONLY IF the GUI redesign is 100% complete and all roadmap tasks are finished, you may consult `local/WISHLIST.md` for 'nice-to-have' tasks. Do not prioritize wishlist items over a fully working GUI and DSP."
     )
 
 if __name__ == "__main__":
