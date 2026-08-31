@@ -3252,6 +3252,206 @@ impl DspNodeRegistry {
             .with_param(DspParamSchema::knob("macro_punch", "Macro 3 (Punch)", 0.0, 1.0, 0.5, "%", MacroRole::Punch, "Master Punch macro controller"))
             .with_param(DspParamSchema::knob("macro_char", "Macro 4 (Character)", 0.0, 1.0, 0.5, "%", MacroRole::Character, "Master Character macro controller"))
         );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "Vst3HostPlugin",
+                "VST3 Audio Plugin Host Wrapper",
+                DspNodeCategory::Utility,
+                "Sandboxed VST3 plugin container with sample-accurate parameter automation and dynamic latency compensation.",
+            )
+            .with_param(DspParamSchema::knob("dry_wet_mix", "Dry / Wet", 0.0, 1.0, 1.0, "%", MacroRole::Space, "Plugin processed mix balance"))
+            .with_param(DspParamSchema::knob("input_gain_db", "Input Gain", -24.0, 24.0, 0.0, "dB", MacroRole::Punch, "Pre-plugin signal gain"))
+            .with_param(DspParamSchema::knob("output_gain_db", "Output Gain", -24.0, 24.0, 0.0, "dB", MacroRole::Punch, "Post-plugin output trim"))
+            .with_param(DspParamSchema::toggle("bypass_host", "Bypass Plugin", false, "Hard-bypass plugin processing"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "ClapHostEngine",
+                "CLAP Plugin & Polyphonic Modulation Host",
+                DspNodeCategory::Utility,
+                "Next-gen CLAP plugin host supporting non-destructive voice-level modulation, preset discovery, and sample-accurate events.",
+            )
+            .with_param(DspParamSchema::knob("dry_wet_mix", "Dry / Wet", 0.0, 1.0, 1.0, "%", MacroRole::Space, "CLAP processed mix level"))
+            .with_param(DspParamSchema::knob("poly_mod_depth", "Voice Mod Depth", 0.0, 2.0, 1.0, "x", MacroRole::Character, "Polyphonic parameter modulation scaling"))
+            .with_param(DspParamSchema::toggle("mpe_enabled", "MPE Voice Routing", true, "Route MPE expression to polyphonic parameters"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "PushControllerDriver",
+                "Ableton Push 2 / 3 Hardware Surface Bridge",
+                DspNodeCategory::Utility,
+                "Bidirectional USB MIDI/HID driver for Ableton Push 2/3 hardware controller with 64 RGB pads, encoders, and LCD/OLED display buffer streaming.",
+            )
+            .with_param(DspParamSchema::choice("pad_layout", "Pad Mode", &["Isomorphic 4th", "Drum 16-Pad", "Session Grid", "Sequencer 32-Step"], 0, "Grid layout mode"))
+            .with_param(DspParamSchema::knob("velocity_sensitivity", "Pad Sensitivity", 0.1, 2.0, 1.0, "x", MacroRole::Punch, "Pad pressure & velocity curve scale"))
+            .with_param(DspParamSchema::knob("lcd_brightness", "Display Brightness", 0.1, 1.0, 0.85, "%", MacroRole::Tone, "Hardware screen backlight brightness"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "LaunchpadProDriver",
+                "Novation Launchpad Pro RGB Grid Controller",
+                DspNodeCategory::Utility,
+                "Full RGB SysEx integration for Launchpad Pro MK3 featuring note mode, clip launching, custom fader banks, and microtonal scale mappings.",
+            )
+            .with_param(DspParamSchema::choice("mode_select", "Active Mode", &["Note Mode", "Session Grid", "Fader Banks", "Microtonal Lattice"], 0, "Launchpad hardware mode"))
+            .with_param(DspParamSchema::knob("pad_velocity_curve", "Velocity Curve", 0.1, 3.0, 1.0, "x", MacroRole::Punch, "Hardware velocity sensor response curve"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "NksIntegrationDriver",
+                "Native Instruments NKS2 Hardware Integration",
+                DspNodeCategory::Utility,
+                "Komplete Kontrol S-Series MK3 integration featuring Light Guide LED keys, high-res screen parameter mapping, and tag-based preset browsing.",
+            )
+            .with_param(DspParamSchema::toggle("light_guide_active", "Light Guide LEDs", true, "Illuminate active scale degrees and key splits"))
+            .with_param(DspParamSchema::knob("touch_strip_sens", "Touch Strip Sens", 0.1, 2.0, 1.0, "x", MacroRole::Tone, "Hardware pitch/mod ribbon sensitivity"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "McuControllerDriver",
+                "Mackie Control Universal (MCU) Motorized Surface Driver",
+                DspNodeCategory::Utility,
+                "Supports Mackie Control Universal, Behringer X-Touch, and Icon QCon Pro motorized 100mm faders, V-Pots, 2x55 character LCD scribbles, and Jog Wheel.",
+            )
+            .with_param(DspParamSchema::choice("fader_bank", "Active Fader Bank", &["Tracks 1-8", "Tracks 9-16", "Tracks 17-24", "Master & VCA"], 0, "Current 8-fader track group"))
+            .with_param(DspParamSchema::toggle("motor_feedback", "Motor Feedback", true, "Send servo position updates to physical faders"))
+            .with_param(DspParamSchema::knob("jog_scrub_speed", "Jog Wheel Sens", 0.1, 5.0, 1.0, "x", MacroRole::Punch, "Scrubbing timeline step speed"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "OscMappingEngine",
+                "Open Sound Control (OSC) Bidirectional Network Router",
+                DspNodeCategory::Utility,
+                "High-speed UDP Open Sound Control engine mapping incoming /summoner/* messages to DSP parameters and streaming real-time metering telemetry.",
+            )
+            .with_param(DspParamSchema::knob("network_port", "UDP Receive Port", 1024.0, 65535.0, 9000.0, "port", MacroRole::None, "OSC inbound port"))
+            .with_param(DspParamSchema::knob("telemetry_rate_hz", "Telemetry Rate", 10.0, 120.0, 60.0, "Hz", MacroRole::Tone, "Meter broadcast rate"))
+            .with_param(DspParamSchema::toggle("bidirectional_sync", "Bidirectional Sync", true, "Echo parameter changes to connected OSC clients"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "WasmDspRuntime",
+                "WebAssembly Deterministic DSP JIT Runtime",
+                DspNodeCategory::Utility,
+                "Sandboxed, real-time safe WebAssembly execution environment allowing custom user DSP filters and oscillators compiled from Rust, C, or Faust.",
+            )
+            .with_param(DspParamSchema::knob("wasm_param_1", "Custom Param 1", 0.0, 1.0, 0.5, "%", MacroRole::Tone, "WASM export parameter 1"))
+            .with_param(DspParamSchema::knob("wasm_param_2", "Custom Param 2", 0.0, 1.0, 0.5, "%", MacroRole::Space, "WASM export parameter 2"))
+            .with_param(DspParamSchema::knob("wasm_param_3", "Custom Param 3", 0.0, 1.0, 0.5, "%", MacroRole::Punch, "WASM export parameter 3"))
+            .with_param(DspParamSchema::knob("wasm_param_4", "Custom Param 4", 0.0, 1.0, 0.5, "%", MacroRole::Character, "WASM export parameter 4"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "MidiClockCalibrator",
+                "Hardware MIDI Clock Jitter Calibrator & DIN Sync",
+                DspNodeCategory::Utility,
+                "Sub-sample accurate hardware MIDI clock transmission with predictive jitter compensation, swing shuffle, and optical isolator latency offset.",
+            )
+            .with_param(DspParamSchema::knob("clock_offset_ms", "Latency Offset", -50.0, 50.0, 0.0, "ms", MacroRole::Punch, "Hardware output timing correction"))
+            .with_param(DspParamSchema::knob("clock_swing", "Clock Swing", 0.0, 0.75, 0.0, "%", MacroRole::Character, "16th-note clock shuffle"))
+            .with_param(DspParamSchema::toggle("send_start_stop", "Send Transport SPP", true, "Transmit Song Position Pointer & Start/Stop"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "CvGateGenerator",
+                "Eurorack DC-Coupled Audio CV/Gate Voltage Generator",
+                DspNodeCategory::Modulation,
+                "Generates +/-10V calibrated 1V/Oct pitch CV, gate pulses, triggers, and continuous modulation waveforms for modular synthesizers via DC-coupled audio interfaces.",
+            )
+            .with_param(DspParamSchema::knob("volts_per_octave", "V/Oct Scale Cal", 0.95, 1.05, 1.0, "V", MacroRole::Tone, "1V/Octave slope calibration factor"))
+            .with_param(DspParamSchema::knob("gate_voltage_v", "Gate Output Level", 0.0, 10.0, 5.0, "V", MacroRole::Punch, "Gate pulse voltage amplitude"))
+            .with_param(DspParamSchema::knob("glide_time_ms", "Portamento Time", 0.0, 1000.0, 0.0, "ms", MacroRole::Tone, "Analog CV slew rate"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "DinSyncGenerator",
+                "Roland Sync24 / Sync48 Clock Pulse Generator",
+                DspNodeCategory::Modulation,
+                "Generates legacy 24 PPQN / 48 PPQN analog pulse trains and run/stop signals for vintage drum machines (TR-808, TR-909, TB-303).",
+            )
+            .with_param(DspParamSchema::choice("pulse_standard", "Sync Standard", &["Sync24 (Roland 24 PPQN)", "Sync48 (Korg 48 PPQN)"], 0, "Clock resolution standard"))
+            .with_param(DspParamSchema::knob("pulse_width_ms", "Pulse Width", 0.5, 10.0, 2.0, "ms", MacroRole::Punch, "Clock trigger duration"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "BleMidiController",
+                "Bluetooth Low Energy (BLE) Wireless MIDI Transceiver",
+                DspNodeCategory::Utility,
+                "Zero-configuration Apple/Android BLE MIDI profile manager with low-latency connection bonding and packet timestamp jitter smoothing.",
+            )
+            .with_param(DspParamSchema::knob("connection_interval_ms", "Min Interval", 7.5, 30.0, 11.25, "ms", MacroRole::Tone, "BLE radio connection interval"))
+            .with_param(DspParamSchema::toggle("auto_reconnect", "Auto-Reconnect", true, "Automatically pair when wireless device is in range"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "LiveSessionRecorder",
+                "Multichannel Lossless Session Disk Spooler",
+                DspNodeCategory::Utility,
+                "Zero-allocation background audio streaming spooler recording 64-channel 32-bit float master takes and stem sub-mixes directly to NVMe SSD.",
+            )
+            .with_param(DspParamSchema::choice("bit_depth", "Bit Format", &["32-bit Float WAV", "24-bit PCM WAV", "FLAC 24-bit Lossless"], 0, "Recording audio encoding"))
+            .with_param(DspParamSchema::toggle("auto_punch_in", "Auto-Punch Transport", false, "Engage recording automatically at loop boundary"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "VisualizerIntegrationEngine",
+                "GPU Multi-Mode Oscilloscope & Spectrogram Engine",
+                DspNodeCategory::Utility,
+                "High-performance SIMD audio visualizer engine calculating 4096-band FFT spectrograms, stereoscopic vectorscopes, and Lissajous figures at 120 FPS.",
+            )
+            .with_param(DspParamSchema::choice("scope_mode", "Visualizer Mode", &["CRT Oscilloscope", "FFT Spectrogram", "Stereo Vectorscope", "Lissajous Phase"], 0, "Visualization display format"))
+            .with_param(DspParamSchema::knob("decay_speed", "Decay Smoothing", 0.05, 0.99, 0.85, "%", MacroRole::Space, "Peak hold falloff rate"))
+            .with_param(DspParamSchema::knob("fft_gain_boost_db", "FFT Gain Boost", -12.0, 24.0, 6.0, "dB", MacroRole::Punch, "Spectral visualizer sensitivity"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "SpectrogramArtMorphNode",
+                "Spectral Image-Morphing Dual-Buffer Interpolation Generator",
+                DspNodeCategory::SpectralResynthesis,
+                "Morphs seamlessly between two visual image spectrograms, synthesizing complex evolving timbres directly in the frequency domain.",
+            )
+            .with_param(DspParamSchema::knob("morph_factor", "Image Morph", 0.0, 1.0, 0.5, "%", MacroRole::Tone, "Interpolation ratio between image A and image B"))
+            .with_param(DspParamSchema::knob("phase_coherence", "Phase Coherence", 0.0, 1.0, 0.8, "%", MacroRole::Character, "Griffin-Lim phase reconstruction alignment"))
+            .with_param(DspParamSchema::knob("spectral_smear", "Spectral Smear", 0.0, 1.0, 0.2, "%", MacroRole::Space, "Frequency smearing blur radius"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "PluginAudioNode",
+                "Universal Sandboxed Audio Plugin Processor",
+                DspNodeCategory::Utility,
+                "Universal native audio plugin node with dynamic crash isolation, zero memory leak protection, and automated parameter reflection.",
+            )
+            .with_param(DspParamSchema::knob("dry_wet", "Mix Level", 0.0, 1.0, 1.0, "%", MacroRole::Space, "Wet/Dry blend"))
+            .with_param(DspParamSchema::knob("gain_trim_db", "Gain Trim", -18.0, 18.0, 0.0, "dB", MacroRole::Punch, "I/O gain adjustment"))
+        );
+
+        self.register(
+            DspNodeDescriptor::new(
+                "ElasticWarpEngine",
+                "WSOLA Elastic Audio Time-Stretching & Pitch Engine",
+                DspNodeCategory::SamplerSlicer,
+                "Phase-vocoder & WSOLA transient-preserving elastic time stretcher allowing independent tempo scaling and formant-corrected pitch shifting.",
+            )
+            .with_param(DspParamSchema::knob("time_stretch_ratio", "Time Stretch", 0.25, 4.0, 1.0, "x", MacroRole::Tone, "Playback tempo playback speed ratio"))
+            .with_param(DspParamSchema::knob("pitch_shift_semitones", "Pitch Transpose", -24.0, 24.0, 0.0, "st", MacroRole::Character, "Semitone transpose"))
+            .with_param(DspParamSchema::toggle("preserve_formants", "Formant Preservation", true, "Lock acoustic throat formants during transpose"))
+        );
     }
 }
 
@@ -3264,7 +3464,7 @@ mod tests {
         let registry = DspNodeRegistry::new();
         let all = registry.list_all();
         assert!(
-            all.len() >= 180,
+            all.len() >= 210,
             "Registry should contain extensive DSP modules (found {})",
             all.len()
         );
@@ -3296,6 +3496,9 @@ mod tests {
         let neural = registry.list_by_category(DspNodeCategory::NeuralAi);
         assert!(!neural.is_empty(), "Neural AI nodes must be registered");
 
+        let utility = registry.list_by_category(DspNodeCategory::Utility);
+        assert!(!utility.is_empty(), "Utility nodes must be registered");
+
         // Verify AI Mixing and Neural Vocal nodes
         assert!(registry.get("DemucsV4Separator").is_some());
         assert!(registry.get("SingingSynthesisNode").is_some());
@@ -3320,6 +3523,25 @@ mod tests {
         assert!(registry.get("MultiTrackAudioRouter").is_some());
         assert!(registry.get("MpeExpressionCurveEditor").is_some());
         assert!(registry.get("MacroModulationMatrix").is_some());
+
+        // Verify Hardware Ecosystem, Plugin Hosting & Utility nodes
+        assert!(registry.get("Vst3HostPlugin").is_some());
+        assert!(registry.get("ClapHostEngine").is_some());
+        assert!(registry.get("PushControllerDriver").is_some());
+        assert!(registry.get("LaunchpadProDriver").is_some());
+        assert!(registry.get("NksIntegrationDriver").is_some());
+        assert!(registry.get("McuControllerDriver").is_some());
+        assert!(registry.get("OscMappingEngine").is_some());
+        assert!(registry.get("WasmDspRuntime").is_some());
+        assert!(registry.get("MidiClockCalibrator").is_some());
+        assert!(registry.get("CvGateGenerator").is_some());
+        assert!(registry.get("DinSyncGenerator").is_some());
+        assert!(registry.get("BleMidiController").is_some());
+        assert!(registry.get("LiveSessionRecorder").is_some());
+        assert!(registry.get("VisualizerIntegrationEngine").is_some());
+        assert!(registry.get("SpectrogramArtMorphNode").is_some());
+        assert!(registry.get("PluginAudioNode").is_some());
+        assert!(registry.get("ElasticWarpEngine").is_some());
 
         // Verify default node config creation
         let gamelan_desc = registry.get("GamelanGender").expect("GamelanGender must exist");
