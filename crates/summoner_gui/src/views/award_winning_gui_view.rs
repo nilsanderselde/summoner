@@ -107,6 +107,16 @@ pub struct ModularPatchCord {
     pub intensity: f32,
 }
 
+/// Interactive MIDI note block inside Piano Roll Canvas.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct PianoRollNote {
+    pub id: usize,
+    pub pitch_idx: usize, // 0..13 (C5 down to C4)
+    pub start_beat: f32,
+    pub length_beats: f32,
+    pub velocity: f32,
+}
+
 #[derive(Debug, Clone)]
 pub struct AwardWinningGuiView {
     pub top_bar_state: ModernTopBarState,
@@ -137,6 +147,11 @@ pub struct AwardWinningGuiView {
     pub last_inspector_armed: bool,
     pub last_selected_track_idx: usize,
     pub last_applied_master_gain: f32,
+    pub piano_roll_notes: Vec<PianoRollNote>,
+    pub selected_note_id: Option<usize>,
+    pub auditioned_pitch_idx: Option<usize>,
+    pub next_note_id: usize,
+    pub last_synced_track_notes_idx: usize,
 }
 
 impl Default for AwardWinningGuiView {
@@ -283,6 +298,20 @@ impl AwardWinningGuiView {
             last_inspector_armed: false,
             last_selected_track_idx: 4,
             last_applied_master_gain: 1.0,
+            piano_roll_notes: vec![
+                PianoRollNote { id: 1, pitch_idx: 3, start_beat: 0.0, length_beats: 1.5, velocity: 0.90 },
+                PianoRollNote { id: 2, pitch_idx: 5, start_beat: 2.0, length_beats: 1.5, velocity: 0.80 },
+                PianoRollNote { id: 3, pitch_idx: 8, start_beat: 4.0, length_beats: 2.0, velocity: 0.85 },
+                PianoRollNote { id: 4, pitch_idx: 10, start_beat: 6.0, length_beats: 1.5, velocity: 0.75 },
+                PianoRollNote { id: 5, pitch_idx: 12, start_beat: 8.0, length_beats: 3.0, velocity: 0.95 },
+                PianoRollNote { id: 6, pitch_idx: 10, start_beat: 11.5, length_beats: 1.0, velocity: 0.70 },
+                PianoRollNote { id: 7, pitch_idx: 8, start_beat: 13.0, length_beats: 2.0, velocity: 0.85 },
+                PianoRollNote { id: 8, pitch_idx: 3, start_beat: 15.0, length_beats: 2.0, velocity: 1.00 },
+            ],
+            selected_note_id: Some(1),
+            auditioned_pitch_idx: None,
+            next_note_id: 9,
+            last_synced_track_notes_idx: 4,
         };
         view.reset_modular_nodes();
         view
@@ -651,31 +680,137 @@ impl AwardWinningGuiView {
                     painter.text(egui::pos2(bar_x + 4.0, ruler_rect.top() + 4.0), egui::Align2::LEFT_TOP, format!("{}", bar), FontId::proportional(9.0), Color32::from_rgb(148, 163, 184));
                 }
 
-                // Ruler playhead scrubbing
                 let pointer_pos = resp.interact_pointer_pos().or_else(|| ui.input(|i| i.pointer.latest_pos()));
-                let is_interacting = resp.clicked() || resp.dragged() || ui.input(|i| i.pointer.primary_down() || i.pointer.primary_clicked());
+                let is_click = resp.clicked() || ui.input(|i| i.pointer.primary_clicked());
+                let is_down = ui.input(|i| i.pointer.primary_down());
+                let is_secondary_click = ui.input(|i| i.pointer.secondary_clicked());
+                let is_delete_pressed = ui.input(|i| i.key_pressed(egui::Key::Delete) || i.key_pressed(egui::Key::Backspace));
+
+                // Ruler playhead scrubbing
                 if let Some(pos) = pointer_pos {
-                    if is_interacting && pos.y <= rect.top() + ruler_h {
+                    if (is_click || is_down || resp.dragged()) && pos.y <= rect.top() + ruler_h {
                         let beat = ((pos.x - (rect.left() + key_w)) / ppb).max(0.0);
                         self.playhead_beat = beat;
                     }
                 }
 
-                // 2. Pitch Rows (12 semitones C5 down to C4)
+                // Keyboard & Pitch Row definitions (12 semitones C5 down to C4)
                 let pitch_names = ["C5", "B4", "A#4", "A4", "G#4", "G4", "F#4", "F4", "E4", "D#4", "D4", "C#4", "C4"];
                 let num_pitches = pitch_names.len();
                 let vel_lane_h = 32.0;
                 let roll_area_h = canvas_height - ruler_h - vel_lane_h;
                 let pitch_row_h = roll_area_h / num_pitches as f32;
 
+                // Delete selected note shortcut
+                if is_delete_pressed {
+                    if let Some(sel_id) = self.selected_note_id {
+                        self.piano_roll_notes.retain(|n| n.id != sel_id);
+                        self.selected_note_id = None;
+                    }
+                }
+
+                // Interactive Pointer Handling (Keyboard, Velocity Lane, Grid Notes)
+                if let Some(pos) = pointer_pos {
+                    if pos.x <= rect.left() + key_w && pos.y > rect.top() + ruler_h && pos.y < rect.bottom() - vel_lane_h {
+                        // 2A. Interactive Piano Keyboard Clicking / Auditioning
+                        let p_idx = (((pos.y - (rect.top() + ruler_h)) / pitch_row_h) as usize).min(num_pitches - 1);
+                        if is_down || is_click {
+                            self.auditioned_pitch_idx = Some(p_idx);
+                            self.inspector_state.target_name = format!("Pitch {}", pitch_names[p_idx]);
+                            self.inspector_state.scale_ratio_num = (num_pitches - p_idx) as i32;
+                            self.inspector_state.root_ratio = 440.0 * 2.0f32.powf(((72 - p_idx as i32) - 69) as f32 / 12.0);
+                            self.inspector_state.octave_offset = if p_idx < 1 { 5 } else { 4 };
+                        }
+                    } else if pos.y >= rect.bottom() - vel_lane_h && pos.x > rect.left() + key_w {
+                        // 2B. Interactive Velocity Lane Dragging
+                        if is_down || is_click || resp.dragged() {
+                            let mut closest_idx = None;
+                            let mut min_dist = f32::MAX;
+                            for (idx, note) in self.piano_roll_notes.iter().enumerate() {
+                                let stick_x = rect.left() + key_w + note.start_beat * ppb + 2.0;
+                                let dist = (pos.x - stick_x).abs();
+                                if dist < min_dist {
+                                    min_dist = dist;
+                                    closest_idx = Some(idx);
+                                }
+                            }
+                            if min_dist < (ppb * 1.5).max(14.0) {
+                                if let Some(idx) = closest_idx {
+                                    let new_vel = ((rect.bottom() - 2.0 - pos.y) / (vel_lane_h * 0.85)).clamp(0.05, 1.0);
+                                    self.piano_roll_notes[idx].velocity = new_vel;
+                                    self.selected_note_id = Some(self.piano_roll_notes[idx].id);
+                                }
+                            } else if let Some(sel_id) = self.selected_note_id {
+                                if let Some(note) = self.piano_roll_notes.iter_mut().find(|n| n.id == sel_id) {
+                                    let new_vel = ((rect.bottom() - 2.0 - pos.y) / (vel_lane_h * 0.85)).clamp(0.05, 1.0);
+                                    note.velocity = new_vel;
+                                }
+                            }
+                        }
+                    } else if pos.x > rect.left() + key_w && pos.y > rect.top() + ruler_h && pos.y < rect.bottom() - vel_lane_h {
+                        // 2C. Grid Note Selection, Creation & Deletion
+                        if is_click || is_secondary_click {
+                            let mut hit_idx = None;
+                            for (idx, note) in self.piano_roll_notes.iter().enumerate() {
+                                let note_y = rect.top() + ruler_h + note.pitch_idx as f32 * pitch_row_h + 1.5;
+                                let note_h = pitch_row_h - 3.0;
+                                let note_x = rect.left() + key_w + note.start_beat * ppb;
+                                let note_w = (note.length_beats * ppb).max(8.0);
+                                let n_rect = Rect::from_min_size(egui::pos2(note_x, note_y), Vec2::new(note_w, note_h));
+                                if n_rect.contains(pos) {
+                                    hit_idx = Some(idx);
+                                    break;
+                                }
+                            }
+                            if let Some(idx) = hit_idx {
+                                if is_secondary_click {
+                                    self.piano_roll_notes.remove(idx);
+                                    self.selected_note_id = None;
+                                } else {
+                                    let note = &self.piano_roll_notes[idx];
+                                    self.selected_note_id = Some(note.id);
+                                    self.inspector_state.target_name = format!("Note {} (Beat {:.1})", pitch_names[note.pitch_idx], note.start_beat);
+                                    self.inspector_state.scale_ratio_num = (num_pitches - note.pitch_idx) as i32;
+                                    self.inspector_state.octave_offset = if note.pitch_idx < 1 { 5 } else { 4 };
+                                }
+                            } else if is_click {
+                                // Clicked empty cell: create new note
+                                let p_idx = (((pos.y - (rect.top() + ruler_h)) / pitch_row_h) as usize).min(num_pitches - 1);
+                                let raw_b = ((pos.x - (rect.left() + key_w)) / ppb).max(0.0);
+                                let start_b = (raw_b * 2.0).round() / 2.0; // snapped to 0.5 beat
+                                let new_id = self.next_note_id;
+                                self.next_note_id += 1;
+                                self.piano_roll_notes.push(PianoRollNote {
+                                    id: new_id,
+                                    pitch_idx: p_idx,
+                                    start_beat: start_b,
+                                    length_beats: 1.0,
+                                    velocity: 0.85,
+                                });
+                                self.selected_note_id = Some(new_id);
+                                self.inspector_state.target_name = format!("Note {} (Beat {:.1})", pitch_names[p_idx], start_b);
+                                self.inspector_state.scale_ratio_num = (num_pitches - p_idx) as i32;
+                                self.inspector_state.octave_offset = if p_idx < 1 { 5 } else { 4 };
+                            }
+                        }
+                    }
+                }
+                if !is_down && !is_click {
+                    self.auditioned_pitch_idx = None;
+                }
+
+                // 2. Render Pitch Rows & Piano Keys
                 for (p_idx, p_name) in pitch_names.iter().enumerate() {
                     let py = rect.top() + ruler_h + p_idx as f32 * pitch_row_h;
                     let is_accidental = p_name.contains('#');
                     let is_tonic = *p_name == "A4" || *p_name == "C4" || *p_name == "C5";
+                    let is_auditioned = self.auditioned_pitch_idx == Some(p_idx);
 
                     // Key Label Header
                     let key_rect = Rect::from_min_size(egui::pos2(rect.left(), py), Vec2::new(key_w, pitch_row_h));
-                    let key_bg = if is_tonic {
+                    let key_bg = if is_auditioned {
+                        Color32::from_rgb(14, 116, 144) // Active pressed ocean cyan
+                    } else if is_tonic {
                         Color32::from_rgb(24, 38, 56)
                     } else if is_accidental {
                         Color32::from_rgb(12, 16, 24)
@@ -683,8 +818,19 @@ impl AwardWinningGuiView {
                         Color32::from_rgb(18, 24, 34)
                     };
                     painter.rect_filled(key_rect, 1.0, key_bg);
-                    painter.rect_stroke(key_rect, 1.0, Stroke::new(0.5_f32, Color32::from_rgb(28, 40, 60)));
-                    let key_text_col = if is_tonic { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(148, 163, 184) };
+                    let border_col = if is_auditioned {
+                        Color32::from_rgb(56, 189, 248)
+                    } else {
+                        Color32::from_rgb(28, 40, 60)
+                    };
+                    painter.rect_stroke(key_rect, 1.0, Stroke::new(if is_auditioned { 1.5_f32 } else { 0.5_f32 }, border_col));
+                    let key_text_col = if is_auditioned {
+                        Color32::WHITE
+                    } else if is_tonic {
+                        Color32::from_rgb(56, 189, 248)
+                    } else {
+                        Color32::from_rgb(148, 163, 184)
+                    };
                     painter.text(egui::pos2(key_rect.left() + 8.0, key_rect.center().y), egui::Align2::LEFT_CENTER, *p_name, FontId::proportional(9.0), key_text_col);
 
                     // Grid Lane
@@ -700,40 +846,79 @@ impl AwardWinningGuiView {
                     }
                 }
 
-                // 3. MIDI Note Blocks (Synth 1 Melodic Line in A Minor)
-                let demo_notes = [
-                    (3, 0.0, 1.5, 0.9),  // A4
-                    (5, 2.0, 1.5, 0.8),  // G4
-                    (8, 4.0, 2.0, 0.85), // E4
-                    (10, 6.0, 1.5, 0.75),// D4
-                    (12, 8.0, 3.0, 0.95),// C4
-                    (10, 11.5, 1.0, 0.7),// D4
-                    (8, 13.0, 2.0, 0.85),// E4
-                    (3, 15.0, 2.0, 1.0), // A4
-                ];
+                // 3. Velocity Lane Background & Separator
+                let vel_sep_y = rect.bottom() - vel_lane_h;
+                painter.line_segment([egui::pos2(rect.left(), vel_sep_y), egui::pos2(rect.right(), vel_sep_y)], Stroke::new(1.0_f32, Color32::from_rgb(36, 50, 74)));
+                painter.rect_filled(Rect::from_min_size(egui::pos2(rect.left(), vel_sep_y), Vec2::new(rect.width(), vel_lane_h)), 0.0, Color32::from_rgb(12, 16, 26));
+                painter.text(egui::pos2(rect.left() + 8.0, vel_sep_y + 4.0), egui::Align2::LEFT_TOP, "VELOCITY", FontId::proportional(8.0), Color32::from_rgb(100, 116, 139));
 
-                for (pitch_idx, start_b, len_b, vel) in demo_notes {
-                    let note_y = rect.top() + ruler_h + pitch_idx as f32 * pitch_row_h + 1.5;
+                // 4. MIDI Note Blocks & Velocity Lane Sticks
+                for note in &self.piano_roll_notes {
+                    let is_sel = self.selected_note_id == Some(note.id);
+                    let note_y = rect.top() + ruler_h + note.pitch_idx as f32 * pitch_row_h + 1.5;
                     let note_h = pitch_row_h - 3.0;
-                    let note_x = rect.left() + key_w + start_b * ppb;
-                    let note_w = (len_b * ppb).max(8.0);
+                    let note_x = rect.left() + key_w + note.start_beat * ppb;
+                    let note_w = (note.length_beats * ppb).max(8.0);
                     let note_rect = Rect::from_min_size(egui::pos2(note_x, note_y), Vec2::new(note_w, note_h));
 
                     // Glowing note fill
-                    let fill_col = Color32::from_rgba_unmultiplied(56, 189, 248, (vel * 200.0) as u8);
+                    let fill_alpha = if is_sel {
+                        (note.velocity * 220.0 + 35.0).min(255.0) as u8
+                    } else {
+                        (note.velocity * 180.0 + 20.0).min(240.0) as u8
+                    };
+                    let fill_col = Color32::from_rgba_unmultiplied(56, 189, 248, fill_alpha);
                     painter.rect_filled(note_rect, 2.0, fill_col);
-                    painter.rect_stroke(note_rect, 2.0, Stroke::new(1.0_f32, Color32::from_rgb(56, 189, 248)));
+
+                    if is_sel {
+                        // High-contrast selection aura
+                        painter.rect_stroke(note_rect.expand(1.5), 3.0, Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(56, 189, 248, 120)));
+                        painter.rect_stroke(note_rect, 2.0, Stroke::new(1.8_f32, Color32::WHITE));
+                    } else {
+                        painter.rect_stroke(note_rect, 2.0, Stroke::new(1.0_f32, Color32::from_rgb(56, 189, 248)));
+                    }
+
+                    // Note Pitch Label inside block
+                    if note_w >= 22.0 && note.pitch_idx < num_pitches {
+                        painter.text(
+                            egui::pos2(note_rect.left() + 4.0, note_rect.center().y),
+                            egui::Align2::LEFT_CENTER,
+                            pitch_names[note.pitch_idx],
+                            FontId::proportional(8.5),
+                            if is_sel { Color32::WHITE } else { Color32::from_rgb(220, 240, 255) },
+                        );
+                    }
 
                     // Velocity lane stick
-                    let v_height = vel_lane_h * vel * 0.85;
+                    let v_height = vel_lane_h * note.velocity * 0.85;
                     let stick_x = note_x + 2.0;
-                    painter.line_segment([egui::pos2(stick_x, rect.bottom() - 2.0), egui::pos2(stick_x, rect.bottom() - 2.0 - v_height)], Stroke::new(1.5_f32, Color32::from_rgb(56, 189, 248)));
-                    painter.circle_filled(egui::pos2(stick_x, rect.bottom() - 2.0 - v_height), 2.5, Color32::from_rgb(56, 189, 248));
+                    let cap_y = rect.bottom() - 2.0 - v_height;
+                    let stick_col = if is_sel { Color32::WHITE } else { Color32::from_rgb(56, 189, 248) };
+                    painter.line_segment([egui::pos2(stick_x, rect.bottom() - 2.0), egui::pos2(stick_x, cap_y)], Stroke::new(if is_sel { 2.0_f32 } else { 1.5_f32 }, stick_col));
+                    painter.circle_filled(egui::pos2(stick_x, cap_y), if is_sel { 3.5 } else { 2.5 }, stick_col);
+                    if is_sel {
+                        painter.text(
+                            egui::pos2(stick_x + 6.0, cap_y),
+                            egui::Align2::LEFT_CENTER,
+                            format!("{:.0}%", note.velocity * 100.0),
+                            FontId::proportional(8.0),
+                            Color32::from_rgb(56, 189, 248),
+                        );
+                    }
                 }
 
-                // 4. Playhead Line
+                // 5. Playhead Line (Spans entire height with diamond marker)
                 let playhead_x = rect.left() + key_w + (self.playhead_beat * ppb);
-                painter.line_segment([egui::pos2(playhead_x, rect.top()), egui::pos2(playhead_x, rect.bottom())], Stroke::new(1.5_f32, Color32::from_rgb(56, 189, 248)));
+                painter.line_segment(
+                    [egui::pos2(playhead_x, rect.top()), egui::pos2(playhead_x, rect.bottom())],
+                    Stroke::new(3.0_f32, Color32::from_rgba_unmultiplied(56, 189, 248, 70)),
+                );
+                painter.line_segment(
+                    [egui::pos2(playhead_x, rect.top()), egui::pos2(playhead_x, rect.bottom())],
+                    Stroke::new(1.5_f32, Color32::from_rgb(56, 189, 248)),
+                );
+                let marker_rect = Rect::from_center_size(egui::pos2(playhead_x, rect.top() + 6.0), Vec2::new(8.0, 12.0));
+                painter.rect_filled(marker_rect, 2.0, Color32::from_rgb(56, 189, 248));
             });
     }
 
@@ -982,6 +1167,82 @@ impl AwardWinningGuiView {
             // Project transport drives GUI
             self.top_bar_state.bpm = project.transport.bpm;
             self.last_synced_bpm = project.transport.bpm;
+        }
+
+        // 5. Bidirectional Piano Roll <-> Track Sequence synchronization
+        if self.selected_track_idx < project.tracks.len() {
+            if self.selected_track_idx != self.last_synced_track_notes_idx {
+                self.last_synced_track_notes_idx = self.selected_track_idx;
+                let track = &project.tracks[self.selected_track_idx];
+                self.load_piano_roll_from_track(track);
+            } else {
+                let track = &mut project.tracks[self.selected_track_idx];
+                self.sync_piano_roll_to_track(track);
+            }
+        }
+    }
+
+    /// Load sequence steps from a ProjectConfig track into the interactive piano roll.
+    pub fn load_piano_roll_from_track(&mut self, track: &summoner_project::schema::TrackConfig) {
+        let seq_opt = track.sequence.as_ref().or_else(|| track.clips.first());
+        if let Some(seq) = seq_opt {
+            if !seq.steps.is_empty() {
+                let step_div = if seq.step_division > 0.0 { seq.step_division as f32 } else { 0.25 };
+                self.piano_roll_notes = seq.steps.iter().enumerate().filter(|(_, s)| s.active && !s.muted).map(|(i, s)| {
+                    let pitch_idx = (72.0 - s.note).clamp(0.0, 12.0).round() as usize;
+                    let start_beat = seq.start_beat as f32 + (i as f32) * step_div;
+                    let length_beats = (s.gate * step_div).max(0.25);
+                    PianoRollNote {
+                        id: i + 1,
+                        pitch_idx,
+                        start_beat,
+                        length_beats,
+                        velocity: s.velocity,
+                    }
+                }).collect();
+                self.selected_note_id = self.piano_roll_notes.first().map(|n| n.id);
+                self.next_note_id = self.piano_roll_notes.iter().map(|n| n.id).max().unwrap_or(0) + 1;
+                return;
+            }
+        }
+        self.piano_roll_notes.clear();
+        self.selected_note_id = None;
+    }
+
+    /// Write active piano roll notes into a ProjectConfig track's sequence.
+    pub fn sync_piano_roll_to_track(&self, track: &mut summoner_project::schema::TrackConfig) {
+        if self.piano_roll_notes.is_empty() {
+            return;
+        }
+        let step_div = 0.25_f32;
+        let max_beat = self.piano_roll_notes.iter().map(|n| n.start_beat + n.length_beats).fold(16.0_f32, f32::max);
+        let total_steps = ((max_beat / step_div).ceil() as usize).max(16);
+
+        let seq = track.sequence.get_or_insert_with(|| summoner_project::schema::SequenceConfig {
+            start_beat: 0.0,
+            step_division: step_div as f64,
+            clip_color: track.color,
+            clip_name: Some(format!("{} Sequence", track.name)),
+            name: format!("{} Sequence", track.name),
+            is_unique: true,
+            steps: vec![summoner_project::schema::TrackerStepConfig::default(); total_steps],
+            ..Default::default()
+        });
+
+        if seq.steps.len() < total_steps {
+            seq.steps.resize_with(total_steps, summoner_project::schema::TrackerStepConfig::default);
+        }
+        for s in &mut seq.steps {
+            s.active = false;
+        }
+        for note in &self.piano_roll_notes {
+            let step_idx = ((note.start_beat / step_div).round() as usize).min(seq.steps.len().saturating_sub(1));
+            let step = &mut seq.steps[step_idx];
+            step.note = (72 - (note.pitch_idx.min(12) as i32)) as f64;
+            step.velocity = note.velocity;
+            step.gate = (note.length_beats / step_div).max(0.1);
+            step.active = true;
+            step.muted = false;
         }
     }
 

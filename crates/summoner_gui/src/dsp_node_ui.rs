@@ -3330,6 +3330,25 @@ impl DspNodeRegistry {
             .with_param(DspParamSchema::knob("resonance_decay_s", "Sympathetic Ring Decay", 0.5, 15.0, 4.5, "s", MacroRole::Space, "Sustain ring decay time of sympathetic strings parameter"))
             .with_param(DspParamSchema::choice("tuning_bank", "Raga Scale Preset", &["Bhairav", "Yaman", "Todi", "Kafi", "Bhairavi", "Darbari", "Chromatic 12", "Quartertone 24"], 0, "Sympathetic string microtonal tuning bank selector"))
         );
+        descriptors.insert("TuningMatrix".to_string(), DspNodeDescriptor::new("TuningMatrix", "Dynamic Microtonal Tuning Remapping Matrix", DspNodeCategory::Modulation, "Lock-free real-time tuning remapping engine supporting per-note frequency lookups, dynamic temperament crossfading, microtonal scale quantization, and atomic parameter dispatch into ParamBus")
+            .with_param(DspParamSchema::log_knob("root_hz", "Root Reference Pitch", 200.0, 800.0, 440.0, "Hz", MacroRole::Tone, "Base reference tuning pitch for root note parameter"))
+            .with_param(DspParamSchema::knob("morph_pos", "Temperament Morph", 0.0, 1.0, 0.0, "%", MacroRole::Character, "Crossfade position between baseline and target microtonal scales parameter"))
+            .with_param(DspParamSchema::knob("cent_offset", "Global Cent Offset", -100.0, 100.0, 0.0, "cents", MacroRole::Tone, "Continuous fine pitch deviation in cents parameter"))
+            .with_param(DspParamSchema::choice("remap_mode", "Remapping Mode", &["Direct Frequency", "Cent Offset", "Temperament Interpolation", "Scale Quantize"], 0, "Dynamic tuning transformation mode selector"))
+        );
+        descriptors.insert("JiBridgeJunction".to_string(), DspNodeDescriptor::new("JiBridgeJunction", "Asian Zither Movable Ji Bridge Acoustic Scattering Matrix", DspNodeCategory::AcousticPhysicalModel, "Physical modeling acoustic scattering junction for the movable triangular Ji bridge of Japanese Koto and Chinese Guzheng, simulating nonlinear boundary impedance and behind-the-bridge sympathetic coupling")
+            .with_param(DspParamSchema::knob("position_fraction", "Bridge Position", 0.15, 0.90, 0.65, "%", MacroRole::Tone, "Active string length fraction ratio L_play / L_total parameter"))
+            .with_param(DspParamSchema::knob("transmission", "Sympathetic Bleed", 0.01, 0.50, 0.12, "%", MacroRole::Space, "Transmission coefficient into unplayed behind-the-bridge segment parameter"))
+            .with_param(DspParamSchema::knob("reflection", "Boundary Reflection", 0.50, 0.99, 0.88, "%", MacroRole::Punch, "Wave reflection coefficient back into playing segment parameter"))
+            .with_param(DspParamSchema::knob("body_coupling", "Soundboard Coupling", 0.05, 0.80, 0.35, "%", MacroRole::Character, "Acoustic impedance energy transfer to Paulownia wood soundboard parameter"))
+            .with_param(DspParamSchema::choice("profile", "Bridge Material", &["Paulownia Hardwood", "Hard Maple", "Ivory Bone", "Synthetic Resin"], 0, "Bridge structural material impedance profile selector"))
+        );
+        descriptors.insert("PaulowniaSoundboardBody".to_string(), DspNodeDescriptor::new("PaulowniaSoundboardBody", "Paulownia Wood Koto Soundboard 8-Mode Resonator", DspNodeCategory::AcousticPhysicalModel, "Acoustic modal resonator simulating the Paulownia (Kiri) arched soundboard body cavity of traditional Asian zithers, including Helmholtz soundhole radiation and arched plate flexure")
+            .with_param(DspParamSchema::knob("wood_gain", "Soundboard Gain", 0.0, 2.0, 0.85, "%", MacroRole::Tone, "Master acoustic soundboard radiation gain parameter"))
+            .with_param(DspParamSchema::log_knob("helmholtz_hz", "Cavity Air Resonance", 100.0, 350.0, 185.0, "Hz", MacroRole::Punch, "Body cavity Helmholtz air mode frequency (in-ko and yo-ko soundholes) parameter"))
+            .with_param(DspParamSchema::knob("plate_q", "Arched Plate Q", 5.0, 50.0, 22.0, "Q", MacroRole::Character, "Quality factor of longitudinal wood flexural modes parameter"))
+            .with_param(DspParamSchema::knob("tsume_brightness", "Tsume Pick Brightness", 0.0, 1.0, 0.60, "%", MacroRole::Space, "High-frequency bridge radiation peak sensitivity to plectrum snap parameter"))
+        );
 
         Self { descriptors }
     }
@@ -3720,6 +3739,9 @@ impl DspNodeRegistry {
             ("SpruceSoundboard", DspNodeCategory::AcousticPhysicalModel, "Sitka Spruce Acoustic Soundboard Modal Radiation Model"),
             ("TrompetteChienJunction", DspNodeCategory::AcousticPhysicalModel, "Hurdy-Gurdy Chien Buzzing Bridge Nonlinear Contact"),
             ("SympatheticResonatorMatrix", DspNodeCategory::AcousticPhysicalModel, "Multi-String Sympathetic Coupling & Raga Resonance Bank"),
+            ("TuningMatrix", DspNodeCategory::Modulation, "Dynamic Microtonal Tuning Remapping Matrix"),
+            ("JiBridgeJunction", DspNodeCategory::AcousticPhysicalModel, "Asian Zither Movable Ji Bridge Acoustic Scattering Matrix"),
+            ("PaulowniaSoundboardBody", DspNodeCategory::AcousticPhysicalModel, "Paulownia Wood Koto Soundboard 8-Mode Resonator"),
         ]
     }
 
@@ -4287,6 +4309,21 @@ impl DspNodeRegistry {
             "trompettechien" => Some("TrompetteChienJunction"),
             "sympatheticresonatormatrix" => Some("SympatheticResonatorMatrix"),
             "sympatheticmatrix" => Some("SympatheticResonatorMatrix"),
+            "timpani" => Some("MembranePercussionModel"),
+            "besselmembrane" => Some("MembranePercussionModel"),
+            "tuningmatrix" => Some("TuningMatrix"),
+            "microtonalmatrix" => Some("TuningMatrix"),
+            "temperamentmatrix" => Some("TuningMatrix"),
+            "jibridgejunction" => Some("JiBridgeJunction"),
+            "jibridge" => Some("JiBridgeJunction"),
+            "kotobridge" => Some("JiBridgeJunction"),
+            "paulowniasoundboardbody" => Some("PaulowniaSoundboardBody"),
+            "paulowniasoundboard" => Some("PaulowniaSoundboardBody"),
+            "paulowniabody" => Some("PaulowniaSoundboardBody"),
+            "cvgategenerator" => Some("CvGateSignalGeneratorNode"),
+            "cvgate" => Some("CvGateSignalGeneratorNode"),
+            "dinsyncgenerator" => Some("DinSync24PulseGeneratorNode"),
+            "dinsync" => Some("DinSync24PulseGeneratorNode"),
             _ => None,
         }
     }
@@ -6443,6 +6480,28 @@ impl DspNodeRegistry {
                     .with_param(DspParamDescriptor::new_linear("coupling_gain", "Bridge Cross-Coupling", 0.01, 0.50, 0.15, "%", (56, 189, 248)))
                     .with_param(DspParamDescriptor::new_linear("resonance_decay_s", "Sympathetic Ring Decay", 0.5, 15.0, 4.5, "s", (236, 72, 153)))
                     .with_param(DspParamDescriptor::new_enum("tuning_bank", "Raga Scale Preset", vec!["Bhairav".into(), "Yaman".into(), "Todi".into(), "Kafi".into(), "Bhairavi".into(), "Darbari".into(), "Chromatic 12".into(), "Quartertone 24".into()], 0, (16, 185, 129)))
+            ),
+            "TuningMatrix" => Box::new(
+                GenericDspNodeUi::new("TuningMatrix", "Dynamic Microtonal Tuning Remapping Matrix", DspNodeCategory::Modulation)
+                    .with_param(DspParamDescriptor::new_log("root_hz", "Root Reference Pitch", 200.0, 800.0, 440.0, "Hz", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("morph_pos", "Temperament Morph", 0.0, 1.0, 0.0, "%", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("cent_offset", "Global Cent Offset", -100.0, 100.0, 0.0, "cents", (236, 72, 153)))
+                    .with_param(DspParamDescriptor::new_enum("remap_mode", "Remapping Mode", vec!["Direct Frequency".into(), "Cent Offset".into(), "Temperament Interpolation".into(), "Scale Quantize".into()], 0, (16, 185, 129)))
+            ),
+            "JiBridgeJunction" => Box::new(
+                GenericDspNodeUi::new("JiBridgeJunction", "Asian Zither Movable Ji Bridge Acoustic Scattering Matrix", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("position_fraction", "Bridge Position", 0.15, 0.90, 0.65, "%", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("transmission", "Sympathetic Bleed", 0.01, 0.50, 0.12, "%", (236, 72, 153)))
+                    .with_param(DspParamDescriptor::new_linear("reflection", "Boundary Reflection", 0.50, 0.99, 0.88, "%", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("body_coupling", "Soundboard Coupling", 0.05, 0.80, 0.35, "%", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_enum("profile", "Bridge Material", vec!["Paulownia Hardwood".into(), "Hard Maple".into(), "Ivory Bone".into(), "Synthetic Resin".into()], 0, (16, 185, 129)))
+            ),
+            "PaulowniaSoundboardBody" => Box::new(
+                GenericDspNodeUi::new("PaulowniaSoundboardBody", "Paulownia Wood Koto Soundboard 8-Mode Resonator", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("wood_gain", "Soundboard Gain", 0.0, 2.0, 0.85, "%", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_log("helmholtz_hz", "Cavity Air Resonance", 100.0, 350.0, 185.0, "Hz", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("plate_q", "Arched Plate Q", 5.0, 50.0, 22.0, "Q", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("tsume_brightness", "Tsume Pick Brightness", 0.0, 1.0, 0.60, "%", (236, 72, 153)))
             ),
             // Fallback dynamic generator for any unexpected or plugin node
             other => {

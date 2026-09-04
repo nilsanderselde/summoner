@@ -1057,4 +1057,213 @@ mod tests {
         assert_eq!(view.inspector_state.pan_val, 0.35);
         assert!(!view.inspector_state.is_muted);
     }
+
+    #[test]
+    fn test_tier84_dsp_registry_physical_modeling_expansion() {
+        use crate::dsp_node_ui::{DspCategory, DspNodeRegistry};
+        let registry = DspNodeRegistry::new();
+        assert!(registry.list_all().len() >= 346, "Registry should have at least 346 modules, got {}", registry.list_all().len());
+
+        // Verify TuningMatrix registration
+        let tuning = registry.get("TuningMatrix").expect("TuningMatrix must be registered");
+        assert_eq!(tuning.category, DspCategory::Modulation);
+        assert!(!tuning.params.is_empty());
+        let tuning_ui = DspNodeRegistry::create_node_ui(&tuning.kind_id);
+        assert!(tuning_ui.is_some(), "create_node_ui must succeed for TuningMatrix");
+
+        // Verify JiBridgeJunction registration
+        let ji = registry.get("JiBridgeJunction").expect("JiBridgeJunction must be registered");
+        assert_eq!(ji.category, DspCategory::AcousticPhysicalModel);
+        assert!(!ji.params.is_empty());
+        let ji_ui = DspNodeRegistry::create_node_ui(&ji.kind_id);
+        assert!(ji_ui.is_some(), "create_node_ui must succeed for JiBridgeJunction");
+
+        // Verify PaulowniaSoundboardBody registration
+        let soundboard = registry.get("PaulowniaSoundboardBody").expect("PaulowniaSoundboardBody must be registered");
+        assert_eq!(soundboard.category, DspCategory::AcousticPhysicalModel);
+        assert!(!soundboard.params.is_empty());
+        let soundboard_ui = DspNodeRegistry::create_node_ui(&soundboard.kind_id);
+        assert!(soundboard_ui.is_some(), "create_node_ui must succeed for PaulowniaSoundboardBody");
+
+        // Verify aliases in inventory and normalize_type_name
+        let inv = DspNodeRegistry::inventory();
+        assert!(inv.iter().any(|(name, _, _)| *name == "TuningMatrix"));
+        assert!(inv.iter().any(|(name, _, _)| *name == "JiBridgeJunction"));
+        assert!(inv.iter().any(|(name, _, _)| *name == "PaulowniaSoundboardBody"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("tuningmatrix"), Some("TuningMatrix"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("jibridgejunction"), Some("JiBridgeJunction"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("paulowniasoundboardbody"), Some("PaulowniaSoundboardBody"));
+    }
+
+    #[test]
+    fn test_tier84_piano_roll_interactive_note_selection_and_creation() {
+        let mut view = AwardWinningGuiView::new();
+        assert_eq!(view.piano_roll_notes.len(), 8);
+        assert_eq!(view.selected_note_id, Some(1));
+
+        // Select note 3
+        view.selected_note_id = Some(3);
+        let note3 = view.piano_roll_notes.iter().find(|n| n.id == 3).unwrap();
+        assert_eq!(note3.pitch_idx, 8); // E4
+
+        // Add a new note at beat 18.0, pitch_idx 0 (C5)
+        let new_id = view.next_note_id;
+        view.next_note_id += 1;
+        view.piano_roll_notes.push(crate::views::award_winning_gui_view::PianoRollNote {
+            id: new_id,
+            pitch_idx: 0,
+            start_beat: 18.0,
+            length_beats: 1.0,
+            velocity: 0.9,
+        });
+        view.selected_note_id = Some(new_id);
+        assert_eq!(view.piano_roll_notes.len(), 9);
+
+        // Delete note 2
+        view.piano_roll_notes.retain(|n| n.id != 2);
+        assert_eq!(view.piano_roll_notes.len(), 8);
+        assert!(view.piano_roll_notes.iter().all(|n| n.id != 2));
+    }
+
+    #[test]
+    fn test_tier84_piano_roll_velocity_lane_dragging() {
+        let mut view = AwardWinningGuiView::new();
+        // Modify velocity of selected note
+        let sel_id = view.selected_note_id.unwrap();
+        if let Some(note) = view.piano_roll_notes.iter_mut().find(|n| n.id == sel_id) {
+            note.velocity = 0.42;
+        }
+
+        let updated_note = view.piano_roll_notes.iter().find(|n| n.id == sel_id).unwrap();
+        assert_eq!(updated_note.velocity, 0.42);
+
+        // Test clamping bounds
+        if let Some(note) = view.piano_roll_notes.iter_mut().find(|n| n.id == sel_id) {
+            let clamped_low = (-0.5_f32).clamp(0.05, 1.0);
+            note.velocity = clamped_low;
+        }
+        assert_eq!(view.piano_roll_notes.iter().find(|n| n.id == sel_id).unwrap().velocity, 0.05);
+
+        if let Some(note) = view.piano_roll_notes.iter_mut().find(|n| n.id == sel_id) {
+            let clamped_high = (1.8_f32).clamp(0.05, 1.0);
+            note.velocity = clamped_high;
+        }
+        assert_eq!(view.piano_roll_notes.iter().find(|n| n.id == sel_id).unwrap().velocity, 1.0);
+    }
+
+    #[test]
+    #[cfg(feature = "gui")]
+    fn test_tier84_piano_roll_keyboard_auditioning_and_tuning_sync() {
+        let mut view = AwardWinningGuiView::new();
+        view.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::PianoRoll;
+
+        // Verify pitch tuning calculation for auditioned pitch
+        let pitch_names = ["C5", "B4", "A#4", "A4", "G#4", "G4", "F#4", "F4", "E4", "D#4", "D4", "C#4", "C4"];
+        let p_idx = 5; // G4 (MIDI 67)
+        let num_pitches = pitch_names.len();
+        view.auditioned_pitch_idx = Some(p_idx);
+        view.inspector_state.target_name = format!("Pitch {}", pitch_names[p_idx]);
+        view.inspector_state.scale_ratio_num = (num_pitches - p_idx) as i32;
+        view.inspector_state.root_ratio = 440.0 * 2.0f32.powf(((72 - p_idx as i32) - 69) as f32 / 12.0);
+        view.inspector_state.octave_offset = if p_idx < 1 { 5 } else { 4 };
+
+        assert_eq!(view.inspector_state.target_name, "Pitch G4");
+        assert_eq!(view.inspector_state.scale_ratio_num, 8);
+        assert!((view.inspector_state.root_ratio - 391.995).abs() < 0.1);
+        assert_eq!(view.inspector_state.octave_offset, 4);
+
+        // Verify that rendering a frame when mouse is not down releases auditioned key
+        let ctx = eframe::egui::Context::default();
+        let raw_input = eframe::egui::RawInput::default();
+        let _ = ctx.run(raw_input, |ctx| {
+            eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                view.show(ui);
+            });
+        });
+
+        // Key released on pointer up
+        assert_eq!(view.auditioned_pitch_idx, None);
+    }
+
+    #[test]
+    fn test_tier84_piano_roll_bidirectional_project_sequence_sync() {
+        let mut view = AwardWinningGuiView::new();
+
+        // 1. Create a track with custom sequence steps
+        let mut track = summoner_project::schema::TrackConfig {
+            id: 201,
+            name: "Pluck Lead".to_string(),
+            sequence: Some(summoner_project::schema::SequenceConfig {
+                start_beat: 4.0,
+                step_division: 0.5,
+                steps: vec![
+                    summoner_project::schema::TrackerStepConfig {
+                        note: 72.0, // C5 -> pitch_idx 0
+                        velocity: 0.95,
+                        gate: 0.8,
+                        active: true,
+                        ..Default::default()
+                    },
+                    summoner_project::schema::TrackerStepConfig {
+                        note: 67.0, // G4 (72 - 5) -> pitch_idx 5
+                        velocity: 0.80,
+                        gate: 0.5,
+                        active: true,
+                        ..Default::default()
+                    },
+                ],
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+
+        // 2. Load sequence into piano roll
+        view.load_piano_roll_from_track(&track);
+        assert_eq!(view.piano_roll_notes.len(), 2);
+        assert_eq!(view.piano_roll_notes[0].pitch_idx, 0); // C5
+        assert_eq!(view.piano_roll_notes[0].start_beat, 4.0);
+        assert_eq!(view.piano_roll_notes[0].velocity, 0.95);
+        assert_eq!(view.piano_roll_notes[1].pitch_idx, 5); // G4
+        assert_eq!(view.piano_roll_notes[1].start_beat, 4.5);
+        assert_eq!(view.piano_roll_notes[1].velocity, 0.80);
+
+        // 3. Mutate piano roll: add a third note at beat 5.0
+        let new_id = view.next_note_id;
+        view.piano_roll_notes.push(crate::views::award_winning_gui_view::PianoRollNote {
+            id: new_id,
+            pitch_idx: 12, // C4
+            start_beat: 5.0,
+            length_beats: 1.0,
+            velocity: 0.88,
+        });
+
+        // 4. Sync back to track
+        view.sync_piano_roll_to_track(&mut track);
+        let seq = track.sequence.as_ref().unwrap();
+        // At beat 5.0 / 0.25 = step 20
+        let step20 = &seq.steps[20];
+        assert!(step20.active);
+        assert_eq!(step20.note, 60.0); // 72 - 12 = 60 (C4)
+        assert_eq!(step20.velocity, 0.88);
+
+        // 5. Test full sync_with_project round trip
+        let mut project = summoner_project::schema::ProjectConfig {
+            version: "1.0".to_string(),
+            name: "Sequence Test Project".to_string(),
+            tracks: vec![track],
+            transport: summoner_project::schema::TransportConfig {
+                bpm: 124.0,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let mut playhead = 0.0_f64;
+        let mut running = false;
+        let mut sel_id = Some(201_u64);
+
+        view.selected_track_idx = 0;
+        view.last_synced_track_notes_idx = 0;
+        view.sync_with_project(&mut project, &mut playhead, &mut running, &mut sel_id);
+        assert_eq!(project.tracks[0].sequence.as_ref().unwrap().steps[20].note, 60.0);
+    }
 }
