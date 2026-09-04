@@ -2893,6 +2893,46 @@ impl DspNodeRegistry {
             .with_param(DspParamSchema::toggle("enabled", "Relay Active", true, "Relay Active toggle switch"))
             .with_param(DspParamSchema::knob("trim_db", "Relay Output Trim", -12.0, 12.0, 0.0, "dB", MacroRole::Tone, "Relay Output Trim parameter"))
         );
+        descriptors.insert("DemucsV4Separator".to_string(), DspNodeDescriptor::new("DemucsV4Separator", "Demucs v4 Hybrid Neural Stem Separator", DspNodeCategory::NeuralAi, "Deep Neural Network 6-Stem Audio Source Separation Transformer")
+            .with_param(DspParamSchema::choice("stems_mask", "Stem Mode", &["6-Stem Full", "4-Stem Standard", "Vocal Isolated", "Instrumental"], 0, "Stem separation target mode selector"))
+            .with_param(DspParamSchema::knob("overlap", "FFT Overlap", 0.1, 0.9, 0.25, "%", MacroRole::Space, "Transformer chunk overlap ratio parameter"))
+            .with_param(DspParamSchema::knob("sensitivity", "Separation Sensitivity", 0.1, 2.0, 1.0, "x", MacroRole::Tone, "Stem isolation sensitivity gain parameter"))
+            .with_param(DspParamSchema::knob("residual_bleed", "Residual Bleed", -48.0, 0.0, -24.0, "dB", MacroRole::Character, "Cross-stem residual attenuation parameter"))
+            .with_param(DspParamSchema::knob("spectral_power", "Mask Exponent", 1.0, 4.0, 2.0, "p", MacroRole::Punch, "Wiener-EM mask sharpness exponent parameter"))
+            .with_param(DspParamSchema::toggle("gpu_accel", "GPU Acceleration", true, "Hardware AVX2/CUDA inference toggle"))
+        );
+        descriptors.insert("AiAutonomousMasteringEngine".to_string(), DspNodeDescriptor::new("AiAutonomousMasteringEngine", "AI Autonomous Mastering Engine", DspNodeCategory::DynamicsMaster, "Autonomous EBU R128 Spectral Matching & Dynamic Mastering Engine")
+            .with_param(DspParamSchema::choice("target_curve", "Target Curve", &["Modern Pop", "EDM Club", "Warm Vintage", "Acoustic Folk", "Classical Concert"], 0, "Target spectral weighting curve selector"))
+            .with_param(DspParamSchema::knob("target_lufs", "Target LUFS", -24.0, -6.0, -14.0, "LUFS", MacroRole::Punch, "Integrated loudness target level parameter"))
+            .with_param(DspParamSchema::knob("ceiling_db", "Ceiling dBFS", -2.0, 0.0, -0.3, "dBFS", MacroRole::Tone, "True peak limiter threshold ceiling parameter"))
+            .with_param(DspParamSchema::knob("warmth", "Low-End Warmth", 0.0, 1.0, 0.35, "%", MacroRole::Tone, "Sub-bass harmonic density reinforcement parameter"))
+            .with_param(DspParamSchema::knob("punch", "Transient Punch", 0.0, 1.0, 0.50, "%", MacroRole::Punch, "Micro-dynamic crest factor enhancement parameter"))
+            .with_param(DspParamSchema::knob("stereo_width", "Stereo Width", 0.5, 2.0, 1.15, "x", MacroRole::Space, "Mid-Side spatial stage expansion factor parameter"))
+        );
+        descriptors.insert("AutomatedDrumReplacer".to_string(), DspNodeDescriptor::new("AutomatedDrumReplacer", "AI Automated Drum Replacement Trigger", DspNodeCategory::SamplerSlicer, "Intelligent Transient-Triggered Multi-Layer Drum Sample Replacer")
+            .with_param(DspParamSchema::knob("trigger_thresh", "Trigger Threshold", -60.0, 0.0, -24.0, "dB", MacroRole::Punch, "Transient onset detector threshold parameter"))
+            .with_param(DspParamSchema::knob("sensitivity", "Sensitivity", 0.0, 1.0, 0.75, "%", MacroRole::Character, "Spectral flux detector sensitivity parameter"))
+            .with_param(DspParamSchema::knob("velocity_track", "Velocity Tracking", 0.0, 1.0, 0.85, "%", MacroRole::Punch, "Input dynamic energy to sample velocity scaling parameter"))
+            .with_param(DspParamSchema::knob("retrigger_ms", "Retrigger Holdoff", 5.0, 200.0, 40.0, "ms", MacroRole::Tone, "Minimum lockout between consecutive strikes parameter"))
+            .with_param(DspParamSchema::choice("sample_slot", "Sample Preset", &["Acoustic Snare Direct", "808 Sub Kick", "Tight Studio Rim", "Layered Transient"], 0, "Loaded replacement sample selector"))
+            .with_param(DspParamSchema::knob("dry_wet", "Dry / Wet Mix", 0.0, 1.0, 1.0, "%", MacroRole::Space, "Blend between original audio and triggered sample parameter"))
+        );
+        descriptors.insert("NeuralRoomAcousticMatcher".to_string(), DspNodeDescriptor::new("NeuralRoomAcousticMatcher", "Neural Room Acoustic Matcher", DspNodeCategory::NeuralAi, "Impulse Response Convolution Profiler & Architectural Space Matcher")
+            .with_param(DspParamSchema::knob("rt60_decay", "RT60 Decay Time", 0.1, 8.0, 1.2, "s", MacroRole::Space, "Estimated reverberation time parameter"))
+            .with_param(DspParamSchema::knob("brightness", "Brightness Ratio", 0.2, 3.0, 1.15, "x", MacroRole::Tone, "High frequency absorption compensation parameter"))
+            .with_param(DspParamSchema::log_knob("room_volume", "Room Volume", 10.0, 5000.0, 120.0, "m³", MacroRole::Space, "Architectural hall volumetric air estimation logarithmic parameter"))
+            .with_param(DspParamSchema::knob("early_reflections", "Early Reflections", 0.0, 1.0, 0.65, "%", MacroRole::Space, "Specular discrete echo wall ratio parameter"))
+            .with_param(DspParamSchema::knob("tail_density", "Late Tail Density", 0.1, 1.0, 0.80, "%", MacroRole::Character, "Stochastic modal diffusion build rate parameter"))
+            .with_param(DspParamSchema::knob("stereo_spread", "Stereo Field Width", 0.0, 1.0, 0.90, "%", MacroRole::Space, "Binaural cross-correlation spatial separation parameter"))
+        );
+        descriptors.insert("PluckedStringNode".to_string(), DspNodeDescriptor::new("PluckedStringNode", "Karplus-Strong Plucked Waveguide String", DspNodeCategory::AcousticPhysicalModel, "Acoustic Waveguide Physical Model with Feedback Loop & String Damping")
+            .with_param(DspParamSchema::log_knob("freq", "Frequency", 20.0, 5000.0, 220.0, "Hz", MacroRole::Tone, "String fundamental frequency logarithmic parameter"))
+            .with_param(DspParamSchema::knob("decay", "Decay Sustain", 0.8, 0.999, 0.98, "s", MacroRole::Tone, "Feedback loop decay attenuation coefficient parameter"))
+            .with_param(DspParamSchema::knob("brightness", "Pluck Brightness", 0.0, 1.0, 0.75, "%", MacroRole::Tone, "Internal lowpass filter cutoff damping parameter"))
+            .with_param(DspParamSchema::knob("pluck_pos", "Pluck Position", 0.01, 0.99, 0.25, "%", MacroRole::Character, "Comb notch excitation pickup position parameter"))
+            .with_param(DspParamSchema::knob("tension", "String Tension", 0.1, 2.0, 1.0, "x", MacroRole::Punch, "Waveguide dispersion stiffness scale parameter"))
+            .with_param(DspParamSchema::knob("resonance", "Body Resonance", 0.0, 1.0, 0.45, "%", MacroRole::Space, "Acoustic soundboard sympathetic coupling parameter"))
+        );
 
         Self { descriptors }
     }
@@ -3214,6 +3254,11 @@ impl DspNodeRegistry {
             ("ElasticWarpEngine", DspNodeCategory::Utility, "Real-time Elastic Audio Warp & Transient Pinning"),
             ("Oversampler", DspNodeCategory::Utility, "Polyphase Anti-Aliasing Oversampling Filter"),
             ("PassthroughNode", DspNodeCategory::Utility, "Zero-Latency Transparent Buffer Relay"),
+            ("DemucsV4Separator", DspNodeCategory::NeuralAi, "Demucs v4 Hybrid Neural Stem Separator"),
+            ("AiAutonomousMasteringEngine", DspNodeCategory::DynamicsMaster, "AI Autonomous Mastering Engine"),
+            ("AutomatedDrumReplacer", DspNodeCategory::SamplerSlicer, "AI Automated Drum Replacement Trigger"),
+            ("NeuralRoomAcousticMatcher", DspNodeCategory::NeuralAi, "Neural Room Acoustic Matcher"),
+            ("PluckedStringNode", DspNodeCategory::AcousticPhysicalModel, "Karplus-Strong Plucked Waveguide String"),
         ]
     }
 
@@ -3601,6 +3646,20 @@ impl DspNodeRegistry {
             "wsolatimestretcher" => Some("WsolaTimeStretcher"),
             "elasticwarpengine" => Some("ElasticWarpEngine"),
             "passthroughnode" => Some("PassthroughNode"),
+            "demucsv4separator" => Some("DemucsV4Separator"),
+            "demucsv4" => Some("DemucsV4Separator"),
+            "demucs" => Some("DemucsV4Separator"),
+            "aiautonomousmasteringengine" => Some("AiAutonomousMasteringEngine"),
+            "autonomousmastering" => Some("AiAutonomousMasteringEngine"),
+            "aimastering" => Some("AiAutonomousMasteringEngine"),
+            "aimasteringengine" => Some("AiAutonomousMasteringEngine"),
+            "automateddrumreplacer" => Some("AutomatedDrumReplacer"),
+            "drumreplacer" => Some("AutomatedDrumReplacer"),
+            "neuralroomacousticmatcher" => Some("NeuralRoomAcousticMatcher"),
+            "roomacousticmatcher" => Some("NeuralRoomAcousticMatcher"),
+            "pluckedstringnode" => Some("PluckedStringNode"),
+            "karplusstrongstring" => Some("PluckedStringNode"),
+            "bowedstringnode" => Some("BowedStringModel"),
             _ => None,
         }
     }
@@ -5547,6 +5606,41 @@ impl DspNodeRegistry {
                 GenericDspNodeUi::new("PassthroughNode", "Zero-Latency Transparent Buffer Relay", DspNodeCategory::Utility)
                     .with_param(DspParamDescriptor::new_bool("enabled", "Relay Active", true, (0, 230, 118)))
                     .with_param(DspParamDescriptor::new_linear("trim_db", "Relay Output Trim", -12.0, 12.0, 0.0, "dB", (180, 195, 215)))
+            ),
+            "DemucsV4Separator" => Box::new(
+                GenericDspNodeUi::new("DemucsV4Separator", "Demucs v4 Hybrid Neural Stem Separator", DspNodeCategory::NeuralAi)
+                    .with_param(DspParamDescriptor::new_enum("stems_mask", "Stem Mode", vec!["6-Stem Full".into(), "4-Stem Standard".into(), "Vocal Isolated".into(), "Instrumental".into()], 0, (236, 72, 153)))
+                    .with_param(DspParamDescriptor::new_linear("overlap", "FFT Overlap", 0.1, 0.9, 0.25, "%", (99, 102, 241)))
+                    .with_param(DspParamDescriptor::new_linear("sensitivity", "Separation Sensitivity", 0.1, 2.0, 1.0, "x", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("residual_bleed", "Residual Bleed", -48.0, 0.0, -24.0, "dB", (249, 115, 22)))
+            ),
+            "AiAutonomousMasteringEngine" => Box::new(
+                GenericDspNodeUi::new("AiAutonomousMasteringEngine", "AI Autonomous Mastering Engine", DspNodeCategory::DynamicsMaster)
+                    .with_param(DspParamDescriptor::new_enum("target_curve", "Target Curve", vec!["Modern Pop".into(), "EDM Club".into(), "Warm Vintage".into(), "Acoustic Folk".into(), "Classical Concert".into()], 0, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("target_lufs", "Target LUFS", -24.0, -6.0, -14.0, "LUFS", (249, 115, 22)))
+                    .with_param(DspParamDescriptor::new_linear("ceiling_db", "Ceiling dBFS", -2.0, 0.0, -0.3, "dBFS", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("punch", "Transient Punch", 0.0, 1.0, 0.50, "%", (239, 68, 68)))
+            ),
+            "AutomatedDrumReplacer" => Box::new(
+                GenericDspNodeUi::new("AutomatedDrumReplacer", "AI Automated Drum Replacement Trigger", DspNodeCategory::SamplerSlicer)
+                    .with_param(DspParamDescriptor::new_linear("trigger_thresh", "Trigger Threshold", -60.0, 0.0, -24.0, "dB", (16, 185, 129)))
+                    .with_param(DspParamDescriptor::new_linear("sensitivity", "Sensitivity", 0.0, 1.0, 0.75, "%", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("velocity_track", "Velocity Tracking", 0.0, 1.0, 0.85, "%", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_enum("sample_slot", "Sample Preset", vec!["Acoustic Snare Direct".into(), "808 Sub Kick".into(), "Tight Studio Rim".into(), "Layered Transient".into()], 0, (16, 185, 129)))
+            ),
+            "NeuralRoomAcousticMatcher" => Box::new(
+                GenericDspNodeUi::new("NeuralRoomAcousticMatcher", "Neural Room Acoustic Matcher", DspNodeCategory::NeuralAi)
+                    .with_param(DspParamDescriptor::new_linear("rt60_decay", "RT60 Decay Time", 0.1, 8.0, 1.2, "s", (236, 72, 153)))
+                    .with_param(DspParamDescriptor::new_linear("brightness", "Brightness Ratio", 0.2, 3.0, 1.15, "x", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_log("room_volume", "Room Volume", 10.0, 5000.0, 120.0, "m³", (99, 102, 241)))
+                    .with_param(DspParamDescriptor::new_linear("early_reflections", "Early Reflections", 0.0, 1.0, 0.65, "%", (236, 72, 153)))
+            ),
+            "PluckedStringNode" => Box::new(
+                GenericDspNodeUi::new("PluckedStringNode", "Karplus-Strong Plucked Waveguide String", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_log("freq", "Frequency", 20.0, 5000.0, 220.0, "Hz", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("decay", "Decay Sustain", 0.8, 0.999, 0.98, "s", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("brightness", "Pluck Brightness", 0.0, 1.0, 0.75, "%", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("pluck_pos", "Pluck Position", 0.01, 0.99, 0.25, "%", (249, 115, 22)))
             ),
             // Fallback dynamic generator for any unexpected or plugin node
             other => {

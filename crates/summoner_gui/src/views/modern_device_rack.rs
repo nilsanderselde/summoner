@@ -72,6 +72,84 @@ pub fn show_modern_device_rack(
     state: &mut ModernDeviceRackState,
     oscilloscope_data: Option<&[f32]>,
 ) {
+    let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+    let cur_selection = state.selected_node_kind.clone().unwrap_or_else(|| "AetherSynth".to_string());
+    let opt_desc = registry.get(&cur_selection);
+    let (r, g, b) = opt_desc.map(|d| d.category.color_rgb()).unwrap_or((56, 189, 248));
+    let cat_accent = Color32::from_rgb(r, g, b);
+
+    // Collapsed Drawer Mode (Click-to-Expand Pro Rack Drawer)
+    if state.is_minimized {
+        let collapsed_h = 36.0;
+        egui::Frame::none()
+            .fill(Color32::from_rgb(14, 20, 32))
+            .stroke(Stroke::new(1.0_f32, Color32::from_rgb(28, 40, 60)))
+            .rounding(Rounding::same(6.0))
+            .inner_margin(egui::Margin::symmetric(10.0, 6.0))
+            .show(ui, |ui| {
+                ui.set_height(collapsed_h);
+                ui.horizontal(|ui| {
+                    if ui.button(RichText::new("▲ EXPAND RACK").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).clicked() {
+                        state.is_minimized = false;
+                    }
+                    ui.add_space(4.0);
+                    let pwr_col = if state.is_enabled { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(100, 116, 139) };
+                    if ui.button(RichText::new("⏻").font(FontId::proportional(12.0)).color(pwr_col)).clicked() {
+                        state.is_enabled = !state.is_enabled;
+                    }
+                    ui.add_space(6.0);
+
+                    let cur_display = opt_desc.map(|d| format!("{} {}", d.category.icon(), d.display_name)).unwrap_or_else(|| state.device_name.clone());
+                    egui::ComboBox::from_id_source("minimized_device_rack_module_selector")
+                        .selected_text(RichText::new(cur_display).font(FontId::proportional(11.0)).color(cat_accent))
+                        .show_ui(ui, |ui| {
+                            for desc in registry.list_all() {
+                                let is_sel = state.selected_node_kind.as_deref() == Some(&desc.kind_id);
+                                let label = format!("{} {} ({})", desc.category.icon(), desc.display_name, desc.category.name());
+                                if ui.selectable_label(is_sel, label).clicked() {
+                                    state.selected_node_kind = Some(desc.kind_id.clone());
+                                    state.device_name = desc.display_name.clone();
+                                }
+                            }
+                        });
+
+                    if let Some(desc) = opt_desc {
+                        egui::Frame::none()
+                            .fill(Color32::from_rgba_unmultiplied(r, g, b, 25))
+                            .stroke(Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(r, g, b, 80)))
+                            .rounding(Rounding::same(3.0))
+                            .inner_margin(egui::Margin::symmetric(5.0, 2.0))
+                            .show(ui, |ui| {
+                                ui.label(RichText::new(desc.category.name()).font(FontId::proportional(9.0)).color(cat_accent));
+                            });
+                    }
+
+                    ui.add_space(8.0);
+                    let pills = [
+                        ("Tone", state.cutoff),
+                        ("Space", state.decay),
+                        ("Punch", state.drive),
+                        ("Vol", state.volume),
+                    ];
+                    for (name, val) in pills {
+                        egui::Frame::none()
+                            .fill(Color32::from_rgb(20, 28, 44))
+                            .rounding(Rounding::same(3.0))
+                            .inner_margin(egui::Margin::symmetric(5.0, 2.0))
+                            .show(ui, |ui| {
+                                ui.label(RichText::new(format!("{}: {:.0}%", name, val * 100.0)).font(FontId::proportional(9.0)).color(Color32::from_rgb(200, 215, 235)));
+                            });
+                        ui.add_space(2.0);
+                    }
+
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        ui.label(RichText::new("Modular Rack Drawer (Collapsed)").font(FontId::proportional(9.0)).color(Color32::from_rgb(100, 116, 139)));
+                    });
+                });
+            });
+        return;
+    }
+
     let rack_height = 190.0;
     egui::Frame::none()
         .fill(Color32::from_rgb(14, 20, 32))
@@ -80,9 +158,6 @@ pub fn show_modern_device_rack(
         .inner_margin(egui::Margin::symmetric(10.0, 8.0))
         .show(ui, |ui| {
             ui.set_height(rack_height);
-
-            let registry = crate::dsp_node_ui::DspNodeRegistry::new();
-            let cur_selection = state.selected_node_kind.clone().unwrap_or_else(|| "AetherSynth".to_string());
 
             // 1. Device Box Header (Rule 2 from GUI_RULES.md)
             ui.horizontal(|ui| {
@@ -94,10 +169,10 @@ pub fn show_modern_device_rack(
                 }
 
                 // DSP Module Selection Dropdown
-                let cur_display = registry.get(&cur_selection).map(|d| format!("{} {}", d.category.icon(), d.display_name)).unwrap_or_else(|| state.device_name.clone());
+                let cur_display = opt_desc.map(|d| format!("{} {}", d.category.icon(), d.display_name)).unwrap_or_else(|| state.device_name.clone());
 
                 egui::ComboBox::from_id_source("device_rack_module_selector")
-                    .selected_text(RichText::new(cur_display).font(FontId::proportional(11.0)).color(Color32::from_rgb(56, 189, 248)))
+                    .selected_text(RichText::new(cur_display).font(FontId::proportional(11.0)).color(cat_accent))
                     .show_ui(ui, |ui| {
                         for desc in registry.list_all() {
                             let is_sel = state.selected_node_kind.as_deref() == Some(&desc.kind_id);
@@ -109,7 +184,21 @@ pub fn show_modern_device_rack(
                         }
                     });
 
+                if let Some(desc) = opt_desc {
+                    egui::Frame::none()
+                        .fill(Color32::from_rgba_unmultiplied(r, g, b, 25))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(r, g, b, 80)))
+                        .rounding(Rounding::same(3.0))
+                        .inner_margin(egui::Margin::symmetric(5.0, 2.0))
+                        .show(ui, |ui| {
+                            ui.label(RichText::new(desc.category.name()).font(FontId::proportional(9.0)).color(cat_accent));
+                        });
+                }
+
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if ui.button(RichText::new("▼ COLLAPSE").font(FontId::proportional(10.0)).color(Color32::from_rgb(148, 163, 184))).clicked() {
+                        state.is_minimized = true;
+                    }
                     let _ = ui.small_button("✕");
                     let _ = ui.small_button("⋯");
                     egui::Frame::none()
@@ -132,10 +221,6 @@ pub fn show_modern_device_rack(
                 });
                 return;
             }
-
-            let opt_desc = registry.get(&cur_selection);
-            let (r, g, b) = opt_desc.map(|d| d.category.color_rgb()).unwrap_or((56, 189, 248));
-            let cat_accent = Color32::from_rgb(r, g, b);
 
             // 2. Chassis Main Body (5 distinct modular sections)
             ui.horizontal(|ui| {
@@ -232,20 +317,57 @@ pub fn show_modern_device_rack(
 
                 ui.add_space(6.0);
 
-                // Section 2: Vertical Sliders (Osc Mix, Shape, Vol)
+                // Section 2: Vertical Sliders (Osc Mix, Shape, Vol or dynamic reflection params 6..9)
                 egui::Frame::none()
                     .fill(Color32::from_rgb(18, 24, 36))
                     .stroke(Stroke::new(1.0_f32, Color32::from_rgb(36, 50, 74)))
                     .rounding(Rounding::same(4.0))
                     .inner_margin(egui::Margin::symmetric(8.0, 6.0))
                     .show(ui, |ui| {
-                        ui.horizontal(|ui| {
-                            draw_vertical_fader(ui, "Osc Mix", &mut state.osc_mix);
-                            ui.add_space(4.0);
-                            draw_vertical_fader(ui, "Shape", &mut state.shape);
-                            ui.add_space(4.0);
-                            draw_vertical_fader(ui, "Vol", &mut state.volume);
-                        });
+                        let fader_params: Vec<&crate::dsp_node_ui::DspParamSchema> = if let Some(desc) = opt_desc {
+                            if desc.params.len() > 6 {
+                                desc.params[6..].iter().take(3).collect()
+                            } else {
+                                Vec::new()
+                            }
+                        } else {
+                            Vec::new()
+                        };
+
+                        if !fader_params.is_empty() {
+                            ui.horizontal(|ui| {
+                                for (i, p) in fader_params.iter().enumerate() {
+                                    let default_norm = match &p.widget {
+                                        crate::dsp_node_ui::DspWidgetKind::RotaryKnob { min, max, default, .. }
+                                        | crate::dsp_node_ui::DspWidgetKind::VerticalFader { min, max, default, .. } => {
+                                            ((*default - *min) / (*max - *min).max(1e-5)).clamp(0.0, 1.0)
+                                        }
+                                        _ => 0.5,
+                                    };
+                                    let val = state.node_param_values.entry(p.id.clone()).or_insert(default_norm);
+                                    draw_vertical_fader(ui, &p.name, val);
+                                    if i + 1 < fader_params.len() {
+                                        ui.add_space(4.0);
+                                    }
+                                }
+                                for i in fader_params.len()..3 {
+                                    ui.add_space(4.0);
+                                    if i == 1 {
+                                        draw_vertical_fader(ui, "Shape", &mut state.shape);
+                                    } else {
+                                        draw_vertical_fader(ui, "Vol", &mut state.volume);
+                                    }
+                                }
+                            });
+                        } else {
+                            ui.horizontal(|ui| {
+                                draw_vertical_fader(ui, "Osc Mix", &mut state.osc_mix);
+                                ui.add_space(4.0);
+                                draw_vertical_fader(ui, "Shape", &mut state.shape);
+                                ui.add_space(4.0);
+                                draw_vertical_fader(ui, "Vol", &mut state.volume);
+                            });
+                        }
                     });
 
                 ui.add_space(6.0);
@@ -373,31 +495,82 @@ pub fn show_modern_device_rack(
 
                 ui.add_space(6.0);
 
-                // Section 5: LFO & Modulators
+                // Section 5: LFO & Modulators / Schema Params 9..13
                 egui::Frame::none()
                     .fill(Color32::from_rgb(18, 24, 36))
                     .stroke(Stroke::new(1.0_f32, Color32::from_rgb(36, 50, 74)))
                     .rounding(Rounding::same(4.0))
                     .inner_margin(egui::Margin::symmetric(8.0, 6.0))
                     .show(ui, |ui| {
-                        ui.vertical(|ui| {
-                            ui.horizontal(|ui| {
-                                ui.label(RichText::new("LFO").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(200, 215, 235)));
-                                ui.label(RichText::new("〰").font(FontId::proportional(10.0)).color(Color32::from_rgb(56, 189, 248)));
+                        let mod_params: Vec<&crate::dsp_node_ui::DspParamSchema> = if let Some(desc) = opt_desc {
+                            if desc.params.len() > 9 {
+                                desc.params[9..].iter().take(4).collect()
+                            } else {
+                                Vec::new()
+                            }
+                        } else {
+                            Vec::new()
+                        };
+
+                        if !mod_params.is_empty() {
+                            ui.vertical(|ui| {
+                                ui.horizontal(|ui| {
+                                    ui.label(RichText::new("Aux Params").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(200, 215, 235)));
+                                    ui.label(RichText::new("⚡").font(FontId::proportional(10.0)).color(cat_accent));
+                                });
+                                ui.add_space(2.0);
+                                ui.horizontal(|ui| {
+                                    for (i, p) in mod_params.iter().take(2).enumerate() {
+                                        let default_norm = match &p.widget {
+                                            crate::dsp_node_ui::DspWidgetKind::RotaryKnob { min, max, default, .. }
+                                            | crate::dsp_node_ui::DspWidgetKind::VerticalFader { min, max, default, .. } => {
+                                                ((*default - *min) / (*max - *min).max(1e-5)).clamp(0.0, 1.0)
+                                            }
+                                            _ => 0.5,
+                                        };
+                                        let val = state.node_param_values.entry(p.id.clone()).or_insert(default_norm);
+                                        draw_rotary_dial(ui, &p.name, val, cat_accent);
+                                        if i == 0 && mod_params.len() > 1 {
+                                            ui.add_space(2.0);
+                                        }
+                                    }
+                                });
+                                ui.add_space(2.0);
+                                ui.horizontal(|ui| {
+                                    for (i, p) in mod_params.iter().skip(2).take(2).enumerate() {
+                                        let default_norm = match &p.widget {
+                                            crate::dsp_node_ui::DspWidgetKind::RotaryKnob { min, max, default, .. }
+                                            | crate::dsp_node_ui::DspWidgetKind::VerticalFader { min, max, default, .. } => {
+                                                ((*default - *min) / (*max - *min).max(1e-5)).clamp(0.0, 1.0)
+                                            }
+                                            _ => 0.5,
+                                        };
+                                        let val = state.node_param_values.entry(p.id.clone()).or_insert(default_norm);
+                                        draw_rotary_dial(ui, &p.name, val, cat_accent);
+                                        if i == 0 {
+                                            ui.add_space(2.0);
+                                        }
+                                    }
+                                });
                             });
-                            ui.add_space(2.0);
-                            ui.horizontal(|ui| {
-                                draw_rotary_dial(ui, "Min", &mut state.lfo_speed, Color32::from_rgb(56, 189, 248));
-                                draw_rotary_dial(ui, "Wait", &mut state.lfo_depth, Color32::from_rgb(148, 163, 184));
+                        } else {
+                            ui.vertical(|ui| {
+                                ui.horizontal(|ui| {
+                                    ui.label(RichText::new("LFO").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(200, 215, 235)));
+                                    ui.label(RichText::new("〰").font(FontId::proportional(10.0)).color(Color32::from_rgb(56, 189, 248)));
+                                });
+                                ui.add_space(2.0);
+                                ui.horizontal(|ui| {
+                                    draw_rotary_dial(ui, "Rate", &mut state.lfo_speed, Color32::from_rgb(56, 189, 248));
+                                    draw_rotary_dial(ui, "Depth", &mut state.lfo_depth, Color32::from_rgb(148, 163, 184));
+                                });
+                                ui.add_space(2.0);
+                                ui.horizontal(|ui| {
+                                    draw_rotary_dial(ui, "Shape", &mut state.shape, Color32::from_rgb(56, 189, 248));
+                                    draw_rotary_dial(ui, "Mod", &mut state.mod_amt, Color32::from_rgb(148, 163, 184));
+                                });
                             });
-                            ui.add_space(2.0);
-                            ui.horizontal(|ui| {
-                                let mut coom = 0.50;
-                                let mut lfo_val = 0.60;
-                                draw_rotary_dial(ui, "Coom", &mut coom, Color32::from_rgb(56, 189, 248));
-                                draw_rotary_dial(ui, "LFO", &mut lfo_val, Color32::from_rgb(148, 163, 184));
-                            });
-                        });
+                        }
                     });
             });
         });
@@ -535,5 +708,57 @@ mod tests {
         });
 
         assert!(!state.node_param_values.is_empty());
+    }
+
+    #[test]
+    #[cfg(feature = "gui")]
+    fn test_modern_device_rack_drawer_minimize_expand_toggle() {
+        let mut state = ModernDeviceRackState::default();
+        let ctx = egui::Context::default();
+
+        // 1. Initial expanded state
+        assert!(!state.is_minimized);
+        let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                show_modern_device_rack(ui, &mut state, None);
+            });
+        });
+
+        // 2. Collapse to drawer mode
+        state.is_minimized = true;
+        let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                show_modern_device_rack(ui, &mut state, None);
+            });
+        });
+        assert!(state.is_minimized);
+
+        // 3. Expand back to full modular rack
+        state.is_minimized = false;
+        let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                show_modern_device_rack(ui, &mut state, None);
+            });
+        });
+        assert!(!state.is_minimized);
+    }
+
+    #[test]
+    #[cfg(feature = "gui")]
+    fn test_modern_device_rack_dynamic_faders_and_aux_reflection() {
+        let mut state = ModernDeviceRackState::default();
+        let ctx = egui::Context::default();
+
+        // Test with AI Mastering Engine (contains multiple parameters spanning faders & aux)
+        state.selected_node_kind = Some("AiAutonomousMasteringEngine".to_string());
+        let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                show_modern_device_rack(ui, &mut state, None);
+            });
+        });
+
+        assert!(state.node_param_values.contains_key("target_lufs"));
+        assert!(state.node_param_values.contains_key("ceiling_db"));
+        assert!(state.node_param_values.contains_key("punch"));
     }
 }
