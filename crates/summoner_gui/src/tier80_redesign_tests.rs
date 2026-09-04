@@ -558,8 +558,8 @@ mod tests {
                     view.show(ui);
                 });
             });
-            assert_eq!(view.device_rack_state.selected_node_kind, Some("PipeOrgan".to_string()));
-            assert_eq!(view.inspector_state.selected_node_kind, Some("PipeOrgan".to_string()));
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("PipeOrganModel".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("PipeOrganModel".to_string()));
 
             // Preset B: Cosmic Shockwave Reverb
             view.top_bar_state.selected_preset = "Cosmic Shockwave Reverb".to_string();
@@ -591,5 +591,275 @@ mod tests {
             assert_eq!(view.device_rack_state.selected_node_kind, Some("TapeStop".to_string()));
             assert_eq!(view.inspector_state.selected_node_kind, Some("TapeStop".to_string()));
         }
+    }
+
+    #[test]
+    fn test_tier82_arranger_and_piano_roll_canvas_scrubbing_and_track_selection() {
+        let mut view = AwardWinningGuiView::new();
+        view.asset_browser_state.is_collapsed = true;
+        assert_eq!(view.selected_track_idx, 4);
+        view.playhead_beat = 0.0;
+
+        let ctx = eframe::egui::Context::default();
+
+        // 1. Click on timeline ruler in Arranger canvas to scrub playhead
+        let mut input = eframe::egui::RawInput::default();
+        input.screen_rect = Some(eframe::egui::Rect::from_min_size(
+            eframe::egui::Pos2::ZERO,
+            eframe::egui::Vec2::new(1200.0, 800.0),
+        ));
+        let ruler_click = eframe::egui::pos2(350.0, 80.0);
+        input.events.push(eframe::egui::Event::PointerButton {
+            pos: ruler_click,
+            button: eframe::egui::PointerButton::Primary,
+            pressed: true,
+            modifiers: eframe::egui::Modifiers::default(),
+        });
+        input.events.push(eframe::egui::Event::PointerButton {
+            pos: ruler_click,
+            button: eframe::egui::PointerButton::Primary,
+            pressed: false,
+            modifiers: eframe::egui::Modifiers::default(),
+        });
+
+        let _ = ctx.run(input, |ctx| {
+            eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                view.show(ui);
+            });
+        });
+
+        // Playhead should have moved forward from 0.0
+        assert!(view.playhead_beat > 0.0, "Playhead beat should scrub forward on ruler click, got {}", view.playhead_beat);
+
+        // 2. Click on Track 2 lane (idx 1) to select it
+        let mut track_click_input = eframe::egui::RawInput::default();
+        track_click_input.screen_rect = Some(eframe::egui::Rect::from_min_size(
+            eframe::egui::Pos2::ZERO,
+            eframe::egui::Vec2::new(1200.0, 800.0),
+        ));
+        let track_click = eframe::egui::pos2(120.0, 145.0);
+        track_click_input.events.push(eframe::egui::Event::PointerButton {
+            pos: track_click,
+            button: eframe::egui::PointerButton::Primary,
+            pressed: true,
+            modifiers: eframe::egui::Modifiers::default(),
+        });
+        track_click_input.events.push(eframe::egui::Event::PointerButton {
+            pos: track_click,
+            button: eframe::egui::PointerButton::Primary,
+            pressed: false,
+            modifiers: eframe::egui::Modifiers::default(),
+        });
+
+        let _ = ctx.run(track_click_input, |ctx| {
+            eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                view.show(ui);
+            });
+        });
+
+        assert_eq!(view.selected_track_idx, 1);
+        assert_eq!(view.inspector_state.target_name, view.tracks[1].name);
+
+        // 3. Switch to Piano Roll canvas and scrub ruler
+        view.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::PianoRoll;
+        view.playhead_beat = 0.0;
+        let mut pr_input = eframe::egui::RawInput::default();
+        pr_input.screen_rect = Some(eframe::egui::Rect::from_min_size(
+            eframe::egui::Pos2::ZERO,
+            eframe::egui::Vec2::new(1200.0, 800.0),
+        ));
+        let pr_click = eframe::egui::pos2(350.0, 80.0);
+        pr_input.events.push(eframe::egui::Event::PointerButton {
+            pos: pr_click,
+            button: eframe::egui::PointerButton::Primary,
+            pressed: true,
+            modifiers: eframe::egui::Modifiers::default(),
+        });
+        pr_input.events.push(eframe::egui::Event::PointerButton {
+            pos: pr_click,
+            button: eframe::egui::PointerButton::Primary,
+            pressed: false,
+            modifiers: eframe::egui::Modifiers::default(),
+        });
+
+        let _ = ctx.run(pr_input, |ctx| {
+            eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                view.show(ui);
+            });
+        });
+
+        assert!(view.playhead_beat > 0.0);
+    }
+
+    #[test]
+    fn test_tier82_mixer_canvas_mute_solo_and_fader_interaction() {
+        let mut view = AwardWinningGuiView::new();
+        view.asset_browser_state.is_collapsed = true;
+        view.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::Mixer;
+
+        assert!(!view.tracks[0].is_muted);
+        assert!(!view.tracks[0].is_soloed);
+
+        let ctx = eframe::egui::Context::default();
+
+        // Click Mute button for channel 0 (approx x: 110px, y: 124px inside canvas)
+        let mut mute_input = eframe::egui::RawInput::default();
+        mute_input.screen_rect = Some(eframe::egui::Rect::from_min_size(
+            eframe::egui::Pos2::ZERO,
+            eframe::egui::Vec2::new(1200.0, 800.0),
+        ));
+        let mute_pos = eframe::egui::pos2(110.0, 124.0);
+        mute_input.events.push(eframe::egui::Event::PointerButton {
+            pos: mute_pos,
+            button: eframe::egui::PointerButton::Primary,
+            pressed: true,
+            modifiers: eframe::egui::Modifiers::default(),
+        });
+        mute_input.events.push(eframe::egui::Event::PointerButton {
+            pos: mute_pos,
+            button: eframe::egui::PointerButton::Primary,
+            pressed: false,
+            modifiers: eframe::egui::Modifiers::default(),
+        });
+
+        let _ = ctx.run(mute_input, |ctx| {
+            eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                view.show(ui);
+            });
+        });
+
+        assert!(view.tracks[0].is_muted, "Track 0 should be muted after clicking M button");
+        assert!(view.inspector_state.is_muted, "Inspector mute state should mirror track mute");
+
+        // Click Solo button for channel 0 (approx x: 158px, y: 124px)
+        let mut solo_input = eframe::egui::RawInput::default();
+        solo_input.screen_rect = Some(eframe::egui::Rect::from_min_size(
+            eframe::egui::Pos2::ZERO,
+            eframe::egui::Vec2::new(1200.0, 800.0),
+        ));
+        let solo_pos = eframe::egui::pos2(158.0, 124.0);
+        solo_input.events.push(eframe::egui::Event::PointerButton {
+            pos: solo_pos,
+            button: eframe::egui::PointerButton::Primary,
+            pressed: true,
+            modifiers: eframe::egui::Modifiers::default(),
+        });
+        solo_input.events.push(eframe::egui::Event::PointerButton {
+            pos: solo_pos,
+            button: eframe::egui::PointerButton::Primary,
+            pressed: false,
+            modifiers: eframe::egui::Modifiers::default(),
+        });
+
+        let _ = ctx.run(solo_input, |ctx| {
+            eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                view.show(ui);
+            });
+        });
+
+        assert!(view.tracks[0].is_soloed, "Track 0 should be soloed after clicking S button");
+        assert!(view.inspector_state.is_soloed, "Inspector solo state should mirror track solo");
+    }
+
+    #[test]
+    fn test_tier82_project_config_and_transport_bidirectional_sync() {
+        let mut view = AwardWinningGuiView::new();
+
+        // 1. Create mock ProjectConfig with 2 tracks
+        let mut project = summoner_project::schema::ProjectConfig {
+            version: "1.0".to_string(),
+            name: "Cybernetic Synthwave Session".to_string(),
+            tuning_file: None,
+            transport: summoner_project::schema::TransportConfig {
+                sample_rate: 48000,
+                bpm: 138.0,
+                time_signature: "4/4".to_string(),
+                master_tune_cents: 0.0,
+                master_trim_db: 0.0,
+            },
+            tracks: vec![
+                summoner_project::schema::TrackConfig {
+                    id: 101,
+                    name: "Neon Bass".to_string(),
+                    gain: 0.95,
+                    pan: -0.2,
+                    color: Some([168, 85, 247]),
+                    record_armed: true,
+                    ..Default::default()
+                },
+                summoner_project::schema::TrackConfig {
+                    id: 102,
+                    name: "Hologram Lead".to_string(),
+                    gain: 1.10,
+                    pan: 0.3,
+                    color: Some([56, 189, 248]),
+                    record_armed: false,
+                    ..Default::default()
+                },
+            ],
+            assets: Vec::new(),
+            automation_lanes: Vec::new(),
+            midi_mappings: Vec::new(),
+            markers: Vec::new(),
+            loop_start_beat: 8.0,
+            loop_end_beat: 24.0,
+            loop_enabled: true,
+            punch_in_beat: None,
+            punch_out_beat: None,
+            locator_a_beat: None,
+            locator_b_beat: None,
+            meta: None,
+            scripts: Vec::new(),
+            lua_state: None,
+        };
+
+        let mut playhead_beat = 12.0_f64;
+        let mut transport_running = true;
+        let mut selected_track_id = Some(102_u64);
+
+        // First sync: ProjectConfig -> AwardWinningGuiView
+        view.sync_with_project(&mut project, &mut playhead_beat, &mut transport_running, &mut selected_track_id);
+
+        assert_eq!(view.tracks.len(), 2);
+        assert_eq!(view.tracks[0].id, 101);
+        assert_eq!(view.tracks[0].name, "Neon Bass");
+        assert_eq!(view.tracks[0].color_rgb, [168, 85, 247]);
+        assert_eq!(view.tracks[1].id, 102);
+        assert_eq!(view.tracks[1].name, "Hologram Lead");
+
+        // Selected track should have synchronized to index 1 (id 102)
+        assert_eq!(view.selected_track_idx, 1);
+
+        // Transport & Loop bounds synced
+        assert_eq!(view.top_bar_state.bpm, 138.0);
+        assert_eq!(view.loop_start_beat, 8.0);
+        assert_eq!(view.loop_end_beat, 24.0);
+        assert_eq!(view.playhead_beat, 12.0);
+        assert!(view.top_bar_state.is_playing);
+
+        // Mutate track parameters in GUI view
+        view.tracks[0].gain = 0.72;
+        view.tracks[0].pan = -0.6;
+        view.tracks[0].is_muted = true;
+        view.tracks[0].is_soloed = true;
+
+        // Mutate tempo in GUI top bar
+        view.top_bar_state.bpm = 144.0;
+
+        // Pause transport in GUI top bar
+        view.top_bar_state.is_playing = false;
+
+        // Second sync: AwardWinningGuiView -> ProjectConfig
+        view.sync_with_project(&mut project, &mut playhead_beat, &mut transport_running, &mut selected_track_id);
+
+        // Verify project tracks updated
+        assert_eq!(project.tracks[0].gain, 0.72);
+        assert_eq!(project.tracks[0].pan, -0.6);
+        assert!(project.tracks[0].muted);
+        assert!(project.tracks[0].soloed);
+
+        // Verify tempo and transport state synced back
+        assert_eq!(project.transport.bpm, 144.0);
+        assert!(!transport_running);
     }
 }

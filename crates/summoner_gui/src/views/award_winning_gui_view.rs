@@ -126,6 +126,8 @@ pub struct AwardWinningGuiView {
     pub pending_cord_source: Option<(String, String)>,
     pub last_applied_preset: String,
     pub last_applied_macros: [f32; 4],
+    pub last_synced_bpm: f64,
+    pub last_synced_is_playing: bool,
 }
 
 impl Default for AwardWinningGuiView {
@@ -261,6 +263,8 @@ impl AwardWinningGuiView {
             pending_cord_source: None,
             last_applied_preset: "Init Synth 1".to_string(),
             last_applied_macros: [0.65, 0.40, 0.55, 0.50],
+            last_synced_bpm: 120.0,
+            last_synced_is_playing: false,
         };
         view.reset_modular_nodes();
         view
@@ -409,6 +413,50 @@ impl AwardWinningGuiView {
                     painter.text(egui::pos2(bar_x + 4.0, ruler_rect.top() + 6.0), egui::Align2::LEFT_TOP, format!("{}", bar), FontId::proportional(10.0), Color32::from_rgb(148, 163, 184));
                 }
 
+                // Interaction handling (Scrubbing playhead, selecting track, adjusting track gain)
+                let pointer_pos = resp.interact_pointer_pos().or_else(|| ui.input(|i| i.pointer.latest_pos()));
+                let is_interacting = resp.clicked() || resp.dragged() || ui.input(|i| i.pointer.primary_down() || i.pointer.primary_clicked());
+                let is_click = resp.clicked() || ui.input(|i| i.pointer.primary_clicked() || (i.pointer.primary_down() && !resp.dragged()));
+
+                if let Some(pos) = pointer_pos {
+                    if is_interacting {
+                        if pos.y <= rect.top() + ruler_h {
+                            let beat = ((pos.x - (rect.left() + header_w)) / ppb).max(0.0);
+                            self.playhead_beat = beat;
+                        } else {
+                            let mut selected_idx = None;
+                            let row_h = 32.0;
+                            for (idx, track) in self.tracks.iter_mut().enumerate() {
+                                let row_top = rect.top() + ruler_h + (idx as f32 * (row_h + 2.0));
+                                let head_rect = Rect::from_min_size(egui::pos2(rect.left(), row_top), Vec2::new(header_w, row_h));
+                                let lane_rect = Rect::from_min_size(egui::pos2(rect.left() + header_w, row_top), Vec2::new(track_area_w, row_h));
+                                let pill_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 72.0, head_rect.center().y - 4.0), Vec2::new(45.0, 8.0));
+
+                                if pill_rect.expand(4.0).contains(pos) {
+                                    let new_gain = ((pos.x - pill_rect.left()) / pill_rect.width() * 1.5).clamp(0.0, 1.5);
+                                    track.gain = new_gain;
+                                    selected_idx = Some(idx);
+                                } else if (head_rect.contains(pos) || lane_rect.contains(pos)) && is_click {
+                                    selected_idx = Some(idx);
+                                }
+                            }
+                            if let Some(s_idx) = selected_idx {
+                                self.selected_track_idx = s_idx;
+                                if let Some(tr) = self.tracks.get(s_idx) {
+                                    self.top_bar_state.master_gain = tr.gain;
+                                    self.inspector_state.target_name = tr.name.clone();
+                                    self.inspector_state.gain_db = (tr.gain - 1.0) * 12.0;
+                                    self.inspector_state.pan_val = tr.pan;
+                                    self.inspector_state.is_muted = tr.is_muted;
+                                    self.inspector_state.is_soloed = tr.is_soloed;
+                                    self.inspector_state.is_armed = tr.is_armed;
+                                    self.device_rack_state.device_name = tr.name.clone();
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // 2. Track Lanes
                 let row_h = 32.0;
                 for (idx, track) in self.tracks.iter().enumerate() {
@@ -520,6 +568,16 @@ impl AwardWinningGuiView {
                     let bar_x = rect.left() + key_w + ((bar - 1) as f32 * 4.0 * ppb);
                     painter.line_segment([egui::pos2(bar_x, ruler_rect.top()), egui::pos2(bar_x, ruler_rect.bottom())], Stroke::new(1.0_f32, Color32::from_rgb(50, 65, 90)));
                     painter.text(egui::pos2(bar_x + 4.0, ruler_rect.top() + 4.0), egui::Align2::LEFT_TOP, format!("{}", bar), FontId::proportional(9.0), Color32::from_rgb(148, 163, 184));
+                }
+
+                // Ruler playhead scrubbing
+                let pointer_pos = resp.interact_pointer_pos().or_else(|| ui.input(|i| i.pointer.latest_pos()));
+                let is_interacting = resp.clicked() || resp.dragged() || ui.input(|i| i.pointer.primary_down() || i.pointer.primary_clicked());
+                if let Some(pos) = pointer_pos {
+                    if is_interacting && pos.y <= rect.top() + ruler_h {
+                        let beat = ((pos.x - (rect.left() + key_w)) / ppb).max(0.0);
+                        self.playhead_beat = beat;
+                    }
                 }
 
                 // 2. Pitch Rows (12 semitones C5 down to C4)
@@ -743,6 +801,107 @@ impl AwardWinningGuiView {
         self.inspector_state.selected_node_kind = Some(desc.kind_id.clone());
         self.inspector_state.target_name = desc.display_name.clone();
         self.modular_nodes.push(instance);
+    }
+
+    /// Synchronize live session configuration, transport position, and active track between Summoner Core and the Studio GUI.
+    pub fn sync_with_project(
+        &mut self,
+        project: &mut summoner_project::schema::ProjectConfig,
+        playhead_beat: &mut f64,
+        transport_running: &mut bool,
+        selected_track_id: &mut Option<u64>,
+    ) {
+        // 1. Reconcile tracks if project has tracks
+        if !project.tracks.is_empty() {
+            let proj_ids: Vec<u64> = project.tracks.iter().map(|t| t.id).collect();
+            let view_ids: Vec<u64> = self.tracks.iter().map(|t| t.id).collect();
+            if proj_ids != view_ids {
+                let default_colors = [
+                    [56, 189, 248],   // Cyan
+                    [168, 85, 247],   // Purple
+                    [236, 72, 153],   // Pink
+                    [245, 158, 11],   // Amber
+                    [16, 185, 129],   // Emerald
+                    [59, 130, 246],   // Blue
+                    [239, 68, 68],    // Red
+                    [14, 165, 233],   // Sky
+                ];
+                self.tracks = project.tracks.iter().enumerate().map(|(i, t)| {
+                    let color = t.color.unwrap_or_else(|| default_colors[i % default_colors.len()]);
+                    let (clip_start, clip_len) = if let Some(ref seq) = t.sequence {
+                        (seq.start_beat as f32, seq.step_division as f32)
+                    } else if let Some(clip) = t.clips.first() {
+                        (clip.start_beat as f32, clip.step_division as f32)
+                    } else {
+                        (0.0_f32, 16.0_f32)
+                    };
+                    let is_audio = t.nodes.iter().any(|n| {
+                        let k = n.kind.to_lowercase();
+                        k.contains("audio") || k.contains("sample") || k.contains("wav")
+                    });
+                    TrackVisualData {
+                        id: t.id,
+                        name: t.name.clone(),
+                        color_rgb: color,
+                        is_audio,
+                        gain: t.gain,
+                        pan: t.pan,
+                        is_muted: t.muted,
+                        is_soloed: t.soloed,
+                        is_armed: t.record_armed,
+                        clip_start_beat: clip_start,
+                        clip_length_beats: clip_len,
+                    }
+                }).collect();
+            } else {
+                // Bi-directional parameter sync: push view track mutations to project tracks
+                for t in &mut project.tracks {
+                    if let Some(vt) = self.tracks.iter().find(|v| v.id == t.id) {
+                        t.gain = vt.gain;
+                        t.pan = vt.pan;
+                        t.muted = vt.is_muted;
+                        t.soloed = vt.is_soloed;
+                        t.record_armed = vt.is_armed;
+                    }
+                }
+            }
+        }
+
+        // 2. Track selection sync
+        if let Some(sel_id) = *selected_track_id {
+            if let Some(pos) = self.tracks.iter().position(|t| t.id == sel_id) {
+                self.selected_track_idx = pos;
+            }
+        } else if self.selected_track_idx < self.tracks.len() {
+            *selected_track_id = Some(self.tracks[self.selected_track_idx].id);
+        }
+
+        // 3. Transport & Playhead sync
+        if self.top_bar_state.is_playing != self.last_synced_is_playing {
+            *transport_running = self.top_bar_state.is_playing;
+            self.last_synced_is_playing = self.top_bar_state.is_playing;
+        } else {
+            self.top_bar_state.is_playing = *transport_running;
+            self.last_synced_is_playing = *transport_running;
+        }
+        if *transport_running {
+            self.playhead_beat = *playhead_beat as f32;
+        } else {
+            *playhead_beat = self.playhead_beat as f64;
+        }
+
+        // 4. Loop bounds & Tempo sync
+        self.loop_start_beat = project.loop_start_beat as f32;
+        self.loop_end_beat = project.loop_end_beat as f32;
+        if (self.top_bar_state.bpm - self.last_synced_bpm).abs() > 0.01 {
+            // User adjusted BPM in GUI top bar
+            project.transport.bpm = self.top_bar_state.bpm;
+            self.last_synced_bpm = self.top_bar_state.bpm;
+        } else {
+            // Project transport drives GUI
+            self.top_bar_state.bpm = project.transport.bpm;
+            self.last_synced_bpm = project.transport.bpm;
+        }
     }
 
     #[cfg(feature = "gui")]
@@ -1060,6 +1219,55 @@ impl AwardWinningGuiView {
                 let master_w = 68.0;
                 let ch_area_w = rect.width() - master_w - 12.0;
                 let strip_w = (ch_area_w / num_ch as f32).max(44.0);
+
+                // Mixer interactions: Mute, Solo, Volume Fader, Track Selection
+                let pointer_pos = resp.interact_pointer_pos().or_else(|| ui.input(|i| i.pointer.latest_pos()));
+                let is_interacting = resp.clicked() || resp.dragged() || ui.input(|i| i.pointer.primary_down() || i.pointer.primary_clicked());
+                let is_click = resp.clicked() || ui.input(|i| i.pointer.primary_clicked() || (i.pointer.primary_down() && !resp.dragged()));
+
+                if let Some(pos) = pointer_pos {
+                    if is_interacting {
+                        let mut selected_idx = None;
+                        for (idx, track) in self.tracks.iter_mut().enumerate() {
+                            let sx = rect.left() + idx as f32 * strip_w;
+                            let strip_rect = Rect::from_min_size(egui::pos2(sx, rect.top() + 4.0), Vec2::new(strip_w - 4.0, canvas_height - 8.0));
+                            if strip_rect.contains(pos) {
+                                let pan_y = strip_rect.top() + 32.0;
+                                let m_rect = Rect::from_min_size(egui::pos2(strip_rect.left() + 4.0, pan_y + 14.0), Vec2::new((strip_rect.width() - 10.0) / 2.0, 16.0));
+                                let s_rect = Rect::from_min_size(egui::pos2(m_rect.right() + 2.0, pan_y + 14.0), Vec2::new(m_rect.width(), 16.0));
+                                let fader_top = s_rect.bottom() + 10.0;
+                                let fader_bot = strip_rect.bottom() - 20.0;
+
+                                if m_rect.contains(pos) && is_click {
+                                    track.is_muted = !track.is_muted;
+                                    selected_idx = Some(idx);
+                                } else if s_rect.contains(pos) && is_click {
+                                    track.is_soloed = !track.is_soloed;
+                                    selected_idx = Some(idx);
+                                } else if pos.y >= fader_top - 6.0 && pos.y <= fader_bot + 6.0 {
+                                    let norm = ((fader_bot - pos.y) / (fader_bot - fader_top)).clamp(0.0, 1.0);
+                                    track.gain = norm * 1.5;
+                                    selected_idx = Some(idx);
+                                } else if is_click {
+                                    selected_idx = Some(idx);
+                                }
+                            }
+                        }
+                        if let Some(s_idx) = selected_idx {
+                            self.selected_track_idx = s_idx;
+                            if let Some(tr) = self.tracks.get(s_idx) {
+                                self.top_bar_state.master_gain = tr.gain;
+                                self.inspector_state.target_name = tr.name.clone();
+                                self.inspector_state.gain_db = (tr.gain - 1.0) * 12.0;
+                                self.inspector_state.pan_val = tr.pan;
+                                self.inspector_state.is_muted = tr.is_muted;
+                                self.inspector_state.is_soloed = tr.is_soloed;
+                                self.inspector_state.is_armed = tr.is_armed;
+                                self.device_rack_state.device_name = tr.name.clone();
+                            }
+                        }
+                    }
+                }
 
                 // Draw Track Channel Strips 1..8
                 for (idx, track) in self.tracks.iter().enumerate() {

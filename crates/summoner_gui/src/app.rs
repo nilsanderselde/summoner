@@ -2507,12 +2507,18 @@ impl eframe::App for SummonerApp {
                     crate::views::co_producer::show_co_producer_panel(ui, &self.project, &mut self.co_producer_state);
                 }
                 ViewMode::ModernStudio => {
+                    self.award_winning_view.sync_with_project(
+                        &mut self.project,
+                        &mut self.playhead_beat,
+                        &mut self.transport_running,
+                        &mut self.selected_track_id,
+                    );
                     self.award_winning_view.show(ui);
                 }
             }
 
             // Optional Macro Rack device panel at bottom of central area
-            if self.show_rack && self.current_view != ViewMode::Performance {
+            if self.show_rack && self.current_view != ViewMode::Performance && self.current_view != ViewMode::ModernStudio {
                 ui.separator();
                 if let Some(tid) = self.selected_track_id {
                     let osc = self.oscilloscope_buffers.get(&tid).map(|o| o.as_ref());
