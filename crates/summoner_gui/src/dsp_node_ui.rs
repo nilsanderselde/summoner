@@ -3115,6 +3115,71 @@ impl DspNodeRegistry {
             .with_param(DspParamSchema::knob("smoothing_tau_ms", "Packet Slew Smoothing", 0.0, 100.0, 10.0, "ms", MacroRole::Character, "Temporal lag filter preventing staircasing on incoming control packet rates parameter"))
             .with_param(DspParamSchema::toggle("feedback_echo", "Bidirectional Feedback Echo", false, "Sends parameter state acknowledgments back to remote control client toggle"))
         );
+        descriptors.insert("CrystalResonator".to_string(), DspNodeDescriptor::new("CrystalResonator", "8-Mode Thin-Shell Crystal Glass & Singing Bowl Resonator", DspNodeCategory::AcousticPhysicalModel, "Acoustic physical model of thin-shell crystal glass singing bowls, water-tuned wine glasses, and quartz bells with split modal doublets")
+            .with_param(DspParamSchema::log_knob("root_freq_hz", "Root Resonance Freq", 50.0, 8000.0, 528.0, "Hz", MacroRole::Tone, "Crystal singing bowl fundamental pitch resonance frequency parameter"))
+            .with_param(DspParamSchema::knob("water_fill_level", "Water Fill Level", 0.0, 1.0, 0.25, "%", MacroRole::Character, "Fluid height acoustic loading and mass-lowering parameter"))
+            .with_param(DspParamSchema::knob("q_scale", "Modal Q Scale", 0.1, 10.0, 2.0, "x", MacroRole::Tone, "Resonance sharpness and decay envelope duration multiplier parameter"))
+            .with_param(DspParamSchema::knob("friction_velocity", "Stick-Slip Friction", 0.0, 1.0, 0.50, "%", MacroRole::Punch, "Rotational rim friction excitation intensity parameter"))
+            .with_param(DspParamSchema::knob("master_gain", "Resonator Output Gain", 0.0, 2.0, 1.0, "%", MacroRole::Tone, "Output amplification gain trim parameter"))
+        );
+        descriptors.insert("DistanceDopplerNode".to_string(), DspNodeDescriptor::new("DistanceDopplerNode", "3D Distance Attenuation, Air Absorption & Doppler Shift", DspNodeCategory::SpatialSurround, "Physically accurate 3D acoustic propagation with inverse-square falloff, frequency-dependent air absorption, and continuous Doppler shift")
+            .with_param(DspParamSchema::knob("pos_x", "Source X Position", -50.0, 50.0, 0.0, "m", MacroRole::Space, "Lateral 3D spatial coordinate parameter"))
+            .with_param(DspParamSchema::knob("pos_y", "Source Y Position", -50.0, 50.0, 1.0, "m", MacroRole::Space, "Front-back 3D spatial coordinate parameter"))
+            .with_param(DspParamSchema::knob("pos_z", "Source Z Position", -50.0, 50.0, 0.0, "m", MacroRole::Space, "Vertical elevation 3D spatial coordinate parameter"))
+            .with_param(DspParamSchema::knob("speed_of_sound", "Speed of Sound", 300.0, 400.0, 343.0, "m/s", MacroRole::Character, "Medium acoustic velocity for Doppler pitch calculations parameter"))
+            .with_param(DspParamSchema::knob("air_absorption", "Air Absorption", 0.0, 1.0, 0.30, "%", MacroRole::Tone, "Distance-dependent high frequency dampening parameter"))
+        );
+        descriptors.insert("BrirConvolutionNode".to_string(), DspNodeDescriptor::new("BrirConvolutionNode", "Binaural Room Impulse Response (BRIR) Convolver", DspNodeCategory::SpatialSurround, "Zero-latency dual-ear BRIR convolution engine placing virtual sound sources into hyper-realistic acoustic rooms")
+            .with_param(DspParamSchema::knob("room_decay", "Impulse Decay Time", 0.05, 5.0, 0.8, "s", MacroRole::Space, "Binaural room reverberation tail duration parameter"))
+            .with_param(DspParamSchema::knob("reflection_density", "Early Reflections", 0.0, 1.0, 0.75, "%", MacroRole::Space, "Early boundary reflection density parameter"))
+            .with_param(DspParamSchema::knob("head_shadowing", "Head Shadowing ILD", 0.0, 1.0, 0.85, "%", MacroRole::Tone, "Interaural level difference filtering intensity parameter"))
+            .with_param(DspParamSchema::knob("wet_dry", "Wet / Dry Mix", 0.0, 1.0, 0.50, "%", MacroRole::Space, "Balance between direct dry sound and binaural room convolution parameter"))
+        );
+        descriptors.insert("TarabResonatorBank".to_string(), DspNodeDescriptor::new("TarabResonatorBank", "Indian Classical Tarab Sympathetic String Resonance Bank", DspNodeCategory::AcousticPhysicalModel, "Multi-string sympathetic resonance bank tuned to classical Raga scales with non-linear flat Jawari bridge buzzing")
+            .with_param(DspParamSchema::log_knob("root_freq_hz", "Tarab Root Sa Freq", 20.0, 1000.0, 130.81, "Hz", MacroRole::Tone, "Fundamental Sa reference frequency for sympathetic tuning parameter"))
+            .with_param(DspParamSchema::knob("coupling_bleed", "Sympathetic Coupling", 0.0, 1.0, 0.35, "%", MacroRole::Space, "Cross-string sympathetic acoustic excitation coupling parameter"))
+            .with_param(DspParamSchema::choice("raga_scale", "Raga Scale Mode", &["Bhairav", "Yaman", "Todi", "Kafi", "Bhairavi"], 0, "Selected Raga modal interval tuning selector"))
+            .with_param(DspParamSchema::knob("jawari_buzz", "Jawari Bridge Buzz", 0.0, 1.0, 0.50, "%", MacroRole::Character, "Non-linear parabolic bone bridge buzzing envelope parameter"))
+            .with_param(DspParamSchema::knob("sympathetic_sustain", "Sympathetic Sustain", 0.1, 5.0, 1.5, "s", MacroRole::Space, "Resonance ring-down decay time parameter"))
+        );
+        descriptors.insert("ArmonicaChassisResonator".to_string(), DspNodeDescriptor::new("ArmonicaChassisResonator", "Benjamin Franklin Glass Armonica Acoustic Soundbox", DspNodeCategory::AcousticPhysicalModel, "Acoustic resonance soundboard and cavity simulation of Benjamin Franklin's 1761 glass armonica mahogany case")
+            .with_param(DspParamSchema::knob("master_chassis_gain", "Chassis Body Gain", 0.0, 2.0, 1.0, "%", MacroRole::Tone, "Soundboard body amplification gain trim parameter"))
+            .with_param(DspParamSchema::knob("spruce_resonance_q", "Wood Resonant Q", 0.5, 10.0, 3.0, "Q", MacroRole::Character, "Spruce and mahogany timber resonant sharpness parameter"))
+            .with_param(DspParamSchema::knob("air_cavity_coupling", "Air Cavity Coupling", 0.0, 1.0, 0.40, "%", MacroRole::Space, "Coupling factor between spinning glass cups and internal sound cavity parameter"))
+            .with_param(DspParamSchema::knob("low_end_radiance", "Low-End Radiance", 0.0, 1.0, 0.55, "%", MacroRole::Tone, "Bass radiation reinforcement from large case dimensions parameter"))
+        );
+        descriptors.insert("SineOscillatorNode".to_string(), DspNodeDescriptor::new("SineOscillatorNode", "Core Deterministic Sine Oscillator AudioNode", DspNodeCategory::Oscillator, "Bit-exact, phase-continuous deterministic sine wave oscillator implementing fundamental summoner_core::node::AudioNode")
+            .with_param(DspParamSchema::log_knob("frequency", "Oscillator Frequency", 20.0, 20000.0, 440.0, "Hz", MacroRole::Tone, "Deterministic sine oscillation frequency parameter"))
+            .with_param(DspParamSchema::knob("phase", "Phase Offset", 0.0, 360.0, 0.0, "deg", MacroRole::Tone, "Initial waveform starting phase parameter"))
+            .with_param(DspParamSchema::knob("gain", "Oscillator Gain", 0.0, 1.0, 0.80, "%", MacroRole::Tone, "Output level amplitude scaling parameter"))
+        );
+        descriptors.insert("ModalSynthesisEngine".to_string(), DspNodeDescriptor::new("ModalSynthesisEngine", "Polyphonic Modal Synthesis Bank with Dynamic Damping", DspNodeCategory::AcousticPhysicalModel, "High-performance bank of 16 resonant modal bandpass filters modeling bells, bars, plates, and struck acoustic bodies")
+            .with_param(DspParamSchema::log_knob("fundamental_freq", "Fundamental Freq", 20.0, 5000.0, 220.0, "Hz", MacroRole::Tone, "Base modal frequency across all resonant modes parameter"))
+            .with_param(DspParamSchema::knob("modal_damping", "Modal Damping", 0.01, 5.0, 0.8, "s", MacroRole::Space, "Decay time constant for higher-order modal partials parameter"))
+            .with_param(DspParamSchema::knob("strike_stiffness", "Exciter Stiffness", 0.0, 1.0, 0.50, "%", MacroRole::Punch, "Hardness of physical strike impact impulse parameter"))
+            .with_param(DspParamSchema::knob("inharmonicity", "Inharmonicity Spread", 0.0, 1.0, 0.15, "%", MacroRole::Character, "Dispersion warping modes away from harmonic integer multiples parameter"))
+            .with_param(DspParamSchema::knob("num_modes", "Active Modal Count", 1.0, 16.0, 8.0, "", MacroRole::Tone, "Number of active resonant filter bands computed parameter"))
+        );
+        descriptors.insert("MacroModulationMatrix".to_string(), DspNodeDescriptor::new("MacroModulationMatrix", "64-Slot Real-time Macro Modulation Matrix & Slew Router", DspNodeCategory::Modulation, "Universal cross-point modulation router mapping DAW macro dials and LFOs to arbitrary DSP targets with smoothing")
+            .with_param(DspParamSchema::knob("routing_depth", "Modulation Depth", -1.0, 1.0, 0.50, "%", MacroRole::Character, "Bipolar modulation routing intensity scale parameter"))
+            .with_param(DspParamSchema::knob("slew_time_ms", "Slew Smoothing", 0.0, 500.0, 10.0, "ms", MacroRole::Tone, "Low-pass lag filtering preventing zipper noise parameter"))
+            .with_param(DspParamSchema::knob("bipolar_offset", "Bipolar Bias Offset", -1.0, 1.0, 0.0, "%", MacroRole::Tone, "DC offset shift applied to modulation signal parameter"))
+            .with_param(DspParamSchema::toggle("invert_polarity", "Invert Signal Polarity", false, "Inverts modulation direction from positive to negative toggle"))
+        );
+        descriptors.insert("SurroundLimiterAndLoudness".to_string(), DspNodeDescriptor::new("SurroundLimiterAndLoudness", "7.1.4 / 9.1.6 Multi-Channel True-Peak Surround Limiter", DspNodeCategory::DynamicsMaster, "Mastering-grade multi-channel lookahead limiter with inter-channel linking, true-peak detection, and integrated EBU R128 loudness targeting")
+            .with_param(DspParamSchema::knob("target_lufs", "Integrated Target LUFS", -36.0, -6.0, -14.0, "LUFS", MacroRole::Punch, "Target program loudness normalization threshold parameter"))
+            .with_param(DspParamSchema::knob("ceiling_dbtp", "True-Peak Ceiling", -6.0, 0.0, -0.5, "dBTP", MacroRole::Tone, "Maximum allowable inter-sample true-peak limit parameter"))
+            .with_param(DspParamSchema::knob("release_ms", "Limiter Release", 5.0, 1000.0, 50.0, "ms", MacroRole::Punch, "Gain recovery envelope release speed parameter"))
+            .with_param(DspParamSchema::knob("interchannel_linking", "Surround Channel Link", 0.0, 1.0, 0.80, "%", MacroRole::Space, "Prevents spatial image collapse by linking surround channel gain reductions parameter"))
+            .with_param(DspParamSchema::toggle("true_peak_enable", "True-Peak Oversampling", true, "Enables 4x polyphase inter-sample true-peak detection toggle"))
+        );
+        descriptors.insert("SpatialReverb3D".to_string(), DspNodeDescriptor::new("SpatialReverb3D", "3D Volumetric Spatial Geometric Room Reverb", DspNodeCategory::SpatialSurround, "Full 3D spatial reverberation engine supporting immersive speaker layouts (Stereo up to 22.2) with geometric room boundary reflections")
+            .with_param(DspParamSchema::knob("room_size_m", "Room Dimension", 1.0, 50.0, 12.0, "m", MacroRole::Space, "Length of virtual acoustic room cube parameter"))
+            .with_param(DspParamSchema::knob("rt60_decay", "Reverb Decay RT60", 0.1, 10.0, 1.8, "s", MacroRole::Space, "Time required for late diffuse reflections to decay by 60dB parameter"))
+            .with_param(DspParamSchema::knob("diffusion", "Wall Diffusion", 0.0, 1.0, 0.70, "%", MacroRole::Space, "Scattering coefficient of virtual acoustic walls parameter"))
+            .with_param(DspParamSchema::knob("predelay_ms", "Pre-Delay Time", 0.0, 200.0, 20.0, "ms", MacroRole::Space, "Gap before first early reflections arrive parameter"))
+            .with_param(DspParamSchema::knob("high_freq_damping", "Air Damping Cutoff", 500.0, 20000.0, 6000.0, "Hz", MacroRole::Tone, "High frequency absorption corner frequency parameter"))
+        );
 
         Self { descriptors }
     }
@@ -3470,6 +3535,16 @@ impl DspNodeRegistry {
             ("ProcessorNodeAdapter", DspNodeCategory::Utility, "Universal Signal Processor Adapter Bridge"),
             ("AudioChannelRoutingMatrix", DspNodeCategory::Utility, "Multi-Channel Audio Routing Matrix (32x32)"),
             ("OscMappingEngine", DspNodeCategory::Utility, "Open Sound Control (OSC) Bidirectional Mapping Bridge"),
+            ("CrystalResonator", DspNodeCategory::AcousticPhysicalModel, "8-Mode Thin-Shell Crystal Glass & Singing Bowl Resonator"),
+            ("DistanceDopplerNode", DspNodeCategory::SpatialSurround, "3D Distance Attenuation, Air Absorption & Doppler Shift"),
+            ("BrirConvolutionNode", DspNodeCategory::SpatialSurround, "Binaural Room Impulse Response (BRIR) Convolver"),
+            ("TarabResonatorBank", DspNodeCategory::AcousticPhysicalModel, "Indian Classical Tarab Sympathetic String Resonance Bank"),
+            ("ArmonicaChassisResonator", DspNodeCategory::AcousticPhysicalModel, "Benjamin Franklin Glass Armonica Acoustic Soundbox"),
+            ("SineOscillatorNode", DspNodeCategory::Oscillator, "Core Deterministic Sine Oscillator AudioNode"),
+            ("ModalSynthesisEngine", DspNodeCategory::AcousticPhysicalModel, "Polyphonic Modal Synthesis Bank with Dynamic Damping"),
+            ("MacroModulationMatrix", DspNodeCategory::Modulation, "64-Slot Real-time Macro Modulation Matrix & Slew Router"),
+            ("SurroundLimiterAndLoudness", DspNodeCategory::DynamicsMaster, "7.1.4 / 9.1.6 Multi-Channel True-Peak Surround Limiter"),
+            ("SpatialReverb3D", DspNodeCategory::SpatialSurround, "3D Volumetric Spatial Geometric Room Reverb"),
         ]
     }
 
@@ -3941,6 +4016,47 @@ impl DspNodeRegistry {
             "crosspointmatrix" => Some("AudioChannelRoutingMatrix"),
             "oscmappingengine" => Some("OscMappingEngine"),
             "oscmapping" => Some("OscMappingEngine"),
+            "membranedrum" => Some("MembranePercussionModel"),
+            "crystalresonator" => Some("CrystalResonator"),
+            "crystalbowl" => Some("CrystalResonator"),
+            "crystalglass" => Some("CrystalResonator"),
+            "subharmonicquantumtunneling" => Some("SubharmonicQuantumTunnelingFilter"),
+            "quantumtunnelingfilter" => Some("SubharmonicQuantumTunnelingFilter"),
+            "distancedopplernode" => Some("DistanceDopplerNode"),
+            "distancedoppler" => Some("DistanceDopplerNode"),
+            "dopplershiftnode" => Some("DistanceDopplerNode"),
+            "brirconvolutionnode" => Some("BrirConvolutionNode"),
+            "brirconvolution" => Some("BrirConvolutionNode"),
+            "binauralroomimpulse" => Some("BrirConvolutionNode"),
+            "tarabresonatorbank" => Some("TarabResonatorBank"),
+            "tarabresonator" => Some("TarabResonatorBank"),
+            "sympatheticstrings" => Some("TarabResonatorBank"),
+            "armonicachassisresonator" => Some("ArmonicaChassisResonator"),
+            "armonicachassis" => Some("ArmonicaChassisResonator"),
+            "glassarmonicachassis" => Some("ArmonicaChassisResonator"),
+            "sineoscillatornode" => Some("SineOscillatorNode"),
+            "modalsynthesisengine" => Some("ModalSynthesisEngine"),
+            "macromodulationmatrix" => Some("MacroModulationMatrix"),
+            "surroundlimiterandloudness" => Some("SurroundLimiterAndLoudness"),
+            "surroundlimiter" => Some("SurroundLimiterAndLoudness"),
+            "spatialreverb3d" => Some("SpatialReverb3D"),
+            "spatialreverb" => Some("SpatialReverb3D"),
+            "pipeorgannode" => Some("PipeOrgan"),
+            "sitarnode" => Some("Sitar"),
+            "tonewheelorgannode" => Some("TonewheelOrgan"),
+            "rotaryspeakernode" => Some("RotarySpeaker"),
+            "waveguidebrassnode" => Some("WaveguideBrass"),
+            "waveguidemeshnode" => Some("WaveguideMesh"),
+            "woodwindjetnode" => Some("WoodwindJet"),
+            "plasmaarcsynthesizernode" => Some("PlasmaArcSynthesizer"),
+            "acousticcloakingspatializernode" => Some("AcousticCloakingSpatializer"),
+            "fusionresonancesynthnode" => Some("FusionResonanceSynth"),
+            "haptictransducernode" => Some("HapticTransducer"),
+            "hyperbolicreverbnode" => Some("HyperbolicReverb"),
+            "ismshockwavereverbnode" => Some("IsmShockwaveReverb"),
+            "metamaterialrefractionfilternode" => Some("MetamaterialRefractionFilter"),
+            "mhdplasmawavemodulatornode" => Some("MhdPlasmaWaveModulator"),
+            "molecularvibrationresonatornode" => Some("MolecularVibrationResonator"),
             _ => None,
         }
     }

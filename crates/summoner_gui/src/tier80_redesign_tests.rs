@@ -263,4 +263,128 @@ mod tests {
         assert_eq!(last_cord.to_node_id, room_id);
         assert!(last_cord.is_audio);
     }
+
+    #[test]
+    fn test_novice_macro_strip_and_preset_sync_to_pro_device_rack() {
+        let mut view = AwardWinningGuiView::new();
+
+        // Initial defaults
+        assert_eq!(view.device_rack_state.device_name, "Synth 1");
+        assert_eq!(view.top_bar_state.selected_preset, "Init Synth 1");
+
+        // 1. Mutate Novice Presets in Top Bar
+        view.top_bar_state.selected_preset = "Ambient Crystal Bells".to_string();
+
+        // 2. Mutate Novice Macro Knobs (Tone, Space, Punch, Character) + Master Gain
+        view.top_bar_state.macro_tone = 0.88;
+        view.top_bar_state.macro_space = 0.72;
+        view.top_bar_state.macro_punch = 0.64;
+        view.top_bar_state.macro_character = 0.91;
+        view.top_bar_state.master_gain = 1.25;
+
+        // Run UI cycle to process bindings
+        let ctx = eframe::egui::Context::default();
+        let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+            eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                view.show(ui);
+            });
+        });
+
+        // Verify Device Rack and Inspector updated to CrystalResonator
+        assert_eq!(view.device_rack_state.selected_node_kind.as_deref(), Some("CrystalResonator"));
+        assert_eq!(view.inspector_state.selected_node_kind.as_deref(), Some("CrystalResonator"));
+        assert_eq!(view.device_rack_state.device_name, "8-Mode Thin-Shell Crystal Glass & Singing Bowl Resonator");
+
+        // Verify Macro Knobs propagated into Rack Controls
+        assert_eq!(view.device_rack_state.cutoff, 0.88);
+        assert_eq!(view.device_rack_state.decay, 0.72);
+        assert_eq!(view.device_rack_state.drive, 0.64);
+        assert_eq!(view.device_rack_state.mod_amt, 0.91);
+
+        // Verify mirrored into node parameter reflection
+        assert_eq!(view.device_rack_state.node_param_values.get("cutoff"), Some(&0.88));
+        assert_eq!(view.device_rack_state.node_param_values.get("decay"), Some(&0.72));
+        assert_eq!(view.device_rack_state.node_param_values.get("drive"), Some(&0.64));
+        assert_eq!(view.device_rack_state.node_param_values.get("character"), Some(&0.91));
+
+        // Verify Master Gain propagated to active selected track
+        assert_eq!(view.tracks[view.selected_track_idx].gain, 1.25);
+    }
+
+    #[test]
+    fn test_newly_registered_dsp_nodes_inventory_and_port_sockets() {
+        let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+        assert!(registry.list_all().len() >= 315, "Registry should contain >= 315 descriptors, found {}", registry.list_all().len());
+
+        let inventory = crate::dsp_node_ui::DspNodeRegistry::inventory();
+        assert!(inventory.len() >= 315, "Inventory should contain >= 315 entries, found {}", inventory.len());
+
+        // 1. CrystalResonator (Acoustic physical singing bowl)
+        let crystal = registry.get("CrystalResonator").expect("CrystalResonator must exist");
+        assert_eq!(crystal.category, crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel);
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("crystalbowl"), Some("CrystalResonator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("crystalglass"), Some("CrystalResonator"));
+
+        // 2. DistanceDopplerNode (3D spatial audio)
+        let doppler = registry.get("DistanceDopplerNode").expect("DistanceDopplerNode must exist");
+        assert_eq!(doppler.category, crate::dsp_node_ui::DspNodeCategory::SpatialSurround);
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("distancedoppler"), Some("DistanceDopplerNode"));
+
+        // 3. BrirConvolutionNode (Binaural room impulse)
+        let brir = registry.get("BrirConvolutionNode").expect("BrirConvolutionNode must exist");
+        assert_eq!(brir.category, crate::dsp_node_ui::DspNodeCategory::SpatialSurround);
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("binauralroomimpulse"), Some("BrirConvolutionNode"));
+
+        // 4. TarabResonatorBank (Indian classical sympathetic resonance)
+        let tarab = registry.get("TarabResonatorBank").expect("TarabResonatorBank must exist");
+        assert_eq!(tarab.category, crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel);
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sympatheticstrings"), Some("TarabResonatorBank"));
+
+        // 5. SineOscillatorNode (Core deterministic sine AudioNode)
+        let sine = registry.get("SineOscillatorNode").expect("SineOscillatorNode must exist");
+        assert_eq!(sine.category, crate::dsp_node_ui::DspNodeCategory::Oscillator);
+
+        // 6. SpatialReverb3D (3D volumetric spatial room)
+        let reverb = registry.get("SpatialReverb3D").expect("SpatialReverb3D must exist");
+        assert_eq!(reverb.category, crate::dsp_node_ui::DspNodeCategory::SpatialSurround);
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("spatialreverb"), Some("SpatialReverb3D"));
+
+        // 7. SurroundLimiterAndLoudness (True-peak multichannel limiter)
+        let surround_lim = registry.get("SurroundLimiterAndLoudness").expect("SurroundLimiterAndLoudness must exist");
+        assert_eq!(surround_lim.category, crate::dsp_node_ui::DspNodeCategory::DynamicsMaster);
+
+        // 8. MacroModulationMatrix (64-slot modulation routing)
+        let mod_matrix = registry.get("MacroModulationMatrix").expect("MacroModulationMatrix must exist");
+        assert_eq!(mod_matrix.category, crate::dsp_node_ui::DspNodeCategory::Modulation);
+
+        // 9. Standard *Node aliases normalization
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pipeorgannode"), Some("PipeOrgan"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sitarnode"), Some("Sitar"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("tonewheelorgannode"), Some("TonewheelOrgan"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("rotaryspeakernode"), Some("RotarySpeaker"));
+
+        // 10. Test dynamic modular node creation from newly registered descriptors
+        let mut view = AwardWinningGuiView::new();
+        view.add_modular_node_from_descriptor(crystal);
+        view.add_modular_node_from_descriptor(doppler);
+        view.add_modular_node_from_descriptor(mod_matrix);
+
+        let nodes = &view.modular_nodes;
+        assert_eq!(nodes[nodes.len() - 3].kind_id, "CrystalResonator");
+        assert_eq!(nodes[nodes.len() - 2].kind_id, "DistanceDopplerNode");
+        assert_eq!(nodes[nodes.len() - 1].kind_id, "MacroModulationMatrix");
+
+        // Verify category socket bindings
+        let doppler_ports: Vec<_> = nodes[nodes.len() - 2].ports.iter().map(|p| p.id.as_str()).collect();
+        assert!(doppler_ports.contains(&"in_l"));
+        assert!(doppler_ports.contains(&"in_r"));
+        assert!(doppler_ports.contains(&"pos_cv"));
+        assert!(doppler_ports.contains(&"out_l"));
+        assert!(doppler_ports.contains(&"out_r"));
+
+        let mod_ports: Vec<_> = nodes[nodes.len() - 1].ports.iter().map(|p| p.id.as_str()).collect();
+        assert!(mod_ports.contains(&"gate"));
+        assert!(mod_ports.contains(&"sync"));
+        assert!(mod_ports.contains(&"cv_out"));
+    }
 }

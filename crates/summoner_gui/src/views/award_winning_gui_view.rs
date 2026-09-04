@@ -124,6 +124,8 @@ pub struct AwardWinningGuiView {
     pub patch_cords: Vec<ModularPatchCord>,
     pub selected_modular_node_id: Option<String>,
     pub pending_cord_source: Option<(String, String)>,
+    pub last_applied_preset: String,
+    pub last_applied_macros: [f32; 4],
 }
 
 impl Default for AwardWinningGuiView {
@@ -257,6 +259,8 @@ impl AwardWinningGuiView {
             patch_cords: Vec::new(),
             selected_modular_node_id: Some("osc_1".to_string()),
             pending_cord_source: None,
+            last_applied_preset: "Init Synth 1".to_string(),
+            last_applied_macros: [0.65, 0.40, 0.55, 0.50],
         };
         view.reset_modular_nodes();
         view
@@ -264,7 +268,55 @@ impl AwardWinningGuiView {
 
     #[cfg(feature = "gui")]
     pub fn show(&mut self, ui: &mut egui::Ui) {
-        // Synchronize selected DSP module across Modular Canvas, Rack & Inspector
+        // 1. Synchronize Novice Presets to Active Device Rack & Inspector
+        if self.top_bar_state.selected_preset != self.last_applied_preset {
+            self.last_applied_preset = self.top_bar_state.selected_preset.clone();
+            let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+            let target_node = match self.last_applied_preset.as_str() {
+                "Init Synth 1" => "AetherSynth",
+                "Aether Warm Pad" => "AtmosphericPadSynth",
+                "808 Sub Kick" => "CyberpunkSubSynth",
+                "Vintage Tape Lead" => "TapeSaturation",
+                "Karplus Acoustic Pluck" => "PluckSynth",
+                "Neural Vocal Demucs" => "DemucsV4Separator",
+                "Ambient Crystal Bells" => "CrystalResonator",
+                "Lo-Fi Breakbeat" => "LoopSlicerNode",
+                _ => "AetherSynth",
+            };
+            if let Some(desc) = registry.get(target_node) {
+                self.device_rack_state.selected_node_kind = Some(desc.kind_id.clone());
+                self.device_rack_state.device_name = desc.display_name.clone();
+                self.inspector_state.selected_node_kind = Some(desc.kind_id.clone());
+                self.inspector_state.target_name = desc.display_name.clone();
+            }
+        }
+
+        // 2. Synchronize Novice Macro Strip Knobs to Active Device Rack
+        let cur_macros = [
+            self.top_bar_state.macro_tone,
+            self.top_bar_state.macro_space,
+            self.top_bar_state.macro_punch,
+            self.top_bar_state.macro_character,
+        ];
+        if cur_macros != self.last_applied_macros {
+            self.last_applied_macros = cur_macros;
+            self.device_rack_state.cutoff = cur_macros[0];
+            self.device_rack_state.decay = cur_macros[1];
+            self.device_rack_state.drive = cur_macros[2];
+            self.device_rack_state.mod_amt = cur_macros[3];
+
+            self.device_rack_state.node_param_values.insert("cutoff".to_string(), cur_macros[0]);
+            self.device_rack_state.node_param_values.insert("decay".to_string(), cur_macros[1]);
+            self.device_rack_state.node_param_values.insert("drive".to_string(), cur_macros[2]);
+            self.device_rack_state.node_param_values.insert("character".to_string(), cur_macros[3]);
+        }
+
+        // 3. Synchronize Master Gain to Selected Track
+        if let Some(track) = self.tracks.get_mut(self.selected_track_idx) {
+            track.gain = self.top_bar_state.master_gain;
+        }
+
+        // 4. Synchronize selected DSP module across Modular Canvas, Rack & Inspector
         if self.device_rack_state.selected_node_kind != self.inspector_state.selected_node_kind {
             if let Some(ref r_kind) = self.device_rack_state.selected_node_kind {
                 self.inspector_state.selected_node_kind = Some(r_kind.clone());
