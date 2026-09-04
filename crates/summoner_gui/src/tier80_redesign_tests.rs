@@ -1266,4 +1266,185 @@ mod tests {
         view.sync_with_project(&mut project, &mut playhead, &mut running, &mut sel_id);
         assert_eq!(project.tracks[0].sequence.as_ref().unwrap().steps[20].note, 60.0);
     }
+
+    #[test]
+    fn test_tier85_dsp_registry_percussion_and_idiophone_expansion() {
+        use crate::dsp_node_ui::{DspCategory, DspNodeRegistry};
+        let registry = DspNodeRegistry::new();
+        assert!(registry.list_all().len() >= 358, "Registry should have at least 358 modules, got {}", registry.list_all().len());
+
+        // 1. PercussionMembrane
+        let drum = registry.get("PercussionMembrane").expect("PercussionMembrane must be registered");
+        assert_eq!(drum.category, DspCategory::AcousticPhysicalModel);
+        assert!(drum.params.iter().any(|p| p.id == "fundamental_hz"));
+        assert!(drum.params.iter().any(|p| p.id == "snare_tension"));
+        assert!(drum.params.iter().any(|p| p.id == "air_cavity_depth"));
+        let drum_ui = DspNodeRegistry::create_node_ui(&drum.kind_id);
+        assert!(drum_ui.is_some(), "create_node_ui must succeed for PercussionMembrane");
+
+        // 2. StruckIdiophoneResonator
+        let marimba = registry.get("StruckIdiophoneResonator").expect("StruckIdiophoneResonator must be registered");
+        assert_eq!(marimba.category, DspCategory::AcousticPhysicalModel);
+        assert!(marimba.params.iter().any(|p| p.id == "mallet_hardness"));
+        assert!(marimba.params.iter().any(|p| p.id == "tube_mix"));
+        assert!(marimba.params.iter().any(|p| p.id == "instrument"));
+        let marimba_ui = DspNodeRegistry::create_node_ui(&marimba.kind_id);
+        assert!(marimba_ui.is_some(), "create_node_ui must succeed for StruckIdiophoneResonator");
+
+        // 3. HurdyGurdySoundboxBody
+        let gurdy = registry.get("HurdyGurdySoundboxBody").expect("HurdyGurdySoundboxBody must be registered");
+        assert_eq!(gurdy.category, DspCategory::AcousticPhysicalModel);
+        assert!(gurdy.params.iter().any(|p| p.id == "body_gain"));
+        assert!(gurdy.params.iter().any(|p| p.id == "helmholtz_hz"));
+        let gurdy_ui = DspNodeRegistry::create_node_ui(&gurdy.kind_id);
+        assert!(gurdy_ui.is_some(), "create_node_ui must succeed for HurdyGurdySoundboxBody");
+
+        // 4. SitarSoundboxBody
+        let sitar_box = registry.get("SitarSoundboxBody").expect("SitarSoundboxBody must be registered");
+        assert_eq!(sitar_box.category, DspCategory::AcousticPhysicalModel);
+        assert!(sitar_box.params.iter().any(|p| p.id == "resonance_gain"));
+        assert!(sitar_box.params.iter().any(|p| p.id == "gourd_volume_l"));
+        let sitar_box_ui = DspNodeRegistry::create_node_ui(&sitar_box.kind_id);
+        assert!(sitar_box_ui.is_some(), "create_node_ui must succeed for SitarSoundboxBody");
+
+        // 5. BridgeWaveCoupler
+        let coupler = registry.get("BridgeWaveCoupler").expect("BridgeWaveCoupler must be registered");
+        assert_eq!(coupler.category, DspCategory::AcousticPhysicalModel);
+        assert!(coupler.params.iter().any(|p| p.id == "bridge_impedance"));
+        assert!(coupler.params.iter().any(|p| p.id == "reflection"));
+        let coupler_ui = DspNodeRegistry::create_node_ui(&coupler.kind_id);
+        assert!(coupler_ui.is_some(), "create_node_ui must succeed for BridgeWaveCoupler");
+
+        // Verify inventory & aliases
+        let inv = DspNodeRegistry::inventory();
+        assert!(inv.iter().any(|(name, _, _)| *name == "PercussionMembrane"));
+        assert!(inv.iter().any(|(name, _, _)| *name == "StruckIdiophoneResonator"));
+        assert!(inv.iter().any(|(name, _, _)| *name == "HurdyGurdySoundboxBody"));
+        assert!(inv.iter().any(|(name, _, _)| *name == "SitarSoundboxBody"));
+        assert!(inv.iter().any(|(name, _, _)| *name == "BridgeWaveCoupler"));
+
+        assert_eq!(DspNodeRegistry::normalize_type_name("percussionmembranenode"), Some("PercussionMembrane"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("struckidiophoneresonator"), Some("StruckIdiophoneResonator"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("hurdygurdysoundboxbody"), Some("HurdyGurdySoundboxBody"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("sitarsoundboxbody"), Some("SitarSoundboxBody"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("bridgewavecoupler"), Some("BridgeWaveCoupler"));
+    }
+
+    #[test]
+    fn test_tier85_asset_browser_category_filtering_and_selection() {
+        let mut browser = ModernAssetBrowserState::default();
+
+        // 1. Verify default folders per category
+        let inst_folders = BrowserCategory::Instruments.default_folders();
+        assert!(inst_folders.iter().any(|(name, _)| *name == "Physical Models"));
+        assert!(inst_folders.iter().any(|(name, _)| *name == "Synthesizers"));
+
+        let phys_models = inst_folders.iter().find(|(name, _)| *name == "Physical Models").unwrap().1;
+        assert!(phys_models.contains(&"PercussionMembrane"));
+        assert!(phys_models.contains(&"StruckIdiophoneResonator"));
+        assert!(phys_models.contains(&"HurdyGurdySoundboxBody"));
+        assert!(phys_models.contains(&"SitarSoundboxBody"));
+
+        let fx_folders = BrowserCategory::AudioFx.default_folders();
+        assert!(fx_folders.iter().any(|(name, _)| *name == "Dynamics & Level"));
+        assert!(fx_folders.iter().any(|(name, _)| *name == "Time & Reverb"));
+
+        let midi_folders = BrowserCategory::MidiFx.default_folders();
+        assert!(midi_folders.iter().any(|(name, _)| *name == "Generative & Sync"));
+
+        // 2. Test search filtering and interactive category selection
+        #[cfg(feature = "gui")]
+        {
+            let ctx = eframe::egui::Context::default();
+
+            // Select Instruments category and search for "Marimba"
+            browser.selected_category = BrowserCategory::Instruments;
+            browser.search_query = "Marimba".to_string();
+
+            let mut dragged_item = None;
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    crate::views::modern_asset_browser::show_modern_asset_browser(ui, &mut browser, |item| {
+                        dragged_item = Some(item.to_string());
+                    });
+                });
+            });
+
+            // Clear search and switch to Audio FX
+            browser.search_query.clear();
+            browser.selected_category = BrowserCategory::AudioFx;
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    crate::views::modern_asset_browser::show_modern_asset_browser(ui, &mut browser, |item| {
+                        dragged_item = Some(item.to_string());
+                    });
+                });
+            });
+            assert_eq!(browser.selected_category, BrowserCategory::AudioFx);
+        }
+    }
+
+    #[test]
+    fn test_tier85_award_winning_gui_novice_presets_and_asset_drag_sync() {
+        let mut view = AwardWinningGuiView::new();
+
+        #[cfg(feature = "gui")]
+        {
+            let ctx = eframe::egui::Context::default();
+
+            // 1. Test Novice Preset: Orchestral Timpani Drum
+            view.top_bar_state.selected_preset = "Orchestral Timpani Drum".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("PercussionMembrane".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("PercussionMembrane".to_string()));
+
+            // 2. Test Novice Preset: Concert Rosewood Marimba
+            view.top_bar_state.selected_preset = "Concert Rosewood Marimba".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("StruckIdiophoneResonator".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("StruckIdiophoneResonator".to_string()));
+
+            // 3. Test Novice Preset: Bourbonnais Vielle Gurdy
+            view.top_bar_state.selected_preset = "Bourbonnais Vielle Gurdy".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("HurdyGurdySoundboxBody".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("HurdyGurdySoundboxBody".to_string()));
+
+            // 4. Test Novice Preset: Silk String Japanese Koto
+            view.top_bar_state.selected_preset = "Silk String Japanese Koto".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("SitarSoundboxBody".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("SitarSoundboxBody".to_string()));
+
+            // 5. Test Asset Browser dynamic item selection synchronizing to Device Rack & Inspector
+            view.asset_browser_state.selected_category = BrowserCategory::Instruments;
+            view.asset_browser_state.selected_item = Some("StruckIdiophoneResonator".to_string());
+            let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+            if let Some(desc) = registry.get("StruckIdiophoneResonator") {
+                view.device_rack_state.selected_node_kind = Some(desc.kind_id.clone());
+                view.device_rack_state.device_name = desc.display_name.clone();
+                view.inspector_state.selected_node_kind = Some(desc.kind_id.clone());
+                view.inspector_state.target_name = desc.display_name.clone();
+            }
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("StruckIdiophoneResonator".to_string()));
+            assert_eq!(view.device_rack_state.device_name, "Physical Modeling Struck Idiophone Resonator Bank");
+            assert_eq!(view.inspector_state.selected_node_kind, Some("StruckIdiophoneResonator".to_string()));
+        }
+    }
 }

@@ -101,6 +101,10 @@ fn default_available_presets() -> Vec<String> {
         "Cosmic Shockwave Reverb".to_string(),
         "Neuro HRV Bio-Sync".to_string(),
         "Analog Tape Stop".to_string(),
+        "Orchestral Timpani Drum".to_string(),
+        "Concert Rosewood Marimba".to_string(),
+        "Bourbonnais Vielle Gurdy".to_string(),
+        "Silk String Japanese Koto".to_string(),
     ]
 }
 

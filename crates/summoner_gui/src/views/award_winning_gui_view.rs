@@ -336,6 +336,10 @@ impl AwardWinningGuiView {
                 "Cosmic Shockwave Reverb" => "IsmShockwaveReverb",
                 "Neuro HRV Bio-Sync" => "HrvTempoSyncEngine",
                 "Analog Tape Stop" => "TapeStop",
+                "Orchestral Timpani Drum" => "PercussionMembrane",
+                "Concert Rosewood Marimba" => "StruckIdiophoneResonator",
+                "Bourbonnais Vielle Gurdy" => "HurdyGurdySoundboxBody",
+                "Silk String Japanese Koto" => "SitarSoundboxBody",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {
@@ -455,7 +459,21 @@ impl AwardWinningGuiView {
             // Main Workspace Frame (Zone 2: Left, Zone 3: Center Canvas + Bottom Rack, Zone 4: Right Inspector)
             ui.horizontal(|ui| {
                 // Zone 2: Left Collapsible Asset Browser
-                show_modern_asset_browser(ui, &mut self.asset_browser_state, |_| {});
+                let mut selected_asset = None;
+                show_modern_asset_browser(ui, &mut self.asset_browser_state, |drag_preset| {
+                    selected_asset = Some(drag_preset.to_string());
+                });
+                if let Some(asset) = selected_asset {
+                    let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+                    if let Some(desc) = registry.get(&asset) {
+                        self.device_rack_state.selected_node_kind = Some(desc.kind_id.clone());
+                        self.device_rack_state.device_name = desc.display_name.clone();
+                        self.inspector_state.selected_node_kind = Some(desc.kind_id.clone());
+                        self.inspector_state.target_name = desc.display_name.clone();
+                    } else {
+                        self.inspector_state.target_name = asset;
+                    }
+                }
 
                 // Center Column (Dynamic Canvas + Bottom Dock)
                 ui.vertical(|ui| {

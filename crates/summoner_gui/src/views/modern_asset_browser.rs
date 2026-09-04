@@ -35,6 +35,129 @@ impl BrowserCategory {
             BrowserCategory::Samples => "📁",
         }
     }
+
+    pub fn default_folders(&self) -> &'static [(&'static str, &'static [&'static str])] {
+        match self {
+            BrowserCategory::Instruments => &[
+                (
+                    "Physical Models",
+                    &[
+                        "PercussionMembrane",
+                        "StruckIdiophoneResonator",
+                        "HurdyGurdySoundboxBody",
+                        "SitarSoundboxBody",
+                        "BridgeWaveCoupler",
+                        "PipeOrgan",
+                        "WaveguideBrass",
+                        "WoodwindJet",
+                    ],
+                ),
+                (
+                    "Synthesizers",
+                    &[
+                        "AetherSynth",
+                        "CyberpunkSubSynth",
+                        "AtmosphericPadSynth",
+                        "PluckSynth",
+                        "Acid303",
+                        "TonewheelOrgan",
+                    ],
+                ),
+                (
+                    "Samplers & Slicers",
+                    &[
+                        "LoopSlicerNode",
+                        "GranularSamplerNode",
+                        "MultiSampler",
+                    ],
+                ),
+            ],
+            BrowserCategory::AudioFx => &[
+                (
+                    "Dynamics & Level",
+                    &[
+                        "TapeSaturation",
+                        "Limiter",
+                        "Compressor",
+                        "SpectralGate",
+                    ],
+                ),
+                (
+                    "Time & Reverb",
+                    &[
+                        "IsmShockwaveReverb",
+                        "PlateReverb",
+                        "StereoDelay",
+                        "RotarySpeaker",
+                        "TapeStop",
+                    ],
+                ),
+                (
+                    "Filters & EQ",
+                    &[
+                        "StateVariableFilter",
+                        "MoogLadderFilter",
+                        "FormantFilter",
+                        "GraphicEq",
+                    ],
+                ),
+                (
+                    "Modulation & Pitch",
+                    &[
+                        "Chorus",
+                        "Phaser",
+                        "Flanger",
+                        "CrystalResonator",
+                        "DemucsV4Separator",
+                    ],
+                ),
+            ],
+            BrowserCategory::MidiFx => &[
+                (
+                    "Generative & Sync",
+                    &[
+                        "HrvTempoSyncEngine",
+                        "EuclideanSequencer",
+                        "Arpeggiator",
+                    ],
+                ),
+                (
+                    "Transforms & Routing",
+                    &[
+                        "MidiTranspose",
+                        "ScaleQuantizer",
+                        "ChordGenerator",
+                    ],
+                ),
+            ],
+            BrowserCategory::Samples => &[
+                (
+                    "Drums",
+                    &[
+                        "Drums/Synths.wav",
+                        "Kick_Punchy.wav",
+                        "Snare_Tight.wav",
+                    ],
+                ),
+                (
+                    "Synths",
+                    &[
+                        "Audit.midi",
+                        "Lead_Aether.toml",
+                        "Pad_Shimmer.toml",
+                    ],
+                ),
+                (
+                    "Bass",
+                    &[
+                        "Sample..midi",
+                        "Sub_808.wav",
+                        "Acid_303.toml",
+                    ],
+                ),
+            ],
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -51,7 +174,15 @@ impl Default for ModernAssetBrowserState {
         Self {
             selected_category: BrowserCategory::Samples,
             search_query: String::new(),
-            expanded_folders: vec!["Drums".to_string(), "Synths".to_string(), "Bass".to_string()],
+            expanded_folders: vec![
+                "Drums".to_string(),
+                "Synths".to_string(),
+                "Bass".to_string(),
+                "Physical Models".to_string(),
+                "Synthesizers".to_string(),
+                "Dynamics & Level".to_string(),
+                "Time & Reverb".to_string(),
+            ],
             selected_item: Some("Drums/Synths".to_string()),
             is_collapsed: false,
         }
@@ -124,7 +255,22 @@ pub fn show_modern_asset_browser(
                         });
                     });
 
-                    ui.add_space(8.0);
+                    ui.add_space(6.0);
+
+                    // Search Box
+                    ui.horizontal(|ui| {
+                        ui.label(RichText::new("🔍").font(FontId::proportional(10.0)).color(Color32::from_rgb(148, 163, 184)));
+                        ui.add(
+                            egui::TextEdit::singleline(&mut state.search_query)
+                                .hint_text("Search...")
+                                .desired_width(135.0),
+                        );
+                        if !state.search_query.is_empty() && ui.small_button("✖").clicked() {
+                            state.search_query.clear();
+                        }
+                    });
+
+                    ui.add_space(6.0);
 
                     // Categories List
                     let categories = [
@@ -174,20 +320,28 @@ pub fn show_modern_asset_browser(
 
                     // Folder & Item Tree
                     egui::ScrollArea::vertical().show(ui, |ui| {
-                        let folders = [
-                            ("Drums", vec!["Drums/Synths.wav", "Kick_Punchy.wav", "Snare_Tight.wav"]),
-                            ("Synths", vec!["Audit.midi", "Lead_Aether.toml", "Pad_Shimmer.toml"]),
-                            ("Bass", vec!["Sample..midi", "Sub_808.wav", "Acid_303.toml"]),
-                        ];
+                        let folders = state.selected_category.default_folders();
+                        let query = state.search_query.trim().to_lowercase();
 
                         for (folder_name, files) in folders {
-                            let is_exp = state.expanded_folders.contains(&folder_name.to_string());
+                            let folder_matches = !query.is_empty() && folder_name.to_lowercase().contains(&query);
+                            let matching_files: Vec<&'static str> = files
+                                .iter()
+                                .copied()
+                                .filter(|file| query.is_empty() || folder_matches || file.to_lowercase().contains(&query))
+                                .collect();
+
+                            if !query.is_empty() && matching_files.is_empty() {
+                                continue;
+                            }
+
+                            let is_exp = !query.is_empty() || state.expanded_folders.contains(&folder_name.to_string());
                             let arrow = if is_exp { "▼" } else { "▶" };
 
                             ui.horizontal(|ui| {
                                 if ui.small_button(arrow).clicked() {
-                                    if is_exp {
-                                        state.expanded_folders.retain(|f| f != folder_name);
+                                    if state.expanded_folders.contains(&folder_name.to_string()) {
+                                        state.expanded_folders.retain(|f| f != *folder_name);
                                     } else {
                                         state.expanded_folders.push(folder_name.to_string());
                                     }
@@ -196,7 +350,7 @@ pub fn show_modern_asset_browser(
                             });
 
                             if is_exp {
-                                for file in files {
+                                for file in matching_files {
                                     ui.horizontal(|ui| {
                                         ui.add_space(14.0);
                                         let is_sel = state.selected_item.as_deref() == Some(file);
@@ -204,6 +358,7 @@ pub fn show_modern_asset_browser(
                                         let btn = ui.selectable_label(is_sel, RichText::new(format!("📄 {}", file)).font(FontId::proportional(10.0)).color(file_col));
                                         if btn.clicked() {
                                             state.selected_item = Some(file.to_string());
+                                            _on_drag(file);
                                         }
                                     });
                                 }
