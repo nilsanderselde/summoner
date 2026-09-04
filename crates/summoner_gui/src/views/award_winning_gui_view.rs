@@ -633,22 +633,39 @@ impl AwardWinningGuiView {
         let y = 20.0 + row * 125.0;
         let node_id = format!("node_{}_{}", desc.kind_id.to_lowercase(), count + 1);
 
-        let is_generator = desc.category == crate::dsp_node_ui::DspNodeCategory::Oscillator;
+        let is_synth_source = matches!(
+            desc.category,
+            crate::dsp_node_ui::DspNodeCategory::Oscillator
+                | crate::dsp_node_ui::DspNodeCategory::CompositeSynth
+                | crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel
+                | crate::dsp_node_ui::DspNodeCategory::SamplerSlicer
+        );
         let is_mod = desc.category == crate::dsp_node_ui::DspNodeCategory::Modulation;
-        let is_effect = matches!(desc.category, crate::dsp_node_ui::DspNodeCategory::TimeSpace | crate::dsp_node_ui::DspNodeCategory::FilterEq | crate::dsp_node_ui::DspNodeCategory::DynamicsMaster);
+        let is_spatial = desc.category == crate::dsp_node_ui::DspNodeCategory::SpatialSurround;
+        let is_master_dyn = desc.category == crate::dsp_node_ui::DspNodeCategory::DynamicsMaster;
 
         let mut ports = Vec::new();
-        if is_generator {
+        if is_synth_source {
             ports.push(ModularPort { id: "voct".into(), name: "V/Oct".into(), kind: ModularPortKind::ModulationIn, rel_pos: (14.0, 85.0) });
-            ports.push(ModularPort { id: "sync".into(), name: "Sync".into(), kind: ModularPortKind::GateIn, rel_pos: (45.0, 85.0) });
+            ports.push(ModularPort { id: "gate".into(), name: "Gate".into(), kind: ModularPortKind::GateIn, rel_pos: (45.0, 85.0) });
+            ports.push(ModularPort { id: "mod".into(), name: "Mod".into(), kind: ModularPortKind::ModulationIn, rel_pos: (76.0, 85.0) });
             ports.push(ModularPort { id: "out".into(), name: "Out".into(), kind: ModularPortKind::AudioOut, rel_pos: (126.0, 85.0) });
         } else if is_mod {
             ports.push(ModularPort { id: "gate".into(), name: "Gate".into(), kind: ModularPortKind::GateIn, rel_pos: (14.0, 85.0) });
+            ports.push(ModularPort { id: "sync".into(), name: "Sync".into(), kind: ModularPortKind::ModulationIn, rel_pos: (45.0, 85.0) });
             ports.push(ModularPort { id: "cv_out".into(), name: "CV".into(), kind: ModularPortKind::ModulationOut, rel_pos: (126.0, 85.0) });
-        } else if is_effect {
-            ports.push(ModularPort { id: "in".into(), name: "In".into(), kind: ModularPortKind::AudioIn, rel_pos: (14.0, 45.0) });
-            ports.push(ModularPort { id: "cv".into(), name: "CV".into(), kind: ModularPortKind::ModulationIn, rel_pos: (14.0, 75.0) });
-            ports.push(ModularPort { id: "out".into(), name: "Out".into(), kind: ModularPortKind::AudioOut, rel_pos: (126.0, 60.0) });
+        } else if is_spatial {
+            ports.push(ModularPort { id: "in_l".into(), name: "In L".into(), kind: ModularPortKind::AudioIn, rel_pos: (14.0, 45.0) });
+            ports.push(ModularPort { id: "in_r".into(), name: "In R".into(), kind: ModularPortKind::AudioIn, rel_pos: (14.0, 75.0) });
+            ports.push(ModularPort { id: "pos_cv".into(), name: "Pan CV".into(), kind: ModularPortKind::ModulationIn, rel_pos: (60.0, 85.0) });
+            ports.push(ModularPort { id: "out_l".into(), name: "Out L".into(), kind: ModularPortKind::AudioOut, rel_pos: (126.0, 45.0) });
+            ports.push(ModularPort { id: "out_r".into(), name: "Out R".into(), kind: ModularPortKind::AudioOut, rel_pos: (126.0, 75.0) });
+        } else if is_master_dyn {
+            ports.push(ModularPort { id: "in_l".into(), name: "In L".into(), kind: ModularPortKind::AudioIn, rel_pos: (14.0, 45.0) });
+            ports.push(ModularPort { id: "in_r".into(), name: "In R".into(), kind: ModularPortKind::AudioIn, rel_pos: (14.0, 75.0) });
+            ports.push(ModularPort { id: "sidechain".into(), name: "SC CV".into(), kind: ModularPortKind::ModulationIn, rel_pos: (60.0, 85.0) });
+            ports.push(ModularPort { id: "out_l".into(), name: "Out L".into(), kind: ModularPortKind::AudioOut, rel_pos: (126.0, 45.0) });
+            ports.push(ModularPort { id: "out_r".into(), name: "Out R".into(), kind: ModularPortKind::AudioOut, rel_pos: (126.0, 75.0) });
         } else {
             ports.push(ModularPort { id: "in".into(), name: "In".into(), kind: ModularPortKind::AudioIn, rel_pos: (14.0, 45.0) });
             ports.push(ModularPort { id: "cv".into(), name: "CV".into(), kind: ModularPortKind::ModulationIn, rel_pos: (14.0, 75.0) });

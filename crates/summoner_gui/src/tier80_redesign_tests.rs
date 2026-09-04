@@ -167,4 +167,100 @@ mod tests {
         assert_eq!(view.inspector_state.target_name, "Algorithmic Plate Reverb");
         assert_eq!(view.inspector_state.node_param_values.get("cutoff"), Some(&0.77));
     }
+
+    #[test]
+    fn test_dsp_node_registry_300_plus_modules_completeness() {
+        let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+        assert!(registry.list_all().len() >= 305, "Registry should contain >= 305 descriptors, found {}", registry.list_all().len());
+
+        let inventory = crate::dsp_node_ui::DspNodeRegistry::inventory();
+        assert!(inventory.len() >= 305, "Inventory should contain >= 305 entries, found {}", inventory.len());
+
+        // Verify key newly registered DSP modules
+        let limiter = registry.get("TruePeakLimiter").expect("TruePeakLimiter must exist");
+        assert_eq!(limiter.category, crate::dsp_node_ui::DspNodeCategory::DynamicsMaster);
+        assert!(limiter.params.len() >= 5);
+
+        let nam = registry.get("NamAmpNode").expect("NamAmpNode must exist");
+        assert_eq!(nam.category, crate::dsp_node_ui::DspNodeCategory::NeuralAi);
+        assert!(nam.params.len() >= 4);
+
+        let koto = registry.get("Koto").expect("Koto must exist");
+        assert_eq!(koto.category, crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel);
+        assert!(koto.params.len() >= 5);
+
+        let free_reed = registry.get("FreeReedNode").expect("FreeReedNode must exist");
+        assert_eq!(free_reed.category, crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel);
+        assert!(free_reed.params.len() >= 5);
+
+        let cloud = registry.get("GranularCloudNode").expect("GranularCloudNode must exist");
+        assert_eq!(cloud.category, crate::dsp_node_ui::DspNodeCategory::Oscillator);
+        assert!(cloud.params.len() >= 6);
+
+        let room = registry.get("SpatialRoomNode").expect("SpatialRoomNode must exist");
+        assert_eq!(room.category, crate::dsp_node_ui::DspNodeCategory::SpatialSurround);
+        assert!(room.params.len() >= 7);
+
+        let panner = registry.get("ContinuousSpatialPannerDoppler3D").expect("ContinuousSpatialPannerDoppler3D must exist");
+        assert_eq!(panner.category, crate::dsp_node_ui::DspNodeCategory::SpatialSurround);
+        assert!(panner.params.len() >= 5);
+    }
+
+    #[test]
+    fn test_modular_canvas_category_specific_port_creation() {
+        let mut view = AwardWinningGuiView::new();
+        let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+
+        // 1. Add Koto (AcousticPhysicalModel / Synth source)
+        let koto_desc = registry.get("Koto").expect("Koto must exist");
+        view.add_modular_node_from_descriptor(koto_desc);
+        let koto_node = view.modular_nodes.last().unwrap();
+        assert_eq!(koto_node.kind_id, "Koto");
+        let koto_port_ids: Vec<_> = koto_node.ports.iter().map(|p| p.id.as_str()).collect();
+        assert!(koto_port_ids.contains(&"voct"));
+        assert!(koto_port_ids.contains(&"gate"));
+        assert!(koto_port_ids.contains(&"out"));
+        let koto_id = koto_node.id.clone();
+
+        // 2. Add SpatialRoomNode (SpatialSurround)
+        let room_desc = registry.get("SpatialRoomNode").expect("SpatialRoomNode must exist");
+        view.add_modular_node_from_descriptor(room_desc);
+        let room_node = view.modular_nodes.last().unwrap();
+        assert_eq!(room_node.kind_id, "SpatialRoomNode");
+        let room_port_ids: Vec<_> = room_node.ports.iter().map(|p| p.id.as_str()).collect();
+        assert!(room_port_ids.contains(&"in_l"));
+        assert!(room_port_ids.contains(&"in_r"));
+        assert!(room_port_ids.contains(&"pos_cv"));
+        assert!(room_port_ids.contains(&"out_l"));
+        assert!(room_port_ids.contains(&"out_r"));
+        let room_id = room_node.id.clone();
+
+        // 3. Add TruePeakLimiter (DynamicsMaster)
+        let limiter_desc = registry.get("TruePeakLimiter").expect("TruePeakLimiter must exist");
+        view.add_modular_node_from_descriptor(limiter_desc);
+        let limiter_node = view.modular_nodes.last().unwrap();
+        assert_eq!(limiter_node.kind_id, "TruePeakLimiter");
+        let lim_port_ids: Vec<_> = limiter_node.ports.iter().map(|p| p.id.as_str()).collect();
+        assert!(lim_port_ids.contains(&"in_l"));
+        assert!(lim_port_ids.contains(&"in_r"));
+        assert!(lim_port_ids.contains(&"sidechain"));
+        assert!(lim_port_ids.contains(&"out_l"));
+        assert!(lim_port_ids.contains(&"out_r"));
+
+        // 4. Connect Koto Audio Out to SpatialRoomNode In L
+        view.patch_cords.push(crate::views::award_winning_gui_view::ModularPatchCord {
+            from_node_id: koto_id.clone(),
+            from_port_id: "out".into(),
+            to_node_id: room_id.clone(),
+            to_port_id: "in_l".into(),
+            is_audio: true,
+            intensity: 1.0,
+        });
+
+        assert_eq!(view.patch_cords.len(), 4); // 3 defaults + 1 new
+        let last_cord = view.patch_cords.last().unwrap();
+        assert_eq!(last_cord.from_node_id, koto_id);
+        assert_eq!(last_cord.to_node_id, room_id);
+        assert!(last_cord.is_audio);
+    }
 }
