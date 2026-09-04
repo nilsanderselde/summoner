@@ -97,6 +97,10 @@ fn default_available_presets() -> Vec<String> {
         "Neural Vocal Demucs".to_string(),
         "Ambient Crystal Bells".to_string(),
         "Lo-Fi Breakbeat".to_string(),
+        "Cathedral Pipe Organ".to_string(),
+        "Cosmic Shockwave Reverb".to_string(),
+        "Neuro HRV Bio-Sync".to_string(),
+        "Analog Tape Stop".to_string(),
     ]
 }
 

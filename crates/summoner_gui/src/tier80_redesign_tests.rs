@@ -387,4 +387,209 @@ mod tests {
         assert!(mod_ports.contains(&"sync"));
         assert!(mod_ports.contains(&"cv_out"));
     }
+
+    #[test]
+    fn test_tier81_comprehensive_dsp_coverage_and_preset_sync() {
+        let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+        assert!(
+            registry.list_all().len() >= 340,
+            "Registry should contain >= 340 descriptors, found {}",
+            registry.list_all().len()
+        );
+
+        let inventory = crate::dsp_node_ui::DspNodeRegistry::inventory();
+        assert!(
+            inventory.len() >= 340,
+            "Inventory should contain >= 340 entries, found {}",
+            inventory.len()
+        );
+
+        // 1. Verify physical modeling acoustic modules
+        let windchest = registry.get("Windchest").expect("Windchest must exist");
+        assert_eq!(windchest.category, crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel);
+        assert!(windchest.params.len() >= 4);
+
+        let cassotto = registry.get("CassottoChamber").expect("CassottoChamber must exist");
+        assert_eq!(cassotto.category, crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel);
+
+        let air_reed = registry.get("AirReed").expect("AirReed must exist");
+        assert_eq!(air_reed.category, crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel);
+
+        let hammer = registry.get("HammerStrike").expect("HammerStrike must exist");
+        assert_eq!(hammer.category, crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel);
+
+        let tonehole = registry.get("ToneholeLattice").expect("ToneholeLattice must exist");
+        assert_eq!(tonehole.category, crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel);
+
+        let soundboard = registry.get("SpruceSoundboard").expect("SpruceSoundboard must exist");
+        assert_eq!(soundboard.category, crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel);
+
+        let chien = registry.get("TrompetteChienJunction").expect("TrompetteChienJunction must exist");
+        assert_eq!(chien.category, crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel);
+
+        let sympathetic = registry.get("SympatheticResonatorMatrix").expect("SympatheticResonatorMatrix must exist");
+        assert_eq!(sympathetic.category, crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel);
+
+        // 2. Verify Neural AI modules
+        let crepe = registry.get("CrepePitchTracker").expect("CrepePitchTracker must exist");
+        assert_eq!(crepe.category, crate::dsp_node_ui::DspNodeCategory::NeuralAi);
+
+        let style_transfer = registry.get("NeuralAudioStyleTransferPreviewRenderer").expect("NeuralAudioStyleTransferPreviewRenderer must exist");
+        assert_eq!(style_transfer.category, crate::dsp_node_ui::DspNodeCategory::NeuralAi);
+
+        let neuro_aff = registry.get("NeuroAffectiveAnalyzer").expect("NeuroAffectiveAnalyzer must exist");
+        assert_eq!(neuro_aff.category, crate::dsp_node_ui::DspNodeCategory::NeuralAi);
+
+        let mental = registry.get("MentalImageryClassifier").expect("MentalImageryClassifier must exist");
+        assert_eq!(mental.category, crate::dsp_node_ui::DspNodeCategory::NeuralAi);
+
+        let aesthetic = registry.get("NeuroAestheticScorer").expect("NeuroAestheticScorer must exist");
+        assert_eq!(aesthetic.category, crate::dsp_node_ui::DspNodeCategory::NeuralAi);
+
+        // 3. Verify Modulation & Glitch modules
+        let tapestop = registry.get("TapeStop").expect("TapeStop must exist");
+        assert_eq!(tapestop.category, crate::dsp_node_ui::DspNodeCategory::Modulation);
+
+        let mpe_curve = registry.get("MpeExpressionCurveEditor").expect("MpeExpressionCurveEditor must exist");
+        assert_eq!(mpe_curve.category, crate::dsp_node_ui::DspNodeCategory::Modulation);
+
+        let hrv_sync = registry.get("HrvTempoSyncEngine").expect("HrvTempoSyncEngine must exist");
+        assert_eq!(hrv_sync.category, crate::dsp_node_ui::DspNodeCategory::Modulation);
+
+        let emg = registry.get("EmgGestureDriver").expect("EmgGestureDriver must exist");
+        assert_eq!(emg.category, crate::dsp_node_ui::DspNodeCategory::Modulation);
+
+        // 4. Verify Filters & Mastering modules
+        let head_bump = registry.get("HeadBumpFilter").expect("HeadBumpFilter must exist");
+        assert_eq!(head_bump.category, crate::dsp_node_ui::DspNodeCategory::FilterEq);
+
+        let crossover = registry.get("LinkwitzRiley4BandCrossover").expect("LinkwitzRiley4BandCrossover must exist");
+        assert_eq!(crossover.category, crate::dsp_node_ui::DspNodeCategory::FilterEq);
+
+        // 5. Verify Utility & Infrastructure modules
+        let recorder = registry.get("LiveSessionRecorder").expect("LiveSessionRecorder must exist");
+        assert_eq!(recorder.category, crate::dsp_node_ui::DspNodeCategory::Utility);
+
+        let stem_router = registry.get("MultiTrackAudioRouter").expect("MultiTrackAudioRouter must exist");
+        assert_eq!(stem_router.category, crate::dsp_node_ui::DspNodeCategory::Utility);
+
+        let buffer_scaler = registry.get("AdaptiveBufferScaler").expect("AdaptiveBufferScaler must exist");
+        assert_eq!(buffer_scaler.category, crate::dsp_node_ui::DspNodeCategory::Utility);
+
+        let visualizer = registry.get("VisualizerIntegrationEngine").expect("VisualizerIntegrationEngine must exist");
+        assert_eq!(visualizer.category, crate::dsp_node_ui::DspNodeCategory::Utility);
+
+        let clap_host = registry.get("ClapHostEngine").expect("ClapHostEngine must exist");
+        assert_eq!(clap_host.category, crate::dsp_node_ui::DspNodeCategory::Utility);
+
+        let wasm_dsp = registry.get("WasmDspRuntime").expect("WasmDspRuntime must exist");
+        assert_eq!(wasm_dsp.category, crate::dsp_node_ui::DspNodeCategory::Utility);
+
+        // 6. Verify Normalization & Aliases (including bugfix validations)
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("hyperbolicreverbnode"), Some("NonEuclideanHyperbolicReverb"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("haptictransducernode"), Some("SubsensoryTactileHapticTransducer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("tapestop"), Some("TapeStop"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sessionrecorder"), Some("LiveSessionRecorder"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("headbump"), Some("HeadBumpFilter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("linkwitzriley"), Some("LinkwitzRiley4BandCrossover"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("crepe"), Some("CrepePitchTracker"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("styletransfer"), Some("NeuralAudioStyleTransferPreviewRenderer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("adaptivebuffer"), Some("AdaptiveBufferScaler"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("mpeexpression"), Some("MpeExpressionCurveEditor"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("visualizerengine"), Some("VisualizerIntegrationEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("neuroaffective"), Some("NeuroAffectiveAnalyzer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("mentalimagery"), Some("MentalImageryClassifier"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("hrvsync"), Some("HrvTempoSyncEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("emggesture"), Some("EmgGestureDriver"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("claphost"), Some("ClapHostEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("wasmdsp"), Some("WasmDspRuntime"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("organwindchest"), Some("Windchest"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cassotto"), Some("CassottoChamber"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("airreed"), Some("AirReed"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("felthammerstrike"), Some("HammerStrike"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("toneholematrix"), Some("ToneholeLattice"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("soundboardradiation"), Some("SpruceSoundboard"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("trompettechien"), Some("TrompetteChienJunction"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sympatheticmatrix"), Some("SympatheticResonatorMatrix"));
+
+        // 7. Verify dynamic modular socket creation
+        let mut view = AwardWinningGuiView::new();
+        view.add_modular_node_from_descriptor(windchest);
+        view.add_modular_node_from_descriptor(hrv_sync);
+        view.add_modular_node_from_descriptor(recorder);
+        view.add_modular_node_from_descriptor(head_bump);
+
+        let nodes = &view.modular_nodes;
+        let wc_node = &nodes[nodes.len() - 4];
+        let hrv_node = &nodes[nodes.len() - 3];
+        let rec_node = &nodes[nodes.len() - 2];
+        let hb_node = &nodes[nodes.len() - 1];
+
+        assert_eq!(wc_node.kind_id, "Windchest");
+        assert_eq!(hrv_node.kind_id, "HrvTempoSyncEngine");
+        assert_eq!(rec_node.kind_id, "LiveSessionRecorder");
+        assert_eq!(hb_node.kind_id, "HeadBumpFilter");
+
+        let wc_ports: Vec<_> = wc_node.ports.iter().map(|p| p.id.as_str()).collect();
+        assert!(wc_ports.contains(&"voct"));
+        assert!(wc_ports.contains(&"gate"));
+        assert!(wc_ports.contains(&"mod"));
+        assert!(wc_ports.contains(&"out"));
+
+        let hrv_ports: Vec<_> = hrv_node.ports.iter().map(|p| p.id.as_str()).collect();
+        assert!(hrv_ports.contains(&"gate"));
+        assert!(hrv_ports.contains(&"sync"));
+        assert!(hrv_ports.contains(&"cv_out"));
+
+        let rec_ports: Vec<_> = rec_node.ports.iter().map(|p| p.id.as_str()).collect();
+        assert!(rec_ports.contains(&"in"));
+        assert!(rec_ports.contains(&"cv"));
+        assert!(rec_ports.contains(&"out"));
+
+        // 8. Verify Novice Preset synchronization with new presets
+        #[cfg(feature = "gui")]
+        {
+            let ctx = eframe::egui::Context::default();
+
+            // Preset A: Cathedral Pipe Organ
+            view.top_bar_state.selected_preset = "Cathedral Pipe Organ".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("PipeOrgan".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("PipeOrgan".to_string()));
+
+            // Preset B: Cosmic Shockwave Reverb
+            view.top_bar_state.selected_preset = "Cosmic Shockwave Reverb".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("IsmShockwaveReverb".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("IsmShockwaveReverb".to_string()));
+
+            // Preset C: Neuro HRV Bio-Sync
+            view.top_bar_state.selected_preset = "Neuro HRV Bio-Sync".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("HrvTempoSyncEngine".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("HrvTempoSyncEngine".to_string()));
+
+            // Preset D: Analog Tape Stop
+            view.top_bar_state.selected_preset = "Analog Tape Stop".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("TapeStop".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("TapeStop".to_string()));
+        }
+    }
 }

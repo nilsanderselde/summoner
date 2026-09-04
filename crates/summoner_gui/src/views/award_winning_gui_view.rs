@@ -281,6 +281,10 @@ impl AwardWinningGuiView {
                 "Neural Vocal Demucs" => "DemucsV4Separator",
                 "Ambient Crystal Bells" => "CrystalResonator",
                 "Lo-Fi Breakbeat" => "LoopSlicerNode",
+                "Cathedral Pipe Organ" => "PipeOrgan",
+                "Cosmic Shockwave Reverb" => "IsmShockwaveReverb",
+                "Neuro HRV Bio-Sync" => "HrvTempoSyncEngine",
+                "Analog Tape Stop" => "TapeStop",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {
