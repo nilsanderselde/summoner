@@ -11,7 +11,7 @@ use crate::views::modern_inspector::{show_modern_inspector, ModernInspectorState
 use crate::views::modern_top_bar::{show_modern_top_bar, ModernTopBarState};
 
 #[cfg(feature = "gui")]
-use eframe::egui::{self, Color32, FontId, Rect, Rounding, Stroke, Vec2};
+use eframe::egui::{self, Color32, FontId, Rect, RichText, Rounding, Stroke, Vec2};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -29,7 +29,85 @@ pub struct TrackVisualData {
     pub clip_length_beats: f32,
 }
 
-#[derive(Debug, Clone, Default)]
+/// Canvas display mode for Pro Modular view.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum ModularCanvasMode {
+    #[default]
+    PatchCords,
+    RoutingMatrix,
+}
+
+impl ModularCanvasMode {
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::PatchCords => "∿ Patch Cords",
+            Self::RoutingMatrix => "▦ Routing Matrix",
+        }
+    }
+}
+
+/// Port socket signal type for modular nodes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ModularPortKind {
+    AudioIn,
+    AudioOut,
+    ModulationIn,
+    ModulationOut,
+    GateIn,
+    GateOut,
+}
+
+impl ModularPortKind {
+    pub fn color_rgb(&self) -> (u8, u8, u8) {
+        match self {
+            Self::AudioIn | Self::AudioOut => (56, 189, 248),        // Cyan
+            Self::ModulationIn | Self::ModulationOut => (245, 158, 11), // Amber
+            Self::GateIn | Self::GateOut => (236, 72, 153),           // Neon Pink
+        }
+    }
+
+    pub fn is_output(&self) -> bool {
+        matches!(self, Self::AudioOut | Self::ModulationOut | Self::GateOut)
+    }
+
+    pub fn is_modulation(&self) -> bool {
+        matches!(self, Self::ModulationIn | Self::ModulationOut | Self::GateIn | Self::GateOut)
+    }
+}
+
+/// A socket port on a modular node.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ModularPort {
+    pub id: String,
+    pub name: String,
+    pub kind: ModularPortKind,
+    pub rel_pos: (f32, f32),
+}
+
+/// An instantiated modular DSP node in the modular canvas.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ModularNodeInstance {
+    pub id: String,
+    pub kind_id: String,
+    pub display_name: String,
+    pub category: crate::dsp_node_ui::DspNodeCategory,
+    pub pos: (f32, f32),
+    pub size: (f32, f32),
+    pub ports: Vec<ModularPort>,
+}
+
+/// A routed patch cord between two modular node ports.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ModularPatchCord {
+    pub from_node_id: String,
+    pub from_port_id: String,
+    pub to_node_id: String,
+    pub to_port_id: String,
+    pub is_audio: bool,
+    pub intensity: f32,
+}
+
+#[derive(Debug, Clone)]
 pub struct AwardWinningGuiView {
     pub top_bar_state: ModernTopBarState,
     pub asset_browser_state: ModernAssetBrowserState,
@@ -40,6 +118,18 @@ pub struct AwardWinningGuiView {
     pub loop_end_beat: f32,
     pub selected_track_idx: usize,
     pub tracks: Vec<TrackVisualData>,
+    pub patch_matrix: crate::patch_matrix::PatchMatrixView,
+    pub modular_mode: ModularCanvasMode,
+    pub modular_nodes: Vec<ModularNodeInstance>,
+    pub patch_cords: Vec<ModularPatchCord>,
+    pub selected_modular_node_id: Option<String>,
+    pub pending_cord_source: Option<(String, String)>,
+}
+
+impl Default for AwardWinningGuiView {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl AwardWinningGuiView {
@@ -151,7 +241,7 @@ impl AwardWinningGuiView {
             },
         ];
 
-        Self {
+        let mut view = Self {
             top_bar_state: ModernTopBarState::default(),
             asset_browser_state: ModernAssetBrowserState::default(),
             inspector_state: ModernInspectorState::default(),
@@ -161,11 +251,33 @@ impl AwardWinningGuiView {
             loop_end_beat: 8.0,
             selected_track_idx: 4, // Synth 1
             tracks,
-        }
+            patch_matrix: crate::patch_matrix::PatchMatrixView::default(),
+            modular_mode: ModularCanvasMode::PatchCords,
+            modular_nodes: Vec::new(),
+            patch_cords: Vec::new(),
+            selected_modular_node_id: Some("osc_1".to_string()),
+            pending_cord_source: None,
+        };
+        view.reset_modular_nodes();
+        view
     }
 
     #[cfg(feature = "gui")]
     pub fn show(&mut self, ui: &mut egui::Ui) {
+        // Synchronize selected DSP module across Modular Canvas, Rack & Inspector
+        if self.device_rack_state.selected_node_kind != self.inspector_state.selected_node_kind {
+            if let Some(ref r_kind) = self.device_rack_state.selected_node_kind {
+                self.inspector_state.selected_node_kind = Some(r_kind.clone());
+                self.inspector_state.target_name = self.device_rack_state.device_name.clone();
+            }
+        }
+        for (k, v) in &self.device_rack_state.node_param_values {
+            self.inspector_state.node_param_values.insert(k.clone(), *v);
+        }
+        for (k, v) in &self.inspector_state.node_param_values {
+            self.device_rack_state.node_param_values.insert(k.clone(), *v);
+        }
+
         ui.vertical(|ui| {
             // Zone 1: Top Bar
             show_modern_top_bar(ui, &mut self.top_bar_state, || {});
@@ -430,6 +542,136 @@ impl AwardWinningGuiView {
             });
     }
 
+    pub fn reset_modular_nodes(&mut self) {
+        self.modular_nodes = vec![
+            ModularNodeInstance {
+                id: "osc_1".into(),
+                kind_id: "OscSaw".into(),
+                display_name: "Osc Saw".into(),
+                category: crate::dsp_node_ui::DspNodeCategory::Oscillator,
+                pos: (24.0, 20.0),
+                size: (140.0, 105.0),
+                ports: vec![
+                    ModularPort { id: "voct".into(), name: "V/Oct".into(), kind: ModularPortKind::ModulationIn, rel_pos: (14.0, 88.0) },
+                    ModularPort { id: "sync".into(), name: "Sync".into(), kind: ModularPortKind::GateIn, rel_pos: (45.0, 88.0) },
+                    ModularPort { id: "out".into(), name: "Out".into(), kind: ModularPortKind::AudioOut, rel_pos: (126.0, 88.0) },
+                ],
+            },
+            ModularNodeInstance {
+                id: "filter_1".into(),
+                kind_id: "FilterSvf".into(),
+                display_name: "Filter SVF".into(),
+                category: crate::dsp_node_ui::DspNodeCategory::FilterEq,
+                pos: (190.0, 35.0),
+                size: (150.0, 115.0),
+                ports: vec![
+                    ModularPort { id: "in".into(), name: "In 1".into(), kind: ModularPortKind::AudioIn, rel_pos: (14.0, 45.0) },
+                    ModularPort { id: "cv_cut".into(), name: "CV Cut".into(), kind: ModularPortKind::ModulationIn, rel_pos: (14.0, 75.0) },
+                    ModularPort { id: "lp".into(), name: "LP".into(), kind: ModularPortKind::AudioOut, rel_pos: (136.0, 45.0) },
+                ],
+            },
+            ModularNodeInstance {
+                id: "env_1".into(),
+                kind_id: "EnvAdsr".into(),
+                display_name: "Env ADSR".into(),
+                category: crate::dsp_node_ui::DspNodeCategory::Modulation,
+                pos: (370.0, 20.0),
+                size: (140.0, 105.0),
+                ports: vec![
+                    ModularPort { id: "gate".into(), name: "Gate".into(), kind: ModularPortKind::GateIn, rel_pos: (14.0, 88.0) },
+                    ModularPort { id: "cv".into(), name: "CV".into(), kind: ModularPortKind::ModulationOut, rel_pos: (126.0, 88.0) },
+                ],
+            },
+            ModularNodeInstance {
+                id: "vca_1".into(),
+                kind_id: "VcaNode".into(),
+                display_name: "VCA Master".into(),
+                category: crate::dsp_node_ui::DspNodeCategory::DynamicsMaster,
+                pos: (540.0, 40.0),
+                size: (140.0, 110.0),
+                ports: vec![
+                    ModularPort { id: "audio".into(), name: "Audio".into(), kind: ModularPortKind::AudioIn, rel_pos: (14.0, 45.0) },
+                    ModularPort { id: "cv".into(), name: "CV".into(), kind: ModularPortKind::ModulationIn, rel_pos: (14.0, 75.0) },
+                    ModularPort { id: "main".into(), name: "Main".into(), kind: ModularPortKind::AudioOut, rel_pos: (126.0, 60.0) },
+                ],
+            },
+        ];
+
+        self.patch_cords = vec![
+            ModularPatchCord {
+                from_node_id: "osc_1".into(),
+                from_port_id: "out".into(),
+                to_node_id: "filter_1".into(),
+                to_port_id: "in".into(),
+                is_audio: true,
+                intensity: 1.0,
+            },
+            ModularPatchCord {
+                from_node_id: "filter_1".into(),
+                from_port_id: "lp".into(),
+                to_node_id: "vca_1".into(),
+                to_port_id: "audio".into(),
+                is_audio: true,
+                intensity: 1.0,
+            },
+            ModularPatchCord {
+                from_node_id: "env_1".into(),
+                from_port_id: "cv".into(),
+                to_node_id: "vca_1".into(),
+                to_port_id: "cv".into(),
+                is_audio: false,
+                intensity: 1.0,
+            },
+        ];
+    }
+
+    pub fn add_modular_node_from_descriptor(&mut self, desc: &crate::dsp_node_ui::DspNodeDescriptor) {
+        let count = self.modular_nodes.len();
+        let col = (count % 4) as f32;
+        let row = (count / 4) as f32;
+        let x = 24.0 + col * 170.0;
+        let y = 20.0 + row * 125.0;
+        let node_id = format!("node_{}_{}", desc.kind_id.to_lowercase(), count + 1);
+
+        let is_generator = desc.category == crate::dsp_node_ui::DspNodeCategory::Oscillator;
+        let is_mod = desc.category == crate::dsp_node_ui::DspNodeCategory::Modulation;
+        let is_effect = matches!(desc.category, crate::dsp_node_ui::DspNodeCategory::TimeSpace | crate::dsp_node_ui::DspNodeCategory::FilterEq | crate::dsp_node_ui::DspNodeCategory::DynamicsMaster);
+
+        let mut ports = Vec::new();
+        if is_generator {
+            ports.push(ModularPort { id: "voct".into(), name: "V/Oct".into(), kind: ModularPortKind::ModulationIn, rel_pos: (14.0, 85.0) });
+            ports.push(ModularPort { id: "sync".into(), name: "Sync".into(), kind: ModularPortKind::GateIn, rel_pos: (45.0, 85.0) });
+            ports.push(ModularPort { id: "out".into(), name: "Out".into(), kind: ModularPortKind::AudioOut, rel_pos: (126.0, 85.0) });
+        } else if is_mod {
+            ports.push(ModularPort { id: "gate".into(), name: "Gate".into(), kind: ModularPortKind::GateIn, rel_pos: (14.0, 85.0) });
+            ports.push(ModularPort { id: "cv_out".into(), name: "CV".into(), kind: ModularPortKind::ModulationOut, rel_pos: (126.0, 85.0) });
+        } else if is_effect {
+            ports.push(ModularPort { id: "in".into(), name: "In".into(), kind: ModularPortKind::AudioIn, rel_pos: (14.0, 45.0) });
+            ports.push(ModularPort { id: "cv".into(), name: "CV".into(), kind: ModularPortKind::ModulationIn, rel_pos: (14.0, 75.0) });
+            ports.push(ModularPort { id: "out".into(), name: "Out".into(), kind: ModularPortKind::AudioOut, rel_pos: (126.0, 60.0) });
+        } else {
+            ports.push(ModularPort { id: "in".into(), name: "In".into(), kind: ModularPortKind::AudioIn, rel_pos: (14.0, 45.0) });
+            ports.push(ModularPort { id: "cv".into(), name: "CV".into(), kind: ModularPortKind::ModulationIn, rel_pos: (14.0, 75.0) });
+            ports.push(ModularPort { id: "out".into(), name: "Out".into(), kind: ModularPortKind::AudioOut, rel_pos: (126.0, 60.0) });
+        }
+
+        let instance = ModularNodeInstance {
+            id: node_id.clone(),
+            kind_id: desc.kind_id.clone(),
+            display_name: desc.display_name.clone(),
+            category: desc.category,
+            pos: (x, y),
+            size: (145.0, 105.0),
+            ports,
+        };
+        self.selected_modular_node_id = Some(node_id);
+        self.device_rack_state.selected_node_kind = Some(desc.kind_id.clone());
+        self.device_rack_state.device_name = desc.display_name.clone();
+        self.inspector_state.selected_node_kind = Some(desc.kind_id.clone());
+        self.inspector_state.target_name = desc.display_name.clone();
+        self.modular_nodes.push(instance);
+    }
+
     #[cfg(feature = "gui")]
     fn show_modular_canvas(&mut self, ui: &mut egui::Ui) {
         let canvas_height = (self.tracks.len() as f32 * 36.0 + 36.0).max(280.0);
@@ -439,107 +681,294 @@ impl AwardWinningGuiView {
             .rounding(Rounding::same(6.0))
             .show(ui, |ui| {
                 ui.set_height(canvas_height);
-                let (resp, painter) = ui.allocate_painter(Vec2::new(ui.available_width(), canvas_height), egui::Sense::click_and_drag());
-                let rect = resp.rect;
 
-                // 1. Cybernetic Modular Background Grid
-                let grid_spacing = 24.0;
-                let mut gx = rect.left();
-                while gx < rect.right() {
-                    let mut gy = rect.top();
-                    while gy < rect.bottom() {
-                        painter.circle_filled(egui::pos2(gx, gy), 1.0, Color32::from_rgb(24, 34, 52));
-                        gy += grid_spacing;
+                // Modular Pro Toolbar: Switch between Patch Cords & Routing Matrix, Add Modules from DspNodeRegistry
+                ui.horizontal(|ui| {
+                    ui.label(RichText::new("Modular Routing").font(FontId::proportional(11.0)).strong().color(Color32::from_rgb(241, 245, 249)));
+                    ui.add_space(8.0);
+
+                    // Mode Toggle: Patch Cords vs Matrix Grid
+                    let cords_active = self.modular_mode == ModularCanvasMode::PatchCords;
+                    if ui.selectable_label(cords_active, "∿ Patch Cords").clicked() {
+                        self.modular_mode = ModularCanvasMode::PatchCords;
                     }
-                    gx += grid_spacing;
+                    let matrix_active = self.modular_mode == ModularCanvasMode::RoutingMatrix;
+                    if ui.selectable_label(matrix_active, "▦ Routing Matrix").clicked() {
+                        self.modular_mode = ModularCanvasMode::RoutingMatrix;
+                    }
+
+                    ui.separator();
+
+                    // "➕ Add Module" Dropdown
+                    let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+                    egui::ComboBox::from_id_source("modular_canvas_add_module_combo")
+                        .selected_text(RichText::new("➕ Add DSP Module...").font(FontId::proportional(10.0)).color(Color32::from_rgb(56, 189, 248)))
+                        .show_ui(ui, |ui| {
+                            for desc in registry.list_all() {
+                                let label = format!("{} {} ({})", desc.category.icon(), desc.display_name, desc.category.name());
+                                if ui.selectable_label(false, label).clicked() {
+                                    self.add_modular_node_from_descriptor(desc);
+                                }
+                            }
+                        });
+
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.small_button("Clear Cords").clicked() {
+                            self.patch_cords.clear();
+                        }
+                        if ui.small_button("Reset Layout").clicked() {
+                            self.reset_modular_nodes();
+                        }
+                        ui.label(RichText::new(format!("{} Nodes | {} Cables", self.modular_nodes.len(), self.patch_cords.len())).font(FontId::proportional(9.0)).color(Color32::from_rgb(148, 163, 184)));
+                    });
+                });
+
+                ui.separator();
+
+                match self.modular_mode {
+                    ModularCanvasMode::RoutingMatrix => {
+                        self.patch_matrix.ui(ui);
+                    }
+                    ModularCanvasMode::PatchCords => {
+                        self.render_patch_cords_canvas(ui, canvas_height - 38.0);
+                    }
                 }
-
-                // 2. Modular Node 1: Osc Saw (Carrier)
-                let n1_rect = Rect::from_min_size(egui::pos2(rect.left() + 24.0, rect.top() + 20.0), Vec2::new(140.0, 105.0));
-                painter.rect_filled(n1_rect, 4.0, Color32::from_rgb(16, 24, 38));
-                painter.rect_stroke(n1_rect, 4.0, Stroke::new(1.2_f32, Color32::from_rgb(56, 189, 248)));
-                painter.text(egui::pos2(n1_rect.left() + 8.0, n1_rect.top() + 6.0), egui::Align2::LEFT_TOP, "Osc Saw", FontId::proportional(11.0), Color32::from_rgb(241, 245, 249));
-                painter.circle_filled(egui::pos2(n1_rect.right() - 12.0, n1_rect.top() + 12.0), 3.5, Color32::from_rgb(56, 189, 248));
-                painter.circle_stroke(egui::pos2(n1_rect.left() + 14.0, n1_rect.bottom() - 16.0), 5.0, Stroke::new(1.5_f32, Color32::from_rgb(245, 158, 11)));
-                painter.text(egui::pos2(n1_rect.left() + 24.0, n1_rect.bottom() - 16.0), egui::Align2::LEFT_CENTER, "V/Oct", FontId::proportional(9.0), Color32::from_rgb(148, 163, 184));
-                painter.circle_stroke(egui::pos2(n1_rect.right() - 14.0, n1_rect.bottom() - 16.0), 5.0, Stroke::new(1.5_f32, Color32::from_rgb(56, 189, 248)));
-                painter.text(egui::pos2(n1_rect.right() - 24.0, n1_rect.bottom() - 16.0), egui::Align2::RIGHT_CENTER, "Out", FontId::proportional(9.0), Color32::from_rgb(148, 163, 184));
-
-                // Modular Node 2: Filter SVF
-                let n2_rect = Rect::from_min_size(egui::pos2(rect.left() + 190.0, rect.top() + 35.0), Vec2::new(150.0, 115.0));
-                painter.rect_filled(n2_rect, 4.0, Color32::from_rgb(16, 24, 38));
-                painter.rect_stroke(n2_rect, 4.0, Stroke::new(1.2_f32, Color32::from_rgb(245, 158, 11)));
-                painter.text(egui::pos2(n2_rect.left() + 8.0, n2_rect.top() + 6.0), egui::Align2::LEFT_TOP, "Filter SVF", FontId::proportional(11.0), Color32::from_rgb(241, 245, 249));
-                painter.circle_filled(egui::pos2(n2_rect.right() - 12.0, n2_rect.top() + 12.0), 3.5, Color32::from_rgb(245, 158, 11));
-                painter.circle_stroke(egui::pos2(n2_rect.left() + 14.0, n2_rect.top() + 45.0), 5.0, Stroke::new(1.5_f32, Color32::from_rgb(56, 189, 248)));
-                painter.text(egui::pos2(n2_rect.left() + 24.0, n2_rect.top() + 45.0), egui::Align2::LEFT_CENTER, "In 1", FontId::proportional(9.0), Color32::from_rgb(148, 163, 184));
-                painter.circle_stroke(egui::pos2(n2_rect.left() + 14.0, n2_rect.top() + 75.0), 5.0, Stroke::new(1.5_f32, Color32::from_rgb(245, 158, 11)));
-                painter.text(egui::pos2(n2_rect.left() + 24.0, n2_rect.top() + 75.0), egui::Align2::LEFT_CENTER, "CV Cut", FontId::proportional(9.0), Color32::from_rgb(148, 163, 184));
-                painter.circle_stroke(egui::pos2(n2_rect.right() - 14.0, n2_rect.top() + 45.0), 5.0, Stroke::new(1.5_f32, Color32::from_rgb(56, 189, 248)));
-                painter.text(egui::pos2(n2_rect.right() - 24.0, n2_rect.top() + 45.0), egui::Align2::RIGHT_CENTER, "LP", FontId::proportional(9.0), Color32::from_rgb(148, 163, 184));
-
-                // Modular Node 3: Env ADSR
-                let n3_rect = Rect::from_min_size(egui::pos2(rect.left() + 370.0, rect.top() + 20.0), Vec2::new(140.0, 105.0));
-                painter.rect_filled(n3_rect, 4.0, Color32::from_rgb(16, 24, 38));
-                painter.rect_stroke(n3_rect, 4.0, Stroke::new(1.2_f32, Color32::from_rgb(16, 185, 129)));
-                painter.text(egui::pos2(n3_rect.left() + 8.0, n3_rect.top() + 6.0), egui::Align2::LEFT_TOP, "Env ADSR", FontId::proportional(11.0), Color32::from_rgb(241, 245, 249));
-                painter.circle_stroke(egui::pos2(n3_rect.left() + 14.0, n3_rect.bottom() - 16.0), 5.0, Stroke::new(1.5_f32, Color32::from_rgb(236, 72, 153)));
-                painter.text(egui::pos2(n3_rect.left() + 24.0, n3_rect.bottom() - 16.0), egui::Align2::LEFT_CENTER, "Gate", FontId::proportional(9.0), Color32::from_rgb(148, 163, 184));
-                painter.circle_stroke(egui::pos2(n3_rect.right() - 14.0, n3_rect.bottom() - 16.0), 5.0, Stroke::new(1.5_f32, Color32::from_rgb(245, 158, 11)));
-                painter.text(egui::pos2(n3_rect.right() - 24.0, n3_rect.bottom() - 16.0), egui::Align2::RIGHT_CENTER, "CV", FontId::proportional(9.0), Color32::from_rgb(148, 163, 184));
-
-                // Modular Node 4: VCA Master
-                let n4_rect = Rect::from_min_size(egui::pos2(rect.left() + 540.0, rect.top() + 40.0), Vec2::new(140.0, 110.0));
-                painter.rect_filled(n4_rect, 4.0, Color32::from_rgb(16, 24, 38));
-                painter.rect_stroke(n4_rect, 4.0, Stroke::new(1.2_f32, Color32::from_rgb(56, 189, 248)));
-                painter.text(egui::pos2(n4_rect.left() + 8.0, n4_rect.top() + 6.0), egui::Align2::LEFT_TOP, "VCA Master", FontId::proportional(11.0), Color32::from_rgb(241, 245, 249));
-                painter.circle_stroke(egui::pos2(n4_rect.left() + 14.0, n4_rect.top() + 45.0), 5.0, Stroke::new(1.5_f32, Color32::from_rgb(56, 189, 248)));
-                painter.text(egui::pos2(n4_rect.left() + 24.0, n4_rect.top() + 45.0), egui::Align2::LEFT_CENTER, "Audio", FontId::proportional(9.0), Color32::from_rgb(148, 163, 184));
-                painter.circle_stroke(egui::pos2(n4_rect.left() + 14.0, n4_rect.top() + 75.0), 5.0, Stroke::new(1.5_f32, Color32::from_rgb(245, 158, 11)));
-                painter.text(egui::pos2(n4_rect.left() + 24.0, n4_rect.top() + 75.0), egui::Align2::LEFT_CENTER, "CV", FontId::proportional(9.0), Color32::from_rgb(148, 163, 184));
-                painter.circle_stroke(egui::pos2(n4_rect.right() - 14.0, n4_rect.top() + 60.0), 5.0, Stroke::new(1.5_f32, Color32::from_rgb(56, 189, 248)));
-                painter.text(egui::pos2(n4_rect.right() - 24.0, n4_rect.top() + 60.0), egui::Align2::RIGHT_CENTER, "Main", FontId::proportional(9.0), Color32::from_rgb(148, 163, 184));
-
-                // 3. Patch Cables (Bézier curves)
-                // Cable 1: Osc Saw Out -> Filter SVF In 1
-                let p1_start = egui::pos2(n1_rect.right() - 14.0, n1_rect.bottom() - 16.0);
-                let p1_end = egui::pos2(n2_rect.left() + 14.0, n2_rect.top() + 45.0);
-                let p1_c1 = egui::pos2(p1_start.x + 30.0, p1_start.y + 40.0);
-                let p1_c2 = egui::pos2(p1_end.x - 30.0, p1_end.y + 40.0);
-                let b1 = egui::epaint::CubicBezierShape::from_points_stroke(
-                    [p1_start, p1_c1, p1_c2, p1_end],
-                    false,
-                    Color32::TRANSPARENT,
-                    Stroke::new(2.5_f32, Color32::from_rgb(56, 189, 248)),
-                );
-                painter.add(b1);
-
-                // Cable 2: Filter SVF LP -> VCA Master Audio In
-                let p2_start = egui::pos2(n2_rect.right() - 14.0, n2_rect.top() + 45.0);
-                let p2_end = egui::pos2(n4_rect.left() + 14.0, n4_rect.top() + 45.0);
-                let p2_c1 = egui::pos2(p2_start.x + 40.0, p2_start.y + 50.0);
-                let p2_c2 = egui::pos2(p2_end.x - 40.0, p2_end.y + 50.0);
-                let b2 = egui::epaint::CubicBezierShape::from_points_stroke(
-                    [p2_start, p2_c1, p2_c2, p2_end],
-                    false,
-                    Color32::TRANSPARENT,
-                    Stroke::new(2.5_f32, Color32::from_rgb(56, 189, 248)),
-                );
-                painter.add(b2);
-
-                // Cable 3: Env ADSR CV -> VCA Master CV In
-                let p3_start = egui::pos2(n3_rect.right() - 14.0, n3_rect.bottom() - 16.0);
-                let p3_end = egui::pos2(n4_rect.left() + 14.0, n4_rect.top() + 75.0);
-                let p3_c1 = egui::pos2(p3_start.x + 30.0, p3_start.y + 35.0);
-                let p3_c2 = egui::pos2(p3_end.x - 30.0, p3_end.y + 35.0);
-                let b3 = egui::epaint::CubicBezierShape::from_points_stroke(
-                    [p3_start, p3_c1, p3_c2, p3_end],
-                    false,
-                    Color32::TRANSPARENT,
-                    Stroke::new(2.0_f32, Color32::from_rgb(245, 158, 11)),
-                );
-                painter.add(b3);
             });
+    }
+
+    #[cfg(feature = "gui")]
+    fn render_patch_cords_canvas(&mut self, ui: &mut egui::Ui, available_h: f32) {
+        let (resp, painter) = ui.allocate_painter(Vec2::new(ui.available_width(), available_h), egui::Sense::click_and_drag());
+        let rect = resp.rect;
+
+        // 1. Cybernetic Modular Background Grid
+        let grid_spacing = 24.0;
+        let mut gx = rect.left();
+        while gx < rect.right() {
+            let mut gy = rect.top();
+            while gy < rect.bottom() {
+                painter.circle_filled(egui::pos2(gx, gy), 1.0, Color32::from_rgb(24, 34, 52));
+                gy += grid_spacing;
+            }
+            gx += grid_spacing;
+        }
+
+        let pointer_pos = resp.interact_pointer_pos();
+        let clicked = resp.clicked();
+
+        let mut node_selected = None;
+        let mut clicked_socket = None;
+
+        for node in &self.modular_nodes {
+            let n_rect = Rect::from_min_size(
+                egui::pos2(rect.left() + node.pos.0, rect.top() + node.pos.1),
+                Vec2::new(node.size.0, node.size.1),
+            );
+
+            // Check socket clicks first
+            for port in &node.ports {
+                let s_pos = egui::pos2(n_rect.left() + port.rel_pos.0, n_rect.top() + port.rel_pos.1);
+                if let Some(pos) = pointer_pos {
+                    if pos.distance(s_pos) <= 8.0 && clicked {
+                        clicked_socket = Some((node.id.clone(), port.id.clone(), port.kind));
+                    }
+                }
+            }
+
+            if clicked_socket.is_none() && clicked {
+                if let Some(pos) = pointer_pos {
+                    if n_rect.contains(pos) {
+                        node_selected = Some((node.id.clone(), node.kind_id.clone(), node.display_name.clone()));
+                    }
+                }
+            }
+        }
+
+        // Handle socket connection logic
+        if let Some((node_id, port_id, port_kind)) = clicked_socket {
+            if port_kind.is_output() {
+                if self.pending_cord_source == Some((node_id.clone(), port_id.clone())) {
+                    self.pending_cord_source = None;
+                } else {
+                    self.pending_cord_source = Some((node_id, port_id));
+                }
+            } else {
+                // It is an input
+                if let Some((src_node, src_port)) = self.pending_cord_source.take() {
+                    if src_node != node_id {
+                        let is_audio = !port_kind.is_modulation();
+                        if let Some(pos) = self.patch_cords.iter().position(|c| c.from_node_id == src_node && c.from_port_id == src_port && c.to_node_id == node_id && c.to_port_id == port_id) {
+                            self.patch_cords.remove(pos);
+                        } else {
+                            self.patch_cords.push(ModularPatchCord {
+                                from_node_id: src_node,
+                                from_port_id: src_port,
+                                to_node_id: node_id,
+                                to_port_id: port_id,
+                                is_audio,
+                                intensity: 1.0,
+                            });
+                        }
+                    }
+                } else {
+                    // Disconnect existing cable to this input socket
+                    self.patch_cords.retain(|c| !(c.to_node_id == node_id && c.to_port_id == port_id));
+                }
+            }
+        } else if clicked && pointer_pos.is_some() && node_selected.is_none() {
+            // Clicked on empty space: cancel pending cord
+            self.pending_cord_source = None;
+        }
+
+        if let Some((node_id, kind_id, display_name)) = node_selected {
+            self.selected_modular_node_id = Some(node_id);
+            self.device_rack_state.selected_node_kind = Some(kind_id.clone());
+            self.device_rack_state.device_name = display_name.clone();
+            self.inspector_state.selected_node_kind = Some(kind_id);
+            self.inspector_state.target_name = display_name;
+        }
+
+        // 2. Render Nodes
+        for node in &self.modular_nodes {
+            let n_rect = Rect::from_min_size(
+                egui::pos2(rect.left() + node.pos.0, rect.top() + node.pos.1),
+                Vec2::new(node.size.0, node.size.1),
+            );
+            let is_sel = self.selected_modular_node_id.as_deref() == Some(&node.id);
+            let (cr, cg, cb) = node.category.color_rgb();
+            let cat_col = Color32::from_rgb(cr, cg, cb);
+
+            // Background chassis
+            painter.rect_filled(n_rect, 4.0, Color32::from_rgb(16, 24, 38));
+            if is_sel {
+                painter.rect_stroke(n_rect.expand(2.0), 5.0, Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(cr, cg, cb, 60)));
+                painter.rect_stroke(n_rect, 4.0, Stroke::new(1.8_f32, cat_col));
+            } else {
+                painter.rect_stroke(n_rect, 4.0, Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(cr, cg, cb, 140)));
+            }
+
+            // Header
+            painter.text(
+                egui::pos2(n_rect.left() + 8.0, n_rect.top() + 6.0),
+                egui::Align2::LEFT_TOP,
+                format!("{} {}", node.category.icon(), node.display_name),
+                FontId::proportional(11.0),
+                Color32::from_rgb(241, 245, 249),
+            );
+            painter.circle_filled(egui::pos2(n_rect.right() - 12.0, n_rect.top() + 12.0), 3.5, cat_col);
+
+            // Sockets
+            for port in &node.ports {
+                let s_pos = egui::pos2(n_rect.left() + port.rel_pos.0, n_rect.top() + port.rel_pos.1);
+                let (pr, pg, pb) = port.kind.color_rgb();
+                let port_col = Color32::from_rgb(pr, pg, pb);
+
+                // Outer metallic ring
+                painter.circle_stroke(s_pos, 6.0, Stroke::new(1.5_f32, Color32::from_rgb(45, 60, 85)));
+                // Inner socket hole
+                painter.circle_filled(s_pos, 4.0, Color32::from_rgb(6, 10, 18));
+                // LED pin
+                painter.circle_filled(s_pos, 2.2, port_col);
+
+                // Port label
+                let text_pos = if port.kind.is_output() {
+                    egui::pos2(s_pos.x - 10.0, s_pos.y)
+                } else {
+                    egui::pos2(s_pos.x + 10.0, s_pos.y)
+                };
+                let align = if port.kind.is_output() { egui::Align2::RIGHT_CENTER } else { egui::Align2::LEFT_CENTER };
+                painter.text(text_pos, align, &port.name, FontId::proportional(9.0), Color32::from_rgb(148, 163, 184));
+            }
+        }
+
+        // Helper to locate socket position by (node_id, port_id)
+        let find_socket_pos = |node_id: &str, port_id: &str, nodes: &[ModularNodeInstance]| -> Option<egui::Pos2> {
+            for n in nodes {
+                if n.id == node_id {
+                    for p in &n.ports {
+                        if p.id == port_id {
+                            return Some(egui::pos2(
+                                rect.left() + n.pos.0 + p.rel_pos.0,
+                                rect.top() + n.pos.1 + p.rel_pos.1,
+                            ));
+                        }
+                    }
+                }
+            }
+            None
+        };
+
+        // 3. Render Patch Cords (Bézier curves with gravity sag and glow)
+        for cord in &self.patch_cords {
+            if let (Some(src_pt), Some(dst_pt)) = (
+                find_socket_pos(&cord.from_node_id, &cord.from_port_id, &self.modular_nodes),
+                find_socket_pos(&cord.to_node_id, &cord.to_port_id, &self.modular_nodes),
+            ) {
+                let sag = ((dst_pt.x - src_pt.x).abs() * 0.2 + (dst_pt.y - src_pt.y).abs() * 0.15).clamp(20.0, 60.0);
+                let c1 = egui::pos2(src_pt.x + 30.0, src_pt.y + sag);
+                let c2 = egui::pos2(dst_pt.x - 30.0, dst_pt.y + sag);
+
+                let color = if cord.is_audio {
+                    Color32::from_rgb(56, 189, 248) // Cyan
+                } else {
+                    Color32::from_rgb(245, 158, 11) // Amber
+                };
+
+                // Glow shadow
+                let shadow_col = Color32::from_rgba_unmultiplied(color.r(), color.g(), color.b(), 65);
+                let b_glow = egui::epaint::CubicBezierShape::from_points_stroke(
+                    [src_pt, c1, c2, dst_pt],
+                    false,
+                    Color32::TRANSPARENT,
+                    Stroke::new(3.5_f32, shadow_col),
+                );
+                painter.add(b_glow);
+
+                // Core cable
+                let b_core = egui::epaint::CubicBezierShape::from_points_stroke(
+                    [src_pt, c1, c2, dst_pt],
+                    false,
+                    Color32::TRANSPARENT,
+                    Stroke::new(1.8_f32, color),
+                );
+                painter.add(b_core);
+
+                // Active animated signal pulse along the cord
+                let pulse_t = (self.playhead_beat * 0.25).fract();
+                let pulse_pt = egui::pos2(
+                    (1.0 - pulse_t) * (1.0 - pulse_t) * (1.0 - pulse_t) * src_pt.x
+                        + 3.0 * (1.0 - pulse_t) * (1.0 - pulse_t) * pulse_t * c1.x
+                        + 3.0 * (1.0 - pulse_t) * pulse_t * pulse_t * c2.x
+                        + pulse_t * pulse_t * pulse_t * dst_pt.x,
+                    (1.0 - pulse_t) * (1.0 - pulse_t) * (1.0 - pulse_t) * src_pt.y
+                        + 3.0 * (1.0 - pulse_t) * (1.0 - pulse_t) * pulse_t * c1.y
+                        + 3.0 * (1.0 - pulse_t) * pulse_t * pulse_t * c2.y
+                        + pulse_t * pulse_t * pulse_t * dst_pt.y,
+                );
+                painter.circle_filled(pulse_pt, 2.8, Color32::WHITE);
+                painter.circle_stroke(pulse_pt, 4.0, Stroke::new(1.0_f32, color));
+            }
+        }
+
+        // 4. Pending cord preview while dragging
+        if let Some((src_n, src_p)) = &self.pending_cord_source {
+            if let Some(src_pt) = find_socket_pos(src_n, src_p, &self.modular_nodes) {
+                if let Some(cur_pos) = pointer_pos {
+                    let sag = ((cur_pos.x - src_pt.x).abs() * 0.2 + (cur_pos.y - src_pt.y).abs() * 0.15).clamp(20.0, 50.0);
+                    let c1 = egui::pos2(src_pt.x + 25.0, src_pt.y + sag);
+                    let c2 = egui::pos2(cur_pos.x - 25.0, cur_pos.y + sag);
+
+                    let b_pending = egui::epaint::CubicBezierShape::from_points_stroke(
+                        [src_pt, c1, c2, cur_pos],
+                        false,
+                        Color32::TRANSPARENT,
+                        Stroke::new(2.0_f32, Color32::from_rgb(56, 189, 248)),
+                    );
+                    painter.add(b_pending);
+                    painter.circle_filled(cur_pos, 3.5, Color32::from_rgb(56, 189, 248));
+                }
+            }
+        }
     }
 
     #[cfg(feature = "gui")]

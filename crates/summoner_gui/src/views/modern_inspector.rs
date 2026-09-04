@@ -58,7 +58,7 @@ pub fn show_modern_inspector(ui: &mut egui::Ui, state: &mut ModernInspectorState
         return;
     }
 
-    let panel_w = 200.0;
+    let panel_w = 240.0;
     egui::Frame::none()
         .fill(Color32::from_rgb(14, 20, 32))
         .stroke(Stroke::new(1.0_f32, Color32::from_rgb(28, 40, 60)))
@@ -68,7 +68,11 @@ pub fn show_modern_inspector(ui: &mut egui::Ui, state: &mut ModernInspectorState
             ui.set_width(panel_w);
             ui.set_height(ui.available_height());
 
-            // Header
+            egui::ScrollArea::vertical()
+                .id_source("modern_inspector_scroll")
+                .auto_shrink([false, false])
+                .show(ui, |ui| {
+                    // Header
             ui.horizontal(|ui| {
                 ui.label(RichText::new("Inspector").font(FontId::proportional(12.0)).strong().color(Color32::from_rgb(241, 245, 249)));
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -240,6 +244,7 @@ pub fn show_modern_inspector(ui: &mut egui::Ui, state: &mut ModernInspectorState
                             let label = format!("{} {}", desc.category.icon(), desc.display_name);
                             if ui.selectable_label(is_sel, label).clicked() {
                                 state.selected_node_kind = Some(desc.kind_id.clone());
+                                state.target_name = desc.display_name.clone();
                             }
                         }
                     });
@@ -252,5 +257,6 @@ pub fn show_modern_inspector(ui: &mut egui::Ui, state: &mut ModernInspectorState
                     descriptor.render_pro_inspector(ui, &mut state.node_param_values, None, 1, 0);
                 }
             }
+                });
         });
 }

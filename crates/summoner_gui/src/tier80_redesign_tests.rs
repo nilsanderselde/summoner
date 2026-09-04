@@ -101,4 +101,70 @@ mod tests {
         let meta = std::fs::metadata(path).expect("Metadata should exist");
         assert!(meta.len() > 1024, "PNG snapshot file should be non-empty");
     }
+
+    #[test]
+    fn test_modular_routing_canvas_nodes_and_cords() {
+        let mut view = AwardWinningGuiView::new();
+        assert_eq!(view.modular_mode, crate::views::award_winning_gui_view::ModularCanvasMode::PatchCords);
+        assert_eq!(view.modular_nodes.len(), 4);
+        assert_eq!(view.patch_cords.len(), 3);
+
+        // Verify audio vs CV color coding on ports
+        let osc = &view.modular_nodes[0];
+        assert_eq!(osc.id, "osc_1");
+        assert_eq!(osc.ports[0].kind, crate::views::award_winning_gui_view::ModularPortKind::ModulationIn);
+        assert_eq!(osc.ports[0].kind.color_rgb(), (245, 158, 11)); // Amber for CV
+        assert_eq!(osc.ports[2].kind, crate::views::award_winning_gui_view::ModularPortKind::AudioOut);
+        assert_eq!(osc.ports[2].kind.color_rgb(), (56, 189, 248)); // Cyan for Audio
+
+        // Test adding a dynamic DSP module from DspNodeRegistry
+        let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+        let desc = registry.get("FilterLadder").expect("FilterLadder must exist");
+        view.add_modular_node_from_descriptor(desc);
+
+        assert_eq!(view.modular_nodes.len(), 5);
+        let last_node = view.modular_nodes.last().unwrap();
+        assert_eq!(last_node.kind_id, "FilterLadder");
+        assert_eq!(view.selected_modular_node_id.as_deref(), Some(last_node.id.as_str()));
+        assert_eq!(view.device_rack_state.selected_node_kind.as_deref(), Some("FilterLadder"));
+        assert_eq!(view.inspector_state.selected_node_kind.as_deref(), Some("FilterLadder"));
+    }
+
+    #[test]
+    fn test_modular_routing_matrix_and_pro_view_integration() {
+        let mut view = AwardWinningGuiView::new();
+        view.modular_mode = crate::views::award_winning_gui_view::ModularCanvasMode::RoutingMatrix;
+        assert_eq!(view.modular_mode.label(), "▦ Routing Matrix");
+
+        // Verify patch matrix integration
+        assert!(view.patch_matrix.sources.len() >= 6);
+        assert!(view.patch_matrix.destinations.len() >= 6);
+        assert!(view.patch_matrix.is_connected("lfo1", "cutoff"));
+
+        // Toggle connection
+        view.patch_matrix.toggle_connection("lfo2", "resonance");
+        assert!(view.patch_matrix.is_connected("lfo2", "resonance"));
+    }
+
+    #[test]
+    fn test_modular_canvas_rack_and_inspector_synchronization() {
+        let mut view = AwardWinningGuiView::new();
+
+        // Mutate parameter in rack
+        view.device_rack_state.node_param_values.insert("cutoff".to_string(), 0.77);
+        view.device_rack_state.selected_node_kind = Some("ReverbPlate".to_string());
+        view.device_rack_state.device_name = "Algorithmic Plate Reverb".to_string();
+
+        let ctx = eframe::egui::Context::default();
+        let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+            eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                view.show(ui);
+            });
+        });
+
+        // Inspector must be synchronized with device rack
+        assert_eq!(view.inspector_state.selected_node_kind.as_deref(), Some("ReverbPlate"));
+        assert_eq!(view.inspector_state.target_name, "Algorithmic Plate Reverb");
+        assert_eq!(view.inspector_state.node_param_values.get("cutoff"), Some(&0.77));
+    }
 }
