@@ -105,6 +105,12 @@ fn default_available_presets() -> Vec<String> {
         "Concert Rosewood Marimba".to_string(),
         "Bourbonnais Vielle Gurdy".to_string(),
         "Silk String Japanese Koto".to_string(),
+        "Hindustani Ravi Sitar".to_string(),
+        "Rhodes Classic Mark I".to_string(),
+        "Hurdy-Gurdy Crank Wheel".to_string(),
+        "Concert Snare Drum Rattle".to_string(),
+        "Indian Raga Chikari Drone".to_string(),
+        "Franklin Water Armonica".to_string(),
     ]
 }
 

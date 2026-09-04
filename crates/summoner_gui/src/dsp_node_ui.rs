@@ -3429,6 +3429,96 @@ impl DspNodeRegistry {
             .with_param(DspParamSchema::knob("jet_distance", "Jet Propagation Distance", 1.0, 15.0, 5.0, "mm", MacroRole::Tone, "Jet Propagation Distance parameter"))
             .with_param(DspParamSchema::knob("breath_noise", "Breath Turbulence Mix", 0.0, 0.4, 0.06, "%", MacroRole::Tone, "Breath Turbulence Mix parameter"))
         );
+        descriptors.insert("JawariBridge".to_string(), DspNodeDescriptor::new("JawariBridge", "Sitar Curved Jawari Bridge & Unilateral Obstacle Boundary", DspNodeCategory::AcousticPhysicalModel, "Sitar deer-horn/camel-bone curved bridge with non-linear unilateral obstacle contact collision, dynamic string shortening, and jiva thread damping")
+            .with_param(DspParamSchema::knob("clearance_gap_mm", "Apex Clearance Gap", 0.01, 1.5, 0.18, "mm", MacroRole::Tone, "Clearance gap h0 at the bridge apex parameter"))
+            .with_param(DspParamSchema::knob("curvature_c", "Obstacle Curvature", 20.0, 400.0, 120.0, "m^-1", MacroRole::Tone, "Parabolic curvature profile parameter"))
+            .with_param(DspParamSchema::log_knob("contact_stiffness_k", "Contact Stiffness", 1.0e6, 5.0e8, 4.5e7, "N/m", MacroRole::Character, "Unilateral contact penalty stiffness parameter"))
+            .with_param(DspParamSchema::knob("jiva_thread_pos", "Jiva Thread Position", 0.0, 1.0, 0.45, "%", MacroRole::Tone, "Cotton jiva thread grazing position parameter"))
+            .with_param(DspParamSchema::knob("jiva_damping", "Jiva Thread Damping", 0.05, 1.0, 0.35, "mu", MacroRole::Space, "Cotton thread collision damping factor parameter"))
+            .with_param(DspParamSchema::choice("profile", "Bridge Profile", &["Deer-Horn Curved", "Camel-Bone Sharp", "Ebony Hardwood", "Synthetic Delrin", "Electric Flat", "Open Resonant Gourd"], 0, "Jawari material preset"))
+        );
+        descriptors.insert("TineResonator".to_string(), DspNodeDescriptor::new("TineResonator", "Physical Modeling Electromechanical Tine & Reed Resonator", DspNodeCategory::AcousticPhysicalModel, "Rhodes tine / Wurlitzer reed cantilever beam with inharmonic dispersion, Hertzian hammer contact, tonebar coupling, and inductive pickup saturation")
+            .with_param(DspParamSchema::log_knob("frequency", "Fundamental Frequency", 20.0, 2000.0, 261.63, "Hz", MacroRole::Tone, "Cantilever fundamental tuning frequency parameter"))
+            .with_param(DspParamSchema::knob("hammer_hardness", "Hammer Tip Hardness", 0.0, 1.0, 0.50, "%", MacroRole::Punch, "Neoprene/rubber hammer tip hardness parameter"))
+            .with_param(DspParamSchema::knob("bark_drive", "Inductive Bark Drive", 0.0, 1.0, 0.50, "%", MacroRole::Character, "Electromagnetic pickup barking saturation drive parameter"))
+            .with_param(DspParamSchema::knob("air_gap_mm", "Pickup Air Gap", 0.4, 6.0, 1.8, "mm", MacroRole::Tone, "Distance from vibrating tine to pickup pole piece parameter"))
+            .with_param(DspParamSchema::knob("tonebar_coupling", "Tonebar Mass Coupling", 0.0, 1.0, 0.65, "%", MacroRole::Space, "Acoustic energy coupling into steel tonebar parameter"))
+            .with_param(DspParamSchema::knob("feedback_gain", "Sustain Feedback Gain", 0.90, 0.9999, 0.994, "%", MacroRole::Space, "Waveguide loop decay feedback parameter"))
+            .with_param(DspParamSchema::choice("model", "Resonator Model", &["Rhodes Tine", "Wurlitzer Reed"], 0, "Electromechanical piano model type"))
+        );
+        descriptors.insert("FrictionWheelExciter".to_string(), DspNodeDescriptor::new("FrictionWheelExciter", "Continuous Rosined Wheel Friction Exciter", DspNodeCategory::AcousticPhysicalModel, "Continuous rosined wooden wheel excitation with Stribeck velocity-dependent stick-slip friction dynamics and wrist acceleration pulses")
+            .with_param(DspParamSchema::knob("angular_velocity", "Crank Angular Velocity", 0.0, 12.56, 6.28, "rad/s", MacroRole::Tone, "Crank rotation angular velocity parameter"))
+            .with_param(DspParamSchema::knob("wheel_pressure", "Normal Wheel Pressure", 0.01, 1.0, 0.70, "%", MacroRole::Punch, "Normal contact pressure force on strings parameter"))
+            .with_param(DspParamSchema::knob("rosin_adhesion", "Rosin Adhesion Stickiness", 0.1, 1.0, 0.85, "%", MacroRole::Character, "Rosin static/kinetic friction adhesion parameter"))
+            .with_param(DspParamSchema::knob("wrist_acceleration", "Coup de Poignet Pulse", 0.0, 10.0, 0.0, "rad/s2", MacroRole::Punch, "Wrist acceleration snarl burst parameter"))
+            .with_param(DspParamSchema::knob("wheel_radius_m", "Wheel Outer Radius", 0.03, 0.15, 0.07, "m", MacroRole::Tone, "Rosined wooden wheel radius parameter"))
+        );
+        descriptors.insert("SnareRattleModel".to_string(), DspNodeDescriptor::new("SnareRattleModel", "Non-Linear Snare Wire Rattle & Head Coupling", DspNodeCategory::AcousticPhysicalModel, "Snare drum bottom resonant head and coiled wire rattling collision model with threshold non-linearity and strainer throw-off")
+            .with_param(DspParamSchema::knob("snare_tension", "Snare Wire Strain Tension", 0.0, 1.0, 0.50, "%", MacroRole::Tone, "Snare wire mechanical tension parameter"))
+            .with_param(DspParamSchema::knob("snare_buzz_decay", "Wire Rattle Decay Rate", 0.80, 0.999, 0.992, "%", MacroRole::Space, "Buzz envelope decay coefficient parameter"))
+            .with_param(DspParamSchema::knob("snare_threshold", "Chatter Collision Threshold", 0.001, 0.50, 0.05, "%", MacroRole::Punch, "Wire contact impact threshold parameter"))
+            .with_param(DspParamSchema::knob("buzz_gain", "Snare Buzz Level", 0.0, 2.0, 1.0, "%", MacroRole::Tone, "Snare buzz master volume level parameter"))
+            .with_param(DspParamSchema::toggle("enabled", "Strainer Engaged", true, "Snare throw-off toggle"))
+        );
+        descriptors.insert("ChikariDroneBank".to_string(), DspNodeDescriptor::new("ChikariDroneBank", "4-String Rhythmic Chikari Drone Strummer", DspNodeCategory::AcousticPhysicalModel, "Indian sitar 4-string high tonic and fifth rhythmic drone bank with staggered mizrab flick strumming and sympathetic coupling")
+            .with_param(DspParamSchema::log_knob("root_hz", "Kharaj Sa Root Pitch", 60.0, 300.0, 130.81, "Hz", MacroRole::Tone, "Tonic root fundamental frequency parameter"))
+            .with_param(DspParamSchema::knob("strum_speed", "Mizrab Strum Stagger", 0.5, 10.0, 3.0, "ms", MacroRole::Tone, "Inter-string strum dispersion delay parameter"))
+            .with_param(DspParamSchema::knob("drone_resonance", "Drone Loop Resonance", 0.90, 0.999, 0.994, "%", MacroRole::Space, "Waveguide loop decay feedback parameter"))
+            .with_param(DspParamSchema::knob("chikari_gain", "Chikari Master Level", 0.0, 2.0, 0.85, "%", MacroRole::Punch, "Chikari output amplitude gain parameter"))
+        );
+        descriptors.insert("ClavinetAnvilModel".to_string(), DspNodeDescriptor::new("ClavinetAnvilModel", "Clavinet Rubber Anvil Hammer Impact Compliance", DspNodeCategory::AcousticPhysicalModel, "Hohner Clavinet rubber anvil mechanical impact compliance model with Hertzian contact exponent and dynamic strike duration")
+            .with_param(DspParamSchema::knob("hardness", "Rubber Anvil Hardness", 0.0, 1.0, 0.80, "%", MacroRole::Punch, "Rubber anvil tip hardness parameter"))
+            .with_param(DspParamSchema::knob("velocity", "Strike Velocity", 0.0, 1.0, 0.85, "%", MacroRole::Tone, "Strike velocity impact force parameter"))
+            .with_param(DspParamSchema::knob("exponent", "Contact Exponent", 1.0, 3.0, 1.60, "p", MacroRole::Character, "Non-linear Hertzian contact exponent parameter"))
+        );
+        descriptors.insert("WetStickSlipExciter".to_string(), DspNodeDescriptor::new("WetStickSlipExciter", "Wet-Finger / Suede-Wand Rim Friction Exciter", DspNodeCategory::AcousticPhysicalModel, "Continuous rotational rubbing excitation for quartz singing bowls and glass armonica with water film lubrication and normal force modulation")
+            .with_param(DspParamSchema::knob("wand_speed_rad_s", "Rotational Rubbing Speed", 0.0, 18.84, 2.5, "rad/s", MacroRole::Tone, "Rotational rubbing speed around bowl rim parameter"))
+            .with_param(DspParamSchema::knob("normal_force_n", "Normal Contact Force", 0.01, 3.0, 0.45, "N", MacroRole::Punch, "Normal pressing force perpendicular to rim parameter"))
+            .with_param(DspParamSchema::knob("moisture_film", "Moisture Lubrication", 0.1, 1.0, 0.85, "%", MacroRole::Character, "Water/moisture film lubrication factor parameter"))
+            .with_param(DspParamSchema::knob("rim_radius_m", "Bowl Outer Rim Radius", 0.02, 0.40, 0.10, "m", MacroRole::Tone, "Acoustic bowl outer radius parameter"))
+        );
+        descriptors.insert("YarnDamper".to_string(), DspNodeDescriptor::new("YarnDamper", "Clavinet Wool Yarn Key-Release Damper & Thud", DspNodeCategory::AcousticPhysicalModel, "Hohner Clavinet wool yarn string damping and key-release mechanical transient clunk generator")
+            .with_param(DspParamSchema::knob("damping_amount", "Wool Yarn Damping Ratio", 0.0, 1.0, 0.80, "%", MacroRole::Tone, "Wool yarn damping ratio parameter"))
+            .with_param(DspParamSchema::knob("thud_volume", "Key-Release Clunk Level", 0.0, 2.0, 0.75, "%", MacroRole::Punch, "Key release mechanical transient thud level parameter"))
+            .with_param(DspParamSchema::knob("thud_decay", "Damper Thud Decay Slew", 0.70, 0.99, 0.90, "%", MacroRole::Space, "Damper thud decay slew rate parameter"))
+            .with_param(DspParamSchema::log_knob("thud_freq", "Damper Thud Pitch", 100.0, 800.0, 320.0, "Hz", MacroRole::Tone, "Damper mechanical resonance frequency parameter"))
+        );
+        descriptors.insert("AutoSlicer".to_string(), DspNodeDescriptor::new("AutoSlicer", "Intelligent Transient Detector & Sample Slicer", DspNodeCategory::SamplerSlicer, "Offline and real-time transient detection and beat slicing using energy derivative, spectral flux, and ONNX neural models")
+            .with_param(DspParamSchema::knob("threshold", "Transient Peak Threshold", 0.01, 1.0, 0.25, "%", MacroRole::Punch, "Transient onset detection threshold parameter"))
+            .with_param(DspParamSchema::choice("algorithm", "Detection Algorithm", &["Energy Derivative", "Spectral Flux", "ONNX Neural Model"], 1, "Slicing onset detector engine"))
+            .with_param(DspParamSchema::knob("min_slice_length_ms", "Minimum Slice Window", 5.0, 500.0, 50.0, "ms", MacroRole::Space, "Minimum allowable slice duration parameter"))
+            .with_param(DspParamSchema::knob("sensitivity", "Spectral Flux Sensitivity", 0.1, 5.0, 1.5, "x", MacroRole::Tone, "Spectral flux onset multiplier parameter"))
+        );
+        descriptors.insert("SpeakerCalibrationMatrix".to_string(), DspNodeDescriptor::new("SpeakerCalibrationMatrix", "Studio Monitor Layout Calibration Matrix", DspNodeCategory::SpatialSurround, "Multi-channel surround and immersive monitor calibration matrix with per-channel gain trimming, delay alignment, and target curve compensation")
+            .with_param(DspParamSchema::knob("num_channels", "Speaker Channel Count", 2.0, 16.0, 8.0, "ch", MacroRole::Character, "Total monitored surround/immersive channels parameter"))
+            .with_param(DspParamSchema::knob("master_trim_db", "Master Alignment Trim", -24.0, 12.0, 0.0, "dB", MacroRole::Punch, "Global output calibration trim level parameter"))
+            .with_param(DspParamSchema::knob("delay_compensation_ms", "Inter-Channel Delay Align", 0.0, 50.0, 0.0, "ms", MacroRole::Space, "Distance-compensation inter-channel delay parameter"))
+            .with_param(DspParamSchema::choice("target_curve", "Target EQ Curve", &["Flat Studio", "Harman Target", "B&K 1974 House", "Diffuse Field"], 0, "Target frequency response profile"))
+        );
+        descriptors.insert("AiMixBalanceAnalyzer".to_string(), DspNodeDescriptor::new("AiMixBalanceAnalyzer", "AI Multi-Track Frequency Masking Analyzer", DspNodeCategory::NeuralAi, "Neural and psychoacoustic multi-track frequency collision and masking analyzer providing intelligent corrective EQ recommendations")
+            .with_param(DspParamSchema::knob("sensitivity", "Masking Detection Threshold", 0.0, 1.0, 0.50, "%", MacroRole::Tone, "Psychoacoustic masking sensitivity threshold parameter"))
+            .with_param(DspParamSchema::knob("spectral_bands", "Analysis Band Count", 4.0, 32.0, 16.0, "bands", MacroRole::Character, "Critical band filter bank resolution parameter"))
+            .with_param(DspParamSchema::knob("smoothing_sec", "Temporal Smoothing Window", 0.05, 2.0, 0.30, "s", MacroRole::Space, "Time-constant smoothing integration parameter"))
+            .with_param(DspParamSchema::knob("auto_recommend_cut", "Auto-Cut Recommended Depth", 0.0, 12.0, 3.0, "dB", MacroRole::Punch, "Recommended notch attenuation depth parameter"))
+        );
+        descriptors.insert("AiSongStructureDetector".to_string(), DspNodeDescriptor::new("AiSongStructureDetector", "AI Song Structure & Arrangement Classifier", DspNodeCategory::NeuralAi, "Neural arrangement analyzer segmenting audio into Intro, Verse, Chorus, Bridge, and Outro sections with automated marker placement")
+            .with_param(DspParamSchema::knob("min_section_bars", "Minimum Section Length", 4.0, 32.0, 8.0, "bars", MacroRole::Space, "Minimum bars per song section parameter"))
+            .with_param(DspParamSchema::knob("energy_contrast", "Chorus Energy Contrast", 0.0, 1.0, 0.65, "%", MacroRole::Punch, "Dynamic drop/chorus contrast threshold parameter"))
+            .with_param(DspParamSchema::knob("tempo_stability", "Beat Grid Confidence", 0.50, 1.0, 0.95, "%", MacroRole::Tone, "BPM and downbeat detection confidence parameter"))
+            .with_param(DspParamSchema::toggle("auto_marker_placement", "Auto Place Markers", true, "Automatic timeline marker generation toggle"))
+        );
+        descriptors.insert("AiPolyphonicChordExtractor".to_string(), DspNodeDescriptor::new("AiPolyphonicChordExtractor", "Real-Time AI Polyphonic Chord Extractor", DspNodeCategory::NeuralAi, "Deep learning polyphonic audio chord extraction transcribing harmonic progressions into MIDI chords and lead sheets")
+            .with_param(DspParamSchema::knob("confidence_threshold", "Chord Detection Confidence", 0.20, 0.99, 0.70, "%", MacroRole::Tone, "Minimum probability for chord classification parameter"))
+            .with_param(DspParamSchema::knob("bass_octave_weight", "Bass Root Note Weight", 0.0, 2.0, 1.20, "x", MacroRole::Punch, "Low-end chromagram weighting factor parameter"))
+            .with_param(DspParamSchema::choice("tempo_quantize", "Quantize Grid", &["Quarter Note (1/4)", "Eighth Note (1/8)", "Sixteenth Note (1/16)", "Free / Unquantized"], 0, "Sequencer grid timing quantization"))
+            .with_param(DspParamSchema::knob("velocity_scaling", "Extracted Velocity Scale", 0.1, 2.0, 1.0, "x", MacroRole::Character, "Extracted MIDI note velocity scale factor parameter"))
+        );
+        descriptors.insert("AudioAlignmentTool".to_string(), DspNodeDescriptor::new("AudioAlignmentTool", "Automatic Phase & Transient Micro-Delay Alignment", DspNodeCategory::Utility, "Cross-correlation phase alignment and sub-sample time delay compensator for multi-mic drum kits, bass D.I. vs mic, and stereo pairs")
+            .with_param(DspParamSchema::knob("max_search_lag_ms", "Max Search Lag Window", 1.0, 50.0, 10.0, "ms", MacroRole::Space, "Maximum cross-correlation search window parameter"))
+            .with_param(DspParamSchema::knob("cross_corr_threshold", "Correlation Match Threshold", 0.10, 1.0, 0.50, "%", MacroRole::Tone, "Minimum correlation peak acceptance threshold parameter"))
+            .with_param(DspParamSchema::toggle("auto_polarity_invert", "Auto 180 Polarity Invert", true, "Automatic negative phase inversion toggle"))
+            .with_param(DspParamSchema::knob("phase_align_amount", "Phase Alignment Blend", 0.0, 1.0, 1.0, "%", MacroRole::Punch, "Dry/aligned micro-delay interpolation blend parameter"))
+        );
 
         Self { descriptors }
     }
@@ -3834,6 +3924,20 @@ impl DspNodeRegistry {
             ("WaveguideBrass", DspNodeCategory::AcousticPhysicalModel, "Bernoulli Lip-Reed Acoustic Waveguide Brass Core"),
             ("WaveguideMesh", DspNodeCategory::AcousticPhysicalModel, "2D Triangular Mesh Wave Propagation Surface Core"),
             ("WoodwindJet", DspNodeCategory::AcousticPhysicalModel, "Flute Jet Instability & Aerodynamic Vortex Core"),
+            ("JawariBridge", DspNodeCategory::AcousticPhysicalModel, "Sitar Curved Jawari Bridge & Unilateral Obstacle Boundary"),
+            ("TineResonator", DspNodeCategory::AcousticPhysicalModel, "Physical Modeling Electromechanical Tine & Reed Resonator"),
+            ("FrictionWheelExciter", DspNodeCategory::AcousticPhysicalModel, "Continuous Rosined Wheel Friction Exciter (Hurdy-Gurdy)"),
+            ("SnareRattleModel", DspNodeCategory::AcousticPhysicalModel, "Non-Linear Snare Wire Rattle & Head Coupling"),
+            ("ChikariDroneBank", DspNodeCategory::AcousticPhysicalModel, "4-String Rhythmic Chikari Drone Strummer"),
+            ("ClavinetAnvilModel", DspNodeCategory::AcousticPhysicalModel, "Clavinet Rubber Anvil Hammer Impact Compliance"),
+            ("WetStickSlipExciter", DspNodeCategory::AcousticPhysicalModel, "Wet-Finger / Suede-Wand Rim Friction Exciter"),
+            ("YarnDamper", DspNodeCategory::AcousticPhysicalModel, "Clavinet Wool Yarn Key-Release Damper & Thud"),
+            ("AutoSlicer", DspNodeCategory::SamplerSlicer, "Intelligent Transient Detector & Sample Slicer"),
+            ("SpeakerCalibrationMatrix", DspNodeCategory::SpatialSurround, "Studio Monitor Layout Calibration Matrix"),
+            ("AiMixBalanceAnalyzer", DspNodeCategory::NeuralAi, "AI Multi-Track Frequency Masking Analyzer"),
+            ("AiSongStructureDetector", DspNodeCategory::NeuralAi, "AI Song Structure & Arrangement Classifier"),
+            ("AiPolyphonicChordExtractor", DspNodeCategory::NeuralAi, "Real-Time AI Polyphonic Chord Extractor"),
+            ("AudioAlignmentTool", DspNodeCategory::Utility, "Automatic Phase & Transient Micro-Delay Alignment"),
         ]
     }
 
@@ -4424,6 +4528,62 @@ impl DspNodeRegistry {
             "sitargourd" => Some("SitarSoundboxBody"),
             "bridgewavecoupler" => Some("BridgeWaveCoupler"),
             "pianobridge" => Some("BridgeWaveCoupler"),
+            "jawari" => Some("JawariBridge"),
+            "sitarjawari" => Some("JawariBridge"),
+            "jawaribridge" => Some("JawariBridge"),
+            "jawariobstacle" => Some("JawariBridge"),
+            "tine" => Some("TineResonator"),
+            "tineresonator" => Some("TineResonator"),
+            "rhodestine" => Some("TineResonator"),
+            "wurlitzerreed" => Some("TineResonator"),
+            "frictionwheel" => Some("FrictionWheelExciter"),
+            "frictionwheelexciter" => Some("FrictionWheelExciter"),
+            "hurdygurdywheel" => Some("FrictionWheelExciter"),
+            "crankwheel" => Some("FrictionWheelExciter"),
+            "snarerattle" => Some("SnareRattleModel"),
+            "snarerattlemodel" => Some("SnareRattleModel"),
+            "snarewire" => Some("SnareRattleModel"),
+            "snaremodel" => Some("SnareRattleModel"),
+            "chikaridrone" => Some("ChikariDroneBank"),
+            "chikaridronebank" => Some("ChikariDroneBank"),
+            "chikari" => Some("ChikariDroneBank"),
+            "sitardrone" => Some("ChikariDroneBank"),
+            "clavinetanvil" => Some("ClavinetAnvilModel"),
+            "clavinetanvilmodel" => Some("ClavinetAnvilModel"),
+            "rubberanvil" => Some("ClavinetAnvilModel"),
+            "armonicasoundbox" => Some("ArmonicaChassisResonator"),
+            "armonicasoundboard" => Some("ArmonicaChassisResonator"),
+            "armonictrough" => Some("ArmonicaChassisResonator"),
+            "wetstickslip" => Some("WetStickSlipExciter"),
+            "wetstickslipexciter" => Some("WetStickSlipExciter"),
+            "rimrubbing" => Some("WetStickSlipExciter"),
+            "crystalwand" => Some("WetStickSlipExciter"),
+            "yarndamper" => Some("YarnDamper"),
+            "clavinetdamper" => Some("YarnDamper"),
+            "clavdamper" => Some("YarnDamper"),
+            "autoslicer" => Some("AutoSlicer"),
+            "transientslicer" => Some("AutoSlicer"),
+            "beatslicer" => Some("AutoSlicer"),
+            "speakercalibration" => Some("SpeakerCalibrationMatrix"),
+            "speakercalibrationmatrix" => Some("SpeakerCalibrationMatrix"),
+            "speakermatrix" => Some("SpeakerCalibrationMatrix"),
+            "monitorcal" => Some("SpeakerCalibrationMatrix"),
+            "aimixbalance" => Some("AiMixBalanceAnalyzer"),
+            "aimixbalanceanalyzer" => Some("AiMixBalanceAnalyzer"),
+            "maskinganalyzer" => Some("AiMixBalanceAnalyzer"),
+            "mixbalance" => Some("AiMixBalanceAnalyzer"),
+            "songstructure" => Some("AiSongStructureDetector"),
+            "aisongstructuredetector" => Some("AiSongStructureDetector"),
+            "structureclassifier" => Some("AiSongStructureDetector"),
+            "arrangementdetector" => Some("AiSongStructureDetector"),
+            "chordextractor" => Some("AiPolyphonicChordExtractor"),
+            "aipolyphonicchordextractor" => Some("AiPolyphonicChordExtractor"),
+            "polyphonicchords" => Some("AiPolyphonicChordExtractor"),
+            "aichords" => Some("AiPolyphonicChordExtractor"),
+            "audioalign" => Some("AudioAlignmentTool"),
+            "audioalignmenttool" => Some("AudioAlignmentTool"),
+            "phasealign" => Some("AudioAlignmentTool"),
+            "phasealignment" => Some("AudioAlignmentTool"),
             _ => None,
         }
     }
@@ -6639,6 +6799,118 @@ impl DspNodeRegistry {
                     .with_param(DspParamDescriptor::new_linear("unison_bleed", "Unison Cross-Coupling", 0.01, 0.80, 0.35, "%", (245, 158, 11)))
                     .with_param(DspParamDescriptor::new_linear("reflection", "Boundary Wave Reflection", 0.50, 0.999, 0.92, "%", (56, 189, 248)))
                     .with_param(DspParamDescriptor::new_linear("absorption", "Bridge Contact Damping", 0.001, 0.10, 0.015, "%", (236, 72, 153)))
+            ),
+            "JawariBridge" => Box::new(
+                GenericDspNodeUi::new("JawariBridge", "Sitar Curved Jawari Bridge & Unilateral Obstacle Boundary", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("clearance_gap_mm", "Apex Clearance Gap", 0.01, 1.5, 0.18, "mm", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("curvature_c", "Obstacle Curvature", 20.0, 400.0, 120.0, "m^-1", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_log("contact_stiffness_k", "Contact Stiffness", 1.0e6, 5.0e8, 4.5e7, "N/m", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("jiva_thread_pos", "Jiva Thread Position", 0.0, 1.0, 0.45, "%", (236, 72, 153)))
+                    .with_param(DspParamDescriptor::new_linear("jiva_damping", "Jiva Thread Damping", 0.05, 1.0, 0.35, "mu", (16, 185, 129)))
+                    .with_param(DspParamDescriptor::new_enum("profile", "Bridge Profile", vec!["Deer-Horn Curved".into(), "Camel-Bone Sharp".into(), "Ebony Hardwood".into(), "Synthetic Delrin".into(), "Electric Flat".into(), "Open Resonant Gourd".into()], 0, (249, 115, 22)))
+            ),
+            "TineResonator" => Box::new(
+                GenericDspNodeUi::new("TineResonator", "Physical Modeling Electromechanical Tine & Reed Resonator", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_log("frequency", "Fundamental Frequency", 20.0, 2000.0, 261.63, "Hz", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("hammer_hardness", "Hammer Tip Hardness", 0.0, 1.0, 0.50, "%", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("bark_drive", "Inductive Bark Drive", 0.0, 1.0, 0.50, "%", (249, 115, 22)))
+                    .with_param(DspParamDescriptor::new_linear("air_gap_mm", "Pickup Air Gap", 0.4, 6.0, 1.8, "mm", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("tonebar_coupling", "Tonebar Mass Coupling", 0.0, 1.0, 0.65, "%", (99, 102, 241)))
+                    .with_param(DspParamDescriptor::new_linear("feedback_gain", "Sustain Feedback Gain", 0.90, 0.9999, 0.994, "%", (16, 185, 129)))
+                    .with_param(DspParamDescriptor::new_enum("model", "Resonator Model", vec!["Rhodes Tine".into(), "Wurlitzer Reed".into()], 0, (236, 72, 153)))
+            ),
+            "FrictionWheelExciter" => Box::new(
+                GenericDspNodeUi::new("FrictionWheelExciter", "Continuous Rosined Wheel Friction Exciter", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("angular_velocity", "Crank Angular Velocity", 0.0, 12.56, 6.28, "rad/s", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("wheel_pressure", "Normal Wheel Pressure", 0.01, 1.0, 0.70, "%", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("rosin_adhesion", "Rosin Adhesion Stickiness", 0.1, 1.0, 0.85, "%", (249, 115, 22)))
+                    .with_param(DspParamDescriptor::new_linear("wrist_acceleration", "Coup de Poignet Pulse", 0.0, 10.0, 0.0, "rad/s2", (236, 72, 153)))
+                    .with_param(DspParamDescriptor::new_linear("wheel_radius_m", "Wheel Outer Radius", 0.03, 0.15, 0.07, "m", (245, 158, 11)))
+            ),
+            "SnareRattleModel" => Box::new(
+                GenericDspNodeUi::new("SnareRattleModel", "Non-Linear Snare Wire Rattle & Head Coupling", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("snare_tension", "Snare Wire Strain Tension", 0.0, 1.0, 0.50, "%", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("snare_buzz_decay", "Wire Rattle Decay Rate", 0.80, 0.999, 0.992, "%", (99, 102, 241)))
+                    .with_param(DspParamDescriptor::new_linear("snare_threshold", "Chatter Collision Threshold", 0.001, 0.50, 0.05, "%", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("buzz_gain", "Snare Buzz Level", 0.0, 2.0, 1.0, "%", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_enum("enabled", "Strainer Engaged", vec!["Off (Disengaged)".into(), "On (Engaged)".into()], 1, (16, 185, 129)))
+            ),
+            "ChikariDroneBank" => Box::new(
+                GenericDspNodeUi::new("ChikariDroneBank", "4-String Rhythmic Chikari Drone Strummer", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_log("root_hz", "Kharaj Sa Root Pitch", 60.0, 300.0, 130.81, "Hz", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("strum_speed", "Mizrab Strum Stagger", 0.5, 10.0, 3.0, "ms", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("drone_resonance", "Drone Loop Resonance", 0.90, 0.999, 0.994, "%", (99, 102, 241)))
+                    .with_param(DspParamDescriptor::new_linear("chikari_gain", "Chikari Master Level", 0.0, 2.0, 0.85, "%", (239, 68, 68)))
+            ),
+            "ArmonicaChassisResonator" => Box::new(
+                GenericDspNodeUi::new("ArmonicaChassisResonator", "Glass Armonica Mahogany Casing & Water Trough Resonator", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("master_chassis_gain", "Chassis Radiation Level", 0.0, 2.0, 0.75, "%", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_log("helmholtz_hz", "Casing Helmholtz Mode", 80.0, 250.0, 135.0, "Hz", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_log("soundboard_hz", "Soundboard Flexure Mode", 150.0, 450.0, 280.0, "Hz", (99, 102, 241)))
+                    .with_param(DspParamDescriptor::new_log("water_trough_hz", "Water Trough Fluid Mode", 300.0, 800.0, 510.0, "Hz", (249, 115, 22)))
+                    .with_param(DspParamDescriptor::new_log("spindle_bearing_hz", "Spindle Bearing Mode", 500.0, 1500.0, 920.0, "Hz", (239, 68, 68)))
+            ),
+            "ClavinetAnvilModel" => Box::new(
+                GenericDspNodeUi::new("ClavinetAnvilModel", "Clavinet Rubber Anvil Hammer Impact Compliance", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("hardness", "Rubber Anvil Hardness", 0.0, 1.0, 0.80, "%", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("velocity", "Strike Velocity", 0.0, 1.0, 0.85, "%", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("exponent", "Contact Exponent", 1.0, 3.0, 1.60, "p", (245, 158, 11)))
+            ),
+            "WetStickSlipExciter" => Box::new(
+                GenericDspNodeUi::new("WetStickSlipExciter", "Wet-Finger / Suede-Wand Rim Friction Exciter", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("wand_speed_rad_s", "Rotational Rubbing Speed", 0.0, 18.84, 2.5, "rad/s", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("normal_force_n", "Normal Contact Force", 0.01, 3.0, 0.45, "N", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("moisture_film", "Moisture Lubrication", 0.1, 1.0, 0.85, "%", (249, 115, 22)))
+                    .with_param(DspParamDescriptor::new_linear("rim_radius_m", "Bowl Outer Rim Radius", 0.02, 0.40, 0.10, "m", (245, 158, 11)))
+            ),
+            "YarnDamper" => Box::new(
+                GenericDspNodeUi::new("YarnDamper", "Clavinet Wool Yarn Key-Release Damper & Thud", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("damping_amount", "Wool Yarn Damping Ratio", 0.0, 1.0, 0.80, "%", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("thud_volume", "Key-Release Clunk Level", 0.0, 2.0, 0.75, "%", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("thud_decay", "Damper Thud Decay Slew", 0.70, 0.99, 0.90, "%", (99, 102, 241)))
+                    .with_param(DspParamDescriptor::new_log("thud_freq", "Damper Thud Pitch", 100.0, 800.0, 320.0, "Hz", (245, 158, 11)))
+            ),
+            "AutoSlicer" => Box::new(
+                GenericDspNodeUi::new("AutoSlicer", "Intelligent Transient Detector & Sample Slicer", DspNodeCategory::SamplerSlicer)
+                    .with_param(DspParamDescriptor::new_linear("threshold", "Transient Peak Threshold", 0.01, 1.0, 0.25, "%", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_enum("algorithm", "Detection Algorithm", vec!["Energy Derivative".into(), "Spectral Flux".into(), "ONNX Neural Model".into()], 1, (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("min_slice_length_ms", "Minimum Slice Window", 5.0, 500.0, 50.0, "ms", (99, 102, 241)))
+                    .with_param(DspParamDescriptor::new_linear("sensitivity", "Spectral Flux Sensitivity", 0.1, 5.0, 1.5, "x", (245, 158, 11)))
+            ),
+            "SpeakerCalibrationMatrix" => Box::new(
+                GenericDspNodeUi::new("SpeakerCalibrationMatrix", "Studio Monitor Layout Calibration Matrix", DspNodeCategory::SpatialSurround)
+                    .with_param(DspParamDescriptor::new_linear("num_channels", "Speaker Channel Count", 2.0, 16.0, 8.0, "ch", (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_linear("master_trim_db", "Master Alignment Trim", -24.0, 12.0, 0.0, "dB", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("delay_compensation_ms", "Inter-Channel Delay Align", 0.0, 50.0, 0.0, "ms", (99, 102, 241)))
+                    .with_param(DspParamDescriptor::new_enum("target_curve", "Target EQ Curve", vec!["Flat Studio".into(), "Harman Target".into(), "B&K 1974 House".into(), "Diffuse Field".into()], 0, (56, 189, 248)))
+            ),
+            "AiMixBalanceAnalyzer" => Box::new(
+                GenericDspNodeUi::new("AiMixBalanceAnalyzer", "AI Multi-Track Frequency Masking Analyzer", DspNodeCategory::NeuralAi)
+                    .with_param(DspParamDescriptor::new_linear("sensitivity", "Masking Detection Threshold", 0.0, 1.0, 0.50, "%", (236, 72, 153)))
+                    .with_param(DspParamDescriptor::new_linear("spectral_bands", "Analysis Band Count", 4.0, 32.0, 16.0, "bands", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("smoothing_sec", "Temporal Smoothing Window", 0.05, 2.0, 0.30, "s", (99, 102, 241)))
+                    .with_param(DspParamDescriptor::new_linear("auto_recommend_cut", "Auto-Cut Recommended Depth", 0.0, 12.0, 3.0, "dB", (239, 68, 68)))
+            ),
+            "AiSongStructureDetector" => Box::new(
+                GenericDspNodeUi::new("AiSongStructureDetector", "AI Song Structure & Arrangement Classifier", DspNodeCategory::NeuralAi)
+                    .with_param(DspParamDescriptor::new_linear("min_section_bars", "Minimum Section Length", 4.0, 32.0, 8.0, "bars", (99, 102, 241)))
+                    .with_param(DspParamDescriptor::new_linear("energy_contrast", "Chorus Energy Contrast", 0.0, 1.0, 0.65, "%", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("tempo_stability", "Beat Grid Confidence", 0.50, 1.0, 0.95, "%", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_enum("auto_marker_placement", "Auto Place Markers", vec!["Disabled".into(), "Enabled".into()], 1, (16, 185, 129)))
+            ),
+            "AiPolyphonicChordExtractor" => Box::new(
+                GenericDspNodeUi::new("AiPolyphonicChordExtractor", "Real-Time AI Polyphonic Chord Extractor", DspNodeCategory::NeuralAi)
+                    .with_param(DspParamDescriptor::new_linear("confidence_threshold", "Chord Detection Confidence", 0.20, 0.99, 0.70, "%", (236, 72, 153)))
+                    .with_param(DspParamDescriptor::new_linear("bass_octave_weight", "Bass Root Note Weight", 0.0, 2.0, 1.20, "x", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_enum("tempo_quantize", "Quantize Grid", vec!["Quarter Note (1/4)".into(), "Eighth Note (1/8)".into(), "Sixteenth Note (1/16)".into(), "Free / Unquantized".into()], 0, (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("velocity_scaling", "Extracted Velocity Scale", 0.1, 2.0, 1.0, "x", (245, 158, 11)))
+            ),
+            "AudioAlignmentTool" => Box::new(
+                GenericDspNodeUi::new("AudioAlignmentTool", "Automatic Phase & Transient Micro-Delay Alignment", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("max_search_lag_ms", "Max Search Lag Window", 1.0, 50.0, 10.0, "ms", (99, 102, 241)))
+                    .with_param(DspParamDescriptor::new_linear("cross_corr_threshold", "Correlation Match Threshold", 0.10, 1.0, 0.50, "%", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_enum("auto_polarity_invert", "Auto 180 Polarity Invert", vec!["Disabled".into(), "Enabled".into()], 1, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("phase_align_amount", "Phase Alignment Blend", 0.0, 1.0, 1.0, "%", (16, 185, 129)))
             ),
             // Fallback dynamic generator for any unexpected or plugin node
             other => {

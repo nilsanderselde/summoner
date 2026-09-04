@@ -340,6 +340,12 @@ impl AwardWinningGuiView {
                 "Concert Rosewood Marimba" => "StruckIdiophoneResonator",
                 "Bourbonnais Vielle Gurdy" => "HurdyGurdySoundboxBody",
                 "Silk String Japanese Koto" => "SitarSoundboxBody",
+                "Hindustani Ravi Sitar" => "JawariBridge",
+                "Rhodes Classic Mark I" => "TineResonator",
+                "Hurdy-Gurdy Crank Wheel" => "FrictionWheelExciter",
+                "Concert Snare Drum Rattle" => "SnareRattleModel",
+                "Indian Raga Chikari Drone" => "ChikariDroneBank",
+                "Franklin Water Armonica" => "ArmonicaChassisResonator",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {

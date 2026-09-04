@@ -1447,4 +1447,337 @@ mod tests {
             assert_eq!(view.inspector_state.selected_node_kind, Some("StruckIdiophoneResonator".to_string()));
         }
     }
+
+    #[test]
+    fn test_tier86_dsp_node_registry_expansion_and_parameter_reflection() {
+        use crate::dsp_node_ui::{DspCategory, DspNodeRegistry};
+
+        let registry = DspNodeRegistry::new();
+        assert!(registry.list_all().len() >= 372, "Registry must contain >= 372 descriptors, found {}", registry.list_all().len());
+
+        let inv = DspNodeRegistry::inventory();
+        assert!(inv.len() >= 372, "Inventory must contain >= 372 entries, found {}", inv.len());
+
+        // 1. JawariBridge
+        let jawari = registry.get("JawariBridge").expect("JawariBridge must be registered");
+        assert_eq!(jawari.category, DspCategory::AcousticPhysicalModel);
+        assert!(jawari.params.iter().any(|p| p.id == "clearance_gap_mm"));
+        assert!(jawari.params.iter().any(|p| p.id == "curvature_c"));
+        assert!(jawari.params.iter().any(|p| p.id == "contact_stiffness_k"));
+        assert!(jawari.params.iter().any(|p| p.id == "jiva_thread_pos"));
+        assert!(jawari.params.iter().any(|p| p.id == "jiva_damping"));
+        let jawari_ui = DspNodeRegistry::create_node_ui(&jawari.kind_id);
+        assert!(jawari_ui.is_some(), "create_node_ui must succeed for JawariBridge");
+
+        // 2. TineResonator
+        let tine = registry.get("TineResonator").expect("TineResonator must be registered");
+        assert_eq!(tine.category, DspCategory::AcousticPhysicalModel);
+        assert!(tine.params.iter().any(|p| p.id == "frequency"));
+        assert!(tine.params.iter().any(|p| p.id == "hammer_hardness"));
+        assert!(tine.params.iter().any(|p| p.id == "bark_drive"));
+        assert!(tine.params.iter().any(|p| p.id == "air_gap_mm"));
+        assert!(tine.params.iter().any(|p| p.id == "tonebar_coupling"));
+        assert!(tine.params.iter().any(|p| p.id == "feedback_gain"));
+        let tine_ui = DspNodeRegistry::create_node_ui(&tine.kind_id);
+        assert!(tine_ui.is_some(), "create_node_ui must succeed for TineResonator");
+
+        // 3. FrictionWheelExciter
+        let wheel = registry.get("FrictionWheelExciter").expect("FrictionWheelExciter must be registered");
+        assert_eq!(wheel.category, DspCategory::AcousticPhysicalModel);
+        assert!(wheel.params.iter().any(|p| p.id == "angular_velocity"));
+        assert!(wheel.params.iter().any(|p| p.id == "wheel_pressure"));
+        assert!(wheel.params.iter().any(|p| p.id == "rosin_adhesion"));
+        assert!(wheel.params.iter().any(|p| p.id == "wrist_acceleration"));
+        assert!(wheel.params.iter().any(|p| p.id == "wheel_radius_m"));
+        let wheel_ui = DspNodeRegistry::create_node_ui(&wheel.kind_id);
+        assert!(wheel_ui.is_some(), "create_node_ui must succeed for FrictionWheelExciter");
+
+        // 4. SnareRattleModel
+        let snare = registry.get("SnareRattleModel").expect("SnareRattleModel must be registered");
+        assert_eq!(snare.category, DspCategory::AcousticPhysicalModel);
+        assert!(snare.params.iter().any(|p| p.id == "snare_tension"));
+        assert!(snare.params.iter().any(|p| p.id == "snare_buzz_decay"));
+        assert!(snare.params.iter().any(|p| p.id == "snare_threshold"));
+        assert!(snare.params.iter().any(|p| p.id == "buzz_gain"));
+        assert!(snare.params.iter().any(|p| p.id == "enabled"));
+        let snare_ui = DspNodeRegistry::create_node_ui(&snare.kind_id);
+        assert!(snare_ui.is_some(), "create_node_ui must succeed for SnareRattleModel");
+
+        // 5. ChikariDroneBank
+        let chikari = registry.get("ChikariDroneBank").expect("ChikariDroneBank must be registered");
+        assert_eq!(chikari.category, DspCategory::AcousticPhysicalModel);
+        assert!(chikari.params.iter().any(|p| p.id == "root_hz"));
+        assert!(chikari.params.iter().any(|p| p.id == "strum_speed"));
+        assert!(chikari.params.iter().any(|p| p.id == "drone_resonance"));
+        assert!(chikari.params.iter().any(|p| p.id == "chikari_gain"));
+        let chikari_ui = DspNodeRegistry::create_node_ui(&chikari.kind_id);
+        assert!(chikari_ui.is_some(), "create_node_ui must succeed for ChikariDroneBank");
+
+        // 6. ClavinetAnvilModel & ArmonicaChassisResonator
+        let anvil = registry.get("ClavinetAnvilModel").expect("ClavinetAnvilModel must be registered");
+        assert_eq!(anvil.category, DspCategory::AcousticPhysicalModel);
+        assert!(anvil.params.iter().any(|p| p.id == "hardness"));
+        assert!(anvil.params.iter().any(|p| p.id == "velocity"));
+        assert!(anvil.params.iter().any(|p| p.id == "exponent"));
+        let anvil_ui = DspNodeRegistry::create_node_ui(&anvil.kind_id);
+        assert!(anvil_ui.is_some(), "create_node_ui must succeed for ClavinetAnvilModel");
+
+        let armonica = registry.get("ArmonicaChassisResonator").expect("ArmonicaChassisResonator must be registered");
+        assert_eq!(armonica.category, DspCategory::AcousticPhysicalModel);
+        assert!(armonica.params.iter().any(|p| p.id == "master_chassis_gain"));
+        let armonica_ui = DspNodeRegistry::create_node_ui(&armonica.kind_id);
+        assert!(armonica_ui.is_some(), "create_node_ui must succeed for ArmonicaChassisResonator");
+
+        // 7. WetStickSlipExciter
+        let wet = registry.get("WetStickSlipExciter").expect("WetStickSlipExciter must be registered");
+        assert_eq!(wet.category, DspCategory::AcousticPhysicalModel);
+        assert!(wet.params.iter().any(|p| p.id == "wand_speed_rad_s"));
+        assert!(wet.params.iter().any(|p| p.id == "normal_force_n"));
+        assert!(wet.params.iter().any(|p| p.id == "moisture_film"));
+        assert!(wet.params.iter().any(|p| p.id == "rim_radius_m"));
+        let wet_ui = DspNodeRegistry::create_node_ui(&wet.kind_id);
+        assert!(wet_ui.is_some(), "create_node_ui must succeed for WetStickSlipExciter");
+
+        // 8. YarnDamper
+        let damper = registry.get("YarnDamper").expect("YarnDamper must be registered");
+        assert_eq!(damper.category, DspCategory::AcousticPhysicalModel);
+        assert!(damper.params.iter().any(|p| p.id == "damping_amount"));
+        assert!(damper.params.iter().any(|p| p.id == "thud_volume"));
+        assert!(damper.params.iter().any(|p| p.id == "thud_decay"));
+        assert!(damper.params.iter().any(|p| p.id == "thud_freq"));
+        let damper_ui = DspNodeRegistry::create_node_ui(&damper.kind_id);
+        assert!(damper_ui.is_some(), "create_node_ui must succeed for YarnDamper");
+
+        // 9. AutoSlicer
+        let slicer = registry.get("AutoSlicer").expect("AutoSlicer must be registered");
+        assert_eq!(slicer.category, DspCategory::SamplerSlicer);
+        assert!(slicer.params.iter().any(|p| p.id == "threshold"));
+        assert!(slicer.params.iter().any(|p| p.id == "algorithm"));
+        assert!(slicer.params.iter().any(|p| p.id == "min_slice_length_ms"));
+        assert!(slicer.params.iter().any(|p| p.id == "sensitivity"));
+        let slicer_ui = DspNodeRegistry::create_node_ui(&slicer.kind_id);
+        assert!(slicer_ui.is_some(), "create_node_ui must succeed for AutoSlicer");
+
+        // 10. SpeakerCalibrationMatrix
+        let speaker = registry.get("SpeakerCalibrationMatrix").expect("SpeakerCalibrationMatrix must be registered");
+        assert_eq!(speaker.category, DspCategory::SpatialSurround);
+        assert!(speaker.params.iter().any(|p| p.id == "num_channels"));
+        assert!(speaker.params.iter().any(|p| p.id == "master_trim_db"));
+        assert!(speaker.params.iter().any(|p| p.id == "delay_compensation_ms"));
+        let speaker_ui = DspNodeRegistry::create_node_ui(&speaker.kind_id);
+        assert!(speaker_ui.is_some(), "create_node_ui must succeed for SpeakerCalibrationMatrix");
+
+        // 11. AiMixBalanceAnalyzer
+        let mix = registry.get("AiMixBalanceAnalyzer").expect("AiMixBalanceAnalyzer must be registered");
+        assert_eq!(mix.category, DspCategory::NeuralAi);
+        assert!(mix.params.iter().any(|p| p.id == "sensitivity"));
+        assert!(mix.params.iter().any(|p| p.id == "spectral_bands"));
+        assert!(mix.params.iter().any(|p| p.id == "smoothing_sec"));
+        assert!(mix.params.iter().any(|p| p.id == "auto_recommend_cut"));
+        let mix_ui = DspNodeRegistry::create_node_ui(&mix.kind_id);
+        assert!(mix_ui.is_some(), "create_node_ui must succeed for AiMixBalanceAnalyzer");
+
+        // 12. AiSongStructureDetector
+        let struct_det = registry.get("AiSongStructureDetector").expect("AiSongStructureDetector must be registered");
+        assert_eq!(struct_det.category, DspCategory::NeuralAi);
+        assert!(struct_det.params.iter().any(|p| p.id == "min_section_bars"));
+        assert!(struct_det.params.iter().any(|p| p.id == "energy_contrast"));
+        assert!(struct_det.params.iter().any(|p| p.id == "tempo_stability"));
+        assert!(struct_det.params.iter().any(|p| p.id == "auto_marker_placement"));
+        let struct_ui = DspNodeRegistry::create_node_ui(&struct_det.kind_id);
+        assert!(struct_ui.is_some(), "create_node_ui must succeed for AiSongStructureDetector");
+
+        // 13. AiPolyphonicChordExtractor
+        let chord = registry.get("AiPolyphonicChordExtractor").expect("AiPolyphonicChordExtractor must be registered");
+        assert_eq!(chord.category, DspCategory::NeuralAi);
+        assert!(chord.params.iter().any(|p| p.id == "confidence_threshold"));
+        assert!(chord.params.iter().any(|p| p.id == "bass_octave_weight"));
+        assert!(chord.params.iter().any(|p| p.id == "velocity_scaling"));
+        let chord_ui = DspNodeRegistry::create_node_ui(&chord.kind_id);
+        assert!(chord_ui.is_some(), "create_node_ui must succeed for AiPolyphonicChordExtractor");
+
+        // 14. AudioAlignmentTool
+        let align = registry.get("AudioAlignmentTool").expect("AudioAlignmentTool must be registered");
+        assert_eq!(align.category, DspCategory::Utility);
+        assert!(align.params.iter().any(|p| p.id == "max_search_lag_ms"));
+        assert!(align.params.iter().any(|p| p.id == "cross_corr_threshold"));
+        assert!(align.params.iter().any(|p| p.id == "auto_polarity_invert"));
+        assert!(align.params.iter().any(|p| p.id == "phase_align_amount"));
+        let align_ui = DspNodeRegistry::create_node_ui(&align.kind_id);
+        assert!(align_ui.is_some(), "create_node_ui must succeed for AudioAlignmentTool");
+
+        // Verify normalization aliases
+        assert_eq!(DspNodeRegistry::normalize_type_name("jawari"), Some("JawariBridge"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("sitarjawari"), Some("JawariBridge"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("tineresonator"), Some("TineResonator"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("rhodestine"), Some("TineResonator"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("frictionwheel"), Some("FrictionWheelExciter"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("snarerattle"), Some("SnareRattleModel"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("chikaridrone"), Some("ChikariDroneBank"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("armonicasoundbox"), Some("ArmonicaChassisResonator"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("wetstickslip"), Some("WetStickSlipExciter"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("yarndamper"), Some("YarnDamper"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("autoslicer"), Some("AutoSlicer"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("clavinetanvil"), Some("ClavinetAnvilModel"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("speakercalibration"), Some("SpeakerCalibrationMatrix"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("aimixbalance"), Some("AiMixBalanceAnalyzer"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("songstructure"), Some("AiSongStructureDetector"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("chordextractor"), Some("AiPolyphonicChordExtractor"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("audioalign"), Some("AudioAlignmentTool"));
+    }
+
+    #[test]
+    fn test_tier86_asset_browser_category_expansion() {
+        let mut browser = ModernAssetBrowserState::default();
+
+        // 1. Verify default folders per category
+        let inst_folders = BrowserCategory::Instruments.default_folders();
+        let phys_models = inst_folders.iter().find(|(name, _)| *name == "Physical Models").unwrap().1;
+        assert!(phys_models.contains(&"JawariBridge"));
+        assert!(phys_models.contains(&"TineResonator"));
+        assert!(phys_models.contains(&"FrictionWheelExciter"));
+        assert!(phys_models.contains(&"SnareRattleModel"));
+        assert!(phys_models.contains(&"ChikariDroneBank"));
+        assert!(phys_models.contains(&"ArmonicaChassisResonator"));
+        assert!(phys_models.contains(&"WetStickSlipExciter"));
+        assert!(phys_models.contains(&"YarnDamper"));
+        assert!(phys_models.contains(&"ClavinetAnvilModel"));
+
+        let samplers = inst_folders.iter().find(|(name, _)| *name == "Samplers & Slicers").unwrap().1;
+        assert!(samplers.contains(&"AutoSlicer"));
+
+        let fx_folders = BrowserCategory::AudioFx.default_folders();
+        let dynamics = fx_folders.iter().find(|(name, _)| *name == "Dynamics & Level").unwrap().1;
+        assert!(dynamics.contains(&"SpeakerCalibrationMatrix"));
+
+        let midi_folders = BrowserCategory::MidiFx.default_folders();
+        let gen_sync = midi_folders.iter().find(|(name, _)| *name == "Generative & Sync").unwrap().1;
+        assert!(gen_sync.contains(&"AiPolyphonicChordExtractor"));
+        assert!(gen_sync.contains(&"AiSongStructureDetector"));
+
+        let routing = midi_folders.iter().find(|(name, _)| *name == "Transforms & Routing").unwrap().1;
+        assert!(routing.contains(&"AiMixBalanceAnalyzer"));
+        assert!(routing.contains(&"AudioAlignmentTool"));
+
+        // 2. Interactive browsing under egui
+        #[cfg(feature = "gui")]
+        {
+            let ctx = eframe::egui::Context::default();
+            browser.selected_category = BrowserCategory::Instruments;
+            browser.search_query = "Jawari".to_string();
+
+            let mut dragged_item = None;
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    crate::views::modern_asset_browser::show_modern_asset_browser(ui, &mut browser, |item| {
+                        dragged_item = Some(item.to_string());
+                    });
+                });
+            });
+
+            browser.search_query.clear();
+            browser.selected_category = BrowserCategory::MidiFx;
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    crate::views::modern_asset_browser::show_modern_asset_browser(ui, &mut browser, |item| {
+                        dragged_item = Some(item.to_string());
+                    });
+                });
+            });
+            assert_eq!(browser.selected_category, BrowserCategory::MidiFx);
+        }
+    }
+
+    #[test]
+    fn test_tier86_award_winning_gui_novice_presets_physical_models_sync() {
+        let mut view = AwardWinningGuiView::new();
+
+        #[cfg(feature = "gui")]
+        {
+            let ctx = eframe::egui::Context::default();
+
+            // 1. Test Novice Preset: Hindustani Ravi Sitar
+            view.top_bar_state.selected_preset = "Hindustani Ravi Sitar".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("JawariBridge".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("JawariBridge".to_string()));
+
+            // 2. Test Novice Preset: Rhodes Classic Mark I
+            view.top_bar_state.selected_preset = "Rhodes Classic Mark I".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("TineResonator".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("TineResonator".to_string()));
+
+            // 3. Test Novice Preset: Hurdy-Gurdy Crank Wheel
+            view.top_bar_state.selected_preset = "Hurdy-Gurdy Crank Wheel".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("FrictionWheelExciter".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("FrictionWheelExciter".to_string()));
+
+            // 4. Test Novice Preset: Concert Snare Drum Rattle
+            view.top_bar_state.selected_preset = "Concert Snare Drum Rattle".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("SnareRattleModel".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("SnareRattleModel".to_string()));
+
+            // 5. Test Novice Preset: Indian Raga Chikari Drone
+            view.top_bar_state.selected_preset = "Indian Raga Chikari Drone".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("ChikariDroneBank".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("ChikariDroneBank".to_string()));
+
+            // 6. Test Novice Preset: Franklin Water Armonica
+            view.top_bar_state.selected_preset = "Franklin Water Armonica".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("ArmonicaChassisResonator".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("ArmonicaChassisResonator".to_string()));
+
+            // 7. Test Asset Selection synchronization for AutoSlicer & SpeakerCalibrationMatrix
+            view.asset_browser_state.selected_category = BrowserCategory::Instruments;
+            view.asset_browser_state.selected_item = Some("AutoSlicer".to_string());
+            let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+            if let Some(desc) = registry.get("AutoSlicer") {
+                view.device_rack_state.selected_node_kind = Some(desc.kind_id.clone());
+                view.device_rack_state.device_name = desc.display_name.clone();
+                view.inspector_state.selected_node_kind = Some(desc.kind_id.clone());
+                view.inspector_state.target_name = desc.display_name.clone();
+            }
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("AutoSlicer".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("AutoSlicer".to_string()));
+
+            if let Some(desc) = registry.get("SpeakerCalibrationMatrix") {
+                view.device_rack_state.selected_node_kind = Some(desc.kind_id.clone());
+                view.device_rack_state.device_name = desc.display_name.clone();
+                view.inspector_state.selected_node_kind = Some(desc.kind_id.clone());
+                view.inspector_state.target_name = desc.display_name.clone();
+            }
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("SpeakerCalibrationMatrix".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("SpeakerCalibrationMatrix".to_string()));
+        }
+    }
 }
+

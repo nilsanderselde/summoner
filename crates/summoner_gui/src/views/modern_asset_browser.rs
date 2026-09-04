@@ -47,6 +47,15 @@ impl BrowserCategory {
                         "HurdyGurdySoundboxBody",
                         "SitarSoundboxBody",
                         "BridgeWaveCoupler",
+                        "JawariBridge",
+                        "TineResonator",
+                        "FrictionWheelExciter",
+                        "SnareRattleModel",
+                        "ChikariDroneBank",
+                        "ArmonicaChassisResonator",
+                        "WetStickSlipExciter",
+                        "YarnDamper",
+                        "ClavinetAnvilModel",
                         "PipeOrgan",
                         "WaveguideBrass",
                         "WoodwindJet",
@@ -67,6 +76,7 @@ impl BrowserCategory {
                     "Samplers & Slicers",
                     &[
                         "LoopSlicerNode",
+                        "AutoSlicer",
                         "GranularSamplerNode",
                         "MultiSampler",
                     ],
@@ -80,6 +90,7 @@ impl BrowserCategory {
                         "Limiter",
                         "Compressor",
                         "SpectralGate",
+                        "SpeakerCalibrationMatrix",
                     ],
                 ),
                 (
@@ -117,6 +128,8 @@ impl BrowserCategory {
                     "Generative & Sync",
                     &[
                         "HrvTempoSyncEngine",
+                        "AiPolyphonicChordExtractor",
+                        "AiSongStructureDetector",
                         "EuclideanSequencer",
                         "Arpeggiator",
                     ],
@@ -124,6 +137,8 @@ impl BrowserCategory {
                 (
                     "Transforms & Routing",
                     &[
+                        "AiMixBalanceAnalyzer",
+                        "AudioAlignmentTool",
                         "MidiTranspose",
                         "ScaleQuantizer",
                         "ChordGenerator",
