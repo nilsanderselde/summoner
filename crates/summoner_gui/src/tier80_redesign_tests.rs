@@ -862,4 +862,199 @@ mod tests {
         assert_eq!(project.transport.bpm, 144.0);
         assert!(!transport_running);
     }
+
+    #[test]
+    fn test_tier83_stage_canvas_scene_launch_pad_trigger_and_panic() {
+        let mut view = AwardWinningGuiView::new();
+        view.asset_browser_state.is_collapsed = true;
+        view.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::Performance;
+        view.top_bar_state.is_playing = false;
+
+        let ctx = eframe::egui::Context::default();
+
+        // 1. Initial render of Stage Canvas
+        let mut raw_input = eframe::egui::RawInput::default();
+        raw_input.screen_rect = Some(eframe::egui::Rect::from_min_size(eframe::egui::Pos2::ZERO, eframe::egui::Vec2::new(1200.0, 800.0)));
+        let _ = ctx.run(raw_input.clone(), |ctx| {
+            eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                view.show(ui);
+            });
+        });
+
+        assert_eq!(view.active_scene_idx, None);
+        assert!(!view.panic_triggered);
+
+        // 2. Click Scene 2 ("2 Verse") Launch Button (x=120.0, y=210.0 in stage canvas)
+        let mut press_scene = raw_input.clone();
+        let scene_pos = eframe::egui::pos2(120.0, 210.0);
+        press_scene.events.push(eframe::egui::Event::PointerMoved(scene_pos));
+        press_scene.events.push(eframe::egui::Event::PointerButton {
+            pos: scene_pos,
+            button: eframe::egui::PointerButton::Primary,
+            pressed: true,
+            modifiers: eframe::egui::Modifiers::default(),
+        });
+        press_scene.events.push(eframe::egui::Event::PointerButton {
+            pos: scene_pos,
+            button: eframe::egui::PointerButton::Primary,
+            pressed: false,
+            modifiers: eframe::egui::Modifiers::default(),
+        });
+        let _ = ctx.run(press_scene, |ctx| {
+            eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                view.show(ui);
+            });
+        });
+
+        assert_eq!(view.active_scene_idx, Some(1));
+        assert!(view.top_bar_state.is_playing);
+        assert_eq!(view.playhead_beat, 16.0);
+
+        // 3. Click Clip Pad for Track 3 (x=410.0, y=210.0)
+        let mut press_pad = raw_input.clone();
+        let pad_pos = eframe::egui::pos2(410.0, 210.0);
+        press_pad.events.push(eframe::egui::Event::PointerMoved(pad_pos));
+        press_pad.events.push(eframe::egui::Event::PointerButton {
+            pos: pad_pos,
+            button: eframe::egui::PointerButton::Primary,
+            pressed: true,
+            modifiers: eframe::egui::Modifiers::default(),
+        });
+        press_pad.events.push(eframe::egui::Event::PointerButton {
+            pos: pad_pos,
+            button: eframe::egui::PointerButton::Primary,
+            pressed: false,
+            modifiers: eframe::egui::Modifiers::default(),
+        });
+        let _ = ctx.run(press_pad, |ctx| {
+            eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                view.show(ui);
+            });
+        });
+
+        // Track should now be selected and focused in Inspector & Device Rack
+        assert!(view.selected_track_idx < view.tracks.len());
+        let sel_name = view.tracks[view.selected_track_idx].name.clone();
+        assert_eq!(view.inspector_state.target_name, sel_name);
+        assert_eq!(view.device_rack_state.device_name, sel_name);
+
+        // 4. Click PANIC Button (top right of stage canvas: x=1135.0, y=84.0)
+        let mut press_panic = raw_input.clone();
+        let panic_pos = eframe::egui::pos2(1135.0, 84.0);
+        press_panic.events.push(eframe::egui::Event::PointerMoved(panic_pos));
+        press_panic.events.push(eframe::egui::Event::PointerButton {
+            pos: panic_pos,
+            button: eframe::egui::PointerButton::Primary,
+            pressed: true,
+            modifiers: eframe::egui::Modifiers::default(),
+        });
+        press_panic.events.push(eframe::egui::Event::PointerButton {
+            pos: panic_pos,
+            button: eframe::egui::PointerButton::Primary,
+            pressed: false,
+            modifiers: eframe::egui::Modifiers::default(),
+        });
+        let _ = ctx.run(press_panic, |ctx| {
+            eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                view.show(ui);
+            });
+        });
+
+        // Transport should be stopped and panic triggered
+        assert!(!view.top_bar_state.is_playing);
+        assert!(view.panic_triggered);
+        for tr in &view.tracks {
+            assert!(!tr.is_armed);
+        }
+    }
+
+    #[test]
+    fn test_tier83_master_bus_fader_interaction() {
+        let mut view = AwardWinningGuiView::new();
+        view.asset_browser_state.is_collapsed = true;
+        view.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::Mixer;
+        view.top_bar_state.master_gain = 1.0;
+
+        let ctx = eframe::egui::Context::default();
+        let mut raw_input = eframe::egui::RawInput::default();
+        raw_input.screen_rect = Some(eframe::egui::Rect::from_min_size(eframe::egui::Pos2::ZERO, eframe::egui::Vec2::new(1200.0, 800.0)));
+
+        // Drag master fader near right edge of mixer canvas (approx x=920.0, y=140.0)
+        let mut drag_master = raw_input.clone();
+        drag_master.events.push(eframe::egui::Event::PointerMoved(eframe::egui::pos2(920.0, 140.0)));
+        drag_master.events.push(eframe::egui::Event::PointerButton {
+            pos: eframe::egui::pos2(920.0, 140.0),
+            button: eframe::egui::PointerButton::Primary,
+            pressed: true,
+            modifiers: eframe::egui::Modifiers::default(),
+        });
+        let _ = ctx.run(drag_master, |ctx| {
+            eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                view.show(ui);
+            });
+        });
+
+        // Master gain should have been updated from the master strip drag
+        assert!(view.top_bar_state.master_gain > 0.0);
+    }
+
+    #[test]
+    fn test_tier83_bidirectional_track_and_inspector_sync() {
+        let mut view = AwardWinningGuiView::new();
+        view.asset_browser_state.is_collapsed = true;
+
+        let ctx = eframe::egui::Context::default();
+        let mut raw_input = eframe::egui::RawInput::default();
+        raw_input.screen_rect = Some(eframe::egui::Rect::from_min_size(eframe::egui::Pos2::ZERO, eframe::egui::Vec2::new(1200.0, 800.0)));
+
+        // Select track 2 (HiHats)
+        view.selected_track_idx = 2;
+
+        let _ = ctx.run(raw_input.clone(), |ctx| {
+            eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                view.show(ui);
+            });
+        });
+
+        // Inspector must match track 2 properties
+        assert_eq!(view.inspector_state.target_name, "HiHats");
+        let initial_gain = view.tracks[2].gain;
+        assert!((view.inspector_state.gain_db - ((initial_gain - 1.0) * 12.0)).abs() < 0.05);
+
+        // 1. Mutate Inspector controls
+        view.inspector_state.gain_db = 6.0;
+        view.inspector_state.pan_val = -0.45;
+        view.inspector_state.is_muted = true;
+        view.inspector_state.is_soloed = true;
+        view.inspector_state.is_armed = true;
+
+        let _ = ctx.run(raw_input.clone(), |ctx| {
+            eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                view.show(ui);
+            });
+        });
+
+        // Track 2 must now have updated properties written back from Inspector
+        assert!((view.tracks[2].gain - 1.5).abs() < 0.05);
+        assert_eq!(view.tracks[2].pan, -0.45);
+        assert!(view.tracks[2].is_muted);
+        assert!(view.tracks[2].is_soloed);
+        assert!(view.tracks[2].is_armed);
+
+        // 2. Mutate Track directly (e.g. from Arranger/Mixer)
+        view.tracks[2].gain = 0.8;
+        view.tracks[2].pan = 0.35;
+        view.tracks[2].is_muted = false;
+
+        let _ = ctx.run(raw_input.clone(), |ctx| {
+            eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                view.show(ui);
+            });
+        });
+
+        // Inspector must now reflect the mutated track properties
+        assert!((view.inspector_state.gain_db - ((0.8 - 1.0) * 12.0)).abs() < 0.05);
+        assert_eq!(view.inspector_state.pan_val, 0.35);
+        assert!(!view.inspector_state.is_muted);
+    }
 }

@@ -128,6 +128,15 @@ pub struct AwardWinningGuiView {
     pub last_applied_macros: [f32; 4],
     pub last_synced_bpm: f64,
     pub last_synced_is_playing: bool,
+    pub active_scene_idx: Option<usize>,
+    pub panic_triggered: bool,
+    pub last_inspector_gain_db: f32,
+    pub last_inspector_pan: f32,
+    pub last_inspector_muted: bool,
+    pub last_inspector_soloed: bool,
+    pub last_inspector_armed: bool,
+    pub last_selected_track_idx: usize,
+    pub last_applied_master_gain: f32,
 }
 
 impl Default for AwardWinningGuiView {
@@ -265,6 +274,15 @@ impl AwardWinningGuiView {
             last_applied_macros: [0.65, 0.40, 0.55, 0.50],
             last_synced_bpm: 120.0,
             last_synced_is_playing: false,
+            active_scene_idx: None,
+            panic_triggered: false,
+            last_inspector_gain_db: 0.0,
+            last_inspector_pan: 0.0,
+            last_inspector_muted: false,
+            last_inspector_soloed: false,
+            last_inspector_armed: false,
+            last_selected_track_idx: 4,
+            last_applied_master_gain: 1.0,
         };
         view.reset_modular_nodes();
         view
@@ -319,9 +337,72 @@ impl AwardWinningGuiView {
             self.device_rack_state.node_param_values.insert("character".to_string(), cur_macros[3]);
         }
 
-        // 3. Synchronize Master Gain to Selected Track
-        if let Some(track) = self.tracks.get_mut(self.selected_track_idx) {
-            track.gain = self.top_bar_state.master_gain;
+        // Synchronize Master Gain from Novice / Top Bar if adjusted
+        if (self.top_bar_state.master_gain - self.last_applied_master_gain).abs() > 0.001 {
+            self.last_applied_master_gain = self.top_bar_state.master_gain;
+            if let Some(track) = self.tracks.get_mut(self.selected_track_idx) {
+                track.gain = self.top_bar_state.master_gain;
+                self.inspector_state.gain_db = (track.gain - 1.0) * 12.0;
+                self.last_inspector_gain_db = self.inspector_state.gain_db;
+            }
+        }
+
+        // 3. Bidirectional Track <--> Inspector Synchronization
+        if self.selected_track_idx != self.last_selected_track_idx {
+            self.last_selected_track_idx = self.selected_track_idx;
+            if let Some(track) = self.tracks.get(self.selected_track_idx) {
+                self.inspector_state.target_name = track.name.clone();
+                self.inspector_state.gain_db = (track.gain - 1.0) * 12.0;
+                self.inspector_state.pan_val = track.pan;
+                self.inspector_state.is_muted = track.is_muted;
+                self.inspector_state.is_soloed = track.is_soloed;
+                self.inspector_state.is_armed = track.is_armed;
+                self.last_inspector_gain_db = self.inspector_state.gain_db;
+                self.last_inspector_pan = self.inspector_state.pan_val;
+                self.last_inspector_muted = self.inspector_state.is_muted;
+                self.last_inspector_soloed = self.inspector_state.is_soloed;
+                self.last_inspector_armed = self.inspector_state.is_armed;
+            }
+        } else if let Some(track) = self.tracks.get_mut(self.selected_track_idx) {
+            if (self.inspector_state.gain_db - self.last_inspector_gain_db).abs() > 0.01 {
+                track.gain = ((self.inspector_state.gain_db / 12.0) + 1.0).clamp(0.0, 2.0);
+                self.last_inspector_gain_db = self.inspector_state.gain_db;
+            } else if (track.gain - ((self.last_inspector_gain_db / 12.0) + 1.0)).abs() > 0.01 {
+                self.inspector_state.gain_db = (track.gain - 1.0) * 12.0;
+                self.last_inspector_gain_db = self.inspector_state.gain_db;
+            }
+
+            if (self.inspector_state.pan_val - self.last_inspector_pan).abs() > 0.01 {
+                track.pan = self.inspector_state.pan_val;
+                self.last_inspector_pan = self.inspector_state.pan_val;
+            } else if (track.pan - self.last_inspector_pan).abs() > 0.01 {
+                self.inspector_state.pan_val = track.pan;
+                self.last_inspector_pan = track.pan;
+            }
+
+            if self.inspector_state.is_muted != self.last_inspector_muted {
+                track.is_muted = self.inspector_state.is_muted;
+                self.last_inspector_muted = self.inspector_state.is_muted;
+            } else if track.is_muted != self.last_inspector_muted {
+                self.inspector_state.is_muted = track.is_muted;
+                self.last_inspector_muted = track.is_muted;
+            }
+
+            if self.inspector_state.is_soloed != self.last_inspector_soloed {
+                track.is_soloed = self.inspector_state.is_soloed;
+                self.last_inspector_soloed = self.inspector_state.is_soloed;
+            } else if track.is_soloed != self.last_inspector_soloed {
+                self.inspector_state.is_soloed = track.is_soloed;
+                self.last_inspector_soloed = track.is_soloed;
+            }
+
+            if self.inspector_state.is_armed != self.last_inspector_armed {
+                track.is_armed = self.inspector_state.is_armed;
+                self.last_inspector_armed = self.inspector_state.is_armed;
+            } else if track.is_armed != self.last_inspector_armed {
+                self.inspector_state.is_armed = track.is_armed;
+                self.last_inspector_armed = track.is_armed;
+            }
         }
 
         // 4. Synchronize selected DSP module across Modular Canvas, Rack & Inspector
@@ -1324,7 +1405,37 @@ impl AwardWinningGuiView {
                 let m_strip = Rect::from_min_size(egui::pos2(m_x, rect.top() + 4.0), Vec2::new(master_w, canvas_height - 8.0));
                 painter.rect_filled(m_strip, 4.0, Color32::from_rgb(16, 24, 38));
                 painter.rect_stroke(m_strip, 4.0, Stroke::new(1.5_f32, Color32::from_rgb(56, 189, 248)));
-                painter.text(egui::pos2(m_strip.center().x, m_strip.top() + 10.0), egui::Align2::CENTER_TOP, "MASTER", FontId::proportional(11.0), Color32::from_rgb(56, 189, 248));
+                painter.text(egui::pos2(m_strip.center().x, m_strip.top() + 8.0), egui::Align2::CENTER_TOP, "MASTER", FontId::proportional(11.0), Color32::from_rgb(56, 189, 248));
+
+                let m_fader_top = m_strip.top() + 32.0;
+                let m_fader_bot = m_strip.bottom() - 24.0;
+                let m_fader_x = m_strip.left() + m_strip.width() * 0.35;
+
+                if let Some(pos) = pointer_pos {
+                    if is_interacting && m_strip.contains(pos) && pos.y >= m_fader_top - 6.0 && pos.y <= m_fader_bot + 6.0 {
+                        let norm = ((m_fader_bot - pos.y) / (m_fader_bot - m_fader_top)).clamp(0.0, 1.0);
+                        self.top_bar_state.master_gain = norm * 2.0;
+                    }
+                }
+
+                // Draw Master fader slot & thumb
+                painter.line_segment([egui::pos2(m_fader_x, m_fader_top), egui::pos2(m_fader_x, m_fader_bot)], Stroke::new(2.5_f32, Color32::from_rgb(8, 12, 18)));
+                let m_norm = (self.top_bar_state.master_gain / 2.0).clamp(0.0, 1.0);
+                let m_thumb_y = m_fader_bot - m_norm * (m_fader_bot - m_fader_top);
+                let m_thumb_r = Rect::from_center_size(egui::pos2(m_fader_x, m_thumb_y), Vec2::new(20.0, 9.0));
+                painter.rect_filled(m_thumb_r, 2.0, Color32::from_rgb(56, 189, 248));
+                painter.rect_stroke(m_thumb_r, 2.0, Stroke::new(1.0_f32, Color32::WHITE));
+
+                // Dual Stereo Master VU Meter
+                let m_meter_x = m_strip.right() - 18.0;
+                let m_meter_rect = Rect::from_min_size(egui::pos2(m_meter_x, m_fader_top), Vec2::new(12.0, m_fader_bot - m_fader_top));
+                painter.rect_filled(m_meter_rect, 1.0, Color32::from_rgb(6, 10, 16));
+                let m_fill_h = (m_meter_rect.height() * m_norm).max(2.0);
+                let m_fill_rect = Rect::from_min_max(egui::pos2(m_meter_rect.left(), m_meter_rect.bottom() - m_fill_h), m_meter_rect.right_bottom());
+                painter.rect_filled(m_fill_rect, 1.0, Color32::from_rgb(16, 185, 129));
+
+                let m_db = if self.top_bar_state.master_gain > 0.001 { (self.top_bar_state.master_gain - 1.0) * 12.0 } else { -96.0 };
+                painter.text(egui::pos2(m_strip.center().x, m_strip.bottom() - 10.0), egui::Align2::CENTER_CENTER, format!("{:.1}dB", m_db), FontId::proportional(8.0), Color32::from_rgb(56, 189, 248));
             });
     }
 
@@ -1340,6 +1451,9 @@ impl AwardWinningGuiView {
                 let (resp, painter) = ui.allocate_painter(Vec2::new(ui.available_width(), canvas_height), egui::Sense::click_and_drag());
                 let rect = resp.rect;
 
+                let pointer_pos = resp.interact_pointer_pos().or_else(|| ui.input(|i| i.pointer.latest_pos()));
+                let is_click = resp.clicked() || ui.input(|i| i.pointer.primary_clicked() || (i.pointer.primary_down() && !resp.dragged()));
+
                 // 1. Top Bar inside Stage: TAP Tempo, Panic, Quantize Mode
                 let bar_h = 28.0;
                 painter.rect_filled(Rect::from_min_size(rect.min, Vec2::new(rect.width(), bar_h)), 0.0, Color32::from_rgb(14, 20, 32));
@@ -1347,27 +1461,68 @@ impl AwardWinningGuiView {
 
                 // Panic Button
                 let panic_rect = Rect::from_min_size(egui::pos2(rect.right() - 90.0, rect.top() + 4.0), Vec2::new(80.0, 20.0));
-                painter.rect_filled(panic_rect, 3.0, Color32::from_rgb(239, 68, 68));
+                let panic_hovered = pointer_pos.map(|p| panic_rect.contains(p)).unwrap_or(false);
+                if let Some(pos) = pointer_pos {
+                    if panic_rect.contains(pos) && is_click {
+                        self.top_bar_state.is_playing = false;
+                        self.last_synced_is_playing = false;
+                        for tr in &mut self.tracks {
+                            tr.is_armed = false;
+                        }
+                        self.panic_triggered = true;
+                    }
+                }
+                let panic_bg = if self.panic_triggered || panic_hovered {
+                    Color32::from_rgb(220, 38, 38)
+                } else {
+                    Color32::from_rgb(185, 28, 28)
+                };
+                painter.rect_filled(panic_rect, 3.0, panic_bg);
+                painter.rect_stroke(panic_rect, 3.0, Stroke::new(1.0_f32, Color32::from_rgb(252, 165, 165)));
                 painter.text(panic_rect.center(), egui::Align2::CENTER_CENTER, "PANIC (ESC)", FontId::proportional(9.0), Color32::WHITE);
 
                 // 2. Matrix Grid: Tracks x 4 Scenes
                 let scene_names = ["1 Intro", "2 Verse", "3 Drop", "4 Outro"];
                 let grid_top = rect.top() + bar_h + 8.0;
                 let track_count = self.tracks.len();
-                let col_w = (rect.width() - 80.0) / track_count as f32;
+                let col_w = (rect.width() - 80.0) / track_count.max(1) as f32;
                 let row_h = (canvas_height - bar_h - 20.0) / scene_names.len() as f32;
 
                 // Scene Launch Buttons (Leftmost column)
                 for (s_idx, s_name) in scene_names.iter().enumerate() {
                     let sy = grid_top + s_idx as f32 * row_h;
                     let sc_rect = Rect::from_min_size(egui::pos2(rect.left() + 8.0, sy + 2.0), Vec2::new(64.0, row_h - 4.0));
-                    painter.rect_filled(sc_rect, 3.0, Color32::from_rgb(20, 28, 44));
-                    painter.rect_stroke(sc_rect, 3.0, Stroke::new(1.0_f32, Color32::from_rgb(56, 189, 248)));
-                    painter.text(egui::pos2(sc_rect.left() + 6.0, sc_rect.center().y), egui::Align2::LEFT_CENTER, *s_name, FontId::proportional(9.0), Color32::from_rgb(56, 189, 248));
-                    painter.text(egui::pos2(sc_rect.right() - 8.0, sc_rect.center().y), egui::Align2::RIGHT_CENTER, "▶", FontId::proportional(8.0), Color32::from_rgb(16, 185, 129));
+                    let is_active_scene = self.active_scene_idx == Some(s_idx);
+
+                    if let Some(pos) = pointer_pos {
+                        if sc_rect.contains(pos) && is_click {
+                            self.active_scene_idx = Some(s_idx);
+                            self.top_bar_state.is_playing = true;
+                            self.last_synced_is_playing = true;
+                            self.panic_triggered = false;
+                            self.playhead_beat = (s_idx as f32) * 16.0;
+                        }
+                    }
+
+                    let sc_bg = if is_active_scene {
+                        Color32::from_rgb(16, 50, 40)
+                    } else {
+                        Color32::from_rgb(20, 28, 44)
+                    };
+                    painter.rect_filled(sc_rect, 3.0, sc_bg);
+                    let sc_border = if is_active_scene {
+                        Color32::from_rgb(16, 185, 129)
+                    } else {
+                        Color32::from_rgb(56, 189, 248)
+                    };
+                    painter.rect_stroke(sc_rect, 3.0, Stroke::new(1.2_f32, sc_border));
+                    painter.text(egui::pos2(sc_rect.left() + 6.0, sc_rect.center().y), egui::Align2::LEFT_CENTER, *s_name, FontId::proportional(9.0), sc_border);
+                    let launch_icon = if is_active_scene { "■" } else { "▶" };
+                    painter.text(egui::pos2(sc_rect.right() - 8.0, sc_rect.center().y), egui::Align2::RIGHT_CENTER, launch_icon, FontId::proportional(8.0), if is_active_scene { Color32::from_rgb(16, 185, 129) } else { Color32::from_rgb(100, 116, 139) });
                 }
 
                 // Grid Pads
+                let mut pad_track_selected = None;
                 for (t_idx, track) in self.tracks.iter().enumerate() {
                     let col_x = rect.left() + 80.0 + t_idx as f32 * col_w;
                     let col = Color32::from_rgb(track.color_rgb[0], track.color_rgb[1], track.color_rgb[2]);
@@ -1375,9 +1530,20 @@ impl AwardWinningGuiView {
                     for (s_idx, _) in scene_names.iter().enumerate() {
                         let row_y = grid_top + s_idx as f32 * row_h;
                         let pad_rect = Rect::from_min_size(egui::pos2(col_x + 2.0, row_y + 2.0), Vec2::new(col_w - 4.0, row_h - 4.0));
-                        let is_playing = (t_idx + s_idx) % 2 == 0;
+                        let is_playing = self.active_scene_idx == Some(s_idx) || (self.active_scene_idx.is_none() && (t_idx + s_idx) % 2 == 0 && self.top_bar_state.is_playing);
+
+                        if let Some(pos) = pointer_pos {
+                            if pad_rect.contains(pos) && is_click {
+                                pad_track_selected = Some(t_idx);
+                                self.active_scene_idx = Some(s_idx);
+                                self.top_bar_state.is_playing = true;
+                                self.last_synced_is_playing = true;
+                                self.panic_triggered = false;
+                            }
+                        }
+
                         let pad_bg = if is_playing {
-                            Color32::from_rgba_unmultiplied(track.color_rgb[0], track.color_rgb[1], track.color_rgb[2], 60)
+                            Color32::from_rgba_unmultiplied(track.color_rgb[0], track.color_rgb[1], track.color_rgb[2], 65)
                         } else {
                             Color32::from_rgb(14, 18, 28)
                         };
@@ -1387,6 +1553,19 @@ impl AwardWinningGuiView {
                         let pad_label = if is_playing { "▶ Clip" } else { "⬚" };
                         let label_col = if is_playing { col } else { Color32::from_rgb(100, 116, 139) };
                         painter.text(pad_rect.center(), egui::Align2::CENTER_CENTER, pad_label, FontId::proportional(9.0), label_col);
+                    }
+                }
+
+                if let Some(s_idx) = pad_track_selected {
+                    self.selected_track_idx = s_idx;
+                    if let Some(tr) = self.tracks.get(s_idx) {
+                        self.inspector_state.target_name = tr.name.clone();
+                        self.inspector_state.gain_db = (tr.gain - 1.0) * 12.0;
+                        self.inspector_state.pan_val = tr.pan;
+                        self.inspector_state.is_muted = tr.is_muted;
+                        self.inspector_state.is_soloed = tr.is_soloed;
+                        self.inspector_state.is_armed = tr.is_armed;
+                        self.device_rack_state.device_name = tr.name.clone();
                     }
                 }
             });
