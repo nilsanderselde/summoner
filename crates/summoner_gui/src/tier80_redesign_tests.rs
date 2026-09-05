@@ -3992,5 +3992,188 @@ mod tests {
             assert_eq!(view.inspector_state.selected_node_kind, Some("RotaryDoppler".to_string()));
         }
     }
+
+    #[test]
+    fn test_tier97_modern_gui_dsp_module_coverage_and_presets() {
+        use crate::dsp_node_ui::{DspNodeRegistry, DspNodeCategory};
+        use crate::views::modern_asset_browser::BrowserCategory;
+
+        // 1. Verify global registry inventory completeness >= 650
+        let registry = DspNodeRegistry::new();
+        assert!(registry.list_all().len() >= 650, "Registry must contain >= 650 descriptors, found {}", registry.list_all().len());
+
+        let inv = DspNodeRegistry::inventory();
+        assert!(inv.len() >= 650, "Inventory must contain >= 650 entries, found {}", inv.len());
+
+        // 2. Verify all 21 newly registered DSP modules exist and have valid UIs
+        let new_modules = [
+            ("NamModelConfig", DspNodeCategory::DistortionSaturation),
+            ("Vst3HostConfig", DspNodeCategory::Utility),
+            ("ClapAutomationHost", DspNodeCategory::Modulation),
+            ("SpatialIrConfig", DspNodeCategory::SpatialSurround),
+            ("SpectralMorphEngine", DspNodeCategory::FilterEq),
+            ("SpectrogramSoundGenerator", DspNodeCategory::Oscillator),
+            ("MultiSampleBank", DspNodeCategory::CompositeSynth),
+            ("SamplerMacroStrip", DspNodeCategory::CompositeSynth),
+            ("AirReedConfig", DspNodeCategory::AcousticPhysicalModel),
+            ("WindchestReservoir", DspNodeCategory::AcousticPhysicalModel),
+            ("QuantumTomographyVisualizer", DspNodeCategory::Utility),
+            ("NeuroAffectiveEngine", DspNodeCategory::Modulation),
+            ("OscMappingRouter", DspNodeCategory::Utility),
+            ("MaskingCollisionAnalyzer", DspNodeCategory::Utility),
+            ("AiMixRecommendationEngine", DspNodeCategory::Utility),
+            ("AetherMacroStrip", DspNodeCategory::CompositeSynth),
+            ("DrumMacroStrip", DspNodeCategory::SamplerSlicer),
+            ("SimdVoiceAllocator", DspNodeCategory::Utility),
+            ("AudioWarpMarker", DspNodeCategory::TimeSpace),
+            ("StickSlipPhysicsModel", DspNodeCategory::AcousticPhysicalModel),
+            ("PianoHammerMechanics", DspNodeCategory::AcousticPhysicalModel),
+        ];
+
+        for (name, cat) in &new_modules {
+            let desc = registry.get(name).unwrap_or_else(|| panic!("Node {} must be registered in DspNodeRegistry", name));
+            assert_eq!(desc.category, *cat, "Node {} must match expected category", name);
+            assert!(desc.params.len() >= 5, "Node {} must have >= 5 tactile parameters, got {}", name, desc.params.len());
+
+            let ui = crate::dsp_node_ui::DspNodeRegistry::create_node_ui(name)
+                .unwrap_or_else(|| panic!("create_node_ui({}) must succeed", name));
+            assert_eq!(ui.node_type_name(), *name);
+            assert_eq!(ui.category(), *cat);
+            assert!(ui.parameters().len() >= 5);
+        }
+
+        // 3. Verify canonical normalization mappings
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("nammodelconfig"), Some("NamModelConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("namcoreprofile"), Some("NamModelConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("vst3hostconfig"), Some("Vst3HostConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("vst3hostbridge"), Some("Vst3HostConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clapautomationhost"), Some("ClapAutomationHost"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clapsampleaccurate"), Some("ClapAutomationHost"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("spatialirconfig"), Some("SpatialIrConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("spatialirconvolver"), Some("SpatialIrConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("spectralmorphengine"), Some("SpectralMorphEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("fftspectralmorph"), Some("SpectralMorphEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("spectrogramsoundgenerator"), Some("SpectrogramSoundGenerator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("imagesoundgenerator"), Some("SpectrogramSoundGenerator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("multisamplebank"), Some("MultiSampleBank"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("velocitysamplebank"), Some("MultiSampleBank"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("samplermacrostrip"), Some("SamplerMacroStrip"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("samplermacrohud"), Some("SamplerMacroStrip"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("airreedconfig"), Some("AirReedConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("fluejetconfig"), Some("AirReedConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("windchestreservoir"), Some("WindchestReservoir"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pneumaticwindchest"), Some("WindchestReservoir"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("quantumtomographyvisualizer"), Some("QuantumTomographyVisualizer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("quantumdensitymatrix"), Some("QuantumTomographyVisualizer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("neuroaffectiveengine"), Some("NeuroAffectiveEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("eegaffectivemodulator"), Some("NeuroAffectiveEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("oscmappingrouter"), Some("OscMappingRouter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("opensoundcontrolrouter"), Some("OscMappingRouter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("maskingcollisionanalyzer"), Some("MaskingCollisionAnalyzer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("spectralmaskingreport"), Some("MaskingCollisionAnalyzer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("aimixrecommendationengine"), Some("AiMixRecommendationEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("aimixadvisor"), Some("AiMixRecommendationEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("aethermacrostrip"), Some("AetherMacroStrip"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("aethermacrosurface"), Some("AetherMacroStrip"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("drummacrostrip"), Some("DrumMacroStrip"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("16paddrumconsole"), Some("DrumMacroStrip"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("simdvoiceallocator"), Some("SimdVoiceAllocator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("polyphonicvoiceallocator"), Some("SimdVoiceAllocator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("audiowarpmarker"), Some("AudioWarpMarker"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("warpmarker"), Some("AudioWarpMarker"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("stickslipphysicsmodel"), Some("StickSlipPhysicsModel"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("bowfrictionmechanics"), Some("StickSlipPhysicsModel"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pianohammermechanics"), Some("PianoHammerMechanics"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("felthammermechanics"), Some("PianoHammerMechanics"));
+
+        // 4. Verify Asset Browser categorization
+        let inst_folders = BrowserCategory::Instruments.default_folders();
+        let phys_items = inst_folders.iter().find(|(name, _)| *name == "Physical Models").unwrap().1;
+        assert!(phys_items.contains(&"AirReedConfig"));
+        assert!(phys_items.contains(&"WindchestReservoir"));
+        assert!(phys_items.contains(&"StickSlipPhysicsModel"));
+        assert!(phys_items.contains(&"PianoHammerMechanics"));
+
+        let synth_items = inst_folders.iter().find(|(name, _)| *name == "Synthesizers").unwrap().1;
+        assert!(synth_items.contains(&"SpectrogramSoundGenerator"));
+        assert!(synth_items.contains(&"AetherMacroStrip"));
+
+        let sampler_items = inst_folders.iter().find(|(name, _)| *name == "Samplers & Slicers").unwrap().1;
+        assert!(sampler_items.contains(&"MultiSampleBank"));
+        assert!(sampler_items.contains(&"SamplerMacroStrip"));
+        assert!(sampler_items.contains(&"DrumMacroStrip"));
+
+        let fx_folders = BrowserCategory::AudioFx.default_folders();
+        let dyn_items = fx_folders.iter().find(|(name, _)| *name == "Dynamics & Level").unwrap().1;
+        assert!(dyn_items.contains(&"NamModelConfig"));
+
+        let time_items = fx_folders.iter().find(|(name, _)| *name == "Time & Reverb").unwrap().1;
+        assert!(time_items.contains(&"SpatialIrConfig"));
+        assert!(time_items.contains(&"AudioWarpMarker"));
+
+        let filter_items = fx_folders.iter().find(|(name, _)| *name == "Filters & EQ").unwrap().1;
+        assert!(filter_items.contains(&"SpectralMorphEngine"));
+
+        let mod_items = fx_folders.iter().find(|(name, _)| *name == "Modulation & Pitch").unwrap().1;
+        assert!(mod_items.contains(&"ClapAutomationHost"));
+        assert!(mod_items.contains(&"NeuroAffectiveEngine"));
+
+        let midi_folders = BrowserCategory::MidiFx.default_folders();
+        let routing_items = midi_folders.iter().find(|(name, _)| *name == "Transforms & Routing").unwrap().1;
+        assert!(routing_items.contains(&"QuantumTomographyVisualizer"));
+        assert!(routing_items.contains(&"OscMappingRouter"));
+        assert!(routing_items.contains(&"MaskingCollisionAnalyzer"));
+        assert!(routing_items.contains(&"AiMixRecommendationEngine"));
+        assert!(routing_items.contains(&"SimdVoiceAllocator"));
+        assert!(routing_items.contains(&"Vst3HostConfig"));
+
+        // 5. Verify Novice Presets synchronize in AwardWinningGuiView
+        #[cfg(feature = "gui")]
+        {
+            let mut view = crate::views::award_winning_gui_view::AwardWinningGuiView::default();
+            let ctx = eframe::egui::Context::default();
+
+            // Preset: Neural High-Gain Amp Stack -> NamModelConfig
+            view.top_bar_state.selected_preset = "Neural High-Gain Amp Stack".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("NamModelConfig".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("NamModelConfig".to_string()));
+
+            // Preset: Spectrogram Visual Audio Canvas -> SpectrogramSoundGenerator
+            view.top_bar_state.selected_preset = "Spectrogram Visual Audio Canvas".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("SpectrogramSoundGenerator".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("SpectrogramSoundGenerator".to_string()));
+
+            // Preset: Cathedral Pipe Organ Windchest -> WindchestReservoir
+            view.top_bar_state.selected_preset = "Cathedral Pipe Organ Windchest".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("WindchestReservoir".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("WindchestReservoir".to_string()));
+
+            // Preset: Tactile 16-Pad Groove Machine -> DrumMacroStrip
+            view.top_bar_state.selected_preset = "Tactile 16-Pad Groove Machine".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("DrumMacroStrip".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("DrumMacroStrip".to_string()));
+        }
+    }
 }
+
 

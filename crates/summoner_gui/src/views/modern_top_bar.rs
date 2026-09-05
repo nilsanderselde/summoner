@@ -157,6 +157,10 @@ fn default_available_presets() -> Vec<String> {
         "Bowed Cello Friction Orbit".to_string(),
         "Moog 4-Pole Ladder Self-Oscillation".to_string(),
         "Leslie 122 Dual Rotor Doppler".to_string(),
+        "Neural High-Gain Amp Stack".to_string(),
+        "Spectrogram Visual Audio Canvas".to_string(),
+        "Cathedral Pipe Organ Windchest".to_string(),
+        "Tactile 16-Pad Groove Machine".to_string(),
     ]
 }
 

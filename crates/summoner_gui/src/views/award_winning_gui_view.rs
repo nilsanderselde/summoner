@@ -392,6 +392,10 @@ impl AwardWinningGuiView {
                 "Bowed Cello Friction Orbit" => "FrictionOrbit",
                 "Moog 4-Pole Ladder Self-Oscillation" => "LadderFilterBode",
                 "Leslie 122 Dual Rotor Doppler" => "RotaryDoppler",
+                "Neural High-Gain Amp Stack" => "NamModelConfig",
+                "Spectrogram Visual Audio Canvas" => "SpectrogramSoundGenerator",
+                "Cathedral Pipe Organ Windchest" => "WindchestReservoir",
+                "Tactile 16-Pad Groove Machine" => "DrumMacroStrip",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {
