@@ -5262,9 +5262,9 @@ mod tests {
 
         let registry = DspNodeRegistry::new();
 
-        // 1. Verify 799 total DSP modules registered
+        // 1. Verify >= 799 total DSP modules registered
         let total_modules = DspNodeRegistry::inventory();
-        assert_eq!(total_modules.len(), 799, "Must have exactly 799 registered DSP modules");
+        assert!(total_modules.len() >= 799, "Must have >= 799 registered DSP modules");
 
         // 2. Verify all 21 Tier 104 modules have proper schemas and >= 5 parameters
         let new_modules = [
@@ -5452,6 +5452,200 @@ mod tests {
             });
             assert_eq!(view.device_rack_state.selected_node_kind, Some("BinauralHrtfInterpolator".to_string()));
             assert_eq!(view.inspector_state.selected_node_kind, Some("BinauralHrtfInterpolator".to_string()));
+        }
+    }
+
+    #[test]
+    fn test_tier105_modern_gui_dsp_module_coverage_and_presets() {
+        use crate::dsp_node_ui::{DspNodeRegistry, DspNodeCategory};
+        use crate::views::modern_asset_browser::BrowserCategory;
+
+        let registry = DspNodeRegistry::new();
+
+        // 1. Verify 820 total DSP modules registered
+        let total_modules = DspNodeRegistry::inventory();
+        assert_eq!(total_modules.len(), 820, "Must have exactly 820 registered DSP modules");
+
+        // 2. Verify all 21 Tier 105 modules have proper schemas and >= 5 parameters
+        let new_modules = [
+            ("CrdtEngine", DspNodeCategory::Utility),
+            ("CloudProjectManager", DspNodeCategory::Utility),
+            ("AutomationRegistry", DspNodeCategory::Modulation),
+            ("LooperTrack", DspNodeCategory::SamplerSlicer),
+            ("GraphSchedule", DspNodeCategory::Utility),
+            ("LuaDspGraphBuilder", DspNodeCategory::Utility),
+            ("LuaLspServer", DspNodeCategory::Utility),
+            ("LuaHotReloader", DspNodeCategory::Utility),
+            ("LuaOscServer", DspNodeCategory::Utility),
+            ("FollowAction", DspNodeCategory::Modulation),
+            ("HarmonicContext", DspNodeCategory::Modulation),
+            ("IsomorphicVoiceState", DspNodeCategory::Modulation),
+            ("FormantTrajectoryPoint", DspNodeCategory::SpectralResynthesis),
+            ("AudioMeshPacket", DspNodeCategory::Utility),
+            ("BellowsWaypoint", DspNodeCategory::AcousticPhysicalModel),
+            ("BowingWaypoint", DspNodeCategory::AcousticPhysicalModel),
+            ("KotoWaypoint", DspNodeCategory::AcousticPhysicalModel),
+            ("GrandPianoWaypoint", DspNodeCategory::AcousticPhysicalModel),
+            ("ClavinetWaypoint", DspNodeCategory::AcousticPhysicalModel),
+            ("AtmosphericDensity", DspNodeCategory::SpatialSurround),
+            ("AcousticLevitationTrap", DspNodeCategory::SpatialSurround),
+        ];
+
+        for (name, cat) in &new_modules {
+            let desc = registry.get(name).unwrap_or_else(|| panic!("Node {} must be registered in DspNodeRegistry", name));
+            assert_eq!(desc.category, *cat, "Node {} must match expected category", name);
+            assert!(desc.params.len() >= 5, "Node {} must have >= 5 tactile parameters, got {}", name, desc.params.len());
+
+            let ui = crate::dsp_node_ui::DspNodeRegistry::create_node_ui(name)
+                .unwrap_or_else(|| panic!("create_node_ui({}) must succeed", name));
+            assert_eq!(ui.node_type_name(), *name);
+            assert_eq!(ui.category(), *cat);
+            assert!(ui.parameters().len() >= 5);
+        }
+
+        // 3. Verify canonical normalization mappings
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("crdtengine"), Some("CrdtEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("crdtsession"), Some("CrdtEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("crdtsync"), Some("CrdtEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cloudprojectmanager"), Some("CloudProjectManager"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cloudproject"), Some("CloudProjectManager"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("projecthub"), Some("CloudProjectManager"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("automationregistry"), Some("AutomationRegistry"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("paramautomation"), Some("AutomationRegistry"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("globalautomation"), Some("AutomationRegistry"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("looperchannel"), Some("LooperTrack"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("multitracklooperlayer"), Some("LooperTrack"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("overdubloopertrack"), Some("LooperTrack"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("dagschedule"), Some("GraphSchedule"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("topologicalschedule"), Some("GraphSchedule"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("topologicaldag"), Some("GraphSchedule"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luadspgraphbuilder"), Some("LuaDspGraphBuilder"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luagraphbuilder"), Some("LuaDspGraphBuilder"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("dspgraphbuilder"), Some("LuaDspGraphBuilder"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("lualspserver"), Some("LuaLspServer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("lualsp"), Some("LuaLspServer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("dsplsp"), Some("LuaLspServer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luahotreloader"), Some("LuaHotReloader"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luareloader"), Some("LuaHotReloader"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("scripthotreloader"), Some("LuaHotReloader"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luaoscserver"), Some("LuaOscServer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luaosc"), Some("LuaOscServer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("osctelemetry"), Some("LuaOscServer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("followaction"), Some("FollowAction"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clipfollowaction"), Some("FollowAction"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("matrixfollow"), Some("FollowAction"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("harmoniccontext"), Some("HarmonicContext"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("globalharmonicbus"), Some("HarmonicContext"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("tonalgravity"), Some("HarmonicContext"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("isomorphicvoicestate"), Some("IsomorphicVoiceState"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("isomorphicvoice"), Some("IsomorphicVoiceState"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("hexvoice"), Some("IsomorphicVoiceState"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("formanttrajectorypoint"), Some("FormantTrajectoryPoint"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("formanttrajectory"), Some("FormantTrajectoryPoint"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("voweltrajectorypoint"), Some("FormantTrajectoryPoint"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("audiomeshpacket"), Some("AudioMeshPacket"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("audiomesh"), Some("AudioMeshPacket"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("p2paudiomesh"), Some("AudioMeshPacket"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("bellowswaypoint"), Some("BellowsWaypoint"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("bellowspressure"), Some("BellowsWaypoint"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("accordionbellowswaypoint"), Some("BellowsWaypoint"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("bowingwaypoint"), Some("BowingWaypoint"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("bowingvelocity"), Some("BowingWaypoint"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("violinbowingwaypoint"), Some("BowingWaypoint"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("kotowaypoint"), Some("KotoWaypoint"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("kotobending"), Some("KotoWaypoint"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("oshidewaypoint"), Some("KotoWaypoint"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("grandpianowaypoint"), Some("GrandPianoWaypoint"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pianowaypoint"), Some("GrandPianoWaypoint"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("hammerstrikevelocity"), Some("GrandPianoWaypoint"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clavinetwaypoint"), Some("ClavinetWaypoint"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("tangentimpact"), Some("ClavinetWaypoint"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clavinetdynamics"), Some("ClavinetWaypoint"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("atmosphericdensity"), Some("AtmosphericDensity"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("airabsorption"), Some("AtmosphericDensity"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("atmosphericdamping"), Some("AtmosphericDensity"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("acousticlevitationtrap"), Some("AcousticLevitationTrap"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("levitationtrap"), Some("AcousticLevitationTrap"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("ultrasonictrap"), Some("AcousticLevitationTrap"));
+
+        // 4. Verify Asset Browser categorization
+        let inst_folders = BrowserCategory::Instruments.default_folders();
+        let phys_items = inst_folders.iter().find(|(name, _)| *name == "Physical Models").unwrap().1;
+        assert!(phys_items.contains(&"BellowsWaypoint"));
+        assert!(phys_items.contains(&"BowingWaypoint"));
+        assert!(phys_items.contains(&"KotoWaypoint"));
+        assert!(phys_items.contains(&"GrandPianoWaypoint"));
+        assert!(phys_items.contains(&"ClavinetWaypoint"));
+
+        let fx_folders = BrowserCategory::AudioFx.default_folders();
+        let spatial_items = fx_folders.iter().find(|(name, _)| *name == "Time & Reverb").unwrap().1;
+        assert!(spatial_items.contains(&"AtmosphericDensity"));
+        assert!(spatial_items.contains(&"AcousticLevitationTrap"));
+
+        let midi_folders = BrowserCategory::MidiFx.default_folders();
+        let gen_sync_items = midi_folders.iter().find(|(name, _)| *name == "Generative & Sync").unwrap().1;
+        assert!(gen_sync_items.contains(&"FollowAction"));
+        assert!(gen_sync_items.contains(&"AutomationRegistry"));
+        assert!(gen_sync_items.contains(&"LooperTrack"));
+
+        let routing_items = midi_folders.iter().find(|(name, _)| *name == "Transforms & Routing").unwrap().1;
+        assert!(routing_items.contains(&"CrdtEngine"));
+        assert!(routing_items.contains(&"CloudProjectManager"));
+        assert!(routing_items.contains(&"GraphSchedule"));
+        assert!(routing_items.contains(&"LuaDspGraphBuilder"));
+        assert!(routing_items.contains(&"LuaLspServer"));
+        assert!(routing_items.contains(&"LuaHotReloader"));
+        assert!(routing_items.contains(&"LuaOscServer"));
+        assert!(routing_items.contains(&"HarmonicContext"));
+        assert!(routing_items.contains(&"IsomorphicVoiceState"));
+        assert!(routing_items.contains(&"FormantTrajectoryPoint"));
+        assert!(routing_items.contains(&"AudioMeshPacket"));
+
+        // 5. Verify Novice Presets synchronize in AwardWinningGuiView
+        #[cfg(feature = "gui")]
+        {
+            let mut view = crate::views::award_winning_gui_view::AwardWinningGuiView::default();
+            let ctx = eframe::egui::Context::default();
+
+            // Preset: Real-Time CRDT Multi-User Session -> CrdtEngine
+            view.top_bar_state.selected_preset = "Real-Time CRDT Multi-User Session".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("CrdtEngine".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("CrdtEngine".to_string()));
+
+            // Preset: Ultrasonic Phased-Array Levitation Soundfield -> AcousticLevitationTrap
+            view.top_bar_state.selected_preset = "Ultrasonic Phased-Array Levitation Soundfield".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("AcousticLevitationTrap".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("AcousticLevitationTrap".to_string()));
+
+            // Preset: Non-Linear Follow Action Matrix Sequencer -> FollowAction
+            view.top_bar_state.selected_preset = "Non-Linear Follow Action Matrix Sequencer".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("FollowAction".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("FollowAction".to_string()));
+
+            // Preset: Concert Grand Piano Escapement Trajectory -> GrandPianoWaypoint
+            view.top_bar_state.selected_preset = "Concert Grand Piano Escapement Trajectory".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("GrandPianoWaypoint".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("GrandPianoWaypoint".to_string()));
         }
     }
 }

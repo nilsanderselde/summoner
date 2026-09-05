@@ -424,6 +424,10 @@ impl AwardWinningGuiView {
                 "Psychoacoustic Lipshitz Mastering Dither" => "DitherNoiseShaper",
                 "Multi-Band Attack & Sustain Transient Sculptor" => "TransientShaperMatrix",
                 "Spherical Harmonic 3D Binaural HRTF Soundfield" => "BinauralHrtfInterpolator",
+                "Real-Time CRDT Multi-User Session" => "CrdtEngine",
+                "Ultrasonic Phased-Array Levitation Soundfield" => "AcousticLevitationTrap",
+                "Non-Linear Follow Action Matrix Sequencer" => "FollowAction",
+                "Concert Grand Piano Escapement Trajectory" => "GrandPianoWaypoint",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {

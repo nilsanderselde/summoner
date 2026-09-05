@@ -189,6 +189,10 @@ fn default_available_presets() -> Vec<String> {
         "Psychoacoustic Lipshitz Mastering Dither".to_string(),
         "Multi-Band Attack & Sustain Transient Sculptor".to_string(),
         "Spherical Harmonic 3D Binaural HRTF Soundfield".to_string(),
+        "Real-Time CRDT Multi-User Session".to_string(),
+        "Ultrasonic Phased-Array Levitation Soundfield".to_string(),
+        "Non-Linear Follow Action Matrix Sequencer".to_string(),
+        "Concert Grand Piano Escapement Trajectory".to_string(),
     ]
 }
 
