@@ -3713,6 +3713,156 @@ impl DspNodeRegistry {
             .with_param(DspParamSchema::knob("formant_resonance_q", "Formant Filter Resonance Q", 1.0, 30.0, 8.0, "Q", MacroRole::Tone, "Formant filter resonance peak focus parameter"))
             .with_param(DspParamSchema::knob("consonant_brightness", "Fricative Consonant Air", 0.0, 1.0, 0.35, "%", MacroRole::Space, "High-frequency fricative consonant airy shimmer parameter"))
         );
+        descriptors.insert("PreampToneControl".to_string(), DspNodeDescriptor::new("PreampToneControl", "Baxandall Active Shelving EQ & Preamp Saturation", DspNodeCategory::DistortionSaturation, "Vintage Baxandall active shelving bass/treble tone stack and nonlinear triode preamp saturation for electromechanical pianos")
+            .with_param(DspParamSchema::knob("drive_db", "Preamp Drive", 0.0, 24.0, 4.0, "dB", MacroRole::Punch, "Preamp nonlinear saturation drive level parameter"))
+            .with_param(DspParamSchema::knob("bass_db", "Bass Shelving EQ", -12.0, 12.0, 1.5, "dB", MacroRole::Tone, "150 Hz Baxandall bass boost and cut parameter"))
+            .with_param(DspParamSchema::knob("treble_db", "Treble Shelving EQ", -12.0, 12.0, 2.0, "dB", MacroRole::Tone, "3500 Hz Baxandall treble boost and cut parameter"))
+            .with_param(DspParamSchema::knob("tube_warmth", "Even Harmonic Warmth", 0.0, 1.0, 0.40, "%", MacroRole::Character, "Asymmetric triode transfer characteristic warmth parameter"))
+        );
+        descriptors.insert("ClavinetToneSwitches".to_string(), DspNodeDescriptor::new("ClavinetToneSwitches", "Hohner Clavinet D6 4-Way Tone Switches", DspNodeCategory::AcousticPhysicalModel, "4-switch discrete analog filter matrix modeling Brilliant, Treble, Medium, and Soft rocker switches on vintage Clavinet D6")
+            .with_param(DspParamSchema::toggle("brilliant", "Brilliant High-Pass", false, "High-pass filtering for percussive funk snap parameter"))
+            .with_param(DspParamSchema::toggle("treble", "Treble Band-Pass", true, "Band-pass resonant peak emphasizing upper mid harmonics parameter"))
+            .with_param(DspParamSchema::toggle("medium", "Medium Notch Filter", false, "Hollow mid-scoop filter response parameter"))
+            .with_param(DspParamSchema::toggle("soft", "Soft Low-Pass Filter", false, "Warm acoustic low-pass attenuation parameter"))
+        );
+        descriptors.insert("OrganVoice".to_string(), DspNodeDescriptor::new("OrganVoice", "Physical Pipe Organ Flue Voice & Speech Chiff", DspNodeCategory::AcousticPhysicalModel, "Single pipe organ acoustic flue pipe voice with jet vortex turbulence, languid air slit dynamics, and speech chiff transient")
+            .with_param(DspParamSchema::log_knob("pipe_freq_hz", "Pipe Speaking Fundamental", 16.0, 4000.0, 261.63, "Hz", MacroRole::Tone, "Resonant fundamental pitch of organ pipe column parameter"))
+            .with_param(DspParamSchema::knob("chiff_intensity", "Pipe Attack Chiff Level", 0.0, 1.0, 0.45, "%", MacroRole::Punch, "Transient turbulence noise burst when pallet valve opens parameter"))
+            .with_param(DspParamSchema::knob("wind_pressure_kpa", "Wind Chest Pipe Pressure", 0.2, 3.0, 0.85, "kPa", MacroRole::Character, "Air column speaking pressure parameter"))
+            .with_param(DspParamSchema::knob("mouth_cutup_m", "Languid Mouth Cut-Up Height", 0.002, 0.05, 0.012, "m", MacroRole::Space, "Physical labium mouth geometry parameter"))
+        );
+        descriptors.insert("BesselMembraneMode".to_string(), DspNodeDescriptor::new("BesselMembraneMode", "2D Circular Drumhead Bessel Vibration Mode", DspNodeCategory::AcousticPhysicalModel, "Exact 2D Bessel function drumhead circular and radial vibration mode section for acoustic drums and percussion")
+            .with_param(DspParamSchema::log_knob("freq_hz", "Modal Frequency", 20.0, 2000.0, 100.0, "Hz", MacroRole::Tone, "Resonant frequency of (m,n) Bessel mode parameter"))
+            .with_param(DspParamSchema::knob("t60_sec", "Decay Time T60", 0.05, 10.0, 2.0, "s", MacroRole::Space, "Reverberant modal decay time of the membrane skin parameter"))
+            .with_param(DspParamSchema::knob("amplitude", "Excitation Amplitude", 0.0, 1.0, 1.0, "%", MacroRole::Punch, "Strike position spatial excitation weighting parameter"))
+            .with_param(DspParamSchema::choice("radial_order", "Radial Nodal Circle (n)", &["n=1 (Fundamental)", "n=2 (First Overtone)", "n=3 (Second Overtone)", "n=4 (High Mode)"], 0, "Number of concentric nodal circles on circular drumhead parameter"))
+        );
+        descriptors.insert("KotoStringVoice".to_string(), DspNodeDescriptor::new("KotoStringVoice", "Japanese Koto Silk String Waveguide Voice", DspNodeCategory::AcousticPhysicalModel, "Dual-segment digital waveguide voice for traditional Japanese Koto silk string with movable Ji bridge and left-hand Oshide pitch bend")
+            .with_param(DspParamSchema::log_knob("nominal_freq_hz", "Open String Fundamental", 50.0, 1500.0, 261.63, "Hz", MacroRole::Tone, "Tuned fundamental pitch of koto string parameter"))
+            .with_param(DspParamSchema::knob("oshi_ite_force_n", "Oshi-ite Left-Hand Force", 0.0, 50.0, 0.0, "N", MacroRole::Punch, "Left hand downward pressing force behind bridge to raise pitch parameter"))
+            .with_param(DspParamSchema::knob("hiki_iro_release", "Hiki-iro Pulling Release", 0.0, 1.0, 0.0, "%", MacroRole::Character, "Pulling release grace ornamentation parameter"))
+            .with_param(DspParamSchema::knob("loop_damping", "Silk String Damping", 0.001, 0.10, 0.015, "", MacroRole::Space, "Viscous acoustic damping of twisted silk fibers parameter"))
+        );
+        descriptors.insert("HurdyGurdyStringVoice".to_string(), DspNodeDescriptor::new("HurdyGurdyStringVoice", "Hurdy-Gurdy Bowed Friction Waveguide Voice", DspNodeCategory::AcousticPhysicalModel, "Continuous rosined wheel excitation physical waveguide string voice for vielle à roue chanterelle melody strings and drones")
+            .with_param(DspParamSchema::log_knob("nominal_freq_hz", "Open String Fundamental", 50.0, 2000.0, 293.66, "Hz", MacroRole::Tone, "Nominal open string tuning frequency (D4 chanterelle) parameter"))
+            .with_param(DspParamSchema::knob("tangent_semitone", "Tangent Key Offset", -12.0, 24.0, 0.0, "st", MacroRole::Punch, "Key box wooden tangent stopping position parameter"))
+            .with_param(DspParamSchema::knob("loop_damping", "Gut String Loop Damping", 0.90, 0.999, 0.985, "", MacroRole::Space, "Internal string loop loss and high frequency absorption parameter"))
+            .with_param(DspParamSchema::knob("wheel_contact_n", "Wheel Down-Bearing Contact", 0.1, 10.0, 2.5, "N", MacroRole::Character, "Normal force of string pressing against rosin wheel rim parameter"))
+        );
+        descriptors.insert("GlassArmonicaBowl".to_string(), DspNodeDescriptor::new("GlassArmonicaBowl", "Franklin Glass Armonica Quartz Bowl", DspNodeCategory::AcousticPhysicalModel, "Single hemispherical quartz glass bowl spinning on horizontal spindle with water lubrication and wet finger friction excitation")
+            .with_param(DspParamSchema::log_knob("nominal_freq_hz", "Bowl Resonant Pitch", 100.0, 3000.0, 523.25, "Hz", MacroRole::Tone, "Fundamental acoustic flexural mode frequency of glass bowl parameter"))
+            .with_param(DspParamSchema::knob("touch_force_n", "Wet Finger Touch Force", 0.02, 2.5, 0.40, "N", MacroRole::Punch, "Normal pressing force of performer's wet fingertip on glass rim parameter"))
+            .with_param(DspParamSchema::knob("bowl_radius_m", "Bowl Hemispherical Radius", 0.04, 0.20, 0.10, "m", MacroRole::Character, "Physical diameter of blown quartz bowl parameter"))
+            .with_param(DspParamSchema::knob("water_damping", "Water Bath Viscous Damping", 0.0, 1.0, 0.25, "%", MacroRole::Space, "Damping attenuation from bottom water trough immersion parameter"))
+        );
+        descriptors.insert("EurorackCvGateInterface".to_string(), DspNodeDescriptor::new("EurorackCvGateInterface", "Eurorack 4-Channel 1V/Oct CV & Gate Hardware Interface", DspNodeCategory::Utility, "4-channel Eurorack modular synthesizer control voltage (1V/Oct pitch) and 5V gate/trigger hardware SPI bus interface")
+            .with_param(DspParamSchema::knob("cv_scale_v_oct", "Pitch Standard", 0.5, 2.0, 1.0, "V/Oct", MacroRole::Tone, "Control voltage pitch standard calibration parameter"))
+            .with_param(DspParamSchema::knob("gate_voltage", "Gate Pulse Level", 3.3, 12.0, 5.0, "V", MacroRole::Punch, "Active high gate trigger output voltage parameter"))
+            .with_param(DspParamSchema::knob("cv_port_offset", "DAC Trimming Offset", -0.5, 0.5, 0.0, "V", MacroRole::Character, "Hardware zero-offset voltage calibration trim parameter"))
+            .with_param(DspParamSchema::choice("sample_hold_mode", "CV Sample & Hold", &["Direct Track", "Quantized S&H", "Glide Slew"], 0, "Pitch CV output latching mode parameter"))
+        );
+        descriptors.insert("PushControllerDriver".to_string(), DspNodeDescriptor::new("PushControllerDriver", "Ableton Push 2/3 Hardware Surface Driver", DspNodeCategory::Utility, "Bi-directional hardware protocol driver for Ableton Push 2 and Push 3 64-pad RGB matrix, 11 rotary encoders, and LCD/OLED display")
+            .with_param(DspParamSchema::knob("pad_sensitivity", "Pad Velocity Sensitivity", 0.1, 2.0, 1.0, "x", MacroRole::Punch, "64-pad pressure and polyphonic aftertouch curve multiplier parameter"))
+            .with_param(DspParamSchema::knob("encoder_accel", "Encoder Acceleration", 1.0, 5.0, 2.0, "x", MacroRole::Tone, "Rotary endless encoder dynamic velocity scaling parameter"))
+            .with_param(DspParamSchema::knob("mpe_pitch_bend_st", "MPE Pad Pitch Bend Range", 1.0, 48.0, 12.0, "st", MacroRole::Character, "Per-pad horizontal slide expressive pitch deflection parameter"))
+            .with_param(DspParamSchema::choice("display_fps", "Display Frame Rate", &["30 FPS", "60 FPS"], 1, "Push color display framebuffer update rate parameter"))
+        );
+        descriptors.insert("LaunchpadProDriver".to_string(), DspNodeDescriptor::new("LaunchpadProDriver", "Novation Launchpad Pro RGB Grid Controller", DspNodeCategory::Utility, "Novation Launchpad Pro polyphonic aftertouch 64-pad grid, clip launching, and step sequencer surface driver")
+            .with_param(DspParamSchema::knob("pad_threshold", "Pad Trigger Threshold", 1.0, 30.0, 8.0, "vel", MacroRole::Punch, "Minimum strike force threshold to trigger note/clip parameter"))
+            .with_param(DspParamSchema::choice("aftertouch_mode", "Pressure Mode", &["Channel Aftertouch", "Polyphonic Aftertouch"], 1, "Pressure response routing architecture parameter"))
+            .with_param(DspParamSchema::knob("led_brightness", "RGB LED Brightness", 0.1, 1.0, 0.85, "%", MacroRole::Tone, "Grid pad illumination brightness factor parameter"))
+            .with_param(DspParamSchema::choice("velocity_curve", "Velocity Curve", &["Linear", "Soft", "Hard", "Fixed 127"], 0, "Pad response velocity transfer function parameter"))
+        );
+        descriptors.insert("NksIntegrationDriver".to_string(), DspNodeDescriptor::new("NksIntegrationDriver", "Native Instruments NKS Light Guide & Control Driver", DspNodeCategory::Utility, "Native Instruments Komplete Kontrol NKS standard light guide 88-LED integration, parameter paging, and hardware automapping")
+            .with_param(DspParamSchema::knob("light_guide_brightness", "Light Guide Brightness", 0.1, 1.0, 0.80, "%", MacroRole::Tone, "Per-key multi-color LED light guide illumination intensity parameter"))
+            .with_param(DspParamSchema::knob("active_page", "Parameter Page Index", 0.0, 15.0, 0.0, "pg", MacroRole::Punch, "Active 8-knob hardware control page parameter"))
+            .with_param(DspParamSchema::choice("scale_highlight_mode", "Light Guide Scale Mode", &["Key Root & Notes", "Root Only", "Chords & Voicing", "Off"], 0, "LED key guidance visual mode parameter"))
+            .with_param(DspParamSchema::knob("automapper_sensitivity", "Auto-Mapper Parameter Depth", 0.0, 1.0, 0.70, "%", MacroRole::Character, "Automatic DSP parameter extraction heuristic threshold parameter"))
+        );
+        descriptors.insert("McuControllerDriver".to_string(), DspNodeDescriptor::new("McuControllerDriver", "Mackie Control Universal (MCU) Motorized Fader Driver", DspNodeCategory::Utility, "Mackie Control Universal protocol driver managing 9 motorized 100mm touch-sensitive faders, V-Pots with LED rings, and LCD display")
+            .with_param(DspParamSchema::knob("fader_motor_speed", "Motorized Fader Slew Rate", 10.0, 200.0, 60.0, "ms", MacroRole::Punch, "Motorized fader mechanical tracking responsiveness parameter"))
+            .with_param(DspParamSchema::knob("vpot_sensitivity", "V-Pot Resolution", 0.5, 3.0, 1.0, "x", MacroRole::Tone, "Endless rotary V-Pot increment scaling factor parameter"))
+            .with_param(DspParamSchema::knob("touch_sense_threshold", "Touch Capacitance Threshold", 0.1, 1.0, 0.40, "%", MacroRole::Character, "Conductive fader knob touch automation punch-in threshold parameter"))
+            .with_param(DspParamSchema::knob("fader_bank_offset", "Track Bank Channel Offset", 0.0, 56.0, 0.0, "ch", MacroRole::Space, "Channel bank navigation offset in 8-fader groups parameter"))
+        );
+        descriptors.insert("MidiClockCalibrator".to_string(), DspNodeDescriptor::new("MidiClockCalibrator", "Hardware MIDI Clock Jitter Calibrator & PLL Lock", DspNodeCategory::Utility, "Sub-millisecond jitter compensation and Phase-Locked Loop (PLL) drift tracking for DIN and USB hardware MIDI synthesizers")
+            .with_param(DspParamSchema::knob("latency_offset_ms", "Manual Latency Offset", -50.0, 50.0, 0.0, "ms", MacroRole::Tone, "Hardware delay compensation offset buffer parameter"))
+            .with_param(DspParamSchema::knob("pll_bandwidth_hz", "PLL Filter Bandwidth", 0.1, 10.0, 1.2, "Hz", MacroRole::Character, "Phase-Locked Loop smoothing bandwidth against timing jitter parameter"))
+            .with_param(DspParamSchema::knob("jitter_threshold_ms", "Jitter Warning Threshold", 0.5, 10.0, 2.0, "ms", MacroRole::Punch, "Threshold above which timing jitter triggers clock realignment parameter"))
+            .with_param(DspParamSchema::choice("clock_source", "Sync Master Reference", &["Internal Master", "DIN UART External", "USB MIDI In", "Network OSC"], 0, "Hardware clock timing master parameter"))
+        );
+        descriptors.insert("CvGateGenerator".to_string(), DspNodeDescriptor::new("CvGateGenerator", "Audio-Rate CV & Gate Pulse Generator", DspNodeCategory::Utility, "DC-coupled audio interface Control Voltage generator producing 1V/Oct pitch, envelope modulation, and 5V clock/gate pulses")
+            .with_param(DspParamSchema::knob("volts_per_octave", "Volts Per Octave", 0.5, 2.0, 1.0, "V", MacroRole::Tone, "Pitch scaling voltage slope parameter"))
+            .with_param(DspParamSchema::knob("gate_high_voltage", "Gate High Pulse Level", 3.0, 10.0, 5.0, "V", MacroRole::Punch, "Gate signal ON state amplitude parameter"))
+            .with_param(DspParamSchema::knob("glide_time_ms", "Portamento Glide Slew", 0.0, 500.0, 15.0, "ms", MacroRole::Character, "Audio-rate CV slew rate limiter parameter"))
+            .with_param(DspParamSchema::knob("dc_offset_trim", "DAC DC Trim Voltage", -1.0, 1.0, 0.0, "V", MacroRole::Space, "Hardware audio interface DC bias nulling trim parameter"))
+        );
+        descriptors.insert("DinSyncGenerator".to_string(), DspNodeDescriptor::new("DinSyncGenerator", "DIN Sync 24 PPQN Clock Pulse Generator", DspNodeCategory::Utility, "Sync24 hardware clock pulse and run/stop generator for vintage Roland 808/909 drum machines and TB-303 synthesizers")
+            .with_param(DspParamSchema::knob("bpm", "Sync Tempo BPM", 40.0, 300.0, 120.0, "BPM", MacroRole::Punch, "Target synchronization tempo for 24 PPQN pulse train parameter"))
+            .with_param(DspParamSchema::knob("pulse_width_percent", "Pulse Duty Cycle", 10.0, 90.0, 50.0, "%", MacroRole::Tone, "Clock pulse square wave high time percentage parameter"))
+            .with_param(DspParamSchema::knob("swing_shuffle", "Sync24 Shuffle Swing", 50.0, 75.0, 50.0, "%", MacroRole::Character, "Alternate pulse displacement swing feel parameter"))
+            .with_param(DspParamSchema::choice("run_mode", "Transport Control Mode", &["DAW Linked", "Manual Run", "Gated Burst"], 0, "DIN Sync run line activation state parameter"))
+        );
+        descriptors.insert("BleMidiController".to_string(), DspNodeDescriptor::new("BleMidiController", "Bluetooth Low Energy Wireless BLE-MIDI Driver", DspNodeCategory::Utility, "Wireless Apple/MIDI association BLE-MIDI low-latency packet unpacker and connection monitor")
+            .with_param(DspParamSchema::knob("connection_interval_ms", "BLE Connection Interval", 7.5, 30.0, 11.25, "ms", MacroRole::Punch, "Bluetooth LE connection polling interval time parameter"))
+            .with_param(DspParamSchema::knob("mtu_payload_size", "MTU Packet Payload", 23.0, 256.0, 128.0, "bytes", MacroRole::Character, "Maximum transmission unit for packed MIDI messages parameter"))
+            .with_param(DspParamSchema::knob("packet_timeout_ms", "Drop Timeout Window", 50.0, 500.0, 150.0, "ms", MacroRole::Tone, "Disconnect latency warning threshold parameter"))
+            .with_param(DspParamSchema::toggle("timestamp_compensation", "High-Resolution Timestamps", true, "Use BLE-MIDI millisecond packet timestamps for jitter-free playback parameter"))
+        );
+        descriptors.insert("FreeReedOscillator".to_string(), DspNodeDescriptor::new("FreeReedOscillator", "Aeroelastic Free-Reed Tongue Oscillation & Pitch Sag", DspNodeCategory::AcousticPhysicalModel, "Physically modeled vibrating brass/steel free-reed tongue for accordion, bandoneon, and harmonica with pressure pitch sag")
+            .with_param(DspParamSchema::knob("reed_stiffness", "Reed Tongue Stiffness", 0.5, 3.0, 1.2, "k", MacroRole::Tone, "Brass/steel reed elastic restoring force multiplier parameter"))
+            .with_param(DspParamSchema::knob("pressure_diff_pa", "Bellows Pressure Difference", 10.0, 2500.0, 450.0, "Pa", MacroRole::Punch, "Differential pressure across reed chamber aperture parameter"))
+            .with_param(DspParamSchema::knob("pitch_sag_cents", "Aeroelastic Pitch Sag", 0.0, 35.0, 8.0, "cents", MacroRole::Character, "Pitch drop effect under extreme fortissimo bellows draw parameter"))
+            .with_param(DspParamSchema::choice("stroke_mode", "Bellows Stroke Direction", &["Push (Compressing)", "Pull (Expanding)"], 0, "Bellows airflow vector across reed plate parameter"))
+        );
+        descriptors.insert("PipeOrganStops".to_string(), DspNodeDescriptor::new("PipeOrganStops", "Classical 8-Stop Pipe Organ Registration Console", DspNodeCategory::AcousticPhysicalModel, "Interactive French Romantic & Baroque pipe organ stop console controlling 8 foundation, overtone, and reed ranks")
+            .with_param(DspParamSchema::toggle("principal_8", "Principal 8' Diapason", true, "Foundation open metal diapason rank parameter"))
+            .with_param(DspParamSchema::toggle("bourdon_16", "Bourdon 16' Sub-Bass", true, "Deep stopped wood flute foundation rank parameter"))
+            .with_param(DspParamSchema::toggle("octave_4", "Octave 4' Prestant", true, "Bright principal overtone rank parameter"))
+            .with_param(DspParamSchema::toggle("mixture_iv", "Fourniture Mixture IV", true, "4-rank harmonic glitter crown stop parameter"))
+        );
+        descriptors.insert("CassottoChamber".to_string(), DspNodeDescriptor::new("CassottoChamber", "Accordion Cassotto Wooden Tone Chamber & Shutter", DspNodeCategory::AcousticPhysicalModel, "Acoustic Cassotto tone chamber resonance and shutter aperture mechanics softening reed harshness and enhancing bass fundamental")
+            .with_param(DspParamSchema::knob("aperture", "Chamber Shutter Aperture", 0.0, 1.0, 0.85, "%", MacroRole::Tone, "Cassotto shutter opening: 0=dark enclosed, 1=open brilliant parameter"))
+            .with_param(DspParamSchema::knob("wood_warmth", "Wooden Body Warmth", 0.0, 2.0, 0.85, "x", MacroRole::Character, "Soundbox resonance gain and lower-mid vowel reinforcement parameter"))
+            .with_param(DspParamSchema::knob("transmission_loss_db", "Cassotto HF Attenuation", 0.0, 24.0, 7.5, "dB", MacroRole::Punch, "High-frequency attenuation through wooden chamber baffle parameter"))
+            .with_param(DspParamSchema::choice("profile", "Cassotto Acoustic Geometry", &["Doble Cassotto Bandoneon", "Classical Concert Accordion", "Vintage Bayan", "Bavarian Musette"], 0, "Chamber acoustic profile parameter"))
+        );
+        descriptors.insert("BodyResonatorMode".to_string(), DspNodeDescriptor::new("BodyResonatorMode", "2nd-Order Resonant Bandpass Acoustic Body Formant", DspNodeCategory::AcousticPhysicalModel, "Individual resonant acoustic cavity bandpass biquad mode for violin, cello, and acoustic guitar instrument bodies")
+            .with_param(DspParamSchema::log_knob("freq_hz", "Formant Peak Frequency", 20.0, 5000.0, 440.0, "Hz", MacroRole::Tone, "Center resonance frequency of wooden body mode parameter"))
+            .with_param(DspParamSchema::knob("q", "Resonance Quality Factor Q", 0.5, 50.0, 10.0, "Q", MacroRole::Character, "Sharpness and decay ring time of modal peak parameter"))
+            .with_param(DspParamSchema::knob("gain", "Modal Radiance Gain", 0.0, 4.0, 1.0, "x", MacroRole::Punch, "Radiation acoustic amplitude of this body vibration parameter"))
+            .with_param(DspParamSchema::choice("body_type", "Acoustic Body Type", &["Violin Stradivarius", "Cello Montagnana", "Acoustic Dreadnought", "Archtop Jazz Guitar"], 0, "Preset body geometry target parameter"))
+        );
+        descriptors.insert("SitarStringWaveguide".to_string(), DspNodeDescriptor::new("SitarStringWaveguide", "Digital Waveguide Baj Tar Playing String with Dispersion", DspNodeCategory::AcousticPhysicalModel, "Digital waveguide model for Indian sitar main melody string (Baj Tar) with dispersion allpass filter and loop loss")
+            .with_param(DspParamSchema::knob("loop_gain", "String Loop Reflection Gain", 0.90, 0.9999, 0.996, "", MacroRole::Space, "Waveguide round-trip loop feedback gain parameter"))
+            .with_param(DspParamSchema::knob("loss_cutoff_coeff", "HF Loss Filter Cutoff", 0.05, 0.95, 0.40, "", MacroRole::Tone, "Internal steel string high-frequency viscous damping parameter"))
+            .with_param(DspParamSchema::knob("dispersion_allpass", "Stiffness Dispersion Warp", -0.99, 0.99, -0.42, "", MacroRole::Character, "Phase allpass inharmonic dispersion warp parameter"))
+            .with_param(DspParamSchema::knob("mizrab_pluck_sharpness", "Mizrab Wire Plectrum Sharpness", 0.0, 1.0, 0.70, "%", MacroRole::Punch, "Metallic wire mizrab plectrum attack sharpness parameter"))
+        );
+        descriptors.insert("GrandPianoVoice".to_string(), DspNodeDescriptor::new("GrandPianoVoice", "Polyphonic Coupled 3-Unison Grand Piano String Voice", DspNodeCategory::AcousticPhysicalModel, "Polyphonic voice modeling grand piano notes with 1, 2, or 3 coupled unison strings, prompt and aftersound decay, and inharmonicity")
+            .with_param(DspParamSchema::knob("prompt_t60", "Prompt Initial Decay T60", 0.5, 8.0, 2.2, "s", MacroRole::Punch, "Initial fast string energy transfer to soundboard parameter"))
+            .with_param(DspParamSchema::knob("aftersound_t60", "Aftersound Sustained T60", 2.0, 30.0, 14.0, "s", MacroRole::Space, "Out-of-phase coupled string singing aftersound decay parameter"))
+            .with_param(DspParamSchema::knob("inharmonicity_b", "Inharmonicity B-Factor", 0.00001, 0.005, 0.00018, "", MacroRole::Tone, "Piano wire stiffness overtone stretching factor parameter"))
+            .with_param(DspParamSchema::knob("unison_detune_cents", "Trichord Unison Detuning", 0.0, 3.0, 0.75, "cents", MacroRole::Character, "Inter-string pitch beating spread among the 3 unisons parameter"))
+        );
+        descriptors.insert("OledDisplayDriver".to_string(), DspNodeDescriptor::new("OledDisplayDriver", "128x64 Monochrome OLED Telemetry Display Driver", DspNodeCategory::Utility, "I2C/SPI monochrome SSD1306 OLED hardware display driver rendering real-time waveform oscilloscope, VU meters, and patch telemetry")
+            .with_param(DspParamSchema::knob("contrast", "OLED Panel Contrast", 0.0, 1.0, 0.80, "%", MacroRole::Tone, "SSD1306 internal charge pump display contrast parameter"))
+            .with_param(DspParamSchema::choice("screen_mode", "Active Telemetry Screen", &["Oscilloscope CRT", "Stereo VU Meters", "Patch Info & Presets", "CPU & Temperature"], 0, "Display visual page parameter"))
+            .with_param(DspParamSchema::knob("refresh_rate_hz", "Display Refresh Rate", 10.0, 60.0, 30.0, "Hz", MacroRole::Punch, "I2C/SPI bus screen frame update frequency parameter"))
+            .with_param(DspParamSchema::toggle("inverse_video", "Invert Black/White Pixels", false, "Invert OLED pixels for high-contrast viewing parameter"))
+        );
+        descriptors.insert("GpioDriver".to_string(), DspNodeDescriptor::new("GpioDriver", "Raspberry Pi GPIO Button & Rotary Encoder Driver", DspNodeCategory::Utility, "Direct Linux sysfs/libgpiod driver for Raspberry Pi 5 audio hat pushbuttons, rotary encoders, and hardware interrupt pins")
+            .with_param(DspParamSchema::knob("debounce_ms", "Switch Debounce Window", 1.0, 50.0, 15.0, "ms", MacroRole::Punch, "Hardware switch mechanical contact bounce suppression parameter"))
+            .with_param(DspParamSchema::knob("hold_threshold_ms", "Long-Press Hold Time", 200.0, 2000.0, 600.0, "ms", MacroRole::Tone, "Duration to distinguish button click from secondary hold action parameter"))
+            .with_param(DspParamSchema::choice("encoder_quadrature_div", "Encoder Quadrature Division", &["Full Step (4 edges)", "Half Step (2 edges)", "Single Edge"], 0, "Rotary encoder pulse resolution divider parameter"))
+            .with_param(DspParamSchema::choice("pull_resistor_mode", "Internal Pin Pull Resistor", &["Pull-Up (Active Low)", "Pull-Down (Active High)", "Floating (External)"], 0, "Hardware GPIO internal bias state parameter"))
+        );
+        descriptors.insert("BatteryMonitor".to_string(), DspNodeDescriptor::new("BatteryMonitor", "Embedded Battery Level & Power Telemetry Monitor", DspNodeCategory::Utility, "I2C battery fuel gauge telemetry listener managing battery voltage, charging status, and thermal shutdown guards")
+            .with_param(DspParamSchema::knob("battery_critical_volts", "Critical Voltage Cutoff", 2.8, 3.6, 3.3, "V", MacroRole::Punch, "Battery voltage below which headless DAW triggers emergency project save parameter"))
+            .with_param(DspParamSchema::knob("polling_interval_s", "Telemetry Polling Rate", 1.0, 60.0, 5.0, "s", MacroRole::Tone, "Battery fuel gauge state interrogation period parameter"))
+            .with_param(DspParamSchema::knob("temperature_alert_c", "Cell Thermal Alert Ceiling", 45.0, 80.0, 65.0, "°C", MacroRole::Character, "Maximum safe battery temperature threshold parameter"))
+            .with_param(DspParamSchema::toggle("low_battery_auto_save", "Auto-Save on Low Battery", true, "Automatically take project state snapshot when battery drops below 10% parameter"))
+        );
 
         Self { descriptors }
     }
@@ -4164,6 +4314,31 @@ impl DspNodeRegistry {
             ("GrandPianoStringDuplexCoupler", DspNodeCategory::AcousticPhysicalModel, "Steinway Aliquot Tuned Duplex Scaling Coupler"),
             ("BellowsDynamicsCoupler", DspNodeCategory::AcousticPhysicalModel, "Pneumatic Bellows Air Chamber Aeroacoustic Coupler"),
             ("FormantVowelMatrix", DspNodeCategory::FilterEq, "5-Formant Acoustic Vowel Morphing Filter Matrix"),
+            ("PreampToneControl", DspNodeCategory::DistortionSaturation, "Baxandall Active Shelving EQ & Preamp Saturation"),
+            ("ClavinetAnvilModel", DspNodeCategory::AcousticPhysicalModel, "Rubber Hammer Impact Compliance & Hertzian Contact"),
+            ("YarnDamper", DspNodeCategory::AcousticPhysicalModel, "Clavinet Wool Yarn Damper & Key Release Transient"),
+            ("BesselMembraneMode", DspNodeCategory::AcousticPhysicalModel, "2D Circular Drumhead Bessel Vibration Mode"),
+            ("KotoStringVoice", DspNodeCategory::AcousticPhysicalModel, "Japanese Koto Silk String Waveguide Voice"),
+            ("HurdyGurdyStringVoice", DspNodeCategory::AcousticPhysicalModel, "Hurdy-Gurdy Bowed Friction Waveguide Voice"),
+            ("GlassArmonicaBowl", DspNodeCategory::AcousticPhysicalModel, "Franklin Glass Armonica Quartz Bowl"),
+            ("EurorackCvGateInterface", DspNodeCategory::Utility, "Eurorack 4-Channel 1V/Oct CV & Gate Hardware Interface"),
+            ("PushControllerDriver", DspNodeCategory::Utility, "Ableton Push 2/3 Hardware Surface Driver"),
+            ("LaunchpadProDriver", DspNodeCategory::Utility, "Novation Launchpad Pro RGB Grid Controller"),
+            ("NksIntegrationDriver", DspNodeCategory::Utility, "Native Instruments NKS Light Guide & Control Driver"),
+            ("McuControllerDriver", DspNodeCategory::Utility, "Mackie Control Universal (MCU) Motorized Fader Driver"),
+            ("MidiClockCalibrator", DspNodeCategory::Utility, "Hardware MIDI Clock Jitter Calibrator & PLL Lock"),
+            ("CvGateGenerator", DspNodeCategory::Utility, "Audio-Rate CV & Gate Pulse Generator"),
+            ("DinSyncGenerator", DspNodeCategory::Utility, "DIN Sync 24 PPQN Clock Pulse Generator"),
+            ("BleMidiController", DspNodeCategory::Utility, "Bluetooth Low Energy Wireless BLE-MIDI Driver"),
+            ("FreeReedOscillator", DspNodeCategory::AcousticPhysicalModel, "Aeroelastic Free-Reed Tongue Oscillation & Pitch Sag"),
+            ("PipeOrganStops", DspNodeCategory::AcousticPhysicalModel, "Classical 8-Stop Pipe Organ Registration Console"),
+            ("CassottoChamber", DspNodeCategory::AcousticPhysicalModel, "Accordion Cassotto Wooden Tone Chamber & Shutter"),
+            ("BodyResonatorMode", DspNodeCategory::AcousticPhysicalModel, "2nd-Order Resonant Bandpass Acoustic Body Formant"),
+            ("SitarStringWaveguide", DspNodeCategory::AcousticPhysicalModel, "Digital Waveguide Baj Tar Playing String with Dispersion"),
+            ("GrandPianoVoice", DspNodeCategory::AcousticPhysicalModel, "Polyphonic Coupled 3-Unison Grand Piano String Voice"),
+            ("OledDisplayDriver", DspNodeCategory::Utility, "128x64 Monochrome OLED Telemetry Display Driver"),
+            ("GpioDriver", DspNodeCategory::Utility, "Raspberry Pi GPIO Button & Rotary Encoder Driver"),
+            ("BatteryMonitor", DspNodeCategory::Utility, "Embedded Battery Level & Power Telemetry Monitor"),
         ]
     }
 
@@ -4875,6 +5050,58 @@ impl DspNodeRegistry {
             "bellowscoupler" => Some("BellowsDynamicsCoupler"),
             "formantvowelmatrix" => Some("FormantVowelMatrix"),
             "vowelmatrix" => Some("FormantVowelMatrix"),
+            "preamptonecontrol" => Some("PreampToneControl"),
+            "preamptone" => Some("PreampToneControl"),
+            "baxandall" => Some("PreampToneControl"),
+            "clavinetanvilmodel" => Some("ClavinetAnvilModel"),
+            "clavinetanvil" => Some("ClavinetAnvilModel"),
+            "rubberanvil" => Some("ClavinetAnvilModel"),
+            "yarndamper" => Some("YarnDamper"),
+            "clavinetyarn" => Some("YarnDamper"),
+            "besselmembranemode" => Some("BesselMembraneMode"),
+            "besselmode" => Some("BesselMembraneMode"),
+            "kotostringvoice" => Some("KotoStringVoice"),
+            "kotovoice" => Some("KotoStringVoice"),
+            "hurdygurdystringvoice" => Some("HurdyGurdyStringVoice"),
+            "hurdygurdyvoice" => Some("HurdyGurdyStringVoice"),
+            "glassarmonicabowl" => Some("GlassArmonicaBowl"),
+            "armonicabowl" => Some("GlassArmonicaBowl"),
+            "eurorackcvgateinterface" => Some("EurorackCvGateInterface"),
+            "eurorackcvgate" => Some("EurorackCvGateInterface"),
+            "pushcontrollerdriver" => Some("PushControllerDriver"),
+            "pushdriver" => Some("PushControllerDriver"),
+            "launchpadprodriver" => Some("LaunchpadProDriver"),
+            "launchpadpro" => Some("LaunchpadProDriver"),
+            "nksintegrationdriver" => Some("NksIntegrationDriver"),
+            "nksdriver" => Some("NksIntegrationDriver"),
+            "mcucontrollerdriver" => Some("McuControllerDriver"),
+            "mcudriver" => Some("McuControllerDriver"),
+            "midiclockcalibrator" => Some("MidiClockCalibrator"),
+            "midiclock" => Some("MidiClockCalibrator"),
+            "cvgategenerator" => Some("CvGateGenerator"),
+            "cvgenerator" => Some("CvGateGenerator"),
+            "dinsyncgenerator" => Some("DinSyncGenerator"),
+            "dinsync" => Some("DinSyncGenerator"),
+            "blemidicontroller" => Some("BleMidiController"),
+            "blemidi" => Some("BleMidiController"),
+            "freereedoscillator" => Some("FreeReedOscillator"),
+            "freereedosc" => Some("FreeReedOscillator"),
+            "pipeorganstops" => Some("PipeOrganStops"),
+            "organstops" => Some("PipeOrganStops"),
+            "cassottochamber" => Some("CassottoChamber"),
+            "cassotto" => Some("CassottoChamber"),
+            "bodyresonatormode" => Some("BodyResonatorMode"),
+            "bodymode" => Some("BodyResonatorMode"),
+            "sitarstringwaveguide" => Some("SitarStringWaveguide"),
+            "sitarstring" => Some("SitarStringWaveguide"),
+            "grandpianovoice" => Some("GrandPianoVoice"),
+            "pianovoice" => Some("GrandPianoVoice"),
+            "oleddisplaydriver" => Some("OledDisplayDriver"),
+            "oleddriver" => Some("OledDisplayDriver"),
+            "gpiodriver" => Some("GpioDriver"),
+            "rpidriver" => Some("GpioDriver"),
+            "batterymonitor" => Some("BatteryMonitor"),
+            "fuelgauge" => Some("BatteryMonitor"),
             _ => None,
         }
     }
@@ -7429,6 +7656,181 @@ impl DspNodeRegistry {
                     .with_param(DspParamDescriptor::new_linear("formant_resonance_q", "Formant Filter Resonance Q", 1.0, 30.0, 8.0, "Q", (245, 158, 11)))
                     .with_param(DspParamDescriptor::new_linear("consonant_brightness", "Fricative Consonant Air", 0.0, 1.0, 0.35, "%", (16, 185, 129)))
             ),
+            "PreampToneControl" => Box::new(
+                GenericDspNodeUi::new("PreampToneControl", "Baxandall Active Shelving EQ & Preamp Saturation", DspNodeCategory::DistortionSaturation)
+                    .with_param(DspParamDescriptor::new_linear("drive_db", "Preamp Drive", 0.0, 24.0, 4.0, "dB", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("bass_db", "Bass Shelving EQ", -12.0, 12.0, 1.5, "dB", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("treble_db", "Treble Shelving EQ", -12.0, 12.0, 2.0, "dB", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("tube_warmth", "Even Harmonic Warmth", 0.0, 1.0, 0.40, "%", (236, 72, 153)))
+            ),
+            "ClavinetAnvilModel" => Box::new(
+                GenericDspNodeUi::new("ClavinetAnvilModel", "Rubber Hammer Impact Compliance & Hertzian Contact", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("hardness", "Rubber Anvil Hardness", 0.0, 1.0, 0.80, "%", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("velocity", "Hammer Strike Velocity", 0.0, 1.0, 0.85, "%", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("exponent", "Hertzian Contact Exponent", 1.0, 3.0, 1.6, "p", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("damping", "Tip Contact Damping", 0.0, 1.0, 0.30, "%", (99, 102, 241)))
+            ),
+            "YarnDamper" => Box::new(
+                GenericDspNodeUi::new("YarnDamper", "Clavinet Wool Yarn Damper & Key Release Transient", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("damping_amount", "Yarn Damping Strength", 0.0, 1.0, 0.80, "%", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("thud_decay", "Key Release Thud Decay", 0.50, 0.99, 0.90, "%", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_log("thud_freq", "Damper Thud Pitch", 100.0, 800.0, 320.0, "Hz", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("string_choke", "Release Choke Speed", 5.0, 200.0, 25.0, "ms", (16, 185, 129)))
+            ),
+            "BesselMembraneMode" => Box::new(
+                GenericDspNodeUi::new("BesselMembraneMode", "2D Circular Drumhead Bessel Vibration Mode", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_log("freq_hz", "Modal Frequency", 20.0, 2000.0, 100.0, "Hz", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("t60_sec", "Decay Time T60", 0.05, 10.0, 2.0, "s", (99, 102, 241)))
+                    .with_param(DspParamDescriptor::new_linear("amplitude", "Excitation Amplitude", 0.0, 1.0, 1.0, "%", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_enum("radial_order", "Radial Nodal Circle (n)", vec!["n=1 (Fundamental)".into(), "n=2 (First Overtone)".into(), "n=3 (Second Overtone)".into(), "n=4 (High Mode)".into()], 0, (245, 158, 11)))
+            ),
+            "KotoStringVoice" => Box::new(
+                GenericDspNodeUi::new("KotoStringVoice", "Japanese Koto Silk String Waveguide Voice", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_log("nominal_freq_hz", "Open String Fundamental", 50.0, 1500.0, 261.63, "Hz", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("oshi_ite_force_n", "Oshi-ite Left-Hand Force", 0.0, 50.0, 0.0, "N", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("hiki_iro_release", "Hiki-iro Pulling Release", 0.0, 1.0, 0.0, "%", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("loop_damping", "Silk String Damping", 0.001, 0.10, 0.015, "", (99, 102, 241)))
+            ),
+            "HurdyGurdyStringVoice" => Box::new(
+                GenericDspNodeUi::new("HurdyGurdyStringVoice", "Hurdy-Gurdy Bowed Friction Waveguide Voice", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_log("nominal_freq_hz", "Open String Fundamental", 50.0, 2000.0, 293.66, "Hz", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("tangent_semitone", "Tangent Key Offset", -12.0, 24.0, 0.0, "st", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("loop_damping", "Gut String Loop Damping", 0.90, 0.999, 0.985, "", (99, 102, 241)))
+                    .with_param(DspParamDescriptor::new_linear("wheel_contact_n", "Wheel Down-Bearing Contact", 0.1, 10.0, 2.5, "N", (245, 158, 11)))
+            ),
+            "GlassArmonicaBowl" => Box::new(
+                GenericDspNodeUi::new("GlassArmonicaBowl", "Franklin Glass Armonica Quartz Bowl", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_log("nominal_freq_hz", "Bowl Resonant Pitch", 100.0, 3000.0, 523.25, "Hz", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("touch_force_n", "Wet Finger Touch Force", 0.02, 2.5, 0.40, "N", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("bowl_radius_m", "Bowl Hemispherical Radius", 0.04, 0.20, 0.10, "m", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("water_damping", "Water Bath Viscous Damping", 0.0, 1.0, 0.25, "%", (99, 102, 241)))
+            ),
+            "EurorackCvGateInterface" => Box::new(
+                GenericDspNodeUi::new("EurorackCvGateInterface", "Eurorack 4-Channel 1V/Oct CV & Gate Hardware Interface", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("cv_scale_v_oct", "Pitch Standard", 0.5, 2.0, 1.0, "V/Oct", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("gate_voltage", "Gate Pulse Level", 3.3, 12.0, 5.0, "V", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("cv_port_offset", "DAC Trimming Offset", -0.5, 0.5, 0.0, "V", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_enum("sample_hold_mode", "CV Sample & Hold", vec!["Direct Track".into(), "Quantized S&H".into(), "Glide Slew".into()], 0, (99, 102, 241)))
+            ),
+            "PushControllerDriver" => Box::new(
+                GenericDspNodeUi::new("PushControllerDriver", "Ableton Push 2/3 Hardware Surface Driver", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("pad_sensitivity", "Pad Velocity Sensitivity", 0.1, 2.0, 1.0, "x", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("encoder_accel", "Encoder Acceleration", 1.0, 5.0, 2.0, "x", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("mpe_pitch_bend_st", "MPE Pad Pitch Bend Range", 1.0, 48.0, 12.0, "st", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_enum("display_fps", "Display Frame Rate", vec!["30 FPS".into(), "60 FPS".into()], 1, (16, 185, 129)))
+            ),
+            "LaunchpadProDriver" => Box::new(
+                GenericDspNodeUi::new("LaunchpadProDriver", "Novation Launchpad Pro RGB Grid Controller", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("pad_threshold", "Pad Trigger Threshold", 1.0, 30.0, 8.0, "vel", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_enum("aftertouch_mode", "Pressure Mode", vec!["Channel Aftertouch".into(), "Polyphonic Aftertouch".into()], 1, (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("led_brightness", "RGB LED Brightness", 0.1, 1.0, 0.85, "%", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_enum("velocity_curve", "Velocity Curve", vec!["Linear".into(), "Soft".into(), "Hard".into(), "Fixed 127".into()], 0, (99, 102, 241)))
+            ),
+            "NksIntegrationDriver" => Box::new(
+                GenericDspNodeUi::new("NksIntegrationDriver", "Native Instruments NKS Light Guide & Control Driver", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("light_guide_brightness", "Light Guide Brightness", 0.1, 1.0, 0.80, "%", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("active_page", "Parameter Page Index", 0.0, 15.0, 0.0, "pg", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_enum("scale_highlight_mode", "Light Guide Scale Mode", vec!["Key Root & Notes".into(), "Root Only".into(), "Chords & Voicing".into(), "Off".into()], 0, (99, 102, 241)))
+                    .with_param(DspParamDescriptor::new_linear("automapper_sensitivity", "Auto-Mapper Parameter Depth", 0.0, 1.0, 0.70, "%", (239, 68, 68)))
+            ),
+            "McuControllerDriver" => Box::new(
+                GenericDspNodeUi::new("McuControllerDriver", "Mackie Control Universal (MCU) Motorized Fader Driver", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("fader_motor_speed", "Motorized Fader Slew Rate", 10.0, 200.0, 60.0, "ms", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("vpot_sensitivity", "V-Pot Resolution", 0.5, 3.0, 1.0, "x", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("touch_sense_threshold", "Touch Capacitance Threshold", 0.1, 1.0, 0.40, "%", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("fader_bank_offset", "Track Bank Channel Offset", 0.0, 56.0, 0.0, "ch", (99, 102, 241)))
+            ),
+            "MidiClockCalibrator" => Box::new(
+                GenericDspNodeUi::new("MidiClockCalibrator", "Hardware MIDI Clock Jitter Calibrator & PLL Lock", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("latency_offset_ms", "Manual Latency Offset", -50.0, 50.0, 0.0, "ms", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("pll_bandwidth_hz", "PLL Filter Bandwidth", 0.1, 10.0, 1.2, "Hz", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("jitter_threshold_ms", "Jitter Warning Threshold", 0.5, 10.0, 2.0, "ms", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_enum("clock_source", "Sync Master Reference", vec!["Internal Master".into(), "DIN UART External".into(), "USB MIDI In".into(), "Network OSC".into()], 0, (99, 102, 241)))
+            ),
+            "CvGateGenerator" => Box::new(
+                GenericDspNodeUi::new("CvGateGenerator", "Audio-Rate CV & Gate Pulse Generator", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("volts_per_octave", "Volts Per Octave", 0.5, 2.0, 1.0, "V", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("gate_high_voltage", "Gate High Pulse Level", 3.0, 10.0, 5.0, "V", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("glide_time_ms", "Portamento Glide Slew", 0.0, 500.0, 15.0, "ms", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("dc_offset_trim", "DAC DC Trim Voltage", -1.0, 1.0, 0.0, "V", (99, 102, 241)))
+            ),
+            "DinSyncGenerator" => Box::new(
+                GenericDspNodeUi::new("DinSyncGenerator", "DIN Sync 24 PPQN Clock Pulse Generator", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("bpm", "Sync Tempo BPM", 40.0, 300.0, 120.0, "BPM", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("pulse_width_percent", "Pulse Duty Cycle", 10.0, 90.0, 50.0, "%", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("swing_shuffle", "Sync24 Shuffle Swing", 50.0, 75.0, 50.0, "%", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_enum("run_mode", "Transport Control Mode", vec!["DAW Linked".into(), "Manual Run".into(), "Gated Burst".into()], 0, (16, 185, 129)))
+            ),
+            "BleMidiController" => Box::new(
+                GenericDspNodeUi::new("BleMidiController", "Bluetooth Low Energy Wireless BLE-MIDI Driver", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("connection_interval_ms", "BLE Connection Interval", 7.5, 30.0, 11.25, "ms", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("mtu_payload_size", "MTU Packet Payload", 23.0, 256.0, 128.0, "bytes", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("packet_timeout_ms", "Drop Timeout Window", 50.0, 500.0, 150.0, "ms", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_enum("timestamp_compensation", "High-Resolution Timestamps", vec!["Disabled".into(), "Enabled".into()], 1, (99, 102, 241)))
+            ),
+            "FreeReedOscillator" => Box::new(
+                GenericDspNodeUi::new("FreeReedOscillator", "Aeroelastic Free-Reed Tongue Oscillation & Pitch Sag", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("reed_stiffness", "Reed Tongue Stiffness", 0.5, 3.0, 1.2, "k", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("pressure_diff_pa", "Bellows Pressure Difference", 10.0, 2500.0, 450.0, "Pa", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("pitch_sag_cents", "Aeroelastic Pitch Sag", 0.0, 35.0, 8.0, "cents", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_enum("stroke_mode", "Bellows Stroke Direction", vec!["Push (Compressing)".into(), "Pull (Expanding)".into()], 0, (99, 102, 241)))
+            ),
+            "PipeOrganStops" => Box::new(
+                GenericDspNodeUi::new("PipeOrganStops", "Classical 8-Stop Pipe Organ Registration Console", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_enum("principal_8", "Principal 8' Diapason", vec!["Off".into(), "On".into()], 1, (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_enum("bourdon_16", "Bourdon 16' Sub-Bass", vec!["Off".into(), "On".into()], 1, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_enum("octave_4", "Octave 4' Prestant", vec!["Off".into(), "On".into()], 1, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_enum("mixture_iv", "Fourniture Mixture IV", vec!["Off".into(), "On".into()], 1, (99, 102, 241)))
+            ),
+            "CassottoChamber" => Box::new(
+                GenericDspNodeUi::new("CassottoChamber", "Accordion Cassotto Wooden Tone Chamber & Shutter", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("aperture", "Chamber Shutter Aperture", 0.0, 1.0, 0.85, "%", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("wood_warmth", "Wooden Body Warmth", 0.0, 2.0, 0.85, "x", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("transmission_loss_db", "Cassotto HF Attenuation", 0.0, 24.0, 7.5, "dB", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_enum("profile", "Cassotto Acoustic Geometry", vec!["Doble Cassotto Bandoneon".into(), "Classical Concert Accordion".into(), "Vintage Bayan".into(), "Bavarian Musette".into()], 0, (99, 102, 241)))
+            ),
+            "BodyResonatorMode" => Box::new(
+                GenericDspNodeUi::new("BodyResonatorMode", "2nd-Order Resonant Bandpass Acoustic Body Formant", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_log("freq_hz", "Formant Peak Frequency", 20.0, 5000.0, 440.0, "Hz", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("q", "Resonance Quality Factor Q", 0.5, 50.0, 10.0, "Q", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("gain", "Modal Radiance Gain", 0.0, 4.0, 1.0, "x", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_enum("body_type", "Acoustic Body Type", vec!["Violin Stradivarius".into(), "Cello Montagnana".into(), "Acoustic Dreadnought".into(), "Archtop Jazz Guitar".into()], 0, (99, 102, 241)))
+            ),
+            "SitarStringWaveguide" => Box::new(
+                GenericDspNodeUi::new("SitarStringWaveguide", "Digital Waveguide Baj Tar Playing String with Dispersion", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("loop_gain", "String Loop Reflection Gain", 0.90, 0.9999, 0.996, "", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("loss_cutoff_coeff", "HF Loss Filter Cutoff", 0.05, 0.95, 0.40, "", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("dispersion_allpass", "Stiffness Dispersion Warp", -0.99, 0.99, -0.42, "", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("mizrab_pluck_sharpness", "Mizrab Wire Plectrum Sharpness", 0.0, 1.0, 0.70, "%", (99, 102, 241)))
+            ),
+            "GrandPianoVoice" => Box::new(
+                GenericDspNodeUi::new("GrandPianoVoice", "Polyphonic Coupled 3-Unison Grand Piano String Voice", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("prompt_t60", "Prompt Initial Decay T60", 0.5, 8.0, 2.2, "s", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("aftersound_t60", "Aftersound Sustained T60", 2.0, 30.0, 14.0, "s", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("inharmonicity_b", "Inharmonicity B-Factor", 0.00001, 0.005, 0.00018, "", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("unison_detune_cents", "Trichord Unison Detuning", 0.0, 3.0, 0.75, "cents", (99, 102, 241)))
+            ),
+            "OledDisplayDriver" => Box::new(
+                GenericDspNodeUi::new("OledDisplayDriver", "128x64 Monochrome OLED Telemetry Display Driver", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("contrast", "OLED Panel Contrast", 0.0, 1.0, 0.80, "%", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_enum("screen_mode", "Active Telemetry Screen", vec!["Oscilloscope CRT".into(), "Stereo VU Meters".into(), "Patch Info & Presets".into(), "CPU & Temperature".into()], 0, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("refresh_rate_hz", "Display Refresh Rate", 10.0, 60.0, 30.0, "Hz", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_enum("inverse_video", "Invert Black/White Pixels", vec!["Normal".into(), "Inverted".into()], 0, (99, 102, 241)))
+            ),
+            "GpioDriver" => Box::new(
+                GenericDspNodeUi::new("GpioDriver", "Raspberry Pi GPIO Button & Rotary Encoder Driver", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("debounce_ms", "Switch Debounce Window", 1.0, 50.0, 15.0, "ms", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("hold_threshold_ms", "Long-Press Hold Time", 200.0, 2000.0, 600.0, "ms", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_enum("encoder_quadrature_div", "Encoder Quadrature Division", vec!["Full Step (4 edges)".into(), "Half Step (2 edges)".into(), "Single Edge".into()], 0, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_enum("pull_resistor_mode", "Internal Pin Pull Resistor", vec!["Pull-Up (Active Low)".into(), "Pull-Down (Active High)".into(), "Floating (External)".into()], 0, (99, 102, 241)))
+            ),
+            "BatteryMonitor" => Box::new(
+                GenericDspNodeUi::new("BatteryMonitor", "Embedded Battery Level & Power Telemetry Monitor", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("battery_critical_volts", "Critical Voltage Cutoff", 2.8, 3.6, 3.3, "V", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("polling_interval_s", "Telemetry Polling Rate", 1.0, 60.0, 5.0, "s", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("temperature_alert_c", "Cell Thermal Alert Ceiling", 45.0, 80.0, 65.0, "°C", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_enum("low_battery_auto_save", "Auto-Save on Low Battery", vec!["Disabled".into(), "Enabled".into()], 1, (16, 185, 129)))
+            ),
             // Fallback dynamic generator for any unexpected or plugin node
             other => {
                 let cat = Self::inventory()
@@ -7458,10 +7860,10 @@ mod tests {
     #[test]
     fn test_dsp_node_registry_inventory_completeness() {
         let registry = DspNodeRegistry::new();
-        assert!(registry.list_all().len() >= 400, "Registry should contain >= 400 descriptors, found {}", registry.list_all().len());
+        assert!(registry.list_all().len() >= 425, "Registry should contain >= 425 descriptors, found {}", registry.list_all().len());
 
         let inventory = DspNodeRegistry::inventory();
-        assert!(inventory.len() >= 400, "Inventory should contain >= 400 entries, found {}", inventory.len());
+        assert!(inventory.len() >= 425, "Inventory should contain >= 425 entries, found {}", inventory.len());
 
         // Verify newly registered unmapped nodes exist
         assert!(registry.get("TruePeakLimiter").is_some());
@@ -7498,6 +7900,31 @@ mod tests {
         assert!(registry.get("GrandPianoStringDuplexCoupler").is_some());
         assert!(registry.get("BellowsDynamicsCoupler").is_some());
         assert!(registry.get("FormantVowelMatrix").is_some());
+        assert!(registry.get("PreampToneControl").is_some());
+        assert!(registry.get("ClavinetAnvilModel").is_some());
+        assert!(registry.get("YarnDamper").is_some());
+        assert!(registry.get("BesselMembraneMode").is_some());
+        assert!(registry.get("KotoStringVoice").is_some());
+        assert!(registry.get("HurdyGurdyStringVoice").is_some());
+        assert!(registry.get("GlassArmonicaBowl").is_some());
+        assert!(registry.get("EurorackCvGateInterface").is_some());
+        assert!(registry.get("PushControllerDriver").is_some());
+        assert!(registry.get("LaunchpadProDriver").is_some());
+        assert!(registry.get("NksIntegrationDriver").is_some());
+        assert!(registry.get("McuControllerDriver").is_some());
+        assert!(registry.get("MidiClockCalibrator").is_some());
+        assert!(registry.get("CvGateGenerator").is_some());
+        assert!(registry.get("DinSyncGenerator").is_some());
+        assert!(registry.get("BleMidiController").is_some());
+        assert!(registry.get("FreeReedOscillator").is_some());
+        assert!(registry.get("PipeOrganStops").is_some());
+        assert!(registry.get("CassottoChamber").is_some());
+        assert!(registry.get("BodyResonatorMode").is_some());
+        assert!(registry.get("SitarStringWaveguide").is_some());
+        assert!(registry.get("GrandPianoVoice").is_some());
+        assert!(registry.get("OledDisplayDriver").is_some());
+        assert!(registry.get("GpioDriver").is_some());
+        assert!(registry.get("BatteryMonitor").is_some());
     }
 
     #[test]
