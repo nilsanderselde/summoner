@@ -121,6 +121,10 @@ fn default_available_presets() -> Vec<String> {
         "Neuro Relaxation Feedback".to_string(),
         "Acoustic Cloaking Soundfield".to_string(),
         "Sub-Harmonic Quantum Tunnel".to_string(),
+        "EBU R128 Master Broadcast".to_string(),
+        "Dolby Atmos Bed Splitter".to_string(),
+        "Procedural Raytraced Hall".to_string(),
+        "Polymetric Euclidean Groove".to_string(),
     ]
 }
 

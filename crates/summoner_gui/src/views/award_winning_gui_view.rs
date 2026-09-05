@@ -356,6 +356,10 @@ impl AwardWinningGuiView {
                 "Neuro Relaxation Feedback" => "NeuroFeedbackOscillator",
                 "Acoustic Cloaking Soundfield" => "AcousticCloakingSpatializerNode",
                 "Sub-Harmonic Quantum Tunnel" => "SubHarmonicQuantumTunnelingFilter",
+                "EBU R128 Master Broadcast" => "EbuR128LoudnessMeter",
+                "Dolby Atmos Bed Splitter" => "SurroundStemSplitterBedObject",
+                "Procedural Raytraced Hall" => "ProceduralSpatialIrGenerator",
+                "Polymetric Euclidean Groove" => "PolymetricSequencer",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {

@@ -2072,5 +2072,147 @@ mod tests {
             assert_eq!(view.inspector_state.selected_node_kind, Some("SubharmonicQuantumTunnelingFilter".to_string()));
         }
     }
+
+    #[test]
+    fn test_tier89_dsp_registry_465_plus_full_module_exposure() {
+        use crate::dsp_node_ui::DspNodeRegistry;
+        use crate::views::modern_asset_browser::BrowserCategory;
+
+        let inv = DspNodeRegistry::inventory();
+        assert!(inv.len() >= 465, "Expected inventory count >= 465, got {}", inv.len());
+
+        let registry = DspNodeRegistry::new();
+        assert!(registry.list_all().len() >= 465, "Expected descriptor count >= 465, got {}", registry.list_all().len());
+
+        let new_tier89_nodes = [
+            "PeakHeadroomAnalyzer",
+            "EbuR128LoudnessMeter",
+            "StemMetadataParser",
+            "DrumReplacementTrigger",
+            "SurroundStemSplitterBedObject",
+            "HardwareControlEditorState",
+            "HeadTrackerReceiver",
+            "ProceduralSpatialIrGenerator",
+            "IsolatedPluginScanner",
+            "MidiFilterEngine",
+            "PolymetricSequencer",
+            "LinkwitzRiley4WaySplitter",
+            "NativeAudioDriverTuner",
+            "HardwareWatchdogService",
+            "ThermalThrottlingListener",
+            "BypassRelayTrigger",
+            "RotaryEncoderDebouncer",
+            "MultiTenantRenderQueue",
+            "LockFreeTuningRemapper",
+            "SidechainMatrix",
+        ];
+
+        for node_id in &new_tier89_nodes {
+            let desc = registry.get(node_id);
+            assert!(desc.is_some(), "Node {} missing from DspNodeRegistry", node_id);
+            let desc = desc.unwrap();
+            assert!(!desc.params.is_empty(), "Node {} has empty parameter list", node_id);
+            assert!(!desc.description.is_empty(), "Node {} has empty description", node_id);
+
+            let ui = DspNodeRegistry::create_node_ui(node_id);
+            assert!(ui.is_some(), "create_node_ui failed for {}", node_id);
+            let ui = ui.unwrap();
+            assert!(!ui.parameters().is_empty(), "UI for {} has no parameters", node_id);
+        }
+
+        // Test canonical alias normalization
+        assert_eq!(DspNodeRegistry::normalize_type_name("peakheadroom"), Some("PeakHeadroomAnalyzer"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("ebur128"), Some("EbuR128LoudnessMeter"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("ixmlparser"), Some("StemMetadataParser"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("drumtrigger"), Some("DrumReplacementTrigger"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("atmosstemsplitter"), Some("SurroundStemSplitterBedObject"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("controlsurfaceeditor"), Some("HardwareControlEditorState"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("imuheadtracker"), Some("HeadTrackerReceiver"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("proceduralspatialir"), Some("ProceduralSpatialIrGenerator"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("pluginscanner"), Some("IsolatedPluginScanner"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("midifilter"), Some("MidiFilterEngine"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("euclideansequencer"), Some("PolymetricSequencer"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("lr4waysplitter"), Some("LinkwitzRiley4WaySplitter"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("drivertuner"), Some("NativeAudioDriverTuner"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("watchdogservice"), Some("HardwareWatchdogService"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("thermallistener"), Some("ThermalThrottlingListener"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("relaytrigger"), Some("BypassRelayTrigger"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("encoderdebouncer"), Some("RotaryEncoderDebouncer"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("renderqueue"), Some("MultiTenantRenderQueue"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("sclremapper"), Some("LockFreeTuningRemapper"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("sidechainhub"), Some("SidechainMatrix"));
+
+        // Test modern asset browser categorization
+        let inst_folders = BrowserCategory::Instruments.default_folders();
+        let samplers = inst_folders.iter().find(|(name, _)| *name == "Samplers & Slicers").unwrap().1;
+        assert!(samplers.contains(&"DrumReplacementTrigger"));
+
+        let fx_folders = BrowserCategory::AudioFx.default_folders();
+        let dyn_items = fx_folders.iter().find(|(name, _)| *name == "Dynamics & Level").unwrap().1;
+        assert!(dyn_items.contains(&"PeakHeadroomAnalyzer"));
+        assert!(dyn_items.contains(&"EbuR128LoudnessMeter"));
+        assert!(dyn_items.contains(&"SidechainMatrix"));
+
+        let time_items = fx_folders.iter().find(|(name, _)| *name == "Time & Reverb").unwrap().1;
+        assert!(time_items.contains(&"ProceduralSpatialIrGenerator"));
+        assert!(time_items.contains(&"SurroundStemSplitterBedObject"));
+        assert!(time_items.contains(&"HeadTrackerReceiver"));
+
+        let mod_items = fx_folders.iter().find(|(name, _)| *name == "Modulation & Pitch").unwrap().1;
+        assert!(mod_items.contains(&"LockFreeTuningRemapper"));
+
+        let midi_folders = BrowserCategory::MidiFx.default_folders();
+        let gen_items = midi_folders.iter().find(|(name, _)| *name == "Generative & Sync").unwrap().1;
+        assert!(gen_items.contains(&"PolymetricSequencer"));
+
+        let routing_items = midi_folders.iter().find(|(name, _)| *name == "Transforms & Routing").unwrap().1;
+        assert!(routing_items.contains(&"MidiFilterEngine"));
+
+        #[cfg(feature = "gui")]
+        {
+            let mut view = crate::views::award_winning_gui_view::AwardWinningGuiView::default();
+            let ctx = eframe::egui::Context::default();
+
+            // Preset: EBU R128 Master Broadcast
+            view.top_bar_state.selected_preset = "EBU R128 Master Broadcast".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("EbuR128LoudnessMeter".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("EbuR128LoudnessMeter".to_string()));
+
+            // Preset: Dolby Atmos Bed Splitter
+            view.top_bar_state.selected_preset = "Dolby Atmos Bed Splitter".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("SurroundStemSplitterBedObject".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("SurroundStemSplitterBedObject".to_string()));
+
+            // Preset: Procedural Raytraced Hall
+            view.top_bar_state.selected_preset = "Procedural Raytraced Hall".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("ProceduralSpatialIrGenerator".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("ProceduralSpatialIrGenerator".to_string()));
+
+            // Preset: Polymetric Euclidean Groove
+            view.top_bar_state.selected_preset = "Polymetric Euclidean Groove".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("PolymetricSequencer".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("PolymetricSequencer".to_string()));
+        }
+    }
 }
 
