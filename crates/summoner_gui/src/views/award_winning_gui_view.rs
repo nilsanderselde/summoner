@@ -436,6 +436,10 @@ impl AwardWinningGuiView {
                 "Vocal Multi-Take Comping & Crossfade Editor" => "CompLane",
                 "Generative Markov Algorithmic Melodic Mutator" => "MarkovMutatorConfig",
                 "Broadcast Multi-Stem Master Export Station" => "ExportPreset",
+                "Concert Grand Piano Acoustic Resonance Model" => "GrandPianoBusSnapshot",
+                "Cathedral Pipe Organ Tracker Wind Chest" => "PipeOrganBusSnapshot",
+                "Hurdy-Gurdy Rosin Friction & Drone Resonator" => "HurdyGurdyBusSnapshot",
+                "Continuous Human Breath & Wind Controller" => "BreathBusSnapshot",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {

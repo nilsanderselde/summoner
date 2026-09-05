@@ -6880,6 +6880,153 @@ impl DspNodeRegistry {
             .with_param(DspParamSchema::toggle("auto_kill_unresponsive", "Auto-Bypass Failing Plugin Instances", true, "Safely isolates and mutes any plugin exceeding real-time budget"))
             .with_param(DspParamSchema::choice("sandbox_isolation_level", "DSP Plugin Memory Isolation Architecture", &["In-Process High Performance", "Out-of-Process Shared Memory", "Strict Sandboxed Worker"], 0, "Process safety and sandboxing boundary protecting audio stability"))
         );
+        descriptors.insert("GrandPianoBusSnapshot".to_string(), DspNodeDescriptor::new("GrandPianoBusSnapshot", "Concert Grand Piano Physical Resonance Snapshot HUD", DspNodeCategory::AcousticPhysicalModel, "Concert grand piano physical acoustic model bus controlling felt hammer velocity, string duplex scaling, soundboard impedance, lid acoustic reflection, and damper pedal sympathetic resonance")
+            .with_param(DspParamSchema::knob("hammer_hardness", "Felt Hammer Strike Hardness", 0.1, 2.0, 1.0, "mult", MacroRole::Punch, "Felt strike stiffness and attack brightness"))
+            .with_param(DspParamSchema::knob("duplex_resonance", "Duplex String Sympathetic Scaling", 0.0, 1.0, 0.45, "norm", MacroRole::Tone, "Sympathetic string ring in non-speaking string lengths"))
+            .with_param(DspParamSchema::knob("soundboard_radiation", "Spruce Soundboard Radiation Factor", 0.0, 1.0, 0.75, "norm", MacroRole::Space, "Spruce soundboard acoustic radiation and body resonance"))
+            .with_param(DspParamSchema::knob("lid_position_angle", "Grand Piano Lid Opening Angle", 0.0, 90.0, 65.0, "deg", MacroRole::Tone, "Grand piano lid opening angle shaping high-frequency dispersion"))
+            .with_param(DspParamSchema::toggle("damper_pedal_state", "Damper Pedal Sustain Lift", false, "Damper sustain pedal lifting all dampers off strings"))
+        );
+        descriptors.insert("PipeOrganBusSnapshot".to_string(), DspNodeDescriptor::new("PipeOrganBusSnapshot", "Cathedral Pipe Organ Wind Chest & Tracker Snapshot HUD", DspNodeCategory::AcousticPhysicalModel, "Cathedral pipe organ physical acoustic model bus capturing flue and reed pipe air turbulence, tracker action mechanical noise, wind chest pressure reservoir, and swell box shutter attenuation")
+            .with_param(DspParamSchema::knob("wind_chest_pressure", "Pneumatic Wind Chest Air Pressure", 40.0, 120.0, 80.0, "mmAq", MacroRole::Punch, "Pneumatic wind chest steady air supply pressure"))
+            .with_param(DspParamSchema::knob("tracker_action_noise", "Tracker Linkage Action Mechanical Noise", -60.0, 0.0, -36.0, "dB", MacroRole::Tone, "Mechanical wooden rod tracker linkage clatter and valve noise"))
+            .with_param(DspParamSchema::knob("tremulant_speed", "Pneumatic Tremulant Pulsation Speed", 1.0, 8.0, 4.2, "Hz", MacroRole::Tone, "Pneumatic reservoir valve tremulant pulsation speed"))
+            .with_param(DspParamSchema::knob("swell_box_open", "Swell Box Acoustic Shutter Aperture", 0.0, 100.0, 75.0, "%", MacroRole::Space, "Swell box acoustic shutter opening angle"))
+            .with_param(DspParamSchema::choice("reed_flue_blend", "Pipe Rank Voicing Balance", &["Pure Flue Foundations", "Balanced Reed & Flue", "Tutti Reed Dominant", "Solo Cornet Mixture"], 1, "Mixture ratio between chimney flue pipes and trumpet reed pipes"))
+        );
+        descriptors.insert("HurdyGurdyBusSnapshot".to_string(), DspNodeDescriptor::new("HurdyGurdyBusSnapshot", "Hurdy-Gurdy Rosin Crank & Drone Resonator HUD", DspNodeCategory::AcousticPhysicalModel, "Hurdy-gurdy electro-acoustic physical model bus controlling wooden crank wheel rotational velocity, rosin friction coefficient, chanterelle string tangents, drone string intervals, and buzzing bridge chien buzz")
+            .with_param(DspParamSchema::knob("wheel_rotational_speed", "Wooden Crank Wheel Rotation Rate", 0.2, 5.0, 1.8, "rps", MacroRole::Punch, "Wooden crank wheel rotation rate driving continuous friction"))
+            .with_param(DspParamSchema::knob("rosin_friction_coeff", "Wheel Rosin Stick-Slip Traction", 0.05, 1.0, 0.42, "mu", MacroRole::Tone, "Wheel perimeter rosin stick-slip friction dynamic traction"))
+            .with_param(DspParamSchema::knob("buzzing_bridge_chien", "Trompette Buzzing Bridge Sensitivity", 0.0, 1.0, 0.6, "buzz", MacroRole::Punch, "Trompette buzzing bridge rhythmic acceleration sensitivity"))
+            .with_param(DspParamSchema::knob("drone_resonance_mix", "Bourdon Low Drone Acoustic Mix", 0.0, 1.0, 0.35, "norm", MacroRole::Space, "Bourdon and gros bourdon low continuous drone resonance"))
+            .with_param(DspParamSchema::knob("tangent_damping", "Keybed Wooden Tangent Release Damping", 0.01, 1.0, 0.15, "sec", MacroRole::Tone, "Keyboard wooden tangent note release acoustic damping"))
+        );
+        descriptors.insert("KotoBusSnapshot".to_string(), DspNodeDescriptor::new("KotoBusSnapshot", "13-String Silk Bridge & Paulownia Acoustic Body Resonator HUD", DspNodeCategory::AcousticPhysicalModel, "Traditional 13-string Japanese koto physical model bus simulating moveable bridge positions, silk string tension, ivory plectrum pluck hardness, left-hand oshite pitch bends, and hollow paulownia wood soundboard resonance")
+            .with_param(DspParamSchema::knob("oshite_bend_tension", "Left-Hand Behind-Bridge Oshite Bend", 0.0, 4.0, 0.0, "semi", MacroRole::Tone, "Left-hand behind-bridge string pressing pitch modulation"))
+            .with_param(DspParamSchema::knob("plectrum_hardness", "Ivory Plectrum Attack Hardness", 0.1, 1.0, 0.8, "norm", MacroRole::Punch, "Ivory finger pick striking hardness and attack click"))
+            .with_param(DspParamSchema::knob("paulownia_resonance", "Paulownia Soundboard Body Cavity Resonance", 0.0, 1.0, 0.65, "norm", MacroRole::Space, "Hollow paulownia wood acoustic body chamber resonance"))
+            .with_param(DspParamSchema::knob("bridge_scatter_loss", "Movable Ji Bridge Transmission Loss", 0.01, 0.5, 0.08, "norm", MacroRole::Tone, "Movable ji bridge energy transmission loss into soundboard"))
+            .with_param(DspParamSchema::knob("sympathetic_ring", "Sibling String Sympathetic Coupling", 0.0, 1.0, 0.5, "norm", MacroRole::Space, "Unplucked sibling string sympathetic vibrational coupling"))
+        );
+        descriptors.insert("ShakuhachiBusSnapshot".to_string(), DspNodeDescriptor::new("ShakuhachiBusSnapshot", "Bamboo Bore Embouchure Angle & Turbulence Resonator HUD", DspNodeCategory::AcousticPhysicalModel, "Japanese shakuhachi bamboo flute physical acoustic model bus capturing embouchure lip blowing angle, edge jet bifurcation turbulence, meri/kari head tilting pitch bends, finger hole acoustic shading, and bamboo root flare reflection")
+            .with_param(DspParamSchema::knob("embouchure_angle", "Utaguchi Blowing Angle Alignment", -30.0, 30.0, 0.0, "deg", MacroRole::Tone, "Blowing angle across utaguchi horn edge controlling octave jump"))
+            .with_param(DspParamSchema::knob("jet_turbulence_noise", "Vortex Shedding Breath Jet Turbulence", 0.0, 1.0, 0.25, "norm", MacroRole::Tone, "Air jet vortex shedding breath breathiness turbulence"))
+            .with_param(DspParamSchema::knob("meri_kari_pitch_bend", "Meri/Kari Chin Tilt Pitch Expression", -3.0, 3.0, 0.0, "semi", MacroRole::Punch, "Chin tilt up/down (meri/kari) expressive microtonal intonation"))
+            .with_param(DspParamSchema::knob("bore_root_flare", "Bamboo Root Flare Horn Impedance", 0.0, 1.0, 0.7, "norm", MacroRole::Space, "Bamboo root flare internal acoustic horn impedance matching"))
+            .with_param(DspParamSchema::knob("muraiki_breath_burst", "Muraiki Explosive Breath Burst", 0.0, 1.0, 0.0, "burst", MacroRole::Punch, "Explosive breath rush technique triggering non-linear noise burst"))
+        );
+        descriptors.insert("SitarBusSnapshot".to_string(), DspNodeDescriptor::new("SitarBusSnapshot", "Curved Jawari Bridge Buzz & Tarafdar Drone Resonator HUD", DspNodeCategory::AcousticPhysicalModel, "Classical Indian sitar physical model bus modeling wide curved bone jawari bridge buzzing contact dynamics, meend lateral string deflection pitch pulling, mizrab wire plectrum strike, and 13 tarafdar sympathetic strings")
+            .with_param(DspParamSchema::knob("jawari_buzz_depth", "Bone Jawari Bridge Grazing Buzz", 0.0, 1.0, 0.72, "buzz", MacroRole::Tone, "Curved bone bridge surface dynamic grazing contact non-linearity"))
+            .with_param(DspParamSchema::knob("meend_pull_range", "Meend Lateral String Pull Width", 0.0, 7.0, 4.0, "semi", MacroRole::Punch, "Frets lateral pulling width for glissando ornamentation"))
+            .with_param(DspParamSchema::knob("mizrab_strike_angle", "Mizrab Wire Plectrum Strike Angle", 10.0, 90.0, 45.0, "deg", MacroRole::Tone, "Finger wire pick strike angle and high partial excitation"))
+            .with_param(DspParamSchema::knob("tarafdar_drone_coupling", "Tarafdar Sympathetic Strings Coupling", 0.0, 1.0, 0.6, "norm", MacroRole::Space, "Sympathetic resonance coupling into 11-13 under-fret strings"))
+            .with_param(DspParamSchema::knob("tumba_gourd_resonance", "Calabash Tumba Gourd Acoustic Cavity", 0.0, 1.0, 0.55, "norm", MacroRole::Space, "Upper neck dried calabash gourd resonator acoustic chamber"))
+        );
+        descriptors.insert("GlassArmonicaBusSnapshot".to_string(), DspNodeDescriptor::new("GlassArmonicaBusSnapshot", "Quartz Glass Bowl Peripheral Friction Spindle Resonator HUD", DspNodeCategory::AcousticPhysicalModel, "Benjamin Franklin glass armonica physical model bus simulating concentric rotating quartz glass bowls, moist finger peripheral friction slip-stick dynamics, crystal rim modal resonances, and spindle rotation speed")
+            .with_param(DspParamSchema::knob("spindle_rpm", "Central Spindle Rotational Velocity", 20.0, 200.0, 85.0, "RPM", MacroRole::Punch, "Central iron spindle rotational velocity of nested glass bowls"))
+            .with_param(DspParamSchema::knob("finger_moisture_lubricity", "Fingertip Water Film Lubricity", 0.01, 1.0, 0.68, "norm", MacroRole::Tone, "Water lubrication film thickness modulating stick-slip grip"))
+            .with_param(DspParamSchema::knob("contact_pressure_force", "Perpendicular Rim Contact Force", 0.05, 5.0, 1.2, "N", MacroRole::Punch, "Perpendicular fingertip pressure against quartz bowl rim"))
+            .with_param(DspParamSchema::knob("quartz_purity_q", "Quartz Crystal Modal Quality Q", 500.0, 10000.0, 4500.0, "Q", MacroRole::Tone, "Acoustic resonance Q factor and crystal glass ring time"))
+            .with_param(DspParamSchema::knob("bowl_size_diameter_cm", "Vibrating Bowl Rim Diameter", 5.0, 35.0, 18.0, "cm", MacroRole::Space, "Quartz glass bell physical diameter setting acoustic resonance"))
+        );
+        descriptors.insert("ClavinetBusSnapshot".to_string(), DspNodeDescriptor::new("ClavinetBusSnapshot", "Vintage Clavinet Rubber Striker Hammer & Pickup Matrix HUD", DspNodeCategory::AcousticPhysicalModel, "Vintage electro-mechanical clavinet physical model bus capturing direct rubber hammer tip keybed striking against steel strings, yarn mute dampening, and dual single-coil magnetic pickups with phase switching")
+            .with_param(DspParamSchema::knob("hammer_tip_elasticity", "Neoprene Rubber Hammer Tip Elasticity", 0.1, 2.0, 1.0, "elast", MacroRole::Punch, "Hardened neoprene rubber hammer strike velocity response"))
+            .with_param(DspParamSchema::knob("yarn_mute_damping", "Yarn String Mute Weave Damping", 0.0, 1.0, 0.25, "damp", MacroRole::Tone, "Felt/yarn string mute weave setting string staccato decay"))
+            .with_param(DspParamSchema::knob("pickup_balance_mix", "Dual Single-Coil Pickup Balance", 0.0, 1.0, 0.5, "neck/brg", MacroRole::Tone, "Magnetic pickup blend between neck coil and bridge coil"))
+            .with_param(DspParamSchema::toggle("pickup_phase_invert", "Out-Of-Phase Reverse Pickup Wiring", false, "Out-of-phase pickup wiring creating hollow funky comb filter"))
+            .with_param(DspParamSchema::knob("preamp_overdrive_gain", "Discrete Transistor Preamp Drive", 0.0, 36.0, 6.0, "dB", MacroRole::Punch, "Discrete transistor preamp drive and saturation"))
+        );
+        descriptors.insert("BellowsBusSnapshot".to_string(), DspNodeDescriptor::new("BellowsBusSnapshot", "Accordion Bellows Airflow Pressure & Reed Chamber Coupler HUD", DspNodeCategory::AcousticPhysicalModel, "Free reed accordion and bandoneón physical model bus simulating dynamic bellows compression and expansion airflow, free reed non-linear deflection, cassotto tone chamber filtering, and multiple reed rank couplers")
+            .with_param(DspParamSchema::knob("bellows_air_pressure", "Bellows Compression Airflow Pressure", -100.0, 100.0, 40.0, "hPa", MacroRole::Punch, "Bellows push/pull air pressure driving free reed oscillation"))
+            .with_param(DspParamSchema::knob("reed_tongue_deflection", "Spring Steel Reed Non-Linear Deflection", 0.05, 1.0, 0.55, "norm", MacroRole::Tone, "Spring steel reed tongue bending amplitude and harmonic distortion"))
+            .with_param(DspParamSchema::knob("cassotto_chamber_filter", "Cassotto Tone Chamber Cutoff", 200.0, 8000.0, 1800.0, "Hz", MacroRole::Tone, "Internal wooden cassotto tone chamber acoustic cutoff"))
+            .with_param(DspParamSchema::knob("tremolo_rank_detune", "Musette Tremolo Reed Frequency Offset", 0.0, 35.0, 12.0, "cents", MacroRole::Tone, "Musette tremolo reed rank frequency beating offset"))
+            .with_param(DspParamSchema::knob("valve_click_mechanical", "Pallet Valve & Keybed Mechanical Noise", -60.0, 0.0, -32.0, "dB", MacroRole::Tone, "Leather pallet valve and keybed mechanical transient noise"))
+        );
+        descriptors.insert("BreathBusSnapshot".to_string(), DspNodeDescriptor::new("BreathBusSnapshot", "Continuous Acoustic Wind Human Breath Pressure Controller HUD", DspNodeCategory::Modulation, "Continuous human respiration and breath modulation engine transforming physical breath pressure, lip aperture bite tension, diaphragm vibrato fluctuations, and flutter-tonguing into multi-destination control streams")
+            .with_param(DspParamSchema::knob("breath_pressure", "Normalized Exhalation Air Pressure", 0.0, 1.0, 0.65, "norm", MacroRole::Punch, "Instantaneous normalized air stream pressure"))
+            .with_param(DspParamSchema::knob("lip_bite_tension", "Embouchure Lip Squeeze Bite Tension", 0.0, 1.0, 0.4, "norm", MacroRole::Tone, "Embouchure lip squeeze tension controlling filter and pitch"))
+            .with_param(DspParamSchema::knob("flutter_tongue_rate", "Tongue Flutter Flutter-Tongue Rate", 0.0, 40.0, 0.0, "Hz", MacroRole::Punch, "Tongue flutter oscillation rate modulating acoustic airflow"))
+            .with_param(DspParamSchema::knob("vibrato_humanize_depth", "Diaphragm Tremor Humanize Depth", 0.0, 100.0, 25.0, "%", MacroRole::Space, "Natural involuntary human diaphragm tremor and vibrato"))
+            .with_param(DspParamSchema::knob("noise_coupling_ratio", "Acoustic Airway Noise Injection", 0.0, 1.0, 0.15, "ratio", MacroRole::Tone, "Breath turbulence noise injection routed to audio engine"))
+        );
+        descriptors.insert("CadenceBusSnapshot".to_string(), DspNodeDescriptor::new("CadenceBusSnapshot", "Harmonic Progression Tension & Voice-Leading Detector HUD", DspNodeCategory::Modulation, "Advanced tonal harmony and musical cadence analyzer bus calculating instant tension-release ratios, circle of fifths distance, voice leading smoothness, modal interchange degree, and tonic resolution target")
+            .with_param(DspParamSchema::knob("harmonic_tension_index", "Psychoacoustic Harmonic Tension Index", 0.0, 1.0, 0.35, "tens", MacroRole::Tone, "Total psychoacoustic dissonance and functional instability index"))
+            .with_param(DspParamSchema::knob("resolution_pull_rate", "Tonal Center Resolution Pull Rate", 0.1, 10.0, 2.5, "sec", MacroRole::Tone, "Temporal urgency of harmonic transition to tonic tonal center"))
+            .with_param(DspParamSchema::knob("circle_fifths_distance", "Circle Of Fifths Step Distance", 0.0, 6.0, 1.0, "steps", MacroRole::Tone, "Step distance on circle of fifths away from root tonic"))
+            .with_param(DspParamSchema::knob("voice_leading_parsimony", "Voice Leading Parsimony Smoothness", 0.0, 1.0, 0.85, "norm", MacroRole::Space, "Minimum voice distance movement penalty in chord transitions"))
+            .with_param(DspParamSchema::choice("cadence_resolution_type", "Target Harmonic Cadence Archetype", &["Authentic (V -> I)", "Plagal (IV -> I)", "Deceptive (V -> vi)", "Half-Cadence (I -> V)", "Phrygian Half"], 0, "Detected or targeted harmonic cadence resolution archetype"))
+        );
+        descriptors.insert("MalletBusSnapshot".to_string(), DspNodeDescriptor::new("MalletBusSnapshot", "Tuned Percussion Bar Strike & Motor Tremolo Modulator HUD", DspNodeCategory::AcousticPhysicalModel, "Vibraphone, marimba, and xylophone physical acoustic model bus simulating rosewood/aluminum bar modal vibrations, rubber/cord mallet core hardness, under-bar resonator tubes, and rotating motor tremolo discs")
+            .with_param(DspParamSchema::knob("mallet_core_hardness", "Mallet Strike Core Hardness", 0.1, 1.0, 0.5, "hard", MacroRole::Punch, "Mallet wrapping yarn density and rubber strike core hardness"))
+            .with_param(DspParamSchema::knob("resonator_tube_tune", "Acoustic Resonator Tube Micro-Tune", -50.0, 50.0, 0.0, "cents", MacroRole::Tone, "Quarter-wave acoustic resonator pipe pitch alignment"))
+            .with_param(DspParamSchema::knob("motor_tremolo_speed", "Rotating Baffle Disc Tremolo Speed", 0.0, 12.0, 4.8, "Hz", MacroRole::Tone, "Rotating disc baffle tremolo oscillation frequency"))
+            .with_param(DspParamSchema::knob("damper_felt_decay", "Felt Damper Release Sustain Decay", 0.05, 8.0, 3.2, "sec", MacroRole::Space, "Felt damper bar release sustain ring time"))
+            .with_param(DspParamSchema::knob("anharmonic_partial_2", "Bar Undercut Second Partial Ratio", 1.5, 6.0, 3.98, "ratio", MacroRole::Tone, "Second partial frequency ratio tuned by bar under-cutting"))
+        );
+        descriptors.insert("PlectrumBusSnapshot".to_string(), DspNodeDescriptor::new("PlectrumBusSnapshot", "Plectrum & Quill Pluck Angle Attack Striker Model HUD", DspNodeCategory::AcousticPhysicalModel, "Physical pluck interaction simulator capturing celluloid guitar pick, harpsichord crow feather quill, or finger nail string displacement, attack release snap, string scrape friction, and strike position ratio")
+            .with_param(DspParamSchema::knob("pick_thickness_gauge", "Plectrum Thickness Flex Gauge", 0.3, 2.5, 0.88, "mm", MacroRole::Punch, "Physical plectrum thickness and flexural rigidity"))
+            .with_param(DspParamSchema::knob("pluck_position_ratio", "Pluck Position Ratio Along String", 0.05, 0.95, 0.18, "pos", MacroRole::Tone, "Relative pluck location along string from bridge to nut"))
+            .with_param(DspParamSchema::knob("strike_attack_angle", "Attack Striking Angle Relative To String", 0.0, 90.0, 35.0, "deg", MacroRole::Tone, "Plectrum bevel angle against string determining scrape transient"))
+            .with_param(DspParamSchema::knob("release_snap_velocity", "String Slip Release Snap Velocity", 0.1, 5.0, 1.8, "m/s", MacroRole::Punch, "String release velocity at slip moment creating initial wave packet"))
+            .with_param(DspParamSchema::knob("string_scrape_grit", "Wound String Wire Scrape Grit", -60.0, 0.0, -28.0, "dB", MacroRole::Tone, "Plectrum sliding friction along wound metal string wrap"))
+        );
+        descriptors.insert("FormantBusSnapshot".to_string(), DspNodeDescriptor::new("FormantBusSnapshot", "Anthropomorphic Vocal Tract & F1-F4 Formant Envelope HUD", DspNodeCategory::SpectralResynthesis, "Human vocal tract acoustic tube and vocal resonator filter bus providing real-time vowel morphing across F1-F4 formant frequencies, vocal bandwidths, nasal pharynx coupling, and larynx throat depth")
+            .with_param(DspParamSchema::knob("vowel_morph_xy", "Continuous Vowel Space Morph Coordinate", 0.0, 1.0, 0.3, "morph", MacroRole::Tone, "Continuous vowel formant morphing between [a, e, i, o, u]"))
+            .with_param(DspParamSchema::knob("formant_shift_cents", "Acoustic Vocal Tract Length Pitch Shift", -1200.0, 1200.0, 0.0, "cents", MacroRole::Tone, "Global formant scaling simulating vocal tract length changes"))
+            .with_param(DspParamSchema::knob("nasal_coupling_amount", "Soft Palate Velum Nasal Coupling", 0.0, 1.0, 0.15, "norm", MacroRole::Space, "Soft palate velum opening coupling acoustic nasal resonance"))
+            .with_param(DspParamSchema::knob("throat_larynx_depth", "Pharyngeal Cavity Throat Larynx Depth", 0.5, 2.0, 1.0, "geom", MacroRole::Punch, "Pharyngeal cavity throat depth and chest cavity resonance"))
+            .with_param(DspParamSchema::knob("vocal_formant_q_factor", "Formant Filter Bandwidth Sharpness Q", 1.0, 20.0, 6.5, "Q", MacroRole::Tone, "Bandwidth sharpness of individual formant band filters"))
+        );
+        descriptors.insert("EpBusSnapshot".to_string(), DspNodeDescriptor::new("EpBusSnapshot", "Vintage Electric Piano Tine Strike & Tonebar Sustain HUD", DspNodeCategory::AcousticPhysicalModel, "Vintage electro-mechanical tine and reed electric piano physical model bus simulating neoprene hammer tip velocity, asymmetrical tine vibration, tonebar acoustic sustain coupling, and electromagnetic pickup gap proximity")
+            .with_param(DspParamSchema::knob("tine_pickup_proximity", "Tine-To-Pickup Air Gap Proximity", 0.2, 5.0, 1.1, "mm", MacroRole::Punch, "Air gap between vibrating tine tip and magnetic pickup pole"))
+            .with_param(DspParamSchema::knob("tonebar_sustain_mass", "Cast Tonebar Acoustic Resonant Mass", 0.5, 4.0, 1.5, "mass", MacroRole::Space, "Cast tonebar acoustic mass sustaining fundamental resonance"))
+            .with_param(DspParamSchema::knob("hammer_felt_hardness", "Neoprene Hammer Tip Elastic Hardness", 0.1, 1.0, 0.6, "norm", MacroRole::Punch, "Graduated neoprene/felt tip strike elasticity and transient snap"))
+            .with_param(DspParamSchema::knob("harmonic_bark_drive", "High-Velocity Tine Bark Overdrive", 0.0, 24.0, 4.5, "dB", MacroRole::Tone, "High-velocity non-linear tine clack and growl drive"))
+            .with_param(DspParamSchema::knob("damper_felt_buzz", "Damper Felt Release Contact Buzz", -60.0, 0.0, -36.0, "dB", MacroRole::Tone, "Damper felt release buzz on vibrating tine"))
+        );
+        descriptors.insert("SpringBusSnapshot".to_string(), DspNodeDescriptor::new("SpringBusSnapshot", "Electro-Mechanical Spring Reverb Multi-Coil Dispersion HUD", DspNodeCategory::TimeSpace, "Vintage physical spring reverb tank simulation modeling multi-coil helical dispersion, non-linear high-frequency chirp delay, input drive transducer saturation, and metal tank chassis boing flutter")
+            .with_param(DspParamSchema::knob("spring_tank_decay", "Helical Spring Tank Reverberant Decay", 0.5, 12.0, 3.8, "sec", MacroRole::Space, "Helical spring vibration decay time inside suspension tank"))
+            .with_param(DspParamSchema::knob("chirp_dispersion_lag", "Dispersive Chirp Propagation Lag", 0.1, 10.0, 2.4, "ms", MacroRole::Tone, "Frequency-dependent dispersive wave propagation delay chirp"))
+            .with_param(DspParamSchema::knob("spring_drive_saturation", "Input Transducer Magnetic Saturation", 0.0, 30.0, 8.0, "dB", MacroRole::Punch, "Magnetic coil input transducer overdrive and compression"))
+            .with_param(DspParamSchema::knob("spring_boing_intensity", "Mechanical Chassis Transient Boing", 0.0, 1.0, 0.45, "norm", MacroRole::Punch, "Transient strike spring bouncing boing characteristic"))
+            .with_param(DspParamSchema::choice("coil_count_mode", "Mechanical Coil Array Configuration", &["Single Helical Coil", "Dual Counter-Wound", "Triple Balanced Coil", "Quad Long-Delay Array"], 2, "Number of interlinked mechanical spring coils"))
+        );
+        descriptors.insert("RotaryBusSnapshot".to_string(), DspNodeDescriptor::new("RotaryBusSnapshot", "Dual Rotor Leslie Speaker Doppler Shift & Cabinet Horn HUD", DspNodeCategory::Modulation, "Electro-acoustic rotating speaker simulation modeling dual rotor high-frequency treble horn and low-frequency bass drum acceleration, Doppler frequency modulation, wooden cabinet reflections, and microphone stereo angle")
+            .with_param(DspParamSchema::choice("horn_speed_mode", "Dual Rotor Velocity State", &["Brake (Stopped)", "Slow (Chorale)", "Fast (Tremolo)"], 2, "Treble horn and bass drum rotation speed state"))
+            .with_param(DspParamSchema::knob("horn_rotor_accel_sec", "Treble Horn Motor Acceleration", 0.2, 5.0, 1.4, "sec", MacroRole::Punch, "Treble horn motor spin-up and spin-down inertia time"))
+            .with_param(DspParamSchema::knob("drum_rotor_accel_sec", "Bass Drum Wooden Rotor Inertia", 1.0, 10.0, 4.5, "sec", MacroRole::Punch, "Heavy bass wooden rotor drum spin acceleration time"))
+            .with_param(DspParamSchema::knob("doppler_depth_cents", "Acoustic Doppler Pitch Deviation", 0.0, 100.0, 42.0, "cents", MacroRole::Tone, "Acoustic Doppler pitch shift amplitude per rotation"))
+            .with_param(DspParamSchema::knob("cabinet_mic_angle_deg", "Stereo Microphone Placement Angle", 30.0, 180.0, 90.0, "deg", MacroRole::Space, "Stereo microphone angle relative to wooden louvers"))
+        );
+        descriptors.insert("AcousticProfile".to_string(), DspNodeDescriptor::new("AcousticProfile", "Material Acoustic Impedance & Loss Factor Specifier HUD", DspNodeCategory::AcousticPhysicalModel, "Physical material properties configuration node specifying acoustic impedance, Young's modulus elasticity, density, internal loss factor, and sound radiation coefficient for physical acoustic models")
+            .with_param(DspParamSchema::knob("material_youngs_modulus", "Young's Modulus Elastic Stiffness", 1.0, 250.0, 12.5, "GPa", MacroRole::Tone, "Material stiffness governing acoustic wave velocity"))
+            .with_param(DspParamSchema::knob("material_density", "Volumetric Mass Density", 100.0, 15000.0, 450.0, "kg/m³", MacroRole::Punch, "Mass density of vibrating body (e.g. spruce wood vs brass)"))
+            .with_param(DspParamSchema::knob("internal_loss_factor", "Viscoelastic Internal Damping Loss", 0.0001, 0.1, 0.005, "eta", MacroRole::Tone, "Internal viscoelastic vibrational dissipation factor"))
+            .with_param(DspParamSchema::knob("radiation_efficiency", "Acoustic Energy Radiation Ratio", 0.0, 1.0, 0.7, "norm", MacroRole::Space, "Efficiency of kinetic energy conversion into acoustic sound waves"))
+            .with_param(DspParamSchema::knob("poisson_ratio", "Transverse Poisson Strain Ratio", 0.1, 0.49, 0.35, "nu", MacroRole::Tone, "Transverse strain ratio under longitudinal stress"))
+        );
+        descriptors.insert("HarmonicProfile".to_string(), DspNodeDescriptor::new("HarmonicProfile", "Additive Harmonic Partial Distribution & Centroid Envelope HUD", DspNodeCategory::SpectralResynthesis, "Spectral distribution and harmonic synthesis contour node controlling odd-to-even partial balance, high-frequency spectral rolloff slope, inharmonicity stretch, and spectral tilt centroid")
+            .with_param(DspParamSchema::knob("odd_even_balance", "Odd-To-Even Harmonic Partial Ratio", -1.0, 1.0, 0.0, "bal", MacroRole::Tone, "Balance between odd harmonics (clarinet) and even harmonics (strings)"))
+            .with_param(DspParamSchema::knob("spectral_tilt_slope", "High-Frequency Spectral Tilt Rolloff", -24.0, 6.0, -6.0, "dB/oct", MacroRole::Tone, "High-frequency partial attenuation rolloff rate"))
+            .with_param(DspParamSchema::knob("inharmonic_stretch", "Wire Dispersion Inharmonicity Stretch", 0.0, 0.1, 0.002, "factor", MacroRole::Tone, "Stiff bar or heavy wire overtone stretching factor"))
+            .with_param(DspParamSchema::knob("harmonic_count", "Synthesized Fourier Partial Count", 1.0, 128.0, 32.0, "partials", MacroRole::Punch, "Active synthesized Fourier sinusoidal partial count"))
+            .with_param(DspParamSchema::knob("spectral_centroid_shift", "Spectral Mass Centroid Brightness Shift", -1000.0, 2000.0, 0.0, "Hz", MacroRole::Tone, "Center of spectral mass frequency brightness shift"))
+        );
+        descriptors.insert("HammerParameters".to_string(), DspNodeDescriptor::new("HammerParameters", "Non-Linear Felt Strike Compaction Hysteresis Engine HUD", DspNodeCategory::AcousticPhysicalModel, "Non-linear piano and struck-string hammer interaction engine modeling felt compression compliance exponent, dynamic contact duration, hysteresis energy dissipation, and hammer striker mass")
+            .with_param(DspParamSchema::knob("hammer_mass_grams", "Striker Mechanism Physical Mass", 1.0, 50.0, 8.5, "g", MacroRole::Punch, "Effective physical mass of the striking hammer mechanism"))
+            .with_param(DspParamSchema::knob("stiffness_exponent_p", "Non-Linear Felt Compliance Exponent", 1.5, 4.0, 2.5, "p", MacroRole::Tone, "Non-linear force exponent F = k * x^p of felt compression"))
+            .with_param(DspParamSchema::knob("hysteresis_loss_ratio", "Impact Compaction Energy Hysteresis Loss", 0.0, 0.8, 0.28, "loss", MacroRole::Tone, "Energy absorbed by felt hysteresis during impact and rebound"))
+            .with_param(DspParamSchema::knob("contact_duration_target", "String Physical Contact Duration", 0.5, 10.0, 2.8, "ms", MacroRole::Punch, "Duration hammer remains in physical contact with string"))
+            .with_param(DspParamSchema::knob("felt_aging_wear", "Felt Surface Hardening & Wear", 0.0, 1.0, 0.2, "wear", MacroRole::Tone, "Felt grooving and compaction wear causing brighter tone"))
+        );
+        descriptors.insert("FrictionParameters".to_string(), DspNodeDescriptor::new("FrictionParameters", "Stribeck Stick-Slip Rosin Friction & Softening Core HUD", DspNodeCategory::AcousticPhysicalModel, "Dynamic bow-string and hurdy-gurdy friction contact model calculating Stribeck curve stick-slip transitions, static-to-kinetic friction ratio, rosin thermal softening, and bow normal pressure force")
+            .with_param(DspParamSchema::knob("static_friction_coeff", "Static Grip Friction Coefficient", 0.2, 1.5, 0.8, "mu_s", MacroRole::Punch, "Static grip friction coefficient holding string before slip"))
+            .with_param(DspParamSchema::knob("kinetic_friction_coeff", "Dynamic Sliding Kinetic Friction", 0.05, 0.8, 0.25, "mu_k", MacroRole::Tone, "Sliding kinetic friction coefficient during slip phase"))
+            .with_param(DspParamSchema::knob("stribeck_velocity_decay", "Stribeck Velocity Transition Decay", 0.01, 1.0, 0.12, "v_s", MacroRole::Tone, "Stribeck velocity threshold transitioning between static and kinetic"))
+            .with_param(DspParamSchema::knob("rosin_thermal_softening", "Sliding Thermal Rosin Softening", 0.0, 1.0, 0.35, "norm", MacroRole::Tone, "Heat generation from sliding reducing rosin viscosity"))
+            .with_param(DspParamSchema::knob("bow_normal_force_newtons", "Perpendicular Downward Normal Force", 0.05, 5.0, 0.9, "N", MacroRole::Punch, "Perpendicular downward bow pressure applied to string"))
+        );
 
         Self { descriptors }
     }
@@ -7792,6 +7939,27 @@ impl DspNodeRegistry {
             ("MicroCommit", DspNodeCategory::Utility, "Git-Backed Time-Machine Undo Micro-Commit HUD"),
             ("MidiControllerMapping", DspNodeCategory::Utility, "Hardware MIDI Control Surface Mapping Matrix HUD"),
             ("PluginResourceBudget", DspNodeCategory::Utility, "Real-Time DSP Audio Thread Resource Guard HUD"),
+            ("GrandPianoBusSnapshot", DspNodeCategory::AcousticPhysicalModel, "Concert Grand Piano Physical Resonance Snapshot HUD"),
+            ("PipeOrganBusSnapshot", DspNodeCategory::AcousticPhysicalModel, "Cathedral Pipe Organ Wind Chest & Tracker Snapshot HUD"),
+            ("HurdyGurdyBusSnapshot", DspNodeCategory::AcousticPhysicalModel, "Hurdy-Gurdy Rosin Crank & Drone Resonator HUD"),
+            ("KotoBusSnapshot", DspNodeCategory::AcousticPhysicalModel, "13-String Silk Bridge & Paulownia Acoustic Body Resonator HUD"),
+            ("ShakuhachiBusSnapshot", DspNodeCategory::AcousticPhysicalModel, "Bamboo Bore Embouchure Angle & Turbulence Resonator HUD"),
+            ("SitarBusSnapshot", DspNodeCategory::AcousticPhysicalModel, "Curved Jawari Bridge Buzz & Tarafdar Drone Resonator HUD"),
+            ("GlassArmonicaBusSnapshot", DspNodeCategory::AcousticPhysicalModel, "Quartz Glass Bowl Peripheral Friction Spindle Resonator HUD"),
+            ("ClavinetBusSnapshot", DspNodeCategory::AcousticPhysicalModel, "Vintage Clavinet Rubber Striker Hammer & Pickup Matrix HUD"),
+            ("BellowsBusSnapshot", DspNodeCategory::AcousticPhysicalModel, "Accordion Bellows Airflow Pressure & Reed Chamber Coupler HUD"),
+            ("BreathBusSnapshot", DspNodeCategory::Modulation, "Continuous Acoustic Wind Human Breath Pressure Controller HUD"),
+            ("CadenceBusSnapshot", DspNodeCategory::Modulation, "Harmonic Progression Tension & Voice-Leading Detector HUD"),
+            ("MalletBusSnapshot", DspNodeCategory::AcousticPhysicalModel, "Tuned Percussion Bar Strike & Motor Tremolo Modulator HUD"),
+            ("PlectrumBusSnapshot", DspNodeCategory::AcousticPhysicalModel, "Plectrum & Quill Pluck Angle Attack Striker Model HUD"),
+            ("FormantBusSnapshot", DspNodeCategory::SpectralResynthesis, "Anthropomorphic Vocal Tract & F1-F4 Formant Envelope HUD"),
+            ("EpBusSnapshot", DspNodeCategory::AcousticPhysicalModel, "Vintage Electric Piano Tine Strike & Tonebar Sustain HUD"),
+            ("SpringBusSnapshot", DspNodeCategory::TimeSpace, "Electro-Mechanical Spring Reverb Multi-Coil Dispersion HUD"),
+            ("RotaryBusSnapshot", DspNodeCategory::Modulation, "Dual Rotor Leslie Speaker Doppler Shift & Cabinet Horn HUD"),
+            ("AcousticProfile", DspNodeCategory::AcousticPhysicalModel, "Material Acoustic Impedance & Loss Factor Specifier HUD"),
+            ("HarmonicProfile", DspNodeCategory::SpectralResynthesis, "Additive Harmonic Partial Distribution & Centroid Envelope HUD"),
+            ("HammerParameters", DspNodeCategory::AcousticPhysicalModel, "Non-Linear Felt Strike Compaction Hysteresis Engine HUD"),
+            ("FrictionParameters", DspNodeCategory::AcousticPhysicalModel, "Stribeck Stick-Slip Rosin Friction & Softening Core HUD"),
         ]
     }
 
@@ -9656,6 +9824,27 @@ impl DspNodeRegistry {
             "microcommit" | "timemachinesnapshot" | "gitmicrocommit" | "dawsnapshot" => Some("MicroCommit"),
             "midicontrollermapping" | "midilearn" | "midiccmeta" | "controllermap" => Some("MidiControllerMapping"),
             "pluginresourcebudget" | "dspbudgetguard" | "pluginbudget" | "cpuwatchdog" => Some("PluginResourceBudget"),
+            "grandpianobussnapshot" | "grandpianosnapshot" | "pianosnapshot" | "pianobussnapshot" => Some("GrandPianoBusSnapshot"),
+            "pipeorganbussnapshot" | "pipeorgansnapshot" | "organsnapshot" | "organbussnapshot" => Some("PipeOrganBusSnapshot"),
+            "hurdygurdybussnapshot" | "hurdygurdysnapshot" | "gurdysnapshot" | "gurdybussnapshot" => Some("HurdyGurdyBusSnapshot"),
+            "kotobussnapshot" | "kotosnapshot" | "japanesekotosnapshot" | "kotobussnap" => Some("KotoBusSnapshot"),
+            "shakuhachibussnapshot" | "shakuhachisnapshot" | "shakuhachibussnap" | "flutesnapshot" => Some("ShakuhachiBusSnapshot"),
+            "sitarbussnapshot" | "sitarsnapshot" | "sitarbussnap" | "indiansitarsnapshot" => Some("SitarBusSnapshot"),
+            "glassarmonicabussnapshot" | "glassarmonicasnapshot" | "armonicasnapshot" | "armonicasnap" => Some("GlassArmonicaBusSnapshot"),
+            "clavinetbussnapshot" | "clavinetsnapshot" | "clavinetbussnap" | "clavbussnapshot" => Some("ClavinetBusSnapshot"),
+            "bellowsbussnapshot" | "bellowssnapshot" | "bellowsbussnap" | "accordionbellowssnapshot" => Some("BellowsBusSnapshot"),
+            "breathbussnapshot" | "breathsnapshot" | "breathbussnap" | "respirationsnapshot" => Some("BreathBusSnapshot"),
+            "cadencebussnapshot" | "cadencesnapshot" | "cadencebussnap" | "harmoniccadencesnapshot" => Some("CadenceBusSnapshot"),
+            "malletbussnapshot" | "malletsnapshot" | "malletbussnap" | "percussionmalletsnapshot" => Some("MalletBusSnapshot"),
+            "plectrumbussnapshot" | "plectrumsnapshot" | "plectrumbussnap" | "picksnapshot" => Some("PlectrumBusSnapshot"),
+            "formantbussnapshot" | "formantsnapshot" | "formantbussnap" | "tractformantsnapshot" => Some("FormantBusSnapshot"),
+            "epbussnapshot" | "epsnapshot" | "epbussnap" | "electricpianosnapshot" => Some("EpBusSnapshot"),
+            "springbussnapshot" | "springsnapshot" | "springbussnap" | "springtanksnapshot" => Some("SpringBusSnapshot"),
+            "rotarybussnapshot" | "rotarysnapshot" | "rotarybussnap" | "rotaryhornsnapshot" => Some("RotaryBusSnapshot"),
+            "acousticprofile" | "materialprofile" | "acousticmaterial" | "materialimpedance" => Some("AcousticProfile"),
+            "harmonicprofile" | "spectralprofile" | "harmonicdistribution" | "partialprofile" => Some("HarmonicProfile"),
+            "hammerparameters" | "hammerparams" | "pianohammerparams" | "hammerphysics" => Some("HammerParameters"),
+            "frictionparameters" | "frictionparams" | "frictionmodelparams" | "stribeckfriction" => Some("FrictionParameters"),
             _ => None,
         }
     }
@@ -15820,6 +16009,174 @@ impl DspNodeRegistry {
                     .with_param(DspParamDescriptor::new_linear("auto_kill_unresponsive", "Auto-Bypass Failing Plugin Instances", 0.0, 1.0, 1.0, "bool", (168, 85, 247)))
                     .with_param(DspParamDescriptor::new_enum("sandbox_isolation_level", "DSP Plugin Memory Isolation Architecture", vec!["In-Process High Performance".into(), "Out-of-Process Shared Memory".into(), "Strict Sandboxed Worker".into()], 0, (34, 197, 94)))
             ),
+            "GrandPianoBusSnapshot" => Box::new(
+                GenericDspNodeUi::new("GrandPianoBusSnapshot", "Concert Grand Piano Physical Resonance Snapshot HUD", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("hammer_hardness", "Felt Hammer Strike Hardness", 0.1, 2.0, 1.0, "mult", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("duplex_resonance", "Duplex String Sympathetic Scaling", 0.0, 1.0, 0.45, "norm", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("soundboard_radiation", "Spruce Soundboard Radiation Factor", 0.0, 1.0, 0.75, "norm", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("lid_position_angle", "Grand Piano Lid Opening Angle", 0.0, 90.0, 65.0, "deg", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("damper_pedal_state", "Damper Pedal Sustain Lift", 0.0, 1.0, 0.0, "bool", (34, 197, 94)))
+            ),
+            "PipeOrganBusSnapshot" => Box::new(
+                GenericDspNodeUi::new("PipeOrganBusSnapshot", "Cathedral Pipe Organ Wind Chest & Tracker Snapshot HUD", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("wind_chest_pressure", "Pneumatic Wind Chest Air Pressure", 40.0, 120.0, 80.0, "mmAq", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("tracker_action_noise", "Tracker Linkage Action Mechanical Noise", -60.0, 0.0, -36.0, "dB", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("tremulant_speed", "Pneumatic Tremulant Pulsation Speed", 1.0, 8.0, 4.2, "Hz", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("swell_box_open", "Swell Box Acoustic Shutter Aperture", 0.0, 100.0, 75.0, "%", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_enum("reed_flue_blend", "Pipe Rank Voicing Balance", vec!["Pure Flue Foundations".into(), "Balanced Reed & Flue".into(), "Tutti Reed Dominant".into(), "Solo Cornet Mixture".into()], 1, (34, 197, 94)))
+            ),
+            "HurdyGurdyBusSnapshot" => Box::new(
+                GenericDspNodeUi::new("HurdyGurdyBusSnapshot", "Hurdy-Gurdy Rosin Crank & Drone Resonator HUD", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("wheel_rotational_speed", "Wooden Crank Wheel Rotation Rate", 0.2, 5.0, 1.8, "rps", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("rosin_friction_coeff", "Wheel Rosin Stick-Slip Traction", 0.05, 1.0, 0.42, "mu", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("buzzing_bridge_chien", "Trompette Buzzing Bridge Sensitivity", 0.0, 1.0, 0.6, "buzz", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("drone_resonance_mix", "Bourdon Low Drone Acoustic Mix", 0.0, 1.0, 0.35, "norm", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("tangent_damping", "Keybed Wooden Tangent Release Damping", 0.01, 1.0, 0.15, "sec", (34, 197, 94)))
+            ),
+            "KotoBusSnapshot" => Box::new(
+                GenericDspNodeUi::new("KotoBusSnapshot", "13-String Silk Bridge & Paulownia Acoustic Body Resonator HUD", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("oshite_bend_tension", "Left-Hand Behind-Bridge Oshite Bend", 0.0, 4.0, 0.0, "semi", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("plectrum_hardness", "Ivory Plectrum Attack Hardness", 0.1, 1.0, 0.8, "norm", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("paulownia_resonance", "Paulownia Soundboard Body Cavity Resonance", 0.0, 1.0, 0.65, "norm", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("bridge_scatter_loss", "Movable Ji Bridge Transmission Loss", 0.01, 0.5, 0.08, "norm", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("sympathetic_ring", "Sibling String Sympathetic Coupling", 0.0, 1.0, 0.5, "norm", (34, 197, 94)))
+            ),
+            "ShakuhachiBusSnapshot" => Box::new(
+                GenericDspNodeUi::new("ShakuhachiBusSnapshot", "Bamboo Bore Embouchure Angle & Turbulence Resonator HUD", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("embouchure_angle", "Utaguchi Blowing Angle Alignment", -30.0, 30.0, 0.0, "deg", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("jet_turbulence_noise", "Vortex Shedding Breath Jet Turbulence", 0.0, 1.0, 0.25, "norm", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("meri_kari_pitch_bend", "Meri/Kari Chin Tilt Pitch Expression", -3.0, 3.0, 0.0, "semi", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("bore_root_flare", "Bamboo Root Flare Horn Impedance", 0.0, 1.0, 0.7, "norm", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("muraiki_breath_burst", "Muraiki Explosive Breath Burst", 0.0, 1.0, 0.0, "burst", (34, 197, 94)))
+            ),
+            "SitarBusSnapshot" => Box::new(
+                GenericDspNodeUi::new("SitarBusSnapshot", "Curved Jawari Bridge Buzz & Tarafdar Drone Resonator HUD", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("jawari_buzz_depth", "Bone Jawari Bridge Grazing Buzz", 0.0, 1.0, 0.72, "buzz", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("meend_pull_range", "Meend Lateral String Pull Width", 0.0, 7.0, 4.0, "semi", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("mizrab_strike_angle", "Mizrab Wire Plectrum Strike Angle", 10.0, 90.0, 45.0, "deg", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("tarafdar_drone_coupling", "Tarafdar Sympathetic Strings Coupling", 0.0, 1.0, 0.6, "norm", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("tumba_gourd_resonance", "Calabash Tumba Gourd Acoustic Cavity", 0.0, 1.0, 0.55, "norm", (34, 197, 94)))
+            ),
+            "GlassArmonicaBusSnapshot" => Box::new(
+                GenericDspNodeUi::new("GlassArmonicaBusSnapshot", "Quartz Glass Bowl Peripheral Friction Spindle Resonator HUD", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("spindle_rpm", "Central Spindle Rotational Velocity", 20.0, 200.0, 85.0, "RPM", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("finger_moisture_lubricity", "Fingertip Water Film Lubricity", 0.01, 1.0, 0.68, "norm", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("contact_pressure_force", "Perpendicular Rim Contact Force", 0.05, 5.0, 1.2, "N", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("quartz_purity_q", "Quartz Crystal Modal Quality Q", 500.0, 10000.0, 4500.0, "Q", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("bowl_size_diameter_cm", "Vibrating Bowl Rim Diameter", 5.0, 35.0, 18.0, "cm", (34, 197, 94)))
+            ),
+            "ClavinetBusSnapshot" => Box::new(
+                GenericDspNodeUi::new("ClavinetBusSnapshot", "Vintage Clavinet Rubber Striker Hammer & Pickup Matrix HUD", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("hammer_tip_elasticity", "Neoprene Rubber Hammer Tip Elasticity", 0.1, 2.0, 1.0, "elast", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("yarn_mute_damping", "Yarn String Mute Weave Damping", 0.0, 1.0, 0.25, "damp", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("pickup_balance_mix", "Dual Single-Coil Pickup Balance", 0.0, 1.0, 0.5, "neck/brg", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("pickup_phase_invert", "Out-Of-Phase Reverse Pickup Wiring", 0.0, 1.0, 0.0, "bool", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("preamp_overdrive_gain", "Discrete Transistor Preamp Drive", 0.0, 36.0, 6.0, "dB", (34, 197, 94)))
+            ),
+            "BellowsBusSnapshot" => Box::new(
+                GenericDspNodeUi::new("BellowsBusSnapshot", "Accordion Bellows Airflow Pressure & Reed Chamber Coupler HUD", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("bellows_air_pressure", "Bellows Compression Airflow Pressure", -100.0, 100.0, 40.0, "hPa", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("reed_tongue_deflection", "Spring Steel Reed Non-Linear Deflection", 0.05, 1.0, 0.55, "norm", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("cassotto_chamber_filter", "Cassotto Tone Chamber Cutoff", 200.0, 8000.0, 1800.0, "Hz", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("tremolo_rank_detune", "Musette Tremolo Reed Frequency Offset", 0.0, 35.0, 12.0, "cents", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("valve_click_mechanical", "Pallet Valve & Keybed Mechanical Noise", -60.0, 0.0, -32.0, "dB", (34, 197, 94)))
+            ),
+            "BreathBusSnapshot" => Box::new(
+                GenericDspNodeUi::new("BreathBusSnapshot", "Continuous Acoustic Wind Human Breath Pressure Controller HUD", DspNodeCategory::Modulation)
+                    .with_param(DspParamDescriptor::new_linear("breath_pressure", "Normalized Exhalation Air Pressure", 0.0, 1.0, 0.65, "norm", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("lip_bite_tension", "Embouchure Lip Squeeze Bite Tension", 0.0, 1.0, 0.4, "norm", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("flutter_tongue_rate", "Tongue Flutter Flutter-Tongue Rate", 0.0, 40.0, 0.0, "Hz", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("vibrato_humanize_depth", "Diaphragm Tremor Humanize Depth", 0.0, 100.0, 25.0, "%", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("noise_coupling_ratio", "Acoustic Airway Noise Injection", 0.0, 1.0, 0.15, "ratio", (34, 197, 94)))
+            ),
+            "CadenceBusSnapshot" => Box::new(
+                GenericDspNodeUi::new("CadenceBusSnapshot", "Harmonic Progression Tension & Voice-Leading Detector HUD", DspNodeCategory::Modulation)
+                    .with_param(DspParamDescriptor::new_linear("harmonic_tension_index", "Psychoacoustic Harmonic Tension Index", 0.0, 1.0, 0.35, "tens", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("resolution_pull_rate", "Tonal Center Resolution Pull Rate", 0.1, 10.0, 2.5, "sec", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("circle_fifths_distance", "Circle Of Fifths Step Distance", 0.0, 6.0, 1.0, "steps", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("voice_leading_parsimony", "Voice Leading Parsimony Smoothness", 0.0, 1.0, 0.85, "norm", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_enum("cadence_resolution_type", "Target Harmonic Cadence Archetype", vec!["Authentic (V -> I)".into(), "Plagal (IV -> I)".into(), "Deceptive (V -> vi)".into(), "Half-Cadence (I -> V)".into(), "Phrygian Half".into()], 0, (34, 197, 94)))
+            ),
+            "MalletBusSnapshot" => Box::new(
+                GenericDspNodeUi::new("MalletBusSnapshot", "Tuned Percussion Bar Strike & Motor Tremolo Modulator HUD", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("mallet_core_hardness", "Mallet Strike Core Hardness", 0.1, 1.0, 0.5, "hard", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("resonator_tube_tune", "Acoustic Resonator Tube Micro-Tune", -50.0, 50.0, 0.0, "cents", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("motor_tremolo_speed", "Rotating Baffle Disc Tremolo Speed", 0.0, 12.0, 4.8, "Hz", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("damper_felt_decay", "Felt Damper Release Sustain Decay", 0.05, 8.0, 3.2, "sec", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("anharmonic_partial_2", "Bar Undercut Second Partial Ratio", 1.5, 6.0, 3.98, "ratio", (34, 197, 94)))
+            ),
+            "PlectrumBusSnapshot" => Box::new(
+                GenericDspNodeUi::new("PlectrumBusSnapshot", "Plectrum & Quill Pluck Angle Attack Striker Model HUD", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("pick_thickness_gauge", "Plectrum Thickness Flex Gauge", 0.3, 2.5, 0.88, "mm", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("pluck_position_ratio", "Pluck Position Ratio Along String", 0.05, 0.95, 0.18, "pos", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("strike_attack_angle", "Attack Striking Angle Relative To String", 0.0, 90.0, 35.0, "deg", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("release_snap_velocity", "String Slip Release Snap Velocity", 0.1, 5.0, 1.8, "m/s", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("string_scrape_grit", "Wound String Wire Scrape Grit", -60.0, 0.0, -28.0, "dB", (34, 197, 94)))
+            ),
+            "FormantBusSnapshot" => Box::new(
+                GenericDspNodeUi::new("FormantBusSnapshot", "Anthropomorphic Vocal Tract & F1-F4 Formant Envelope HUD", DspNodeCategory::SpectralResynthesis)
+                    .with_param(DspParamDescriptor::new_linear("vowel_morph_xy", "Continuous Vowel Space Morph Coordinate", 0.0, 1.0, 0.3, "morph", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("formant_shift_cents", "Acoustic Vocal Tract Length Pitch Shift", -1200.0, 1200.0, 0.0, "cents", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("nasal_coupling_amount", "Soft Palate Velum Nasal Coupling", 0.0, 1.0, 0.15, "norm", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("throat_larynx_depth", "Pharyngeal Cavity Throat Larynx Depth", 0.5, 2.0, 1.0, "geom", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("vocal_formant_q_factor", "Formant Filter Bandwidth Sharpness Q", 1.0, 20.0, 6.5, "Q", (34, 197, 94)))
+            ),
+            "EpBusSnapshot" => Box::new(
+                GenericDspNodeUi::new("EpBusSnapshot", "Vintage Electric Piano Tine Strike & Tonebar Sustain HUD", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("tine_pickup_proximity", "Tine-To-Pickup Air Gap Proximity", 0.2, 5.0, 1.1, "mm", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("tonebar_sustain_mass", "Cast Tonebar Acoustic Resonant Mass", 0.5, 4.0, 1.5, "mass", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("hammer_felt_hardness", "Neoprene Hammer Tip Elastic Hardness", 0.1, 1.0, 0.6, "norm", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("harmonic_bark_drive", "High-Velocity Tine Bark Overdrive", 0.0, 24.0, 4.5, "dB", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("damper_felt_buzz", "Damper Felt Release Contact Buzz", -60.0, 0.0, -36.0, "dB", (34, 197, 94)))
+            ),
+            "SpringBusSnapshot" => Box::new(
+                GenericDspNodeUi::new("SpringBusSnapshot", "Electro-Mechanical Spring Reverb Multi-Coil Dispersion HUD", DspNodeCategory::TimeSpace)
+                    .with_param(DspParamDescriptor::new_linear("spring_tank_decay", "Helical Spring Tank Reverberant Decay", 0.5, 12.0, 3.8, "sec", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("chirp_dispersion_lag", "Dispersive Chirp Propagation Lag", 0.1, 10.0, 2.4, "ms", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("spring_drive_saturation", "Input Transducer Magnetic Saturation", 0.0, 30.0, 8.0, "dB", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("spring_boing_intensity", "Mechanical Chassis Transient Boing", 0.0, 1.0, 0.45, "norm", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_enum("coil_count_mode", "Mechanical Coil Array Configuration", vec!["Single Helical Coil".into(), "Dual Counter-Wound".into(), "Triple Balanced Coil".into(), "Quad Long-Delay Array".into()], 2, (34, 197, 94)))
+            ),
+            "RotaryBusSnapshot" => Box::new(
+                GenericDspNodeUi::new("RotaryBusSnapshot", "Dual Rotor Leslie Speaker Doppler Shift & Cabinet Horn HUD", DspNodeCategory::Modulation)
+                    .with_param(DspParamDescriptor::new_enum("horn_speed_mode", "Dual Rotor Velocity State", vec!["Brake (Stopped)".into(), "Slow (Chorale)".into(), "Fast (Tremolo)".into()], 2, (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_linear("horn_rotor_accel_sec", "Treble Horn Motor Acceleration", 0.2, 5.0, 1.4, "sec", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("drum_rotor_accel_sec", "Bass Drum Wooden Rotor Inertia", 1.0, 10.0, 4.5, "sec", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("doppler_depth_cents", "Acoustic Doppler Pitch Deviation", 0.0, 100.0, 42.0, "cents", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("cabinet_mic_angle_deg", "Stereo Microphone Placement Angle", 30.0, 180.0, 90.0, "deg", (168, 85, 247)))
+            ),
+            "AcousticProfile" => Box::new(
+                GenericDspNodeUi::new("AcousticProfile", "Material Acoustic Impedance & Loss Factor Specifier HUD", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("material_youngs_modulus", "Young's Modulus Elastic Stiffness", 1.0, 250.0, 12.5, "GPa", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("material_density", "Volumetric Mass Density", 100.0, 15000.0, 450.0, "kg/m³", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("internal_loss_factor", "Viscoelastic Internal Damping Loss", 0.0001, 0.1, 0.005, "eta", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("radiation_efficiency", "Acoustic Energy Radiation Ratio", 0.0, 1.0, 0.7, "norm", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("poisson_ratio", "Transverse Poisson Strain Ratio", 0.1, 0.49, 0.35, "nu", (34, 197, 94)))
+            ),
+            "HarmonicProfile" => Box::new(
+                GenericDspNodeUi::new("HarmonicProfile", "Additive Harmonic Partial Distribution & Centroid Envelope HUD", DspNodeCategory::SpectralResynthesis)
+                    .with_param(DspParamDescriptor::new_linear("odd_even_balance", "Odd-To-Even Harmonic Partial Ratio", -1.0, 1.0, 0.0, "bal", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("spectral_tilt_slope", "High-Frequency Spectral Tilt Rolloff", -24.0, 6.0, -6.0, "dB/oct", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("inharmonic_stretch", "Wire Dispersion Inharmonicity Stretch", 0.0, 0.1, 0.002, "factor", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("harmonic_count", "Synthesized Fourier Partial Count", 1.0, 128.0, 32.0, "partials", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("spectral_centroid_shift", "Spectral Mass Centroid Brightness Shift", -1000.0, 2000.0, 0.0, "Hz", (34, 197, 94)))
+            ),
+            "HammerParameters" => Box::new(
+                GenericDspNodeUi::new("HammerParameters", "Non-Linear Felt Strike Compaction Hysteresis Engine HUD", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("hammer_mass_grams", "Striker Mechanism Physical Mass", 1.0, 50.0, 8.5, "g", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("stiffness_exponent_p", "Non-Linear Felt Compliance Exponent", 1.5, 4.0, 2.5, "p", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("hysteresis_loss_ratio", "Impact Compaction Energy Hysteresis Loss", 0.0, 0.8, 0.28, "loss", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("contact_duration_target", "String Physical Contact Duration", 0.5, 10.0, 2.8, "ms", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("felt_aging_wear", "Felt Surface Hardening & Wear", 0.0, 1.0, 0.2, "wear", (34, 197, 94)))
+            ),
+            "FrictionParameters" => Box::new(
+                GenericDspNodeUi::new("FrictionParameters", "Stribeck Stick-Slip Rosin Friction & Softening Core HUD", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("static_friction_coeff", "Static Grip Friction Coefficient", 0.2, 1.5, 0.8, "mu_s", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("kinetic_friction_coeff", "Dynamic Sliding Kinetic Friction", 0.05, 0.8, 0.25, "mu_k", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("stribeck_velocity_decay", "Stribeck Velocity Transition Decay", 0.01, 1.0, 0.12, "v_s", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("rosin_thermal_softening", "Sliding Thermal Rosin Softening", 0.0, 1.0, 0.35, "norm", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("bow_normal_force_newtons", "Perpendicular Downward Normal Force", 0.05, 5.0, 0.9, "N", (34, 197, 94)))
+            ),
             // Fallback dynamic generator for any unexpected or plugin node
             other => {
                 let cat = Self::inventory()
@@ -16291,6 +16648,27 @@ mod tests {
         assert!(registry.get("MicroCommit").is_some());
         assert!(registry.get("MidiControllerMapping").is_some());
         assert!(registry.get("PluginResourceBudget").is_some());
+        assert!(registry.get("GrandPianoBusSnapshot").is_some());
+        assert!(registry.get("PipeOrganBusSnapshot").is_some());
+        assert!(registry.get("HurdyGurdyBusSnapshot").is_some());
+        assert!(registry.get("KotoBusSnapshot").is_some());
+        assert!(registry.get("ShakuhachiBusSnapshot").is_some());
+        assert!(registry.get("SitarBusSnapshot").is_some());
+        assert!(registry.get("GlassArmonicaBusSnapshot").is_some());
+        assert!(registry.get("ClavinetBusSnapshot").is_some());
+        assert!(registry.get("BellowsBusSnapshot").is_some());
+        assert!(registry.get("BreathBusSnapshot").is_some());
+        assert!(registry.get("CadenceBusSnapshot").is_some());
+        assert!(registry.get("MalletBusSnapshot").is_some());
+        assert!(registry.get("PlectrumBusSnapshot").is_some());
+        assert!(registry.get("FormantBusSnapshot").is_some());
+        assert!(registry.get("EpBusSnapshot").is_some());
+        assert!(registry.get("SpringBusSnapshot").is_some());
+        assert!(registry.get("RotaryBusSnapshot").is_some());
+        assert!(registry.get("AcousticProfile").is_some());
+        assert!(registry.get("HarmonicProfile").is_some());
+        assert!(registry.get("HammerParameters").is_some());
+        assert!(registry.get("FrictionParameters").is_some());
     }
 
     #[test]

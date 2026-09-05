@@ -201,6 +201,10 @@ fn default_available_presets() -> Vec<String> {
         "Vocal Multi-Take Comping & Crossfade Editor".to_string(),
         "Generative Markov Algorithmic Melodic Mutator".to_string(),
         "Broadcast Multi-Stem Master Export Station".to_string(),
+        "Concert Grand Piano Acoustic Resonance Model".to_string(),
+        "Cathedral Pipe Organ Tracker Wind Chest".to_string(),
+        "Hurdy-Gurdy Rosin Friction & Drone Resonator".to_string(),
+        "Continuous Human Breath & Wind Controller".to_string(),
     ]
 }
 

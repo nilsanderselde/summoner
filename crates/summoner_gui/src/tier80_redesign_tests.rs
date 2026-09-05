@@ -5955,6 +5955,174 @@ mod tests {
             assert_eq!(view.inspector_state.selected_node_kind, Some("ExportPreset".to_string()));
         }
     }
+
+    #[test]
+    fn test_tier108_modern_gui_dsp_module_coverage_and_presets() {
+        use crate::dsp_node_ui::{DspNodeRegistry, DspNodeCategory};
+        use crate::views::modern_asset_browser::BrowserCategory;
+
+        let registry = DspNodeRegistry::new();
+
+        // 1. Verify 883 total DSP modules registered
+        let total_modules = DspNodeRegistry::inventory();
+        assert_eq!(total_modules.len(), 883, "Must have exactly 883 registered DSP modules");
+        assert!(
+            registry.list_all().len() >= 883,
+            "Must have at least 883 registered DSP modules, found {}",
+            registry.list_all().len()
+        );
+
+        // 2. Verify all 21 new modules exist with correct categories and tactile parameters (>= 5 params each)
+        let new_modules = [
+            ("GrandPianoBusSnapshot", DspNodeCategory::AcousticPhysicalModel),
+            ("PipeOrganBusSnapshot", DspNodeCategory::AcousticPhysicalModel),
+            ("HurdyGurdyBusSnapshot", DspNodeCategory::AcousticPhysicalModel),
+            ("KotoBusSnapshot", DspNodeCategory::AcousticPhysicalModel),
+            ("ShakuhachiBusSnapshot", DspNodeCategory::AcousticPhysicalModel),
+            ("SitarBusSnapshot", DspNodeCategory::AcousticPhysicalModel),
+            ("GlassArmonicaBusSnapshot", DspNodeCategory::AcousticPhysicalModel),
+            ("ClavinetBusSnapshot", DspNodeCategory::AcousticPhysicalModel),
+            ("BellowsBusSnapshot", DspNodeCategory::AcousticPhysicalModel),
+            ("BreathBusSnapshot", DspNodeCategory::Modulation),
+            ("CadenceBusSnapshot", DspNodeCategory::Modulation),
+            ("MalletBusSnapshot", DspNodeCategory::AcousticPhysicalModel),
+            ("PlectrumBusSnapshot", DspNodeCategory::AcousticPhysicalModel),
+            ("FormantBusSnapshot", DspNodeCategory::SpectralResynthesis),
+            ("EpBusSnapshot", DspNodeCategory::AcousticPhysicalModel),
+            ("SpringBusSnapshot", DspNodeCategory::TimeSpace),
+            ("RotaryBusSnapshot", DspNodeCategory::Modulation),
+            ("AcousticProfile", DspNodeCategory::AcousticPhysicalModel),
+            ("HarmonicProfile", DspNodeCategory::SpectralResynthesis),
+            ("HammerParameters", DspNodeCategory::AcousticPhysicalModel),
+            ("FrictionParameters", DspNodeCategory::AcousticPhysicalModel),
+        ];
+
+        for (name, expected_cat) in new_modules {
+            let desc = registry.get(name).unwrap_or_else(|| panic!("Module {} not found", name));
+            assert_eq!(desc.category, expected_cat, "Module {} category mismatch", name);
+            assert!(desc.params.len() >= 5, "Module {} must have >= 5 tactile parameters", name);
+        }
+
+        // 3. Verify normalization mappings
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("grandpianobussnapshot"), Some("GrandPianoBusSnapshot"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pianosnapshot"), Some("GrandPianoBusSnapshot"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pipeorganbussnapshot"), Some("PipeOrganBusSnapshot"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("organsnapshot"), Some("PipeOrganBusSnapshot"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("hurdygurdybussnapshot"), Some("HurdyGurdyBusSnapshot"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("gurdysnapshot"), Some("HurdyGurdyBusSnapshot"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("kotobussnapshot"), Some("KotoBusSnapshot"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("japanesekotosnapshot"), Some("KotoBusSnapshot"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("shakuhachibussnapshot"), Some("ShakuhachiBusSnapshot"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("flutesnapshot"), Some("ShakuhachiBusSnapshot"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sitarbussnapshot"), Some("SitarBusSnapshot"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("indiansitarsnapshot"), Some("SitarBusSnapshot"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("glassarmonicabussnapshot"), Some("GlassArmonicaBusSnapshot"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("armonicasnapshot"), Some("GlassArmonicaBusSnapshot"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clavinetbussnapshot"), Some("ClavinetBusSnapshot"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("bellowsbussnapshot"), Some("BellowsBusSnapshot"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("breathbussnapshot"), Some("BreathBusSnapshot"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("respirationsnapshot"), Some("BreathBusSnapshot"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cadencebussnapshot"), Some("CadenceBusSnapshot"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("harmoniccadencesnapshot"), Some("CadenceBusSnapshot"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("malletbussnapshot"), Some("MalletBusSnapshot"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("plectrumbussnapshot"), Some("PlectrumBusSnapshot"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("formantbussnapshot"), Some("FormantBusSnapshot"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("tractformantsnapshot"), Some("FormantBusSnapshot"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("epbussnapshot"), Some("EpBusSnapshot"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("electricpianosnapshot"), Some("EpBusSnapshot"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("springbussnapshot"), Some("SpringBusSnapshot"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("springtanksnapshot"), Some("SpringBusSnapshot"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("rotarybussnapshot"), Some("RotaryBusSnapshot"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("rotaryhornsnapshot"), Some("RotaryBusSnapshot"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("acousticprofile"), Some("AcousticProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("harmonicprofile"), Some("HarmonicProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("hammerparameters"), Some("HammerParameters"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("frictionparameters"), Some("FrictionParameters"));
+
+        // 4. Verify Asset Browser categorization
+        let inst_folders = BrowserCategory::Instruments.default_folders();
+        let phys_items = inst_folders.iter().find(|(name, _)| *name == "Physical Models").unwrap().1;
+        assert!(phys_items.contains(&"GrandPianoBusSnapshot"));
+        assert!(phys_items.contains(&"PipeOrganBusSnapshot"));
+        assert!(phys_items.contains(&"HurdyGurdyBusSnapshot"));
+        assert!(phys_items.contains(&"KotoBusSnapshot"));
+        assert!(phys_items.contains(&"ShakuhachiBusSnapshot"));
+        assert!(phys_items.contains(&"SitarBusSnapshot"));
+        assert!(phys_items.contains(&"GlassArmonicaBusSnapshot"));
+        assert!(phys_items.contains(&"ClavinetBusSnapshot"));
+        assert!(phys_items.contains(&"BellowsBusSnapshot"));
+        assert!(phys_items.contains(&"MalletBusSnapshot"));
+        assert!(phys_items.contains(&"PlectrumBusSnapshot"));
+        assert!(phys_items.contains(&"EpBusSnapshot"));
+        assert!(phys_items.contains(&"AcousticProfile"));
+        assert!(phys_items.contains(&"HammerParameters"));
+        assert!(phys_items.contains(&"FrictionParameters"));
+
+        let synth_items = inst_folders.iter().find(|(name, _)| *name == "Synthesizers").unwrap().1;
+        assert!(synth_items.contains(&"HarmonicProfile"));
+
+        let fx_folders = BrowserCategory::AudioFx.default_folders();
+        let spatial_items = fx_folders.iter().find(|(name, _)| *name == "Time & Reverb").unwrap().1;
+        assert!(spatial_items.contains(&"SpringBusSnapshot"));
+
+        let filter_items = fx_folders.iter().find(|(name, _)| *name == "Filters & EQ").unwrap().1;
+        assert!(filter_items.contains(&"FormantBusSnapshot"));
+
+        let mod_items = fx_folders.iter().find(|(name, _)| *name == "Modulation & Pitch").unwrap().1;
+        assert!(mod_items.contains(&"RotaryBusSnapshot"));
+
+        let midi_folders = BrowserCategory::MidiFx.default_folders();
+        let gen_sync_items = midi_folders.iter().find(|(name, _)| *name == "Generative & Sync").unwrap().1;
+        assert!(gen_sync_items.contains(&"BreathBusSnapshot"));
+        assert!(gen_sync_items.contains(&"CadenceBusSnapshot"));
+
+        // 5. Verify Novice Presets synchronize in AwardWinningGuiView
+        #[cfg(feature = "gui")]
+        {
+            let mut view = crate::views::award_winning_gui_view::AwardWinningGuiView::default();
+            let ctx = eframe::egui::Context::default();
+
+            // Preset: Concert Grand Piano Acoustic Resonance Model -> GrandPianoBusSnapshot
+            view.top_bar_state.selected_preset = "Concert Grand Piano Acoustic Resonance Model".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("GrandPianoBusSnapshot".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("GrandPianoBusSnapshot".to_string()));
+
+            // Preset: Cathedral Pipe Organ Tracker Wind Chest -> PipeOrganBusSnapshot
+            view.top_bar_state.selected_preset = "Cathedral Pipe Organ Tracker Wind Chest".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("PipeOrganBusSnapshot".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("PipeOrganBusSnapshot".to_string()));
+
+            // Preset: Hurdy-Gurdy Rosin Friction & Drone Resonator -> HurdyGurdyBusSnapshot
+            view.top_bar_state.selected_preset = "Hurdy-Gurdy Rosin Friction & Drone Resonator".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("HurdyGurdyBusSnapshot".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("HurdyGurdyBusSnapshot".to_string()));
+
+            // Preset: Continuous Human Breath & Wind Controller -> BreathBusSnapshot
+            view.top_bar_state.selected_preset = "Continuous Human Breath & Wind Controller".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("BreathBusSnapshot".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("BreathBusSnapshot".to_string()));
+        }
+    }
 }
 
 
