@@ -169,6 +169,10 @@ fn default_available_presets() -> Vec<String> {
         "Real-Time Session Telemetry & Headroom HUD".to_string(),
         "Interactive Lua DSP Profiler & Flamegraph".to_string(),
         "Git DAG Branching & Undo Timeline HUD".to_string(),
+        "Live Session Matrix Clip Launcher".to_string(),
+        "AI Spectral Unmasking & Mix Balance HUD".to_string(),
+        "Hexagonal Wicki-Hayden Isomorphic Keyboard".to_string(),
+        "Polymetric Euclidean Tracker Groove Matrix".to_string(),
     ]
 }
 

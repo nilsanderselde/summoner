@@ -404,6 +404,10 @@ impl AwardWinningGuiView {
                 "Real-Time Session Telemetry & Headroom HUD" => "SessionAnalyticsDashboard",
                 "Interactive Lua DSP Profiler & Flamegraph" => "LuaProfiler",
                 "Git DAG Branching & Undo Timeline HUD" => "GitSessionDag",
+                "Live Session Matrix Clip Launcher" => "LiveClipMatrix",
+                "AI Spectral Unmasking & Mix Balance HUD" => "AiMixBalanceInspector",
+                "Hexagonal Wicki-Hayden Isomorphic Keyboard" => "IsomorphicKeyboardRouter",
+                "Polymetric Euclidean Tracker Groove Matrix" => "PolymetricTrackerSequencer",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {

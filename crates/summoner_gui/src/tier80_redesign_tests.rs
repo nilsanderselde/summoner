@@ -4526,6 +4526,178 @@ mod tests {
             assert_eq!(view.inspector_state.selected_node_kind, Some("GitSessionDag".to_string()));
         }
     }
+
+    #[test]
+    fn test_tier100_modern_gui_dsp_module_coverage_and_presets() {
+        use crate::dsp_node_ui::{DspNodeRegistry, DspNodeCategory};
+        use crate::views::modern_asset_browser::BrowserCategory;
+
+        // 1. Verify global registry inventory completeness >= 715
+        let registry = DspNodeRegistry::new();
+        assert!(registry.list_all().len() >= 715, "Registry must contain >= 715 descriptors, found {}", registry.list_all().len());
+
+        let inv = DspNodeRegistry::inventory();
+        assert!(inv.len() >= 715, "Inventory must contain >= 715 entries, found {}", inv.len());
+
+        // 2. Verify all 21 newly registered Tier 100 DSP modules exist and have valid tactile UIs
+        let new_modules = [
+            ("LiveClipMatrix", DspNodeCategory::Utility),
+            ("CompingTakeManager", DspNodeCategory::Utility),
+            ("MidiPerformanceHub", DspNodeCategory::Modulation),
+            ("MidiStreamAnalyzer", DspNodeCategory::Utility),
+            ("AutomationTimelineManager", DspNodeCategory::Modulation),
+            ("GenerativeStochasticEngine", DspNodeCategory::Modulation),
+            ("IsomorphicKeyboardRouter", DspNodeCategory::Modulation),
+            ("HarmonicCadenceEngine", DspNodeCategory::Modulation),
+            ("VoiceLeadingGraph", DspNodeCategory::Modulation),
+            ("VowelTrajectoryGraph", DspNodeCategory::SpectralResynthesis),
+            ("MidiClockSyncHub", DspNodeCategory::Utility),
+            ("MidiMessageFilterMatrix", DspNodeCategory::Utility),
+            ("PolymetricTrackerSequencer", DspNodeCategory::Modulation),
+            ("DynamicMicrotonalRemapper", DspNodeCategory::Modulation),
+            ("MultiTenantRenderManager", DspNodeCategory::Utility),
+            ("HardwareEncoderController", DspNodeCategory::Utility),
+            ("AiMixBalanceInspector", DspNodeCategory::DynamicsMaster),
+            ("AudioPhaseAligner", DspNodeCategory::DynamicsMaster),
+            ("ClapPluginHostBridge", DspNodeCategory::Utility),
+            ("HardwareSurfaceController", DspNodeCategory::Utility),
+            ("AnalogSyncTransceiver", DspNodeCategory::Utility),
+        ];
+
+        for (name, cat) in &new_modules {
+            let desc = registry.get(name).unwrap_or_else(|| panic!("Node {} must be registered in DspNodeRegistry", name));
+            assert_eq!(desc.category, *cat, "Node {} must match expected category", name);
+            assert!(desc.params.len() >= 5, "Node {} must have >= 5 tactile parameters, got {}", name, desc.params.len());
+
+            let ui = crate::dsp_node_ui::DspNodeRegistry::create_node_ui(name)
+                .unwrap_or_else(|| panic!("create_node_ui({}) must succeed", name));
+            assert_eq!(ui.node_type_name(), *name);
+            assert_eq!(ui.category(), *cat);
+            assert!(ui.parameters().len() >= 5);
+        }
+
+        // 3. Verify canonical normalization mappings
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("liveclipmatrix"), Some("LiveClipMatrix"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sessionmatrix"), Some("LiveClipMatrix"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("compingtakemanager"), Some("CompingTakeManager"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("audiocomping"), Some("CompingTakeManager"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("midiperformancehub"), Some("MidiPerformanceHub"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("midihub"), Some("MidiPerformanceHub"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("keysplit"), Some("MidiPerformanceHub"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("midistreamanalyzer"), Some("MidiStreamAnalyzer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("midianalyzer"), Some("MidiStreamAnalyzer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("automationtimelinemanager"), Some("AutomationTimelineManager"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("automationtimelinehud"), Some("AutomationTimelineManager"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("generativestochasticengine"), Some("GenerativeStochasticEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("stochasticengine"), Some("GenerativeStochasticEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("isomorphickeyboardrouter"), Some("IsomorphicKeyboardRouter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("isomorphickeyboardhud"), Some("IsomorphicKeyboardRouter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("harmoniccadenceengine"), Some("HarmonicCadenceEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("harmoniccadencehud"), Some("HarmonicCadenceEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("voiceleadinggraph"), Some("VoiceLeadingGraph"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("voiceleadinggraphhud"), Some("VoiceLeadingGraph"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("voweltrajectorygraph"), Some("VowelTrajectoryGraph"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("vowelformantspline"), Some("VowelTrajectoryGraph"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("midiclocksynchub"), Some("MidiClockSyncHub"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clocksynchub"), Some("MidiClockSyncHub"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("midimessagefiltermatrix"), Some("MidiMessageFilterMatrix"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("midifiltermatrix"), Some("MidiMessageFilterMatrix"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("polymetrictrackersequencer"), Some("PolymetricTrackerSequencer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("polymetrictracker"), Some("PolymetricTrackerSequencer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("dynamicmicrotonalremapper"), Some("DynamicMicrotonalRemapper"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("microtonalremapper"), Some("DynamicMicrotonalRemapper"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("multitenantrendermanager"), Some("MultiTenantRenderManager"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("rendermanager"), Some("MultiTenantRenderManager"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("hardwareencodercontroller"), Some("HardwareEncoderController"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("encodercontroller"), Some("HardwareEncoderController"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("aimixbalanceinspector"), Some("AiMixBalanceInspector"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("mixbalanceinspector"), Some("AiMixBalanceInspector"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("audiophasealigner"), Some("AudioPhaseAligner"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("phasealigner"), Some("AudioPhaseAligner"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clappluginhostbridge"), Some("ClapPluginHostBridge"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("claphostbridge"), Some("ClapPluginHostBridge"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("hardwaresurfacecontroller"), Some("HardwareSurfaceController"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("surfacecontroller"), Some("HardwareSurfaceController"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("analogsynctransceiver"), Some("AnalogSyncTransceiver"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("analogtransceiver"), Some("AnalogSyncTransceiver"));
+
+        // 4. Verify Asset Browser categorization
+        let fx_folders = BrowserCategory::AudioFx.default_folders();
+        let dyn_items = fx_folders.iter().find(|(name, _)| *name == "Dynamics & Level").unwrap().1;
+        assert!(dyn_items.contains(&"AiMixBalanceInspector"));
+        assert!(dyn_items.contains(&"AudioPhaseAligner"));
+
+        let midi_folders = BrowserCategory::MidiFx.default_folders();
+        let gen_sync_items = midi_folders.iter().find(|(name, _)| *name == "Generative & Sync").unwrap().1;
+        assert!(gen_sync_items.contains(&"LiveClipMatrix"));
+        assert!(gen_sync_items.contains(&"PolymetricTrackerSequencer"));
+        assert!(gen_sync_items.contains(&"GenerativeStochasticEngine"));
+        assert!(gen_sync_items.contains(&"HarmonicCadenceEngine"));
+
+        let routing_items = midi_folders.iter().find(|(name, _)| *name == "Transforms & Routing").unwrap().1;
+        assert!(routing_items.contains(&"CompingTakeManager"));
+        assert!(routing_items.contains(&"MidiPerformanceHub"));
+        assert!(routing_items.contains(&"MidiStreamAnalyzer"));
+        assert!(routing_items.contains(&"AutomationTimelineManager"));
+        assert!(routing_items.contains(&"IsomorphicKeyboardRouter"));
+        assert!(routing_items.contains(&"VoiceLeadingGraph"));
+        assert!(routing_items.contains(&"VowelTrajectoryGraph"));
+        assert!(routing_items.contains(&"MidiClockSyncHub"));
+        assert!(routing_items.contains(&"MidiMessageFilterMatrix"));
+        assert!(routing_items.contains(&"DynamicMicrotonalRemapper"));
+        assert!(routing_items.contains(&"MultiTenantRenderManager"));
+        assert!(routing_items.contains(&"HardwareEncoderController"));
+        assert!(routing_items.contains(&"ClapPluginHostBridge"));
+        assert!(routing_items.contains(&"HardwareSurfaceController"));
+        assert!(routing_items.contains(&"AnalogSyncTransceiver"));
+
+        // 5. Verify Novice Presets synchronize in AwardWinningGuiView
+        #[cfg(feature = "gui")]
+        {
+            let mut view = crate::views::award_winning_gui_view::AwardWinningGuiView::default();
+            let ctx = eframe::egui::Context::default();
+
+            // Preset: Live Session Matrix Clip Launcher -> LiveClipMatrix
+            view.top_bar_state.selected_preset = "Live Session Matrix Clip Launcher".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("LiveClipMatrix".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("LiveClipMatrix".to_string()));
+
+            // Preset: AI Spectral Unmasking & Mix Balance HUD -> AiMixBalanceInspector
+            view.top_bar_state.selected_preset = "AI Spectral Unmasking & Mix Balance HUD".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("AiMixBalanceInspector".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("AiMixBalanceInspector".to_string()));
+
+            // Preset: Hexagonal Wicki-Hayden Isomorphic Keyboard -> IsomorphicKeyboardRouter
+            view.top_bar_state.selected_preset = "Hexagonal Wicki-Hayden Isomorphic Keyboard".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("IsomorphicKeyboardRouter".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("IsomorphicKeyboardRouter".to_string()));
+
+            // Preset: Polymetric Euclidean Tracker Groove Matrix -> PolymetricTrackerSequencer
+            view.top_bar_state.selected_preset = "Polymetric Euclidean Tracker Groove Matrix".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("PolymetricTrackerSequencer".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("PolymetricTrackerSequencer".to_string()));
+        }
+    }
 }
 
 
