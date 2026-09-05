@@ -408,6 +408,10 @@ impl AwardWinningGuiView {
                 "AI Spectral Unmasking & Mix Balance HUD" => "AiMixBalanceInspector",
                 "Hexagonal Wicki-Hayden Isomorphic Keyboard" => "IsomorphicKeyboardRouter",
                 "Polymetric Euclidean Tracker Groove Matrix" => "PolymetricTrackerSequencer",
+                "WASM & AudioWorklet Standalone Packager" => "WasmPackageExporter",
+                "ITU-R BS.2076 ADM Dolby Atmos Spatial Exporter" => "AdmSpatialBwfExporter",
+                "AI Harmonic Cadence & Leading Tone Suggester" => "AiHarmonySuggester",
+                "Adaptive Automation Bézier Spline Thinning HUD" => "CurveThinningOptimizer",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {

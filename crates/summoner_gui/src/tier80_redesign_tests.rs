@@ -4698,6 +4698,179 @@ mod tests {
             assert_eq!(view.inspector_state.selected_node_kind, Some("PolymetricTrackerSequencer".to_string()));
         }
     }
+
+    #[test]
+    fn test_tier101_modern_gui_dsp_module_coverage_and_presets() {
+        use crate::dsp_node_ui::{DspNodeRegistry, DspNodeCategory};
+        use crate::views::modern_asset_browser::BrowserCategory;
+
+        // 1. Verify global registry inventory completeness >= 736
+        let registry = DspNodeRegistry::new();
+        assert!(registry.list_all().len() >= 736, "Registry must contain >= 736 descriptors, found {}", registry.list_all().len());
+
+        let inv = DspNodeRegistry::inventory();
+        assert!(inv.len() >= 736, "Inventory must contain >= 736 entries, found {}", inv.len());
+
+        // 2. Verify all 21 newly registered Tier 101 DSP modules exist and have valid tactile UIs
+        let new_modules = [
+            ("WasmPackageExporter", DspNodeCategory::Utility),
+            ("AdmSpatialBwfExporter", DspNodeCategory::SpatialSurround),
+            ("RaspberryPiApplianceBuilder", DspNodeCategory::Utility),
+            ("ProjectSemanticDiffer", DspNodeCategory::Utility),
+            ("SessionHotReloadWatcher", DspNodeCategory::Utility),
+            ("DynamicTempoMapAnalyzer", DspNodeCategory::Modulation),
+            ("CurveThinningOptimizer", DspNodeCategory::Modulation),
+            ("GrooveHumanizeTransformer", DspNodeCategory::Modulation),
+            ("ProjectSchemaMigrator", DspNodeCategory::Utility),
+            ("AudioProjectNormalizer", DspNodeCategory::DynamicsMaster),
+            ("PresetCachePrewarmer", DspNodeCategory::Utility),
+            ("SfzMultisampleConverter", DspNodeCategory::SamplerSlicer),
+            ("AiHarmonySuggester", DspNodeCategory::Modulation),
+            ("MicrotonalScalaTuner", DspNodeCategory::Modulation),
+            ("InteractiveAudioRepl", DspNodeCategory::Utility),
+            ("BatchAutomationRunner", DspNodeCategory::Modulation),
+            ("DspScriptTestHarness", DspNodeCategory::Utility),
+            ("BroadcastFormatTranscoder", DspNodeCategory::Utility),
+            ("PerceptualQualityVerifier", DspNodeCategory::DynamicsMaster),
+            ("MidiClockPllSynchronizer", DspNodeCategory::Utility),
+            ("PatchPrGenerator", DspNodeCategory::Utility),
+        ];
+
+        for (name, cat) in &new_modules {
+            let desc = registry.get(name).unwrap_or_else(|| panic!("Node {} must be registered in DspNodeRegistry", name));
+            assert_eq!(desc.category, *cat, "Node {} must match expected category", name);
+            assert!(desc.params.len() >= 5, "Node {} must have >= 5 tactile parameters, got {}", name, desc.params.len());
+
+            let ui = crate::dsp_node_ui::DspNodeRegistry::create_node_ui(name)
+                .unwrap_or_else(|| panic!("create_node_ui({}) must succeed", name));
+            assert_eq!(ui.node_type_name(), *name);
+            assert_eq!(ui.category(), *cat);
+            assert!(ui.parameters().len() >= 5);
+        }
+
+        // 3. Verify canonical normalization mappings
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("wasmpackageexporter"), Some("WasmPackageExporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("wasmpackager"), Some("WasmPackageExporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("wasmexport"), Some("WasmPackageExporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("admspatialbwfexporter"), Some("AdmSpatialBwfExporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("admspatialexporter"), Some("AdmSpatialBwfExporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("dolbyatmosexporter"), Some("AdmSpatialBwfExporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("raspberrypiappliancebuilder"), Some("RaspberryPiApplianceBuilder"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("piappliancebuilder"), Some("RaspberryPiApplianceBuilder"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("projectsemanticdiffer"), Some("ProjectSemanticDiffer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("semanticdiff"), Some("ProjectSemanticDiffer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sessionhotreloadwatcher"), Some("SessionHotReloadWatcher"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sessionwatcher"), Some("SessionHotReloadWatcher"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("dynamictempomapanalyzer"), Some("DynamicTempoMapAnalyzer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("tempomapanalyzer"), Some("DynamicTempoMapAnalyzer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("curvethinningoptimizer"), Some("CurveThinningOptimizer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("curvethinning"), Some("CurveThinningOptimizer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("groovehumanizetransformer"), Some("GrooveHumanizeTransformer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("groovehumanizer"), Some("GrooveHumanizeTransformer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("projectschemamigrator"), Some("ProjectSchemaMigrator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("schemamigrator"), Some("ProjectSchemaMigrator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("audioprojectnormalizer"), Some("AudioProjectNormalizer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("projectnormalizer"), Some("AudioProjectNormalizer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("presetcacheprewarmer"), Some("PresetCachePrewarmer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cacheprewarmer"), Some("PresetCachePrewarmer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sfzmultisampleconverter"), Some("SfzMultisampleConverter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sfzconverter"), Some("SfzMultisampleConverter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("aiharmonysuggester"), Some("AiHarmonySuggester"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("harmonysuggester"), Some("AiHarmonySuggester"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("microtonalscalatuner"), Some("MicrotonalScalaTuner"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("scalatuner"), Some("MicrotonalScalaTuner"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("interactiveaudiorepl"), Some("InteractiveAudioRepl"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("audiorepl"), Some("InteractiveAudioRepl"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("batchautomationrunner"), Some("BatchAutomationRunner"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("automationrunner"), Some("BatchAutomationRunner"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("dspscripttestharness"), Some("DspScriptTestHarness"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("scripttestharness"), Some("DspScriptTestHarness"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("broadcastformattranscoder"), Some("BroadcastFormatTranscoder"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("formattranscoder"), Some("BroadcastFormatTranscoder"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("perceptualqualityverifier"), Some("PerceptualQualityVerifier"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("qualityverifier"), Some("PerceptualQualityVerifier"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("midiclockpllsynchronizer"), Some("MidiClockPllSynchronizer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clockpllsynchronizer"), Some("MidiClockPllSynchronizer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("patchprgenerator"), Some("PatchPrGenerator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("patchpr"), Some("PatchPrGenerator"));
+
+        // 4. Verify Asset Browser categorization
+        let fx_folders = BrowserCategory::AudioFx.default_folders();
+        let dyn_items = fx_folders.iter().find(|(name, _)| *name == "Dynamics & Level").unwrap().1;
+        assert!(dyn_items.contains(&"AudioProjectNormalizer"));
+        assert!(dyn_items.contains(&"PerceptualQualityVerifier"));
+
+        let midi_folders = BrowserCategory::MidiFx.default_folders();
+        let gen_sync_items = midi_folders.iter().find(|(name, _)| *name == "Generative & Sync").unwrap().1;
+        assert!(gen_sync_items.contains(&"DynamicTempoMapAnalyzer"));
+        assert!(gen_sync_items.contains(&"CurveThinningOptimizer"));
+        assert!(gen_sync_items.contains(&"GrooveHumanizeTransformer"));
+        assert!(gen_sync_items.contains(&"AiHarmonySuggester"));
+        assert!(gen_sync_items.contains(&"BatchAutomationRunner"));
+        assert!(gen_sync_items.contains(&"MidiClockPllSynchronizer"));
+
+        let routing_items = midi_folders.iter().find(|(name, _)| *name == "Transforms & Routing").unwrap().1;
+        assert!(routing_items.contains(&"WasmPackageExporter"));
+        assert!(routing_items.contains(&"AdmSpatialBwfExporter"));
+        assert!(routing_items.contains(&"RaspberryPiApplianceBuilder"));
+        assert!(routing_items.contains(&"ProjectSemanticDiffer"));
+        assert!(routing_items.contains(&"SessionHotReloadWatcher"));
+        assert!(routing_items.contains(&"ProjectSchemaMigrator"));
+        assert!(routing_items.contains(&"PresetCachePrewarmer"));
+        assert!(routing_items.contains(&"SfzMultisampleConverter"));
+        assert!(routing_items.contains(&"MicrotonalScalaTuner"));
+        assert!(routing_items.contains(&"InteractiveAudioRepl"));
+        assert!(routing_items.contains(&"DspScriptTestHarness"));
+        assert!(routing_items.contains(&"BroadcastFormatTranscoder"));
+        assert!(routing_items.contains(&"PatchPrGenerator"));
+
+        // 5. Verify Novice Presets synchronize in AwardWinningGuiView
+        #[cfg(feature = "gui")]
+        {
+            let mut view = crate::views::award_winning_gui_view::AwardWinningGuiView::default();
+            let ctx = eframe::egui::Context::default();
+
+            // Preset: WASM & AudioWorklet Standalone Packager -> WasmPackageExporter
+            view.top_bar_state.selected_preset = "WASM & AudioWorklet Standalone Packager".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("WasmPackageExporter".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("WasmPackageExporter".to_string()));
+
+            // Preset: ITU-R BS.2076 ADM Dolby Atmos Spatial Exporter -> AdmSpatialBwfExporter
+            view.top_bar_state.selected_preset = "ITU-R BS.2076 ADM Dolby Atmos Spatial Exporter".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("AdmSpatialBwfExporter".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("AdmSpatialBwfExporter".to_string()));
+
+            // Preset: AI Harmonic Cadence & Leading Tone Suggester -> AiHarmonySuggester
+            view.top_bar_state.selected_preset = "AI Harmonic Cadence & Leading Tone Suggester".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("AiHarmonySuggester".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("AiHarmonySuggester".to_string()));
+
+            // Preset: Adaptive Automation Bézier Spline Thinning HUD -> CurveThinningOptimizer
+            view.top_bar_state.selected_preset = "Adaptive Automation Bézier Spline Thinning HUD".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("CurveThinningOptimizer".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("CurveThinningOptimizer".to_string()));
+        }
+    }
 }
 
 
