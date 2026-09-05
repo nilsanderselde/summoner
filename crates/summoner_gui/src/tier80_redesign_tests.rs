@@ -4353,6 +4353,179 @@ mod tests {
             assert_eq!(view.inspector_state.selected_node_kind, Some("PluginSandbox".to_string()));
         }
     }
+
+    #[test]
+    fn test_tier99_modern_gui_dsp_module_coverage_and_presets() {
+        use crate::dsp_node_ui::{DspNodeRegistry, DspNodeCategory};
+        use crate::views::modern_asset_browser::BrowserCategory;
+
+        // 1. Verify global registry inventory completeness >= 694
+        let registry = DspNodeRegistry::new();
+        assert!(registry.list_all().len() >= 694, "Registry must contain >= 694 descriptors, found {}", registry.list_all().len());
+
+        let inv = DspNodeRegistry::inventory();
+        assert!(inv.len() >= 694, "Inventory must contain >= 694 entries, found {}", inv.len());
+
+        // 2. Verify all 21 newly registered DSP modules exist and have valid tactile UIs
+        let new_modules = [
+            ("WebSocketSyncTransport", DspNodeCategory::Utility),
+            ("CursorTracker", DspNodeCategory::Utility),
+            ("OpusAudioRelay", DspNodeCategory::TimeSpace),
+            ("CloudBranchingManager", DspNodeCategory::Utility),
+            ("CloudAssetSync", DspNodeCategory::Utility),
+            ("SharedAnnotationPanel", DspNodeCategory::Modulation),
+            ("AutomatedCloudBackup", DspNodeCategory::Utility),
+            ("AccessControlPolicy", DspNodeCategory::Utility),
+            ("RenderFarmDispatchApi", DspNodeCategory::Utility),
+            ("E2eeProjectEncryptor", DspNodeCategory::Utility),
+            ("OfflineChangeQueue", DspNodeCategory::Utility),
+            ("GitHubActionsBotIntegration", DspNodeCategory::Utility),
+            ("SessionAnalyticsDashboard", DspNodeCategory::DynamicsMaster),
+            ("WebRtcMidiStreamer", DspNodeCategory::Modulation),
+            ("TemplateMarketplace", DspNodeCategory::Utility),
+            ("GitSessionDag", DspNodeCategory::Utility),
+            ("GoldenRenderSuite", DspNodeCategory::DynamicsMaster),
+            ("ApiChangelogGenerator", DspNodeCategory::Utility),
+            ("VideoExportConfig", DspNodeCategory::DynamicsMaster),
+            ("LuaDebugger", DspNodeCategory::Modulation),
+            ("LuaProfiler", DspNodeCategory::Utility),
+        ];
+
+        for (name, cat) in &new_modules {
+            let desc = registry.get(name).unwrap_or_else(|| panic!("Node {} must be registered in DspNodeRegistry", name));
+            assert_eq!(desc.category, *cat, "Node {} must match expected category", name);
+            assert!(desc.params.len() >= 5, "Node {} must have >= 5 tactile parameters, got {}", name, desc.params.len());
+
+            let ui = crate::dsp_node_ui::DspNodeRegistry::create_node_ui(name)
+                .unwrap_or_else(|| panic!("create_node_ui({}) must succeed", name));
+            assert_eq!(ui.node_type_name(), *name);
+            assert_eq!(ui.category(), *cat);
+            assert!(ui.parameters().len() >= 5);
+        }
+
+        // 3. Verify canonical normalization mappings
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("websocketsynctransport"), Some("WebSocketSyncTransport"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("websocketsync"), Some("WebSocketSyncTransport"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cursortracker"), Some("CursorTracker"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("remotecursortracker"), Some("CursorTracker"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("opusaudiorelay"), Some("OpusAudioRelay"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("opusrelay"), Some("OpusAudioRelay"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cloudbranchingmanager"), Some("CloudBranchingManager"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cloudbranching"), Some("CloudBranchingManager"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cloudassetsync"), Some("CloudAssetSync"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("assetsync"), Some("CloudAssetSync"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sharedannotationpanel"), Some("SharedAnnotationPanel"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("timelineannotation"), Some("SharedAnnotationPanel"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("automatedcloudbackup"), Some("AutomatedCloudBackup"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cloudbackup"), Some("AutomatedCloudBackup"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("accesscontrolpolicy"), Some("AccessControlPolicy"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("workspaceaccesscontrol"), Some("AccessControlPolicy"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("renderfarmdispatchapi"), Some("RenderFarmDispatchApi"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("renderfarmdispatcher"), Some("RenderFarmDispatchApi"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("e2eeprojectencryptor"), Some("E2eeProjectEncryptor"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("projectencryptor"), Some("E2eeProjectEncryptor"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("offlinechangequeue"), Some("OfflineChangeQueue"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("offlinequeue"), Some("OfflineChangeQueue"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("githubactionsbotintegration"), Some("GitHubActionsBotIntegration"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("githubactionsbot"), Some("GitHubActionsBotIntegration"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sessionanalyticsdashboard"), Some("SessionAnalyticsDashboard"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sessionanalytics"), Some("SessionAnalyticsDashboard"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("webrtcmidistreamer"), Some("WebRtcMidiStreamer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("midistreamer"), Some("WebRtcMidiStreamer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("templatemarketplace"), Some("TemplateMarketplace"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("projecttemplatemarketplace"), Some("TemplateMarketplace"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("gitsessiondag"), Some("GitSessionDag"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("gitdag"), Some("GitSessionDag"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("goldenrendersuite"), Some("GoldenRenderSuite"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("goldensuite"), Some("GoldenRenderSuite"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("apichangeloggenerator"), Some("ApiChangelogGenerator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("changeloggenerator"), Some("ApiChangelogGenerator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("videoexportconfig"), Some("VideoExportConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("videoexporter"), Some("VideoExportConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luadebugger"), Some("LuaDebugger"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luadspdebugger"), Some("LuaDebugger"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luaprofiler"), Some("LuaProfiler"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luadspprofiler"), Some("LuaProfiler"));
+
+        // 4. Verify Asset Browser categorization
+        let fx_folders = BrowserCategory::AudioFx.default_folders();
+        let dyn_items = fx_folders.iter().find(|(name, _)| *name == "Dynamics & Level").unwrap().1;
+        assert!(dyn_items.contains(&"SessionAnalyticsDashboard"));
+        assert!(dyn_items.contains(&"GoldenRenderSuite"));
+        assert!(dyn_items.contains(&"VideoExportConfig"));
+
+        let time_items = fx_folders.iter().find(|(name, _)| *name == "Time & Reverb").unwrap().1;
+        assert!(time_items.contains(&"OpusAudioRelay"));
+
+        let midi_folders = BrowserCategory::MidiFx.default_folders();
+        let gen_sync_items = midi_folders.iter().find(|(name, _)| *name == "Generative & Sync").unwrap().1;
+        assert!(gen_sync_items.contains(&"WebRtcMidiStreamer"));
+        assert!(gen_sync_items.contains(&"SharedAnnotationPanel"));
+        assert!(gen_sync_items.contains(&"LuaDebugger"));
+
+        let routing_items = midi_folders.iter().find(|(name, _)| *name == "Transforms & Routing").unwrap().1;
+        assert!(routing_items.contains(&"WebSocketSyncTransport"));
+        assert!(routing_items.contains(&"CursorTracker"));
+        assert!(routing_items.contains(&"CloudBranchingManager"));
+        assert!(routing_items.contains(&"CloudAssetSync"));
+        assert!(routing_items.contains(&"AutomatedCloudBackup"));
+        assert!(routing_items.contains(&"AccessControlPolicy"));
+        assert!(routing_items.contains(&"RenderFarmDispatchApi"));
+        assert!(routing_items.contains(&"E2eeProjectEncryptor"));
+        assert!(routing_items.contains(&"OfflineChangeQueue"));
+        assert!(routing_items.contains(&"GitHubActionsBotIntegration"));
+        assert!(routing_items.contains(&"TemplateMarketplace"));
+        assert!(routing_items.contains(&"GitSessionDag"));
+        assert!(routing_items.contains(&"ApiChangelogGenerator"));
+        assert!(routing_items.contains(&"LuaProfiler"));
+
+        // 5. Verify Novice Presets synchronize in AwardWinningGuiView
+        #[cfg(feature = "gui")]
+        {
+            let mut view = crate::views::award_winning_gui_view::AwardWinningGuiView::default();
+            let ctx = eframe::egui::Context::default();
+
+            // Preset: Ultra-Low Latency Opus Audio Relay -> OpusAudioRelay
+            view.top_bar_state.selected_preset = "Ultra-Low Latency Opus Audio Relay".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("OpusAudioRelay".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("OpusAudioRelay".to_string()));
+
+            // Preset: Real-Time Session Telemetry & Headroom HUD -> SessionAnalyticsDashboard
+            view.top_bar_state.selected_preset = "Real-Time Session Telemetry & Headroom HUD".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("SessionAnalyticsDashboard".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("SessionAnalyticsDashboard".to_string()));
+
+            // Preset: Interactive Lua DSP Profiler & Flamegraph -> LuaProfiler
+            view.top_bar_state.selected_preset = "Interactive Lua DSP Profiler & Flamegraph".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("LuaProfiler".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("LuaProfiler".to_string()));
+
+            // Preset: Git DAG Branching & Undo Timeline HUD -> GitSessionDag
+            view.top_bar_state.selected_preset = "Git DAG Branching & Undo Timeline HUD".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("GitSessionDag".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("GitSessionDag".to_string()));
+        }
+    }
 }
 
 

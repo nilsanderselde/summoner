@@ -6419,6 +6419,7 @@ impl DspNodeRegistry {
             ("FederatedMarketplace", DspNodeCategory::Utility, "Decentralized Soundpack & Plugin Marketplace HUD"),
             ("PeerMeshNetwork", DspNodeCategory::SpatialSurround, "Collaborative WebRTC Peer Mesh Network HUD"),
             ("ZkPatchVerifier", DspNodeCategory::Utility, "Zero-Knowledge Preset & Bytecode Verifier HUD"),
+            ("ContinuousBackupEngine", DspNodeCategory::Utility, "Continuous Non-Blocking Session Backup HUD"),
             ("MidiFileParser", DspNodeCategory::Modulation, "Standard MIDI File Import & Velocity Scaler HUD"),
             ("WebSocketSyncTransport", DspNodeCategory::Utility, "Real-Time WebSocket Sync Protocol HUD"),
             ("CursorTracker", DspNodeCategory::Utility, "Multi-User Remote Collaborator Cursor HUD"),

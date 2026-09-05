@@ -165,6 +165,10 @@ fn default_available_presets() -> Vec<String> {
         "Multi-Zone SFZ Orchestra Sample Patch".to_string(),
         "Lua Real-Time DSP Script Controller".to_string(),
         "Zero-Latency Plugin Sandbox Guard".to_string(),
+        "Ultra-Low Latency Opus Audio Relay".to_string(),
+        "Real-Time Session Telemetry & Headroom HUD".to_string(),
+        "Interactive Lua DSP Profiler & Flamegraph".to_string(),
+        "Git DAG Branching & Undo Timeline HUD".to_string(),
     ]
 }
 

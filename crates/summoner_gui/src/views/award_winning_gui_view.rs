@@ -400,6 +400,10 @@ impl AwardWinningGuiView {
                 "Multi-Zone SFZ Orchestra Sample Patch" => "SfzPresetPatch",
                 "Lua Real-Time DSP Script Controller" => "LuaScriptEngine",
                 "Zero-Latency Plugin Sandbox Guard" => "PluginSandbox",
+                "Ultra-Low Latency Opus Audio Relay" => "OpusAudioRelay",
+                "Real-Time Session Telemetry & Headroom HUD" => "SessionAnalyticsDashboard",
+                "Interactive Lua DSP Profiler & Flamegraph" => "LuaProfiler",
+                "Git DAG Branching & Undo Timeline HUD" => "GitSessionDag",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {
