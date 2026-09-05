@@ -111,6 +111,12 @@ fn default_available_presets() -> Vec<String> {
         "Concert Snare Drum Rattle".to_string(),
         "Indian Raga Chikari Drone".to_string(),
         "Franklin Water Armonica".to_string(),
+        "Concert Grand Felt Hammer".to_string(),
+        "Sitka Spruce Resonance".to_string(),
+        "Hohner D6 Funk Clavinet".to_string(),
+        "Indian Tarab Sympathetic".to_string(),
+        "Neural AI Room Impulse".to_string(),
+        "AI Voice-Leading Master".to_string(),
     ]
 }
 

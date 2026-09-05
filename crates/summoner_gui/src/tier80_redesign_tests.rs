@@ -1779,5 +1779,173 @@ mod tests {
             assert_eq!(view.inspector_state.selected_node_kind, Some("SpeakerCalibrationMatrix".to_string()));
         }
     }
+
+    #[test]
+    fn test_tier87_dsp_registry_400_plus_and_physical_modeling_expansion() {
+        let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+        let total_nodes = registry.list_all().len();
+        assert!(total_nodes >= 400, "Registry must contain >= 400 DSP modules, found {}", total_nodes);
+
+        let inventory = crate::dsp_node_ui::DspNodeRegistry::inventory();
+        assert!(inventory.len() >= 400, "Inventory must contain >= 400 DSP modules, found {}", inventory.len());
+
+        // 1. Verify physical modeling nodes and schemas
+        let felt_hammer = registry.get("GrandPianoFeltHammer").expect("GrandPianoFeltHammer must exist");
+        assert_eq!(felt_hammer.category, crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel);
+        assert_eq!(felt_hammer.params.len(), 4);
+        assert!(felt_hammer.params.iter().any(|p| p.id == "nonlin_stiffness"));
+        assert!(felt_hammer.params.iter().any(|p| p.id == "hysteresis_loss"));
+        assert!(felt_hammer.params.iter().any(|p| p.id == "una_corda_shift"));
+
+        let spruce = registry.get("SpruceSoundboardMode").expect("SpruceSoundboardMode must exist");
+        assert_eq!(spruce.category, crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel);
+        assert_eq!(spruce.params.len(), 4);
+        assert!(spruce.params.iter().any(|p| p.id == "modal_frequency"));
+        assert!(spruce.params.iter().any(|p| p.id == "bridge_impedance"));
+
+        let tonehole = registry.get("ToneholeJunction").expect("ToneholeJunction must exist");
+        assert_eq!(tonehole.category, crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel);
+        assert_eq!(tonehole.params.len(), 4);
+
+        let clav = registry.get("ClavinetVoice").expect("ClavinetVoice must exist");
+        assert_eq!(clav.category, crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel);
+        assert_eq!(clav.params.len(), 4);
+
+        let tarab = registry.get("TarabStringResonator").expect("TarabStringResonator must exist");
+        assert_eq!(tarab.category, crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel);
+        assert_eq!(tarab.params.len(), 4);
+
+        let duplex = registry.get("GrandPianoStringDuplexCoupler").expect("GrandPianoStringDuplexCoupler must exist");
+        assert_eq!(duplex.category, crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel);
+        assert_eq!(duplex.params.len(), 4);
+
+        let bellows = registry.get("BellowsDynamicsCoupler").expect("BellowsDynamicsCoupler must exist");
+        assert_eq!(bellows.category, crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel);
+        assert_eq!(bellows.params.len(), 4);
+
+        // 2. Verify Spatial & Audio FX nodes
+        let hoa_dec = registry.get("AmbisonicsDecoder3D").expect("AmbisonicsDecoder3D must exist");
+        assert_eq!(hoa_dec.category, crate::dsp_node_ui::DspNodeCategory::SpatialSurround);
+
+        let hoa_enc = registry.get("AmbisonicsEncoder3D").expect("AmbisonicsEncoder3D must exist");
+        assert_eq!(hoa_enc.category, crate::dsp_node_ui::DspNodeCategory::SpatialSurround);
+
+        let part_conv = registry.get("PartitionedBinauralHrtfConvolver").expect("PartitionedBinauralHrtfConvolver must exist");
+        assert_eq!(part_conv.category, crate::dsp_node_ui::DspNodeCategory::SpatialSurround);
+
+        let clipper = registry.get("OversampledClipper").expect("OversampledClipper must exist");
+        assert_eq!(clipper.category, crate::dsp_node_ui::DspNodeCategory::DistortionSaturation);
+
+        let peak_det = registry.get("TruePeakDetector").expect("TruePeakDetector must exist");
+        assert_eq!(peak_det.category, crate::dsp_node_ui::DspNodeCategory::Utility);
+
+        let autowah = registry.get("AutoWah").expect("AutoWah must exist");
+        assert_eq!(autowah.category, crate::dsp_node_ui::DspNodeCategory::Modulation);
+
+        let formant_vowel = registry.get("FormantVowelMatrix").expect("FormantVowelMatrix must exist");
+        assert_eq!(formant_vowel.category, crate::dsp_node_ui::DspNodeCategory::FilterEq);
+
+        // 3. Verify Neural AI nodes
+        let neural_ir = registry.get("NeuralIrSynthesizer").expect("NeuralIrSynthesizer must exist");
+        assert_eq!(neural_ir.category, crate::dsp_node_ui::DspNodeCategory::NeuralAi);
+
+        let neural_midi = registry.get("NeuralMidiTranscriber").expect("NeuralMidiTranscriber must exist");
+        assert_eq!(neural_midi.category, crate::dsp_node_ui::DspNodeCategory::NeuralAi);
+
+        let drum_tr = registry.get("DrumTranscriptor").expect("DrumTranscriptor must exist");
+        assert_eq!(drum_tr.category, crate::dsp_node_ui::DspNodeCategory::NeuralAi);
+
+        let ai_chord = registry.get("AiChordGenerator").expect("AiChordGenerator must exist");
+        assert_eq!(ai_chord.category, crate::dsp_node_ui::DspNodeCategory::NeuralAi);
+
+        let ai_mix = registry.get("AiMixAssistant").expect("AiMixAssistant must exist");
+        assert_eq!(ai_mix.category, crate::dsp_node_ui::DspNodeCategory::NeuralAi);
+
+        // 4. Verify alias normalization
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("grandpianofelthammer"), Some("GrandPianoFeltHammer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("felthammer"), Some("GrandPianoFeltHammer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sprucesoundboardmode"), Some("SpruceSoundboardMode"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("tonehole"), Some("ToneholeJunction"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("ambisonicsdecoder3d"), Some("AmbisonicsDecoder3D"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("optotremolo"), Some("OpticalTremolo"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("buffershuffle"), Some("GlitchShuffle"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("stutterrepeater"), Some("GlitchStutter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("aichordgenerator"), Some("AiChordGenerator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("vowelmatrix"), Some("FormantVowelMatrix"));
+
+        // 5. Verify create_node_ui instantiations
+        let ui_hammer = crate::dsp_node_ui::DspNodeRegistry::create_node_ui("GrandPianoFeltHammer").expect("UI must create for GrandPianoFeltHammer");
+        assert_eq!(ui_hammer.display_name(), "Nonlinear Felt Hammer Contact Dynamics");
+
+        let ui_spruce = crate::dsp_node_ui::DspNodeRegistry::create_node_ui("SpruceSoundboardMode").expect("UI must create for SpruceSoundboardMode");
+        assert_eq!(ui_spruce.display_name(), "Sitka Spruce Soundboard Orthotropic 2D Mode");
+
+        let ui_neural_ir = crate::dsp_node_ui::DspNodeRegistry::create_node_ui("NeuralIrSynthesizer").expect("UI must create for NeuralIrSynthesizer");
+        assert_eq!(ui_neural_ir.display_name(), "Deep Neural Parametric Room Impulse Generator");
+
+            // 6. Test Novice Preset switching in AwardWinningGuiView
+            let mut view = AwardWinningGuiView::new();
+            let ctx = eframe::egui::Context::default();
+
+            // Preset: Concert Grand Felt Hammer
+            view.top_bar_state.selected_preset = "Concert Grand Felt Hammer".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("GrandPianoFeltHammer".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("GrandPianoFeltHammer".to_string()));
+
+            // Preset: Sitka Spruce Resonance
+            view.top_bar_state.selected_preset = "Sitka Spruce Resonance".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("SpruceSoundboardMode".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("SpruceSoundboardMode".to_string()));
+
+            // Preset: Hohner D6 Funk Clavinet
+            view.top_bar_state.selected_preset = "Hohner D6 Funk Clavinet".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("ClavinetVoice".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("ClavinetVoice".to_string()));
+
+            // Preset: Indian Tarab Sympathetic
+            view.top_bar_state.selected_preset = "Indian Tarab Sympathetic".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("TarabStringResonator".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("TarabStringResonator".to_string()));
+
+            // Preset: Neural AI Room Impulse
+            view.top_bar_state.selected_preset = "Neural AI Room Impulse".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("NeuralIrSynthesizer".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("NeuralIrSynthesizer".to_string()));
+
+            // Preset: AI Voice-Leading Master
+            view.top_bar_state.selected_preset = "AI Voice-Leading Master".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("AiChordGenerator".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("AiChordGenerator".to_string()));
+    }
 }
 

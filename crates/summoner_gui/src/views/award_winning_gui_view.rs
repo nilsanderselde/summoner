@@ -346,6 +346,12 @@ impl AwardWinningGuiView {
                 "Concert Snare Drum Rattle" => "SnareRattleModel",
                 "Indian Raga Chikari Drone" => "ChikariDroneBank",
                 "Franklin Water Armonica" => "ArmonicaChassisResonator",
+                "Concert Grand Felt Hammer" => "GrandPianoFeltHammer",
+                "Sitka Spruce Resonance" => "SpruceSoundboardMode",
+                "Hohner D6 Funk Clavinet" => "ClavinetVoice",
+                "Indian Tarab Sympathetic" => "TarabStringResonator",
+                "Neural AI Room Impulse" => "NeuralIrSynthesizer",
+                "AI Voice-Leading Master" => "AiChordGenerator",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {
