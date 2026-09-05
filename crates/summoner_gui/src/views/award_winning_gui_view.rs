@@ -420,6 +420,10 @@ impl AwardWinningGuiView {
                 "Sample-Accurate Multi-Take Studio Vocal Comp" => "MultiTakeCompManager",
                 "Dynamic L1/L2 Cadence Tree Path Resolver" => "CadencePathResolver",
                 "44-Cylinder Acoustic Vocal Tract Synthesizer" => "VowelCylinderAreaSynthesizer",
+                "WebAssembly AudioWorklet Real-Time Bundle" => "AudioWorkletExporter",
+                "Psychoacoustic Lipshitz Mastering Dither" => "DitherNoiseShaper",
+                "Multi-Band Attack & Sustain Transient Sculptor" => "TransientShaperMatrix",
+                "Spherical Harmonic 3D Binaural HRTF Soundfield" => "BinauralHrtfInterpolator",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {

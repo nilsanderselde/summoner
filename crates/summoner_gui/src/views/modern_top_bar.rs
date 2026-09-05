@@ -185,6 +185,10 @@ fn default_available_presets() -> Vec<String> {
         "Sample-Accurate Multi-Take Studio Vocal Comp".to_string(),
         "Dynamic L1/L2 Cadence Tree Path Resolver".to_string(),
         "44-Cylinder Acoustic Vocal Tract Synthesizer".to_string(),
+        "WebAssembly AudioWorklet Real-Time Bundle".to_string(),
+        "Psychoacoustic Lipshitz Mastering Dither".to_string(),
+        "Multi-Band Attack & Sustain Transient Sculptor".to_string(),
+        "Spherical Harmonic 3D Binaural HRTF Soundfield".to_string(),
     ]
 }
 

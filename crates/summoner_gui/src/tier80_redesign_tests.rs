@@ -5254,6 +5254,206 @@ mod tests {
             assert_eq!(view.inspector_state.selected_node_kind, Some("VowelCylinderAreaSynthesizer".to_string()));
         }
     }
+
+    #[test]
+    fn test_tier104_modern_gui_dsp_module_coverage_and_presets() {
+        use crate::dsp_node_ui::{DspNodeRegistry, DspNodeCategory};
+        use crate::views::modern_asset_browser::BrowserCategory;
+
+        let registry = DspNodeRegistry::new();
+
+        // 1. Verify 799 total DSP modules registered
+        let total_modules = DspNodeRegistry::inventory();
+        assert_eq!(total_modules.len(), 799, "Must have exactly 799 registered DSP modules");
+
+        // 2. Verify all 21 Tier 104 modules have proper schemas and >= 5 parameters
+        let new_modules = [
+            ("Vst3PluginScanner", DspNodeCategory::Utility),
+            ("AudioWorkletExporter", DspNodeCategory::Utility),
+            ("TransientShaperMatrix", DspNodeCategory::DynamicsMaster),
+            ("DitherNoiseShaper", DspNodeCategory::DynamicsMaster),
+            ("EqualPowerCrossfader", DspNodeCategory::Utility),
+            ("BesselFilterBank", DspNodeCategory::FilterEq),
+            ("StateVariableOversampler", DspNodeCategory::FilterEq),
+            ("ParametricDynamicEq", DspNodeCategory::FilterEq),
+            ("BinauralHrtfInterpolator", DspNodeCategory::SpatialSurround),
+            ("HarmonicTensionFlow", DspNodeCategory::Modulation),
+            ("EuclideanPolyrhythmGenerator", DspNodeCategory::Modulation),
+            ("MidiPatternHumanizer", DspNodeCategory::Modulation),
+            ("SidechainSpectralDucker", DspNodeCategory::DynamicsMaster),
+            ("LinearPhaseDeEsser", DspNodeCategory::DynamicsMaster),
+            ("ResonantBodyFormant", DspNodeCategory::AcousticPhysicalModel),
+            ("ConvolutionCabinetSimulator", DspNodeCategory::DistortionSaturation),
+            ("StereoGoniometerVisualizer", DspNodeCategory::DynamicsMaster),
+            ("SurroundDownmixer", DspNodeCategory::SpatialSurround),
+            ("PitchDriftModulator", DspNodeCategory::Modulation),
+            ("ZeroLatencyBufferBridge", DspNodeCategory::Utility),
+            ("MasterSafetyClipper", DspNodeCategory::DynamicsMaster),
+        ];
+
+        for (name, cat) in &new_modules {
+            let desc = registry.get(name).unwrap_or_else(|| panic!("Node {} must be registered in DspNodeRegistry", name));
+            assert_eq!(desc.category, *cat, "Node {} must match expected category", name);
+            assert!(desc.params.len() >= 5, "Node {} must have >= 5 tactile parameters, got {}", name, desc.params.len());
+
+            let ui = crate::dsp_node_ui::DspNodeRegistry::create_node_ui(name)
+                .unwrap_or_else(|| panic!("create_node_ui({}) must succeed", name));
+            assert_eq!(ui.node_type_name(), *name);
+            assert_eq!(ui.category(), *cat);
+            assert!(ui.parameters().len() >= 5);
+        }
+
+        // 3. Verify canonical normalization mappings
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("vst3pluginscanner"), Some("Vst3PluginScanner"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("vst3scanner"), Some("Vst3PluginScanner"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("dynamicpluginscanner"), Some("Vst3PluginScanner"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("audioworkletexporter"), Some("AudioWorkletExporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("audioworklet"), Some("AudioWorkletExporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("workletexporter"), Some("AudioWorkletExporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("transientshapermatrix"), Some("TransientShaperMatrix"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("transientshaper"), Some("TransientShaperMatrix"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("multibandtransientshaper"), Some("TransientShaperMatrix"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("dithernoiseshaper"), Some("DitherNoiseShaper"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("dithershaper"), Some("DitherNoiseShaper"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("noiseshaper"), Some("DitherNoiseShaper"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("equalpowercrossfader"), Some("EqualPowerCrossfader"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("equalpower"), Some("EqualPowerCrossfader"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("crossfader"), Some("EqualPowerCrossfader"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("besselfilterbank"), Some("BesselFilterBank"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("besselfilter"), Some("BesselFilterBank"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("besselbank"), Some("BesselFilterBank"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("statevariableoversampler"), Some("StateVariableOversampler"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("svfoversampler"), Some("StateVariableOversampler"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("oversampledfsf"), Some("StateVariableOversampler"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("parametricdynamiceq"), Some("ParametricDynamicEq"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("dynamiceq"), Some("ParametricDynamicEq"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("dynamicparametric"), Some("ParametricDynamicEq"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("binauralhrtfinterpolator"), Some("BinauralHrtfInterpolator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("hrtfinterpolator"), Some("BinauralHrtfInterpolator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("binauralinterpolator"), Some("BinauralHrtfInterpolator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("harmonictensionflow"), Some("HarmonicTensionFlow"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("tensionflow"), Some("HarmonicTensionFlow"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("harmonictension"), Some("HarmonicTensionFlow"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("euclideanpolyrhythmgenerator"), Some("EuclideanPolyrhythmGenerator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("euclideanpolyrhythm"), Some("EuclideanPolyrhythmGenerator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("polyrhythmgenerator"), Some("EuclideanPolyrhythmGenerator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("midipatternhumanizer"), Some("MidiPatternHumanizer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("patternhumanizer"), Some("MidiPatternHumanizer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("midihumanizer"), Some("MidiPatternHumanizer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sidechainspectralducker"), Some("SidechainSpectralDucker"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("spectralducker"), Some("SidechainSpectralDucker"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sidechainducker"), Some("SidechainSpectralDucker"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("linearphasedeesser"), Some("LinearPhaseDeEsser"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("phasedeesser"), Some("LinearPhaseDeEsser"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("linearphaseesser"), Some("LinearPhaseDeEsser"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("resonantbodyformant"), Some("ResonantBodyFormant"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("bodyformant"), Some("ResonantBodyFormant"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("resonantbody"), Some("ResonantBodyFormant"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("convolutioncabinetsimulator"), Some("ConvolutionCabinetSimulator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cabinetsimulator"), Some("ConvolutionCabinetSimulator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cabsim"), Some("ConvolutionCabinetSimulator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("stereogoniometervisualizer"), Some("StereoGoniometerVisualizer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("goniometervisualizer"), Some("StereoGoniometerVisualizer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("stereogoniometer"), Some("StereoGoniometerVisualizer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("surrounddownmixer"), Some("SurroundDownmixer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("downmixer"), Some("SurroundDownmixer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("surrounddownmix"), Some("SurroundDownmixer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pitchdriftmodulator"), Some("PitchDriftModulator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pitchdrift"), Some("PitchDriftModulator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("vcodrift"), Some("PitchDriftModulator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("zerolatencybufferbridge"), Some("ZeroLatencyBufferBridge"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("bufferbridge"), Some("ZeroLatencyBufferBridge"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("telemetrybridge"), Some("ZeroLatencyBufferBridge"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("mastersafetyclipper"), Some("MasterSafetyClipper"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("safetyclipper"), Some("MasterSafetyClipper"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("masterclipper"), Some("MasterSafetyClipper"));
+
+        // 4. Verify Asset Browser categorization
+        let inst_folders = BrowserCategory::Instruments.default_folders();
+        let phys_items = inst_folders.iter().find(|(name, _)| *name == "Physical Models").unwrap().1;
+        assert!(phys_items.contains(&"ResonantBodyFormant"));
+
+        let fx_folders = BrowserCategory::AudioFx.default_folders();
+        let dyn_items = fx_folders.iter().find(|(name, _)| *name == "Dynamics & Level").unwrap().1;
+        assert!(dyn_items.contains(&"TransientShaperMatrix"));
+        assert!(dyn_items.contains(&"DitherNoiseShaper"));
+        assert!(dyn_items.contains(&"SidechainSpectralDucker"));
+        assert!(dyn_items.contains(&"LinearPhaseDeEsser"));
+        assert!(dyn_items.contains(&"StereoGoniometerVisualizer"));
+        assert!(dyn_items.contains(&"MasterSafetyClipper"));
+
+        let filter_items = fx_folders.iter().find(|(name, _)| *name == "Filters & EQ").unwrap().1;
+        assert!(filter_items.contains(&"BesselFilterBank"));
+        assert!(filter_items.contains(&"StateVariableOversampler"));
+        assert!(filter_items.contains(&"ParametricDynamicEq"));
+
+        let mod_items = fx_folders.iter().find(|(name, _)| *name == "Modulation & Pitch").unwrap().1;
+        assert!(mod_items.contains(&"HarmonicTensionFlow"));
+        assert!(mod_items.contains(&"PitchDriftModulator"));
+
+        let spatial_items = fx_folders.iter().find(|(name, _)| *name == "Time & Reverb").unwrap().1;
+        assert!(spatial_items.contains(&"BinauralHrtfInterpolator"));
+        assert!(spatial_items.contains(&"SurroundDownmixer"));
+
+        let midi_folders = BrowserCategory::MidiFx.default_folders();
+        let gen_sync_items = midi_folders.iter().find(|(name, _)| *name == "Generative & Sync").unwrap().1;
+        assert!(gen_sync_items.contains(&"EuclideanPolyrhythmGenerator"));
+        assert!(gen_sync_items.contains(&"MidiPatternHumanizer"));
+
+        let routing_items = midi_folders.iter().find(|(name, _)| *name == "Transforms & Routing").unwrap().1;
+        assert!(routing_items.contains(&"Vst3PluginScanner"));
+        assert!(routing_items.contains(&"AudioWorkletExporter"));
+        assert!(routing_items.contains(&"EqualPowerCrossfader"));
+        assert!(routing_items.contains(&"ConvolutionCabinetSimulator"));
+        assert!(routing_items.contains(&"ZeroLatencyBufferBridge"));
+
+        // 5. Verify Novice Presets synchronize in AwardWinningGuiView
+        #[cfg(feature = "gui")]
+        {
+            let mut view = crate::views::award_winning_gui_view::AwardWinningGuiView::default();
+            let ctx = eframe::egui::Context::default();
+
+            // Preset: WebAssembly AudioWorklet Real-Time Bundle -> AudioWorkletExporter
+            view.top_bar_state.selected_preset = "WebAssembly AudioWorklet Real-Time Bundle".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("AudioWorkletExporter".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("AudioWorkletExporter".to_string()));
+
+            // Preset: Psychoacoustic Lipshitz Mastering Dither -> DitherNoiseShaper
+            view.top_bar_state.selected_preset = "Psychoacoustic Lipshitz Mastering Dither".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("DitherNoiseShaper".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("DitherNoiseShaper".to_string()));
+
+            // Preset: Multi-Band Attack & Sustain Transient Sculptor -> TransientShaperMatrix
+            view.top_bar_state.selected_preset = "Multi-Band Attack & Sustain Transient Sculptor".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("TransientShaperMatrix".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("TransientShaperMatrix".to_string()));
+
+            // Preset: Spherical Harmonic 3D Binaural HRTF Soundfield -> BinauralHrtfInterpolator
+            view.top_bar_state.selected_preset = "Spherical Harmonic 3D Binaural HRTF Soundfield".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("BinauralHrtfInterpolator".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("BinauralHrtfInterpolator".to_string()));
+        }
+    }
 }
 
 
