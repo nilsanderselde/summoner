@@ -2768,5 +2768,244 @@ mod tests {
             assert_eq!(view.inspector_state.selected_node_kind, Some("MpeRouter".to_string()));
         }
     }
+
+    #[test]
+    fn test_step_1292_tier92_multitrack_looper_and_hardware_drivers() {
+        use crate::dsp_node_ui::DspNodeRegistry;
+        use crate::views::modern_asset_browser::BrowserCategory;
+
+        let registry = DspNodeRegistry::new();
+        assert!(registry.list_all().len() >= 545, "Expected >= 545 descriptors, got {}", registry.list_all().len());
+
+        let inv = DspNodeRegistry::inventory();
+        assert!(inv.len() >= 545, "Expected >= 545 inventory items, got {}", inv.len());
+
+        let new_nodes = [
+            "MultitrackSessionLooper",
+            "AlsaDriver",
+            "AudioUnitDriver",
+            "AAudioDriver",
+            "AsapiDriver",
+            "BleMidiPeripheral",
+            "HardwareEmulationHarness",
+            "MidiClockGenerator",
+            "MidiClockReceiver",
+            "MidiInputFilter",
+            "KeyboardSplit",
+            "KeyboardLayering",
+            "NamWaveNetEngine",
+            "WaveguideBrassNode",
+            "WaveguideMeshNode",
+            "WoodwindJetNode",
+            "PercussionMembraneNode",
+            "PipeOrganNode",
+            "SitarNode",
+            "BowedStringNode",
+        ];
+
+        // 1. Verify existence and UI instantiation
+        for name in &new_nodes {
+            let desc = registry.get(name);
+            assert!(desc.is_some(), "Module {} must exist in DspNodeRegistry", name);
+            let desc = desc.unwrap();
+            assert!(!desc.params.is_empty(), "Module {} must have schema parameters", name);
+
+            let ui_node = DspNodeRegistry::create_node_ui(name);
+            assert!(ui_node.is_some(), "create_node_ui must succeed for {}", name);
+            let ui_node = ui_node.unwrap();
+            assert!(!ui_node.parameters().is_empty(), "Module {} must have parameters exposed in UI", name);
+        }
+
+        // 2. Verify parameter IDs on key nodes
+        let looper = registry.get("MultitrackSessionLooper").unwrap();
+        assert!(looper.params.iter().any(|p| p.id == "feedback"));
+        assert!(looper.params.iter().any(|p| p.id == "track_count"));
+        assert!(looper.params.iter().any(|p| p.id == "crossfade_ms"));
+
+        let alsa = registry.get("AlsaDriver").unwrap();
+        assert!(alsa.params.iter().any(|p| p.id == "period_size_frames"));
+        assert!(alsa.params.iter().any(|p| p.id == "mmap_transfer_enabled"));
+
+        let au = registry.get("AudioUnitDriver").unwrap();
+        assert!(au.params.iter().any(|p| p.id == "buffer_frame_capacity"));
+        assert!(au.params.iter().any(|p| p.id == "voice_processing_io"));
+
+        let aaudio = registry.get("AAudioDriver").unwrap();
+        assert!(aaudio.params.iter().any(|p| p.id == "buffer_burst_frames"));
+        assert!(aaudio.params.iter().any(|p| p.id == "sharing_mode_exclusive"));
+
+        let asapi = registry.get("AsapiDriver").unwrap();
+        assert!(asapi.params.iter().any(|p| p.id == "preferred_buffer_size"));
+        assert!(asapi.params.iter().any(|p| p.id == "clock_source"));
+
+        let ble = registry.get("BleMidiPeripheral").unwrap();
+        assert!(ble.params.iter().any(|p| p.id == "connection_interval_ms"));
+        assert!(ble.params.iter().any(|p| p.id == "midi2_ump_protocol"));
+
+        let harness = registry.get("HardwareEmulationHarness").unwrap();
+        assert!(harness.params.iter().any(|p| p.id == "simulated_cpu_load_pct"));
+        assert!(harness.params.iter().any(|p| p.id == "thermal_temp_celsius"));
+
+        let clock_gen = registry.get("MidiClockGenerator").unwrap();
+        assert!(clock_gen.params.iter().any(|p| p.id == "bpm_tempo"));
+        assert!(clock_gen.params.iter().any(|p| p.id == "shuffle_swing_pct"));
+
+        let clock_rx = registry.get("MidiClockReceiver").unwrap();
+        assert!(clock_rx.params.iter().any(|p| p.id == "pll_damping"));
+        assert!(clock_rx.params.iter().any(|p| p.id == "flywheel_timeout_ms"));
+
+        let filter = registry.get("MidiInputFilter").unwrap();
+        assert!(filter.params.iter().any(|p| p.id == "filter_channel"));
+        assert!(filter.params.iter().any(|p| p.id == "velocity_curve_gamma"));
+
+        let split = registry.get("KeyboardSplit").unwrap();
+        assert!(split.params.iter().any(|p| p.id == "split_key_note"));
+        assert!(split.params.iter().any(|p| p.id == "lower_transpose_st"));
+
+        let layering = registry.get("KeyboardLayering").unwrap();
+        assert!(layering.params.iter().any(|p| p.id == "layer_mode"));
+        assert!(layering.params.iter().any(|p| p.id == "velocity_split_threshold"));
+
+        let wavenet = registry.get("NamWaveNetEngine").unwrap();
+        assert!(wavenet.params.iter().any(|p| p.id == "input_gain_db"));
+        assert!(wavenet.params.iter().any(|p| p.id == "dilated_layers_count"));
+
+        let freereed = registry.get("FreeReedVoice").unwrap();
+        assert!(freereed.params.iter().any(|p| p.id == "reed_frequency_hz"));
+        assert!(freereed.params.iter().any(|p| p.id == "bellows_pressure_kpa"));
+
+        let armonica = registry.get("ArmonicaChassisMode").unwrap();
+        assert!(armonica.params.iter().any(|p| p.id == "spindle_angular_vel_rpm"));
+        assert!(armonica.params.iter().any(|p| p.id == "water_bath_damping"));
+
+        let paulownia = registry.get("PaulowniaBodyMode").unwrap();
+        assert!(paulownia.params.iter().any(|p| p.id == "wood_stiffness_longitudinal"));
+        assert!(paulownia.params.iter().any(|p| p.id == "cavity_air_resonance_hz"));
+
+        let allpass_chain = registry.get("DispersionAllpassChain").unwrap();
+        assert!(allpass_chain.params.iter().any(|p| p.id == "dispersion_stages_count"));
+        assert!(allpass_chain.params.iter().any(|p| p.id == "inharmonicity_coefficient_b"));
+
+        let tine_disp = registry.get("TineDispersionAllpass").unwrap();
+        assert!(tine_disp.params.iter().any(|p| p.id == "tine_inharmonicity"));
+        assert!(tine_disp.params.iter().any(|p| p.id == "center_frequency_hz"));
+
+        let sitar_disp = registry.get("SitarDispersionAllpass").unwrap();
+        assert!(sitar_disp.params.iter().any(|p| p.id == "string_stiffness_parameter"));
+        assert!(sitar_disp.params.iter().any(|p| p.id == "taraf_coupling_cutoff_hz"));
+
+        let band_dyn = registry.get("BandDynamics").unwrap();
+        assert!(band_dyn.params.iter().any(|p| p.id == "threshold_db"));
+        assert!(band_dyn.params.iter().any(|p| p.id == "compression_ratio"));
+
+        // 3. Verify alias normalization
+        assert_eq!(DspNodeRegistry::normalize_type_name("multitracksessionlooper"), Some("MultitrackSessionLooper"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("sessionlooper"), Some("MultitrackSessionLooper"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("alsadriver"), Some("AlsaDriver"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("audiounitdriver"), Some("AudioUnitDriver"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("aaudiodriver"), Some("AAudioDriver"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("asapidriver"), Some("AsapiDriver"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("blemidiperipheral"), Some("BleMidiPeripheral"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("hardwareemulationharness"), Some("HardwareEmulationHarness"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("midiclockgenerator"), Some("MidiClockGenerator"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("midiclockreceiver"), Some("MidiClockReceiver"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("midiinputfilter"), Some("MidiInputFilter"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("keyboardsplit"), Some("KeyboardSplit"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("keyboardlayering"), Some("KeyboardLayering"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("namwavenetengine"), Some("NamWaveNetEngine"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("freereedvoice"), Some("FreeReedVoice"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("harmonicareed"), Some("FreeReedVoice"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("armonicachassismode"), Some("ArmonicaChassisMode"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("paulowniabodymode"), Some("PaulowniaBodyMode"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("dispersionallpasschain"), Some("DispersionAllpassChain"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("tinedispersionallpass"), Some("TineDispersionAllpass"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("sitardispersionallpass"), Some("SitarDispersionAllpass"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("banddynamics"), Some("BandDynamics"));
+
+        // 4. Verify Asset Browser categorization
+        let inst_folders = BrowserCategory::Instruments.default_folders();
+        let phys_items = inst_folders.iter().find(|(name, _)| *name == "Physical Models").unwrap().1;
+        assert!(phys_items.contains(&"FreeReedVoice"));
+        assert!(phys_items.contains(&"ArmonicaChassisMode"));
+        assert!(phys_items.contains(&"PaulowniaBodyMode"));
+
+        let synth_items = inst_folders.iter().find(|(name, _)| *name == "Synthesizers").unwrap().1;
+        assert!(synth_items.contains(&"NamWaveNetEngine"));
+
+        let sampler_items = inst_folders.iter().find(|(name, _)| *name == "Samplers & Slicers").unwrap().1;
+        assert!(sampler_items.contains(&"MultitrackSessionLooper"));
+
+        let fx_folders = BrowserCategory::AudioFx.default_folders();
+        let dyn_items = fx_folders.iter().find(|(name, _)| *name == "Dynamics & Level").unwrap().1;
+        assert!(dyn_items.contains(&"BandDynamics"));
+
+        let filter_items = fx_folders.iter().find(|(name, _)| *name == "Filters & EQ").unwrap().1;
+        assert!(filter_items.contains(&"DispersionAllpassChain"));
+        assert!(filter_items.contains(&"TineDispersionAllpass"));
+        assert!(filter_items.contains(&"SitarDispersionAllpass"));
+
+        let midi_folders = BrowserCategory::MidiFx.default_folders();
+        let gen_items = midi_folders.iter().find(|(name, _)| *name == "Generative & Sync").unwrap().1;
+        assert!(gen_items.contains(&"MidiClockGenerator"));
+        assert!(gen_items.contains(&"MidiClockReceiver"));
+        assert!(gen_items.contains(&"BleMidiPeripheral"));
+
+        let routing_items = midi_folders.iter().find(|(name, _)| *name == "Transforms & Routing").unwrap().1;
+        assert!(routing_items.contains(&"MidiInputFilter"));
+        assert!(routing_items.contains(&"KeyboardSplit"));
+        assert!(routing_items.contains(&"KeyboardLayering"));
+        assert!(routing_items.contains(&"AlsaDriver"));
+        assert!(routing_items.contains(&"AudioUnitDriver"));
+        assert!(routing_items.contains(&"AAudioDriver"));
+        assert!(routing_items.contains(&"AsapiDriver"));
+        assert!(routing_items.contains(&"HardwareEmulationHarness"));
+
+        // 5. Verify Novice Presets synchronize in AwardWinningGuiView
+        #[cfg(feature = "gui")]
+        {
+            let mut view = crate::views::award_winning_gui_view::AwardWinningGuiView::default();
+            let ctx = eframe::egui::Context::default();
+
+            // Preset: Multitrack Ambient Soundscape Loop -> MultitrackSessionLooper
+            view.top_bar_state.selected_preset = "Multitrack Ambient Soundscape Loop".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("MultitrackSessionLooper".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("MultitrackSessionLooper".to_string()));
+
+            // Preset: Harmonium Free-Reed Expression Swell -> FreeReedVoice
+            view.top_bar_state.selected_preset = "Harmonium Free-Reed Expression Swell".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("FreeReedVoice".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("FreeReedVoice".to_string()));
+
+            // Preset: Glass Armonica Celestial Shimmer -> ArmonicaChassisMode
+            view.top_bar_state.selected_preset = "Glass Armonica Celestial Shimmer".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("ArmonicaChassisMode".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("ArmonicaChassisMode".to_string()));
+
+            // Preset: High-Gain WaveNet Tube Overdrive -> NamWaveNetEngine
+            view.top_bar_state.selected_preset = "High-Gain WaveNet Tube Overdrive".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("NamWaveNetEngine".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("NamWaveNetEngine".to_string()));
+        }
+    }
 }
 

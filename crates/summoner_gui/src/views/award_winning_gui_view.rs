@@ -372,6 +372,10 @@ impl AwardWinningGuiView {
                 "Analog Reel-to-Reel Tape Saturation" => "TapeChannelState",
                 "Shoebox Early Acoustic Reflections" => "ImageReflection",
                 "MPE Polyphonic Gesture Router" => "MpeRouter",
+                "Multitrack Ambient Soundscape Loop" => "MultitrackSessionLooper",
+                "Harmonium Free-Reed Expression Swell" => "FreeReedVoice",
+                "Glass Armonica Celestial Shimmer" => "ArmonicaChassisMode",
+                "High-Gain WaveNet Tube Overdrive" => "NamWaveNetEngine",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {

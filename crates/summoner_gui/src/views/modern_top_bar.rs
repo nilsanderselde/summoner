@@ -137,6 +137,10 @@ fn default_available_presets() -> Vec<String> {
         "Analog Reel-to-Reel Tape Saturation".to_string(),
         "Shoebox Early Acoustic Reflections".to_string(),
         "MPE Polyphonic Gesture Router".to_string(),
+        "Multitrack Ambient Soundscape Loop".to_string(),
+        "Harmonium Free-Reed Expression Swell".to_string(),
+        "Glass Armonica Celestial Shimmer".to_string(),
+        "High-Gain WaveNet Tube Overdrive".to_string(),
     ]
 }
 
