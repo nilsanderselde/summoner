@@ -149,6 +149,10 @@ fn default_available_presets() -> Vec<String> {
         "Stevie 70s Clavinet Wah Funk".to_string(),
         "Plate Tank Mechanical Reverb".to_string(),
         "Zen Bamboo Flute Breath".to_string(),
+        "Neo-Riemannian Cadence Graph".to_string(),
+        "Bjorklund Euclidean Rhythm Engine".to_string(),
+        "Microtonal 31-EDO Harmonic Scale".to_string(),
+        "Acoustic Flamenco Guitar Strummer".to_string(),
     ]
 }
 

@@ -3536,5 +3536,287 @@ mod tests {
             assert_eq!(view.inspector_state.selected_node_kind, Some("Shakuhachi".to_string()));
         }
     }
+
+    #[test]
+    fn test_step_1295_tier95_dsp_modules_expansion_coverage() {
+        use crate::dsp_node_ui::DspNodeRegistry;
+        use crate::views::modern_asset_browser::BrowserCategory;
+
+        let registry = DspNodeRegistry::new();
+        assert!(registry.list_all().len() >= 610, "Expected >= 610 descriptors, got {}", registry.list_all().len());
+
+        let inv = DspNodeRegistry::inventory();
+        assert!(inv.len() >= 610, "Expected >= 610 inventory items, got {}", inv.len());
+
+        let tier95_dsp_modules = [
+            "CadenceGraph",
+            "CadenceEngine",
+            "HarmonicTensionAnalyzer",
+            "VoiceLeadingOptimizer",
+            "IsomorphicRouter",
+            "VowelGraph",
+            "EdoTuning",
+            "SclTuning",
+            "KbmMapping",
+            "HarmonicBusBridge",
+            "ClipMatrix",
+            "AutomationTimeline",
+            "CompTrack",
+            "GenerativeEngine",
+            "TimelineArranger",
+            "Arpeggiator",
+            "ChordMemory",
+            "Strummer",
+            "SidechainRoute",
+            "SpatialTrajectoryTrack",
+            "TrackerStep",
+        ];
+
+        // 1. Verify existence, descriptor param count (>= 5), and UI instantiation
+        for name in &tier95_dsp_modules {
+            let desc = registry.get(name);
+            assert!(desc.is_some(), "Module {} must exist in DspNodeRegistry", name);
+            let desc = desc.unwrap();
+            assert!(desc.params.len() >= 5, "Module {} must have at least 5 schema parameters, found {}", name, desc.params.len());
+
+            let ui_node = DspNodeRegistry::create_node_ui(name);
+            assert!(ui_node.is_some(), "create_node_ui must succeed for {}", name);
+            let ui_node = ui_node.unwrap();
+            assert!(ui_node.parameters().len() >= 5, "Module {} must have at least 5 parameters exposed in UI, found {}", name, ui_node.parameters().len());
+        }
+
+        // 2. Verify key parameter IDs on all 21 modules
+        let cadence_g = registry.get("CadenceGraph").unwrap();
+        assert!(cadence_g.params.iter().any(|p| p.id == "root_key"));
+        assert!(cadence_g.params.iter().any(|p| p.id == "scale_mode"));
+        assert!(cadence_g.params.iter().any(|p| p.id == "cadence_branching"));
+
+        let cadence_e = registry.get("CadenceEngine").unwrap();
+        assert!(cadence_e.params.iter().any(|p| p.id == "resolution_speed"));
+        assert!(cadence_e.params.iter().any(|p| p.id == "deceptive_prob"));
+        assert!(cadence_e.params.iter().any(|p| p.id == "cadence_strength"));
+
+        let tension = registry.get("HarmonicTensionAnalyzer").unwrap();
+        assert!(tension.params.iter().any(|p| p.id == "roughness_weight"));
+        assert!(tension.params.iter().any(|p| p.id == "tonal_stability"));
+        assert!(tension.params.iter().any(|p| p.id == "color_saturation"));
+
+        let voice = registry.get("VoiceLeadingOptimizer").unwrap();
+        assert!(voice.params.iter().any(|p| p.id == "voice_count"));
+        assert!(voice.params.iter().any(|p| p.id == "distance_penalty"));
+        assert!(voice.params.iter().any(|p| p.id == "stepwise_preference"));
+
+        let iso = registry.get("IsomorphicRouter").unwrap();
+        assert!(iso.params.iter().any(|p| p.id == "row_axis_semitones"));
+        assert!(iso.params.iter().any(|p| p.id == "col_axis_semitones"));
+        assert!(iso.params.iter().any(|p| p.id == "layout_preset"));
+
+        let vowel = registry.get("VowelGraph").unwrap();
+        assert!(vowel.params.iter().any(|p| p.id == "formant_f1_hz"));
+        assert!(vowel.params.iter().any(|p| p.id == "formant_f2_hz"));
+        assert!(vowel.params.iter().any(|p| p.id == "nasalization"));
+
+        let edo = registry.get("EdoTuning").unwrap();
+        assert!(edo.params.iter().any(|p| p.id == "divisions_per_octave"));
+        assert!(edo.params.iter().any(|p| p.id == "reference_pitch_hz"));
+        assert!(edo.params.iter().any(|p| p.id == "stretch_factor"));
+
+        let scl = registry.get("SclTuning").unwrap();
+        assert!(scl.params.iter().any(|p| p.id == "scale_size"));
+        assert!(scl.params.iter().any(|p| p.id == "fundamental_hz"));
+        assert!(scl.params.iter().any(|p| p.id == "just_intonation_bias"));
+
+        let kbm = registry.get("KbmMapping").unwrap();
+        assert!(kbm.params.iter().any(|p| p.id == "middle_key_midi"));
+        assert!(kbm.params.iter().any(|p| p.id == "scale_degree_map"));
+        assert!(kbm.params.iter().any(|p| p.id == "octave_key_span"));
+
+        let bridge = registry.get("HarmonicBusBridge").unwrap();
+        assert!(bridge.params.iter().any(|p| p.id == "broadcast_channel"));
+        assert!(bridge.params.iter().any(|p| p.id == "send_level"));
+        assert!(bridge.params.iter().any(|p| p.id == "tension_damping"));
+
+        let clip = registry.get("ClipMatrix").unwrap();
+        assert!(clip.params.iter().any(|p| p.id == "launch_quantize"));
+        assert!(clip.params.iter().any(|p| p.id == "scene_tempo_sync"));
+        assert!(clip.params.iter().any(|p| p.id == "crossfade_curve"));
+
+        let auto = registry.get("AutomationTimeline").unwrap();
+        assert!(auto.params.iter().any(|p| p.id == "smoothing_tau_ms"));
+        assert!(auto.params.iter().any(|p| p.id == "curve_tension"));
+        assert!(auto.params.iter().any(|p| p.id == "record_latch_mode"));
+
+        let comp = registry.get("CompTrack").unwrap();
+        assert!(comp.params.iter().any(|p| p.id == "crossfade_time_ms"));
+        assert!(comp.params.iter().any(|p| p.id == "equal_power_crossfade"));
+        assert!(comp.params.iter().any(|p| p.id == "take_selection"));
+
+        let gen = registry.get("GenerativeEngine").unwrap();
+        assert!(gen.params.iter().any(|p| p.id == "euclidean_hits"));
+        assert!(gen.params.iter().any(|p| p.id == "euclidean_steps"));
+        assert!(gen.params.iter().any(|p| p.id == "swing_factor"));
+
+        let time = registry.get("TimelineArranger").unwrap();
+        assert!(time.params.iter().any(|p| p.id == "playback_speed"));
+        assert!(time.params.iter().any(|p| p.id == "loop_start_bar"));
+        assert!(time.params.iter().any(|p| p.id == "metronome_gain"));
+
+        let arp = registry.get("Arpeggiator").unwrap();
+        assert!(arp.params.iter().any(|p| p.id == "arp_mode"));
+        assert!(arp.params.iter().any(|p| p.id == "rate_division"));
+        assert!(arp.params.iter().any(|p| p.id == "octave_range"));
+
+        let chord = registry.get("ChordMemory").unwrap();
+        assert!(chord.params.iter().any(|p| p.id == "voicing_preset"));
+        assert!(chord.params.iter().any(|p| p.id == "velocity_spread"));
+        assert!(chord.params.iter().any(|p| p.id == "strum_delay_ms"));
+
+        let strum = registry.get("Strummer").unwrap();
+        assert!(strum.params.iter().any(|p| p.id == "strum_speed_ms"));
+        assert!(strum.params.iter().any(|p| p.id == "strum_direction"));
+        assert!(strum.params.iter().any(|p| p.id == "plectrum_stiffness"));
+
+        let sidechain = registry.get("SidechainRoute").unwrap();
+        assert!(sidechain.params.iter().any(|p| p.id == "sidechain_source_ch"));
+        assert!(sidechain.params.iter().any(|p| p.id == "ducking_amount_db"));
+        assert!(sidechain.params.iter().any(|p| p.id == "sidechain_hpf_hz"));
+
+        let spatial = registry.get("SpatialTrajectoryTrack").unwrap();
+        assert!(spatial.params.iter().any(|p| p.id == "orbit_speed_hz"));
+        assert!(spatial.params.iter().any(|p| p.id == "orbit_radius_m"));
+        assert!(spatial.params.iter().any(|p| p.id == "trajectory_shape"));
+
+        let tracker = registry.get("TrackerStep").unwrap();
+        assert!(tracker.params.iter().any(|p| p.id == "ticks_per_line"));
+        assert!(tracker.params.iter().any(|p| p.id == "hex_fx_command"));
+        assert!(tracker.params.iter().any(|p| p.id == "hex_fx_param"));
+
+        // 3. Verify alias normalization
+        assert_eq!(DspNodeRegistry::normalize_type_name("cadencegraph"), Some("CadenceGraph"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("harmoniccadencegraph"), Some("CadenceGraph"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("cadenceengine"), Some("CadenceEngine"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("cadenceresolver"), Some("CadenceEngine"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("harmonictensionanalyzer"), Some("HarmonicTensionAnalyzer"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("tensionanalyzer"), Some("HarmonicTensionAnalyzer"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("voiceleadingoptimizer"), Some("VoiceLeadingOptimizer"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("parsimoniousvoiceleading"), Some("VoiceLeadingOptimizer"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("isomorphicrouter"), Some("IsomorphicRouter"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("wickihaydenrouter"), Some("IsomorphicRouter"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("vowelgraph"), Some("VowelGraph"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("formantvowelgraph"), Some("VowelGraph"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("edotuning"), Some("EdoTuning"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("equaldivisionsoctave"), Some("EdoTuning"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("scltuning"), Some("SclTuning"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("scalascltuning"), Some("SclTuning"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("kbmmapping"), Some("KbmMapping"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("microtonalkbm"), Some("KbmMapping"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("harmonicbusbridge"), Some("HarmonicBusBridge"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("harmonicbridge"), Some("HarmonicBusBridge"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("clipmatrix"), Some("ClipMatrix"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("sessionclipmatrix"), Some("ClipMatrix"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("automationtimeline"), Some("AutomationTimeline"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("parametertimeline"), Some("AutomationTimeline"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("comptrack"), Some("CompTrack"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("vocalcomptrack"), Some("CompTrack"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("generativeengine"), Some("GenerativeEngine"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("euclideangenerative"), Some("GenerativeEngine"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("timelinearranger"), Some("TimelineArranger"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("songtimelinearranger"), Some("TimelineArranger"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("arpeggiator"), Some("Arpeggiator"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("polyarpeggiator"), Some("Arpeggiator"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("chordmemory"), Some("ChordMemory"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("polychordmemory"), Some("ChordMemory"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("strummer"), Some("Strummer"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("acousticstrummer"), Some("Strummer"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("sidechainroute"), Some("SidechainRoute"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("dynamicsidechain"), Some("SidechainRoute"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("spatialtrajectorytrack"), Some("SpatialTrajectoryTrack"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("spatialorbittrajectory"), Some("SpatialTrajectoryTrack"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("trackerstep"), Some("TrackerStep"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("modtrackerstep"), Some("TrackerStep"));
+
+        // 4. Verify Asset Browser categorization
+        let inst_folders = BrowserCategory::Instruments.default_folders();
+        let phys_items = inst_folders.iter().find(|(name, _)| *name == "Physical Models").unwrap().1;
+        assert!(phys_items.contains(&"Strummer"));
+
+        let fx_folders = BrowserCategory::AudioFx.default_folders();
+        let dyn_items = fx_folders.iter().find(|(name, _)| *name == "Dynamics & Level").unwrap().1;
+        assert!(dyn_items.contains(&"SidechainRoute"));
+
+        let time_items = fx_folders.iter().find(|(name, _)| *name == "Time & Reverb").unwrap().1;
+        assert!(time_items.contains(&"SpatialTrajectoryTrack"));
+
+        let filter_items = fx_folders.iter().find(|(name, _)| *name == "Filters & EQ").unwrap().1;
+        assert!(filter_items.contains(&"VowelGraph"));
+
+        let mod_items = fx_folders.iter().find(|(name, _)| *name == "Modulation & Pitch").unwrap().1;
+        assert!(mod_items.contains(&"CadenceEngine"));
+        assert!(mod_items.contains(&"VoiceLeadingOptimizer"));
+        assert!(mod_items.contains(&"AutomationTimeline"));
+        assert!(mod_items.contains(&"GenerativeEngine"));
+        assert!(mod_items.contains(&"ChordMemory"));
+        assert!(mod_items.contains(&"TrackerStep"));
+
+        let midi_folders = BrowserCategory::MidiFx.default_folders();
+        let routing_items = midi_folders.iter().find(|(name, _)| *name == "Transforms & Routing").unwrap().1;
+        assert!(routing_items.contains(&"CadenceGraph"));
+        assert!(routing_items.contains(&"HarmonicTensionAnalyzer"));
+        assert!(routing_items.contains(&"IsomorphicRouter"));
+        assert!(routing_items.contains(&"EdoTuning"));
+        assert!(routing_items.contains(&"SclTuning"));
+        assert!(routing_items.contains(&"KbmMapping"));
+        assert!(routing_items.contains(&"HarmonicBusBridge"));
+        assert!(routing_items.contains(&"TimelineArranger"));
+        assert!(routing_items.contains(&"ClipMatrix"));
+        assert!(routing_items.contains(&"CompTrack"));
+
+        // 5. Verify Novice Presets synchronize in AwardWinningGuiView
+        #[cfg(feature = "gui")]
+        {
+            let mut view = crate::views::award_winning_gui_view::AwardWinningGuiView::default();
+            let ctx = eframe::egui::Context::default();
+
+            // Preset: Neo-Riemannian Cadence Graph -> CadenceGraph
+            view.top_bar_state.selected_preset = "Neo-Riemannian Cadence Graph".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("CadenceGraph".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("CadenceGraph".to_string()));
+
+            // Preset: Bjorklund Euclidean Rhythm Engine -> GenerativeEngine
+            view.top_bar_state.selected_preset = "Bjorklund Euclidean Rhythm Engine".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("GenerativeEngine".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("GenerativeEngine".to_string()));
+
+            // Preset: Microtonal 31-EDO Harmonic Scale -> EdoTuning
+            view.top_bar_state.selected_preset = "Microtonal 31-EDO Harmonic Scale".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("EdoTuning".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("EdoTuning".to_string()));
+
+            // Preset: Acoustic Flamenco Guitar Strummer -> Strummer
+            view.top_bar_state.selected_preset = "Acoustic Flamenco Guitar Strummer".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("Strummer".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("Strummer".to_string()));
+        }
+    }
 }
 

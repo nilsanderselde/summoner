@@ -384,6 +384,10 @@ impl AwardWinningGuiView {
                 "Stevie 70s Clavinet Wah Funk" => "Clavinet",
                 "Plate Tank Mechanical Reverb" => "PlateTank",
                 "Zen Bamboo Flute Breath" => "Shakuhachi",
+                "Neo-Riemannian Cadence Graph" => "CadenceGraph",
+                "Bjorklund Euclidean Rhythm Engine" => "GenerativeEngine",
+                "Microtonal 31-EDO Harmonic Scale" => "EdoTuning",
+                "Acoustic Flamenco Guitar Strummer" => "Strummer",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {
