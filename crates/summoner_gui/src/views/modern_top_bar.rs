@@ -129,6 +129,10 @@ fn default_available_presets() -> Vec<String> {
         "3D Atmos Trajectory Orbit".to_string(),
         "Concert Grand Piano Escapement".to_string(),
         "Bowed Violin Kinematics".to_string(),
+        "Concert Acoustic Harp Arpeggio".to_string(),
+        "Hurdy Gurdy Chien Drone".to_string(),
+        "Vocal Tract Formant Shaper".to_string(),
+        "Electric Piano Tine Saturation".to_string(),
     ]
 }
 

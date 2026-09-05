@@ -2353,5 +2353,187 @@ mod tests {
             assert_eq!(view.inspector_state.selected_node_kind, Some("BowingGestureEngine".to_string()));
         }
     }
+
+    #[test]
+    fn test_tier91_dsp_registry_505_plus_and_lockfree_bus_exposure() {
+        use crate::dsp_node_ui::DspNodeRegistry;
+        use crate::views::modern_asset_browser::BrowserCategory;
+
+        let inv = DspNodeRegistry::inventory();
+        assert!(inv.len() >= 505, "Expected inventory count >= 505, got {}", inv.len());
+
+        let registry = DspNodeRegistry::new();
+        assert!(registry.list_all().len() >= 505, "Expected descriptor count >= 505, got {}", registry.list_all().len());
+
+        let new_tier91_nodes = [
+            "ArticulationBus",
+            "BreathBus",
+            "CadenceBus",
+            "ClavinetBus",
+            "EpBus",
+            "FormantBus",
+            "GlassBus",
+            "GrandPianoBus",
+            "HurdyGurdyBus",
+            "KotoBus",
+            "MalletBus",
+            "PipeOrganBus",
+            "PlectrumBus",
+            "RotaryBus",
+            "ShakuhachiBus",
+            "SitarBus",
+            "SpringBus",
+            "BootToSynthEngine",
+            "MidiUsbGadgetMode",
+            "MultiBusEventRouter",
+        ];
+
+        for name in &new_tier91_nodes {
+            assert!(registry.get(name).is_some(), "Module {} must be in DspNodeRegistry", name);
+            assert!(inv.iter().any(|(n, _, _)| n == name), "Module {} must be in inventory", name);
+
+            let ui_node = DspNodeRegistry::create_node_ui(name);
+            assert!(ui_node.is_some(), "create_node_ui must succeed for {}", name);
+            let ui_node = ui_node.unwrap();
+            assert!(!ui_node.parameters().is_empty(), "Module {} must have parameters exposed", name);
+        }
+
+        // Verify specific parameter presence
+        let articulation = registry.get("ArticulationBus").unwrap();
+        assert!(articulation.params.iter().any(|p| p.id == "technique_index"));
+        assert!(articulation.params.iter().any(|p| p.id == "bow_velocity_mps"));
+
+        let breath = registry.get("BreathBus").unwrap();
+        assert!(breath.params.iter().any(|p| p.id == "blowing_pressure_pa"));
+        assert!(breath.params.iter().any(|p| p.id == "jet_distance_mm"));
+
+        let cadence = registry.get("CadenceBus").unwrap();
+        assert!(cadence.params.iter().any(|p| p.id == "harmonic_tension"));
+        assert!(cadence.params.iter().any(|p| p.id == "voice_leading_cost"));
+
+        let clav = registry.get("ClavinetBus").unwrap();
+        assert!(clav.params.iter().any(|p| p.id == "key_tangent_velocity"));
+        assert!(clav.params.iter().any(|p| p.id == "pickup_coil_balance"));
+
+        let ep = registry.get("EpBus").unwrap();
+        assert!(ep.params.iter().any(|p| p.id == "tine_excitation_force"));
+        assert!(ep.params.iter().any(|p| p.id == "pickup_gap_mm"));
+
+        let formant = registry.get("FormantBus").unwrap();
+        assert!(formant.params.iter().any(|p| p.id == "formant_f1_hz"));
+        assert!(formant.params.iter().any(|p| p.id == "nasal_coupling_ratio"));
+
+        let glass = registry.get("GlassBus").unwrap();
+        assert!(glass.params.iter().any(|p| p.id == "rim_angular_vel_rads"));
+        assert!(glass.params.iter().any(|p| p.id == "water_level_detune_cents"));
+
+        let piano = registry.get("GrandPianoBus").unwrap();
+        assert!(piano.params.iter().any(|p| p.id == "strike_velocity"));
+        assert!(piano.params.iter().any(|p| p.id == "duplex_resonance_db"));
+
+        let gurdy = registry.get("HurdyGurdyBus").unwrap();
+        assert!(gurdy.params.iter().any(|p| p.id == "crank_wheel_rpm"));
+        assert!(gurdy.params.iter().any(|p| p.id == "chien_pressure_gf"));
+
+        let plectrum = registry.get("PlectrumBus").unwrap();
+        assert!(plectrum.params.iter().any(|p| p.id == "attack_velocity"));
+        assert!(plectrum.params.iter().any(|p| p.id == "snap_release_force_n"));
+
+        let boot = registry.get("BootToSynthEngine").unwrap();
+        assert!(boot.params.iter().any(|p| p.id == "boot_profile_mode"));
+        assert!(boot.params.iter().any(|p| p.id == "startup_gain_db"));
+
+        let router = registry.get("MultiBusEventRouter").unwrap();
+        assert!(router.params.iter().any(|p| p.id == "source_bus_index"));
+        assert!(router.params.iter().any(|p| p.id == "target_bus_index"));
+
+        // Verify alias normalization
+        assert_eq!(DspNodeRegistry::normalize_type_name("articulationbus"), Some("ArticulationBus"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("bowingbus"), Some("ArticulationBus"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("woodwindbus"), Some("BreathBus"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("harmoniccadencebus"), Some("CadenceBus"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("electricpianobus"), Some("EpBus"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("vocaltractbus"), Some("FormantBus"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("pianobus"), Some("GrandPianoBus"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("pluckbus"), Some("PlectrumBus"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("boottosynth"), Some("BootToSynthEngine"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("usbgadgetmode"), Some("MidiUsbGadgetMode"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("multibusevent"), Some("MultiBusEventRouter"));
+
+        // Verify Asset Browser categorization
+        let inst_folders = BrowserCategory::Instruments.default_folders();
+        let phys_items = inst_folders.iter().find(|(name, _)| *name == "Physical Models").unwrap().1;
+        assert!(phys_items.contains(&"ArticulationBus"));
+        assert!(phys_items.contains(&"BreathBus"));
+        assert!(phys_items.contains(&"ClavinetBus"));
+        assert!(phys_items.contains(&"EpBus"));
+        assert!(phys_items.contains(&"GrandPianoBus"));
+        assert!(phys_items.contains(&"HurdyGurdyBus"));
+        assert!(phys_items.contains(&"PlectrumBus"));
+
+        let fx_folders = BrowserCategory::AudioFx.default_folders();
+        let time_items = fx_folders.iter().find(|(name, _)| *name == "Time & Reverb").unwrap().1;
+        assert!(time_items.contains(&"SpringBus"));
+
+        let mod_items = fx_folders.iter().find(|(name, _)| *name == "Modulation & Pitch").unwrap().1;
+        assert!(mod_items.contains(&"RotaryBus"));
+
+        let midi_folders = BrowserCategory::MidiFx.default_folders();
+        let gen_items = midi_folders.iter().find(|(name, _)| *name == "Generative & Sync").unwrap().1;
+        assert!(gen_items.contains(&"CadenceBus"));
+        assert!(gen_items.contains(&"BootToSynthEngine"));
+
+        let routing_items = midi_folders.iter().find(|(name, _)| *name == "Transforms & Routing").unwrap().1;
+        assert!(routing_items.contains(&"FormantBus"));
+        assert!(routing_items.contains(&"MidiUsbGadgetMode"));
+        assert!(routing_items.contains(&"MultiBusEventRouter"));
+
+        // Verify Novice Presets synchronize in AwardWinningGuiView
+        #[cfg(feature = "gui")]
+        {
+            let mut view = crate::views::award_winning_gui_view::AwardWinningGuiView::default();
+            let ctx = eframe::egui::Context::default();
+
+            // Preset: Concert Acoustic Harp Arpeggio -> PlectrumBus
+            view.top_bar_state.selected_preset = "Concert Acoustic Harp Arpeggio".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("PlectrumBus".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("PlectrumBus".to_string()));
+
+            // Preset: Hurdy Gurdy Chien Drone -> HurdyGurdyBus
+            view.top_bar_state.selected_preset = "Hurdy Gurdy Chien Drone".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("HurdyGurdyBus".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("HurdyGurdyBus".to_string()));
+
+            // Preset: Vocal Tract Formant Shaper -> FormantBus
+            view.top_bar_state.selected_preset = "Vocal Tract Formant Shaper".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("FormantBus".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("FormantBus".to_string()));
+
+            // Preset: Electric Piano Tine Saturation -> EpBus
+            view.top_bar_state.selected_preset = "Electric Piano Tine Saturation".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("EpBus".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("EpBus".to_string()));
+        }
+    }
 }
 

@@ -4211,6 +4211,144 @@ impl DspNodeRegistry {
             .with_param(DspParamSchema::knob("cartesian_z", "Source Cartesian Z Position", -10.0, 10.0, 0.0, "m", MacroRole::Punch, "Height Cartesian coordinate along Z-axis parameter"))
             .with_param(DspParamSchema::toggle("atomic_slot_lockless", "Lockless Double-Buffer Sync", true, "Atomic double-buffered coordinate update without mutexes parameter"))
         );
+        descriptors.insert("ArticulationBus".to_string(), DspNodeDescriptor::new("ArticulationBus", "Lock-Free Atomic Bowing Articulation Bus", DspNodeCategory::Utility, "Real-time thread-safe lock-free atomic parameter bus publishing continuous physical bowing vectors: velocity, normal force, bridge proximity beta, and rosin adhesion")
+            .with_param(DspParamSchema::knob("technique_index", "Bowing Technique Mode", 0.0, 9.0, 0.0, "mode", MacroRole::Tone, "Continuous or stepped classical bowing technique enum parameter"))
+            .with_param(DspParamSchema::log_knob("bow_velocity_mps", "Bow Velocity", 0.01, 2.5, 0.35, "m/s", MacroRole::Punch, "Dynamic tangential bow velocity parameter"))
+            .with_param(DspParamSchema::log_knob("bow_force_n", "Normal Bow Force", 0.05, 8.0, 1.2, "N", MacroRole::Space, "Dynamic normal bow hair pressure force parameter"))
+            .with_param(DspParamSchema::knob("bridge_proximity_beta", "Bridge Distance Beta", 0.02, 0.40, 0.12, "beta", MacroRole::Character, "Relative contact point beta ratio between bridge and fingerboard parameter"))
+            .with_param(DspParamSchema::toggle("atomic_bus_sync", "Atomic State Broadcast", true, "Real-time thread-safe atomic parameter bus publishing parameter"))
+        );
+        descriptors.insert("BreathBus".to_string(), DspNodeDescriptor::new("BreathBus", "Lock-Free Atomic Woodwind Breath Bus", DspNodeCategory::Utility, "Thread-safe atomic breath and airway gesture bus streaming blowing pressure, jet distance, embouchure angle, and flutter tonguing")
+            .with_param(DspParamSchema::log_knob("blowing_pressure_pa", "Airway Blowing Pressure", 10.0, 8000.0, 1200.0, "Pa", MacroRole::Punch, "Continuous airway blowing pressure in Pascals parameter"))
+            .with_param(DspParamSchema::knob("jet_distance_mm", "Lip-to-Labium Jet Distance", 1.0, 20.0, 5.5, "mm", MacroRole::Tone, "Physical air jet length between lips and splitting edge parameter"))
+            .with_param(DspParamSchema::knob("embouchure_angle_deg", "Embouchure Angle Offset", -45.0, 45.0, 0.0, "deg", MacroRole::Space, "Acoustic embouchure jet angle deviation parameter"))
+            .with_param(DspParamSchema::knob("tonehole_bitmask", "Tonehole Bitmask (0-63)", 0.0, 63.0, 0.0, "mask", MacroRole::Character, "6-tonehole open/closed binary state mask parameter"))
+            .with_param(DspParamSchema::toggle("atomic_bus_sync", "Atomic State Broadcast", true, "Thread-safe lock-free atomic parameter synchronization parameter"))
+        );
+        descriptors.insert("CadenceBus".to_string(), DspNodeDescriptor::new("CadenceBus", "Lock-Free Harmonic Progression & Cadence Bus", DspNodeCategory::Utility, "Real-time atomic parameter bus routing chord progressions, active root pitch, harmonic tension scores, and cadence resolutions")
+            .with_param(DspParamSchema::knob("harmonic_tension", "Harmonic Tension Score", 0.0, 1.0, 0.25, "tension", MacroRole::Character, "Psychoacoustic harmonic dissonance and tension score parameter"))
+            .with_param(DspParamSchema::knob("resolution_urgency", "Cadence Resolution Urgency", 0.0, 1.0, 0.10, "urgency", MacroRole::Punch, "Tonal pull toward immediate cadence resolution parameter"))
+            .with_param(DspParamSchema::knob("voice_leading_cost", "Voice-Leading Distance Cost", 0.0, 10.0, 1.5, "cost", MacroRole::Tone, "Cumulative voice-leading semitone displacement penalty parameter"))
+            .with_param(DspParamSchema::knob("predicted_cadence_mode", "Target Cadence Mode", 0.0, 4.0, 0.0, "mode", MacroRole::Space, "Predicted cadence target resolution type enum parameter"))
+            .with_param(DspParamSchema::toggle("auto_progression_active", "Autonomous Progression", false, "Autonomous harmonic progression generation enable parameter"))
+        );
+        descriptors.insert("ClavinetBus".to_string(), DspNodeDescriptor::new("ClavinetBus", "Lock-Free Atomic Clavinet Tangent Bus", DspNodeCategory::Utility, "Atomic parameter bus broadcasting rubber tangent impact velocity, anvil rebound gap, and electromagnetic coil balance")
+            .with_param(DspParamSchema::knob("key_tangent_velocity", "Key Tangent Velocity", 0.0, 1.0, 0.70, "vel", MacroRole::Punch, "Rubber tip tangent strike kinetic velocity parameter"))
+            .with_param(DspParamSchema::log_knob("anvil_gap_microns", "Tangent-to-Anvil Gap", 10.0, 500.0, 85.0, "um", MacroRole::Space, "Resting distance between anvil and string contact point parameter"))
+            .with_param(DspParamSchema::knob("pickup_coil_balance", "Pickup Coil Balance", -1.0, 1.0, 0.0, "pan", MacroRole::Tone, "Electromagnetic coil blend between neck and bridge pickups parameter"))
+            .with_param(DspParamSchema::knob("yarn_damping_force", "Yarn String Damping", 0.0, 1.0, 0.35, "damp", MacroRole::Character, "Wool yarn mechanical string damping friction parameter"))
+            .with_param(DspParamSchema::toggle("atomic_bus_sync", "Atomic State Broadcast", true, "Thread-safe atomic parameter broadcast parameter"))
+        );
+        descriptors.insert("EpBus".to_string(), DspNodeDescriptor::new("EpBus", "Lock-Free Electric Piano Tine Bus", DspNodeCategory::Utility, "Lock-free atomic state exchange for vibrating tine deflection, magnetic pickup clearance, and tonebar coupling")
+            .with_param(DspParamSchema::knob("tine_excitation_force", "Tine Strike Velocity", 0.0, 1.0, 0.65, "vel", MacroRole::Punch, "Neoprene hammer strike excitation velocity parameter"))
+            .with_param(DspParamSchema::knob("pickup_gap_mm", "Magnetic Pickup Gap", 0.2, 8.0, 1.8, "mm", MacroRole::Tone, "Air gap clearance between vibrating tine tip and magnetic pole parameter"))
+            .with_param(DspParamSchema::knob("tonebar_coupling_db", "Tonebar Coupling", -36.0, 0.0, -12.0, "dB", MacroRole::Space, "Acoustic resonance coupling between tine and heavy tonebar parameter"))
+            .with_param(DspParamSchema::knob("bark_saturation", "Asymmetric Tine Saturation", 0.0, 1.0, 0.40, "sat", MacroRole::Character, "Nonlinear magnetic pickup bark saturation distortion parameter"))
+            .with_param(DspParamSchema::toggle("atomic_bus_sync", "Atomic State Broadcast", true, "Lock-free atomic state synchronization parameter"))
+        );
+        descriptors.insert("FormantBus".to_string(), DspNodeDescriptor::new("FormantBus", "Lock-Free Vocal Tract Resonator Bus", DspNodeCategory::Utility, "High-speed atomic bus coordinating F1-F5 formant pole frequencies, nasal cavity coupling, and vocal tract length")
+            .with_param(DspParamSchema::log_knob("formant_f1_hz", "Formant F1 Frequency", 150.0, 1200.0, 500.0, "Hz", MacroRole::Tone, "First formant center frequency corresponding to pharyngeal opening parameter"))
+            .with_param(DspParamSchema::log_knob("formant_f2_hz", "Formant F2 Frequency", 500.0, 3500.0, 1500.0, "Hz", MacroRole::Character, "Second formant center frequency corresponding to tongue position parameter"))
+            .with_param(DspParamSchema::log_knob("formant_f3_hz", "Formant F3 Frequency", 1500.0, 4500.0, 2500.0, "Hz", MacroRole::Space, "Third formant center frequency corresponding to lip rounding parameter"))
+            .with_param(DspParamSchema::knob("nasal_coupling_ratio", "Nasal Cavity Coupling", 0.0, 1.0, 0.05, "ratio", MacroRole::Punch, "Velopharyngeal port opening ratio into nasal resonator parameter"))
+            .with_param(DspParamSchema::toggle("vocal_tract_sync", "Real-Time Resonator Sync", true, "Atomic vocal tract resonator parameter dispatch parameter"))
+        );
+        descriptors.insert("GlassBus".to_string(), DspNodeDescriptor::new("GlassBus", "Lock-Free Glass Armonica Friction Bus", DspNodeCategory::Utility, "Atomic parameter dispatcher for wet finger friction stick-slip velocity, contact force, and water rim immersion tuning")
+            .with_param(DspParamSchema::knob("rim_angular_vel_rads", "Bowl Angular Velocity", 0.5, 30.0, 8.5, "rad/s", MacroRole::Tone, "Spindle rotational angular velocity in radians per second parameter"))
+            .with_param(DspParamSchema::knob("finger_moisture_ratio", "Finger Moisture", 0.01, 1.0, 0.75, "moist", MacroRole::Character, "Skin-to-crystal contact fluid lubrication level parameter"))
+            .with_param(DspParamSchema::log_knob("normal_contact_force_n", "Rim Contact Force", 0.02, 5.0, 0.8, "N", MacroRole::Punch, "Normal fingertip pressure force against crystal rim parameter"))
+            .with_param(DspParamSchema::knob("water_level_detune_cents", "Water Pitch Detune", -200.0, 0.0, -25.0, "cents", MacroRole::Space, "Hydrodynamic mass loading pitch lowering in cents parameter"))
+            .with_param(DspParamSchema::toggle("atomic_bus_sync", "Atomic State Broadcast", true, "Thread-safe lock-free crystal state dispatch parameter"))
+        );
+        descriptors.insert("GrandPianoBus".to_string(), DspNodeDescriptor::new("GrandPianoBus", "Lock-Free Concert Grand Escapement Bus", DspNodeCategory::Utility, "Lock-free atomic state bus coordinating hammer strike velocity, damper pedal lift, una corda shift, and duplex scale resonance")
+            .with_param(DspParamSchema::knob("strike_velocity", "Key Strike Velocity", 0.0, 1.0, 0.70, "vel", MacroRole::Punch, "Felt hammer impact velocity parameter"))
+            .with_param(DspParamSchema::knob("damper_pedal_pos", "Sustain Damper Lift", 0.0, 1.0, 0.0, "pedal", MacroRole::Space, "Continuous damper pedal lift engagement ratio parameter"))
+            .with_param(DspParamSchema::knob("una_corda_shift", "Una Corda Shift", 0.0, 1.0, 0.0, "shift", MacroRole::Character, "Keyboard lateral shift for single/double string strike parameter"))
+            .with_param(DspParamSchema::knob("duplex_resonance_db", "Duplex Scale Resonance", -48.0, 0.0, -18.0, "dB", MacroRole::Tone, "Aliquot and duplex non-struck string sympathetic excitation parameter"))
+            .with_param(DspParamSchema::toggle("soundboard_bridge_sync", "Bridge Waveguide Sync", true, "Bridge waveguide and soundboard atomic link parameter"))
+        );
+        descriptors.insert("HurdyGurdyBus".to_string(), DspNodeDescriptor::new("HurdyGurdyBus", "Lock-Free Hurdy Gurdy Rosin Wheel Bus", DspNodeCategory::Utility, "Continuous atomic coordination of rosin crank wheel RPM, trompette chien bridge buzzing pressure, and drone tangent muting")
+            .with_param(DspParamSchema::knob("crank_wheel_rpm", "Crank Wheel RPM", 0.0, 300.0, 75.0, "RPM", MacroRole::Punch, "Wooden rosin wheel rotational speed in RPM parameter"))
+            .with_param(DspParamSchema::knob("chien_pressure_gf", "Chien Bridge Pressure", 0.0, 200.0, 45.0, "gf", MacroRole::Tone, "Loose buzzing bridge downward contact force parameter"))
+            .with_param(DspParamSchema::knob("drone_tangent_mute", "Drone Tangent Mask", 0.0, 7.0, 0.0, "mask", MacroRole::Space, "Bourdon and mouche drone string mechanical muting mask parameter"))
+            .with_param(DspParamSchema::knob("rosin_dust_buildup", "Wheel Rosin Grittiness", 0.0, 1.0, 0.50, "rosin", MacroRole::Character, "Powdered rosin friction coefficient and slip stickiness parameter"))
+            .with_param(DspParamSchema::toggle("atomic_bus_sync", "Atomic State Broadcast", true, "Real-time atomic hurdy gurdy kinematic broadcast parameter"))
+        );
+        descriptors.insert("KotoBus".to_string(), DspNodeDescriptor::new("KotoBus", "Lock-Free Koto Ji Bridge & String Bus", DspNodeCategory::Utility, "Lock-free atomic state dispatcher for movable Ji bridge positioning, left-hand Oshite deflection, and ivory Tsume pick attack")
+            .with_param(DspParamSchema::knob("ji_bridge_position_cm", "Ji Bridge Position", 10.0, 150.0, 65.0, "cm", MacroRole::Tone, "Movable ivory Ji bridge position along string scale parameter"))
+            .with_param(DspParamSchema::knob("oshite_bend_cents", "Oshite Lateral Bend", 0.0, 400.0, 0.0, "cents", MacroRole::Punch, "Left-hand pressing string tension pitch bend in cents parameter"))
+            .with_param(DspParamSchema::knob("tsume_pick_hardness", "Tsume Pick Hardness", 0.1, 1.0, 0.85, "hard", MacroRole::Character, "Ivory plectrum impact contact hardness parameter"))
+            .with_param(DspParamSchema::knob("paulownia_resonance_db", "Paulownia Body Coupling", -36.0, 0.0, -9.0, "dB", MacroRole::Space, "Hollowed Kiri wood soundbox acoustic coupling gain parameter"))
+            .with_param(DspParamSchema::toggle("atomic_bus_sync", "Atomic State Broadcast", true, "Thread-safe lock-free atomic parameter synchronization parameter"))
+        );
+        descriptors.insert("MalletBus".to_string(), DspNodeDescriptor::new("MalletBus", "Lock-Free Tuned Mallet Dynamics Bus", DspNodeCategory::Utility, "Atomic routing bus streaming mallet impact velocity, shore core hardness, bar nodal contact position, and resonator tuning")
+            .with_param(DspParamSchema::knob("mallet_velocity", "Mallet Impact Velocity", 0.0, 1.0, 0.75, "vel", MacroRole::Punch, "Yarn or rubber mallet strike velocity parameter"))
+            .with_param(DspParamSchema::knob("core_hardness_shore", "Mallet Shore Hardness", 20.0, 90.0, 55.0, "shore", MacroRole::Tone, "Rubber or phenolic mallet head Shore-A durometer hardness parameter"))
+            .with_param(DspParamSchema::knob("strike_point_ratio", "Nodal Strike Ratio", 0.05, 0.50, 0.22, "ratio", MacroRole::Space, "Fractional strike coordinate relative to bar support nodes parameter"))
+            .with_param(DspParamSchema::log_knob("tube_resonator_tune_hz", "Resonator Tube Tuning", 50.0, 4000.0, 440.0, "Hz", MacroRole::Character, "Under-bar tuned aluminum resonator tube fundamental frequency parameter"))
+            .with_param(DspParamSchema::toggle("atomic_bus_sync", "Atomic State Broadcast", true, "Lock-free mallet dynamics state broadcast parameter"))
+        );
+        descriptors.insert("PipeOrganBus".to_string(), DspNodeDescriptor::new("PipeOrganBus", "Lock-Free Pipe Organ Windchest Bus", DspNodeCategory::Utility, "Atomic parameter dispatcher synchronizing windchest water-column air pressure, tracker pallet valve opening, and tremulant cycles")
+            .with_param(DspParamSchema::log_knob("windchest_pressure_mmws", "Windchest Pressure", 40.0, 250.0, 90.0, "mmWS", MacroRole::Punch, "Static wind reservoir pressure in millimeters water column parameter"))
+            .with_param(DspParamSchema::knob("pallet_opening_ratio", "Tracker Pallet Opening", 0.0, 1.0, 1.0, "open", MacroRole::Tone, "Mechanical tracker key pallet valve aperture fraction parameter"))
+            .with_param(DspParamSchema::log_knob("valve_chuff_decay_ms", "Chuff Inrush Transient", 5.0, 120.0, 25.0, "ms", MacroRole::Space, "Pipe flue onset transient turbulence decay duration parameter"))
+            .with_param(DspParamSchema::knob("tremulant_mod_freq_hz", "Tremulant Valve Frequency", 1.0, 8.0, 3.5, "Hz", MacroRole::Character, "Pneumatic tremulant reservoir pressure pulsation rate parameter"))
+            .with_param(DspParamSchema::toggle("windchest_air_sync", "Windchest Airway Sync", true, "Windchest and pipe voicing atomic dispatch parameter"))
+        );
+        descriptors.insert("PlectrumBus".to_string(), DspNodeDescriptor::new("PlectrumBus", "Lock-Free Plucked String Plectrum Bus", DspNodeCategory::Utility, "Atomic parameter bus broadcasting plectrum attack velocity, pick angle, release snap force, and string contact position beta")
+            .with_param(DspParamSchema::knob("attack_velocity", "Plectrum Attack Velocity", 0.0, 1.0, 0.70, "vel", MacroRole::Punch, "Pick or fingernail string displacement velocity parameter"))
+            .with_param(DspParamSchema::knob("pick_angle_deg", "Plectrum Attack Angle", -60.0, 60.0, 15.0, "deg", MacroRole::Tone, "Angle of plectrum blade relative to string axis parameter"))
+            .with_param(DspParamSchema::log_knob("snap_release_force_n", "String Release Snap Force", 0.1, 20.0, 3.5, "N", MacroRole::Character, "Static friction threshold before string release snap parameter"))
+            .with_param(DspParamSchema::knob("strike_point_beta", "Pluck Position Beta", 0.05, 0.50, 0.18, "beta", MacroRole::Space, "Pluck position fractional ratio along string scale parameter"))
+            .with_param(DspParamSchema::toggle("atomic_bus_sync", "Atomic State Broadcast", true, "Thread-safe plectrum gesture atomic synchronization parameter"))
+        );
+        descriptors.insert("RotaryBus".to_string(), DspNodeDescriptor::new("RotaryBus", "Lock-Free Rotary Speaker Kinematics Bus", DspNodeCategory::Utility, "Real-time atomic parameter bus publishing treble horn RPM, bass drum rotor speed, inertia damping, and Doppler frequency shift")
+            .with_param(DspParamSchema::knob("horn_rotor_speed_mode", "Rotor Speed Mode", 0.0, 2.0, 1.0, "mode", MacroRole::Character, "Speed switch: 0=Brake, 1=Chorale (slow), 2=Tremolo (fast) parameter"))
+            .with_param(DspParamSchema::log_knob("horn_target_rpm", "Treble Horn Speed", 10.0, 500.0, 380.0, "RPM", MacroRole::Tone, "Target angular velocity for treble horn parameter"))
+            .with_param(DspParamSchema::log_knob("bass_target_rpm", "Bass Rotor Speed", 10.0, 450.0, 340.0, "RPM", MacroRole::Punch, "Target angular velocity for lower bass rotor parameter"))
+            .with_param(DspParamSchema::knob("doppler_dispersion_depth", "Doppler Modulation Depth", 0.0, 1.0, 0.80, "depth", MacroRole::Space, "Acoustic Doppler pitch deviation depth parameter"))
+            .with_param(DspParamSchema::toggle("inertial_physics_sync", "Dual Rotor Inertia Sync", true, "Lock-free dual rotor kinematic state synchronization parameter"))
+        );
+        descriptors.insert("ShakuhachiBus".to_string(), DspNodeDescriptor::new("ShakuhachiBus", "Lock-Free Bamboo Flute Embouchure Bus", DspNodeCategory::Utility, "Lock-free atomic state dispatcher for Meri/Kari chin tilt angle, labium jet airflow velocity, and Muraiki explosive breath bursts")
+            .with_param(DspParamSchema::knob("meri_kari_chin_tilt_cents", "Meri/Kari Chin Tilt", -300.0, 100.0, 0.0, "cents", MacroRole::Tone, "Chin angle tilt pitch lowering (meri) and raising (kari) parameter"))
+            .with_param(DspParamSchema::log_knob("blowing_jet_velocity_mps", "Breath Air Jet Velocity", 2.0, 60.0, 18.0, "m/s", MacroRole::Punch, "Exhaled breath air stream velocity reaching blowing edge parameter"))
+            .with_param(DspParamSchema::knob("muraiki_burst_depth", "Muraiki Breath Burst", 0.0, 1.0, 0.20, "burst", MacroRole::Space, "Explosive turbulent breath noise accent intensity parameter"))
+            .with_param(DspParamSchema::knob("madake_bamboo_bore_taper", "Madake Root Bore Taper", 0.5, 2.0, 1.15, "taper", MacroRole::Character, "Acoustic bore inverse taper coefficient of natural bamboo root parameter"))
+            .with_param(DspParamSchema::toggle("atomic_bus_sync", "Atomic State Broadcast", true, "Atomic shakuhachi embouchure parameter synchronization parameter"))
+        );
+        descriptors.insert("SitarBus".to_string(), DspNodeDescriptor::new("SitarBus", "Lock-Free Sitar Meend & Jawari Bus", DspNodeCategory::Utility, "Continuous atomic routing of Meend lateral string deflection, Mizrab stroke velocity, Jawari flat bridge buzzing, and Chikari drones")
+            .with_param(DspParamSchema::knob("meend_pull_semitones", "Meend Lateral Pull", 0.0, 7.0, 0.0, "st", MacroRole::Tone, "Curved fret lateral string pull pitch deflection in semitones parameter"))
+            .with_param(DspParamSchema::knob("mizrab_strike_velocity", "Mizrab Stroke Velocity", 0.0, 1.0, 0.75, "vel", MacroRole::Punch, "Wire plectrum striking velocity parameter"))
+            .with_param(DspParamSchema::knob("jawari_bridge_curvature", "Jawari Bridge Curvature", 0.1, 1.0, 0.88, "buzz", MacroRole::Character, "Flat bone bridge parabolic curvature controlling buzzing overtones parameter"))
+            .with_param(DspParamSchema::knob("chikari_high_drone_gain", "Chikari High Drone Gain", -36.0, 6.0, 0.0, "dB", MacroRole::Space, "High sympathetic and rhythm drone string gain parameter"))
+            .with_param(DspParamSchema::toggle("atomic_bus_sync", "Atomic State Broadcast", true, "Atomic sitar gesture and bridge bus broadcast parameter"))
+        );
+        descriptors.insert("SpringBus".to_string(), DspNodeDescriptor::new("SpringBus", "Lock-Free Spring Reverb Transducer Bus", DspNodeCategory::Utility, "Atomic parameter bus coordinating helical coil drive level, fluid decay damping, mechanical chassis thumps, and chirp dispersion")
+            .with_param(DspParamSchema::knob("transducer_input_drive", "Drive Coil Level", 0.0, 1.0, 0.60, "drv", MacroRole::Punch, "Input magnetic transducer electromagnetic excitation drive parameter"))
+            .with_param(DspParamSchema::log_knob("spring_damping_factor", "Helical Spring Damping", 0.1, 10.0, 1.2, "damp", MacroRole::Space, "Viscous damping along twisted helical spring wires parameter"))
+            .with_param(DspParamSchema::knob("tank_chassis_kick_impulse", "Chassis Kick Impulse", 0.0, 1.0, 0.0, "thump", MacroRole::Character, "Mechanical chassis knock impulse inducing spring crash parameter"))
+            .with_param(DspParamSchema::knob("chirp_dispersion_ratio", "Chirp Dispersion Ratio", 0.0, 1.0, 0.85, "chirp", MacroRole::Tone, "High-frequency phase velocity delay producing signature metallic chirp parameter"))
+            .with_param(DspParamSchema::toggle("atomic_bus_sync", "Atomic State Broadcast", true, "Lock-free spring reverb transducer bus broadcast parameter"))
+        );
+        descriptors.insert("BootToSynthEngine".to_string(), DspNodeDescriptor::new("BootToSynthEngine", "Hardware Appliance Instant Boot-to-Synth Engine", DspNodeCategory::Utility, "Dedicated embedded appliance boot loader providing instant hardware start directly into real-time audio graph evaluation")
+            .with_param(DspParamSchema::knob("boot_profile_mode", "Boot Profile Mode", 0.0, 2.0, 0.0, "profile", MacroRole::Tone, "Embedded startup profile: 0=Performance, 1=Studio, 2=Diagnostics parameter"))
+            .with_param(DspParamSchema::knob("startup_gain_db", "Startup Gain Ceiling", -60.0, 0.0, 0.0, "dB", MacroRole::Punch, "Initial audio bus gain ceiling on power-on boot parameter"))
+            .with_param(DspParamSchema::log_knob("fast_boot_bypass_ms", "Fast-Boot Bypass Period", 50.0, 2000.0, 250.0, "ms", MacroRole::Space, "Hardware relay stabilization mute interval after startup parameter"))
+            .with_param(DspParamSchema::toggle("kiosk_mode_locked", "Embedded Kiosk Lock", true, "Lock headless device to dedicated appliance synth engine parameter"))
+        );
+        descriptors.insert("MidiUsbGadgetMode".to_string(), DspNodeDescriptor::new("MidiUsbGadgetMode", "USB Composite Class-Compliant Audio/MIDI Gadget", DspNodeCategory::Utility, "USB OTG composite gadget driver exposing real-time multichannel audio endpoints and multiple virtual MIDI cables")
+            .with_param(DspParamSchema::knob("usb_buffer_size", "USB Gadget DMA Buffer", 32.0, 512.0, 128.0, "frames", MacroRole::Punch, "USB transfer DMA circular buffer frame count parameter"))
+            .with_param(DspParamSchema::knob("midi_port_count", "Virtual MIDI Cables", 1.0, 8.0, 2.0, "ports", MacroRole::Tone, "Number of concurrent virtual USB MIDI cable ports parameter"))
+            .with_param(DspParamSchema::toggle("high_speed_usb2", "USB 2.0 High-Speed 480Mbps", true, "Enable 480 Mbps High-Speed USB 2.0 endpoint negotiation parameter"))
+            .with_param(DspParamSchema::toggle("gadget_link_active", "Gadget Endpoint Active", true, "Activate USB OTG device gadget endpoints parameter"))
+        );
+        descriptors.insert("MultiBusEventRouter".to_string(), DspNodeDescriptor::new("MultiBusEventRouter", "Multi-Bus Sidechain & Auxiliary Event Router", DspNodeCategory::Utility, "Ultra-low-latency 16-channel sidechain cross-coupling and auxiliary event dispatch matrix with threshold ducking")
+            .with_param(DspParamSchema::knob("source_bus_index", "Source Bus Channel", 0.0, 15.0, 0.0, "ch", MacroRole::Tone, "Source channel index for sidechain or auxiliary event extraction parameter"))
+            .with_param(DspParamSchema::knob("target_bus_index", "Target Bus Channel", 0.0, 15.0, 1.0, "ch", MacroRole::Character, "Destination bus index receiving routed sidechain events parameter"))
+            .with_param(DspParamSchema::knob("send_gain_db", "Aux Send Gain Trim", -60.0, 12.0, 0.0, "dB", MacroRole::Punch, "Attenuation or boost applied to the routed signal path parameter"))
+            .with_param(DspParamSchema::knob("ducking_threshold_db", "Sidechain Ducking Threshold", -60.0, 0.0, -24.0, "dB", MacroRole::Space, "Audio level threshold triggering destination ducking compression parameter"))
+            .with_param(DspParamSchema::toggle("sidechain_active", "Sidechain Cross-Coupling", true, "Activate real-time multi-bus sidechain event coupling parameter"))
+        );
 
         Self { descriptors }
     }
@@ -4743,6 +4881,26 @@ impl DspNodeRegistry {
             ("WoodwindFingeringEngine", DspNodeCategory::AcousticPhysicalModel, "Acoustic Woodwind Tonehole Lattice & Cross-Fingering Matrix"),
             ("BellowsBus", DspNodeCategory::Utility, "Lock-Free Atomic Bellows State & Pressure Dispatch Bus"),
             ("SpatialBus", DspNodeCategory::SpatialSurround, "Real-Time 64-Channel 3D Atomic Coordinate Coordination Bus"),
+            ("ArticulationBus", DspNodeCategory::Utility, "Lock-Free Atomic Bowing Articulation Vector Bus"),
+            ("BreathBus", DspNodeCategory::Utility, "Lock-Free Atomic Woodwind Breath Pressure & Fingering Bus"),
+            ("CadenceBus", DspNodeCategory::Utility, "Lock-Free Harmonic Progression & Cadence Resolution Bus"),
+            ("ClavinetBus", DspNodeCategory::Utility, "Lock-Free Atomic Clavinet Tangent & Anvil Key Action Bus"),
+            ("EpBus", DspNodeCategory::Utility, "Lock-Free Electric Piano Tine & Pickup Impedance Bus"),
+            ("FormantBus", DspNodeCategory::Utility, "Lock-Free Vocal Tract Resonator & Formant Coordinate Bus"),
+            ("GlassBus", DspNodeCategory::Utility, "Lock-Free Glass Armonica Wet Friction & Water Tuning Bus"),
+            ("GrandPianoBus", DspNodeCategory::Utility, "Lock-Free Concert Grand Escapement & Duplex Scale Bus"),
+            ("HurdyGurdyBus", DspNodeCategory::Utility, "Lock-Free Hurdy Gurdy Rosin Wheel & Chien Buzzing Bus"),
+            ("KotoBus", DspNodeCategory::Utility, "Lock-Free Koto Ji Movable Bridge & String Deflection Bus"),
+            ("MalletBus", DspNodeCategory::Utility, "Lock-Free Tuned Percussion Mallet Strike Dynamics Bus"),
+            ("PipeOrganBus", DspNodeCategory::Utility, "Lock-Free Pipe Organ Windchest Pallet & Valve Dynamics Bus"),
+            ("PlectrumBus", DspNodeCategory::Utility, "Lock-Free Plucked String Plectrum Dynamics & Release Bus"),
+            ("RotaryBus", DspNodeCategory::Utility, "Lock-Free Rotary Speaker Dual-Rotor Kinetic Kinematics Bus"),
+            ("ShakuhachiBus", DspNodeCategory::Utility, "Lock-Free Bamboo Flute Meri/Kari Embouchure Bus"),
+            ("SitarBus", DspNodeCategory::Utility, "Lock-Free Sitar Meend Lateral Pull & Jawari Flat Bridge Bus"),
+            ("SpringBus", DspNodeCategory::Utility, "Lock-Free Mechanical Spring Reverb Transducer Excitation Bus"),
+            ("BootToSynthEngine", DspNodeCategory::Utility, "Hardware Appliance Instant Boot-to-Synth Engine"),
+            ("MidiUsbGadgetMode", DspNodeCategory::Utility, "USB Composite Class-Compliant Audio/MIDI Gadget"),
+            ("MultiBusEventRouter", DspNodeCategory::Utility, "Low-Latency Multi-Bus Sidechain & Auxiliary Event Router"),
         ]
     }
 
@@ -5662,6 +5820,40 @@ impl DspNodeRegistry {
             "bellowsatomicbus" => Some("BellowsBus"),
             "spatialbus" => Some("SpatialBus"),
             "spatialatomicbus" => Some("SpatialBus"),
+            "articulationbus" => Some("ArticulationBus"),
+            "bowingbus" => Some("ArticulationBus"),
+            "breathbus" => Some("BreathBus"),
+            "woodwindbus" => Some("BreathBus"),
+            "cadencebus" => Some("CadenceBus"),
+            "harmoniccadencebus" => Some("CadenceBus"),
+            "clavinetbus" => Some("ClavinetBus"),
+            "clavinetactionbus" => Some("ClavinetBus"),
+            "epbus" => Some("EpBus"),
+            "electricpianobus" => Some("EpBus"),
+            "formantbus" => Some("FormantBus"),
+            "vocaltractbus" => Some("FormantBus"),
+            "glassbus" => Some("GlassBus"),
+            "glassarmonicabus" => Some("GlassBus"),
+            "grandpianobus" => Some("GrandPianoBus"),
+            "pianobus" => Some("GrandPianoBus"),
+            "hurdygurdybus" => Some("HurdyGurdyBus"),
+            "gurdybus" => Some("HurdyGurdyBus"),
+            "kotobus" => Some("KotoBus"),
+            "malletbus" => Some("MalletBus"),
+            "pipeorganbus" => Some("PipeOrganBus"),
+            "organbus" => Some("PipeOrganBus"),
+            "plectrumbus" => Some("PlectrumBus"),
+            "pluckbus" => Some("PlectrumBus"),
+            "rotarybus" => Some("RotaryBus"),
+            "shakuhachibus" => Some("ShakuhachiBus"),
+            "sitarbus" => Some("SitarBus"),
+            "springbus" => Some("SpringBus"),
+            "boottosynthengine" => Some("BootToSynthEngine"),
+            "boottosynth" => Some("BootToSynthEngine"),
+            "midiusbgadgetmode" => Some("MidiUsbGadgetMode"),
+            "usbgadgetmode" => Some("MidiUsbGadgetMode"),
+            "multibuseventrouter" => Some("MultiBusEventRouter"),
+            "multibusevent" => Some("MultiBusEventRouter"),
             _ => None,
         }
     }
@@ -8783,6 +8975,164 @@ impl DspNodeRegistry {
                     .with_param(DspParamDescriptor::new_linear("cartesian_z", "Source Cartesian Z Position", -10.0, 10.0, 0.0, "m", (239, 68, 68)))
                     .with_param(DspParamDescriptor::new_bool("atomic_slot_lockless", "Lockless Double-Buffer Sync", true, (16, 185, 129)))
             ),
+            "ArticulationBus" => Box::new(
+                GenericDspNodeUi::new("ArticulationBus", "Lock-Free Atomic Bowing Articulation Bus", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("technique_index", "Bowing Technique Mode", 0.0, 9.0, 0.0, "mode", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_log("bow_velocity_mps", "Bow Velocity", 0.01, 2.5, 0.35, "m/s", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_log("bow_force_n", "Normal Bow Force", 0.05, 8.0, 1.2, "N", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("bridge_proximity_beta", "Bridge Distance Beta", 0.02, 0.40, 0.12, "beta", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("atomic_bus_sync", "Atomic State Broadcast", true, (16, 185, 129)))
+            ),
+            "BreathBus" => Box::new(
+                GenericDspNodeUi::new("BreathBus", "Lock-Free Atomic Woodwind Breath Bus", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_log("blowing_pressure_pa", "Airway Blowing Pressure", 10.0, 8000.0, 1200.0, "Pa", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("jet_distance_mm", "Lip-to-Labium Jet Distance", 1.0, 20.0, 5.5, "mm", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("embouchure_angle_deg", "Embouchure Angle Offset", -45.0, 45.0, 0.0, "deg", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("tonehole_bitmask", "Tonehole Bitmask (0-63)", 0.0, 63.0, 0.0, "mask", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("atomic_bus_sync", "Atomic State Broadcast", true, (16, 185, 129)))
+            ),
+            "CadenceBus" => Box::new(
+                GenericDspNodeUi::new("CadenceBus", "Lock-Free Harmonic Progression & Cadence Bus", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("harmonic_tension", "Harmonic Tension Score", 0.0, 1.0, 0.25, "tension", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("resolution_urgency", "Cadence Resolution Urgency", 0.0, 1.0, 0.10, "urgency", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("voice_leading_cost", "Voice-Leading Distance Cost", 0.0, 10.0, 1.5, "cost", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("predicted_cadence_mode", "Target Cadence Mode", 0.0, 4.0, 0.0, "mode", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("auto_progression_active", "Autonomous Progression", false, (16, 185, 129)))
+            ),
+            "ClavinetBus" => Box::new(
+                GenericDspNodeUi::new("ClavinetBus", "Lock-Free Atomic Clavinet Tangent Bus", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("key_tangent_velocity", "Key Tangent Velocity", 0.0, 1.0, 0.70, "vel", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_log("anvil_gap_microns", "Tangent-to-Anvil Gap", 10.0, 500.0, 85.0, "um", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("pickup_coil_balance", "Pickup Coil Balance", -1.0, 1.0, 0.0, "pan", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("yarn_damping_force", "Yarn String Damping", 0.0, 1.0, 0.35, "damp", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("atomic_bus_sync", "Atomic State Broadcast", true, (16, 185, 129)))
+            ),
+            "EpBus" => Box::new(
+                GenericDspNodeUi::new("EpBus", "Lock-Free Electric Piano Tine Bus", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("tine_excitation_force", "Tine Strike Velocity", 0.0, 1.0, 0.65, "vel", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("pickup_gap_mm", "Magnetic Pickup Gap", 0.2, 8.0, 1.8, "mm", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("tonebar_coupling_db", "Tonebar Coupling", -36.0, 0.0, -12.0, "dB", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("bark_saturation", "Asymmetric Tine Saturation", 0.0, 1.0, 0.40, "sat", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("atomic_bus_sync", "Atomic State Broadcast", true, (16, 185, 129)))
+            ),
+            "FormantBus" => Box::new(
+                GenericDspNodeUi::new("FormantBus", "Lock-Free Vocal Tract Resonator Bus", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_log("formant_f1_hz", "Formant F1 Frequency", 150.0, 1200.0, 500.0, "Hz", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_log("formant_f2_hz", "Formant F2 Frequency", 500.0, 3500.0, 1500.0, "Hz", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_log("formant_f3_hz", "Formant F3 Frequency", 1500.0, 4500.0, 2500.0, "Hz", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("nasal_coupling_ratio", "Nasal Cavity Coupling", 0.0, 1.0, 0.05, "ratio", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("vocal_tract_sync", "Real-Time Resonator Sync", true, (16, 185, 129)))
+            ),
+            "GlassBus" => Box::new(
+                GenericDspNodeUi::new("GlassBus", "Lock-Free Glass Armonica Friction Bus", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("rim_angular_vel_rads", "Bowl Angular Velocity", 0.5, 30.0, 8.5, "rad/s", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("finger_moisture_ratio", "Finger Moisture", 0.01, 1.0, 0.75, "moist", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_log("normal_contact_force_n", "Rim Contact Force", 0.02, 5.0, 0.8, "N", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("water_level_detune_cents", "Water Pitch Detune", -200.0, 0.0, -25.0, "cents", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("atomic_bus_sync", "Atomic State Broadcast", true, (16, 185, 129)))
+            ),
+            "GrandPianoBus" => Box::new(
+                GenericDspNodeUi::new("GrandPianoBus", "Lock-Free Concert Grand Escapement Bus", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("strike_velocity", "Key Strike Velocity", 0.0, 1.0, 0.70, "vel", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("damper_pedal_pos", "Sustain Damper Lift", 0.0, 1.0, 0.0, "pedal", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("una_corda_shift", "Una Corda Shift", 0.0, 1.0, 0.0, "shift", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("duplex_resonance_db", "Duplex Scale Resonance", -48.0, 0.0, -18.0, "dB", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("soundboard_bridge_sync", "Bridge Waveguide Sync", true, (16, 185, 129)))
+            ),
+            "HurdyGurdyBus" => Box::new(
+                GenericDspNodeUi::new("HurdyGurdyBus", "Lock-Free Hurdy Gurdy Rosin Wheel Bus", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("crank_wheel_rpm", "Crank Wheel RPM", 0.0, 300.0, 75.0, "RPM", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("chien_pressure_gf", "Chien Bridge Pressure", 0.0, 200.0, 45.0, "gf", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("drone_tangent_mute", "Drone Tangent Mask", 0.0, 7.0, 0.0, "mask", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("rosin_dust_buildup", "Wheel Rosin Grittiness", 0.0, 1.0, 0.50, "rosin", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("atomic_bus_sync", "Atomic State Broadcast", true, (16, 185, 129)))
+            ),
+            "KotoBus" => Box::new(
+                GenericDspNodeUi::new("KotoBus", "Lock-Free Koto Ji Bridge & String Bus", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("ji_bridge_position_cm", "Ji Bridge Position", 10.0, 150.0, 65.0, "cm", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("oshite_bend_cents", "Oshite Lateral Bend", 0.0, 400.0, 0.0, "cents", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("tsume_pick_hardness", "Tsume Pick Hardness", 0.1, 1.0, 0.85, "hard", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("paulownia_resonance_db", "Paulownia Body Coupling", -36.0, 0.0, -9.0, "dB", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("atomic_bus_sync", "Atomic State Broadcast", true, (16, 185, 129)))
+            ),
+            "MalletBus" => Box::new(
+                GenericDspNodeUi::new("MalletBus", "Lock-Free Tuned Mallet Dynamics Bus", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("mallet_velocity", "Mallet Impact Velocity", 0.0, 1.0, 0.75, "vel", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("core_hardness_shore", "Mallet Shore Hardness", 20.0, 90.0, 55.0, "shore", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("strike_point_ratio", "Nodal Strike Ratio", 0.05, 0.50, 0.22, "ratio", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_log("tube_resonator_tune_hz", "Resonator Tube Tuning", 50.0, 4000.0, 440.0, "Hz", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("atomic_bus_sync", "Atomic State Broadcast", true, (16, 185, 129)))
+            ),
+            "PipeOrganBus" => Box::new(
+                GenericDspNodeUi::new("PipeOrganBus", "Lock-Free Pipe Organ Windchest Bus", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_log("windchest_pressure_mmws", "Windchest Pressure", 40.0, 250.0, 90.0, "mmWS", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("pallet_opening_ratio", "Tracker Pallet Opening", 0.0, 1.0, 1.0, "open", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_log("valve_chuff_decay_ms", "Chuff Inrush Transient", 5.0, 120.0, 25.0, "ms", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("tremulant_mod_freq_hz", "Tremulant Valve Frequency", 1.0, 8.0, 3.5, "Hz", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("windchest_air_sync", "Windchest Airway Sync", true, (16, 185, 129)))
+            ),
+            "PlectrumBus" => Box::new(
+                GenericDspNodeUi::new("PlectrumBus", "Lock-Free Plucked String Plectrum Bus", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("attack_velocity", "Plectrum Attack Velocity", 0.0, 1.0, 0.70, "vel", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("pick_angle_deg", "Plectrum Attack Angle", -60.0, 60.0, 15.0, "deg", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_log("snap_release_force_n", "String Release Snap Force", 0.1, 20.0, 3.5, "N", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("strike_point_beta", "Pluck Position Beta", 0.05, 0.50, 0.18, "beta", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("atomic_bus_sync", "Atomic State Broadcast", true, (16, 185, 129)))
+            ),
+            "RotaryBus" => Box::new(
+                GenericDspNodeUi::new("RotaryBus", "Lock-Free Rotary Speaker Kinematics Bus", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("horn_rotor_speed_mode", "Rotor Speed Mode", 0.0, 2.0, 1.0, "mode", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_log("horn_target_rpm", "Treble Horn Speed", 10.0, 500.0, 380.0, "RPM", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_log("bass_target_rpm", "Bass Rotor Speed", 10.0, 450.0, 340.0, "RPM", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("doppler_dispersion_depth", "Doppler Modulation Depth", 0.0, 1.0, 0.80, "depth", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("inertial_physics_sync", "Dual Rotor Inertia Sync", true, (16, 185, 129)))
+            ),
+            "ShakuhachiBus" => Box::new(
+                GenericDspNodeUi::new("ShakuhachiBus", "Lock-Free Bamboo Flute Embouchure Bus", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("meri_kari_chin_tilt_cents", "Meri/Kari Chin Tilt", -300.0, 100.0, 0.0, "cents", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_log("blowing_jet_velocity_mps", "Breath Air Jet Velocity", 2.0, 60.0, 18.0, "m/s", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("muraiki_burst_depth", "Muraiki Breath Burst", 0.0, 1.0, 0.20, "burst", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("madake_bamboo_bore_taper", "Madake Root Bore Taper", 0.5, 2.0, 1.15, "taper", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("atomic_bus_sync", "Atomic State Broadcast", true, (16, 185, 129)))
+            ),
+            "SitarBus" => Box::new(
+                GenericDspNodeUi::new("SitarBus", "Lock-Free Sitar Meend & Jawari Bus", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("meend_pull_semitones", "Meend Lateral Pull", 0.0, 7.0, 0.0, "st", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("mizrab_strike_velocity", "Mizrab Stroke Velocity", 0.0, 1.0, 0.75, "vel", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("jawari_bridge_curvature", "Jawari Bridge Curvature", 0.1, 1.0, 0.88, "buzz", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("chikari_high_drone_gain", "Chikari High Drone Gain", -36.0, 6.0, 0.0, "dB", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("atomic_bus_sync", "Atomic State Broadcast", true, (16, 185, 129)))
+            ),
+            "SpringBus" => Box::new(
+                GenericDspNodeUi::new("SpringBus", "Lock-Free Spring Reverb Transducer Bus", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("transducer_input_drive", "Drive Coil Level", 0.0, 1.0, 0.60, "drv", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_log("spring_damping_factor", "Helical Spring Damping", 0.1, 10.0, 1.2, "damp", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("tank_chassis_kick_impulse", "Chassis Kick Impulse", 0.0, 1.0, 0.0, "thump", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("chirp_dispersion_ratio", "Chirp Dispersion Ratio", 0.0, 1.0, 0.85, "chirp", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("atomic_bus_sync", "Atomic State Broadcast", true, (16, 185, 129)))
+            ),
+            "BootToSynthEngine" => Box::new(
+                GenericDspNodeUi::new("BootToSynthEngine", "Hardware Appliance Instant Boot-to-Synth Engine", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("boot_profile_mode", "Boot Profile Mode", 0.0, 2.0, 0.0, "profile", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("startup_gain_db", "Startup Gain Ceiling", -60.0, 0.0, 0.0, "dB", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_log("fast_boot_bypass_ms", "Fast-Boot Bypass Period", 50.0, 2000.0, 250.0, "ms", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("kiosk_mode_locked", "Embedded Kiosk Lock", true, (16, 185, 129)))
+            ),
+            "MidiUsbGadgetMode" => Box::new(
+                GenericDspNodeUi::new("MidiUsbGadgetMode", "USB Composite Class-Compliant Audio/MIDI Gadget", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("usb_buffer_size", "USB Gadget DMA Buffer", 32.0, 512.0, 128.0, "frames", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("midi_port_count", "Virtual MIDI Cables", 1.0, 8.0, 2.0, "ports", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("high_speed_usb2", "USB 2.0 High-Speed 480Mbps", true, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("gadget_link_active", "Gadget Endpoint Active", true, (16, 185, 129)))
+            ),
+            "MultiBusEventRouter" => Box::new(
+                GenericDspNodeUi::new("MultiBusEventRouter", "Multi-Bus Sidechain & Auxiliary Event Router", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("source_bus_index", "Source Bus Channel", 0.0, 15.0, 0.0, "ch", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("target_bus_index", "Target Bus Channel", 0.0, 15.0, 1.0, "ch", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("send_gain_db", "Aux Send Gain Trim", -60.0, 12.0, 0.0, "dB", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("ducking_threshold_db", "Sidechain Ducking Threshold", -60.0, 0.0, -24.0, "dB", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("sidechain_active", "Sidechain Cross-Coupling", true, (16, 185, 129)))
+            ),
             // Fallback dynamic generator for any unexpected or plugin node
             other => {
                 let cat = Self::inventory()
@@ -8812,10 +9162,10 @@ mod tests {
     #[test]
     fn test_dsp_node_registry_inventory_completeness() {
         let registry = DspNodeRegistry::new();
-        assert!(registry.list_all().len() >= 465, "Registry should contain >= 465 descriptors, found {}", registry.list_all().len());
+        assert!(registry.list_all().len() >= 505, "Registry should contain >= 505 descriptors, found {}", registry.list_all().len());
 
         let inventory = DspNodeRegistry::inventory();
-        assert!(inventory.len() >= 465, "Inventory should contain >= 465 entries, found {}", inventory.len());
+        assert!(inventory.len() >= 505, "Inventory should contain >= 505 entries, found {}", inventory.len());
 
         // Verify newly registered unmapped nodes exist
         assert!(registry.get("TruePeakLimiter").is_some());
@@ -8937,6 +9287,26 @@ mod tests {
         assert!(registry.get("WoodwindFingeringEngine").is_some());
         assert!(registry.get("BellowsBus").is_some());
         assert!(registry.get("SpatialBus").is_some());
+        assert!(registry.get("ArticulationBus").is_some());
+        assert!(registry.get("BreathBus").is_some());
+        assert!(registry.get("CadenceBus").is_some());
+        assert!(registry.get("ClavinetBus").is_some());
+        assert!(registry.get("EpBus").is_some());
+        assert!(registry.get("FormantBus").is_some());
+        assert!(registry.get("GlassBus").is_some());
+        assert!(registry.get("GrandPianoBus").is_some());
+        assert!(registry.get("HurdyGurdyBus").is_some());
+        assert!(registry.get("KotoBus").is_some());
+        assert!(registry.get("MalletBus").is_some());
+        assert!(registry.get("PipeOrganBus").is_some());
+        assert!(registry.get("PlectrumBus").is_some());
+        assert!(registry.get("RotaryBus").is_some());
+        assert!(registry.get("ShakuhachiBus").is_some());
+        assert!(registry.get("SitarBus").is_some());
+        assert!(registry.get("SpringBus").is_some());
+        assert!(registry.get("BootToSynthEngine").is_some());
+        assert!(registry.get("MidiUsbGadgetMode").is_some());
+        assert!(registry.get("MultiBusEventRouter").is_some());
     }
 
     #[test]

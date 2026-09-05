@@ -364,6 +364,10 @@ impl AwardWinningGuiView {
                 "3D Atmos Trajectory Orbit" => "SpatialAutomationEngine",
                 "Concert Grand Piano Escapement" => "GrandPianoGestureEngine",
                 "Bowed Violin Kinematics" => "BowingGestureEngine",
+                "Concert Acoustic Harp Arpeggio" => "PlectrumBus",
+                "Hurdy Gurdy Chien Drone" => "HurdyGurdyBus",
+                "Vocal Tract Formant Shaper" => "FormantBus",
+                "Electric Piano Tine Saturation" => "EpBus",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {
