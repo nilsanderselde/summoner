@@ -456,6 +456,10 @@ impl AwardWinningGuiView {
                 "Quantum Wavepacket Coherence Spatial Interferometer" => "Complex32",
                 "Dynamic Sidechain Matrix Ducking & Punch Controller" => "ControlEvent",
                 "Neo-Riemannian Microtonal Modal Harmony Matrix" => "Scale",
+                "Expressive Cello Continuous Bowing Physics" => "BowingGesturePattern",
+                "Electric Piano Tine Hammer Dynamics" => "EpGesturePattern",
+                "Japanese Bamboo Shakuhachi Breath & Meri" => "ShakuhachiGesturePattern",
+                "Mechanical Spring Reverb Tank Perturbation" => "SpringGesturePattern",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {

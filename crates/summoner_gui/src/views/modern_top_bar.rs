@@ -221,6 +221,10 @@ fn default_available_presets() -> Vec<String> {
         "Quantum Wavepacket Coherence Spatial Interferometer".to_string(),
         "Dynamic Sidechain Matrix Ducking & Punch Controller".to_string(),
         "Neo-Riemannian Microtonal Modal Harmony Matrix".to_string(),
+        "Expressive Cello Continuous Bowing Physics".to_string(),
+        "Electric Piano Tine Hammer Dynamics".to_string(),
+        "Japanese Bamboo Shakuhachi Breath & Meri".to_string(),
+        "Mechanical Spring Reverb Tank Perturbation".to_string(),
     ]
 }
 

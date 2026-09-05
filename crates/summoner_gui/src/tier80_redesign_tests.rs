@@ -5073,7 +5073,7 @@ mod tests {
 
         // 1. Verify 778 total DSP modules registered
         let total_modules = DspNodeRegistry::inventory();
-        assert_eq!(total_modules.len(), 778, "Must have exactly 778 registered DSP modules");
+        assert!(total_modules.len() >= 778, "Must have >= 778 registered DSP modules");
 
         // 2. Verify all 21 Tier 103 modules have proper schemas and >= 5 parameters
         let new_modules = [
@@ -5658,7 +5658,7 @@ mod tests {
 
         // 1. Verify 841 total DSP modules registered
         let total_modules = DspNodeRegistry::inventory();
-        assert_eq!(total_modules.len(), 841, "Must have exactly 841 registered DSP modules");
+        assert!(total_modules.len() >= 841, "Must have >= 841 registered DSP modules");
 
         // 2. Verify all 21 Tier 106 modules have proper schemas and >= 5 parameters
         let new_modules = [
@@ -5809,7 +5809,7 @@ mod tests {
 
         // 1. Verify 862 total DSP modules registered
         let total_modules = DspNodeRegistry::inventory();
-        assert_eq!(total_modules.len(), 862, "Must have exactly 862 registered DSP modules");
+        assert!(total_modules.len() >= 862, "Must have >= 862 registered DSP modules");
         assert!(
             registry.list_all().len() >= 862,
             "Must have at least 862 registered DSP modules, found {}",
@@ -5965,7 +5965,7 @@ mod tests {
 
         // 1. Verify 883 total DSP modules registered
         let total_modules = DspNodeRegistry::inventory();
-        assert_eq!(total_modules.len(), 883, "Must have exactly 883 registered DSP modules");
+        assert!(total_modules.len() >= 883, "Must have >= 883 registered DSP modules");
         assert!(
             registry.list_all().len() >= 883,
             "Must have at least 883 registered DSP modules, found {}",
@@ -6133,7 +6133,7 @@ mod tests {
 
         // 1. Verify 904 total DSP modules registered
         let total_modules = DspNodeRegistry::inventory();
-        assert_eq!(total_modules.len(), 904, "Must have exactly 904 registered DSP modules");
+        assert!(total_modules.len() >= 904, "Must have >= 904 registered DSP modules");
         assert!(
             registry.list_all().len() >= 904,
             "Must have at least 904 registered DSP modules, found {}",
@@ -6287,7 +6287,7 @@ mod tests {
 
         // 1. Verify 925 total DSP modules registered
         let total_modules = DspNodeRegistry::inventory();
-        assert_eq!(total_modules.len(), 925, "Must have exactly 925 registered DSP modules");
+        assert!(total_modules.len() >= 925, "Must have >= 925 registered DSP modules");
         assert!(
             registry.list_all().len() >= 925,
             "Must have at least 925 registered DSP modules, found {}",
@@ -6441,7 +6441,7 @@ mod tests {
 
         // 1. Verify 946 total DSP modules registered
         let total_modules = DspNodeRegistry::inventory();
-        assert_eq!(total_modules.len(), 946, "Must have exactly 946 registered DSP modules");
+        assert!(total_modules.len() >= 946, "Must have >= 946 registered DSP modules");
         assert!(
             registry.list_all().len() >= 946,
             "Must have at least 946 registered DSP modules, found {}",
@@ -6594,7 +6594,7 @@ mod tests {
 
         // 1. Verify 967 total DSP modules registered
         let total_modules = DspNodeRegistry::inventory();
-        assert_eq!(total_modules.len(), 967, "Must have exactly 967 registered DSP modules");
+        assert!(total_modules.len() >= 967, "Must have at least 967 registered DSP modules");
         assert!(
             registry.list_all().len() >= 967,
             "Must have at least 967 registered DSP modules, found {}",
@@ -6735,6 +6735,157 @@ mod tests {
             });
             assert_eq!(view.device_rack_state.selected_node_kind, Some("Scale".to_string()));
             assert_eq!(view.inspector_state.selected_node_kind, Some("Scale".to_string()));
+        }
+    }
+
+    #[test]
+    fn test_tier113_modern_gui_dsp_module_coverage_and_presets() {
+        use crate::dsp_node_ui::{DspNodeRegistry, DspNodeCategory};
+        use crate::views::modern_asset_browser::BrowserCategory;
+
+        let registry = DspNodeRegistry::new();
+
+        // 1. Verify 988 total DSP modules registered
+        let total_modules = DspNodeRegistry::inventory();
+        assert_eq!(total_modules.len(), 988, "Must have exactly 988 registered DSP modules");
+        assert!(
+            registry.list_all().len() >= 988,
+            "Must have at least 988 registered DSP modules, found {}",
+            registry.list_all().len()
+        );
+
+        // 2. Verify all 21 new modules exist with correct categories and tactile parameters (>= 5 params each)
+        let new_modules = [
+            ("Clip", DspNodeCategory::Utility),
+            ("NoteEvent", DspNodeCategory::Modulation),
+            ("PatternStep", DspNodeCategory::Modulation),
+            ("PatternNote", DspNodeCategory::Modulation),
+            ("TimelineEvaluation", DspNodeCategory::Utility),
+            ("MidiLogEntry", DspNodeCategory::Utility),
+            ("ParamId", DspNodeCategory::Utility),
+            ("SampleHash", DspNodeCategory::Utility),
+            ("RenderResult", DspNodeCategory::DynamicsMaster),
+            ("Edge", DspNodeCategory::Utility),
+            ("Frame", DspNodeCategory::Utility),
+            ("EpGesturePattern", DspNodeCategory::AcousticPhysicalModel),
+            ("BowingGesturePattern", DspNodeCategory::AcousticPhysicalModel),
+            ("KotoGesturePattern", DspNodeCategory::AcousticPhysicalModel),
+            ("MalletGesturePattern", DspNodeCategory::AcousticPhysicalModel),
+            ("PipeOrganGesturePattern", DspNodeCategory::AcousticPhysicalModel),
+            ("RotaryGesturePattern", DspNodeCategory::Modulation),
+            ("ShakuhachiGesturePattern", DspNodeCategory::AcousticPhysicalModel),
+            ("SitarGesturePattern", DspNodeCategory::AcousticPhysicalModel),
+            ("SpringGesturePattern", DspNodeCategory::AcousticPhysicalModel),
+            ("WoodwindGesturePattern", DspNodeCategory::AcousticPhysicalModel),
+        ];
+
+        for (name, expected_cat) in new_modules {
+            let desc = registry.get(name).unwrap_or_else(|| panic!("Module {} not found", name));
+            assert_eq!(desc.category, expected_cat, "Module {} category mismatch", name);
+            assert!(desc.params.len() >= 5, "Module {} must have >= 5 tactile parameters, found {}", name, desc.params.len());
+        }
+
+        // 3. Verify normalization mappings
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clip"), Some("Clip"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("noteevent"), Some("NoteEvent"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("patternstep"), Some("PatternStep"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("patternnote"), Some("PatternNote"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("timelineevaluation"), Some("TimelineEvaluation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("midilogentry"), Some("MidiLogEntry"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("paramid"), Some("ParamId"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("samplehash"), Some("SampleHash"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("renderresult"), Some("RenderResult"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("edge"), Some("Edge"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("frame"), Some("Frame"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("epgesturepattern"), Some("EpGesturePattern"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("bowinggesturepattern"), Some("BowingGesturePattern"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("kotogesturepattern"), Some("KotoGesturePattern"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("malletgesturepattern"), Some("MalletGesturePattern"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pipeorgangesturepattern"), Some("PipeOrganGesturePattern"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("rotarygesturepattern"), Some("RotaryGesturePattern"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("shakuhachigesturepattern"), Some("ShakuhachiGesturePattern"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sitargesturepattern"), Some("SitarGesturePattern"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("springgesturepattern"), Some("SpringGesturePattern"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("woodwindgesturepattern"), Some("WoodwindGesturePattern"));
+
+        // 4. Verify Asset Browser categorization
+        let inst_folders = BrowserCategory::Instruments.default_folders();
+        let phys_items = inst_folders.iter().find(|(name, _)| *name == "Physical Models").unwrap().1;
+        assert!(phys_items.contains(&"EpGesturePattern"));
+        assert!(phys_items.contains(&"BowingGesturePattern"));
+        assert!(phys_items.contains(&"KotoGesturePattern"));
+        assert!(phys_items.contains(&"MalletGesturePattern"));
+        assert!(phys_items.contains(&"PipeOrganGesturePattern"));
+        assert!(phys_items.contains(&"ShakuhachiGesturePattern"));
+        assert!(phys_items.contains(&"SitarGesturePattern"));
+        assert!(phys_items.contains(&"SpringGesturePattern"));
+        assert!(phys_items.contains(&"WoodwindGesturePattern"));
+
+        let fx_folders = BrowserCategory::AudioFx.default_folders();
+        let dynamics_items = fx_folders.iter().find(|(name, _)| *name == "Dynamics & Level").unwrap().1;
+        assert!(dynamics_items.contains(&"RenderResult"));
+
+        let mod_items = fx_folders.iter().find(|(name, _)| *name == "Modulation & Pitch").unwrap().1;
+        assert!(mod_items.contains(&"NoteEvent"));
+        assert!(mod_items.contains(&"PatternStep"));
+        assert!(mod_items.contains(&"PatternNote"));
+        assert!(mod_items.contains(&"RotaryGesturePattern"));
+
+        let midi_folders = BrowserCategory::MidiFx.default_folders();
+        let routing_items = midi_folders.iter().find(|(name, _)| *name == "Transforms & Routing").unwrap().1;
+        assert!(routing_items.contains(&"Clip"));
+        assert!(routing_items.contains(&"TimelineEvaluation"));
+        assert!(routing_items.contains(&"MidiLogEntry"));
+        assert!(routing_items.contains(&"ParamId"));
+        assert!(routing_items.contains(&"SampleHash"));
+        assert!(routing_items.contains(&"Edge"));
+        assert!(routing_items.contains(&"Frame"));
+
+        // 5. Verify Novice Presets synchronize in AwardWinningGuiView
+        #[cfg(feature = "gui")]
+        {
+            let mut view = crate::views::award_winning_gui_view::AwardWinningGuiView::default();
+            let ctx = eframe::egui::Context::default();
+
+            // Preset 1: Expressive Cello Continuous Bowing Physics -> BowingGesturePattern
+            view.top_bar_state.selected_preset = "Expressive Cello Continuous Bowing Physics".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("BowingGesturePattern".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("BowingGesturePattern".to_string()));
+
+            // Preset 2: Electric Piano Tine Hammer Dynamics -> EpGesturePattern
+            view.top_bar_state.selected_preset = "Electric Piano Tine Hammer Dynamics".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("EpGesturePattern".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("EpGesturePattern".to_string()));
+
+            // Preset 3: Japanese Bamboo Shakuhachi Breath & Meri -> ShakuhachiGesturePattern
+            view.top_bar_state.selected_preset = "Japanese Bamboo Shakuhachi Breath & Meri".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("ShakuhachiGesturePattern".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("ShakuhachiGesturePattern".to_string()));
+
+            // Preset 4: Mechanical Spring Reverb Tank Perturbation -> SpringGesturePattern
+            view.top_bar_state.selected_preset = "Mechanical Spring Reverb Tank Perturbation".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("SpringGesturePattern".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("SpringGesturePattern".to_string()));
         }
     }
 }
