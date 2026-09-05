@@ -225,6 +225,10 @@ fn default_available_presets() -> Vec<String> {
         "Electric Piano Tine Hammer Dynamics".to_string(),
         "Japanese Bamboo Shakuhachi Breath & Meri".to_string(),
         "Mechanical Spring Reverb Tank Perturbation".to_string(),
+        "Bellows Accordion Dual Reed Chamber Dynamics".to_string(),
+        "Clavinet Funk Dual Pickup Tangent Strike".to_string(),
+        "Franklin Lead Crystal Armonica Rotational Friction".to_string(),
+        "Concert Grand Escapement Felt Hammer Action".to_string(),
     ]
 }
 

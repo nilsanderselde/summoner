@@ -6888,4 +6888,174 @@ mod tests {
             assert_eq!(view.inspector_state.selected_node_kind, Some("SpringGesturePattern".to_string()));
         }
     }
+
+    #[test]
+    fn test_tier114_modern_gui_dsp_module_coverage_and_presets() {
+        use crate::dsp_node_ui::{DspNodeRegistry, DspNodeCategory};
+        use crate::views::modern_asset_browser::BrowserCategory;
+
+        let registry = DspNodeRegistry::new();
+
+        // 1. Verify 1009 total DSP modules registered (crossing the 1,000 milestone!)
+        let total_modules = DspNodeRegistry::inventory();
+        assert_eq!(total_modules.len(), 1009, "Must have exactly 1009 registered DSP modules");
+        assert!(
+            registry.list_all().len() >= 1009,
+            "Must have at least 1009 registered DSP modules, found {}",
+            registry.list_all().len()
+        );
+
+        // 2. Verify all 21 new modules exist with correct categories and tactile parameters (>= 5 params each)
+        let new_modules = [
+            ("BellowsGesturePattern", DspNodeCategory::AcousticPhysicalModel),
+            ("ClavinetGesturePattern", DspNodeCategory::AcousticPhysicalModel),
+            ("GlassGesturePattern", DspNodeCategory::AcousticPhysicalModel),
+            ("GrandPianoGesturePattern", DspNodeCategory::AcousticPhysicalModel),
+            ("HurdyGurdyGesturePattern", DspNodeCategory::AcousticPhysicalModel),
+            ("PluckGesturePattern", DspNodeCategory::AcousticPhysicalModel),
+            ("ArmonicaProfile", DspNodeCategory::AcousticPhysicalModel),
+            ("CassottoProfile", DspNodeCategory::AcousticPhysicalModel),
+            ("ChienMaterialProfile", DspNodeCategory::AcousticPhysicalModel),
+            ("ClavinetProfile", DspNodeCategory::AcousticPhysicalModel),
+            ("ElectricPianoProfile", DspNodeCategory::AcousticPhysicalModel),
+            ("FreeReedProfile", DspNodeCategory::AcousticPhysicalModel),
+            ("CrystalMaterialProfile", DspNodeCategory::AcousticPhysicalModel),
+            ("CrystallineLattice", DspNodeCategory::AcousticPhysicalModel),
+            ("AcousticMaterial", DspNodeCategory::TimeSpace),
+            ("AudioGraphBenchmarkConfig", DspNodeCategory::Utility),
+            ("AudioGraphBenchmarkReport", DspNodeCategory::Utility),
+            ("ExportSettings", DspNodeCategory::Utility),
+            ("DevicePreset", DspNodeCategory::Utility),
+            ("CrashAnalysisResult", DspNodeCategory::Utility),
+            ("CollaborationSession", DspNodeCategory::Utility),
+        ];
+
+        for (name, expected_cat) in new_modules {
+            let desc = registry.get(name).unwrap_or_else(|| panic!("Module {} not found", name));
+            assert_eq!(desc.category, expected_cat, "Module {} category mismatch", name);
+            assert!(desc.params.len() >= 5, "Module {} must have >= 5 tactile parameters, found {}", name, desc.params.len());
+        }
+
+        // 3. Verify normalization mappings
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("bellowsgesturepattern"), Some("BellowsGesturePattern"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("accordionbellowspattern"), Some("BellowsGesturePattern"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clavinetgesturepattern"), Some("ClavinetGesturePattern"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clavinettangentpattern"), Some("ClavinetGesturePattern"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("glassgesturepattern"), Some("GlassGesturePattern"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("armonicafrictionpattern"), Some("GlassGesturePattern"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("grandpianogesturepattern"), Some("GrandPianoGesturePattern"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pianohammerpattern"), Some("GrandPianoGesturePattern"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("hurdygurdygesturepattern"), Some("HurdyGurdyGesturePattern"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("gurdycrankpattern"), Some("HurdyGurdyGesturePattern"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pluckgesturepattern"), Some("PluckGesturePattern"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("plectrumpluckpattern"), Some("PluckGesturePattern"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("armonicaprofile"), Some("ArmonicaProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("glassarmonicaprofile"), Some("ArmonicaProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cassottoprofile"), Some("CassottoProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("accordiontonechamber"), Some("CassottoProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("chienmaterialprofile"), Some("ChienMaterialProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("buzzchienprofile"), Some("ChienMaterialProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clavinetprofile"), Some("ClavinetProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clavinetd6profile"), Some("ClavinetProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("electricpianoprofile"), Some("ElectricPianoProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("rhodespianoprofile"), Some("ElectricPianoProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("freereedprofile"), Some("FreeReedProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("accordionreedprofile"), Some("FreeReedProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("crystalmaterialprofile"), Some("CrystalMaterialProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("fusedsilicaprofile"), Some("CrystalMaterialProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("crystallinelattice"), Some("CrystallineLattice"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("modalcrystallattice"), Some("CrystallineLattice"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("acousticmaterial"), Some("AcousticMaterial"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("roomacousticsmaterial"), Some("AcousticMaterial"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("audiographbenchmarkconfig"), Some("AudioGraphBenchmarkConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("dspbenchmarkconfig"), Some("AudioGraphBenchmarkConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("audiographbenchmarkreport"), Some("AudioGraphBenchmarkReport"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("dspbenchmarkreport"), Some("AudioGraphBenchmarkReport"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("exportsettings"), Some("ExportSettings"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("audioexportsettings"), Some("ExportSettings"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("devicepreset"), Some("DevicePreset"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("modularpreset"), Some("DevicePreset"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("crashanalysisresult"), Some("CrashAnalysisResult"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("dspcrashanalyzer"), Some("CrashAnalysisResult"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("collaborationsession"), Some("CollaborationSession"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cloudcollabsession"), Some("CollaborationSession"));
+
+        // 4. Verify Asset Browser categorization
+        let inst_folders = BrowserCategory::Instruments.default_folders();
+        let phys_items = inst_folders.iter().find(|(name, _)| *name == "Physical Models").unwrap().1;
+        assert!(phys_items.contains(&"BellowsGesturePattern"));
+        assert!(phys_items.contains(&"ClavinetGesturePattern"));
+        assert!(phys_items.contains(&"GlassGesturePattern"));
+        assert!(phys_items.contains(&"GrandPianoGesturePattern"));
+        assert!(phys_items.contains(&"HurdyGurdyGesturePattern"));
+        assert!(phys_items.contains(&"PluckGesturePattern"));
+        assert!(phys_items.contains(&"ArmonicaProfile"));
+        assert!(phys_items.contains(&"CassottoProfile"));
+        assert!(phys_items.contains(&"ChienMaterialProfile"));
+        assert!(phys_items.contains(&"ClavinetProfile"));
+        assert!(phys_items.contains(&"ElectricPianoProfile"));
+        assert!(phys_items.contains(&"FreeReedProfile"));
+        assert!(phys_items.contains(&"CrystalMaterialProfile"));
+        assert!(phys_items.contains(&"CrystallineLattice"));
+
+        let fx_folders = BrowserCategory::AudioFx.default_folders();
+        let space_items = fx_folders.iter().find(|(name, _)| *name == "Time & Reverb").unwrap().1;
+        assert!(space_items.contains(&"AcousticMaterial"));
+
+        let midi_folders = BrowserCategory::MidiFx.default_folders();
+        let routing_items = midi_folders.iter().find(|(name, _)| *name == "Transforms & Routing").unwrap().1;
+        assert!(routing_items.contains(&"AudioGraphBenchmarkConfig"));
+        assert!(routing_items.contains(&"AudioGraphBenchmarkReport"));
+        assert!(routing_items.contains(&"ExportSettings"));
+        assert!(routing_items.contains(&"DevicePreset"));
+        assert!(routing_items.contains(&"CrashAnalysisResult"));
+        assert!(routing_items.contains(&"CollaborationSession"));
+
+        // 5. Verify Novice Presets synchronize in AwardWinningGuiView
+        #[cfg(feature = "gui")]
+        {
+            let mut view = crate::views::award_winning_gui_view::AwardWinningGuiView::default();
+            let ctx = eframe::egui::Context::default();
+
+            // Preset 1: Bellows Accordion Dual Reed Chamber Dynamics -> BellowsGesturePattern
+            view.top_bar_state.selected_preset = "Bellows Accordion Dual Reed Chamber Dynamics".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("BellowsGesturePattern".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("BellowsGesturePattern".to_string()));
+
+            // Preset 2: Clavinet Funk Dual Pickup Tangent Strike -> ClavinetGesturePattern
+            view.top_bar_state.selected_preset = "Clavinet Funk Dual Pickup Tangent Strike".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("ClavinetGesturePattern".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("ClavinetGesturePattern".to_string()));
+
+            // Preset 3: Franklin Lead Crystal Armonica Rotational Friction -> GlassGesturePattern
+            view.top_bar_state.selected_preset = "Franklin Lead Crystal Armonica Rotational Friction".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("GlassGesturePattern".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("GlassGesturePattern".to_string()));
+
+            // Preset 4: Concert Grand Escapement Felt Hammer Action -> GrandPianoGesturePattern
+            view.top_bar_state.selected_preset = "Concert Grand Escapement Felt Hammer Action".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("GrandPianoGesturePattern".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("GrandPianoGesturePattern".to_string()));
+        }
+    }
 }

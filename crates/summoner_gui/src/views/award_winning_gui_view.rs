@@ -460,6 +460,10 @@ impl AwardWinningGuiView {
                 "Electric Piano Tine Hammer Dynamics" => "EpGesturePattern",
                 "Japanese Bamboo Shakuhachi Breath & Meri" => "ShakuhachiGesturePattern",
                 "Mechanical Spring Reverb Tank Perturbation" => "SpringGesturePattern",
+                "Bellows Accordion Dual Reed Chamber Dynamics" => "BellowsGesturePattern",
+                "Clavinet Funk Dual Pickup Tangent Strike" => "ClavinetGesturePattern",
+                "Franklin Lead Crystal Armonica Rotational Friction" => "GlassGesturePattern",
+                "Concert Grand Escapement Felt Hammer Action" => "GrandPianoGesturePattern",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {
