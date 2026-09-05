@@ -3007,5 +3007,251 @@ mod tests {
             assert_eq!(view.inspector_state.selected_node_kind, Some("NamWaveNetEngine".to_string()));
         }
     }
+
+    #[test]
+    fn test_step_1293_tier93_dsp_modules_expansion_coverage() {
+        use crate::dsp_node_ui::DspNodeRegistry;
+        use crate::views::modern_asset_browser::BrowserCategory;
+
+        let registry = DspNodeRegistry::new();
+        assert!(registry.list_all().len() >= 565, "Expected >= 565 descriptors, got {}", registry.list_all().len());
+
+        let inv = DspNodeRegistry::inventory();
+        assert!(inv.len() >= 565, "Expected >= 565 inventory items, got {}", inv.len());
+
+        let new_dsp_modules = [
+            "BowedStringNode",
+            "PercussionMembraneNode",
+            "PipeOrganNode",
+            "CommutedPluckedString",
+            "RotarySpeakerNode",
+            "SamplerNode",
+            "ShakuhachiVoice",
+            "SitarVoice",
+            "TonewheelOrganNode",
+            "WaveguideBrassNode",
+            "WaveguideMeshNode",
+            "WoodwindJetNode",
+            "MolecularVibrationResonatorNode",
+            "PlasmaArcSynthesizerNode",
+            "MetamaterialRefractionFilterNode",
+            "IsmShockwaveReverbNode",
+            "FusionResonanceSynthNode",
+            "MasterLimiter",
+            "TrackStereoCorrelationMeter",
+            "SpectrumMatchingAnalyzer",
+            "MasterBusTrim",
+        ];
+
+        // 1. Verify existence and UI instantiation
+        for name in &new_dsp_modules {
+            let desc = registry.get(name);
+            assert!(desc.is_some(), "Module {} must exist in DspNodeRegistry", name);
+            let desc = desc.unwrap();
+            assert!(desc.params.len() >= 5, "Module {} must have at least 5 schema parameters, found {}", name, desc.params.len());
+
+            let ui_node = DspNodeRegistry::create_node_ui(name);
+            assert!(ui_node.is_some(), "create_node_ui must succeed for {}", name);
+            let ui_node = ui_node.unwrap();
+            assert!(ui_node.parameters().len() >= 5, "Module {} must have at least 5 parameters exposed in UI, found {}", name, ui_node.parameters().len());
+        }
+
+        // 2. Verify parameter IDs on key nodes
+        let bowed = registry.get("BowedStringNode").unwrap();
+        assert!(bowed.params.iter().any(|p| p.id == "bow_velocity_mps"));
+        assert!(bowed.params.iter().any(|p| p.id == "bow_pressure_n"));
+        assert!(bowed.params.iter().any(|p| p.id == "string_damping"));
+
+        let perc = registry.get("PercussionMembraneNode").unwrap();
+        assert!(perc.params.iter().any(|p| p.id == "rim_tension_kpa"));
+        assert!(perc.params.iter().any(|p| p.id == "membrane_mass_g_m2"));
+
+        let organ = registry.get("PipeOrganNode").unwrap();
+        assert!(organ.params.iter().any(|p| p.id == "pipe_frequency_hz"));
+        assert!(organ.params.iter().any(|p| p.id == "chiff_noise_mix"));
+
+        let plucked = registry.get("CommutedPluckedString").unwrap();
+        assert!(plucked.params.iter().any(|p| p.id == "pitch_hz"));
+        assert!(plucked.params.iter().any(|p| p.id == "pick_hardness"));
+
+        let rotary = registry.get("RotarySpeakerNode").unwrap();
+        assert!(rotary.params.iter().any(|p| p.id == "horn_rate_hz"));
+        assert!(rotary.params.iter().any(|p| p.id == "drum_rate_hz"));
+
+        let sampler = registry.get("SamplerNode").unwrap();
+        assert!(sampler.params.iter().any(|p| p.id == "playback_speed"));
+        assert!(sampler.params.iter().any(|p| p.id == "root_pitch_semitones"));
+
+        let shakuhachi = registry.get("ShakuhachiVoice").unwrap();
+        assert!(shakuhachi.params.iter().any(|p| p.id == "breath_pressure_pa"));
+        assert!(shakuhachi.params.iter().any(|p| p.id == "meri_angle_cents"));
+
+        let sitar = registry.get("SitarVoice").unwrap();
+        assert!(sitar.params.iter().any(|p| p.id == "baj_frequency_hz"));
+        assert!(sitar.params.iter().any(|p| p.id == "taraf_strings_count"));
+
+        let tonewheel = registry.get("TonewheelOrganNode").unwrap();
+        assert!(tonewheel.params.iter().any(|p| p.id == "key_click_gain"));
+        assert!(tonewheel.params.iter().any(|p| p.id == "leakage_crosstalk"));
+
+        let brass = registry.get("WaveguideBrassNode").unwrap();
+        assert!(brass.params.iter().any(|p| p.id == "lip_tension_n_m"));
+        assert!(brass.params.iter().any(|p| p.id == "bore_flare_exponent"));
+
+        let mesh = registry.get("WaveguideMeshNode").unwrap();
+        assert!(mesh.params.iter().any(|p| p.id == "mesh_geometry"));
+        assert!(mesh.params.iter().any(|p| p.id == "boundary_reflection"));
+
+        let jet = registry.get("WoodwindJetNode").unwrap();
+        assert!(jet.params.iter().any(|p| p.id == "jet_length_mm"));
+        assert!(jet.params.iter().any(|p| p.id == "jet_velocity_mps"));
+
+        let molec = registry.get("MolecularVibrationResonatorNode").unwrap();
+        assert!(molec.params.iter().any(|p| p.id == "base_frequency_hz"));
+        assert!(molec.params.iter().any(|p| p.id == "thermal_excitation_temp_k"));
+
+        let plasma = registry.get("PlasmaArcSynthesizerNode").unwrap();
+        assert!(plasma.params.iter().any(|p| p.id == "arc_current_ma"));
+        assert!(plasma.params.iter().any(|p| p.id == "spark_gap_mm"));
+
+        let meta = registry.get("MetamaterialRefractionFilterNode").unwrap();
+        assert!(meta.params.iter().any(|p| p.id == "center_frequency_hz"));
+        assert!(meta.params.iter().any(|p| p.id == "refractive_index"));
+
+        let ism = registry.get("IsmShockwaveReverbNode").unwrap();
+        assert!(ism.params.iter().any(|p| p.id == "room_length_m"));
+        assert!(ism.params.iter().any(|p| p.id == "shockwave_mach_number"));
+
+        let fusion = registry.get("FusionResonanceSynthNode").unwrap();
+        assert!(fusion.params.iter().any(|p| p.id == "magnetic_field_tesla"));
+        assert!(fusion.params.iter().any(|p| p.id == "plasma_density_10e19"));
+
+        let limiter = registry.get("MasterLimiter").unwrap();
+        assert!(limiter.params.iter().any(|p| p.id == "threshold_db"));
+        assert!(limiter.params.iter().any(|p| p.id == "true_peak_oversampling"));
+
+        let meter = registry.get("TrackStereoCorrelationMeter").unwrap();
+        assert!(meter.params.iter().any(|p| p.id == "integration_time_ms"));
+        assert!(meter.params.iter().any(|p| p.id == "correlation_coefficient"));
+
+        let spec = registry.get("SpectrumMatchingAnalyzer").unwrap();
+        assert!(spec.params.iter().any(|p| p.id == "num_bands"));
+        assert!(spec.params.iter().any(|p| p.id == "matching_intensity"));
+
+        let trim = registry.get("MasterBusTrim").unwrap();
+        assert!(trim.params.iter().any(|p| p.id == "trim_gain_db"));
+        assert!(trim.params.iter().any(|p| p.id == "phase_flip_left"));
+
+        // 3. Verify alias normalization
+        assert_eq!(DspNodeRegistry::normalize_type_name("bowedstringnode"), Some("BowedStringNode"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("percussionmembranenode"), Some("PercussionMembraneNode"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("pipeorgannode"), Some("PipeOrganNode"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("commutedpluckedstring"), Some("CommutedPluckedString"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("rotaryspeakernode"), Some("RotarySpeakerNode"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("samplernode"), Some("SamplerNode"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("shakuhachivoice"), Some("ShakuhachiVoice"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("sitarvoice"), Some("SitarVoice"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("tonewheelorgannode"), Some("TonewheelOrganNode"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("waveguidebrassnode"), Some("WaveguideBrassNode"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("waveguidemeshnode"), Some("WaveguideMeshNode"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("woodwindjetnode"), Some("WoodwindJetNode"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("molecularvibrationresonatornode"), Some("MolecularVibrationResonatorNode"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("plasmaarcsynthesizernode"), Some("PlasmaArcSynthesizerNode"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("metamaterialrefractionfilternode"), Some("MetamaterialRefractionFilterNode"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("ismshockwavereverbnode"), Some("IsmShockwaveReverbNode"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("fusionresonancesynthnode"), Some("FusionResonanceSynthNode"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("masterlimiter"), Some("MasterLimiter"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("trackstereocorrelationmeter"), Some("TrackStereoCorrelationMeter"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("spectrummatchinganalyzer"), Some("SpectrumMatchingAnalyzer"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("masterbustrim"), Some("MasterBusTrim"));
+
+        // 4. Verify Asset Browser categorization
+        let inst_folders = BrowserCategory::Instruments.default_folders();
+        let phys_items = inst_folders.iter().find(|(name, _)| *name == "Physical Models").unwrap().1;
+        assert!(phys_items.contains(&"BowedStringNode"));
+        assert!(phys_items.contains(&"PercussionMembraneNode"));
+        assert!(phys_items.contains(&"PipeOrganNode"));
+        assert!(phys_items.contains(&"CommutedPluckedString"));
+        assert!(phys_items.contains(&"ShakuhachiVoice"));
+        assert!(phys_items.contains(&"SitarVoice"));
+        assert!(phys_items.contains(&"WaveguideBrassNode"));
+        assert!(phys_items.contains(&"WaveguideMeshNode"));
+        assert!(phys_items.contains(&"WoodwindJetNode"));
+
+        let synth_items = inst_folders.iter().find(|(name, _)| *name == "Synthesizers").unwrap().1;
+        assert!(synth_items.contains(&"TonewheelOrganNode"));
+        assert!(synth_items.contains(&"MolecularVibrationResonatorNode"));
+        assert!(synth_items.contains(&"PlasmaArcSynthesizerNode"));
+        assert!(synth_items.contains(&"FusionResonanceSynthNode"));
+
+        let sampler_items = inst_folders.iter().find(|(name, _)| *name == "Samplers & Slicers").unwrap().1;
+        assert!(sampler_items.contains(&"SamplerNode"));
+
+        let fx_folders = BrowserCategory::AudioFx.default_folders();
+        let dyn_items = fx_folders.iter().find(|(name, _)| *name == "Dynamics & Level").unwrap().1;
+        assert!(dyn_items.contains(&"MasterLimiter"));
+        assert!(dyn_items.contains(&"MasterBusTrim"));
+
+        let filter_items = fx_folders.iter().find(|(name, _)| *name == "Filters & EQ").unwrap().1;
+        assert!(filter_items.contains(&"MetamaterialRefractionFilterNode"));
+        assert!(filter_items.contains(&"SpectrumMatchingAnalyzer"));
+
+        let time_items = fx_folders.iter().find(|(name, _)| *name == "Time & Reverb").unwrap().1;
+        assert!(time_items.contains(&"IsmShockwaveReverbNode"));
+
+        let mod_items = fx_folders.iter().find(|(name, _)| *name == "Modulation & Pitch").unwrap().1;
+        assert!(mod_items.contains(&"RotarySpeakerNode"));
+
+        let midi_folders = BrowserCategory::MidiFx.default_folders();
+        let routing_items = midi_folders.iter().find(|(name, _)| *name == "Transforms & Routing").unwrap().1;
+        assert!(routing_items.contains(&"TrackStereoCorrelationMeter"));
+
+        // 5. Verify Novice Presets synchronize in AwardWinningGuiView
+        #[cfg(feature = "gui")]
+        {
+            let mut view = crate::views::award_winning_gui_view::AwardWinningGuiView::default();
+            let ctx = eframe::egui::Context::default();
+
+            // Preset: Concert Hall Bowed Double Bass -> BowedStringNode
+            view.top_bar_state.selected_preset = "Concert Hall Bowed Double Bass".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("BowedStringNode".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("BowedStringNode".to_string()));
+
+            // Preset: Tuned Orchestral Timpani Membrane -> PercussionMembraneNode
+            view.top_bar_state.selected_preset = "Tuned Orchestral Timpani Membrane".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("PercussionMembraneNode".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("PercussionMembraneNode".to_string()));
+
+            // Preset: Vintage 91-Wheel Jazz Tonewheel Organ -> TonewheelOrganNode
+            view.top_bar_state.selected_preset = "Vintage 91-Wheel Jazz Tonewheel Organ".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("TonewheelOrganNode".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("TonewheelOrganNode".to_string()));
+
+            // Preset: Master Brickwall True-Peak Limiter -> MasterLimiter
+            view.top_bar_state.selected_preset = "Master Brickwall True-Peak Limiter".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("MasterLimiter".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("MasterLimiter".to_string()));
+        }
+    }
 }
 

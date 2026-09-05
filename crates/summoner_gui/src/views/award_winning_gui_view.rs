@@ -376,6 +376,10 @@ impl AwardWinningGuiView {
                 "Harmonium Free-Reed Expression Swell" => "FreeReedVoice",
                 "Glass Armonica Celestial Shimmer" => "ArmonicaChassisMode",
                 "High-Gain WaveNet Tube Overdrive" => "NamWaveNetEngine",
+                "Concert Hall Bowed Double Bass" => "BowedStringNode",
+                "Tuned Orchestral Timpani Membrane" => "PercussionMembraneNode",
+                "Vintage 91-Wheel Jazz Tonewheel Organ" => "TonewheelOrganNode",
+                "Master Brickwall True-Peak Limiter" => "MasterLimiter",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {

@@ -141,6 +141,10 @@ fn default_available_presets() -> Vec<String> {
         "Harmonium Free-Reed Expression Swell".to_string(),
         "Glass Armonica Celestial Shimmer".to_string(),
         "High-Gain WaveNet Tube Overdrive".to_string(),
+        "Concert Hall Bowed Double Bass".to_string(),
+        "Tuned Orchestral Timpani Membrane".to_string(),
+        "Vintage 91-Wheel Jazz Tonewheel Organ".to_string(),
+        "Master Brickwall True-Peak Limiter".to_string(),
     ]
 }
 
