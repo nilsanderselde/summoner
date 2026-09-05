@@ -448,6 +448,10 @@ impl AwardWinningGuiView {
                 "AI Multi-Track Frequency Collision & Masking Inspector" => "MaskingReport",
                 "Acoustic Tonehole 3-Port Scattering Wave Matrix" => "ToneholeScatteringResult",
                 "Quantum Bloch Sphere Density Matrix Tomography" => "QuantumTomographyData",
+                "Neo-Riemannian Tonnetz Harmonic Matrix Synthesizer" => "HarmonicNode",
+                "CLAP Sub-Sample Precision Automation & MPE Rig" => "ClapSampleAccurateAutomation",
+                "Multi-Velocity Layered Acoustic Studio Drum Station" => "DrumPad",
+                "3D Binaural Spatial Soundfield Vector Tracker" => "AtomicSpatialSlot",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {

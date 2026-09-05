@@ -213,6 +213,10 @@ fn default_available_presets() -> Vec<String> {
         "AI Multi-Track Frequency Collision & Masking Inspector".to_string(),
         "Acoustic Tonehole 3-Port Scattering Wave Matrix".to_string(),
         "Quantum Bloch Sphere Density Matrix Tomography".to_string(),
+        "Neo-Riemannian Tonnetz Harmonic Matrix Synthesizer".to_string(),
+        "CLAP Sub-Sample Precision Automation & MPE Rig".to_string(),
+        "Multi-Velocity Layered Acoustic Studio Drum Station".to_string(),
+        "3D Binaural Spatial Soundfield Vector Tracker".to_string(),
     ]
 }
 

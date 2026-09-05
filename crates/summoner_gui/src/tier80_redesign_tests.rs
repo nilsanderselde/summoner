@@ -6432,6 +6432,159 @@ mod tests {
             assert_eq!(view.inspector_state.selected_node_kind, Some("QuantumTomographyData".to_string()));
         }
     }
+    #[test]
+    fn test_tier111_modern_gui_dsp_module_coverage_and_presets() {
+        use crate::dsp_node_ui::{DspNodeRegistry, DspNodeCategory};
+        use crate::views::modern_asset_browser::BrowserCategory;
+
+        let registry = DspNodeRegistry::new();
+
+        // 1. Verify 946 total DSP modules registered
+        let total_modules = DspNodeRegistry::inventory();
+        assert_eq!(total_modules.len(), 946, "Must have exactly 946 registered DSP modules");
+        assert!(
+            registry.list_all().len() >= 946,
+            "Must have at least 946 registered DSP modules, found {}",
+            registry.list_all().len()
+        );
+
+        // 2. Verify all 21 new modules exist with correct categories and tactile parameters (>= 5 params each)
+        let new_modules = [
+            ("AtomicSpatialSlot", DspNodeCategory::SpatialSurround),
+            ("EqBand", DspNodeCategory::FilterEq),
+            ("Grain", DspNodeCategory::SamplerSlicer),
+            ("ClapMpeEvent", DspNodeCategory::Modulation),
+            ("ClapProcessBuffer", DspNodeCategory::Utility),
+            ("ClapSampleAccurateAutomation", DspNodeCategory::Modulation),
+            ("DrumPad", DspNodeCategory::SamplerSlicer),
+            ("HarmonicNode", DspNodeCategory::Modulation),
+            ("MarkovChain2", DspNodeCategory::Modulation),
+            ("MidiStepEvent", DspNodeCategory::Modulation),
+            ("ModulationAssignment", DspNodeCategory::Modulation),
+            ("ModulationTarget", DspNodeCategory::Modulation),
+            ("PadTriggerEvent", DspNodeCategory::Modulation),
+            ("PatternClip", DspNodeCategory::Modulation),
+            ("PluginDescriptor", DspNodeCategory::Utility),
+            ("PluginParamInfo", DspNodeCategory::Utility),
+            ("Position3D", DspNodeCategory::SpatialSurround),
+            ("ProcessContext", DspNodeCategory::Utility),
+            ("RenderJob", DspNodeCategory::Utility),
+            ("SampleSlice", DspNodeCategory::SamplerSlicer),
+            ("SmoothParam", DspNodeCategory::Utility),
+        ];
+
+        for (name, expected_cat) in new_modules {
+            let desc = registry.get(name).unwrap_or_else(|| panic!("Module {} not found", name));
+            assert_eq!(desc.category, expected_cat, "Module {} category mismatch", name);
+            assert!(desc.params.len() >= 5, "Module {} must have >= 5 tactile parameters, found {}", name, desc.params.len());
+        }
+
+        // 3. Verify normalization mappings
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("atomicspatialslot"), Some("AtomicSpatialSlot"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("eqband"), Some("EqBand"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("grain"), Some("Grain"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clapmpeevent"), Some("ClapMpeEvent"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clapprocessbuffer"), Some("ClapProcessBuffer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clapsampleaccurateautomation"), Some("ClapSampleAccurateAutomation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("drumpad"), Some("DrumPad"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("harmonicnode"), Some("HarmonicNode"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("markovchain2"), Some("MarkovChain2"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("midistepevent"), Some("MidiStepEvent"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("midisteptrigger"), Some("MidiStepEvent"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("modulationassignment"), Some("ModulationAssignment"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("modulationtarget"), Some("ModulationTarget"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("padtriggerevent"), Some("PadTriggerEvent"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("patternclip"), Some("PatternClip"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("plugindescriptor"), Some("PluginDescriptor"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pluginparaminfo"), Some("PluginParamInfo"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("position3d"), Some("Position3D"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("processcontext"), Some("ProcessContext"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("renderjob"), Some("RenderJob"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sampleslice"), Some("SampleSlice"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("smoothparam"), Some("SmoothParam"));
+
+        // 4. Verify Asset Browser categorization
+        let inst_folders = BrowserCategory::Instruments.default_folders();
+        let sampler_items = inst_folders.iter().find(|(name, _)| *name == "Samplers & Slicers").unwrap().1;
+        assert!(sampler_items.contains(&"Grain"));
+        assert!(sampler_items.contains(&"DrumPad"));
+        assert!(sampler_items.contains(&"SampleSlice"));
+
+        let fx_folders = BrowserCategory::AudioFx.default_folders();
+        let spatial_items = fx_folders.iter().find(|(name, _)| *name == "Time & Reverb").unwrap().1;
+        assert!(spatial_items.contains(&"AtomicSpatialSlot"));
+        assert!(spatial_items.contains(&"Position3D"));
+
+        let filter_items = fx_folders.iter().find(|(name, _)| *name == "Filters & EQ").unwrap().1;
+        assert!(filter_items.contains(&"EqBand"));
+
+        let mod_items = fx_folders.iter().find(|(name, _)| *name == "Modulation & Pitch").unwrap().1;
+        assert!(mod_items.contains(&"ClapMpeEvent"));
+        assert!(mod_items.contains(&"ClapSampleAccurateAutomation"));
+        assert!(mod_items.contains(&"HarmonicNode"));
+        assert!(mod_items.contains(&"MarkovChain2"));
+        assert!(mod_items.contains(&"MidiStepEvent"));
+        assert!(mod_items.contains(&"ModulationAssignment"));
+        assert!(mod_items.contains(&"ModulationTarget"));
+        assert!(mod_items.contains(&"PadTriggerEvent"));
+        assert!(mod_items.contains(&"PatternClip"));
+
+        let midi_folders = BrowserCategory::MidiFx.default_folders();
+        let routing_items = midi_folders.iter().find(|(name, _)| *name == "Transforms & Routing").unwrap().1;
+        assert!(routing_items.contains(&"ClapProcessBuffer"));
+        assert!(routing_items.contains(&"PluginDescriptor"));
+        assert!(routing_items.contains(&"PluginParamInfo"));
+        assert!(routing_items.contains(&"ProcessContext"));
+        assert!(routing_items.contains(&"RenderJob"));
+        assert!(routing_items.contains(&"SmoothParam"));
+
+        // 5. Verify Novice Presets synchronize in AwardWinningGuiView
+        #[cfg(feature = "gui")]
+        {
+            let mut view = crate::views::award_winning_gui_view::AwardWinningGuiView::default();
+            let ctx = eframe::egui::Context::default();
+
+            // Preset 1: Neo-Riemannian Tonnetz Harmonic Matrix Synthesizer -> HarmonicNode
+            view.top_bar_state.selected_preset = "Neo-Riemannian Tonnetz Harmonic Matrix Synthesizer".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("HarmonicNode".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("HarmonicNode".to_string()));
+
+            // Preset 2: CLAP Sub-Sample Precision Automation & MPE Rig -> ClapSampleAccurateAutomation
+            view.top_bar_state.selected_preset = "CLAP Sub-Sample Precision Automation & MPE Rig".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("ClapSampleAccurateAutomation".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("ClapSampleAccurateAutomation".to_string()));
+
+            // Preset 3: Multi-Velocity Layered Acoustic Studio Drum Station -> DrumPad
+            view.top_bar_state.selected_preset = "Multi-Velocity Layered Acoustic Studio Drum Station".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("DrumPad".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("DrumPad".to_string()));
+
+            // Preset 4: 3D Binaural Spatial Soundfield Vector Tracker -> AtomicSpatialSlot
+            view.top_bar_state.selected_preset = "3D Binaural Spatial Soundfield Vector Tracker".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("AtomicSpatialSlot".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("AtomicSpatialSlot".to_string()));
+        }
+    }
 }
 
 
