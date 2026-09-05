@@ -229,6 +229,10 @@ fn default_available_presets() -> Vec<String> {
         "Clavinet Funk Dual Pickup Tangent Strike".to_string(),
         "Franklin Lead Crystal Armonica Rotational Friction".to_string(),
         "Concert Grand Escapement Felt Hammer Action".to_string(),
+        "Baroque Pipe Organ Tutti Plenum & Mixture Ranks".to_string(),
+        "Vintage EMT-140 Cold-Rolled Steel Suspension Reverb".to_string(),
+        "Concert Steinway D 9-Foot Resonant Soundboard".to_string(),
+        "Classic B3 Tonewheel Organ Full Gospel Drawbars".to_string(),
     ]
 }
 

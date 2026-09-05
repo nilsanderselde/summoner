@@ -464,6 +464,10 @@ impl AwardWinningGuiView {
                 "Clavinet Funk Dual Pickup Tangent Strike" => "ClavinetGesturePattern",
                 "Franklin Lead Crystal Armonica Rotational Friction" => "GlassGesturePattern",
                 "Concert Grand Escapement Felt Hammer Action" => "GrandPianoGesturePattern",
+                "Baroque Pipe Organ Tutti Plenum & Mixture Ranks" => "PipeOrganProfile",
+                "Vintage EMT-140 Cold-Rolled Steel Suspension Reverb" => "PlateReverbProfile",
+                "Concert Steinway D 9-Foot Resonant Soundboard" => "SoundboardProfile",
+                "Classic B3 Tonewheel Organ Full Gospel Drawbars" => "TonewheelOrganProfile",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {

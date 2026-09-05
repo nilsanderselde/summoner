@@ -7910,6 +7910,174 @@ descriptors.insert("BellowsGesturePattern".to_string(), DspNodeDescriptor::new("
             .with_param(DspParamSchema::knob("active_cursor_track", "Focused Remote Collaborator Track Lane", 1.0, 64.0, 1.0, "track", MacroRole::Character, "Current timeline track lane focused by remote collaborator cursor"))
             .with_param(DspParamSchema::toggle("auto_merge_conflicts", "Autonomous Non-Destructive Conflict Resolution", true, "Automatically merge concurrent non-overlapping timeline edits"))
         );
+        descriptors.insert("PipeOrganProfile".to_string(), DspNodeDescriptor::new("PipeOrganProfile", "Baroque & Gothic Pipe Organ Registration & Scaling Profile", DspNodeCategory::AcousticPhysicalModel, "Acoustic pipe organ registration profile defining stop combinations, plenum mixture ranks, tracker windchest pressures, pipe scaling ratios, and reed tongue buzz")
+            .with_param(DspParamSchema::choice("registration_mode", "Pipe Organ Stop Registration Mode", &["Toccata Plenum", "Baroque Chorale", "Gothic Cathedral", "French Romantic Reed", "Vocal Vox Humana"], 0, "Selects classical organ registration stop combinations"))
+            .with_param(DspParamSchema::knob("plenum_mixture_rank", "Plenum Compound Mixture Ranks", 1.0, 8.0, 4.0, "ranks", MacroRole::Tone, "Number of harmonic mixture ranks in organo pleno chorus"))
+            .with_param(DspParamSchema::knob("windchest_pressure_mmws", "Tracker Windchest Air Pressure", 40.0, 250.0, 95.0, "mmWS", MacroRole::Punch, "Static windchest reservoir pressure in millimeters of water column"))
+            .with_param(DspParamSchema::knob("pipe_scaling_ratio", "Normmensur Pipe Scaling Ratio", 0.6, 1.8, 1.0, "scale", MacroRole::Character, "Bore diameter-to-length scaling ratio affecting harmonic brilliance"))
+            .with_param(DspParamSchema::knob("reed_tongue_buzz", "Brass Reed Tongue Vibratory Buzz", 0.0, 1.0, 0.35, "buzz", MacroRole::Tone, "Harmonic buzzing intensity from curved brass shallot reed tongues"))
+            .with_param(DspParamSchema::toggle("organo_pleno_sync", "Organo Pleno Multivoice Waveguide Sync", true, "Synchronizes multiple pipe flue and reed waveguides simultaneously"))
+        );
+        descriptors.insert("PlateReverbProfile".to_string(), DspNodeDescriptor::new("PlateReverbProfile", "EMT-140 & 240 Precision Suspension Plate Reverb Profile", DspNodeCategory::TimeSpace, "Precision mechanical plate reverb profile modeling cold-rolled steel plates, gold foils, suspension spring tension, damping pad proximities, and modal diffusion")
+            .with_param(DspParamSchema::choice("plate_material_mode", "Plate Resonator Material Topology", &["Vintage EMT-140 Steel", "Studio Suspension Plate", "Gold Foil Diaphragm", "Compact Mechanical Tank", "High-Tension Resonator"], 0, "Selects metallic plate physical alloy and suspension chassis"))
+            .with_param(DspParamSchema::knob("plate_tension_kn", "Perimeter Suspension Spring Tension", 5.0, 50.0, 24.0, "kN", MacroRole::Tone, "Mechanical suspension boundary tension in kiloNewtons"))
+            .with_param(DspParamSchema::knob("damping_pad_distance_mm", "Felt Damping Pad Proximity Gap", 0.5, 30.0, 8.0, "mm", MacroRole::Space, "Air gap between felt absorption damper plate and vibrating sheet"))
+            .with_param(DspParamSchema::knob("transducer_drive_level", "Electrodynamic Input Drive Level", 0.0, 1.0, 0.70, "drive", MacroRole::Punch, "Input coil electromagnetic drive level and soft saturation"))
+            .with_param(DspParamSchema::knob("diffusion_rate", "Modal Reflection Diffusion Rate", 0.0, 1.0, 0.85, "diff", MacroRole::Space, "Rate of echo density buildup and high-frequency modal dispersion"))
+            .with_param(DspParamSchema::toggle("dual_piezo_pickup_sync", "Dual Piezo Sensor Stereo Sync", true, "Phase-coherent stereo pickup from dual piezoelectric contact transducers"))
+        );
+        descriptors.insert("PluckedInstrumentProfile".to_string(), DspNodeDescriptor::new("PluckedInstrumentProfile", "Acoustic Plucked String Instrument Physics Profile", DspNodeCategory::AcousticPhysicalModel, "Acoustic plucked string profile configuring steel, nylon, grand piano, harpsichord quill, and harp waveguide stiffness, body coupling, and sympathetic sustain")
+            .with_param(DspParamSchema::choice("instrument_type_mode", "Plucked Instrument Acoustic Mode", &["Acoustic Steel Guitar", "Classical Nylon", "Concert Grand Piano", "Flemish Harpsichord", "Concert Pedal Harp"], 0, "Selects physical string material, plectrum excitation, and body geometry"))
+            .with_param(DspParamSchema::knob("string_stiffness_b", "Inharmonic String Bending Stiffness", 0.0001, 0.05, 0.0015, "disp", MacroRole::Tone, "Non-zero bending stiffness coefficient causing modal inharmonicity"))
+            .with_param(DspParamSchema::knob("body_coupling_db", "Bridge-to-Soundboard Coupling Gain", -36.0, 0.0, -12.0, "dB", MacroRole::Character, "Acoustic energy transmission from vibrating string into body chamber"))
+            .with_param(DspParamSchema::knob("pluck_width_ratio", "Plectrum Contact Width Ratio", 0.01, 0.50, 0.15, "width", MacroRole::Punch, "Normalized excitation contact width suppressing higher spectral notches"))
+            .with_param(DspParamSchema::knob("sympathetic_sustain_sec", "Sympathetic Open String Sustain", 0.1, 12.0, 3.5, "s", MacroRole::Space, "Decay time of sympathetic unplayed string resonance bank"))
+            .with_param(DspParamSchema::toggle("bridge_polarization_sync", "Dual-Plane Polarization Coupling Sync", true, "Couples horizontal and vertical polarization planes through the bridge"))
+        );
+        descriptors.insert("MembraneInstrumentProfile".to_string(), DspNodeDescriptor::new("MembraneInstrumentProfile", "Percussion Membrane Drum & Cavity Acoustic Profile", DspNodeCategory::AcousticPhysicalModel, "Percussive membrane instrument profile configuring orchestral timpani kettle volumes, bass drum inertia, snare wire rattles, and non-linear tension pitch drops")
+            .with_param(DspParamSchema::choice("membrane_type_mode", "Percussion Membrane Instrument Mode", &["Timpani Kettle", "Concert Bass Drum", "Snare Drum", "Acoustic Tom-Tom", "Bongos & Congas"], 0, "Selects drum membrane profile and resonant enclosure topology"))
+            .with_param(DspParamSchema::knob("kettle_air_volume_liters", "Acoustic Cavity Air Volume", 5.0, 250.0, 65.0, "L", MacroRole::Tone, "Enclosed kettle or shell air volume shifting modal frequency ratios"))
+            .with_param(DspParamSchema::knob("head_tension_n_m", "Drum Skin Radial Tension", 500.0, 8000.0, 2400.0, "N/m", MacroRole::Tone, "Tension force applied across circular membrane perimeter"))
+            .with_param(DspParamSchema::knob("snare_wire_rattle_gain", "Resonant Snare Wire Rattle Gain", 0.0, 1.0, 0.0, "rattle", MacroRole::Character, "Intensity of non-linear contact rattling against resonant drum head"))
+            .with_param(DspParamSchema::knob("nonlinear_pitch_drop_cents", "High-Displacement Pitch Drop Envelope", 0.0, 600.0, 120.0, "cents", MacroRole::Punch, "Transient fundamental frequency pitch drop on high-energy strikes"))
+            .with_param(DspParamSchema::toggle("dual_head_coupling_sync", "Batter & Resonant Head Air Coupling Sync", true, "Acoustically couples top batter head to bottom resonant skin via enclosed air"))
+        );
+        descriptors.insert("MeshMaterialProfile".to_string(), DspNodeDescriptor::new("MeshMaterialProfile", "2D Waveguide Resonator Physical Mesh Material Profile", DspNodeCategory::AcousticPhysicalModel, "2D physical waveguide mesh material profile defining elastic membrane properties, stiff metallic plate inharmonicity, boundary reflections, and propagation speeds")
+            .with_param(DspParamSchema::choice("mesh_geometry_mode", "Waveguide Mesh Material Geometry", &["Elastic Membrane", "Stiff Metallic Plate", "1D Acoustic Bar"], 0, "Selects modal material equations and boundary geometry"))
+            .with_param(DspParamSchema::knob("propagation_wave_speed", "Transverse Wave Propagation Speed", 50.0, 2000.0, 340.0, "m/s", MacroRole::Tone, "Phase velocity of traveling wave packets across 2D grid nodes"))
+            .with_param(DspParamSchema::knob("junction_damping_coeff", "Inter-Junction Loss Dissipation Factor", 0.001, 0.20, 0.025, "damp", MacroRole::Tone, "Scattering junction friction loss per time-step"))
+            .with_param(DspParamSchema::knob("rim_boundary_reflection", "Boundary Termination Reflection Coefficient", -1.0, 1.0, -0.98, "coeff", MacroRole::Character, "Phase reflection coefficient at outer rim boundaries"))
+            .with_param(DspParamSchema::knob("inharmonic_stiffness_disp", "Biharmonic Plate Stiffness Dispersion", 0.0, 1.0, 0.15, "stiff", MacroRole::Tone, "Dispersion filter coefficient modeling metal gong and cymbal stiffness"))
+            .with_param(DspParamSchema::toggle("mesh_energy_conservation_sync", "Strict Energy Conservation Watchdog", true, "Prevents numerical overflow and explosive runaway on resonant nodes"))
+        );
+        descriptors.insert("RotaryCabinetModel".to_string(), DspNodeDescriptor::new("RotaryCabinetModel", "Leslie Vintage Rotary Speaker Enclosure Cabinet Profile", DspNodeCategory::Modulation, "Vintage Leslie rotary speaker cabinet profile modeling 122 tube amps, 147 open-back cabinets, 760 solid-state drives, rotor inertia acceleration, and mic spreads")
+            .with_param(DspParamSchema::choice("cabinet_topology_mode", "Rotary Cabinet Enclosure Model", &["Leslie 122 Vintage Tube", "Leslie 147 Open-Back", "Leslie 760 Solid-State", "Custom Twin Horn Spatial"], 0, "Selects wooden cabinet construction, horn flare, and amplifier topology"))
+            .with_param(DspParamSchema::knob("horn_rotor_acceleration", "Treble Horn Spin Acceleration Time", 0.5, 8.0, 2.2, "s", MacroRole::Tone, "Inertial spin ramp-up time for lightweight treble rotating horn"))
+            .with_param(DspParamSchema::knob("bass_drum_acceleration", "Bass Drum Spin Acceleration Time", 1.0, 12.0, 4.8, "s", MacroRole::Tone, "Inertial spin ramp-up time for heavy wooden bass rotor scoop"))
+            .with_param(DspParamSchema::knob("tube_preamp_drive_db", "6550 Tube Preamp Saturation Drive", -12.0, 24.0, 6.0, "dB", MacroRole::Punch, "Harmonic overdrive from pushed tube power amplifier stage"))
+            .with_param(DspParamSchema::knob("mic_distance_meters", "Stereo Microphone Capture Distance", 0.2, 3.0, 0.85, "m", MacroRole::Space, "Microphone placement distance from cabinet louvers affecting AM depth"))
+            .with_param(DspParamSchema::toggle("stereo_binaural_spread_sync", "Dual Counter-Rotating Stereo Field Sync", true, "Calculates phase-aligned acoustic doppler modulation across stereo channels"))
+        );
+        descriptors.insert("ShakuhachiProfile".to_string(), DspNodeDescriptor::new("ShakuhachiProfile", "Japanese Traditional Shakuhachi Bamboo Flute Profile", DspNodeCategory::AcousticPhysicalModel, "Traditional Japanese bamboo flute acoustic profile defining classical Honkyoku, Jinashi Zen, Min'yo folk, and explosive Murai-iki blowing physics and embouchure angles")
+            .with_param(DspParamSchema::choice("flute_tradition_mode", "Shakuhachi Tradition & Performance Style", &["Honkyoku Traditional", "Zen Meditative", "Min'yo Folk", "Sankyoku Ensemble", "Murai-Iki Explosive"], 0, "Selects performance style, flute length, and bore character"))
+            .with_param(DspParamSchema::knob("bore_length_shaku", "Nominal Flute Length in Shaku Units", 1.4, 3.0, 1.8, "shaku", MacroRole::Tone, "Traditional length (1.8 shaku = standard D fundamental tuning)"))
+            .with_param(DspParamSchema::knob("blowing_edge_angle_deg", "Utaguchi Sharp Blowing Edge Angle", 20.0, 60.0, 38.0, "deg", MacroRole::Tone, "Horn insert angle at blowing edge determining vortex excitation threshold"))
+            .with_param(DspParamSchema::knob("breath_turbulence_ratio", "Muraiki Breath Noise Turbulence Level", 0.0, 1.0, 0.40, "noise", MacroRole::Character, "Volume of unpitched chaotic breath air crossing the labium split"))
+            .with_param(DspParamSchema::knob("meri_kari_bend_cents", "Meri/Kari Chin Angle Pitch Bend", -300.0, 100.0, 0.0, "cents", MacroRole::Tone, "Pitch modulation from tilting player chin down (meri) or up (kari)"))
+            .with_param(DspParamSchema::toggle("madake_root_bore_sync", "Madake Bamboo Root Node Irregularity Sync", true, "Simulates non-uniform inner bore nodes of natural harvested bamboo root"))
+        );
+        descriptors.insert("SitarProfile".to_string(), DspNodeDescriptor::new("SitarProfile", "Indian Classical Sitar & Jawari Bridge Acoustic Profile", DspNodeCategory::AcousticPhysicalModel, "Acoustic sitar physical model profile defining Kharaj-Pancham, Gayaki vocal, Surbahar bass, and electric sitar traditions, flat parabolic Jawari buzz, and Tarafdar coupling")
+            .with_param(DspParamSchema::choice("sitar_tradition_mode", "Classical Sitar Stylistic Tradition", &["Ravi Shankar Kharaj", "Vilayat Khan Gayaki", "Surbahar Bass", "Electric Sitar", "Antique Gourd"], 0, "Selects sitar string gauges, jawari profiling, and resonant gourds"))
+            .with_param(DspParamSchema::knob("jawari_buzz_curvature", "Jawari Parabolic Bone Bridge Curvature", 0.1, 1.0, 0.85, "buzz", MacroRole::Tone, "Gentle upward curvature of camel bone bridge generating singing buzzy overtones"))
+            .with_param(DspParamSchema::knob("tarafdar_sympathetic_gain", "Tarafdar Sympathetic Resonance Gain", -36.0, 6.0, 0.0, "dB", MacroRole::Space, "Amplification of 11-13 sympathetic under-strings responding to main melody"))
+            .with_param(DspParamSchema::knob("tabli_spruce_coupling", "Toon Wood Tabli Soundboard Coupling", 0.1, 1.0, 0.72, "couple", MacroRole::Character, "Vibrational energy transfer from bridge foot to hollow wooden soundboard"))
+            .with_param(DspParamSchema::knob("jiva_thread_position_mm", "Cotton Jiva Thread Fine Adjustment", 0.1, 10.0, 2.4, "mm", MacroRole::Tone, "Position of fine cotton thread under string tuning jawari buzz contact point"))
+            .with_param(DspParamSchema::toggle("gourd_resonator_phase_sync", "Upper Tumba & Lower Kaddu Gourd Phase Sync", true, "Acoustically couples upper neck gourd to primary lower resonator sphere"))
+        );
+        descriptors.insert("SoundboardProfile".to_string(), DspNodeDescriptor::new("SoundboardProfile", "Concert Grand Piano Soundboard Acoustic Radiation Profile", DspNodeCategory::AcousticPhysicalModel, "Grand piano spruce soundboard profile modeling Steinway D 9-ft, Bösendorfer Imperial 290, Yamaha CFX, wood grain density, rib stiffening, and prompt/aftersound ratios")
+            .with_param(DspParamSchema::choice("soundboard_model_mode", "Concert Grand Soundboard Model", &["Steinway D 9-Foot", "Bösendorfer Imperial 290", "Yamaha CFX", "Intimate Studio Grand", "Impressionist Una Corda"], 0, "Selects soundboard dimension, bridge placement, and timber grain profile"))
+            .with_param(DspParamSchema::knob("wood_density_kg_m3", "Sitka Spruce Soundboard Density", 300.0, 700.0, 420.0, "kg/m³", MacroRole::Tone, "Specific gravity and density of cured alpine spruce planks"))
+            .with_param(DspParamSchema::knob("bridge_admittance_scale", "Bridge Mechanical Admittance Scale", 0.1, 2.5, 1.0, "admit", MacroRole::Punch, "Dynamic mobility of bridge allowing string energy into soundboard"))
+            .with_param(DspParamSchema::knob("rib_stiffening_factor", "Transverse Soundboard Rib Stiffness", 0.5, 3.0, 1.4, "stiff", MacroRole::Tone, "Cross-grain stiffening factor from glued spruce support ribs"))
+            .with_param(DspParamSchema::knob("prompt_aftersound_ratio", "Prompt Sound vs Lingering Aftersound Ratio", 0.1, 1.0, 0.55, "ratio", MacroRole::Space, "Balance between fast initial acoustic burst and lingering resonant tail"))
+            .with_param(DspParamSchema::toggle("soundboard_modal_matrix_sync", "Full Modal Admittance Matrix Sync", true, "Computes 64-mode 2D plate Eigenfrequencies and radiation damping"))
+        );
+        descriptors.insert("SpringLatticeProfile".to_string(), DspNodeDescriptor::new("SpringLatticeProfile", "Mechanical Helical Spring Reverb Tank Lattice Profile", DspNodeCategory::TimeSpace, "Helical spring reverb profile configuring vintage Accutronics tanks, studio plate suspensions, Duffing cubic stiffness non-linearities, and chirpy dispersion gradients")
+            .with_param(DspParamSchema::choice("tank_topology_mode", "Spring Reverb Tank Construction", &["Vintage Accutronics 2/3 Spring", "Studio Plate Suspension", "Dual Helical Spring Tank", "Resonant Helical Coil", "Nonlinear Shaker Table", "Multi-Axis 3D Lattice"], 0, "Selects number of transmission springs and magnetic transducer coupling"))
+            .with_param(DspParamSchema::knob("helical_coil_turns", "Total Helical Wire Turns Count", 50.0, 800.0, 320.0, "turns", MacroRole::Tone, "Number of active helical turns determining high-frequency chirp delay"))
+            .with_param(DspParamSchema::knob("duffing_nonlinearity_beta", "Duffing Cubic Hardening Coefficient", 0.0, 1.0, 0.28, "beta", MacroRole::Punch, "Non-linear spring restoring force creating metallic 'boing' timbre on transients"))
+            .with_param(DspParamSchema::knob("chirp_dispersion_gradient", "High-to-Low Dispersion Gradient", 0.1, 5.0, 1.6, "disp", MacroRole::Space, "Frequency-dependent group velocity delay between treble and bass waves"))
+            .with_param(DspParamSchema::knob("chassis_transducer_drive", "Drive Transducer Coil Overdrive", 0.0, 1.0, 0.65, "drive", MacroRole::Tone, "Input drive coil magnetic saturation and chassis thump sensitivity"))
+            .with_param(DspParamSchema::toggle("antipodal_coil_coupling_sync", "Antipodal Phase Cancelation Sync", true, "Balances out-of-phase pickup transducers for wide ambient stereo imaging"))
+        );
+        descriptors.insert("TonewheelOrganProfile".to_string(), DspNodeDescriptor::new("TonewheelOrganProfile", "Hammond Tonewheel Drawbar Organ Sound Profile", DspNodeCategory::AcousticPhysicalModel, "Classic tonewheel organ registration profile modeling Gospel, Jazz Trio Jimmy Smith, screaming Rock, drawbar footages (16', 8', 4'), and 2nd/3rd fast percussion")
+            .with_param(DspParamSchema::choice("drawbar_preset_mode", "Tonewheel Organ Registration Style", &["Classic Gospel (88 8000 008)", "Jazz Trio 888 (88 8000 000)", "Full Rock Power (88 8888 888)", "Mellow Theater (80 0008 000)", "Funky Groove (80 8000 008)", "Ambient Swell (80 0008 888)"], 0, "Pre-configured drawbar footages and percussion settings"))
+            .with_param(DspParamSchema::knob("drawbar_16_sub", "16-Foot Sub-Octave Drawbar Level", 0.0, 8.0, 8.0, "step", MacroRole::Tone, "Deep bass foundation drawbar level from 0 (off) to 8 (full)"))
+            .with_param(DspParamSchema::knob("drawbar_8_fundamental", "8-Foot Fundamental Unison Drawbar", 0.0, 8.0, 8.0, "step", MacroRole::Tone, "Core tonal pitch drawbar level from 0 to 8"))
+            .with_param(DspParamSchema::knob("drawbar_4_octave", "4-Foot Octave Harmonic Drawbar", 0.0, 8.0, 8.0, "step", MacroRole::Tone, "First octave overtone harmonic drawbar level from 0 to 8"))
+            .with_param(DspParamSchema::choice("percussion_harmonic_select", "Harmonic Percussion Transient Mode", &["Off", "2nd Harmonic (Soft)", "2nd Harmonic (Fast)", "3rd Harmonic (Fast)"], 3, "Selects keyed harmonic percussive chime trigger transient"))
+            .with_param(DspParamSchema::toggle("scanner_vibrato_chorus_sync", "Mechanical Scanner Vibrato/Chorus Sync", true, "Simulates rotating capacitor scanner delay line for authentic C3 chorus"))
+        );
+        descriptors.insert("WoodwindInstrumentProfile".to_string(), DspNodeDescriptor::new("WoodwindInstrumentProfile", "Acoustic Woodwind Flute & Labium Jet Instrument Profile", DspNodeCategory::AcousticPhysicalModel, "Acoustic woodwind flute profile configuring Concert Flute, Piccolo, Alto Recorder, Shakuhachi, and Pan Flute labium split distances, vortex speeds, and radiation losses")
+            .with_param(DspParamSchema::choice("flute_instrument_mode", "Woodwind Acoustic Instrument Mode", &["Concert Flute C4", "Piccolo C5", "Alto Recorder", "Shakuhachi Bamboo", "Pan Flute Array"], 0, "Selects headjoint type, bore geometry, and radiation impedance"))
+            .with_param(DspParamSchema::knob("embouchure_flue_distance", "Lip-to-Labium Flue Distance", 2.0, 15.0, 6.0, "mm", MacroRole::Tone, "Distance from airway channel to cutting edge determining jet delay time"))
+            .with_param(DspParamSchema::knob("air_jet_velocity_mps", "Blowing Air Jet Streaming Speed", 5.0, 50.0, 22.0, "m/s", MacroRole::Tone, "Centerline stream velocity controlling fundamental vs octave overblowing"))
+            .with_param(DspParamSchema::knob("vortex_shedding_q", "Labium Vortex Shedding Quality Q", 2.0, 30.0, 12.0, "Q", MacroRole::Tone, "Sharpness of non-linear hydrodynamic vortex boundary shedding"))
+            .with_param(DspParamSchema::knob("pipe_end_reflection_loss", "Open End Acoustic Radiation Loss", 0.01, 0.30, 0.08, "loss", MacroRole::Character, "High-frequency spherical acoustic energy radiated away at bell/open end"))
+            .with_param(DspParamSchema::toggle("fipple_split_jet_sync", "Hydrodynamic Jet Splicing Sync", true, "Couples jet phase delay with resonant acoustic velocity at tonehole ports"))
+        );
+        descriptors.insert("BellowsInterpolationCurve".to_string(), DspNodeDescriptor::new("BellowsInterpolationCurve", "Accordion Bellows Gesture Keyframe Interpolation Curve", DspNodeCategory::Modulation, "Dynamic keyframe trajectory interpolation curve for accordion bellows pressure, chamber coupling, and air inrush transients across timeline beats")
+            .with_param(DspParamSchema::choice("curve_type_mode", "Bellows Waypoint Curve Topology", &["Cubic Catmull-Rom", "Cubic Bezier", "Linear Segment", "Hold / Step", "Exponential Ramp"], 0, "Selects mathematical interpolation curve between pressure waypoints"))
+            .with_param(DspParamSchema::knob("tension_catmull_rom", "Catmull-Rom Spline Tension Parameter", 0.0, 1.0, 0.5, "tau", MacroRole::Tone, "Controls overshoot tightness and curvature smoothness across waypoints"))
+            .with_param(DspParamSchema::knob("bezier_handle_in_x", "Cubic Bezier Inflow Tangent Handle X", 0.0, 1.0, 0.25, "inX", MacroRole::Tone, "Normalized time handle position for incoming trajectory easing"))
+            .with_param(DspParamSchema::knob("bezier_handle_out_x", "Cubic Bezier Outflow Tangent Handle X", 0.0, 1.0, 0.75, "outX", MacroRole::Tone, "Normalized time handle position for outgoing trajectory easing"))
+            .with_param(DspParamSchema::knob("smoothing_window_beats", "Sub-Beat Transient Smoothing Window", 0.05, 4.0, 0.25, "beats", MacroRole::Punch, "Running filter duration preventing clicks during sudden bellows directional reversal"))
+            .with_param(DspParamSchema::toggle("isochronous_timeline_sync", "Transport Clock Isochronous Quantization Sync", true, "Locks waypoint evaluation to precise audio-engine render buffer boundaries"))
+        );
+        descriptors.insert("BowingInterpolationCurve".to_string(), DspNodeDescriptor::new("BowingInterpolationCurve", "Orchestral Cello & Bowing Gesture Interpolation Curve", DspNodeCategory::Modulation, "Continuous bowing parameter trajectory interpolation engine controlling bow velocity, normal friction force, bridge proximity beta, and Helmholtz stick-slip dynamics")
+            .with_param(DspParamSchema::choice("curve_type_mode", "Bowing Waypoint Curve Topology", &["Cubic Catmull-Rom", "Cubic Bezier", "Linear Segment", "Hold / Step", "Exponential Ramp"], 0, "Selects mathematical curve interpolating between bowing waypoints"))
+            .with_param(DspParamSchema::knob("bow_velocity_smoothing", "Bow Stroke Velocity Smoothing Time", 0.001, 0.5, 0.04, "s", MacroRole::Tone, "Low-pass filter time constant smoothing abrupt player hand gestures"))
+            .with_param(DspParamSchema::knob("force_hysteresis_gamma", "Normal Bow Force Gamma Response", 0.5, 3.0, 1.2, "gamma", MacroRole::Punch, "Curvature exponent mapping velocity to down-bearing normal string force"))
+            .with_param(DspParamSchema::knob("bridge_distance_curvature", "Sul Ponticello / Tasto Distance Shape", 0.1, 2.0, 1.0, "curv", MacroRole::Character, "Nonlinear bow-to-bridge proximity mapping controlling overtone brilliance"))
+            .with_param(DspParamSchema::knob("bezier_tangent_angle", "Bow Reversal Tangent Angle", -60.0, 60.0, 0.0, "deg", MacroRole::Tone, "Angular tilt of Bezier handles at bow direction turnaround waypoints"))
+            .with_param(DspParamSchema::toggle("continuous_helmholtz_sync", "Helmholtz Wave Stick-Slip Phase Locking", true, "Synchronizes bow velocity transitions with string resonant fundamental period"))
+        );
+        descriptors.insert("ClavinetInterpolationCurve".to_string(), DspNodeDescriptor::new("ClavinetInterpolationCurve", "Clavinet Tangent Strike Gesture Interpolation Curve", DspNodeCategory::Modulation, "Multi-dimensional gesture curve engine managing clavinet tangent impact velocity, anvil contact duration, yarn string damping, and snappy key releases")
+            .with_param(DspParamSchema::choice("curve_type_mode", "Tangent Strike Curve Topology", &["Cubic Catmull-Rom", "Cubic Bezier", "Linear Segment", "Hold / Step", "Exponential Ramp"], 0, "Selects interpolation formula for tangent strike kinematics"))
+            .with_param(DspParamSchema::knob("strike_velocity_gamma", "Key Strike Velocity Mapping Exponent", 0.2, 3.0, 1.0, "gamma", MacroRole::Punch, "Curvature exponent shaping MIDI velocity into physical strike acceleration"))
+            .with_param(DspParamSchema::knob("anvil_contact_duration_ms", "Tangent-to-Anvil Metal Dwell Duration", 1.0, 80.0, 15.0, "ms", MacroRole::Tone, "Time rubber tangent pad holds string pressed hard against metal anvil"))
+            .with_param(DspParamSchema::knob("yarn_damping_curve_slope", "Woven Yarn String Damping Envelope", 0.1, 5.0, 1.5, "slope", MacroRole::Tone, "Steepness of high-frequency attenuation curve from damping yarn"))
+            .with_param(DspParamSchema::knob("key_release_snap_time_ms", "Return Spring Key Snap Release Duration", 0.5, 40.0, 5.0, "ms", MacroRole::Character, "Duration of mechanical key snap-back upon note release"))
+            .with_param(DspParamSchema::toggle("tangent_impact_physics_sync", "Sub-Sample Tangent Strike Synchronization", true, "Aligns mechanical tangent impact events with sub-sample audio precision"))
+        );
+        descriptors.insert("EpInterpolationCurve".to_string(), DspNodeDescriptor::new("EpInterpolationCurve", "Electric Piano Tine Excitation Gesture Interpolation Curve", DspNodeCategory::Modulation, "Keyframe trajectory interpolation engine for electric piano tine excitation, hammer felt hardness, tonebar coupling, and nonlinear magnetic pickup gaps")
+            .with_param(DspParamSchema::choice("curve_type_mode", "EP Tine Strike Curve Topology", &["Cubic Catmull-Rom", "Cubic Bezier", "Linear Segment", "Hold / Step", "Exponential Ramp"], 0, "Selects curve profile for tine hammer strikes and damper releases"))
+            .with_param(DspParamSchema::knob("hammer_strike_velocity_exp", "Neoprene Tip Strike Velocity Exponent", 0.5, 3.5, 1.8, "exp", MacroRole::Punch, "Power-law scaling converting key velocity into hammer impact impulse"))
+            .with_param(DspParamSchema::knob("tonebar_coupling_time_ms", "Tonebar Sympathetic Bleed Rise Time", 5.0, 250.0, 45.0, "ms", MacroRole::Tone, "Time constant for vibration transfer from tine to massive steel tonebar"))
+            .with_param(DspParamSchema::knob("pickup_nonlinear_curve_shape", "Variable-Reluctance Pickup Distortion Shape", 0.1, 2.5, 1.0, "shape", MacroRole::Character, "Asymmetric saturation curve as vibrating tine tip approaches magnet core"))
+            .with_param(DspParamSchema::knob("key_off_damper_time_ms", "Felt Damper Arm Mute Decay Time", 10.0, 500.0, 85.0, "ms", MacroRole::Space, "Rate at which felt damper arm attenuates ringing tine upon key release"))
+            .with_param(DspParamSchema::toggle("asymmetric_tine_dynamics_sync", "Bimodal Tine & Tonebar Phase Alignment", true, "Synchronizes fundamental tine mode with secondary harmonic tonebar swing"))
+        );
+        descriptors.insert("GlassInterpolationCurve".to_string(), DspNodeDescriptor::new("GlassInterpolationCurve", "Glass Armonica Spindle Rotation Gesture Interpolation Curve", DspNodeCategory::Modulation, "Multi-dimensional keyframe curve engine for Benjamin Franklin glass armonica rotational friction, finger moisture levels, and water rim pitch chirps")
+            .with_param(DspParamSchema::choice("curve_type_mode", "Glass Armonica Waypoint Curve Topology", &["Cubic Catmull-Rom", "Cubic Bezier", "Linear Segment", "Hold / Step", "Exponential Ramp"], 0, "Selects trajectory curve for glass spindle rotational velocity"))
+            .with_param(DspParamSchema::knob("spindle_omega_smoothing_s", "Treadle Spindle Angular Smoothing Time", 0.01, 2.0, 0.20, "s", MacroRole::Tone, "Rotational flywheel inertia filter smoothing pedal treadle acceleration"))
+            .with_param(DspParamSchema::knob("finger_pressure_contour_gamma", "Moist Finger Normal Force Gamma Contour", 0.4, 2.5, 1.0, "gamma", MacroRole::Tone, "Exponent shaping touch contact pressure against spinning quartz bowl rim"))
+            .with_param(DspParamSchema::knob("water_film_damping_slope", "Aqueous Lubricant Boundary Damping Slope", 0.05, 3.0, 0.8, "slope", MacroRole::Space, "Hydrodynamic shear layer damping slope between skin ridges and glass"))
+            .with_param(DspParamSchema::knob("modal_chirp_slew_rate", "Water Level Pitch Detuning Slew Rate", 0.1, 10.0, 1.5, "st/s", MacroRole::Tone, "Slew rate limiting pitch deviation during sudden fingertip wetting shifts"))
+            .with_param(DspParamSchema::toggle("boundary_friction_physics_sync", "Stribeck Friction Boundary Phase Synchronization", true, "Aligns stick-slip frictional state with crystalline shear resonant cycles"))
+        );
+        descriptors.insert("GrandPianoInterpolationCurve".to_string(), DspNodeDescriptor::new("GrandPianoInterpolationCurve", "Concert Grand Escapement Felt Gesture Interpolation Curve", DspNodeCategory::Modulation, "Trajectory curve generator for grand piano escapement felt hammers, key repetition levers, damper pedal sweeps, and una corda soft pedal shifts")
+            .with_param(DspParamSchema::choice("curve_type_mode", "Grand Piano Waypoint Curve Topology", &["Cubic Catmull-Rom", "Cubic Bezier", "Linear Segment", "Hold / Step", "Exponential Ramp"], 0, "Selects mathematical interpolation curve between piano articulation points"))
+            .with_param(DspParamSchema::knob("escapement_release_speed", "Double Escapement Jack Drop-Off Velocity", 0.1, 1.0, 0.85, "speed", MacroRole::Punch, "Speed at which the escapement jack trips free just before string impact"))
+            .with_param(DspParamSchema::knob("hammer_felt_hysteresis_exp", "Nonlinear Felt Compression Exponent", 1.5, 4.0, 2.5, "exp", MacroRole::Tone, "Hertzian contact stiffness exponent modeling compressed wool felt"))
+            .with_param(DspParamSchema::knob("damper_lift_timeline_curve", "Sustain Damper Rail Lift Trajectory", 0.0, 1.0, 0.0, "lift", MacroRole::Space, "Gradual half-pedal damper rail position lifting felt wedges from strings"))
+            .with_param(DspParamSchema::knob("una_corda_shift_slew_ms", "Una Corda Keyboard Shift Slew Time", 10.0, 400.0, 120.0, "ms", MacroRole::Character, "Duration of mechanical keyboard shift into softer felt grooves"))
+            .with_param(DspParamSchema::toggle("three_string_unison_sync", "Tri-Chord Unison Coupling Sync", true, "Couples energy transmission across 3 unison strings via shared wooden bridge"))
+        );
+        descriptors.insert("HurdyGurdyInterpolationCurve".to_string(), DspNodeDescriptor::new("HurdyGurdyInterpolationCurve", "Hurdy-Gurdy Rosin Wheel Crank Gesture Interpolation Curve", DspNodeCategory::Modulation, "Trajectory interpolation engine for hurdy-gurdy crank wheel RPM, coup de poignet wrist accents, buzzing chien bridge pressure, and drone tangent mutes")
+            .with_param(DspParamSchema::choice("curve_type_mode", "Hurdy-Gurdy Waypoint Curve Topology", &["Cubic Catmull-Rom", "Cubic Bezier", "Linear Segment", "Hold / Step", "Exponential Ramp"], 0, "Selects curve profile for continuous crank rotation and accents"))
+            .with_param(DspParamSchema::knob("crank_wheel_inertia_tau", "Solid Pearwood Wheel Inertia Time Constant", 0.05, 3.0, 0.45, "s", MacroRole::Tone, "Flywheel rotational inertia resisting sudden crank hand speed fluctuations"))
+            .with_param(DspParamSchema::knob("chien_pressure_response_curve", "Buzzing Chien Pressure Response Curve", 0.2, 3.0, 1.0, "gamma", MacroRole::Punch, "Exponential sensitivity curve triggering chien bridge buzzing rattle"))
+            .with_param(DspParamSchema::knob("drone_damping_transition_ms", "Drone String Tangent Mute Transition", 5.0, 200.0, 35.0, "ms", MacroRole::Tone, "Crossfade duration when engaging or disengaging drone bass strings"))
+            .with_param(DspParamSchema::knob("rosin_stick_slip_slew_rate", "Rosin Stick-Slip Dynamic Slew Rate", 0.1, 20.0, 4.0, "rate", MacroRole::Character, "Slew rate limiter on rosin friction coefficient transitions"))
+            .with_param(DspParamSchema::toggle("percussive_coup_de_poignet_sync", "Coup de Poignet Wrist Snap Transient Sync", true, "Locks percussive wrist acceleration pulses to musical beat boundaries"))
+        );
+        descriptors.insert("KotoInterpolationCurve".to_string(), DspNodeDescriptor::new("KotoInterpolationCurve", "Koto Tsume Pluck & Ji Bridge Gesture Interpolation Curve", DspNodeCategory::Modulation, "Keyframe curve generator for traditional Japanese koto tsume plucking, oshite lateral string bends, hiki-iro release vibratos, and movable ji bridge positions")
+            .with_param(DspParamSchema::choice("curve_type_mode", "Koto Articulation Curve Topology", &["Cubic Catmull-Rom", "Cubic Bezier", "Linear Segment", "Hold / Step", "Exponential Ramp"], 0, "Selects curve formulation for plucks, bends, and bridge repositioning"))
+            .with_param(DspParamSchema::knob("tsume_strike_attack_tau_ms", "Ivory Tsume Pick Attack Transient Duration", 0.5, 30.0, 3.5, "ms", MacroRole::Punch, "Rise time of stiff ivory pick contact before string snaps free"))
+            .with_param(DspParamSchema::knob("oshite_bend_slew_semitones_s", "Oshite Left-Hand Press Slew Rate", 0.5, 24.0, 6.0, "st/s", MacroRole::Tone, "Slew rate of pitch bend from pressing left of the ji bridge"))
+            .with_param(DspParamSchema::knob("bridge_sliding_damping_slope", "Movable Ji Bridge Friction Damping Slope", 0.1, 4.0, 1.2, "slope", MacroRole::Tone, "Damping slope when adjusting ji bridge position along paulownia soundboard"))
+            .with_param(DspParamSchema::knob("hiki_iro_vibrato_envelope", "Hiki-Iro Pull Vibrato Modulation Depth", 0.0, 1.0, 0.5, "vib", MacroRole::Character, "Amplitude envelope for lingering pitch vibrato following a strong pluck"))
+            .with_param(DspParamSchema::toggle("dual_polarization_string_sync", "In-Plane & Out-of-Plane Polarization Sync", true, "Couples horizontal string plucks with vertical bridge rocking motions"))
+        );
+        descriptors.insert("MalletInterpolationCurve".to_string(), DspNodeDescriptor::new("MalletInterpolationCurve", "Tuned Mallet Percussion Strike Gesture Interpolation Curve", DspNodeCategory::Modulation, "Trajectory curve generator for tuned mallet percussion strikes, Shore hardness envelopes, nodal radial strike positions, and tubular resonator acoustic bleed")
+            .with_param(DspParamSchema::choice("curve_type_mode", "Mallet Strike Curve Topology", &["Cubic Catmull-Rom", "Cubic Bezier", "Linear Segment", "Hold / Step", "Exponential Ramp"], 0, "Selects trajectory curve for percussion impact and decay"))
+            .with_param(DspParamSchema::knob("strike_hardness_ramp_exp", "Dynamic Velocity-to-Hardness Exponent", 0.5, 3.0, 1.5, "exp", MacroRole::Tone, "Scales mallet core stiffness as impact velocity increases"))
+            .with_param(DspParamSchema::knob("radial_position_interpolation", "Center-to-Rim Strike Trajectory Position", 0.0, 1.0, 0.35, "pos", MacroRole::Tone, "Radial point of strike from 0.0 (bar/drum center) to 1.0 (nodal rim)"))
+            .with_param(DspParamSchema::knob("resonator_tube_bleed_tau_ms", "Tuned Resonator Tube Inrush Decay Time", 10.0, 1000.0, 180.0, "ms", MacroRole::Space, "Acoustic coupling decay time into tuned air column beneath tone bar"))
+            .with_param(DspParamSchema::knob("damped_dead_stroke_cutoff_ms", "Dead Stroke Damped Contact Cutoff Time", 2.0, 150.0, 25.0, "ms", MacroRole::Punch, "Transient mute duration when player holds mallet pressed into bar"))
+            .with_param(DspParamSchema::toggle("modal_dispersion_vector_sync", "Harmonic Mode Phase Coherence Sync", true, "Maintains phase coherence across fundamental and first two overtone modes"))
+        );
 
         Self { descriptors }
     }
@@ -8969,6 +9137,27 @@ descriptors.insert("BellowsGesturePattern".to_string(), DspNodeDescriptor::new("
             ("DevicePreset", DspNodeCategory::Utility, "Serialized Modular Device & DSP Preset Container"),
             ("CrashAnalysisResult", DspNodeCategory::Utility, "DSP Audio Engine Panic & Crash Diagnostics Analyzer"),
             ("CollaborationSession", DspNodeCategory::Utility, "Real-Time Multi-User CRDT Collaboration Session"),
+            ("PipeOrganProfile", DspNodeCategory::AcousticPhysicalModel, "Baroque & Gothic Pipe Organ Registration & Scaling Profile"),
+            ("PlateReverbProfile", DspNodeCategory::TimeSpace, "EMT-140 & 240 Precision Suspension Plate Reverb Profile"),
+            ("PluckedInstrumentProfile", DspNodeCategory::AcousticPhysicalModel, "Acoustic Plucked String Instrument Physics Profile"),
+            ("MembraneInstrumentProfile", DspNodeCategory::AcousticPhysicalModel, "Percussion Membrane Drum & Cavity Acoustic Profile"),
+            ("MeshMaterialProfile", DspNodeCategory::AcousticPhysicalModel, "2D Waveguide Resonator Physical Mesh Material Profile"),
+            ("RotaryCabinetModel", DspNodeCategory::Modulation, "Leslie Vintage Rotary Speaker Enclosure Cabinet Profile"),
+            ("ShakuhachiProfile", DspNodeCategory::AcousticPhysicalModel, "Japanese Traditional Shakuhachi Bamboo Flute Profile"),
+            ("SitarProfile", DspNodeCategory::AcousticPhysicalModel, "Indian Classical Sitar & Jawari Bridge Acoustic Profile"),
+            ("SoundboardProfile", DspNodeCategory::AcousticPhysicalModel, "Concert Grand Piano Soundboard Acoustic Radiation Profile"),
+            ("SpringLatticeProfile", DspNodeCategory::TimeSpace, "Mechanical Helical Spring Reverb Tank Lattice Profile"),
+            ("TonewheelOrganProfile", DspNodeCategory::AcousticPhysicalModel, "Hammond Tonewheel Drawbar Organ Sound Profile"),
+            ("WoodwindInstrumentProfile", DspNodeCategory::AcousticPhysicalModel, "Acoustic Woodwind Flute & Labium Jet Instrument Profile"),
+            ("BellowsInterpolationCurve", DspNodeCategory::Modulation, "Accordion Bellows Gesture Keyframe Interpolation Curve"),
+            ("BowingInterpolationCurve", DspNodeCategory::Modulation, "Orchestral Cello & Bowing Gesture Interpolation Curve"),
+            ("ClavinetInterpolationCurve", DspNodeCategory::Modulation, "Clavinet Tangent Strike Gesture Interpolation Curve"),
+            ("EpInterpolationCurve", DspNodeCategory::Modulation, "Electric Piano Tine Excitation Gesture Interpolation Curve"),
+            ("GlassInterpolationCurve", DspNodeCategory::Modulation, "Glass Armonica Spindle Rotation Gesture Interpolation Curve"),
+            ("GrandPianoInterpolationCurve", DspNodeCategory::Modulation, "Concert Grand Escapement Felt Gesture Interpolation Curve"),
+            ("HurdyGurdyInterpolationCurve", DspNodeCategory::Modulation, "Hurdy-Gurdy Rosin Wheel Crank Gesture Interpolation Curve"),
+            ("KotoInterpolationCurve", DspNodeCategory::Modulation, "Koto Tsume Pluck & Ji Bridge Gesture Interpolation Curve"),
+            ("MalletInterpolationCurve", DspNodeCategory::Modulation, "Tuned Mallet Percussion Strike Gesture Interpolation Curve"),
         ]
     }
 
@@ -10980,6 +11169,27 @@ descriptors.insert("BellowsGesturePattern".to_string(), DspNodeDescriptor::new("
             "devicepreset" | "modularpreset" | "dspdevicepreset" => Some("DevicePreset"),
             "crashanalysisresult" | "crashreportresult" | "dspcrashanalyzer" => Some("CrashAnalysisResult"),
             "collaborationsession" | "cloudcollabsession" | "realtimecollabsession" => Some("CollaborationSession"),
+            "pipeorganprofile" | "organplenumprofile" | "baroquepipeorganprofile" => Some("PipeOrganProfile"),
+            "platereverbprofile" | "emt140profile" | "emt240platereverb" => Some("PlateReverbProfile"),
+            "pluckedinstrumentprofile" | "acousticpluckprofile" | "pluckedstringprofile" => Some("PluckedInstrumentProfile"),
+            "membraneinstrumentprofile" | "percussionmembraneprofile" | "timpanimembraneprofile" => Some("MembraneInstrumentProfile"),
+            "meshmaterialprofile" | "waveguidemeshprofile" | "resonatorsurfaceprofile" => Some("MeshMaterialProfile"),
+            "rotarycabinetmodel" | "lesliecabinetprofile" | "rotaryspeakerprofile" => Some("RotaryCabinetModel"),
+            "shakuhachiprofile" | "zenfluteprofile" | "bamboofluteprofile" => Some("ShakuhachiProfile"),
+            "sitarprofile" | "jawarisitarprofile" | "indiansitarprofile" => Some("SitarProfile"),
+            "soundboardprofile" | "steinwaysoundboardprofile" | "grandsoundboardprofile" => Some("SoundboardProfile"),
+            "springlatticeprofile" | "accutronicsspringprofile" | "springreverblattice" => Some("SpringLatticeProfile"),
+            "tonewheelorganprofile" | "b3drawbarprofile" | "hammondorganprofile" => Some("TonewheelOrganProfile"),
+            "woodwindinstrumentprofile" | "acousticfluteprofile" | "woodwindjetprofile" => Some("WoodwindInstrumentProfile"),
+            "bellowsinterpolationcurve" | "accordionbellowscurve" | "bellowscurvetrajectory" => Some("BellowsInterpolationCurve"),
+            "bowinginterpolationcurve" | "cellobowingcurve" | "bowingtrajectorycurve" => Some("BowingInterpolationCurve"),
+            "clavinetinterpolationcurve" | "clavinettangentcurve" | "clavinettrajectorycurve" => Some("ClavinetInterpolationCurve"),
+            "epinterpolationcurve" | "electricpianotinecurve" | "eptrajectorycurve" => Some("EpInterpolationCurve"),
+            "glassinterpolationcurve" | "armonicaspindlecurve" | "glassarmonictrajectory" => Some("GlassInterpolationCurve"),
+            "grandpianointerpolationcurve" | "pianohammercurve" | "grandpianotrajectory" => Some("GrandPianoInterpolationCurve"),
+            "hurdygurdyinterpolationcurve" | "gurdycrankcurve" | "hurdygurdytrajectory" => Some("HurdyGurdyInterpolationCurve"),
+            "kotointerpolationcurve" | "kotooshitecurve" | "kototrajectorycurve" => Some("KotoInterpolationCurve"),
+            "malletinterpolationcurve" | "tunedmalletstrikecurve" | "malletstriketrajectory" => Some("MalletInterpolationCurve"),
             _ => None,
         }
     }
@@ -18320,6 +18530,195 @@ descriptors.insert("BellowsGesturePattern".to_string(), DspNodeDescriptor::new("
                     .with_param(DspParamDescriptor::new_linear("active_cursor_track", "Focused Remote Collaborator Track Lane", 1.0, 64.0, 1.0, "track", (168, 85, 247)))
                     .with_param(DspParamDescriptor::new_linear("auto_merge_conflicts", "Autonomous Non-Destructive Conflict Resolution", 0.0, 1.0, 1.0, "merge", (34, 197, 94)))
             ),
+            "PipeOrganProfile" => Box::new(
+                GenericDspNodeUi::new("PipeOrganProfile", "Baroque & Gothic Pipe Organ Registration & Scaling Profile", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("registration_mode", "Pipe Organ Stop Registration Mode", 0.0, 4.0, 0.0, "mode", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("plenum_mixture_rank", "Plenum Compound Mixture Ranks", 1.0, 8.0, 4.0, "ranks", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_log("windchest_pressure_mmws", "Tracker Windchest Air Pressure", 40.0, 250.0, 95.0, "mmWS", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("pipe_scaling_ratio", "Normmensur Pipe Scaling Ratio", 0.6, 1.8, 1.0, "scale", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("reed_tongue_buzz", "Brass Reed Tongue Vibratory Buzz", 0.0, 1.0, 0.35, "buzz", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("organo_pleno_sync", "Organo Pleno Multivoice Waveguide Sync", true, (16, 185, 129)))
+            ),
+            "PlateReverbProfile" => Box::new(
+                GenericDspNodeUi::new("PlateReverbProfile", "EMT-140 & 240 Precision Suspension Plate Reverb Profile", DspNodeCategory::TimeSpace)
+                    .with_param(DspParamDescriptor::new_linear("plate_material_mode", "Plate Resonator Material Topology", 0.0, 4.0, 0.0, "mode", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("plate_tension_kn", "Perimeter Suspension Spring Tension", 5.0, 50.0, 24.0, "kN", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("damping_pad_distance_mm", "Felt Damping Pad Proximity Gap", 0.5, 30.0, 8.0, "mm", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("transducer_drive_level", "Electrodynamic Input Drive Level", 0.0, 1.0, 0.70, "drive", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("diffusion_rate", "Modal Reflection Diffusion Rate", 0.0, 1.0, 0.85, "diff", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("dual_piezo_pickup_sync", "Dual Piezo Sensor Stereo Sync", true, (16, 185, 129)))
+            ),
+            "PluckedInstrumentProfile" => Box::new(
+                GenericDspNodeUi::new("PluckedInstrumentProfile", "Acoustic Plucked String Instrument Physics Profile", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("instrument_type_mode", "Plucked Instrument Acoustic Mode", 0.0, 4.0, 0.0, "mode", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_log("string_stiffness_b", "Inharmonic String Bending Stiffness", 0.0001, 0.05, 0.0015, "disp", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("body_coupling_db", "Bridge-to-Soundboard Coupling Gain", -36.0, 0.0, -12.0, "dB", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("pluck_width_ratio", "Plectrum Contact Width Ratio", 0.01, 0.50, 0.15, "width", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("sympathetic_sustain_sec", "Sympathetic Open String Sustain", 0.1, 12.0, 3.5, "s", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("bridge_polarization_sync", "Dual-Plane Polarization Coupling Sync", true, (16, 185, 129)))
+            ),
+            "MembraneInstrumentProfile" => Box::new(
+                GenericDspNodeUi::new("MembraneInstrumentProfile", "Percussion Membrane Drum & Cavity Acoustic Profile", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("membrane_type_mode", "Percussion Membrane Instrument Mode", 0.0, 4.0, 0.0, "mode", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("kettle_air_volume_liters", "Acoustic Cavity Air Volume", 5.0, 250.0, 65.0, "L", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("head_tension_n_m", "Drum Skin Radial Tension", 500.0, 8000.0, 2400.0, "N/m", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("snare_wire_rattle_gain", "Resonant Snare Wire Rattle Gain", 0.0, 1.0, 0.0, "rattle", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("nonlinear_pitch_drop_cents", "High-Displacement Pitch Drop Envelope", 0.0, 600.0, 120.0, "cents", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("dual_head_coupling_sync", "Batter & Resonant Head Air Coupling Sync", true, (16, 185, 129)))
+            ),
+            "MeshMaterialProfile" => Box::new(
+                GenericDspNodeUi::new("MeshMaterialProfile", "2D Waveguide Resonator Physical Mesh Material Profile", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("mesh_geometry_mode", "Waveguide Mesh Material Geometry", 0.0, 2.0, 0.0, "mode", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_log("propagation_wave_speed", "Transverse Wave Propagation Speed", 50.0, 2000.0, 340.0, "m/s", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("junction_damping_coeff", "Inter-Junction Loss Dissipation Factor", 0.001, 0.20, 0.025, "damp", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("rim_boundary_reflection", "Boundary Termination Reflection Coefficient", -1.0, 1.0, -0.98, "coeff", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("inharmonic_stiffness_disp", "Biharmonic Plate Stiffness Dispersion", 0.0, 1.0, 0.15, "stiff", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("mesh_energy_conservation_sync", "Strict Energy Conservation Watchdog", true, (16, 185, 129)))
+            ),
+            "RotaryCabinetModel" => Box::new(
+                GenericDspNodeUi::new("RotaryCabinetModel", "Leslie Vintage Rotary Speaker Enclosure Cabinet Profile", DspNodeCategory::Modulation)
+                    .with_param(DspParamDescriptor::new_linear("cabinet_topology_mode", "Rotary Cabinet Enclosure Model", 0.0, 3.0, 0.0, "mode", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("horn_rotor_acceleration", "Treble Horn Spin Acceleration Time", 0.5, 8.0, 2.2, "s", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("bass_drum_acceleration", "Bass Drum Spin Acceleration Time", 1.0, 12.0, 4.8, "s", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("tube_preamp_drive_db", "6550 Tube Preamp Saturation Drive", -12.0, 24.0, 6.0, "dB", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("mic_distance_meters", "Stereo Microphone Capture Distance", 0.2, 3.0, 0.85, "m", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("stereo_binaural_spread_sync", "Dual Counter-Rotating Stereo Field Sync", true, (16, 185, 129)))
+            ),
+            "ShakuhachiProfile" => Box::new(
+                GenericDspNodeUi::new("ShakuhachiProfile", "Japanese Traditional Shakuhachi Bamboo Flute Profile", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("flute_tradition_mode", "Shakuhachi Tradition & Performance Style", 0.0, 4.0, 0.0, "mode", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("bore_length_shaku", "Nominal Flute Length in Shaku Units", 1.4, 3.0, 1.8, "shaku", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("blowing_edge_angle_deg", "Utaguchi Sharp Blowing Edge Angle", 20.0, 60.0, 38.0, "deg", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("breath_turbulence_ratio", "Muraiki Breath Noise Turbulence Level", 0.0, 1.0, 0.40, "noise", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("meri_kari_bend_cents", "Meri/Kari Chin Angle Pitch Bend", -300.0, 100.0, 0.0, "cents", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("madake_root_bore_sync", "Madake Bamboo Root Node Irregularity Sync", true, (16, 185, 129)))
+            ),
+            "SitarProfile" => Box::new(
+                GenericDspNodeUi::new("SitarProfile", "Indian Classical Sitar & Jawari Bridge Acoustic Profile", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("sitar_tradition_mode", "Classical Sitar Stylistic Tradition", 0.0, 4.0, 0.0, "mode", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("jawari_buzz_curvature", "Jawari Parabolic Bone Bridge Curvature", 0.1, 1.0, 0.85, "buzz", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("tarafdar_sympathetic_gain", "Tarafdar Sympathetic Resonance Gain", -36.0, 6.0, 0.0, "dB", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("tabli_spruce_coupling", "Toon Wood Tabli Soundboard Coupling", 0.1, 1.0, 0.72, "couple", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("jiva_thread_position_mm", "Cotton Jiva Thread Fine Adjustment", 0.1, 10.0, 2.4, "mm", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("gourd_resonator_phase_sync", "Upper Tumba & Lower Kaddu Gourd Phase Sync", true, (16, 185, 129)))
+            ),
+            "SoundboardProfile" => Box::new(
+                GenericDspNodeUi::new("SoundboardProfile", "Concert Grand Piano Soundboard Acoustic Radiation Profile", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("soundboard_model_mode", "Concert Grand Soundboard Model", 0.0, 4.0, 0.0, "mode", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("wood_density_kg_m3", "Sitka Spruce Soundboard Density", 300.0, 700.0, 420.0, "kg/m³", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("bridge_admittance_scale", "Bridge Mechanical Admittance Scale", 0.1, 2.5, 1.0, "admit", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("rib_stiffening_factor", "Transverse Soundboard Rib Stiffness", 0.5, 3.0, 1.4, "stiff", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("prompt_aftersound_ratio", "Prompt Sound vs Lingering Aftersound Ratio", 0.1, 1.0, 0.55, "ratio", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("soundboard_modal_matrix_sync", "Full Modal Admittance Matrix Sync", true, (16, 185, 129)))
+            ),
+            "SpringLatticeProfile" => Box::new(
+                GenericDspNodeUi::new("SpringLatticeProfile", "Mechanical Helical Spring Reverb Tank Lattice Profile", DspNodeCategory::TimeSpace)
+                    .with_param(DspParamDescriptor::new_linear("tank_topology_mode", "Spring Reverb Tank Construction", 0.0, 5.0, 0.0, "mode", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("helical_coil_turns", "Total Helical Wire Turns Count", 50.0, 800.0, 320.0, "turns", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("duffing_nonlinearity_beta", "Duffing Cubic Hardening Coefficient", 0.0, 1.0, 0.28, "beta", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("chirp_dispersion_gradient", "High-to-Low Dispersion Gradient", 0.1, 5.0, 1.6, "disp", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("chassis_transducer_drive", "Drive Transducer Coil Overdrive", 0.0, 1.0, 0.65, "drive", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("antipodal_coil_coupling_sync", "Antipodal Phase Cancelation Sync", true, (16, 185, 129)))
+            ),
+            "TonewheelOrganProfile" => Box::new(
+                GenericDspNodeUi::new("TonewheelOrganProfile", "Hammond Tonewheel Drawbar Organ Sound Profile", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("drawbar_preset_mode", "Tonewheel Organ Registration Style", 0.0, 5.0, 0.0, "mode", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("drawbar_16_sub", "16-Foot Sub-Octave Drawbar Level", 0.0, 8.0, 8.0, "step", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("drawbar_8_fundamental", "8-Foot Fundamental Unison Drawbar", 0.0, 8.0, 8.0, "step", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("drawbar_4_octave", "4-Foot Octave Harmonic Drawbar", 0.0, 8.0, 8.0, "step", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("percussion_harmonic_select", "Harmonic Percussion Transient Mode", 0.0, 3.0, 3.0, "mode", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("scanner_vibrato_chorus_sync", "Mechanical Scanner Vibrato/Chorus Sync", true, (16, 185, 129)))
+            ),
+            "WoodwindInstrumentProfile" => Box::new(
+                GenericDspNodeUi::new("WoodwindInstrumentProfile", "Acoustic Woodwind Flute & Labium Jet Instrument Profile", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("flute_instrument_mode", "Woodwind Acoustic Instrument Mode", 0.0, 4.0, 0.0, "mode", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("embouchure_flue_distance", "Lip-to-Labium Flue Distance", 2.0, 15.0, 6.0, "mm", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("air_jet_velocity_mps", "Blowing Air Jet Streaming Speed", 5.0, 50.0, 22.0, "m/s", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("vortex_shedding_q", "Labium Vortex Shedding Quality Q", 2.0, 30.0, 12.0, "Q", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("pipe_end_reflection_loss", "Open End Acoustic Radiation Loss", 0.01, 0.30, 0.08, "loss", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("fipple_split_jet_sync", "Hydrodynamic Jet Splicing Sync", true, (16, 185, 129)))
+            ),
+            "BellowsInterpolationCurve" => Box::new(
+                GenericDspNodeUi::new("BellowsInterpolationCurve", "Accordion Bellows Gesture Keyframe Interpolation Curve", DspNodeCategory::Modulation)
+                    .with_param(DspParamDescriptor::new_linear("curve_type_mode", "Bellows Waypoint Curve Topology", 0.0, 4.0, 0.0, "mode", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("tension_catmull_rom", "Catmull-Rom Spline Tension Parameter", 0.0, 1.0, 0.5, "tau", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("bezier_handle_in_x", "Cubic Bezier Inflow Tangent Handle X", 0.0, 1.0, 0.25, "inX", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("bezier_handle_out_x", "Cubic Bezier Outflow Tangent Handle X", 0.0, 1.0, 0.75, "outX", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("smoothing_window_beats", "Sub-Beat Transient Smoothing Window", 0.05, 4.0, 0.25, "beats", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("isochronous_timeline_sync", "Transport Clock Isochronous Quantization Sync", true, (16, 185, 129)))
+            ),
+            "BowingInterpolationCurve" => Box::new(
+                GenericDspNodeUi::new("BowingInterpolationCurve", "Orchestral Cello & Bowing Gesture Interpolation Curve", DspNodeCategory::Modulation)
+                    .with_param(DspParamDescriptor::new_linear("curve_type_mode", "Bowing Waypoint Curve Topology", 0.0, 4.0, 0.0, "mode", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("bow_velocity_smoothing", "Bow Stroke Velocity Smoothing Time", 0.001, 0.5, 0.04, "s", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("force_hysteresis_gamma", "Normal Bow Force Gamma Response", 0.5, 3.0, 1.2, "gamma", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("bridge_distance_curvature", "Sul Ponticello / Tasto Distance Shape", 0.1, 2.0, 1.0, "curv", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("bezier_tangent_angle", "Bow Reversal Tangent Angle", -60.0, 60.0, 0.0, "deg", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("continuous_helmholtz_sync", "Helmholtz Wave Stick-Slip Phase Locking", true, (16, 185, 129)))
+            ),
+            "ClavinetInterpolationCurve" => Box::new(
+                GenericDspNodeUi::new("ClavinetInterpolationCurve", "Clavinet Tangent Strike Gesture Interpolation Curve", DspNodeCategory::Modulation)
+                    .with_param(DspParamDescriptor::new_linear("curve_type_mode", "Tangent Strike Curve Topology", 0.0, 4.0, 0.0, "mode", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("strike_velocity_gamma", "Key Strike Velocity Mapping Exponent", 0.2, 3.0, 1.0, "gamma", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("anvil_contact_duration_ms", "Tangent-to-Anvil Metal Dwell Duration", 1.0, 80.0, 15.0, "ms", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("yarn_damping_curve_slope", "Woven Yarn String Damping Envelope", 0.1, 5.0, 1.5, "slope", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("key_release_snap_time_ms", "Return Spring Key Snap Release Duration", 0.5, 40.0, 5.0, "ms", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("tangent_impact_physics_sync", "Sub-Sample Tangent Strike Synchronization", true, (16, 185, 129)))
+            ),
+            "EpInterpolationCurve" => Box::new(
+                GenericDspNodeUi::new("EpInterpolationCurve", "Electric Piano Tine Excitation Gesture Interpolation Curve", DspNodeCategory::Modulation)
+                    .with_param(DspParamDescriptor::new_linear("curve_type_mode", "EP Tine Strike Curve Topology", 0.0, 4.0, 0.0, "mode", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("hammer_strike_velocity_exp", "Neoprene Tip Strike Velocity Exponent", 0.5, 3.5, 1.8, "exp", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("tonebar_coupling_time_ms", "Tonebar Sympathetic Bleed Rise Time", 5.0, 250.0, 45.0, "ms", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("pickup_nonlinear_curve_shape", "Variable-Reluctance Pickup Distortion Shape", 0.1, 2.5, 1.0, "shape", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("key_off_damper_time_ms", "Felt Damper Arm Mute Decay Time", 10.0, 500.0, 85.0, "ms", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("asymmetric_tine_dynamics_sync", "Bimodal Tine & Tonebar Phase Alignment", true, (16, 185, 129)))
+            ),
+            "GlassInterpolationCurve" => Box::new(
+                GenericDspNodeUi::new("GlassInterpolationCurve", "Glass Armonica Spindle Rotation Gesture Interpolation Curve", DspNodeCategory::Modulation)
+                    .with_param(DspParamDescriptor::new_linear("curve_type_mode", "Glass Armonica Waypoint Curve Topology", 0.0, 4.0, 0.0, "mode", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("spindle_omega_smoothing_s", "Treadle Spindle Angular Smoothing Time", 0.01, 2.0, 0.20, "s", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("finger_pressure_contour_gamma", "Moist Finger Normal Force Gamma Contour", 0.4, 2.5, 1.0, "gamma", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("water_film_damping_slope", "Aqueous Lubricant Boundary Damping Slope", 0.05, 3.0, 0.8, "slope", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("modal_chirp_slew_rate", "Water Level Pitch Detuning Slew Rate", 0.1, 10.0, 1.5, "st/s", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("boundary_friction_physics_sync", "Stribeck Friction Boundary Phase Synchronization", true, (16, 185, 129)))
+            ),
+            "GrandPianoInterpolationCurve" => Box::new(
+                GenericDspNodeUi::new("GrandPianoInterpolationCurve", "Concert Grand Escapement Felt Gesture Interpolation Curve", DspNodeCategory::Modulation)
+                    .with_param(DspParamDescriptor::new_linear("curve_type_mode", "Grand Piano Waypoint Curve Topology", 0.0, 4.0, 0.0, "mode", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("escapement_release_speed", "Double Escapement Jack Drop-Off Velocity", 0.1, 1.0, 0.85, "speed", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("hammer_felt_hysteresis_exp", "Nonlinear Felt Compression Exponent", 1.5, 4.0, 2.5, "exp", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("damper_lift_timeline_curve", "Sustain Damper Rail Lift Trajectory", 0.0, 1.0, 0.0, "lift", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("una_corda_shift_slew_ms", "Una Corda Keyboard Shift Slew Time", 10.0, 400.0, 120.0, "ms", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("three_string_unison_sync", "Tri-Chord Unison Coupling Sync", true, (16, 185, 129)))
+            ),
+            "HurdyGurdyInterpolationCurve" => Box::new(
+                GenericDspNodeUi::new("HurdyGurdyInterpolationCurve", "Hurdy-Gurdy Rosin Wheel Crank Gesture Interpolation Curve", DspNodeCategory::Modulation)
+                    .with_param(DspParamDescriptor::new_linear("curve_type_mode", "Hurdy-Gurdy Waypoint Curve Topology", 0.0, 4.0, 0.0, "mode", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("crank_wheel_inertia_tau", "Solid Pearwood Wheel Inertia Time Constant", 0.05, 3.0, 0.45, "s", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("chien_pressure_response_curve", "Buzzing Chien Pressure Response Curve", 0.2, 3.0, 1.0, "gamma", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("drone_damping_transition_ms", "Drone String Tangent Mute Transition", 5.0, 200.0, 35.0, "ms", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("rosin_stick_slip_slew_rate", "Rosin Stick-Slip Dynamic Slew Rate", 0.1, 20.0, 4.0, "rate", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("percussive_coup_de_poignet_sync", "Coup de Poignet Wrist Snap Transient Sync", true, (16, 185, 129)))
+            ),
+            "KotoInterpolationCurve" => Box::new(
+                GenericDspNodeUi::new("KotoInterpolationCurve", "Koto Tsume Pluck & Ji Bridge Gesture Interpolation Curve", DspNodeCategory::Modulation)
+                    .with_param(DspParamDescriptor::new_linear("curve_type_mode", "Koto Articulation Curve Topology", 0.0, 4.0, 0.0, "mode", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("tsume_strike_attack_tau_ms", "Ivory Tsume Pick Attack Transient Duration", 0.5, 30.0, 3.5, "ms", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("oshite_bend_slew_semitones_s", "Oshite Left-Hand Press Slew Rate", 0.5, 24.0, 6.0, "st/s", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("bridge_sliding_damping_slope", "Movable Ji Bridge Friction Damping Slope", 0.1, 4.0, 1.2, "slope", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("hiki_iro_vibrato_envelope", "Hiki-Iro Pull Vibrato Modulation Depth", 0.0, 1.0, 0.5, "vib", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("dual_polarization_string_sync", "In-Plane & Out-of-Plane Polarization Sync", true, (16, 185, 129)))
+            ),
+            "MalletInterpolationCurve" => Box::new(
+                GenericDspNodeUi::new("MalletInterpolationCurve", "Tuned Mallet Percussion Strike Gesture Interpolation Curve", DspNodeCategory::Modulation)
+                    .with_param(DspParamDescriptor::new_linear("curve_type_mode", "Mallet Strike Curve Topology", 0.0, 4.0, 0.0, "mode", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("strike_hardness_ramp_exp", "Dynamic Velocity-to-Hardness Exponent", 0.5, 3.0, 1.5, "exp", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("radial_position_interpolation", "Center-to-Rim Strike Trajectory Position", 0.0, 1.0, 0.35, "pos", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("resonator_tube_bleed_tau_ms", "Tuned Resonator Tube Inrush Decay Time", 10.0, 1000.0, 180.0, "ms", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("damped_dead_stroke_cutoff_ms", "Dead Stroke Damped Contact Cutoff Time", 2.0, 150.0, 25.0, "ms", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("modal_dispersion_vector_sync", "Harmonic Mode Phase Coherence Sync", true, (16, 185, 129)))
+            ),
             // Fallback dynamic generator for any unexpected or plugin node
             other => {
                 let cat = Self::inventory()
@@ -18938,6 +19337,27 @@ assert!(registry.get("BellowsGesturePattern").is_some());
         assert!(registry.get("DevicePreset").is_some());
         assert!(registry.get("CrashAnalysisResult").is_some());
         assert!(registry.get("CollaborationSession").is_some());
+        assert!(registry.get("PipeOrganProfile").is_some());
+        assert!(registry.get("PlateReverbProfile").is_some());
+        assert!(registry.get("PluckedInstrumentProfile").is_some());
+        assert!(registry.get("MembraneInstrumentProfile").is_some());
+        assert!(registry.get("MeshMaterialProfile").is_some());
+        assert!(registry.get("RotaryCabinetModel").is_some());
+        assert!(registry.get("ShakuhachiProfile").is_some());
+        assert!(registry.get("SitarProfile").is_some());
+        assert!(registry.get("SoundboardProfile").is_some());
+        assert!(registry.get("SpringLatticeProfile").is_some());
+        assert!(registry.get("TonewheelOrganProfile").is_some());
+        assert!(registry.get("WoodwindInstrumentProfile").is_some());
+        assert!(registry.get("BellowsInterpolationCurve").is_some());
+        assert!(registry.get("BowingInterpolationCurve").is_some());
+        assert!(registry.get("ClavinetInterpolationCurve").is_some());
+        assert!(registry.get("EpInterpolationCurve").is_some());
+        assert!(registry.get("GlassInterpolationCurve").is_some());
+        assert!(registry.get("GrandPianoInterpolationCurve").is_some());
+        assert!(registry.get("HurdyGurdyInterpolationCurve").is_some());
+        assert!(registry.get("KotoInterpolationCurve").is_some());
+        assert!(registry.get("MalletInterpolationCurve").is_some());
     }
 
     #[test]
