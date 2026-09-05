@@ -161,6 +161,10 @@ fn default_available_presets() -> Vec<String> {
         "Spectrogram Visual Audio Canvas".to_string(),
         "Cathedral Pipe Organ Windchest".to_string(),
         "Tactile 16-Pad Groove Machine".to_string(),
+        "Benjamin Franklin Glass Armonica".to_string(),
+        "Multi-Zone SFZ Orchestra Sample Patch".to_string(),
+        "Lua Real-Time DSP Script Controller".to_string(),
+        "Zero-Latency Plugin Sandbox Guard".to_string(),
     ]
 }
 

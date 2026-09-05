@@ -5403,6 +5403,153 @@ impl DspNodeRegistry {
             .with_param(DspParamSchema::knob("hammer_mass_grams", "Piano Hammer Head Equivalent Mass", 5.0, 25.0, 10.2, "g", MacroRole::Tone, "Effective hammer mass determining contact duration and excitation spectrum"))
             .with_param(DspParamSchema::knob("voicing_hardness_ratio", "Felt Needling Voicing Hardness Factor", 0.5, 2.0, 1.0, "voicing", MacroRole::Tone, "Acoustic technician voicing factor altering high-frequency impact brightness"))
         );
+        descriptors.insert("GlassArmonicaBus".to_string(), DspNodeDescriptor::new("GlassArmonicaBus", "Glass Armonica & Crystal Singing Bowl Bus HUD", DspNodeCategory::AcousticPhysicalModel, "Lock-free real-time parameter bus for Franklin glass armonica and quartz crystal singing bowls with rotational hydrodynamics, wetting friction, and mahogany chassis resonance")
+            .with_param(DspParamSchema::knob("spindle_speed_rad_s", "Spindle Rotation Angular Velocity", 0.0, 18.85, 6.28, "rad/s", MacroRole::Tone, "Spindle rotational angular velocity driving continuous friction excitation"))
+            .with_param(DspParamSchema::knob("normal_force_n", "Wetted Finger Contact Normal Force", 0.05, 2.50, 0.65, "N", MacroRole::Character, "Downward finger contact normal force pressing against spinning glass bowl rim"))
+            .with_param(DspParamSchema::knob("water_fill_level", "Chalice Water Fill Pitch Level", 0.0, 1.0, 0.35, "ratio", MacroRole::Tone, "Water fill depth in glass cup mass-loading boundary and altering pitch resonance"))
+            .with_param(DspParamSchema::knob("strike_velocity", "Soft Mallet Crystal Strike Impulse", 0.0, 1.5, 0.0, "vel", MacroRole::Punch, "Soft padded mallet impact impulse velocity for singing bowl strikes"))
+            .with_param(DspParamSchema::knob("chassis_resonance", "Mahogany Acoustic Chassis Resonance", 0.0, 1.0, 0.45, "%", MacroRole::Space, "Acoustic coupling gain into the mahogany armonica case and soundboard chamber"))
+        );
+        descriptors.insert("SfzPresetPatch".to_string(), DspNodeDescriptor::new("SfzPresetPatch", "SFZ Multi-Zone Soundfont & Instrument Patch HUD", DspNodeCategory::SamplerSlicer, "Standard SFZ opcode instrument format loader with multi-velocity split zones, sample root transposition, loop crossfades, and filter envelope tracking")
+            .with_param(DspParamSchema::choice("keyzone_low_note", "Lowest Keyzone Active Note Boundary", &["C-1 (MIDI 0)", "C1 (MIDI 24)", "C2 (MIDI 36)", "C3 (MIDI 48)"], 0, "Lowest active MIDI keyzone boundary for current instrument layer"))
+            .with_param(DspParamSchema::choice("keyzone_high_note", "Highest Keyzone Active Note Boundary", &["C5 (MIDI 72)", "C6 (MIDI 84)", "C7 (MIDI 96)", "G9 (MIDI 127)"], 3, "Highest active MIDI keyzone boundary for current instrument layer"))
+            .with_param(DspParamSchema::knob("velocity_split_threshold", "Dynamic Velocity Crossfade Split Boundary", 1.0, 127.0, 64.0, "vel", MacroRole::Punch, "Dynamic MIDI velocity boundary between soft and hard multi-sample sound layers"))
+            .with_param(DspParamSchema::knob("loop_crossfade_ms", "Loop Transition Equal-Power Crossfade", 0.0, 500.0, 45.0, "ms", MacroRole::Space, "Equal-power crossfade length at sustained sample loop transition points"))
+            .with_param(DspParamSchema::knob("patch_attenuation_db", "Master Instrument Patch Trim Gain", -48.0, 12.0, -3.0, "dB", MacroRole::Tone, "Master patch gain offset compensating for multi-layer loudness differences"))
+        );
+        descriptors.insert("LuaScriptEngine".to_string(), DspNodeDescriptor::new("LuaScriptEngine", "Lua Real-Time DSP Script Runner & Modulator HUD", DspNodeCategory::Modulation, "Embedded sandboxed Lua 5.4 scripting environment with real-time audio sample processing, custom LFO generators, and hot-reload state persistence")
+            .with_param(DspParamSchema::knob("execution_budget_micros", "Audio Block Execution Time Quota", 10.0, 2000.0, 250.0, "us", MacroRole::Tone, "Maximum per-audio-block execution time quota before soft-skipping to prevent dropouts"))
+            .with_param(DspParamSchema::choice("sandbox_security_mode", "Lua Sandbox Security Privilege Level", &["Strict Isolated", "File Read Only", "Network Permitted", "Full Dev Unrestricted"], 0, "Sandboxing privilege level restricting filesystem and socket access from user scripts"))
+            .with_param(DspParamSchema::knob("hot_reload_debounce_ms", "Hot-Reload File Modification Watch Debounce", 50.0, 2000.0, 300.0, "ms", MacroRole::Character, "Debounce delay for watching file alterations and auto-recompiling script bytecode"))
+            .with_param(DspParamSchema::knob("heap_memory_limit_mb", "Lua Virtual Machine Heap Memory Cap", 1.0, 64.0, 8.0, "MB", MacroRole::Tone, "Hard limit on total Lua heap memory allocation before triggering emergency GC"))
+            .with_param(DspParamSchema::toggle("script_cycle_profile_enable", "Microsecond Call Profiling & Benchmark", true, "Collects microsecond call counts and cycle benchmarks for script performance tuning"))
+        );
+        descriptors.insert("PluginSandbox".to_string(), DspNodeDescriptor::new("PluginSandbox", "Zero-Latency Audio Plugin Isolation Sandbox HUD", DspNodeCategory::Utility, "Out-of-process and sandboxed VST3/CLAP container isolating third-party audio plugins to protect DAW stability and crash immunity")
+            .with_param(DspParamSchema::choice("isolation_level", "Subprocess Memory Boundary Isolation Level", &["In-Process Protected", "Separate Subprocess", "Sandboxed Container", "Full Hardened Jail"], 1, "Process boundary level separating third-party plugin memory space from DAW audio thread"))
+            .with_param(DspParamSchema::knob("crash_watchdog_timeout_ms", "Processing Stall Watchdog Timeout", 5.0, 250.0, 25.0, "ms", MacroRole::Tone, "Maximum allowable plugin audio processing stall duration before triggering graceful restart"))
+            .with_param(DspParamSchema::knob("ipc_ringbuffer_size_kb", "Shared Memory IPC Stream Ringbuffer Size", 16.0, 1024.0, 128.0, "KB", MacroRole::Punch, "Shared memory lock-free ringbuffer capacity for transmitting uncompressed audio streams"))
+            .with_param(DspParamSchema::toggle("auto_bypass_on_fault", "Automatic Mute Bypass On Memory Fault", true, "Instantly mutes and bypasses crashed plugins to avoid burst noise or silent hangs"))
+            .with_param(DspParamSchema::choice("sandbox_cpu_affinity", "Subprocess Worker Core CPU Affinity", &["Auto Affinity", "Core 1-2 Audio", "Isolated Dedicated Core", "Efficiency Cores"], 0, "CPU core pinning affinity for plugin subprocess to minimize audio cache thrashing"))
+        );
+        descriptors.insert("PluginLatencyCompensation".to_string(), DspNodeDescriptor::new("PluginLatencyCompensation", "PDC Automatic Plugin Delay Compensation HUD", DspNodeCategory::Utility, "Sample-accurate multi-track PDC delay compensation aligning lookahead limiters, spectral convolvers, and nonlinear oversampled plugins")
+            .with_param(DspParamSchema::knob("max_delay_compensation_ms", "Maximum PDC Delay Compensation Window", 10.0, 2000.0, 500.0, "ms", MacroRole::Space, "Maximum latency buffer window allocated across all parallel mixing and sidechain buses"))
+            .with_param(DspParamSchema::choice("sub_sample_delay_interpolation", "Sub-Sample Fractional Delay Resampling", &["Disabled (Round Int)", "Linear 2-Point", "Cubic Sinc 8-Tap", "Bandlimited Sinc 32-Tap"], 2, "Fractional sample interpolation mode preserving stereo phase alignment between tracks"))
+            .with_param(DspParamSchema::toggle("sidechain_pdc_alignment", "Sidechain Bus Signal PDC Offset Alignment", true, "Applies latency offset compensation to auxiliary sidechain send trigger buses"))
+            .with_param(DspParamSchema::choice("live_armed_track_latency_mode", "Record-Armed Track Low-Latency Behavior", &["Strict Full PDC", "Low-Latency Direct Bypass", "Constrained Lookahead"], 1, "Behavior on record-armed tracks to minimize monitoring latency for performers"))
+            .with_param(DspParamSchema::knob("pdc_buffer_preallocation_mb", "Zero-Allocation PDC Ringbuffer Pre-allocation", 2.0, 128.0, 16.0, "MB", MacroRole::Tone, "Pre-allocated ringbuffer memory avoiding heap allocations during dynamic track routing changes"))
+        );
+        descriptors.insert("PluginCrashGuard".to_string(), DspNodeDescriptor::new("PluginCrashGuard", "Real-Time DSP Crash Interceptor & Watchdog HUD", DspNodeCategory::Utility, "Signal handler and panic hook interceptor that catches segmentation faults, illegal instructions, and floating point exceptions in DSP nodes")
+            .with_param(DspParamSchema::choice("trap_action_policy", "Unhandled CPU Exception Intercept Policy", &["Silence & Log", "Crossfade Bypass Dry", "Reload Last Known State", "Restart Sub-Graph"], 1, "Action taken upon catching an unhandled CPU exception in audio processing loop"))
+            .with_param(DspParamSchema::knob("max_faults_before_blacklist", "Maximum Faults Before Automatic Blacklist", 1.0, 10.0, 3.0, "faults", MacroRole::Character, "Consecutive crashes tolerated within one minute before automatically disabling the faulty node"))
+            .with_param(DspParamSchema::knob("snapshot_recovery_interval_sec", "Lock-Free Parameter Snapshot Interval", 1.0, 60.0, 5.0, "s", MacroRole::Tone, "Frequency of periodic lock-free parameter state dumps used for post-crash restoration"))
+            .with_param(DspParamSchema::toggle("nan_inf_scrubbing_enable", "Automatic NaN and Inf Sample Zero-Scrubbing", true, "Automatically detects and zeros out NaN (Not a Number) or +/-Infinity audio samples"))
+            .with_param(DspParamSchema::toggle("telemetry_silent_dump", "Silent Diagnostic Minidump Trace Logging", false, "Generates anonymized crash trace dump file in project logs directory for diagnostics"))
+        );
+        descriptors.insert("AudioGraphBenchmarkSuite".to_string(), DspNodeDescriptor::new("AudioGraphBenchmarkSuite", "DSP Audio Graph Stress & Latency Benchmark HUD", DspNodeCategory::Utility, "Deterministic benchmark profiler measuring buffer render times, CPU pipeline stalls, cache misses, and DSP safety headroom across block sizes")
+            .with_param(DspParamSchema::choice("benchmark_block_size", "Audio Processing Block Size Benchmark", &["32 Frames (Ultra Low)", "64 Frames (Low)", "128 Frames (Balanced)", "256 Frames (Safe)", "512 Frames (High)"], 2, "Audio block size evaluated for throughput and real-time deadline margins"))
+            .with_param(DspParamSchema::knob("synthetic_voice_multiplier", "Simulated Parallel Synth Voice Load Count", 1.0, 64.0, 16.0, "voices", MacroRole::Punch, "Number of parallel synth voices and effects instances simulated in stress test"))
+            .with_param(DspParamSchema::knob("dsp_deadline_safety_margin_pct", "Real-Time Deadline Safety Headroom Margin", 5.0, 50.0, 20.0, "%", MacroRole::Tone, "Threshold of buffer duration reserved as safety headroom before flagging a warning"))
+            .with_param(DspParamSchema::toggle("simd_vector_utilization_check", "SIMD AVX2/NEON Vector Execution Verification", true, "Verifies whether compiler AVX2/NEON vectorization is actively executing on audio loops"))
+            .with_param(DspParamSchema::knob("thread_concurrency_threads", "Parallel Graph Evaluator Worker Threads", 1.0, 32.0, 8.0, "threads", MacroRole::Tone, "Parallel worker thread count allocated for parallel DSP node graph evaluation"))
+        );
+        descriptors.insert("ProjectAutoSaveManager".to_string(), DspNodeDescriptor::new("ProjectAutoSaveManager", "Background Project Auto-Save & Snapshot HUD", DspNodeCategory::Utility, "Non-blocking background project snapshot manager with atomic copy-on-write persistence, delta compression, and crash recovery checkpoints")
+            .with_param(DspParamSchema::knob("auto_save_interval_minutes", "Periodic Auto-Save Interval Cadence", 1.0, 30.0, 5.0, "min", MacroRole::Tone, "Interval in minutes between automatic background project snapshot saves"))
+            .with_param(DspParamSchema::knob("max_snapshot_history_count", "Maximum Rolling Backup Snapshot Checkpoints", 5.0, 100.0, 25.0, "snapshots", MacroRole::Character, "Maximum retained rolling backup snapshots before auto-purging oldest checkpoints"))
+            .with_param(DspParamSchema::choice("delta_compression_level", "Snapshot Archive Delta Compression Algorithm", &["Uncompressed Fast", "LZ4 Real-Time (Level 1)", "Zstandard Balanced (Level 3)", "Zstandard High (Level 9)"], 2, "Compression algorithm used to pack project snapshots into small disk footprint"))
+            .with_param(DspParamSchema::toggle("save_only_when_idle", "Defer Snapshot Writing Until Transport Idle", true, "Waits for active transport to stop before writing project state to avoid disk I/O spikes"))
+            .with_param(DspParamSchema::toggle("external_cloud_sync_trigger", "Notify Background Cloud Sync Daemon", false, "Notifies cloud sync daemon immediately after each successful auto-save snapshot"))
+        );
+        descriptors.insert("SessionMarkerNavigationManager".to_string(), DspNodeDescriptor::new("SessionMarkerNavigationManager", "Session Marker & Chapter Navigation HUD", DspNodeCategory::Modulation, "Timeline arrangement navigation manager with quantized marker snapping, loop punch-in markers, cue triggers, and chapter metadata")
+            .with_param(DspParamSchema::choice("marker_snap_quantization", "Timeline Grid Marker Placement Quantize", &["Off (Free)", "1/4 Beat", "1/2 Beat", "1 Beat", "1 Bar", "4 Bars"], 4, "Timeline grid resolution to which marker placements and cue jumps automatically snap"))
+            .with_param(DspParamSchema::knob("marker_jump_preroll_ms", "Live Marker Jump Pre-Roll Lead Time", 0.0, 2000.0, 250.0, "ms", MacroRole::Space, "Pre-roll lead time when jumping playback head to marker during live playback"))
+            .with_param(DspParamSchema::toggle("cue_marker_loop_enable", "Engage Transport Loop Across Cue Region", false, "Automatically engages transport loop playback between current and subsequent session marker"))
+            .with_param(DspParamSchema::choice("timecode_display_format", "Timeline Display Timecode Coordinates Format", &["Bars:Beats:Ticks", "Minutes:Seconds:Millis", "SMPTE 24fps", "SMPTE 30fps Drop", "Sample Frames"], 0, "Timecode format used for displaying marker coordinates across the timeline"))
+            .with_param(DspParamSchema::choice("marker_color_theme", "Marker Visual Flag Highlighting Theme", &["Rainbow Spectra", "Section Functional", "Monochrome Slate", "High-Contrast Neon"], 1, "Color scheme applied to timeline marker flags according to verse/chorus/bridge role"))
+        );
+        descriptors.insert("ScratchAudioCache".to_string(), DspNodeDescriptor::new("ScratchAudioCache", "Scratchpad Audio Buffer & Preview Cache HUD", DspNodeCategory::Utility, "Ephemeral audio waveform cache and background offline render scratchpad for rapid sample slicing, freeze tracks, and preview auditioning")
+            .with_param(DspParamSchema::knob("cache_disk_budget_gb", "Scratch Storage Maximum Disk Capacity", 1.0, 50.0, 10.0, "GB", MacroRole::Tone, "Maximum disk capacity allocated to scratch audio cache before auto-evicting LRU files"))
+            .with_param(DspParamSchema::knob("retention_ttl_hours", "Unaccessed Scratch File Expiration TTL", 1.0, 168.0, 24.0, "h", MacroRole::Character, "Time-to-live expiration after which unopened scratch preview files are purged"))
+            .with_param(DspParamSchema::knob("background_render_threads", "Background Render Thread Pool Capacity", 1.0, 16.0, 4.0, "threads", MacroRole::Tone, "Background CPU thread pool size allocated for rendering waveform previews and stem freezes"))
+            .with_param(DspParamSchema::choice("sample_bit_depth_cache", "Scratch Freeze Buffer Audio Bit Depth", &["16-bit Integer (Compact)", "24-bit Integer", "32-bit Float (Lossless Studio)", "64-bit Double"], 2, "Audio format used when writing rendered track freeze and bounce scratch buffers"))
+            .with_param(DspParamSchema::toggle("auto_purge_on_exit", "Purge Ephemeral Scratch Files Upon Exit", false, "Cleans up all temporary scratch files upon graceful DAW application shutdown"))
+        );
+        descriptors.insert("WorkspaceDependencyAuditor".to_string(), DspNodeDescriptor::new("WorkspaceDependencyAuditor", "DAW Workspace Security & Dependency Auditor HUD", DspNodeCategory::Utility, "Automated supply chain security auditor verifying Rust crate dependencies, cryptographic checksums, license compatibility, and known CVEs")
+            .with_param(DspParamSchema::choice("minimum_vulnerability_severity", "Security Alert Severity Reporting Threshold", &["Low (All Alerts)", "Medium", "High (Urgent)", "Critical Only"], 1, "Severity threshold required to raise security warnings during project dependency scans"))
+            .with_param(DspParamSchema::toggle("allow_unverified_crates", "Permit Unsigned Extension Modules", false, "Permits loading third-party plugins and user scripts with unverified digital signatures"))
+            .with_param(DspParamSchema::knob("advisory_database_ttl_hours", "Advisory Database Cache Refresh Interval", 1.0, 168.0, 24.0, "h", MacroRole::Tone, "Cache expiration for downloading updated RustSec and OSV vulnerability databases"))
+            .with_param(DspParamSchema::choice("license_compliance_strictness", "License Compliance Compatibility Policy", &["Permissive Only (MIT/Apache)", "Copyleft Allowed (GPL/LGPL)", "AGPLv3 Compatible", "Any Open Source"], 2, "Enforces workspace license compliance against proprietary or incompatible license terms"))
+            .with_param(DspParamSchema::toggle("auto_lockfile_integrity_verify", "Verify Cargo Lockfile SHA-256 Checksums", true, "Checks SHA-256 integrity hashes of Cargo.lock crates before launching background jobs"))
+        );
+        descriptors.insert("CrashDumpAnalyzer".to_string(), DspNodeDescriptor::new("CrashDumpAnalyzer", "Offline Crash Dump & Minidump Diagnostic HUD", DspNodeCategory::Utility, "Offline post-mortem crash analyzer decoding breakpad/minidump binaries, stack frames, register states, and offending DSP module instructions")
+            .with_param(DspParamSchema::knob("max_stack_frame_depth", "Maximum Callstack Unwind Frame Depth", 10.0, 200.0, 64.0, "frames", MacroRole::Tone, "Maximum callstack frame depth traversed when reconstructing crash unwind traces"))
+            .with_param(DspParamSchema::toggle("symbol_server_lookup_enable", "Query Local & Remote Debug Symbol Servers", true, "Queries local and remote debug symbol databases to resolve function names and line numbers"))
+            .with_param(DspParamSchema::choice("crash_severity_filter", "Diagnostic Failure Mechanism Filter", &["All Crash Reports", "Panic Unwinds Only", "Access Violations / Segfaults", "Watchdog Deadlocks"], 0, "Filters crash report browser by underlying operating system fault mechanism"))
+            .with_param(DspParamSchema::toggle("anonymize_local_paths", "Anonymize User File Paths in Reports", true, "Strips user profile directories and private path details before exporting diagnostic reports"))
+            .with_param(DspParamSchema::knob("memory_snapshot_preview_kb", "Faulting Instruction Memory Dump Window", 4.0, 128.0, 32.0, "KB", MacroRole::Character, "Size of memory buffer dump surrounding instruction pointer displayed in hex inspector"))
+        );
+        descriptors.insert("ExportPresetManager".to_string(), DspNodeDescriptor::new("ExportPresetManager", "Multi-Format Stem Export & Mastering Batch HUD", DspNodeCategory::DynamicsMaster, "Batch mastering and multi-track stem exporter with broadcast WAV, FLAC, MP3, and OGG encoding, peak normalization, and dither curves")
+            .with_param(DspParamSchema::choice("export_sample_rate", "Export Master Audio Sample Rate", &["44100 Hz (CD)", "48000 Hz (Broadcast)", "88200 Hz (High-Res)", "96000 Hz (Studio Pro)", "192000 Hz (Mastering)"], 1, "Target audio sample rate conversion for exported stems and stereo mixdown"))
+            .with_param(DspParamSchema::choice("export_bit_depth", "Export Audio Bit Depth & Lossless Codec", &["16-bit PCM", "24-bit PCM", "32-bit Float", "FLAC Lossless", "MP3 320kbps"], 2, "Audio bit depth resolution and codec format applied during export rendering"))
+            .with_param(DspParamSchema::knob("peak_normalization_target_db", "True-Peak Master Normalization Ceiling", -6.0, 0.0, -0.3, "dBFS", MacroRole::Punch, "True-peak ceiling threshold applied during final export normalization pass"))
+            .with_param(DspParamSchema::choice("dither_noise_shaping_mode", "Quantization Dither & Noise Shaping Mode", &["None (Truncate)", "Rectangular TPDF", "Triangular TPDF", "High-Pass Shaped Dither"], 2, "Dither algorithm applied when downscaling from 32/64-bit float to 16/24-bit fixed point"))
+            .with_param(DspParamSchema::choice("stem_auto_naming_pattern", "Multi-Track Stem File Naming Template", &["{track_num}_{track_name}", "{bpm}_{key}_{track_name}", "{project}_{track_name}_{date}", "Custom Pattern"], 0, "File naming template applied when batch-rendering multi-track individual stems"))
+        );
+        descriptors.insert("DistributedRenderFarm".to_string(), DspNodeDescriptor::new("DistributedRenderFarm", "Cluster & Cloud Distributed Audio Render HUD", DspNodeCategory::Utility, "Parallel audio rendering cluster dispatcher distributing heavy non-realtime offline bounces across local network LAN nodes and cloud instances")
+            .with_param(DspParamSchema::knob("cluster_chunk_size_bars", "Distributed Timeline Chunk Length", 1.0, 64.0, 8.0, "bars", MacroRole::Tone, "Timeline chunk length distributed to each remote render worker node"))
+            .with_param(DspParamSchema::knob("remote_worker_timeout_sec", "Remote Render Worker Timeout Window", 5.0, 300.0, 30.0, "s", MacroRole::Tone, "Timeout duration before re-dispatching failed chunk to alternate worker node"))
+            .with_param(DspParamSchema::knob("network_bandwidth_limit_mbps", "Stem Network Upload/Download Throughput Cap", 10.0, 1000.0, 250.0, "Mbps", MacroRole::Punch, "Maximum network upload and download streaming rate for audio stem transfer"))
+            .with_param(DspParamSchema::choice("cluster_lossless_codec", "Intermediate Network Audio Streaming Codec", &["Raw 32-bit Float PCM", "FLAC High-Speed (Level 1)", "WavPack Lossless Fast", "LZ4 Encoded Buffer"], 1, "Audio compression format used to stream intermediate render chunks over the network"))
+            .with_param(DspParamSchema::toggle("verify_chunk_sha256_checksum", "Verify Chunk SHA-256 Hash Integrity", true, "Validates SHA-256 cryptographic hash of rendered audio chunks before master assembly"))
+        );
+        descriptors.insert("LivePerformanceSync".to_string(), DspNodeDescriptor::new("LivePerformanceSync", "Stage Performance Sync & Wireless PTP Clock HUD", DspNodeCategory::Modulation, "Stage clock synchronization engine supporting IEEE 1588 PTP network clock, Ableton Link, MIDI clock, and stage wireless jitter filter")
+            .with_param(DspParamSchema::choice("sync_protocol_mode", "Stage Performance Timing Master Protocol", &["IEEE 1588 Precision Time Protocol", "Ableton Link", "MIDI 2.0 Clock", "Analog DIN Sync 24", "Internal Master Clock"], 1, "Timing master synchronization protocol used to lock DAW tempo across band equipment"))
+            .with_param(DspParamSchema::knob("jitter_smoothing_window_ms", "Wireless Clock Jitter Smoothing Window", 5.0, 200.0, 35.0, "ms", MacroRole::Space, "Sliding window duration for filtering packet jitter and network transit time spikes"))
+            .with_param(DspParamSchema::knob("tempo_drift_correction_rate", "Maximum Tempo Slewing Pitch-Bend Rate", 0.01, 1.0, 0.15, "%/s", MacroRole::Tone, "Maximum allowable tempo slewing rate to avoid audible pitch warping during sync adjustments"))
+            .with_param(DspParamSchema::toggle("stage_panic_mute_all_enable", "Emergency Master Stage Panic Hardware Mute", true, "Enables emergency master hardware mute switch accessible via dedicated stage hotkey"))
+            .with_param(DspParamSchema::choice("quantum_step_quantization", "Transport Start/Stop Musical Quantization", &["Instant (No Quantize)", "1/16 Beat", "1/4 Beat", "1 Beat Bar Lock"], 3, "Quantizes transport start and stop triggers to musical bar boundaries across all performers"))
+        );
+        descriptors.insert("CloudPresetHub".to_string(), DspNodeDescriptor::new("CloudPresetHub", "Collaborative Cloud Preset & Patch Repository HUD", DspNodeCategory::Utility, "Cloud preset repository with Git-backed version history, semantic tagging, user ratings, author attribution, and patch diffing")
+            .with_param(DspParamSchema::toggle("auto_cloud_sync_favorites", "Auto-Upload Starred Patches to Private Cloud", true, "Automatically uploads starred presets and downloaded community patches in the background"))
+            .with_param(DspParamSchema::knob("preset_version_history_depth", "Retained Revision Checkpoint History Depth", 1.0, 50.0, 10.0, "revs", MacroRole::Character, "Number of previous revision checkpoints retained for rolling back accidental sound tweaks"))
+            .with_param(DspParamSchema::knob("community_rating_filter_min", "Minimum Community Star Rating Filter", 1.0, 5.0, 3.5, "stars", MacroRole::Tone, "Minimum community star rating threshold displayed when browsing online sound libraries"))
+            .with_param(DspParamSchema::toggle("cloud_asset_preview_streaming", "Stream High-Fidelity Audio Preview Audition", true, "Plays low-bitrate audio sample previews directly from cloud before downloading full preset"))
+            .with_param(DspParamSchema::choice("patch_diff_algorithm", "Patch Variation Comparison Diffing Engine", &["Key-Value Property Diff", "Hierarchical Graph Tree Diff", "Binary Byte Hash", "Semantic Sound Character"], 0, "Diffing engine used to compare and visualize modifications between preset iterations"))
+        );
+        descriptors.insert("FederatedMarketplace".to_string(), DspNodeDescriptor::new("FederatedMarketplace", "Decentralized Soundpack & Plugin Marketplace HUD", DspNodeCategory::Utility, "Decentralized audio asset store enabling creators to publish, browse, and audition sound packs, instrument presets, and DSP extension plugins")
+            .with_param(DspParamSchema::knob("catalog_cache_ttl_hours", "Marketplace Metadata Catalog Refresh TTL", 1.0, 72.0, 12.0, "h", MacroRole::Tone, "Expiration time for locally cached marketplace metadata, artwork, and descriptions"))
+            .with_param(DspParamSchema::choice("asset_signature_verification", "Cryptographic Publisher Signature Rigor", &["Strict Ed25519 Required", "Warn on Unsigned", "Allow Development Builds"], 0, "Cryptographic signature check verifying that downloaded plugins originate from trusted developers"))
+            .with_param(DspParamSchema::knob("max_local_download_cache_gb", "Audition Preview Cache Storage Cap", 2.0, 100.0, 20.0, "GB", MacroRole::Character, "Maximum storage capacity allocated for caching downloaded audition stems and packs"))
+            .with_param(DspParamSchema::choice("preview_audio_bitrate_kbps", "Sample Pack Preview Streaming Bitrate", &["64 kbps (Mobile/Fast)", "128 kbps (Standard)", "256 kbps (High Quality)", "320 kbps (Studio MP3)"], 2, "Audio streaming bitrate used when auditioning marketplace sample packs"))
+            .with_param(DspParamSchema::toggle("auto_check_plugin_updates", "Automatic Background Plugin Update Checks", true, "Periodically checks installed third-party plugins for stability and bugfix updates"))
+        );
+        descriptors.insert("PeerMeshNetwork".to_string(), DspNodeDescriptor::new("PeerMeshNetwork", "Collaborative WebRTC Peer Mesh Network HUD", DspNodeCategory::SpatialSurround, "Decentralized zero-server WebRTC peer mesh networking engine for low-latency multi-user remote collaboration and live audio streaming")
+            .with_param(DspParamSchema::knob("max_mesh_peers_limit", "Maximum Connected Collaborative Peer Nodes", 2.0, 16.0, 6.0, "peers", MacroRole::Tone, "Maximum simultaneous peer nodes connected in full-mesh topology before switching to star"))
+            .with_param(DspParamSchema::knob("jitter_buffer_target_ms", "Adaptive Dynamic Audio Jitter Buffer Target", 10.0, 250.0, 40.0, "ms", MacroRole::Space, "Dynamic network audio jitter buffer target balancing latency against dropped packet clicks"))
+            .with_param(DspParamSchema::choice("packet_loss_concealment", "Audio Packet Loss Concealment (PLC) Mode", &["Silence on Loss", "Zero-Order Hold", "Waveform Linear Fade", "Neural Spectral Inpainting"], 3, "Algorithm used to synthesize missing audio samples during transient internet packet loss"))
+            .with_param(DspParamSchema::choice("peer_audio_compression_mode", "Collaborative Stream Audio Codec Mode", &["Opus High-Fidelity 128kbps", "Opus Studio 256kbps", "FLAC Ultra-Low-Loss", "PCM 16-bit Uncompressed"], 1, "Audio compression codec applied to outgoing collaborative audio streams"))
+            .with_param(DspParamSchema::toggle("end_to_end_encryption_enable", "DTLS-SRTP End-to-End Stream Encryption", true, "Enforces DTLS-SRTP end-to-end cryptographic encryption across all collaborative peer streams"))
+        );
+        descriptors.insert("ZkPatchVerifier".to_string(), DspNodeDescriptor::new("ZkPatchVerifier", "Zero-Knowledge Preset & Bytecode Verifier HUD", DspNodeCategory::Utility, "Zero-knowledge cryptographic verifier ensuring loaded presets, DSP shaders, and compiled bytecode adhere to deterministic constraints")
+            .with_param(DspParamSchema::choice("proof_verification_rigor", "Zero-Knowledge Proof Verification Rigor", &["Fast Checksum Check", "ZK-SNARK Groth16", "PLONK Constraint Proof", "Full Formal Verification"], 1, "Cryptographic proof system used to validate bytecode memory boundaries and termination guarantees"))
+            .with_param(DspParamSchema::knob("max_instruction_count_budget", "Virtual Machine Opcode Execution Budget", 1000.0, 1000000.0, 50000.0, "ops", MacroRole::Punch, "Strict limit on total virtual machine CPU instructions permitted per audio sample calculation"))
+            .with_param(DspParamSchema::toggle("memory_safety_bounds_check", "Static Array & Buffer Memory Bounds Check", true, "Statically verifies all array and pointer accesses remain strictly within allocated boundaries"))
+            .with_param(DspParamSchema::toggle("audit_trail_logging_enable", "Tamper-Proof Receipt Audit Trail Logging", true, "Records cryptographic validation receipts in local tamper-proof audit log file"))
+            .with_param(DspParamSchema::toggle("zero_allocation_guarantee_enforce", "Enforce Zero Heap Allocations in Audio Loop", true, "Fails verification immediately if any heap allocation or system call opcode is detected"))
+        );
+        descriptors.insert("ContinuousBackupEngine".to_string(), DspNodeDescriptor::new("ContinuousBackupEngine", "Continuous Non-Blocking Session Backup HUD", DspNodeCategory::Utility, "Continuous journaled snapshot recorder capturing undo history, automation curves, and track edits with zero audio playback interruption")
+            .with_param(DspParamSchema::knob("journal_tick_rate_seconds", "Incremental Journal Write Cadence Rate", 0.5, 30.0, 2.0, "s", MacroRole::Tone, "Cadence at which incremental edit mutations are appended to the on-disk session journal"))
+            .with_param(DspParamSchema::choice("deduplication_block_size_kb", "Content-Defined Chunk Deduplication Size", &["16 KB (Fine-Grained)", "64 KB (Balanced)", "256 KB (Large Audio)", "1024 KB (Fast I/O)"], 1, "Content-defined chunking block size for deduplicating repeated audio tracks and clips"))
+            .with_param(DspParamSchema::knob("max_rollback_depth_actions", "Maximum Rolling Undo Actions Rollback Depth", 50.0, 2000.0, 500.0, "actions", MacroRole::Character, "Maximum depth of granular undo actions preserved for time-travel restoration"))
+            .with_param(DspParamSchema::knob("disk_quota_storage_limit_gb", "Journal History Total Storage Disk Quota", 1.0, 50.0, 8.0, "GB", MacroRole::Tone, "Hard limit on total journal backup storage before compacting intermediate edit history"))
+            .with_param(DspParamSchema::toggle("background_flush_low_priority", "Low-Priority Background Thread Disk Flush", true, "Executes disk writes with idle background I/O scheduling to prevent audio buffer underruns"))
+        );
+        descriptors.insert("MidiFileParser".to_string(), DspNodeDescriptor::new("MidiFileParser", "Standard MIDI File Import & Velocity Scaler HUD", DspNodeCategory::Modulation, "Standard MIDI File (SMF format 0 & 1) parser with polyphonic track splitting, tempo map extraction, microtonal tuning, and velocity scaling")
+            .with_param(DspParamSchema::choice("ppq_timebase_resolution", "Ticks Per Quarter Note (PPQ) Resolution", &["96 PPQ (Vintage)", "192 PPQ", "480 PPQ (Standard)", "960 PPQ (High-Res)", "1920 PPQ (Micro)"], 2, "Ticks per quarter note timing resolution applied during MIDI track parsing and sequencing"))
+            .with_param(DspParamSchema::knob("velocity_scaling_curve", "MIDI Note Dynamic Velocity Scaling Power", 0.2, 3.0, 1.0, "exp", MacroRole::Punch, "Power-law exponential curve applied to imported MIDI note velocities to adjust dynamic feel"))
+            .with_param(DspParamSchema::choice("tempo_map_extraction_mode", "Project Tempo Map & Signature Import Policy", &["Import Project Tempo", "Flatten to Fixed Tempo", "Stretch to Current BPM", "Extract Markers Only"], 0, "Behavior when parsing tempo change events and time signature markers from MIDI files"))
+            .with_param(DspParamSchema::toggle("multi_channel_track_split", "Auto-Split Channels Into Individual Tracks", true, "Automatically separates multi-channel MIDI file into individual dedicated instrument tracks"))
+            .with_param(DspParamSchema::knob("pitch_bend_range_semitones", "Imported Pitch Bend Range Interpretation", 1.0, 24.0, 2.0, "st", MacroRole::Tone, "Interpreted pitch bend wheel range in semitones applied to imported continuous controllers"))
+        );
 
         Self { descriptors }
     }
@@ -6105,6 +6252,27 @@ impl DspNodeRegistry {
             ("AudioWarpMarker", DspNodeCategory::TimeSpace, "Elastic Audio Warp Marker & Pitch-Time Grid HUD"),
             ("StickSlipPhysicsModel", DspNodeCategory::AcousticPhysicalModel, "Stick-Slip Bow Contact Friction Mechanics HUD"),
             ("PianoHammerMechanics", DspNodeCategory::AcousticPhysicalModel, "Felt Piano Hammer Non-Linear Mechanics HUD"),
+            ("GlassArmonicaBus", DspNodeCategory::AcousticPhysicalModel, "Glass Armonica & Crystal Singing Bowl Bus HUD"),
+            ("SfzPresetPatch", DspNodeCategory::SamplerSlicer, "SFZ Multi-Zone Soundfont & Instrument Patch HUD"),
+            ("LuaScriptEngine", DspNodeCategory::Modulation, "Lua Real-Time DSP Script Runner & Modulator HUD"),
+            ("PluginSandbox", DspNodeCategory::Utility, "Zero-Latency Audio Plugin Isolation Sandbox HUD"),
+            ("PluginLatencyCompensation", DspNodeCategory::Utility, "PDC Automatic Plugin Delay Compensation HUD"),
+            ("PluginCrashGuard", DspNodeCategory::Utility, "Real-Time DSP Crash Interceptor & Watchdog HUD"),
+            ("AudioGraphBenchmarkSuite", DspNodeCategory::Utility, "DSP Audio Graph Stress & Latency Benchmark HUD"),
+            ("ProjectAutoSaveManager", DspNodeCategory::Utility, "Background Project Auto-Save & Snapshot HUD"),
+            ("SessionMarkerNavigationManager", DspNodeCategory::Modulation, "Session Marker & Chapter Navigation HUD"),
+            ("ScratchAudioCache", DspNodeCategory::Utility, "Scratchpad Audio Buffer & Preview Cache HUD"),
+            ("WorkspaceDependencyAuditor", DspNodeCategory::Utility, "DAW Workspace Security & Dependency Auditor HUD"),
+            ("CrashDumpAnalyzer", DspNodeCategory::Utility, "Offline Crash Dump & Minidump Diagnostic HUD"),
+            ("ExportPresetManager", DspNodeCategory::DynamicsMaster, "Multi-Format Stem Export & Mastering Batch HUD"),
+            ("DistributedRenderFarm", DspNodeCategory::Utility, "Cluster & Cloud Distributed Audio Render HUD"),
+            ("LivePerformanceSync", DspNodeCategory::Modulation, "Stage Performance Sync & Wireless PTP Clock HUD"),
+            ("CloudPresetHub", DspNodeCategory::Utility, "Collaborative Cloud Preset & Patch Repository HUD"),
+            ("FederatedMarketplace", DspNodeCategory::Utility, "Decentralized Soundpack & Plugin Marketplace HUD"),
+            ("PeerMeshNetwork", DspNodeCategory::SpatialSurround, "Collaborative WebRTC Peer Mesh Network HUD"),
+            ("ZkPatchVerifier", DspNodeCategory::Utility, "Zero-Knowledge Preset & Bytecode Verifier HUD"),
+            ("ContinuousBackupEngine", DspNodeCategory::Utility, "Continuous Non-Blocking Session Backup HUD"),
+            ("MidiFileParser", DspNodeCategory::Modulation, "Standard MIDI File Import & Velocity Scaler HUD"),
         ]
     }
 
@@ -6930,7 +7098,7 @@ impl DspNodeRegistry {
             "proceduralir" => Some("ProceduralSpatialIrGenerator"),
             "isolatedpluginscanner" => Some("IsolatedPluginScanner"),
             "pluginscanner" => Some("IsolatedPluginScanner"),
-            "pluginsandbox" => Some("IsolatedPluginScanner"),
+            "isolatedscanner" => Some("IsolatedPluginScanner"),
             "midifilterengine" => Some("MidiFilterEngine"),
             "midifilter" => Some("MidiFilterEngine"),
             "midirouter" => Some("MidiFilterEngine"),
@@ -7029,7 +7197,7 @@ impl DspNodeRegistry {
             "formantbus" => Some("FormantBus"),
             "vocaltractbus" => Some("FormantBus"),
             "glassbus" => Some("GlassBus"),
-            "glassarmonicabus" => Some("GlassBus"),
+            "glassphonicbus" => Some("GlassBus"),
             "grandpianobus" => Some("GrandPianoBus"),
             "pianobus" => Some("GrandPianoBus"),
             "hurdygurdybus" => Some("HurdyGurdyBus"),
@@ -7444,6 +7612,69 @@ impl DspNodeRegistry {
             "pianohammermechanics" => Some("PianoHammerMechanics"),
             "felthammermechanics" => Some("PianoHammerMechanics"),
             "pianohammerparameters" => Some("PianoHammerMechanics"),
+            "glassarmonicabus" => Some("GlassArmonicaBus"),
+            "franklinglassarmonica" => Some("GlassArmonicaBus"),
+            "crystalsingingbowl" => Some("GlassArmonicaBus"),
+            "sfzpresetpatch" => Some("SfzPresetPatch"),
+            "sfzpatch" => Some("SfzPresetPatch"),
+            "sfzsoundfont" => Some("SfzPresetPatch"),
+            "luascriptengine" => Some("LuaScriptEngine"),
+            "luascriptrunner" => Some("LuaScriptEngine"),
+            "luadspengine" => Some("LuaScriptEngine"),
+            "pluginsandbox" => Some("PluginSandbox"),
+            "pluginhostsandbox" => Some("PluginSandbox"),
+            "isolatedpluginhost" => Some("PluginSandbox"),
+            "pluginlatencycompensation" => Some("PluginLatencyCompensation"),
+            "plugindelaycompensation" => Some("PluginLatencyCompensation"),
+            "automaticpdc" => Some("PluginLatencyCompensation"),
+            "plugincrashguard" => Some("PluginCrashGuard"),
+            "crashguardwatchdog" => Some("PluginCrashGuard"),
+            "dspexceptionguard" => Some("PluginCrashGuard"),
+            "audiographbenchmarksuite" => Some("AudioGraphBenchmarkSuite"),
+            "audiographbenchmark" => Some("AudioGraphBenchmarkSuite"),
+            "dspgraphbenchmark" => Some("AudioGraphBenchmarkSuite"),
+            "projectautosavemanager" => Some("ProjectAutoSaveManager"),
+            "projectautosave" => Some("ProjectAutoSaveManager"),
+            "backupsnapshotmanager" => Some("ProjectAutoSaveManager"),
+            "sessionmarkernavigationmanager" => Some("SessionMarkerNavigationManager"),
+            "sessionmarkermanager" => Some("SessionMarkerNavigationManager"),
+            "markernavigation" => Some("SessionMarkerNavigationManager"),
+            "scratchaudiocache" => Some("ScratchAudioCache"),
+            "scratchpadcache" => Some("ScratchAudioCache"),
+            "temporaryaudiocache" => Some("ScratchAudioCache"),
+            "workspacedependencyauditor" => Some("WorkspaceDependencyAuditor"),
+            "dependencyauditor" => Some("WorkspaceDependencyAuditor"),
+            "cratevulnerabilityauditor" => Some("WorkspaceDependencyAuditor"),
+            "crashdumpanalyzer" => Some("CrashDumpAnalyzer"),
+            "minidumpanalyzer" => Some("CrashDumpAnalyzer"),
+            "crashdiagnosticinspector" => Some("CrashDumpAnalyzer"),
+            "exportpresetmanager" => Some("ExportPresetManager"),
+            "exportmanager" => Some("ExportPresetManager"),
+            "batchstemexporter" => Some("ExportPresetManager"),
+            "distributedrenderfarm" => Some("DistributedRenderFarm"),
+            "renderfarmcluster" => Some("DistributedRenderFarm"),
+            "cloudaudiorender" => Some("DistributedRenderFarm"),
+            "liveperformancesync" => Some("LivePerformanceSync"),
+            "performancesync" => Some("LivePerformanceSync"),
+            "stageptpclock" => Some("LivePerformanceSync"),
+            "cloudpresethub" => Some("CloudPresetHub"),
+            "presethub" => Some("CloudPresetHub"),
+            "cloudpatchrepository" => Some("CloudPresetHub"),
+            "federatedmarketplace" => Some("FederatedMarketplace"),
+            "pluginmarketplace" => Some("FederatedMarketplace"),
+            "assetmarketplace" => Some("FederatedMarketplace"),
+            "peermeshnetwork" => Some("PeerMeshNetwork"),
+            "webrtcpeermesh" => Some("PeerMeshNetwork"),
+            "collaborativepeermesh" => Some("PeerMeshNetwork"),
+            "zkpatchverifier" => Some("ZkPatchVerifier"),
+            "zkverifier" => Some("ZkPatchVerifier"),
+            "zeroknowledgebytecodeverifier" => Some("ZkPatchVerifier"),
+            "continuousbackupengine" => Some("ContinuousBackupEngine"),
+            "continuoussessionbackup" => Some("ContinuousBackupEngine"),
+            "journaledtimemachinebackup" => Some("ContinuousBackupEngine"),
+            "midifileparser" => Some("MidiFileParser"),
+            "standardmidifileparser" => Some("MidiFileParser"),
+            "smfparser" => Some("MidiFileParser"),
             _ => None,
         }
     }
@@ -11922,6 +12153,174 @@ impl DspNodeRegistry {
                     .with_param(DspParamDescriptor::new_linear("hammer_mass_grams", "Piano Hammer Head Equivalent Mass", 5.0, 25.0, 10.2, "g", (168, 85, 247)))
                     .with_param(DspParamDescriptor::new_linear("voicing_hardness_ratio", "Felt Needling Voicing Hardness Factor", 0.5, 2.0, 1.0, "voicing", (34, 197, 94)))
             ),
+            "GlassArmonicaBus" => Box::new(
+                GenericDspNodeUi::new("GlassArmonicaBus", "Glass Armonica & Crystal Singing Bowl Bus HUD", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("spindle_speed_rad_s", "Spindle Rotation Angular Velocity", 0.0, 18.85, 6.28, "rad/s", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("normal_force_n", "Wetted Finger Contact Normal Force", 0.05, 2.50, 0.65, "N", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("water_fill_level", "Chalice Water Fill Pitch Level", 0.0, 1.0, 0.35, "ratio", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("strike_velocity", "Soft Mallet Crystal Strike Impulse", 0.0, 1.5, 0.0, "vel", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("chassis_resonance", "Mahogany Acoustic Chassis Resonance", 0.0, 1.0, 0.45, "%", (34, 197, 94)))
+            ),
+            "SfzPresetPatch" => Box::new(
+                GenericDspNodeUi::new("SfzPresetPatch", "SFZ Multi-Zone Soundfont & Instrument Patch HUD", DspNodeCategory::SamplerSlicer)
+                    .with_param(DspParamDescriptor::new_enum("keyzone_low_note", "Lowest Keyzone Active Note Boundary", vec!["C-1 (MIDI 0)".into(), "C1 (MIDI 24)".into(), "C2 (MIDI 36)".into(), "C3 (MIDI 48)".into()], 0, (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_enum("keyzone_high_note", "Highest Keyzone Active Note Boundary", vec!["C5 (MIDI 72)".into(), "C6 (MIDI 84)".into(), "C7 (MIDI 96)".into(), "G9 (MIDI 127)".into()], 3, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("velocity_split_threshold", "Dynamic Velocity Crossfade Split Boundary", 1.0, 127.0, 64.0, "vel", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("loop_crossfade_ms", "Loop Transition Equal-Power Crossfade", 0.0, 500.0, 45.0, "ms", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("patch_attenuation_db", "Master Instrument Patch Trim Gain", -48.0, 12.0, -3.0, "dB", (34, 197, 94)))
+            ),
+            "LuaScriptEngine" => Box::new(
+                GenericDspNodeUi::new("LuaScriptEngine", "Lua Real-Time DSP Script Runner & Modulator HUD", DspNodeCategory::Modulation)
+                    .with_param(DspParamDescriptor::new_linear("execution_budget_micros", "Audio Block Execution Time Quota", 10.0, 2000.0, 250.0, "us", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_enum("sandbox_security_mode", "Lua Sandbox Security Privilege Level", vec!["Strict Isolated".into(), "File Read Only".into(), "Network Permitted".into(), "Full Dev Unrestricted".into()], 0, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("hot_reload_debounce_ms", "Hot-Reload File Modification Watch Debounce", 50.0, 2000.0, 300.0, "ms", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("heap_memory_limit_mb", "Lua Virtual Machine Heap Memory Cap", 1.0, 64.0, 8.0, "MB", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("script_cycle_profile_enable", "Microsecond Call Profiling & Benchmark", true, (34, 197, 94)))
+            ),
+            "PluginSandbox" => Box::new(
+                GenericDspNodeUi::new("PluginSandbox", "Zero-Latency Audio Plugin Isolation Sandbox HUD", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_enum("isolation_level", "Subprocess Memory Boundary Isolation Level", vec!["In-Process Protected".into(), "Separate Subprocess".into(), "Sandboxed Container".into(), "Full Hardened Jail".into()], 1, (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("crash_watchdog_timeout_ms", "Processing Stall Watchdog Timeout", 5.0, 250.0, 25.0, "ms", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("ipc_ringbuffer_size_kb", "Shared Memory IPC Stream Ringbuffer Size", 16.0, 1024.0, 128.0, "KB", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("auto_bypass_on_fault", "Automatic Mute Bypass On Memory Fault", true, (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_enum("sandbox_cpu_affinity", "Subprocess Worker Core CPU Affinity", vec!["Auto Affinity".into(), "Core 1-2 Audio".into(), "Isolated Dedicated Core".into(), "Efficiency Cores".into()], 0, (168, 85, 247)))
+            ),
+            "PluginLatencyCompensation" => Box::new(
+                GenericDspNodeUi::new("PluginLatencyCompensation", "PDC Automatic Plugin Delay Compensation HUD", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("max_delay_compensation_ms", "Maximum PDC Delay Compensation Window", 10.0, 2000.0, 500.0, "ms", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_enum("sub_sample_delay_interpolation", "Sub-Sample Fractional Delay Resampling", vec!["Disabled (Round Int)".into(), "Linear 2-Point".into(), "Cubic Sinc 8-Tap".into(), "Bandlimited Sinc 32-Tap".into()], 2, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("sidechain_pdc_alignment", "Sidechain Bus Signal PDC Offset Alignment", true, (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_enum("live_armed_track_latency_mode", "Record-Armed Track Low-Latency Behavior", vec!["Strict Full PDC".into(), "Low-Latency Direct Bypass".into(), "Constrained Lookahead".into()], 1, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("pdc_buffer_preallocation_mb", "Zero-Allocation PDC Ringbuffer Pre-allocation", 2.0, 128.0, 16.0, "MB", (168, 85, 247)))
+            ),
+            "PluginCrashGuard" => Box::new(
+                GenericDspNodeUi::new("PluginCrashGuard", "Real-Time DSP Crash Interceptor & Watchdog HUD", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_enum("trap_action_policy", "Unhandled CPU Exception Intercept Policy", vec!["Silence & Log".into(), "Crossfade Bypass Dry".into(), "Reload Last Known State".into(), "Restart Sub-Graph".into()], 1, (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("max_faults_before_blacklist", "Maximum Faults Before Automatic Blacklist", 1.0, 10.0, 3.0, "faults", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("snapshot_recovery_interval_sec", "Lock-Free Parameter Snapshot Interval", 1.0, 60.0, 5.0, "s", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("nan_inf_scrubbing_enable", "Automatic NaN and Inf Sample Zero-Scrubbing", true, (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("telemetry_silent_dump", "Silent Diagnostic Minidump Trace Logging", false, (168, 85, 247)))
+            ),
+            "AudioGraphBenchmarkSuite" => Box::new(
+                GenericDspNodeUi::new("AudioGraphBenchmarkSuite", "DSP Audio Graph Stress & Latency Benchmark HUD", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_enum("benchmark_block_size", "Audio Processing Block Size Benchmark", vec!["32 Frames (Ultra Low)".into(), "64 Frames (Low)".into(), "128 Frames (Balanced)".into(), "256 Frames (Safe)".into(), "512 Frames (High)".into()], 2, (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("synthetic_voice_multiplier", "Simulated Parallel Synth Voice Load Count", 1.0, 64.0, 16.0, "voices", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("dsp_deadline_safety_margin_pct", "Real-Time Deadline Safety Headroom Margin", 5.0, 50.0, 20.0, "%", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("simd_vector_utilization_check", "SIMD AVX2/NEON Vector Execution Verification", true, (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_linear("thread_concurrency_threads", "Parallel Graph Evaluator Worker Threads", 1.0, 32.0, 8.0, "threads", (168, 85, 247)))
+            ),
+            "ProjectAutoSaveManager" => Box::new(
+                GenericDspNodeUi::new("ProjectAutoSaveManager", "Background Project Auto-Save & Snapshot HUD", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("auto_save_interval_minutes", "Periodic Auto-Save Interval Cadence", 1.0, 30.0, 5.0, "min", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("max_snapshot_history_count", "Maximum Rolling Backup Snapshot Checkpoints", 5.0, 100.0, 25.0, "snapshots", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_enum("delta_compression_level", "Snapshot Archive Delta Compression Algorithm", vec!["Uncompressed Fast".into(), "LZ4 Real-Time (Level 1)".into(), "Zstandard Balanced (Level 3)".into(), "Zstandard High (Level 9)".into()], 2, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("save_only_when_idle", "Defer Snapshot Writing Until Transport Idle", true, (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("external_cloud_sync_trigger", "Notify Background Cloud Sync Daemon", false, (168, 85, 247)))
+            ),
+            "SessionMarkerNavigationManager" => Box::new(
+                GenericDspNodeUi::new("SessionMarkerNavigationManager", "Session Marker & Chapter Navigation HUD", DspNodeCategory::Modulation)
+                    .with_param(DspParamDescriptor::new_enum("marker_snap_quantization", "Timeline Grid Marker Placement Quantize", vec!["Off (Free)".into(), "1/4 Beat".into(), "1/2 Beat".into(), "1 Beat".into(), "1 Bar".into(), "4 Bars".into()], 4, (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("marker_jump_preroll_ms", "Live Marker Jump Pre-Roll Lead Time", 0.0, 2000.0, 250.0, "ms", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("cue_marker_loop_enable", "Engage Transport Loop Across Cue Region", false, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_enum("timecode_display_format", "Timeline Display Timecode Coordinates Format", vec!["Bars:Beats:Ticks".into(), "Minutes:Seconds:Millis".into(), "SMPTE 24fps".into(), "SMPTE 30fps Drop".into(), "Sample Frames".into()], 0, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_enum("marker_color_theme", "Marker Visual Flag Highlighting Theme", vec!["Rainbow Spectra".into(), "Section Functional".into(), "Monochrome Slate".into(), "High-Contrast Neon".into()], 1, (34, 197, 94)))
+            ),
+            "ScratchAudioCache" => Box::new(
+                GenericDspNodeUi::new("ScratchAudioCache", "Scratchpad Audio Buffer & Preview Cache HUD", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("cache_disk_budget_gb", "Scratch Storage Maximum Disk Capacity", 1.0, 50.0, 10.0, "GB", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("retention_ttl_hours", "Unaccessed Scratch File Expiration TTL", 1.0, 168.0, 24.0, "h", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("background_render_threads", "Background Render Thread Pool Capacity", 1.0, 16.0, 4.0, "threads", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_enum("sample_bit_depth_cache", "Scratch Freeze Buffer Audio Bit Depth", vec!["16-bit Integer (Compact)".into(), "24-bit Integer".into(), "32-bit Float (Lossless Studio)".into(), "64-bit Double".into()], 2, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("auto_purge_on_exit", "Purge Ephemeral Scratch Files Upon Exit", false, (34, 197, 94)))
+            ),
+            "WorkspaceDependencyAuditor" => Box::new(
+                GenericDspNodeUi::new("WorkspaceDependencyAuditor", "DAW Workspace Security & Dependency Auditor HUD", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_enum("minimum_vulnerability_severity", "Security Alert Severity Reporting Threshold", vec!["Low (All Alerts)".into(), "Medium".into(), "High (Urgent)".into(), "Critical Only".into()], 1, (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_bool("allow_unverified_crates", "Permit Unsigned Extension Modules", false, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("advisory_database_ttl_hours", "Advisory Database Cache Refresh Interval", 1.0, 168.0, 24.0, "h", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_enum("license_compliance_strictness", "License Compliance Compatibility Policy", vec!["Permissive Only (MIT/Apache)".into(), "Copyleft Allowed (GPL/LGPL)".into(), "AGPLv3 Compatible".into(), "Any Open Source".into()], 2, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("auto_lockfile_integrity_verify", "Verify Cargo Lockfile SHA-256 Checksums", true, (34, 197, 94)))
+            ),
+            "CrashDumpAnalyzer" => Box::new(
+                GenericDspNodeUi::new("CrashDumpAnalyzer", "Offline Crash Dump & Minidump Diagnostic HUD", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("max_stack_frame_depth", "Maximum Callstack Unwind Frame Depth", 10.0, 200.0, 64.0, "frames", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_bool("symbol_server_lookup_enable", "Query Local & Remote Debug Symbol Servers", true, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_enum("crash_severity_filter", "Diagnostic Failure Mechanism Filter", vec!["All Crash Reports".into(), "Panic Unwinds Only".into(), "Access Violations / Segfaults".into(), "Watchdog Deadlocks".into()], 0, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("anonymize_local_paths", "Anonymize User File Paths in Reports", true, (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_linear("memory_snapshot_preview_kb", "Faulting Instruction Memory Dump Window", 4.0, 128.0, 32.0, "KB", (168, 85, 247)))
+            ),
+            "ExportPresetManager" => Box::new(
+                GenericDspNodeUi::new("ExportPresetManager", "Multi-Format Stem Export & Mastering Batch HUD", DspNodeCategory::DynamicsMaster)
+                    .with_param(DspParamDescriptor::new_enum("export_sample_rate", "Export Master Audio Sample Rate", vec!["44100 Hz (CD)".into(), "48000 Hz (Broadcast)".into(), "88200 Hz (High-Res)".into(), "96000 Hz (Studio Pro)".into(), "192000 Hz (Mastering)".into()], 1, (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_enum("export_bit_depth", "Export Audio Bit Depth & Lossless Codec", vec!["16-bit PCM".into(), "24-bit PCM".into(), "32-bit Float".into(), "FLAC Lossless".into(), "MP3 320kbps".into()], 2, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("peak_normalization_target_db", "True-Peak Master Normalization Ceiling", -6.0, 0.0, -0.3, "dBFS", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_enum("dither_noise_shaping_mode", "Quantization Dither & Noise Shaping Mode", vec!["None (Truncate)".into(), "Rectangular TPDF".into(), "Triangular TPDF".into(), "High-Pass Shaped Dither".into()], 2, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_enum("stem_auto_naming_pattern", "Multi-Track Stem File Naming Template", vec!["{track_num}_{track_name}".into(), "{bpm}_{key}_{track_name}".into(), "{project}_{track_name}_{date}".into(), "Custom Pattern".into()], 0, (34, 197, 94)))
+            ),
+            "DistributedRenderFarm" => Box::new(
+                GenericDspNodeUi::new("DistributedRenderFarm", "Cluster & Cloud Distributed Audio Render HUD", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("cluster_chunk_size_bars", "Distributed Timeline Chunk Length", 1.0, 64.0, 8.0, "bars", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("remote_worker_timeout_sec", "Remote Render Worker Timeout Window", 5.0, 300.0, 30.0, "s", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("network_bandwidth_limit_mbps", "Stem Network Upload/Download Throughput Cap", 10.0, 1000.0, 250.0, "Mbps", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_enum("cluster_lossless_codec", "Intermediate Network Audio Streaming Codec", vec!["Raw 32-bit Float PCM".into(), "FLAC High-Speed (Level 1)".into(), "WavPack Lossless Fast".into(), "LZ4 Encoded Buffer".into()], 1, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("verify_chunk_sha256_checksum", "Verify Chunk SHA-256 Hash Integrity", true, (34, 197, 94)))
+            ),
+            "LivePerformanceSync" => Box::new(
+                GenericDspNodeUi::new("LivePerformanceSync", "Stage Performance Sync & Wireless PTP Clock HUD", DspNodeCategory::Modulation)
+                    .with_param(DspParamDescriptor::new_enum("sync_protocol_mode", "Stage Performance Timing Master Protocol", vec!["IEEE 1588 Precision Time Protocol".into(), "Ableton Link".into(), "MIDI 2.0 Clock".into(), "Analog DIN Sync 24".into(), "Internal Master Clock".into()], 1, (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("jitter_smoothing_window_ms", "Wireless Clock Jitter Smoothing Window", 5.0, 200.0, 35.0, "ms", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("tempo_drift_correction_rate", "Maximum Tempo Slewing Pitch-Bend Rate", 0.01, 1.0, 0.15, "%/s", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("stage_panic_mute_all_enable", "Emergency Master Stage Panic Hardware Mute", true, (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_enum("quantum_step_quantization", "Transport Start/Stop Musical Quantization", vec!["Instant (No Quantize)".into(), "1/16 Beat".into(), "1/4 Beat".into(), "1 Beat Bar Lock".into()], 3, (168, 85, 247)))
+            ),
+            "CloudPresetHub" => Box::new(
+                GenericDspNodeUi::new("CloudPresetHub", "Collaborative Cloud Preset & Patch Repository HUD", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_bool("auto_cloud_sync_favorites", "Auto-Upload Starred Patches to Private Cloud", true, (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("preset_version_history_depth", "Retained Revision Checkpoint History Depth", 1.0, 50.0, 10.0, "revs", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("community_rating_filter_min", "Minimum Community Star Rating Filter", 1.0, 5.0, 3.5, "stars", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("cloud_asset_preview_streaming", "Stream High-Fidelity Audio Preview Audition", true, (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_enum("patch_diff_algorithm", "Patch Variation Comparison Diffing Engine", vec!["Key-Value Property Diff".into(), "Hierarchical Graph Tree Diff".into(), "Binary Byte Hash".into(), "Semantic Sound Character".into()], 0, (168, 85, 247)))
+            ),
+            "FederatedMarketplace" => Box::new(
+                GenericDspNodeUi::new("FederatedMarketplace", "Decentralized Soundpack & Plugin Marketplace HUD", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("catalog_cache_ttl_hours", "Marketplace Metadata Catalog Refresh TTL", 1.0, 72.0, 12.0, "h", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_enum("asset_signature_verification", "Cryptographic Publisher Signature Rigor", vec!["Strict Ed25519 Required".into(), "Warn on Unsigned".into(), "Allow Development Builds".into()], 0, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("max_local_download_cache_gb", "Audition Preview Cache Storage Cap", 2.0, 100.0, 20.0, "GB", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_enum("preview_audio_bitrate_kbps", "Sample Pack Preview Streaming Bitrate", vec!["64 kbps (Mobile/Fast)".into(), "128 kbps (Standard)".into(), "256 kbps (High Quality)".into(), "320 kbps (Studio MP3)".into()], 2, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("auto_check_plugin_updates", "Automatic Background Plugin Update Checks", true, (34, 197, 94)))
+            ),
+            "PeerMeshNetwork" => Box::new(
+                GenericDspNodeUi::new("PeerMeshNetwork", "Collaborative WebRTC Peer Mesh Network HUD", DspNodeCategory::SpatialSurround)
+                    .with_param(DspParamDescriptor::new_linear("max_mesh_peers_limit", "Maximum Connected Collaborative Peer Nodes", 2.0, 16.0, 6.0, "peers", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("jitter_buffer_target_ms", "Adaptive Dynamic Audio Jitter Buffer Target", 10.0, 250.0, 40.0, "ms", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_enum("packet_loss_concealment", "Audio Packet Loss Concealment (PLC) Mode", vec!["Silence on Loss".into(), "Zero-Order Hold".into(), "Waveform Linear Fade".into(), "Neural Spectral Inpainting".into()], 3, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_enum("peer_audio_compression_mode", "Collaborative Stream Audio Codec Mode", vec!["Opus High-Fidelity 128kbps".into(), "Opus Studio 256kbps".into(), "FLAC Ultra-Low-Loss".into(), "PCM 16-bit Uncompressed".into()], 1, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("end_to_end_encryption_enable", "DTLS-SRTP End-to-End Stream Encryption", true, (34, 197, 94)))
+            ),
+            "ZkPatchVerifier" => Box::new(
+                GenericDspNodeUi::new("ZkPatchVerifier", "Zero-Knowledge Preset & Bytecode Verifier HUD", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_enum("proof_verification_rigor", "Zero-Knowledge Proof Verification Rigor", vec!["Fast Checksum Check".into(), "ZK-SNARK Groth16".into(), "PLONK Constraint Proof".into(), "Full Formal Verification".into()], 1, (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("max_instruction_count_budget", "Virtual Machine Opcode Execution Budget", 1000.0, 1000000.0, 50000.0, "ops", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("memory_safety_bounds_check", "Static Array & Buffer Memory Bounds Check", true, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("audit_trail_logging_enable", "Tamper-Proof Receipt Audit Trail Logging", true, (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("zero_allocation_guarantee_enforce", "Enforce Zero Heap Allocations in Audio Loop", true, (168, 85, 247)))
+            ),
+            "ContinuousBackupEngine" => Box::new(
+                GenericDspNodeUi::new("ContinuousBackupEngine", "Continuous Non-Blocking Session Backup HUD", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("journal_tick_rate_seconds", "Incremental Journal Write Cadence Rate", 0.5, 30.0, 2.0, "s", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_enum("deduplication_block_size_kb", "Content-Defined Chunk Deduplication Size", vec!["16 KB (Fine-Grained)".into(), "64 KB (Balanced)".into(), "256 KB (Large Audio)".into(), "1024 KB (Fast I/O)".into()], 1, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("max_rollback_depth_actions", "Maximum Rolling Undo Actions Rollback Depth", 50.0, 2000.0, 500.0, "actions", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("disk_quota_storage_limit_gb", "Journal History Total Storage Disk Quota", 1.0, 50.0, 8.0, "GB", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("background_flush_low_priority", "Low-Priority Background Thread Disk Flush", true, (34, 197, 94)))
+            ),
+            "MidiFileParser" => Box::new(
+                GenericDspNodeUi::new("MidiFileParser", "Standard MIDI File Import & Velocity Scaler HUD", DspNodeCategory::Modulation)
+                    .with_param(DspParamDescriptor::new_enum("ppq_timebase_resolution", "Ticks Per Quarter Note (PPQ) Resolution", vec!["96 PPQ (Vintage)".into(), "192 PPQ".into(), "480 PPQ (Standard)".into(), "960 PPQ (High-Res)".into(), "1920 PPQ (Micro)".into()], 2, (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("velocity_scaling_curve", "MIDI Note Dynamic Velocity Scaling Power", 0.2, 3.0, 1.0, "exp", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_enum("tempo_map_extraction_mode", "Project Tempo Map & Signature Import Policy", vec!["Import Project Tempo".into(), "Flatten to Fixed Tempo".into(), "Stretch to Current BPM".into(), "Extract Markers Only".into()], 0, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("multi_channel_track_split", "Auto-Split Channels Into Individual Tracks", true, (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_linear("pitch_bend_range_semitones", "Imported Pitch Bend Range Interpretation", 1.0, 24.0, 2.0, "st", (168, 85, 247)))
+            ),
             // Fallback dynamic generator for any unexpected or plugin node
             other => {
                 let cat = Self::inventory()
@@ -11961,8 +12360,8 @@ mod tests {
         if !missing.is_empty() {
             panic!("Missing {} descriptors: {:?}", missing.len(), missing);
         }
-        assert!(registry.list_all().len() >= 650, "Registry should contain >= 650 descriptors, found {}", registry.list_all().len());
-        assert!(inventory.len() >= 650, "Inventory should contain >= 650 entries, found {}", inventory.len());
+        assert!(registry.list_all().len() >= 670, "Registry should contain >= 670 descriptors, found {}", registry.list_all().len());
+        assert!(inventory.len() >= 670, "Inventory should contain >= 670 entries, found {}", inventory.len());
 
         // Verify newly registered unmapped nodes exist
         assert!(registry.get("TruePeakLimiter").is_some());
@@ -12267,6 +12666,27 @@ mod tests {
         assert!(registry.get("AudioWarpMarker").is_some());
         assert!(registry.get("StickSlipPhysicsModel").is_some());
         assert!(registry.get("PianoHammerMechanics").is_some());
+        assert!(registry.get("GlassArmonicaBus").is_some());
+        assert!(registry.get("SfzPresetPatch").is_some());
+        assert!(registry.get("LuaScriptEngine").is_some());
+        assert!(registry.get("PluginSandbox").is_some());
+        assert!(registry.get("PluginLatencyCompensation").is_some());
+        assert!(registry.get("PluginCrashGuard").is_some());
+        assert!(registry.get("AudioGraphBenchmarkSuite").is_some());
+        assert!(registry.get("ProjectAutoSaveManager").is_some());
+        assert!(registry.get("SessionMarkerNavigationManager").is_some());
+        assert!(registry.get("ScratchAudioCache").is_some());
+        assert!(registry.get("WorkspaceDependencyAuditor").is_some());
+        assert!(registry.get("CrashDumpAnalyzer").is_some());
+        assert!(registry.get("ExportPresetManager").is_some());
+        assert!(registry.get("DistributedRenderFarm").is_some());
+        assert!(registry.get("LivePerformanceSync").is_some());
+        assert!(registry.get("CloudPresetHub").is_some());
+        assert!(registry.get("FederatedMarketplace").is_some());
+        assert!(registry.get("PeerMeshNetwork").is_some());
+        assert!(registry.get("ZkPatchVerifier").is_some());
+        assert!(registry.get("ContinuousBackupEngine").is_some());
+        assert!(registry.get("MidiFileParser").is_some());
     }
 
     #[test]

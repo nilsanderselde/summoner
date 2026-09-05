@@ -4174,6 +4174,185 @@ mod tests {
             assert_eq!(view.inspector_state.selected_node_kind, Some("DrumMacroStrip".to_string()));
         }
     }
+
+    #[test]
+    fn test_tier98_modern_gui_dsp_module_coverage_and_presets() {
+        use crate::dsp_node_ui::{DspNodeRegistry, DspNodeCategory};
+        use crate::views::modern_asset_browser::BrowserCategory;
+
+        // 1. Verify global registry inventory completeness >= 670 (currently 673)
+        let registry = DspNodeRegistry::new();
+        assert!(registry.list_all().len() >= 670, "Registry must contain >= 670 descriptors, found {}", registry.list_all().len());
+
+        let inv = DspNodeRegistry::inventory();
+        assert!(inv.len() >= 670, "Inventory must contain >= 670 entries, found {}", inv.len());
+
+        // 2. Verify all 21 newly registered DSP modules exist and have valid tactile UIs
+        let new_modules = [
+            ("GlassArmonicaBus", DspNodeCategory::AcousticPhysicalModel),
+            ("SfzPresetPatch", DspNodeCategory::SamplerSlicer),
+            ("LuaScriptEngine", DspNodeCategory::Modulation),
+            ("PluginSandbox", DspNodeCategory::Utility),
+            ("PluginLatencyCompensation", DspNodeCategory::Utility),
+            ("PluginCrashGuard", DspNodeCategory::Utility),
+            ("AudioGraphBenchmarkSuite", DspNodeCategory::Utility),
+            ("ProjectAutoSaveManager", DspNodeCategory::Utility),
+            ("SessionMarkerNavigationManager", DspNodeCategory::Modulation),
+            ("ScratchAudioCache", DspNodeCategory::Utility),
+            ("WorkspaceDependencyAuditor", DspNodeCategory::Utility),
+            ("CrashDumpAnalyzer", DspNodeCategory::Utility),
+            ("ExportPresetManager", DspNodeCategory::DynamicsMaster),
+            ("DistributedRenderFarm", DspNodeCategory::Utility),
+            ("LivePerformanceSync", DspNodeCategory::Modulation),
+            ("CloudPresetHub", DspNodeCategory::Utility),
+            ("FederatedMarketplace", DspNodeCategory::Utility),
+            ("PeerMeshNetwork", DspNodeCategory::SpatialSurround),
+            ("ZkPatchVerifier", DspNodeCategory::Utility),
+            ("ContinuousBackupEngine", DspNodeCategory::Utility),
+            ("MidiFileParser", DspNodeCategory::Modulation),
+        ];
+
+        for (name, cat) in &new_modules {
+            let desc = registry.get(name).unwrap_or_else(|| panic!("Node {} must be registered in DspNodeRegistry", name));
+            assert_eq!(desc.category, *cat, "Node {} must match expected category", name);
+            assert!(desc.params.len() >= 5, "Node {} must have >= 5 tactile parameters, got {}", name, desc.params.len());
+
+            let ui = crate::dsp_node_ui::DspNodeRegistry::create_node_ui(name)
+                .unwrap_or_else(|| panic!("create_node_ui({}) must succeed", name));
+            assert_eq!(ui.node_type_name(), *name);
+            assert_eq!(ui.category(), *cat);
+            assert!(ui.parameters().len() >= 5);
+        }
+
+        // 3. Verify canonical normalization mappings
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("glassarmonicabus"), Some("GlassArmonicaBus"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("franklinglassarmonica"), Some("GlassArmonicaBus"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("crystalsingingbowl"), Some("GlassArmonicaBus"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sfzpresetpatch"), Some("SfzPresetPatch"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sfzsoundfont"), Some("SfzPresetPatch"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luascriptengine"), Some("LuaScriptEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luadspengine"), Some("LuaScriptEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pluginsandbox"), Some("PluginSandbox"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pluginhostsandbox"), Some("PluginSandbox"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pluginlatencycompensation"), Some("PluginLatencyCompensation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("automaticpdc"), Some("PluginLatencyCompensation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("plugincrashguard"), Some("PluginCrashGuard"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("crashguardwatchdog"), Some("PluginCrashGuard"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("audiographbenchmarksuite"), Some("AudioGraphBenchmarkSuite"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("dspgraphbenchmark"), Some("AudioGraphBenchmarkSuite"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("projectautosavemanager"), Some("ProjectAutoSaveManager"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("backupsnapshotmanager"), Some("ProjectAutoSaveManager"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sessionmarkernavigationmanager"), Some("SessionMarkerNavigationManager"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("markernavigation"), Some("SessionMarkerNavigationManager"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("scratchaudiocache"), Some("ScratchAudioCache"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("temporaryaudiocache"), Some("ScratchAudioCache"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("workspacedependencyauditor"), Some("WorkspaceDependencyAuditor"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cratevulnerabilityauditor"), Some("WorkspaceDependencyAuditor"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("crashdumpanalyzer"), Some("CrashDumpAnalyzer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("minidumpanalyzer"), Some("CrashDumpAnalyzer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("exportpresetmanager"), Some("ExportPresetManager"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("batchstemexporter"), Some("ExportPresetManager"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("distributedrenderfarm"), Some("DistributedRenderFarm"),);
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cloudaudiorender"), Some("DistributedRenderFarm"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("liveperformancesync"), Some("LivePerformanceSync"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("stageptpclock"), Some("LivePerformanceSync"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cloudpresethub"), Some("CloudPresetHub"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cloudpatchrepository"), Some("CloudPresetHub"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("federatedmarketplace"), Some("FederatedMarketplace"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("assetmarketplace"), Some("FederatedMarketplace"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("peermeshnetwork"), Some("PeerMeshNetwork"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("collaborativepeermesh"), Some("PeerMeshNetwork"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("zkpatchverifier"), Some("ZkPatchVerifier"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("zeroknowledgebytecodeverifier"), Some("ZkPatchVerifier"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("continuousbackupengine"), Some("ContinuousBackupEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("journaledtimemachinebackup"), Some("ContinuousBackupEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("midifileparser"), Some("MidiFileParser"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("smfparser"), Some("MidiFileParser"));
+
+        // 4. Verify Asset Browser categorization
+        let inst_folders = BrowserCategory::Instruments.default_folders();
+        let phys_items = inst_folders.iter().find(|(name, _)| *name == "Physical Models").unwrap().1;
+        assert!(phys_items.contains(&"GlassArmonicaBus"));
+
+        let sampler_items = inst_folders.iter().find(|(name, _)| *name == "Samplers & Slicers").unwrap().1;
+        assert!(sampler_items.contains(&"SfzPresetPatch"));
+
+        let fx_folders = BrowserCategory::AudioFx.default_folders();
+        let dyn_items = fx_folders.iter().find(|(name, _)| *name == "Dynamics & Level").unwrap().1;
+        assert!(dyn_items.contains(&"ExportPresetManager"));
+
+        let time_items = fx_folders.iter().find(|(name, _)| *name == "Time & Reverb").unwrap().1;
+        assert!(time_items.contains(&"PeerMeshNetwork"));
+
+        let midi_folders = BrowserCategory::MidiFx.default_folders();
+        let gen_sync_items = midi_folders.iter().find(|(name, _)| *name == "Generative & Sync").unwrap().1;
+        assert!(gen_sync_items.contains(&"SessionMarkerNavigationManager"));
+        assert!(gen_sync_items.contains(&"LivePerformanceSync"));
+        assert!(gen_sync_items.contains(&"LuaScriptEngine"));
+        assert!(gen_sync_items.contains(&"MidiFileParser"));
+
+        let routing_items = midi_folders.iter().find(|(name, _)| *name == "Transforms & Routing").unwrap().1;
+        assert!(routing_items.contains(&"PluginSandbox"));
+        assert!(routing_items.contains(&"PluginLatencyCompensation"));
+        assert!(routing_items.contains(&"PluginCrashGuard"));
+        assert!(routing_items.contains(&"AudioGraphBenchmarkSuite"));
+        assert!(routing_items.contains(&"ProjectAutoSaveManager"));
+        assert!(routing_items.contains(&"ScratchAudioCache"));
+        assert!(routing_items.contains(&"WorkspaceDependencyAuditor"));
+        assert!(routing_items.contains(&"CrashDumpAnalyzer"));
+        assert!(routing_items.contains(&"DistributedRenderFarm"));
+        assert!(routing_items.contains(&"CloudPresetHub"));
+        assert!(routing_items.contains(&"FederatedMarketplace"));
+        assert!(routing_items.contains(&"ZkPatchVerifier"));
+        assert!(routing_items.contains(&"ContinuousBackupEngine"));
+
+        // 5. Verify Novice Presets synchronize in AwardWinningGuiView
+        #[cfg(feature = "gui")]
+        {
+            let mut view = crate::views::award_winning_gui_view::AwardWinningGuiView::default();
+            let ctx = eframe::egui::Context::default();
+
+            // Preset: Benjamin Franklin Glass Armonica -> GlassArmonicaBus
+            view.top_bar_state.selected_preset = "Benjamin Franklin Glass Armonica".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("GlassArmonicaBus".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("GlassArmonicaBus".to_string()));
+
+            // Preset: Multi-Zone SFZ Orchestra Sample Patch -> SfzPresetPatch
+            view.top_bar_state.selected_preset = "Multi-Zone SFZ Orchestra Sample Patch".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("SfzPresetPatch".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("SfzPresetPatch".to_string()));
+
+            // Preset: Lua Real-Time DSP Script Controller -> LuaScriptEngine
+            view.top_bar_state.selected_preset = "Lua Real-Time DSP Script Controller".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("LuaScriptEngine".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("LuaScriptEngine".to_string()));
+
+            // Preset: Zero-Latency Plugin Sandbox Guard -> PluginSandbox
+            view.top_bar_state.selected_preset = "Zero-Latency Plugin Sandbox Guard".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("PluginSandbox".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("PluginSandbox".to_string()));
+        }
+    }
 }
 
 

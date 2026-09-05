@@ -396,6 +396,10 @@ impl AwardWinningGuiView {
                 "Spectrogram Visual Audio Canvas" => "SpectrogramSoundGenerator",
                 "Cathedral Pipe Organ Windchest" => "WindchestReservoir",
                 "Tactile 16-Pad Groove Machine" => "DrumMacroStrip",
+                "Benjamin Franklin Glass Armonica" => "GlassArmonicaBus",
+                "Multi-Zone SFZ Orchestra Sample Patch" => "SfzPresetPatch",
+                "Lua Real-Time DSP Script Controller" => "LuaScriptEngine",
+                "Zero-Latency Plugin Sandbox Guard" => "PluginSandbox",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {
