@@ -217,6 +217,10 @@ fn default_available_presets() -> Vec<String> {
         "CLAP Sub-Sample Precision Automation & MPE Rig".to_string(),
         "Multi-Velocity Layered Acoustic Studio Drum Station".to_string(),
         "3D Binaural Spatial Soundfield Vector Tracker".to_string(),
+        "Analog Subtractive Twin-Oscillator Performance Lead".to_string(),
+        "Quantum Wavepacket Coherence Spatial Interferometer".to_string(),
+        "Dynamic Sidechain Matrix Ducking & Punch Controller".to_string(),
+        "Neo-Riemannian Microtonal Modal Harmony Matrix".to_string(),
     ]
 }
 

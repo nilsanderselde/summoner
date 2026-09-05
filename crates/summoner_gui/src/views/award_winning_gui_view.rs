@@ -452,6 +452,10 @@ impl AwardWinningGuiView {
                 "CLAP Sub-Sample Precision Automation & MPE Rig" => "ClapSampleAccurateAutomation",
                 "Multi-Velocity Layered Acoustic Studio Drum Station" => "DrumPad",
                 "3D Binaural Spatial Soundfield Vector Tracker" => "AtomicSpatialSlot",
+                "Analog Subtractive Twin-Oscillator Performance Lead" => "AetherMacroView",
+                "Quantum Wavepacket Coherence Spatial Interferometer" => "Complex32",
+                "Dynamic Sidechain Matrix Ducking & Punch Controller" => "ControlEvent",
+                "Neo-Riemannian Microtonal Modal Harmony Matrix" => "Scale",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {
