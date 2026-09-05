@@ -444,6 +444,10 @@ impl AwardWinningGuiView {
                 "6-DOF Acoustic Articulation Bowing Dynamics Bus" => "ArticulationBusSnapshot",
                 "Phonetic IPA Vowel Formant Trajectory Matrix" => "VowelNode",
                 "Embedded Hardware Supervisor & Thermal Throttling" => "EmbeddedHardwareConfig",
+                "Live Session Lossless WAV Disk Recorder Station" => "RecordingStats",
+                "AI Multi-Track Frequency Collision & Masking Inspector" => "MaskingReport",
+                "Acoustic Tonehole 3-Port Scattering Wave Matrix" => "ToneholeScatteringResult",
+                "Quantum Bloch Sphere Density Matrix Tomography" => "QuantumTomographyData",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {

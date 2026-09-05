@@ -209,6 +209,10 @@ fn default_available_presets() -> Vec<String> {
         "6-DOF Acoustic Articulation Bowing Dynamics Bus".to_string(),
         "Phonetic IPA Vowel Formant Trajectory Matrix".to_string(),
         "Embedded Hardware Supervisor & Thermal Throttling".to_string(),
+        "Live Session Lossless WAV Disk Recorder Station".to_string(),
+        "AI Multi-Track Frequency Collision & Masking Inspector".to_string(),
+        "Acoustic Tonehole 3-Port Scattering Wave Matrix".to_string(),
+        "Quantum Bloch Sphere Density Matrix Tomography".to_string(),
     ]
 }
 

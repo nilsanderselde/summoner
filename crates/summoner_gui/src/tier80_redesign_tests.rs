@@ -6277,6 +6277,161 @@ mod tests {
             assert_eq!(view.inspector_state.selected_node_kind, Some("EmbeddedHardwareConfig".to_string()));
         }
     }
+
+    #[test]
+    fn test_tier110_modern_gui_dsp_module_coverage_and_presets() {
+        use crate::dsp_node_ui::{DspNodeRegistry, DspNodeCategory};
+        use crate::views::modern_asset_browser::BrowserCategory;
+
+        let registry = DspNodeRegistry::new();
+
+        // 1. Verify 925 total DSP modules registered
+        let total_modules = DspNodeRegistry::inventory();
+        assert_eq!(total_modules.len(), 925, "Must have exactly 925 registered DSP modules");
+        assert!(
+            registry.list_all().len() >= 925,
+            "Must have at least 925 registered DSP modules, found {}",
+            registry.list_all().len()
+        );
+
+        // 2. Verify all 21 new modules exist with correct categories and tactile parameters (>= 5 params each)
+        let new_modules = [
+            ("RecordingStats", DspNodeCategory::Utility),
+            ("FastPrng", DspNodeCategory::Modulation),
+            ("MaskingReport", DspNodeCategory::DynamicsMaster),
+            ("StrikeContactResult", DspNodeCategory::AcousticPhysicalModel),
+            ("ToneholeScatteringResult", DspNodeCategory::AcousticPhysicalModel),
+            ("SampleBuffer", DspNodeCategory::SamplerSlicer),
+            ("SampleRegion", DspNodeCategory::SamplerSlicer),
+            ("CloudGrain", DspNodeCategory::SamplerSlicer),
+            ("AlignmentResult", DspNodeCategory::DynamicsMaster),
+            ("ExtractedChordEvent", DspNodeCategory::Modulation),
+            ("FrictionResult", DspNodeCategory::AcousticPhysicalModel),
+            ("HarmonicPartial", DspNodeCategory::SpectralResynthesis),
+            ("QuantumTomographyData", DspNodeCategory::SpectralResynthesis),
+            ("WindchestConfig", DspNodeCategory::AcousticPhysicalModel),
+            ("TunerResult", DspNodeCategory::Utility),
+            ("VisualizerFrameData", DspNodeCategory::Utility),
+            ("VisualizerPreset", DspNodeCategory::Utility),
+            ("SampleMarker", DspNodeCategory::SamplerSlicer),
+            ("AllocGuard", DspNodeCategory::Utility),
+            ("EegBands", DspNodeCategory::Modulation),
+            ("PluginStateConfig", DspNodeCategory::Utility),
+        ];
+
+        for (name, expected_cat) in new_modules {
+            let desc = registry.get(name).unwrap_or_else(|| panic!("Module {} not found", name));
+            assert_eq!(desc.category, expected_cat, "Module {} category mismatch", name);
+            assert!(desc.params.len() >= 5, "Module {} must have >= 5 tactile parameters, found {}", name, desc.params.len());
+        }
+
+        // 3. Verify normalization mappings
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("recordingstats"), Some("RecordingStats"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("fastprng"), Some("FastPrng"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("maskingcollisionreport"), Some("MaskingReport"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("strikecontactresult"), Some("StrikeContactResult"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("toneholescat"), Some("ToneholeScatteringResult"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("samplebuffer"), Some("SampleBuffer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sampleregion"), Some("SampleRegion"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cloudgrain"), Some("CloudGrain"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("alignmentresult"), Some("AlignmentResult"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("polyphonicchordevent"), Some("ExtractedChordEvent"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("frictionresult"), Some("FrictionResult"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("harmonicpartial"), Some("HarmonicPartial"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("blochtomography"), Some("QuantumTomographyData"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("windchestconfig"), Some("WindchestConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("tunerresult"), Some("TunerResult"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("visualizerframedata"), Some("VisualizerFrameData"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("visualizerpreset"), Some("VisualizerPreset"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("samplemarker"), Some("SampleMarker"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("allocguard"), Some("AllocGuard"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("eegbands"), Some("EegBands"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pluginstateconfig"), Some("PluginStateConfig"));
+
+        // 4. Verify Asset Browser categorization
+        let inst_folders = BrowserCategory::Instruments.default_folders();
+        let phys_items = inst_folders.iter().find(|(name, _)| *name == "Physical Models").unwrap().1;
+        assert!(phys_items.contains(&"StrikeContactResult"));
+        assert!(phys_items.contains(&"ToneholeScatteringResult"));
+        assert!(phys_items.contains(&"FrictionResult"));
+        assert!(phys_items.contains(&"WindchestConfig"));
+
+        let synth_items = inst_folders.iter().find(|(name, _)| *name == "Synthesizers").unwrap().1;
+        assert!(synth_items.contains(&"HarmonicPartial"));
+        assert!(synth_items.contains(&"QuantumTomographyData"));
+
+        let sampler_items = inst_folders.iter().find(|(name, _)| *name == "Samplers & Slicers").unwrap().1;
+        assert!(sampler_items.contains(&"SampleBuffer"));
+        assert!(sampler_items.contains(&"SampleRegion"));
+        assert!(sampler_items.contains(&"CloudGrain"));
+        assert!(sampler_items.contains(&"SampleMarker"));
+
+        let fx_folders = BrowserCategory::AudioFx.default_folders();
+        let dynamics_items = fx_folders.iter().find(|(name, _)| *name == "Dynamics & Level").unwrap().1;
+        assert!(dynamics_items.contains(&"MaskingReport"));
+        assert!(dynamics_items.contains(&"AlignmentResult"));
+
+        let mod_items = fx_folders.iter().find(|(name, _)| *name == "Modulation & Pitch").unwrap().1;
+        assert!(mod_items.contains(&"FastPrng"));
+        assert!(mod_items.contains(&"ExtractedChordEvent"));
+        assert!(mod_items.contains(&"EegBands"));
+
+        let midi_folders = BrowserCategory::MidiFx.default_folders();
+        let routing_items = midi_folders.iter().find(|(name, _)| *name == "Transforms & Routing").unwrap().1;
+        assert!(routing_items.contains(&"RecordingStats"));
+        assert!(routing_items.contains(&"TunerResult"));
+        assert!(routing_items.contains(&"VisualizerFrameData"));
+        assert!(routing_items.contains(&"VisualizerPreset"));
+        assert!(routing_items.contains(&"AllocGuard"));
+        assert!(routing_items.contains(&"PluginStateConfig"));
+
+        // 5. Verify Novice Presets synchronize in AwardWinningGuiView
+        #[cfg(feature = "gui")]
+        {
+            let mut view = crate::views::award_winning_gui_view::AwardWinningGuiView::default();
+            let ctx = eframe::egui::Context::default();
+
+            // Preset 1: Live Session Lossless WAV Disk Recorder Station -> RecordingStats
+            view.top_bar_state.selected_preset = "Live Session Lossless WAV Disk Recorder Station".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("RecordingStats".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("RecordingStats".to_string()));
+
+            // Preset 2: AI Multi-Track Frequency Collision & Masking Inspector -> MaskingReport
+            view.top_bar_state.selected_preset = "AI Multi-Track Frequency Collision & Masking Inspector".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("MaskingReport".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("MaskingReport".to_string()));
+
+            // Preset 3: Acoustic Tonehole 3-Port Scattering Wave Matrix -> ToneholeScatteringResult
+            view.top_bar_state.selected_preset = "Acoustic Tonehole 3-Port Scattering Wave Matrix".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("ToneholeScatteringResult".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("ToneholeScatteringResult".to_string()));
+
+            // Preset 4: Quantum Bloch Sphere Density Matrix Tomography -> QuantumTomographyData
+            view.top_bar_state.selected_preset = "Quantum Bloch Sphere Density Matrix Tomography".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("QuantumTomographyData".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("QuantumTomographyData".to_string()));
+        }
+    }
 }
 
 
