@@ -4091,6 +4091,126 @@ impl DspNodeRegistry {
             .with_param(DspParamSchema::log_knob("sidechain_lowpass_hz", "Key Lowpass Filter", 1000.0, 20000.0, 12000.0, "Hz", MacroRole::Character, "Filters harsh transients from trigger detector parameter"))
             .with_param(DspParamSchema::toggle("key_listen", "Key Signal Audition", false, "Listen to filtered sidechain key signal in isolation parameter"))
         );
+        descriptors.insert("BellowsGestureEngine".to_string(), DspNodeDescriptor::new("BellowsGestureEngine", "Aeroacoustic Bellows Push-Pull Pressure & Trajectory Planner", DspNodeCategory::AcousticPhysicalModel, "Continuous pneumatic bellows pressure trajectory generator with push-pull inflection kinematics, acceleration dynamics, and reed chuff modeling")
+            .with_param(DspParamSchema::log_knob("bellows_pressure_pa", "Bellows Pressure", 50.0, 3000.0, 850.0, "Pa", MacroRole::Punch, "Bellows chamber static pressure parameter"))
+            .with_param(DspParamSchema::knob("push_pull_symmetry", "Push-Pull Balance", -1.0, 1.0, 0.0, "bal", MacroRole::Tone, "Push versus pull directional pressure symmetry parameter"))
+            .with_param(DspParamSchema::knob("airflow_rate", "Volumetric Airflow", 0.0, 120.0, 35.0, "L/min", MacroRole::Character, "Volumetric airflow rate through pallets parameter"))
+            .with_param(DspParamSchema::toggle("bellows_shake_accel", "Fast Bellows Shaking", false, "Fast rhythmic bellows shaking articulation parameter"))
+        );
+        descriptors.insert("BowingGestureEngine".to_string(), DspNodeDescriptor::new("BowingGestureEngine", "Dynamic Bowing Articulation Gesture Timeline & Trajectory Engine", DspNodeCategory::AcousticPhysicalModel, "Multi-dimensional violin/cello bow velocity, normal force, bridge proximity beta, and rosin stick-slip contact planner")
+            .with_param(DspParamSchema::knob("bow_velocity_mps", "Transverse Bow Velocity", -2.0, 2.0, 0.35, "m/s", MacroRole::Punch, "Transverse bow speed along string parameter"))
+            .with_param(DspParamSchema::log_knob("bow_force_n", "Normal Clamping Force", 0.05, 5.0, 0.85, "N", MacroRole::Tone, "Downward normal clamping bow force parameter"))
+            .with_param(DspParamSchema::knob("bridge_proximity_beta", "Bridge Proximity Beta", 0.02, 0.50, 0.12, "beta", MacroRole::Character, "Proximity ratio of bow contact to bridge parameter"))
+            .with_param(DspParamSchema::toggle("rosin_adhesion", "Rosin Stick-Slip Adhesion", true, "Nonlinear sticky rosin friction hysteresis parameter"))
+        );
+        descriptors.insert("ClavinetGestureEngine".to_string(), DspNodeDescriptor::new("ClavinetGestureEngine", "Electro-Acoustic Clavinet Key Strike & Pickup Gesture Engine", DspNodeCategory::AcousticPhysicalModel, "Hohner D6 clavinet rubber hammer strike dynamics, key release damper yarn bounce, and dual magnetic pickup coil flux selector")
+            .with_param(DspParamSchema::knob("strike_velocity", "Hammer Strike Velocity", 0.0, 1.0, 0.75, "vel", MacroRole::Punch, "Hammer impact velocity against anvil parameter"))
+            .with_param(DspParamSchema::log_knob("release_damping_ms", "Yarn Damper Decay", 5.0, 300.0, 45.0, "ms", MacroRole::Space, "Wool yarn damper decay time upon key release parameter"))
+            .with_param(DspParamSchema::knob("pickup_balance", "Pickup Neck/Bridge Mix", 0.0, 1.0, 0.50, "bal", MacroRole::Tone, "Neck vs bridge electromagnetic pickup mixing parameter"))
+            .with_param(DspParamSchema::toggle("phase_reverse_switch", "Pickup Phase Inversion", false, "Out-of-phase pickup coil cancellation parameter"))
+        );
+        descriptors.insert("EpGestureEngine".to_string(), DspNodeDescriptor::new("EpGestureEngine", "Electric Piano Tine Kinematics & Escapement Gesture Engine", DspNodeCategory::AcousticPhysicalModel, "Vintage Rhodes/Wurlitzer neoprene hammer tip velocity, tine-to-tonebar strikeline, and variable-reluctance pickup saturation")
+            .with_param(DspParamSchema::knob("tine_strikeline", "Tine Strikeline Position", 0.0, 1.0, 0.55, "pos", MacroRole::Character, "Hammer impact strike point along asymmetric tine parameter"))
+            .with_param(DspParamSchema::knob("escapement_distance_mm", "Escapement Let-off Gap", 0.5, 8.0, 2.2, "mm", MacroRole::Punch, "Let-off escapement distance between hammer tip and tine parameter"))
+            .with_param(DspParamSchema::knob("pickup_distance_mm", "Pickup Pole Gap", 0.5, 10.0, 1.8, "mm", MacroRole::Tone, "Electromagnetic pickup pole piece proximity parameter"))
+            .with_param(DspParamSchema::toggle("damper_felt_slap", "Damper Felt Slap Transient", true, "Acoustic damper felt slap transient upon release parameter"))
+        );
+        descriptors.insert("GlassGestureEngine".to_string(), DspNodeDescriptor::new("GlassGestureEngine", "Glass Armonica Friction Orbit & Acoustic Wet-Slip Exciter", DspNodeCategory::AcousticPhysicalModel, "Benjamin Franklin glass armonica wet finger friction orbital pressure, rotational spindle slip-stick excitation, and quartz rim dampening")
+            .with_param(DspParamSchema::log_knob("orbital_pressure_kpa", "Finger Contact Pressure", 0.1, 50.0, 4.5, "kPa", MacroRole::Punch, "Finger contact normal pressure against rotating quartz bowl parameter"))
+            .with_param(DspParamSchema::knob("spindle_rpm", "Spindle Rotation Speed", 30.0, 300.0, 115.0, "RPM", MacroRole::Tone, "Rotational velocity of nested glass spindle parameter"))
+            .with_param(DspParamSchema::knob("water_rim_damping", "Water Film Edge Damping", 0.0, 1.0, 0.15, "damp", MacroRole::Space, "Moisture film viscosity and acoustic edge damping parameter"))
+            .with_param(DspParamSchema::toggle("slip_stick_chaos", "Stick-Slip Micro-Chaos", true, "Microscopic stick-slip friction chaos perturbation parameter"))
+        );
+        descriptors.insert("GrandPianoGestureEngine".to_string(), DspNodeDescriptor::new("GrandPianoGestureEngine", "Concert Grand Piano Escapement, Pedaling & Kinematics Engine", DspNodeCategory::AcousticPhysicalModel, "Concert grand piano double repetition escapement, continuous half-pedal damper lift, una corda soft shift, and sympathetic soundboard bleed")
+            .with_param(DspParamSchema::knob("damper_lift_pos", "Damper Half-Pedal Lift", 0.0, 1.0, 0.0, "lift", MacroRole::Space, "Continuous damper pedal lift fraction (half-pedaling) parameter"))
+            .with_param(DspParamSchema::knob("una_corda_shift", "Una Corda Soft Shift", 0.0, 1.0, 0.0, "shift", MacroRole::Tone, "Soft pedal keyboard shift altering hammer strike zone parameter"))
+            .with_param(DspParamSchema::knob("hammer_felt_hardness", "Felt Hammer Hardness", 0.1, 1.0, 0.65, "hard", MacroRole::Punch, "Felt hammer compliance and nonlinear strike velocity curve parameter"))
+            .with_param(DspParamSchema::toggle("sympathetic_bleed_enable", "Sympathetic Soundboard Bleed", true, "Soundboard sympathetic open string resonance bleed parameter"))
+        );
+        descriptors.insert("HurdyGurdyGestureEngine".to_string(), DspNodeDescriptor::new("HurdyGurdyGestureEngine", "Vielle à Roue Crank Wheel & Trompette Chien Gesture Engine", DspNodeCategory::AcousticPhysicalModel, "French hurdy-gurdy continuous resin crank wheel rotation, rhythmic coup-de-poignet buzzing bridge transients, and sympathetic drone balance")
+            .with_param(DspParamSchema::knob("crank_wheel_rpm", "Crank Wheel Speed", 20.0, 240.0, 78.0, "RPM", MacroRole::Tone, "Continuous wooden wheel rotation speed parameter"))
+            .with_param(DspParamSchema::log_knob("chien_accent_force", "Coup-de-Poignet Force", 0.1, 10.0, 2.4, "N", MacroRole::Punch, "Coup-de-poignet wrist flick force triggering buzzing bridge parameter"))
+            .with_param(DspParamSchema::knob("resin_friction_coeff", "Rosin Stick-Slip Coeff", 0.1, 1.0, 0.68, "coeff", MacroRole::Character, "Rosin stick-slip excitation intensity parameter"))
+            .with_param(DspParamSchema::toggle("buzzing_bridge_active", "Chien Buzzing Bridge Active", true, "Acoustic chien loose bridge buzzing engagement parameter"))
+        );
+        descriptors.insert("KotoGestureEngine".to_string(), DspNodeDescriptor::new("KotoGestureEngine", "Traditional 13-String Koto Plectrum & Oshi-de Gesture Engine", DspNodeCategory::AcousticPhysicalModel, "Japanese 13-string Koto ivory tsume plectrum strike angle, left-hand oshi-de behind-the-bridge pitch pulling, and movable ji bridge displacement")
+            .with_param(DspParamSchema::knob("oshi_de_pull_cents", "Oshi-de Pitch Pull", 0.0, 400.0, 0.0, "cents", MacroRole::Tone, "Left hand pulling string behind bridge for microtonal pitch bending parameter"))
+            .with_param(DspParamSchema::knob("tsume_strike_angle", "Tsume Plectrum Angle", 15.0, 90.0, 45.0, "deg", MacroRole::Punch, "Ivory plectrum strike angle along silk/tetron string parameter"))
+            .with_param(DspParamSchema::knob("ji_bridge_offset_mm", "Ji Bridge Position Offset", -30.0, 30.0, 0.0, "mm", MacroRole::Character, "Movable ji bridge sliding position parameter"))
+            .with_param(DspParamSchema::toggle("tremolo_chirashizume", "Chirashizume Tremolo", false, "Fast alternating finger flutter tremolo articulation parameter"))
+        );
+        descriptors.insert("MalletGestureEngine".to_string(), DspNodeDescriptor::new("MalletGestureEngine", "Percussion Mallet Strike Hardness & Motor Tremolo Gesture Engine", DspNodeCategory::AcousticPhysicalModel, "Marimba/vibraphone yarn vs rubber mallet hardness trajectory, bar strike node offset, and rotating resonator fan flutter modulation")
+            .with_param(DspParamSchema::knob("mallet_hardness", "Mallet Head Hardness", 0.1, 1.0, 0.55, "hard", MacroRole::Punch, "Mallet head core compliance and yarn wrapping hardness parameter"))
+            .with_param(DspParamSchema::knob("strike_node_offset", "Bar Strike Node Offset", 0.0, 0.5, 0.15, "pos", MacroRole::Character, "Mallet impact distance from bar nodal suspension point parameter"))
+            .with_param(DspParamSchema::knob("motor_fan_speed_hz", "Vibraphone Motor Speed", 0.0, 10.0, 4.2, "Hz", MacroRole::Tone, "Vibraphone resonator tube rotating butterfly valve motor speed parameter"))
+            .with_param(DspParamSchema::toggle("damper_pedal_down", "Sustain Felt Damper Bar", false, "Sustain felt damper bar pedal engagement parameter"))
+        );
+        descriptors.insert("MarkovSequenceMutator".to_string(), DspNodeDescriptor::new("MarkovSequenceMutator", "Generative Polyrhythmic Sequence Mutator & Higher-Order Markov Engine", DspNodeCategory::Modulation, "2nd and 3rd-order Markov transition matrix melody and rhythm generator with temperature scaling and polyrhythmic division")
+            .with_param(DspParamSchema::knob("temperature", "Markov Temperature", 0.1, 2.5, 1.0, "temp", MacroRole::Character, "Markov state transition randomness and entropy parameter"))
+            .with_param(DspParamSchema::knob("mutation_rate", "Step Mutation Rate", 0.0, 1.0, 0.35, "prob", MacroRole::Punch, "Probability of altering existing pattern steps parameter"))
+            .with_param(DspParamSchema::toggle("order_order3_active", "3rd-Order Chain Active", false, "Switch between 2nd-order (false) and 3rd-order (true) Markov dependencies parameter"))
+            .with_param(DspParamSchema::toggle("pitch_only_mutation", "Mutate Pitch Only", false, "Preserve rhythm and gate timings while mutating pitches parameter"))
+        );
+        descriptors.insert("PipeOrganGestureEngine".to_string(), DspNodeDescriptor::new("PipeOrganGestureEngine", "Tracker Action Pipe Organ Valve Acceleration & Pressure Drop Engine", DspNodeCategory::AcousticPhysicalModel, "Mechanical tracker action pallet valve opening acceleration, pipe speaking onset delay, and localized windchest pressure drop")
+            .with_param(DspParamSchema::log_knob("key_tracker_speed", "Tracker Action Velocity", 10.0, 500.0, 120.0, "mm/s", MacroRole::Punch, "Mechanical tracker action pallet valve pull velocity parameter"))
+            .with_param(DspParamSchema::log_knob("windchest_reservoir_pa", "Windchest Pressure", 200.0, 2500.0, 850.0, "Pa", MacroRole::Tone, "Static wind pressure in pipe organ soundboard pallet box parameter"))
+            .with_param(DspParamSchema::log_knob("pipe_onset_chuff_ms", "Flue Speech Chuff Delay", 2.0, 80.0, 18.0, "ms", MacroRole::Character, "Flue pipe acoustic jet speech onset chuff delay parameter"))
+            .with_param(DspParamSchema::toggle("tremulant_active", "Organ Tremulant Valve", false, "Mechanical windchest tremulant pulse valve parameter"))
+        );
+        descriptors.insert("PluckGestureEngine".to_string(), DspNodeDescriptor::new("PluckGestureEngine", "Acoustic Pluck Dynamics, Plectrum Angle & String Release Engine", DspNodeCategory::AcousticPhysicalModel, "Guitar and harp string pluck position beta ratio, plectrum stroke angle, fingernail compliance, and snap-back release trajectory")
+            .with_param(DspParamSchema::knob("pluck_position_beta", "Pluck Position Beta", 0.05, 0.50, 0.18, "beta", MacroRole::Tone, "Normalized excitation point along string relative to length parameter"))
+            .with_param(DspParamSchema::log_knob("pluck_force_n", "Initial Pluck Force", 0.1, 15.0, 2.5, "N", MacroRole::Punch, "Initial string transverse displacement force parameter"))
+            .with_param(DspParamSchema::knob("nail_vs_flesh_ratio", "Nail vs Flesh Balance", 0.0, 1.0, 0.40, "ratio", MacroRole::Character, "Finger flesh soft attack vs fingernail bright snap balance parameter"))
+            .with_param(DspParamSchema::toggle("snap_release_bartok", "Bartók Snap Pizzicato", false, "Bartok snap pizzicato string slapping against fingerboard parameter"))
+        );
+        descriptors.insert("RotaryGestureEngine".to_string(), DspNodeDescriptor::new("RotaryGestureEngine", "Rotary Speaker Horn & Rotor Inertia Acceleration Controller", DspNodeCategory::Modulation, "Dual-motor Leslie speaker horn and low-frequency rotor mechanical inertia, ramp acceleration times, and Doppler phase modulation")
+            .with_param(DspParamSchema::knob("horn_speed_mode", "Speed Mode (0=Stop, 1=Slow, 2=Fast)", 0.0, 2.0, 1.0, "mode", MacroRole::Tone, "Rotary speed selector: 0=Brake, 1=Chorale (Slow), 2=Tremolo (Fast) parameter"))
+            .with_param(DspParamSchema::log_knob("horn_accel_time_sec", "Horn Acceleration Time", 0.2, 10.0, 1.8, "s", MacroRole::Punch, "Treble horn motor ramp-up time from slow to fast parameter"))
+            .with_param(DspParamSchema::log_knob("rotor_accel_time_sec", "Rotor Acceleration Time", 0.5, 15.0, 4.5, "s", MacroRole::Space, "Heavy bass drum rotor inertia ramp time parameter"))
+            .with_param(DspParamSchema::toggle("doppler_depth", "Doppler Frequency Modulation", true, "Acoustic Doppler frequency shifting and directional comb filtering parameter"))
+        );
+        descriptors.insert("ShakuhachiGestureEngine".to_string(), DspNodeDescriptor::new("ShakuhachiGestureEngine", "Bamboo Shakuhachi Embouchure Meri/Kari & Muraiki Gesture Engine", DspNodeCategory::AcousticPhysicalModel, "Traditional Japanese bamboo flute chin tilt meri/kari microtonal pitch bends, explosive breath turbulence muraiki, and utaguchi edge split")
+            .with_param(DspParamSchema::knob("embouchure_tilt_cents", "Meri/Kari Chin Tilt", -300.0, 100.0, 0.0, "cents", MacroRole::Tone, "Chin tilting angle Meri (pitch down) to Kari (pitch up) parameter"))
+            .with_param(DspParamSchema::log_knob("breath_blowing_kpa", "Blowing Breath Pressure", 0.1, 10.0, 1.8, "kPa", MacroRole::Punch, "Lungs blowing pressure directed into bamboo utaguchi edge parameter"))
+            .with_param(DspParamSchema::knob("muraiki_burst_depth", "Muraiki Breath Burst", 0.0, 1.0, 0.15, "burst", MacroRole::Character, "Explosive airy breath turbulence noise burst parameter"))
+            .with_param(DspParamSchema::toggle("utaguchi_split_resonance", "Utaguchi Edge Splitting", true, "Sharp angled buffalo-horn utaguchi acoustic edge splitting parameter"))
+        );
+        descriptors.insert("SitarGestureEngine".to_string(), DspNodeDescriptor::new("SitarGestureEngine", "Hindustani Sitar Mizrab Stroke, Meend Deflection & Chikari Engine", DspNodeCategory::AcousticPhysicalModel, "Sitar wire mizrab finger plectrum strike, deep lateral meend string pulling across curved frets, and rhythmic chikari drone pulses")
+            .with_param(DspParamSchema::knob("meend_pull_semitones", "Meend Lateral Pull", 0.0, 7.0, 0.0, "st", MacroRole::Tone, "Lateral string pulling deflection across high curved frets parameter"))
+            .with_param(DspParamSchema::knob("mizrab_stroke_velocity", "Mizrab Stroke Velocity", 0.0, 1.0, 0.70, "vel", MacroRole::Punch, "Metallic wire plectrum striking dynamic parameter"))
+            .with_param(DspParamSchema::knob("jawari_buzz_depth", "Jawari Buzz Curvature", 0.0, 1.0, 0.85, "buzz", MacroRole::Character, "Wide sloping deer-horn jawari bridge sympathetic buzz curvature parameter"))
+            .with_param(DspParamSchema::toggle("chikari_drone_accent", "Chikari High Drone Accent", false, "Rhythmic high-pitched rhythmic drone string accent trigger parameter"))
+        );
+        descriptors.insert("SpatialAutomationEngine".to_string(), DspNodeDescriptor::new("SpatialAutomationEngine", "Spatial Trajectory Path Interpolator & Dynamic 3D Automation Engine", DspNodeCategory::SpatialSurround, "3D Cartesian and spherical coordinate automation with parametric geometric paths (Orbit, Lissajous3D, Spiral, Flyby) and cubic Catmull-Rom splines")
+            .with_param(DspParamSchema::log_knob("orbit_radius_m", "Trajectory Orbit Radius", 0.2, 25.0, 3.5, "m", MacroRole::Space, "Orbital radius distance from listener center parameter"))
+            .with_param(DspParamSchema::knob("orbit_speed_cycles", "Orbit Speed Per Beat", 0.05, 10.0, 0.5, "cyc/b", MacroRole::Tone, "Orbital rotational speed in cycles per musical beat parameter"))
+            .with_param(DspParamSchema::knob("orbit_tilt_deg", "Orbit Plane Inclination", -90.0, 90.0, 15.0, "deg", MacroRole::Character, "Inclination tilt angle of 3D orbital trajectory plane parameter"))
+            .with_param(DspParamSchema::toggle("spline_smooth_easing", "Catmull-Rom Spline Easing", true, "Catmull-Rom cubic spline waypoint velocity smoothing parameter"))
+        );
+        descriptors.insert("SpringGestureEngine".to_string(), DspNodeDescriptor::new("SpringGestureEngine", "Mechanical Spring Reverb Tank Impulse Exciter & Kick Generator", DspNodeCategory::TimeSpace, "Physical spring transducer magnetic coil drive, mechanical tank chassis thump/kick transient exciter, and helical dispersion resonance")
+            .with_param(DspParamSchema::knob("transducer_drive", "Coil Transducer Drive", 0.0, 1.0, 0.65, "drv", MacroRole::Punch, "Input magnetic coil current drive into helical springs parameter"))
+            .with_param(DspParamSchema::log_knob("spring_decay_sec", "Helical Spring Decay", 0.5, 12.0, 3.2, "s", MacroRole::Space, "Helical spring torsional vibration decay duration parameter"))
+            .with_param(DspParamSchema::knob("tank_kick_impulse", "Mechanical Chassis Thump", 0.0, 1.0, 0.0, "thump", MacroRole::Tone, "Physical spring tank mechanical shock thump transient parameter"))
+            .with_param(DspParamSchema::toggle("helical_chirp_dispersion", "Helical Chirp Dispersion", true, "Nonlinear frequency-dependent high-pitch chirp dispersion parameter"))
+        );
+        descriptors.insert("WoodwindFingeringEngine".to_string(), DspNodeDescriptor::new("WoodwindFingeringEngine", "Acoustic Woodwind Tonehole Lattice & Cross-Fingering Matrix", DspNodeCategory::AcousticPhysicalModel, "Multi-tonehole open/closed acoustic inertance calculator, register vent octaving, and smooth finger transition portamento")
+            .with_param(DspParamSchema::knob("open_toneholes_mask", "Toneholes Bitmask (0-63)", 0.0, 63.0, 0.0, "mask", MacroRole::Tone, "6-hole open/closed fingering bitmask combination parameter"))
+            .with_param(DspParamSchema::knob("register_vent_state", "Register Key Vent Ratio", 0.0, 1.0, 0.0, "vent", MacroRole::Punch, "Octave / speaker key register vent opening ratio parameter"))
+            .with_param(DspParamSchema::log_knob("finger_transition_ms", "Finger Transition Slew", 1.0, 150.0, 22.0, "ms", MacroRole::Space, "Acoustic hole uncovering transition slew duration parameter"))
+            .with_param(DspParamSchema::toggle("cross_fingering_shading", "Fork Cross-Fingering Shading", true, "Micro-acoustic inertance and resonance shading for fork fingerings parameter"))
+        );
+        descriptors.insert("BellowsBus".to_string(), DspNodeDescriptor::new("BellowsBus", "Lock-Free Atomic Bellows State & Pressure Dispatch Bus", DspNodeCategory::Utility, "Thread-safe atomic parameter bus publishing bellows pressure, airflow velocity, push-pull state, and acoustic impedance in real time")
+            .with_param(DspParamSchema::log_knob("bus_pressure_pa", "Atomic Airway Pressure", 20.0, 4000.0, 950.0, "Pa", MacroRole::Punch, "Real-time atomic chamber air pressure parameter"))
+            .with_param(DspParamSchema::knob("bus_airflow_lps", "Throughput Airflow Rate", 0.0, 5.0, 1.2, "L/s", MacroRole::Tone, "Real-time volumetric air throughput parameter"))
+            .with_param(DspParamSchema::knob("bellows_direction", "Direction (-1=Push, +1=Pull)", -1.0, 1.0, 1.0, "dir", MacroRole::Character, "Direction sign: -1.0 for compression (push), +1.0 for expansion (pull) parameter"))
+            .with_param(DspParamSchema::toggle("bus_active_sync", "Atomic State Broadcast", true, "Lock-free inter-thread atomic state broadcasting parameter"))
+        );
+        descriptors.insert("SpatialBus".to_string(), DspNodeDescriptor::new("SpatialBus", "Real-Time 64-Channel 3D Atomic Coordinate Coordination Bus", DspNodeCategory::SpatialSurround, "64-slot lock-free atomic spatial bus synchronizing Cartesian X,Y,Z positions, azimuth, elevation, and source diffusion width")
+            .with_param(DspParamSchema::knob("cartesian_x", "Source Cartesian X Position", -20.0, 20.0, 0.0, "m", MacroRole::Space, "Left-Right Cartesian coordinate along X-axis parameter"))
+            .with_param(DspParamSchema::knob("cartesian_y", "Source Cartesian Y Position", -20.0, 20.0, 2.0, "m", MacroRole::Tone, "Front-Back Cartesian coordinate along Y-axis parameter"))
+            .with_param(DspParamSchema::knob("cartesian_z", "Source Cartesian Z Position", -10.0, 10.0, 0.0, "m", MacroRole::Punch, "Height Cartesian coordinate along Z-axis parameter"))
+            .with_param(DspParamSchema::toggle("atomic_slot_lockless", "Lockless Double-Buffer Sync", true, "Atomic double-buffered coordinate update without mutexes parameter"))
+        );
 
         Self { descriptors }
     }
@@ -4603,6 +4723,26 @@ impl DspNodeRegistry {
             ("MultiTenantRenderQueue", DspNodeCategory::Utility, "Multi-Tenant Asynchronous Audio Render Job Scheduler & Resource Guard"),
             ("LockFreeTuningRemapper", DspNodeCategory::Modulation, "Lock-Free Dynamic Microtonal SCL Temperament Remapper & Pitch Morpher"),
             ("SidechainMatrix", DspNodeCategory::DynamicsMaster, "Multi-Channel Dynamic Sidechain Matrix & Routing Cross-Bar Hub"),
+            ("BellowsGestureEngine", DspNodeCategory::AcousticPhysicalModel, "Aeroacoustic Bellows Push-Pull Pressure & Trajectory Planner"),
+            ("BowingGestureEngine", DspNodeCategory::AcousticPhysicalModel, "Dynamic Bowing Articulation Gesture Timeline & Trajectory Engine"),
+            ("ClavinetGestureEngine", DspNodeCategory::AcousticPhysicalModel, "Electro-Acoustic Clavinet Key Strike & Pickup Gesture Engine"),
+            ("EpGestureEngine", DspNodeCategory::AcousticPhysicalModel, "Electric Piano Tine Kinematics & Escapement Gesture Engine"),
+            ("GlassGestureEngine", DspNodeCategory::AcousticPhysicalModel, "Glass Armonica Friction Orbit & Acoustic Wet-Slip Exciter"),
+            ("GrandPianoGestureEngine", DspNodeCategory::AcousticPhysicalModel, "Concert Grand Piano Escapement, Pedaling & Kinematics Engine"),
+            ("HurdyGurdyGestureEngine", DspNodeCategory::AcousticPhysicalModel, "Vielle à Roue Crank Wheel & Trompette Chien Gesture Engine"),
+            ("KotoGestureEngine", DspNodeCategory::AcousticPhysicalModel, "Traditional 13-String Koto Plectrum & Oshi-de Gesture Engine"),
+            ("MalletGestureEngine", DspNodeCategory::AcousticPhysicalModel, "Percussion Mallet Strike Hardness & Motor Tremolo Gesture Engine"),
+            ("MarkovSequenceMutator", DspNodeCategory::Modulation, "Generative Polyrhythmic Sequence Mutator & Higher-Order Markov Engine"),
+            ("PipeOrganGestureEngine", DspNodeCategory::AcousticPhysicalModel, "Tracker Action Pipe Organ Valve Acceleration & Pressure Drop Engine"),
+            ("PluckGestureEngine", DspNodeCategory::AcousticPhysicalModel, "Acoustic Pluck Dynamics, Plectrum Angle & String Release Engine"),
+            ("RotaryGestureEngine", DspNodeCategory::Modulation, "Rotary Speaker Horn & Rotor Inertia Acceleration Controller"),
+            ("ShakuhachiGestureEngine", DspNodeCategory::AcousticPhysicalModel, "Bamboo Shakuhachi Embouchure Meri/Kari & Muraiki Gesture Engine"),
+            ("SitarGestureEngine", DspNodeCategory::AcousticPhysicalModel, "Hindustani Sitar Mizrab Stroke, Meend Deflection & Chikari Engine"),
+            ("SpatialAutomationEngine", DspNodeCategory::SpatialSurround, "Spatial Trajectory Path Interpolator & Dynamic 3D Automation Engine"),
+            ("SpringGestureEngine", DspNodeCategory::TimeSpace, "Mechanical Spring Reverb Tank Impulse Exciter & Kick Generator"),
+            ("WoodwindFingeringEngine", DspNodeCategory::AcousticPhysicalModel, "Acoustic Woodwind Tonehole Lattice & Cross-Fingering Matrix"),
+            ("BellowsBus", DspNodeCategory::Utility, "Lock-Free Atomic Bellows State & Pressure Dispatch Bus"),
+            ("SpatialBus", DspNodeCategory::SpatialSurround, "Real-Time 64-Channel 3D Atomic Coordinate Coordination Bus"),
         ]
     }
 
@@ -5472,6 +5612,56 @@ impl DspNodeRegistry {
             "sidechainmatrix" => Some("SidechainMatrix"),
             "sidechainhub" => Some("SidechainMatrix"),
             "dynamicssidechain" => Some("SidechainMatrix"),
+            "bellowsgestureengine" => Some("BellowsGestureEngine"),
+            "bellowsgesture" => Some("BellowsGestureEngine"),
+            "bellowsplanner" => Some("BellowsGestureEngine"),
+            "bowinggestureengine" => Some("BowingGestureEngine"),
+            "bowinggesture" => Some("BowingGestureEngine"),
+            "bowingkinematics" => Some("BowingGestureEngine"),
+            "clavinetgestureengine" => Some("ClavinetGestureEngine"),
+            "clavinetgesture" => Some("ClavinetGestureEngine"),
+            "epgestureengine" => Some("EpGestureEngine"),
+            "epgesture" => Some("EpGestureEngine"),
+            "electricpianogesture" => Some("EpGestureEngine"),
+            "glassgestureengine" => Some("GlassGestureEngine"),
+            "glassgesture" => Some("GlassGestureEngine"),
+            "glassfriction" => Some("GlassGestureEngine"),
+            "grandpianogestureengine" => Some("GrandPianoGestureEngine"),
+            "grandpianogesture" => Some("GrandPianoGestureEngine"),
+            "pianogesture" => Some("GrandPianoGestureEngine"),
+            "hurdygurdygestureengine" => Some("HurdyGurdyGestureEngine"),
+            "hurdygurdygesture" => Some("HurdyGurdyGestureEngine"),
+            "gurdygesture" => Some("HurdyGurdyGestureEngine"),
+            "kotogestureengine" => Some("KotoGestureEngine"),
+            "kotogesture" => Some("KotoGestureEngine"),
+            "malletgestureengine" => Some("MalletGestureEngine"),
+            "malletgesture" => Some("MalletGestureEngine"),
+            "markovsequencemutator" => Some("MarkovSequenceMutator"),
+            "markovmutator" => Some("MarkovSequenceMutator"),
+            "markovsequence" => Some("MarkovSequenceMutator"),
+            "pipeorgangestureengine" => Some("PipeOrganGestureEngine"),
+            "pipeorgangesture" => Some("PipeOrganGestureEngine"),
+            "organgesture" => Some("PipeOrganGestureEngine"),
+            "pluckgestureengine" => Some("PluckGestureEngine"),
+            "pluckgesture" => Some("PluckGestureEngine"),
+            "rotarygestureengine" => Some("RotaryGestureEngine"),
+            "rotarygesture" => Some("RotaryGestureEngine"),
+            "shakuhachigestureengine" => Some("ShakuhachiGestureEngine"),
+            "shakuhachigesture" => Some("ShakuhachiGestureEngine"),
+            "sitargestureengine" => Some("SitarGestureEngine"),
+            "sitargesture" => Some("SitarGestureEngine"),
+            "spatialautomationengine" => Some("SpatialAutomationEngine"),
+            "spatialautomation" => Some("SpatialAutomationEngine"),
+            "spatialtrajectory" => Some("SpatialAutomationEngine"),
+            "springgestureengine" => Some("SpringGestureEngine"),
+            "springgesture" => Some("SpringGestureEngine"),
+            "woodwindfingeringengine" => Some("WoodwindFingeringEngine"),
+            "woodwindfingering" => Some("WoodwindFingeringEngine"),
+            "fingeringengine" => Some("WoodwindFingeringEngine"),
+            "bellowsbus" => Some("BellowsBus"),
+            "bellowsatomicbus" => Some("BellowsBus"),
+            "spatialbus" => Some("SpatialBus"),
+            "spatialatomicbus" => Some("SpatialBus"),
             _ => None,
         }
     }
@@ -8453,6 +8643,146 @@ impl DspNodeRegistry {
                     .with_param(DspParamDescriptor::new_log("sidechain_lowpass_hz", "Key Lowpass Filter", 1000.0, 20000.0, 12000.0, "Hz", (239, 68, 68)))
                     .with_param(DspParamDescriptor::new_bool("key_listen", "Key Signal Audition", false, (16, 185, 129)))
             ),
+            "BellowsGestureEngine" => Box::new(
+                GenericDspNodeUi::new("BellowsGestureEngine", "Aeroacoustic Bellows Push-Pull Pressure & Trajectory Planner", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_log("bellows_pressure_pa", "Bellows Pressure", 50.0, 3000.0, 850.0, "Pa", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("push_pull_symmetry", "Push-Pull Balance", -1.0, 1.0, 0.0, "bal", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("airflow_rate", "Volumetric Airflow", 0.0, 120.0, 35.0, "L/min", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("bellows_shake_accel", "Fast Bellows Shaking", false, (16, 185, 129)))
+            ),
+            "BowingGestureEngine" => Box::new(
+                GenericDspNodeUi::new("BowingGestureEngine", "Dynamic Bowing Articulation Gesture Timeline & Trajectory Engine", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("bow_velocity_mps", "Transverse Bow Velocity", -2.0, 2.0, 0.35, "m/s", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_log("bow_force_n", "Normal Clamping Force", 0.05, 5.0, 0.85, "N", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("bridge_proximity_beta", "Bridge Proximity Beta", 0.02, 0.50, 0.12, "beta", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("rosin_adhesion", "Rosin Stick-Slip Adhesion", true, (16, 185, 129)))
+            ),
+            "ClavinetGestureEngine" => Box::new(
+                GenericDspNodeUi::new("ClavinetGestureEngine", "Electro-Acoustic Clavinet Key Strike & Pickup Gesture Engine", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("strike_velocity", "Hammer Strike Velocity", 0.0, 1.0, 0.75, "vel", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_log("release_damping_ms", "Yarn Damper Decay", 5.0, 300.0, 45.0, "ms", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("pickup_balance", "Pickup Neck/Bridge Mix", 0.0, 1.0, 0.50, "bal", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("phase_reverse_switch", "Pickup Phase Inversion", false, (16, 185, 129)))
+            ),
+            "EpGestureEngine" => Box::new(
+                GenericDspNodeUi::new("EpGestureEngine", "Electric Piano Tine Kinematics & Escapement Gesture Engine", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("tine_strikeline", "Tine Strikeline Position", 0.0, 1.0, 0.55, "pos", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("escapement_distance_mm", "Escapement Let-off Gap", 0.5, 8.0, 2.2, "mm", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("pickup_distance_mm", "Pickup Pole Gap", 0.5, 10.0, 1.8, "mm", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("damper_felt_slap", "Damper Felt Slap Transient", true, (16, 185, 129)))
+            ),
+            "GlassGestureEngine" => Box::new(
+                GenericDspNodeUi::new("GlassGestureEngine", "Glass Armonica Friction Orbit & Acoustic Wet-Slip Exciter", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_log("orbital_pressure_kpa", "Finger Contact Pressure", 0.1, 50.0, 4.5, "kPa", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("spindle_rpm", "Spindle Rotation Speed", 30.0, 300.0, 115.0, "RPM", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("water_rim_damping", "Water Film Edge Damping", 0.0, 1.0, 0.15, "damp", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("slip_stick_chaos", "Stick-Slip Micro-Chaos", true, (16, 185, 129)))
+            ),
+            "GrandPianoGestureEngine" => Box::new(
+                GenericDspNodeUi::new("GrandPianoGestureEngine", "Concert Grand Piano Escapement, Pedaling & Kinematics Engine", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("damper_lift_pos", "Damper Half-Pedal Lift", 0.0, 1.0, 0.0, "lift", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("una_corda_shift", "Una Corda Soft Shift", 0.0, 1.0, 0.0, "shift", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("hammer_felt_hardness", "Felt Hammer Hardness", 0.1, 1.0, 0.65, "hard", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("sympathetic_bleed_enable", "Sympathetic Soundboard Bleed", true, (16, 185, 129)))
+            ),
+            "HurdyGurdyGestureEngine" => Box::new(
+                GenericDspNodeUi::new("HurdyGurdyGestureEngine", "Vielle à Roue Crank Wheel & Trompette Chien Gesture Engine", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("crank_wheel_rpm", "Crank Wheel Speed", 20.0, 240.0, 78.0, "RPM", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_log("chien_accent_force", "Coup-de-Poignet Force", 0.1, 10.0, 2.4, "N", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("resin_friction_coeff", "Rosin Stick-Slip Coeff", 0.1, 1.0, 0.68, "coeff", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("buzzing_bridge_active", "Chien Buzzing Bridge Active", true, (16, 185, 129)))
+            ),
+            "KotoGestureEngine" => Box::new(
+                GenericDspNodeUi::new("KotoGestureEngine", "Traditional 13-String Koto Plectrum & Oshi-de Gesture Engine", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("oshi_de_pull_cents", "Oshi-de Pitch Pull", 0.0, 400.0, 0.0, "cents", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("tsume_strike_angle", "Tsume Plectrum Angle", 15.0, 90.0, 45.0, "deg", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("ji_bridge_offset_mm", "Ji Bridge Position Offset", -30.0, 30.0, 0.0, "mm", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("tremolo_chirashizume", "Chirashizume Tremolo", false, (16, 185, 129)))
+            ),
+            "MalletGestureEngine" => Box::new(
+                GenericDspNodeUi::new("MalletGestureEngine", "Percussion Mallet Strike Hardness & Motor Tremolo Gesture Engine", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("mallet_hardness", "Mallet Head Hardness", 0.1, 1.0, 0.55, "hard", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("strike_node_offset", "Bar Strike Node Offset", 0.0, 0.5, 0.15, "pos", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("motor_fan_speed_hz", "Vibraphone Motor Speed", 0.0, 10.0, 4.2, "Hz", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("damper_pedal_down", "Sustain Felt Damper Bar", false, (16, 185, 129)))
+            ),
+            "MarkovSequenceMutator" => Box::new(
+                GenericDspNodeUi::new("MarkovSequenceMutator", "Generative Polyrhythmic Sequence Mutator & Higher-Order Markov Engine", DspNodeCategory::Modulation)
+                    .with_param(DspParamDescriptor::new_linear("temperature", "Markov Temperature", 0.1, 2.5, 1.0, "temp", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("mutation_rate", "Step Mutation Rate", 0.0, 1.0, 0.35, "prob", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("order_order3_active", "3rd-Order Chain Active", false, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("pitch_only_mutation", "Mutate Pitch Only", false, (16, 185, 129)))
+            ),
+            "PipeOrganGestureEngine" => Box::new(
+                GenericDspNodeUi::new("PipeOrganGestureEngine", "Tracker Action Pipe Organ Valve Acceleration & Pressure Drop Engine", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_log("key_tracker_speed", "Tracker Action Velocity", 10.0, 500.0, 120.0, "mm/s", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_log("windchest_reservoir_pa", "Windchest Pressure", 200.0, 2500.0, 850.0, "Pa", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_log("pipe_onset_chuff_ms", "Flue Speech Chuff Delay", 2.0, 80.0, 18.0, "ms", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("tremulant_active", "Organ Tremulant Valve", false, (16, 185, 129)))
+            ),
+            "PluckGestureEngine" => Box::new(
+                GenericDspNodeUi::new("PluckGestureEngine", "Acoustic Pluck Dynamics, Plectrum Angle & String Release Engine", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("pluck_position_beta", "Pluck Position Beta", 0.05, 0.50, 0.18, "beta", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_log("pluck_force_n", "Initial Pluck Force", 0.1, 15.0, 2.5, "N", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("nail_vs_flesh_ratio", "Nail vs Flesh Balance", 0.0, 1.0, 0.40, "ratio", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("snap_release_bartok", "Bartók Snap Pizzicato", false, (16, 185, 129)))
+            ),
+            "RotaryGestureEngine" => Box::new(
+                GenericDspNodeUi::new("RotaryGestureEngine", "Rotary Speaker Horn & Rotor Inertia Acceleration Controller", DspNodeCategory::Modulation)
+                    .with_param(DspParamDescriptor::new_linear("horn_speed_mode", "Speed Mode (0=Stop, 1=Slow, 2=Fast)", 0.0, 2.0, 1.0, "mode", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_log("horn_accel_time_sec", "Horn Acceleration Time", 0.2, 10.0, 1.8, "s", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_log("rotor_accel_time_sec", "Rotor Acceleration Time", 0.5, 15.0, 4.5, "s", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("doppler_depth", "Doppler Frequency Modulation", true, (16, 185, 129)))
+            ),
+            "ShakuhachiGestureEngine" => Box::new(
+                GenericDspNodeUi::new("ShakuhachiGestureEngine", "Bamboo Shakuhachi Embouchure Meri/Kari & Muraiki Gesture Engine", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("embouchure_tilt_cents", "Meri/Kari Chin Tilt", -300.0, 100.0, 0.0, "cents", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_log("breath_blowing_kpa", "Blowing Breath Pressure", 0.1, 10.0, 1.8, "kPa", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("muraiki_burst_depth", "Muraiki Breath Burst", 0.0, 1.0, 0.15, "burst", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("utaguchi_split_resonance", "Utaguchi Edge Splitting", true, (16, 185, 129)))
+            ),
+            "SitarGestureEngine" => Box::new(
+                GenericDspNodeUi::new("SitarGestureEngine", "Hindustani Sitar Mizrab Stroke, Meend Deflection & Chikari Engine", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("meend_pull_semitones", "Meend Lateral Pull", 0.0, 7.0, 0.0, "st", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("mizrab_stroke_velocity", "Mizrab Stroke Velocity", 0.0, 1.0, 0.70, "vel", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("jawari_buzz_depth", "Jawari Buzz Curvature", 0.0, 1.0, 0.85, "buzz", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("chikari_drone_accent", "Chikari High Drone Accent", false, (16, 185, 129)))
+            ),
+            "SpatialAutomationEngine" => Box::new(
+                GenericDspNodeUi::new("SpatialAutomationEngine", "Spatial Trajectory Path Interpolator & Dynamic 3D Automation Engine", DspNodeCategory::SpatialSurround)
+                    .with_param(DspParamDescriptor::new_log("orbit_radius_m", "Trajectory Orbit Radius", 0.2, 25.0, 3.5, "m", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("orbit_speed_cycles", "Orbit Speed Per Beat", 0.05, 10.0, 0.5, "cyc/b", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("orbit_tilt_deg", "Orbit Plane Inclination", -90.0, 90.0, 15.0, "deg", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("spline_smooth_easing", "Catmull-Rom Spline Easing", true, (16, 185, 129)))
+            ),
+            "SpringGestureEngine" => Box::new(
+                GenericDspNodeUi::new("SpringGestureEngine", "Mechanical Spring Reverb Tank Impulse Exciter & Kick Generator", DspNodeCategory::TimeSpace)
+                    .with_param(DspParamDescriptor::new_linear("transducer_drive", "Coil Transducer Drive", 0.0, 1.0, 0.65, "drv", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_log("spring_decay_sec", "Helical Spring Decay", 0.5, 12.0, 3.2, "s", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("tank_kick_impulse", "Mechanical Chassis Thump", 0.0, 1.0, 0.0, "thump", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("helical_chirp_dispersion", "Helical Chirp Dispersion", true, (16, 185, 129)))
+            ),
+            "WoodwindFingeringEngine" => Box::new(
+                GenericDspNodeUi::new("WoodwindFingeringEngine", "Acoustic Woodwind Tonehole Lattice & Cross-Fingering Matrix", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("open_toneholes_mask", "Toneholes Bitmask (0-63)", 0.0, 63.0, 0.0, "mask", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("register_vent_state", "Register Key Vent Ratio", 0.0, 1.0, 0.0, "vent", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_log("finger_transition_ms", "Finger Transition Slew", 1.0, 150.0, 22.0, "ms", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("cross_fingering_shading", "Fork Cross-Fingering Shading", true, (16, 185, 129)))
+            ),
+            "BellowsBus" => Box::new(
+                GenericDspNodeUi::new("BellowsBus", "Lock-Free Atomic Bellows State & Pressure Dispatch Bus", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_log("bus_pressure_pa", "Atomic Airway Pressure", 20.0, 4000.0, 950.0, "Pa", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("bus_airflow_lps", "Throughput Airflow Rate", 0.0, 5.0, 1.2, "L/s", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("bellows_direction", "Direction (-1=Push, +1=Pull)", -1.0, 1.0, 1.0, "dir", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("bus_active_sync", "Atomic State Broadcast", true, (16, 185, 129)))
+            ),
+            "SpatialBus" => Box::new(
+                GenericDspNodeUi::new("SpatialBus", "Real-Time 64-Channel 3D Atomic Coordinate Coordination Bus", DspNodeCategory::SpatialSurround)
+                    .with_param(DspParamDescriptor::new_linear("cartesian_x", "Source Cartesian X Position", -20.0, 20.0, 0.0, "m", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("cartesian_y", "Source Cartesian Y Position", -20.0, 20.0, 2.0, "m", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("cartesian_z", "Source Cartesian Z Position", -10.0, 10.0, 0.0, "m", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("atomic_slot_lockless", "Lockless Double-Buffer Sync", true, (16, 185, 129)))
+            ),
             // Fallback dynamic generator for any unexpected or plugin node
             other => {
                 let cat = Self::inventory()
@@ -8587,6 +8917,26 @@ mod tests {
         assert!(registry.get("MultiTenantRenderQueue").is_some());
         assert!(registry.get("LockFreeTuningRemapper").is_some());
         assert!(registry.get("SidechainMatrix").is_some());
+        assert!(registry.get("BellowsGestureEngine").is_some());
+        assert!(registry.get("BowingGestureEngine").is_some());
+        assert!(registry.get("ClavinetGestureEngine").is_some());
+        assert!(registry.get("EpGestureEngine").is_some());
+        assert!(registry.get("GlassGestureEngine").is_some());
+        assert!(registry.get("GrandPianoGestureEngine").is_some());
+        assert!(registry.get("HurdyGurdyGestureEngine").is_some());
+        assert!(registry.get("KotoGestureEngine").is_some());
+        assert!(registry.get("MalletGestureEngine").is_some());
+        assert!(registry.get("MarkovSequenceMutator").is_some());
+        assert!(registry.get("PipeOrganGestureEngine").is_some());
+        assert!(registry.get("PluckGestureEngine").is_some());
+        assert!(registry.get("RotaryGestureEngine").is_some());
+        assert!(registry.get("ShakuhachiGestureEngine").is_some());
+        assert!(registry.get("SitarGestureEngine").is_some());
+        assert!(registry.get("SpatialAutomationEngine").is_some());
+        assert!(registry.get("SpringGestureEngine").is_some());
+        assert!(registry.get("WoodwindFingeringEngine").is_some());
+        assert!(registry.get("BellowsBus").is_some());
+        assert!(registry.get("SpatialBus").is_some());
     }
 
     #[test]

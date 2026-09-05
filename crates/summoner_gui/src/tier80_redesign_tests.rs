@@ -2214,5 +2214,144 @@ mod tests {
             assert_eq!(view.inspector_state.selected_node_kind, Some("PolymetricSequencer".to_string()));
         }
     }
+
+    #[test]
+    fn test_tier90_dsp_registry_485_plus_and_gesture_engine_exposure() {
+        use crate::dsp_node_ui::DspNodeRegistry;
+        use crate::views::modern_asset_browser::BrowserCategory;
+
+        let inv = DspNodeRegistry::inventory();
+        assert!(inv.len() >= 485, "Expected inventory count >= 485, got {}", inv.len());
+
+        let registry = DspNodeRegistry::new();
+        assert!(registry.list_all().len() >= 485, "Expected descriptor count >= 485, got {}", registry.list_all().len());
+
+        let new_tier90_nodes = [
+            "BellowsGestureEngine",
+            "BowingGestureEngine",
+            "ClavinetGestureEngine",
+            "EpGestureEngine",
+            "GlassGestureEngine",
+            "GrandPianoGestureEngine",
+            "HurdyGurdyGestureEngine",
+            "KotoGestureEngine",
+            "MalletGestureEngine",
+            "MarkovSequenceMutator",
+            "PipeOrganGestureEngine",
+            "PluckGestureEngine",
+            "RotaryGestureEngine",
+            "ShakuhachiGestureEngine",
+            "SitarGestureEngine",
+            "SpatialAutomationEngine",
+            "SpringGestureEngine",
+            "WoodwindFingeringEngine",
+            "BellowsBus",
+            "SpatialBus",
+        ];
+
+        for name in &new_tier90_nodes {
+            assert!(registry.get(name).is_some(), "Module {} must be in DspNodeRegistry", name);
+            assert!(inv.iter().any(|(n, _, _)| n == name), "Module {} must be in inventory", name);
+
+            let ui_node = DspNodeRegistry::create_node_ui(name);
+            assert!(ui_node.is_some(), "create_node_ui must succeed for {}", name);
+            let ui_node = ui_node.unwrap();
+            assert!(!ui_node.parameters().is_empty(), "Module {} must have parameters exposed", name);
+        }
+
+        // Verify specific parameter presence
+        let bellows = registry.get("BellowsGestureEngine").unwrap();
+        assert!(bellows.params.iter().any(|p| p.id == "bellows_pressure_pa"));
+        assert!(bellows.params.iter().any(|p| p.id == "push_pull_symmetry"));
+
+        let markov = registry.get("MarkovSequenceMutator").unwrap();
+        assert!(markov.params.iter().any(|p| p.id == "temperature"));
+        assert!(markov.params.iter().any(|p| p.id == "mutation_rate"));
+
+        let spatial = registry.get("SpatialAutomationEngine").unwrap();
+        assert!(spatial.params.iter().any(|p| p.id == "orbit_radius_m"));
+        assert!(spatial.params.iter().any(|p| p.id == "orbit_speed_cycles"));
+
+        let piano = registry.get("GrandPianoGestureEngine").unwrap();
+        assert!(piano.params.iter().any(|p| p.id == "damper_lift_pos"));
+        assert!(piano.params.iter().any(|p| p.id == "una_corda_shift"));
+
+        // Verify alias normalization
+        assert_eq!(DspNodeRegistry::normalize_type_name("bellowsgesture"), Some("BellowsGestureEngine"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("markovmutator"), Some("MarkovSequenceMutator"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("spatialautomation"), Some("SpatialAutomationEngine"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("pianogesture"), Some("GrandPianoGestureEngine"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("bowinggesture"), Some("BowingGestureEngine"));
+
+        // Verify Asset Browser categorization
+        let inst_folders = BrowserCategory::Instruments.default_folders();
+        let phys_items = inst_folders.iter().find(|(name, _)| *name == "Physical Models").unwrap().1;
+        assert!(phys_items.contains(&"BowingGestureEngine"));
+        assert!(phys_items.contains(&"GrandPianoGestureEngine"));
+        assert!(phys_items.contains(&"HurdyGurdyGestureEngine"));
+
+        let fx_folders = BrowserCategory::AudioFx.default_folders();
+        let time_items = fx_folders.iter().find(|(name, _)| *name == "Time & Reverb").unwrap().1;
+        assert!(time_items.contains(&"SpatialAutomationEngine"));
+        assert!(time_items.contains(&"SpringGestureEngine"));
+        assert!(time_items.contains(&"SpatialBus"));
+
+        let mod_items = fx_folders.iter().find(|(name, _)| *name == "Modulation & Pitch").unwrap().1;
+        assert!(mod_items.contains(&"RotaryGestureEngine"));
+
+        let midi_folders = BrowserCategory::MidiFx.default_folders();
+        let gen_items = midi_folders.iter().find(|(name, _)| *name == "Generative & Sync").unwrap().1;
+        assert!(gen_items.contains(&"MarkovSequenceMutator"));
+
+        let routing_items = midi_folders.iter().find(|(name, _)| *name == "Transforms & Routing").unwrap().1;
+        assert!(routing_items.contains(&"BellowsBus"));
+
+        // Verify Novice Presets synchronize in AwardWinningGuiView
+        #[cfg(feature = "gui")]
+        {
+            let mut view = crate::views::award_winning_gui_view::AwardWinningGuiView::default();
+            let ctx = eframe::egui::Context::default();
+
+            // Preset: Markov Generative Matrix
+            view.top_bar_state.selected_preset = "Markov Generative Matrix".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("MarkovSequenceMutator".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("MarkovSequenceMutator".to_string()));
+
+            // Preset: 3D Atmos Trajectory Orbit
+            view.top_bar_state.selected_preset = "3D Atmos Trajectory Orbit".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("SpatialAutomationEngine".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("SpatialAutomationEngine".to_string()));
+
+            // Preset: Concert Grand Piano Escapement
+            view.top_bar_state.selected_preset = "Concert Grand Piano Escapement".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("GrandPianoGestureEngine".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("GrandPianoGestureEngine".to_string()));
+
+            // Preset: Bowed Violin Kinematics
+            view.top_bar_state.selected_preset = "Bowed Violin Kinematics".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("BowingGestureEngine".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("BowingGestureEngine".to_string()));
+        }
+    }
 }
 

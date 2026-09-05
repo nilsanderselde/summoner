@@ -125,6 +125,10 @@ fn default_available_presets() -> Vec<String> {
         "Dolby Atmos Bed Splitter".to_string(),
         "Procedural Raytraced Hall".to_string(),
         "Polymetric Euclidean Groove".to_string(),
+        "Markov Generative Matrix".to_string(),
+        "3D Atmos Trajectory Orbit".to_string(),
+        "Concert Grand Piano Escapement".to_string(),
+        "Bowed Violin Kinematics".to_string(),
     ]
 }
 

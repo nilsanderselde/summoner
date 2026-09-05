@@ -360,6 +360,10 @@ impl AwardWinningGuiView {
                 "Dolby Atmos Bed Splitter" => "SurroundStemSplitterBedObject",
                 "Procedural Raytraced Hall" => "ProceduralSpatialIrGenerator",
                 "Polymetric Euclidean Groove" => "PolymetricSequencer",
+                "Markov Generative Matrix" => "MarkovSequenceMutator",
+                "3D Atmos Trajectory Orbit" => "SpatialAutomationEngine",
+                "Concert Grand Piano Escapement" => "GrandPianoGestureEngine",
+                "Bowed Violin Kinematics" => "BowingGestureEngine",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {
