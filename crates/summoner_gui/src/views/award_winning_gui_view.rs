@@ -432,6 +432,10 @@ impl AwardWinningGuiView {
                 "Visual Spectrogram Image Sonification Canvas" => "SpectrogramArtConfig",
                 "Multi-Track DAW Transport & Graph Engine" => "Transport",
                 "Polyphonic Voice Pool & Micro-Timing Sequencer" => "VoicePool",
+                "Live Session Clip Matrix & Scene Launcher" => "ClipSlot",
+                "Vocal Multi-Take Comping & Crossfade Editor" => "CompLane",
+                "Generative Markov Algorithmic Melodic Mutator" => "MarkovMutatorConfig",
+                "Broadcast Multi-Stem Master Export Station" => "ExportPreset",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {

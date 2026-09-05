@@ -197,6 +197,10 @@ fn default_available_presets() -> Vec<String> {
         "Visual Spectrogram Image Sonification Canvas".to_string(),
         "Multi-Track DAW Transport & Graph Engine".to_string(),
         "Polyphonic Voice Pool & Micro-Timing Sequencer".to_string(),
+        "Live Session Clip Matrix & Scene Launcher".to_string(),
+        "Vocal Multi-Take Comping & Crossfade Editor".to_string(),
+        "Generative Markov Algorithmic Melodic Mutator".to_string(),
+        "Broadcast Multi-Stem Master Export Station".to_string(),
     ]
 }
 

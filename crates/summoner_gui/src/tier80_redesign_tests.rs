@@ -5799,6 +5799,163 @@ mod tests {
             assert_eq!(view.inspector_state.selected_node_kind, Some("VoicePool".to_string()));
         }
     }
+
+    #[test]
+    fn test_tier107_modern_gui_dsp_module_coverage_and_presets() {
+        use crate::dsp_node_ui::{DspNodeRegistry, DspNodeCategory};
+        use crate::views::modern_asset_browser::BrowserCategory;
+
+        let registry = DspNodeRegistry::new();
+
+        // 1. Verify 862 total DSP modules registered
+        let total_modules = DspNodeRegistry::inventory();
+        assert_eq!(total_modules.len(), 862, "Must have exactly 862 registered DSP modules");
+        assert!(
+            registry.list_all().len() >= 862,
+            "Must have at least 862 registered DSP modules, found {}",
+            registry.list_all().len()
+        );
+
+        // 2. Verify all 21 new modules exist with correct categories and tactile parameters (>= 5 params each)
+        let new_modules = [
+            ("ClipSlot", DspNodeCategory::Modulation),
+            ("Scene", DspNodeCategory::Modulation),
+            ("CompLane", DspNodeCategory::Utility),
+            ("CompRegion", DspNodeCategory::Utility),
+            ("AudioTake", DspNodeCategory::Utility),
+            ("LooperLayer", DspNodeCategory::Utility),
+            ("SpatialWaypoint", DspNodeCategory::SpatialSurround),
+            ("MarkovMutatorConfig", DspNodeCategory::Modulation),
+            ("MarkovTransitionMatrix", DspNodeCategory::Modulation),
+            ("MarkovStepEvent", DspNodeCategory::Modulation),
+            ("AutomationLane", DspNodeCategory::Modulation),
+            ("AutomationCurve", DspNodeCategory::Modulation),
+            ("AutomationPoint", DspNodeCategory::Modulation),
+            ("SessionMarker", DspNodeCategory::Utility),
+            ("ExportPreset", DspNodeCategory::Utility),
+            ("StemExportReport", DspNodeCategory::Utility),
+            ("BatchConvertReport", DspNodeCategory::Utility),
+            ("SfzRegionConfig", DspNodeCategory::SamplerSlicer),
+            ("MicroCommit", DspNodeCategory::Utility),
+            ("MidiControllerMapping", DspNodeCategory::Utility),
+            ("PluginResourceBudget", DspNodeCategory::Utility),
+        ];
+
+        for (name, expected_cat) in new_modules {
+            let desc = registry.get(name).unwrap_or_else(|| panic!("Module {} must be in registry", name));
+            assert_eq!(desc.category, expected_cat, "Module {} category mismatch", name);
+            assert!(desc.params.len() >= 5, "Module {} must have >= 5 tactile parameters", name);
+        }
+
+        // 3. Verify normalization mappings
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clipslot"), Some("ClipSlot"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("launcherslot"), Some("ClipSlot"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("scene"), Some("Scene"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("scenetrigger"), Some("Scene"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("complane"), Some("CompLane"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("takelane"), Some("CompLane"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("compregion"), Some("CompRegion"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("compslice"), Some("CompRegion"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("audiotake"), Some("AudioTake"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("takebuffer"), Some("AudioTake"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("looperlayer"), Some("LooperLayer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("spatialwaypoint"), Some("SpatialWaypoint"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("markovmutatorconfig"), Some("MarkovMutatorConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("markovtransitionmatrix"), Some("MarkovTransitionMatrix"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("markovstepevent"), Some("MarkovStepEvent"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("automationlane"), Some("AutomationLane"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("automationcurve"), Some("AutomationCurve"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("automationpoint"), Some("AutomationPoint"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sessionmarker"), Some("SessionMarker"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("exportpreset"), Some("ExportPreset"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("stemexportreport"), Some("StemExportReport"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("batchconvertreport"), Some("BatchConvertReport"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sfzregionconfig"), Some("SfzRegionConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("microcommit"), Some("MicroCommit"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("midicontrollermapping"), Some("MidiControllerMapping"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pluginresourcebudget"), Some("PluginResourceBudget"));
+
+        // 4. Verify Asset Browser categorization
+        let inst_folders = BrowserCategory::Instruments.default_folders();
+        let samplers_items = inst_folders.iter().find(|(name, _)| *name == "Samplers & Slicers").unwrap().1;
+        assert!(samplers_items.contains(&"SfzRegionConfig"));
+
+        let fx_folders = BrowserCategory::AudioFx.default_folders();
+        let spatial_items = fx_folders.iter().find(|(name, _)| *name == "Time & Reverb").unwrap().1;
+        assert!(spatial_items.contains(&"LooperLayer"));
+        assert!(spatial_items.contains(&"SpatialWaypoint"));
+
+        let midi_folders = BrowserCategory::MidiFx.default_folders();
+        let gen_sync_items = midi_folders.iter().find(|(name, _)| *name == "Generative & Sync").unwrap().1;
+        assert!(gen_sync_items.contains(&"ClipSlot"));
+        assert!(gen_sync_items.contains(&"Scene"));
+        assert!(gen_sync_items.contains(&"MarkovMutatorConfig"));
+        assert!(gen_sync_items.contains(&"MarkovTransitionMatrix"));
+        assert!(gen_sync_items.contains(&"MarkovStepEvent"));
+
+        let routing_items = midi_folders.iter().find(|(name, _)| *name == "Transforms & Routing").unwrap().1;
+        assert!(routing_items.contains(&"CompLane"));
+        assert!(routing_items.contains(&"CompRegion"));
+        assert!(routing_items.contains(&"AudioTake"));
+        assert!(routing_items.contains(&"AutomationLane"));
+        assert!(routing_items.contains(&"AutomationCurve"));
+        assert!(routing_items.contains(&"AutomationPoint"));
+        assert!(routing_items.contains(&"SessionMarker"));
+        assert!(routing_items.contains(&"ExportPreset"));
+        assert!(routing_items.contains(&"StemExportReport"));
+        assert!(routing_items.contains(&"BatchConvertReport"));
+        assert!(routing_items.contains(&"MicroCommit"));
+        assert!(routing_items.contains(&"MidiControllerMapping"));
+        assert!(routing_items.contains(&"PluginResourceBudget"));
+
+        // 5. Verify Novice Presets synchronize in AwardWinningGuiView
+        #[cfg(feature = "gui")]
+        {
+            let mut view = crate::views::award_winning_gui_view::AwardWinningGuiView::default();
+            let ctx = eframe::egui::Context::default();
+
+            // Preset: Live Session Clip Matrix & Scene Launcher -> ClipSlot
+            view.top_bar_state.selected_preset = "Live Session Clip Matrix & Scene Launcher".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("ClipSlot".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("ClipSlot".to_string()));
+
+            // Preset: Vocal Multi-Take Comping & Crossfade Editor -> CompLane
+            view.top_bar_state.selected_preset = "Vocal Multi-Take Comping & Crossfade Editor".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("CompLane".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("CompLane".to_string()));
+
+            // Preset: Generative Markov Algorithmic Melodic Mutator -> MarkovMutatorConfig
+            view.top_bar_state.selected_preset = "Generative Markov Algorithmic Melodic Mutator".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("MarkovMutatorConfig".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("MarkovMutatorConfig".to_string()));
+
+            // Preset: Broadcast Multi-Stem Master Export Station -> ExportPreset
+            view.top_bar_state.selected_preset = "Broadcast Multi-Stem Master Export Station".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("ExportPreset".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("ExportPreset".to_string()));
+        }
+    }
 }
+
 
 
