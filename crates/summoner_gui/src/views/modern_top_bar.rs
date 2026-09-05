@@ -181,6 +181,10 @@ fn default_available_presets() -> Vec<String> {
         "ONNX Neural Diatonic Melody Composer".to_string(),
         "Demucs 4-Stem Deep Learning Splitter".to_string(),
         "Standalone CLAP Audio Plugin Bundler".to_string(),
+        "Privacy-Preserving Federated Mix Engine".to_string(),
+        "Sample-Accurate Multi-Take Studio Vocal Comp".to_string(),
+        "Dynamic L1/L2 Cadence Tree Path Resolver".to_string(),
+        "44-Cylinder Acoustic Vocal Tract Synthesizer".to_string(),
     ]
 }
 

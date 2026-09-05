@@ -416,6 +416,10 @@ impl AwardWinningGuiView {
                 "ONNX Neural Diatonic Melody Composer" => "NeuralOnnxMelodyGenerator",
                 "Demucs 4-Stem Deep Learning Splitter" => "DemucsNeuralStemSplitter",
                 "Standalone CLAP Audio Plugin Bundler" => "ClapStandaloneExporter",
+                "Privacy-Preserving Federated Mix Engine" => "FederatedMixLearner",
+                "Sample-Accurate Multi-Take Studio Vocal Comp" => "MultiTakeCompManager",
+                "Dynamic L1/L2 Cadence Tree Path Resolver" => "CadencePathResolver",
+                "44-Cylinder Acoustic Vocal Tract Synthesizer" => "VowelCylinderAreaSynthesizer",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {

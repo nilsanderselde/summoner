@@ -5063,6 +5063,197 @@ mod tests {
             assert_eq!(view.inspector_state.selected_node_kind, Some("ClapStandaloneExporter".to_string()));
         }
     }
+
+    #[test]
+    fn test_tier103_modern_gui_dsp_module_coverage_and_presets() {
+        use crate::dsp_node_ui::{DspNodeRegistry, DspNodeCategory};
+        use crate::views::modern_asset_browser::BrowserCategory;
+
+        let registry = DspNodeRegistry::new();
+
+        // 1. Verify 778 total DSP modules registered
+        let total_modules = DspNodeRegistry::inventory();
+        assert_eq!(total_modules.len(), 778, "Must have exactly 778 registered DSP modules");
+
+        // 2. Verify all 21 Tier 103 modules have proper schemas and >= 5 parameters
+        let new_modules = [
+            ("FederatedMixLearner", DspNodeCategory::NeuralAi),
+            ("PresenceSyncServer", DspNodeCategory::Utility),
+            ("IpfsAssetStore", DspNodeCategory::Utility),
+            ("TomlMergeDriver", DspNodeCategory::Utility),
+            ("SessionChatCrypto", DspNodeCategory::Utility),
+            ("WasmPluginRunner", DspNodeCategory::Utility),
+            ("DidAuthenticator", DspNodeCategory::Utility),
+            ("PtpSyncClock", DspNodeCategory::Utility),
+            ("AdaptiveBandwidthManager", DspNodeCategory::Utility),
+            ("MultiTakeCompManager", DspNodeCategory::SamplerSlicer),
+            ("GrooveQuantizeEngine", DspNodeCategory::Modulation),
+            ("CadencePathResolver", DspNodeCategory::Modulation),
+            ("PolyphonicVoicePool", DspNodeCategory::Utility),
+            ("MidiMonitorLog", DspNodeCategory::Utility),
+            ("LooperTrackManager", DspNodeCategory::SamplerSlicer),
+            ("DynamicParameterSmoother", DspNodeCategory::Modulation),
+            ("NodeGraphScheduler", DspNodeCategory::Utility),
+            ("VowelCylinderAreaSynthesizer", DspNodeCategory::SpectralResynthesis),
+            ("Rank2TemperamentGenerator", DspNodeCategory::Modulation),
+            ("PhaseFlipPolarityInverter", DspNodeCategory::Utility),
+            ("InputOutputGainTrim", DspNodeCategory::DynamicsMaster),
+        ];
+
+        for (name, cat) in &new_modules {
+            let desc = registry.get(name).unwrap_or_else(|| panic!("Node {} must be registered in DspNodeRegistry", name));
+            assert_eq!(desc.category, *cat, "Node {} must match expected category", name);
+            assert!(desc.params.len() >= 5, "Node {} must have >= 5 tactile parameters, got {}", name, desc.params.len());
+
+            let ui = crate::dsp_node_ui::DspNodeRegistry::create_node_ui(name)
+                .unwrap_or_else(|| panic!("create_node_ui({}) must succeed", name));
+            assert_eq!(ui.node_type_name(), *name);
+            assert_eq!(ui.category(), *cat);
+            assert!(ui.parameters().len() >= 5);
+        }
+
+        // 3. Verify canonical normalization mappings
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("federatedmixlearner"), Some("FederatedMixLearner"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("federatedmix"), Some("FederatedMixLearner"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("mixlearner"), Some("FederatedMixLearner"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("presencesyncserver"), Some("PresenceSyncServer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("presencesync"), Some("PresenceSyncServer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("presenceserver"), Some("PresenceSyncServer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("ipfsassetstore"), Some("IpfsAssetStore"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("ipfsstore"), Some("IpfsAssetStore"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("ipfssamples"), Some("IpfsAssetStore"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("tomlmergedriver"), Some("TomlMergeDriver"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("tomlmerge"), Some("TomlMergeDriver"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("schemamergedriver"), Some("TomlMergeDriver"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sessionchatcrypto"), Some("SessionChatCrypto"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("chatcrypto"), Some("SessionChatCrypto"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sessionchat"), Some("SessionChatCrypto"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("wasmpluginrunner"), Some("WasmPluginRunner"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("wasmrunner"), Some("WasmPluginRunner"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("wasmpluginexecutor"), Some("WasmPluginRunner"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("didauthenticator"), Some("DidAuthenticator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("didauth"), Some("DidAuthenticator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("w3cdidauth"), Some("DidAuthenticator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("ptpsyncclock"), Some("PtpSyncClock"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("ptpclock"), Some("PtpSyncClock"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("ptpsync"), Some("PtpSyncClock"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("adaptivebandwidthmanager"), Some("AdaptiveBandwidthManager"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("bandwidthmanager"), Some("AdaptiveBandwidthManager"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("adaptivebandwidth"), Some("AdaptiveBandwidthManager"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("multitakecompmanager"), Some("MultiTakeCompManager"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("multitakecomp"), Some("MultiTakeCompManager"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("compmanager"), Some("MultiTakeCompManager"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("groovequantizeengine"), Some("GrooveQuantizeEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("groovequantize"), Some("GrooveQuantizeEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("grooveengine"), Some("GrooveQuantizeEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cadencepathresolver"), Some("CadencePathResolver"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cadencepath"), Some("CadencePathResolver"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pathresolver"), Some("CadencePathResolver"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("polyphonicvoicepool"), Some("PolyphonicVoicePool"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("voicepool"), Some("PolyphonicVoicePool"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("polyvoicepool"), Some("PolyphonicVoicePool"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("midimonitorlog"), Some("MidiMonitorLog"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("midilogger"), Some("MidiMonitorLog"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("midieventlog"), Some("MidiMonitorLog"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("loopertrackmanager"), Some("LooperTrackManager"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("loopertrack"), Some("LooperTrackManager"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("tracklooper"), Some("LooperTrackManager"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("dynamicparametersmoother"), Some("DynamicParameterSmoother"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("parametersmoother"), Some("DynamicParameterSmoother"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("paramsmoother"), Some("DynamicParameterSmoother"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("nodegraphscheduler"), Some("NodeGraphScheduler"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("graphscheduler"), Some("NodeGraphScheduler"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("dagscheduler"), Some("NodeGraphScheduler"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("vowelcylinderareasynthesizer"), Some("VowelCylinderAreaSynthesizer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("vowelcylindersynthesizer"), Some("VowelCylinderAreaSynthesizer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("vowelcylinder"), Some("VowelCylinderAreaSynthesizer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("rank2temperamentgenerator"), Some("Rank2TemperamentGenerator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("rank2temperament"), Some("Rank2TemperamentGenerator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("rank2generator"), Some("Rank2TemperamentGenerator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("phaseflippolarityinverter"), Some("PhaseFlipPolarityInverter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("phaseflip"), Some("PhaseFlipPolarityInverter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("polarityinverter"), Some("PhaseFlipPolarityInverter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("inputoutputgaintrim"), Some("InputOutputGainTrim"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("gaintrim"), Some("InputOutputGainTrim"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("inputoutputtrim"), Some("InputOutputGainTrim"));
+
+        // 4. Verify Asset Browser categorization
+        let inst_folders = BrowserCategory::Instruments.default_folders();
+        let samplers_items = inst_folders.iter().find(|(name, _)| *name == "Samplers & Slicers").unwrap().1;
+        assert!(samplers_items.contains(&"MultiTakeCompManager"));
+        assert!(samplers_items.contains(&"LooperTrackManager"));
+
+        let midi_folders = BrowserCategory::MidiFx.default_folders();
+        let gen_sync_items = midi_folders.iter().find(|(name, _)| *name == "Generative & Sync").unwrap().1;
+        assert!(gen_sync_items.contains(&"GrooveQuantizeEngine"));
+        assert!(gen_sync_items.contains(&"CadencePathResolver"));
+        assert!(gen_sync_items.contains(&"Rank2TemperamentGenerator"));
+        assert!(gen_sync_items.contains(&"PtpSyncClock"));
+
+        let routing_items = midi_folders.iter().find(|(name, _)| *name == "Transforms & Routing").unwrap().1;
+        assert!(routing_items.contains(&"FederatedMixLearner"));
+        assert!(routing_items.contains(&"PresenceSyncServer"));
+        assert!(routing_items.contains(&"IpfsAssetStore"));
+        assert!(routing_items.contains(&"TomlMergeDriver"));
+        assert!(routing_items.contains(&"SessionChatCrypto"));
+        assert!(routing_items.contains(&"WasmPluginRunner"));
+        assert!(routing_items.contains(&"DidAuthenticator"));
+        assert!(routing_items.contains(&"AdaptiveBandwidthManager"));
+        assert!(routing_items.contains(&"PolyphonicVoicePool"));
+        assert!(routing_items.contains(&"MidiMonitorLog"));
+        assert!(routing_items.contains(&"DynamicParameterSmoother"));
+        assert!(routing_items.contains(&"NodeGraphScheduler"));
+        assert!(routing_items.contains(&"VowelCylinderAreaSynthesizer"));
+        assert!(routing_items.contains(&"PhaseFlipPolarityInverter"));
+        assert!(routing_items.contains(&"InputOutputGainTrim"));
+
+        // 5. Verify Novice Presets synchronize in AwardWinningGuiView
+        #[cfg(feature = "gui")]
+        {
+            let mut view = crate::views::award_winning_gui_view::AwardWinningGuiView::default();
+            let ctx = eframe::egui::Context::default();
+
+            // Preset: Privacy-Preserving Federated Mix Engine -> FederatedMixLearner
+            view.top_bar_state.selected_preset = "Privacy-Preserving Federated Mix Engine".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("FederatedMixLearner".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("FederatedMixLearner".to_string()));
+
+            // Preset: Sample-Accurate Multi-Take Studio Vocal Comp -> MultiTakeCompManager
+            view.top_bar_state.selected_preset = "Sample-Accurate Multi-Take Studio Vocal Comp".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("MultiTakeCompManager".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("MultiTakeCompManager".to_string()));
+
+            // Preset: Dynamic L1/L2 Cadence Tree Path Resolver -> CadencePathResolver
+            view.top_bar_state.selected_preset = "Dynamic L1/L2 Cadence Tree Path Resolver".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("CadencePathResolver".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("CadencePathResolver".to_string()));
+
+            // Preset: 44-Cylinder Acoustic Vocal Tract Synthesizer -> VowelCylinderAreaSynthesizer
+            view.top_bar_state.selected_preset = "44-Cylinder Acoustic Vocal Tract Synthesizer".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("VowelCylinderAreaSynthesizer".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("VowelCylinderAreaSynthesizer".to_string()));
+        }
+    }
 }
 
 

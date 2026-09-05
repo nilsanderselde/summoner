@@ -6144,6 +6144,153 @@ impl DspNodeRegistry {
             .with_param(DspParamSchema::toggle("initialize_git_dag_repository", "Initialize Git Session DAG Repository in Project Root", true, "Runs automatic git init creating versioned commit DAG and undo history tracking"))
             .with_param(DspParamSchema::toggle("create_default_audio_assets_folder", "Create Local assets/ and stems/ Subdirectories", true, "Creates directory scaffolding for sample asset storage and audio stem exports"))
         );
+        descriptors.insert("FederatedMixLearner".to_string(), DspNodeDescriptor::new("FederatedMixLearner", "Privacy-Preserving Federated Mix Model Learner HUD", DspNodeCategory::NeuralAi, "Decentralized machine learning worker aggregating local mixing balances and EQ adjustments into a global collaborative model without leaking raw audio")
+            .with_param(DspParamSchema::knob("local_epochs_per_round", "Local Training Epochs Per Round", 1.0, 50.0, 5.0, "epochs", MacroRole::Punch, "Number of local gradient descent passes evaluated over user mixing adjustments before federated parameter sync"))
+            .with_param(DspParamSchema::knob("differential_privacy_epsilon", "Differential Privacy Noise Budget Epsilon", 0.1, 10.0, 1.0, "eps", MacroRole::Tone, "Laplace/Gaussian noise calibration parameter providing mathematically bounded privacy guarantees against training data inversion"))
+            .with_param(DspParamSchema::knob("gradient_clipping_norm", "Gradient L2 Clipping Norm", 0.1, 5.0, 1.0, "norm", MacroRole::Punch, "Threshold ceiling bounding individual participant update magnitudes to defend against malicious weight poisoning"))
+            .with_param(DspParamSchema::choice("federated_aggregation_strategy", "Federated Weight Aggregation Strategy", &["FedAvg (Standard Averaging)", "FedProx (Proximal Regularization)", "FedAdam (Adaptive Momentum)", "SCAFFOLD (Control Variates)"], 0, "Consensus optimization algorithm applied across participating DAW nodes to merge local mixing models"))
+            .with_param(DspParamSchema::toggle("participate_in_federated_mesh", "Participate in Decentralized Model Mesh", true, "Enables continuous anonymous background gradient synchronization with peer mixing stations"))
+        );
+        descriptors.insert("PresenceSyncServer".to_string(), DspNodeDescriptor::new("PresenceSyncServer", "Multi-User Presence & Viewport Synchronization Engine HUD", DspNodeCategory::Utility, "Real-time presence broker broadcasting active user viewports, track selection cursors, playhead positions, and collaboration heartbeats")
+            .with_param(DspParamSchema::knob("heartbeat_interval_ms", "Presence Heartbeat Broadcast Interval", 50.0, 2000.0, 250.0, "ms", MacroRole::Space, "Cadence of background UDP/WebSocket ping packets announcing user active status and viewport coordinates"))
+            .with_param(DspParamSchema::knob("cursor_interpolation_smoothness", "Remote Cursor Slew Interpolation", 0.0, 1.0, 0.8, "smooth", MacroRole::Character, "Hermite spline smoothing coefficient applied to remote user cursor and selection bounding boxes"))
+            .with_param(DspParamSchema::knob("max_active_remote_collaborators", "Maximum Tracked Peer Collaborators", 2.0, 64.0, 16.0, "users", MacroRole::Tone, "Upper bound on concurrently rendered remote participant badges and timeline color indicators"))
+            .with_param(DspParamSchema::choice("presence_broadcast_scope", "Collaborator Presence Broadcast Scope", &["Global Project Scope", "Active Track Group Only", "Spatial Horizon (Nearby Tracks)", "Stealth Mode (Observe Only)"], 0, "Network privacy boundary governing which track activities are broadcast to the collaborative mesh"))
+            .with_param(DspParamSchema::toggle("broadcast_playhead_scrub", "Broadcast Live Playhead Scrub Positions", true, "Shares active scrubbing and loop region adjustments with connected peer sessions"))
+        );
+        descriptors.insert("IpfsAssetStore".to_string(), DspNodeDescriptor::new("IpfsAssetStore", "Decentralized Content-Addressed Sample & Asset Store HUD", DspNodeCategory::Utility, "Decentralized IPFS sample library manager fetching, caching, and pinning audio assets and impulse responses via cryptographically immutable CIDs")
+            .with_param(DspParamSchema::knob("local_cache_quota_gb", "Local Disk Content Cache Quota", 1.0, 100.0, 10.0, "GB", MacroRole::Tone, "Maximum local storage reserved for cached audio samples, IRs, and soundfont files fetched from IPFS"))
+            .with_param(DspParamSchema::knob("pinning_redundancy_factor", "Decentralized Pinning Redundancy", 1.0, 5.0, 3.0, "copies", MacroRole::Punch, "Target number of decentralized cluster nodes replicating project audio assets"))
+            .with_param(DspParamSchema::knob("gateway_connection_timeout_sec", "IPFS Gateway Connect Timeout", 1.0, 30.0, 5.0, "s", MacroRole::Space, "Maximum time allowed for gateway handshake before falling back to local fallback asset cache"))
+            .with_param(DspParamSchema::choice("ipfs_storage_gateway_provider", "Primary IPFS Gateway Provider", &["Infura Dedicated Gateway", "Pinata Cloud", "Local IPFS Daemon (localhost:5001)", "Filecoin Decentralized Storage"], 0, "Decentralized storage endpoint utilized for resolving and publishing sample content hashes"))
+            .with_param(DspParamSchema::toggle("auto_pin_imported_audio_samples", "Automatically Pin Imported Audio Stems", true, "Uploads and pins local sample recordings to IPFS upon project save"))
+        );
+        descriptors.insert("TomlMergeDriver".to_string(), DspNodeDescriptor::new("TomlMergeDriver", "Syntactic 3-Way TOML Project Schema Merge Driver HUD", DspNodeCategory::Utility, "Automated 3-way AST merge driver for Summoner DAW project files resolving track additions, routing changes, and plugin state collisions")
+            .with_param(DspParamSchema::choice("merge_conflict_resolution_mode", "3-Way Conflict Resolution Mode", &["Semantic 3-Way AST Merge", "Prefer Local Changes (Ours)", "Prefer Incoming Changes (Theirs)", "Interactive Conflict HUD Prompt"], 0, "Automatic conflict arbitration algorithm for concurrent track additions, renames, and routing modifications"))
+            .with_param(DspParamSchema::choice("plugin_state_merge_strategy", "DSP Plugin State Merge Policy", &["Latest Timestamp Wins", "Keep Dual Branches", "Parameter-by-Parameter Diff", "Fail Fast on Conflict"], 0, "Strategy for reconciling divergent parameter automations and preset tweaks on the same DSP node"))
+            .with_param(DspParamSchema::choice("ast_syntax_validation_strictness", "AST Schema Validation Strictness", &["Strict Schema Compliance", "Permissive with Deprecation Warnings", "Lossy Auto-Repair"], 0, "Enforces strict TOML validation rules to eliminate schema corruption during multi-branch merges"))
+            .with_param(DspParamSchema::toggle("dry_run_simulation_mode", "Simulate Merge Dry-Run (No Disk Write)", false, "Executes merge logic in memory and displays simulated diff without mutating project TOML file"))
+            .with_param(DspParamSchema::toggle("auto_create_pre_merge_checkpoint", "Create Git Checkpoint Before Auto-Merge", true, "Commits clean git snapshot prior to executing automated merge resolution"))
+        );
+        descriptors.insert("SessionChatCrypto".to_string(), DspNodeDescriptor::new("SessionChatCrypto", "Double-Ratchet End-to-End Encrypted Session Chat HUD", DspNodeCategory::Utility, "Cryptographically secure collaboration chat utilizing Signal Protocol double ratchet with ephemeral key agreement for team text and voice memos")
+            .with_param(DspParamSchema::knob("ratchet_rekeying_frequency_msgs", "Symmetric Ratchet Rekey Interval", 10.0, 100.0, 25.0, "msgs", MacroRole::Space, "Number of transmitted chat messages between Diffie-Hellman ratchet root key rotations"))
+            .with_param(DspParamSchema::knob("session_key_expiry_hours", "Ephemeral Session Key Time-To-Live", 1.0, 72.0, 24.0, "hours", MacroRole::Tone, "Cryptographic expiration duration for collaboration room master pre-keys"))
+            .with_param(DspParamSchema::knob("voice_memo_audio_bitrate_kbps", "Voice Memo Encrypted Opus Bitrate", 16.0, 128.0, 32.0, "kbps", MacroRole::Punch, "Audio encoding bitrate for collaborative voice notes embedded directly into timeline markers"))
+            .with_param(DspParamSchema::choice("crypto_identity_key_fingerprint", "Identity Key Fingerprint Algorithm", &["Curve25519 Modern Diffie-Hellman", "Kyber-768 Post-Quantum Hybrid", "Ed25519 Legacy Verify"], 0, "Cryptographic primitive governing identity key pair generation and forward secrecy authentication"))
+            .with_param(DspParamSchema::toggle("ephemeral_disappearing_messages", "Enable Disappearing Messages (Self-Destruct)", false, "Automatically scrubs collaborative chat messages and ephemeral audio memos after expiration"))
+        );
+        descriptors.insert("WasmPluginRunner".to_string(), DspNodeDescriptor::new("WasmPluginRunner", "Sandboxed WebAssembly DSP & Plugin Runtime HUD", DspNodeCategory::Utility, "Wasmtime-powered sandboxed execution environment running WebAssembly audio processors and DSP generators with memory isolation and crash containment")
+            .with_param(DspParamSchema::knob("wasm_memory_heap_limit_mb", "Wasm Memory Heap Allocation Ceiling", 16.0, 512.0, 64.0, "MB", MacroRole::Tone, "Hard memory quota allocated to each instantiated WebAssembly DSP sandbox module"))
+            .with_param(DspParamSchema::knob("fuel_instruction_budget_per_block", "Wasm Instruction Fuel Budget Per Block", 1000.0, 100000.0, 25000.0, "fuel", MacroRole::Punch, "Maximum CPU instruction fuel consumed per audio block before automatic execution throttling"))
+            .with_param(DspParamSchema::choice("simd_vectorization_mode", "Wasm Vectorization Acceleration Mode", &["Wasm SIMD128 Enabled", "Scalar Emulation Fallback", "Relaxed SIMD Experimental"], 0, "Hardware instruction set optimization level for inner loop audio rendering within WebAssembly"))
+            .with_param(DspParamSchema::choice("sandbox_isolation_tier", "Security Sandbox Isolation Level", &["Strict Sandboxing (No Host Access)", "Audio & MIDI Pipe Only", "Full Shared Array Buffer"], 1, "Operating system privilege boundary restricting filesystem and network socket access from third-party Wasm modules"))
+            .with_param(DspParamSchema::toggle("hot_reload_wasm_on_file_save", "Hot-Reload Wasm Module on Binary Save", true, "Watches target .wasm file on disk and hot-swaps audio kernel with anti-pop crossfade upon compilation"))
+        );
+        descriptors.insert("DidAuthenticator".to_string(), DspNodeDescriptor::new("DidAuthenticator", "W3C DID Cryptographic Identity & Access Authenticator HUD", DspNodeCategory::Utility, "Decentralized Identifier (DID) authentication provider granting role-based access control and cryptographic signing for multi-user session edits")
+            .with_param(DspParamSchema::choice("did_method_standard", "W3C DID Identifier Method", &["did:key (Ed25519 Public Key)", "did:web (Domain Verified SSL)", "did:ion (Decentralized Sidetree)", "did:pkh (EVM Account Binding)"], 0, "Decentralized identity protocol establishing user authenticity and public verification keys"))
+            .with_param(DspParamSchema::choice("collaborator_role_permission", "Active Collaborator Access Role", &["Full Admin (Edit Tracks & Settings)", "Mix Engineer (DSP & Faders Only)", "Musician (Record & Takes Only)", "Auditor (Read-Only Playback)"], 0, "Granular permission policy restricting destructive edits, project config changes, and stem exports"))
+            .with_param(DspParamSchema::knob("token_revocation_grace_period_min", "Revocation Grace Period Window", 1.0, 60.0, 15.0, "min", MacroRole::Space, "Interval during which revoked cryptographic tokens are cross-checked against CRL revocation lists"))
+            .with_param(DspParamSchema::knob("signature_cache_lifetime_sec", "Cryptographic Signature Cache TTL", 30.0, 3600.0, 300.0, "s", MacroRole::Punch, "Duration verified cryptographic signatures remain in memory before re-authenticating against public key registry"))
+            .with_param(DspParamSchema::toggle("require_hardware_token_confirmation", "Require FIDO2 / U2F Hardware Confirmation", false, "Demands physical security key tap before applying master bus or track deletion actions"))
+        );
+        descriptors.insert("PtpSyncClock".to_string(), DspNodeDescriptor::new("PtpSyncClock", "IEEE 1588 Precision Time Protocol Nanosecond Clock Synchronizer HUD", DspNodeCategory::Utility, "Sub-microsecond hardware and networked PTP clock synchronizer coordinating master DAW transport and slave devices over local Ethernet")
+            .with_param(DspParamSchema::choice("ptp_sync_packet_interval_log2", "PTP Synchronization Heartbeat Rate", &["64 Hz (Ultra-Fast LAN)", "32 Hz (Standard Studio)", "16 Hz (Wi-Fi Tolerant)", "8 Hz (Low Overhead)"], 1, "Sync packet transmission cadence establishing sub-microsecond transport phase synchronization"))
+            .with_param(DspParamSchema::choice("hardware_timestamping_interface", "Timestamping Network Interface Layer", &["Hardware NIC PHY Layer", "Kernel Software Timestamping", "User-Space Socket Fallback"], 0, "Selects hardware-level PHY timestamping or kernel software timestamping for packet arrival analysis"))
+            .with_param(DspParamSchema::knob("drift_compensation_gain", "Servo Clock Drift Compensation Gain", 0.01, 1.0, 0.25, "gain", MacroRole::Tone, "PI servo controller proportional gain continuously nudging local sample clock frequency to match grandmaster"))
+            .with_param(DspParamSchema::knob("allowed_clock_jitter_threshold_us", "Maximum Tolerated Clock Jitter Threshold", 0.1, 50.0, 5.0, "us", MacroRole::Space, "Jitter window exceeding which triggers clock resynchronization and slew warning alarms"))
+            .with_param(DspParamSchema::toggle("ptp_grandmaster_failover_enabled", "Automatic Grandmaster Clock Failover", true, "Promotes secondary DAW host to PTP grandmaster if master clock signal is interrupted"))
+        );
+        descriptors.insert("AdaptiveBandwidthManager".to_string(), DspNodeDescriptor::new("AdaptiveBandwidthManager", "Dynamic Real-Time Audio Bitrate & Packet Loss Adapter HUD", DspNodeCategory::Utility, "Probing network quality monitor automatically scaling Opus bitrates, FEC redundancy, and packet framing for glitch-free collaborative audio streaming")
+            .with_param(DspParamSchema::knob("target_audio_bitrate_kbps", "Target Audio Stream Bitrate", 32.0, 320.0, 160.0, "kbps", MacroRole::Tone, "Nominal Opus codec compression bitrate adapted dynamically according to measured network conditions"))
+            .with_param(DspParamSchema::knob("forward_error_correction_pct", "Forward Error Correction (FEC) Overhead", 0.0, 100.0, 20.0, "%", MacroRole::Punch, "Percentage of stream bandwidth dedicated to packet loss recovery and redundant audio frames"))
+            .with_param(DspParamSchema::knob("packet_loss_probe_interval_ms", "Network Round-Trip Ping Probe Interval", 50.0, 1000.0, 200.0, "ms", MacroRole::Space, "Frequency of continuous RTT latency and packet loss measurement probes"))
+            .with_param(DspParamSchema::choice("adaptive_rate_control_profile", "Bandwidth Adaptation Profile", &["Aggressive Bandwidth Preservation", "Balanced Low-Latency Audio", "Audiophile Pristine Fidelity"], 1, "Tuning curve prioritizing uninterrupted playback on unstable connections vs maximum acoustic clarity"))
+            .with_param(DspParamSchema::toggle("enable_dynamic_frame_expansion", "Dynamic Frame Size Expansion on Congestion", true, "Switches from 5ms to 20ms audio frames during severe network congestion to reduce packet overhead"))
+        );
+        descriptors.insert("MultiTakeCompManager".to_string(), DspNodeDescriptor::new("MultiTakeCompManager", "Sample-Accurate Multi-Take Audio Comping & Lane Splice Engine HUD", DspNodeCategory::SamplerSlicer, "Non-destructive comping controller managing multiple recorded audio takes, interactive lane swipe splicing, and equal-power boundary crossfades")
+            .with_param(DspParamSchema::knob("splice_crossfade_duration_ms", "Comp Splice Boundary Crossfade Time", 1.0, 50.0, 5.0, "ms", MacroRole::Space, "Crossfade duration between adjacent take segments to eliminate boundary clicks and phase pops"))
+            .with_param(DspParamSchema::choice("crossfade_curve_power", "Splice Boundary Crossfade Geometry", &["Equal Power (3dB Dip Free)", "Linear Slope", "S-Curve Logarithmic", "Fast Cut (0.5ms)"], 0, "Geometric gain transfer profile applied across spliced take region boundaries"))
+            .with_param(DspParamSchema::choice("comp_lane_audition_solo", "Comp Lane Audition Routing", &["Master Comp Composite", "Solo Lane 1", "Solo Lane 2", "Solo Lane 3", "Solo Lane 4"], 0, "Routes composite comp result or isolated individual audio take directly to channel monitor fader"))
+            .with_param(DspParamSchema::choice("splice_boundary_snap_grid", "Splice Boundary Grid Snapping Mode", &["Free Hand (Sample-Accurate)", "1/64 Note Beat Snap", "Transient Hit Boundary", "Zero-Crossing Detection"], 3, "Snaps user comp swipe markers to musical divisions, detected acoustic transients, or waveform zero-crossings"))
+            .with_param(DspParamSchema::toggle("non_destructive_slip_editing", "Enable Non-Destructive Take Slip Editing", true, "Permits shifting audio take contents horizontally within fixed comp boundaries without altering splice points"))
+        );
+        descriptors.insert("GrooveQuantizeEngine".to_string(), DspNodeDescriptor::new("GrooveQuantizeEngine", "Funk/House/HipHop Groove Quantizer & Micro-Shift Humanizer HUD", DspNodeCategory::Modulation, "Musical groove engine imparting humanized micro-timing shifts, swing offsets, and dynamic velocity accents from iconic musical genres")
+            .with_param(DspParamSchema::choice("groove_template_style", "Genre Micro-Timing Groove Template", &["Funk (Push 2 & 4 + 16th Swing)", "House (4-on-Floor + 16th Late)", "HipHop (Heavy Laid-Back Snare)", "Bossa Nova (Syncopated Clave)"], 0, "Curated rhythmic feel profile defining downbeat accents, offbeat micro-delays, and dynamic velocity scaling"))
+            .with_param(DspParamSchema::knob("groove_application_amount_pct", "Groove Template Intensity Strength", 0.0, 100.0, 75.0, "%", MacroRole::Punch, "Master blend interpolating between strict mathematical quantization and full genre groove feel"))
+            .with_param(DspParamSchema::knob("micro_shift_jitter_amount_ms", "Micro-Timing Timing Jitter Offset", 0.0, 20.0, 3.5, "ms", MacroRole::Space, "Subtle organic human micro-timing variations added to step triggers to eliminate robotic rigidity"))
+            .with_param(DspParamSchema::knob("velocity_accent_boost_db", "Metric Accent Velocity Gain Boost", 0.0, 6.0, 2.0, "dB", MacroRole::Tone, "Dynamic volume accentuation applied to rhythmically stressed pulses in the groove pattern"))
+            .with_param(DspParamSchema::toggle("quantize_only_selected_notes", "Apply Groove Only to Selected Notes", false, "Limits groove quantization and micro-shifts to actively highlighted sequencer events"))
+        );
+        descriptors.insert("CadencePathResolver".to_string(), DspNodeDescriptor::new("CadencePathResolver", "Graph-Based Dynamic Harmonic Progression Path Resolver HUD", DspNodeCategory::Modulation, "Tymoczko L1/L2 metric voice-leading tree search solving optimal harmonic progression paths and chord substitutions towards tonal resolutions")
+            .with_param(DspParamSchema::choice("target_cadence_resolution", "Target Cadential Resolution Type", &["Authentic (V -> I)", "Plagal (IV -> I)", "Deceptive (V -> vi)", "Half Cadence (Any -> V)", "Neapolitan Sub (bII -> V)"], 0, "Musical cadence destination governing tree search direction and chord progression attraction vectors"))
+            .with_param(DspParamSchema::choice("voice_leading_cost_metric", "Voice-Leading Distance Optimization Metric", &["Tymoczko L1 Minimal Distance", "L2 Euclidean Distance", "Smooth Contrapuntal Contrary Motion", "Parallel Motion Tolerance"], 0, "Mathematical distance function evaluating voice displacement across multi-dimensional chord geometries"))
+            .with_param(DspParamSchema::knob("max_search_depth_steps", "Cadence Graph Tree Search Depth", 2.0, 8.0, 4.0, "steps", MacroRole::Punch, "Maximum chord progression substitution steps evaluated in finding smooth voice-leading transitions"))
+            .with_param(DspParamSchema::knob("tension_escalation_gradient", "Harmonic Tension Escalation Gradient", 0.0, 1.0, 0.6, "gradient", MacroRole::Tone, "Slope of harmonic dissonance and tension accumulation before final cadence release"))
+            .with_param(DspParamSchema::toggle("avoid_parallel_fifths_and_octaves", "Strict Classical Parallel Fifth/Octave Avoidance", true, "Disallows voice motions generating parallel perfect 5ths and 8ves across consecutive chords"))
+        );
+        descriptors.insert("PolyphonicVoicePool".to_string(), DspNodeDescriptor::new("PolyphonicVoicePool", "MPE Dynamic Voice Stealing & Polyphonic Allocation Pool HUD", DspNodeCategory::Utility, "Lock-free fixed-capacity polyphonic voice allocator with oldest-note voice stealing, envelope-release retriggering, and MPE channel dispatch")
+            .with_param(DspParamSchema::knob("maximum_polyphonic_voices", "Maximum Simultaneous Polyphonic Voices", 1.0, 32.0, 16.0, "voices", MacroRole::Punch, "Hardware voice allocation capacity bounding concurrent synthesis oscillators and filter states"))
+            .with_param(DspParamSchema::choice("voice_stealing_algorithm", "Polyphonic Voice Stealing Policy", &["Oldest Active Voice", "Quietist / Lowest Envelope", "Highest Pitch Priority", "Round-Robin Cyclic"], 0, "Priority heuristic for reclaiming and recycling active voices when maximum allocation ceiling is reached"))
+            .with_param(DspParamSchema::choice("voice_retrigger_mode", "Voice Envelope Retriggering Behavior", &["Hard Reset Phase (Zero-Crossing)", "Soft Retrigger (Catch from Current Envelope)", "Legato NoteGlide"], 1, "Oscillator phase and envelope generator reset mechanism when retriggering existing voice note"))
+            .with_param(DspParamSchema::knob("unison_voice_stack_count", "Unison Voice Multiplier Stacking", 1.0, 4.0, 1.0, "stack", MacroRole::Tone, "Number of concurrent detuned voices assigned to each played note event"))
+            .with_param(DspParamSchema::toggle("preserve_sustained_pedal_notes", "Protect Sustained Damper Pedal Notes", true, "Exempts notes held by MIDI CC64 sustain pedal from aggressive voice stealing algorithms"))
+        );
+        descriptors.insert("MidiMonitorLog".to_string(), DspNodeDescriptor::new("MidiMonitorLog", "Real-Time Diagnostic MIDI Event Stream Logger & Hex Analyzer HUD", DspNodeCategory::Utility, "Real-time diagnostic event monitor capturing incoming and outgoing MIDI packets, running status bytes, CC values, and sub-millisecond deltas")
+            .with_param(DspParamSchema::choice("event_capture_buffer_size", "Diagnostic Event Log Ring Buffer Depth", &["256 Events", "1024 Events", "4096 Events", "16384 Events"], 1, "Capacity of circular event log storing historical MIDI transactions for diagnostic inspection"))
+            .with_param(DspParamSchema::choice("display_notation_format", "Event Stream Display Representation", &["Raw Hexadecimal (90 3C 64)", "Musical Notes (Ch1 NoteOn C4 Vel100)", "Continuous Control Graph", "SysEx Dump View"], 1, "Formatting mode for rendering incoming MIDI event details in GUI diagnostic readout"))
+            .with_param(DspParamSchema::choice("channel_view_filter", "MIDI Hardware Channel Scope Filter", &["Omni (All 16 Channels)", "Channel 1 Only", "Channel 10 (Percussion)", "MPE Channels (2-16)"], 0, "Filters displayed event stream to isolate specific hardware instruments or controller channels"))
+            .with_param(DspParamSchema::knob("minimum_logged_velocity_threshold", "Minimum Logged Note Velocity Threshold", 0.0, 127.0, 0.0, "vel", MacroRole::Punch, "Suppresses diagnostic logging for ghost notes or low-velocity triggers below threshold"))
+            .with_param(DspParamSchema::toggle("freeze_logging_on_next_trigger", "Freeze Diagnostic Log on Error / Next Trigger", false, "Halts real-time scrolling when a diagnostic event trigger or malformed MIDI packet is detected"))
+        );
+        descriptors.insert("LooperTrackManager".to_string(), DspNodeDescriptor::new("LooperTrackManager", "Non-Blocking Multitrack Circular Looper & Overdub Layer Manager HUD", DspNodeCategory::SamplerSlicer, "Multi-track audio looper module with bar-quantized record, overdub, multiply, divide, non-destructive undo/redo stacks, and loop decay")
+            .with_param(DspParamSchema::knob("overdub_feedback_decay_pct", "Overdub Layer Feedback Decay Retention", 50.0, 100.0, 100.0, "%", MacroRole::Punch, "Decay coefficient attenuating earlier audio passes during continuous sound-on-sound overdubbing"))
+            .with_param(DspParamSchema::choice("loop_quantize_division", "Loop Record & Punch Quantize Grid", &["1 Bar (Strict Measure)", "2 Bars", "4 Bars", "1/4 Beat Freeform", "Free Run (Unquantized)"], 0, "Clock division synchronizing punch-in, punch-out, and playback boundary turnaround"))
+            .with_param(DspParamSchema::knob("boundary_crossfade_samples", "Turnaround Splice Crossfade Window", 16.0, 256.0, 64.0, "samples", MacroRole::Space, "Sample-accurate crossfade length applied across circular buffer loop endpoints to prevent boundary clicks"))
+            .with_param(DspParamSchema::choice("playback_speed_multiplier", "Loop Playback Rate & Direction", &["1x Normal Speed", "2x Double Speed", "0.5x Half Speed Reverse", "-1x Reverse Playback"], 0, "Resampling speed and direction multiplier applied to loop playback head"))
+            .with_param(DspParamSchema::toggle("enable_infinite_overdub_layers", "Non-Destructive Multi-Layer Undo Stack", true, "Preserves independent overdub audio layers in memory enabling multi-step undo and layer mute"))
+        );
+        descriptors.insert("DynamicParameterSmoother".to_string(), DspNodeDescriptor::new("DynamicParameterSmoother", "One-Pole Exponential Slew Limiter & Parameter Smoother HUD", DspNodeCategory::Modulation, "Real-time DSP parameter smoother filtering discontinuous control jumps and zipper noise into smooth analog-like exponential transitions")
+            .with_param(DspParamSchema::knob("smoothing_time_constant_ms", "Exponential Transition Time Constant", 0.1, 200.0, 10.0, "ms", MacroRole::Space, "Filter time constant determining rate of parameter convergence to eliminate discrete step zipper noise"))
+            .with_param(DspParamSchema::choice("slew_interpolation_curve", "Parameter Slew Response Profile", &["One-Pole Exponential Lowpass", "Linear Slew Ramp", "Logarithmic Fast-Attack", "Hermite Cubic Spline"], 0, "Mathematical trajectory profile governing parameter transition curvature between automation nodes"))
+            .with_param(DspParamSchema::knob("cutoff_frequency_tracking", "Slew Filter Cutoff Frequency Corner", 5.0, 500.0, 40.0, "Hz", MacroRole::Tone, "Lowpass filtering cutoff frequency bounding high-frequency control chatter"))
+            .with_param(DspParamSchema::choice("anti_zipper_noise_filter", "Anti-Zipper Noise Precision Mode", &["Enabled (Standard 24-Bit)", "High Precision (32-Bit Float)", "Bypass Smoothing"], 0, "Selects dynamic quantization precision for low-level continuous parameter adjustments"))
+            .with_param(DspParamSchema::toggle("instant_jump_on_scene_change", "Instantaneous Jump on Scene / Pattern Switch", true, "Bypasses exponential smoothing when song scenes or pattern clips transition to ensure punchy drop-in"))
+        );
+        descriptors.insert("NodeGraphScheduler".to_string(), DspNodeDescriptor::new("NodeGraphScheduler", "Kahn's Topological DAG Scheduler & Double-Buffered Hot-Swap Engine HUD", DspNodeCategory::Utility, "Lock-free DSP node graph compiler computing topological evaluation levels for parallel multi-core rendering with cycle detection and anti-pop crossfading")
+            .with_param(DspParamSchema::toggle("multithreaded_parallel_dispatch", "Multi-Threaded Parallel Level Dispatch", true, "Distributes independent topological graph levels across worker threads for multi-core DSP scaling"))
+            .with_param(DspParamSchema::knob("max_worker_thread_pool", "Allocated DSP Audio Worker Thread Count", 1.0, 32.0, 8.0, "threads", MacroRole::Punch, "Thread pool capacity dedicated to rendering concurrent non-dependent audio graph branches"))
+            .with_param(DspParamSchema::knob("anti_pop_crossfade_generation_ms", "Graph Hot-Swap Anti-Pop Crossfade Time", 1.0, 20.0, 3.0, "ms", MacroRole::Space, "Crossfade window applied during lock-free ArcSwap graph replacements to prevent audible dropouts"))
+            .with_param(DspParamSchema::choice("cycle_detection_fallback_action", "Cyclic Dependency Fallback Strategy", &["Break Feedback Edge with 1-Block Delay", "Mute Cyclic Node Branch", "Throw Hard Compilation Error"], 0, "Arbitration mechanism automatically resolving cyclic feedback loops discovered in user signal routing"))
+            .with_param(DspParamSchema::toggle("profile_per_node_cpu_cycles", "Record High-Precision Per-Node CPU Timings", true, "Profiles microsecond execution duration of individual DSP nodes for real-time load heatmaps"))
+        );
+        descriptors.insert("VowelCylinderAreaSynthesizer".to_string(), DspNodeDescriptor::new("VowelCylinderAreaSynthesizer", "44-Cylinder Acoustic Area Vocal Tract Formant Synthesizer HUD", DspNodeCategory::SpectralResynthesis, "Acoustic waveguide physical model synthesizing human vocal tract geometry from 44 discrete cross-sectional tube area cylinders with lip radiation")
+            .with_param(DspParamSchema::knob("glottis_vocal_tract_length_cm", "Acoustic Vocal Tract Length", 12.0, 22.0, 17.5, "cm", MacroRole::Tone, "Physical length of Kelly-Lochbaum vocal tube determining baseline formant frequency spacing"))
+            .with_param(DspParamSchema::knob("lip_radiation_aperture_cm2", "Lip Termination Radiation Aperture Area", 0.2, 8.0, 2.5, "cm²", MacroRole::Character, "Cross-sectional area of cylinder 44 governing high-frequency spherical wave acoustic radiation"))
+            .with_param(DspParamSchema::knob("pharyngeal_constriction_pos", "Tongue & Pharyngeal Constriction Center", 0.0, 1.0, 0.45, "norm", MacroRole::Tone, "Normalized anatomical position along 44-cylinder vocal tract representing primary phonetic constriction"))
+            .with_param(DspParamSchema::knob("vocal_tract_damping_factor", "Acoustic Tube Wall Viscous Damping", 0.8, 0.999, 0.985, "Q", MacroRole::Punch, "Energy absorption coefficient modeling mucosal tissue damping and heat conduction along tube walls"))
+            .with_param(DspParamSchema::toggle("acoustic_nasal_coupling", "Engage Velopharyngeal Nasal Cavity Coupling", false, "Opens secondary acoustic waveguide branch modeling nasal consonant resonances /m/ and /n/"))
+        );
+        descriptors.insert("Rank2TemperamentGenerator".to_string(), DspNodeDescriptor::new("Rank2TemperamentGenerator", "Generalized Rank-2 Scale Degree & Interval Lattice Generator HUD", DspNodeCategory::Modulation, "Microtonal temperament generator deriving rank-2 regular scales from arbitrary period and generator interval step pairs (e.g. Meantone, Pelog, Porcupine)")
+            .with_param(DspParamSchema::knob("generator_interval_cents", "Rank-2 Generator Step Interval", 500.0, 800.0, 696.58, "cents", MacroRole::Tone, "Microtonal generator interval (e.g. 696.58c for 1/4-comma meantone fifth, 701.96c for 3-limit Pythagorean)"))
+            .with_param(DspParamSchema::knob("period_interval_cents", "Scale Equave / Period Interval", 1100.0, 1300.0, 1200.0, "cents", MacroRole::Tone, "Formal repetition period of the tuning system (typically 1200.0c for standard octave, or 1901.96c for Bohlen-Pierce tritave)"))
+            .with_param(DspParamSchema::knob("scale_size_notes_count", "Generated Scale Tone Count", 5.0, 53.0, 12.0, "notes", MacroRole::Character, "Number of generated microtonal scale degrees sorted into the fundamental scale period"))
+            .with_param(DspParamSchema::choice("historical_temperament_preset", "Rank-2 Historical Temperament Archetype", &["Quarter-Comma Meantone (696.58c)", "Pythagorean 3-Limit (701.96c)", "Porcupine Temperament (163c)", "Hanson Blackwood (685.7c)", "Custom Generator/Period"], 0, "Preset template configuring generator and period intervals from classic microtonal tuning theory"))
+            .with_param(DspParamSchema::toggle("normalize_to_octave_period", "Fold Generated Pitches into Primary Equave", true, "Applies modulo arithmetic to compress all generator step multiples into single octave boundary"))
+        );
+        descriptors.insert("PhaseFlipPolarityInverter".to_string(), DspNodeDescriptor::new("PhaseFlipPolarityInverter", "Sample-Accurate Phase Inversion & Polarity Flip Utility HUD", DspNodeCategory::Utility, "Sample-accurate signal polarity inverter supporting independent Left/Right channel phase flips for drum mic bleed cancellation and acoustic phase matching")
+            .with_param(DspParamSchema::choice("channel_phase_inversion_scope", "Channel Polarity Inversion Scope", &["Both Channels (Stereo Invert)", "Left Channel Only", "Right Channel Only", "M/S Side Channel Invert"], 0, "Determines which stereo audio channels receive mathematical polarity inversion (-1x)"))
+            .with_param(DspParamSchema::toggle("phase_inversion_active", "Engage Polarity Inversion (-1x Multiplier)", true, "Toggles sample-accurate phase inversion active on selected audio channels"))
+            .with_param(DspParamSchema::knob("sub_sample_delay_phase_trim_deg", "Micro-Phase Sinc Delay Phase Trim", -180.0, 180.0, 0.0, "deg", MacroRole::Tone, "Fractional sub-sample allpass phase angle offset for precise multi-mic alignment"))
+            .with_param(DspParamSchema::toggle("dc_blocking_highpass_guard", "DC Offset Removal High-Pass Guard", true, "Prevents polarity flip transient thump by filtering out sub-audible DC voltage offsets"))
+            .with_param(DspParamSchema::toggle("mono_compatibility_audition", "Sum to Mono for Phase Cancellation Check", false, "Sums Left and Right channels to mono to rapidly audit destructive acoustic comb filtering"))
+        );
+        descriptors.insert("InputOutputGainTrim".to_string(), DspNodeDescriptor::new("InputOutputGainTrim", "Dual-Stage Pre/Post Track Channel Gain Trim & Headroom Attenuator HUD", DspNodeCategory::DynamicsMaster, "Dual-stage track channel gain stage providing independent input pre-trim and output post-trim for optimal gain staging into non-linear DSP plugins")
+            .with_param(DspParamSchema::knob("pre_dsp_input_gain_trim_db", "Pre-DSP Channel Input Gain Trim", -24.0, 24.0, 0.0, "dB", MacroRole::Punch, "Input attenuation or boost applied before insert effect chain to establish optimal analog headroom"))
+            .with_param(DspParamSchema::knob("post_dsp_output_gain_trim_db", "Post-DSP Channel Output Gain Trim", -24.0, 24.0, 0.0, "dB", MacroRole::Punch, "Output fader level adjustment compensating for cumulative plugin makeup gain"))
+            .with_param(DspParamSchema::choice("gain_stage_linking_mode", "Dual-Stage Gain Linking Coupling", &["Independent Trim", "Inverse Gain Match (Pre + Post = 0dB)", "Input Mute Safe"], 0, "Couples input and output trims so driving hotter input automatically attenuates output by equivalent dB"))
+            .with_param(DspParamSchema::choice("analog_headroom_soft_clip", "Analog Headroom Soft Clipping Profile", &["Off (Linear Clean)", "Gentle Analog Warmth (-0.5dB)", "Tape Soft Saturation (-1.0dB)"], 0, "Applies subtle hyperbolic tangent soft saturation to tame unexpected extreme signal excursions"))
+            .with_param(DspParamSchema::toggle("enable_gain_staging_bypass", "Bypass Gain Staging Trim Circuit", false, "Passes incoming audio through unaltered for transparent A/B gain comparison"))
+        );
 
         Self { descriptors }
     }
@@ -6951,6 +7098,27 @@ impl DspNodeRegistry {
             ("SmfMidiStreamExporter", DspNodeCategory::Utility, "Standard MIDI File (SMF Type 0) Stream Exporter HUD"),
             ("LiveAudioMonitorEngine", DspNodeCategory::Utility, "Real-Time CPAL Audio Engine Hardware Playback Monitor HUD"),
             ("ProjectScaffoldWizard", DspNodeCategory::Utility, "Interactive Session Scaffolding & Project Wizard HUD"),
+            ("FederatedMixLearner", DspNodeCategory::NeuralAi, "Privacy-Preserving Federated Mix Model Learner HUD"),
+            ("PresenceSyncServer", DspNodeCategory::Utility, "Multi-User Presence & Viewport Synchronization Engine HUD"),
+            ("IpfsAssetStore", DspNodeCategory::Utility, "Decentralized Content-Addressed Sample & Asset Store HUD"),
+            ("TomlMergeDriver", DspNodeCategory::Utility, "Syntactic 3-Way TOML Project Schema Merge Driver HUD"),
+            ("SessionChatCrypto", DspNodeCategory::Utility, "Double-Ratchet End-to-End Encrypted Session Chat HUD"),
+            ("WasmPluginRunner", DspNodeCategory::Utility, "Sandboxed WebAssembly DSP & Plugin Runtime HUD"),
+            ("DidAuthenticator", DspNodeCategory::Utility, "W3C DID Cryptographic Identity & Access Authenticator HUD"),
+            ("PtpSyncClock", DspNodeCategory::Utility, "IEEE 1588 Precision Time Protocol Nanosecond Clock Synchronizer HUD"),
+            ("AdaptiveBandwidthManager", DspNodeCategory::Utility, "Dynamic Real-Time Audio Bitrate & Packet Loss Adapter HUD"),
+            ("MultiTakeCompManager", DspNodeCategory::SamplerSlicer, "Sample-Accurate Multi-Take Audio Comping & Lane Splice Engine HUD"),
+            ("GrooveQuantizeEngine", DspNodeCategory::Modulation, "Funk/House/HipHop Groove Quantizer & Micro-Shift Humanizer HUD"),
+            ("CadencePathResolver", DspNodeCategory::Modulation, "Graph-Based Dynamic Harmonic Progression Path Resolver HUD"),
+            ("PolyphonicVoicePool", DspNodeCategory::Utility, "MPE Dynamic Voice Stealing & Polyphonic Allocation Pool HUD"),
+            ("MidiMonitorLog", DspNodeCategory::Utility, "Real-Time Diagnostic MIDI Event Stream Logger & Hex Analyzer HUD"),
+            ("LooperTrackManager", DspNodeCategory::SamplerSlicer, "Non-Blocking Multitrack Circular Looper & Overdub Layer Manager HUD"),
+            ("DynamicParameterSmoother", DspNodeCategory::Modulation, "One-Pole Exponential Slew Limiter & Parameter Smoother HUD"),
+            ("NodeGraphScheduler", DspNodeCategory::Utility, "Kahn's Topological DAG Scheduler & Double-Buffered Hot-Swap Engine HUD"),
+            ("VowelCylinderAreaSynthesizer", DspNodeCategory::SpectralResynthesis, "44-Cylinder Acoustic Area Vocal Tract Formant Synthesizer HUD"),
+            ("Rank2TemperamentGenerator", DspNodeCategory::Modulation, "Generalized Rank-2 Scale Degree & Interval Lattice Generator HUD"),
+            ("PhaseFlipPolarityInverter", DspNodeCategory::Utility, "Sample-Accurate Phase Inversion & Polarity Flip Utility HUD"),
+            ("InputOutputGainTrim", DspNodeCategory::DynamicsMaster, "Dual-Stage Pre/Post Track Channel Gain Trim & Headroom Attenuator HUD"),
         ]
     }
 
@@ -8584,6 +8752,69 @@ impl DspNodeRegistry {
             "projectscaffoldwizard" => Some("ProjectScaffoldWizard"),
             "scaffoldwizard" => Some("ProjectScaffoldWizard"),
             "projectwizard" => Some("ProjectScaffoldWizard"),
+            "federatedmixlearner" => Some("FederatedMixLearner"),
+            "federatedmix" => Some("FederatedMixLearner"),
+            "mixlearner" => Some("FederatedMixLearner"),
+            "presencesyncserver" => Some("PresenceSyncServer"),
+            "presencesync" => Some("PresenceSyncServer"),
+            "presenceserver" => Some("PresenceSyncServer"),
+            "ipfsassetstore" => Some("IpfsAssetStore"),
+            "ipfsstore" => Some("IpfsAssetStore"),
+            "ipfssamples" => Some("IpfsAssetStore"),
+            "tomlmergedriver" => Some("TomlMergeDriver"),
+            "tomlmerge" => Some("TomlMergeDriver"),
+            "schemamergedriver" => Some("TomlMergeDriver"),
+            "sessionchatcrypto" => Some("SessionChatCrypto"),
+            "chatcrypto" => Some("SessionChatCrypto"),
+            "sessionchat" => Some("SessionChatCrypto"),
+            "wasmpluginrunner" => Some("WasmPluginRunner"),
+            "wasmrunner" => Some("WasmPluginRunner"),
+            "wasmpluginexecutor" => Some("WasmPluginRunner"),
+            "didauthenticator" => Some("DidAuthenticator"),
+            "didauth" => Some("DidAuthenticator"),
+            "w3cdidauth" => Some("DidAuthenticator"),
+            "ptpsyncclock" => Some("PtpSyncClock"),
+            "ptpclock" => Some("PtpSyncClock"),
+            "ptpsync" => Some("PtpSyncClock"),
+            "adaptivebandwidthmanager" => Some("AdaptiveBandwidthManager"),
+            "bandwidthmanager" => Some("AdaptiveBandwidthManager"),
+            "adaptivebandwidth" => Some("AdaptiveBandwidthManager"),
+            "multitakecompmanager" => Some("MultiTakeCompManager"),
+            "multitakecomp" => Some("MultiTakeCompManager"),
+            "compmanager" => Some("MultiTakeCompManager"),
+            "groovequantizeengine" => Some("GrooveQuantizeEngine"),
+            "groovequantize" => Some("GrooveQuantizeEngine"),
+            "grooveengine" => Some("GrooveQuantizeEngine"),
+            "cadencepathresolver" => Some("CadencePathResolver"),
+            "cadencepath" => Some("CadencePathResolver"),
+            "pathresolver" => Some("CadencePathResolver"),
+            "polyphonicvoicepool" => Some("PolyphonicVoicePool"),
+            "voicepool" => Some("PolyphonicVoicePool"),
+            "polyvoicepool" => Some("PolyphonicVoicePool"),
+            "midimonitorlog" => Some("MidiMonitorLog"),
+            "midilogger" => Some("MidiMonitorLog"),
+            "midieventlog" => Some("MidiMonitorLog"),
+            "loopertrackmanager" => Some("LooperTrackManager"),
+            "loopertrack" => Some("LooperTrackManager"),
+            "tracklooper" => Some("LooperTrackManager"),
+            "dynamicparametersmoother" => Some("DynamicParameterSmoother"),
+            "parametersmoother" => Some("DynamicParameterSmoother"),
+            "paramsmoother" => Some("DynamicParameterSmoother"),
+            "nodegraphscheduler" => Some("NodeGraphScheduler"),
+            "graphscheduler" => Some("NodeGraphScheduler"),
+            "dagscheduler" => Some("NodeGraphScheduler"),
+            "vowelcylinderareasynthesizer" => Some("VowelCylinderAreaSynthesizer"),
+            "vowelcylindersynthesizer" => Some("VowelCylinderAreaSynthesizer"),
+            "vowelcylinder" => Some("VowelCylinderAreaSynthesizer"),
+            "rank2temperamentgenerator" => Some("Rank2TemperamentGenerator"),
+            "rank2temperament" => Some("Rank2TemperamentGenerator"),
+            "rank2generator" => Some("Rank2TemperamentGenerator"),
+            "phaseflippolarityinverter" => Some("PhaseFlipPolarityInverter"),
+            "phaseflip" => Some("PhaseFlipPolarityInverter"),
+            "polarityinverter" => Some("PhaseFlipPolarityInverter"),
+            "inputoutputgaintrim" => Some("InputOutputGainTrim"),
+            "gaintrim" => Some("InputOutputGainTrim"),
+            "inputoutputtrim" => Some("InputOutputGainTrim"),
             _ => None,
         }
     }
@@ -13908,6 +14139,174 @@ impl DspNodeRegistry {
                     .with_param(DspParamDescriptor::new_bool("initialize_git_dag_repository", "Initialize Git Session DAG Repository in Project Root", true, (168, 85, 247)))
                     .with_param(DspParamDescriptor::new_bool("create_default_audio_assets_folder", "Create Local assets/ and stems/ Subdirectories", true, (34, 197, 94)))
             ),
+            "FederatedMixLearner" => Box::new(
+                GenericDspNodeUi::new("FederatedMixLearner", "Privacy-Preserving Federated Mix Model Learner HUD", DspNodeCategory::NeuralAi)
+                    .with_param(DspParamDescriptor::new_linear("local_epochs_per_round", "Local Training Epochs Per Round", 1.0, 50.0, 5.0, "epochs", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("differential_privacy_epsilon", "Differential Privacy Noise Budget Epsilon", 0.1, 10.0, 1.0, "eps", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("gradient_clipping_norm", "Gradient L2 Clipping Norm", 0.1, 5.0, 1.0, "norm", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_enum("federated_aggregation_strategy", "Federated Weight Aggregation Strategy", vec!["FedAvg (Standard Averaging)".into(), "FedProx (Proximal Regularization)".into(), "FedAdam (Adaptive Momentum)".into(), "SCAFFOLD (Control Variates)".into()], 0, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("participate_in_federated_mesh", "Participate in Decentralized Model Mesh", true, (34, 197, 94)))
+            ),
+            "PresenceSyncServer" => Box::new(
+                GenericDspNodeUi::new("PresenceSyncServer", "Multi-User Presence & Viewport Synchronization Engine HUD", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("heartbeat_interval_ms", "Presence Heartbeat Broadcast Interval", 50.0, 2000.0, 250.0, "ms", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("cursor_interpolation_smoothness", "Remote Cursor Slew Interpolation", 0.0, 1.0, 0.8, "smooth", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("max_active_remote_collaborators", "Maximum Tracked Peer Collaborators", 2.0, 64.0, 16.0, "users", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_enum("presence_broadcast_scope", "Collaborator Presence Broadcast Scope", vec!["Global Project Scope".into(), "Active Track Group Only".into(), "Spatial Horizon (Nearby Tracks)".into(), "Stealth Mode (Observe Only)".into()], 0, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("broadcast_playhead_scrub", "Broadcast Live Playhead Scrub Positions", true, (34, 197, 94)))
+            ),
+            "IpfsAssetStore" => Box::new(
+                GenericDspNodeUi::new("IpfsAssetStore", "Decentralized Content-Addressed Sample & Asset Store HUD", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("local_cache_quota_gb", "Local Disk Content Cache Quota", 1.0, 100.0, 10.0, "GB", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("pinning_redundancy_factor", "Decentralized Pinning Redundancy", 1.0, 5.0, 3.0, "copies", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("gateway_connection_timeout_sec", "IPFS Gateway Connect Timeout", 1.0, 30.0, 5.0, "s", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_enum("ipfs_storage_gateway_provider", "Primary IPFS Gateway Provider", vec!["Infura Dedicated Gateway".into(), "Pinata Cloud".into(), "Local IPFS Daemon (localhost:5001)".into(), "Filecoin Decentralized Storage".into()], 0, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("auto_pin_imported_audio_samples", "Automatically Pin Imported Audio Stems", true, (34, 197, 94)))
+            ),
+            "TomlMergeDriver" => Box::new(
+                GenericDspNodeUi::new("TomlMergeDriver", "Syntactic 3-Way TOML Project Schema Merge Driver HUD", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_enum("merge_conflict_resolution_mode", "3-Way Conflict Resolution Mode", vec!["Semantic 3-Way AST Merge".into(), "Prefer Local Changes (Ours)".into(), "Prefer Incoming Changes (Theirs)".into(), "Interactive Conflict HUD Prompt".into()], 0, (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_enum("plugin_state_merge_strategy", "DSP Plugin State Merge Policy", vec!["Latest Timestamp Wins".into(), "Keep Dual Branches".into(), "Parameter-by-Parameter Diff".into(), "Fail Fast on Conflict".into()], 0, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_enum("ast_syntax_validation_strictness", "AST Schema Validation Strictness", vec!["Strict Schema Compliance".into(), "Permissive with Deprecation Warnings".into(), "Lossy Auto-Repair".into()], 0, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("dry_run_simulation_mode", "Simulate Merge Dry-Run (No Disk Write)", false, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("auto_create_pre_merge_checkpoint", "Create Git Checkpoint Before Auto-Merge", true, (34, 197, 94)))
+            ),
+            "SessionChatCrypto" => Box::new(
+                GenericDspNodeUi::new("SessionChatCrypto", "Double-Ratchet End-to-End Encrypted Session Chat HUD", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("ratchet_rekeying_frequency_msgs", "Symmetric Ratchet Rekey Interval", 10.0, 100.0, 25.0, "msgs", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("session_key_expiry_hours", "Ephemeral Session Key Time-To-Live", 1.0, 72.0, 24.0, "hours", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("voice_memo_audio_bitrate_kbps", "Voice Memo Encrypted Opus Bitrate", 16.0, 128.0, 32.0, "kbps", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_enum("crypto_identity_key_fingerprint", "Identity Key Fingerprint Algorithm", vec!["Curve25519 Modern Diffie-Hellman".into(), "Kyber-768 Post-Quantum Hybrid".into(), "Ed25519 Legacy Verify".into()], 0, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("ephemeral_disappearing_messages", "Enable Disappearing Messages (Self-Destruct)", false, (34, 197, 94)))
+            ),
+            "WasmPluginRunner" => Box::new(
+                GenericDspNodeUi::new("WasmPluginRunner", "Sandboxed WebAssembly DSP & Plugin Runtime HUD", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("wasm_memory_heap_limit_mb", "Wasm Memory Heap Allocation Ceiling", 16.0, 512.0, 64.0, "MB", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("fuel_instruction_budget_per_block", "Wasm Instruction Fuel Budget Per Block", 1000.0, 100000.0, 25000.0, "fuel", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_enum("simd_vectorization_mode", "Wasm Vectorization Acceleration Mode", vec!["Wasm SIMD128 Enabled".into(), "Scalar Emulation Fallback".into(), "Relaxed SIMD Experimental".into()], 0, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_enum("sandbox_isolation_tier", "Security Sandbox Isolation Level", vec!["Strict Sandboxing (No Host Access)".into(), "Audio & MIDI Pipe Only".into(), "Full Shared Array Buffer".into()], 1, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("hot_reload_wasm_on_file_save", "Hot-Reload Wasm Module on Binary Save", true, (34, 197, 94)))
+            ),
+            "DidAuthenticator" => Box::new(
+                GenericDspNodeUi::new("DidAuthenticator", "W3C DID Cryptographic Identity & Access Authenticator HUD", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_enum("did_method_standard", "W3C DID Identifier Method", vec!["did:key (Ed25519 Public Key)".into(), "did:web (Domain Verified SSL)".into(), "did:ion (Decentralized Sidetree)".into(), "did:pkh (EVM Account Binding)".into()], 0, (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_enum("collaborator_role_permission", "Active Collaborator Access Role", vec!["Full Admin (Edit Tracks & Settings)".into(), "Mix Engineer (DSP & Faders Only)".into(), "Musician (Record & Takes Only)".into(), "Auditor (Read-Only Playback)".into()], 0, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("token_revocation_grace_period_min", "Revocation Grace Period Window", 1.0, 60.0, 15.0, "min", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("signature_cache_lifetime_sec", "Cryptographic Signature Cache TTL", 30.0, 3600.0, 300.0, "s", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("require_hardware_token_confirmation", "Require FIDO2 / U2F Hardware Confirmation", false, (34, 197, 94)))
+            ),
+            "PtpSyncClock" => Box::new(
+                GenericDspNodeUi::new("PtpSyncClock", "IEEE 1588 Precision Time Protocol Nanosecond Clock Synchronizer HUD", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_enum("ptp_sync_packet_interval_log2", "PTP Synchronization Heartbeat Rate", vec!["64 Hz (Ultra-Fast LAN)".into(), "32 Hz (Standard Studio)".into(), "16 Hz (Wi-Fi Tolerant)".into(), "8 Hz (Low Overhead)".into()], 1, (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_enum("hardware_timestamping_interface", "Timestamping Network Interface Layer", vec!["Hardware NIC PHY Layer".into(), "Kernel Software Timestamping".into(), "User-Space Socket Fallback".into()], 0, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("drift_compensation_gain", "Servo Clock Drift Compensation Gain", 0.01, 1.0, 0.25, "gain", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("allowed_clock_jitter_threshold_us", "Maximum Tolerated Clock Jitter Threshold", 0.1, 50.0, 5.0, "us", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("ptp_grandmaster_failover_enabled", "Automatic Grandmaster Clock Failover", true, (34, 197, 94)))
+            ),
+            "AdaptiveBandwidthManager" => Box::new(
+                GenericDspNodeUi::new("AdaptiveBandwidthManager", "Dynamic Real-Time Audio Bitrate & Packet Loss Adapter HUD", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("target_audio_bitrate_kbps", "Target Audio Stream Bitrate", 32.0, 320.0, 160.0, "kbps", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("forward_error_correction_pct", "Forward Error Correction (FEC) Overhead", 0.0, 100.0, 20.0, "%", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("packet_loss_probe_interval_ms", "Network Round-Trip Ping Probe Interval", 50.0, 1000.0, 200.0, "ms", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_enum("adaptive_rate_control_profile", "Bandwidth Adaptation Profile", vec!["Aggressive Bandwidth Preservation".into(), "Balanced Low-Latency Audio".into(), "Audiophile Pristine Fidelity".into()], 1, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("enable_dynamic_frame_expansion", "Dynamic Frame Size Expansion on Congestion", true, (34, 197, 94)))
+            ),
+            "MultiTakeCompManager" => Box::new(
+                GenericDspNodeUi::new("MultiTakeCompManager", "Sample-Accurate Multi-Take Audio Comping & Lane Splice Engine HUD", DspNodeCategory::SamplerSlicer)
+                    .with_param(DspParamDescriptor::new_linear("splice_crossfade_duration_ms", "Comp Splice Boundary Crossfade Time", 1.0, 50.0, 5.0, "ms", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_enum("crossfade_curve_power", "Splice Boundary Crossfade Geometry", vec!["Equal Power (3dB Dip Free)".into(), "Linear Slope".into(), "S-Curve Logarithmic".into(), "Fast Cut (0.5ms)".into()], 0, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_enum("comp_lane_audition_solo", "Comp Lane Audition Routing", vec!["Master Comp Composite".into(), "Solo Lane 1".into(), "Solo Lane 2".into(), "Solo Lane 3".into(), "Solo Lane 4".into()], 0, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_enum("splice_boundary_snap_grid", "Splice Boundary Grid Snapping Mode", vec!["Free Hand (Sample-Accurate)".into(), "1/64 Note Beat Snap".into(), "Transient Hit Boundary".into(), "Zero-Crossing Detection".into()], 3, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("non_destructive_slip_editing", "Enable Non-Destructive Take Slip Editing", true, (34, 197, 94)))
+            ),
+            "GrooveQuantizeEngine" => Box::new(
+                GenericDspNodeUi::new("GrooveQuantizeEngine", "Funk/House/HipHop Groove Quantizer & Micro-Shift Humanizer HUD", DspNodeCategory::Modulation)
+                    .with_param(DspParamDescriptor::new_enum("groove_template_style", "Genre Micro-Timing Groove Template", vec!["Funk (Push 2 & 4 + 16th Swing)".into(), "House (4-on-Floor + 16th Late)".into(), "HipHop (Heavy Laid-Back Snare)".into(), "Bossa Nova (Syncopated Clave)".into()], 0, (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("groove_application_amount_pct", "Groove Template Intensity Strength", 0.0, 100.0, 75.0, "%", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("micro_shift_jitter_amount_ms", "Micro-Timing Timing Jitter Offset", 0.0, 20.0, 3.5, "ms", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("velocity_accent_boost_db", "Metric Accent Velocity Gain Boost", 0.0, 6.0, 2.0, "dB", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("quantize_only_selected_notes", "Apply Groove Only to Selected Notes", false, (34, 197, 94)))
+            ),
+            "CadencePathResolver" => Box::new(
+                GenericDspNodeUi::new("CadencePathResolver", "Graph-Based Dynamic Harmonic Progression Path Resolver HUD", DspNodeCategory::Modulation)
+                    .with_param(DspParamDescriptor::new_enum("target_cadence_resolution", "Target Cadential Resolution Type", vec!["Authentic (V -> I)".into(), "Plagal (IV -> I)".into(), "Deceptive (V -> vi)".into(), "Half Cadence (Any -> V)".into(), "Neapolitan Sub (bII -> V)".into()], 0, (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_enum("voice_leading_cost_metric", "Voice-Leading Distance Optimization Metric", vec!["Tymoczko L1 Minimal Distance".into(), "L2 Euclidean Distance".into(), "Smooth Contrapuntal Contrary Motion".into(), "Parallel Motion Tolerance".into()], 0, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("max_search_depth_steps", "Cadence Graph Tree Search Depth", 2.0, 8.0, 4.0, "steps", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("tension_escalation_gradient", "Harmonic Tension Escalation Gradient", 0.0, 1.0, 0.6, "gradient", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("avoid_parallel_fifths_and_octaves", "Strict Classical Parallel Fifth/Octave Avoidance", true, (34, 197, 94)))
+            ),
+            "PolyphonicVoicePool" => Box::new(
+                GenericDspNodeUi::new("PolyphonicVoicePool", "MPE Dynamic Voice Stealing & Polyphonic Allocation Pool HUD", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("maximum_polyphonic_voices", "Maximum Simultaneous Polyphonic Voices", 1.0, 32.0, 16.0, "voices", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_enum("voice_stealing_algorithm", "Polyphonic Voice Stealing Policy", vec!["Oldest Active Voice".into(), "Quietist / Lowest Envelope".into(), "Highest Pitch Priority".into(), "Round-Robin Cyclic".into()], 0, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_enum("voice_retrigger_mode", "Voice Envelope Retriggering Behavior", vec!["Hard Reset Phase (Zero-Crossing)".into(), "Soft Retrigger (Catch from Current Envelope)".into(), "Legato NoteGlide".into()], 1, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("unison_voice_stack_count", "Unison Voice Multiplier Stacking", 1.0, 4.0, 1.0, "stack", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("preserve_sustained_pedal_notes", "Protect Sustained Damper Pedal Notes", true, (34, 197, 94)))
+            ),
+            "MidiMonitorLog" => Box::new(
+                GenericDspNodeUi::new("MidiMonitorLog", "Real-Time Diagnostic MIDI Event Stream Logger & Hex Analyzer HUD", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_enum("event_capture_buffer_size", "Diagnostic Event Log Ring Buffer Depth", vec!["256 Events".into(), "1024 Events".into(), "4096 Events".into(), "16384 Events".into()], 1, (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_enum("display_notation_format", "Event Stream Display Representation", vec!["Raw Hexadecimal (90 3C 64)".into(), "Musical Notes (Ch1 NoteOn C4 Vel100)".into(), "Continuous Control Graph".into(), "SysEx Dump View".into()], 1, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_enum("channel_view_filter", "MIDI Hardware Channel Scope Filter", vec!["Omni (All 16 Channels)".into(), "Channel 1 Only".into(), "Channel 10 (Percussion)".into(), "MPE Channels (2-16)".into()], 0, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("minimum_logged_velocity_threshold", "Minimum Logged Note Velocity Threshold", 0.0, 127.0, 0.0, "vel", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("freeze_logging_on_next_trigger", "Freeze Diagnostic Log on Error / Next Trigger", false, (34, 197, 94)))
+            ),
+            "LooperTrackManager" => Box::new(
+                GenericDspNodeUi::new("LooperTrackManager", "Non-Blocking Multitrack Circular Looper & Overdub Layer Manager HUD", DspNodeCategory::SamplerSlicer)
+                    .with_param(DspParamDescriptor::new_linear("overdub_feedback_decay_pct", "Overdub Layer Feedback Decay Retention", 50.0, 100.0, 100.0, "%", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_enum("loop_quantize_division", "Loop Record & Punch Quantize Grid", vec!["1 Bar (Strict Measure)".into(), "2 Bars".into(), "4 Bars".into(), "1/4 Beat Freeform".into(), "Free Run (Unquantized)".into()], 0, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("boundary_crossfade_samples", "Turnaround Splice Crossfade Window", 16.0, 256.0, 64.0, "samples", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_enum("playback_speed_multiplier", "Loop Playback Rate & Direction", vec!["1x Normal Speed".into(), "2x Double Speed".into(), "0.5x Half Speed Reverse".into(), "-1x Reverse Playback".into()], 0, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("enable_infinite_overdub_layers", "Non-Destructive Multi-Layer Undo Stack", true, (34, 197, 94)))
+            ),
+            "DynamicParameterSmoother" => Box::new(
+                GenericDspNodeUi::new("DynamicParameterSmoother", "One-Pole Exponential Slew Limiter & Parameter Smoother HUD", DspNodeCategory::Modulation)
+                    .with_param(DspParamDescriptor::new_linear("smoothing_time_constant_ms", "Exponential Transition Time Constant", 0.1, 200.0, 10.0, "ms", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_enum("slew_interpolation_curve", "Parameter Slew Response Profile", vec!["One-Pole Exponential Lowpass".into(), "Linear Slew Ramp".into(), "Logarithmic Fast-Attack".into(), "Hermite Cubic Spline".into()], 0, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("cutoff_frequency_tracking", "Slew Filter Cutoff Frequency Corner", 5.0, 500.0, 40.0, "Hz", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_enum("anti_zipper_noise_filter", "Anti-Zipper Noise Precision Mode", vec!["Enabled (Standard 24-Bit)".into(), "High Precision (32-Bit Float)".into(), "Bypass Smoothing".into()], 0, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("instant_jump_on_scene_change", "Instantaneous Jump on Scene / Pattern Switch", true, (34, 197, 94)))
+            ),
+            "NodeGraphScheduler" => Box::new(
+                GenericDspNodeUi::new("NodeGraphScheduler", "Kahn's Topological DAG Scheduler & Double-Buffered Hot-Swap Engine HUD", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_bool("multithreaded_parallel_dispatch", "Multi-Threaded Parallel Level Dispatch", true, (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("max_worker_thread_pool", "Allocated DSP Audio Worker Thread Count", 1.0, 32.0, 8.0, "threads", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("anti_pop_crossfade_generation_ms", "Graph Hot-Swap Anti-Pop Crossfade Time", 1.0, 20.0, 3.0, "ms", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_enum("cycle_detection_fallback_action", "Cyclic Dependency Fallback Strategy", vec!["Break Feedback Edge with 1-Block Delay".into(), "Mute Cyclic Node Branch".into(), "Throw Hard Compilation Error".into()], 0, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("profile_per_node_cpu_cycles", "Record High-Precision Per-Node CPU Timings", true, (34, 197, 94)))
+            ),
+            "VowelCylinderAreaSynthesizer" => Box::new(
+                GenericDspNodeUi::new("VowelCylinderAreaSynthesizer", "44-Cylinder Acoustic Area Vocal Tract Formant Synthesizer HUD", DspNodeCategory::SpectralResynthesis)
+                    .with_param(DspParamDescriptor::new_linear("glottis_vocal_tract_length_cm", "Acoustic Vocal Tract Length", 12.0, 22.0, 17.5, "cm", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("lip_radiation_aperture_cm2", "Lip Termination Radiation Aperture Area", 0.2, 8.0, 2.5, "cm²", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("pharyngeal_constriction_pos", "Tongue & Pharyngeal Constriction Center", 0.0, 1.0, 0.45, "norm", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("vocal_tract_damping_factor", "Acoustic Tube Wall Viscous Damping", 0.8, 0.999, 0.985, "Q", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("acoustic_nasal_coupling", "Engage Velopharyngeal Nasal Cavity Coupling", false, (34, 197, 94)))
+            ),
+            "Rank2TemperamentGenerator" => Box::new(
+                GenericDspNodeUi::new("Rank2TemperamentGenerator", "Generalized Rank-2 Scale Degree & Interval Lattice Generator HUD", DspNodeCategory::Modulation)
+                    .with_param(DspParamDescriptor::new_linear("generator_interval_cents", "Rank-2 Generator Step Interval", 500.0, 800.0, 696.58, "cents", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("period_interval_cents", "Scale Equave / Period Interval", 1100.0, 1300.0, 1200.0, "cents", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("scale_size_notes_count", "Generated Scale Tone Count", 5.0, 53.0, 12.0, "notes", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_enum("historical_temperament_preset", "Rank-2 Historical Temperament Archetype", vec!["Quarter-Comma Meantone (696.58c)".into(), "Pythagorean 3-Limit (701.96c)".into(), "Porcupine Temperament (163c)".into(), "Hanson Blackwood (685.7c)".into(), "Custom Generator/Period".into()], 0, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("normalize_to_octave_period", "Fold Generated Pitches into Primary Equave", true, (34, 197, 94)))
+            ),
+            "PhaseFlipPolarityInverter" => Box::new(
+                GenericDspNodeUi::new("PhaseFlipPolarityInverter", "Sample-Accurate Phase Inversion & Polarity Flip Utility HUD", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_enum("channel_phase_inversion_scope", "Channel Polarity Inversion Scope", vec!["Both Channels (Stereo Invert)".into(), "Left Channel Only".into(), "Right Channel Only".into(), "M/S Side Channel Invert".into()], 0, (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_bool("phase_inversion_active", "Engage Polarity Inversion (-1x Multiplier)", true, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("sub_sample_delay_phase_trim_deg", "Micro-Phase Sinc Delay Phase Trim", -180.0, 180.0, 0.0, "deg", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("dc_blocking_highpass_guard", "DC Offset Removal High-Pass Guard", true, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("mono_compatibility_audition", "Sum to Mono for Phase Cancellation Check", false, (34, 197, 94)))
+            ),
+            "InputOutputGainTrim" => Box::new(
+                GenericDspNodeUi::new("InputOutputGainTrim", "Dual-Stage Pre/Post Track Channel Gain Trim & Headroom Attenuator HUD", DspNodeCategory::DynamicsMaster)
+                    .with_param(DspParamDescriptor::new_linear("pre_dsp_input_gain_trim_db", "Pre-DSP Channel Input Gain Trim", -24.0, 24.0, 0.0, "dB", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("post_dsp_output_gain_trim_db", "Post-DSP Channel Output Gain Trim", -24.0, 24.0, 0.0, "dB", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_enum("gain_stage_linking_mode", "Dual-Stage Gain Linking Coupling", vec!["Independent Trim".into(), "Inverse Gain Match (Pre + Post = 0dB)".into(), "Input Mute Safe".into()], 0, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_enum("analog_headroom_soft_clip", "Analog Headroom Soft Clipping Profile", vec!["Off (Linear Clean)".into(), "Gentle Analog Warmth (-0.5dB)".into(), "Tape Soft Saturation (-1.0dB)".into()], 0, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("enable_gain_staging_bypass", "Bypass Gain Staging Trim Circuit", false, (34, 197, 94)))
+            ),
             // Fallback dynamic generator for any unexpected or plugin node
             other => {
                 let cat = Self::inventory()
@@ -14274,6 +14673,27 @@ mod tests {
         assert!(registry.get("ZkPatchVerifier").is_some());
         assert!(registry.get("ContinuousBackupEngine").is_some());
         assert!(registry.get("MidiFileParser").is_some());
+        assert!(registry.get("FederatedMixLearner").is_some());
+        assert!(registry.get("PresenceSyncServer").is_some());
+        assert!(registry.get("IpfsAssetStore").is_some());
+        assert!(registry.get("TomlMergeDriver").is_some());
+        assert!(registry.get("SessionChatCrypto").is_some());
+        assert!(registry.get("WasmPluginRunner").is_some());
+        assert!(registry.get("DidAuthenticator").is_some());
+        assert!(registry.get("PtpSyncClock").is_some());
+        assert!(registry.get("AdaptiveBandwidthManager").is_some());
+        assert!(registry.get("MultiTakeCompManager").is_some());
+        assert!(registry.get("GrooveQuantizeEngine").is_some());
+        assert!(registry.get("CadencePathResolver").is_some());
+        assert!(registry.get("PolyphonicVoicePool").is_some());
+        assert!(registry.get("MidiMonitorLog").is_some());
+        assert!(registry.get("LooperTrackManager").is_some());
+        assert!(registry.get("DynamicParameterSmoother").is_some());
+        assert!(registry.get("NodeGraphScheduler").is_some());
+        assert!(registry.get("VowelCylinderAreaSynthesizer").is_some());
+        assert!(registry.get("Rank2TemperamentGenerator").is_some());
+        assert!(registry.get("PhaseFlipPolarityInverter").is_some());
+        assert!(registry.get("InputOutputGainTrim").is_some());
     }
 
     #[test]
