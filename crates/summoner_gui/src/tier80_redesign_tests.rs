@@ -6123,6 +6123,160 @@ mod tests {
             assert_eq!(view.inspector_state.selected_node_kind, Some("BreathBusSnapshot".to_string()));
         }
     }
+
+    #[test]
+    fn test_tier109_modern_gui_dsp_module_coverage_and_presets() {
+        use crate::dsp_node_ui::{DspNodeRegistry, DspNodeCategory};
+        use crate::views::modern_asset_browser::BrowserCategory;
+
+        let registry = DspNodeRegistry::new();
+
+        // 1. Verify 904 total DSP modules registered
+        let total_modules = DspNodeRegistry::inventory();
+        assert_eq!(total_modules.len(), 904, "Must have exactly 904 registered DSP modules");
+        assert!(
+            registry.list_all().len() >= 904,
+            "Must have at least 904 registered DSP modules, found {}",
+            registry.list_all().len()
+        );
+
+        // 2. Verify all 21 new modules exist with correct categories and tactile parameters (>= 5 params each)
+        let new_modules = [
+            ("HurdyGurdyWaypoint", DspNodeCategory::AcousticPhysicalModel),
+            ("GlassWaypoint", DspNodeCategory::AcousticPhysicalModel),
+            ("PipeOrganWaypoint", DspNodeCategory::AcousticPhysicalModel),
+            ("PluckWaypoint", DspNodeCategory::AcousticPhysicalModel),
+            ("EpWaypoint", DspNodeCategory::AcousticPhysicalModel),
+            ("MalletWaypoint", DspNodeCategory::AcousticPhysicalModel),
+            ("RotaryWaypoint", DspNodeCategory::Modulation),
+            ("ShakuhachiWaypoint", DspNodeCategory::AcousticPhysicalModel),
+            ("SitarWaypoint", DspNodeCategory::AcousticPhysicalModel),
+            ("SpringWaypoint", DspNodeCategory::TimeSpace),
+            ("WoodwindWaypoint", DspNodeCategory::AcousticPhysicalModel),
+            ("ArticulationBusSnapshot", DspNodeCategory::AcousticPhysicalModel),
+            ("EmbeddedHardwareConfig", DspNodeCategory::Utility),
+            ("MpeVoiceState", DspNodeCategory::Modulation),
+            ("SidechainConfig", DspNodeCategory::Modulation),
+            ("HarmonicTension", DspNodeCategory::Modulation),
+            ("CadenceEdge", DspNodeCategory::Modulation),
+            ("HarmonicPathStep", DspNodeCategory::Modulation),
+            ("HexCoordinate", DspNodeCategory::Modulation),
+            ("VowelNode", DspNodeCategory::SpectralResynthesis),
+            ("ToneholeParams", DspNodeCategory::AcousticPhysicalModel),
+        ];
+
+        for (name, expected_cat) in new_modules {
+            let desc = registry.get(name).unwrap_or_else(|| panic!("Module {} not found", name));
+            assert_eq!(desc.category, expected_cat, "Module {} category mismatch", name);
+            assert!(desc.params.len() >= 5, "Module {} must have >= 5 tactile parameters", name);
+        }
+
+        // 3. Verify normalization mappings
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("hurdygurdywaypoint"), Some("HurdyGurdyWaypoint"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("gurdywaypoint"), Some("HurdyGurdyWaypoint"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("glasswaypoint"), Some("GlassWaypoint"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pipeorganwaypoint"), Some("PipeOrganWaypoint"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pluckwaypoint"), Some("PluckWaypoint"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("epwaypoint"), Some("EpWaypoint"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("malletwaypoint"), Some("MalletWaypoint"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("rotarywaypoint"), Some("RotaryWaypoint"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("shakuhachiwaypoint"), Some("ShakuhachiWaypoint"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sitarwaypoint"), Some("SitarWaypoint"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("springwaypoint"), Some("SpringWaypoint"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("woodwindwaypoint"), Some("WoodwindWaypoint"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("articulationbussnapshot"), Some("ArticulationBusSnapshot"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("embeddedhardwareconfig"), Some("EmbeddedHardwareConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("mpevoicestate"), Some("MpeVoiceState"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sidechainconfig"), Some("SidechainConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("harmonictensiontelemetry"), Some("HarmonicTension"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cadenceedge"), Some("CadenceEdge"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("harmonicpathstep"), Some("HarmonicPathStep"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("hexcoordinate"), Some("HexCoordinate"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("vowelnode"), Some("VowelNode"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("toneholeparams"), Some("ToneholeParams"));
+
+        // 4. Verify Asset Browser categorization
+        let inst_folders = BrowserCategory::Instruments.default_folders();
+        let phys_items = inst_folders.iter().find(|(name, _)| *name == "Physical Models").unwrap().1;
+        assert!(phys_items.contains(&"HurdyGurdyWaypoint"));
+        assert!(phys_items.contains(&"GlassWaypoint"));
+        assert!(phys_items.contains(&"PipeOrganWaypoint"));
+        assert!(phys_items.contains(&"PluckWaypoint"));
+        assert!(phys_items.contains(&"EpWaypoint"));
+        assert!(phys_items.contains(&"MalletWaypoint"));
+        assert!(phys_items.contains(&"ShakuhachiWaypoint"));
+        assert!(phys_items.contains(&"SitarWaypoint"));
+        assert!(phys_items.contains(&"WoodwindWaypoint"));
+        assert!(phys_items.contains(&"ArticulationBusSnapshot"));
+        assert!(phys_items.contains(&"ToneholeParams"));
+
+        let fx_folders = BrowserCategory::AudioFx.default_folders();
+        let spatial_items = fx_folders.iter().find(|(name, _)| *name == "Time & Reverb").unwrap().1;
+        assert!(spatial_items.contains(&"SpringWaypoint"));
+
+        let filter_items = fx_folders.iter().find(|(name, _)| *name == "Filters & EQ").unwrap().1;
+        assert!(filter_items.contains(&"VowelNode"));
+
+        let mod_items = fx_folders.iter().find(|(name, _)| *name == "Modulation & Pitch").unwrap().1;
+        assert!(mod_items.contains(&"RotaryWaypoint"));
+        assert!(mod_items.contains(&"MpeVoiceState"));
+        assert!(mod_items.contains(&"SidechainConfig"));
+        assert!(mod_items.contains(&"HarmonicTension"));
+        assert!(mod_items.contains(&"CadenceEdge"));
+        assert!(mod_items.contains(&"HarmonicPathStep"));
+        assert!(mod_items.contains(&"HexCoordinate"));
+
+        let midi_folders = BrowserCategory::MidiFx.default_folders();
+        let routing_items = midi_folders.iter().find(|(name, _)| *name == "Transforms & Routing").unwrap().1;
+        assert!(routing_items.contains(&"EmbeddedHardwareConfig"));
+
+        // 5. Verify Novice Presets synchronize in AwardWinningGuiView
+        #[cfg(feature = "gui")]
+        {
+            let mut view = crate::views::award_winning_gui_view::AwardWinningGuiView::default();
+            let ctx = eframe::egui::Context::default();
+
+            // Preset: Hurdy-Gurdy Continuous Crank & Buzzing Chien Gesture -> HurdyGurdyWaypoint
+            view.top_bar_state.selected_preset = "Hurdy-Gurdy Continuous Crank & Buzzing Chien Gesture".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("HurdyGurdyWaypoint".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("HurdyGurdyWaypoint".to_string()));
+
+            // Preset: 6-DOF Acoustic Articulation Bowing Dynamics Bus -> ArticulationBusSnapshot
+            view.top_bar_state.selected_preset = "6-DOF Acoustic Articulation Bowing Dynamics Bus".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("ArticulationBusSnapshot".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("ArticulationBusSnapshot".to_string()));
+
+            // Preset: Phonetic IPA Vowel Formant Trajectory Matrix -> VowelNode
+            view.top_bar_state.selected_preset = "Phonetic IPA Vowel Formant Trajectory Matrix".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("VowelNode".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("VowelNode".to_string()));
+
+            // Preset: Embedded Hardware Supervisor & Thermal Throttling -> EmbeddedHardwareConfig
+            view.top_bar_state.selected_preset = "Embedded Hardware Supervisor & Thermal Throttling".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("EmbeddedHardwareConfig".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("EmbeddedHardwareConfig".to_string()));
+        }
+    }
 }
 
 

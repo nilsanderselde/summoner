@@ -440,6 +440,10 @@ impl AwardWinningGuiView {
                 "Cathedral Pipe Organ Tracker Wind Chest" => "PipeOrganBusSnapshot",
                 "Hurdy-Gurdy Rosin Friction & Drone Resonator" => "HurdyGurdyBusSnapshot",
                 "Continuous Human Breath & Wind Controller" => "BreathBusSnapshot",
+                "Hurdy-Gurdy Continuous Crank & Buzzing Chien Gesture" => "HurdyGurdyWaypoint",
+                "6-DOF Acoustic Articulation Bowing Dynamics Bus" => "ArticulationBusSnapshot",
+                "Phonetic IPA Vowel Formant Trajectory Matrix" => "VowelNode",
+                "Embedded Hardware Supervisor & Thermal Throttling" => "EmbeddedHardwareConfig",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {

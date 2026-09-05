@@ -205,6 +205,10 @@ fn default_available_presets() -> Vec<String> {
         "Cathedral Pipe Organ Tracker Wind Chest".to_string(),
         "Hurdy-Gurdy Rosin Friction & Drone Resonator".to_string(),
         "Continuous Human Breath & Wind Controller".to_string(),
+        "Hurdy-Gurdy Continuous Crank & Buzzing Chien Gesture".to_string(),
+        "6-DOF Acoustic Articulation Bowing Dynamics Bus".to_string(),
+        "Phonetic IPA Vowel Formant Trajectory Matrix".to_string(),
+        "Embedded Hardware Supervisor & Thermal Throttling".to_string(),
     ]
 }
 
