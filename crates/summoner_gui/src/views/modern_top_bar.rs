@@ -177,6 +177,10 @@ fn default_available_presets() -> Vec<String> {
         "ITU-R BS.2076 ADM Dolby Atmos Spatial Exporter".to_string(),
         "AI Harmonic Cadence & Leading Tone Suggester".to_string(),
         "Adaptive Automation Bézier Spline Thinning HUD".to_string(),
+        "Wolfram Rule 30 Cellular Rhythm Matrix".to_string(),
+        "ONNX Neural Diatonic Melody Composer".to_string(),
+        "Demucs 4-Stem Deep Learning Splitter".to_string(),
+        "Standalone CLAP Audio Plugin Bundler".to_string(),
     ]
 }
 

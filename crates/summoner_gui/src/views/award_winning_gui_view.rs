@@ -412,6 +412,10 @@ impl AwardWinningGuiView {
                 "ITU-R BS.2076 ADM Dolby Atmos Spatial Exporter" => "AdmSpatialBwfExporter",
                 "AI Harmonic Cadence & Leading Tone Suggester" => "AiHarmonySuggester",
                 "Adaptive Automation Bézier Spline Thinning HUD" => "CurveThinningOptimizer",
+                "Wolfram Rule 30 Cellular Rhythm Matrix" => "CellularAutomataRhythmGenerator",
+                "ONNX Neural Diatonic Melody Composer" => "NeuralOnnxMelodyGenerator",
+                "Demucs 4-Stem Deep Learning Splitter" => "DemucsNeuralStemSplitter",
+                "Standalone CLAP Audio Plugin Bundler" => "ClapStandaloneExporter",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {

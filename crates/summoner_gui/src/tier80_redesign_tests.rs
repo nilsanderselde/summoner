@@ -4871,6 +4871,198 @@ mod tests {
             assert_eq!(view.inspector_state.selected_node_kind, Some("CurveThinningOptimizer".to_string()));
         }
     }
+
+    #[test]
+    fn test_tier102_modern_gui_dsp_module_coverage_and_presets() {
+        use crate::dsp_node_ui::{DspNodeRegistry, DspNodeCategory};
+        use crate::views::modern_asset_browser::BrowserCategory;
+
+        // 1. Verify global registry inventory completeness >= 757
+        let registry = DspNodeRegistry::new();
+        assert!(registry.list_all().len() >= 757, "Registry must contain >= 757 descriptors, found {}", registry.list_all().len());
+
+        let inv = DspNodeRegistry::inventory();
+        assert!(inv.len() >= 757, "Inventory must contain >= 757 entries, found {}", inv.len());
+
+        // 2. Verify all 21 newly registered Tier 102 DSP modules exist and have valid tactile UIs
+        let new_modules = [
+            ("CellularAutomataRhythmGenerator", DspNodeCategory::Modulation),
+            ("NeuralOnnxMelodyGenerator", DspNodeCategory::Modulation),
+            ("AssetIntegrityAuditor", DspNodeCategory::Utility),
+            ("ProjectHealthValidator", DspNodeCategory::Utility),
+            ("RealtimeCpuProfiler", DspNodeCategory::Utility),
+            ("CpalAudioDeviceInspector", DspNodeCategory::Utility),
+            ("MultiSamplePresetLoader", DspNodeCategory::SamplerSlicer),
+            ("DemucsNeuralStemSplitter", DspNodeCategory::Utility),
+            ("ClapStandaloneExporter", DspNodeCategory::Utility),
+            ("LuaSecuritySandboxAuditor", DspNodeCategory::Utility),
+            ("LuaAstLinterFormatter", DspNodeCategory::Utility),
+            ("LuaBundleOptimizer", DspNodeCategory::Utility),
+            ("LuaDocumentationGenerator", DspNodeCategory::Utility),
+            ("MidiVelocityCurveShaper", DspNodeCategory::Modulation),
+            ("MidiControllerMappingMatrix", DspNodeCategory::Modulation),
+            ("DeterministicPatternRandomizer", DspNodeCategory::Modulation),
+            ("VelocityLevelQuantizer", DspNodeCategory::Modulation),
+            ("PatternDensityFilter", DspNodeCategory::Modulation),
+            ("SmfMidiStreamExporter", DspNodeCategory::Utility),
+            ("LiveAudioMonitorEngine", DspNodeCategory::Utility),
+            ("ProjectScaffoldWizard", DspNodeCategory::Utility),
+        ];
+
+        for (name, cat) in &new_modules {
+            let desc = registry.get(name).unwrap_or_else(|| panic!("Node {} must be registered in DspNodeRegistry", name));
+            assert_eq!(desc.category, *cat, "Node {} must match expected category", name);
+            assert!(desc.params.len() >= 5, "Node {} must have >= 5 tactile parameters, got {}", name, desc.params.len());
+
+            let ui = crate::dsp_node_ui::DspNodeRegistry::create_node_ui(name)
+                .unwrap_or_else(|| panic!("create_node_ui({}) must succeed", name));
+            assert_eq!(ui.node_type_name(), *name);
+            assert_eq!(ui.category(), *cat);
+            assert!(ui.parameters().len() >= 5);
+        }
+
+        // 3. Verify canonical normalization mappings
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cellularautomatarhythmgenerator"), Some("CellularAutomataRhythmGenerator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cellularautomatarhythm"), Some("CellularAutomataRhythmGenerator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cellularautomata"), Some("CellularAutomataRhythmGenerator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("neuralonnxmelodygenerator"), Some("NeuralOnnxMelodyGenerator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("onnxmelodygenerator"), Some("NeuralOnnxMelodyGenerator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("neuralmelodygenerator"), Some("NeuralOnnxMelodyGenerator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("assetintegrityauditor"), Some("AssetIntegrityAuditor"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("assetintegrity"), Some("AssetIntegrityAuditor"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("blake3assetauditor"), Some("AssetIntegrityAuditor"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("projecthealthvalidator"), Some("ProjectHealthValidator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("projectvalidator"), Some("ProjectHealthValidator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("schemavalidator"), Some("ProjectHealthValidator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("realtimecpuprofiler"), Some("RealtimeCpuProfiler"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cpuprofiler"), Some("RealtimeCpuProfiler"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("realtimeprofiler"), Some("RealtimeCpuProfiler"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cpalaudiodeviceinspector"), Some("CpalAudioDeviceInspector"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("audiodeviceinspector"), Some("CpalAudioDeviceInspector"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cpaldeviceinspector"), Some("CpalAudioDeviceInspector"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("multisamplepresetloader"), Some("MultiSamplePresetLoader"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("multisampleloader"), Some("MultiSamplePresetLoader"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("presetloader"), Some("MultiSamplePresetLoader"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("demucsneuralstemsplitter"), Some("DemucsNeuralStemSplitter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("demucsstemsplitter"), Some("DemucsNeuralStemSplitter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("stemsplitter"), Some("DemucsNeuralStemSplitter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clapstandaloneexporter"), Some("ClapStandaloneExporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clapexporter"), Some("ClapStandaloneExporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clappluginpackager"), Some("ClapStandaloneExporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luasecuritysandboxauditor"), Some("LuaSecuritySandboxAuditor"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luasandboxauditor"), Some("LuaSecuritySandboxAuditor"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luasecurityauditor"), Some("LuaSecuritySandboxAuditor"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luaastlinterformatter"), Some("LuaAstLinterFormatter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("lualinterformatter"), Some("LuaAstLinterFormatter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luaformatter"), Some("LuaAstLinterFormatter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luabundleoptimizer"), Some("LuaBundleOptimizer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luabundler"), Some("LuaBundleOptimizer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luatreeshaker"), Some("LuaBundleOptimizer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luadocumentationgenerator"), Some("LuaDocumentationGenerator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luadocgenerator"), Some("LuaDocumentationGenerator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luadocs"), Some("LuaDocumentationGenerator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("midivelocitycurveshaper"), Some("MidiVelocityCurveShaper"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("velocitycurveshaper"), Some("MidiVelocityCurveShaper"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("velocityshaper"), Some("MidiVelocityCurveShaper"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("midicontrollermappingmatrix"), Some("MidiControllerMappingMatrix"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("controllermappingmatrix"), Some("MidiControllerMappingMatrix"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("midimappingmatrix"), Some("MidiControllerMappingMatrix"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("deterministicpatternrandomizer"), Some("DeterministicPatternRandomizer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("patternrandomizer"), Some("DeterministicPatternRandomizer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("lcgrandomizer"), Some("DeterministicPatternRandomizer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("velocitylevelquantizer"), Some("VelocityLevelQuantizer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("velocityquantizer"), Some("VelocityLevelQuantizer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("dynamicslevelquantizer"), Some("VelocityLevelQuantizer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("patterndensityfilter"), Some("PatternDensityFilter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("densityfilter"), Some("PatternDensityFilter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("patternpruner"), Some("PatternDensityFilter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("smfmidistreamexporter"), Some("SmfMidiStreamExporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("smfmidiexporter"), Some("SmfMidiStreamExporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("midistreamexporter"), Some("SmfMidiStreamExporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("liveaudiomonitorengine"), Some("LiveAudioMonitorEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("audiomonitorengine"), Some("LiveAudioMonitorEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cpalmonitor"), Some("LiveAudioMonitorEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("projectscaffoldwizard"), Some("ProjectScaffoldWizard"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("scaffoldwizard"), Some("ProjectScaffoldWizard"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("projectwizard"), Some("ProjectScaffoldWizard"));
+
+        // 4. Verify Asset Browser categorization
+        let inst_folders = BrowserCategory::Instruments.default_folders();
+        let samplers_items = inst_folders.iter().find(|(name, _)| *name == "Samplers & Slicers").unwrap().1;
+        assert!(samplers_items.contains(&"MultiSamplePresetLoader"));
+
+        let midi_folders = BrowserCategory::MidiFx.default_folders();
+        let gen_sync_items = midi_folders.iter().find(|(name, _)| *name == "Generative & Sync").unwrap().1;
+        assert!(gen_sync_items.contains(&"CellularAutomataRhythmGenerator"));
+        assert!(gen_sync_items.contains(&"NeuralOnnxMelodyGenerator"));
+        assert!(gen_sync_items.contains(&"DeterministicPatternRandomizer"));
+        assert!(gen_sync_items.contains(&"PatternDensityFilter"));
+
+        let routing_items = midi_folders.iter().find(|(name, _)| *name == "Transforms & Routing").unwrap().1;
+        assert!(routing_items.contains(&"MidiVelocityCurveShaper"));
+        assert!(routing_items.contains(&"MidiControllerMappingMatrix"));
+        assert!(routing_items.contains(&"VelocityLevelQuantizer"));
+        assert!(routing_items.contains(&"AssetIntegrityAuditor"));
+        assert!(routing_items.contains(&"ProjectHealthValidator"));
+        assert!(routing_items.contains(&"RealtimeCpuProfiler"));
+        assert!(routing_items.contains(&"CpalAudioDeviceInspector"));
+        assert!(routing_items.contains(&"DemucsNeuralStemSplitter"));
+        assert!(routing_items.contains(&"ClapStandaloneExporter"));
+        assert!(routing_items.contains(&"LuaSecuritySandboxAuditor"));
+        assert!(routing_items.contains(&"LuaAstLinterFormatter"));
+        assert!(routing_items.contains(&"LuaBundleOptimizer"));
+        assert!(routing_items.contains(&"LuaDocumentationGenerator"));
+        assert!(routing_items.contains(&"SmfMidiStreamExporter"));
+        assert!(routing_items.contains(&"LiveAudioMonitorEngine"));
+        assert!(routing_items.contains(&"ProjectScaffoldWizard"));
+
+        // 5. Verify Novice Presets synchronize in AwardWinningGuiView
+        #[cfg(feature = "gui")]
+        {
+            let mut view = crate::views::award_winning_gui_view::AwardWinningGuiView::default();
+            let ctx = eframe::egui::Context::default();
+
+            // Preset: Wolfram Rule 30 Cellular Rhythm Matrix -> CellularAutomataRhythmGenerator
+            view.top_bar_state.selected_preset = "Wolfram Rule 30 Cellular Rhythm Matrix".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("CellularAutomataRhythmGenerator".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("CellularAutomataRhythmGenerator".to_string()));
+
+            // Preset: ONNX Neural Diatonic Melody Composer -> NeuralOnnxMelodyGenerator
+            view.top_bar_state.selected_preset = "ONNX Neural Diatonic Melody Composer".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("NeuralOnnxMelodyGenerator".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("NeuralOnnxMelodyGenerator".to_string()));
+
+            // Preset: Demucs 4-Stem Deep Learning Splitter -> DemucsNeuralStemSplitter
+            view.top_bar_state.selected_preset = "Demucs 4-Stem Deep Learning Splitter".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("DemucsNeuralStemSplitter".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("DemucsNeuralStemSplitter".to_string()));
+
+            // Preset: Standalone CLAP Audio Plugin Bundler -> ClapStandaloneExporter
+            view.top_bar_state.selected_preset = "Standalone CLAP Audio Plugin Bundler".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("ClapStandaloneExporter".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("ClapStandaloneExporter".to_string()));
+        }
+    }
 }
 
 
