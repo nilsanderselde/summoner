@@ -3818,5 +3818,179 @@ mod tests {
             assert_eq!(view.inspector_state.selected_node_kind, Some("Strummer".to_string()));
         }
     }
+
+    #[test]
+    fn test_tier96_cadence_flow_concordance_friction_orbit_and_bode_hud_integration() {
+        use crate::dsp_node_ui::DspNodeCategory;
+
+        // 1. Verify DSP registry contains >= 630 modules
+        let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+        assert!(registry.list_all().len() >= 630, "Registry must contain >= 630 modules, found {}", registry.list_all().len());
+        let inventory = crate::dsp_node_ui::DspNodeRegistry::inventory();
+        assert!(inventory.len() >= 630, "Inventory must contain >= 630 modules, found {}", inventory.len());
+
+        // 2. Verify all 21 new DSP modules exist and have tactile parameter descriptors
+        let new_modules = [
+            ("CadenceFlow", DspNodeCategory::Utility),
+            ("ConcordanceLattice", DspNodeCategory::Utility),
+            ("EmbouchureAngle", DspNodeCategory::AcousticPhysicalModel),
+            ("FrictionOrbit", DspNodeCategory::AcousticPhysicalModel),
+            ("HarmonicTensionMap", DspNodeCategory::Utility),
+            ("Hoa4Spatializer", DspNodeCategory::SpatialSurround),
+            ("IdiophoneSpectrum", DspNodeCategory::AcousticPhysicalModel),
+            ("IsomorphicLattice", DspNodeCategory::Utility),
+            ("IsomorphicTuningKeyboard", DspNodeCategory::Utility),
+            ("LadderFilterBode", DspNodeCategory::FilterEq),
+            ("MembraneCavity", DspNodeCategory::AcousticPhysicalModel),
+            ("MpeghSpatializer", DspNodeCategory::SpatialSurround),
+            ("PhaseAlign", DspNodeCategory::Utility),
+            ("RotaryDoppler", DspNodeCategory::Modulation),
+            ("ToneholeMatrix", DspNodeCategory::AcousticPhysicalModel),
+            ("TrompetteBridge", DspNodeCategory::AcousticPhysicalModel),
+            ("VowelSpace", DspNodeCategory::FilterEq),
+            ("BellowsChamber", DspNodeCategory::AcousticPhysicalModel),
+            ("ConvolutionImpulse", DspNodeCategory::TimeSpace),
+            ("ConvolutionMorph", DspNodeCategory::TimeSpace),
+            ("BezierAutomation", DspNodeCategory::Modulation),
+        ];
+
+        for (name, cat) in &new_modules {
+            let desc = registry.get(name).unwrap_or_else(|| panic!("Node {} must be registered in DspNodeRegistry", name));
+            assert_eq!(desc.category, *cat, "Node {} must match expected category", name);
+            assert!(desc.params.len() >= 5, "Node {} must have >= 5 tactile parameters, got {}", name, desc.params.len());
+
+            let ui = crate::dsp_node_ui::DspNodeRegistry::create_node_ui(name)
+                .unwrap_or_else(|| panic!("create_node_ui({}) must succeed", name));
+            assert_eq!(ui.node_type_name(), *name);
+            assert_eq!(ui.category(), *cat);
+            assert!(ui.parameters().len() >= 5);
+        }
+
+        // 3. Verify canonical normalization mappings
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cadenceflow"), Some("CadenceFlow"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cadenceflowhud"), Some("CadenceFlow"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("concordancelattice"), Some("ConcordanceLattice"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("harmonicconcordance"), Some("ConcordanceLattice"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("embouchureangle"), Some("EmbouchureAngle"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("shakuhachiembouchure"), Some("EmbouchureAngle"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("frictionorbit"), Some("FrictionOrbit"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("bowingorbit"), Some("FrictionOrbit"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("harmonictensionmap"), Some("HarmonicTensionMap"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("tensionheatmap"), Some("HarmonicTensionMap"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("hoa4spatializer"), Some("Hoa4Spatializer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("hoa4sphere"), Some("Hoa4Spatializer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("idiophonespectrum"), Some("IdiophoneSpectrum"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("idiophonemodal"), Some("IdiophoneSpectrum"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("isomorphiclattice"), Some("IsomorphicLattice"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("hexpitchlattice"), Some("IsomorphicLattice"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("isomorphictuningkeyboard"), Some("IsomorphicTuningKeyboard"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("microtonalkeyboard"), Some("IsomorphicTuningKeyboard"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("ladderfilterbode"), Some("LadderFilterBode"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("moogladderbode"), Some("LadderFilterBode"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("membranecavity"), Some("MembraneCavity"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("drumcavity"), Some("MembraneCavity"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("mpeghspatializer"), Some("MpeghSpatializer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("mpeghspatialbus"), Some("MpeghSpatializer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("phasealignhud"), Some("PhaseAlign"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("subsamplephasealign"), Some("PhaseAlign"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("rotarydoppler"), Some("RotaryDoppler"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("lesliedoppler"), Some("RotaryDoppler"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("toneholematrixview"), Some("ToneholeMatrix"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("woodwindtonehole"), Some("ToneholeMatrix"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("trompettebridge"), Some("TrompetteBridge"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("trompettebridgeview"), Some("TrompetteBridge"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("vowelspace"), Some("VowelSpace"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("ipavowelspace"), Some("VowelSpace"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("bellowschamber"), Some("BellowsChamber"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("accordionbellows"), Some("BellowsChamber"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("convolutionimpulse"), Some("ConvolutionImpulse"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("reverbimpulsehud"), Some("ConvolutionImpulse"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("convolutionmorph"), Some("ConvolutionMorph"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("irmorphing"), Some("ConvolutionMorph"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("bezierautomation"), Some("BezierAutomation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("tactilebeziercurve"), Some("BezierAutomation"));
+
+        // 4. Verify Asset Browser categorization
+        let inst_folders = BrowserCategory::Instruments.default_folders();
+        let phys_items = inst_folders.iter().find(|(name, _)| *name == "Physical Models").unwrap().1;
+        assert!(phys_items.contains(&"EmbouchureAngle"));
+        assert!(phys_items.contains(&"FrictionOrbit"));
+        assert!(phys_items.contains(&"IdiophoneSpectrum"));
+        assert!(phys_items.contains(&"MembraneCavity"));
+        assert!(phys_items.contains(&"ToneholeMatrix"));
+        assert!(phys_items.contains(&"TrompetteBridge"));
+        assert!(phys_items.contains(&"BellowsChamber"));
+
+        let fx_folders = BrowserCategory::AudioFx.default_folders();
+        let time_items = fx_folders.iter().find(|(name, _)| *name == "Time & Reverb").unwrap().1;
+        assert!(time_items.contains(&"Hoa4Spatializer"));
+        assert!(time_items.contains(&"MpeghSpatializer"));
+        assert!(time_items.contains(&"ConvolutionImpulse"));
+        assert!(time_items.contains(&"ConvolutionMorph"));
+
+        let filter_items = fx_folders.iter().find(|(name, _)| *name == "Filters & EQ").unwrap().1;
+        assert!(filter_items.contains(&"LadderFilterBode"));
+        assert!(filter_items.contains(&"VowelSpace"));
+
+        let mod_items = fx_folders.iter().find(|(name, _)| *name == "Modulation & Pitch").unwrap().1;
+        assert!(mod_items.contains(&"RotaryDoppler"));
+        assert!(mod_items.contains(&"BezierAutomation"));
+
+        let midi_folders = BrowserCategory::MidiFx.default_folders();
+        let routing_items = midi_folders.iter().find(|(name, _)| *name == "Transforms & Routing").unwrap().1;
+        assert!(routing_items.contains(&"CadenceFlow"));
+        assert!(routing_items.contains(&"ConcordanceLattice"));
+        assert!(routing_items.contains(&"HarmonicTensionMap"));
+        assert!(routing_items.contains(&"IsomorphicLattice"));
+        assert!(routing_items.contains(&"IsomorphicTuningKeyboard"));
+        assert!(routing_items.contains(&"PhaseAlign"));
+
+        // 5. Verify Novice Presets synchronize in AwardWinningGuiView
+        #[cfg(feature = "gui")]
+        {
+            let mut view = crate::views::award_winning_gui_view::AwardWinningGuiView::default();
+            let ctx = eframe::egui::Context::default();
+
+            // Preset: Just Intonation Concordance Lattice -> ConcordanceLattice
+            view.top_bar_state.selected_preset = "Just Intonation Concordance Lattice".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("ConcordanceLattice".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("ConcordanceLattice".to_string()));
+
+            // Preset: Bowed Cello Friction Orbit -> FrictionOrbit
+            view.top_bar_state.selected_preset = "Bowed Cello Friction Orbit".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("FrictionOrbit".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("FrictionOrbit".to_string()));
+
+            // Preset: Moog 4-Pole Ladder Self-Oscillation -> LadderFilterBode
+            view.top_bar_state.selected_preset = "Moog 4-Pole Ladder Self-Oscillation".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("LadderFilterBode".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("LadderFilterBode".to_string()));
+
+            // Preset: Leslie 122 Dual Rotor Doppler -> RotaryDoppler
+            view.top_bar_state.selected_preset = "Leslie 122 Dual Rotor Doppler".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("RotaryDoppler".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("RotaryDoppler".to_string()));
+        }
+    }
 }
 

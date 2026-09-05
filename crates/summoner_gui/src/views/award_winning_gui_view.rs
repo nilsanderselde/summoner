@@ -388,6 +388,10 @@ impl AwardWinningGuiView {
                 "Bjorklund Euclidean Rhythm Engine" => "GenerativeEngine",
                 "Microtonal 31-EDO Harmonic Scale" => "EdoTuning",
                 "Acoustic Flamenco Guitar Strummer" => "Strummer",
+                "Just Intonation Concordance Lattice" => "ConcordanceLattice",
+                "Bowed Cello Friction Orbit" => "FrictionOrbit",
+                "Moog 4-Pole Ladder Self-Oscillation" => "LadderFilterBode",
+                "Leslie 122 Dual Rotor Doppler" => "RotaryDoppler",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {

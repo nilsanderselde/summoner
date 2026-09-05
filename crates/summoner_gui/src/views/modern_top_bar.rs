@@ -153,6 +153,10 @@ fn default_available_presets() -> Vec<String> {
         "Bjorklund Euclidean Rhythm Engine".to_string(),
         "Microtonal 31-EDO Harmonic Scale".to_string(),
         "Acoustic Flamenco Guitar Strummer".to_string(),
+        "Just Intonation Concordance Lattice".to_string(),
+        "Bowed Cello Friction Orbit".to_string(),
+        "Moog 4-Pole Ladder Self-Oscillation".to_string(),
+        "Leslie 122 Dual Rotor Doppler".to_string(),
     ]
 }
 
