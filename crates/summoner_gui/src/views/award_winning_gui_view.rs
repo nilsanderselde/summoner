@@ -352,6 +352,10 @@ impl AwardWinningGuiView {
                 "Indian Tarab Sympathetic" => "TarabStringResonator",
                 "Neural AI Room Impulse" => "NeuralIrSynthesizer",
                 "AI Voice-Leading Master" => "AiChordGenerator",
+                "Quantum Hyperbolic Reverb" => "HyperbolicReverbNode",
+                "Neuro Relaxation Feedback" => "NeuroFeedbackOscillator",
+                "Acoustic Cloaking Soundfield" => "AcousticCloakingSpatializerNode",
+                "Sub-Harmonic Quantum Tunnel" => "SubHarmonicQuantumTunnelingFilter",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {

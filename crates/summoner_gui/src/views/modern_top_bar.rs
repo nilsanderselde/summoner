@@ -117,6 +117,10 @@ fn default_available_presets() -> Vec<String> {
         "Indian Tarab Sympathetic".to_string(),
         "Neural AI Room Impulse".to_string(),
         "AI Voice-Leading Master".to_string(),
+        "Quantum Hyperbolic Reverb".to_string(),
+        "Neuro Relaxation Feedback".to_string(),
+        "Acoustic Cloaking Soundfield".to_string(),
+        "Sub-Harmonic Quantum Tunnel".to_string(),
     ]
 }
 

@@ -1947,5 +1947,130 @@ mod tests {
             assert_eq!(view.device_rack_state.selected_node_kind, Some("AiChordGenerator".to_string()));
             assert_eq!(view.inspector_state.selected_node_kind, Some("AiChordGenerator".to_string()));
     }
+
+    #[test]
+    fn test_tier88_dsp_registry_445_plus_quantum_and_neuro_expansion() {
+        use crate::dsp_node_ui::DspNodeRegistry;
+        use crate::views::modern_asset_browser::BrowserCategory;
+
+        let inv = DspNodeRegistry::inventory();
+        assert!(inv.len() >= 445, "Expected inventory count >= 445, got {}", inv.len());
+
+        let registry = DspNodeRegistry::new();
+        let new_nodes = [
+            "BrainstemPitchTracker",
+            "NeuroFeedbackOscillator",
+            "AcousticHologramFilter",
+            "HapticTransducerNode",
+            "SubHarmonicQuantumTunnelingFilter",
+            "HyperbolicReverbNode",
+            "QuantumEntanglementRouter",
+            "NeuralQuantumAnnealer",
+            "QuantumTeleportationBufferBus",
+            "QuantumErrorCorrectionCodec",
+            "HyperDimensionalHrtfLoader",
+            "MhdPlasmaWaveModulatorNode",
+            "AcousticCloakingSpatializerNode",
+            "CrystalModalFilter",
+            "HurdyGurdyDispersionFilter",
+            "SpectrogramArtEngine",
+            "SpectrogramArtMorpher",
+            "AudioReverse",
+            "GlitchGate",
+        ];
+
+        for node_id in &new_nodes {
+            let desc = registry.get(node_id);
+            assert!(desc.is_some(), "Node {} missing from DspNodeRegistry", node_id);
+            let desc = desc.unwrap();
+            assert!(!desc.params.is_empty(), "Node {} has empty parameter list", node_id);
+            assert!(!desc.description.is_empty(), "Node {} has empty description", node_id);
+
+            let ui = DspNodeRegistry::create_node_ui(node_id);
+            assert!(ui.is_some(), "create_node_ui failed for {}", node_id);
+            let ui = ui.unwrap();
+            assert!(!ui.parameters().is_empty(), "UI for {} has no parameters", node_id);
+        }
+
+        // Test normalize_type_name
+        assert_eq!(DspNodeRegistry::normalize_type_name("brainstempitchtracker"), Some("BrainstemPitchTracker"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("neurofeedback"), Some("NeuroFeedbackOscillator"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("haptictransducer"), Some("HapticTransducerNode"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("quantumtunneling"), Some("SubHarmonicQuantumTunnelingFilter"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("hyperbolicreverb"), Some("HyperbolicReverbNode"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("quantumentanglement"), Some("QuantumEntanglementRouter"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("shorcodec"), Some("QuantumErrorCorrectionCodec"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("hdhrtfloader"), Some("HyperDimensionalHrtfLoader"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("mhdplasmawave"), Some("MhdPlasmaWaveModulatorNode"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("acousticcloaking"), Some("AcousticCloakingSpatializerNode"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("piezocrystalfilter"), Some("CrystalModalFilter"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("hurdygurdydispersion"), Some("HurdyGurdyDispersionFilter"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("spectrogramartengine"), Some("SpectrogramArtEngine"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("spectrogrammorpher"), Some("SpectrogramArtMorpher"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("audioreverse"), Some("AudioReverse"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("glitchgate"), Some("GlitchGate"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("samplernode"), Some("SamplerDevice"));
+
+        // Test modern asset browser integration
+        let inst_folders = BrowserCategory::Instruments.default_folders();
+        let synth_items = inst_folders.iter().find(|(name, _)| *name == "Synthesizers").unwrap().1;
+        assert!(synth_items.contains(&"NeuroFeedbackOscillator"));
+        assert!(synth_items.contains(&"SpectrogramArtEngine"));
+
+        let fx_folders = BrowserCategory::AudioFx.default_folders();
+        let time_items = fx_folders.iter().find(|(name, _)| *name == "Time & Reverb").unwrap().1;
+        assert!(time_items.contains(&"HyperbolicReverbNode"));
+        assert!(time_items.contains(&"AcousticCloakingSpatializerNode"));
+
+        let filter_items = fx_folders.iter().find(|(name, _)| *name == "Filters & EQ").unwrap().1;
+        assert!(filter_items.contains(&"SubHarmonicQuantumTunnelingFilter"));
+        assert!(filter_items.contains(&"CrystalModalFilter"));
+
+        #[cfg(feature = "gui")]
+        {
+            let mut view = crate::views::award_winning_gui_view::AwardWinningGuiView::default();
+            let ctx = eframe::egui::Context::default();
+
+            // Preset: Quantum Hyperbolic Reverb
+            view.top_bar_state.selected_preset = "Quantum Hyperbolic Reverb".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("NonEuclideanHyperbolicReverb".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("NonEuclideanHyperbolicReverb".to_string()));
+
+            // Preset: Neuro Relaxation Feedback
+            view.top_bar_state.selected_preset = "Neuro Relaxation Feedback".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("NeuroFeedbackOscillator".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("NeuroFeedbackOscillator".to_string()));
+
+            // Preset: Acoustic Cloaking Soundfield
+            view.top_bar_state.selected_preset = "Acoustic Cloaking Soundfield".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("AcousticCloakingSpatializer".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("AcousticCloakingSpatializer".to_string()));
+
+            // Preset: Sub-Harmonic Quantum Tunnel
+            view.top_bar_state.selected_preset = "Sub-Harmonic Quantum Tunnel".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("SubharmonicQuantumTunnelingFilter".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("SubharmonicQuantumTunnelingFilter".to_string()));
+        }
+    }
 }
 
