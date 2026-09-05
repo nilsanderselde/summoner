@@ -4349,6 +4349,146 @@ impl DspNodeRegistry {
             .with_param(DspParamSchema::knob("ducking_threshold_db", "Sidechain Ducking Threshold", -60.0, 0.0, -24.0, "dB", MacroRole::Space, "Audio level threshold triggering destination ducking compression parameter"))
             .with_param(DspParamSchema::toggle("sidechain_active", "Sidechain Cross-Coupling", true, "Activate real-time multi-bus sidechain event coupling parameter"))
         );
+        descriptors.insert("SampleEditor".to_string(), DspNodeDescriptor::new("SampleEditor", "Interactive Waveform Sample Slicer & Looper", DspNodeCategory::SamplerSlicer, "Visual sample editor with interactive zero-crossing snap, loop crossfade, and transient slice markers")
+            .with_param(DspParamSchema::knob("loop_start_sec", "Loop Start Position", 0.0, 60.0, 0.0, "s", MacroRole::Tone, "Sample loop start time offset parameter"))
+            .with_param(DspParamSchema::knob("loop_end_sec", "Loop End Position", 0.01, 60.0, 4.0, "s", MacroRole::Space, "Sample loop end boundary timestamp parameter"))
+            .with_param(DspParamSchema::log_knob("crossfade_len_ms", "Loop Crossfade Length", 1.0, 1000.0, 25.0, "ms", MacroRole::Character, "Equal-power loop point crossfade duration parameter"))
+            .with_param(DspParamSchema::toggle("snap_to_zero", "Snap to Zero Crossing", true, "Snap slice boundaries to closest zero-crossing point parameter"))
+            .with_param(DspParamSchema::toggle("normalize_on_slice", "Auto-Normalize Slices", true, "Peak normalize sliced regions automatically parameter"))
+        );
+        descriptors.insert("SpatialObjectAutomation".to_string(), DspNodeDescriptor::new("SpatialObjectAutomation", "3D Spatial Audio Vector Trajectory Engine", DspNodeCategory::SpatialSurround, "Real-time 3D object automation engine with spline interpolation, azimuth, elevation, and distance curves")
+            .with_param(DspParamSchema::knob("azimuth_deg", "Horizontal Azimuth", -180.0, 180.0, 0.0, "deg", MacroRole::Tone, "Horizontal spatial azimuth angle around listener parameter"))
+            .with_param(DspParamSchema::knob("elevation_deg", "Vertical Elevation", -90.0, 90.0, 0.0, "deg", MacroRole::Space, "Vertical elevation angle relative to listener plane parameter"))
+            .with_param(DspParamSchema::log_knob("distance_m", "Radial Distance", 0.1, 100.0, 2.5, "m", MacroRole::Punch, "Distance from listener center for inverse-square attenuation parameter"))
+            .with_param(DspParamSchema::knob("orbit_speed_hz", "Orbit Angular Velocity", 0.01, 10.0, 0.25, "Hz", MacroRole::Character, "Rotational trajectory angular velocity parameter"))
+            .with_param(DspParamSchema::toggle("doppler_tracking", "Acoustic Doppler Shift", true, "Enable relativistic Doppler pitch shift during rapid movement parameter"))
+        );
+        descriptors.insert("Vst3WindowEmbedder".to_string(), DspNodeDescriptor::new("Vst3WindowEmbedder", "VST3 Native GUI Window Embedding Bridge", DspNodeCategory::Utility, "Cross-platform native platform window embedder (HWND / NSView / X11) for third-party VST3 plugin UIs")
+            .with_param(DspParamSchema::knob("embed_scale_factor", "HiDPI Display Scale", 0.5, 3.0, 1.0, "x", MacroRole::Tone, "HiDPI display scaling factor for embedded plugin editor parameter"))
+            .with_param(DspParamSchema::knob("target_fps", "Target GUI Frame Rate", 15.0, 120.0, 60.0, "fps", MacroRole::Character, "Native editor frame refresh synchronization rate parameter"))
+            .with_param(DspParamSchema::knob("window_width", "Container Width", 320.0, 3840.0, 1024.0, "px", MacroRole::Space, "Allocated container pixel width for embedded editor parameter"))
+            .with_param(DspParamSchema::knob("window_height", "Container Height", 240.0, 2160.0, 768.0, "px", MacroRole::Punch, "Allocated container pixel height for embedded editor parameter"))
+            .with_param(DspParamSchema::toggle("gpu_compositing", "Direct GPU Compositing", true, "Direct GPU compositor texture blitting for plugin canvas parameter"))
+        );
+        descriptors.insert("ParameterAutomapper".to_string(), DspNodeDescriptor::new("ParameterAutomapper", "Heuristic Plugin Parameter Auto-Mapper", DspNodeCategory::Utility, "Intelligent pattern-matching heuristic auto-mapper binding VST3/CLAP plugin parameters to hardware macro controllers")
+            .with_param(DspParamSchema::knob("mapping_confidence", "Match Confidence Threshold", 0.1, 1.0, 0.85, "ratio", MacroRole::Tone, "Heuristic match confidence acceptance threshold parameter"))
+            .with_param(DspParamSchema::knob("macro_slot_count", "Hardware Macro Slots", 4.0, 16.0, 8.0, "slots", MacroRole::Punch, "Number of priority macro rotary slots allocated parameter"))
+            .with_param(DspParamSchema::knob("auto_learn_sensitivity", "Auto-Learn Sensitivity", 0.01, 1.0, 0.5, "sens", MacroRole::Character, "Touch / wiggle detection threshold for MIDI parameter learn parameter"))
+            .with_param(DspParamSchema::toggle("prefer_frequency_knobs", "Prioritize Frequency Knobs", true, "Prioritize filter cutoff and EQ frequencies for Macro 1 parameter"))
+            .with_param(DspParamSchema::toggle("bidirectional_sync", "Motor Fader Sync", true, "Synchronize hardware motor faders back to plugin parameters parameter"))
+        );
+        descriptors.insert("TruePeakMeter".to_string(), DspNodeDescriptor::new("TruePeakMeter", "ITU-R BS.1770 4x Oversampled True Peak Meter", DspNodeCategory::Utility, "Polyphase FIR 4x oversampled inter-sample peak detector complying with ITU-R BS.1770 and EBU R128 mastering standards")
+            .with_param(DspParamSchema::knob("peak_ceiling_dbfs", "True Peak Ceiling", -12.0, 0.0, -0.1, "dBTP", MacroRole::Tone, "Inter-sample true peak compliance ceiling threshold parameter"))
+            .with_param(DspParamSchema::log_knob("hold_time_ms", "Peak Hold Decay Time", 100.0, 10000.0, 2000.0, "ms", MacroRole::Character, "Maximum peak hold indicator decay retention parameter"))
+            .with_param(DspParamSchema::knob("oversample_factor", "Oversampling Factor", 1.0, 8.0, 4.0, "x", MacroRole::Punch, "Oversampling interpolation factor for inter-sample peak resolution parameter"))
+            .with_param(DspParamSchema::knob("clipping_alarm_count", "Consecutive Clip Alarm", 1.0, 10.0, 3.0, "samples", MacroRole::Space, "Consecutive full-scale samples triggering clip warning parameter"))
+            .with_param(DspParamSchema::toggle("dbtp_display_mode", "True dBTP Mode", true, "Display values in true dBTP instead of sample-level dBFS parameter"))
+        );
+        descriptors.insert("AudioTagger".to_string(), DspNodeDescriptor::new("AudioTagger", "Deep Neural Audio Tagging & Timbre Classifier", DspNodeCategory::NeuralAi, "MobileNet-derived convolutional neural network classifying audio genre, instrumentation, mood, and key signature")
+            .with_param(DspParamSchema::knob("classification_threshold", "Acceptance Confidence", 0.1, 0.99, 0.65, "prob", MacroRole::Tone, "Prediction probability threshold for tag activation parameter"))
+            .with_param(DspParamSchema::knob("analysis_window_sec", "Analysis Window Length", 0.5, 10.0, 3.0, "s", MacroRole::Character, "Temporal STFT frame buffer size for inference parameter"))
+            .with_param(DspParamSchema::knob("top_k_candidates", "Top-K Candidates", 1.0, 10.0, 5.0, "tags", MacroRole::Punch, "Maximum number of multi-label classification tags returned parameter"))
+            .with_param(DspParamSchema::toggle("auto_categorize_asset", "Auto-Tag New Samples", true, "Automatically tag incoming samples in asset browser parameter"))
+            .with_param(DspParamSchema::toggle("realtime_inference", "Background Inference", false, "Continuous low-priority background inference thread parameter"))
+        );
+        descriptors.insert("NeuralWavetableInterpolator".to_string(), DspNodeDescriptor::new("NeuralWavetableInterpolator", "Latent-Space Neural Wavetable Continuous Interpolator", DspNodeCategory::NeuralAi, "Variational autoencoder providing smooth, artifact-free non-linear morphing between arbitrary single-cycle wavetables")
+            .with_param(DspParamSchema::knob("latent_dim_x", "Latent Axis X (Bright)", -3.0, 3.0, 0.0, "z1", MacroRole::Tone, "First principal latent space coordinate for timbre morphing parameter"))
+            .with_param(DspParamSchema::knob("latent_dim_y", "Latent Axis Y (Contour)", -3.0, 3.0, 0.0, "z2", MacroRole::Space, "Second principal latent space coordinate for harmonic contour parameter"))
+            .with_param(DspParamSchema::knob("spectral_flatness_bias", "Spectral Flatness Bias", 0.0, 1.0, 0.3, "bias", MacroRole::Character, "Latent projection bias towards bright or mellow waveforms parameter"))
+            .with_param(DspParamSchema::knob("decoder_temperature", "Decoder Temperature", 0.1, 2.0, 1.0, "temp", MacroRole::Punch, "Stochastic decoder temperature introducing microscopic harmonic variation parameter"))
+            .with_param(DspParamSchema::toggle("bandlimited_resynthesis", "Bandlimited Resynthesis", true, "Strict anti-aliased Dirichlet kernel waveform resynthesis parameter"))
+        );
+        descriptors.insert("KarplusStrongString".to_string(), DspNodeDescriptor::new("KarplusStrongString", "Karplus-Strong Waveguide Physical String Resonator", DspNodeCategory::AcousticPhysicalModel, "Extended Karplus-Strong waveguide resonator with frequency-dependent decay, string stiffness allpass, and strike position")
+            .with_param(DspParamSchema::log_knob("frequency_hz", "String Fundamental", 20.0, 4000.0, 220.0, "Hz", MacroRole::Tone, "Fundamental resonance frequency of simulated physical string parameter"))
+            .with_param(DspParamSchema::knob("decay_damping", "Loop Sustain Decay", 0.01, 0.999, 0.985, "damp", MacroRole::Space, "Loss filter loop attenuation governing sustain length parameter"))
+            .with_param(DspParamSchema::knob("pluck_position", "Pluck Point Ratio", 0.01, 0.99, 0.18, "pos", MacroRole::Punch, "Comb excitation strike location along string fraction parameter"))
+            .with_param(DspParamSchema::knob("string_stiffness", "Inharmonic Stiffness", 0.0, 0.5, 0.05, "stiff", MacroRole::Character, "Inharmonic allpass dispersion coefficient simulating wire thickness parameter"))
+            .with_param(DspParamSchema::toggle("dual_polarization", "Dual Plane Polarization", true, "Simulate coupled horizontal and vertical string polarizations parameter"))
+        );
+        descriptors.insert("TonebarCoupling".to_string(), DspNodeDescriptor::new("TonebarCoupling", "Electric Piano Tonebar Mechanical Coupling & Dispersion", DspNodeCategory::AcousticPhysicalModel, "Physical acoustic model of the tuned cast-iron tonebar energy absorption and sympathetic sustain coupling to the tine")
+            .with_param(DspParamSchema::knob("tonebar_mass_ratio", "Tonebar Mass Ratio", 1.0, 20.0, 8.5, "mass", MacroRole::Tone, "Mass ratio between cast tonebar and vibrating steel tine parameter"))
+            .with_param(DspParamSchema::knob("coupling_stiffness", "Mounting Block Stiffness", 0.01, 1.0, 0.42, "k", MacroRole::Punch, "Spring mounting block mechanical impedance coupling coefficient parameter"))
+            .with_param(DspParamSchema::knob("sympathetic_bleed_db", "Sympathetic Bleed", -60.0, -6.0, -24.0, "dB", MacroRole::Space, "Adjacent tine sympathetic vibration transfer level parameter"))
+            .with_param(DspParamSchema::log_knob("grommet_loss_factor", "Neoprene Grommet Loss", 0.01, 5.0, 0.25, "loss", MacroRole::Character, "Neoprene mounting washer viscoelastic dampening factor parameter"))
+            .with_param(DspParamSchema::toggle("phase_cancellation_sync", "Antipodal Phase Sync", true, "Acoustic antipodal phase cancellation between tine and tonebar parameter"))
+        );
+        descriptors.insert("InductivePickup".to_string(), DspNodeDescriptor::new("InductivePickup", "Variable-Reluctance Electromagnetic Pickup Transducer", DspNodeCategory::AcousticPhysicalModel, "Electro-magnetic coil transducer modeling magnetic field lines, eddy currents, air gap non-linearity, and preamp loading")
+            .with_param(DspParamSchema::knob("air_gap_mm", "Pole Piece Air Gap", 0.5, 10.0, 2.0, "mm", MacroRole::Punch, "Physical distance from magnetic pole piece to vibrating tine or string parameter"))
+            .with_param(DspParamSchema::knob("pole_curvature", "Field Gradient Curvature", 0.1, 2.0, 1.0, "curve", MacroRole::Tone, "Nonlinear quadratic field gradient coefficient parameter"))
+            .with_param(DspParamSchema::log_knob("coil_inductance_henry", "Coil Inductance", 0.5, 10.0, 2.8, "H", MacroRole::Character, "Coil electrical self-inductance creating passive low-pass resonance parameter"))
+            .with_param(DspParamSchema::log_knob("cable_capacitance_pf", "Cable Capacitance", 50.0, 2000.0, 350.0, "pF", MacroRole::Space, "Instrument cable stray capacitance tuning pickup resonant peak parameter"))
+            .with_param(DspParamSchema::toggle("eddy_current_damping", "Eddy Current Softening", true, "Core eddy current loss simulation softening aggressive transients parameter"))
+        );
+        descriptors.insert("HammerModel".to_string(), DspNodeDescriptor::new("HammerModel", "Nonlinear Strike Contact Dynamic Hammer Model", DspNodeCategory::AcousticPhysicalModel, "Non-linear elastomeric contact force model calculating compression, restitution hysteresis, and tip velocity")
+            .with_param(DspParamSchema::log_knob("hammer_stiffness_p", "Hertzian Stiffness K", 10000.0, 1000000000.0, 5000000.0, "N/m^p", MacroRole::Punch, "Power-law elastic contact stiffness parameter"))
+            .with_param(DspParamSchema::knob("nonlinear_exponent_p", "Force Exponent P", 1.5, 4.0, 2.5, "exp", MacroRole::Tone, "Hertzian contact deformation power exponent parameter"))
+            .with_param(DspParamSchema::knob("viscoelastic_hysteresis", "Viscoelastic Hysteresis", 0.0, 1.0, 0.35, "mu", MacroRole::Character, "Internal damping loss during compression vs release phase parameter"))
+            .with_param(DspParamSchema::knob("hammer_mass_grams", "Striking Tip Mass", 0.5, 25.0, 3.2, "g", MacroRole::Space, "Effective physical striking mass of hammer head parameter"))
+            .with_param(DspParamSchema::toggle("una_corda_felt_shift", "Soft Felt Shift", false, "Shift impact strike point to softer, grooveless felt section parameter"))
+        );
+        descriptors.insert("ImageReflection".to_string(), DspNodeDescriptor::new("ImageReflection", "Shoebox Room Geometric Acoustic Image-Source Engine", DspNodeCategory::SpatialSurround, "First and second order specular acoustic reflection generator for shoebox geometry listening rooms")
+            .with_param(DspParamSchema::knob("room_length_m", "Room Length", 2.0, 50.0, 10.0, "m", MacroRole::Space, "Shoebox room physical length coordinate parameter"))
+            .with_param(DspParamSchema::knob("room_width_m", "Room Width", 2.0, 40.0, 7.5, "m", MacroRole::Space, "Shoebox room physical width coordinate parameter"))
+            .with_param(DspParamSchema::knob("room_height_m", "Room Ceiling Height", 2.0, 20.0, 3.8, "m", MacroRole::Space, "Shoebox room ceiling height coordinate parameter"))
+            .with_param(DspParamSchema::knob("wall_absorption_coeff", "Wall Absorption Alpha", 0.05, 0.95, 0.25, "alpha", MacroRole::Tone, "Frequency-dependent acoustic boundary wall absorption coefficient parameter"))
+            .with_param(DspParamSchema::knob("specular_diffusion_mix", "Diffusion Blend", 0.0, 1.0, 0.30, "diff", MacroRole::Character, "Ratio between mirror-like specular reflections and scattered diffuse tail parameter"))
+        );
+        descriptors.insert("TapeChannelState".to_string(), DspNodeDescriptor::new("TapeChannelState", "Analog Magnetic Tape Flutter, Bias & Hysteresis Engine", DspNodeCategory::DistortionSaturation, "Physical simulation of magnetic tape particle hysteresis (Jiles-Atherton), AC bias drive, gap loss, and capstan flutter")
+            .with_param(DspParamSchema::knob("tape_speed_ips", "Tape Speed IPS", 3.75, 30.0, 15.0, "ips", MacroRole::Tone, "Tape transport speed: 7.5, 15, or 30 inches per second parameter"))
+            .with_param(DspParamSchema::knob("saturation_drive_db", "Tape Saturation Drive", -12.0, 24.0, 4.5, "dB", MacroRole::Punch, "Input gain driving tape magnetic oxide particles into soft saturation parameter"))
+            .with_param(DspParamSchema::log_knob("ac_bias_frequency_khz", "Ultrasonic AC Bias", 50.0, 250.0, 105.0, "kHz", MacroRole::Character, "Ultrasonic AC bias current optimizing linearity and THD parameter"))
+            .with_param(DspParamSchema::log_knob("head_bump_resonance_hz", "Head Bump Center", 30.0, 120.0, 55.0, "Hz", MacroRole::Space, "Reproduce head contour resonance frequency boosting low-end parameter"))
+            .with_param(DspParamSchema::knob("wow_flutter_depth", "Wow & Flutter Depth", 0.0, 1.0, 0.12, "depth", MacroRole::Character, "Mechanical capstan eccentricity speed fluctuation depth parameter"))
+        );
+        descriptors.insert("TubeChannelState".to_string(), DspNodeDescriptor::new("TubeChannelState", "Triode/Pentode Vacuum Tube Harmonic Saturation Stage", DspNodeCategory::DistortionSaturation, "Child-Langmuir 3/2-power vacuum tube model with cathode bypass capacitor sag, grid current conduction, and even harmonics")
+            .with_param(DspParamSchema::knob("tube_type_mode", "Tube Topology", 0.0, 2.0, 0.0, "type", MacroRole::Tone, "Valve topology: 0=12AX7 Triode, 1=EL34 Pentode, 2=6L6 Beam Tetrode parameter"))
+            .with_param(DspParamSchema::knob("plate_drive_db", "Grid Drive Gain", -18.0, 36.0, 12.0, "dB", MacroRole::Punch, "Input driving grid-to-plate asymmetric soft clipping parameter"))
+            .with_param(DspParamSchema::knob("cathode_bias_sag", "Dynamic Bias Sag", 0.0, 1.0, 0.45, "sag", MacroRole::Character, "Cathode bias RC network dynamic compression parameter"))
+            .with_param(DspParamSchema::knob("even_odd_harmonic_balance", "Even/Odd Balance", -1.0, 1.0, 0.35, "bal", MacroRole::Space, "Balance between warm 2nd harmonic and aggressive 3rd harmonic parameter"))
+            .with_param(DspParamSchema::toggle("miller_effect_hpf", "Miller Capacitance Rolloff", true, "Inter-electrode grid-to-plate capacitance high-frequency rolloff parameter"))
+        );
+        descriptors.insert("MpeRouter".to_string(), DspNodeDescriptor::new("MpeRouter", "Lock-Free MPE Voice Allocation & Expression Router", DspNodeCategory::Utility, "Deterministic lock-free multichannel router for MIDI Polyphonic Expression (MPE) pitch bend, pressure, and slide")
+            .with_param(DspParamSchema::knob("mpe_zone_mode", "MPE Zone Layout", 0.0, 2.0, 0.0, "zone", MacroRole::Tone, "MPE configuration: 0=Lower Zone (Ch 2-15), 1=Upper Zone (Ch 1-14), 2=Full Multi-Channel parameter"))
+            .with_param(DspParamSchema::knob("pitch_bend_range_st", "Per-Note Bend Range", 1.0, 96.0, 48.0, "st", MacroRole::Punch, "Per-note finger slide pitch bend range in semitones parameter"))
+            .with_param(DspParamSchema::knob("pressure_curve_gamma", "Aftertouch Response Gamma", 0.2, 3.0, 1.0, "gamma", MacroRole::Character, "Channel / polyphonic aftertouch response curve gamma parameter"))
+            .with_param(DspParamSchema::knob("timbre_cc_number", "Slide CC Assignment", 1.0, 127.0, 74.0, "CC", MacroRole::Space, "Continuous controller assigned to Y-axis finger slide parameter"))
+            .with_param(DspParamSchema::knob("voice_stealing_policy", "Voice Stealing Policy", 0.0, 2.0, 1.0, "policy", MacroRole::Character, "Voice exhaustion steal mode: 0=Oldest, 1=Lowest Volume, 2=Same Pitch parameter"))
+        );
+        descriptors.insert("MidiUartSerialDriver".to_string(), DspNodeDescriptor::new("MidiUartSerialDriver", "Hardware Serial DIN-5 MIDI UART Interface Driver", DspNodeCategory::Utility, "Real-time non-blocking ring buffer serial UART driver operating at exact standard 31,250 baud for legacy DIN-5 MIDI ports")
+            .with_param(DspParamSchema::knob("baud_rate_bps", "UART Baud Rate", 9600.0, 115200.0, 31250.0, "baud", MacroRole::Tone, "Serial UART communication baud rate parameter"))
+            .with_param(DspParamSchema::knob("dma_fifo_depth", "DMA FIFO Depth", 16.0, 512.0, 128.0, "bytes", MacroRole::Punch, "Hardware DMA receive ring buffer capacity parameter"))
+            .with_param(DspParamSchema::toggle("running_status_opt", "MIDI Running Status", true, "Compress outgoing serial stream using MIDI running status optimization parameter"))
+            .with_param(DspParamSchema::toggle("hardware_flow_control", "RTS/CTS Flow Control", false, "RTS/CTS hardware flow control handshaking parameter"))
+            .with_param(DspParamSchema::toggle("tx_rx_loopback_test", "Self-Diagnostic Loopback", false, "Direct internal loopback for latency self-calibration parameter"))
+        );
+        descriptors.insert("EepromPresetStore".to_string(), DspNodeDescriptor::new("EepromPresetStore", "Hardware Appliance EEPROM Preset Storage Engine", DspNodeCategory::Utility, "Wear-leveled fault-tolerant non-volatile I2C/SPI EEPROM preset manager for embedded hardware synthesizer appliances")
+            .with_param(DspParamSchema::knob("active_bank_index", "EEPROM Bank Index", 0.0, 15.0, 0.0, "bank", MacroRole::Tone, "Currently selected hardware EEPROM preset memory bank parameter"))
+            .with_param(DspParamSchema::knob("active_preset_slot", "Preset Slot Index", 0.0, 127.0, 0.0, "slot", MacroRole::Punch, "Program slot index within active memory bank parameter"))
+            .with_param(DspParamSchema::knob("wear_level_cycles", "Wear Level Count", 0.0, 100000.0, 1240.0, "cycles", MacroRole::Character, "Current estimated write cycle endurance count parameter"))
+            .with_param(DspParamSchema::toggle("write_protect_locked", "Hardware Write Protect", false, "Hardware memory write protection lockout parameter"))
+            .with_param(DspParamSchema::toggle("crc32_checksum_verify", "CRC32 Integrity Check", true, "Automatic CRC32 integrity verification during preset read parameter"))
+        );
+        descriptors.insert("WebConfigDashboard".to_string(), DspNodeDescriptor::new("WebConfigDashboard", "Embedded Web Server Remote Configuration Dashboard", DspNodeCategory::Utility, "Lightweight zero-allocation embedded HTTP / WebSocket micro-daemon serving real-time DSP telemetry and remote DAW parameter editing")
+            .with_param(DspParamSchema::knob("http_server_port", "HTTP Server Port", 1024.0, 65535.0, 8080.0, "port", MacroRole::Tone, "Embedded HTTP web dashboard listening port parameter"))
+            .with_param(DspParamSchema::knob("websocket_telemetry_rate_hz", "Telemetry Stream Rate", 1.0, 60.0, 30.0, "Hz", MacroRole::Punch, "Real-time spectrum and oscilloscope frame streaming rate parameter"))
+            .with_param(DspParamSchema::knob("max_ws_clients", "Max Connected Clients", 1.0, 16.0, 4.0, "clients", MacroRole::Character, "Maximum concurrent remote WebSocket control clients parameter"))
+            .with_param(DspParamSchema::toggle("authentication_required", "Token Authentication", false, "Enforce token authentication on REST and WebSocket endpoints parameter"))
+            .with_param(DspParamSchema::toggle("ssl_tls_encryption", "TLS/HTTPS Encryption", true, "Enable TLS/HTTPS secure transport parameter"))
+        );
+        descriptors.insert("WasapiDriver".to_string(), DspNodeDescriptor::new("WasapiDriver", "Windows WASAPI Exclusive Mode High-Precision Audio Driver", DspNodeCategory::Utility, "Direct Windows Core Audio WASAPI Exclusive event-driven streaming audio driver with sub-millisecond hardware latency")
+            .with_param(DspParamSchema::knob("buffer_frame_size", "Hardware Buffer Size", 32.0, 1024.0, 128.0, "frames", MacroRole::Punch, "Direct hardware circular DMA audio buffer sample count parameter"))
+            .with_param(DspParamSchema::knob("sample_rate_khz", "Master Clock Rate", 44.1, 192.0, 48.0, "kHz", MacroRole::Tone, "Exclusive hardware master clock sample rate parameter"))
+            .with_param(DspParamSchema::toggle("event_driven_mode", "MMCSS Event Driven", true, "Use low-jitter multimedia class scheduler service (MMCSS) event-driven pumping parameter"))
+            .with_param(DspParamSchema::knob("bit_depth_format", "Audio Stream Bit Depth", 16.0, 32.0, 32.0, "bits", MacroRole::Character, "Hardware stream bit depth: 16-bit, 24-bit, or 32-bit float parameter"))
+            .with_param(DspParamSchema::toggle("exclusive_lock", "Exclusive Mode Lock", true, "Lock device exclusively bypassing Windows system audio mixer parameter"))
+        );
+        descriptors.insert("StereoPanner".to_string(), DspNodeDescriptor::new("StereoPanner", "Equal-Power Stereo Coordinate Panner & Balance Trimmer", DspNodeCategory::SpatialSurround, "Sine-cosine 3dB and 4.5dB equal-power stereo panner with width expansion, center channel trim, and polarity invert")
+            .with_param(DspParamSchema::knob("pan_position", "Pan Coordinate", -1.0, 1.0, 0.0, "pan", MacroRole::Tone, "Horizontal stereo position: -1.0=Hard Left, 0.0=Center, 1.0=Hard Right parameter"))
+            .with_param(DspParamSchema::knob("stereo_width", "Stereo Image Width", 0.0, 2.0, 1.0, "width", MacroRole::Space, "Stereo width scaling: 0.0=Mono, 1.0=Normal Stereo, 2.0=Super-Wide M/S expansion parameter"))
+            .with_param(DspParamSchema::knob("center_attenuation_db", "Center Attenuation", -6.0, 0.0, -3.0, "dB", MacroRole::Punch, "Pan law center attenuation compensation curve parameter"))
+            .with_param(DspParamSchema::knob("balance_trim_db", "Fine Balance Trim", -12.0, 12.0, 0.0, "dB", MacroRole::Character, "Fine balance gain trim between Left and Right channels parameter"))
+            .with_param(DspParamSchema::toggle("phase_invert_right", "Invert Right Polarity", false, "Invert phase polarity of right audio channel parameter"))
+        );
 
         Self { descriptors }
     }
@@ -4901,6 +5041,26 @@ impl DspNodeRegistry {
             ("BootToSynthEngine", DspNodeCategory::Utility, "Hardware Appliance Instant Boot-to-Synth Engine"),
             ("MidiUsbGadgetMode", DspNodeCategory::Utility, "USB Composite Class-Compliant Audio/MIDI Gadget"),
             ("MultiBusEventRouter", DspNodeCategory::Utility, "Low-Latency Multi-Bus Sidechain & Auxiliary Event Router"),
+            ("SampleEditor", DspNodeCategory::SamplerSlicer, "Interactive Waveform Sample Slicer & Looper"),
+            ("SpatialObjectAutomation", DspNodeCategory::SpatialSurround, "3D Spatial Audio Vector Trajectory Engine"),
+            ("Vst3WindowEmbedder", DspNodeCategory::Utility, "VST3 Native GUI Window Embedding Bridge"),
+            ("ParameterAutomapper", DspNodeCategory::Utility, "Heuristic Plugin Parameter Auto-Mapper"),
+            ("TruePeakMeter", DspNodeCategory::Utility, "ITU-R BS.1770 4x Oversampled True Peak Meter"),
+            ("AudioTagger", DspNodeCategory::NeuralAi, "Deep Neural Audio Tagging & Timbre Classifier"),
+            ("NeuralWavetableInterpolator", DspNodeCategory::NeuralAi, "Latent-Space Neural Wavetable Continuous Interpolator"),
+            ("KarplusStrongString", DspNodeCategory::AcousticPhysicalModel, "Karplus-Strong Waveguide Physical String Resonator"),
+            ("TonebarCoupling", DspNodeCategory::AcousticPhysicalModel, "Electric Piano Tonebar Mechanical Coupling & Dispersion"),
+            ("InductivePickup", DspNodeCategory::AcousticPhysicalModel, "Variable-Reluctance Electromagnetic Pickup Transducer"),
+            ("HammerModel", DspNodeCategory::AcousticPhysicalModel, "Nonlinear Strike Contact Dynamic Hammer Model"),
+            ("ImageReflection", DspNodeCategory::SpatialSurround, "Shoebox Room Geometric Acoustic Image-Source Engine"),
+            ("TapeChannelState", DspNodeCategory::DistortionSaturation, "Analog Magnetic Tape Flutter, Bias & Hysteresis Engine"),
+            ("TubeChannelState", DspNodeCategory::DistortionSaturation, "Triode/Pentode Vacuum Tube Harmonic Saturation Stage"),
+            ("MpeRouter", DspNodeCategory::Utility, "Lock-Free MPE Voice Allocation & Expression Router"),
+            ("MidiUartSerialDriver", DspNodeCategory::Utility, "Hardware Serial DIN-5 MIDI UART Interface Driver"),
+            ("EepromPresetStore", DspNodeCategory::Utility, "Hardware Appliance EEPROM Preset Storage Engine"),
+            ("WebConfigDashboard", DspNodeCategory::Utility, "Embedded Web Server Remote Configuration Dashboard"),
+            ("WasapiDriver", DspNodeCategory::Utility, "Windows WASAPI Exclusive Mode High-Precision Audio Driver"),
+            ("StereoPanner", DspNodeCategory::SpatialSurround, "Equal-Power Stereo Coordinate Panner & Balance Trimmer"),
         ]
     }
 
@@ -5300,7 +5460,7 @@ impl DspNodeRegistry {
             "neuralroomacousticmatcher" => Some("NeuralRoomAcousticMatcher"),
             "roomacousticmatcher" => Some("NeuralRoomAcousticMatcher"),
             "pluckedstringnode" => Some("PluckedStringNode"),
-            "karplusstrongstring" => Some("PluckedStringNode"),
+            "karplusstrongstring" => Some("KarplusStrongString"),
             "bowedstringnode" => Some("BowedStringModel"),
             "truepeaklimiter" => Some("TruePeakLimiter"),
             "truepeak" => Some("TruePeakLimiter"),
@@ -5854,6 +6014,49 @@ impl DspNodeRegistry {
             "usbgadgetmode" => Some("MidiUsbGadgetMode"),
             "multibuseventrouter" => Some("MultiBusEventRouter"),
             "multibusevent" => Some("MultiBusEventRouter"),
+            "sampleeditor" => Some("SampleEditor"),
+            "waveformeditor" => Some("SampleEditor"),
+            "samplelooper" => Some("SampleEditor"),
+            "spatialobjectautomation" => Some("SpatialObjectAutomation"),
+            "3dautomation" => Some("SpatialObjectAutomation"),
+            "trajectoryengine" => Some("SpatialObjectAutomation"),
+            "vst3windowembedder" => Some("Vst3WindowEmbedder"),
+            "vst3embedder" => Some("Vst3WindowEmbedder"),
+            "parameterautomapper" => Some("ParameterAutomapper"),
+            "paramautomapper" => Some("ParameterAutomapper"),
+            "truepeakmeter" => Some("TruePeakMeter"),
+            "bs1770meter" => Some("TruePeakMeter"),
+            "audiotagger" => Some("AudioTagger"),
+            "deepaudiotagger" => Some("AudioTagger"),
+            "neuralwavetableinterpolator" => Some("NeuralWavetableInterpolator"),
+            "latentwavetable" => Some("NeuralWavetableInterpolator"),
+            "karplusstrong" => Some("KarplusStrongString"),
+            "waveguidestring" => Some("KarplusStrongString"),
+            "tonebarcoupling" => Some("TonebarCoupling"),
+            "tonebardynamics" => Some("TonebarCoupling"),
+            "inductivepickup" => Some("InductivePickup"),
+            "magneticpickup" => Some("InductivePickup"),
+            "hammermodel" => Some("HammerModel"),
+            "contacthammer" => Some("HammerModel"),
+            "imagereflection" => Some("ImageReflection"),
+            "shoeboxreflection" => Some("ImageReflection"),
+            "tapechannelstate" => Some("TapeChannelState"),
+            "analogtape" => Some("TapeChannelState"),
+            "tubechannelstate" => Some("TubeChannelState"),
+            "vacuumtube" => Some("TubeChannelState"),
+            "mperouter" => Some("MpeRouter"),
+            "mpevoicerouter" => Some("MpeRouter"),
+            "midiuartserialdriver" => Some("MidiUartSerialDriver"),
+            "midiuart" => Some("MidiUartSerialDriver"),
+            "din5midi" => Some("MidiUartSerialDriver"),
+            "eeprompresetstore" => Some("EepromPresetStore"),
+            "eeprompresets" => Some("EepromPresetStore"),
+            "webconfigdashboard" => Some("WebConfigDashboard"),
+            "embeddedwebdashboard" => Some("WebConfigDashboard"),
+            "wasapidriver" => Some("WasapiDriver"),
+            "wasapiexclusive" => Some("WasapiDriver"),
+            "stereopanner" => Some("StereoPanner"),
+            "equalpowerpanner" => Some("StereoPanner"),
             _ => None,
         }
     }
@@ -9133,6 +9336,166 @@ impl DspNodeRegistry {
                     .with_param(DspParamDescriptor::new_linear("ducking_threshold_db", "Sidechain Ducking Threshold", -60.0, 0.0, -24.0, "dB", (168, 85, 247)))
                     .with_param(DspParamDescriptor::new_bool("sidechain_active", "Sidechain Cross-Coupling", true, (16, 185, 129)))
             ),
+            "SampleEditor" => Box::new(
+                GenericDspNodeUi::new("SampleEditor", "Interactive Waveform Sample Slicer & Looper", DspNodeCategory::SamplerSlicer)
+                    .with_param(DspParamDescriptor::new_linear("loop_start_sec", "Loop Start Position", 0.0, 60.0, 0.0, "s", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("loop_end_sec", "Loop End Position", 0.01, 60.0, 4.0, "s", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_log("crossfade_len_ms", "Loop Crossfade Length", 1.0, 1000.0, 25.0, "ms", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("snap_to_zero", "Snap to Zero Crossing", true, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("normalize_on_slice", "Auto-Normalize Slices", true, (16, 185, 129)))
+            ),
+            "SpatialObjectAutomation" => Box::new(
+                GenericDspNodeUi::new("SpatialObjectAutomation", "3D Spatial Audio Vector Trajectory Engine", DspNodeCategory::SpatialSurround)
+                    .with_param(DspParamDescriptor::new_linear("azimuth_deg", "Horizontal Azimuth", -180.0, 180.0, 0.0, "deg", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("elevation_deg", "Vertical Elevation", -90.0, 90.0, 0.0, "deg", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_log("distance_m", "Radial Distance", 0.1, 100.0, 2.5, "m", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("orbit_speed_hz", "Orbit Angular Velocity", 0.01, 10.0, 0.25, "Hz", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("doppler_tracking", "Acoustic Doppler Shift", true, (16, 185, 129)))
+            ),
+            "Vst3WindowEmbedder" => Box::new(
+                GenericDspNodeUi::new("Vst3WindowEmbedder", "VST3 Native GUI Window Embedding Bridge", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("embed_scale_factor", "HiDPI Display Scale", 0.5, 3.0, 1.0, "x", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("target_fps", "Target GUI Frame Rate", 15.0, 120.0, 60.0, "fps", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("window_width", "Container Width", 320.0, 3840.0, 1024.0, "px", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("window_height", "Container Height", 240.0, 2160.0, 768.0, "px", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("gpu_compositing", "Direct GPU Compositing", true, (16, 185, 129)))
+            ),
+            "ParameterAutomapper" => Box::new(
+                GenericDspNodeUi::new("ParameterAutomapper", "Heuristic Plugin Parameter Auto-Mapper", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("mapping_confidence", "Match Confidence Threshold", 0.1, 1.0, 0.85, "ratio", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("macro_slot_count", "Hardware Macro Slots", 4.0, 16.0, 8.0, "slots", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("auto_learn_sensitivity", "Auto-Learn Sensitivity", 0.01, 1.0, 0.5, "sens", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("prefer_frequency_knobs", "Prioritize Frequency Knobs", true, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("bidirectional_sync", "Motor Fader Sync", true, (16, 185, 129)))
+            ),
+            "TruePeakMeter" => Box::new(
+                GenericDspNodeUi::new("TruePeakMeter", "ITU-R BS.1770 4x Oversampled True Peak Meter", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("peak_ceiling_dbfs", "True Peak Ceiling", -12.0, 0.0, -0.1, "dBTP", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_log("hold_time_ms", "Peak Hold Decay Time", 100.0, 10000.0, 2000.0, "ms", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("oversample_factor", "Oversampling Factor", 1.0, 8.0, 4.0, "x", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("clipping_alarm_count", "Consecutive Clip Alarm", 1.0, 10.0, 3.0, "samples", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("dbtp_display_mode", "True dBTP Mode", true, (16, 185, 129)))
+            ),
+            "AudioTagger" => Box::new(
+                GenericDspNodeUi::new("AudioTagger", "Deep Neural Audio Tagging & Timbre Classifier", DspNodeCategory::NeuralAi)
+                    .with_param(DspParamDescriptor::new_linear("classification_threshold", "Acceptance Confidence", 0.1, 0.99, 0.65, "prob", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("analysis_window_sec", "Analysis Window Length", 0.5, 10.0, 3.0, "s", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("top_k_candidates", "Top-K Candidates", 1.0, 10.0, 5.0, "tags", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("auto_categorize_asset", "Auto-Tag New Samples", true, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("realtime_inference", "Background Inference", false, (16, 185, 129)))
+            ),
+            "NeuralWavetableInterpolator" => Box::new(
+                GenericDspNodeUi::new("NeuralWavetableInterpolator", "Latent-Space Neural Wavetable Continuous Interpolator", DspNodeCategory::NeuralAi)
+                    .with_param(DspParamDescriptor::new_linear("latent_dim_x", "Latent Axis X (Bright)", -3.0, 3.0, 0.0, "z1", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("latent_dim_y", "Latent Axis Y (Contour)", -3.0, 3.0, 0.0, "z2", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("spectral_flatness_bias", "Spectral Flatness Bias", 0.0, 1.0, 0.3, "bias", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("decoder_temperature", "Decoder Temperature", 0.1, 2.0, 1.0, "temp", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("bandlimited_resynthesis", "Bandlimited Resynthesis", true, (16, 185, 129)))
+            ),
+            "KarplusStrongString" => Box::new(
+                GenericDspNodeUi::new("KarplusStrongString", "Karplus-Strong Waveguide Physical String Resonator", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_log("frequency_hz", "String Fundamental", 20.0, 4000.0, 220.0, "Hz", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("decay_damping", "Loop Sustain Decay", 0.01, 0.999, 0.985, "damp", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("pluck_position", "Pluck Point Ratio", 0.01, 0.99, 0.18, "pos", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("string_stiffness", "Inharmonic Stiffness", 0.0, 0.5, 0.05, "stiff", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("dual_polarization", "Dual Plane Polarization", true, (16, 185, 129)))
+            ),
+            "TonebarCoupling" => Box::new(
+                GenericDspNodeUi::new("TonebarCoupling", "Electric Piano Tonebar Mechanical Coupling & Dispersion", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("tonebar_mass_ratio", "Tonebar Mass Ratio", 1.0, 20.0, 8.5, "mass", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("coupling_stiffness", "Mounting Block Stiffness", 0.01, 1.0, 0.42, "k", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("sympathetic_bleed_db", "Sympathetic Bleed", -60.0, -6.0, -24.0, "dB", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_log("grommet_loss_factor", "Neoprene Grommet Loss", 0.01, 5.0, 0.25, "loss", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("phase_cancellation_sync", "Antipodal Phase Sync", true, (16, 185, 129)))
+            ),
+            "InductivePickup" => Box::new(
+                GenericDspNodeUi::new("InductivePickup", "Variable-Reluctance Electromagnetic Pickup Transducer", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("air_gap_mm", "Pole Piece Air Gap", 0.5, 10.0, 2.0, "mm", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("pole_curvature", "Field Gradient Curvature", 0.1, 2.0, 1.0, "curve", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_log("coil_inductance_henry", "Coil Inductance", 0.5, 10.0, 2.8, "H", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_log("cable_capacitance_pf", "Cable Capacitance", 50.0, 2000.0, 350.0, "pF", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("eddy_current_damping", "Eddy Current Softening", true, (16, 185, 129)))
+            ),
+            "HammerModel" => Box::new(
+                GenericDspNodeUi::new("HammerModel", "Nonlinear Strike Contact Dynamic Hammer Model", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_log("hammer_stiffness_p", "Hertzian Stiffness K", 10000.0, 1000000000.0, 5000000.0, "N/m^p", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("nonlinear_exponent_p", "Force Exponent P", 1.5, 4.0, 2.5, "exp", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("viscoelastic_hysteresis", "Viscoelastic Hysteresis", 0.0, 1.0, 0.35, "mu", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("hammer_mass_grams", "Striking Tip Mass", 0.5, 25.0, 3.2, "g", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("una_corda_felt_shift", "Soft Felt Shift", false, (16, 185, 129)))
+            ),
+            "ImageReflection" => Box::new(
+                GenericDspNodeUi::new("ImageReflection", "Shoebox Room Geometric Acoustic Image-Source Engine", DspNodeCategory::SpatialSurround)
+                    .with_param(DspParamDescriptor::new_linear("room_length_m", "Room Length", 2.0, 50.0, 10.0, "m", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("room_width_m", "Room Width", 2.0, 40.0, 7.5, "m", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("room_height_m", "Room Ceiling Height", 2.0, 20.0, 3.8, "m", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("wall_absorption_coeff", "Wall Absorption Alpha", 0.05, 0.95, 0.25, "alpha", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("specular_diffusion_mix", "Diffusion Blend", 0.0, 1.0, 0.30, "diff", (16, 185, 129)))
+            ),
+            "TapeChannelState" => Box::new(
+                GenericDspNodeUi::new("TapeChannelState", "Analog Magnetic Tape Flutter, Bias & Hysteresis Engine", DspNodeCategory::DistortionSaturation)
+                    .with_param(DspParamDescriptor::new_linear("tape_speed_ips", "Tape Speed IPS", 3.75, 30.0, 15.0, "ips", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("saturation_drive_db", "Tape Saturation Drive", -12.0, 24.0, 4.5, "dB", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_log("ac_bias_frequency_khz", "Ultrasonic AC Bias", 50.0, 250.0, 105.0, "kHz", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_log("head_bump_resonance_hz", "Head Bump Center", 30.0, 120.0, 55.0, "Hz", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("wow_flutter_depth", "Wow & Flutter Depth", 0.0, 1.0, 0.12, "depth", (16, 185, 129)))
+            ),
+            "TubeChannelState" => Box::new(
+                GenericDspNodeUi::new("TubeChannelState", "Triode/Pentode Vacuum Tube Harmonic Saturation Stage", DspNodeCategory::DistortionSaturation)
+                    .with_param(DspParamDescriptor::new_linear("tube_type_mode", "Tube Topology", 0.0, 2.0, 0.0, "type", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("plate_drive_db", "Grid Drive Gain", -18.0, 36.0, 12.0, "dB", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("cathode_bias_sag", "Dynamic Bias Sag", 0.0, 1.0, 0.45, "sag", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("even_odd_harmonic_balance", "Even/Odd Balance", -1.0, 1.0, 0.35, "bal", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("miller_effect_hpf", "Miller Capacitance Rolloff", true, (16, 185, 129)))
+            ),
+            "MpeRouter" => Box::new(
+                GenericDspNodeUi::new("MpeRouter", "Lock-Free MPE Voice Allocation & Expression Router", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("mpe_zone_mode", "MPE Zone Layout", 0.0, 2.0, 0.0, "zone", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("pitch_bend_range_st", "Per-Note Bend Range", 1.0, 96.0, 48.0, "st", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("pressure_curve_gamma", "Aftertouch Response Gamma", 0.2, 3.0, 1.0, "gamma", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("timbre_cc_number", "Slide CC Assignment", 1.0, 127.0, 74.0, "CC", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("voice_stealing_policy", "Voice Stealing Policy", 0.0, 2.0, 1.0, "policy", (16, 185, 129)))
+            ),
+            "MidiUartSerialDriver" => Box::new(
+                GenericDspNodeUi::new("MidiUartSerialDriver", "Hardware Serial DIN-5 MIDI UART Interface Driver", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("baud_rate_bps", "UART Baud Rate", 9600.0, 115200.0, 31250.0, "baud", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("dma_fifo_depth", "DMA FIFO Depth", 16.0, 512.0, 128.0, "bytes", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("running_status_opt", "MIDI Running Status", true, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("hardware_flow_control", "RTS/CTS Flow Control", false, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("tx_rx_loopback_test", "Self-Diagnostic Loopback", false, (16, 185, 129)))
+            ),
+            "EepromPresetStore" => Box::new(
+                GenericDspNodeUi::new("EepromPresetStore", "Hardware Appliance EEPROM Preset Storage Engine", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("active_bank_index", "EEPROM Bank Index", 0.0, 15.0, 0.0, "bank", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("active_preset_slot", "Preset Slot Index", 0.0, 127.0, 0.0, "slot", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("wear_level_cycles", "Wear Level Count", 0.0, 100000.0, 1240.0, "cycles", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("write_protect_locked", "Hardware Write Protect", false, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("crc32_checksum_verify", "CRC32 Integrity Check", true, (16, 185, 129)))
+            ),
+            "WebConfigDashboard" => Box::new(
+                GenericDspNodeUi::new("WebConfigDashboard", "Embedded Web Server Remote Configuration Dashboard", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("http_server_port", "HTTP Server Port", 1024.0, 65535.0, 8080.0, "port", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("websocket_telemetry_rate_hz", "Telemetry Stream Rate", 1.0, 60.0, 30.0, "Hz", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("max_ws_clients", "Max Connected Clients", 1.0, 16.0, 4.0, "clients", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("authentication_required", "Token Authentication", false, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("ssl_tls_encryption", "TLS/HTTPS Encryption", true, (16, 185, 129)))
+            ),
+            "WasapiDriver" => Box::new(
+                GenericDspNodeUi::new("WasapiDriver", "Windows WASAPI Exclusive Mode High-Precision Audio Driver", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("buffer_frame_size", "Hardware Buffer Size", 32.0, 1024.0, 128.0, "frames", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("sample_rate_khz", "Master Clock Rate", 44.1, 192.0, 48.0, "kHz", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("event_driven_mode", "MMCSS Event Driven", true, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("bit_depth_format", "Audio Stream Bit Depth", 16.0, 32.0, 32.0, "bits", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("exclusive_lock", "Exclusive Mode Lock", true, (16, 185, 129)))
+            ),
+            "StereoPanner" => Box::new(
+                GenericDspNodeUi::new("StereoPanner", "Equal-Power Stereo Coordinate Panner & Balance Trimmer", DspNodeCategory::SpatialSurround)
+                    .with_param(DspParamDescriptor::new_linear("pan_position", "Pan Coordinate", -1.0, 1.0, 0.0, "pan", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("stereo_width", "Stereo Image Width", 0.0, 2.0, 1.0, "width", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("center_attenuation_db", "Center Attenuation", -6.0, 0.0, -3.0, "dB", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("balance_trim_db", "Fine Balance Trim", -12.0, 12.0, 0.0, "dB", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("phase_invert_right", "Invert Right Polarity", false, (16, 185, 129)))
+            ),
             // Fallback dynamic generator for any unexpected or plugin node
             other => {
                 let cat = Self::inventory()
@@ -9162,10 +9525,10 @@ mod tests {
     #[test]
     fn test_dsp_node_registry_inventory_completeness() {
         let registry = DspNodeRegistry::new();
-        assert!(registry.list_all().len() >= 505, "Registry should contain >= 505 descriptors, found {}", registry.list_all().len());
+        assert!(registry.list_all().len() >= 525, "Registry should contain >= 525 descriptors, found {}", registry.list_all().len());
 
         let inventory = DspNodeRegistry::inventory();
-        assert!(inventory.len() >= 505, "Inventory should contain >= 505 entries, found {}", inventory.len());
+        assert!(inventory.len() >= 525, "Inventory should contain >= 525 entries, found {}", inventory.len());
 
         // Verify newly registered unmapped nodes exist
         assert!(registry.get("TruePeakLimiter").is_some());
@@ -9307,6 +9670,26 @@ mod tests {
         assert!(registry.get("BootToSynthEngine").is_some());
         assert!(registry.get("MidiUsbGadgetMode").is_some());
         assert!(registry.get("MultiBusEventRouter").is_some());
+        assert!(registry.get("SampleEditor").is_some());
+        assert!(registry.get("SpatialObjectAutomation").is_some());
+        assert!(registry.get("Vst3WindowEmbedder").is_some());
+        assert!(registry.get("ParameterAutomapper").is_some());
+        assert!(registry.get("TruePeakMeter").is_some());
+        assert!(registry.get("AudioTagger").is_some());
+        assert!(registry.get("NeuralWavetableInterpolator").is_some());
+        assert!(registry.get("KarplusStrongString").is_some());
+        assert!(registry.get("TonebarCoupling").is_some());
+        assert!(registry.get("InductivePickup").is_some());
+        assert!(registry.get("HammerModel").is_some());
+        assert!(registry.get("ImageReflection").is_some());
+        assert!(registry.get("TapeChannelState").is_some());
+        assert!(registry.get("TubeChannelState").is_some());
+        assert!(registry.get("MpeRouter").is_some());
+        assert!(registry.get("MidiUartSerialDriver").is_some());
+        assert!(registry.get("EepromPresetStore").is_some());
+        assert!(registry.get("WebConfigDashboard").is_some());
+        assert!(registry.get("WasapiDriver").is_some());
+        assert!(registry.get("StereoPanner").is_some());
     }
 
     #[test]

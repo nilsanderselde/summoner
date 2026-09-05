@@ -133,6 +133,10 @@ fn default_available_presets() -> Vec<String> {
         "Hurdy Gurdy Chien Drone".to_string(),
         "Vocal Tract Formant Shaper".to_string(),
         "Electric Piano Tine Saturation".to_string(),
+        "Karplus Plucked Nylon Resonator".to_string(),
+        "Analog Reel-to-Reel Tape Saturation".to_string(),
+        "Shoebox Early Acoustic Reflections".to_string(),
+        "MPE Polyphonic Gesture Router".to_string(),
     ]
 }
 

@@ -2535,5 +2535,238 @@ mod tests {
             assert_eq!(view.inspector_state.selected_node_kind, Some("EpBus".to_string()));
         }
     }
+
+    #[test]
+    fn test_tier92_dsp_registry_525_plus_and_hardware_ecosystem_expansion() {
+        use crate::dsp_node_ui::DspNodeRegistry;
+        use crate::views::modern_asset_browser::BrowserCategory;
+
+        let inv = DspNodeRegistry::inventory();
+        assert!(inv.len() >= 525, "Expected inventory count >= 525, got {}", inv.len());
+
+        let registry = DspNodeRegistry::new();
+        assert!(registry.list_all().len() >= 525, "Expected descriptor count >= 525, got {}", registry.list_all().len());
+
+        let new_tier92_nodes = [
+            "SampleEditor",
+            "SpatialObjectAutomation",
+            "Vst3WindowEmbedder",
+            "ParameterAutomapper",
+            "TruePeakMeter",
+            "AudioTagger",
+            "NeuralWavetableInterpolator",
+            "KarplusStrongString",
+            "TonebarCoupling",
+            "InductivePickup",
+            "HammerModel",
+            "ImageReflection",
+            "TapeChannelState",
+            "TubeChannelState",
+            "MpeRouter",
+            "MidiUartSerialDriver",
+            "EepromPresetStore",
+            "WebConfigDashboard",
+            "WasapiDriver",
+            "StereoPanner",
+        ];
+
+        for name in &new_tier92_nodes {
+            assert!(registry.get(name).is_some(), "Module {} must be in DspNodeRegistry", name);
+            assert!(inv.iter().any(|(n, _, _)| n == name), "Module {} must be in inventory", name);
+
+            let ui_node = DspNodeRegistry::create_node_ui(name);
+            assert!(ui_node.is_some(), "create_node_ui must succeed for {}", name);
+            let ui_node = ui_node.unwrap();
+            assert!(!ui_node.parameters().is_empty(), "Module {} must have parameters exposed", name);
+        }
+
+        // 1. Verify specific parameter presence
+        let sample_editor = registry.get("SampleEditor").unwrap();
+        assert!(sample_editor.params.iter().any(|p| p.id == "loop_start_sec"));
+        assert!(sample_editor.params.iter().any(|p| p.id == "snap_to_zero"));
+
+        let spatial_auto = registry.get("SpatialObjectAutomation").unwrap();
+        assert!(spatial_auto.params.iter().any(|p| p.id == "azimuth_deg"));
+        assert!(spatial_auto.params.iter().any(|p| p.id == "orbit_speed_hz"));
+
+        let vst_embed = registry.get("Vst3WindowEmbedder").unwrap();
+        assert!(vst_embed.params.iter().any(|p| p.id == "embed_scale_factor"));
+        assert!(vst_embed.params.iter().any(|p| p.id == "gpu_compositing"));
+
+        let automapper = registry.get("ParameterAutomapper").unwrap();
+        assert!(automapper.params.iter().any(|p| p.id == "mapping_confidence"));
+        assert!(automapper.params.iter().any(|p| p.id == "macro_slot_count"));
+
+        let true_peak = registry.get("TruePeakMeter").unwrap();
+        assert!(true_peak.params.iter().any(|p| p.id == "peak_ceiling_dbfs"));
+        assert!(true_peak.params.iter().any(|p| p.id == "oversample_factor"));
+
+        let audio_tagger = registry.get("AudioTagger").unwrap();
+        assert!(audio_tagger.params.iter().any(|p| p.id == "classification_threshold"));
+        assert!(audio_tagger.params.iter().any(|p| p.id == "top_k_candidates"));
+
+        let wt_interp = registry.get("NeuralWavetableInterpolator").unwrap();
+        assert!(wt_interp.params.iter().any(|p| p.id == "latent_dim_x"));
+        assert!(wt_interp.params.iter().any(|p| p.id == "bandlimited_resynthesis"));
+
+        let karplus = registry.get("KarplusStrongString").unwrap();
+        assert!(karplus.params.iter().any(|p| p.id == "frequency_hz"));
+        assert!(karplus.params.iter().any(|p| p.id == "decay_damping"));
+
+        let tonebar = registry.get("TonebarCoupling").unwrap();
+        assert!(tonebar.params.iter().any(|p| p.id == "tonebar_mass_ratio"));
+        assert!(tonebar.params.iter().any(|p| p.id == "coupling_stiffness"));
+
+        let pickup = registry.get("InductivePickup").unwrap();
+        assert!(pickup.params.iter().any(|p| p.id == "air_gap_mm"));
+        assert!(pickup.params.iter().any(|p| p.id == "coil_inductance_henry"));
+
+        let hammer = registry.get("HammerModel").unwrap();
+        assert!(hammer.params.iter().any(|p| p.id == "hammer_stiffness_p"));
+        assert!(hammer.params.iter().any(|p| p.id == "nonlinear_exponent_p"));
+
+        let room_refl = registry.get("ImageReflection").unwrap();
+        assert!(room_refl.params.iter().any(|p| p.id == "room_length_m"));
+        assert!(room_refl.params.iter().any(|p| p.id == "wall_absorption_coeff"));
+
+        let tape = registry.get("TapeChannelState").unwrap();
+        assert!(tape.params.iter().any(|p| p.id == "tape_speed_ips"));
+        assert!(tape.params.iter().any(|p| p.id == "saturation_drive_db"));
+
+        let tube = registry.get("TubeChannelState").unwrap();
+        assert!(tube.params.iter().any(|p| p.id == "tube_type_mode"));
+        assert!(tube.params.iter().any(|p| p.id == "plate_drive_db"));
+
+        let mpe = registry.get("MpeRouter").unwrap();
+        assert!(mpe.params.iter().any(|p| p.id == "mpe_zone_mode"));
+        assert!(mpe.params.iter().any(|p| p.id == "pitch_bend_range_st"));
+
+        let uart = registry.get("MidiUartSerialDriver").unwrap();
+        assert!(uart.params.iter().any(|p| p.id == "baud_rate_bps"));
+        assert!(uart.params.iter().any(|p| p.id == "running_status_opt"));
+
+        let eeprom = registry.get("EepromPresetStore").unwrap();
+        assert!(eeprom.params.iter().any(|p| p.id == "active_bank_index"));
+        assert!(eeprom.params.iter().any(|p| p.id == "crc32_checksum_verify"));
+
+        let web_cfg = registry.get("WebConfigDashboard").unwrap();
+        assert!(web_cfg.params.iter().any(|p| p.id == "http_server_port"));
+        assert!(web_cfg.params.iter().any(|p| p.id == "websocket_telemetry_rate_hz"));
+
+        let wasapi = registry.get("WasapiDriver").unwrap();
+        assert!(wasapi.params.iter().any(|p| p.id == "buffer_frame_size"));
+        assert!(wasapi.params.iter().any(|p| p.id == "exclusive_lock"));
+
+        let panner = registry.get("StereoPanner").unwrap();
+        assert!(panner.params.iter().any(|p| p.id == "pan_position"));
+        assert!(panner.params.iter().any(|p| p.id == "stereo_width"));
+
+        // 2. Verify alias normalization
+        assert_eq!(DspNodeRegistry::normalize_type_name("sampleeditor"), Some("SampleEditor"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("spatialobjectautomation"), Some("SpatialObjectAutomation"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("vst3windowembedder"), Some("Vst3WindowEmbedder"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("parameterautomapper"), Some("ParameterAutomapper"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("truepeakmeter"), Some("TruePeakMeter"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("audiotagger"), Some("AudioTagger"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("latentwavetable"), Some("NeuralWavetableInterpolator"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("karplusstrong"), Some("KarplusStrongString"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("tonebarcoupling"), Some("TonebarCoupling"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("inductivepickup"), Some("InductivePickup"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("hammermodel"), Some("HammerModel"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("imagereflection"), Some("ImageReflection"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("tapechannelstate"), Some("TapeChannelState"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("tubechannelstate"), Some("TubeChannelState"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("mperouter"), Some("MpeRouter"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("midiuartserialdriver"), Some("MidiUartSerialDriver"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("eeprompresetstore"), Some("EepromPresetStore"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("webconfigdashboard"), Some("WebConfigDashboard"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("wasapidriver"), Some("WasapiDriver"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("stereopanner"), Some("StereoPanner"));
+
+        // 3. Verify Asset Browser categorization
+        let inst_folders = BrowserCategory::Instruments.default_folders();
+        let phys_items = inst_folders.iter().find(|(name, _)| *name == "Physical Models").unwrap().1;
+        assert!(phys_items.contains(&"KarplusStrongString"));
+        assert!(phys_items.contains(&"TonebarCoupling"));
+        assert!(phys_items.contains(&"InductivePickup"));
+        assert!(phys_items.contains(&"HammerModel"));
+
+        let synth_items = inst_folders.iter().find(|(name, _)| *name == "Synthesizers").unwrap().1;
+        assert!(synth_items.contains(&"NeuralWavetableInterpolator"));
+
+        let sampler_items = inst_folders.iter().find(|(name, _)| *name == "Samplers & Slicers").unwrap().1;
+        assert!(sampler_items.contains(&"SampleEditor"));
+
+        let fx_folders = BrowserCategory::AudioFx.default_folders();
+        let dyn_items = fx_folders.iter().find(|(name, _)| *name == "Dynamics & Level").unwrap().1;
+        assert!(dyn_items.contains(&"TruePeakMeter"));
+        assert!(dyn_items.contains(&"TapeChannelState"));
+        assert!(dyn_items.contains(&"TubeChannelState"));
+
+        let time_items = fx_folders.iter().find(|(name, _)| *name == "Time & Reverb").unwrap().1;
+        assert!(time_items.contains(&"SpatialObjectAutomation"));
+        assert!(time_items.contains(&"ImageReflection"));
+        assert!(time_items.contains(&"StereoPanner"));
+
+        let midi_folders = BrowserCategory::MidiFx.default_folders();
+        let gen_items = midi_folders.iter().find(|(name, _)| *name == "Generative & Sync").unwrap().1;
+        assert!(gen_items.contains(&"AudioTagger"));
+
+        let routing_items = midi_folders.iter().find(|(name, _)| *name == "Transforms & Routing").unwrap().1;
+        assert!(routing_items.contains(&"ParameterAutomapper"));
+        assert!(routing_items.contains(&"MpeRouter"));
+        assert!(routing_items.contains(&"Vst3WindowEmbedder"));
+        assert!(routing_items.contains(&"MidiUartSerialDriver"));
+        assert!(routing_items.contains(&"EepromPresetStore"));
+        assert!(routing_items.contains(&"WebConfigDashboard"));
+        assert!(routing_items.contains(&"WasapiDriver"));
+
+        // 4. Verify Novice Presets synchronize in AwardWinningGuiView
+        #[cfg(feature = "gui")]
+        {
+            let mut view = crate::views::award_winning_gui_view::AwardWinningGuiView::default();
+            let ctx = eframe::egui::Context::default();
+
+            // Preset: Karplus Plucked Nylon Resonator -> KarplusStrongString
+            view.top_bar_state.selected_preset = "Karplus Plucked Nylon Resonator".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("KarplusStrongString".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("KarplusStrongString".to_string()));
+
+            // Preset: Analog Reel-to-Reel Tape Saturation -> TapeChannelState
+            view.top_bar_state.selected_preset = "Analog Reel-to-Reel Tape Saturation".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("TapeChannelState".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("TapeChannelState".to_string()));
+
+            // Preset: Shoebox Early Acoustic Reflections -> ImageReflection
+            view.top_bar_state.selected_preset = "Shoebox Early Acoustic Reflections".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("ImageReflection".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("ImageReflection".to_string()));
+
+            // Preset: MPE Polyphonic Gesture Router -> MpeRouter
+            view.top_bar_state.selected_preset = "MPE Polyphonic Gesture Router".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("MpeRouter".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("MpeRouter".to_string()));
+        }
+    }
 }
 

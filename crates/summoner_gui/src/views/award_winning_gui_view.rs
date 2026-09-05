@@ -368,6 +368,10 @@ impl AwardWinningGuiView {
                 "Hurdy Gurdy Chien Drone" => "HurdyGurdyBus",
                 "Vocal Tract Formant Shaper" => "FormantBus",
                 "Electric Piano Tine Saturation" => "EpBus",
+                "Karplus Plucked Nylon Resonator" => "KarplusStrongString",
+                "Analog Reel-to-Reel Tape Saturation" => "TapeChannelState",
+                "Shoebox Early Acoustic Reflections" => "ImageReflection",
+                "MPE Polyphonic Gesture Router" => "MpeRouter",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {
