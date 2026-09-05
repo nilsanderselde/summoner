@@ -145,6 +145,10 @@ fn default_available_presets() -> Vec<String> {
         "Tuned Orchestral Timpani Membrane".to_string(),
         "Vintage 91-Wheel Jazz Tonewheel Organ".to_string(),
         "Master Brickwall True-Peak Limiter".to_string(),
+        "Concert Grand Imperial Steinway".to_string(),
+        "Stevie 70s Clavinet Wah Funk".to_string(),
+        "Plate Tank Mechanical Reverb".to_string(),
+        "Zen Bamboo Flute Breath".to_string(),
     ]
 }
 

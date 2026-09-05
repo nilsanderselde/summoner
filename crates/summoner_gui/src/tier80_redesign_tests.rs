@@ -358,10 +358,10 @@ mod tests {
         assert_eq!(mod_matrix.category, crate::dsp_node_ui::DspNodeCategory::Modulation);
 
         // 9. Standard *Node aliases normalization
-        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pipeorgannode"), Some("PipeOrgan"));
-        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sitarnode"), Some("Sitar"));
-        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("tonewheelorgannode"), Some("TonewheelOrgan"));
-        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("rotaryspeakernode"), Some("RotarySpeaker"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pipeorgannode"), Some("PipeOrganNode"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sitarnode"), Some("SitarNode"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("tonewheelorgannode"), Some("TonewheelOrganNode"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("rotaryspeakernode"), Some("RotarySpeakerNode"));
 
         // 10. Test dynamic modular node creation from newly registered descriptors
         let mut view = AwardWinningGuiView::new();
@@ -1323,7 +1323,7 @@ mod tests {
         assert!(inv.iter().any(|(name, _, _)| *name == "SitarSoundboxBody"));
         assert!(inv.iter().any(|(name, _, _)| *name == "BridgeWaveCoupler"));
 
-        assert_eq!(DspNodeRegistry::normalize_type_name("percussionmembranenode"), Some("PercussionMembrane"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("percussionmembranenode"), Some("PercussionMembraneNode"));
         assert_eq!(DspNodeRegistry::normalize_type_name("struckidiophoneresonator"), Some("StruckIdiophoneResonator"));
         assert_eq!(DspNodeRegistry::normalize_type_name("hurdygurdysoundboxbody"), Some("HurdyGurdySoundboxBody"));
         assert_eq!(DspNodeRegistry::normalize_type_name("sitarsoundboxbody"), Some("SitarSoundboxBody"));
@@ -2009,7 +2009,7 @@ mod tests {
         assert_eq!(DspNodeRegistry::normalize_type_name("spectrogrammorpher"), Some("SpectrogramArtMorpher"));
         assert_eq!(DspNodeRegistry::normalize_type_name("audioreverse"), Some("AudioReverse"));
         assert_eq!(DspNodeRegistry::normalize_type_name("glitchgate"), Some("GlitchGate"));
-        assert_eq!(DspNodeRegistry::normalize_type_name("samplernode"), Some("SamplerDevice"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("samplernode"), Some("SamplerNode"));
 
         // Test modern asset browser integration
         let inst_folders = BrowserCategory::Instruments.default_folders();
@@ -3251,6 +3251,289 @@ mod tests {
             });
             assert_eq!(view.device_rack_state.selected_node_kind, Some("MasterLimiter".to_string()));
             assert_eq!(view.inspector_state.selected_node_kind, Some("MasterLimiter".to_string()));
+        }
+    }
+
+    #[test]
+    fn test_step_1294_tier94_dsp_modules_expansion_coverage() {
+        use crate::dsp_node_ui::DspNodeRegistry;
+        use crate::views::modern_asset_browser::BrowserCategory;
+
+        let registry = DspNodeRegistry::new();
+        assert!(registry.list_all().len() >= 585, "Expected >= 585 descriptors, got {}", registry.list_all().len());
+
+        let inv = DspNodeRegistry::inventory();
+        assert!(inv.len() >= 585, "Expected >= 585 inventory items, got {}", inv.len());
+
+        let tier94_dsp_modules = [
+            "BowedString",
+            "Clavinet",
+            "ElectricPiano",
+            "FreeReed",
+            "GlottalPulse",
+            "ConcertGrandPiano",
+            "PlateTank",
+            "Shakuhachi",
+            "SitarNode",
+            "SpringLattice",
+            "VocalTract",
+            "StereoWidth",
+            "MemoryEstimator",
+            "LFO",
+            "MacroKnob",
+            "Butterworth2ndOrder",
+            "ModalFilterSection",
+            "DispersionAllpass",
+            "SoundboardMode",
+            "ConsoleChannelState",
+            "ConsoleBiquad",
+        ];
+
+        // 1. Verify existence, descriptor param count (>= 5), and UI instantiation
+        for name in &tier94_dsp_modules {
+            let desc = registry.get(name);
+            assert!(desc.is_some(), "Module {} must exist in DspNodeRegistry", name);
+            let desc = desc.unwrap();
+            assert!(desc.params.len() >= 5, "Module {} must have at least 5 schema parameters, found {}", name, desc.params.len());
+
+            let ui_node = DspNodeRegistry::create_node_ui(name);
+            assert!(ui_node.is_some(), "create_node_ui must succeed for {}", name);
+            let ui_node = ui_node.unwrap();
+            assert!(ui_node.parameters().len() >= 5, "Module {} must have at least 5 parameters exposed in UI, found {}", name, ui_node.parameters().len());
+        }
+
+        // 2. Verify key parameter IDs on all 21 modules
+        let bowed = registry.get("BowedString").unwrap();
+        assert!(bowed.params.iter().any(|p| p.id == "bow_velocity"));
+        assert!(bowed.params.iter().any(|p| p.id == "bow_force"));
+        assert!(bowed.params.iter().any(|p| p.id == "string_damping"));
+
+        let clav = registry.get("Clavinet").unwrap();
+        assert!(clav.params.iter().any(|p| p.id == "anvil_hardness"));
+        assert!(clav.params.iter().any(|p| p.id == "yarn_damping"));
+        assert!(clav.params.iter().any(|p| p.id == "pickup_mode"));
+
+        let ep = registry.get("ElectricPiano").unwrap();
+        assert!(ep.params.iter().any(|p| p.id == "hammer_hardness"));
+        assert!(ep.params.iter().any(|p| p.id == "air_gap_mm"));
+        assert!(ep.params.iter().any(|p| p.id == "bark_drive"));
+
+        let freereed = registry.get("FreeReed").unwrap();
+        assert!(freereed.params.iter().any(|p| p.id == "bellows_pressure_pa"));
+        assert!(freereed.params.iter().any(|p| p.id == "reed_stiffness"));
+        assert!(freereed.params.iter().any(|p| p.id == "cassotto_aperture"));
+
+        let glottal = registry.get("GlottalPulse").unwrap();
+        assert!(glottal.params.iter().any(|p| p.id == "open_quotient"));
+        assert!(glottal.params.iter().any(|p| p.id == "speed_quotient"));
+        assert!(glottal.params.iter().any(|p| p.id == "aspiration_level"));
+
+        let grand = registry.get("ConcertGrandPiano").unwrap();
+        assert!(grand.params.iter().any(|p| p.id == "sustain_pedal"));
+        assert!(grand.params.iter().any(|p| p.id == "una_corda_pedal"));
+        assert!(grand.params.iter().any(|p| p.id == "unison_detune_cents"));
+
+        let plate = registry.get("PlateTank").unwrap();
+        assert!(plate.params.iter().any(|p| p.id == "decay_t60_sec"));
+        assert!(plate.params.iter().any(|p| p.id == "dispersion_factor"));
+        assert!(plate.params.iter().any(|p| p.id == "driver_saturation"));
+
+        let shakuhachi = registry.get("Shakuhachi").unwrap();
+        assert!(shakuhachi.params.iter().any(|p| p.id == "blowing_pressure_pa"));
+        assert!(shakuhachi.params.iter().any(|p| p.id == "meri_kari_cents"));
+        assert!(shakuhachi.params.iter().any(|p| p.id == "murai_iki_intensity"));
+
+        let sitar = registry.get("SitarNode").unwrap();
+        assert!(sitar.params.iter().any(|p| p.id == "meend_semitones"));
+        assert!(sitar.params.iter().any(|p| p.id == "root_freq_hz"));
+        assert!(sitar.params.iter().any(|p| p.id == "body_resonance_gain"));
+
+        let spring = registry.get("SpringLattice").unwrap();
+        assert!(spring.params.iter().any(|p| p.id == "fundamental_hz"));
+        assert!(spring.params.iter().any(|p| p.id == "duffing_nonlinearity"));
+        assert!(spring.params.iter().any(|p| p.id == "drive_force"));
+
+        let vocal = registry.get("VocalTract").unwrap();
+        assert!(vocal.params.iter().any(|p| p.id == "tongue_position"));
+        assert!(vocal.params.iter().any(|p| p.id == "tongue_height"));
+        assert!(vocal.params.iter().any(|p| p.id == "velum_opening"));
+
+        let width = registry.get("StereoWidth").unwrap();
+        assert!(width.params.iter().any(|p| p.id == "width"));
+        assert!(width.params.iter().any(|p| p.id == "side_hpf_hz"));
+        assert!(width.params.iter().any(|p| p.id == "mono_correlation_threshold"));
+
+        let mem = registry.get("MemoryEstimator").unwrap();
+        assert!(mem.params.iter().any(|p| p.id == "max_heap_budget_mb"));
+        assert!(mem.params.iter().any(|p| p.id == "audio_buffer_reserve_mb"));
+        assert!(mem.params.iter().any(|p| p.id == "enforce_zero_allocation"));
+
+        let lfo = registry.get("LFO").unwrap();
+        assert!(lfo.params.iter().any(|p| p.id == "frequency"));
+        assert!(lfo.params.iter().any(|p| p.id == "shape"));
+        assert!(lfo.params.iter().any(|p| p.id == "depth"));
+
+        let macro_k = registry.get("MacroKnob").unwrap();
+        assert!(macro_k.params.iter().any(|p| p.id == "value"));
+        assert!(macro_k.params.iter().any(|p| p.id == "smoothing_ms"));
+        assert!(macro_k.params.iter().any(|p| p.id == "curve_exponent"));
+
+        let butter = registry.get("Butterworth2ndOrder").unwrap();
+        assert!(butter.params.iter().any(|p| p.id == "filter_type"));
+        assert!(butter.params.iter().any(|p| p.id == "cutoff_frequency_hz"));
+        assert!(butter.params.iter().any(|p| p.id == "q_resonance"));
+
+        let modal = registry.get("ModalFilterSection").unwrap();
+        assert!(modal.params.iter().any(|p| p.id == "freq_hz"));
+        assert!(modal.params.iter().any(|p| p.id == "t60_sec"));
+        assert!(modal.params.iter().any(|p| p.id == "damping_scale"));
+
+        let disp = registry.get("DispersionAllpass").unwrap();
+        assert!(disp.params.iter().any(|p| p.id == "coefficient"));
+        assert!(disp.params.iter().any(|p| p.id == "frequency_warp_hz"));
+        assert!(disp.params.iter().any(|p| p.id == "inharmonicity_b"));
+
+        let soundboard = registry.get("SoundboardMode").unwrap();
+        assert!(soundboard.params.iter().any(|p| p.id == "freq_hz"));
+        assert!(soundboard.params.iter().any(|p| p.id == "q"));
+        assert!(soundboard.params.iter().any(|p| p.id == "damping_decay_ms"));
+
+        let console = registry.get("ConsoleChannelState").unwrap();
+        assert!(console.params.iter().any(|p| p.id == "drive_gain"));
+        assert!(console.params.iter().any(|p| p.id == "iron_flux"));
+        assert!(console.params.iter().any(|p| p.id == "crosstalk_bleed"));
+
+        let biquad = registry.get("ConsoleBiquad").unwrap();
+        assert!(biquad.params.iter().any(|p| p.id == "freq_hz"));
+        assert!(biquad.params.iter().any(|p| p.id == "gain_db"));
+        assert!(biquad.params.iter().any(|p| p.id == "analog_warmth"));
+
+        // 3. Verify alias normalization
+        assert_eq!(DspNodeRegistry::normalize_type_name("bowedstring"), Some("BowedString"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("bowedacousticstring"), Some("BowedString"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("clavinet"), Some("Clavinet"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("clavinetd6"), Some("Clavinet"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("electricpiano"), Some("ElectricPiano"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("rhodespiano"), Some("ElectricPiano"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("freereed"), Some("FreeReed"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("accordionfreereed"), Some("FreeReed"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("glottalpulse"), Some("GlottalPulse"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("vocalglottalflow"), Some("GlottalPulse"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("concertgrandpiano"), Some("ConcertGrandPiano"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("acousticgrandpiano"), Some("ConcertGrandPiano"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("platetank"), Some("PlateTank"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("steelplatereverb"), Some("PlateTank"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("japanesebambooflute"), Some("Shakuhachi"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("bambooflute"), Some("Shakuhachi"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("sitarnode"), Some("SitarNode"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("classicalsitarnode"), Some("SitarNode"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("springlattice"), Some("SpringLattice"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("springmassreverb"), Some("SpringLattice"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("vocaltractphysical"), Some("VocalTract"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("acousticvocaltract"), Some("VocalTract"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("stereowidth"), Some("StereoWidth"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("midsidestereowidth"), Some("StereoWidth"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("memoryestimator"), Some("MemoryEstimator"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("hardwarememorybudget"), Some("MemoryEstimator"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("lfo"), Some("LFO"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("lowfrequencyoscillator"), Some("LFO"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("macroknob"), Some("MacroKnob"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("performancemacroknob"), Some("MacroKnob"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("butterworth2ndorder"), Some("Butterworth2ndOrder"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("butterworthfilter2ndorder"), Some("Butterworth2ndOrder"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("modalfiltersection"), Some("ModalFilterSection"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("narrowbandmodalfilter"), Some("ModalFilterSection"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("dispersionallpass"), Some("DispersionAllpass"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("inharmonicdispersionallpass"), Some("DispersionAllpass"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("soundboardmode"), Some("SoundboardMode"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("woodensoundboardmode"), Some("SoundboardMode"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("consolechannelstate"), Some("ConsoleChannelState"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("analogconsolechannel"), Some("ConsoleChannelState"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("consolebiquad"), Some("ConsoleBiquad"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("analogconsolebiquad"), Some("ConsoleBiquad"));
+
+        // 4. Verify Asset Browser categorization
+        let inst_folders = BrowserCategory::Instruments.default_folders();
+        let phys_items = inst_folders.iter().find(|(name, _)| *name == "Physical Models").unwrap().1;
+        assert!(phys_items.contains(&"BowedString"));
+        assert!(phys_items.contains(&"Clavinet"));
+        assert!(phys_items.contains(&"ElectricPiano"));
+        assert!(phys_items.contains(&"FreeReed"));
+        assert!(phys_items.contains(&"GlottalPulse"));
+        assert!(phys_items.contains(&"ConcertGrandPiano"));
+        assert!(phys_items.contains(&"Shakuhachi"));
+        assert!(phys_items.contains(&"SitarNode"));
+        assert!(phys_items.contains(&"VocalTract"));
+        assert!(phys_items.contains(&"SoundboardMode"));
+
+        let fx_folders = BrowserCategory::AudioFx.default_folders();
+        let dyn_items = fx_folders.iter().find(|(name, _)| *name == "Dynamics & Level").unwrap().1;
+        assert!(dyn_items.contains(&"ConsoleChannelState"));
+
+        let time_items = fx_folders.iter().find(|(name, _)| *name == "Time & Reverb").unwrap().1;
+        assert!(time_items.contains(&"PlateTank"));
+        assert!(time_items.contains(&"SpringLattice"));
+
+        let filter_items = fx_folders.iter().find(|(name, _)| *name == "Filters & EQ").unwrap().1;
+        assert!(filter_items.contains(&"Butterworth2ndOrder"));
+        assert!(filter_items.contains(&"ModalFilterSection"));
+        assert!(filter_items.contains(&"DispersionAllpass"));
+        assert!(filter_items.contains(&"ConsoleBiquad"));
+
+        let mod_items = fx_folders.iter().find(|(name, _)| *name == "Modulation & Pitch").unwrap().1;
+        assert!(mod_items.contains(&"LFO"));
+        assert!(mod_items.contains(&"MacroKnob"));
+
+        let midi_folders = BrowserCategory::MidiFx.default_folders();
+        let routing_items = midi_folders.iter().find(|(name, _)| *name == "Transforms & Routing").unwrap().1;
+        assert!(routing_items.contains(&"StereoWidth"));
+        assert!(routing_items.contains(&"MemoryEstimator"));
+
+        // 5. Verify Novice Presets synchronize in AwardWinningGuiView
+        #[cfg(feature = "gui")]
+        {
+            let mut view = crate::views::award_winning_gui_view::AwardWinningGuiView::default();
+            let ctx = eframe::egui::Context::default();
+
+            // Preset: Concert Grand Imperial Steinway -> ConcertGrandPiano
+            view.top_bar_state.selected_preset = "Concert Grand Imperial Steinway".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("ConcertGrandPiano".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("ConcertGrandPiano".to_string()));
+
+            // Preset: Stevie 70s Clavinet Wah Funk -> Clavinet
+            view.top_bar_state.selected_preset = "Stevie 70s Clavinet Wah Funk".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("Clavinet".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("Clavinet".to_string()));
+
+            // Preset: Plate Tank Mechanical Reverb -> PlateTank
+            view.top_bar_state.selected_preset = "Plate Tank Mechanical Reverb".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("PlateTank".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("PlateTank".to_string()));
+
+            // Preset: Zen Bamboo Flute Breath -> Shakuhachi
+            view.top_bar_state.selected_preset = "Zen Bamboo Flute Breath".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("Shakuhachi".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("Shakuhachi".to_string()));
         }
     }
 }
