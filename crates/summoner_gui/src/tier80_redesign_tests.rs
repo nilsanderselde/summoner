@@ -5464,7 +5464,7 @@ mod tests {
 
         // 1. Verify 820 total DSP modules registered
         let total_modules = DspNodeRegistry::inventory();
-        assert_eq!(total_modules.len(), 820, "Must have exactly 820 registered DSP modules");
+        assert!(total_modules.len() >= 820, "Must have at least 820 registered DSP modules");
 
         // 2. Verify all 21 Tier 105 modules have proper schemas and >= 5 parameters
         let new_modules = [
@@ -5646,6 +5646,157 @@ mod tests {
             });
             assert_eq!(view.device_rack_state.selected_node_kind, Some("GrandPianoWaypoint".to_string()));
             assert_eq!(view.inspector_state.selected_node_kind, Some("GrandPianoWaypoint".to_string()));
+        }
+    }
+
+    #[test]
+    fn test_tier106_modern_gui_dsp_module_coverage_and_presets() {
+        use crate::dsp_node_ui::{DspNodeRegistry, DspNodeCategory};
+        use crate::views::modern_asset_browser::BrowserCategory;
+
+        let registry = DspNodeRegistry::new();
+
+        // 1. Verify 841 total DSP modules registered
+        let total_modules = DspNodeRegistry::inventory();
+        assert_eq!(total_modules.len(), 841, "Must have exactly 841 registered DSP modules");
+
+        // 2. Verify all 21 Tier 106 modules have proper schemas and >= 5 parameters
+        let new_modules = [
+            ("NodeGraph", DspNodeCategory::Utility),
+            ("Track", DspNodeCategory::Utility),
+            ("Transport", DspNodeCategory::Utility),
+            ("VoicePool", DspNodeCategory::CompositeSynth),
+            ("WavWriter", DspNodeCategory::Utility),
+            ("ParamBus", DspNodeCategory::Modulation),
+            ("FixedAudioBuffer", DspNodeCategory::Utility),
+            ("MultichannelAudioBuffer", DspNodeCategory::SpatialSurround),
+            ("SequenceTrack", DspNodeCategory::Modulation),
+            ("SequenceEvent", DspNodeCategory::Modulation),
+            ("StemMetadata", DspNodeCategory::Utility),
+            ("SpectrogramArtConfig", DspNodeCategory::SpectralResynthesis),
+            ("SpectrogramImage", DspNodeCategory::SpectralResynthesis),
+            ("ImageNoteTrigger", DspNodeCategory::SpectralResynthesis),
+            ("SpectralMorphConfig", DspNodeCategory::SpectralResynthesis),
+            ("LatticePointMass", DspNodeCategory::AcousticPhysicalModel),
+            ("NamModel", DspNodeCategory::DistortionSaturation),
+            ("OnnxCpuSimdExecutionProvider", DspNodeCategory::Utility),
+            ("DrumStepEvent", DspNodeCategory::Modulation),
+            ("MixSuggestions", DspNodeCategory::Utility),
+            ("TranscribedNote", DspNodeCategory::Modulation),
+        ];
+
+        for (name, expected_cat) in new_modules {
+            let desc = registry.get(name).unwrap_or_else(|| panic!("Module {} must be in registry", name));
+            assert_eq!(desc.category, expected_cat, "Module {} category mismatch", name);
+            assert!(desc.params.len() >= 5, "Module {} must have >= 5 tactile parameters", name);
+        }
+
+        // 3. Verify normalization mappings
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("nodegraph"), Some("NodeGraph"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("dagaudiograph"), Some("NodeGraph"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("trackchannel"), Some("Track"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("dawtransport"), Some("Transport"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("voicepoolengine"), Some("VoicePool"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("wavwriter"), Some("WavWriter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("parambusengine"), Some("ParamBus"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("fixedaudiobuffer"), Some("FixedAudioBuffer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("multichannelaudiobuffer"), Some("MultichannelAudioBuffer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sequencetrack"), Some("SequenceTrack"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sequenceevent"), Some("SequenceEvent"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("stemmeta"), Some("StemMetadata"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("spectrogramartconfig"), Some("SpectrogramArtConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("spectrogramimage"), Some("SpectrogramImage"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("imagenotetrigger"), Some("ImageNoteTrigger"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("spectralmorphconfig"), Some("SpectralMorphConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("latticepointmass"), Some("LatticePointMass"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("namneuralrig"), Some("NamModel"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("onnxexecutionprovider"), Some("OnnxCpuSimdExecutionProvider"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("drumstepevent"), Some("DrumStepEvent"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("mixsuggestionsreport"), Some("MixSuggestions"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("transcribednote"), Some("TranscribedNote"));
+
+        // 4. Verify Asset Browser categorization
+        let inst_folders = BrowserCategory::Instruments.default_folders();
+        let phys_items = inst_folders.iter().find(|(name, _)| *name == "Physical Models").unwrap().1;
+        assert!(phys_items.contains(&"LatticePointMass"));
+
+        let synth_items = inst_folders.iter().find(|(name, _)| *name == "Synthesizers").unwrap().1;
+        assert!(synth_items.contains(&"SpectrogramArtConfig"));
+        assert!(synth_items.contains(&"SpectrogramImage"));
+        assert!(synth_items.contains(&"ImageNoteTrigger"));
+        assert!(synth_items.contains(&"SpectralMorphConfig"));
+        assert!(synth_items.contains(&"VoicePool"));
+
+        let fx_folders = BrowserCategory::AudioFx.default_folders();
+        let dyn_items = fx_folders.iter().find(|(name, _)| *name == "Dynamics & Level").unwrap().1;
+        assert!(dyn_items.contains(&"NamModel"));
+
+        let spatial_items = fx_folders.iter().find(|(name, _)| *name == "Time & Reverb").unwrap().1;
+        assert!(spatial_items.contains(&"MultichannelAudioBuffer"));
+
+        let midi_folders = BrowserCategory::MidiFx.default_folders();
+        let gen_sync_items = midi_folders.iter().find(|(name, _)| *name == "Generative & Sync").unwrap().1;
+        assert!(gen_sync_items.contains(&"SequenceTrack"));
+        assert!(gen_sync_items.contains(&"SequenceEvent"));
+        assert!(gen_sync_items.contains(&"DrumStepEvent"));
+        assert!(gen_sync_items.contains(&"TranscribedNote"));
+
+        let routing_items = midi_folders.iter().find(|(name, _)| *name == "Transforms & Routing").unwrap().1;
+        assert!(routing_items.contains(&"NodeGraph"));
+        assert!(routing_items.contains(&"Track"));
+        assert!(routing_items.contains(&"Transport"));
+        assert!(routing_items.contains(&"WavWriter"));
+        assert!(routing_items.contains(&"ParamBus"));
+        assert!(routing_items.contains(&"FixedAudioBuffer"));
+        assert!(routing_items.contains(&"StemMetadata"));
+        assert!(routing_items.contains(&"OnnxCpuSimdExecutionProvider"));
+        assert!(routing_items.contains(&"MixSuggestions"));
+
+        // 5. Verify Novice Presets synchronize in AwardWinningGuiView
+        #[cfg(feature = "gui")]
+        {
+            let mut view = crate::views::award_winning_gui_view::AwardWinningGuiView::default();
+            let ctx = eframe::egui::Context::default();
+
+            // Preset: Neural Amp Modeler WaveNet Studio Rig -> NamModel
+            view.top_bar_state.selected_preset = "Neural Amp Modeler WaveNet Studio Rig".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("NamModel".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("NamModel".to_string()));
+
+            // Preset: Visual Spectrogram Image Sonification Canvas -> SpectrogramArtConfig
+            view.top_bar_state.selected_preset = "Visual Spectrogram Image Sonification Canvas".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("SpectrogramArtConfig".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("SpectrogramArtConfig".to_string()));
+
+            // Preset: Multi-Track DAW Transport & Graph Engine -> Transport
+            view.top_bar_state.selected_preset = "Multi-Track DAW Transport & Graph Engine".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("Transport".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("Transport".to_string()));
+
+            // Preset: Polyphonic Voice Pool & Micro-Timing Sequencer -> VoicePool
+            view.top_bar_state.selected_preset = "Polyphonic Voice Pool & Micro-Timing Sequencer".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("VoicePool".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("VoicePool".to_string()));
         }
     }
 }

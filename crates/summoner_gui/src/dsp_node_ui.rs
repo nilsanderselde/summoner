@@ -6585,6 +6585,154 @@ impl DspNodeRegistry {
             .with_param(DspParamSchema::knob("trap_focal_point_y_mm", "3D Standing Wave Node Focal Point Y Coordinate", -100.0, 100.0, 0.0, "mm", MacroRole::Space, "Horizontal depth position of Gor'kov acoustic potential trap node"))
             .with_param(DspParamSchema::knob("trap_focal_point_z_height_mm", "3D Standing Wave Node Levitation Height Z", 0.0, 200.0, 50.0, "mm", MacroRole::Space, "Vertical levitation elevation above lower ultrasonic emitter grid"))
         );
+        descriptors.insert("NodeGraph".to_string(), DspNodeDescriptor::new("NodeGraph", "Deterministic Directed Acyclic Audio Computation Graph", DspNodeCategory::Utility, "Core DAG audio node execution graph coordinating topological sorting, buffer routing, cycle detection, and lock-free thread dispatch")
+            .with_param(DspParamSchema::knob("node_count", "Total Active Audio Processing Nodes", 1.0, 256.0, 16.0, "nodes", MacroRole::Character, "Total count of active processing nodes in the computation graph"))
+            .with_param(DspParamSchema::choice("cycle_detection", "Graph Cycle Detection Policy", &["Strict Panic (Zero Tolerance)", "Warn and Break Cycles", "Silent Bypass Branch"], 0, "Behavior when an invalid recursive feedback loop is introduced"))
+            .with_param(DspParamSchema::knob("worker_threads", "Parallel Worker Thread Allocation", 1.0, 64.0, 8.0, "threads", MacroRole::Tone, "Number of worker threads allocated for parallel audio block rendering"))
+            .with_param(DspParamSchema::choice("buffer_quantum_frames", "Buffer Execution Quantum Block Size", &["32 Frames", "64 Frames", "128 Frames", "256 Frames"], 2, "Atomic frame block size dispatched to worker threads"))
+            .with_param(DspParamSchema::knob("topological_generation", "Active Graph Topology Generation Counter", 0.0, 100000.0, 1.0, "gen", MacroRole::Space, "Monotonically increasing version tag incremented on every routing edit"))
+        );
+        descriptors.insert("Track".to_string(), DspNodeDescriptor::new("Track", "Multitrack Mixer Channel Strip & Insert FX Chain", DspNodeCategory::Utility, "Core DAW track mixer strip featuring volume fader, pan potentiometer, mute/solo flags, multi-bus sends, and insert plugin chain")
+            .with_param(DspParamSchema::knob("volume_db", "Track Fader Output Volume", -60.0, 12.0, 0.0, "dB", MacroRole::Punch, "Output volume gain fader level in decibels"))
+            .with_param(DspParamSchema::knob("pan", "Stereo Panning Balance", -1.0, 1.0, 0.0, "pan", MacroRole::Space, "Stereo position from full left (-1.0) to full right (+1.0)"))
+            .with_param(DspParamSchema::toggle("mute", "Track Channel Output Mute", false, "Mutes audio output from this track channel strip"))
+            .with_param(DspParamSchema::toggle("solo", "Track Channel Output Solo", false, "Solos this track channel strip exclusively"))
+            .with_param(DspParamSchema::knob("send_1_level_db", "Auxiliary Send 1 Reverb/Delay Level", -60.0, 6.0, -12.0, "dB", MacroRole::Tone, "Auxiliary bus send level for spatial effects routing"))
+            .with_param(DspParamSchema::toggle("record_arm", "Track Recording Arm Enable", false, "Arms this track for audio and MIDI recording"))
+        );
+        descriptors.insert("Transport".to_string(), DspNodeDescriptor::new("Transport", "DAW Master Transport, Playhead & Timeline Clock", DspNodeCategory::Utility, "High-precision master DAW transport engine managing sample-accurate playhead position, loop markers, tempo automation, and time signatures")
+            .with_param(DspParamSchema::knob("bpm", "Master Timeline Musical Tempo", 20.0, 300.0, 120.0, "BPM", MacroRole::Tone, "Beats per minute timeline playback clock tempo"))
+            .with_param(DspParamSchema::knob("playhead_frame", "Sample-Accurate Playhead Position", 0.0, 10000000.0, 0.0, "frames", MacroRole::Space, "Current absolute playback time in audio frames"))
+            .with_param(DspParamSchema::toggle("loop_enabled", "Timeline Loop Region Playback", true, "Enables seamless timeline loop playback"))
+            .with_param(DspParamSchema::choice("time_signature", "Project Metric Time Signature", &["4/4 Standard", "3/4 Waltz", "6/8 Compound", "7/8 Asymmetric", "5/4 Quintuple"], 0, "Time signature governing bar and beat divisions"))
+            .with_param(DspParamSchema::choice("preroll_bars", "Record Count-In Preroll Duration", &["No Preroll", "1 Bar Preroll", "2 Bars Preroll", "4 Bars Preroll"], 1, "Count-in metronome bars prior to recording punch-in"))
+        );
+        descriptors.insert("VoicePool".to_string(), DspNodeDescriptor::new("VoicePool", "Dynamic Polyphonic Voice Allocation & Stealing Engine", DspNodeCategory::CompositeSynth, "Real-time polyphonic synthesizer voice pool managing note allocation, LRU/oldest/quietest voice stealing algorithms, and release damping")
+            .with_param(DspParamSchema::knob("max_voices", "Maximum Polyphonic Voice Limit", 1.0, 64.0, 16.0, "voices", MacroRole::Character, "Total maximum concurrent sounding synthesizer voices"))
+            .with_param(DspParamSchema::choice("stealing_policy", "Polyphonic Voice Stealing Strategy", &["Steal Oldest Note", "Steal Quietest Release", "Steal Lowest Frequency", "Strict Hard Limit (Drop)"], 1, "Algorithm selected when note count exceeds allocated voice capacity"))
+            .with_param(DspParamSchema::knob("unison_count", "Multi-Voice Unison Stacking Count", 1.0, 8.0, 1.0, "unison", MacroRole::Punch, "Number of concurrent voice instances stacked per played note"))
+            .with_param(DspParamSchema::knob("unison_detune_cents", "Unison Detuning Spread", 0.0, 50.0, 12.0, "cents", MacroRole::Tone, "Pitch detuning spread applied across stacked unison voices"))
+            .with_param(DspParamSchema::knob("voice_fade_out_ms", "Voice Steal Fast Fade-Out Time", 0.5, 50.0, 5.0, "ms", MacroRole::Space, "Micro-fade crossfade duration eliminating clicks during voice re-allocation"))
+        );
+        descriptors.insert("WavWriter".to_string(), DspNodeDescriptor::new("WavWriter", "Broadcast 32-Bit Float & 24-Bit PCM WAV Audio File Exporter", DspNodeCategory::Utility, "Deterministic RIFF/WAVE audio file encoder supporting 32-bit IEEE float, 24-bit PCM, multichannel stem headers, and broadcast BWF metadata")
+            .with_param(DspParamSchema::choice("bit_depth", "Target Audio Sample Encoding Bit Depth", &["32-Bit IEEE Float (Mastering)", "24-Bit PCM Broadcast", "16-Bit PCM Redbook CD"], 0, "Quantization bit depth for encoded audio file"))
+            .with_param(DspParamSchema::choice("channel_count", "Channel Configuration Format", &["Stereo (2 Ch)", "Mono (1 Ch)", "5.1 Surround (6 Ch)", "7.1.4 Atmos Bed (12 Ch)"], 0, "Number of interleaved or discrete audio tracks encoded"))
+            .with_param(DspParamSchema::choice("sample_rate", "Export Master Audio Sample Rate", &["48 kHz Broadcast", "44.1 kHz Standard", "96 kHz High-Res", "192 kHz Studio"], 0, "Target sampling frequency in Hertz"))
+            .with_param(DspParamSchema::toggle("dither_enabled", "Triangular PDF Noise Dithering", false, "Applies TPDF psychoacoustic dither when reducing bit depths"))
+            .with_param(DspParamSchema::knob("normalize_headroom_db", "Target Peak Headroom Normalization", -6.0, 0.0, -0.3, "dBFS", MacroRole::Punch, "Peak normalization target headroom below digital clipping"))
+        );
+        descriptors.insert("ParamBus".to_string(), DspNodeDescriptor::new("ParamBus", "Lock-Free Atomic Parameter Bus & Modulation Dispatcher", DspNodeCategory::Modulation, "Zero-allocation lock-free parameter bus distributing continuous automation, LFO modulations, and envelope values across all DSP nodes")
+            .with_param(DspParamSchema::knob("active_slots", "Active Parameter Distribution Slots", 1.0, 1024.0, 128.0, "slots", MacroRole::Character, "Total number of atomic parameter communication slots registered"))
+            .with_param(DspParamSchema::choice("smoothing_filter", "Parameter Interpolation Filter Curve", &["Bilinear One-Pole", "S-Curve Cubic", "Instant Step (No Smoothing)", "Spring Damper"], 0, "Smoothing filter curve preventing zipper noise on rapid automated value updates"))
+            .with_param(DspParamSchema::choice("sample_rate_reduction", "Parameter Update Temporal Resolution", &["Sample-Accurate (1:1)", "Block-Accurate (Sub-sampled)", "Control Rate 1 kHz"], 0, "Temporal resolution of parameter evaluation across the audio graph"))
+            .with_param(DspParamSchema::knob("broadcast_rate_hz", "Internal Bus Parameter Update Frequency", 100.0, 48000.0, 48000.0, "Hz", MacroRole::Tone, "Internal modulation clock frequency in Hertz"))
+            .with_param(DspParamSchema::toggle("saturation_protect", "Floating-Point Range Clamp Guard", true, "Prevents parameter floating-point NaN/Inf runaway"))
+        );
+        descriptors.insert("FixedAudioBuffer".to_string(), DspNodeDescriptor::new("FixedAudioBuffer", "Zero-Allocation Pre-Allocated Audio Buffer Frame Block", DspNodeCategory::Utility, "Static heap-free audio sample buffer guaranteeing zero allocations during real-time processing loops under AllocGuard verification")
+            .with_param(DspParamSchema::choice("capacity_frames", "Fixed Ring Buffer Capacity Size", &["64 Frames", "128 Frames", "256 Frames", "512 Frames", "1024 Frames"], 2, "Pre-allocated static frame capacity"))
+            .with_param(DspParamSchema::knob("current_fill_frames", "Instantaneous Buffer Occupancy Count", 0.0, 1024.0, 256.0, "frames", MacroRole::Space, "Active valid samples available for consumption in buffer"))
+            .with_param(DspParamSchema::knob("gain_trim", "Internal Buffer Gain Calibration Trim", 0.0, 2.0, 1.0, "gain", MacroRole::Punch, "Linear scaling multiplier applied during buffer transfer"))
+            .with_param(DspParamSchema::toggle("clear_on_read", "Auto-Zero Buffer Memory on Read", true, "Automatically zeroes memory after buffer read"))
+            .with_param(DspParamSchema::toggle("saturation_guard", "Hard Linear Clamping Protection", true, "Clamps samples to [-1.0, +1.0] linear limits"))
+        );
+        descriptors.insert("MultichannelAudioBuffer".to_string(), DspNodeDescriptor::new("MultichannelAudioBuffer", "N-Channel Immersive & Surround Bus Audio Buffer", DspNodeCategory::SpatialSurround, "Zero-allocation multi-channel audio buffer supporting quadraphonic, 5.1, 7.1.4 Dolby Atmos, and 64-channel higher-order ambisonic soundfields")
+            .with_param(DspParamSchema::choice("channels", "Discrete Audio Channel Layout Bus", &["Stereo (2)", "Quadraphonic (4)", "5.1 Surround (6)", "7.1.4 Atmos (12)", "22.2 Immersive (24)"], 2, "Channel count and spatial loudspeaker configuration"))
+            .with_param(DspParamSchema::knob("frame_capacity", "Per-Channel Frame Allocation Length", 64.0, 2048.0, 512.0, "frames", MacroRole::Space, "Allocated sample storage per independent surround channel"))
+            .with_param(DspParamSchema::toggle("interleaved", "Channel Sample Interleaving Memory Layout", false, "Interleaved vs de-interleaved channel memory arrangement"))
+            .with_param(DspParamSchema::knob("master_gain", "Surround Master Bus Gain Multiplier", 0.0, 2.0, 1.0, "gain", MacroRole::Punch, "Master gain applied across all multi-channel tracks uniformly"))
+            .with_param(DspParamSchema::knob("lfe_sub_cutoff_hz", "Low-Frequency Effects Subwoofer Crossover", 40.0, 200.0, 120.0, "Hz", MacroRole::Tone, "Low-pass crossover frequency feeding the dedicated LFE channel"))
+        );
+        descriptors.insert("SequenceTrack".to_string(), DspNodeDescriptor::new("SequenceTrack", "Polyphonic Tracker & Step Sequencer Musical Track", DspNodeCategory::Modulation, "Pattern sequencer track coordinating polyphonic note steps, micro-timing nudge, probability masks, and MIDI channel routing")
+            .with_param(DspParamSchema::choice("step_length", "Total Sequence Step Grid Length", &["16 Steps", "32 Steps", "64 Steps", "128 Steps"], 1, "Total musical steps in current sequence loop"))
+            .with_param(DspParamSchema::choice("time_division", "Clock Step Metric Time Division", &["1/16 Standard", "1/8 Straight", "1/16 Triplet", "1/32 Fast", "1/4 Slow"], 0, "Grid subdivision rate per quarter note beat"))
+            .with_param(DspParamSchema::knob("swing_percent", "Groove Shuffle Swing Percentage", 50.0, 75.0, 50.0, "%", MacroRole::Punch, "Delay applied to even-numbered grid steps creating rhythmic swing"))
+            .with_param(DspParamSchema::choice("playback_direction", "Sequence Step Playback Trajectory", &["Forward", "Backward", "Ping-Pong", "Random Walker", "Brownian"], 0, "Pattern step traversal direction and algorithmic variation"))
+            .with_param(DspParamSchema::knob("humanize_velocity_range", "Velocity Micro-Variation Jitter", 0.0, 30.0, 5.0, "vel", MacroRole::Character, "Randomized velocity spread injecting organic human feel"))
+        );
+        descriptors.insert("SequenceEvent".to_string(), DspNodeDescriptor::new("SequenceEvent", "Sample-Accurate MIDI & Automation Sequencer Step Event", DspNodeCategory::Modulation, "Individual musical sequencer event encoding MIDI pitch, velocity, sub-tick gate duration, condition probability, and ratcheting")
+            .with_param(DspParamSchema::knob("note", "Musical Pitch Note Number", 0.0, 127.0, 60.0, "MIDI", MacroRole::Tone, "Standard MIDI note pitch index (60 = Middle C)"))
+            .with_param(DspParamSchema::knob("velocity", "Note Strike Attack Velocity", 1.0, 127.0, 100.0, "vel", MacroRole::Punch, "Attack velocity intensity for synthesized sound generation"))
+            .with_param(DspParamSchema::knob("gate_fraction", "Step Duration Gate Length", 0.05, 2.0, 0.80, "gate", MacroRole::Space, "Fraction of step duration note sounds before releasing"))
+            .with_param(DspParamSchema::knob("probability", "Conditional Trigger Probability", 0.0, 1.0, 1.0, "%", MacroRole::Character, "Likelihood of step firing when reached during playback"))
+            .with_param(DspParamSchema::choice("ratchet_count", "Step Micro-Ratcheting Subdivisions", &["1 (No Ratchet)", "2 (Double)", "3 (Triplet)", "4 (Quad)", "8 (Burst)"], 0, "Subdivides note into rapid re-triggered bursts within single step"))
+        );
+        descriptors.insert("StemMetadata".to_string(), DspNodeDescriptor::new("StemMetadata", "Stem Separation Routing Profile & Stem Metadata Manager", DspNodeCategory::Utility, "Audio stem metadata parser organizing vocals, drums, bass, and other separated tracks with automatic gain normalization and track bus assignments")
+            .with_param(DspParamSchema::choice("stem_type", "Acoustic Audio Stem Classification", &["Vocals", "Drums", "Bass", "Other Accompaniment", "Full Mix"], 0, "Musical role category of separated audio stream"))
+            .with_param(DspParamSchema::knob("gain_offset_db", "Stem Level Calibration Offset", -24.0, 12.0, 0.0, "dB", MacroRole::Punch, "Level adjustment balancing isolated stem against master mix"))
+            .with_param(DspParamSchema::knob("pan_position", "Stem Stereo Placement Coordinate", -1.0, 1.0, 0.0, "pan", MacroRole::Space, "Stereo position for stem playback routing"))
+            .with_param(DspParamSchema::knob("confidence_score", "Neural Separation Confidence Metric", 0.0, 1.0, 0.95, "%", MacroRole::Tone, "Deep learning stem unmixing confidence rating"))
+            .with_param(DspParamSchema::toggle("mute_bleed", "Spectral Cross-Bleed Suppression", true, "Suppresses spectral bleed from adjacent stem channels"))
+        );
+        descriptors.insert("SpectrogramArtConfig".to_string(), DspNodeDescriptor::new("SpectrogramArtConfig", "Visual Spectrogram Art Sonification Engine Configuration", DspNodeCategory::SpectralResynthesis, "Configuration manager for translating visual bitmap images into additive audio oscillator banks with logarithmic frequency spacing")
+            .with_param(DspParamSchema::choice("num_frequency_bins", "Additive Spectral Sine Oscillator Count", &["64 Partials", "128 Partials", "256 Partials", "512 Partials"], 2, "Number of vertical frequency bins synthesized from image height"))
+            .with_param(DspParamSchema::log_knob("min_freq_hz", "Bottom Row Base Frequency", 20.0, 500.0, 60.0, "Hz", MacroRole::Tone, "Lowest frequency assigned to image bottom baseline"))
+            .with_param(DspParamSchema::log_knob("max_freq_hz", "Top Row Ceiling Frequency", 1000.0, 20000.0, 12000.0, "Hz", MacroRole::Tone, "Highest frequency assigned to image top border"))
+            .with_param(DspParamSchema::knob("scan_speed_pps", "Horizontal Scanline Speed", 10.0, 500.0, 100.0, "px/s", MacroRole::Space, "Playback speed traversing image from left to right in pixels/sec"))
+            .with_param(DspParamSchema::knob("gamma_contrast", "Luminance-to-Amplitude Gamma", 0.2, 3.0, 1.2, "gamma", MacroRole::Punch, "Non-linear exponent mapping pixel intensity to partial volume"))
+        );
+        descriptors.insert("SpectrogramImage".to_string(), DspNodeDescriptor::new("SpectrogramImage", "2D Visual Sound Painting Raster Canvas & Image Buffer", DspNodeCategory::SpectralResynthesis, "2D image buffer holding visual raster artwork for optical audio synthesis, supporting real-time brightness curves, color palettes, and inversion")
+            .with_param(DspParamSchema::knob("brightness", "Visual Canvas Master Brightness", 0.0, 2.0, 1.0, "gain", MacroRole::Tone, "Overall brightness multiplier scaling sound volume"))
+            .with_param(DspParamSchema::knob("contrast", "Visual Dynamic Contrast Ratio", 0.5, 3.0, 1.0, "contrast", MacroRole::Punch, "Contrast steepness accentuating loud versus quiet partials"))
+            .with_param(DspParamSchema::toggle("invert_colors", "Negative Invert Pixel Luminance", false, "Inverts black-and-white pixel amplitudes"))
+            .with_param(DspParamSchema::choice("color_mapping", "Color Palette Interpretation Mode", &["Grayscale Luminance", "RGB to Pitch-Triad", "Thermal Spectral", "Cyberpunk Neon"], 0, "Color extraction mode mapping hue/saturation to sound"))
+            .with_param(DspParamSchema::choice("horizontal_resolution", "Raster Canvas Horizontal Buffer Width", &["256 Pixels", "512 Pixels", "1024 Pixels", "2048 Pixels"], 1, "Image width defining temporal detail of sonified painting"))
+        );
+        descriptors.insert("ImageNoteTrigger".to_string(), DspNodeDescriptor::new("ImageNoteTrigger", "Optical Pixel Note Trigger & Coordinates-to-MIDI Translator", DspNodeCategory::SpectralResynthesis, "Scans spectrogram image columns for high-intensity pixel peaks, triggering polyphonic MIDI notes and harmonic partial velocities")
+            .with_param(DspParamSchema::knob("threshold", "Pixel Intensity Detection Threshold", 0.01, 0.95, 0.20, "thresh", MacroRole::Punch, "Minimum optical luminance required to trigger note event"))
+            .with_param(DspParamSchema::knob("max_simultaneous_notes", "Polyphonic Optical Note Limit", 1.0, 32.0, 8.0, "notes", MacroRole::Character, "Maximum concurrent notes emitted by visual scanline"))
+            .with_param(DspParamSchema::choice("scale_quantize", "Optical Frequency Scale Snapping", &["Continuous Microtonal", "12-TET Chromatic", "Major Pentatonic", "Minor Blues", "Dorian Mode"], 1, "Musical scale quantization grid constraining emitted pitches"))
+            .with_param(DspParamSchema::knob("velocity_scale", "Luminance-to-Velocity Sensitivity", 0.1, 2.0, 1.0, "vel", MacroRole::Punch, "Sensitivity scaling pixel luminance into MIDI velocity"))
+            .with_param(DspParamSchema::knob("hysteresis_ms", "Note Re-trigger Lockout Time", 5.0, 200.0, 30.0, "ms", MacroRole::Space, "Minimum duration before identical note can re-trigger"))
+        );
+        descriptors.insert("SpectralMorphConfig".to_string(), DspNodeDescriptor::new("SpectralMorphConfig", "Dynamic Dual-Spectrum Morphing & Cross-Synthesis Engine", DspNodeCategory::SpectralResynthesis, "Calculates spectral interpolation between two distinct FFT frequency profiles, enabling smooth timbre morphing and spectral hybrid synthesis")
+            .with_param(DspParamSchema::knob("morph_factor", "Timbral Cross-Morphing Position", 0.0, 1.0, 0.50, "%", MacroRole::Tone, "Linear interpolation coordinate between Source A and Source B"))
+            .with_param(DspParamSchema::knob("spectral_tilt", "High-Frequency Spectral Tilt", -12.0, 12.0, 0.0, "dB/oct", MacroRole::Character, "Spectral balance slope boosting or cutting upper harmonics"))
+            .with_param(DspParamSchema::choice("phase_coupling", "FFT Bin Phase Reconciliation Mode", &["Linear Phase Blend", "Minimum Phase Warping", "Random Phase Scrambler", "Locked Source A"], 0, "Phase reconstruction method preventing comb filtering during morphing"))
+            .with_param(DspParamSchema::knob("formant_preserve", "Acoustic Vocal Formant Preservation", 0.0, 1.0, 0.70, "%", MacroRole::Tone, "Locks resonant envelope peaks during inter-sound interpolation"))
+            .with_param(DspParamSchema::knob("smear_bandwidth", "Spectral Energy Diffusion Smear", 0.0, 1000.0, 100.0, "Hz", MacroRole::Space, "Gaussian partial blurring across adjacent frequency bins"))
+        );
+        descriptors.insert("LatticePointMass".to_string(), DspNodeDescriptor::new("LatticePointMass", "2D Physical Spring-Mass Resonator Nodal Point", DspNodeCategory::AcousticPhysicalModel, "Discrete mass node in a 2D physical spring-mass acoustic network modeling displacement, velocity, Hooke restorative forces, and damping")
+            .with_param(DspParamSchema::knob("mass_grams", "Nodal Point Inertial Mass", 0.1, 100.0, 5.0, "g", MacroRole::Tone, "Inertial point mass affecting resonant natural frequencies"))
+            .with_param(DspParamSchema::knob("spring_constant_k", "Hooke Restorative Spring Stiffness", 10.0, 2000.0, 350.0, "N/m", MacroRole::Tone, "Spring coupling tension to adjacent lattice neighbors"))
+            .with_param(DspParamSchema::knob("internal_damping", "Viscous Mechanical Friction Damping", 0.001, 0.10, 0.015, "damp", MacroRole::Character, "Internal energy loss converting vibration into acoustic heat"))
+            .with_param(DspParamSchema::knob("initial_displacement", "Strike Excitation Displacement", -10.0, 10.0, 1.5, "mm", MacroRole::Punch, "Physical impulse displacement driving nodal motion"))
+            .with_param(DspParamSchema::choice("boundary_fixity", "Lattice Edge Boundary Constraint", &["Free Floating", "Fixed Anchor", "Viscous Absorber"], 0, "Physical anchoring constraint at network periphery"))
+        );
+        descriptors.insert("NamModel".to_string(), DspNodeDescriptor::new("NamModel", "Neural Amp Modeler WaveNet / LSTM Analog Hardware Model", DspNodeCategory::DistortionSaturation, "Deep learning neural network model replicating guitar tube amplifiers, boutique preamps, and overdrive distortion pedals with sub-millisecond inference")
+            .with_param(DspParamSchema::knob("input_gain_db", "Neural Network Drive Input Gain", -24.0, 24.0, 0.0, "dB", MacroRole::Punch, "Preamplifier boost feeding deep neural saturation layers"))
+            .with_param(DspParamSchema::knob("output_level_db", "Post-Model Makeup Output Level", -24.0, 12.0, 0.0, "dB", MacroRole::Punch, "Output level trim normalizing perceived volume"))
+            .with_param(DspParamSchema::choice("architecture", "Neural Network Model Architecture", &["WaveNet Standard (Deep)", "LSTM Fast (Low CPU)", "Linear Conv1D"], 0, "Inference neural topology balancing fidelity and CPU consumption"))
+            .with_param(DspParamSchema::knob("warmth", "Even-Order Harmonic Warmth Post-Filter", 0.0, 1.0, 0.50, "%", MacroRole::Tone, "Subtle analogue power transformer warming filter"))
+            .with_param(DspParamSchema::knob("noise_gate_threshold_db", "Input Pre-Amplifier Noise Gate", -90.0, -30.0, -60.0, "dB", MacroRole::Character, "High-gain background hum and thermal hiss suppression"))
+        );
+        descriptors.insert("OnnxCpuSimdExecutionProvider".to_string(), DspNodeDescriptor::new("OnnxCpuSimdExecutionProvider", "Hardware SIMD Neural Network ONNX Execution Runtime", DspNodeCategory::Utility, "AVX2/AVX-512 and NEON SIMD accelerated CPU inference provider executing ONNX machine learning models in real-time audio threads")
+            .with_param(DspParamSchema::knob("thread_count", "SIMD Worker Inference Thread Pool", 1.0, 16.0, 4.0, "threads", MacroRole::Character, "Parallel CPU threads dedicated to matrix tensor math"))
+            .with_param(DspParamSchema::choice("simd_instruction_set", "CPU Vector SIMD Acceleration Level", &["Auto Detect (Best)", "AVX-512 (512-Bit)", "AVX2 + FMA (256-Bit)", "SSE4.2 (128-Bit)"], 0, "Hardware vector instruction set used for neural computation"))
+            .with_param(DspParamSchema::choice("execution_priority", "Thread Scheduler Priority Level", &["Real-Time Audio Thread", "High Priority Background", "Normal Worker"], 0, "Operating system thread priority scheduling category"))
+            .with_param(DspParamSchema::choice("cache_opt_level", "Tensor Memory Cache Pre-warming", &["Maximum Memory Pre-warming", "Balanced Cache", "Low Footprint"], 0, "Memory allocation pre-warming strategy to avoid cache misses"))
+            .with_param(DspParamSchema::knob("latency_limit_ms", "Maximum Inference Latency Budget", 0.1, 10.0, 1.0, "ms", MacroRole::Space, "Target calculation deadline preventing buffer underruns"))
+        );
+        descriptors.insert("DrumStepEvent".to_string(), DspNodeDescriptor::new("DrumStepEvent", "Neural AI Percussion Step Trigger & Groove Event", DspNodeCategory::Modulation, "Rhythm generation event output by neural drum networks encoding instrument voice, trigger probability, velocity, micro-offset, and flam")
+            .with_param(DspParamSchema::choice("voice_select", "Percussive Drum Kit Voice Type", &["Kick Drum", "Snare Drum", "Closed Hi-Hat", "Open Hi-Hat", "Clap", "Percussion Tom"], 0, "Percussion drum synthesis element triggered by event"))
+            .with_param(DspParamSchema::knob("velocity", "Hit Impact Velocity Intensity", 1.0, 127.0, 110.0, "vel", MacroRole::Punch, "Dynamic strike force affecting drum body resonance and transient"))
+            .with_param(DspParamSchema::knob("probability", "Step Generative Fire Probability", 0.0, 1.0, 1.0, "%", MacroRole::Character, "Probability weight for generative rhythmic variations"))
+            .with_param(DspParamSchema::knob("micro_timing_offset_ms", "Micro-Timing Groove Offset", -25.0, 25.0, 0.0, "ms", MacroRole::Space, "Sub-millisecond temporal push or drag for authentic human pocket"))
+            .with_param(DspParamSchema::knob("flam_accent", "Double-Hit Flam Transient Accent", 0.0, 1.0, 0.0, "flam", MacroRole::Tone, "Secondary grace strike creating loose stick bounce dynamics"))
+        );
+        descriptors.insert("MixSuggestions".to_string(), DspNodeDescriptor::new("MixSuggestions", "Intelligent AI Mix Advisor & Collision Diagnostic Report", DspNodeCategory::Utility, "Automated mixing assistant inspecting multi-track frequency conflicts, masking ratios, headroom budget, and recommending EQ cuts")
+            .with_param(DspParamSchema::knob("target_loudness_lufs", "Integrated Target Program Loudness", -24.0, -6.0, -14.0, "LUFS", MacroRole::Punch, "Master program loudness target conforming to streaming standards"))
+            .with_param(DspParamSchema::knob("masking_sensitivity", "Frequency Masking Detection Threshold", 0.1, 1.0, 0.65, "sens", MacroRole::Tone, "Sensitivity identifying clashing frequencies between concurrent stems"))
+            .with_param(DspParamSchema::choice("genre_target", "Genre Mixing Curve Reference", &["Modern EDM / Pop", "Rock / Metal Punch", "Acoustic / Jazz Natural", "Hip-Hop Heavy Bass", "Cinematic Orchestral"], 0, "Target spectral curve and dynamic range balance reference"))
+            .with_param(DspParamSchema::knob("suggested_cut_max_db", "Maximum Automated EQ Cut Ceiling", 1.0, 12.0, 3.0, "dB", MacroRole::Punch, "Safety limit restricting drastic automated filter alterations"))
+            .with_param(DspParamSchema::toggle("auto_apply_suggestions", "Auto-Apply Proposed Dynamic EQ Cuts", false, "Automatically applies proposed dynamic EQ notch cuts to unmask tracks"))
+        );
+        descriptors.insert("TranscribedNote".to_string(), DspNodeDescriptor::new("TranscribedNote", "Neural Pitch Tracking & Audio-to-MIDI Transcription Note", DspNodeCategory::Modulation, "Real-time polyphonic audio-to-MIDI transcription note representing detected fundamental pitch, onset certainty, duration, and pitch glide")
+            .with_param(DspParamSchema::knob("pitch_midi", "Estimated Fundamental Note Index", 0.0, 127.0, 60.0, "MIDI", MacroRole::Tone, "Discrete MIDI note pitch resulting from harmonic analysis"))
+            .with_param(DspParamSchema::log_knob("frequency_hz", "Exact Detected Fundamental Frequency", 20.0, 5000.0, 261.63, "Hz", MacroRole::Tone, "Continuous high-precision fundamental oscillation pitch"))
+            .with_param(DspParamSchema::knob("onset_confidence", "Transient Onset Detection Confidence", 0.0, 1.0, 0.90, "%", MacroRole::Punch, "Neural confidence certainty that a new note onset occurred"))
+            .with_param(DspParamSchema::knob("pitch_bend_cents", "Continuous Vocal Pitch Glide Bend", -100.0, 100.0, 0.0, "cents", MacroRole::Tone, "Real-time microtonal intonation glide deviation"))
+            .with_param(DspParamSchema::choice("transcription_model", "Pitch Tracking Neural Backend", &["High-Precision Polyphonic", "Fast Monophonic Pitch Tracker", "Percussive Transient Only"], 0, "Neural model optimized for tracking vocals, monophonic leads, or polyphony"))
+        );
 
         Self { descriptors }
     }
@@ -7455,6 +7603,27 @@ impl DspNodeRegistry {
             ("ClavinetWaypoint", DspNodeCategory::AcousticPhysicalModel, "Clavinet Tangent Attack Dynamics & Anvil Contact Waypoint HUD"),
             ("AtmosphericDensity", DspNodeCategory::SpatialSurround, "Acoustic Humidity, Barometric Air Damping & Propagation HUD"),
             ("AcousticLevitationTrap", DspNodeCategory::SpatialSurround, "40kHz Ultrasonic Phased-Array Acoustic Levitation Trap HUD"),
+            ("NodeGraph", DspNodeCategory::Utility, "Deterministic Directed Acyclic Audio Computation Graph HUD"),
+            ("Track", DspNodeCategory::Utility, "Multitrack Mixer Channel Strip & Insert FX Chain HUD"),
+            ("Transport", DspNodeCategory::Utility, "DAW Master Transport, Playhead & Timeline Clock HUD"),
+            ("VoicePool", DspNodeCategory::CompositeSynth, "Dynamic Polyphonic Voice Allocation & Stealing Engine HUD"),
+            ("WavWriter", DspNodeCategory::Utility, "Broadcast 32-Bit Float & 24-Bit PCM WAV Audio File Exporter HUD"),
+            ("ParamBus", DspNodeCategory::Modulation, "Lock-Free Atomic Parameter Bus & Modulation Dispatcher HUD"),
+            ("FixedAudioBuffer", DspNodeCategory::Utility, "Zero-Allocation Pre-Allocated Audio Buffer Frame Block HUD"),
+            ("MultichannelAudioBuffer", DspNodeCategory::SpatialSurround, "N-Channel Immersive & Surround Bus Audio Buffer HUD"),
+            ("SequenceTrack", DspNodeCategory::Modulation, "Polyphonic Tracker & Step Sequencer Musical Track HUD"),
+            ("SequenceEvent", DspNodeCategory::Modulation, "Sample-Accurate MIDI & Automation Sequencer Step Event HUD"),
+            ("StemMetadata", DspNodeCategory::Utility, "Stem Separation Routing Profile & Stem Metadata Manager HUD"),
+            ("SpectrogramArtConfig", DspNodeCategory::SpectralResynthesis, "Visual Spectrogram Art Sonification Engine Configuration HUD"),
+            ("SpectrogramImage", DspNodeCategory::SpectralResynthesis, "2D Visual Sound Painting Raster Canvas & Image Buffer HUD"),
+            ("ImageNoteTrigger", DspNodeCategory::SpectralResynthesis, "Optical Pixel Note Trigger & Coordinates-to-MIDI Translator HUD"),
+            ("SpectralMorphConfig", DspNodeCategory::SpectralResynthesis, "Dynamic Dual-Spectrum Morphing & Cross-Synthesis Engine HUD"),
+            ("LatticePointMass", DspNodeCategory::AcousticPhysicalModel, "2D Physical Spring-Mass Resonator Nodal Point HUD"),
+            ("NamModel", DspNodeCategory::DistortionSaturation, "Neural Amp Modeler WaveNet / LSTM Analog Hardware Model HUD"),
+            ("OnnxCpuSimdExecutionProvider", DspNodeCategory::Utility, "Hardware SIMD Neural Network ONNX Execution Runtime HUD"),
+            ("DrumStepEvent", DspNodeCategory::Modulation, "Neural AI Percussion Step Trigger & Groove Event HUD"),
+            ("MixSuggestions", DspNodeCategory::Utility, "Intelligent AI Mix Advisor & Collision Diagnostic Report HUD"),
+            ("TranscribedNote", DspNodeCategory::Modulation, "Neural Pitch Tracking & Audio-to-MIDI Transcription Note HUD"),
         ]
     }
 
@@ -9277,6 +9446,27 @@ impl DspNodeRegistry {
             "acousticlevitationtrap" => Some("AcousticLevitationTrap"),
             "levitationtrap" => Some("AcousticLevitationTrap"),
             "ultrasonictrap" => Some("AcousticLevitationTrap"),
+            "nodegraph" | "dagaudiograph" | "audiographdag" | "executiongraph" => Some("NodeGraph"),
+            "trackchannel" | "mixerchanneltrip" | "dawtrackstrip" | "multitrackchannel" => Some("Track"),
+            "dawtransport" | "playheadtransport" | "timelineclock" | "transportengine" => Some("Transport"),
+            "voicepoolengine" | "polyvoiceallocator" | "synthvoicepool" | "dynamicvoicepool" => Some("VoicePool"),
+            "wavwriter" | "wavexportencoder" | "pcmwavwriter" | "audiofilewriter" => Some("WavWriter"),
+            "parambusengine" | "atomicparambus" | "dspmodulationbus" | "parameterbus" => Some("ParamBus"),
+            "fixedaudiobuffer" | "audioframebuffer" | "fixedblockbuffer" | "zeroallocbuffer" => Some("FixedAudioBuffer"),
+            "multichannelaudiobuffer" | "surroundbufferbus" | "multichannelbuffer" | "immersiveaudiobus" => Some("MultichannelAudioBuffer"),
+            "sequencetrack" | "midisequencetrack" | "trackersequencetrack" | "patternsequence" => Some("SequenceTrack"),
+            "sequenceevent" | "notestepsequence" | "trackerstepsequence" | "sequencerstepevent" => Some("SequenceEvent"),
+            "stemmeta" | "stemmetadataprofile" | "stemaudiometadata" | "stemrouteprofile" => Some("StemMetadata"),
+            "spectrogramartconfig" | "spectrogramartsettings" | "imagesonificationconfig" | "spectralartparameters" => Some("SpectrogramArtConfig"),
+            "spectrogramimage" | "spectralimagecanvas" | "soundcanvasraster" | "spectrogramraster" => Some("SpectrogramImage"),
+            "imagenotetrigger" | "spectrogramnotetrigger" | "spectralpixeltrigger" | "opticalnotetrigger" => Some("ImageNoteTrigger"),
+            "spectralmorphconfig" | "spectralmorphing" | "dualspectrummorph" | "spectruminvertmorph" => Some("SpectralMorphConfig"),
+            "latticepointmass" | "springnodalmass" | "pointmassresonator" | "springlatticemass" => Some("LatticePointMass"),
+            "namneuralrig" | "namprofile" | "neuralampmodelfile" | "namneuralamp" => Some("NamModel"),
+            "onnxexecutionprovider" | "onnxsimdprovider" | "onnxruntimecpu" | "neuralexecutionprovider" => Some("OnnxCpuSimdExecutionProvider"),
+            "drumstepevent" | "neuraldrumstep" | "aibeatstep" | "drumtriggerstep" => Some("DrumStepEvent"),
+            "mixsuggestionsreport" | "intelligentmixsuggestions" | "automatedmixsuggestions" | "smartmixadvisories" => Some("MixSuggestions"),
+            "transcribednote" | "neuraltranscription" | "audiotomidinote" | "pitchtranscribednote" => Some("TranscribedNote"),
             _ => None,
         }
     }
@@ -15105,6 +15295,174 @@ impl DspNodeRegistry {
                     .with_param(DspParamDescriptor::new_linear("trap_focal_point_y_mm", "3D Standing Wave Node Focal Point Y Coordinate", -100.0, 100.0, 0.0, "mm", (168, 85, 247)))
                     .with_param(DspParamDescriptor::new_linear("trap_focal_point_z_height_mm", "3D Standing Wave Node Levitation Height Z", 0.0, 200.0, 50.0, "mm", (34, 197, 94)))
             ),
+            "NodeGraph" => Box::new(
+                GenericDspNodeUi::new("NodeGraph", "Deterministic Directed Acyclic Audio Computation Graph HUD", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("node_count", "Total Active Audio Processing Nodes", 1.0, 256.0, 16.0, "nodes", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_enum("cycle_detection", "Graph Cycle Detection Policy", vec!["Strict Panic (Zero Tolerance)".into(), "Warn and Break Cycles".into(), "Silent Bypass Branch".into()], 0, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("worker_threads", "Parallel Worker Thread Allocation", 1.0, 64.0, 8.0, "threads", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_enum("buffer_quantum_frames", "Buffer Execution Quantum Block Size", vec!["32 Frames".into(), "64 Frames".into(), "128 Frames".into(), "256 Frames".into()], 2, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("topological_generation", "Active Graph Topology Generation Counter", 0.0, 100000.0, 1.0, "gen", (34, 197, 94)))
+            ),
+            "Track" => Box::new(
+                GenericDspNodeUi::new("Track", "Multitrack Mixer Channel Strip & Insert FX Chain HUD", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("volume_db", "Track Fader Output Volume", -60.0, 12.0, 0.0, "dB", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("pan", "Stereo Panning Balance", -1.0, 1.0, 0.0, "pan", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("mute", "Track Channel Output Mute", 0.0, 1.0, 0.0, "bool", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("solo", "Track Channel Output Solo", 0.0, 1.0, 0.0, "bool", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("send_1_level_db", "Auxiliary Send 1 Reverb/Delay Level", -60.0, 6.0, -12.0, "dB", (34, 197, 94)))
+            ),
+            "Transport" => Box::new(
+                GenericDspNodeUi::new("Transport", "DAW Master Transport, Playhead & Timeline Clock HUD", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("bpm", "Master Timeline Musical Tempo", 20.0, 300.0, 120.0, "BPM", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("playhead_frame", "Sample-Accurate Playhead Position", 0.0, 10000000.0, 0.0, "frames", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("loop_enabled", "Timeline Loop Region Playback", 0.0, 1.0, 1.0, "bool", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_enum("time_signature", "Project Metric Time Signature", vec!["4/4 Standard".into(), "3/4 Waltz".into(), "6/8 Compound".into(), "7/8 Asymmetric".into(), "5/4 Quintuple".into()], 0, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_enum("preroll_bars", "Record Count-In Preroll Duration", vec!["No Preroll".into(), "1 Bar Preroll".into(), "2 Bars Preroll".into(), "4 Bars Preroll".into()], 1, (34, 197, 94)))
+            ),
+            "VoicePool" => Box::new(
+                GenericDspNodeUi::new("VoicePool", "Dynamic Polyphonic Voice Allocation & Stealing Engine HUD", DspNodeCategory::CompositeSynth)
+                    .with_param(DspParamDescriptor::new_linear("max_voices", "Maximum Polyphonic Voice Limit", 1.0, 64.0, 16.0, "voices", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_enum("stealing_policy", "Polyphonic Voice Stealing Strategy", vec!["Steal Oldest Note".into(), "Steal Quietest Release".into(), "Steal Lowest Frequency".into(), "Strict Hard Limit (Drop)".into()], 1, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("unison_count", "Multi-Voice Unison Stacking Count", 1.0, 8.0, 1.0, "unison", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("unison_detune_cents", "Unison Detuning Spread", 0.0, 50.0, 12.0, "cents", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("voice_fade_out_ms", "Voice Steal Fast Fade-Out Time", 0.5, 50.0, 5.0, "ms", (34, 197, 94)))
+            ),
+            "WavWriter" => Box::new(
+                GenericDspNodeUi::new("WavWriter", "Broadcast 32-Bit Float & 24-Bit PCM WAV Audio File Exporter HUD", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_enum("bit_depth", "Target Audio Sample Encoding Bit Depth", vec!["32-Bit IEEE Float (Mastering)".into(), "24-Bit PCM Broadcast".into(), "16-Bit PCM Redbook CD".into()], 0, (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_enum("channel_count", "Channel Configuration Format", vec!["Stereo (2 Ch)".into(), "Mono (1 Ch)".into(), "5.1 Surround (6 Ch)".into(), "7.1.4 Atmos Bed (12 Ch)".into()], 0, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_enum("sample_rate", "Export Master Audio Sample Rate", vec!["48 kHz Broadcast".into(), "44.1 kHz Standard".into(), "96 kHz High-Res".into(), "192 kHz Studio".into()], 0, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("dither_enabled", "Triangular PDF Noise Dithering", 0.0, 1.0, 0.0, "bool", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("normalize_headroom_db", "Target Peak Headroom Normalization", -6.0, 0.0, -0.3, "dBFS", (34, 197, 94)))
+            ),
+            "ParamBus" => Box::new(
+                GenericDspNodeUi::new("ParamBus", "Lock-Free Atomic Parameter Bus & Modulation Dispatcher HUD", DspNodeCategory::Modulation)
+                    .with_param(DspParamDescriptor::new_linear("active_slots", "Active Parameter Distribution Slots", 1.0, 1024.0, 128.0, "slots", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_enum("smoothing_filter", "Parameter Interpolation Filter Curve", vec!["Bilinear One-Pole".into(), "S-Curve Cubic".into(), "Instant Step (No Smoothing)".into(), "Spring Damper".into()], 0, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_enum("sample_rate_reduction", "Parameter Update Temporal Resolution", vec!["Sample-Accurate (1:1)".into(), "Block-Accurate (Sub-sampled)".into(), "Control Rate 1 kHz".into()], 0, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("broadcast_rate_hz", "Internal Bus Parameter Update Frequency", 100.0, 48000.0, 48000.0, "Hz", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("saturation_protect", "Floating-Point Range Clamp Guard", 0.0, 1.0, 1.0, "bool", (34, 197, 94)))
+            ),
+            "FixedAudioBuffer" => Box::new(
+                GenericDspNodeUi::new("FixedAudioBuffer", "Zero-Allocation Pre-Allocated Audio Buffer Frame Block HUD", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_enum("capacity_frames", "Fixed Ring Buffer Capacity Size", vec!["64 Frames".into(), "128 Frames".into(), "256 Frames".into(), "512 Frames".into(), "1024 Frames".into()], 2, (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("current_fill_frames", "Instantaneous Buffer Occupancy Count", 0.0, 1024.0, 256.0, "frames", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("gain_trim", "Internal Buffer Gain Calibration Trim", 0.0, 2.0, 1.0, "gain", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("clear_on_read", "Auto-Zero Buffer Memory on Read", 0.0, 1.0, 1.0, "bool", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("saturation_guard", "Hard Linear Clamping Protection", 0.0, 1.0, 1.0, "bool", (34, 197, 94)))
+            ),
+            "MultichannelAudioBuffer" => Box::new(
+                GenericDspNodeUi::new("MultichannelAudioBuffer", "N-Channel Immersive & Surround Bus Audio Buffer HUD", DspNodeCategory::SpatialSurround)
+                    .with_param(DspParamDescriptor::new_enum("channels", "Discrete Audio Channel Layout Bus", vec!["Stereo (2)".into(), "Quadraphonic (4)".into(), "5.1 Surround (6)".into(), "7.1.4 Atmos (12)".into(), "22.2 Immersive (24)".into()], 2, (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("frame_capacity", "Per-Channel Frame Allocation Length", 64.0, 2048.0, 512.0, "frames", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("interleaved", "Channel Sample Interleaving Memory Layout", 0.0, 1.0, 0.0, "bool", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("master_gain", "Surround Master Bus Gain Multiplier", 0.0, 2.0, 1.0, "gain", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("lfe_sub_cutoff_hz", "Low-Frequency Effects Subwoofer Crossover", 40.0, 200.0, 120.0, "Hz", (34, 197, 94)))
+            ),
+            "SequenceTrack" => Box::new(
+                GenericDspNodeUi::new("SequenceTrack", "Polyphonic Tracker & Step Sequencer Musical Track HUD", DspNodeCategory::Modulation)
+                    .with_param(DspParamDescriptor::new_enum("step_length", "Total Sequence Step Grid Length", vec!["16 Steps".into(), "32 Steps".into(), "64 Steps".into(), "128 Steps".into()], 1, (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_enum("time_division", "Clock Step Metric Time Division", vec!["1/16 Standard".into(), "1/8 Straight".into(), "1/16 Triplet".into(), "1/32 Fast".into(), "1/4 Slow".into()], 0, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("swing_percent", "Groove Shuffle Swing Percentage", 50.0, 75.0, 50.0, "%", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_enum("playback_direction", "Sequence Step Playback Trajectory", vec!["Forward".into(), "Backward".into(), "Ping-Pong".into(), "Random Walker".into(), "Brownian".into()], 0, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("humanize_velocity_range", "Velocity Micro-Variation Jitter", 0.0, 30.0, 5.0, "vel", (34, 197, 94)))
+            ),
+            "SequenceEvent" => Box::new(
+                GenericDspNodeUi::new("SequenceEvent", "Sample-Accurate MIDI & Automation Sequencer Step Event HUD", DspNodeCategory::Modulation)
+                    .with_param(DspParamDescriptor::new_linear("note", "Musical Pitch Note Number", 0.0, 127.0, 60.0, "MIDI", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("velocity", "Note Strike Attack Velocity", 1.0, 127.0, 100.0, "vel", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("gate_fraction", "Step Duration Gate Length", 0.05, 2.0, 0.80, "gate", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("probability", "Conditional Trigger Probability", 0.0, 1.0, 1.0, "%", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_enum("ratchet_count", "Step Micro-Ratcheting Subdivisions", vec!["1 (No Ratchet)".into(), "2 (Double)".into(), "3 (Triplet)".into(), "4 (Quad)".into(), "8 (Burst)".into()], 0, (34, 197, 94)))
+            ),
+            "StemMetadata" => Box::new(
+                GenericDspNodeUi::new("StemMetadata", "Stem Separation Routing Profile & Stem Metadata Manager HUD", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_enum("stem_type", "Acoustic Audio Stem Classification", vec!["Vocals".into(), "Drums".into(), "Bass".into(), "Other Accompaniment".into(), "Full Mix".into()], 0, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("gain_offset_db", "Stem Level Calibration Offset", -24.0, 12.0, 0.0, "dB", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("pan_position", "Stem Stereo Placement Coordinate", -1.0, 1.0, 0.0, "pan", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("confidence_score", "Neural Separation Confidence Metric", 0.0, 1.0, 0.95, "%", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("mute_bleed", "Spectral Cross-Bleed Suppression", 0.0, 1.0, 1.0, "bool", (34, 197, 94)))
+            ),
+            "SpectrogramArtConfig" => Box::new(
+                GenericDspNodeUi::new("SpectrogramArtConfig", "Visual Spectrogram Art Sonification Engine Configuration HUD", DspNodeCategory::SpectralResynthesis)
+                    .with_param(DspParamDescriptor::new_enum("num_frequency_bins", "Additive Spectral Sine Oscillator Count", vec!["64 Partials".into(), "128 Partials".into(), "256 Partials".into(), "512 Partials".into()], 2, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("min_freq_hz", "Bottom Row Base Frequency", 20.0, 500.0, 60.0, "Hz", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("max_freq_hz", "Top Row Ceiling Frequency", 1000.0, 20000.0, 12000.0, "Hz", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("scan_speed_pps", "Horizontal Scanline Speed", 10.0, 500.0, 100.0, "px/s", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("gamma_contrast", "Luminance-to-Amplitude Gamma", 0.2, 3.0, 1.2, "gamma", (34, 197, 94)))
+            ),
+            "SpectrogramImage" => Box::new(
+                GenericDspNodeUi::new("SpectrogramImage", "2D Visual Sound Painting Raster Canvas & Image Buffer HUD", DspNodeCategory::SpectralResynthesis)
+                    .with_param(DspParamDescriptor::new_linear("brightness", "Visual Canvas Master Brightness", 0.0, 2.0, 1.0, "gain", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("contrast", "Visual Dynamic Contrast Ratio", 0.5, 3.0, 1.0, "contrast", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("invert_colors", "Negative Invert Pixel Luminance", 0.0, 1.0, 0.0, "bool", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_enum("color_mapping", "Color Palette Interpretation Mode", vec!["Grayscale Luminance".into(), "RGB to Pitch-Triad".into(), "Thermal Spectral".into(), "Cyberpunk Neon".into()], 0, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_enum("horizontal_resolution", "Raster Canvas Horizontal Buffer Width", vec!["256 Pixels".into(), "512 Pixels".into(), "1024 Pixels".into(), "2048 Pixels".into()], 1, (34, 197, 94)))
+            ),
+            "ImageNoteTrigger" => Box::new(
+                GenericDspNodeUi::new("ImageNoteTrigger", "Optical Pixel Note Trigger & Coordinates-to-MIDI Translator HUD", DspNodeCategory::SpectralResynthesis)
+                    .with_param(DspParamDescriptor::new_linear("threshold", "Pixel Intensity Detection Threshold", 0.01, 0.95, 0.20, "thresh", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("max_simultaneous_notes", "Polyphonic Optical Note Limit", 1.0, 32.0, 8.0, "notes", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_enum("scale_quantize", "Optical Frequency Scale Snapping", vec!["Continuous Microtonal".into(), "12-TET Chromatic".into(), "Major Pentatonic".into(), "Minor Blues".into(), "Dorian Mode".into()], 1, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("velocity_scale", "Luminance-to-Velocity Sensitivity", 0.1, 2.0, 1.0, "vel", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("hysteresis_ms", "Note Re-trigger Lockout Time", 5.0, 200.0, 30.0, "ms", (34, 197, 94)))
+            ),
+            "SpectralMorphConfig" => Box::new(
+                GenericDspNodeUi::new("SpectralMorphConfig", "Dynamic Dual-Spectrum Morphing & Cross-Synthesis Engine HUD", DspNodeCategory::SpectralResynthesis)
+                    .with_param(DspParamDescriptor::new_linear("morph_factor", "Timbral Cross-Morphing Position", 0.0, 1.0, 0.50, "%", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("spectral_tilt", "High-Frequency Spectral Tilt", -12.0, 12.0, 0.0, "dB/oct", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_enum("phase_coupling", "FFT Bin Phase Reconciliation Mode", vec!["Linear Phase Blend".into(), "Minimum Phase Warping".into(), "Random Phase Scrambler".into(), "Locked Source A".into()], 0, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("formant_preserve", "Acoustic Vocal Formant Preservation", 0.0, 1.0, 0.70, "%", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("smear_bandwidth", "Spectral Energy Diffusion Smear", 0.0, 1000.0, 100.0, "Hz", (34, 197, 94)))
+            ),
+            "LatticePointMass" => Box::new(
+                GenericDspNodeUi::new("LatticePointMass", "2D Physical Spring-Mass Resonator Nodal Point HUD", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("mass_grams", "Nodal Point Inertial Mass", 0.1, 100.0, 5.0, "g", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("spring_constant_k", "Hooke Restorative Spring Stiffness", 10.0, 2000.0, 350.0, "N/m", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("internal_damping", "Viscous Mechanical Friction Damping", 0.001, 0.10, 0.015, "damp", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("initial_displacement", "Strike Excitation Displacement", -10.0, 10.0, 1.5, "mm", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_enum("boundary_fixity", "Lattice Edge Boundary Constraint", vec!["Free Floating".into(), "Fixed Anchor".into(), "Viscous Absorber".into()], 0, (34, 197, 94)))
+            ),
+            "NamModel" => Box::new(
+                GenericDspNodeUi::new("NamModel", "Neural Amp Modeler WaveNet / LSTM Analog Hardware Model HUD", DspNodeCategory::DistortionSaturation)
+                    .with_param(DspParamDescriptor::new_linear("input_gain_db", "Neural Network Drive Input Gain", -24.0, 24.0, 0.0, "dB", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("output_level_db", "Post-Model Makeup Output Level", -24.0, 12.0, 0.0, "dB", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_enum("architecture", "Neural Network Model Architecture", vec!["WaveNet Standard (Deep)".into(), "LSTM Fast (Low CPU)".into(), "Linear Conv1D".into()], 0, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("warmth", "Even-Order Harmonic Warmth Post-Filter", 0.0, 1.0, 0.50, "%", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("noise_gate_threshold_db", "Input Pre-Amplifier Noise Gate", -90.0, -30.0, -60.0, "dB", (34, 197, 94)))
+            ),
+            "OnnxCpuSimdExecutionProvider" => Box::new(
+                GenericDspNodeUi::new("OnnxCpuSimdExecutionProvider", "Hardware SIMD Neural Network ONNX Execution Runtime HUD", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("thread_count", "SIMD Worker Inference Thread Pool", 1.0, 16.0, 4.0, "threads", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_enum("simd_instruction_set", "CPU Vector SIMD Acceleration Level", vec!["Auto Detect (Best)".into(), "AVX-512 (512-Bit)".into(), "AVX2 + FMA (256-Bit)".into(), "SSE4.2 (128-Bit)".into()], 0, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_enum("execution_priority", "Thread Scheduler Priority Level", vec!["Real-Time Audio Thread".into(), "High Priority Background".into(), "Normal Worker".into()], 0, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_enum("cache_opt_level", "Tensor Memory Cache Pre-warming", vec!["Maximum Memory Pre-warming".into(), "Balanced Cache".into(), "Low Footprint".into()], 0, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("latency_limit_ms", "Maximum Inference Latency Budget", 0.1, 10.0, 1.0, "ms", (34, 197, 94)))
+            ),
+            "DrumStepEvent" => Box::new(
+                GenericDspNodeUi::new("DrumStepEvent", "Neural AI Percussion Step Trigger & Groove Event HUD", DspNodeCategory::Modulation)
+                    .with_param(DspParamDescriptor::new_enum("voice_select", "Percussive Drum Kit Voice Type", vec!["Kick Drum".into(), "Snare Drum".into(), "Closed Hi-Hat".into(), "Open Hi-Hat".into(), "Clap".into(), "Percussion Tom".into()], 0, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("velocity", "Hit Impact Velocity Intensity", 1.0, 127.0, 110.0, "vel", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("probability", "Step Generative Fire Probability", 0.0, 1.0, 1.0, "%", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("micro_timing_offset_ms", "Micro-Timing Groove Offset", -25.0, 25.0, 0.0, "ms", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("flam_accent", "Double-Hit Flam Transient Accent", 0.0, 1.0, 0.0, "flam", (34, 197, 94)))
+            ),
+            "MixSuggestions" => Box::new(
+                GenericDspNodeUi::new("MixSuggestions", "Intelligent AI Mix Advisor & Collision Diagnostic Report HUD", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("target_loudness_lufs", "Integrated Target Program Loudness", -24.0, -6.0, -14.0, "LUFS", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("masking_sensitivity", "Frequency Masking Detection Threshold", 0.1, 1.0, 0.65, "sens", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_enum("genre_target", "Genre Mixing Curve Reference", vec!["Modern EDM / Pop".into(), "Rock / Metal Punch".into(), "Acoustic / Jazz Natural".into(), "Hip-Hop Heavy Bass".into(), "Cinematic Orchestral".into()], 0, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("suggested_cut_max_db", "Maximum Automated EQ Cut Ceiling", 1.0, 12.0, 3.0, "dB", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("auto_apply_suggestions", "Auto-Apply Proposed Dynamic EQ Cuts", 0.0, 1.0, 0.0, "bool", (34, 197, 94)))
+            ),
+            "TranscribedNote" => Box::new(
+                GenericDspNodeUi::new("TranscribedNote", "Neural Pitch Tracking & Audio-to-MIDI Transcription Note HUD", DspNodeCategory::Modulation)
+                    .with_param(DspParamDescriptor::new_linear("pitch_midi", "Estimated Fundamental Note Index", 0.0, 127.0, 60.0, "MIDI", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("frequency_hz", "Exact Detected Fundamental Frequency", 20.0, 5000.0, 261.63, "Hz", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("onset_confidence", "Transient Onset Detection Confidence", 0.0, 1.0, 0.90, "%", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("pitch_bend_cents", "Continuous Vocal Pitch Glide Bend", -100.0, 100.0, 0.0, "cents", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_enum("transcription_model", "Pitch Tracking Neural Backend", vec!["High-Precision Polyphonic".into(), "Fast Monophonic Pitch Tracker".into(), "Percussive Transient Only".into()], 0, (34, 197, 94)))
+            ),
             // Fallback dynamic generator for any unexpected or plugin node
             other => {
                 let cat = Self::inventory()
@@ -15534,6 +15892,27 @@ mod tests {
         assert!(registry.get("ClavinetWaypoint").is_some());
         assert!(registry.get("AtmosphericDensity").is_some());
         assert!(registry.get("AcousticLevitationTrap").is_some());
+        assert!(registry.get("NodeGraph").is_some());
+        assert!(registry.get("Track").is_some());
+        assert!(registry.get("Transport").is_some());
+        assert!(registry.get("VoicePool").is_some());
+        assert!(registry.get("WavWriter").is_some());
+        assert!(registry.get("ParamBus").is_some());
+        assert!(registry.get("FixedAudioBuffer").is_some());
+        assert!(registry.get("MultichannelAudioBuffer").is_some());
+        assert!(registry.get("SequenceTrack").is_some());
+        assert!(registry.get("SequenceEvent").is_some());
+        assert!(registry.get("StemMetadata").is_some());
+        assert!(registry.get("SpectrogramArtConfig").is_some());
+        assert!(registry.get("SpectrogramImage").is_some());
+        assert!(registry.get("ImageNoteTrigger").is_some());
+        assert!(registry.get("SpectralMorphConfig").is_some());
+        assert!(registry.get("LatticePointMass").is_some());
+        assert!(registry.get("NamModel").is_some());
+        assert!(registry.get("OnnxCpuSimdExecutionProvider").is_some());
+        assert!(registry.get("DrumStepEvent").is_some());
+        assert!(registry.get("MixSuggestions").is_some());
+        assert!(registry.get("TranscribedNote").is_some());
     }
 
     #[test]

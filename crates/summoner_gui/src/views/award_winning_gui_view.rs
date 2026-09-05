@@ -428,6 +428,10 @@ impl AwardWinningGuiView {
                 "Ultrasonic Phased-Array Levitation Soundfield" => "AcousticLevitationTrap",
                 "Non-Linear Follow Action Matrix Sequencer" => "FollowAction",
                 "Concert Grand Piano Escapement Trajectory" => "GrandPianoWaypoint",
+                "Neural Amp Modeler WaveNet Studio Rig" => "NamModel",
+                "Visual Spectrogram Image Sonification Canvas" => "SpectrogramArtConfig",
+                "Multi-Track DAW Transport & Graph Engine" => "Transport",
+                "Polyphonic Voice Pool & Micro-Timing Sequencer" => "VoicePool",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {

@@ -193,6 +193,10 @@ fn default_available_presets() -> Vec<String> {
         "Ultrasonic Phased-Array Levitation Soundfield".to_string(),
         "Non-Linear Follow Action Matrix Sequencer".to_string(),
         "Concert Grand Piano Escapement Trajectory".to_string(),
+        "Neural Amp Modeler WaveNet Studio Rig".to_string(),
+        "Visual Spectrogram Image Sonification Canvas".to_string(),
+        "Multi-Track DAW Transport & Graph Engine".to_string(),
+        "Polyphonic Voice Pool & Micro-Timing Sequencer".to_string(),
     ]
 }
 
