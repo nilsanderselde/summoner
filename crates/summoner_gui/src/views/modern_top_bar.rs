@@ -281,6 +281,10 @@ fn default_available_presets() -> Vec<String> {
         "Indian Classical Sitar Jawari Obstacle & Jiva Silk Sizzle".to_string(),
         "Procedural Lua Project Builder & Multi-Track Graph".to_string(),
         "Enterprise Audio Engine Health Telemetry & Latency Diagnostics".to_string(),
+        "Physical Bowed Cello & Resonant Rosin Friction Slew".to_string(),
+        "North Indian Classical Raga Shruti Microtonal Drone".to_string(),
+        "Vintage 12AX7 Valve Triode Saturation & Sag Bloom".to_string(),
+        "Opt-In Real-Time Audio Engine Health Telemetry & Diagnostics".to_string(),
     ]
 }
 

@@ -516,6 +516,10 @@ impl AwardWinningGuiView {
                 "Indian Classical Sitar Jawari Obstacle & Jiva Silk Sizzle" => "JawariProfile",
                 "Procedural Lua Project Builder & Multi-Track Graph" => "LuaProjectBuilder",
                 "Enterprise Audio Engine Health Telemetry & Latency Diagnostics" => "UserSessionMetric",
+                "Physical Bowed Cello & Resonant Rosin Friction Slew" => "BowedInstrument",
+                "North Indian Classical Raga Shruti Microtonal Drone" => "RagaScale",
+                "Vintage 12AX7 Valve Triode Saturation & Sag Bloom" => "TubeTopology",
+                "Opt-In Real-Time Audio Engine Health Telemetry & Diagnostics" => "TelemetryManager",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {

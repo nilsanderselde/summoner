@@ -10001,6 +10001,174 @@ descriptors.insert("BellowsGesturePattern".to_string(), DspNodeDescriptor::new("
             .with_param(DspParamSchema::knob("error_recovery_count", "Runtime Script Error Catch & Recovery Tally", 0.0, 100.0, 0.0, "errors", MacroRole::Punch, "Count of runtime exceptions caught and gracefully bypassed without audio crash"))
             .with_param(DspParamSchema::toggle("jit_compilation_status", "LuaJIT Native Machine Code Trace Compilation", true, "Flag indicating if audio inner loops are JIT-compiled to native machine code"))
         );
+        descriptors.insert("BowedInstrument".to_string(), DspNodeDescriptor::new("BowedInstrument", "Physical Bowed String Instrument Geometry & Body Voicing", DspNodeCategory::AcousticPhysicalModel, "Physical modeling acoustic geometry selector providing authentic body cavity profiles, bridge transfer functions, and top plate wood grain impedance for Violin, Viola, Cello, and Double Bass")
+            .with_param(DspParamSchema::choice("instrument_mode", "Bowed String Physical Resonator Mode", &["Violin", "Viola", "Cello", "Double Bass"], 0, "Selects physical body dimensions, string tension, and Helmholtz resonance frequencies"))
+            .with_param(DspParamSchema::knob("body_scaling", "Acoustic Cavity Geometry Scale Multiplier", 0.5, 2.5, 1.0, "x", MacroRole::Tone, "Scales the acoustic soundboard surface area and body air cavity volume"))
+            .with_param(DspParamSchema::knob("soundpost_coupling", "Soundpost Transverse Mechanical Coupling", 0.0, 1.0, 0.85, "ratio", MacroRole::Space, "Transverse vibration transmission efficiency between top spruce plate and back maple plate"))
+            .with_param(DspParamSchema::knob("f_hole_radiation", "F-Hole Air Cavity Acoustic Radiation Ratio", 0.0, 1.0, 0.72, "ratio", MacroRole::Tone, "Acoustic radiation efficiency of the body Helmholtz air volume through instrument f-holes"))
+            .with_param(DspParamSchema::knob("wolf_tone_damping", "Main Body Resonance Wolf-Tone Suppressor", 0.0, 1.0, 0.45, "ratio", MacroRole::Punch, "Targeted damping filter suppressing acoustic body wolf-note instability and beating"))
+            .with_param(DspParamSchema::knob("wood_plate_varnish", "Acoustic Varnish High-Frequency Loss Damping", 0.0, 1.0, 0.60, "ratio", MacroRole::Tone, "Surface varnish elasticity modeling high-frequency overtone damping across wood grain"))
+        );
+        descriptors.insert("ExcitationType".to_string(), DspNodeDescriptor::new("ExcitationType", "Acoustic String Strike, Pluck & Slap Excitation Dynamics", DspNodeCategory::AcousticPhysicalModel, "Non-linear string excitation mechanism modeling contact impedance, strike hardness, plectrum release angle, fingertip flesh deformation, and slap bass fretboard impact")
+            .with_param(DspParamSchema::choice("excitation_mode", "Physical String Excitation Interaction Mode", &["Hammer Strike", "Plectrum Pluck", "Finger Nylon", "Slap Bass"], 0, "Selects physical interaction boundary condition between exciter and vibrating string"))
+            .with_param(DspParamSchema::knob("strike_hardness", "Exciter Surface Dynamic Hardness", 0.01, 1.0, 0.65, "ratio", MacroRole::Punch, "Elastic stiffness of felt, wood, plectrum, or fingertip exciter contact boundary"))
+            .with_param(DspParamSchema::knob("contact_duration_ms", "Mechanical Contact Time Duration in Milliseconds", 0.1, 30.0, 2.5, "ms", MacroRole::Tone, "Duration the exciter stays in mechanical contact with string during initial impact"))
+            .with_param(DspParamSchema::knob("flesh_damping_ratio", "Fingertip Flesh Viscoelastic Absorption", 0.0, 1.0, 0.35, "ratio", MacroRole::Tone, "High-frequency acoustic energy absorbed by soft epidermal flesh during string release"))
+            .with_param(DspParamSchema::knob("strike_position_ratio", "Normalized String Length Excitation Position", 0.01, 0.5, 0.12, "pos", MacroRole::Space, "Fractional position along string length where excitation occurs, shaping harmonic comb nulls"))
+            .with_param(DspParamSchema::knob("fret_buzz_threshold", "Non-linear Fretboard Collision Buzz Threshold", 0.0, 1.0, 0.15, "thresh", MacroRole::Punch, "Dynamic threshold where high-amplitude string displacement causes metallic fret impact rattling"))
+        );
+        descriptors.insert("HornFlarePreset".to_string(), DspNodeDescriptor::new("HornFlarePreset", "Brass Waveguide Horn Flare Acoustic Impedance Profile", DspNodeCategory::AcousticPhysicalModel, "Acoustic radiation impedance calculator and wave reflection boundary modeling trumpet, French horn, trombone, and tuba bell flare geometry with Webster horn equation solution")
+            .with_param(DspParamSchema::choice("flare_preset", "Brass Bell Flare Physical Profile", &["Trumpet", "French Horn", "Trombone", "Tuba"], 0, "Selects bell expansion rate, cutoff frequency, and radiation impedance characteristics"))
+            .with_param(DspParamSchema::knob("cutoff_freq_hz", "High-Pass Bell Radiation Cutoff Frequency", 100.0, 3000.0, 1200.0, "Hz", MacroRole::Tone, "Frequency below which acoustic waves are reflected back into the bore rather than radiated"))
+            .with_param(DspParamSchema::knob("bell_radius_cm", "Bell Flare Termination Physical Radius", 2.0, 45.0, 12.5, "cm", MacroRole::Space, "Physical radius of bell mouth affecting directional high-frequency beaming and spherical radiation"))
+            .with_param(DspParamSchema::knob("radiation_resistance", "Acoustic Radiation Impedance Scaling", 0.1, 2.0, 1.0, "ratio", MacroRole::Punch, "Scales real acoustic impedance component governing sound energy transfer to surrounding air"))
+            .with_param(DspParamSchema::knob("reflection_coefficient", "Bore Return Wave Reflection Amplitude", 0.0, 1.0, 0.68, "ratio", MacroRole::Tone, "Fraction of acoustic wave energy reflected back towards lips to sustain standing-wave oscillation"))
+            .with_param(DspParamSchema::knob("flare_curvature", "Bessel / Exponential Flare Curvature Exponent", 0.1, 5.0, 1.8, "exp", MacroRole::Space, "Mathematical curvature exponent parameterizing non-linear horn bell flare geometry"))
+        );
+        descriptors.insert("HornMuteType".to_string(), DspNodeDescriptor::new("HornMuteType", "Acoustic Brass Instrument Bell Mute Characteristic", DspNodeCategory::AcousticPhysicalModel, "Acoustic mute filter model inserting helmholtz cavity resonance, low-frequency attenuation, and nasal high-frequency formant boosts for Straight, Harmon, and Cup brass mutes")
+            .with_param(DspParamSchema::choice("mute_mode", "Acoustic Brass Mute Insertion Mode", &["Open (Unmuted)", "Straight Mute", "Harmon Mute", "Cup Mute"], 0, "Selects acoustic mute type inserted into the brass bell termination"))
+            .with_param(DspParamSchema::knob("stem_insertion_depth", "Harmon Mute Extendable Stem Extension Depth", 0.0, 1.0, 0.5, "ratio", MacroRole::Tone, "Tuning tube insertion depth for Harmon bubble/buzz formant tuning"))
+            .with_param(DspParamSchema::knob("cavity_resonance_hz", "Internal Mute Cavity Helmholtz Center Frequency", 500.0, 6000.0, 2100.0, "Hz", MacroRole::Tone, "Acoustic cavity resonant peak frequency introducing signature nasal vocal formants"))
+            .with_param(DspParamSchema::knob("low_cut_attenuation_db", "Low-Frequency Shelf Attenuation Depth", 0.0, 36.0, 12.0, "dB", MacroRole::Punch, "Bass fundamental attenuation caused by restricted airflow and acoustic impedance mismatch"))
+            .with_param(DspParamSchema::knob("nasal_formant_boost_db", "Nasal Resonant Peak Gain Amplification", 0.0, 18.0, 6.5, "dB", MacroRole::Tone, "High-Q overtone peak boost characteristic of brass mute timbre"))
+            .with_param(DspParamSchema::knob("plunger_hand_cover", "Dynamic Wah-Wah Plunger Hand Aperture", 0.0, 1.0, 0.0, "ratio", MacroRole::Space, "Manual hand aperture modulation creating dramatic wah-wah frequency sweeps"))
+        );
+        descriptors.insert("MeshBoundaryType".to_string(), DspNodeDescriptor::new("MeshBoundaryType", "2D/3D Waveguide Resonator Mesh Boundary Physics", DspNodeCategory::AcousticPhysicalModel, "Physical wave reflection boundary condition for 2D circular/rectangular waveguide meshes configuring clamped rim reflection, free boundary phase inversion, and absorptive damping")
+            .with_param(DspParamSchema::choice("boundary_mode", "Resonator Mesh Edge Termination Boundary", &["Clamped Rim", "Free Plate", "Damped Absorptive"], 0, "Edge termination physics governing wave phase reflection and boundary dispersion"))
+            .with_param(DspParamSchema::knob("reflection_loss_db", "Per-Reflection High-Frequency Energy Loss", 0.0, 12.0, 0.8, "dB", MacroRole::Tone, "Energy absorbed by rim mounting bracket or boundary material on each wave reflection"))
+            .with_param(DspParamSchema::knob("dispersion_factor", "Phase Velocity Frequency Dispersion Factor", 0.0, 1.0, 0.35, "disp", MacroRole::Space, "Stiffness-driven dispersion causing higher partials to propagate faster than fundamentals"))
+            .with_param(DspParamSchema::knob("boundary_stiffness", "Rim Clamp Mechanical Elastic Stiffness", 0.1, 10.0, 1.5, "N/m", MacroRole::Punch, "Restoring force constant of boundary attachment points regulating inharmonic rim modes"))
+            .with_param(DspParamSchema::toggle("phase_inversion", "Invert Wave Phase on Outer Perimeter Reflection", true, "Controls whether reflected pressure waves experience a 180-degree phase flip"))
+            .with_param(DspParamSchema::knob("corner_damping", "Mesh Corner Dispersion Damping Coefficient", 0.0, 1.0, 0.22, "ratio", MacroRole::Space, "Localized acoustic damping applied to rectangular grid corners to eliminate numerical artifacts"))
+        );
+        descriptors.insert("RagaScale".to_string(), DspNodeDescriptor::new("RagaScale", "North Indian Classical Raga Sympathetic Tuning & Microtonal Shruti Matrix", DspNodeCategory::AcousticPhysicalModel, "Modal microtonal scale and sympathetic bridge obstacle tuner calculating authentic 22-Shruti just intonation ratios for Ragas Yaman, Bhairav, Bilawal, Darbari Kanhada, and Todi")
+            .with_param(DspParamSchema::choice("raga_selection", "Indian Classical Raga Modal Tuning", &["Raga Yaman", "Raga Bhairav", "Raga Bilawal", "Raga Darbari Kanhada", "Raga Todi"], 0, "Selects primary thaat, vadi/samvadi microtonal intervals, and melodic ascending/descending rules"))
+            .with_param(DspParamSchema::knob("tonic_root_hz", "Sa Fundamental Drone Reference Frequency", 65.4, 523.25, 138.59, "Hz", MacroRole::Tone, "Base reference frequency (Sa / C#) from which all 22-Shruti pure rational intervals are derived"))
+            .with_param(DspParamSchema::knob("meend_portamento_ms", "Continuous Meend Glissando Glide Time", 10.0, 1200.0, 280.0, "ms", MacroRole::Space, "Smooth lateral string pull glissando time traversing microtonal shruti intervals"))
+            .with_param(DspParamSchema::knob("andolan_oscillation_cents", "Slow Andolan Pitch Oscillation Depth", 0.0, 80.0, 22.0, "cents", MacroRole::Tone, "Expressive microtonal pitch wobble characteristic of komal Ga and Dha in Darbari Kanhada"))
+            .with_param(DspParamSchema::knob("vadi_emphasis", "Sonant Vadi Note Harmonic Amplitude Weight", 1.0, 3.0, 1.8, "gain", MacroRole::Punch, "Dynamic resonance weighting applied to the king-note (Vadi) of the selected Raga"))
+            .with_param(DspParamSchema::knob("sympathetic_sustain_sec", "Taraf Sympathetic String Ring Sustain", 0.5, 15.0, 6.5, "s", MacroRole::Space, "Reverberant ring time of undamped sympathetic strings resting upon the jawari flat bridge"))
+        );
+        descriptors.insert("RosinType".to_string(), DspNodeDescriptor::new("RosinType", "Bowed String Stick-Slip Rosin Friction Formulation", DspNodeCategory::AcousticPhysicalModel, "Non-linear stick-slip bow hair friction dynamics curve calculating static adhesion, dynamic sliding velocity, and thermal melting transitions across amber, pine, and synthetic rosin")
+            .with_param(DspParamSchema::choice("rosin_formula", "Bow Hair Rosin Chemical Formulation", &["Light Violin Amber", "Medium Cello Pine", "Dark Double Bass Heavy", "Synthetic Low-Dust"], 0, "Selects coefficient of static friction, dynamic slip threshold, and tackiness profile"))
+            .with_param(DspParamSchema::knob("static_friction_coeff", "Static Stick-Phase Friction Coefficient", 0.2, 2.0, 0.85, "mu", MacroRole::Punch, "Maximum adhesive grip holding string displacement before sudden slip release"))
+            .with_param(DspParamSchema::knob("dynamic_friction_coeff", "Dynamic Slip-Phase Kinetic Friction Coefficient", 0.05, 0.8, 0.25, "mu", MacroRole::Tone, "Sliding friction opposing bow motion while string snaps back under elastic tension"))
+            .with_param(DspParamSchema::knob("thermal_melting_point_c", "Rosin Friction-Induced Thermal Melting Temperature", 40.0, 90.0, 62.0, "C", MacroRole::Space, "Temperature threshold where localized frictional heating softens rosin, smoothing tone"))
+            .with_param(DspParamSchema::knob("tackiness_adhesion", "Residual Rosin Tackiness Adhesion Strength", 0.0, 1.0, 0.60, "ratio", MacroRole::Punch, "Microscopic adhesive pull sustaining Helmholtz motion at low bow speeds and light pressure"))
+            .with_param(DspParamSchema::knob("slip_velocity_threshold", "Kinetic Slip Transition Velocity Threshold", 0.01, 2.0, 0.35, "m/s", MacroRole::Tone, "Relative bow-string velocity triggering transition from static sticking to kinetic sliding"))
+        );
+        descriptors.insert("GrainWindowType".to_string(), DspNodeDescriptor::new("GrainWindowType", "Granular Cloud Synthesis Windowing Envelope Function", DspNodeCategory::SamplerSlicer, "Window envelope weighting function shaper modulating individual grain attack and decay skirts across Hann, Tukey, Blackman, Hamming, Trapezoidal, Sine, Gaussian, and Welch geometries")
+            .with_param(DspParamSchema::choice("window_function", "Grain Temporal Windowing Envelope Function", &["Hann", "Tukey", "Blackman", "Hamming", "Trapezoidal", "Sine", "Gaussian", "Welch"], 0, "Selects envelope geometry shaping grain onset transients and spectral side-lobe leakage"))
+            .with_param(DspParamSchema::knob("tukey_alpha", "Tukey Window Flat-Top Cosine Taper Alpha", 0.0, 1.0, 0.5, "alpha", MacroRole::Tone, "Fraction of window duration dedicated to cosine taper edges versus flat sustaining center"))
+            .with_param(DspParamSchema::knob("gaussian_sigma", "Gaussian Standard Deviation Bell Width", 0.1, 1.0, 0.35, "sigma", MacroRole::Space, "Standard deviation parameter governing bell-curve sharpness and smooth transient decay"))
+            .with_param(DspParamSchema::knob("grain_overlap_ratio", "Inter-Grain Window Overlap Density", 1.0, 16.0, 4.0, "x", MacroRole::Punch, "Number of concurrent overlapping grains required for constant-power amplitude sum"))
+            .with_param(DspParamSchema::knob("spectral_leakage_suppression", "Side-Lobe Spectral Leakage Rejection", 12.0, 96.0, 48.0, "dB", MacroRole::Tone, "Attenuation of side-lobe frequency splatter preventing metallic granular buzzing"))
+            .with_param(DspParamSchema::knob("cosine_taper_symmetry", "Envelope Attack / Release Asymmetry Ratio", 0.0, 1.0, 0.5, "sym", MacroRole::Space, "Skews window center to create sharp percussive attack with long exponential decay tail"))
+        );
+        descriptors.insert("TubeTopology".to_string(), DspNodeDescriptor::new("TubeTopology", "Analog Vacuum Tube Topology & Preamp Valve Circuitry", DspNodeCategory::DistortionSaturation, "Physical thermionic vacuum tube circuitry topology configuring 12AX7 dual triode preamp gain stages, EL34 British power pentode push-pull clipping, and 6L6 American beam tetrode dynamics")
+            .with_param(DspParamSchema::choice("valve_topology", "Vacuum Tube Thermionic Architecture", &["12AX7 Preamp Triode", "EL34 Power Pentode", "6L6 Beam Tetrode"], 0, "Selects transfer characteristics, dynamic loadline, and harmonic generation profile"))
+            .with_param(DspParamSchema::knob("plate_voltage_v", "Anode B+ High-Voltage Plate Supply", 100.0, 500.0, 320.0, "V", MacroRole::Tone, "Plate supply voltage controlling dynamic headroom, saturation onset, and harmonic richness"))
+            .with_param(DspParamSchema::knob("grid_bias_v", "Control Grid Operating Point Bias Voltage", -15.0, 0.0, -2.4, "V", MacroRole::Punch, "Grid bias voltage setting quiescent current and balancing even versus odd harmonic distortion"))
+            .with_param(DspParamSchema::knob("even_harmonic_drive", "Second-Order Asymmetric Harmonic Warmth", 0.0, 1.0, 0.55, "ratio", MacroRole::Tone, "Asymmetric loadline curvature generating warm musical second-order even harmonics"))
+            .with_param(DspParamSchema::knob("odd_harmonic_saturation", "Third-Order Symmetric Saturation Punch", 0.0, 1.0, 0.38, "ratio", MacroRole::Punch, "Symmetric grid conduction clipping producing aggressive odd-order edge and punch"))
+            .with_param(DspParamSchema::knob("sag_recovery_time_ms", "Power Supply Choke Sag & Dynamic Bloom Recovery", 5.0, 500.0, 85.0, "ms", MacroRole::Space, "Power rail voltage drop time under heavy transient loads providing natural tube compression bloom"))
+        );
+        descriptors.insert("WallMaterial".to_string(), DspNodeDescriptor::new("WallMaterial", "Acoustic Space Boundary Wall Material & Absorption Spectrum", DspNodeCategory::SpatialSurround, "Acoustic room impulse simulation boundary material calculating multi-band sound absorption, diffuse scattering, and specular reflection coefficients for concrete, wood, acoustic studio foam, carpet, glass, and cathedral stone")
+            .with_param(DspParamSchema::choice("material_type", "Acoustic Boundary Surface Material", &["Concrete", "Wood Paneling", "Studio Acoustic Foam", "Carpet on Felt", "Architectural Glass", "Cathedral Stone"], 2, "Selects frequency-dependent absorption, scattering coefficients, and structural transmission loss"))
+            .with_param(DspParamSchema::knob("absorption_low", "Low-Frequency Absorption Coefficient (<250 Hz)", 0.01, 0.99, 0.15, "coeff", MacroRole::Tone, "Fraction of low-frequency acoustic energy absorbed by boundary surface on each reflection"))
+            .with_param(DspParamSchema::knob("absorption_mid", "Mid-Frequency Absorption Coefficient (250-2000 Hz)", 0.01, 0.99, 0.55, "coeff", MacroRole::Space, "Fraction of mid-frequency acoustic energy absorbed governing vocal clarity and warmth"))
+            .with_param(DspParamSchema::knob("absorption_high", "High-Frequency Absorption Coefficient (>2000 Hz)", 0.01, 0.99, 0.85, "coeff", MacroRole::Tone, "Fraction of treble acoustic energy absorbed preventing flutter echo and harsh reflections"))
+            .with_param(DspParamSchema::knob("scattering_roughness", "Diffuse Lambertian Surface Scattering Ratio", 0.0, 1.0, 0.42, "ratio", MacroRole::Punch, "Fraction of reflected sound energy dispersed diffusely rather than specularly reflected"))
+            .with_param(DspParamSchema::knob("transmission_loss_db", "Through-Wall Acoustic Sound Transmission Loss", 5.0, 80.0, 45.0, "dB", MacroRole::Space, "Attenuation of sound waves passing through boundary walls into adjacent virtual acoustic rooms"))
+        );
+        descriptors.insert("ColorMappingMode".to_string(), DspNodeDescriptor::new("ColorMappingMode", "Spectrogram Art Optical Color-to-Harmonic Audio Mapping", DspNodeCategory::SpectralResynthesis, "Translates 2D bitmap pixel RGB chromaticity and luminance values into additive sinusoidal harmonics, stereo spatial panning, and harmonic overtone brightness")
+            .with_param(DspParamSchema::choice("color_mode", "Pixel Chromaticity to Harmonic Mapping Engine", &["Grayscale Monochrome", "RGB Color-to-Note Harmonic"], 0, "Selects whether image luminance drives pure sine banks or RGB channels drive distinct harmonic voices"))
+            .with_param(DspParamSchema::knob("red_channel_pitch_offset", "Red Color Channel Harmonic Interval Offset", -24.0, 24.0, 0.0, "st", MacroRole::Tone, "Semitone pitch shift applied to partials triggered by image red channel chromaticity"))
+            .with_param(DspParamSchema::knob("green_channel_resonance", "Green Color Channel Filter Resonance Q", 0.0, 1.0, 0.70, "ratio", MacroRole::Space, "Resonant filter emphasis applied to partials triggered by image green chromaticity"))
+            .with_param(DspParamSchema::knob("blue_channel_stereo_pan", "Blue Color Channel Stereo Panning Bias", -1.0, 1.0, 0.0, "pan", MacroRole::Space, "Spatial stereo field placement bias modulated by image blue color intensity"))
+            .with_param(DspParamSchema::knob("luminance_threshold", "Optical Pixel Dark Noise Floor Threshold", 0.0, 1.0, 0.08, "thresh", MacroRole::Punch, "Luminance cutoff below which pixels generate no audible sine oscillator partials"))
+            .with_param(DspParamSchema::knob("gamma_curve_exponent", "Non-linear Pixel Brightness Contrast Gamma", 0.2, 3.0, 1.0, "gamma", MacroRole::Tone, "Dynamic contrast curve exponent shaping perceptual dynamic range of visual sonification"))
+        );
+        descriptors.insert("FrequencyMapping".to_string(), DspNodeDescriptor::new("FrequencyMapping", "Spectrogram Art Vertical Pixel Frequency Axis Scale", DspNodeCategory::SpectralResynthesis, "Configures vertical pixel coordinate calibration across audio frequency spectrum, mapping bitmap height to linear Hertz or musical logarithmic pitch intervals")
+            .with_param(DspParamSchema::choice("frequency_scale", "Vertical Y-Axis Frequency Mapping Calibration", &["Linear Hertz", "Musical Logarithmic"], 1, "Determines whether vertical pixel rows scale linearly in Hertz or logarithmically in musical pitch"))
+            .with_param(DspParamSchema::knob("base_frequency_hz", "Bottom Pixel Row Fundamental Audio Frequency", 20.0, 1000.0, 55.0, "Hz", MacroRole::Tone, "Audio frequency corresponding to row Y=0 at the bottom edge of the image canvas"))
+            .with_param(DspParamSchema::knob("ceiling_frequency_hz", "Top Pixel Row Maximum Nyquist Limit Frequency", 2000.0, 22050.0, 16000.0, "Hz", MacroRole::Tone, "Audio frequency corresponding to the topmost row of pixels in the spectrogram canvas"))
+            .with_param(DspParamSchema::knob("octaves_per_height", "Logarithmic Octave Span Across Canvas Height", 1.0, 10.0, 8.0, "oct", MacroRole::Space, "Total musical octave range spanned from bottom to top of the visual sonification canvas"))
+            .with_param(DspParamSchema::knob("cent_quantization_step", "Chromatic Note Intonation Quantization Step", 0.0, 100.0, 0.0, "cents", MacroRole::Punch, "Snaps vertical oscillator frequencies to nearest 12-TET or microtonal pitch grid steps"))
+            .with_param(DspParamSchema::toggle("anti_aliasing_oversampling", "2x Sub-Pixel Anti-Aliased Sine Interpolation", true, "Interpolates pixel values between vertical scanlines to prevent high-frequency aliasing"))
+        );
+        descriptors.insert("CadenceType".to_string(), DspNodeDescriptor::new("CadenceType", "Harmonic Cadence Progression Resolution Target", DspNodeCategory::Modulation, "Harmonic cadence resolution target configuring voice-leading constraints, dominant tension preparation, and tonic arrival dynamics across Authentic, Plagal, Deceptive, and Half cadences")
+            .with_param(DspParamSchema::choice("cadence_target", "Harmonic Cadence Progression Resolution Target", &["Authentic (V-I / V7-I)", "Plagal (IV-I)", "Deceptive (V-vi)", "Half Cadence (I-V / ii-V)"], 0, "Selects functional chord progression goal for algorithmic composition and accompaniment generators"))
+            .with_param(DspParamSchema::knob("resolution_strength", "Tonal Gravity Resolution Completeness", 0.0, 1.0, 0.95, "ratio", MacroRole::Punch, "Strength of tonal arrival and finality felt upon reaching the cadence resolution chord"))
+            .with_param(DspParamSchema::knob("leading_tone_gravity", "Leading-Tone Half-Step Resolution Pull", 0.0, 1.0, 0.88, "ratio", MacroRole::Tone, "Algorithmic weighting enforcing upward semitone resolution of the 7th scale degree to tonic"))
+            .with_param(DspParamSchema::knob("bass_leap_penalty", "Bass Voice Large Leap Avoidance Penalty", 0.0, 1.0, 0.25, "weight", MacroRole::Space, "Voice-leading penalty discouraging awkward bass jumps in favor of stepwise root motion"))
+            .with_param(DspParamSchema::knob("voice_overlap_tolerance", "Polyphonic Voice Crossing Overlap Tolerance", 0.0, 1.0, 0.10, "ratio", MacroRole::Tone, "Strictness of voice-leading solver in preventing inner voices from crossing outer voices"))
+            .with_param(DspParamSchema::knob("suspension_retention_beats", "Non-Harmonic Suspension Delay in Beats", 0.0, 4.0, 1.0, "beats", MacroRole::Space, "Duration a suspended note (4-3 or 7-6 suspension) is held before resolving to chord tone"))
+        );
+        descriptors.insert("Interpolation".to_string(), DspNodeDescriptor::new("Interpolation", "Automation Curve Interpolation Transfer Mathematical Model", DspNodeCategory::Modulation, "Parameter automation trajectory generator computing time-domain transitions across Linear ramps, Exponential growth, Logarithmic decay, Step hold, Smooth S-curve, and Bezier splines")
+            .with_param(DspParamSchema::choice("curve_type", "Automation Transition Mathematical Interpolation", &["Linear Ramp", "Exponential Growth", "Logarithmic Decay", "Instantaneous Step", "Smooth Hermite", "Cubic Bezier"], 4, "Mathematical transfer function computing intermediate parameter values between automation nodes"))
+            .with_param(DspParamSchema::knob("bezier_control_x", "Cubic Bezier Spline First Control Handle X", 0.0, 1.0, 0.25, "x", MacroRole::Space, "Horizontal time coordinate of the primary Bezier trajectory curvature control handle"))
+            .with_param(DspParamSchema::knob("bezier_control_y", "Cubic Bezier Spline First Control Handle Y", -1.0, 2.0, 0.75, "y", MacroRole::Tone, "Vertical parameter value coordinate allowing expressive overshooting and bounce curves"))
+            .with_param(DspParamSchema::knob("tension_skew", "Hermite Spline Tension & S-Curve Skew Factor", -1.0, 1.0, 0.0, "skew", MacroRole::Punch, "Asymmetric skew parameter shifting curve inflection point towards onset or destination"))
+            .with_param(DspParamSchema::knob("quantize_grid_divisions", "Automation Step Value Quantization Divisions", 0.0, 64.0, 0.0, "div", MacroRole::Tone, "Discretizes smooth curves into stepped staircase values for robotic sample-and-hold effects"))
+            .with_param(DspParamSchema::knob("jitter_smoothing_ms", "Sub-Sample Interpolation Jitter Filter Window", 0.0, 50.0, 2.0, "ms", MacroRole::Space, "Zero-latency one-pole smoothing window preventing zipper noise on hardware MIDI controllers"))
+        );
+        descriptors.insert("CloudPresetEntry".to_string(), DspNodeDescriptor::new("CloudPresetEntry", "Cloud Collaborative Preset Manifest & Social Synchronization", DspNodeCategory::Utility, "CRDT-backed cloud sound preset repository item tracking UUID, creator handle, community upvote score, TOML patch definition, and collaborative comment stream")
+            .with_param(DspParamSchema::knob("upvote_count", "Community Crowd-Sourced Upvote Tally", 0.0, 10000.0, 142.0, "votes", MacroRole::Punch, "Cumulative community endorsement votes reflecting sound design quality and popularity"))
+            .with_param(DspParamSchema::knob("comments_count", "Peer Discussion Comments Thread Depth", 0.0, 500.0, 18.0, "items", MacroRole::Space, "Number of collaborative comments and production tips attached to this cloud patch"))
+            .with_param(DspParamSchema::knob("download_tally", "Global Community Preset Installs Count", 0.0, 50000.0, 850.0, "downloads", MacroRole::Tone, "Total times this preset has been downloaded into producer user libraries"))
+            .with_param(DspParamSchema::knob("version_revision", "Preset Semantic Patch Evolution Revision", 1.0, 100.0, 3.0, "rev", MacroRole::Tone, "Incremental patch version tracking collaborative parameter adjustments over time"))
+            .with_param(DspParamSchema::knob("cloud_sync_latency_ms", "Peer-to-Peer CRDT Patch Synchronization Latency", 1.0, 2000.0, 45.0, "ms", MacroRole::Space, "Network roundtrip latency in milliseconds for synchronizing preset edits across collaborators"))
+            .with_param(DspParamSchema::toggle("is_verified_creator", "Verified Sound Designer Cryptographic Badge", true, "Indicates whether patch was published by a cryptographically verified artist or core contributor"))
+        );
+        descriptors.insert("CloudRenderJob".to_string(), DspNodeDescriptor::new("CloudRenderJob", "Distributed Cloud Audio Render Farm Task Dispatcher", DspNodeCategory::Utility, "Dispatches headless project rendering jobs to distributed remote worker nodes, tracking multi-stem compilation progress, worker health, and download CDN delivery URLs")
+            .with_param(DspParamSchema::knob("render_progress_pct", "Batch Cloud Render Task Completion Percentage", 0.0, 100.0, 72.5, "%", MacroRole::Punch, "Current completion percentage across all dispatched render job audio frame chunks"))
+            .with_param(DspParamSchema::knob("worker_nodes_allocated", "Active Render Farm Parallel Compute Nodes", 1.0, 64.0, 8.0, "nodes", MacroRole::Tone, "Number of concurrent cloud or LAN peer workers crunching multi-track audio buffers"))
+            .with_param(DspParamSchema::knob("chunk_block_size_samples", "Distributed Processing Audio Chunk Size", 256.0, 16384.0, 4096.0, "smpl", MacroRole::Space, "Audio buffer block partition size distributed to worker nodes for parallel DSP rendering"))
+            .with_param(DspParamSchema::knob("elapsed_render_time_sec", "Total Render Elapsed Wall Clock Time in Seconds", 0.0, 3600.0, 14.2, "s", MacroRole::Space, "Wall-clock seconds consumed since render job dispatch across the worker network"))
+            .with_param(DspParamSchema::choice("audio_sample_rate", "Export Master Audio Sample Rate Target", &["44.1 kHz", "48.0 kHz", "96.0 kHz", "192.0 kHz"], 1, "Target sample rate for rendered master stems and interleaved multi-channel WAV files"))
+            .with_param(DspParamSchema::toggle("lossless_flac_compression", "Encode Stems in Lossless FLAC Format", true, "Applies lossless FLAC compression to rendered chunks reducing cloud storage bandwidth"))
+        );
+        descriptors.insert("CrashReport".to_string(), DspNodeDescriptor::new("CrashReport", "Deterministic Crash Dump Diagnostic Telemetry & Exception Reporter", DspNodeCategory::Utility, "Captures unhandled panic exceptions, stack traces, audio buffer underruns, OS environment state, and deterministic RNG seeds for rapid reproduction and debugging")
+            .with_param(DspParamSchema::knob("stack_depth_frames", "Captured Crash Stack Trace Call Depth", 1.0, 128.0, 32.0, "frames", MacroRole::Tone, "Depth of captured CPU execution call stack pointing to exact line of fault or assertion failure"))
+            .with_param(DspParamSchema::knob("memory_rss_at_crash_mb", "Resident Set Memory Footprint at Fault Incident", 16.0, 8192.0, 384.0, "MB", MacroRole::Space, "Process physical RAM memory consumption recorded at the moment of panic capture"))
+            .with_param(DspParamSchema::knob("audio_buffer_underruns", "Cumulative Pre-Crash Buffer Underrun Count", 0.0, 1000.0, 0.0, "xruns", MacroRole::Punch, "Total buffer underruns experienced prior to panic, detecting real-time thread starvation"))
+            .with_param(DspParamSchema::choice("os_kernel_id", "Operating System Kernel Environment Platform", &["Windows NT 10.0", "macOS Darwin", "Linux POSIX RT"], 0, "Target OS platform under which audio engine and low-level driver stack was executing"))
+            .with_param(DspParamSchema::toggle("is_anonymized", "Scrub Personal File Paths & Sensitive User Data", true, "Ensures memory dumps and stack traces are stripped of filesystem user paths before export"))
+            .with_param(DspParamSchema::toggle("auto_submit_diagnostics", "Submit Crash Telemetry to Developers", false, "Allows automated submission of anonymized crash telemetry to improve DAW stability"))
+        );
+        descriptors.insert("TelemetryManager".to_string(), DspNodeDescriptor::new("TelemetryManager", "Opt-In Engine Health, Latency & CPU Load Telemetry Manager", DspNodeCategory::Utility, "Telemetry coordination center collecting DSP load averages, buffer underruns, session uptime, and memory allocations with strict privacy opt-in enforcement")
+            .with_param(DspParamSchema::toggle("telemetry_opt_in", "Explicit User Privacy Telemetry Consent Flag", false, "Strict GDPR/CCPA privacy opt-in toggle enabling background performance telemetry collection"))
+            .with_param(DspParamSchema::knob("event_buffer_capacity", "In-Memory Circular Telemetry Buffer Capacity", 10.0, 5000.0, 500.0, "events", MacroRole::Space, "Maximum number of performance events stored in memory before circular overwriting"))
+            .with_param(DspParamSchema::knob("average_dsp_load_pct", "Session Average Audio Thread Load Percentage", 0.0, 100.0, 18.4, "%", MacroRole::Punch, "Smoothed rolling average of real-time audio thread CPU time relative to block deadline"))
+            .with_param(DspParamSchema::knob("max_underrun_spike_ms", "Worst-Case Audio Callback Latency Spike Duration", 0.0, 100.0, 0.0, "ms", MacroRole::Tone, "Longest single audio processing callback duration recorded during current session"))
+            .with_param(DspParamSchema::knob("reporting_interval_sec", "Periodic Telemetry Aggregation Interval Period", 10.0, 3600.0, 300.0, "s", MacroRole::Space, "Frequency in seconds at which performance snapshots are aggregated and logged"))
+            .with_param(DspParamSchema::knob("anonymous_session_hash", "Cryptographic Anonymized Session Identifier Hash", 1000.0, 999999.0, 482910.0, "hash", MacroRole::Tone, "Ephemerally generated numerical hash masking machine identity while correlating logs"))
+        );
+        descriptors.insert("UserAccount".to_string(), DspNodeDescriptor::new("UserAccount", "Summoner Cloud User Identity & Storage Quota Manager", DspNodeCategory::Utility, "Manages authenticated user profile, session bearer tokens, decentralized authorization keys, and cloud storage allocation for projects, presets, and audio stems")
+            .with_param(DspParamSchema::knob("storage_quota_gb", "Total Cloud Storage Allocation Quota Limit", 1.0, 500.0, 50.0, "GB", MacroRole::Tone, "Maximum allocated cloud storage space for projects, sample assets, and stem recordings"))
+            .with_param(DspParamSchema::knob("storage_used_pct", "Consumed Cloud Storage Allocation Percentage", 0.0, 100.0, 34.2, "%", MacroRole::Punch, "Percentage of user storage quota currently occupied by backed-up projects and assets"))
+            .with_param(DspParamSchema::knob("session_token_ttl_hours", "Bearer Authorization Token Lifetime Duration", 1.0, 720.0, 168.0, "hrs", MacroRole::Space, "Remaining valid hours before decentralized authentication token requires cryptographic renewal"))
+            .with_param(DspParamSchema::toggle("is_logged_in", "Cloud Session Active Authentication Status", true, "Indicates whether DAW instance is currently connected to authenticated user cloud session"))
+            .with_param(DspParamSchema::choice("account_tier", "User Subscription & Access Tier Level", &["Community Free", "Producer Studio", "Enterprise Enterprise"], 1, "Selects cloud sync tier determining stem bandwidth limits and collaboration team size"))
+            .with_param(DspParamSchema::toggle("two_factor_auth_enabled", "Two-Factor Cryptographic Hardware Key Active", true, "Secures cloud collaboration and asset publishing with hardware FIDO2 / WebAuthn"))
+        );
+        descriptors.insert("UpdateChecker".to_string(), DspNodeDescriptor::new("UpdateChecker", "Software Automatic Version Release & Security Update Checker", DspNodeCategory::Utility, "Asynchronous background updater checking official GitHub release tags, verifying cryptographic Blake3 signatures, and displaying semantic version changelogs")
+            .with_param(DspParamSchema::knob("check_frequency_hours", "Background Version Poll Frequency in Hours", 1.0, 168.0, 24.0, "hrs", MacroRole::Space, "Interval between background checks against official release repositories"))
+            .with_param(DspParamSchema::choice("release_channel", "Software Distribution Release Track Channel", &["Stable Official", "Release Candidate", "Nightly Bleeding-Edge"], 0, "Selects release channel for automatic software update notifications and changelog alerts"))
+            .with_param(DspParamSchema::toggle("update_available", "New Binary Release Detected & Ready for Install", false, "Flag indicating if a newer version has been discovered and cryptographically verified"))
+            .with_param(DspParamSchema::toggle("notification_pending", "Display Non-Intrusive Update Status Bar Toast", false, "Controls visibility of subtle desktop notification banner alerting user to updates"))
+            .with_param(DspParamSchema::knob("download_bandwidth_limit_mb", "Update Asset Download Bandwidth Cap Speed", 1.0, 100.0, 25.0, "MB/s", MacroRole::Tone, "Limits background download speed to prevent interference with live audio streaming"))
+            .with_param(DspParamSchema::toggle("allow_major_version_upgrades", "Permit Breaking Major Version Auto-Upgrades", false, "Restricts automatic updates to patch and minor releases unless explicitly authorized"))
+        );
+        descriptors.insert("GdprNotice".to_string(), DspNodeDescriptor::new("GdprNotice", "GDPR Data Privacy Compliance, Data Inspection & Erasure Policy", DspNodeCategory::Utility, "Data protection and privacy compliance controller providing single-click local data inspection, full JSON data export, and cryptographic zero-trace personal data erasure")
+            .with_param(DspParamSchema::toggle("export_data_archive", "Export Complete User Data Archive in JSON Format", false, "Generates a complete, transparent JSON file containing all stored preferences and telemetry"))
+            .with_param(DspParamSchema::knob("data_retention_days", "Diagnostic Telemetry Data Retention Horizon Days", 7.0, 730.0, 90.0, "days", MacroRole::Space, "Automatic expiration threshold beyond which all local telemetry logs are permanently deleted"))
+            .with_param(DspParamSchema::toggle("allow_crash_dump_retention", "Permit Local Crash Dump File Retention on Disk", true, "Authorizes saving panic reports locally for offline troubleshooting and bug reporting"))
+            .with_param(DspParamSchema::toggle("allow_preset_telemetry", "Permit Anonymous Community Preset Telemetry", false, "Controls whether preset popularity metrics are shared with decentralized community hub"))
+            .with_param(DspParamSchema::toggle("privacy_shield_active", "Cryptographic Privacy Shield & IP Masking Active", true, "Masks client IP address and hardware UUIDs during any remote API interaction"))
+            .with_param(DspParamSchema::toggle("zero_trace_erasure_requested", "Execute Irrevocable Zero-Trace Data Erasure", false, "Triggers cryptographic purge of all cached tokens, diagnostic logs, and user identity files"))
+        );
 
         Self { descriptors }
     }
@@ -11328,6 +11496,27 @@ descriptors.insert("BellowsGesturePattern".to_string(), DspNodeDescriptor::new("
             ("GitBlameEntry", DspNodeCategory::Utility, "Git DAG Audio Clip Authorship & Revision History"),
             ("ScriptBlameInfo", DspNodeCategory::Utility, "Procedural Lua DSP Script Revision & Audit Log"),
             ("ScriptExecutionLog", DspNodeCategory::Utility, "Sandboxed Lua Execution Telemetry & Cycle Counter"),
+            ("BowedInstrument", DspNodeCategory::AcousticPhysicalModel, "Physical Bowed String Instrument Geometry & Body Voicing"),
+            ("ExcitationType", DspNodeCategory::AcousticPhysicalModel, "Acoustic String Strike, Pluck & Slap Excitation Dynamics"),
+            ("HornFlarePreset", DspNodeCategory::AcousticPhysicalModel, "Brass Waveguide Horn Flare Acoustic Impedance Profile"),
+            ("HornMuteType", DspNodeCategory::AcousticPhysicalModel, "Acoustic Brass Instrument Bell Mute Characteristic"),
+            ("MeshBoundaryType", DspNodeCategory::AcousticPhysicalModel, "2D/3D Waveguide Resonator Mesh Boundary Physics"),
+            ("RagaScale", DspNodeCategory::AcousticPhysicalModel, "North Indian Classical Raga Sympathetic Tuning & Microtonal Shruti Matrix"),
+            ("RosinType", DspNodeCategory::AcousticPhysicalModel, "Bowed String Stick-Slip Rosin Friction Formulation"),
+            ("GrainWindowType", DspNodeCategory::SamplerSlicer, "Granular Cloud Synthesis Windowing Envelope Function"),
+            ("TubeTopology", DspNodeCategory::DistortionSaturation, "Analog Vacuum Tube Topology & Preamp Valve Circuitry"),
+            ("WallMaterial", DspNodeCategory::SpatialSurround, "Acoustic Space Boundary Wall Material & Absorption Spectrum"),
+            ("ColorMappingMode", DspNodeCategory::SpectralResynthesis, "Spectrogram Art Optical Color-to-Harmonic Audio Mapping"),
+            ("FrequencyMapping", DspNodeCategory::SpectralResynthesis, "Spectrogram Art Vertical Pixel Frequency Axis Scale"),
+            ("CadenceType", DspNodeCategory::Modulation, "Harmonic Cadence Progression Resolution Target"),
+            ("Interpolation", DspNodeCategory::Modulation, "Automation Curve Interpolation Transfer Mathematical Model"),
+            ("CloudPresetEntry", DspNodeCategory::Utility, "Cloud Collaborative Preset Manifest & Social Synchronization"),
+            ("CloudRenderJob", DspNodeCategory::Utility, "Distributed Cloud Audio Render Farm Task Dispatcher"),
+            ("CrashReport", DspNodeCategory::Utility, "Deterministic Crash Dump Diagnostic Telemetry & Exception Reporter"),
+            ("TelemetryManager", DspNodeCategory::Utility, "Opt-In Engine Health, Latency & CPU Load Telemetry Manager"),
+            ("UserAccount", DspNodeCategory::Utility, "Summoner Cloud User Identity & Storage Quota Manager"),
+            ("UpdateChecker", DspNodeCategory::Utility, "Software Automatic Version Release & Security Update Checker"),
+            ("GdprNotice", DspNodeCategory::Utility, "GDPR Data Privacy Compliance, Data Inspection & Erasure Policy"),
         ]
     }
 
@@ -13607,6 +13796,27 @@ descriptors.insert("BellowsGesturePattern".to_string(), DspNodeDescriptor::new("
             "gitblameentry" | "clipblameinfo" | "gitclipblame" | "audiocliptrackblame" => Some("GitBlameEntry"),
             "scriptblameinfo" | "luascriptblame" | "proceduralscriptblame" | "scriptauditinfo" => Some("ScriptBlameInfo"),
             "scriptexecutionlog" | "luacycleprofilerlog" | "scriptelemetrylog" | "luascripttelemetry" => Some("ScriptExecutionLog"),
+            "bowedstringinstrument" | "physicalbowedinstrument" | "bowedinstrumentgeometry" => Some("BowedInstrument"),
+            "stringexcitationtype" | "hammerexcitationdynamics" | "stringstriketype" => Some("ExcitationType"),
+            "brasshornflare" | "bellflarepreset" | "hornflareprofile" => Some("HornFlarePreset"),
+            "acousticbrassmute" | "bellmuteprofile" | "brassmutetype" => Some("HornMuteType"),
+            "meshboundaryphysics" | "resonatingmeshboundary" | "meshboundarycondition" => Some("MeshBoundaryType"),
+            "indianragascale" | "ragashrutituning" | "ragamodalscale" => Some("RagaScale"),
+            "bowrosintype" | "frictionrosinformula" | "sticksliprosintype" => Some("RosinType"),
+            "granularwindowtype" | "grainenvelopewindow" | "granularwindowfunc" => Some("GrainWindowType"),
+            "tubecircuittopology" | "valvecircuittopology" | "analogtubetopology" => Some("TubeTopology"),
+            "roomwallmaterial" | "acousticwallmaterial" | "spacewallmaterial" => Some("WallMaterial"),
+            "colorharmonicmapping" | "spectrogramcolortoharmonic" | "colortomusicmode" => Some("ColorMappingMode"),
+            "spectralfrequencymapping" | "spectrogramfrequencyaxis" | "frequencyaxisscaling" => Some("FrequencyMapping"),
+            "harmoniccadencetype" | "cadenceresolutiontarget" | "progressioncadencetype" => Some("CadenceType"),
+            "automationinterpolationmode" | "curvetransferinterpolation" | "splineinterpolationmodel" => Some("Interpolation"),
+            "cloudcrdtpreset" | "collaborativepresetentry" | "cloudpresetmanifest" => Some("CloudPresetEntry"),
+            "distributedrenderjob" | "cloudrenderfarmjob" | "remotecloudrenderjob" => Some("CloudRenderJob"),
+            "enginecrashreport" | "paniccrashreport" | "deterministiccrashreport" => Some("CrashReport"),
+            "enginetelemetrymanager" | "dsploadtelemetrymanager" | "sessiontelemetrymanager" => Some("TelemetryManager"),
+            "clouduseraccount" | "summoneruseraccount" | "useridentityaccount" => Some("UserAccount"),
+            "softwareupdatechecker" | "releaseupdatechecker" | "versionupdatechecker" => Some("UpdateChecker"),
+            "gdprprivacycompliance" | "gdprdataprivacy" | "gdprprivacycontroller" => Some("GdprNotice"),
             "drumclass" => Some("DrumClassClassification"),
             "mpeevent" => Some("ClapMpeEvent"),
             "nativeaudiodriver" => Some("NativeAudioDriverTuner"),
@@ -23310,6 +23520,195 @@ descriptors.insert("BellowsGesturePattern".to_string(), DspNodeDescriptor::new("
                     .with_param(DspParamDescriptor::new_linear("error_recovery_count", "Runtime Script Error Catch & Recovery Tally", 0.0, 100.0, 0.0, "errors", (14, 165, 233)))
                     .with_param(DspParamDescriptor::new_bool("jit_compilation_status", "LuaJIT Native Machine Code Trace Compilation", true, (52, 211, 153)))
             ),
+            "BowedInstrument" => Box::new(
+                GenericDspNodeUi::new("BowedInstrument", "Physical Bowed String Instrument Geometry & Body Voicing", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("instrument_mode", "Bowed String Physical Resonator Mode", 0.0, 3.0, 0.0, "mode", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("body_scaling", "Acoustic Cavity Geometry Scale Multiplier", 0.5, 2.5, 1.0, "x", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("soundpost_coupling", "Soundpost Transverse Mechanical Coupling", 0.0, 1.0, 0.85, "ratio", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("f_hole_radiation", "F-Hole Air Cavity Acoustic Radiation Ratio", 0.0, 1.0, 0.72, "ratio", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("wolf_tone_damping", "Main Body Resonance Wolf-Tone Suppressor", 0.0, 1.0, 0.45, "ratio", (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_linear("wood_plate_varnish", "Acoustic Varnish High-Frequency Loss Damping", 0.0, 1.0, 0.60, "ratio", (52, 211, 153)))
+            ),
+            "ExcitationType" => Box::new(
+                GenericDspNodeUi::new("ExcitationType", "Acoustic String Strike, Pluck & Slap Excitation Dynamics", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("excitation_mode", "Physical String Excitation Interaction Mode", 0.0, 3.0, 0.0, "mode", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("strike_hardness", "Exciter Surface Dynamic Hardness", 0.01, 1.0, 0.65, "ratio", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("contact_duration_ms", "Mechanical Contact Time Duration in Milliseconds", 0.1, 30.0, 2.5, "ms", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("flesh_damping_ratio", "Fingertip Flesh Viscoelastic Absorption", 0.0, 1.0, 0.35, "ratio", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("strike_position_ratio", "Normalized String Length Excitation Position", 0.01, 0.5, 0.12, "pos", (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_linear("fret_buzz_threshold", "Non-linear Fretboard Collision Buzz Threshold", 0.0, 1.0, 0.15, "thresh", (52, 211, 153)))
+            ),
+            "HornFlarePreset" => Box::new(
+                GenericDspNodeUi::new("HornFlarePreset", "Brass Waveguide Horn Flare Acoustic Impedance Profile", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("flare_preset", "Brass Bell Flare Physical Profile", 0.0, 3.0, 0.0, "preset", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_log("cutoff_freq_hz", "High-Pass Bell Radiation Cutoff Frequency", 100.0, 3000.0, 1200.0, "Hz", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("bell_radius_cm", "Bell Flare Termination Physical Radius", 2.0, 45.0, 12.5, "cm", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("radiation_resistance", "Acoustic Radiation Impedance Scaling", 0.1, 2.0, 1.0, "ratio", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("reflection_coefficient", "Bore Return Wave Reflection Amplitude", 0.0, 1.0, 0.68, "ratio", (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_linear("flare_curvature", "Bessel / Exponential Flare Curvature Exponent", 0.1, 5.0, 1.8, "exp", (52, 211, 153)))
+            ),
+            "HornMuteType" => Box::new(
+                GenericDspNodeUi::new("HornMuteType", "Acoustic Brass Instrument Bell Mute Characteristic", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("mute_mode", "Acoustic Brass Mute Insertion Mode", 0.0, 3.0, 0.0, "mode", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("stem_insertion_depth", "Harmon Mute Extendable Stem Extension Depth", 0.0, 1.0, 0.5, "ratio", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_log("cavity_resonance_hz", "Internal Mute Cavity Helmholtz Center Frequency", 500.0, 6000.0, 2100.0, "Hz", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("low_cut_attenuation_db", "Low-Frequency Shelf Attenuation Depth", 0.0, 36.0, 12.0, "dB", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("nasal_formant_boost_db", "Nasal Resonant Peak Gain Amplification", 0.0, 18.0, 6.5, "dB", (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_linear("plunger_hand_cover", "Dynamic Wah-Wah Plunger Hand Aperture", 0.0, 1.0, 0.0, "ratio", (52, 211, 153)))
+            ),
+            "MeshBoundaryType" => Box::new(
+                GenericDspNodeUi::new("MeshBoundaryType", "2D/3D Waveguide Resonator Mesh Boundary Physics", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("boundary_mode", "Resonator Mesh Edge Termination Boundary", 0.0, 2.0, 0.0, "mode", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("reflection_loss_db", "Per-Reflection High-Frequency Energy Loss", 0.0, 12.0, 0.8, "dB", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("dispersion_factor", "Phase Velocity Frequency Dispersion Factor", 0.0, 1.0, 0.35, "disp", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("boundary_stiffness", "Rim Clamp Mechanical Elastic Stiffness", 0.1, 10.0, 1.5, "N/m", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("phase_inversion", "Invert Wave Phase on Outer Perimeter Reflection", true, (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_linear("corner_damping", "Mesh Corner Dispersion Damping Coefficient", 0.0, 1.0, 0.22, "ratio", (52, 211, 153)))
+            ),
+            "RagaScale" => Box::new(
+                GenericDspNodeUi::new("RagaScale", "North Indian Classical Raga Sympathetic Tuning & Microtonal Shruti Matrix", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("raga_selection", "Indian Classical Raga Modal Tuning", 0.0, 4.0, 0.0, "raga", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_log("tonic_root_hz", "Sa Fundamental Drone Reference Frequency", 65.4, 523.25, 138.59, "Hz", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("meend_portamento_ms", "Continuous Meend Glissando Glide Time", 10.0, 1200.0, 280.0, "ms", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("andolan_oscillation_cents", "Slow Andolan Pitch Oscillation Depth", 0.0, 80.0, 22.0, "cents", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("vadi_emphasis", "Sonant Vadi Note Harmonic Amplitude Weight", 1.0, 3.0, 1.8, "gain", (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_linear("sympathetic_sustain_sec", "Taraf Sympathetic String Ring Sustain", 0.5, 15.0, 6.5, "s", (52, 211, 153)))
+            ),
+            "RosinType" => Box::new(
+                GenericDspNodeUi::new("RosinType", "Bowed String Stick-Slip Rosin Friction Formulation", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("rosin_formula", "Bow Hair Rosin Chemical Formulation", 0.0, 3.0, 0.0, "form", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("static_friction_coeff", "Static Stick-Phase Friction Coefficient", 0.2, 2.0, 0.85, "mu", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("dynamic_friction_coeff", "Dynamic Slip-Phase Kinetic Friction Coefficient", 0.05, 0.8, 0.25, "mu", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("thermal_melting_point_c", "Rosin Friction-Induced Thermal Melting Temperature", 40.0, 90.0, 62.0, "C", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("tackiness_adhesion", "Residual Rosin Tackiness Adhesion Strength", 0.0, 1.0, 0.60, "ratio", (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_linear("slip_velocity_threshold", "Kinetic Slip Transition Velocity Threshold", 0.01, 2.0, 0.35, "m/s", (52, 211, 153)))
+            ),
+            "GrainWindowType" => Box::new(
+                GenericDspNodeUi::new("GrainWindowType", "Granular Cloud Synthesis Windowing Envelope Function", DspNodeCategory::SamplerSlicer)
+                    .with_param(DspParamDescriptor::new_linear("window_function", "Grain Temporal Windowing Envelope Function", 0.0, 7.0, 0.0, "win", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("tukey_alpha", "Tukey Window Flat-Top Cosine Taper Alpha", 0.0, 1.0, 0.5, "alpha", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("gaussian_sigma", "Gaussian Standard Deviation Bell Width", 0.1, 1.0, 0.35, "sigma", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("grain_overlap_ratio", "Inter-Grain Window Overlap Density", 1.0, 16.0, 4.0, "x", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("spectral_leakage_suppression", "Side-Lobe Spectral Leakage Rejection", 12.0, 96.0, 48.0, "dB", (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_linear("cosine_taper_symmetry", "Envelope Attack / Release Asymmetry Ratio", 0.0, 1.0, 0.5, "sym", (52, 211, 153)))
+            ),
+            "TubeTopology" => Box::new(
+                GenericDspNodeUi::new("TubeTopology", "Analog Vacuum Tube Topology & Preamp Valve Circuitry", DspNodeCategory::DistortionSaturation)
+                    .with_param(DspParamDescriptor::new_linear("valve_topology", "Vacuum Tube Thermionic Architecture", 0.0, 2.0, 0.0, "topo", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("plate_voltage_v", "Anode B+ High-Voltage Plate Supply", 100.0, 500.0, 320.0, "V", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("grid_bias_v", "Control Grid Operating Point Bias Voltage", -15.0, 0.0, -2.4, "V", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("even_harmonic_drive", "Second-Order Asymmetric Harmonic Warmth", 0.0, 1.0, 0.55, "ratio", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("odd_harmonic_saturation", "Third-Order Symmetric Saturation Punch", 0.0, 1.0, 0.38, "ratio", (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_linear("sag_recovery_time_ms", "Power Supply Choke Sag & Dynamic Bloom Recovery", 5.0, 500.0, 85.0, "ms", (52, 211, 153)))
+            ),
+            "WallMaterial" => Box::new(
+                GenericDspNodeUi::new("WallMaterial", "Acoustic Space Boundary Wall Material & Absorption Spectrum", DspNodeCategory::SpatialSurround)
+                    .with_param(DspParamDescriptor::new_linear("material_type", "Acoustic Boundary Surface Material", 0.0, 5.0, 2.0, "mat", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("absorption_low", "Low-Frequency Absorption Coefficient (<250 Hz)", 0.01, 0.99, 0.15, "coeff", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("absorption_mid", "Mid-Frequency Absorption Coefficient (250-2000 Hz)", 0.01, 0.99, 0.55, "coeff", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("absorption_high", "High-Frequency Absorption Coefficient (>2000 Hz)", 0.01, 0.99, 0.85, "coeff", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("scattering_roughness", "Diffuse Lambertian Surface Scattering Ratio", 0.0, 1.0, 0.42, "ratio", (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_linear("transmission_loss_db", "Through-Wall Acoustic Sound Transmission Loss", 5.0, 80.0, 45.0, "dB", (52, 211, 153)))
+            ),
+            "ColorMappingMode" => Box::new(
+                GenericDspNodeUi::new("ColorMappingMode", "Spectrogram Art Optical Color-to-Harmonic Audio Mapping", DspNodeCategory::SpectralResynthesis)
+                    .with_param(DspParamDescriptor::new_linear("color_mode", "Pixel Chromaticity to Harmonic Mapping Engine", 0.0, 1.0, 0.0, "mode", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("red_channel_pitch_offset", "Red Color Channel Harmonic Interval Offset", -24.0, 24.0, 0.0, "st", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("green_channel_resonance", "Green Color Channel Filter Resonance Q", 0.0, 1.0, 0.70, "ratio", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("blue_channel_stereo_pan", "Blue Color Channel Stereo Panning Bias", -1.0, 1.0, 0.0, "pan", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("luminance_threshold", "Optical Pixel Dark Noise Floor Threshold", 0.0, 1.0, 0.08, "thresh", (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_linear("gamma_curve_exponent", "Non-linear Pixel Brightness Contrast Gamma", 0.2, 3.0, 1.0, "gamma", (52, 211, 153)))
+            ),
+            "FrequencyMapping" => Box::new(
+                GenericDspNodeUi::new("FrequencyMapping", "Spectrogram Art Vertical Pixel Frequency Axis Scale", DspNodeCategory::SpectralResynthesis)
+                    .with_param(DspParamDescriptor::new_linear("frequency_scale", "Vertical Y-Axis Frequency Mapping Calibration", 0.0, 1.0, 1.0, "scale", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_log("base_frequency_hz", "Bottom Pixel Row Fundamental Audio Frequency", 20.0, 1000.0, 55.0, "Hz", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_log("ceiling_frequency_hz", "Top Pixel Row Maximum Nyquist Limit Frequency", 2000.0, 22050.0, 16000.0, "Hz", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("octaves_per_height", "Logarithmic Octave Span Across Canvas Height", 1.0, 10.0, 8.0, "oct", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("cent_quantization_step", "Chromatic Note Intonation Quantization Step", 0.0, 100.0, 0.0, "cents", (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_bool("anti_aliasing_oversampling", "2x Sub-Pixel Anti-Aliased Sine Interpolation", true, (52, 211, 153)))
+            ),
+            "CadenceType" => Box::new(
+                GenericDspNodeUi::new("CadenceType", "Harmonic Cadence Progression Resolution Target", DspNodeCategory::Modulation)
+                    .with_param(DspParamDescriptor::new_linear("cadence_target", "Harmonic Cadence Progression Resolution Target", 0.0, 3.0, 0.0, "cadence", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("resolution_strength", "Tonal Gravity Resolution Completeness", 0.0, 1.0, 0.95, "ratio", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("leading_tone_gravity", "Leading-Tone Half-Step Resolution Pull", 0.0, 1.0, 0.88, "ratio", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("bass_leap_penalty", "Bass Voice Large Leap Avoidance Penalty", 0.0, 1.0, 0.25, "weight", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("voice_overlap_tolerance", "Polyphonic Voice Crossing Overlap Tolerance", 0.0, 1.0, 0.10, "ratio", (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_linear("suspension_retention_beats", "Non-Harmonic Suspension Delay in Beats", 0.0, 4.0, 1.0, "beats", (52, 211, 153)))
+            ),
+            "Interpolation" => Box::new(
+                GenericDspNodeUi::new("Interpolation", "Automation Curve Interpolation Transfer Mathematical Model", DspNodeCategory::Modulation)
+                    .with_param(DspParamDescriptor::new_linear("curve_type", "Automation Transition Mathematical Interpolation", 0.0, 5.0, 4.0, "interp", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("bezier_control_x", "Cubic Bezier Spline First Control Handle X", 0.0, 1.0, 0.25, "x", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("bezier_control_y", "Cubic Bezier Spline First Control Handle Y", -1.0, 2.0, 0.75, "y", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("tension_skew", "Hermite Spline Tension & S-Curve Skew Factor", -1.0, 1.0, 0.0, "skew", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("quantize_grid_divisions", "Automation Step Value Quantization Divisions", 0.0, 64.0, 0.0, "div", (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_linear("jitter_smoothing_ms", "Sub-Sample Interpolation Jitter Filter Window", 0.0, 50.0, 2.0, "ms", (52, 211, 153)))
+            ),
+            "CloudPresetEntry" => Box::new(
+                GenericDspNodeUi::new("CloudPresetEntry", "Cloud Collaborative Preset Manifest & Social Synchronization", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("upvote_count", "Community Crowd-Sourced Upvote Tally", 0.0, 10000.0, 142.0, "votes", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("comments_count", "Peer Discussion Comments Thread Depth", 0.0, 500.0, 18.0, "items", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("download_tally", "Global Community Preset Installs Count", 0.0, 50000.0, 850.0, "downloads", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("version_revision", "Preset Semantic Patch Evolution Revision", 1.0, 100.0, 3.0, "rev", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("cloud_sync_latency_ms", "Peer-to-Peer CRDT Patch Synchronization Latency", 1.0, 2000.0, 45.0, "ms", (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_bool("is_verified_creator", "Verified Sound Designer Cryptographic Badge", true, (52, 211, 153)))
+            ),
+            "CloudRenderJob" => Box::new(
+                GenericDspNodeUi::new("CloudRenderJob", "Distributed Cloud Audio Render Farm Task Dispatcher", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("render_progress_pct", "Batch Cloud Render Task Completion Percentage", 0.0, 100.0, 72.5, "%", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("worker_nodes_allocated", "Active Render Farm Parallel Compute Nodes", 1.0, 64.0, 8.0, "nodes", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("chunk_block_size_samples", "Distributed Processing Audio Chunk Size", 256.0, 16384.0, 4096.0, "smpl", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("elapsed_render_time_sec", "Total Render Elapsed Wall Clock Time in Seconds", 0.0, 3600.0, 14.2, "s", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("audio_sample_rate", "Export Master Audio Sample Rate Target", 0.0, 3.0, 1.0, "rate", (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_bool("lossless_flac_compression", "Encode Stems in Lossless FLAC Format", true, (52, 211, 153)))
+            ),
+            "CrashReport" => Box::new(
+                GenericDspNodeUi::new("CrashReport", "Deterministic Crash Dump Diagnostic Telemetry & Exception Reporter", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("stack_depth_frames", "Captured Crash Stack Trace Call Depth", 1.0, 128.0, 32.0, "frames", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("memory_rss_at_crash_mb", "Resident Set Memory Footprint at Fault Incident", 16.0, 8192.0, 384.0, "MB", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("audio_buffer_underruns", "Cumulative Pre-Crash Buffer Underrun Count", 0.0, 1000.0, 0.0, "xruns", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("os_kernel_id", "Operating System Kernel Environment Platform", 0.0, 2.0, 0.0, "os", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("is_anonymized", "Scrub Personal File Paths & Sensitive User Data", true, (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_bool("auto_submit_diagnostics", "Submit Crash Telemetry to Developers", false, (52, 211, 153)))
+            ),
+            "TelemetryManager" => Box::new(
+                GenericDspNodeUi::new("TelemetryManager", "Opt-In Engine Health, Latency & CPU Load Telemetry Manager", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_bool("telemetry_opt_in", "Explicit User Privacy Telemetry Consent Flag", false, (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("event_buffer_capacity", "In-Memory Circular Telemetry Buffer Capacity", 10.0, 5000.0, 500.0, "events", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("average_dsp_load_pct", "Session Average Audio Thread Load Percentage", 0.0, 100.0, 18.4, "%", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("max_underrun_spike_ms", "Worst-Case Audio Callback Latency Spike Duration", 0.0, 100.0, 0.0, "ms", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("reporting_interval_sec", "Periodic Telemetry Aggregation Interval Period", 10.0, 3600.0, 300.0, "s", (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_linear("anonymous_session_hash", "Cryptographic Anonymized Session Identifier Hash", 1000.0, 999999.0, 482910.0, "hash", (52, 211, 153)))
+            ),
+            "UserAccount" => Box::new(
+                GenericDspNodeUi::new("UserAccount", "Summoner Cloud User Identity & Storage Quota Manager", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("storage_quota_gb", "Total Cloud Storage Allocation Quota Limit", 1.0, 500.0, 50.0, "GB", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("storage_used_pct", "Consumed Cloud Storage Allocation Percentage", 0.0, 100.0, 34.2, "%", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("session_token_ttl_hours", "Bearer Authorization Token Lifetime Duration", 1.0, 720.0, 168.0, "hrs", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("is_logged_in", "Cloud Session Active Authentication Status", true, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("account_tier", "User Subscription & Access Tier Level", 0.0, 2.0, 1.0, "tier", (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_bool("two_factor_auth_enabled", "Two-Factor Cryptographic Hardware Key Active", true, (52, 211, 153)))
+            ),
+            "UpdateChecker" => Box::new(
+                GenericDspNodeUi::new("UpdateChecker", "Software Automatic Version Release & Security Update Checker", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("check_frequency_hours", "Background Version Poll Frequency in Hours", 1.0, 168.0, 24.0, "hrs", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("release_channel", "Software Distribution Release Track Channel", 0.0, 2.0, 0.0, "chan", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("update_available", "New Binary Release Detected & Ready for Install", false, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("notification_pending", "Display Non-Intrusive Update Status Bar Toast", false, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("download_bandwidth_limit_mb", "Update Asset Download Bandwidth Cap Speed", 1.0, 100.0, 25.0, "MB/s", (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_bool("allow_major_version_upgrades", "Permit Breaking Major Version Auto-Upgrades", false, (52, 211, 153)))
+            ),
+            "GdprNotice" => Box::new(
+                GenericDspNodeUi::new("GdprNotice", "GDPR Data Privacy Compliance, Data Inspection & Erasure Policy", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_bool("export_data_archive", "Export Complete User Data Archive in JSON Format", false, (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("data_retention_days", "Diagnostic Telemetry Data Retention Horizon Days", 7.0, 730.0, 90.0, "days", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("allow_crash_dump_retention", "Permit Local Crash Dump File Retention on Disk", true, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("allow_preset_telemetry", "Permit Anonymous Community Preset Telemetry", false, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("privacy_shield_active", "Cryptographic Privacy Shield & IP Masking Active", true, (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_bool("zero_trace_erasure_requested", "Execute Irrevocable Zero-Trace Data Erasure", false, (52, 211, 153)))
+            ),
             // Fallback dynamic generator for any unexpected or plugin node
             other => {
                 let cat = Self::inventory()
@@ -24999,7 +25398,7 @@ assert!(registry.get("BellowsGesturePattern").is_some());
     fn test_tier127_inventory_count_and_parameter_completeness() {
         let registry = DspNodeRegistry::new();
         let inv = DspNodeRegistry::inventory();
-        assert_eq!(inv.len(), 1277, "Inventory must contain exactly 1277 DSP modules");
+        assert!(inv.len() >= 1277, "Inventory must contain at least 1277 DSP modules");
         assert!(registry.list_all().len() >= 1277, "Registry list_all must be >= 1277");
 
         let tier127_nodes = [
@@ -25076,6 +25475,89 @@ assert!(registry.get("BellowsGesturePattern").is_some());
         assert_eq!(DspNodeRegistry::normalize_type_name("luascriptblame"), Some("ScriptBlameInfo"));
         assert_eq!(DspNodeRegistry::normalize_type_name("scriptexecutionlog"), Some("ScriptExecutionLog"));
         assert_eq!(DspNodeRegistry::normalize_type_name("luacycleprofilerlog"), Some("ScriptExecutionLog"));
+    }
+
+    #[test]
+    fn test_tier128_inventory_count_and_parameter_completeness() {
+        let registry = DspNodeRegistry::new();
+        let inv = DspNodeRegistry::inventory();
+        assert_eq!(inv.len(), 1298, "Inventory must contain exactly 1298 DSP modules");
+        assert!(registry.list_all().len() >= 1298, "Registry list_all must be >= 1298");
+
+        let tier128_nodes = [
+            ("BowedInstrument", DspNodeCategory::AcousticPhysicalModel),
+            ("ExcitationType", DspNodeCategory::AcousticPhysicalModel),
+            ("HornFlarePreset", DspNodeCategory::AcousticPhysicalModel),
+            ("HornMuteType", DspNodeCategory::AcousticPhysicalModel),
+            ("MeshBoundaryType", DspNodeCategory::AcousticPhysicalModel),
+            ("RagaScale", DspNodeCategory::AcousticPhysicalModel),
+            ("RosinType", DspNodeCategory::AcousticPhysicalModel),
+            ("GrainWindowType", DspNodeCategory::SamplerSlicer),
+            ("TubeTopology", DspNodeCategory::DistortionSaturation),
+            ("WallMaterial", DspNodeCategory::SpatialSurround),
+            ("ColorMappingMode", DspNodeCategory::SpectralResynthesis),
+            ("FrequencyMapping", DspNodeCategory::SpectralResynthesis),
+            ("CadenceType", DspNodeCategory::Modulation),
+            ("Interpolation", DspNodeCategory::Modulation),
+            ("CloudPresetEntry", DspNodeCategory::Utility),
+            ("CloudRenderJob", DspNodeCategory::Utility),
+            ("CrashReport", DspNodeCategory::Utility),
+            ("TelemetryManager", DspNodeCategory::Utility),
+            ("UserAccount", DspNodeCategory::Utility),
+            ("UpdateChecker", DspNodeCategory::Utility),
+            ("GdprNotice", DspNodeCategory::Utility),
+        ];
+
+        for (name, expected_cat) in tier128_nodes {
+            let desc = registry.get(name).unwrap_or_else(|| panic!("Module {} missing", name));
+            assert_eq!(desc.category, expected_cat, "Category mismatch for {}", name);
+            assert!(desc.params.len() >= 5, "Module {} must have >= 5 params, found {}", name, desc.params.len());
+            assert!(DspNodeRegistry::create_node_ui(name).is_some(), "create_node_ui failed for {}", name);
+        }
+
+        // Test normalizations
+        assert_eq!(DspNodeRegistry::normalize_type_name("bowedstringinstrument"), Some("BowedInstrument"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("physicalbowedinstrument"), Some("BowedInstrument"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("stringexcitationtype"), Some("ExcitationType"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("hammerexcitationdynamics"), Some("ExcitationType"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("brasshornflare"), Some("HornFlarePreset"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("bellflarepreset"), Some("HornFlarePreset"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("acousticbrassmute"), Some("HornMuteType"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("bellmuteprofile"), Some("HornMuteType"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("meshboundaryphysics"), Some("MeshBoundaryType"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("resonatingmeshboundary"), Some("MeshBoundaryType"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("indianragascale"), Some("RagaScale"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("ragashrutituning"), Some("RagaScale"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("bowrosintype"), Some("RosinType"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("frictionrosinformula"), Some("RosinType"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("granularwindowtype"), Some("GrainWindowType"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("grainenvelopewindow"), Some("GrainWindowType"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("tubecircuittopology"), Some("TubeTopology"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("valvecircuittopology"), Some("TubeTopology"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("roomwallmaterial"), Some("WallMaterial"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("spacewallmaterial"), Some("WallMaterial"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("colorharmonicmapping"), Some("ColorMappingMode"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("spectrogramcolortoharmonic"), Some("ColorMappingMode"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("spectralfrequencymapping"), Some("FrequencyMapping"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("spectrogramfrequencyaxis"), Some("FrequencyMapping"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("harmoniccadencetype"), Some("CadenceType"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("cadenceresolutiontarget"), Some("CadenceType"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("automationinterpolationmode"), Some("Interpolation"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("curvetransferinterpolation"), Some("Interpolation"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("cloudcrdtpreset"), Some("CloudPresetEntry"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("collaborativepresetentry"), Some("CloudPresetEntry"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("distributedrenderjob"), Some("CloudRenderJob"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("cloudrenderfarmjob"), Some("CloudRenderJob"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("enginecrashreport"), Some("CrashReport"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("paniccrashreport"), Some("CrashReport"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("enginetelemetrymanager"), Some("TelemetryManager"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("dsploadtelemetrymanager"), Some("TelemetryManager"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("clouduseraccount"), Some("UserAccount"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("summoneruseraccount"), Some("UserAccount"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("softwareupdatechecker"), Some("UpdateChecker"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("releaseupdatechecker"), Some("UpdateChecker"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("gdprprivacycompliance"), Some("GdprNotice"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("gdprdataprivacy"), Some("GdprNotice"));
     }
 
     #[test]

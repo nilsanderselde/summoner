@@ -8924,6 +8924,142 @@ mod tests {
             assert_eq!(view.inspector_state.selected_node_kind, Some(target_node.to_string()));
         }
     }
+
+    #[test]
+    fn test_tier128_full_workflow() {
+        let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+        let inv = crate::dsp_node_ui::DspNodeRegistry::inventory();
+        assert_eq!(inv.len(), 1298, "Inventory must contain exactly 1298 DSP modules");
+        assert!(registry.list_all().len() >= 1298, "Registry list_all must be >= 1298");
+
+        // 1. Tier 128 registration and completeness
+        let tier128_modules = [
+            ("BowedInstrument", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("ExcitationType", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("HornFlarePreset", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("HornMuteType", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("MeshBoundaryType", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("RagaScale", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("RosinType", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("GrainWindowType", crate::dsp_node_ui::DspNodeCategory::SamplerSlicer),
+            ("TubeTopology", crate::dsp_node_ui::DspNodeCategory::DistortionSaturation),
+            ("WallMaterial", crate::dsp_node_ui::DspNodeCategory::SpatialSurround),
+            ("ColorMappingMode", crate::dsp_node_ui::DspNodeCategory::SpectralResynthesis),
+            ("FrequencyMapping", crate::dsp_node_ui::DspNodeCategory::SpectralResynthesis),
+            ("CadenceType", crate::dsp_node_ui::DspNodeCategory::Modulation),
+            ("Interpolation", crate::dsp_node_ui::DspNodeCategory::Modulation),
+            ("CloudPresetEntry", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CloudRenderJob", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CrashReport", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("TelemetryManager", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("UserAccount", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("UpdateChecker", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("GdprNotice", crate::dsp_node_ui::DspNodeCategory::Utility),
+        ];
+
+        for (name, expected_cat) in tier128_modules {
+            let desc = registry.get(name).unwrap_or_else(|| panic!("Tier 128 module {} missing", name));
+            assert_eq!(desc.category, expected_cat, "Category mismatch for {}", name);
+            assert!(desc.params.len() >= 5, "Module {} must have >= 5 params, found {}", name, desc.params.len());
+            assert!(crate::dsp_node_ui::DspNodeRegistry::create_node_ui(name).is_some(), "create_node_ui failed for {}", name);
+        }
+
+        // 2. Normalization verification
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("bowedstringinstrument"), Some("BowedInstrument"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("physicalbowedinstrument"), Some("BowedInstrument"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("stringexcitationtype"), Some("ExcitationType"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("hammerexcitationdynamics"), Some("ExcitationType"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("brasshornflare"), Some("HornFlarePreset"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("bellflarepreset"), Some("HornFlarePreset"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("acousticbrassmute"), Some("HornMuteType"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("bellmuteprofile"), Some("HornMuteType"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("meshboundaryphysics"), Some("MeshBoundaryType"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("resonatingmeshboundary"), Some("MeshBoundaryType"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("indianragascale"), Some("RagaScale"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("ragashrutituning"), Some("RagaScale"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("bowrosintype"), Some("RosinType"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("frictionrosinformula"), Some("RosinType"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("granularwindowtype"), Some("GrainWindowType"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("grainenvelopewindow"), Some("GrainWindowType"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("tubecircuittopology"), Some("TubeTopology"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("valvecircuittopology"), Some("TubeTopology"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("roomwallmaterial"), Some("WallMaterial"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("spacewallmaterial"), Some("WallMaterial"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("colorharmonicmapping"), Some("ColorMappingMode"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("spectrogramcolortoharmonic"), Some("ColorMappingMode"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("spectralfrequencymapping"), Some("FrequencyMapping"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("spectrogramfrequencyaxis"), Some("FrequencyMapping"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("harmoniccadencetype"), Some("CadenceType"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cadenceresolutiontarget"), Some("CadenceType"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("automationinterpolationmode"), Some("Interpolation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("curvetransferinterpolation"), Some("Interpolation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cloudcrdtpreset"), Some("CloudPresetEntry"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("collaborativepresetentry"), Some("CloudPresetEntry"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("distributedrenderjob"), Some("CloudRenderJob"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cloudrenderfarmjob"), Some("CloudRenderJob"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("enginecrashreport"), Some("CrashReport"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("paniccrashreport"), Some("CrashReport"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("enginetelemetrymanager"), Some("TelemetryManager"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("dsploadtelemetrymanager"), Some("TelemetryManager"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clouduseraccount"), Some("UserAccount"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("summoneruseraccount"), Some("UserAccount"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("softwareupdatechecker"), Some("UpdateChecker"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("releaseupdatechecker"), Some("UpdateChecker"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("gdprprivacycompliance"), Some("GdprNotice"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("gdprdataprivacy"), Some("GdprNotice"));
+
+        // 3. Verify Asset Browser categorization
+        use crate::views::modern_asset_browser::BrowserCategory;
+
+        let instrument_folders = BrowserCategory::Instruments.default_folders();
+        let physical_items = instrument_folders.iter().find(|(name, _)| *name == "Physical Models").unwrap().1;
+        assert!(physical_items.contains(&"BowedInstrument"));
+        assert!(physical_items.contains(&"ExcitationType"));
+        assert!(physical_items.contains(&"HornFlarePreset"));
+        assert!(physical_items.contains(&"HornMuteType"));
+        assert!(physical_items.contains(&"MeshBoundaryType"));
+        assert!(physical_items.contains(&"RagaScale"));
+        assert!(physical_items.contains(&"RosinType"));
+
+        let midi_fx_folders = BrowserCategory::MidiFx.default_folders();
+        let routing_items = midi_fx_folders.iter().find(|(name, _)| *name == "Transforms & Routing").unwrap().1;
+        assert!(routing_items.contains(&"GrainWindowType"));
+        assert!(routing_items.contains(&"TubeTopology"));
+        assert!(routing_items.contains(&"WallMaterial"));
+        assert!(routing_items.contains(&"ColorMappingMode"));
+        assert!(routing_items.contains(&"FrequencyMapping"));
+        assert!(routing_items.contains(&"CadenceType"));
+        assert!(routing_items.contains(&"Interpolation"));
+        assert!(routing_items.contains(&"CloudPresetEntry"));
+        assert!(routing_items.contains(&"CloudRenderJob"));
+        assert!(routing_items.contains(&"CrashReport"));
+        assert!(routing_items.contains(&"TelemetryManager"));
+        assert!(routing_items.contains(&"UserAccount"));
+        assert!(routing_items.contains(&"UpdateChecker"));
+        assert!(routing_items.contains(&"GdprNotice"));
+
+        // 4. Verify interactive AwardWinningGuiView selects Tier 128 preset nodes
+        let mut view = crate::views::award_winning_gui_view::AwardWinningGuiView::default();
+        let ctx = eframe::egui::Context::default();
+
+        let presets = [
+            ("Physical Bowed Cello & Resonant Rosin Friction Slew", "BowedInstrument"),
+            ("North Indian Classical Raga Shruti Microtonal Drone", "RagaScale"),
+            ("Vintage 12AX7 Valve Triode Saturation & Sag Bloom", "TubeTopology"),
+            ("Opt-In Real-Time Audio Engine Health Telemetry & Diagnostics", "TelemetryManager"),
+        ];
+
+        for (preset_name, target_node) in presets {
+            view.top_bar_state.selected_preset = preset_name.to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some(target_node.to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some(target_node.to_string()));
+        }
+    }
 }
 
 
