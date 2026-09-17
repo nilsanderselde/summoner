@@ -8659,7 +8659,7 @@ mod tests {
         let inv = crate::dsp_node_ui::DspNodeRegistry::inventory();
 
         // 1. Verify exact 1256 DSP module count
-        assert_eq!(inv.len(), 1256, "Inventory must contain exactly 1256 DSP modules");
+        assert!(inv.len() >= 1256, "Inventory must contain at least 1256 DSP modules");
         assert!(registry.list_all().len() >= 1256, "Registry list_all must be >= 1256");
 
         let tier126_modules = [
@@ -8786,5 +8786,144 @@ mod tests {
             assert_eq!(view.inspector_state.selected_node_kind, Some(target_node.to_string()));
         }
     }
+
+    #[test]
+    #[cfg(feature = "gui")]
+    fn test_tier127_modern_gui_dsp_module_coverage_and_presets() {
+        let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+        let inv = crate::dsp_node_ui::DspNodeRegistry::inventory();
+
+        // 1. Verify exact 1277 DSP module count
+        assert_eq!(inv.len(), 1277, "Inventory must contain exactly 1277 DSP modules");
+        assert!(registry.list_all().len() >= 1277, "Registry list_all must be >= 1277");
+
+        let tier127_modules = [
+            ("GrandPianoProfile", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("JawariProfile", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("ModalExcitationType", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("AuditedCrateDependency", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("LuaAutomationOnlyGuard", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("LuaClipboard", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("LuaFileWatcher", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("LuaGitScriptTracker", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("LuaProjectBuilder", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("LuaScriptAnalytics", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("LuaScriptInspectorState", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("MarketplaceScriptEntry", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("ScriptMergeConflict", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("ProjectError", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CloudPullRequest", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("PresetComment", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("UserSessionMetric", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("TelemetryEvent", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("GitBlameEntry", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("ScriptBlameInfo", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("ScriptExecutionLog", crate::dsp_node_ui::DspNodeCategory::Utility),
+        ];
+
+        for (name, expected_cat) in tier127_modules {
+            let desc = registry.get(name).unwrap_or_else(|| panic!("Tier 127 module {} missing", name));
+            assert_eq!(desc.category, expected_cat, "Category mismatch for {}", name);
+            assert!(desc.params.len() >= 5, "Module {} must have >= 5 params, found {}", name, desc.params.len());
+            assert!(crate::dsp_node_ui::DspNodeRegistry::create_node_ui(name).is_some(), "create_node_ui failed for {}", name);
+        }
+
+        // 2. Normalization verification
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("grandpianovoicing"), Some("GrandPianoProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("grandpianoacoustic"), Some("GrandPianoProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sitarjawariprofile"), Some("JawariProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("jivadamping"), Some("JawariProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("modalexcitationmode"), Some("ModalExcitationType"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("modalstrikepluckbow"), Some("ModalExcitationType"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("auditedcratedependency"), Some("AuditedCrateDependency"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cratedependencyaudit"), Some("AuditedCrateDependency"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luaautomationonlyguard"), Some("LuaAutomationOnlyGuard"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("automationonlyguard"), Some("LuaAutomationOnlyGuard"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luaclipboard"), Some("LuaClipboard"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clipboardbuffer"), Some("LuaClipboard"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luafilewatcher"), Some("LuaFileWatcher"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("scriptfilewatcher"), Some("LuaFileWatcher"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luagitscripttracker"), Some("LuaGitScriptTracker"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("scriptgittracker"), Some("LuaGitScriptTracker"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luaprojectbuilder"), Some("LuaProjectBuilder"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("proceduralprojectbuilder"), Some("LuaProjectBuilder"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luascriptanalytics"), Some("LuaScriptAnalytics"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luaperfanalytics"), Some("LuaScriptAnalytics"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luascriptinspectorstate"), Some("LuaScriptInspectorState"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("scriptinspector"), Some("LuaScriptInspectorState"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("marketplacescriptentry"), Some("MarketplaceScriptEntry"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("communityscriptentry"), Some("MarketplaceScriptEntry"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("scriptmergeconflict"), Some("ScriptMergeConflict"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("scriptconflictresolver"), Some("ScriptMergeConflict"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("projecterror"), Some("ProjectError"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("projecttomlerror"), Some("ProjectError"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cloudpullrequest"), Some("CloudPullRequest"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("collaborativepr"), Some("CloudPullRequest"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("presetcomment"), Some("PresetComment"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("communitypresetreview"), Some("PresetComment"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("usersessionmetric"), Some("UserSessionMetric"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("dsploadtelemetry"), Some("UserSessionMetric"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("telemetryevent"), Some("TelemetryEvent"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("diagnosticevent"), Some("TelemetryEvent"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("gitblameentry"), Some("GitBlameEntry"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clipblameinfo"), Some("GitBlameEntry"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("scriptblameinfo"), Some("ScriptBlameInfo"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luascriptblame"), Some("ScriptBlameInfo"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("scriptexecutionlog"), Some("ScriptExecutionLog"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luacycleprofilerlog"), Some("ScriptExecutionLog"));
+
+        // 3. Verify Asset Browser categorization
+        use crate::views::modern_asset_browser::BrowserCategory;
+
+        let instrument_folders = BrowserCategory::Instruments.default_folders();
+        let physical_items = instrument_folders.iter().find(|(name, _)| *name == "Physical Models").unwrap().1;
+        assert!(physical_items.contains(&"GrandPianoProfile"));
+        assert!(physical_items.contains(&"JawariProfile"));
+        assert!(physical_items.contains(&"ModalExcitationType"));
+
+        let midi_fx_folders = BrowserCategory::MidiFx.default_folders();
+        let routing_items = midi_fx_folders.iter().find(|(name, _)| *name == "Transforms & Routing").unwrap().1;
+        assert!(routing_items.contains(&"AuditedCrateDependency"));
+        assert!(routing_items.contains(&"LuaAutomationOnlyGuard"));
+        assert!(routing_items.contains(&"LuaClipboard"));
+        assert!(routing_items.contains(&"LuaFileWatcher"));
+        assert!(routing_items.contains(&"LuaGitScriptTracker"));
+        assert!(routing_items.contains(&"LuaProjectBuilder"));
+        assert!(routing_items.contains(&"LuaScriptAnalytics"));
+        assert!(routing_items.contains(&"LuaScriptInspectorState"));
+        assert!(routing_items.contains(&"MarketplaceScriptEntry"));
+        assert!(routing_items.contains(&"ScriptMergeConflict"));
+        assert!(routing_items.contains(&"ProjectError"));
+        assert!(routing_items.contains(&"CloudPullRequest"));
+        assert!(routing_items.contains(&"PresetComment"));
+        assert!(routing_items.contains(&"UserSessionMetric"));
+        assert!(routing_items.contains(&"TelemetryEvent"));
+        assert!(routing_items.contains(&"GitBlameEntry"));
+        assert!(routing_items.contains(&"ScriptBlameInfo"));
+        assert!(routing_items.contains(&"ScriptExecutionLog"));
+
+        // 4. Verify interactive AwardWinningGuiView selects Tier 127 preset nodes
+        let mut view = crate::views::award_winning_gui_view::AwardWinningGuiView::default();
+        let ctx = eframe::egui::Context::default();
+
+        let presets = [
+            ("Concert Grand Piano Steinway D-274 Voicing & Duplex Bleed", "GrandPianoProfile"),
+            ("Indian Classical Sitar Jawari Obstacle & Jiva Silk Sizzle", "JawariProfile"),
+            ("Procedural Lua Project Builder & Multi-Track Graph", "LuaProjectBuilder"),
+            ("Enterprise Audio Engine Health Telemetry & Latency Diagnostics", "UserSessionMetric"),
+        ];
+
+        for (preset_name, target_node) in presets {
+            view.top_bar_state.selected_preset = preset_name.to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some(target_node.to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some(target_node.to_string()));
+        }
+    }
 }
+
 

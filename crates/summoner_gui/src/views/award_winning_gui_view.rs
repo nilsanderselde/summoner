@@ -512,6 +512,10 @@ impl AwardWinningGuiView {
                 "Polymetric Clip Sequence Pattern & Tracker Step Array" => "SequenceConfig",
                 "Enterprise Diagnostic Crash Dump & Subsystem Telemetry" => "CrashDump",
                 "Distributed CRDT Collaborative Session & Multi-User Cursor" => "RemoteUserCursor",
+                "Concert Grand Piano Steinway D-274 Voicing & Duplex Bleed" => "GrandPianoProfile",
+                "Indian Classical Sitar Jawari Obstacle & Jiva Silk Sizzle" => "JawariProfile",
+                "Procedural Lua Project Builder & Multi-Track Graph" => "LuaProjectBuilder",
+                "Enterprise Audio Engine Health Telemetry & Latency Diagnostics" => "UserSessionMetric",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {

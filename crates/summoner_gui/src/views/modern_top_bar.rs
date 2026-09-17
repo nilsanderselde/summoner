@@ -277,6 +277,10 @@ fn default_available_presets() -> Vec<String> {
         "Polymetric Clip Sequence Pattern & Tracker Step Array".to_string(),
         "Enterprise Diagnostic Crash Dump & Subsystem Telemetry".to_string(),
         "Distributed CRDT Collaborative Session & Multi-User Cursor".to_string(),
+        "Concert Grand Piano Steinway D-274 Voicing & Duplex Bleed".to_string(),
+        "Indian Classical Sitar Jawari Obstacle & Jiva Silk Sizzle".to_string(),
+        "Procedural Lua Project Builder & Multi-Track Graph".to_string(),
+        "Enterprise Audio Engine Health Telemetry & Latency Diagnostics".to_string(),
     ]
 }
 

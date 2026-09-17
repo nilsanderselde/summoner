@@ -9833,6 +9833,174 @@ descriptors.insert("BellowsGesturePattern".to_string(), DspNodeDescriptor::new("
             .with_param(DspParamSchema::choice("crate_domain_tier", "Architectural Domain Layer Classification", &["Core (Zero-GUI Pure Audio & Bus Types)", "Dsp (Physical Modeling, Filters, Synthesizers)", "Sequencer (Timeline, Automation & Clips)", "Project (File Formats, CRDT & Telemetry)", "Gui (egui Views, Visualizers & Widgets)"], 1, "Architectural tier defining allowed dependency direction"))
             .with_param(DspParamSchema::toggle("is_license_header_present", "Verify Open-Source License Header in All Files", true, "Guarantees all source files contain standardized copyright notices"))
         );
+        descriptors.insert("GrandPianoProfile".to_string(), DspNodeDescriptor::new("GrandPianoProfile", "Concert Grand Piano Acoustic Geometry & Voicing Profile", DspNodeCategory::AcousticPhysicalModel, "Concert grand piano acoustic geometry profile selecting Steinway D-274, Bösendorfer Imperial 290, Yamaha CFX, Intimate Studio, Impressionist Una Corda, or Prepared Avant-Garde physical soundboard and bridge specifications")
+            .with_param(DspParamSchema::knob("profile_preset", "Grand Piano Profile Preset", 0.0, 5.0, 0.0, "preset", MacroRole::Tone, "Active grand piano voicing profile: 0=Steinway D-274, 1=Bösendorfer Imperial, 2=Yamaha CFX, 3=Intimate Studio, 4=Una Corda, 5=Prepared"))
+            .with_param(DspParamSchema::knob("bridge_impedance", "Soundboard Bridge Wave Impedance Zb", 100.0, 1000.0, 420.0, "kg/s", MacroRole::Tone, "Nominal soundboard bridge impedance Zb determining acoustic energy transfer and string decay rate"))
+            .with_param(DspParamSchema::knob("sympathetic_bleed", "Duplex Sympathetic Coupling Bleed", 0.0, 1.0, 0.35, "ratio", MacroRole::Space, "Inter-string sympathetic resonance bleeding ratio across adjacent unisons and duplex scale aliquots"))
+            .with_param(DspParamSchema::knob("string_inharmonicity_b", "String Stiffness Inharmonicity Factor B", 0.00001, 0.001, 0.00018, "ratio", MacroRole::Tone, "Physical string bending stiffness inharmonicity coefficient shifting partials upward from true harmonics"))
+            .with_param(DspParamSchema::knob("una_corda_shift", "Una Corda Soft Pedal Keyboard Shift", 0.0, 1.0, 0.0, "pos", MacroRole::Tone, "Continuous Una Corda soft pedal shift positioning hammers away from tri-chord outer strings"))
+            .with_param(DspParamSchema::knob("damper_lift", "Continuous Damper Felt Lift Position", 0.0, 1.0, 0.0, "pos", MacroRole::Space, "Half-pedaling continuous damper felt elevation above strings regulating release resonance decay"))
+        );
+        descriptors.insert("JawariProfile".to_string(), DspNodeDescriptor::new("JawariProfile", "Indian Sitar & Veena Dynamic Obstacle Jawari Bridge Profile", DspNodeCategory::AcousticPhysicalModel, "Indian classical sitar and veena curved jawari bridge profile selecting Deer-Horn, Camel-Bone, Ebony Wood, Synthetic Delrin, Electric Flat, or Open Resonant Gourd unilateral obstacle geometries")
+            .with_param(DspParamSchema::knob("jawari_profile", "Jawari Obstacle Profile Model", 0.0, 5.0, 0.0, "profile", MacroRole::Tone, "Jawari bridge material profile: 0=DeerHorn Curved, 1=CamelBone Sharp, 2=Ebony Wood, 3=Delrin, 4=Electric Flat, 5=Open Gourd"))
+            .with_param(DspParamSchema::knob("clearance_gap_mm", "Bridge Apex String Clearance Gap h0", 0.01, 1.50, 0.18, "mm", MacroRole::Tone, "Resting spatial clearance gap h0 between string resting plane and curved jawari bridge apex in millimeters"))
+            .with_param(DspParamSchema::knob("curvature_c", "Bridge Curvature Contour Factor c", 20.0, 300.0, 120.0, "1/m", MacroRole::Tone, "Convex surface curvature parameter c governing spatial extent of unilateral obstacle contact during oscillation"))
+            .with_param(DspParamSchema::knob("contact_stiffness_k", "Obstacle Unilateral Contact Stiffness Kc", 1.0e6, 1.0e8, 4.5e7, "N/m", MacroRole::Punch, "Nonlinear penalty contact stiffness Kc when vibrating string collides with the curved jawari plate"))
+            .with_param(DspParamSchema::knob("jiva_thread_pos", "Jiva Fine Cotton Thread Tuning Position", 0.0, 1.0, 0.45, "pos", MacroRole::Tone, "Normalized longitudinal placement of the fine cotton jiva thread along the contact zone apex"))
+            .with_param(DspParamSchema::knob("jiva_damping", "Jiva Cotton Damping Dissipation mu", 0.05, 0.90, 0.35, "mu", MacroRole::Space, "Acoustic damping and high-frequency buzz dispersion introduced by the cotton jiva filament"))
+        );
+        descriptors.insert("ModalExcitationType".to_string(), DspNodeDescriptor::new("ModalExcitationType", "Physical Resonator Modal Excitation Mechanism", DspNodeCategory::AcousticPhysicalModel, "Modal resonator excitation selector switching between percussive mallet strike, continuous slip-stick friction bowing, and sharp plucked release impulse dynamics")
+            .with_param(DspParamSchema::knob("excitation_mode", "Modal Excitation Mechanism Mode", 0.0, 2.0, 0.0, "mode", MacroRole::Punch, "Excitation trigger mechanism: 0=Percussive Mallet Strike, 1=Continuous Friction Bow, 2=Sharp Plucked Release"))
+            .with_param(DspParamSchema::knob("strike_position", "Resonator Strike / Bow Contact Position", 0.01, 0.99, 0.35, "norm", MacroRole::Tone, "Normalized spatial contact position along 1D beam or 2D membrane determining active modal node excitation"))
+            .with_param(DspParamSchema::knob("mallet_hardness", "Percussive Mallet Tip Elastic Hardness", 0.05, 1.0, 0.60, "hardness", MacroRole::Punch, "Elastic impact contact duration and stiffness of the striking mallet hammer tip"))
+            .with_param(DspParamSchema::knob("bow_pressure", "Continuous Bowing Normal Force Pressure", 0.0, 2.0, 0.50, "N", MacroRole::Punch, "Normal downward contact force Fn pressing bow hair against the modal resonant structure"))
+            .with_param(DspParamSchema::knob("bow_velocity", "Continuous Bowing Relative Surface Velocity", 0.0, 1.5, 0.40, "m/s", MacroRole::Tone, "Tangential sliding speed vb of the bowing actuator driving Helmholtz slip-stick oscillation"))
+            .with_param(DspParamSchema::knob("mode_count", "Active Resonant Modes Count", 1.0, 32.0, 8.0, "modes", MacroRole::Space, "Number of concurrent 2nd-order bandpass resonator poles evaluated in the modal synthesis bank"))
+        );
+        descriptors.insert("AuditedCrateDependency".to_string(), DspNodeDescriptor::new("AuditedCrateDependency", "Audited Crate Dependency License & Integrity Check", DspNodeCategory::Utility, "Dependency audit record tracking individual crate version requirements, license compliance classification, offline-safety verification, and wildcard ban compliance")
+            .with_param(DspParamSchema::knob("version_req", "Dependency Semantic Version Requirement Range", 0.0, 100.0, 1.0, "ver", MacroRole::Tone, "Semantic version constraint range parsed from Cargo.lock specification"))
+            .with_param(DspParamSchema::knob("license_compliance", "License Compliance Tier Classification", 0.0, 4.0, 0.0, "tier", MacroRole::Tone, "License tier classification: 0=Permissive MIT/Apache, 1=Weak Copyleft, 2=GPL, 3=Proprietary, 4=Unrecognized"))
+            .with_param(DspParamSchema::toggle("is_wildcard", "Disallowed Wildcard Version Specifier Detected", false, "Security audit flag rejecting wildcard dependencies in production audio builds"))
+            .with_param(DspParamSchema::toggle("is_offline_safe", "Crate Source Embedded for Air-Gapped Builds", true, "Verifies crate vendoring and offline compilation capability without remote network access"))
+            .with_param(DspParamSchema::knob("audit_severity_score", "Dependency Vulnerability Audit Severity Score", 0.0, 10.0, 0.0, "score", MacroRole::Punch, "Aggregate Common Vulnerability Scoring System (CVSS) security hazard rating"))
+            .with_param(DspParamSchema::knob("direct_dependents", "Internal Workspace Crates Depending on Crate", 1.0, 16.0, 3.0, "crates", MacroRole::Space, "Count of first-party workspace crates consuming this dependency in cargo graph"))
+        );
+        descriptors.insert("LuaAutomationOnlyGuard".to_string(), DspNodeDescriptor::new("LuaAutomationOnlyGuard", "Lua Automation Context Execution Sandbox Guard", DspNodeCategory::Utility, "Execution restriction gate enforcing Lua scripts to execute exclusively in non-realtime automation thread contexts or sandboxed DSP render loops")
+            .with_param(DspParamSchema::toggle("automation_only", "Strict Automation Thread Only Execution Gate", true, "Restricts script execution exclusively to non-realtime timeline automation lanes"))
+            .with_param(DspParamSchema::knob("context_security_level", "Runtime Execution Context Security Isolation", 0.0, 3.0, 2.0, "level", MacroRole::Tone, "Sandbox privilege tier: 0=Full, 1=Restricted IO, 2=Pure Math, 3=Deterministic Automation"))
+            .with_param(DspParamSchema::knob("blocked_evaluations", "Disallowed Audio-Thread Evaluation Rejections", 0.0, 1000.0, 0.0, "blocks", MacroRole::Punch, "Tally of attempted real-time audio thread executions blocked by sandbox guard"))
+            .with_param(DspParamSchema::toggle("allow_dsp_hooks", "Allow Whitelisted Pure Realtime DSP Blocks", false, "Special authorization allowing statically verified allocation-free Lua DSP callbacks"))
+            .with_param(DspParamSchema::knob("sandbox_timeout_ms", "Max Execution Time Limit Before Thread Abort", 0.1, 50.0, 2.0, "ms", MacroRole::Tone, "Hard execution timeout ceiling terminating runaway Lua scripts to prevent DAW freezing"))
+            .with_param(DspParamSchema::knob("quarantine_violations", "Script Quarantine Violation Trigger Threshold", 1.0, 10.0, 3.0, "violations", MacroRole::Space, "Consecutive sandbox violations required to isolate and disable offending script"))
+        );
+        descriptors.insert("LuaClipboard".to_string(), DspNodeDescriptor::new("LuaClipboard", "Sandboxed Lua System Clipboard Text Buffer", DspNodeCategory::Utility, "Sandboxed clipboard interface providing safe text buffer read/write access for procedural code generators, track templates, and preset exchanges")
+            .with_param(DspParamSchema::knob("buffer_capacity_kb", "Clipboard Buffer Maximum Capacity Limit", 1.0, 1024.0, 64.0, "KB", MacroRole::Space, "Maximum permitted text buffer allocation size in kilobytes for script clipboard operations"))
+            .with_param(DspParamSchema::knob("content_length_chars", "Active Buffer Character Content Length", 0.0, 65536.0, 256.0, "chars", MacroRole::Tone, "Current character count of UTF-8 text payload residing in the sandboxed clipboard"))
+            .with_param(DspParamSchema::knob("read_access_count", "Cumulative Clipboard Read Operations", 0.0, 10000.0, 14.0, "reads", MacroRole::Punch, "Cumulative count of text extraction operations performed by running Lua scripts"))
+            .with_param(DspParamSchema::knob("write_access_count", "Cumulative Clipboard Write Operations", 0.0, 10000.0, 6.0, "writes", MacroRole::Punch, "Cumulative count of clipboard copy operations dispatched from Lua runtime"))
+            .with_param(DspParamSchema::toggle("sanitize_escapes", "Sanitize Control Characters & ANSI Sequences", true, "Strips malicious terminal control codes and binary payloads before clipboard insertion"))
+            .with_param(DspParamSchema::toggle("is_clipboard_locked", "Lock Buffer Against External Script Overwrite", false, "Prevents background scripts from overwriting manual user clipboard selections"))
+        );
+        descriptors.insert("LuaFileWatcher".to_string(), DspNodeDescriptor::new("LuaFileWatcher", "Live Lua Script Filesystem Hot-Reload Watcher", DspNodeCategory::Utility, "Filesystem event monitor observing procedural Lua script modifications on disk to hot-reload code into active DSP engines without audio dropouts")
+            .with_param(DspParamSchema::knob("poll_interval_ms", "Filesystem Modification Polling Rate Interval", 10.0, 2000.0, 100.0, "ms", MacroRole::Tone, "Polling interval frequency checking for modified timestamps on registered script files"))
+            .with_param(DspParamSchema::knob("debounce_window_ms", "Write Flush Event Debounce Window", 5.0, 500.0, 50.0, "ms", MacroRole::Tone, "Debounce hold duration ensuring editor file write flushes complete before recompilation"))
+            .with_param(DspParamSchema::knob("reload_event_count", "Total Hot-Reload Script Invocations", 0.0, 500.0, 3.0, "reloads", MacroRole::Punch, "Count of seamless live script reloads performed during active session playback"))
+            .with_param(DspParamSchema::toggle("auto_recompile", "Automatic Syntax Validation Before Hot Reload", true, "Runs Lua bytecode lint and AST validation prior to swapping audio engine function pointer"))
+            .with_param(DspParamSchema::toggle("preserve_dsp_state", "Preserve Internal Parameter State Across Reload", true, "Serializes active filter coefficients and oscillator phases across code reloads"))
+            .with_param(DspParamSchema::toggle("watch_active_status", "Filesystem Directory Watcher Thread Running", true, "Active status of background OS kernel notify / inotify file watcher thread"))
+        );
+        descriptors.insert("LuaGitScriptTracker".to_string(), DspNodeDescriptor::new("LuaGitScriptTracker", "Lua Script Git Version Tracking & Hash Ledger", DspNodeCategory::Utility, "Cryptographic hash registry recording Git commit checkpoints and Blake3 content digests for all project procedural DSP and automation scripts")
+            .with_param(DspParamSchema::knob("tracked_scripts_count", "Total Project Lua Scripts in Version Control", 1.0, 100.0, 8.0, "scripts", MacroRole::Tone, "Number of procedural Lua generators and effect modules tracked in project repository"))
+            .with_param(DspParamSchema::knob("commit_history_depth", "Historical Commit Graph Retained Checkpoints", 1.0, 1000.0, 25.0, "commits", MacroRole::Space, "Number of previous revision checkpoints retained in local version control ledger"))
+            .with_param(DspParamSchema::toggle("blake3_hash_valid", "Verify Content Integrity Against Blake3 Hash", true, "Cryptographic Blake3 verification ensuring script source code has not been tampered with"))
+            .with_param(DspParamSchema::knob("uncommitted_deltas", "Modified Scripts With Uncommitted Local Changes", 0.0, 50.0, 1.0, "deltas", MacroRole::Punch, "Count of procedural scripts differing from latest recorded repository commit snapshot"))
+            .with_param(DspParamSchema::toggle("auto_checkpoint_on_save", "Auto-Create Git Checkpoint on Project Save", true, "Creates version-controlled script revision snapshot whenever user saves project"))
+            .with_param(DspParamSchema::knob("git_branch_id", "Active Version Control Working Branch Index", 0.0, 16.0, 0.0, "branch", MacroRole::Tone, "Git branch index containing procedural script modifications"))
+        );
+        descriptors.insert("LuaProjectBuilder".to_string(), DspNodeDescriptor::new("LuaProjectBuilder", "Procedural Lua DAW Project & Track Graph Builder", DspNodeCategory::Utility, "Procedural project builder instantiating tracks, timeline clips, instrument routing, and master bus configurations directly from Lua scripts")
+            .with_param(DspParamSchema::knob("project_bpm", "Procedural Project Master Tempo Setting", 20.0, 300.0, 120.0, "BPM", MacroRole::Tone, "Master session tempo initialized when generating project layout from procedural script"))
+            .with_param(DspParamSchema::knob("track_count", "Generated Multi-Track Channel Count", 1.0, 128.0, 8.0, "tracks", MacroRole::Space, "Number of audio, MIDI, and auxiliary bus tracks generated in procedural project"))
+            .with_param(DspParamSchema::knob("clip_regions_count", "Procedurally Placed Timeline Audio Regions", 0.0, 512.0, 32.0, "clips", MacroRole::Tone, "Total audio and MIDI clip regions arranged along the multi-track timeline"))
+            .with_param(DspParamSchema::knob("sample_rate_khz", "Project Master Audio Clock Sample Rate", 44.1, 192.0, 48.0, "kHz", MacroRole::Punch, "Target project audio engine hardware sample rate in kilohertz"))
+            .with_param(DspParamSchema::knob("time_signature_num", "Time Signature Beats Per Measure Numerator", 1.0, 16.0, 4.0, "beats", MacroRole::Tone, "Time signature beats count per bar configured by procedural project script"))
+            .with_param(DspParamSchema::toggle("enable_master_limiter", "Insert True-Peak Limiter on Master Output Bus", true, "Automatically instantiates inter-sample true-peak safety limiter on master output bus"))
+        );
+        descriptors.insert("LuaScriptAnalytics".to_string(), DspNodeDescriptor::new("LuaScriptAnalytics", "Lua Script Performance Analytics & Execution Profiler", DspNodeCategory::Utility, "Runtime telemetry profiler measuring per-script invocation count, total wall-clock execution time in milliseconds, and average latency per call")
+            .with_param(DspParamSchema::toggle("telemetry_opt_in", "Enable Performance Metric Collection Opt-In", true, "User privacy opt-in consent permitting runtime execution timing collection"))
+            .with_param(DspParamSchema::knob("total_scripts_profiled", "Active Monitored Procedural Scripts Count", 1.0, 64.0, 5.0, "scripts", MacroRole::Tone, "Number of active procedural scripts undergoing statistical performance profiling"))
+            .with_param(DspParamSchema::knob("total_runtime_ms", "Cumulative Script Execution Duration", 0.0, 100000.0, 420.0, "ms", MacroRole::Space, "Total accumulated execution time in milliseconds across all profiled scripts"))
+            .with_param(DspParamSchema::knob("average_call_time_us", "Average Script Invocation Wall Time", 0.5, 5000.0, 8.5, "us", MacroRole::Tone, "Average execution duration per script invocation in microseconds"))
+            .with_param(DspParamSchema::knob("peak_memory_usage_kb", "Peak Memory Consumed by Script Execution", 16.0, 32768.0, 512.0, "KB", MacroRole::Punch, "Maximum heap memory footprint allocated by Lua runtime during execution bursts"))
+            .with_param(DspParamSchema::knob("profiler_sampling_rate", "Statistical Profiling Sampling Frequency", 10.0, 1000.0, 100.0, "Hz", MacroRole::Tone, "Sample rate frequency at which script profiler collects CPU instruction traces"))
+        );
+        descriptors.insert("LuaScriptInspectorState".to_string(), DspNodeDescriptor::new("LuaScriptInspectorState", "Real-Time Lua Runtime Variable Inspector Panel", DspNodeCategory::Utility, "Interactive inspector state observing exposed script variable values, frame update timestamps, and type conversions for live debugging")
+            .with_param(DspParamSchema::knob("inspected_variables", "Total Live Monitored Script Variables Count", 0.0, 256.0, 16.0, "vars", MacroRole::Tone, "Count of procedural script variables currently monitored in live GUI inspector"))
+            .with_param(DspParamSchema::knob("last_update_frame", "Last Processed Audio Frame Index Offset", 0.0, 1000000.0, 48000.0, "frame", MacroRole::Space, "Hardware audio sample frame index corresponding to latest inspector value update"))
+            .with_param(DspParamSchema::knob("refresh_rate_fps", "Inspector GUI Surface Refresh Frame Rate", 10.0, 120.0, 60.0, "FPS", MacroRole::Punch, "Refresh frequency of inspector graphical display panel in frames per second"))
+            .with_param(DspParamSchema::toggle("pause_on_change", "Pause Audio Callback on Monitored Value Mutation", false, "Debug breakpoint trigger pausing playback when monitored variable changes value"))
+            .with_param(DspParamSchema::toggle("display_hex_floats", "Display Floating Point Numbers in Hexadecimal", false, "Renders IEEE 754 floating point values in exact hex format for bit-exact DSP debugging"))
+            .with_param(DspParamSchema::knob("max_history_entries", "Historical Variable Value State Buffer Depth", 1.0, 100.0, 20.0, "states", MacroRole::Tone, "Number of past variable mutation states retained for rewind and visual inspection"))
+        );
+        descriptors.insert("MarketplaceScriptEntry".to_string(), DspNodeDescriptor::new("MarketplaceScriptEntry", "Community Lua DSP Script Marketplace Manifest", DspNodeCategory::Utility, "Decentralized ecosystem manifest entry describing community procedural DSP scripts with rating, download tally, version, and author attribution")
+            .with_param(DspParamSchema::knob("script_version_major", "Marketplace Script Semantic Major Version", 0.0, 99.0, 1.0, "ver", MacroRole::Tone, "Major release version number of community script package manifest"))
+            .with_param(DspParamSchema::knob("script_version_minor", "Marketplace Script Semantic Minor Version", 0.0, 99.0, 2.0, "ver", MacroRole::Tone, "Minor feature version number of community script package manifest"))
+            .with_param(DspParamSchema::knob("user_star_rating", "Community Crowd-Sourced Star Rating Score", 0.0, 5.0, 4.9, "stars", MacroRole::Space, "Aggregated community star rating score for discovery and quality curation"))
+            .with_param(DspParamSchema::knob("download_count", "Total Community Verified Script Downloads", 0.0, 100000.0, 3420.0, "downloads", MacroRole::Punch, "Total verified package downloads from decentralized script repository"))
+            .with_param(DspParamSchema::knob("comments_count", "Community Review Discussion Comments Count", 0.0, 1000.0, 18.0, "comments", MacroRole::Tone, "Number of peer reviews and discussion threads posted on this script module"))
+            .with_param(DspParamSchema::toggle("is_curated_verified", "Verified Summoner Core Developer Script Seal", true, "Official verification badge confirming safety, performance, and code quality"))
+        );
+        descriptors.insert("CloudPullRequest".to_string(), DspNodeDescriptor::new("CloudPullRequest", "Collaborative Cloud Project Branch Merge Request", DspNodeCategory::Utility, "Collaborative cloud project pull request manager handling multi-track branch forks, three-way merge validation, commit differentials, and CI/CD audio test suites")
+            .with_param(DspParamSchema::knob("pr_id", "Federated Project Pull Request Numeric ID", 1.0, 999999.0, 1042.0, "id", MacroRole::Tone, "Unique pull request identifier in the remote decentralized project Git DAG"))
+            .with_param(DspParamSchema::knob("changed_tracks", "Divergent Arrangement Tracks Count", 0.0, 64.0, 4.0, "tracks", MacroRole::Space, "Number of arrangement tracks with differing audio clips, automation, or FX racks"))
+            .with_param(DspParamSchema::knob("merge_conflict_count", "Automated Three-Way Merge Conflict Tally", 0.0, 50.0, 0.0, "conflicts", MacroRole::Punch, "Detected concurrent edit collisions requiring manual resolution before merge"))
+            .with_param(DspParamSchema::knob("review_approvals", "Peer Peer-Review Cryptographic Signatures", 0.0, 10.0, 2.0, "reviews", MacroRole::Tone, "Number of cryptographic review approvals signed by authorized session collaborators"))
+            .with_param(DspParamSchema::choice("ci_pipeline_status", "Automated Audio Regression CI Pipeline Status", &["Pending", "Running", "Passed (Clean Render)", "Failed"], 2, "CI test status verifying headless audio integrity"))
+            .with_param(DspParamSchema::choice("target_branch", "Destination Merge Target Branch", &["Master / Main", "Staging", "Mixdown", "Stem Master"], 0, "Destination branch in decentralized project DAG"))
+        );
+        descriptors.insert("PresetComment".to_string(), DspNodeDescriptor::new("PresetComment", "Cloud Community Preset Discussion & Feedback Item", DspNodeCategory::Utility, "Cloud preset timestamped feedback and comment thread descriptor managing collaborative feedback, rating stars, and author attribution")
+            .with_param(DspParamSchema::knob("comment_id", "Preset Comment Entity Unique Identifier", 1.0, 999999.0, 1.0, "id", MacroRole::Tone, "Unique sequential comment identifier within the preset discussion thread"))
+            .with_param(DspParamSchema::knob("timestamp_epoch", "Normalized Comment Post Timestamp Epoch", 0.0, 2000000000.0, 1780000000.0, "epoch", MacroRole::Space, "Unix epoch seconds timestamp when user published the comment or review"))
+            .with_param(DspParamSchema::knob("user_rating", "Individual User Rating Score Contribution", 1.0, 5.0, 5.0, "stars", MacroRole::Punch, "Individual numeric review star rating contribution to aggregate preset score"))
+            .with_param(DspParamSchema::knob("upvote_count", "Helpful Community Review Upvote Count", 0.0, 10000.0, 42.0, "upvotes", MacroRole::Punch, "Number of community members who flagged this review as helpful and constructive"))
+            .with_param(DspParamSchema::toggle("is_verified_owner", "Verified Hardware / License Owner Badge", true, "Flag verifying commenter holds a registered hardware controller or full license"))
+            .with_param(DspParamSchema::knob("parent_reply_id", "Parent Comment Thread Reply Identifier", 0.0, 999999.0, 0.0, "id", MacroRole::Space, "Reference to parent comment ID for hierarchical threaded community discussions"))
+        );
+        descriptors.insert("ScriptMergeConflict".to_string(), DspNodeDescriptor::new("ScriptMergeConflict", "Collaborative Script Three-Way Merge Conflict Resolver", DspNodeCategory::Utility, "Multi-user project merge conflict inspector pinpointing divergent script line numbers across Base, Ours, and Theirs git branches")
+            .with_param(DspParamSchema::knob("conflict_line_number", "Conflicting Script Source Code Line Number", 1.0, 5000.0, 42.0, "line", MacroRole::Tone, "Line number within script source code where concurrent edits produced merge collision"))
+            .with_param(DspParamSchema::knob("active_conflicts_count", "Total Unresolved Concurrent Merge Collisions", 0.0, 50.0, 1.0, "conflicts", MacroRole::Punch, "Total remaining conflict blocks requiring collaborator resolution"))
+            .with_param(DspParamSchema::choice("resolution_strategy", "Merge Resolution Strategy Selection", &["Keep Ours (Local Branch)", "Keep Theirs (Remote Branch)", "Keep Base (Ancestral)", "Manual Interactive Synthesis"], 0, "Merge strategy resolving git divergence"))
+            .with_param(DspParamSchema::knob("diff_context_lines", "Divergence Context Inspection Window Lines", 1.0, 20.0, 3.0, "lines", MacroRole::Space, "Number of surrounding source code lines displayed in visual merge conflict tool"))
+            .with_param(DspParamSchema::toggle("auto_resolve_whitespace", "Automatically Resolve Whitespace Discrepancies", true, "Ignores trailing whitespace and indentation changes during automated three-way merge"))
+            .with_param(DspParamSchema::toggle("syntax_safety_verified", "Validate Merged Syntax Before Committing", true, "Executes AST parse test on merged file ensuring syntax integrity before write to working tree"))
+        );
+        descriptors.insert("UserSessionMetric".to_string(), DspNodeDescriptor::new("UserSessionMetric", "Real-Time Audio Performance & Latency Telemetry", DspNodeCategory::Utility, "Real-time DAW audio thread health monitor measuring buffer underrun count, DSP load percentage, round-trip latency, and audio thread jitter in microseconds")
+            .with_param(DspParamSchema::knob("dsp_load_pct", "Real-Time Audio Thread DSP Load Percentage", 0.0, 100.0, 18.5, "%", MacroRole::Tone, "Percentage of audio buffer processing deadline consumed by active DSP graph execution"))
+            .with_param(DspParamSchema::knob("buffer_underruns", "Session Accumulated Buffer Underrun / XRun Tally", 0.0, 1000.0, 0.0, "xruns", MacroRole::Punch, "Count of missed audio buffer processing deadlines resulting in audible clicks or dropouts"))
+            .with_param(DspParamSchema::knob("latency_roundtrip_ms", "Driver Audio Roundtrip Latency in Milliseconds", 0.5, 100.0, 5.8, "ms", MacroRole::Tone, "Combined input ADC, processing buffer, and output DAC roundtrip latency"))
+            .with_param(DspParamSchema::knob("jitter_std_dev_us", "Audio Buffer Callback Timing Jitter Deviation", 0.1, 500.0, 4.2, "us", MacroRole::Space, "Standard deviation of audio driver hardware callback intervals in microseconds"))
+            .with_param(DspParamSchema::knob("active_voice_count", "Active Polyphonic DSP Synthesizer Voice Count", 0.0, 256.0, 32.0, "voices", MacroRole::Tone, "Current concurrent active synthesis voices sounding across all instrument tracks"))
+            .with_param(DspParamSchema::knob("sample_rate_khz", "Operating Audio Engine Hardware Sample Rate", 44.1, 192.0, 48.0, "kHz", MacroRole::Punch, "Active audio hardware sample rate setting (44.1, 48.0, 88.2, 96.0, 176.4, 192.0 kHz)"))
+        );
+        descriptors.insert("TelemetryEvent".to_string(), DspNodeDescriptor::new("TelemetryEvent", "Distributed Analytics & Diagnostic Telemetry Event", DspNodeCategory::Utility, "Structured diagnostic telemetry event capturing subsystem category, severity level, event duration, memory delta, and breadcrumb trace for error analysis")
+            .with_param(DspParamSchema::choice("event_category", "Diagnostic Event Subsystem Category", &["AudioEngine", "DspGraph", "FileIo", "GuiRenderer", "CloudSync", "PluginHost"], 1, "Subsystem originating the diagnostic trace event"))
+            .with_param(DspParamSchema::choice("severity_level", "Event Severity Classification Level", &["Trace", "Debug", "Info", "Warning", "Critical Crash Hazard"], 0, "Severity classification level for event priority queue"))
+            .with_param(DspParamSchema::knob("duration_us", "Event Execution Elapsed Time in Microseconds", 0.0, 100000.0, 150.0, "us", MacroRole::Tone, "Measured execution duration for the profiled operation or subsystem event"))
+            .with_param(DspParamSchema::knob("memory_delta_kb", "Resident Set Memory Allocation Differential", -10240.0, 10240.0, 0.0, "KB", MacroRole::Space, "Heap memory change incurred during the execution of the tracked event"))
+            .with_param(DspParamSchema::knob("thread_priority", "Executing Thread OS Scheduling Priority", 0.0, 99.0, 80.0, "prio", MacroRole::Tone, "Operating system thread priority of the worker executing the recorded event"))
+            .with_param(DspParamSchema::knob("breadcrumbs_count", "Preceding Diagnostic Breadcrumb Log Depth", 0.0, 100.0, 12.0, "items", MacroRole::Space, "Number of contextual trace breadcrumbs recorded prior to event trigger"))
+        );
+        descriptors.insert("ProjectError".to_string(), DspNodeDescriptor::new("ProjectError", "Project File Serialization & TOML Parser Diagnostics", DspNodeCategory::Utility, "Project schema validator and error telemetry handler detecting TOML syntax corruption, invalid node schemas, missing assets, and unparseable tags")
+            .with_param(DspParamSchema::knob("error_kind_code", "Project Error Classification Enum Code", 0.0, 5.0, 0.0, "code", MacroRole::Tone, "Error taxonomy code: 0=None, 1=TomlParse, 2=TomlSerialize, 3=Io, 4=MissingAsset, 5=VersionMismatch"))
+            .with_param(DspParamSchema::knob("corrupted_line_number", "Estimated Corrupted Configuration File Line", 0.0, 10000.0, 0.0, "line", MacroRole::Tone, "Calculated file line offset where parser encountered syntax violation or token error"))
+            .with_param(DspParamSchema::toggle("backup_recovery_available", "Automatic Backup Recovery Snapshot Available", true, "Indicates presence of uncorrupted emergency session recovery point on disk"))
+            .with_param(DspParamSchema::knob("error_severity", "Diagnostic Fault Severity Level Rating", 0.0, 3.0, 1.0, "level", MacroRole::Punch, "Fault severity classification: 0=Info, 1=Warning, 2=Non-Fatal Recoverable, 3=Critical Project Corruption"))
+            .with_param(DspParamSchema::knob("recovery_attempts", "Automated Parser Error Recovery Retries", 0.0, 10.0, 0.0, "retries", MacroRole::Punch, "Count of heuristic repair attempts executed by fault-tolerant project deserializer"))
+            .with_param(DspParamSchema::toggle("strict_schema_validation", "Reject Non-Standard Forward-Compatible Keys", false, "Enforces strict TOML schema conformance rejecting unrecognized extension attributes"))
+        );
+        descriptors.insert("GitBlameEntry".to_string(), DspNodeDescriptor::new("GitBlameEntry", "Git DAG Audio Clip Authorship & Revision History", DspNodeCategory::Utility, "Version control per-clip authorship inspector displaying commit hash prefix, author identity, timestamp, commit summary, and modified track index")
+            .with_param(DspParamSchema::knob("commit_depth", "Git Revision History DAG Node Depth", 0.0, 10000.0, 42.0, "commits", MacroRole::Tone, "Generational distance from repository root commit along the active branch DAG"))
+            .with_param(DspParamSchema::knob("track_index", "Target Audio / MIDI Track Identifier Index", 0.0, 127.0, 1.0, "idx", MacroRole::Space, "Arrangement track index containing the inspected audio clip or automation lane"))
+            .with_param(DspParamSchema::knob("clip_start_bar", "Timeline Clip Position Measure Offset", 1.0, 500.0, 16.0, "bars", MacroRole::Space, "Measure/bar starting position of the clip under historical blame inspection"))
+            .with_param(DspParamSchema::knob("edits_count", "Cumulative Historical Revisions for Clip", 1.0, 200.0, 7.0, "edits", MacroRole::Punch, "Total number of committed edits touching this specific audio region or note cluster"))
+            .with_param(DspParamSchema::knob("author_id", "Author Collaborator Numerical Hash Identifier", 1.0, 9999.0, 101.0, "id", MacroRole::Tone, "Collaborator ID mapped to digital signature of the editor who last touched this clip"))
+            .with_param(DspParamSchema::toggle("is_head_version", "Clip Corresponds to Working Tree HEAD Branch", true, "Indicates whether inspected clip matches current HEAD or historical checkpoint"))
+        );
+        descriptors.insert("ScriptBlameInfo".to_string(), DspNodeDescriptor::new("ScriptBlameInfo", "Procedural Lua DSP Script Revision & Audit Log", DspNodeCategory::Utility, "Procedural Lua DSP code revision auditor tracking per-function commit history, author signatures, line change counts, and regression verification badges")
+            .with_param(DspParamSchema::knob("script_line_count", "Total Script Executable Source Code Lines", 10.0, 5000.0, 320.0, "lines", MacroRole::Tone, "Total lines of Lua code in the inspected procedural DSP generator or filter"))
+            .with_param(DspParamSchema::knob("modified_lines", "Lines Modified in Current Working Delta", 0.0, 500.0, 18.0, "lines", MacroRole::Punch, "Number of lines modified compared to the latest committed git checkpoint"))
+            .with_param(DspParamSchema::knob("function_count", "Registered Lua DSP Processing Callbacks Count", 1.0, 64.0, 6.0, "fns", MacroRole::Space, "Number of procedural functions exposed to audio processing and parameter binding"))
+            .with_param(DspParamSchema::knob("author_confidence", "Author Code Review Verification Confidence", 0.0, 1.0, 0.95, "ratio", MacroRole::Tone, "Automated code quality and lint score verifying zero allocations in audio callback"))
+            .with_param(DspParamSchema::choice("sandbox_security", "Lua JIT Sandbox Security Isolation Level", &["Unrestricted", "Restricted IO", "Pure Deterministic DSP Sandbox"], 2, "Sandbox isolation verifying audio thread safety"))
+            .with_param(DspParamSchema::knob("audit_timestamp", "Normalized Script Audit Check Timestamp Epoch", 0.0, 2000000000.0, 1780000000.0, "epoch", MacroRole::Space, "Timestamp when the procedural script was last scanned for realtime audio safety"))
+        );
+        descriptors.insert("ScriptExecutionLog".to_string(), DspNodeDescriptor::new("ScriptExecutionLog", "Sandboxed Lua Execution Telemetry & Cycle Counter", DspNodeCategory::Utility, "Sandboxed Lua DSP runtime monitor tracking CPU cycle consumption, execution time in nanoseconds, garbage collection memory footprint, and call invocation count")
+            .with_param(DspParamSchema::knob("cpu_cycles_per_sample", "Measured CPU Instruction Cycles Per Sample", 10.0, 50000.0, 450.0, "cycles", MacroRole::Tone, "Instruction cycles consumed by Lua script audio callback per processed sample"))
+            .with_param(DspParamSchema::knob("execution_time_ns", "Nanoseconds Per Audio Block Process Call", 100.0, 1000000.0, 2400.0, "ns", MacroRole::Tone, "Wall-clock duration in nanoseconds required to compute one audio buffer block"))
+            .with_param(DspParamSchema::knob("gc_memory_allocated_kb", "Lua VM Total Garbage Collection Memory Pool", 64.0, 65536.0, 1024.0, "KB", MacroRole::Space, "Current heap memory allocated inside the isolated Lua runtime VM instance"))
+            .with_param(DspParamSchema::knob("invocations_count", "Total Audio Block Processing Callback Invocations", 0.0, 1000000.0, 48000.0, "calls", MacroRole::Punch, "Cumulative count of audio process callbacks dispatched since engine startup"))
+            .with_param(DspParamSchema::knob("error_recovery_count", "Runtime Script Error Catch & Recovery Tally", 0.0, 100.0, 0.0, "errors", MacroRole::Punch, "Count of runtime exceptions caught and gracefully bypassed without audio crash"))
+            .with_param(DspParamSchema::toggle("jit_compilation_status", "LuaJIT Native Machine Code Trace Compilation", true, "Flag indicating if audio inner loops are JIT-compiled to native machine code"))
+        );
 
         Self { descriptors }
     }
@@ -11139,6 +11307,27 @@ descriptors.insert("BellowsGesturePattern".to_string(), DspNodeDescriptor::new("
             ("MarketplacePlugin", DspNodeCategory::Utility, "Community DSP Plugin & Extension Package Manifest"),
             ("DependencyAuditReport", DspNodeCategory::Utility, "Cargo Dependency Security & License Audit Report"),
             ("WorkspaceCrateAudit", DspNodeCategory::Utility, "Workspace Internal Crate Integrity & License Validator"),
+            ("GrandPianoProfile", DspNodeCategory::AcousticPhysicalModel, "Concert Grand Piano Acoustic Geometry & Voicing Profile"),
+            ("JawariProfile", DspNodeCategory::AcousticPhysicalModel, "Indian Sitar & Veena Dynamic Obstacle Jawari Bridge Profile"),
+            ("ModalExcitationType", DspNodeCategory::AcousticPhysicalModel, "Physical Resonator Modal Excitation Mechanism"),
+            ("AuditedCrateDependency", DspNodeCategory::Utility, "Audited Crate Dependency License & Integrity Check"),
+            ("LuaAutomationOnlyGuard", DspNodeCategory::Utility, "Lua Automation Context Execution Sandbox Guard"),
+            ("LuaClipboard", DspNodeCategory::Utility, "Sandboxed Lua System Clipboard Text Buffer"),
+            ("LuaFileWatcher", DspNodeCategory::Utility, "Live Lua Script Filesystem Hot-Reload Watcher"),
+            ("LuaGitScriptTracker", DspNodeCategory::Utility, "Lua Script Git Version Tracking & Hash Ledger"),
+            ("LuaProjectBuilder", DspNodeCategory::Utility, "Procedural Lua DAW Project & Track Graph Builder"),
+            ("LuaScriptAnalytics", DspNodeCategory::Utility, "Lua Script Performance Analytics & Execution Profiler"),
+            ("LuaScriptInspectorState", DspNodeCategory::Utility, "Real-Time Lua Runtime Variable Inspector Panel"),
+            ("MarketplaceScriptEntry", DspNodeCategory::Utility, "Community Lua DSP Script Marketplace Manifest"),
+            ("ScriptMergeConflict", DspNodeCategory::Utility, "Collaborative Script Three-Way Merge Conflict Resolver"),
+            ("ProjectError", DspNodeCategory::Utility, "Project File Serialization & TOML Parser Diagnostics"),
+            ("CloudPullRequest", DspNodeCategory::Utility, "Collaborative Cloud Project Branch Merge Request"),
+            ("PresetComment", DspNodeCategory::Utility, "Cloud Community Preset Discussion & Feedback Item"),
+            ("UserSessionMetric", DspNodeCategory::Utility, "Real-Time Audio Performance & Latency Telemetry"),
+            ("TelemetryEvent", DspNodeCategory::Utility, "Distributed Analytics & Diagnostic Telemetry Event"),
+            ("GitBlameEntry", DspNodeCategory::Utility, "Git DAG Audio Clip Authorship & Revision History"),
+            ("ScriptBlameInfo", DspNodeCategory::Utility, "Procedural Lua DSP Script Revision & Audit Log"),
+            ("ScriptExecutionLog", DspNodeCategory::Utility, "Sandboxed Lua Execution Telemetry & Cycle Counter"),
         ]
     }
 
@@ -13397,6 +13586,27 @@ descriptors.insert("BellowsGesturePattern".to_string(), DspNodeDescriptor::new("
             "marketplaceplugin" | "communityplugin" | "pluginpackagemanifest" | "ecosystemplugin" => Some("MarketplacePlugin"),
             "dependencyauditreport" | "cargoauditreport" | "securityauditreport" | "dependencyreport" => Some("DependencyAuditReport"),
             "workspacecrateaudit" | "crateaudit" | "workspacevalidator" | "crateintegrityvalidator" => Some("WorkspaceCrateAudit"),
+            "grandpianoprofilemodel" | "grandpianovoicing" | "pianoprofile" | "grandpianoacoustic" => Some("GrandPianoProfile"),
+            "sitarjawariprofile" | "jivadamping" | "jivaradius" | "sitarmainjawari" => Some("JawariProfile"),
+            "modalexcitationmode" | "modalstrikepluckbow" | "modalexcite" | "resonatorexcitation" => Some("ModalExcitationType"),
+            "auditedcratedependency" | "cratedependencyaudit" | "auditeddependency" | "cratedependencyentry" => Some("AuditedCrateDependency"),
+            "luaautomationonlyguard" | "automationonlyguard" | "luacontextguard" | "luaautomationguard" => Some("LuaAutomationOnlyGuard"),
+            "luaclipboard" | "luascriptclipboard" | "scriptclipboard" | "clipboardbuffer" => Some("LuaClipboard"),
+            "luafilewatcher" | "luascriptwatcher" | "scriptfilewatcher" | "luahotreloadwatcher" => Some("LuaFileWatcher"),
+            "luagitscripttracker" | "luascriptgit" | "scriptgittracker" | "luagittracker" => Some("LuaGitScriptTracker"),
+            "luaprojectbuilder" | "proceduralprojectbuilder" | "luadawbuilder" | "luaprojectgenerator" => Some("LuaProjectBuilder"),
+            "luascriptanalytics" | "luaperfanalytics" | "scriptanalytics" | "luaruntimeprofiler" => Some("LuaScriptAnalytics"),
+            "luascriptinspectorstate" | "luainspectorstate" | "scriptinspector" | "luavariableinspector" => Some("LuaScriptInspectorState"),
+            "marketplacescriptentry" | "communityscriptentry" | "luamarketplacescript" | "scriptmarketplaceentry" => Some("MarketplaceScriptEntry"),
+            "scriptmergeconflict" | "scriptconflictresolver" | "luamergeconflict" | "scriptthreewayconflict" => Some("ScriptMergeConflict"),
+            "projecterror" | "projecttomlerror" | "projectfileerror" | "projectdiagnosticserror" => Some("ProjectError"),
+            "cloudpullrequest" | "projectpullrequest" | "collaborativepr" | "cloudmergepr" => Some("CloudPullRequest"),
+            "presetcomment" | "cloudpresetcomment" | "communitypresetreview" | "presetfeedback" => Some("PresetComment"),
+            "usersessionmetric" | "audiosessionmetric" | "dsploadtelemetry" | "performancetelemetry" => Some("UserSessionMetric"),
+            "telemetryevent" | "diagnosticevent" | "analyticslogevent" | "telemetrylog" => Some("TelemetryEvent"),
+            "gitblameentry" | "clipblameinfo" | "gitclipblame" | "audiocliptrackblame" => Some("GitBlameEntry"),
+            "scriptblameinfo" | "luascriptblame" | "proceduralscriptblame" | "scriptauditinfo" => Some("ScriptBlameInfo"),
+            "scriptexecutionlog" | "luacycleprofilerlog" | "scriptelemetrylog" | "luascripttelemetry" => Some("ScriptExecutionLog"),
             "drumclass" => Some("DrumClassClassification"),
             "mpeevent" => Some("ClapMpeEvent"),
             "nativeaudiodriver" => Some("NativeAudioDriverTuner"),
@@ -22911,6 +23121,195 @@ descriptors.insert("BellowsGesturePattern".to_string(), DspNodeDescriptor::new("
                     .with_param(DspParamDescriptor::new_linear("crate_domain_tier", "Architectural Domain Layer Classification", 0.0, 4.0, 1.0, "tier", (239, 68, 68)))
                     .with_param(DspParamDescriptor::new_bool("is_license_header_present", "Verify Open-Source License Header in All Files", true, (14, 165, 233)))
             ),
+            "GrandPianoProfile" => Box::new(
+                GenericDspNodeUi::new("GrandPianoProfile", "Concert Grand Piano Acoustic Geometry & Voicing Profile", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("profile_preset", "Grand Piano Profile Preset", 0.0, 5.0, 0.0, "preset", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("bridge_impedance", "Soundboard Bridge Wave Impedance Zb", 100.0, 1000.0, 420.0, "kg/s", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("sympathetic_bleed", "Duplex Sympathetic Coupling Bleed", 0.0, 1.0, 0.35, "ratio", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("string_inharmonicity_b", "String Stiffness Inharmonicity Factor B", 0.00001, 0.001, 0.00018, "ratio", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("una_corda_shift", "Una Corda Soft Pedal Keyboard Shift", 0.0, 1.0, 0.0, "pos", (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_linear("damper_lift", "Continuous Damper Felt Lift Position", 0.0, 1.0, 0.0, "pos", (52, 211, 153)))
+            ),
+            "JawariProfile" => Box::new(
+                GenericDspNodeUi::new("JawariProfile", "Indian Sitar & Veena Dynamic Obstacle Jawari Bridge Profile", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("jawari_profile", "Jawari Obstacle Profile Model", 0.0, 5.0, 0.0, "profile", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("clearance_gap_mm", "Bridge Apex String Clearance Gap h0", 0.01, 1.50, 0.18, "mm", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("curvature_c", "Bridge Curvature Contour Factor c", 20.0, 300.0, 120.0, "1/m", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("contact_stiffness_k", "Obstacle Unilateral Contact Stiffness Kc", 1.0e6, 1.0e8, 4.5e7, "N/m", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("jiva_thread_pos", "Jiva Fine Cotton Thread Tuning Position", 0.0, 1.0, 0.45, "pos", (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_linear("jiva_damping", "Jiva Cotton Damping Dissipation mu", 0.05, 0.90, 0.35, "mu", (52, 211, 153)))
+            ),
+            "ModalExcitationType" => Box::new(
+                GenericDspNodeUi::new("ModalExcitationType", "Physical Resonator Modal Excitation Mechanism", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("excitation_mode", "Modal Excitation Mechanism Mode", 0.0, 2.0, 0.0, "mode", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("strike_position", "Resonator Strike / Bow Contact Position", 0.01, 0.99, 0.35, "norm", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("mallet_hardness", "Percussive Mallet Tip Elastic Hardness", 0.05, 1.0, 0.60, "hardness", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("bow_pressure", "Continuous Bowing Normal Force Pressure", 0.0, 2.0, 0.50, "N", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("bow_velocity", "Continuous Bowing Relative Surface Velocity", 0.0, 1.5, 0.40, "m/s", (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_linear("mode_count", "Active Resonant Modes Count", 1.0, 32.0, 8.0, "modes", (52, 211, 153)))
+            ),
+            "AuditedCrateDependency" => Box::new(
+                GenericDspNodeUi::new("AuditedCrateDependency", "Audited Crate Dependency License & Integrity Check", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("version_req", "Dependency Semantic Version Requirement Range", 0.0, 100.0, 1.0, "ver", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("license_compliance", "License Compliance Tier Classification", 0.0, 4.0, 0.0, "tier", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("is_wildcard", "Disallowed Wildcard Version Specifier Detected", false, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("is_offline_safe", "Crate Source Embedded for Air-Gapped Builds", true, (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_linear("audit_severity_score", "Dependency Vulnerability Audit Severity Score", 0.0, 10.0, 0.0, "score", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("direct_dependents", "Internal Workspace Crates Depending on Crate", 1.0, 16.0, 3.0, "crates", (52, 211, 153)))
+            ),
+            "LuaAutomationOnlyGuard" => Box::new(
+                GenericDspNodeUi::new("LuaAutomationOnlyGuard", "Lua Automation Context Execution Sandbox Guard", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_bool("automation_only", "Strict Automation Thread Only Execution Gate", true, (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("context_security_level", "Runtime Execution Context Security Isolation", 0.0, 3.0, 2.0, "level", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("blocked_evaluations", "Disallowed Audio-Thread Evaluation Rejections", 0.0, 1000.0, 0.0, "blocks", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("allow_dsp_hooks", "Allow Whitelisted Pure Realtime DSP Blocks", false, (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_linear("sandbox_timeout_ms", "Max Execution Time Limit Before Thread Abort", 0.1, 50.0, 2.0, "ms", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("quarantine_violations", "Script Quarantine Violation Trigger Threshold", 1.0, 10.0, 3.0, "violations", (52, 211, 153)))
+            ),
+            "LuaClipboard" => Box::new(
+                GenericDspNodeUi::new("LuaClipboard", "Sandboxed Lua System Clipboard Text Buffer", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("buffer_capacity_kb", "Clipboard Buffer Maximum Capacity Limit", 1.0, 1024.0, 64.0, "KB", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("content_length_chars", "Active Buffer Character Content Length", 0.0, 65536.0, 256.0, "chars", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("read_access_count", "Cumulative Clipboard Read Operations", 0.0, 10000.0, 14.0, "reads", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("write_access_count", "Cumulative Clipboard Write Operations", 0.0, 10000.0, 6.0, "writes", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("sanitize_escapes", "Sanitize Control Characters & ANSI Sequences", true, (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_bool("is_clipboard_locked", "Lock Buffer Against External Script Overwrite", false, (52, 211, 153)))
+            ),
+            "LuaFileWatcher" => Box::new(
+                GenericDspNodeUi::new("LuaFileWatcher", "Live Lua Script Filesystem Hot-Reload Watcher", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("poll_interval_ms", "Filesystem Modification Polling Rate Interval", 10.0, 2000.0, 100.0, "ms", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("debounce_window_ms", "Write Flush Event Debounce Window", 5.0, 500.0, 50.0, "ms", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("reload_event_count", "Total Hot-Reload Script Invocations", 0.0, 500.0, 3.0, "reloads", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("auto_recompile", "Automatic Syntax Validation Before Hot Reload", true, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("preserve_dsp_state", "Preserve Internal Parameter State Across Reload", true, (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_bool("watch_active_status", "Filesystem Directory Watcher Thread Running", true, (52, 211, 153)))
+            ),
+            "LuaGitScriptTracker" => Box::new(
+                GenericDspNodeUi::new("LuaGitScriptTracker", "Lua Script Git Version Tracking & Hash Ledger", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("tracked_scripts_count", "Total Project Lua Scripts in Version Control", 1.0, 100.0, 8.0, "scripts", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("commit_history_depth", "Historical Commit Graph Retained Checkpoints", 1.0, 1000.0, 25.0, "commits", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("blake3_hash_valid", "Verify Content Integrity Against Blake3 Hash", true, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("uncommitted_deltas", "Modified Scripts With Uncommitted Local Changes", 0.0, 50.0, 1.0, "deltas", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("auto_checkpoint_on_save", "Auto-Create Git Checkpoint on Project Save", true, (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_linear("git_branch_id", "Active Version Control Working Branch Index", 0.0, 16.0, 0.0, "branch", (52, 211, 153)))
+            ),
+            "LuaProjectBuilder" => Box::new(
+                GenericDspNodeUi::new("LuaProjectBuilder", "Procedural Lua DAW Project & Track Graph Builder", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("project_bpm", "Procedural Project Master Tempo Setting", 20.0, 300.0, 120.0, "BPM", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("track_count", "Generated Multi-Track Channel Count", 1.0, 128.0, 8.0, "tracks", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("clip_regions_count", "Procedurally Placed Timeline Audio Regions", 0.0, 512.0, 32.0, "clips", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("sample_rate_khz", "Project Master Audio Clock Sample Rate", 44.1, 192.0, 48.0, "kHz", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("time_signature_num", "Time Signature Beats Per Measure Numerator", 1.0, 16.0, 4.0, "beats", (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_bool("enable_master_limiter", "Insert True-Peak Limiter on Master Output Bus", true, (52, 211, 153)))
+            ),
+            "LuaScriptAnalytics" => Box::new(
+                GenericDspNodeUi::new("LuaScriptAnalytics", "Lua Script Performance Analytics & Execution Profiler", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_bool("telemetry_opt_in", "Enable Performance Metric Collection Opt-In", true, (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("total_scripts_profiled", "Active Monitored Procedural Scripts Count", 1.0, 64.0, 5.0, "scripts", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("total_runtime_ms", "Cumulative Script Execution Duration", 0.0, 100000.0, 420.0, "ms", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("average_call_time_us", "Average Script Invocation Wall Time", 0.5, 5000.0, 8.5, "us", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("peak_memory_usage_kb", "Peak Memory Consumed by Script Execution", 16.0, 32768.0, 512.0, "KB", (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_linear("profiler_sampling_rate", "Statistical Profiling Sampling Frequency", 10.0, 1000.0, 100.0, "Hz", (52, 211, 153)))
+            ),
+            "LuaScriptInspectorState" => Box::new(
+                GenericDspNodeUi::new("LuaScriptInspectorState", "Real-Time Lua Runtime Variable Inspector Panel", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("inspected_variables", "Total Live Monitored Script Variables Count", 0.0, 256.0, 16.0, "vars", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("last_update_frame", "Last Processed Audio Frame Index Offset", 0.0, 1000000.0, 48000.0, "frame", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("refresh_rate_fps", "Inspector GUI Surface Refresh Frame Rate", 10.0, 120.0, 60.0, "FPS", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("pause_on_change", "Pause Audio Callback on Monitored Value Mutation", false, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("display_hex_floats", "Display Floating Point Numbers in Hexadecimal", false, (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_linear("max_history_entries", "Historical Variable Value State Buffer Depth", 1.0, 100.0, 20.0, "states", (52, 211, 153)))
+            ),
+            "MarketplaceScriptEntry" => Box::new(
+                GenericDspNodeUi::new("MarketplaceScriptEntry", "Community Lua DSP Script Marketplace Manifest", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("script_version_major", "Marketplace Script Semantic Major Version", 0.0, 99.0, 1.0, "ver", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("script_version_minor", "Marketplace Script Semantic Minor Version", 0.0, 99.0, 2.0, "ver", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("user_star_rating", "Community Crowd-Sourced Star Rating Score", 0.0, 5.0, 4.9, "stars", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("download_count", "Total Community Verified Script Downloads", 0.0, 100000.0, 3420.0, "downloads", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("comments_count", "Community Review Discussion Comments Count", 0.0, 1000.0, 18.0, "comments", (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_bool("is_curated_verified", "Verified Summoner Core Developer Script Seal", true, (52, 211, 153)))
+            ),
+            "CloudPullRequest" => Box::new(
+                GenericDspNodeUi::new("CloudPullRequest", "Collaborative Cloud Project Branch Merge Request", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("pr_id", "Federated Project Pull Request Numeric ID", 1.0, 999999.0, 1042.0, "id", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("changed_tracks", "Divergent Arrangement Tracks Count", 0.0, 64.0, 4.0, "tracks", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("merge_conflict_count", "Automated Three-Way Merge Conflict Tally", 0.0, 50.0, 0.0, "conflicts", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("review_approvals", "Peer Peer-Review Cryptographic Signatures", 0.0, 10.0, 2.0, "reviews", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("ci_pipeline_status", "Automated Audio Regression CI Pipeline Status", 0.0, 3.0, 2.0, "status", (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_linear("target_branch", "Destination Merge Target Branch", 0.0, 3.0, 0.0, "branch", (52, 211, 153)))
+            ),
+            "PresetComment" => Box::new(
+                GenericDspNodeUi::new("PresetComment", "Cloud Community Preset Discussion & Feedback Item", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("comment_id", "Preset Comment Entity Unique Identifier", 1.0, 999999.0, 1.0, "id", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("timestamp_epoch", "Normalized Comment Post Timestamp Epoch", 0.0, 2000000000.0, 1780000000.0, "epoch", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("user_rating", "Individual User Rating Score Contribution", 1.0, 5.0, 5.0, "stars", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("upvote_count", "Helpful Community Review Upvote Count", 0.0, 10000.0, 42.0, "upvotes", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("is_verified_owner", "Verified Hardware / License Owner Badge", true, (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_linear("parent_reply_id", "Parent Comment Thread Reply Identifier", 0.0, 999999.0, 0.0, "id", (52, 211, 153)))
+            ),
+            "ScriptMergeConflict" => Box::new(
+                GenericDspNodeUi::new("ScriptMergeConflict", "Collaborative Script Three-Way Merge Conflict Resolver", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("conflict_line_number", "Conflicting Script Source Code Line Number", 1.0, 5000.0, 42.0, "line", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("active_conflicts_count", "Total Unresolved Concurrent Merge Collisions", 0.0, 50.0, 1.0, "conflicts", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("resolution_strategy", "Merge Resolution Strategy Selection", 0.0, 3.0, 0.0, "strat", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("diff_context_lines", "Divergence Context Inspection Window Lines", 1.0, 20.0, 3.0, "lines", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("auto_resolve_whitespace", "Automatically Resolve Whitespace Discrepancies", true, (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_bool("syntax_safety_verified", "Validate Merged Syntax Before Committing", true, (52, 211, 153)))
+            ),
+            "UserSessionMetric" => Box::new(
+                GenericDspNodeUi::new("UserSessionMetric", "Real-Time Audio Performance & Latency Telemetry", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("dsp_load_pct", "Real-Time Audio Thread DSP Load Percentage", 0.0, 100.0, 18.5, "%", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("buffer_underruns", "Session Accumulated Buffer Underrun / XRun Tally", 0.0, 1000.0, 0.0, "xruns", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("latency_roundtrip_ms", "Driver Audio Roundtrip Latency in Milliseconds", 0.5, 100.0, 5.8, "ms", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("jitter_std_dev_us", "Audio Buffer Callback Timing Jitter Deviation", 0.1, 500.0, 4.2, "us", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("active_voice_count", "Active Polyphonic DSP Synthesizer Voice Count", 0.0, 256.0, 32.0, "voices", (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_linear("sample_rate_khz", "Operating Audio Engine Hardware Sample Rate", 44.1, 192.0, 48.0, "kHz", (52, 211, 153)))
+            ),
+            "TelemetryEvent" => Box::new(
+                GenericDspNodeUi::new("TelemetryEvent", "Distributed Analytics & Diagnostic Telemetry Event", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("event_category", "Diagnostic Event Subsystem Category", 0.0, 5.0, 1.0, "cat", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("severity_level", "Event Severity Classification Level", 0.0, 4.0, 0.0, "level", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("duration_us", "Event Execution Elapsed Time in Microseconds", 0.0, 100000.0, 150.0, "us", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("memory_delta_kb", "Resident Set Memory Allocation Differential", -10240.0, 10240.0, 0.0, "KB", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("thread_priority", "Executing Thread OS Scheduling Priority", 0.0, 99.0, 80.0, "prio", (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_linear("breadcrumbs_count", "Preceding Diagnostic Breadcrumb Log Depth", 0.0, 100.0, 12.0, "items", (52, 211, 153)))
+            ),
+            "ProjectError" => Box::new(
+                GenericDspNodeUi::new("ProjectError", "Project File Serialization & TOML Parser Diagnostics", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("error_kind_code", "Project Error Classification Enum Code", 0.0, 5.0, 0.0, "code", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("corrupted_line_number", "Estimated Corrupted Configuration File Line", 0.0, 10000.0, 0.0, "line", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("backup_recovery_available", "Automatic Backup Recovery Snapshot Available", true, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("error_severity", "Diagnostic Fault Severity Level Rating", 0.0, 3.0, 1.0, "level", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("recovery_attempts", "Automated Parser Error Recovery Retries", 0.0, 10.0, 0.0, "retries", (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_bool("strict_schema_validation", "Reject Non-Standard Forward-Compatible Keys", false, (52, 211, 153)))
+            ),
+            "GitBlameEntry" => Box::new(
+                GenericDspNodeUi::new("GitBlameEntry", "Git DAG Audio Clip Authorship & Revision History", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("commit_depth", "Git Revision History DAG Node Depth", 0.0, 10000.0, 42.0, "commits", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("track_index", "Target Audio / MIDI Track Identifier Index", 0.0, 127.0, 1.0, "idx", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("clip_start_bar", "Timeline Clip Position Measure Offset", 1.0, 500.0, 16.0, "bars", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("edits_count", "Cumulative Historical Revisions for Clip", 1.0, 200.0, 7.0, "edits", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("author_id", "Author Collaborator Numerical Hash Identifier", 1.0, 9999.0, 101.0, "id", (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_bool("is_head_version", "Clip Corresponds to Working Tree HEAD Branch", true, (52, 211, 153)))
+            ),
+            "ScriptBlameInfo" => Box::new(
+                GenericDspNodeUi::new("ScriptBlameInfo", "Procedural Lua DSP Script Revision & Audit Log", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("script_line_count", "Total Script Executable Source Code Lines", 10.0, 5000.0, 320.0, "lines", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("modified_lines", "Lines Modified in Current Working Delta", 0.0, 500.0, 18.0, "lines", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("function_count", "Registered Lua DSP Processing Callbacks Count", 1.0, 64.0, 6.0, "fns", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("author_confidence", "Author Code Review Verification Confidence", 0.0, 1.0, 0.95, "ratio", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("sandbox_security", "Lua JIT Sandbox Security Isolation Level", 0.0, 2.0, 2.0, "level", (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_linear("audit_timestamp", "Normalized Script Audit Check Timestamp Epoch", 0.0, 2000000000.0, 1780000000.0, "epoch", (52, 211, 153)))
+            ),
+            "ScriptExecutionLog" => Box::new(
+                GenericDspNodeUi::new("ScriptExecutionLog", "Sandboxed Lua Execution Telemetry & Cycle Counter", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("cpu_cycles_per_sample", "Measured CPU Instruction Cycles Per Sample", 10.0, 50000.0, 450.0, "cycles", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("execution_time_ns", "Nanoseconds Per Audio Block Process Call", 100.0, 1000000.0, 2400.0, "ns", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("gc_memory_allocated_kb", "Lua VM Total Garbage Collection Memory Pool", 64.0, 65536.0, 1024.0, "KB", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("invocations_count", "Total Audio Block Processing Callback Invocations", 0.0, 1000000.0, 48000.0, "calls", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("error_recovery_count", "Runtime Script Error Catch & Recovery Tally", 0.0, 100.0, 0.0, "errors", (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_bool("jit_compilation_status", "LuaJIT Native Machine Code Trace Compilation", true, (52, 211, 153)))
+            ),
             // Fallback dynamic generator for any unexpected or plugin node
             other => {
                 let cat = Self::inventory()
@@ -24515,7 +24914,7 @@ assert!(registry.get("BellowsGesturePattern").is_some());
     fn test_tier126_inventory_count_and_parameter_completeness() {
         let registry = DspNodeRegistry::new();
         let inv = DspNodeRegistry::inventory();
-        assert_eq!(inv.len(), 1256, "Inventory must contain exactly 1256 DSP modules");
+        assert!(inv.len() >= 1256, "Inventory must contain at least 1256 DSP modules");
         assert!(registry.list_all().len() >= 1256, "Registry list_all must be >= 1256");
 
         let tier126_nodes = [
@@ -24594,6 +24993,89 @@ assert!(registry.get("BellowsGesturePattern").is_some());
         assert_eq!(DspNodeRegistry::normalize_type_name("cargoauditreport"), Some("DependencyAuditReport"));
         assert_eq!(DspNodeRegistry::normalize_type_name("workspacecrateaudit"), Some("WorkspaceCrateAudit"));
         assert_eq!(DspNodeRegistry::normalize_type_name("crateintegrityvalidator"), Some("WorkspaceCrateAudit"));
+    }
+
+    #[test]
+    fn test_tier127_inventory_count_and_parameter_completeness() {
+        let registry = DspNodeRegistry::new();
+        let inv = DspNodeRegistry::inventory();
+        assert_eq!(inv.len(), 1277, "Inventory must contain exactly 1277 DSP modules");
+        assert!(registry.list_all().len() >= 1277, "Registry list_all must be >= 1277");
+
+        let tier127_nodes = [
+            ("GrandPianoProfile", DspNodeCategory::AcousticPhysicalModel),
+            ("JawariProfile", DspNodeCategory::AcousticPhysicalModel),
+            ("ModalExcitationType", DspNodeCategory::AcousticPhysicalModel),
+            ("AuditedCrateDependency", DspNodeCategory::Utility),
+            ("LuaAutomationOnlyGuard", DspNodeCategory::Utility),
+            ("LuaClipboard", DspNodeCategory::Utility),
+            ("LuaFileWatcher", DspNodeCategory::Utility),
+            ("LuaGitScriptTracker", DspNodeCategory::Utility),
+            ("LuaProjectBuilder", DspNodeCategory::Utility),
+            ("LuaScriptAnalytics", DspNodeCategory::Utility),
+            ("LuaScriptInspectorState", DspNodeCategory::Utility),
+            ("MarketplaceScriptEntry", DspNodeCategory::Utility),
+            ("ScriptMergeConflict", DspNodeCategory::Utility),
+            ("ProjectError", DspNodeCategory::Utility),
+            ("CloudPullRequest", DspNodeCategory::Utility),
+            ("PresetComment", DspNodeCategory::Utility),
+            ("UserSessionMetric", DspNodeCategory::Utility),
+            ("TelemetryEvent", DspNodeCategory::Utility),
+            ("GitBlameEntry", DspNodeCategory::Utility),
+            ("ScriptBlameInfo", DspNodeCategory::Utility),
+            ("ScriptExecutionLog", DspNodeCategory::Utility),
+        ];
+
+        for (name, expected_cat) in tier127_nodes {
+            let desc = registry.get(name).unwrap_or_else(|| panic!("Module {} missing", name));
+            assert_eq!(desc.category, expected_cat, "Category mismatch for {}", name);
+            assert!(desc.params.len() >= 5, "Module {} must have >= 5 params, found {}", name, desc.params.len());
+            assert!(DspNodeRegistry::create_node_ui(name).is_some(), "create_node_ui failed for {}", name);
+        }
+
+        // Test normalizations
+        assert_eq!(DspNodeRegistry::normalize_type_name("grandpianovoicing"), Some("GrandPianoProfile"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("grandpianoacoustic"), Some("GrandPianoProfile"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("sitarjawariprofile"), Some("JawariProfile"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("jivadamping"), Some("JawariProfile"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("modalexcitationmode"), Some("ModalExcitationType"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("modalstrikepluckbow"), Some("ModalExcitationType"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("auditedcratedependency"), Some("AuditedCrateDependency"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("cratedependencyaudit"), Some("AuditedCrateDependency"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luaautomationonlyguard"), Some("LuaAutomationOnlyGuard"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("automationonlyguard"), Some("LuaAutomationOnlyGuard"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luaclipboard"), Some("LuaClipboard"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("clipboardbuffer"), Some("LuaClipboard"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luafilewatcher"), Some("LuaFileWatcher"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("scriptfilewatcher"), Some("LuaFileWatcher"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luagitscripttracker"), Some("LuaGitScriptTracker"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("scriptgittracker"), Some("LuaGitScriptTracker"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luaprojectbuilder"), Some("LuaProjectBuilder"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("proceduralprojectbuilder"), Some("LuaProjectBuilder"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luascriptanalytics"), Some("LuaScriptAnalytics"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luaperfanalytics"), Some("LuaScriptAnalytics"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luascriptinspectorstate"), Some("LuaScriptInspectorState"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("scriptinspector"), Some("LuaScriptInspectorState"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("marketplacescriptentry"), Some("MarketplaceScriptEntry"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("communityscriptentry"), Some("MarketplaceScriptEntry"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("scriptmergeconflict"), Some("ScriptMergeConflict"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("scriptconflictresolver"), Some("ScriptMergeConflict"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("projecterror"), Some("ProjectError"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("projecttomlerror"), Some("ProjectError"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("cloudpullrequest"), Some("CloudPullRequest"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("collaborativepr"), Some("CloudPullRequest"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("presetcomment"), Some("PresetComment"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("communitypresetreview"), Some("PresetComment"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("usersessionmetric"), Some("UserSessionMetric"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("dsploadtelemetry"), Some("UserSessionMetric"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("telemetryevent"), Some("TelemetryEvent"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("diagnosticevent"), Some("TelemetryEvent"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("gitblameentry"), Some("GitBlameEntry"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("clipblameinfo"), Some("GitBlameEntry"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("scriptblameinfo"), Some("ScriptBlameInfo"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luascriptblame"), Some("ScriptBlameInfo"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("scriptexecutionlog"), Some("ScriptExecutionLog"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luacycleprofilerlog"), Some("ScriptExecutionLog"));
     }
 
     #[test]
