@@ -8374,7 +8374,7 @@ mod tests {
     fn test_tier124_modern_gui_dsp_module_coverage_and_presets() {
         let registry = crate::dsp_node_ui::DspNodeRegistry::new();
         let inv = crate::dsp_node_ui::DspNodeRegistry::inventory();
-        assert_eq!(inv.len(), 1214, "Inventory must contain exactly 1214 DSP modules");
+        assert!(inv.len() >= 1214, "Inventory must contain at least 1214 DSP modules");
         assert!(registry.list_all().len() >= 1214, "Registry list_all must be >= 1214");
 
         // 1. Verify Tier 124 modules have valid categories and >= 5 parameters
@@ -8498,6 +8498,146 @@ mod tests {
             ("Rosenberg Glottal Pulse Vocal Flow & Aspiration", "GlottalFlowModel"),
             ("Asian Zither Paulownia Soundboard & Movable Ji Bridge", "JiBridgeCoupling"),
             ("EMT 140 Cold-Rolled Steel Continuous Dispersion Plate", "PlateReverbTank"),
+        ];
+
+        for (preset_name, target_node) in presets {
+            view.top_bar_state.selected_preset = preset_name.to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some(target_node.to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some(target_node.to_string()));
+        }
+    }
+
+    #[test]
+    #[cfg(feature = "gui")]
+    fn test_tier125_modern_gui_dsp_module_coverage_and_presets() {
+        let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+        let inv = crate::dsp_node_ui::DspNodeRegistry::inventory();
+
+        // 1. Verify exact 1235 DSP module count
+        assert_eq!(inv.len(), 1235, "Inventory must contain exactly 1235 DSP modules");
+        assert!(registry.list_all().len() >= 1235, "Registry list_all must be >= 1235");
+
+        let tier125_modules = [
+            ("TrajectoryPathType", crate::dsp_node_ui::DspNodeCategory::SpatialSurround),
+            ("SpatialInterpolationCurve", crate::dsp_node_ui::DspNodeCategory::SpatialSurround),
+            ("GestureInterpolationCurve", crate::dsp_node_ui::DspNodeCategory::Modulation),
+            ("PipeOrganInterpolationCurve", crate::dsp_node_ui::DspNodeCategory::Modulation),
+            ("PluckInterpolationCurve", crate::dsp_node_ui::DspNodeCategory::Modulation),
+            ("RotaryInterpolationCurve", crate::dsp_node_ui::DspNodeCategory::Modulation),
+            ("ShakuhachiInterpolationCurve", crate::dsp_node_ui::DspNodeCategory::Modulation),
+            ("SitarInterpolationCurve", crate::dsp_node_ui::DspNodeCategory::Modulation),
+            ("SpringInterpolationCurve", crate::dsp_node_ui::DspNodeCategory::Modulation),
+            ("WoodwindInterpolationCurve", crate::dsp_node_ui::DspNodeCategory::Modulation),
+            ("AutomationInterpolation", crate::dsp_node_ui::DspNodeCategory::Modulation),
+            ("MarkerConfig", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("AutomationLaneConfig", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("AutomationEventConfig", crate::dsp_node_ui::DspNodeCategory::Modulation),
+            ("MidiMappingConfig", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("AssetConfig", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("TrackerStepConfig", crate::dsp_node_ui::DspNodeCategory::Modulation),
+            ("ConnectionConfig", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("TrackConfig", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("TransportConfig", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("ProjectMetadata", crate::dsp_node_ui::DspNodeCategory::Utility),
+        ];
+
+        for (name, expected_cat) in tier125_modules {
+            let desc = registry.get(name).unwrap_or_else(|| panic!("Tier 125 module {} missing", name));
+            assert_eq!(desc.category, expected_cat, "Category mismatch for {}", name);
+            assert!(desc.params.len() >= 5, "Module {} must have >= 5 params, found {}", name, desc.params.len());
+            assert!(crate::dsp_node_ui::DspNodeRegistry::create_node_ui(name).is_some(), "create_node_ui failed for {}", name);
+        }
+
+        // 2. Normalization verification
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("trajectorypathtype"), Some("TrajectoryPathType"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("trajectorypath"), Some("TrajectoryPathType"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("spatialinterpolationcurve"), Some("SpatialInterpolationCurve"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("spatialkeyframecurve"), Some("SpatialInterpolationCurve"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("gestureinterpolationcurve"), Some("GestureInterpolationCurve"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("bowinggesturecurve"), Some("GestureInterpolationCurve"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pipeorganinterpolationcurve"), Some("PipeOrganInterpolationCurve"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("trackerkeyframecurve"), Some("PipeOrganInterpolationCurve"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pluckinterpolationcurve"), Some("PluckInterpolationCurve"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pluckgesturecurve"), Some("PluckInterpolationCurve"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("rotaryinterpolationcurve"), Some("RotaryInterpolationCurve"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("leslieaccelerationcurve"), Some("RotaryInterpolationCurve"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("shakuhachiinterpolationcurve"), Some("ShakuhachiInterpolationCurve"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("merikaricurve"), Some("ShakuhachiInterpolationCurve"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sitarinterpolationcurve"), Some("SitarInterpolationCurve"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("meendpullcurve"), Some("SitarInterpolationCurve"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("springinterpolationcurve"), Some("SpringInterpolationCurve"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("springdispersioncurve"), Some("SpringInterpolationCurve"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("woodwindinterpolationcurve"), Some("WoodwindInterpolationCurve"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("toneholetransitioncurve"), Some("WoodwindInterpolationCurve"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("automationinterpolation"), Some("AutomationInterpolation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("timelineinterpolation"), Some("AutomationInterpolation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("markerconfig"), Some("MarkerConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("timelinesessionmarker"), Some("MarkerConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("automationlaneconfig"), Some("AutomationLaneConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("parameterautomationlane"), Some("AutomationLaneConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("automationeventconfig"), Some("AutomationEventConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("automationkeyframe"), Some("AutomationEventConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("midimappingconfig"), Some("MidiMappingConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("hardwaremidimapping"), Some("MidiMappingConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("assetconfig"), Some("AssetConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("audioassetdescriptor"), Some("AssetConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("trackerstepconfig"), Some("TrackerStepConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("fasttrackerstep"), Some("TrackerStepConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("connectionconfig"), Some("ConnectionConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("patchcordconfig"), Some("ConnectionConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("trackconfig"), Some("TrackConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("mixerchannelconfig"), Some("TrackConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("transportconfig"), Some("TransportConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("mastertransportconfig"), Some("TransportConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("projectmetadata"), Some("ProjectMetadata"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("projectmanifest"), Some("ProjectMetadata"));
+
+        // 3. Verify Asset Browser categorization
+        use crate::views::modern_asset_browser::BrowserCategory;
+
+        let audio_fx_folders = BrowserCategory::AudioFx.default_folders();
+        let reverb_items = audio_fx_folders.iter().find(|(name, _)| *name == "Time & Reverb").unwrap().1;
+        assert!(reverb_items.contains(&"TrajectoryPathType"));
+        assert!(reverb_items.contains(&"SpatialInterpolationCurve"));
+
+        let mod_items = audio_fx_folders.iter().find(|(name, _)| *name == "Modulation & Pitch").unwrap().1;
+        assert!(mod_items.contains(&"GestureInterpolationCurve"));
+        assert!(mod_items.contains(&"PipeOrganInterpolationCurve"));
+        assert!(mod_items.contains(&"PluckInterpolationCurve"));
+        assert!(mod_items.contains(&"RotaryInterpolationCurve"));
+        assert!(mod_items.contains(&"ShakuhachiInterpolationCurve"));
+        assert!(mod_items.contains(&"SitarInterpolationCurve"));
+        assert!(mod_items.contains(&"SpringInterpolationCurve"));
+        assert!(mod_items.contains(&"WoodwindInterpolationCurve"));
+        assert!(mod_items.contains(&"AutomationInterpolation"));
+        assert!(mod_items.contains(&"AutomationEventConfig"));
+        assert!(mod_items.contains(&"TrackerStepConfig"));
+
+        let midi_fx_folders = BrowserCategory::MidiFx.default_folders();
+        let routing_items = midi_fx_folders.iter().find(|(name, _)| *name == "Transforms & Routing").unwrap().1;
+        assert!(routing_items.contains(&"MarkerConfig"));
+        assert!(routing_items.contains(&"AutomationLaneConfig"));
+        assert!(routing_items.contains(&"MidiMappingConfig"));
+        assert!(routing_items.contains(&"AssetConfig"));
+        assert!(routing_items.contains(&"ConnectionConfig"));
+        assert!(routing_items.contains(&"TrackConfig"));
+        assert!(routing_items.contains(&"TransportConfig"));
+        assert!(routing_items.contains(&"ProjectMetadata"));
+
+        // 4. Verify interactive AwardWinningGuiView selects Tier 125 preset nodes
+        let mut view = crate::views::award_winning_gui_view::AwardWinningGuiView::default();
+        let ctx = eframe::egui::Context::default();
+
+        let presets = [
+            ("Parametric 3D Spatial Trajectory & Catmull-Rom Orbit", "TrajectoryPathType"),
+            ("Orchestral String Bowing Phrase Gesture & Friction Slew", "GestureInterpolationCurve"),
+            ("FastTracker Chromatic Note Pattern & Microtonal Detune", "TrackerStepConfig"),
+            ("Deterministic Master Audio Transport & Cycle Looper Clock", "TransportConfig"),
         ];
 
         for (preset_name, target_node) in presets {

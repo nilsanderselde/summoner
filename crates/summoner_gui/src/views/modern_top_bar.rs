@@ -269,6 +269,10 @@ fn default_available_presets() -> Vec<String> {
         "Rosenberg Glottal Pulse Vocal Flow & Aspiration".to_string(),
         "Asian Zither Paulownia Soundboard & Movable Ji Bridge".to_string(),
         "EMT 140 Cold-Rolled Steel Continuous Dispersion Plate".to_string(),
+        "Parametric 3D Spatial Trajectory & Catmull-Rom Orbit".to_string(),
+        "Orchestral String Bowing Phrase Gesture & Friction Slew".to_string(),
+        "FastTracker Chromatic Note Pattern & Microtonal Detune".to_string(),
+        "Deterministic Master Audio Transport & Cycle Looper Clock".to_string(),
     ]
 }
 

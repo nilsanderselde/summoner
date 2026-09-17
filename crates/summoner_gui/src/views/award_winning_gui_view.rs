@@ -504,6 +504,10 @@ impl AwardWinningGuiView {
                 "Rosenberg Glottal Pulse Vocal Flow & Aspiration" => "GlottalFlowModel",
                 "Asian Zither Paulownia Soundboard & Movable Ji Bridge" => "JiBridgeCoupling",
                 "EMT 140 Cold-Rolled Steel Continuous Dispersion Plate" => "PlateReverbTank",
+                "Parametric 3D Spatial Trajectory & Catmull-Rom Orbit" => "TrajectoryPathType",
+                "Orchestral String Bowing Phrase Gesture & Friction Slew" => "GestureInterpolationCurve",
+                "FastTracker Chromatic Note Pattern & Microtonal Detune" => "TrackerStepConfig",
+                "Deterministic Master Audio Transport & Cycle Looper Clock" => "TransportConfig",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {
