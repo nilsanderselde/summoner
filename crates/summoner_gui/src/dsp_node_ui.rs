@@ -12694,6 +12694,174 @@ descriptors.insert("BellowsGesturePattern".to_string(), DspNodeDescriptor::new("
             .with_param(DspParamSchema::choice("phase_inversion_left_channel", "Channel Phase Inversion Switch", &["Normal Polarity", "Invert Left (+/-)", "Invert Right (+/-)", "Invert Both"], 0, "Flips channel polarity by 180 degrees to test or fix out-of-phase recordings"))
             .with_param(DspParamSchema::toggle("enable_auto_phase_cancellation_prevention", "Automatic Dynamic Elliptic Mono Sentry", false, "Dynamically attenuates out-of-phase side information whenever correlation drops below zero"))
         );
+        descriptors.insert("NavierStokesFluidSolver".to_string(), DspNodeDescriptor::new("NavierStokesFluidSolver", "3D Zero-Gravity Navier-Stokes Fluid Dynamics Acoustic Solver", DspNodeCategory::AcousticPhysicalModel, "Navier-Stokes 3D fluid dynamics pressure solver modeling acoustic wave propagation, velocity divergence, and viscosity damping in zero-gravity fluid mediums")
+            .with_param(DspParamSchema::knob("fluid_viscosity_coefficient", "Fluid Viscosity Coefficient", 0.0001, 1.0, 0.05, "visc", MacroRole::Tone, "Kinematic viscosity governing acoustic velocity dissipation and boundary friction"))
+            .with_param(DspParamSchema::knob("fluid_sound_speed_mps", "Acoustic Medium Speed of Sound", 100.0, 2000.0, 343.0, "m/s", MacroRole::Tone, "Speed of sound through fluid medium setting pressure wave velocity"))
+            .with_param(DspParamSchema::knob("pressure_relaxation_damping", "Pressure Poisson Relaxation Damping", 0.90, 0.999, 0.995, "decay", MacroRole::Space, "Damping factor applied across spatial grid cells on each solver step"))
+            .with_param(DspParamSchema::knob("spatial_grid_resolution_cells", "3D Fluid Grid Subdivisions", 4.0, 32.0, 16.0, "cells", MacroRole::Character, "Resolution of the discrete spatial lattice discretizing fluid volume"))
+            .with_param(DspParamSchema::knob("impulse_injection_position_ratio", "Acoustic Impulse Injection Center", 0.0, 1.0, 0.5, "pos", MacroRole::Punch, "Spatial offset where audio impulse pressure is injected into fluid lattice"))
+            .with_param(DspParamSchema::toggle("enable_laplacian_diffusion_smoothing", "Laplacian Velocity Field Smoothing", true, "Preserves numerical solver stability by diffusing velocity divergence vectors"))
+        );
+        descriptors.insert("QuantumMolecularBondResonator".to_string(), DspNodeDescriptor::new("QuantumMolecularBondResonator", "Quantum Molecular Bond Vibrational Frequency Resonator Bank", DspNodeCategory::SpectralResynthesis, "Physical resonator bank simulating quantum mechanical stretching, bending, and torsional vibrational modes of covalent molecular structures")
+            .with_param(DspParamSchema::knob("molecular_bond_stiffness_nm", "Covalent Bond Spring Constant Stiffness", 10.0, 500.0, 120.0, "N/m", MacroRole::Punch, "Stiffness of interatomic bond governing fundamental vibrational frequency"))
+            .with_param(DspParamSchema::knob("atomic_mass_amu", "Constituent Atomic Mass Unit", 1.0, 250.0, 16.0, "amu", MacroRole::Tone, "Effective reduced mass of vibrating atomic nuclei shaping modal overtone ratios"))
+            .with_param(DspParamSchema::knob("anharmonic_potential_depth", "Morse Anharmonic Potential Depth", 0.0, 1.0, 0.25, "Morse", MacroRole::Character, "Non-linear Morse potential curvature introducing authentic overtone detuning"))
+            .with_param(DspParamSchema::knob("vibrational_damping_ps", "Intramolecular Relaxation Lifetime", 0.1, 50.0, 5.0, "ps", MacroRole::Space, "Time constant governing phonon dissipation into surrounding solvent matrix"))
+            .with_param(DspParamSchema::knob("thermal_temperature_kelvin", "Ambient Absolute Temperature", 0.0, 1000.0, 293.15, "K", MacroRole::Tone, "Thermal population of higher vibrational quantum states inducing spectral broadening"))
+            .with_param(DspParamSchema::toggle("enable_quantum_zero_point_energy", "Quantum Zero-Point Energy Fluctuation", true, "Maintains minimum zero-point ground state vibration preventing complete silence"))
+        );
+        descriptors.insert("PlasmaArcSonificationSynthesizer".to_string(), DspNodeDescriptor::new("PlasmaArcSonificationSynthesizer", "Singing High-Voltage Plasma Arc Acoustic Spark Synthesizer", DspNodeCategory::Oscillator, "Electro-acoustic audio transducer and synthesis model simulating thermal air expansion across an oscillating high-voltage electrical plasma discharge")
+            .with_param(DspParamSchema::knob("arc_breakdown_voltage_kv", "Dielectric Spark Breakdown Voltage", 1.0, 50.0, 15.0, "kV", MacroRole::Punch, "Threshold voltage ionizing air gap and igniting singing plasma conduction channel"))
+            .with_param(DspParamSchema::knob("plasma_channel_current_ma", "Conduction Channel Arc Current", 1.0, 200.0, 35.0, "mA", MacroRole::Character, "Continuous electrical current setting thermal volume expansion and acoustic loudness"))
+            .with_param(DspParamSchema::knob("spark_gap_distance_mm", "Electrode Spark Gap Distance", 0.5, 30.0, 8.0, "mm", MacroRole::Tone, "Physical distance between tungsten discharge electrodes dictating arc resistance"))
+            .with_param(DspParamSchema::knob("ionization_thermal_inertia_us", "Thermal Plasma Relaxation Inertia", 1.0, 500.0, 45.0, "us", MacroRole::Tone, "Thermal lag smoothing audio transitions and rolling off ultrasonic harmonics"))
+            .with_param(DspParamSchema::knob("corona_discharge_crackle_ratio", "Corona Discharge Stochastic Hiss", 0.0, 1.0, 0.15, "%", MacroRole::Character, "Micro-spark corona discharge sputtering around sharp needle tips"))
+            .with_param(DspParamSchema::toggle("enable_high_frequency_spark_singing", "High-Frequency Ultrasonic PWM Singing", true, "Carrier modulation singing mode producing shimmering crystalline harmonics"))
+        );
+        descriptors.insert("AtmosphericDensityAbsorption".to_string(), DspNodeDescriptor::new("AtmosphericDensityAbsorption", "Barometric Pressure & Humidity Acoustic Wavefront Absorption", DspNodeCategory::SpatialSurround, "Precision ISO 9613-1 acoustic air absorption filter calculating molecular relaxation loss of nitrogen and oxygen across altitude, temperature, and relative humidity")
+            .with_param(DspParamSchema::knob("altitude_elevation_meters", "Geographic Altitude Elevation", -500.0, 9000.0, 0.0, "m", MacroRole::Tone, "Altitude above sea level altering barometric air density and speed of sound"))
+            .with_param(DspParamSchema::knob("ambient_temperature_celsius", "Ambient Atmospheric Temperature", -40.0, 50.0, 20.0, "deg C", MacroRole::Tone, "Air temperature shifting molecular relaxation frequencies of diatomic gas molecules"))
+            .with_param(DspParamSchema::knob("relative_air_humidity_pct", "Relative Atmospheric Humidity", 5.0, 100.0, 50.0, "%", MacroRole::Space, "Moisture percentage governing water vapor absorption peaks in high treble"))
+            .with_param(DspParamSchema::knob("barometric_static_pressure_kpa", "Static Barometric Pressure", 30.0, 110.0, 101.3, "kPa", MacroRole::Character, "Local atmospheric static pressure governing acoustic impedance of air"))
+            .with_param(DspParamSchema::knob("distance_propagation_meters", "Wavefront Distance Traveled", 1.0, 500.0, 25.0, "m", MacroRole::Space, "Physical propagation distance over which frequency-dependent absorption accumulates"))
+            .with_param(DspParamSchema::toggle("enable_molecular_nitrogen_relaxation", "Diatomic Nitrogen Molecular Relaxation", true, "Calculates rotational relaxation resonance of nitrogen molecules around 1 kHz"))
+        );
+        descriptors.insert("QuantumDotPhotonTransducer".to_string(), DspNodeDescriptor::new("QuantumDotPhotonTransducer", "Colloidal Quantum Dot Optoelectronic Non-Linear Transducer", DspNodeCategory::DistortionSaturation, "Nanoscale quantum confinement model converting optical modulation into non-linear audio drive with Auger recombination saturation and excitonic blinking")
+            .with_param(DspParamSchema::knob("quantum_dot_core_radius_nm", "Nanocrystal Core Radius", 1.0, 10.0, 3.2, "nm", MacroRole::Tone, "Quantum confinement dimension tuning optical emission wavelength and timbre"))
+            .with_param(DspParamSchema::knob("optical_pump_flux_photons", "Laser Optical Excitation Flux", 100.0, 10000.0, 1500.0, "flux", MacroRole::Punch, "Excitation laser pump intensity driving electron-hole pairs in nanocrystals"))
+            .with_param(DspParamSchema::knob("auger_recombination_saturation", "Non-Radiative Auger Saturation", 0.0, 1.0, 0.42, "%", MacroRole::Character, "Non-linear multi-exciton Auger recombination compressing audio crest factor"))
+            .with_param(DspParamSchema::knob("exciton_blinking_stochastic_rate", "Surface Trap Exciton Blinking Rate", 0.1, 100.0, 12.5, "Hz", MacroRole::Space, "Random quantum jump telegraph noise from charging and discharging surface traps"))
+            .with_param(DspParamSchema::knob("bandgap_luminescence_drive_db", "Optoelectronic Transducer Drive", 0.0, 36.0, 14.0, "dB", MacroRole::Punch, "Pre-amplifier signal gain modulating semiconductor optical emission intensity"))
+            .with_param(DspParamSchema::toggle("enable_quantum_confinement_shift", "Size-Dependent Blue-Shift Confinement", true, "Dynamically shifts harmonic spectrum upwards as quantum dot radius decreases"))
+        );
+        descriptors.insert("AcousticLevitationStandingWaveTrap".to_string(), DspNodeDescriptor::new("AcousticLevitationStandingWaveTrap", "Phased Ultrasonic Acoustic Levitation Radiation Force Modulator", DspNodeCategory::Modulation, "Acoustic radiation pressure trap simulator modeling Gor'kov potential wells, particle node entrapment, and ultrasonic standing wave acoustic streaming")
+            .with_param(DspParamSchema::knob("ultrasonic_trap_carrier_khz", "Ultrasonic Transducer Carrier Frequency", 20.0, 100.0, 40.0, "kHz", MacroRole::Tone, "Carrier frequency of opposing piezoelectric transducer array creating standing wave"))
+            .with_param(DspParamSchema::knob("gorkov_acoustic_potential_depth", "Gor'kov Potential Well Acoustic Trap Depth", 0.01, 1.0, 0.65, "J", MacroRole::Punch, "Acoustic radiation force well depth trapping virtual particulate sound sources"))
+            .with_param(DspParamSchema::knob("trapped_particle_mass_mg", "Levitated Particulate Virtual Mass", 0.1, 50.0, 2.5, "mg", MacroRole::Character, "Inertial mass of levitated entity introducing mechanical oscillation resonance"))
+            .with_param(DspParamSchema::knob("standing_wave_phase_shift_deg", "Transducer Array Relative Phase Shift", -180.0, 180.0, 0.0, "deg", MacroRole::Space, "Phase difference between upper and lower emitter shifting node elevation in space"))
+            .with_param(DspParamSchema::knob("acoustic_streaming_vorticity_ratio", "Acoustic Rayleigh Streaming Vorticity", 0.0, 1.0, 0.28, "%", MacroRole::Space, "Secondary steady air circulation vortices induced by intense acoustic standing waves"))
+            .with_param(DspParamSchema::toggle("enable_dynamic_levitation_wobble", "Dynamic Node Harmonic Restoring Wobble", false, "Simulates mechanical spring-mass restoring wobble when perturbed from acoustic node"))
+        );
+        descriptors.insert("SupercriticalFluidPhaseNoise".to_string(), DspNodeDescriptor::new("SupercriticalFluidPhaseNoise", "Supercritical CO2 Phase-Transition Cavitation Noise Generator", DspNodeCategory::Oscillator, "Thermodynamic state-space noise synthesizer generating non-Gaussian stochastic fluctuations near critical point vapor-liquid transitions")
+            .with_param(DspParamSchema::knob("critical_point_temperature_k", "Fluid Thermodynamic Temperature", 250.0, 450.0, 304.13, "K", MacroRole::Tone, "Temperature relative to critical point (304.13 K for CO2) tuning noise character"))
+            .with_param(DspParamSchema::knob("critical_pressure_megapascal", "Fluid Thermodynamic Static Pressure", 5.0, 20.0, 7.38, "MPa", MacroRole::Punch, "Operating pressure crossing critical boundary (7.38 MPa for CO2)"))
+            .with_param(DspParamSchema::knob("opalescence_density_fluctuation", "Critical Opalescence Density Fluctuation", 0.0, 1.0, 0.55, "%", MacroRole::Character, "Density cluster correlation length causing divergent acoustic scattering"))
+            .with_param(DspParamSchema::knob("cavitation_bubble_collapse_rate", "Micro-Cavitation Bubble Collapse Rate", 10.0, 5000.0, 420.0, "Hz", MacroRole::Space, "Rate of transient microbubble formations and implosions in fluid medium"))
+            .with_param(DspParamSchema::knob("spectral_entropy_color_slope", "Noise Power Spectral Entropy Slope", -6.0, 6.0, -1.5, "dB/oct", MacroRole::Tone, "Power spectral density tilt ranging from brownian rumble to violet hiss"))
+            .with_param(DspParamSchema::toggle("enable_critical_opalescence_resonance", "Critical Point Divergence Resonance", true, "Amplifies resonant density fluctuations as temperature approaches critical threshold"))
+        );
+        descriptors.insert("MagnetohydrodynamicPlasmaModulator".to_string(), DspNodeDescriptor::new("MagnetohydrodynamicPlasmaModulator", "Alfvén Wave Magnetohydrodynamic (MHD) Plasma Flux Modulator", DspNodeCategory::Modulation, "MHD plasma wave modulator simulating magnetosonic velocity shears, magnetic induction vector rotations, and solar corona magnetic reconnection pulses")
+            .with_param(DspParamSchema::knob("magnetic_flux_density_tesla", "Background Magnetic Field Flux Density", 0.1, 10.0, 2.4, "T", MacroRole::Punch, "Guiding magnetic field line tension determining Alfvén wave propagation speed"))
+            .with_param(DspParamSchema::knob("alfven_wave_velocity_km_s", "Alfvén Transverse Wave Velocity", 10.0, 1000.0, 150.0, "km/s", MacroRole::Tone, "Phase velocity of magnetic tension oscillations traveling along plasma columns"))
+            .with_param(DspParamSchema::knob("plasma_beta_pressure_ratio", "Plasma Thermal to Magnetic Pressure (Beta)", 0.01, 2.0, 0.35, "beta", MacroRole::Character, "Ratio of gas kinetic pressure to magnetic pressure dictating wave mode coupling"))
+            .with_param(DspParamSchema::knob("magnetic_shear_modulation_rate_hz", "Magnetic Field Shear Rotation Rate", 0.05, 50.0, 2.8, "Hz", MacroRole::Space, "LFO modulation frequency rotating magnetic orientation vector across audio channels"))
+            .with_param(DspParamSchema::knob("magnetic_reconnection_burst_intensity", "Magnetic Reconnection Pulse Energy", 0.0, 1.0, 0.22, "burst", MacroRole::Punch, "Sudden explosive magnetic flux topological reorganization injecting transient bursts"))
+            .with_param(DspParamSchema::toggle("enable_frozen_in_flux_conservation", "Alfvén Frozen-in Flux Theorem Constraint", true, "Constrains plasma fluid elements to move strictly along magnetic field streamlines"))
+        );
+        descriptors.insert("SonoluminescenceCavitationSonifier".to_string(), DspNodeDescriptor::new("SonoluminescenceCavitationSonifier", "Acoustic Cavitation Bubble Picosecond Shockwave & Luminescence Sonifier", DspNodeCategory::DynamicsMaster, "Non-linear hydrodynamic Rayleigh-Plesset bubble dynamic model transforming intense acoustic peaks into hypersonic shockwave collapses and photonic burst pulses")
+            .with_param(DspParamSchema::knob("cavitation_drive_amplitude_db", "Acoustic Pressure Drive Intensity", 0.0, 36.0, 18.0, "dB", MacroRole::Punch, "Sound pressure amplitude driving bubble past Blake cavitation threshold into collapse"))
+            .with_param(DspParamSchema::knob("ambient_bubble_radius_microns", "Equilibrium Bubble Equilibrium Radius", 1.0, 50.0, 5.0, "um", MacroRole::Tone, "Initial unperturbed microbubble radius tuning resonance frequency"))
+            .with_param(DspParamSchema::knob("liquid_viscous_damping_poise", "Liquid Medium Viscosity Damping", 0.005, 0.1, 0.01, "P", MacroRole::Character, "Fluid dynamic viscosity slowing bubble expansion and rounding collapse wavefronts"))
+            .with_param(DspParamSchema::knob("shockwave_hypersonic_compression", "Hypersonic In-Rushing Gas Shock Mach", 0.1, 5.0, 1.8, "Mach", MacroRole::Punch, "Peak gas speed during final picosecond collapse producing intense sonic crackles"))
+            .with_param(DspParamSchema::knob("luminescence_thermal_flash_target", "Core Quasi-Thermal Flash Temperature", 1000.0, 50000.0, 12000.0, "K", MacroRole::Tone, "Adiabatic compression core temperature converting acoustic energy into photon flash"))
+            .with_param(DspParamSchema::toggle("enable_single_bubble_synchronous_mode", "Synchronous Single-Bubble Cavitation Mode", true, "Locks bubble collapse cycle to acoustic carrier fundamental for tonal resonance"))
+        );
+        descriptors.insert("MetamaterialNegativeIndexFilter".to_string(), DspNodeDescriptor::new("MetamaterialNegativeIndexFilter", "Negative Effective Bulk Modulus Acoustic Metamaterial Filter", DspNodeCategory::FilterEq, "Subwavelength resonant labyrinth metamaterial simulating negative refractive index, backward wave phase propagation, and ultra-narrow acoustic bandgaps")
+            .with_param(DspParamSchema::knob("negative_modulus_center_freq_hz", "Metamaterial Negative Modulus Center", 100.0, 15000.0, 1250.0, "Hz", MacroRole::Tone, "Resonance frequency where acoustic bulk modulus reverses sign"))
+            .with_param(DspParamSchema::knob("metamaterial_bandgap_width_cents", "Acoustic Bandgap Rejection Bandwidth", 50.0, 2400.0, 450.0, "cents", MacroRole::Tone, "Width of stopband region where acoustic waves cannot propagate through metamaterial"))
+            .with_param(DspParamSchema::knob("effective_refractive_index", "Effective Acoustic Refractive Index (n)", -5.0, -0.1, -1.2, "n", MacroRole::Character, "Negative index of refraction reversing phase velocity relative to group velocity"))
+            .with_param(DspParamSchema::knob("subwavelength_labyrinth_cells", "Labyrinth Unit Cell Cascades", 2.0, 16.0, 6.0, "cells", MacroRole::Space, "Number of coiling space-curling labyrinth unit cells steepening filter skirts"))
+            .with_param(DspParamSchema::knob("evanescent_wave_amplification_db", "Evanescent Subwavelength Amplification", 0.0, 24.0, 6.0, "dB", MacroRole::Punch, "Super-resolution near-field wave amplification restoring subwavelength details"))
+            .with_param(DspParamSchema::toggle("enable_backward_phase_propagation", "Backward Wave Phase Propagation Mode", true, "Inverts phase response producing anomalous dispersive spatial phase delays"))
+        );
+        descriptors.insert("InterstellarMediumShockwaveReverb".to_string(), DspNodeDescriptor::new("InterstellarMediumShockwaveReverb", "Astrophysical Interstellar Dust Cloud Supersonic Shockwave Reverb", DspNodeCategory::TimeSpace, "Supernova remnant Sedov-Taylor blast wave model simulating diffuse reverberant reflection through cold neutral interstellar hydrogen clouds and cosmic dust grains")
+            .with_param(DspParamSchema::knob("shockwave_expansion_radius_parsecs", "Supernova Blast Wave Radius", 0.1, 20.0, 3.5, "pc", MacroRole::Space, "Physical spatial scale of the expanding spherical shock boundary in parsecs"))
+            .with_param(DspParamSchema::knob("interstellar_gas_density_atoms_cc", "Ambient Interstellar Gas Density", 0.01, 100.0, 1.2, "atoms/cc", MacroRole::Tone, "Hydrogen particle density per cubic centimeter resisting shock expansion"))
+            .with_param(DspParamSchema::knob("mach_number_supersonic_shock", "Front Compression Shock Mach Number", 1.1, 50.0, 8.5, "Mach", MacroRole::Punch, "Shock velocity relative to interstellar sound speed creating steep density jump"))
+            .with_param(DspParamSchema::knob("dust_grain_scattering_albedo", "Silicate Dust Grain Scattering Albedo", 0.0, 1.0, 0.65, "%", MacroRole::Space, "Reflection coefficient of sub-micron cosmic dust grains diffusing high frequencies"))
+            .with_param(DspParamSchema::knob("cooling_timescale_decay_seconds", "Radiative Post-Shock Cooling Decay", 0.5, 30.0, 8.0, "s", MacroRole::Space, "Reverberation tail decay time governed by astrophysical radiative cooling"))
+            .with_param(DspParamSchema::toggle("enable_synchrotron_energy_dissipation", "Relativistic Electron Synchrotron Losses", false, "Adds gentle high-frequency roll-off mimicking relativistic synchrotron radiation"))
+        );
+        descriptors.insert("GravitationalWaveBinaryChirp".to_string(), DspNodeDescriptor::new("GravitationalWaveBinaryChirp", "Compact Binary Inspiral Quadrupole Gravitational Wave Chirp Synth", DspNodeCategory::Oscillator, "Post-Newtonian gravitational wave waveform model synthesizing binary black hole / neutron star inspiral chirp, merger plunge, and ringdown quasinormal modes")
+            .with_param(DspParamSchema::knob("primary_component_mass_solar", "Primary Component Mass (Solar Masses)", 1.4, 100.0, 36.0, "M_sun", MacroRole::Punch, "Mass of primary compact object shaping orbital frequency acceleration"))
+            .with_param(DspParamSchema::knob("secondary_component_mass_solar", "Secondary Component Mass (Solar Masses)", 1.4, 100.0, 29.0, "M_sun", MacroRole::Tone, "Mass of companion compact object setting binary mass ratio"))
+            .with_param(DspParamSchema::knob("inspiral_starting_frequency_hz", "Inspiral Horizon Starting Frequency", 15.0, 200.0, 32.0, "Hz", MacroRole::Tone, "Starting orbital gravitational wave frequency entering audible detector band"))
+            .with_param(DspParamSchema::knob("orbital_eccentricity_ratio", "Keplerian Orbital Eccentricity", 0.0, 0.8, 0.05, "e", MacroRole::Character, "Non-circular orbital eccentricity introducing periodic harmonic sidebands"))
+            .with_param(DspParamSchema::knob("ringdown_quasinormal_damping_q", "Post-Merger Ringdown Q-Factor", 1.0, 50.0, 12.0, "Q", MacroRole::Space, "Quality factor of damped exponential sinusoidal ringdown of merged remnant"))
+            .with_param(DspParamSchema::toggle("enable_spin_precession_polarization", "Orbital Plane Spin Precession Modulation", true, "Modulates plus and cross polarization amplitudes from tilted angular momentum"))
+        );
+        descriptors.insert("CasimirQuantumVacuumNoise".to_string(), DspNodeDescriptor::new("CasimirQuantumVacuumNoise", "Quantum Electrodynamic Vacuum Fluctuation & Casimir Force Noise", DspNodeCategory::Oscillator, "Zero-point quantum fluctuation noise source modulated by nanometer-spaced conductive plate boundaries, exhibiting high-frequency mode exclusion")
+            .with_param(DspParamSchema::knob("plate_separation_distance_nm", "Conductive Plate Gap Separation", 5.0, 500.0, 45.0, "nm", MacroRole::Tone, "Distance between parallel conductive boundary plates cutting off long vacuum modes"))
+            .with_param(DspParamSchema::knob("quantum_vacuum_field_intensity", "Zero-Point Vacuum Field Intensity", 0.01, 2.0, 0.85, "E_0", MacroRole::Punch, "Overall amplitude of virtual photon electromagnetic field fluctuations"))
+            .with_param(DspParamSchema::knob("thermal_blackbody_correction_k", "Thermal Photon Correction Temperature", 0.0, 500.0, 77.0, "K", MacroRole::Tone, "Planck blackbody radiation spectrum blending into zero-point quantum noise"))
+            .with_param(DspParamSchema::knob("finite_conductivity_skin_depth", "Boundary Plate Metal Skin Depth", 0.1, 50.0, 12.0, "nm", MacroRole::Character, "Finite electrical conductivity of metallic mirrors softening boundary cutoffs"))
+            .with_param(DspParamSchema::knob("dynamic_casimir_photon_production", "Dynamical Casimir Real Photon Generation", 0.0, 1.0, 0.18, "%", MacroRole::Space, "Parametric creation of real photons from relativistic boundary acceleration"))
+            .with_param(DspParamSchema::toggle("enable_sub_kelvin_ground_state", "Pure Zero-Kelvin Quantum Ground State", true, "Removes classical thermal noise leaving purely quantum mechanical fluctuations"))
+        );
+        descriptors.insert("AcousticCloakingTransformationPanner".to_string(), DspNodeDescriptor::new("AcousticCloakingTransformationPanner", "Transformation Optics Acoustic Cloaking & Wavefront Curvature Panner", DspNodeCategory::SpatialSurround, "Coordinate transformation mapping sound waves smoothly around a virtual cylinder/sphere without acoustic shadow, backscattering, or wave obstruction")
+            .with_param(DspParamSchema::knob("cloaking_shell_inner_radius_m", "Acoustic Cloak Inner Core Radius", 0.1, 5.0, 0.75, "m", MacroRole::Tone, "Radius of silent shielded zone inside the transformation cloaking shell"))
+            .with_param(DspParamSchema::knob("cloaking_shell_outer_radius_m", "Acoustic Cloak Outer Shell Radius", 0.2, 10.0, 1.8, "m", MacroRole::Space, "Outer boundary where acoustic metamaterial transformation transitions to ambient air"))
+            .with_param(DspParamSchema::knob("anisotropic_density_radial_ratio", "Radial vs Azimuthal Anisotropy", 0.1, 10.0, 2.2, "ratio", MacroRole::Character, "Directional mass density anisotropy guiding wavefronts around obstacles"))
+            .with_param(DspParamSchema::knob("wavefront_deflection_angle_deg", "Curvature Deflection Steering Angle", -180.0, 180.0, 45.0, "deg", MacroRole::Space, "Spatial panning angle directing wavefront curvature across stereo speaker array"))
+            .with_param(DspParamSchema::knob("shadowless_transparency_factor", "Shadowless Acoustic Transparency", 0.0, 1.0, 0.95, "%", MacroRole::Tone, "Elimination of downstream acoustic shadow preserving crisp high frequencies"))
+            .with_param(DspParamSchema::toggle("enable_ideal_transformation_coordinate_map", "Exact Non-Euclidean Metric Tensor Mapping", true, "Computes mathematically rigorous non-Euclidean transformation tensor coordinates"))
+        );
+        descriptors.insert("ThermonuclearFusionResonator".to_string(), DspNodeDescriptor::new("ThermonuclearFusionResonator", "Tokamak Magnetic Confinement Fusion Plasma Resonance Synthesizer", DspNodeCategory::Oscillator, "Deuterium-tritium high-temperature plasma simulator synthesizing ion cyclotron resonance frequencies, neoclassical tearing modes, and magnetic field ripple")
+            .with_param(DspParamSchema::knob("toroidal_magnetic_field_tesla", "Toroidal Confinement Magnetic Field", 1.0, 15.0, 5.3, "T", MacroRole::Punch, "Toroidal magnetic field strength setting ion cyclotron gyro-frequency harmonics"))
+            .with_param(DspParamSchema::knob("plasma_core_temperature_kev", "Core Plasma Kinetic Temperature", 1.0, 50.0, 15.0, "keV", MacroRole::Tone, "Core thermal temperature (15 keV = 150 million Kelvin) driving thermal velocity"))
+            .with_param(DspParamSchema::knob("ion_cyclotron_resonance_harmonic", "Ion Cyclotron Gyro-Frequency Harmonic", 1.0, 16.0, 3.0, "harm", MacroRole::Tone, "Harmonic overtone multiplier for radiofrequency plasma heating resonance"))
+            .with_param(DspParamSchema::knob("neoclassical_tearing_mode_drift", "Magnetic Island Tearing Mode Drift", 0.1, 20.0, 4.2, "Hz", MacroRole::Character, "Rotational frequency of magnetic reconnection islands introducing subharmonic throbbing"))
+            .with_param(DspParamSchema::knob("plasma_current_megaamperes", "Poloidal Ohmic Heating Plasma Current", 0.5, 20.0, 7.5, "MA", MacroRole::Punch, "Total plasma current generating poloidal field and driving high-energy saturation"))
+            .with_param(DspParamSchema::toggle("enable_h_mode_edge_transport_barrier", "High-Confinement H-Mode Edge Barrier", true, "Sharpens plasma edge boundary creating intense harmonic definition"))
+        );
+        descriptors.insert("AiDemucsStemSeparationEngine".to_string(), DspNodeDescriptor::new("AiDemucsStemSeparationEngine", "Deep Neural Hybrid Conv-Transformer 4-Stem Real-Time Isolator", DspNodeCategory::Utility, "Demucs v4 time/frequency domain deep neural architecture separating mixed audio into isolated drum, bass, vocal, and other instrumental stems")
+            .with_param(DspParamSchema::knob("stem_isolation_drums_db", "Isolated Drum Stem Gain Level", -60.0, 12.0, 0.0, "dB", MacroRole::Punch, "Volume level of separated transient percussion and drum kit track"))
+            .with_param(DspParamSchema::knob("stem_isolation_bass_db", "Isolated Bass Stem Gain Level", -60.0, 12.0, 0.0, "dB", MacroRole::Punch, "Volume level of separated low-frequency bass guitar / synthesizer track"))
+            .with_param(DspParamSchema::knob("stem_isolation_vocals_db", "Isolated Vocal Stem Gain Level", -60.0, 12.0, 0.0, "dB", MacroRole::Tone, "Volume level of separated lead vocal and backing speech track"))
+            .with_param(DspParamSchema::knob("stem_isolation_other_db", "Isolated Instrumental Residual Gain", -60.0, 12.0, 0.0, "dB", MacroRole::Tone, "Volume level of remaining guitars, synths, and orchestral accompaniment"))
+            .with_param(DspParamSchema::knob("cross_stem_leakage_suppression", "Inter-Stem Crosstalk Bleed Suppression", 0.0, 1.0, 0.85, "%", MacroRole::Character, "Neural phase-cancellation mask suppressing bleed between isolated audio stems"))
+            .with_param(DspParamSchema::toggle("enable_hybrid_spectrogram_inference", "Dual Time-Domain & Complex STFT Inference", true, "Executes parallel time and frequency domain passes for pristine transient clarity"))
+        );
+        descriptors.insert("AiAutonomousMasteringChain".to_string(), DspNodeDescriptor::new("AiAutonomousMasteringChain", "Autonomous Multi-Stage AI Mastering Balance & Loudness Chain", DspNodeCategory::DynamicsMaster, "Machine learning automated mastering chain executing neural genre spectral target curve matching, dynamic crest factor optimization, and True-Peak limiting")
+            .with_param(DspParamSchema::knob("target_integrated_lufs", "Master Integrated Loudness Target", -24.0, -6.0, -14.0, "LUFS", MacroRole::Punch, "Target delivery loudness (e.g., -14 LUFS for streaming, -9 LUFS for club master)"))
+            .with_param(DspParamSchema::knob("spectral_profile_matching_strength", "Genre Spectral Reference Matching", 0.0, 1.0, 0.75, "%", MacroRole::Tone, "Strength of automated dynamic FIR curve matching reference master profile"))
+            .with_param(DspParamSchema::knob("dynamic_crest_expansion_factor", "Dynamic Crest Factor Transient Preserver", 0.5, 2.0, 1.0, "factor", MacroRole::Character, "Expands or controls punchiness and crest factor ratio during heavy limiting"))
+            .with_param(DspParamSchema::knob("stereo_image_clarity_enhancement", "Stereo Width & Correlation Enhancer", 0.0, 1.0, 0.35, "%", MacroRole::Space, "Expands side channel high-frequency clarity while locking sub-bass to center"))
+            .with_param(DspParamSchema::knob("ceiling_true_peak_margin_db", "Brickwall True-Peak Output Ceiling", -3.0, 0.0, -0.8, "dBTP", MacroRole::Punch, "Maximum permissible inter-sample peak level preventing lossy codec clipping"))
+            .with_param(DspParamSchema::toggle("enable_intersample_oversampled_guard", "8x Oversampled Intersample Peak Sentry", true, "Over-samples peak detector 8x to trap inter-sample DAC overs"))
+        );
+        descriptors.insert("VocalPitchFormantRetuner".to_string(), DspNodeDescriptor::new("VocalPitchFormantRetuner", "Neural Vocal Pitch & Formant Retuner with Gender Transposition", DspNodeCategory::SpectralResynthesis, "Sub-millisecond pitch correction engine with neural formant throat-length preservation, natural vibrato tracking, and microtonal scale snapping")
+            .with_param(DspParamSchema::knob("pitch_correction_speed_ms", "Pitch Retune Correction Speed", 0.0, 100.0, 20.0, "ms", MacroRole::Punch, "Speed of pitch snapping: 0 ms for robotic hard-tune effect, 25 ms for natural transparent tuning"))
+            .with_param(DspParamSchema::knob("pitch_quantize_scale_snap", "Musical Scale Snapping Pull Factor", 0.0, 1.0, 1.0, "%", MacroRole::Character, "Pulls pitch toward the nearest note in the selected scale"))
+            .with_param(DspParamSchema::knob("formant_throat_length_shift", "Vocal Tract Throat Length Shift", -12.0, 12.0, 0.0, "semitones", MacroRole::Tone, "Shifts vocal formants independently from pitch to alter perceived physical throat size"))
+            .with_param(DspParamSchema::knob("vocal_gender_morph_ratio", "Male to Female Timbral Gender Morph", -1.0, 1.0, 0.0, "morph", MacroRole::Tone, "Smooth morphing factor from deep masculine resonance to bright feminine presence"))
+            .with_param(DspParamSchema::knob("natural_vibrato_preservation", "Natural Vibrato Depth Preservation", 0.0, 1.0, 0.8, "%", MacroRole::Space, "Preserves singer's natural vocal vibrato while centering mean fundamental pitch"))
+            .with_param(DspParamSchema::toggle("enable_neural_glottal_pulse_modeling", "Neural Glottal Pulse Resynthesis", true, "Synthesizes authentic physiological glottal pulse excitation during pitch transposition"))
+        );
+        descriptors.insert("NeuralAudioRestorationRepair".to_string(), DspNodeDescriptor::new("NeuralAudioRestorationRepair", "Deep Neural Forensic Waveform De-Click, De-Clip & De-Hum Repair", DspNodeCategory::Utility, "Multi-task neural audio restoration engine reconstructing clipped waveform peaks, removing electrical mains hum, and interpolating transient click scratches")
+            .with_param(DspParamSchema::knob("waveform_declip_headroom_db", "Clipped Peak Reconstruction Headroom", 0.0, 18.0, 6.0, "dB", MacroRole::Punch, "Dynamic range expansion headroom reconstructing squashed square-wave crests"))
+            .with_param(DspParamSchema::knob("transient_declick_sensitivity", "Vinyl Scratch & Click Detection Sens", 0.0, 1.0, 0.65, "%", MacroRole::Character, "Sensitivity of wavelet transient detector spotting impulsive scratches"))
+            .with_param(DspParamSchema::knob("mains_hum_harmonic_rejection_db", "50/60 Hz Mains Hum Notch Depth", 0.0, 60.0, 36.0, "dB", MacroRole::Tone, "Attenuation of fundamental power line hum and its integer harmonics"))
+            .with_param(DspParamSchema::knob("spectral_noise_floor_floor_db", "Target Spectral Noise Floor Threshold", -90.0, -20.0, -60.0, "dB", MacroRole::Tone, "Broadband background noise reduction threshold level"))
+            .with_param(DspParamSchema::knob("reconstructed_wave_spectral_blend", "Restored vs Original Audio Wet Blend", 0.0, 1.0, 1.0, "%", MacroRole::Space, "Mix blend between neural-restored signal and original raw recording"))
+            .with_param(DspParamSchema::toggle("enable_adaptive_background_spectral_learning", "Real-Time Adaptive Noise Fingerprint", true, "Continuously updates stationary noise fingerprint during pauses in speech/music"))
+        );
+        descriptors.insert("AutomatedDynamicPsychoacousticEq".to_string(), DspNodeDescriptor::new("AutomatedDynamicPsychoacousticEq", "Automated Psychoacoustic Spectral Masking & Collision Dynamic EQ", DspNodeCategory::FilterEq, "Intelligent dynamic EQ automatically identifying auditory masking collisions across critical Bark bands and dynamically carving frequency clashes")
+            .with_param(DspParamSchema::knob("masking_detection_sensitivity", "Critical Bark Masking Detection Sens", 0.1, 2.0, 1.0, "sens", MacroRole::Character, "Threshold for psychoacoustic masking detection: higher values trigger earlier carving"))
+            .with_param(DspParamSchema::knob("dynamic_carve_max_cut_db", "Maximum Dynamic Spectral Cut Depth", 0.0, 18.0, 6.0, "dB", MacroRole::Punch, "Maximum attenuation applied to masking frequency pockets"))
+            .with_param(DspParamSchema::knob("critical_band_bark_resolution", "Auditory Filter Bank Bark Resolution", 1.0, 24.0, 12.0, "bands", MacroRole::Tone, "Number of psychoacoustic Bark scale frequency bands evaluated simultaneously"))
+            .with_param(DspParamSchema::knob("dynamic_attack_recovery_ms", "Dynamic Carving Attack & Recovery Time", 5.0, 500.0, 65.0, "ms", MacroRole::Punch, "Ballistics time constant returning carved filter band to unity gain"))
+            .with_param(DspParamSchema::knob("sidechain_unmask_listening_focus", "External Sidechain Unmask Priority", 0.0, 1.0, 0.5, "%", MacroRole::Space, "Prioritizes sidechain input over local track to guarantee vocal/kick clearance"))
+            .with_param(DspParamSchema::toggle("enable_equal_loudness_fletcher_munson", "ISO 226 Fletcher-Munson Equal Loudness", true, "Weights masking calculation according to human ear frequency sensitivity curve"))
+        );
+        descriptors.insert("NeuralRoomImpulseMatcher".to_string(), DspNodeDescriptor::new("NeuralRoomImpulseMatcher", "Neural Room Acoustic Transfer Function & Impulse Response Matcher", DspNodeCategory::TimeSpace, "Deep learning acoustic profiling engine extracting room early reflections, reverberation time RT60, and binaural geometry to synthesize matching convolution spaces")
+            .with_param(DspParamSchema::knob("acoustic_profile_match_accuracy", "Acoustic Target Matching Convergence", 0.0, 1.0, 0.9, "%", MacroRole::Character, "Degree of convergence matching synthetic IR to target reference audio space"))
+            .with_param(DspParamSchema::knob("room_volume_target_cubic_meters", "Target Virtual Acoustic Room Volume", 10.0, 5000.0, 250.0, "m^3", MacroRole::Space, "Estimated 3D enclosed volume determining modal density and echo onset"))
+            .with_param(DspParamSchema::knob("rt60_reverberation_decay_seconds", "Broadband RT60 Reverberation Time", 0.1, 10.0, 1.4, "s", MacroRole::Space, "Time required for sound pressure level to decay by 60 dB"))
+            .with_param(DspParamSchema::knob("wall_material_absorption_hf", "Boundary Wall High-Frequency Absorption", 0.05, 0.95, 0.35, "alpha", MacroRole::Tone, "Absorption coefficient of virtual walls damping early reflections"))
+            .with_param(DspParamSchema::knob("direct_to_reverberant_ratio_db", "Direct-to-Reverberant Energy Ratio", -24.0, 24.0, 4.0, "dB", MacroRole::Punch, "Balance between dry acoustic direct path and diffuse reverberant field"))
+            .with_param(DspParamSchema::toggle("enable_binaural_parallax_matching", "Binaural Interaural Time Delay Matching", true, "Preserves authentic interaural time and level differences across stereo field"))
+        );
 
         Self { descriptors }
     }
@@ -14357,6 +14525,27 @@ descriptors.insert("BellowsGesturePattern".to_string(), DspNodeDescriptor::new("
             ("MultiTapModulatedDiffuser", DspNodeCategory::TimeSpace, "16-Tap Cross-Coupled Delay Line with Feedback Delay Network"),
             ("BucketBrigadeAnalogDelayUnit", DspNodeCategory::TimeSpace, "Dual Panasonic MN3005 BBD Delay with Dark Analog Anti-Aliasing Filter"),
             ("StereoPhaseCorrelationAnalyzer", DspNodeCategory::Utility, "Real-Time Goniometer, Correlation Factor & Mono Compatibility Guard"),
+            ("NavierStokesFluidSolver", DspNodeCategory::AcousticPhysicalModel, "3D Zero-Gravity Navier-Stokes Fluid Dynamics Acoustic Solver"),
+            ("QuantumMolecularBondResonator", DspNodeCategory::SpectralResynthesis, "Quantum Molecular Bond Vibrational Frequency Resonator Bank"),
+            ("PlasmaArcSonificationSynthesizer", DspNodeCategory::Oscillator, "Singing High-Voltage Plasma Arc Acoustic Spark Synthesizer"),
+            ("AtmosphericDensityAbsorption", DspNodeCategory::SpatialSurround, "Barometric Pressure & Humidity Acoustic Wavefront Absorption"),
+            ("QuantumDotPhotonTransducer", DspNodeCategory::DistortionSaturation, "Colloidal Quantum Dot Optoelectronic Non-Linear Transducer"),
+            ("AcousticLevitationStandingWaveTrap", DspNodeCategory::Modulation, "Phased Ultrasonic Acoustic Levitation Radiation Force Modulator"),
+            ("SupercriticalFluidPhaseNoise", DspNodeCategory::Oscillator, "Supercritical CO2 Phase-Transition Cavitation Noise Generator"),
+            ("MagnetohydrodynamicPlasmaModulator", DspNodeCategory::Modulation, "Alfvén Wave Magnetohydrodynamic (MHD) Plasma Flux Modulator"),
+            ("SonoluminescenceCavitationSonifier", DspNodeCategory::DynamicsMaster, "Acoustic Cavitation Bubble Picosecond Shockwave & Luminescence Sonifier"),
+            ("MetamaterialNegativeIndexFilter", DspNodeCategory::FilterEq, "Negative Effective Bulk Modulus Acoustic Metamaterial Filter"),
+            ("InterstellarMediumShockwaveReverb", DspNodeCategory::TimeSpace, "Astrophysical Interstellar Dust Cloud Supersonic Shockwave Reverb"),
+            ("GravitationalWaveBinaryChirp", DspNodeCategory::Oscillator, "Compact Binary Inspiral Quadrupole Gravitational Wave Chirp Synth"),
+            ("CasimirQuantumVacuumNoise", DspNodeCategory::Oscillator, "Quantum Electrodynamic Vacuum Fluctuation & Casimir Force Noise"),
+            ("AcousticCloakingTransformationPanner", DspNodeCategory::SpatialSurround, "Transformation Optics Acoustic Cloaking & Wavefront Curvature Panner"),
+            ("ThermonuclearFusionResonator", DspNodeCategory::Oscillator, "Tokamak Magnetic Confinement Fusion Plasma Resonance Synthesizer"),
+            ("AiDemucsStemSeparationEngine", DspNodeCategory::Utility, "Deep Neural Hybrid Conv-Transformer 4-Stem Real-Time Isolator"),
+            ("AiAutonomousMasteringChain", DspNodeCategory::DynamicsMaster, "Autonomous Multi-Stage AI Mastering Balance & Loudness Chain"),
+            ("VocalPitchFormantRetuner", DspNodeCategory::SpectralResynthesis, "Neural Vocal Pitch & Formant Retuner with Gender Transposition"),
+            ("NeuralAudioRestorationRepair", DspNodeCategory::Utility, "Deep Neural Forensic Waveform De-Click, De-Clip & De-Hum Repair"),
+            ("AutomatedDynamicPsychoacousticEq", DspNodeCategory::FilterEq, "Automated Psychoacoustic Spectral Masking & Collision Dynamic EQ"),
+            ("NeuralRoomImpulseMatcher", DspNodeCategory::TimeSpace, "Neural Room Acoustic Transfer Function & Impulse Response Matcher"),
         ]
     }
 
@@ -16971,6 +17160,27 @@ descriptors.insert("BellowsGesturePattern".to_string(), DspNodeDescriptor::new("
             "multitapmodulateddiffuser" | "multitapdiffuser" | "modulatedfdndiffuser" => Some("MultiTapModulatedDiffuser"),
             "bucketbrigadeanalogdelayunit" | "bbdanalogdelayunit" | "panasonicbbddelay" => Some("BucketBrigadeAnalogDelayUnit"),
             "stereophasecorrelationanalyzer" | "phasecorrelationanalyzer" | "goniometerstereocorrelator" => Some("StereoPhaseCorrelationAnalyzer"),
+            "navierstokesfluidsolver" | "navierstokesfluid" | "fluidpressuresolver" => Some("NavierStokesFluidSolver"),
+            "quantummolecularbondresonator" | "quantummolecularbond" | "quantummolecularsynth" => Some("QuantumMolecularBondResonator"),
+            "plasmaarcsonificationsynthesizer" | "plasmaarcsynth" | "singingplasmaarcsonifier" => Some("PlasmaArcSonificationSynthesizer"),
+            "atmosphericdensityabsorption" | "atmosphericabsorption" | "airabsorptionmodel" => Some("AtmosphericDensityAbsorption"),
+            "quantumdotphotontransducer" | "quantumdottransducer" | "quantumdotsynth" => Some("QuantumDotPhotonTransducer"),
+            "acousticlevitationstandingwavetrap" | "acousticstandingwavetrap" | "ultrasonictrapmodulator" => Some("AcousticLevitationStandingWaveTrap"),
+            "supercriticalfluidphasenoise" | "supercriticalfluidnoise" | "supercriticalnoisegenerator" => Some("SupercriticalFluidPhaseNoise"),
+            "magnetohydrodynamicplasmamodulator" | "mhdplasmamodulator" | "alfvenwavemodulator" => Some("MagnetohydrodynamicPlasmaModulator"),
+            "sonoluminescencecavitationsonifier" | "sonoluminescencesonifier" | "cavitationsonifier" => Some("SonoluminescenceCavitationSonifier"),
+            "metamaterialnegativeindexfilter" | "metamaterialfilter" | "negativeindexacousticfilter" => Some("MetamaterialNegativeIndexFilter"),
+            "interstellarmediumshockwavereverb" | "interstellarshockreverb" | "astrophysicalshockreverb" => Some("InterstellarMediumShockwaveReverb"),
+            "gravitationalwavebinarychirp" | "gravitationalwavechirp" | "binaryinspiralchirp" => Some("GravitationalWaveBinaryChirp"),
+            "casimirquantumvacuumnoise" | "casimirvacuumnoise" | "quantumvacuumgenerator" => Some("CasimirQuantumVacuumNoise"),
+            "acousticcloakingtransformationpanner" | "acousticcloakingpanner" | "transformationacousticcloak" => Some("AcousticCloakingTransformationPanner"),
+            "thermonuclearfusionresonator" | "thermonuclearsynth" | "tokamakplasmasynth" => Some("ThermonuclearFusionResonator"),
+            "aidemucsstemseparationengine" | "demucsseparator" | "stemseparationengine" => Some("AiDemucsStemSeparationEngine"),
+            "aiautonomousmasteringchain" | "autonomousmasteringengine" | "aimasteringchain" => Some("AiAutonomousMasteringChain"),
+            "vocalpitchformantretuner" | "vocalpitchcorrector" | "formantpitchretuner" => Some("VocalPitchFormantRetuner"),
+            "neuralaudiorestorationrepair" | "neuralaudiorepair" | "audiorestorationrepair" => Some("NeuralAudioRestorationRepair"),
+            "automateddynamicpsychoacousticeq" | "automateddynamiceq" | "psychoacousticdynamiceq" => Some("AutomatedDynamicPsychoacousticEq"),
+            "neuralroomimpulsematcher" | "neuraliracousticmatcher" | "roomimpulsematcher" => Some("NeuralRoomImpulseMatcher"),
             "drumclass" => Some("DrumClassClassification"),
             "mpeevent" => Some("ClapMpeEvent"),
             "nativeaudiodriver" => Some("NativeAudioDriverTuner"),
@@ -29698,6 +29908,195 @@ descriptors.insert("BellowsGesturePattern".to_string(), DspNodeDescriptor::new("
                     .with_param(DspParamDescriptor::new_linear("phase_inversion_left_channel", "Channel Phase Inversion Switch Mode", 0.0, 3.0, 0.0, "mode", (34, 197, 94)))
                     .with_param(DspParamDescriptor::new_bool("enable_auto_phase_cancellation_prevention", "Automatic Dynamic Elliptic Mono Sentry", false, (14, 165, 233)))
             ),
+            "NavierStokesFluidSolver" => Box::new(
+                GenericDspNodeUi::new("NavierStokesFluidSolver", "3D Zero-Gravity Navier-Stokes Fluid Dynamics Acoustic Solver", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("fluid_viscosity_coefficient", "Fluid Viscosity Coefficient", 0.0001, 1.0, 0.05, "visc", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("fluid_sound_speed_mps", "Acoustic Medium Speed of Sound", 100.0, 2000.0, 343.0, "m/s", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("pressure_relaxation_damping", "Pressure Poisson Relaxation Damping", 0.90, 0.999, 0.995, "decay", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("spatial_grid_resolution_cells", "3D Fluid Grid Subdivisions", 4.0, 32.0, 16.0, "cells", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("impulse_injection_position_ratio", "Acoustic Impulse Injection Center", 0.0, 1.0, 0.5, "pos", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("enable_laplacian_diffusion_smoothing", "Laplacian Velocity Field Smoothing", true, (14, 165, 233)))
+            ),
+            "QuantumMolecularBondResonator" => Box::new(
+                GenericDspNodeUi::new("QuantumMolecularBondResonator", "Quantum Molecular Bond Vibrational Frequency Resonator Bank", DspNodeCategory::SpectralResynthesis)
+                    .with_param(DspParamDescriptor::new_linear("molecular_bond_stiffness_nm", "Covalent Bond Spring Constant Stiffness", 10.0, 500.0, 120.0, "N/m", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("atomic_mass_amu", "Constituent Atomic Mass Unit", 1.0, 250.0, 16.0, "amu", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("anharmonic_potential_depth", "Morse Anharmonic Potential Depth", 0.0, 1.0, 0.25, "Morse", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("vibrational_damping_ps", "Intramolecular Relaxation Lifetime", 0.1, 50.0, 5.0, "ps", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("thermal_temperature_kelvin", "Ambient Absolute Temperature", 0.0, 1000.0, 293.15, "K", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("enable_quantum_zero_point_energy", "Quantum Zero-Point Energy Fluctuation", true, (14, 165, 233)))
+            ),
+            "PlasmaArcSonificationSynthesizer" => Box::new(
+                GenericDspNodeUi::new("PlasmaArcSonificationSynthesizer", "Singing High-Voltage Plasma Arc Acoustic Spark Synthesizer", DspNodeCategory::Oscillator)
+                    .with_param(DspParamDescriptor::new_linear("arc_breakdown_voltage_kv", "Dielectric Spark Breakdown Voltage", 1.0, 50.0, 15.0, "kV", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("plasma_channel_current_ma", "Conduction Channel Arc Current", 1.0, 200.0, 35.0, "mA", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("spark_gap_distance_mm", "Electrode Spark Gap Distance", 0.5, 30.0, 8.0, "mm", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("ionization_thermal_inertia_us", "Thermal Plasma Relaxation Inertia", 1.0, 500.0, 45.0, "us", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("corona_discharge_crackle_ratio", "Corona Discharge Stochastic Hiss", 0.0, 1.0, 0.15, "%", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("enable_high_frequency_spark_singing", "High-Frequency Ultrasonic PWM Singing", true, (14, 165, 233)))
+            ),
+            "AtmosphericDensityAbsorption" => Box::new(
+                GenericDspNodeUi::new("AtmosphericDensityAbsorption", "Barometric Pressure & Humidity Acoustic Wavefront Absorption", DspNodeCategory::SpatialSurround)
+                    .with_param(DspParamDescriptor::new_linear("altitude_elevation_meters", "Geographic Altitude Elevation", -500.0, 9000.0, 0.0, "m", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("ambient_temperature_celsius", "Ambient Atmospheric Temperature", -40.0, 50.0, 20.0, "deg C", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("relative_air_humidity_pct", "Relative Atmospheric Humidity", 5.0, 100.0, 50.0, "%", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("barometric_static_pressure_kpa", "Static Barometric Pressure", 30.0, 110.0, 101.3, "kPa", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("distance_propagation_meters", "Wavefront Distance Traveled", 1.0, 500.0, 25.0, "m", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("enable_molecular_nitrogen_relaxation", "Diatomic Nitrogen Molecular Relaxation", true, (14, 165, 233)))
+            ),
+            "QuantumDotPhotonTransducer" => Box::new(
+                GenericDspNodeUi::new("QuantumDotPhotonTransducer", "Colloidal Quantum Dot Optoelectronic Non-Linear Transducer", DspNodeCategory::DistortionSaturation)
+                    .with_param(DspParamDescriptor::new_linear("quantum_dot_core_radius_nm", "Nanocrystal Core Radius", 1.0, 10.0, 3.2, "nm", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("optical_pump_flux_photons", "Laser Optical Excitation Flux", 100.0, 10000.0, 1500.0, "flux", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("auger_recombination_saturation", "Non-Radiative Auger Saturation", 0.0, 1.0, 0.42, "%", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("exciton_blinking_stochastic_rate", "Surface Trap Exciton Blinking Rate", 0.1, 100.0, 12.5, "Hz", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("bandgap_luminescence_drive_db", "Optoelectronic Transducer Drive", 0.0, 36.0, 14.0, "dB", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("enable_quantum_confinement_shift", "Size-Dependent Blue-Shift Confinement", true, (14, 165, 233)))
+            ),
+            "AcousticLevitationStandingWaveTrap" => Box::new(
+                GenericDspNodeUi::new("AcousticLevitationStandingWaveTrap", "Phased Ultrasonic Acoustic Levitation Radiation Force Modulator", DspNodeCategory::Modulation)
+                    .with_param(DspParamDescriptor::new_linear("ultrasonic_trap_carrier_khz", "Ultrasonic Transducer Carrier Frequency", 20.0, 100.0, 40.0, "kHz", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("gorkov_acoustic_potential_depth", "Gor'kov Potential Well Acoustic Trap Depth", 0.01, 1.0, 0.65, "J", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("trapped_particle_mass_mg", "Levitated Particulate Virtual Mass", 0.1, 50.0, 2.5, "mg", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("standing_wave_phase_shift_deg", "Transducer Array Relative Phase Shift", -180.0, 180.0, 0.0, "deg", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("acoustic_streaming_vorticity_ratio", "Acoustic Rayleigh Streaming Vorticity", 0.0, 1.0, 0.28, "%", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("enable_dynamic_levitation_wobble", "Dynamic Node Harmonic Restoring Wobble", false, (14, 165, 233)))
+            ),
+            "SupercriticalFluidPhaseNoise" => Box::new(
+                GenericDspNodeUi::new("SupercriticalFluidPhaseNoise", "Supercritical CO2 Phase-Transition Cavitation Noise Generator", DspNodeCategory::Oscillator)
+                    .with_param(DspParamDescriptor::new_linear("critical_point_temperature_k", "Fluid Thermodynamic Temperature", 250.0, 450.0, 304.13, "K", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("critical_pressure_megapascal", "Fluid Thermodynamic Static Pressure", 5.0, 20.0, 7.38, "MPa", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("opalescence_density_fluctuation", "Critical Opalescence Density Fluctuation", 0.0, 1.0, 0.55, "%", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("cavitation_bubble_collapse_rate", "Micro-Cavitation Bubble Collapse Rate", 10.0, 5000.0, 420.0, "Hz", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("spectral_entropy_color_slope", "Noise Power Spectral Entropy Slope", -6.0, 6.0, -1.5, "dB/oct", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("enable_critical_opalescence_resonance", "Critical Point Divergence Resonance", true, (14, 165, 233)))
+            ),
+            "MagnetohydrodynamicPlasmaModulator" => Box::new(
+                GenericDspNodeUi::new("MagnetohydrodynamicPlasmaModulator", "Alfvén Wave Magnetohydrodynamic (MHD) Plasma Flux Modulator", DspNodeCategory::Modulation)
+                    .with_param(DspParamDescriptor::new_linear("magnetic_flux_density_tesla", "Background Magnetic Field Flux Density", 0.1, 10.0, 2.4, "T", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("alfven_wave_velocity_km_s", "Alfvén Transverse Wave Velocity", 10.0, 1000.0, 150.0, "km/s", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("plasma_beta_pressure_ratio", "Plasma Thermal to Magnetic Pressure (Beta)", 0.01, 2.0, 0.35, "beta", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("magnetic_shear_modulation_rate_hz", "Magnetic Field Shear Rotation Rate", 0.05, 50.0, 2.8, "Hz", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("magnetic_reconnection_burst_intensity", "Magnetic Reconnection Pulse Energy", 0.0, 1.0, 0.22, "burst", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("enable_frozen_in_flux_conservation", "Alfvén Frozen-in Flux Theorem Constraint", true, (14, 165, 233)))
+            ),
+            "SonoluminescenceCavitationSonifier" => Box::new(
+                GenericDspNodeUi::new("SonoluminescenceCavitationSonifier", "Acoustic Cavitation Bubble Picosecond Shockwave & Luminescence Sonifier", DspNodeCategory::DynamicsMaster)
+                    .with_param(DspParamDescriptor::new_linear("cavitation_drive_amplitude_db", "Acoustic Pressure Drive Intensity", 0.0, 36.0, 18.0, "dB", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("ambient_bubble_radius_microns", "Equilibrium Bubble Equilibrium Radius", 1.0, 50.0, 5.0, "um", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("liquid_viscous_damping_poise", "Liquid Medium Viscosity Damping", 0.005, 0.1, 0.01, "P", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("shockwave_hypersonic_compression", "Hypersonic In-Rushing Gas Shock Mach", 0.1, 5.0, 1.8, "Mach", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("luminescence_thermal_flash_target", "Core Quasi-Thermal Flash Temperature", 1000.0, 50000.0, 12000.0, "K", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("enable_single_bubble_synchronous_mode", "Synchronous Single-Bubble Cavitation Mode", true, (14, 165, 233)))
+            ),
+            "MetamaterialNegativeIndexFilter" => Box::new(
+                GenericDspNodeUi::new("MetamaterialNegativeIndexFilter", "Negative Effective Bulk Modulus Acoustic Metamaterial Filter", DspNodeCategory::FilterEq)
+                    .with_param(DspParamDescriptor::new_linear("negative_modulus_center_freq_hz", "Metamaterial Negative Modulus Center", 100.0, 15000.0, 1250.0, "Hz", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("metamaterial_bandgap_width_cents", "Acoustic Bandgap Rejection Bandwidth", 50.0, 2400.0, 450.0, "cents", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("effective_refractive_index", "Effective Acoustic Refractive Index (n)", -5.0, -0.1, -1.2, "n", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("subwavelength_labyrinth_cells", "Labyrinth Unit Cell Cascades", 2.0, 16.0, 6.0, "cells", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("evanescent_wave_amplification_db", "Evanescent Subwavelength Amplification", 0.0, 24.0, 6.0, "dB", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("enable_backward_phase_propagation", "Backward Wave Phase Propagation Mode", true, (14, 165, 233)))
+            ),
+            "InterstellarMediumShockwaveReverb" => Box::new(
+                GenericDspNodeUi::new("InterstellarMediumShockwaveReverb", "Astrophysical Interstellar Dust Cloud Supersonic Shockwave Reverb", DspNodeCategory::TimeSpace)
+                    .with_param(DspParamDescriptor::new_linear("shockwave_expansion_radius_parsecs", "Supernova Blast Wave Radius", 0.1, 20.0, 3.5, "pc", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("interstellar_gas_density_atoms_cc", "Ambient Interstellar Gas Density", 0.01, 100.0, 1.2, "atoms/cc", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("mach_number_supersonic_shock", "Front Compression Shock Mach Number", 1.1, 50.0, 8.5, "Mach", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("dust_grain_scattering_albedo", "Silicate Dust Grain Scattering Albedo", 0.0, 1.0, 0.65, "%", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("cooling_timescale_decay_seconds", "Radiative Post-Shock Cooling Decay", 0.5, 30.0, 8.0, "s", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("enable_synchrotron_energy_dissipation", "Relativistic Electron Synchrotron Losses", false, (14, 165, 233)))
+            ),
+            "GravitationalWaveBinaryChirp" => Box::new(
+                GenericDspNodeUi::new("GravitationalWaveBinaryChirp", "Compact Binary Inspiral Quadrupole Gravitational Wave Chirp Synth", DspNodeCategory::Oscillator)
+                    .with_param(DspParamDescriptor::new_linear("primary_component_mass_solar", "Primary Component Mass (Solar Masses)", 1.4, 100.0, 36.0, "M_sun", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("secondary_component_mass_solar", "Secondary Component Mass (Solar Masses)", 1.4, 100.0, 29.0, "M_sun", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("inspiral_starting_frequency_hz", "Inspiral Horizon Starting Frequency", 15.0, 200.0, 32.0, "Hz", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("orbital_eccentricity_ratio", "Keplerian Orbital Eccentricity", 0.0, 0.8, 0.05, "e", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("ringdown_quasinormal_damping_q", "Post-Merger Ringdown Q-Factor", 1.0, 50.0, 12.0, "Q", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("enable_spin_precession_polarization", "Orbital Plane Spin Precession Modulation", true, (14, 165, 233)))
+            ),
+            "CasimirQuantumVacuumNoise" => Box::new(
+                GenericDspNodeUi::new("CasimirQuantumVacuumNoise", "Quantum Electrodynamic Vacuum Fluctuation & Casimir Force Noise", DspNodeCategory::Oscillator)
+                    .with_param(DspParamDescriptor::new_linear("plate_separation_distance_nm", "Conductive Plate Gap Separation", 5.0, 500.0, 45.0, "nm", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("quantum_vacuum_field_intensity", "Zero-Point Vacuum Field Intensity", 0.01, 2.0, 0.85, "E_0", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("thermal_blackbody_correction_k", "Thermal Photon Correction Temperature", 0.0, 500.0, 77.0, "K", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("finite_conductivity_skin_depth", "Boundary Plate Metal Skin Depth", 0.1, 50.0, 12.0, "nm", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("dynamic_casimir_photon_production", "Dynamical Casimir Real Photon Generation", 0.0, 1.0, 0.18, "%", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("enable_sub_kelvin_ground_state", "Pure Zero-Kelvin Quantum Ground State", true, (14, 165, 233)))
+            ),
+            "AcousticCloakingTransformationPanner" => Box::new(
+                GenericDspNodeUi::new("AcousticCloakingTransformationPanner", "Transformation Optics Acoustic Cloaking & Wavefront Curvature Panner", DspNodeCategory::SpatialSurround)
+                    .with_param(DspParamDescriptor::new_linear("cloaking_shell_inner_radius_m", "Acoustic Cloak Inner Core Radius", 0.1, 5.0, 0.75, "m", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("cloaking_shell_outer_radius_m", "Acoustic Cloak Outer Shell Radius", 0.2, 10.0, 1.8, "m", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("anisotropic_density_radial_ratio", "Radial vs Azimuthal Anisotropy", 0.1, 10.0, 2.2, "ratio", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("wavefront_deflection_angle_deg", "Curvature Deflection Steering Angle", -180.0, 180.0, 45.0, "deg", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("shadowless_transparency_factor", "Shadowless Acoustic Transparency", 0.0, 1.0, 0.95, "%", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("enable_ideal_transformation_coordinate_map", "Exact Non-Euclidean Metric Tensor Mapping", true, (14, 165, 233)))
+            ),
+            "ThermonuclearFusionResonator" => Box::new(
+                GenericDspNodeUi::new("ThermonuclearFusionResonator", "Tokamak Magnetic Confinement Fusion Plasma Resonance Synthesizer", DspNodeCategory::Oscillator)
+                    .with_param(DspParamDescriptor::new_linear("toroidal_magnetic_field_tesla", "Toroidal Confinement Magnetic Field", 1.0, 15.0, 5.3, "T", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("plasma_core_temperature_kev", "Core Plasma Kinetic Temperature", 1.0, 50.0, 15.0, "keV", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("ion_cyclotron_resonance_harmonic", "Ion Cyclotron Gyro-Frequency Harmonic", 1.0, 16.0, 3.0, "harm", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("neoclassical_tearing_mode_drift", "Magnetic Island Tearing Mode Drift", 0.1, 20.0, 4.2, "Hz", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("plasma_current_megaamperes", "Poloidal Ohmic Heating Plasma Current", 0.5, 20.0, 7.5, "MA", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("enable_h_mode_edge_transport_barrier", "High-Confinement H-Mode Edge Barrier", true, (14, 165, 233)))
+            ),
+            "AiDemucsStemSeparationEngine" => Box::new(
+                GenericDspNodeUi::new("AiDemucsStemSeparationEngine", "Deep Neural Hybrid Conv-Transformer 4-Stem Real-Time Isolator", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("stem_isolation_drums_db", "Isolated Drum Stem Gain Level", -60.0, 12.0, 0.0, "dB", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("stem_isolation_bass_db", "Isolated Bass Stem Gain Level", -60.0, 12.0, 0.0, "dB", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("stem_isolation_vocals_db", "Isolated Vocal Stem Gain Level", -60.0, 12.0, 0.0, "dB", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("stem_isolation_other_db", "Isolated Instrumental Residual Gain", -60.0, 12.0, 0.0, "dB", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("cross_stem_leakage_suppression", "Inter-Stem Crosstalk Bleed Suppression", 0.0, 1.0, 0.85, "%", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("enable_hybrid_spectrogram_inference", "Dual Time-Domain & Complex STFT Inference", true, (14, 165, 233)))
+            ),
+            "AiAutonomousMasteringChain" => Box::new(
+                GenericDspNodeUi::new("AiAutonomousMasteringChain", "Autonomous Multi-Stage AI Mastering Balance & Loudness Chain", DspNodeCategory::DynamicsMaster)
+                    .with_param(DspParamDescriptor::new_linear("target_integrated_lufs", "Master Integrated Loudness Target", -24.0, -6.0, -14.0, "LUFS", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("spectral_profile_matching_strength", "Genre Spectral Reference Matching", 0.0, 1.0, 0.75, "%", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("dynamic_crest_expansion_factor", "Dynamic Crest Factor Transient Preserver", 0.5, 2.0, 1.0, "factor", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("stereo_image_clarity_enhancement", "Stereo Width & Correlation Enhancer", 0.0, 1.0, 0.35, "%", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("ceiling_true_peak_margin_db", "Brickwall True-Peak Output Ceiling", -3.0, 0.0, -0.8, "dBTP", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("enable_intersample_oversampled_guard", "8x Oversampled Intersample Peak Sentry", true, (14, 165, 233)))
+            ),
+            "VocalPitchFormantRetuner" => Box::new(
+                GenericDspNodeUi::new("VocalPitchFormantRetuner", "Neural Vocal Pitch & Formant Retuner with Gender Transposition", DspNodeCategory::SpectralResynthesis)
+                    .with_param(DspParamDescriptor::new_linear("pitch_correction_speed_ms", "Pitch Retune Correction Speed", 0.0, 100.0, 20.0, "ms", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("pitch_quantize_scale_snap", "Musical Scale Snapping Pull Factor", 0.0, 1.0, 1.0, "%", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("formant_throat_length_shift", "Vocal Tract Throat Length Shift", -12.0, 12.0, 0.0, "semitones", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("vocal_gender_morph_ratio", "Male to Female Timbral Gender Morph", -1.0, 1.0, 0.0, "morph", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("natural_vibrato_preservation", "Natural Vibrato Depth Preservation", 0.0, 1.0, 0.8, "%", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("enable_neural_glottal_pulse_modeling", "Neural Glottal Pulse Resynthesis", true, (14, 165, 233)))
+            ),
+            "NeuralAudioRestorationRepair" => Box::new(
+                GenericDspNodeUi::new("NeuralAudioRestorationRepair", "Deep Neural Forensic Waveform De-Click, De-Clip & De-Hum Repair", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("waveform_declip_headroom_db", "Clipped Peak Reconstruction Headroom", 0.0, 18.0, 6.0, "dB", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("transient_declick_sensitivity", "Vinyl Scratch & Click Detection Sens", 0.0, 1.0, 0.65, "%", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("mains_hum_harmonic_rejection_db", "50/60 Hz Mains Hum Notch Depth", 0.0, 60.0, 36.0, "dB", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("spectral_noise_floor_floor_db", "Target Spectral Noise Floor Threshold", -90.0, -20.0, -60.0, "dB", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("reconstructed_wave_spectral_blend", "Restored vs Original Audio Wet Blend", 0.0, 1.0, 1.0, "%", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("enable_adaptive_background_spectral_learning", "Real-Time Adaptive Noise Fingerprint", true, (14, 165, 233)))
+            ),
+            "AutomatedDynamicPsychoacousticEq" => Box::new(
+                GenericDspNodeUi::new("AutomatedDynamicPsychoacousticEq", "Automated Psychoacoustic Spectral Masking & Collision Dynamic EQ", DspNodeCategory::FilterEq)
+                    .with_param(DspParamDescriptor::new_linear("masking_detection_sensitivity", "Critical Bark Masking Detection Sens", 0.1, 2.0, 1.0, "sens", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("dynamic_carve_max_cut_db", "Maximum Dynamic Spectral Cut Depth", 0.0, 18.0, 6.0, "dB", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("critical_band_bark_resolution", "Auditory Filter Bank Bark Resolution", 1.0, 24.0, 12.0, "bands", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("dynamic_attack_recovery_ms", "Dynamic Carving Attack & Recovery Time", 5.0, 500.0, 65.0, "ms", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("sidechain_unmask_listening_focus", "External Sidechain Unmask Priority", 0.0, 1.0, 0.5, "%", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("enable_equal_loudness_fletcher_munson", "ISO 226 Fletcher-Munson Equal Loudness", true, (14, 165, 233)))
+            ),
+            "NeuralRoomImpulseMatcher" => Box::new(
+                GenericDspNodeUi::new("NeuralRoomImpulseMatcher", "Neural Room Acoustic Transfer Function & Impulse Response Matcher", DspNodeCategory::TimeSpace)
+                    .with_param(DspParamDescriptor::new_linear("acoustic_profile_match_accuracy", "Acoustic Target Matching Convergence", 0.0, 1.0, 0.9, "%", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("room_volume_target_cubic_meters", "Target Virtual Acoustic Room Volume", 10.0, 5000.0, 250.0, "m^3", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("rt60_reverberation_decay_seconds", "Broadband RT60 Reverberation Time", 0.1, 10.0, 1.4, "s", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("wall_material_absorption_hf", "Boundary Wall High-Frequency Absorption", 0.05, 0.95, 0.35, "alpha", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("direct_to_reverberant_ratio_db", "Direct-to-Reverberant Energy Ratio", -24.0, 24.0, 4.0, "dB", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("enable_binaural_parallax_matching", "Binaural Interaural Time Delay Matching", true, (14, 165, 233)))
+            ),
             // Fallback dynamic generator for any unexpected or plugin node
             other => {
                 let cat = Self::inventory()
@@ -32792,6 +33191,89 @@ assert!(registry.get("BellowsGesturePattern").is_some());
         assert_eq!(DspNodeRegistry::normalize_type_name("bbdanalogdelayunit"), Some("BucketBrigadeAnalogDelayUnit"));
         assert_eq!(DspNodeRegistry::normalize_type_name("stereophasecorrelationanalyzer"), Some("StereoPhaseCorrelationAnalyzer"));
         assert_eq!(DspNodeRegistry::normalize_type_name("phasecorrelationanalyzer"), Some("StereoPhaseCorrelationAnalyzer"));
+    }
+
+    #[test]
+    fn test_tier144_inventory_count_and_parameter_completeness() {
+        let registry = DspNodeRegistry::new();
+        let inv = DspNodeRegistry::inventory();
+        assert!(inv.len() >= 1634, "Inventory must contain at least 1634 DSP modules, found {}", inv.len());
+        assert!(registry.list_all().len() >= 1634, "Registry list_all must be >= 1634, found {}", registry.list_all().len());
+
+        let tier144_nodes = [
+            ("NavierStokesFluidSolver", DspNodeCategory::AcousticPhysicalModel),
+            ("QuantumMolecularBondResonator", DspNodeCategory::SpectralResynthesis),
+            ("PlasmaArcSonificationSynthesizer", DspNodeCategory::Oscillator),
+            ("AtmosphericDensityAbsorption", DspNodeCategory::SpatialSurround),
+            ("QuantumDotPhotonTransducer", DspNodeCategory::DistortionSaturation),
+            ("AcousticLevitationStandingWaveTrap", DspNodeCategory::Modulation),
+            ("SupercriticalFluidPhaseNoise", DspNodeCategory::Oscillator),
+            ("MagnetohydrodynamicPlasmaModulator", DspNodeCategory::Modulation),
+            ("SonoluminescenceCavitationSonifier", DspNodeCategory::DynamicsMaster),
+            ("MetamaterialNegativeIndexFilter", DspNodeCategory::FilterEq),
+            ("InterstellarMediumShockwaveReverb", DspNodeCategory::TimeSpace),
+            ("GravitationalWaveBinaryChirp", DspNodeCategory::Oscillator),
+            ("CasimirQuantumVacuumNoise", DspNodeCategory::Oscillator),
+            ("AcousticCloakingTransformationPanner", DspNodeCategory::SpatialSurround),
+            ("ThermonuclearFusionResonator", DspNodeCategory::Oscillator),
+            ("AiDemucsStemSeparationEngine", DspNodeCategory::Utility),
+            ("AiAutonomousMasteringChain", DspNodeCategory::DynamicsMaster),
+            ("VocalPitchFormantRetuner", DspNodeCategory::SpectralResynthesis),
+            ("NeuralAudioRestorationRepair", DspNodeCategory::Utility),
+            ("AutomatedDynamicPsychoacousticEq", DspNodeCategory::FilterEq),
+            ("NeuralRoomImpulseMatcher", DspNodeCategory::TimeSpace),
+        ];
+
+        for (name, expected_cat) in tier144_nodes {
+            let desc = registry.get(name).unwrap_or_else(|| panic!("Module {} missing from registry", name));
+            assert_eq!(desc.category, expected_cat, "Category mismatch for {}", name);
+            assert!(desc.params.len() >= 5, "Module {} must have >= 5 params, found {}", name, desc.params.len());
+            assert!(DspNodeRegistry::create_node_ui(name).is_some(), "create_node_ui failed for {}", name);
+        }
+
+        // Test normalizations
+        assert_eq!(DspNodeRegistry::normalize_type_name("navierstokesfluidsolver"), Some("NavierStokesFluidSolver"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("navierstokesfluid"), Some("NavierStokesFluidSolver"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("quantummolecularbondresonator"), Some("QuantumMolecularBondResonator"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("quantummolecularbond"), Some("QuantumMolecularBondResonator"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("plasmaarcsonificationsynthesizer"), Some("PlasmaArcSonificationSynthesizer"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("plasmaarcsynth"), Some("PlasmaArcSonificationSynthesizer"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("atmosphericdensityabsorption"), Some("AtmosphericDensityAbsorption"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("atmosphericabsorption"), Some("AtmosphericDensityAbsorption"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("quantumdotphotontransducer"), Some("QuantumDotPhotonTransducer"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("quantumdottransducer"), Some("QuantumDotPhotonTransducer"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("acousticlevitationstandingwavetrap"), Some("AcousticLevitationStandingWaveTrap"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("acousticstandingwavetrap"), Some("AcousticLevitationStandingWaveTrap"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("supercriticalfluidphasenoise"), Some("SupercriticalFluidPhaseNoise"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("supercriticalfluidnoise"), Some("SupercriticalFluidPhaseNoise"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("magnetohydrodynamicplasmamodulator"), Some("MagnetohydrodynamicPlasmaModulator"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("mhdplasmamodulator"), Some("MagnetohydrodynamicPlasmaModulator"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("sonoluminescencecavitationsonifier"), Some("SonoluminescenceCavitationSonifier"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("sonoluminescencesonifier"), Some("SonoluminescenceCavitationSonifier"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("metamaterialnegativeindexfilter"), Some("MetamaterialNegativeIndexFilter"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("metamaterialfilter"), Some("MetamaterialNegativeIndexFilter"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("interstellarmediumshockwavereverb"), Some("InterstellarMediumShockwaveReverb"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("interstellarshockreverb"), Some("InterstellarMediumShockwaveReverb"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("gravitationalwavebinarychirp"), Some("GravitationalWaveBinaryChirp"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("gravitationalwavechirp"), Some("GravitationalWaveBinaryChirp"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("casimirquantumvacuumnoise"), Some("CasimirQuantumVacuumNoise"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("casimirvacuumnoise"), Some("CasimirQuantumVacuumNoise"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("acousticcloakingtransformationpanner"), Some("AcousticCloakingTransformationPanner"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("acousticcloakingpanner"), Some("AcousticCloakingTransformationPanner"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("thermonuclearfusionresonator"), Some("ThermonuclearFusionResonator"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("thermonuclearsynth"), Some("ThermonuclearFusionResonator"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("aidemucsstemseparationengine"), Some("AiDemucsStemSeparationEngine"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("demucsseparator"), Some("AiDemucsStemSeparationEngine"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("aiautonomousmasteringchain"), Some("AiAutonomousMasteringChain"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("autonomousmasteringengine"), Some("AiAutonomousMasteringChain"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("vocalpitchformantretuner"), Some("VocalPitchFormantRetuner"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("vocalpitchcorrector"), Some("VocalPitchFormantRetuner"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("neuralaudiorestorationrepair"), Some("NeuralAudioRestorationRepair"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("neuralaudiorepair"), Some("NeuralAudioRestorationRepair"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("automateddynamicpsychoacousticeq"), Some("AutomatedDynamicPsychoacousticEq"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("automateddynamiceq"), Some("AutomatedDynamicPsychoacousticEq"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("neuralroomimpulsematcher"), Some("NeuralRoomImpulseMatcher"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("neuraliracousticmatcher"), Some("NeuralRoomImpulseMatcher"));
     }
 
     #[test]
