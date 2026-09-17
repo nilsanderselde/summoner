@@ -9198,7 +9198,7 @@ mod tests {
     fn test_tier130_full_workflow() {
         let registry = crate::dsp_node_ui::DspNodeRegistry::new();
         let inv = crate::dsp_node_ui::DspNodeRegistry::inventory();
-        assert_eq!(inv.len(), 1340, "Inventory must contain exactly 1340 DSP modules");
+        assert!(inv.len() >= 1340, "Inventory must contain at least 1340 DSP modules");
         assert!(registry.list_all().len() >= 1340, "Registry list_all must be >= 1340");
 
         // 1. Tier 130 registration and completeness
@@ -9313,6 +9313,145 @@ mod tests {
             ("Automated C-ABI CLAP Standalone Audio Plugin Packager", "CliClapPluginExporter"),
             ("Real-Time DSP Hardware Load Profiler & Thread Latency Monitor", "CliDspProfiler"),
             ("Microtiming Groove Jitter Humanizer & Velocity Dynamism", "CliGrooveHumanizer"),
+        ];
+
+        for (preset_name, target_node) in presets {
+            view.top_bar_state.selected_preset = preset_name.to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some(target_node.to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some(target_node.to_string()));
+        }
+    }
+
+    #[test]
+    fn test_tier131_full_workflow() {
+        let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+        let inv = crate::dsp_node_ui::DspNodeRegistry::inventory();
+        assert_eq!(inv.len(), 1361, "Inventory must contain exactly 1361 DSP modules");
+        assert!(registry.list_all().len() >= 1361, "Registry list_all must be >= 1361");
+
+        // 1. Tier 131 registration and completeness
+        let tier131_modules = [
+            ("CliBatchAudioConverter", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliProjectZipBackup", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliAbletonExporter", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliAbletonClipImporter", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliReaperExporter", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliDawprojectExporter", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliDawprojectImporter", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliMidiFileExporter", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliMidiFileImporter", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliGraphSvgExporter", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliAutomationCsvExporter", crate::dsp_node_ui::DspNodeCategory::Modulation),
+            ("CliAutomationCsvImporter", crate::dsp_node_ui::DspNodeCategory::Modulation),
+            ("CliAudioBenchmarkRunner", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliScriptTestRunner", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliScriptReplHarness", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliScriptAutomationRunner", crate::dsp_node_ui::DspNodeCategory::Modulation),
+            ("CliScriptSecurityAuditor", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliScriptFormatter", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliScriptLinter", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliScriptMinifier", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliScriptDocGenerator", crate::dsp_node_ui::DspNodeCategory::Utility),
+        ];
+
+        for (name, expected_cat) in tier131_modules {
+            let desc = registry.get(name).unwrap_or_else(|| panic!("Tier 131 module {} missing from registry", name));
+            assert_eq!(desc.category, expected_cat, "Category mismatch for {}", name);
+            assert!(desc.params.len() >= 5, "Module {} must have >= 5 params, found {}", name, desc.params.len());
+            assert!(crate::dsp_node_ui::DspNodeRegistry::create_node_ui(name).is_some(), "create_node_ui failed for {}", name);
+        }
+
+        // 2. Verify Aliases & Normalization
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clibatchaudioconverter"), Some("CliBatchAudioConverter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("batchaudioconverter"), Some("CliBatchAudioConverter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("summonconvert"), Some("CliBatchAudioConverter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cliprojectzipbackup"), Some("CliProjectZipBackup"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("projectzipbackup"), Some("CliProjectZipBackup"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cliabletonexporter"), Some("CliAbletonExporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("abletonexporter"), Some("CliAbletonExporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cliabletonclipimporter"), Some("CliAbletonClipImporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("abletonclipimporter"), Some("CliAbletonClipImporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clireaperexporter"), Some("CliReaperExporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("reaperexporter"), Some("CliReaperExporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clidawprojectexporter"), Some("CliDawprojectExporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("dawprojectexporter"), Some("CliDawprojectExporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clidawprojectimporter"), Some("CliDawprojectImporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("dawprojectimporter"), Some("CliDawprojectImporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("climidifileexporter"), Some("CliMidiFileExporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("midifileexporter"), Some("CliMidiFileExporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("climidifileimporter"), Some("CliMidiFileImporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("midifileimporter"), Some("CliMidiFileImporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cligraphsvgexporter"), Some("CliGraphSvgExporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("graphsvgexporter"), Some("CliGraphSvgExporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cliautomationcsvexporter"), Some("CliAutomationCsvExporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("automationcsvexporter"), Some("CliAutomationCsvExporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cliautomationcsvimporter"), Some("CliAutomationCsvImporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("automationcsvimporter"), Some("CliAutomationCsvImporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cliaudiobenchmarkrunner"), Some("CliAudioBenchmarkRunner"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("audiobenchmarkrunner"), Some("CliAudioBenchmarkRunner"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("summonbenchmark"), Some("CliAudioBenchmarkRunner"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cliscripttestrunner"), Some("CliScriptTestRunner"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("scripttestrunner"), Some("CliScriptTestRunner"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("summontestscripts"), Some("CliScriptTestRunner"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cliscriptreplharness"), Some("CliScriptReplHarness"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("scriptreplharness"), Some("CliScriptReplHarness"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("summonrepl"), Some("CliScriptReplHarness"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cliscriptautomationrunner"), Some("CliScriptAutomationRunner"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("scriptautomationrunner"), Some("CliScriptAutomationRunner"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("summonautomate"), Some("CliScriptAutomationRunner"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cliscriptsecurityauditor"), Some("CliScriptSecurityAuditor"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("scriptsecurityauditor"), Some("CliScriptSecurityAuditor"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cliscriptformatter"), Some("CliScriptFormatter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("scriptformatter"), Some("CliScriptFormatter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("summonfmtlua"), Some("CliScriptFormatter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cliscriptlinter"), Some("CliScriptLinter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("scriptlinter"), Some("CliScriptLinter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cliscriptminifier"), Some("CliScriptMinifier"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("scriptminifier"), Some("CliScriptMinifier"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cliscriptdocgenerator"), Some("CliScriptDocGenerator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("scriptdocgenerator"), Some("CliScriptDocGenerator"));
+
+        // 3. Verify Asset Browser categorization
+        use crate::views::modern_asset_browser::BrowserCategory;
+
+        let midi_fx_folders = BrowserCategory::MidiFx.default_folders();
+        let routing_items = midi_fx_folders.iter().find(|(name, _)| *name == "Transforms & Routing").unwrap().1;
+        assert!(routing_items.contains(&"CliBatchAudioConverter"));
+        assert!(routing_items.contains(&"CliProjectZipBackup"));
+        assert!(routing_items.contains(&"CliAbletonExporter"));
+        assert!(routing_items.contains(&"CliAbletonClipImporter"));
+        assert!(routing_items.contains(&"CliReaperExporter"));
+        assert!(routing_items.contains(&"CliDawprojectExporter"));
+        assert!(routing_items.contains(&"CliDawprojectImporter"));
+        assert!(routing_items.contains(&"CliMidiFileExporter"));
+        assert!(routing_items.contains(&"CliMidiFileImporter"));
+        assert!(routing_items.contains(&"CliGraphSvgExporter"));
+        assert!(routing_items.contains(&"CliAutomationCsvExporter"));
+        assert!(routing_items.contains(&"CliAutomationCsvImporter"));
+        assert!(routing_items.contains(&"CliAudioBenchmarkRunner"));
+        assert!(routing_items.contains(&"CliScriptTestRunner"));
+        assert!(routing_items.contains(&"CliScriptReplHarness"));
+        assert!(routing_items.contains(&"CliScriptAutomationRunner"));
+        assert!(routing_items.contains(&"CliScriptSecurityAuditor"));
+        assert!(routing_items.contains(&"CliScriptFormatter"));
+        assert!(routing_items.contains(&"CliScriptLinter"));
+        assert!(routing_items.contains(&"CliScriptMinifier"));
+        assert!(routing_items.contains(&"CliScriptDocGenerator"));
+
+        // 4. Verify interactive AwardWinningGuiView selects Tier 131 preset nodes
+        let mut view = crate::views::award_winning_gui_view::AwardWinningGuiView::default();
+        let ctx = eframe::egui::Context::default();
+
+        let presets = [
+            ("Universal Multi-Format Batch Audio Transcoding & Dither Studio", "CliBatchAudioConverter"),
+            ("Universal Open Standard DAWproject Cross-DAW Container Packager", "CliDawprojectExporter"),
+            ("Real-Time Audio Graph Throughput Benchmark & Latency Profiler", "CliAudioBenchmarkRunner"),
+            ("Static Lua DSP AST Security Guard & Sandbox Privilege Auditor", "CliScriptSecurityAuditor"),
         ];
 
         for (preset_name, target_node) in presets {

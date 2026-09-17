@@ -528,6 +528,10 @@ impl AwardWinningGuiView {
                 "Automated C-ABI CLAP Standalone Audio Plugin Packager" => "CliClapPluginExporter",
                 "Real-Time DSP Hardware Load Profiler & Thread Latency Monitor" => "CliDspProfiler",
                 "Microtiming Groove Jitter Humanizer & Velocity Dynamism" => "CliGrooveHumanizer",
+                "Universal Multi-Format Batch Audio Transcoding & Dither Studio" => "CliBatchAudioConverter",
+                "Universal Open Standard DAWproject Cross-DAW Container Packager" => "CliDawprojectExporter",
+                "Real-Time Audio Graph Throughput Benchmark & Latency Profiler" => "CliAudioBenchmarkRunner",
+                "Static Lua DSP AST Security Guard & Sandbox Privilege Auditor" => "CliScriptSecurityAuditor",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {

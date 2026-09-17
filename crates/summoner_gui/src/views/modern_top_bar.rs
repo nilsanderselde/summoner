@@ -293,6 +293,10 @@ fn default_available_presets() -> Vec<String> {
         "Automated C-ABI CLAP Standalone Audio Plugin Packager".to_string(),
         "Real-Time DSP Hardware Load Profiler & Thread Latency Monitor".to_string(),
         "Microtiming Groove Jitter Humanizer & Velocity Dynamism".to_string(),
+        "Universal Multi-Format Batch Audio Transcoding & Dither Studio".to_string(),
+        "Universal Open Standard DAWproject Cross-DAW Container Packager".to_string(),
+        "Real-Time Audio Graph Throughput Benchmark & Latency Profiler".to_string(),
+        "Static Lua DSP AST Security Guard & Sandbox Privilege Auditor".to_string(),
     ]
 }
 
