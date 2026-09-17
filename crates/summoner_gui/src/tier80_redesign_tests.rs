@@ -6747,7 +6747,7 @@ mod tests {
 
         // 1. Verify 988 total DSP modules registered
         let total_modules = DspNodeRegistry::inventory();
-        assert_eq!(total_modules.len(), 988, "Must have exactly 988 registered DSP modules");
+        assert!(total_modules.len() >= 988, "Must have at least 988 registered DSP modules, found {}", total_modules.len());
         assert!(
             registry.list_all().len() >= 988,
             "Must have at least 988 registered DSP modules, found {}",
@@ -6898,7 +6898,7 @@ mod tests {
 
         // 1. Verify 1009 total DSP modules registered (crossing the 1,000 milestone!)
         let total_modules = DspNodeRegistry::inventory();
-        assert_eq!(total_modules.len(), 1009, "Must have exactly 1009 registered DSP modules");
+        assert!(total_modules.len() >= 1009, "Must have at least 1009 registered DSP modules, found {}", total_modules.len());
         assert!(
             registry.list_all().len() >= 1009,
             "Must have at least 1009 registered DSP modules, found {}",
@@ -7056,6 +7056,175 @@ mod tests {
             });
             assert_eq!(view.device_rack_state.selected_node_kind, Some("GrandPianoGesturePattern".to_string()));
             assert_eq!(view.inspector_state.selected_node_kind, Some("GrandPianoGesturePattern".to_string()));
+        }
+    }
+
+    #[test]
+    fn test_tier115_modern_gui_dsp_module_coverage_and_presets() {
+        use crate::dsp_node_ui::{DspNodeRegistry, DspNodeCategory};
+        use crate::views::modern_asset_browser::BrowserCategory;
+
+        let registry = DspNodeRegistry::new();
+
+        // 1. Verify 1030 total DSP modules registered
+        let total_modules = DspNodeRegistry::inventory();
+        assert_eq!(total_modules.len(), 1030, "Must have exactly 1030 registered DSP modules");
+        assert!(
+            registry.list_all().len() >= 1030,
+            "Must have at least 1030 registered DSP modules, found {}",
+            registry.list_all().len()
+        );
+
+        // 2. Verify all 21 new modules exist with correct categories and tactile parameters (>= 5 params each)
+        let new_modules = [
+            ("PipeOrganProfile", DspNodeCategory::AcousticPhysicalModel),
+            ("PlateReverbProfile", DspNodeCategory::TimeSpace),
+            ("PluckedInstrumentProfile", DspNodeCategory::AcousticPhysicalModel),
+            ("MembraneInstrumentProfile", DspNodeCategory::AcousticPhysicalModel),
+            ("MeshMaterialProfile", DspNodeCategory::AcousticPhysicalModel),
+            ("RotaryCabinetModel", DspNodeCategory::Modulation),
+            ("ShakuhachiProfile", DspNodeCategory::AcousticPhysicalModel),
+            ("SitarProfile", DspNodeCategory::AcousticPhysicalModel),
+            ("SoundboardProfile", DspNodeCategory::AcousticPhysicalModel),
+            ("SpringLatticeProfile", DspNodeCategory::TimeSpace),
+            ("TonewheelOrganProfile", DspNodeCategory::AcousticPhysicalModel),
+            ("WoodwindInstrumentProfile", DspNodeCategory::AcousticPhysicalModel),
+            ("BellowsInterpolationCurve", DspNodeCategory::Modulation),
+            ("BowingInterpolationCurve", DspNodeCategory::Modulation),
+            ("ClavinetInterpolationCurve", DspNodeCategory::Modulation),
+            ("EpInterpolationCurve", DspNodeCategory::Modulation),
+            ("GlassInterpolationCurve", DspNodeCategory::Modulation),
+            ("GrandPianoInterpolationCurve", DspNodeCategory::Modulation),
+            ("HurdyGurdyInterpolationCurve", DspNodeCategory::Modulation),
+            ("KotoInterpolationCurve", DspNodeCategory::Modulation),
+            ("MalletInterpolationCurve", DspNodeCategory::Modulation),
+        ];
+
+        for (name, expected_cat) in new_modules {
+            let desc = registry.get(name).unwrap_or_else(|| panic!("Module {} not found", name));
+            assert_eq!(desc.category, expected_cat, "Module {} category mismatch", name);
+            assert!(desc.params.len() >= 5, "Module {} must have >= 5 tactile parameters, found {}", name, desc.params.len());
+        }
+
+        // 3. Verify normalization mappings
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pipeorganprofile"), Some("PipeOrganProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("organplenumprofile"), Some("PipeOrganProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("platereverbprofile"), Some("PlateReverbProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("emt140profile"), Some("PlateReverbProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pluckedinstrumentprofile"), Some("PluckedInstrumentProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("acousticpluckprofile"), Some("PluckedInstrumentProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("membraneinstrumentprofile"), Some("MembraneInstrumentProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("percussionmembraneprofile"), Some("MembraneInstrumentProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("meshmaterialprofile"), Some("MeshMaterialProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("waveguidemeshprofile"), Some("MeshMaterialProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("rotarycabinetmodel"), Some("RotaryCabinetModel"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("lesliecabinetprofile"), Some("RotaryCabinetModel"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("shakuhachiprofile"), Some("ShakuhachiProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("zenfluteprofile"), Some("ShakuhachiProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sitarprofile"), Some("SitarProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("jawarisitarprofile"), Some("SitarProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("soundboardprofile"), Some("SoundboardProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("steinwaysoundboardprofile"), Some("SoundboardProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("springlatticeprofile"), Some("SpringLatticeProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("accutronicsspringprofile"), Some("SpringLatticeProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("tonewheelorganprofile"), Some("TonewheelOrganProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("b3drawbarprofile"), Some("TonewheelOrganProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("woodwindinstrumentprofile"), Some("WoodwindInstrumentProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("acousticfluteprofile"), Some("WoodwindInstrumentProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("bellowsinterpolationcurve"), Some("BellowsInterpolationCurve"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("accordionbellowscurve"), Some("BellowsInterpolationCurve"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("bowinginterpolationcurve"), Some("BowingInterpolationCurve"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cellobowingcurve"), Some("BowingInterpolationCurve"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clavinetinterpolationcurve"), Some("ClavinetInterpolationCurve"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clavinettangentcurve"), Some("ClavinetInterpolationCurve"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("epinterpolationcurve"), Some("EpInterpolationCurve"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("electricpianotinecurve"), Some("EpInterpolationCurve"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("glassinterpolationcurve"), Some("GlassInterpolationCurve"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("armonicaspindlecurve"), Some("GlassInterpolationCurve"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("grandpianointerpolationcurve"), Some("GrandPianoInterpolationCurve"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pianohammercurve"), Some("GrandPianoInterpolationCurve"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("hurdygurdyinterpolationcurve"), Some("HurdyGurdyInterpolationCurve"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("gurdycrankcurve"), Some("HurdyGurdyInterpolationCurve"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("kotointerpolationcurve"), Some("KotoInterpolationCurve"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("kotooshitecurve"), Some("KotoInterpolationCurve"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("malletinterpolationcurve"), Some("MalletInterpolationCurve"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("tunedmalletstrikecurve"), Some("MalletInterpolationCurve"));
+
+        // 4. Verify Asset Browser categorization
+        let inst_folders = BrowserCategory::Instruments.default_folders();
+        let phys_items = inst_folders.iter().find(|(name, _)| *name == "Physical Models").unwrap().1;
+        assert!(phys_items.contains(&"PipeOrganProfile"));
+        assert!(phys_items.contains(&"PluckedInstrumentProfile"));
+        assert!(phys_items.contains(&"MembraneInstrumentProfile"));
+        assert!(phys_items.contains(&"MeshMaterialProfile"));
+        assert!(phys_items.contains(&"ShakuhachiProfile"));
+        assert!(phys_items.contains(&"SitarProfile"));
+        assert!(phys_items.contains(&"SoundboardProfile"));
+        assert!(phys_items.contains(&"TonewheelOrganProfile"));
+        assert!(phys_items.contains(&"WoodwindInstrumentProfile"));
+
+        let fx_folders = BrowserCategory::AudioFx.default_folders();
+        let space_items = fx_folders.iter().find(|(name, _)| *name == "Time & Reverb").unwrap().1;
+        assert!(space_items.contains(&"PlateReverbProfile"));
+        assert!(space_items.contains(&"SpringLatticeProfile"));
+
+        let mod_items = fx_folders.iter().find(|(name, _)| *name == "Modulation & Pitch").unwrap().1;
+        assert!(mod_items.contains(&"RotaryCabinetModel"));
+        assert!(mod_items.contains(&"BellowsInterpolationCurve"));
+        assert!(mod_items.contains(&"BowingInterpolationCurve"));
+        assert!(mod_items.contains(&"ClavinetInterpolationCurve"));
+        assert!(mod_items.contains(&"EpInterpolationCurve"));
+        assert!(mod_items.contains(&"GlassInterpolationCurve"));
+        assert!(mod_items.contains(&"GrandPianoInterpolationCurve"));
+        assert!(mod_items.contains(&"HurdyGurdyInterpolationCurve"));
+        assert!(mod_items.contains(&"KotoInterpolationCurve"));
+        assert!(mod_items.contains(&"MalletInterpolationCurve"));
+
+        // 5. Verify Novice Presets synchronize in AwardWinningGuiView
+        #[cfg(feature = "gui")]
+        {
+            let mut view = crate::views::award_winning_gui_view::AwardWinningGuiView::default();
+            let ctx = eframe::egui::Context::default();
+
+            // Preset 1: Baroque Pipe Organ Tutti Plenum & Mixture Ranks -> PipeOrganProfile
+            view.top_bar_state.selected_preset = "Baroque Pipe Organ Tutti Plenum & Mixture Ranks".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("PipeOrganProfile".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("PipeOrganProfile".to_string()));
+
+            // Preset 2: Vintage EMT-140 Cold-Rolled Steel Suspension Reverb -> PlateReverbProfile
+            view.top_bar_state.selected_preset = "Vintage EMT-140 Cold-Rolled Steel Suspension Reverb".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("PlateReverbProfile".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("PlateReverbProfile".to_string()));
+
+            // Preset 3: Concert Steinway D 9-Foot Resonant Soundboard -> SoundboardProfile
+            view.top_bar_state.selected_preset = "Concert Steinway D 9-Foot Resonant Soundboard".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("SoundboardProfile".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("SoundboardProfile".to_string()));
+
+            // Preset 4: Classic B3 Tonewheel Organ Full Gospel Drawbars -> TonewheelOrganProfile
+            view.top_bar_state.selected_preset = "Classic B3 Tonewheel Organ Full Gospel Drawbars".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("TonewheelOrganProfile".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("TonewheelOrganProfile".to_string()));
         }
     }
 }
