@@ -249,6 +249,10 @@ fn default_available_presets() -> Vec<String> {
         "Miles Dark Harmon Stem-Out Trumpet & Tractrix Brass Flare".to_string(),
         "Kyoto Imperial 13-String Paulownia Koto Hira-Joshi Suite".to_string(),
         "Abbey Road Class-A 12AX7 Dual Triode Tube Console".to_string(),
+        "Neural Lo-Fi Vinyl Audio Style Transfer & Saturation".to_string(),
+        "Bourbonnais Vielle à Roue Wrist Accent Coup de Poignet".to_string(),
+        "Hammond B3 3rd Fast Percussion & C3 Scanner Chorus Suite".to_string(),
+        "Kelly-Lochbaum Formant Vowel Kelly Acoustic Waveguide".to_string(),
     ]
 }
 

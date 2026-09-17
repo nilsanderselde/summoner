@@ -7782,7 +7782,7 @@ mod tests {
     fn test_tier119_modern_gui_dsp_module_coverage_and_presets() {
         let registry = crate::dsp_node_ui::DspNodeRegistry::new();
         let inv = crate::dsp_node_ui::DspNodeRegistry::inventory();
-        assert_eq!(inv.len(), 1114, "Inventory must contain exactly 1114 DSP modules");
+        assert!(inv.len() >= 1114, "Inventory must contain at least 1114 DSP modules");
         assert!(registry.list_all().len() >= 1114, "Registry list_all must be >= 1114");
 
         // 1. Verify Tier 119 modules have valid categories and >= 5 parameters
@@ -7992,6 +7992,95 @@ mod tests {
             });
             assert_eq!(view.device_rack_state.selected_node_kind, Some("VacuumTubeTopology".to_string()));
             assert_eq!(view.inspector_state.selected_node_kind, Some("VacuumTubeTopology".to_string()));
+        }
+    }
+    #[test]
+    fn test_tier120_modern_gui_dsp_module_coverage_and_presets() {
+        let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+        let inv = crate::dsp_node_ui::DspNodeRegistry::inventory();
+        assert_eq!(inv.len(), 1135, "Inventory must contain exactly 1135 DSP modules");
+        assert!(registry.list_all().len() >= 1135, "Registry list_all must be >= 1135");
+
+        // 1. Verify Tier 120 modules have valid categories and >= 5 parameters
+        let tier120_modules = [
+            ("AudioStylePreset", crate::dsp_node_ui::DspNodeCategory::NeuralAi),
+            ("AutoWahDirection", crate::dsp_node_ui::DspNodeCategory::FilterEq),
+            ("BellowsArticulation", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("BowingTechnique", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("BrassInstrumentType", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("CadenceResolutionType", crate::dsp_node_ui::DspNodeCategory::Modulation),
+            ("ChordQuality", crate::dsp_node_ui::DspNodeCategory::Modulation),
+            ("ClavinetArticulation", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("ClavinetPickupMode", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("ConsoleMode", crate::dsp_node_ui::DspNodeCategory::DistortionSaturation),
+            ("DynamicsBandIndex", crate::dsp_node_ui::DspNodeCategory::DynamicsMaster),
+            ("EpArticulation", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("GlassArticulation", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("HurdyGurdyArticulation", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("HurdyGurdyProfile", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("KotoArticulation", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("PercussionHarmonic", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("RecordingFormat", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("TapeSpeed", crate::dsp_node_ui::DspNodeCategory::DistortionSaturation),
+            ("VibratoChorusMode", crate::dsp_node_ui::DspNodeCategory::Modulation),
+            ("VowelPreset", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+        ];
+
+        for (name, expected_cat) in tier120_modules {
+            let desc = registry.get(name).unwrap_or_else(|| panic!("Tier 120 module {} missing", name));
+            assert_eq!(desc.category, expected_cat, "Category mismatch for {}", name);
+            assert!(desc.params.len() >= 5, "Module {} must have >= 5 params, found {}", name, desc.params.len());
+            assert!(crate::dsp_node_ui::DspNodeRegistry::create_node_ui(name).is_some(), "create_node_ui failed for {}", name);
+        }
+
+        // 2. Normalization verification
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("audiostylepreset"), Some("AudioStylePreset"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("audiostyle"), Some("AudioStylePreset"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("neuralaudiostyle"), Some("AudioStylePreset"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("styletypetarget"), Some("AudioStylePreset"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("autowahdirection"), Some("AutoWahDirection"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("wahdirection"), Some("AutoWahDirection"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("bellowsarticulation"), Some("BellowsArticulation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("bellowsairflow"), Some("BellowsArticulation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("bowingtechnique"), Some("BowingTechnique"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("acousticbrasstype"), Some("BrassInstrumentType"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cadenceresolutiontype"), Some("CadenceResolutionType"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("chordquality"), Some("ChordQuality"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clavinetarticulation"), Some("ClavinetArticulation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clavinetpickupmode"), Some("ClavinetPickupMode"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("consolemode"), Some("ConsoleMode"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("dynamicsbandindex"), Some("DynamicsBandIndex"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("eparticulation"), Some("EpArticulation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("glassarticulation"), Some("GlassArticulation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("hurdygurdyarticulation"), Some("HurdyGurdyArticulation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("hurdygurdyprofile"), Some("HurdyGurdyProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("kotoarticulation"), Some("KotoArticulation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("percussionharmonic"), Some("PercussionHarmonic"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("recordingformat"), Some("RecordingFormat"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("tapespeed"), Some("TapeSpeed"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("vibratochorusmode"), Some("VibratoChorusMode"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("vowelpreset"), Some("VowelPreset"));
+
+        // 3. Verify interactive AwardWinningGuiView selects Tier 120 preset nodes
+        let mut view = crate::views::AwardWinningGuiView::new();
+        let ctx = egui::Context::default();
+        let mut audio_state = crate::audio_bridge::AudioEngineBridge::new(48000);
+        let param_bus = summoner_core::param_bus::ParamBus::new();
+
+        let presets = [
+            ("Neural Lo-Fi Vinyl Audio Style Transfer & Saturation", "AudioStylePreset"),
+            ("Bourbonnais Vielle à Roue Wrist Accent Coup de Poignet", "HurdyGurdyArticulation"),
+            ("Hammond B3 3rd Fast Percussion & C3 Scanner Chorus Suite", "PercussionHarmonic"),
+            ("Kelly-Lochbaum Formant Vowel Kelly Acoustic Waveguide", "VowelPreset"),
+        ];
+
+        for (preset_name, target_node) in presets {
+            view.selected_preset = preset_name.to_string();
+            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+                view.render(ctx, &mut audio_state, Some(&param_bus));
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some(target_node.to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some(target_node.to_string()));
         }
     }
 }

@@ -484,6 +484,10 @@ impl AwardWinningGuiView {
                 "Miles Dark Harmon Stem-Out Trumpet & Tractrix Brass Flare" => "HornAcousticMute",
                 "Kyoto Imperial 13-String Paulownia Koto Hira-Joshi Suite" => "KotoTuningSchema",
                 "Abbey Road Class-A 12AX7 Dual Triode Tube Console" => "VacuumTubeTopology",
+                "Neural Lo-Fi Vinyl Audio Style Transfer & Saturation" => "AudioStylePreset",
+                "Bourbonnais Vielle à Roue Wrist Accent Coup de Poignet" => "HurdyGurdyArticulation",
+                "Hammond B3 3rd Fast Percussion & C3 Scanner Chorus Suite" => "PercussionHarmonic",
+                "Kelly-Lochbaum Formant Vowel Kelly Acoustic Waveguide" => "VowelPreset",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {
