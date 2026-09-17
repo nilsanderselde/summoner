@@ -261,6 +261,10 @@ fn default_available_presets() -> Vec<String> {
         "Non-Linear SmoothStep Modulation Curve & Matrix Router".to_string(),
         "AI Autonomous Mastering Target Pop & Club Spectral Curve".to_string(),
         "Deep Neural Audio Voice Morphing & Resynthesis Engine".to_string(),
+        "Dynamic Euclidean Ratchet Generative Pattern Engine".to_string(),
+        "Live Multitrack Performance Looper & Quantized Overdub".to_string(),
+        "Polyphonic Chord Strumming Humanizer & Arpeggiator".to_string(),
+        "Studio Mastering 32-Bit Float Multi-Stem Batch Exporter".to_string(),
     ]
 }
 

@@ -496,6 +496,10 @@ impl AwardWinningGuiView {
                 "Non-Linear SmoothStep Modulation Curve & Matrix Router" => "ModulationCurve",
                 "AI Autonomous Mastering Target Pop & Club Spectral Curve" => "TargetCurve",
                 "Deep Neural Audio Voice Morphing & Resynthesis Engine" => "TargetTimbre",
+                "Dynamic Euclidean Ratchet Generative Pattern Engine" => "MutationStrategy",
+                "Live Multitrack Performance Looper & Quantized Overdub" => "LooperCommand",
+                "Polyphonic Chord Strumming Humanizer & Arpeggiator" => "StrumDirection",
+                "Studio Mastering 32-Bit Float Multi-Stem Batch Exporter" => "StemExportFormat",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {

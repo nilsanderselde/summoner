@@ -8163,7 +8163,7 @@ mod tests {
     fn test_tier122_modern_gui_dsp_module_coverage_and_presets() {
         let registry = crate::dsp_node_ui::DspNodeRegistry::new();
         let inv = crate::dsp_node_ui::DspNodeRegistry::inventory();
-        assert_eq!(inv.len(), 1172, "Inventory must contain exactly 1172 DSP modules");
+        assert!(inv.len() >= 1172, "Inventory must contain at least 1172 DSP modules");
         assert!(registry.list_all().len() >= 1172, "Registry list_all must be >= 1172");
 
         // 1. Verify Tier 122 modules have valid categories and >= 5 parameters
@@ -8251,6 +8251,111 @@ mod tests {
             ("Non-Linear SmoothStep Modulation Curve & Matrix Router", "ModulationCurve"),
             ("AI Autonomous Mastering Target Pop & Club Spectral Curve", "TargetCurve"),
             ("Deep Neural Audio Voice Morphing & Resynthesis Engine", "TargetTimbre"),
+        ];
+
+        for (preset_name, target_node) in presets {
+            view.top_bar_state.selected_preset = preset_name.to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some(target_node.to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some(target_node.to_string()));
+        }
+    }
+    #[test]
+    fn test_tier123_modern_gui_dsp_module_coverage_and_presets() {
+        let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+        let inv = crate::dsp_node_ui::DspNodeRegistry::inventory();
+        assert_eq!(inv.len(), 1193, "Inventory must contain exactly 1193 DSP modules");
+        assert!(registry.list_all().len() >= 1193, "Registry list_all must be >= 1193");
+
+        // 1. Verify Tier 123 modules have valid categories and >= 5 parameters
+        let tier123_modules = [
+            ("ArpDirection", crate::dsp_node_ui::DspNodeCategory::Modulation),
+            ("AutomationMode", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("BitDepth", crate::dsp_node_ui::DspNodeCategory::DynamicsMaster),
+            ("ChapterType", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("ChatMessage", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("ClipContent", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CloudBranch", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CloudProjectTemplate", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CrashSeverity", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("GrooveTemplate", crate::dsp_node_ui::DspNodeCategory::Modulation),
+            ("LooperCommand", crate::dsp_node_ui::DspNodeCategory::SamplerSlicer),
+            ("LooperQuantize", crate::dsp_node_ui::DspNodeCategory::SamplerSlicer),
+            ("LooperSyncMode", crate::dsp_node_ui::DspNodeCategory::SamplerSlicer),
+            ("MarkovOrder", crate::dsp_node_ui::DspNodeCategory::Modulation),
+            ("MatrixEvent", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("MidiMappingType", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("MutationStrategy", crate::dsp_node_ui::DspNodeCategory::Modulation),
+            ("PolyrhythmicDivision", crate::dsp_node_ui::DspNodeCategory::Modulation),
+            ("SlotState", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("StemExportFormat", crate::dsp_node_ui::DspNodeCategory::DynamicsMaster),
+            ("StrumDirection", crate::dsp_node_ui::DspNodeCategory::Modulation),
+        ];
+
+        for (name, expected_cat) in tier123_modules {
+            let desc = registry.get(name).unwrap_or_else(|| panic!("Tier 123 module {} missing", name));
+            assert_eq!(desc.category, expected_cat, "Category mismatch for {}", name);
+            assert!(desc.params.len() >= 5, "Module {} must have >= 5 params, found {}", name, desc.params.len());
+            assert!(crate::dsp_node_ui::DspNodeRegistry::create_node_ui(name).is_some(), "create_node_ui failed for {}", name);
+        }
+
+        // 2. Normalization verification
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("arpdirection"), Some("ArpDirection"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("arpeggiatordirection"), Some("ArpDirection"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("automationmode"), Some("AutomationMode"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("touchlatchwrite"), Some("AutomationMode"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("bitdepth"), Some("BitDepth"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("quantizationbitdepth"), Some("BitDepth"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("chaptertype"), Some("ChapterType"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("timelinechapter"), Some("ChapterType"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("chatmessage"), Some("ChatMessage"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sessionchatmessage"), Some("ChatMessage"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clipcontent"), Some("ClipContent"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("timelineclipcontent"), Some("ClipContent"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cloudbranch"), Some("CloudBranch"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("crdtprojectbranch"), Some("CloudBranch"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cloudprojecttemplate"), Some("CloudProjectTemplate"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("projectstartertemplate"), Some("CloudProjectTemplate"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("crashseverity"), Some("CrashSeverity"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("exceptionseverity"), Some("CrashSeverity"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("groovetemplate"), Some("GrooveTemplate"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("microtimingshufflegroove"), Some("GrooveTemplate"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("loopercommand"), Some("LooperCommand"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sessionloopercommand"), Some("LooperCommand"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("looperquantize"), Some("LooperQuantize"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("loopersyncquantize"), Some("LooperQuantize"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("loopersyncmode"), Some("LooperSyncMode"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("multitrackloopersync"), Some("LooperSyncMode"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("markovorder"), Some("MarkovOrder"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("markovharmonyorder"), Some("MarkovOrder"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("matrixevent"), Some("MatrixEvent"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clipmatrixevent"), Some("MatrixEvent"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("midimappingtype"), Some("MidiMappingType"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("miditargetmapping"), Some("MidiMappingType"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("mutationstrategy"), Some("MutationStrategy"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("generativemutationstrategy"), Some("MutationStrategy"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("polyrhythmicdivision"), Some("PolyrhythmicDivision"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("polyrhythmicstepdivision"), Some("PolyrhythmicDivision"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("slotstate"), Some("SlotState"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clipslotstate"), Some("SlotState"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("stemexportformat"), Some("StemExportFormat"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("multitrackstemformat"), Some("StemExportFormat"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("strumdirection"), Some("StrumDirection"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("chordstrumdirection"), Some("StrumDirection"));
+
+        // 3. Verify interactive AwardWinningGuiView selects Tier 123 preset nodes
+        let mut view = crate::views::award_winning_gui_view::AwardWinningGuiView::default();
+        let ctx = eframe::egui::Context::default();
+
+        let presets = [
+            ("Dynamic Euclidean Ratchet Generative Pattern Engine", "MutationStrategy"),
+            ("Live Multitrack Performance Looper & Quantized Overdub", "LooperCommand"),
+            ("Polyphonic Chord Strumming Humanizer & Arpeggiator", "StrumDirection"),
+            ("Studio Mastering 32-Bit Float Multi-Stem Batch Exporter", "StemExportFormat"),
         ];
 
         for (preset_name, target_node) in presets {
