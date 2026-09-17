@@ -8078,6 +8078,174 @@ descriptors.insert("BellowsGesturePattern".to_string(), DspNodeDescriptor::new("
             .with_param(DspParamSchema::knob("damped_dead_stroke_cutoff_ms", "Dead Stroke Damped Contact Cutoff Time", 2.0, 150.0, 25.0, "ms", MacroRole::Punch, "Transient mute duration when player holds mallet pressed into bar"))
             .with_param(DspParamSchema::toggle("modal_dispersion_vector_sync", "Harmonic Mode Phase Coherence Sync", true, "Maintains phase coherence across fundamental and first two overtone modes"))
         );
+        descriptors.insert("MacroRackLuaDevice".to_string(), DspNodeDescriptor::new("MacroRackLuaDevice", "Scriptable Lua DSP Device & Macro Interface", DspNodeCategory::Utility, "Scriptable real-time Lua DSP device container hosting user-defined parameter macros, audio processing loops, and dynamic UI controls")
+            .with_param(DspParamSchema::choice("lua_engine_execution_tier", "Lua Sandbox Optimization Mode", &["JIT Compiled", "Interpreted Sandbox", "Real-Time Strict Isolation", "Hot-Reload Watcher", "AssemblyScript Bridge"], 0, "Selects JIT execution compiler or isolated real-time memory sandbox"))
+            .with_param(DspParamSchema::knob("macro_knob_count", "Active Macro Rotary Knobs", 1.0, 16.0, 8.0, "knobs", MacroRole::Tone, "Number of hardware-mapped macro knobs exposed to DAW top-level strip"))
+            .with_param(DspParamSchema::knob("sample_block_subdivision", "Buffer Slice Processing Granularity", 1.0, 64.0, 16.0, "samples", MacroRole::Punch, "Subdivision block size for sub-buffer modulation evaluation"))
+            .with_param(DspParamSchema::knob("instruction_limit_mips", "Lua Real-Time Cycle Quota", 1.0, 50.0, 10.0, "MIPS", MacroRole::Character, "Execution instruction quota preventing infinite script loops on audio thread"))
+            .with_param(DspParamSchema::toggle("zero_alloc_realtime_guard", "Audio Thread Allocation Guard", true, "Enforces zero heap allocation verification during script execution"))
+            .with_param(DspParamSchema::toggle("macro_parameter_bidirectional_sync", "Bidirectional DAW Parameter Host Sync", true, "Synchronizes script parameter mutations with DAW host undo/redo history"))
+        );
+        descriptors.insert("LuaDspContext".to_string(), DspNodeDescriptor::new("LuaDspContext", "Lua Audio DSP Evaluation Context", DspNodeCategory::Utility, "Real-time Lua execution environment bridging input/output audio buffers, parameter buses, sample rates, and FFT spectral caches")
+            .with_param(DspParamSchema::choice("buffer_precision_mode", "Internal Processing Precision Mode", &["Float32 Stereo", "Float64 Double", "SIMD 4-Lane Vector", "Circular Ring Buffer", "Complex Frequency Domain"], 0, "Selects floating-point precision and SIMD lane vectorization"))
+            .with_param(DspParamSchema::knob("context_sample_rate", "Audio Engine Base Sample Rate", 22050.0, 192000.0, 48000.0, "Hz", MacroRole::Tone, "Base sampling rate provided to Lua audio filter scripts"))
+            .with_param(DspParamSchema::knob("scratch_buffer_capacity_kb", "Script Scratch Memory Buffer Pool", 16.0, 1024.0, 128.0, "KB", MacroRole::Character, "Pre-allocated non-allocating scratch memory pool for delay lines and tables"))
+            .with_param(DspParamSchema::knob("fft_analysis_window_size", "Spectral Analysis Window Size", 128.0, 8192.0, 1024.0, "bins", MacroRole::Space, "FFT window length for spectral convolution and resynthesis operations"))
+            .with_param(DspParamSchema::toggle("dc_offset_auto_suppression", "Automatic DC Offset Removal Filter", true, "Applies sub-sonic DC blocking filter at Lua script output boundary"))
+            .with_param(DspParamSchema::toggle("denormal_number_clamping", "DAZ / FTZ Denormalized Float Clamp", true, "Flushes denormalized floating-point numbers to zero preventing CPU spikes"))
+        );
+        descriptors.insert("LuaRandomEngine".to_string(), DspNodeDescriptor::new("LuaRandomEngine", "Lua Deterministic Chaos & PRNG Engine", DspNodeCategory::Modulation, "Deterministic pseudo-random number generator and stochastic chaos modulator for generative Lua scripts and algorithmic rhythms")
+            .with_param(DspParamSchema::choice("distribution_algorithm", "PRNG Distribution Curve", &["Uniform White Noise", "Gaussian Normal Bell", "Exponential Decay", "Weibull Clustered", "Perlin Smooth Coherent"], 0, "Statistical distribution shape governing random modulation generation"))
+            .with_param(DspParamSchema::knob("random_seed_offset", "Deterministic Integer Random Seed", 1.0, 65535.0, 1337.0, "seed", MacroRole::Tone, "Base pseudo-random seed ensuring bit-exact DAW playback reproducibility"))
+            .with_param(DspParamSchema::knob("entropy_injection_rate", "Dynamic Entropy Injection Rate", 0.0, 100.0, 12.0, "Hz", MacroRole::Punch, "Frequency of continuous pseudo-random value perturbations"))
+            .with_param(DspParamSchema::knob("brownian_motion_inertia", "Brownian Random Walk Inertia Slope", 0.0, 1.0, 0.45, "slope", MacroRole::Character, "Momentum coefficient smoothing random jumps into continuous walk"))
+            .with_param(DspParamSchema::knob("chaos_attractor_lyapunov", "Lyapunov Exponent / Chaos Scaling", 0.1, 5.0, 1.2, "exp", MacroRole::Space, "Exponential divergence rate for non-linear strange attractor equations"))
+            .with_param(DspParamSchema::toggle("quantum_seed_entanglement", "Synchronize Seed with Transport Bar", true, "Resets random generator sequence to deterministic state on playback loop"))
+        );
+        descriptors.insert("LuaMidiMessage".to_string(), DspNodeDescriptor::new("LuaMidiMessage", "Lua MIDI Event Transformer & Filter", DspNodeCategory::Utility, "Scriptable real-time MIDI event transformer filtering, transposing, velocity-scaling, and multiplexing channel voice messages")
+            .with_param(DspParamSchema::choice("message_filter_type", "Filtered Event Message Type", &["All Events (Note+CC+PitchBend)", "Note On / Off Only", "Control Change (CC)", "Channel Aftertouch & Poly AT", "Pitch Bend Wheel Only"], 0, "Selects MIDI message categories processed by Lua transformation hooks"))
+            .with_param(DspParamSchema::knob("transpose_semitones", "Chromatic Pitch Transpose Interval", -36.0, 36.0, 0.0, "st", MacroRole::Tone, "Real-time semitone transposition applied to Note On/Off messages"))
+            .with_param(DspParamSchema::knob("velocity_scale_factor", "Note Velocity Dynamic Scaling Gain", 0.1, 2.0, 1.0, "gain", MacroRole::Punch, "Linear gain scaling factor applied to note impact velocities"))
+            .with_param(DspParamSchema::knob("channel_remap_target", "Target MIDI Channel Routing Destination", 1.0, 16.0, 1.0, "ch", MacroRole::Character, "Output MIDI channel destination (1 to 16)"))
+            .with_param(DspParamSchema::knob("time_delay_ticks", "Micro-Timing Swing & Delay Offset", -96.0, 96.0, 0.0, "ticks", MacroRole::Space, "Sub-beat tick offset for humanized groove displacement"))
+            .with_param(DspParamSchema::toggle("mpe_expression_preservation", "Preserve MPE Lower/Upper Zone Boundaries", true, "Retains MPE master and member channel articulation relationships"))
+        );
+        descriptors.insert("LuaDspObjectMetatable".to_string(), DspNodeDescriptor::new("LuaDspObjectMetatable", "Lua DSP Class Metatable Dispatcher", DspNodeCategory::Utility, "Object-oriented Lua metatable dispatcher managing custom DSP class hierarchies, operator overloading, and voice lifecycle events")
+            .with_param(DspParamSchema::choice("metatable_dispatch_mode", "Method Lookup & VTable Dispatch Strategy", &["Cached Hash Map", "Flat Index Array", "Prototype Chain Traversal", "JIT Inline Cache", "Direct Function Pointer"], 0, "Virtual method table lookup mechanism for object-oriented DSP nodes"))
+            .with_param(DspParamSchema::knob("max_voice_instances", "Maximum Allocated Dynamic Voices", 1.0, 64.0, 16.0, "voices", MacroRole::Tone, "Maximum concurrent polyphonic instances managed by the metatable"))
+            .with_param(DspParamSchema::knob("gc_memory_step_kb", "Incremental Garbage Collector Step Size", 4.0, 256.0, 32.0, "KB", MacroRole::Character, "Incremental GC collection step budget executed between audio render blocks"))
+            .with_param(DspParamSchema::knob("inheritance_recursion_depth", "Maximum Metatable Inheritance Depth", 1.0, 8.0, 3.0, "depth", MacroRole::Punch, "Allowed class hierarchy depth for __index prototype inheritance"))
+            .with_param(DspParamSchema::knob("operator_overload_overhead_ns", "Arithmetic Operator Profiling Budget", 10.0, 500.0, 45.0, "ns", MacroRole::Space, "Maximum execution time allocated for metamethod operator overloads"))
+            .with_param(DspParamSchema::toggle("strict_nil_indexing_guard", "Enforce Strict Nil Field Access Panic Guard", true, "Prevents silent nil indexing bugs during real-time DSP script execution"))
+        );
+        descriptors.insert("LuaEventSystem".to_string(), DspNodeDescriptor::new("LuaEventSystem", "Lua Audio Event Bus & PubSub Dispatcher", DspNodeCategory::Utility, "Asynchronous publish-subscribe event dispatcher coordinating audio thread notifications, GUI view refreshes, and automation changes")
+            .with_param(DspParamSchema::choice("queue_buffering_policy", "Ring Buffer Overflow Spill Policy", &["Drop Oldest Event", "Drop Newest Event", "Lock-Free Expand", "Priority Queue Eviction", "Block / Throttle Engine"], 0, "Handling strategy when the real-time event ring buffer reaches capacity"))
+            .with_param(DspParamSchema::knob("event_queue_capacity", "Ring Buffer Maximum Event Slots", 32.0, 4096.0, 512.0, "events", MacroRole::Character, "Maximum slot capacity for inter-thread audio event messages"))
+            .with_param(DspParamSchema::knob("dispatch_latency_target_us", "Maximum Allowable Dispatch Latency", 5.0, 500.0, 50.0, "us", MacroRole::Tone, "Target latency for delivering event callbacks across system threads"))
+            .with_param(DspParamSchema::knob("subscriber_priority_levels", "Event Subscriber Priority Priority Bands", 1.0, 8.0, 4.0, "levels", MacroRole::Punch, "Hierarchical priority bands for audio-rate vs UI-rate event handlers"))
+            .with_param(DspParamSchema::knob("event_filtering_mask", "Bitwise Channel Event Routing Mask", 0.0, 255.0, 255.0, "mask", MacroRole::Space, "Bitmask filtering allowed event categories (transport, note, mod, UI)"))
+            .with_param(DspParamSchema::toggle("lock_free_spsc_ring", "Enforce Lock-Free Single-Producer Ring Queue", true, "Guarantees wait-free and lock-free thread communication on audio thread"))
+        );
+        descriptors.insert("LuaTimer".to_string(), DspNodeDescriptor::new("LuaTimer", "Lua Sample-Accurate Timing & Clock Generator", DspNodeCategory::Modulation, "Sample-accurate countdown timer, periodic clock divider, and phase-locked tempo trigger engine for scriptable modulation")
+            .with_param(DspParamSchema::choice("time_base_sync_mode", "Clock Synchronization Source", &["DAW Transport PPQ", "Free-Running Hertz", "Sub-Beat Fractional Triplet", "Dotted Note Meter", "SMPTE Frame Code"], 0, "Selects synchronization reference for periodic timing triggers"))
+            .with_param(DspParamSchema::knob("timer_frequency_hz", "Free-Running Timer Repetition Frequency", 0.01, 100.0, 4.0, "Hz", MacroRole::Tone, "Oscillation frequency when operating in free-running unsynced mode"))
+            .with_param(DspParamSchema::knob("tempo_division_ratio", "Musical Beat Sub-Division Multiplier", 0.125, 32.0, 1.0, "x", MacroRole::Punch, "Metric tempo division ratio relative to quarter note beats"))
+            .with_param(DspParamSchema::knob("jitter_attenuation_damping", "Phase Jitter Lowpass Filter Smoothing", 0.0, 1.0, 0.85, "damp", MacroRole::Character, "Digital PLL jitter rejection damping time for fluctuating external clocks"))
+            .with_param(DspParamSchema::knob("swing_shuffle_percentage", "Groove Swing Sub-Beat Delay Percentage", 50.0, 75.0, 50.0, "%", MacroRole::Space, "Even/odd pulse time displacement creating swing groove shuffle"))
+            .with_param(DspParamSchema::toggle("phase_reset_on_transport_start", "Hard Phase Reset on DAW Playback Trigger", true, "Resets timer phase to zero on transport start / loop wrap"))
+        );
+        descriptors.insert("LuaUiWidget".to_string(), DspNodeDescriptor::new("LuaUiWidget", "Lua Scriptable Vector UI Widget", DspNodeCategory::Utility, "Scriptable 2D graphical widget and parameter binding canvas rendering custom rotary dials, sliders, buttons, and oscilloscopes")
+            .with_param(DspParamSchema::choice("widget_visual_type", "Rendered Control Surface Widget Type", &["Rotary Arc Dial", "Linear Ribbon Slider", "Bipolar XY Pad", "Momentary Strobe Button", "Waveform Mini-Scope"], 0, "Visual presentation archetype for the script-generated UI component"))
+            .with_param(DspParamSchema::knob("widget_width_points", "Logical Horizontal Display Width", 32.0, 512.0, 128.0, "pt", MacroRole::Character, "Rendered widget boundary box width in egui logical points"))
+            .with_param(DspParamSchema::knob("widget_height_points", "Logical Vertical Display Height", 16.0, 512.0, 64.0, "pt", MacroRole::Character, "Rendered widget boundary box height in egui logical points"))
+            .with_param(DspParamSchema::knob("corner_rounding_radius", "Background Panel Corner Bevel Radius", 0.0, 24.0, 6.0, "px", MacroRole::Space, "Curvature rounding radius for the widget frame boundary"))
+            .with_param(DspParamSchema::knob("accent_hue_rotation_deg", "Interactive Accent Color Palette Rotation", 0.0, 360.0, 180.0, "deg", MacroRole::Tone, "Color spectrum rotation angle for widget indicator highlights"))
+            .with_param(DspParamSchema::toggle("hover_interaction_glow", "High-Contrast Neon Edge Glow on Pointer Hover", true, "Renders animated luminance bloom when the mouse hovers over the control"))
+        );
+        descriptors.insert("LuaUiLayout".to_string(), DspNodeDescriptor::new("LuaUiLayout", "Lua Responsive Device Flexbox Layout", DspNodeCategory::Utility, "Declarative CSS flexbox-inspired responsive layout container managing auto-wrapping, margins, spacing, and docking alignment")
+            .with_param(DspParamSchema::choice("flex_direction", "Primary Flex Layout Flow Direction", &["Row Horizontal", "Column Vertical", "Row Reverse", "Column Reverse", "Grid Wrap Matrix"], 0, "Direction of child widget distribution within the device container"))
+            .with_param(DspParamSchema::knob("item_spacing_pixels", "Inter-Widget Layout Separation Gap", 0.0, 48.0, 8.0, "px", MacroRole::Space, "Spacing margin inserted between adjacent child widgets"))
+            .with_param(DspParamSchema::knob("padding_inner_pixels", "Container Frame Inner Padding", 0.0, 64.0, 12.0, "px", MacroRole::Character, "Internal inset padding from container borders to content"))
+            .with_param(DspParamSchema::knob("flex_grow_factor", "Dynamic Space Expansion Weight Factor", 0.0, 5.0, 1.0, "grow", MacroRole::Tone, "Proportional expansion factor filling available rack panel width"))
+            .with_param(DspParamSchema::knob("minimum_container_width", "Responsive Collapsible Width Threshold", 100.0, 1200.0, 320.0, "px", MacroRole::Punch, "Minimum width before triggering responsive wrap or collapsed mini-strip"))
+            .with_param(DspParamSchema::toggle("auto_scroll_overflow", "Enable Smooth Momentum Scroll on Content Overflow", true, "Enables smooth mouse-wheel scrolling when child widgets exceed rack bounds"))
+        );
+        descriptors.insert("LuaPainterBuffer".to_string(), DspNodeDescriptor::new("LuaPainterBuffer", "Lua Retained Vector Painter Buffer", DspNodeCategory::Utility, "Retained-mode vector drawing stream generating smooth Bezier paths, filled convex polygons, text glyphs, and audio waveform meshes")
+            .with_param(DspParamSchema::choice("primitive_tessellation_quality", "GPU Tessellation Curve Subdivision Density", &["Fast Geometric Low", "Medium Smooth", "High Precision Anti-Aliased", "Sub-Pixel Oversampled", "Direct Shader Quad"], 2, "Tessellation tolerance for rendering smooth vector arcs and splines"))
+            .with_param(DspParamSchema::knob("vertex_buffer_capacity", "Pre-Allocated Vertex Buffer Capacity", 256.0, 65536.0, 4096.0, "verts", MacroRole::Character, "Dedicated GPU vertex buffer pre-allocation pool preventing frame reallocations"))
+            .with_param(DspParamSchema::knob("path_stroke_thickness", "Vector Stroke Line Width", 0.5, 16.0, 2.0, "px", MacroRole::Tone, "Default line stroke thickness for vector waveforms and borders"))
+            .with_param(DspParamSchema::knob("mesh_transparency_alpha", "Global Canvas Layer Blend Opacity", 0.0, 1.0, 0.9, "alpha", MacroRole::Space, "Global opacity blending factor for multi-layered vector drawings"))
+            .with_param(DspParamSchema::knob("color_gradient_stop", "Two-Tone Gradient Color Interpolation Stop", 0.0, 1.0, 0.5, "pos", MacroRole::Punch, "Center pivot position for linear and radial background color gradients"))
+            .with_param(DspParamSchema::toggle("hardware_clip_rect_culling", "Hardware Scissor Rect Geometric Clipping", true, "Discards off-screen vector primitives using GPU scissor testing"))
+        );
+        descriptors.insert("LuaMidiInputSubscriber".to_string(), DspNodeDescriptor::new("LuaMidiInputSubscriber", "Lua Polyphonic MIDI Input Subscriber", DspNodeCategory::Utility, "Polyphonic MIDI event subscription filter supporting channel isolation, polyphony voice stealing, and key zone splitting")
+            .with_param(DspParamSchema::choice("channel_listen_mask", "Input Channel Subscription Mode", &["Omni (All 16 Channels)", "Specific Dedicated Channel", "Upper MPE Zone (Channels 2-16)", "Lower MPE Zone (Channels 2-8)", "Selected Track Channel Only"], 0, "Selects channel subscription scope for incoming hardware MIDI messages"))
+            .with_param(DspParamSchema::knob("active_midi_channel", "Dedicated Listening MIDI Channel Number", 1.0, 16.0, 1.0, "ch", MacroRole::Tone, "Target channel number when running in single-channel dedicated mode"))
+            .with_param(DspParamSchema::knob("lower_key_limit", "Lowest Keyboard Split Bound MIDI Note", 0.0, 127.0, 0.0, "note", MacroRole::Punch, "Bottom keyboard split boundary below which notes are ignored"))
+            .with_param(DspParamSchema::knob("upper_key_limit", "Highest Keyboard Split Bound MIDI Note", 0.0, 127.0, 127.0, "note", MacroRole::Character, "Top keyboard split boundary above which notes are ignored"))
+            .with_param(DspParamSchema::knob("note_off_choke_group", "Exclusive Voice Stealing Choke Group", 0.0, 16.0, 0.0, "group", MacroRole::Space, "Choke group ID muting existing voices when a new note strikes"))
+            .with_param(DspParamSchema::toggle("pass_through_unhandled_events", "Echo Unmatched MIDI Events Downstream", true, "Passes unconsumed MIDI events down the track DSP pipeline"))
+        );
+        descriptors.insert("LuaCoroutinePattern".to_string(), DspNodeDescriptor::new("LuaCoroutinePattern", "Lua Coroutine Algorithmic Pattern Generator", DspNodeCategory::Modulation, "Algorithmic step sequencer and pattern generator driven by non-blocking cooperative Lua coroutines and musical generator yields")
+            .with_param(DspParamSchema::choice("pattern_yield_quantization", "Coroutine Resume Step Quantization", &["1/16 Standard Grid", "1/8 Triplet Grid", "1/32 Precision Roll", "1/4 Beat Bar Quarter", "Micro-Tick Fluid Timing"], 0, "Step interval at which the coroutine yields execution back to the sequencer"))
+            .with_param(DspParamSchema::knob("pattern_length_steps", "Sequence Loop Cycle Length In Steps", 1.0, 64.0, 16.0, "steps", MacroRole::Tone, "Total step duration before the algorithmic generator resets loop cycle"))
+            .with_param(DspParamSchema::knob("recursion_stack_depth", "Maximum Nested Generator Depth", 1.0, 16.0, 4.0, "depth", MacroRole::Character, "Maximum recursion call stack permitted during generative music generation"))
+            .with_param(DspParamSchema::knob("stochastic_mutation_chance", "Algorithmic Step Mutation Probability", 0.0, 1.0, 0.15, "prob", MacroRole::Punch, "Probability that a yielded note is algorithmically mutated or inverted"))
+            .with_param(DspParamSchema::knob("gate_pulse_width_percent", "Trigger Gate Output Duration Duty Cycle", 5.0, 95.0, 65.0, "%", MacroRole::Space, "Gate trigger duration as a percentage of the step subdivision"))
+            .with_param(DspParamSchema::toggle("polyphonic_tuple_yielding", "Support Simultaneous Multi-Pitch Polyphonic Yields", true, "Allows coroutine to yield chord arrays instead of monophonic notes"))
+        );
+        descriptors.insert("BlockSizePerformance".to_string(), DspNodeDescriptor::new("BlockSizePerformance", "Audio Block Size & DSP Latency Profiler", DspNodeCategory::Utility, "Audio engine throughput and processing latency benchmark tool comparing round-trip buffer block sizes from 16 to 4096 samples")
+            .with_param(DspParamSchema::choice("test_signal_topology", "DSP Stress-Test Audio Load Graph", &["Pure Waveforms (Baseline)", "Polyphonic Wavetable Heavy", "Physical Modeling String Bank", "Multiband Reverb & Spatial 3D", "Full 64-Track Mastering Suite"], 1, "Selects algorithmic complexity benchmark graph to evaluate real-time DSP throughput"))
+            .with_param(DspParamSchema::knob("buffer_sample_size", "Evaluated Audio Block Size Sample Count", 16.0, 4096.0, 256.0, "spl", MacroRole::Punch, "Hardware buffer size under test for round-trip latency evaluation"))
+            .with_param(DspParamSchema::knob("synthetic_cpu_load_burn", "Synthetic CPU DSP Burn Cycles", 0.0, 100.0, 0.0, "%", MacroRole::Character, "Injected synthetic computational load simulating high project density"))
+            .with_param(DspParamSchema::knob("latency_alert_threshold_ms", "XRun Dropped Frame Latency Warning Threshold", 0.5, 50.0, 5.0, "ms", MacroRole::Tone, "Threshold at which buffer turnaround delays trigger UI xrun warnings"))
+            .with_param(DspParamSchema::knob("memory_bandwidth_read_mbps", "Observed Memory Bus Bandwidth Read Rate", 10.0, 5000.0, 450.0, "MB/s", MacroRole::Space, "Estimated memory bus throughput consumed by audio graph processing"))
+            .with_param(DspParamSchema::toggle("record_xrun_event_history", "Log All Real-Time Buffer Underruns To CSV File", true, "Persists real-time buffer dropouts with microsecond timestamps to diagnostic log"))
+        );
+        descriptors.insert("PeerNode".to_string(), DspNodeDescriptor::new("PeerNode", "WebRTC Audio Peer Collaboration Node", DspNodeCategory::Utility, "Decentralized WebRTC peer connection manager streaming encrypted lossless audio stems, session state, and presence telemetries")
+            .with_param(DspParamSchema::choice("ice_transport_policy", "WebRTC Network NAT Traversal Policy", &["STUN + TURN Auto-Discovery", "Direct P2P Local Only", "Enforce Encrypted Relay TURN", "Dual-Channel IPv6 Multi-Homed", "LAN Broadcast Multicast"], 0, "ICE transport candidate gathering strategy for peer audio streaming"))
+            .with_param(DspParamSchema::knob("audio_stream_bitrate_kbps", "Opus / Lossless FLAC Stem Bitrate", 64.0, 1411.0, 320.0, "kbps", MacroRole::Tone, "Lossless or compressed audio streaming bitrate for real-time monitoring"))
+            .with_param(DspParamSchema::knob("max_jitter_buffer_ms", "Adaptive Network Jitter Buffer Target", 5.0, 250.0, 40.0, "ms", MacroRole::Punch, "Target jitter buffer depth compensating for network packet latency spikes"))
+            .with_param(DspParamSchema::knob("bandwidth_throttle_mbps", "Max Collaborative Outbound Bandwidth Limit", 1.0, 100.0, 15.0, "Mbps", MacroRole::Character, "Maximum outbound bandwidth allocated for stem and telemetry streaming"))
+            .with_param(DspParamSchema::knob("ping_heartbeat_interval_s", "Keepalive Ping Heartbeat Beacon Period", 0.5, 30.0, 3.0, "s", MacroRole::Space, "Interval between keepalive pings verifying connection liveness"))
+            .with_param(DspParamSchema::toggle("e2ee_srtp_payload_encryption", "AES-256-GCM End-to-End Media Encryption", true, "Encrypts all audio stream packets using cryptographic AES-256-GCM"))
+        );
+        descriptors.insert("ZkPatchProof".to_string(), DspNodeDescriptor::new("ZkPatchProof", "Zero-Knowledge Preset Authenticity Verifier", DspNodeCategory::Utility, "Zero-knowledge cryptographic proof generator validating DAW preset authenticity, authorship claims, and DSP integrity without exposing source parameters")
+            .with_param(DspParamSchema::choice("proof_system_scheme", "Zero-Knowledge Proof Cryptographic Scheme", &["Groth16 SNARK", "PLONK Multi-Party", "Bulletproofs Compact", "STARK Post-Quantum Transparent", "ECDSA Signature Attestation"], 1, "Cryptographic proof system used for zero-knowledge parameter attestation"))
+            .with_param(DspParamSchema::knob("proof_verification_budget_ms", "Maximum Proof Verification Time Quota", 1.0, 500.0, 25.0, "ms", MacroRole::Punch, "Time allowance dedicated to cryptographic verification on patch load"))
+            .with_param(DspParamSchema::knob("public_input_count", "Publicly Verified DSP Attestation Claims", 1.0, 32.0, 8.0, "claims", MacroRole::Character, "Number of publicly verified claims (e.g. author ID, creation date, sample hash)"))
+            .with_param(DspParamSchema::knob("reputation_trust_threshold", "Author Trust Score Minimum Acceptance Level", 0.0, 100.0, 75.0, "%", MacroRole::Tone, "Minimum web-of-trust reputation score required to auto-load community preset"))
+            .with_param(DspParamSchema::knob("zk_circuit_constraint_k", "Circuit Complexity Arithmetic Constraints", 1.0, 64.0, 16.0, "kGates", MacroRole::Space, "Constraint circuit size representing patch complexity in R1CS gates"))
+            .with_param(DspParamSchema::toggle("quarantine_unverified_patches", "Auto-Quarantine Patches Failing Cryptographic Proof", true, "Isolates unverified presets in a sandboxed mode preventing parameter tampering"))
+        );
+        descriptors.insert("UserPresence".to_string(), DspNodeDescriptor::new("UserPresence", "Real-Time Collaboration Presence Tracker", DspNodeCategory::Utility, "Real-time remote collaborator presence tracker broadcasting playhead positions, selected arrangement tracks, and mouse pointer coordinates")
+            .with_param(DspParamSchema::choice("presence_broadcast_mode", "Telemetry Broadcast Rate Throttling", &["Smooth 60 FPS Continuous", "30 FPS Balanced", "10 FPS Low Bandwidth", "Keyframe Changes Only", "Silent Audio Only"], 1, "Framerate and bandwidth policy for broadcasting cursor and selection states"))
+            .with_param(DspParamSchema::knob("collaborator_halo_color_hue", "User Visual Cursor Halo Hue Color", 0.0, 360.0, 210.0, "deg", MacroRole::Tone, "Unique color hue distinguishing collaborator cursor on shared arrangement view"))
+            .with_param(DspParamSchema::knob("idle_timeout_seconds", "Collaborator Inactivity Idle Detection Threshold", 10.0, 600.0, 120.0, "s", MacroRole::Character, "Duration of inactivity before remote user is marked as away / idle"))
+            .with_param(DspParamSchema::knob("cursor_interpolation_smoothing", "Remote Mouse Pointer Vector Smoothing", 0.0, 1.0, 0.75, "smooth", MacroRole::Space, "Spline smoothing factor eliminating jitter from remote cursor coordinates"))
+            .with_param(DspParamSchema::knob("max_simultaneous_users", "Session Concurrent User Collaboration Limit", 2.0, 32.0, 8.0, "users", MacroRole::Punch, "Maximum number of simultaneous active peer users supported in session"))
+            .with_param(DspParamSchema::toggle("show_remote_track_lock_badges", "Display Padlock Badges on Tracks Being Edited by Others", true, "Renders visual lock indicator when another producer is recording on a track"))
+        );
+        descriptors.insert("RenderTaskBlock".to_string(), DspNodeDescriptor::new("RenderTaskBlock", "Distributed Cloud Audio Render Coordinator", DspNodeCategory::Utility, "Distributed cloud render coordinator partitioning long multi-track stems into parallel time blocks for cluster audio processing")
+            .with_param(DspParamSchema::choice("chunking_strategy", "Render Timeline Partitioning Strategy", &["Equal Bar Chunks", "Stem Track Isolation", "Dynamic Complexity Balancing", "Mastering Chain Pass", "Lookahead Overlap Stems"], 2, "Timeline segmentation strategy for distributed render farm nodes"))
+            .with_param(DspParamSchema::knob("time_chunk_duration_bars", "Audio Segment Length Per Parallel Job", 1.0, 128.0, 16.0, "bars", MacroRole::Character, "Timeline duration assigned to each distributed worker job"))
+            .with_param(DspParamSchema::knob("crossfade_overlap_samples", "Inter-Block Boundary Seamless Crossfade", 64.0, 8192.0, 1024.0, "samples", MacroRole::Punch, "Sub-block overlap crossfade length preventing boundary discontinuities in audio"))
+            .with_param(DspParamSchema::knob("max_parallel_workers", "Maximum Active Cloud Worker Node Instances", 1.0, 64.0, 8.0, "nodes", MacroRole::Tone, "Maximum number of parallel cluster instances rendering simultaneously"))
+            .with_param(DspParamSchema::knob("chunk_retry_limit", "Automatic Chunk Re-Compute Failure Retries", 0.0, 5.0, 2.0, "retries", MacroRole::Space, "Maximum retries before marking an audio segment as failed"))
+            .with_param(DspParamSchema::toggle("lossless_checksum_verification", "Verify Bit-for-Bit SHA-256 Checksum on Recombined Audio", true, "Performs cryptographic verification that chunk reassembly matches local render"))
+        );
+        descriptors.insert("MarketplacePreset".to_string(), DspNodeDescriptor::new("MarketplacePreset", "Community Preset Manifest & Metadata Hub", DspNodeCategory::Utility, "Semantic manifest descriptor and license container for shared, commercial, and community DAW preset bundles and sample packs")
+            .with_param(DspParamSchema::choice("license_distribution_type", "Preset Pack Distribution License", &["Creative Commons CC-BY 4.0", "Public Domain CC0", "Commercial Royalty-Free", "Shareware Community Evaluation", "Summoner Official Soundbank"], 0, "Intellectual property distribution license governing the sound pack"))
+            .with_param(DspParamSchema::knob("sample_asset_count", "Embedded Audio WAV/FLAC Sample Assets", 0.0, 512.0, 16.0, "samples", MacroRole::Character, "Total number of audio wave assets packaged inside the preset archive"))
+            .with_param(DspParamSchema::knob("manifest_semantic_version", "Preset Bundle Schema Semantic Version", 1.0, 10.0, 2.0, "ver", MacroRole::Tone, "Schema compatibility version ensuring cross-version DAW deserialization"))
+            .with_param(DspParamSchema::knob("download_compression_ratio", "Preset Bundle Archive Compression Level", 1.0, 9.0, 6.0, "level", MacroRole::Space, "Zstandard compression ratio for archive packaging"))
+            .with_param(DspParamSchema::knob("curated_rating_score", "Community Verified Quality Rating Score", 1.0, 5.0, 4.8, "stars", MacroRole::Punch, "Community rating aggregate score out of 5 stars"))
+            .with_param(DspParamSchema::toggle("auto_resolve_missing_dependencies", "Auto-Download Missing Free Plugins & Impulses", true, "Automatically queries preset repository to download missing dependencies"))
+        );
+        descriptors.insert("PermissionToken".to_string(), DspNodeDescriptor::new("PermissionToken", "Role-Based Access Control Security Token", DspNodeCategory::Utility, "Role-based cryptographic permission token regulating access to track mute, stem export, parameter automation, and master bus recording")
+            .with_param(DspParamSchema::choice("role_authorization_level", "Granted Collaboration User Role", &["Full Owner / Producer", "Mixing Engineer (Audio Only)", "Composer (MIDI & Arrangement)", "Guest Commentator (Read-Only)", "Mastering Auditor"], 0, "Role authorization level governing project modification rights"))
+            .with_param(DspParamSchema::knob("token_expiration_hours", "Cryptographic Token Validity Window", 1.0, 720.0, 72.0, "hrs", MacroRole::Character, "Validity duration in hours before re-authentication is required"))
+            .with_param(DspParamSchema::knob("max_export_stems_per_day", "Daily Stem Bounce & Download Quota", 1.0, 100.0, 25.0, "bounces", MacroRole::Punch, "Maximum number of audio export jobs allowed per 24 hour rolling window"))
+            .with_param(DspParamSchema::knob("session_revocation_nonce", "Session Revocation Nonce Sequence Counter", 0.0, 10000.0, 1.0, "nonce", MacroRole::Tone, "Incremental nonce used to invalidate all active session tokens immediately"))
+            .with_param(DspParamSchema::knob("audit_log_retention_days", "Security Event Audit Trail Log Retention", 7.0, 365.0, 90.0, "days", MacroRole::Space, "Retention window for cryptographic security audit events"))
+            .with_param(DspParamSchema::toggle("enforce_hardware_key_auth", "Require WebAuthn / FIDO2 Hardware Security Key", false, "Requires hardware token touch confirmation for master destructive operations"))
+        );
+        descriptors.insert("PendingMutation".to_string(), DspNodeDescriptor::new("PendingMutation", "Optimistic CRDT Mutation Buffer Coordinator", DspNodeCategory::Utility, "Optimistic lock-free CRDT mutation coordinator buffering, debouncing, and validating local parameter adjustments before broadcast")
+            .with_param(DspParamSchema::choice("debounce_coalesce_policy", "Parameter Adjustment Coalesce Strategy", &["Merge Successive Sliders", "Debounce By Time Window", "Vector Clock Causal Chain", "Every Change Discrete", "Last Writer Wins Overwrite"], 0, "Policy for merging rapid continuous slider gestures into network packets"))
+            .with_param(DspParamSchema::knob("coalesce_window_ms", "Mutation Deduplication Time Window", 1.0, 200.0, 15.0, "ms", MacroRole::Character, "Time window in milliseconds over which parameter tweaks are aggregated"))
+            .with_param(DspParamSchema::knob("max_unconfirmed_mutations", "Maximum Buffered In-Flight Adjustments", 10.0, 1000.0, 128.0, "mutations", MacroRole::Punch, "Capacity limit for unconfirmed optimistic local adjustments"))
+            .with_param(DspParamSchema::knob("causal_dependency_depth", "Causal Order Vector Clock History Depth", 1.0, 64.0, 8.0, "depth", MacroRole::Tone, "Depth of causal vector clock history tracked for conflict resolution"))
+            .with_param(DspParamSchema::knob("rollback_compensation_slew_ms", "Optimistic Rollback Audio Smoothing Slew", 0.5, 50.0, 5.0, "ms", MacroRole::Space, "Slew interpolation time when an optimistic adjustment is rejected by consensus"))
+            .with_param(DspParamSchema::toggle("strict_transactional_rollback", "Revert Corrupted Mutations to Snapshot State", true, "Reverts state cleanly to verified snapshot if packet ordering fails"))
+        );
+        descriptors.insert("OfflineCrdtQueue".to_string(), DspNodeDescriptor::new("OfflineCrdtQueue", "Offline Conflict-Free Delta Reconciliation Engine", DspNodeCategory::Utility, "Offline delta replication queue and conflict resolution engine merging disconnected edit history upon network reconnection")
+            .with_param(DspParamSchema::choice("conflict_resolution_strategy", "Branch Divergence Merging Strategy", &["Automatic 3-Way CRDT Merge", "Preserve Local Branch As Stash", "Preserve Remote Cloud Master", "Interactive Side-by-Side Diff", "Create Alternative Variation Clip"], 0, "Automatic conflict resolution behavior on reconnecting after an offline session"))
+            .with_param(DspParamSchema::knob("offline_event_buffer_capacity", "Maximum Queued Offline Edit Operations", 100.0, 50000.0, 5000.0, "events", MacroRole::Character, "Maximum storage capacity allocated for recording offline DAW events"))
+            .with_param(DspParamSchema::knob("sync_batch_size", "Reconnection Network Packet Batch Size", 10.0, 500.0, 100.0, "events", MacroRole::Punch, "Batch chunk size for streaming offline mutations to cloud peers"))
+            .with_param(DspParamSchema::knob("max_offline_duration_days", "Maximum Allowable Offline Stale Time", 1.0, 30.0, 7.0, "days", MacroRole::Tone, "Maximum duration offline before full project reload is enforced"))
+            .with_param(DspParamSchema::knob("reconciliation_bandwidth_cap_kbps", "Background Sync Bandwidth Limit", 32.0, 2048.0, 256.0, "kbps", MacroRole::Space, "Bandwidth cap preventing network throttling during reconnection sync"))
+            .with_param(DspParamSchema::toggle("compress_delta_payloads", "LZ4 Compression on Serialized CRDT Delta Packets", true, "Enables high-speed LZ4 block compression on outgoing offline mutation deltas"))
+        );
 
         Self { descriptors }
     }
@@ -9158,6 +9326,27 @@ descriptors.insert("BellowsGesturePattern".to_string(), DspNodeDescriptor::new("
             ("HurdyGurdyInterpolationCurve", DspNodeCategory::Modulation, "Hurdy-Gurdy Rosin Wheel Crank Gesture Interpolation Curve"),
             ("KotoInterpolationCurve", DspNodeCategory::Modulation, "Koto Tsume Pluck & Ji Bridge Gesture Interpolation Curve"),
             ("MalletInterpolationCurve", DspNodeCategory::Modulation, "Tuned Mallet Percussion Strike Gesture Interpolation Curve"),
+            ("MacroRackLuaDevice", DspNodeCategory::Utility, "Scriptable Lua DSP Device & Macro Interface"),
+            ("LuaDspContext", DspNodeCategory::Utility, "Lua Audio DSP Evaluation Context"),
+            ("LuaRandomEngine", DspNodeCategory::Modulation, "Lua Deterministic Chaos & PRNG Engine"),
+            ("LuaMidiMessage", DspNodeCategory::Utility, "Lua MIDI Event Transformer & Filter"),
+            ("LuaDspObjectMetatable", DspNodeCategory::Utility, "Lua DSP Class Metatable Dispatcher"),
+            ("LuaEventSystem", DspNodeCategory::Utility, "Lua Audio Event Bus & PubSub Dispatcher"),
+            ("LuaTimer", DspNodeCategory::Modulation, "Lua Sample-Accurate Timing & Clock Generator"),
+            ("LuaUiWidget", DspNodeCategory::Utility, "Lua Scriptable Vector UI Widget"),
+            ("LuaUiLayout", DspNodeCategory::Utility, "Lua Responsive Device Flexbox Layout"),
+            ("LuaPainterBuffer", DspNodeCategory::Utility, "Lua Retained Vector Painter Buffer"),
+            ("LuaMidiInputSubscriber", DspNodeCategory::Utility, "Lua Polyphonic MIDI Input Subscriber"),
+            ("LuaCoroutinePattern", DspNodeCategory::Modulation, "Lua Coroutine Algorithmic Pattern Generator"),
+            ("BlockSizePerformance", DspNodeCategory::Utility, "Audio Block Size & DSP Latency Profiler"),
+            ("PeerNode", DspNodeCategory::Utility, "WebRTC Audio Peer Collaboration Node"),
+            ("ZkPatchProof", DspNodeCategory::Utility, "Zero-Knowledge Preset Authenticity Verifier"),
+            ("UserPresence", DspNodeCategory::Utility, "Real-Time Collaboration Presence Tracker"),
+            ("RenderTaskBlock", DspNodeCategory::Utility, "Distributed Cloud Audio Render Coordinator"),
+            ("MarketplacePreset", DspNodeCategory::Utility, "Community Preset Manifest & Metadata Hub"),
+            ("PermissionToken", DspNodeCategory::Utility, "Role-Based Access Control Security Token"),
+            ("PendingMutation", DspNodeCategory::Utility, "Optimistic CRDT Mutation Buffer Coordinator"),
+            ("OfflineCrdtQueue", DspNodeCategory::Utility, "Offline Conflict-Free Delta Reconciliation Engine"),
         ]
     }
 
@@ -11190,6 +11379,27 @@ descriptors.insert("BellowsGesturePattern".to_string(), DspNodeDescriptor::new("
             "hurdygurdyinterpolationcurve" | "gurdycrankcurve" | "hurdygurdytrajectory" => Some("HurdyGurdyInterpolationCurve"),
             "kotointerpolationcurve" | "kotooshitecurve" | "kototrajectorycurve" => Some("KotoInterpolationCurve"),
             "malletinterpolationcurve" | "tunedmalletstrikecurve" | "malletstriketrajectory" => Some("MalletInterpolationCurve"),
+            "macrorackluadevice" | "luamacrorack" | "luadevice" | "macroluadevice" => Some("MacroRackLuaDevice"),
+            "luadspcontext" | "luadspctx" | "dspcontextlua" | "luaaudiocontext" => Some("LuaDspContext"),
+            "luarandomengine" | "luarandom" | "luaprng" | "stochasticlua" => Some("LuaRandomEngine"),
+            "luamidimessage" | "luamidi" | "midimessagelua" | "luamiditransformer" => Some("LuaMidiMessage"),
+            "luadspobjectmetatable" | "luametatable" | "luadspmetatable" | "luaclassdispatcher" => Some("LuaDspObjectMetatable"),
+            "luaeventsystem" | "luaeventbus" | "luaevents" | "audiopubsub" => Some("LuaEventSystem"),
+            "luatimer" | "luaclock" | "luatempoclock" | "scripttimer" => Some("LuaTimer"),
+            "luauiwidget" | "luawidget" | "luacontrolwidget" | "scriptuiwidget" => Some("LuaUiWidget"),
+            "luauilayout" | "lualayout" | "luaflexbox" | "devicelayoutlua" => Some("LuaUiLayout"),
+            "luapainterbuffer" | "luapainter" | "vectorpainterlua" | "luagraphics" => Some("LuaPainterBuffer"),
+            "luamidiinputsubscriber" | "luamidisubscriber" | "midisubscriberlua" | "luainputsubscriber" => Some("LuaMidiInputSubscriber"),
+            "luacoroutinepattern" | "luacoroutine" | "luapattern" | "coroutinepattern" => Some("LuaCoroutinePattern"),
+            "blocksizeperformance" | "blocksizebenchmark" | "dsplatencyprofiler" | "dspbenchmark" => Some("BlockSizePerformance"),
+            "peernode" | "webrtcpeer" | "cloudpeernode" | "p2paudionode" => Some("PeerNode"),
+            "zkpatchproof" | "zkproof" | "zeroknowledgeproof" | "patchverifierzk" => Some("ZkPatchProof"),
+            "userpresence" | "collaborationpresence" | "remotepresence" | "presencehud" => Some("UserPresence"),
+            "rendertaskblock" | "distributedrender" | "cloudrendertask" | "rendercoordinator" => Some("RenderTaskBlock"),
+            "marketplacepreset" | "presetmanifest" | "cloudpresetentry" | "presetbundlemanifest" => Some("MarketplacePreset"),
+            "permissiontoken" | "accesstoken" | "collaborationpermission" | "rbacsecuritytoken" => Some("PermissionToken"),
+            "pendingmutation" | "crdtmutation" | "optimisticmutation" | "pendingchangequeue" => Some("PendingMutation"),
+            "offlinecrdtqueue" | "crdtqueue" | "offlinesyncqueue" | "deltareconciliation" => Some("OfflineCrdtQueue"),
             _ => None,
         }
     }
@@ -18719,6 +18929,195 @@ descriptors.insert("BellowsGesturePattern".to_string(), DspNodeDescriptor::new("
                     .with_param(DspParamDescriptor::new_linear("damped_dead_stroke_cutoff_ms", "Dead Stroke Damped Contact Cutoff Time", 2.0, 150.0, 25.0, "ms", (34, 197, 94)))
                     .with_param(DspParamDescriptor::new_bool("modal_dispersion_vector_sync", "Harmonic Mode Phase Coherence Sync", true, (16, 185, 129)))
             ),
+            "MacroRackLuaDevice" => Box::new(
+                GenericDspNodeUi::new("MacroRackLuaDevice", "Scriptable Lua DSP Device & Macro Interface", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("lua_engine_execution_tier", "Lua Sandbox Optimization Mode", 0.0, 4.0, 0.0, "mode", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("macro_knob_count", "Active Macro Rotary Knobs", 1.0, 16.0, 8.0, "knobs", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("sample_block_subdivision", "Buffer Slice Processing Granularity", 1.0, 64.0, 16.0, "samples", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("instruction_limit_mips", "Lua Real-Time Cycle Quota", 1.0, 50.0, 10.0, "MIPS", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("zero_alloc_realtime_guard", "Audio Thread Allocation Guard", true, (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("macro_parameter_bidirectional_sync", "Bidirectional DAW Parameter Host Sync", true, (16, 185, 129)))
+            ),
+            "LuaDspContext" => Box::new(
+                GenericDspNodeUi::new("LuaDspContext", "Lua Audio DSP Evaluation Context", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("buffer_precision_mode", "Internal Processing Precision Mode", 0.0, 4.0, 0.0, "mode", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("context_sample_rate", "Audio Engine Base Sample Rate", 22050.0, 192000.0, 48000.0, "Hz", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("scratch_buffer_capacity_kb", "Script Scratch Memory Buffer Pool", 16.0, 1024.0, 128.0, "KB", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("fft_analysis_window_size", "Spectral Analysis Window Size", 128.0, 8192.0, 1024.0, "bins", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("dc_offset_auto_suppression", "Automatic DC Offset Removal Filter", true, (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("denormal_number_clamping", "DAZ / FTZ Denormalized Float Clamp", true, (16, 185, 129)))
+            ),
+            "LuaRandomEngine" => Box::new(
+                GenericDspNodeUi::new("LuaRandomEngine", "Lua Deterministic Chaos & PRNG Engine", DspNodeCategory::Modulation)
+                    .with_param(DspParamDescriptor::new_linear("distribution_algorithm", "PRNG Distribution Curve", 0.0, 4.0, 0.0, "dist", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("random_seed_offset", "Deterministic Integer Random Seed", 1.0, 65535.0, 1337.0, "seed", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("entropy_injection_rate", "Dynamic Entropy Injection Rate", 0.0, 100.0, 12.0, "Hz", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("brownian_motion_inertia", "Brownian Random Walk Inertia Slope", 0.0, 1.0, 0.45, "slope", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("chaos_attractor_lyapunov", "Lyapunov Exponent / Chaos Scaling", 0.1, 5.0, 1.2, "exp", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("quantum_seed_entanglement", "Synchronize Seed with Transport Bar", true, (16, 185, 129)))
+            ),
+            "LuaMidiMessage" => Box::new(
+                GenericDspNodeUi::new("LuaMidiMessage", "Lua MIDI Event Transformer & Filter", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("message_filter_type", "Filtered Event Message Type", 0.0, 4.0, 0.0, "type", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("transpose_semitones", "Chromatic Pitch Transpose Interval", -36.0, 36.0, 0.0, "st", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("velocity_scale_factor", "Note Velocity Dynamic Scaling Gain", 0.1, 2.0, 1.0, "gain", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("channel_remap_target", "Target MIDI Channel Routing Destination", 1.0, 16.0, 1.0, "ch", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("time_delay_ticks", "Micro-Timing Swing & Delay Offset", -96.0, 96.0, 0.0, "ticks", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("mpe_expression_preservation", "Preserve MPE Lower/Upper Zone Boundaries", true, (16, 185, 129)))
+            ),
+            "LuaDspObjectMetatable" => Box::new(
+                GenericDspNodeUi::new("LuaDspObjectMetatable", "Lua DSP Class Metatable Dispatcher", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("metatable_dispatch_mode", "Method Lookup & VTable Dispatch Strategy", 0.0, 4.0, 0.0, "mode", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("max_voice_instances", "Maximum Allocated Dynamic Voices", 1.0, 64.0, 16.0, "voices", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("gc_memory_step_kb", "Incremental Garbage Collector Step Size", 4.0, 256.0, 32.0, "KB", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("inheritance_recursion_depth", "Maximum Metatable Inheritance Depth", 1.0, 8.0, 3.0, "depth", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("operator_overload_overhead_ns", "Arithmetic Operator Profiling Budget", 10.0, 500.0, 45.0, "ns", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("strict_nil_indexing_guard", "Enforce Strict Nil Field Access Panic Guard", true, (16, 185, 129)))
+            ),
+            "LuaEventSystem" => Box::new(
+                GenericDspNodeUi::new("LuaEventSystem", "Lua Audio Event Bus & PubSub Dispatcher", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("queue_buffering_policy", "Ring Buffer Overflow Spill Policy", 0.0, 4.0, 0.0, "policy", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("event_queue_capacity", "Ring Buffer Maximum Event Slots", 32.0, 4096.0, 512.0, "events", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("dispatch_latency_target_us", "Maximum Allowable Dispatch Latency", 5.0, 500.0, 50.0, "us", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("subscriber_priority_levels", "Event Subscriber Priority Priority Bands", 1.0, 8.0, 4.0, "levels", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("event_filtering_mask", "Bitwise Channel Event Routing Mask", 0.0, 255.0, 255.0, "mask", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("lock_free_spsc_ring", "Enforce Lock-Free Single-Producer Ring Queue", true, (16, 185, 129)))
+            ),
+            "LuaTimer" => Box::new(
+                GenericDspNodeUi::new("LuaTimer", "Lua Sample-Accurate Timing & Clock Generator", DspNodeCategory::Modulation)
+                    .with_param(DspParamDescriptor::new_linear("time_base_sync_mode", "Clock Synchronization Source", 0.0, 4.0, 0.0, "sync", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("timer_frequency_hz", "Free-Running Timer Repetition Frequency", 0.01, 100.0, 4.0, "Hz", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("tempo_division_ratio", "Musical Beat Sub-Division Multiplier", 0.125, 32.0, 1.0, "x", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("jitter_attenuation_damping", "Phase Jitter Lowpass Filter Smoothing", 0.0, 1.0, 0.85, "damp", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("swing_shuffle_percentage", "Groove Swing Sub-Beat Delay Percentage", 50.0, 75.0, 50.0, "%", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("phase_reset_on_transport_start", "Hard Phase Reset on DAW Playback Trigger", true, (16, 185, 129)))
+            ),
+            "LuaUiWidget" => Box::new(
+                GenericDspNodeUi::new("LuaUiWidget", "Lua Scriptable Vector UI Widget", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("widget_visual_type", "Rendered Control Surface Widget Type", 0.0, 4.0, 0.0, "type", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("widget_width_points", "Logical Horizontal Display Width", 32.0, 512.0, 128.0, "pt", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("widget_height_points", "Logical Vertical Display Height", 16.0, 512.0, 64.0, "pt", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("corner_rounding_radius", "Background Panel Corner Bevel Radius", 0.0, 24.0, 6.0, "px", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("accent_hue_rotation_deg", "Interactive Accent Color Palette Rotation", 0.0, 360.0, 180.0, "deg", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("hover_interaction_glow", "High-Contrast Neon Edge Glow on Pointer Hover", true, (16, 185, 129)))
+            ),
+            "LuaUiLayout" => Box::new(
+                GenericDspNodeUi::new("LuaUiLayout", "Lua Responsive Device Flexbox Layout", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("flex_direction", "Primary Flex Layout Flow Direction", 0.0, 4.0, 0.0, "dir", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("item_spacing_pixels", "Inter-Widget Layout Separation Gap", 0.0, 48.0, 8.0, "px", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("padding_inner_pixels", "Container Frame Inner Padding", 0.0, 64.0, 12.0, "px", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("flex_grow_factor", "Dynamic Space Expansion Weight Factor", 0.0, 5.0, 1.0, "grow", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("minimum_container_width", "Responsive Collapsible Width Threshold", 100.0, 1200.0, 320.0, "px", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("auto_scroll_overflow", "Enable Smooth Momentum Scroll on Content Overflow", true, (16, 185, 129)))
+            ),
+            "LuaPainterBuffer" => Box::new(
+                GenericDspNodeUi::new("LuaPainterBuffer", "Lua Retained Vector Painter Buffer", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("primitive_tessellation_quality", "GPU Tessellation Curve Subdivision Density", 0.0, 4.0, 2.0, "qual", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("vertex_buffer_capacity", "Pre-Allocated Vertex Buffer Capacity", 256.0, 65536.0, 4096.0, "verts", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("path_stroke_thickness", "Vector Stroke Line Width", 0.5, 16.0, 2.0, "px", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("mesh_transparency_alpha", "Global Canvas Layer Blend Opacity", 0.0, 1.0, 0.9, "alpha", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("color_gradient_stop", "Two-Tone Gradient Color Interpolation Stop", 0.0, 1.0, 0.5, "pos", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("hardware_clip_rect_culling", "Hardware Scissor Rect Geometric Clipping", true, (16, 185, 129)))
+            ),
+            "LuaMidiInputSubscriber" => Box::new(
+                GenericDspNodeUi::new("LuaMidiInputSubscriber", "Lua Polyphonic MIDI Input Subscriber", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("channel_listen_mask", "Input Channel Subscription Mode", 0.0, 4.0, 0.0, "mask", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("active_midi_channel", "Dedicated Listening MIDI Channel Number", 1.0, 16.0, 1.0, "ch", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("lower_key_limit", "Lowest Keyboard Split Bound MIDI Note", 0.0, 127.0, 0.0, "note", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("upper_key_limit", "Highest Keyboard Split Bound MIDI Note", 0.0, 127.0, 127.0, "note", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("note_off_choke_group", "Exclusive Voice Stealing Choke Group", 0.0, 16.0, 0.0, "group", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("pass_through_unhandled_events", "Echo Unmatched MIDI Events Downstream", true, (16, 185, 129)))
+            ),
+            "LuaCoroutinePattern" => Box::new(
+                GenericDspNodeUi::new("LuaCoroutinePattern", "Lua Coroutine Algorithmic Pattern Generator", DspNodeCategory::Modulation)
+                    .with_param(DspParamDescriptor::new_linear("pattern_yield_quantization", "Coroutine Resume Step Quantization", 0.0, 4.0, 0.0, "quant", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("pattern_length_steps", "Sequence Loop Cycle Length In Steps", 1.0, 64.0, 16.0, "steps", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("recursion_stack_depth", "Maximum Nested Generator Depth", 1.0, 16.0, 4.0, "depth", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("stochastic_mutation_chance", "Algorithmic Step Mutation Probability", 0.0, 1.0, 0.15, "prob", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("gate_pulse_width_percent", "Trigger Gate Output Duration Duty Cycle", 5.0, 95.0, 65.0, "%", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("polyphonic_tuple_yielding", "Support Simultaneous Multi-Pitch Polyphonic Yields", true, (16, 185, 129)))
+            ),
+            "BlockSizePerformance" => Box::new(
+                GenericDspNodeUi::new("BlockSizePerformance", "Audio Block Size & DSP Latency Profiler", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("test_signal_topology", "DSP Stress-Test Audio Load Graph", 0.0, 4.0, 1.0, "topo", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("buffer_sample_size", "Evaluated Audio Block Size Sample Count", 16.0, 4096.0, 256.0, "spl", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("synthetic_cpu_load_burn", "Synthetic CPU DSP Burn Cycles", 0.0, 100.0, 0.0, "%", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("latency_alert_threshold_ms", "XRun Dropped Frame Latency Warning Threshold", 0.5, 50.0, 5.0, "ms", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("memory_bandwidth_read_mbps", "Observed Memory Bus Bandwidth Read Rate", 10.0, 5000.0, 450.0, "MB/s", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("record_xrun_event_history", "Log All Real-Time Buffer Underruns To CSV File", true, (16, 185, 129)))
+            ),
+            "PeerNode" => Box::new(
+                GenericDspNodeUi::new("PeerNode", "WebRTC Audio Peer Collaboration Node", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("ice_transport_policy", "WebRTC Network NAT Traversal Policy", 0.0, 4.0, 0.0, "policy", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("audio_stream_bitrate_kbps", "Opus / Lossless FLAC Stem Bitrate", 64.0, 1411.0, 320.0, "kbps", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("max_jitter_buffer_ms", "Adaptive Network Jitter Buffer Target", 5.0, 250.0, 40.0, "ms", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("bandwidth_throttle_mbps", "Max Collaborative Outbound Bandwidth Limit", 1.0, 100.0, 15.0, "Mbps", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("ping_heartbeat_interval_s", "Keepalive Ping Heartbeat Beacon Period", 0.5, 30.0, 3.0, "s", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("e2ee_srtp_payload_encryption", "AES-256-GCM End-to-End Media Encryption", true, (16, 185, 129)))
+            ),
+            "ZkPatchProof" => Box::new(
+                GenericDspNodeUi::new("ZkPatchProof", "Zero-Knowledge Preset Authenticity Verifier", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("proof_system_scheme", "Zero-Knowledge Proof Cryptographic Scheme", 0.0, 4.0, 1.0, "scheme", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("proof_verification_budget_ms", "Maximum Proof Verification Time Quota", 1.0, 500.0, 25.0, "ms", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("public_input_count", "Publicly Verified DSP Attestation Claims", 1.0, 32.0, 8.0, "claims", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("reputation_trust_threshold", "Author Trust Score Minimum Acceptance Level", 0.0, 100.0, 75.0, "%", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("zk_circuit_constraint_k", "Circuit Complexity Arithmetic Constraints", 1.0, 64.0, 16.0, "kGates", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("quarantine_unverified_patches", "Auto-Quarantine Patches Failing Cryptographic Proof", true, (16, 185, 129)))
+            ),
+            "UserPresence" => Box::new(
+                GenericDspNodeUi::new("UserPresence", "Real-Time Collaboration Presence Tracker", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("presence_broadcast_mode", "Telemetry Broadcast Rate Throttling", 0.0, 4.0, 1.0, "rate", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("collaborator_halo_color_hue", "User Visual Cursor Halo Hue Color", 0.0, 360.0, 210.0, "deg", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("idle_timeout_seconds", "Collaborator Inactivity Idle Detection Threshold", 10.0, 600.0, 120.0, "s", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("cursor_interpolation_smoothing", "Remote Mouse Pointer Vector Smoothing", 0.0, 1.0, 0.75, "smooth", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("max_simultaneous_users", "Session Concurrent User Collaboration Limit", 2.0, 32.0, 8.0, "users", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("show_remote_track_lock_badges", "Display Padlock Badges on Tracks Being Edited by Others", true, (16, 185, 129)))
+            ),
+            "RenderTaskBlock" => Box::new(
+                GenericDspNodeUi::new("RenderTaskBlock", "Distributed Cloud Audio Render Coordinator", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("chunking_strategy", "Render Timeline Partitioning Strategy", 0.0, 4.0, 2.0, "strat", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("time_chunk_duration_bars", "Audio Segment Length Per Parallel Job", 1.0, 128.0, 16.0, "bars", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("crossfade_overlap_samples", "Inter-Block Boundary Seamless Crossfade", 64.0, 8192.0, 1024.0, "samples", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("max_parallel_workers", "Maximum Active Cloud Worker Node Instances", 1.0, 64.0, 8.0, "nodes", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("chunk_retry_limit", "Automatic Chunk Re-Compute Failure Retries", 0.0, 5.0, 2.0, "retries", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("lossless_checksum_verification", "Verify Bit-for-Bit SHA-256 Checksum on Recombined Audio", true, (16, 185, 129)))
+            ),
+            "MarketplacePreset" => Box::new(
+                GenericDspNodeUi::new("MarketplacePreset", "Community Preset Manifest & Metadata Hub", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("license_distribution_type", "Preset Pack Distribution License", 0.0, 4.0, 0.0, "lic", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("sample_asset_count", "Embedded Audio WAV/FLAC Sample Assets", 0.0, 512.0, 16.0, "samples", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("manifest_semantic_version", "Preset Bundle Schema Semantic Version", 1.0, 10.0, 2.0, "ver", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("download_compression_ratio", "Preset Bundle Archive Compression Level", 1.0, 9.0, 6.0, "level", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("curated_rating_score", "Community Verified Quality Rating Score", 1.0, 5.0, 4.8, "stars", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("auto_resolve_missing_dependencies", "Auto-Download Missing Free Plugins & Impulses", true, (16, 185, 129)))
+            ),
+            "PermissionToken" => Box::new(
+                GenericDspNodeUi::new("PermissionToken", "Role-Based Access Control Security Token", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("role_authorization_level", "Granted Collaboration User Role", 0.0, 4.0, 0.0, "role", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("token_expiration_hours", "Cryptographic Token Validity Window", 1.0, 720.0, 72.0, "hrs", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("max_export_stems_per_day", "Daily Stem Bounce & Download Quota", 1.0, 100.0, 25.0, "bounces", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("session_revocation_nonce", "Session Revocation Nonce Sequence Counter", 0.0, 10000.0, 1.0, "nonce", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("audit_log_retention_days", "Security Event Audit Trail Log Retention", 7.0, 365.0, 90.0, "days", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("enforce_hardware_key_auth", "Require WebAuthn / FIDO2 Hardware Security Key", false, (16, 185, 129)))
+            ),
+            "PendingMutation" => Box::new(
+                GenericDspNodeUi::new("PendingMutation", "Optimistic CRDT Mutation Buffer Coordinator", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("debounce_coalesce_policy", "Parameter Adjustment Coalesce Strategy", 0.0, 4.0, 0.0, "strat", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("coalesce_window_ms", "Mutation Deduplication Time Window", 1.0, 200.0, 15.0, "ms", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("max_unconfirmed_mutations", "Maximum Buffered In-Flight Adjustments", 10.0, 1000.0, 128.0, "mutations", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("causal_dependency_depth", "Causal Order Vector Clock History Depth", 1.0, 64.0, 8.0, "depth", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("rollback_compensation_slew_ms", "Optimistic Rollback Audio Smoothing Slew", 0.5, 50.0, 5.0, "ms", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("strict_transactional_rollback", "Revert Corrupted Mutations to Snapshot State", true, (16, 185, 129)))
+            ),
+            "OfflineCrdtQueue" => Box::new(
+                GenericDspNodeUi::new("OfflineCrdtQueue", "Offline Conflict-Free Delta Reconciliation Engine", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("conflict_resolution_strategy", "Branch Divergence Merging Strategy", 0.0, 4.0, 0.0, "strat", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("offline_event_buffer_capacity", "Maximum Queued Offline Edit Operations", 100.0, 50000.0, 5000.0, "events", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("sync_batch_size", "Reconnection Network Packet Batch Size", 10.0, 500.0, 100.0, "events", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("max_offline_duration_days", "Maximum Allowable Offline Stale Time", 1.0, 30.0, 7.0, "days", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("reconciliation_bandwidth_cap_kbps", "Background Sync Bandwidth Limit", 32.0, 2048.0, 256.0, "kbps", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("compress_delta_payloads", "LZ4 Compression on Serialized CRDT Delta Packets", true, (16, 185, 129)))
+            ),
             // Fallback dynamic generator for any unexpected or plugin node
             other => {
                 let cat = Self::inventory()
@@ -19358,6 +19757,27 @@ assert!(registry.get("BellowsGesturePattern").is_some());
         assert!(registry.get("HurdyGurdyInterpolationCurve").is_some());
         assert!(registry.get("KotoInterpolationCurve").is_some());
         assert!(registry.get("MalletInterpolationCurve").is_some());
+        assert!(registry.get("MacroRackLuaDevice").is_some());
+        assert!(registry.get("LuaDspContext").is_some());
+        assert!(registry.get("LuaRandomEngine").is_some());
+        assert!(registry.get("LuaMidiMessage").is_some());
+        assert!(registry.get("LuaDspObjectMetatable").is_some());
+        assert!(registry.get("LuaEventSystem").is_some());
+        assert!(registry.get("LuaTimer").is_some());
+        assert!(registry.get("LuaUiWidget").is_some());
+        assert!(registry.get("LuaUiLayout").is_some());
+        assert!(registry.get("LuaPainterBuffer").is_some());
+        assert!(registry.get("LuaMidiInputSubscriber").is_some());
+        assert!(registry.get("LuaCoroutinePattern").is_some());
+        assert!(registry.get("BlockSizePerformance").is_some());
+        assert!(registry.get("PeerNode").is_some());
+        assert!(registry.get("ZkPatchProof").is_some());
+        assert!(registry.get("UserPresence").is_some());
+        assert!(registry.get("RenderTaskBlock").is_some());
+        assert!(registry.get("MarketplacePreset").is_some());
+        assert!(registry.get("PermissionToken").is_some());
+        assert!(registry.get("PendingMutation").is_some());
+        assert!(registry.get("OfflineCrdtQueue").is_some());
     }
 
     #[test]

@@ -468,6 +468,10 @@ impl AwardWinningGuiView {
                 "Vintage EMT-140 Cold-Rolled Steel Suspension Reverb" => "PlateReverbProfile",
                 "Concert Steinway D 9-Foot Resonant Soundboard" => "SoundboardProfile",
                 "Classic B3 Tonewheel Organ Full Gospel Drawbars" => "TonewheelOrganProfile",
+                "Scriptable Real-Time Lua Device & Macro Control Surface" => "MacroRackLuaDevice",
+                "Stochastic Chaos Modulation & Algorithmic Random Generator" => "LuaRandomEngine",
+                "Decentralized WebRTC Low-Latency Audio Peer Streamer" => "PeerNode",
+                "Zero-Knowledge Cryptographic DSP Patch & State Verifier" => "ZkPatchProof",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {

@@ -7227,4 +7227,173 @@ mod tests {
             assert_eq!(view.inspector_state.selected_node_kind, Some("TonewheelOrganProfile".to_string()));
         }
     }
+
+    #[test]
+    fn test_tier116_modern_gui_dsp_module_coverage_and_presets() {
+        use crate::dsp_node_ui::{DspNodeRegistry, DspNodeCategory};
+        use crate::views::modern_asset_browser::BrowserCategory;
+
+        let registry = DspNodeRegistry::new();
+
+        // 1. Verify exactly 1051 total DSP modules registered
+        let total_modules = DspNodeRegistry::inventory();
+        assert_eq!(total_modules.len(), 1051, "Must have exactly 1051 registered DSP modules");
+        assert!(
+            registry.list_all().len() >= 1051,
+            "Must have at least 1051 registered DSP modules, found {}",
+            registry.list_all().len()
+        );
+
+        // 2. Verify all 21 new modules exist with correct categories and tactile parameters (>= 5 params each)
+        let new_modules = [
+            ("MacroRackLuaDevice", DspNodeCategory::Utility),
+            ("LuaDspContext", DspNodeCategory::Utility),
+            ("LuaRandomEngine", DspNodeCategory::Modulation),
+            ("LuaMidiMessage", DspNodeCategory::Utility),
+            ("LuaDspObjectMetatable", DspNodeCategory::Utility),
+            ("LuaEventSystem", DspNodeCategory::Utility),
+            ("LuaTimer", DspNodeCategory::Modulation),
+            ("LuaUiWidget", DspNodeCategory::Utility),
+            ("LuaUiLayout", DspNodeCategory::Utility),
+            ("LuaPainterBuffer", DspNodeCategory::Utility),
+            ("LuaMidiInputSubscriber", DspNodeCategory::Utility),
+            ("LuaCoroutinePattern", DspNodeCategory::Modulation),
+            ("BlockSizePerformance", DspNodeCategory::Utility),
+            ("PeerNode", DspNodeCategory::Utility),
+            ("ZkPatchProof", DspNodeCategory::Utility),
+            ("UserPresence", DspNodeCategory::Utility),
+            ("RenderTaskBlock", DspNodeCategory::Utility),
+            ("MarketplacePreset", DspNodeCategory::Utility),
+            ("PermissionToken", DspNodeCategory::Utility),
+            ("PendingMutation", DspNodeCategory::Utility),
+            ("OfflineCrdtQueue", DspNodeCategory::Utility),
+        ];
+
+        for (name, expected_cat) in new_modules {
+            let desc = registry.get(name).unwrap_or_else(|| panic!("Module {} not found", name));
+            assert_eq!(desc.category, expected_cat, "Module {} category mismatch", name);
+            assert!(desc.params.len() >= 5, "Module {} must have >= 5 tactile parameters, found {}", name, desc.params.len());
+        }
+
+        // 3. Verify normalization mappings
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("macrorackluadevice"), Some("MacroRackLuaDevice"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luamacrorack"), Some("MacroRackLuaDevice"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luadspcontext"), Some("LuaDspContext"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luadspctx"), Some("LuaDspContext"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luarandomengine"), Some("LuaRandomEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("stochasticlua"), Some("LuaRandomEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luamidimessage"), Some("LuaMidiMessage"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luamiditransformer"), Some("LuaMidiMessage"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luadspobjectmetatable"), Some("LuaDspObjectMetatable"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luametatable"), Some("LuaDspObjectMetatable"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luaeventsystem"), Some("LuaEventSystem"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("audiopubsub"), Some("LuaEventSystem"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luatimer"), Some("LuaTimer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luatempoclock"), Some("LuaTimer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luauiwidget"), Some("LuaUiWidget"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("scriptuiwidget"), Some("LuaUiWidget"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luauilayout"), Some("LuaUiLayout"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luaflexbox"), Some("LuaUiLayout"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luapainterbuffer"), Some("LuaPainterBuffer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("vectorpainterlua"), Some("LuaPainterBuffer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luamidiinputsubscriber"), Some("LuaMidiInputSubscriber"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("midisubscriberlua"), Some("LuaMidiInputSubscriber"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luacoroutinepattern"), Some("LuaCoroutinePattern"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("coroutinepattern"), Some("LuaCoroutinePattern"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("blocksizeperformance"), Some("BlockSizePerformance"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("dsplatencyprofiler"), Some("BlockSizePerformance"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("peernode"), Some("PeerNode"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("webrtcpeer"), Some("PeerNode"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("zkpatchproof"), Some("ZkPatchProof"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("patchverifierzk"), Some("ZkPatchProof"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("userpresence"), Some("UserPresence"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("presencehud"), Some("UserPresence"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("rendertaskblock"), Some("RenderTaskBlock"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("distributedrender"), Some("RenderTaskBlock"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("marketplacepreset"), Some("MarketplacePreset"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("presetmanifest"), Some("MarketplacePreset"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("permissiontoken"), Some("PermissionToken"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("rbacsecuritytoken"), Some("PermissionToken"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pendingmutation"), Some("PendingMutation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("crdtmutation"), Some("PendingMutation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("offlinecrdtqueue"), Some("OfflineCrdtQueue"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("deltareconciliation"), Some("OfflineCrdtQueue"));
+
+        // 4. Verify Asset Browser categorization
+        let fx_folders = BrowserCategory::AudioFx.default_folders();
+        let mod_items = fx_folders.iter().find(|(name, _)| *name == "Modulation & Pitch").unwrap().1;
+        assert!(mod_items.contains(&"LuaRandomEngine"));
+        assert!(mod_items.contains(&"LuaTimer"));
+        assert!(mod_items.contains(&"LuaCoroutinePattern"));
+
+        let midi_folders = BrowserCategory::MidiFx.default_folders();
+        let gen_items = midi_folders.iter().find(|(name, _)| *name == "Generative & Sync").unwrap().1;
+        assert!(gen_items.contains(&"MacroRackLuaDevice"));
+        assert!(gen_items.contains(&"LuaDspContext"));
+        assert!(gen_items.contains(&"LuaMidiMessage"));
+        assert!(gen_items.contains(&"LuaDspObjectMetatable"));
+        assert!(gen_items.contains(&"LuaEventSystem"));
+        assert!(gen_items.contains(&"LuaUiWidget"));
+        assert!(gen_items.contains(&"LuaUiLayout"));
+        assert!(gen_items.contains(&"LuaPainterBuffer"));
+        assert!(gen_items.contains(&"LuaMidiInputSubscriber"));
+
+        let routing_items = midi_folders.iter().find(|(name, _)| *name == "Transforms & Routing").unwrap().1;
+        assert!(routing_items.contains(&"BlockSizePerformance"));
+        assert!(routing_items.contains(&"PeerNode"));
+        assert!(routing_items.contains(&"ZkPatchProof"));
+        assert!(routing_items.contains(&"UserPresence"));
+        assert!(routing_items.contains(&"RenderTaskBlock"));
+        assert!(routing_items.contains(&"MarketplacePreset"));
+        assert!(routing_items.contains(&"PermissionToken"));
+        assert!(routing_items.contains(&"PendingMutation"));
+        assert!(routing_items.contains(&"OfflineCrdtQueue"));
+
+        // 5. Verify Novice Presets synchronize in AwardWinningGuiView
+        #[cfg(feature = "gui")]
+        {
+            let mut view = crate::views::award_winning_gui_view::AwardWinningGuiView::default();
+            let ctx = eframe::egui::Context::default();
+
+            // Preset 1: Scriptable Real-Time Lua Device & Macro Control Surface -> MacroRackLuaDevice
+            view.top_bar_state.selected_preset = "Scriptable Real-Time Lua Device & Macro Control Surface".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("MacroRackLuaDevice".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("MacroRackLuaDevice".to_string()));
+
+            // Preset 2: Stochastic Chaos Modulation & Algorithmic Random Generator -> LuaRandomEngine
+            view.top_bar_state.selected_preset = "Stochastic Chaos Modulation & Algorithmic Random Generator".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("LuaRandomEngine".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("LuaRandomEngine".to_string()));
+
+            // Preset 3: Decentralized WebRTC Low-Latency Audio Peer Streamer -> PeerNode
+            view.top_bar_state.selected_preset = "Decentralized WebRTC Low-Latency Audio Peer Streamer".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("PeerNode".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("PeerNode".to_string()));
+
+            // Preset 4: Zero-Knowledge Cryptographic DSP Patch & State Verifier -> ZkPatchProof
+            view.top_bar_state.selected_preset = "Zero-Knowledge Cryptographic DSP Patch & State Verifier".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("ZkPatchProof".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("ZkPatchProof".to_string()));
+        }
+    }
 }

@@ -233,6 +233,10 @@ fn default_available_presets() -> Vec<String> {
         "Vintage EMT-140 Cold-Rolled Steel Suspension Reverb".to_string(),
         "Concert Steinway D 9-Foot Resonant Soundboard".to_string(),
         "Classic B3 Tonewheel Organ Full Gospel Drawbars".to_string(),
+        "Scriptable Real-Time Lua Device & Macro Control Surface".to_string(),
+        "Stochastic Chaos Modulation & Algorithmic Random Generator".to_string(),
+        "Decentralized WebRTC Low-Latency Audio Peer Streamer".to_string(),
+        "Zero-Knowledge Cryptographic DSP Patch & State Verifier".to_string(),
     ]
 }
 
