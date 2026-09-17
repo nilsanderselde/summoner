@@ -265,6 +265,10 @@ fn default_available_presets() -> Vec<String> {
         "Live Multitrack Performance Looper & Quantized Overdub".to_string(),
         "Polyphonic Chord Strumming Humanizer & Arpeggiator".to_string(),
         "Studio Mastering 32-Bit Float Multi-Stem Batch Exporter".to_string(),
+        "Aeroelastic Free-Reed Cassotto Chamber & Bellows Flow".to_string(),
+        "Rosenberg Glottal Pulse Vocal Flow & Aspiration".to_string(),
+        "Asian Zither Paulownia Soundboard & Movable Ji Bridge".to_string(),
+        "EMT 140 Cold-Rolled Steel Continuous Dispersion Plate".to_string(),
     ]
 }
 

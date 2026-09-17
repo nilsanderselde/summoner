@@ -500,6 +500,10 @@ impl AwardWinningGuiView {
                 "Live Multitrack Performance Looper & Quantized Overdub" => "LooperCommand",
                 "Polyphonic Chord Strumming Humanizer & Arpeggiator" => "StrumDirection",
                 "Studio Mastering 32-Bit Float Multi-Stem Batch Exporter" => "StemExportFormat",
+                "Aeroelastic Free-Reed Cassotto Chamber & Bellows Flow" => "FreeReedExciter",
+                "Rosenberg Glottal Pulse Vocal Flow & Aspiration" => "GlottalFlowModel",
+                "Asian Zither Paulownia Soundboard & Movable Ji Bridge" => "JiBridgeCoupling",
+                "EMT 140 Cold-Rolled Steel Continuous Dispersion Plate" => "PlateReverbTank",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {

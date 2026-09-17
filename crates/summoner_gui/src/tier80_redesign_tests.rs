@@ -8268,7 +8268,7 @@ mod tests {
     fn test_tier123_modern_gui_dsp_module_coverage_and_presets() {
         let registry = crate::dsp_node_ui::DspNodeRegistry::new();
         let inv = crate::dsp_node_ui::DspNodeRegistry::inventory();
-        assert_eq!(inv.len(), 1193, "Inventory must contain exactly 1193 DSP modules");
+        assert!(inv.len() >= 1193, "Inventory must contain at least 1193 DSP modules");
         assert!(registry.list_all().len() >= 1193, "Registry list_all must be >= 1193");
 
         // 1. Verify Tier 123 modules have valid categories and >= 5 parameters
@@ -8356,6 +8356,148 @@ mod tests {
             ("Live Multitrack Performance Looper & Quantized Overdub", "LooperCommand"),
             ("Polyphonic Chord Strumming Humanizer & Arpeggiator", "StrumDirection"),
             ("Studio Mastering 32-Bit Float Multi-Stem Batch Exporter", "StemExportFormat"),
+        ];
+
+        for (preset_name, target_node) in presets {
+            view.top_bar_state.selected_preset = preset_name.to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some(target_node.to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some(target_node.to_string()));
+        }
+    }
+
+    #[test]
+    fn test_tier124_modern_gui_dsp_module_coverage_and_presets() {
+        let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+        let inv = crate::dsp_node_ui::DspNodeRegistry::inventory();
+        assert_eq!(inv.len(), 1214, "Inventory must contain exactly 1214 DSP modules");
+        assert!(registry.list_all().len() >= 1214, "Registry list_all must be >= 1214");
+
+        // 1. Verify Tier 124 modules have valid categories and >= 5 parameters
+        let tier124_modules = [
+            ("NavigationCommand", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("LicenseCompliance", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("LuaScriptSandboxMode", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("LuaDrawCommand", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("WorkspaceRole", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CrdtOperationType", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("SfzLoopMode", crate::dsp_node_ui::DspNodeCategory::SamplerSlicer),
+            ("AudioOnsetDetector", crate::dsp_node_ui::DspNodeCategory::Modulation),
+            ("FreeReedExciter", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("GitMicroCommitDag", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("GlottalFlowModel", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("ClapPluginExportConfig", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("AssetBlake3Verifier", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("HammerStrikeExciter", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("JiBridgeCoupling", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("KotoSoundboard", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("PlateReverbTank", crate::dsp_node_ui::DspNodeCategory::TimeSpace),
+            ("PluckedStringWaveguide", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("SitarSoundboard", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("WindchestTracker", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("CassottoChamberShutter", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+        ];
+
+        for (name, expected_cat) in tier124_modules {
+            let desc = registry.get(name).unwrap_or_else(|| panic!("Tier 124 module {} missing", name));
+            assert_eq!(desc.category, expected_cat, "Category mismatch for {}", name);
+            assert!(desc.params.len() >= 5, "Module {} must have >= 5 params, found {}", name, desc.params.len());
+            assert!(crate::dsp_node_ui::DspNodeRegistry::create_node_ui(name).is_some(), "create_node_ui failed for {}", name);
+        }
+
+        // 2. Normalization verification
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("navigationcommand"), Some("NavigationCommand"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("timelinenavigation"), Some("NavigationCommand"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("licensecompliance"), Some("LicenseCompliance"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("dependencylicenseaudit"), Some("LicenseCompliance"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luascriptsandboxmode"), Some("LuaScriptSandboxMode"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luasandboxmode"), Some("LuaScriptSandboxMode"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luadrawcommand"), Some("LuaDrawCommand"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("gpudrawcommand"), Some("LuaDrawCommand"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("workspacerole"), Some("WorkspaceRole"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("collaborativerole"), Some("WorkspaceRole"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("crdtoperationtype"), Some("CrdtOperationType"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("crdtsyncoperation"), Some("CrdtOperationType"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sfzloopmode"), Some("SfzLoopMode"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sampleloopmode"), Some("SfzLoopMode"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("audioonsetdetector"), Some("AudioOnsetDetector"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("spectralfluxonset"), Some("AudioOnsetDetector"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("freereedexciter"), Some("FreeReedExciter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("aeroelasticreed"), Some("FreeReedExciter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("gitmicrocommitdag"), Some("GitMicroCommitDag"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sessioncommitdag"), Some("GitMicroCommitDag"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("glottalflowmodel"), Some("GlottalFlowModel"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("rosenbergglottalflow"), Some("GlottalFlowModel"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clappluginexportconfig"), Some("ClapPluginExportConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("patchexportclap"), Some("ClapPluginExportConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("assetblake3verifier"), Some("AssetBlake3Verifier"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("audiointegrityverifier"), Some("AssetBlake3Verifier"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("hammerstrikeexciter"), Some("HammerStrikeExciter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("feltcontactdynamics"), Some("HammerStrikeExciter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("jibridgecoupling"), Some("JiBridgeCoupling"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("jibridgemodel"), Some("JiBridgeCoupling"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("kotosoundboard"), Some("KotoSoundboard"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("kotoacousticbody"), Some("KotoSoundboard"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("platereverbtank"), Some("PlateReverbTank"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("emt140platetank"), Some("PlateReverbTank"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pluckedstringwaveguide"), Some("PluckedStringWaveguide"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("commutedwaveguidestring"), Some("PluckedStringWaveguide"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sitarsoundboard"), Some("SitarSoundboard"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("tablisoundboard"), Some("SitarSoundboard"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("windchesttracker"), Some("WindchestTracker"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("organwindpressure"), Some("WindchestTracker"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cassottochambershutter"), Some("CassottoChamberShutter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("tonechambershutter"), Some("CassottoChamberShutter"));
+
+        // 3. Verify Asset Browser categorization
+        use crate::views::modern_asset_browser::BrowserCategory;
+        let inst_folders = BrowserCategory::Instruments.default_folders();
+        let phys_items = inst_folders.iter().find(|(name, _)| *name == "Physical Models").unwrap().1;
+        assert!(phys_items.contains(&"FreeReedExciter"));
+        assert!(phys_items.contains(&"GlottalFlowModel"));
+        assert!(phys_items.contains(&"HammerStrikeExciter"));
+        assert!(phys_items.contains(&"JiBridgeCoupling"));
+        assert!(phys_items.contains(&"KotoSoundboard"));
+        assert!(phys_items.contains(&"PluckedStringWaveguide"));
+        assert!(phys_items.contains(&"SitarSoundboard"));
+        assert!(phys_items.contains(&"WindchestTracker"));
+        assert!(phys_items.contains(&"CassottoChamberShutter"));
+
+        let sampler_items = inst_folders.iter().find(|(name, _)| *name == "Samplers & Slicers").unwrap().1;
+        assert!(sampler_items.contains(&"SfzLoopMode"));
+
+        let audio_fx_folders = BrowserCategory::AudioFx.default_folders();
+        let reverb_items = audio_fx_folders.iter().find(|(name, _)| *name == "Time & Reverb").unwrap().1;
+        assert!(reverb_items.contains(&"PlateReverbTank"));
+
+        let mod_items = audio_fx_folders.iter().find(|(name, _)| *name == "Modulation & Pitch").unwrap().1;
+        assert!(mod_items.contains(&"AudioOnsetDetector"));
+
+        let midi_fx_folders = BrowserCategory::MidiFx.default_folders();
+        let routing_items = midi_fx_folders.iter().find(|(name, _)| *name == "Transforms & Routing").unwrap().1;
+        assert!(routing_items.contains(&"NavigationCommand"));
+        assert!(routing_items.contains(&"LicenseCompliance"));
+        assert!(routing_items.contains(&"LuaScriptSandboxMode"));
+        assert!(routing_items.contains(&"LuaDrawCommand"));
+        assert!(routing_items.contains(&"WorkspaceRole"));
+        assert!(routing_items.contains(&"CrdtOperationType"));
+        assert!(routing_items.contains(&"GitMicroCommitDag"));
+        assert!(routing_items.contains(&"ClapPluginExportConfig"));
+        assert!(routing_items.contains(&"AssetBlake3Verifier"));
+
+        // 4. Verify interactive AwardWinningGuiView selects Tier 124 preset nodes
+        let mut view = crate::views::award_winning_gui_view::AwardWinningGuiView::default();
+        let ctx = eframe::egui::Context::default();
+
+        let presets = [
+            ("Aeroelastic Free-Reed Cassotto Chamber & Bellows Flow", "FreeReedExciter"),
+            ("Rosenberg Glottal Pulse Vocal Flow & Aspiration", "GlottalFlowModel"),
+            ("Asian Zither Paulownia Soundboard & Movable Ji Bridge", "JiBridgeCoupling"),
+            ("EMT 140 Cold-Rolled Steel Continuous Dispersion Plate", "PlateReverbTank"),
         ];
 
         for (preset_name, target_node) in presets {
