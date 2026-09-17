@@ -9060,6 +9060,139 @@ mod tests {
             assert_eq!(view.inspector_state.selected_node_kind, Some(target_node.to_string()));
         }
     }
+
+    #[test]
+    fn test_tier129_full_workflow() {
+        let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+        let inv = crate::dsp_node_ui::DspNodeRegistry::inventory();
+        assert_eq!(inv.len(), 1319, "Inventory must contain exactly 1319 DSP modules");
+        assert!(registry.list_all().len() >= 1319, "Registry list_all must be >= 1319");
+
+        // 1. Tier 129 registration and completeness
+        let tier129_modules = [
+            ("ParamUpdate", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("GraphRunner", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("NodeFactory", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("OscCommand", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("OscServer", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliBatchRenderEngine", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliStemSeparatorEngine", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliSfzPatchConverter", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliMelodyGenerator", crate::dsp_node_ui::DspNodeCategory::Modulation),
+            ("CliPatternGenerator", crate::dsp_node_ui::DspNodeCategory::Modulation),
+            ("CliProjectMigrator", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliProjectDiffEngine", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliWasmPackager", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliAdmSpatialExporter", crate::dsp_node_ui::DspNodeCategory::SpatialSurround),
+            ("CliHarmonySuggester", crate::dsp_node_ui::DspNodeCategory::Modulation),
+            ("CliMicrotoneTuner", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliPiPlatformBuilder", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliAssetVerifier", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliAutoSlicer", crate::dsp_node_ui::DspNodeCategory::SamplerSlicer),
+            ("CliSessionWatchDaemon", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliProjectNormalizer", crate::dsp_node_ui::DspNodeCategory::Utility),
+        ];
+
+        for (name, expected_cat) in tier129_modules {
+            let desc = registry.get(name).unwrap_or_else(|| panic!("Module {} missing in Tier 129", name));
+            assert_eq!(desc.category, expected_cat, "Category mismatch for {}", name);
+            assert!(desc.params.len() >= 5, "Module {} must have >= 5 params, found {}", name, desc.params.len());
+            assert!(crate::dsp_node_ui::DspNodeRegistry::create_node_ui(name).is_some(), "create_node_ui failed for {}", name);
+        }
+
+        // 2. Verify normalizations
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("paramupdate"), Some("ParamUpdate"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("audioparamupdate"), Some("ParamUpdate"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("graphrunner"), Some("GraphRunner"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("audiographrunner"), Some("GraphRunner"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("nodefactory"), Some("NodeFactory"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("dspnodefactory"), Some("NodeFactory"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("osccommand"), Some("OscCommand"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("oscmessagerouter"), Some("OscCommand"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("oscserver"), Some("OscServer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("osclistener"), Some("OscServer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clibatchrenderengine"), Some("CliBatchRenderEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("batchrenderengine"), Some("CliBatchRenderEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clistemseparatorengine"), Some("CliStemSeparatorEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("stemseparatorengine"), Some("CliStemSeparatorEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clisfzpatchconverter"), Some("CliSfzPatchConverter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sfzpatchconverter"), Some("CliSfzPatchConverter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("climelodygenerator"), Some("CliMelodyGenerator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("melodygenerator"), Some("CliMelodyGenerator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clipatterngenerator"), Some("CliPatternGenerator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clicellularautomata"), Some("CliPatternGenerator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cliprojectmigrator"), Some("CliProjectMigrator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("projectmigrator"), Some("CliProjectMigrator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cliprojectdiffengine"), Some("CliProjectDiffEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("projectdiffengine"), Some("CliProjectDiffEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cliwasmpackager"), Some("CliWasmPackager"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("webassemblypluginpackager"), Some("CliWasmPackager"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cliadmspatialexporter"), Some("CliAdmSpatialExporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clispatialadm"), Some("CliAdmSpatialExporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cliharmonysuggester"), Some("CliHarmonySuggester"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("climodalharmony"), Some("CliHarmonySuggester"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("climicrotonetuner"), Some("CliMicrotoneTuner"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("microtonetuner"), Some("CliMicrotoneTuner"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clipiplatformbuilder"), Some("CliPiPlatformBuilder"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("piplatformbuilder"), Some("CliPiPlatformBuilder"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cliassetverifier"), Some("CliAssetVerifier"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clisampleverifier"), Some("CliAssetVerifier"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cliautoslicer"), Some("CliAutoSlicer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clitransientslicer"), Some("CliAutoSlicer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clisessionwatchdaemon"), Some("CliSessionWatchDaemon"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sessionwatchdaemon"), Some("CliSessionWatchDaemon"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cliprojectnormalizer"), Some("CliProjectNormalizer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cliprojectformatter"), Some("CliProjectNormalizer"));
+
+        // 3. Verify Asset Browser categorization
+        use crate::views::modern_asset_browser::BrowserCategory;
+
+        let midi_fx_folders = BrowserCategory::MidiFx.default_folders();
+        let routing_items = midi_fx_folders.iter().find(|(name, _)| *name == "Transforms & Routing").unwrap().1;
+        assert!(routing_items.contains(&"ParamUpdate"));
+        assert!(routing_items.contains(&"GraphRunner"));
+        assert!(routing_items.contains(&"NodeFactory"));
+        assert!(routing_items.contains(&"OscCommand"));
+        assert!(routing_items.contains(&"OscServer"));
+        assert!(routing_items.contains(&"CliBatchRenderEngine"));
+        assert!(routing_items.contains(&"CliStemSeparatorEngine"));
+        assert!(routing_items.contains(&"CliSfzPatchConverter"));
+        assert!(routing_items.contains(&"CliMelodyGenerator"));
+        assert!(routing_items.contains(&"CliPatternGenerator"));
+        assert!(routing_items.contains(&"CliProjectMigrator"));
+        assert!(routing_items.contains(&"CliProjectDiffEngine"));
+        assert!(routing_items.contains(&"CliWasmPackager"));
+        assert!(routing_items.contains(&"CliAdmSpatialExporter"));
+        assert!(routing_items.contains(&"CliHarmonySuggester"));
+        assert!(routing_items.contains(&"CliMicrotoneTuner"));
+        assert!(routing_items.contains(&"CliPiPlatformBuilder"));
+        assert!(routing_items.contains(&"CliAssetVerifier"));
+        assert!(routing_items.contains(&"CliAutoSlicer"));
+        assert!(routing_items.contains(&"CliSessionWatchDaemon"));
+        assert!(routing_items.contains(&"CliProjectNormalizer"));
+
+        // 4. Verify interactive AwardWinningGuiView selects Tier 129 preset nodes
+        let mut view = crate::views::award_winning_gui_view::AwardWinningGuiView::default();
+        let ctx = eframe::egui::Context::default();
+
+        let presets = [
+            ("Headless Batch Project Render Farm & Offline Export Pipeline", "CliBatchRenderEngine"),
+            ("Demucs v4 Neural Stem Separation & Vocal Isolation Matrix", "CliStemSeparatorEngine"),
+            ("Real-Time OSC UDP Command Dispatcher & Control Protocol Bridge", "OscServer"),
+            ("ITU-R BS.2076 ADM 3D Spatial Audio & Dolby Atmos Broadcast Master", "CliAdmSpatialExporter"),
+        ];
+
+        for (preset_name, target_node) in presets {
+            view.top_bar_state.selected_preset = preset_name.to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some(target_node.to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some(target_node.to_string()));
+        }
+    }
 }
 
 

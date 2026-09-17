@@ -285,6 +285,10 @@ fn default_available_presets() -> Vec<String> {
         "North Indian Classical Raga Shruti Microtonal Drone".to_string(),
         "Vintage 12AX7 Valve Triode Saturation & Sag Bloom".to_string(),
         "Opt-In Real-Time Audio Engine Health Telemetry & Diagnostics".to_string(),
+        "Headless Batch Project Render Farm & Offline Export Pipeline".to_string(),
+        "Demucs v4 Neural Stem Separation & Vocal Isolation Matrix".to_string(),
+        "Real-Time OSC UDP Command Dispatcher & Control Protocol Bridge".to_string(),
+        "ITU-R BS.2076 ADM 3D Spatial Audio & Dolby Atmos Broadcast Master".to_string(),
     ]
 }
 

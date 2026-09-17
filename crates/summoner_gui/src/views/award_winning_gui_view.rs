@@ -520,6 +520,10 @@ impl AwardWinningGuiView {
                 "North Indian Classical Raga Shruti Microtonal Drone" => "RagaScale",
                 "Vintage 12AX7 Valve Triode Saturation & Sag Bloom" => "TubeTopology",
                 "Opt-In Real-Time Audio Engine Health Telemetry & Diagnostics" => "TelemetryManager",
+                "Headless Batch Project Render Farm & Offline Export Pipeline" => "CliBatchRenderEngine",
+                "Demucs v4 Neural Stem Separation & Vocal Isolation Matrix" => "CliStemSeparatorEngine",
+                "Real-Time OSC UDP Command Dispatcher & Control Protocol Bridge" => "OscServer",
+                "ITU-R BS.2076 ADM 3D Spatial Audio & Dolby Atmos Broadcast Master" => "CliAdmSpatialExporter",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {
