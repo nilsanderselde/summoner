@@ -492,6 +492,10 @@ impl AwardWinningGuiView {
                 "Hohner D6 Dual-Coil Parallel Out-of-Phase Funk Quack" => "ClavinetPickupSelection",
                 "Multi-Topology Dynamic Wavefolder & Tanh Tube Saturation" => "DistortionType",
                 "Mastering Psychoacoustic Noise-Shaped 24-Bit Dither" => "DitherType",
+                "Modal Vibraphone & Marimba Wood Acoustic Resonator" => "ModalMaterialPreset",
+                "Non-Linear SmoothStep Modulation Curve & Matrix Router" => "ModulationCurve",
+                "AI Autonomous Mastering Target Pop & Club Spectral Curve" => "TargetCurve",
+                "Deep Neural Audio Voice Morphing & Resynthesis Engine" => "TargetTimbre",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {

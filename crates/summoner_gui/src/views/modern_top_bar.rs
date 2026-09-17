@@ -257,6 +257,10 @@ fn default_available_presets() -> Vec<String> {
         "Hohner D6 Dual-Coil Parallel Out-of-Phase Funk Quack".to_string(),
         "Multi-Topology Dynamic Wavefolder & Tanh Tube Saturation".to_string(),
         "Mastering Psychoacoustic Noise-Shaped 24-Bit Dither".to_string(),
+        "Modal Vibraphone & Marimba Wood Acoustic Resonator".to_string(),
+        "Non-Linear SmoothStep Modulation Curve & Matrix Router".to_string(),
+        "AI Autonomous Mastering Target Pop & Club Spectral Curve".to_string(),
+        "Deep Neural Audio Voice Morphing & Resynthesis Engine".to_string(),
     ]
 }
 
