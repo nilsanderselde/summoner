@@ -289,6 +289,10 @@ fn default_available_presets() -> Vec<String> {
         "Demucs v4 Neural Stem Separation & Vocal Isolation Matrix".to_string(),
         "Real-Time OSC UDP Command Dispatcher & Control Protocol Bridge".to_string(),
         "ITU-R BS.2076 ADM 3D Spatial Audio & Dolby Atmos Broadcast Master".to_string(),
+        "Deterministic Session Git DAG Commit & Visual Tree Diff".to_string(),
+        "Automated C-ABI CLAP Standalone Audio Plugin Packager".to_string(),
+        "Real-Time DSP Hardware Load Profiler & Thread Latency Monitor".to_string(),
+        "Microtiming Groove Jitter Humanizer & Velocity Dynamism".to_string(),
     ]
 }
 

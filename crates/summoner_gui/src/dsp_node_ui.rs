@@ -10337,6 +10337,174 @@ descriptors.insert("BellowsGesturePattern".to_string(), DspNodeDescriptor::new("
             .with_param(DspParamSchema::toggle("sort_plugin_parameters", "Sort Plugin Parameter Dictionaries Alphabetically", true, "Sorts keys alphabetically so re-ordering does not cause git diff noise"))
             .with_param(DspParamSchema::toggle("preserve_comments_and_docstrings", "Retain User Comments and Session Documentation", true, "Preserves human-written comments and header notes during serialization"))
         );
+        descriptors.insert("CliProjectInitializer".to_string(), DspNodeDescriptor::new("CliProjectInitializer", "Headless CLI Project Scaffolding & Session Initializer", DspNodeCategory::Utility, "Headless project generator establishing directory structures, sample rate clocking, default track layouts, and Git tracking repositories")
+            .with_param(DspParamSchema::choice("sample_rate_khz", "Sample Rate Clock Master", &["44.1 kHz Standard", "48.0 kHz Production", "88.2 kHz Studio", "96.0 kHz Hi-Res", "192.0 kHz Master"], 1, "Master hardware sampling frequency clocking the session audio graph"))
+            .with_param(DspParamSchema::knob("initial_tempo_bpm", "Initial Project Tempo", 20.0, 300.0, 120.0, "BPM", MacroRole::Tone, "Default transport tempo in beats per minute initialized upon project creation"))
+            .with_param(DspParamSchema::knob("master_headroom_db", "Master Mix Bus Headroom Ceiling", -18.0, 0.0, -6.0, "dB", MacroRole::Tone, "Fixed headroom padding below 0 dBFS protecting against digital clipping"))
+            .with_param(DspParamSchema::toggle("scaffold_git_repo", "Initialize Git Tracking Repository", true, "Automatically configures a local Git session repository with atomic micro-commit tracking"))
+            .with_param(DspParamSchema::knob("default_track_count", "Initial Track Channel Count", 1.0, 32.0, 4.0, "tracks", MacroRole::Space, "Number of default audio tracks allocated in the newly generated session TOML"))
+            .with_param(DspParamSchema::toggle("enable_metronome_bus", "Allocate Dedicated Metronome Click Bus", true, "Configures an auxiliary audio bus for low-jitter sample-accurate click routing"))
+        );
+        descriptors.insert("CliStubRenderer".to_string(), DspNodeDescriptor::new("CliStubRenderer", "Fast Headless Audio Pipeline Verification Stub", DspNodeCategory::Utility, "Ultra-fast headless dry-run verification engine validating DSP graph connectivity, NaN immunity, and zero-allocation assertions")
+            .with_param(DspParamSchema::knob("verification_block_count", "Dry-Run Block Count", 1.0, 1024.0, 64.0, "blocks", MacroRole::Tone, "Number of audio buffer frames processed during dry-run pipeline verification"))
+            .with_param(DspParamSchema::toggle("strict_alloc_guard", "Enforce Strict Zero-Allocation Guard", true, "Panics immediately if heap allocation occurs on the audio render thread during dry run"))
+            .with_param(DspParamSchema::knob("max_acceptable_nan_count", "Maximum Acceptable NaN/Inf Samples", 0.0, 10.0, 0.0, "samples", MacroRole::Tone, "Strict numerical stability threshold ensuring float calculations remain valid"))
+            .with_param(DspParamSchema::knob("timeout_seconds", "Process Timeout Watchdog", 0.5, 30.0, 5.0, "s", MacroRole::Space, "Maximum allowable execution duration before terminating stuck render jobs"))
+            .with_param(DspParamSchema::toggle("headless_dry_run", "Headless Silent Dry Run Mode", true, "Bypasses all DAC audio output and writes pure telemetry to console stdout"))
+            .with_param(DspParamSchema::toggle("report_dsp_cycles", "Report Per-Node CPU Cycle Consumption", true, "Emits micro-benchmarking statistics detailing execution overhead of each DSP node"))
+        );
+        descriptors.insert("CliWavRenderer".to_string(), DspNodeDescriptor::new("CliWavRenderer", "Offline Studio Floating-Point WAV Master Bounce Engine", DspNodeCategory::Utility, "Multi-threaded offline bounce engine rendering pristine 32-bit floating point masters with true-peak limiting and EBU R128 compliance")
+            .with_param(DspParamSchema::choice("render_bit_depth", "Audio File Export Bit Depth", &["16-bit Fixed PCM", "24-bit Studio PCM", "32-bit Floating Point", "64-bit Double Precision"], 2, "Target sample quantization precision written to the final output file"))
+            .with_param(DspParamSchema::knob("offline_render_speed", "Offline Render Throughput", 1.0, 64.0, 16.0, "x", MacroRole::Tone, "Target rendering speed relative to real-time playback duration"))
+            .with_param(DspParamSchema::knob("true_peak_ceiling_db", "True-Peak Master Limiter Ceiling", -6.0, 0.0, -0.3, "dBFS", MacroRole::Tone, "Inter-sample peak ceiling protecting against lossy compression inter-sample distortion"))
+            .with_param(DspParamSchema::knob("target_integrated_lufs", "Target Integrated Broadcast Loudness", -24.0, -6.0, -14.0, "LUFS", MacroRole::Tone, "Target integrated loudness compliant with Spotify, YouTube, and Apple Music standards"))
+            .with_param(DspParamSchema::choice("dither_noise_shaping", "Dither & Noise Shaping Filter", &["None (Truncation)", "TPDF Flat Dither", "High-Pass Noise Shaped", "Lipshitz Optimal"], 2, "Psychoacoustic noise shaping filter minimizing quantization noise in audible spectrum"))
+            .with_param(DspParamSchema::toggle("normalize_loudness", "Automatic Loudness Normalization", true, "Scales master gain automatically to match the specified target integrated LUFS target"))
+        );
+        descriptors.insert("CliBatchManifestRenderer".to_string(), DspNodeDescriptor::new("CliBatchManifestRenderer", "Parallel Multi-Project Batch Render Farm Dispatcher", DspNodeCategory::Utility, "Headless batch rendering daemon executing multi-session project queues across parallel Rayon worker threads")
+            .with_param(DspParamSchema::knob("max_concurrent_workers", "Parallel Worker Thread Count", 1.0, 32.0, 8.0, "threads", MacroRole::Tone, "Maximum concurrent CPU worker threads dedicated to rendering project sessions"))
+            .with_param(DspParamSchema::toggle("retry_failed_jobs", "Automatic Fault-Tolerant Job Retry", true, "Retries render tasks up to 3 times in isolated subprocesses upon unexpected crash"))
+            .with_param(DspParamSchema::knob("memory_limit_mb", "Worker Memory Usage Ceiling", 512.0, 16384.0, 4096.0, "MB", MacroRole::Space, "Maximum RAM allocation allocated before throttling batch pipeline concurrency"))
+            .with_param(DspParamSchema::toggle("export_manifest_json", "Emit JSON Telemetry Render Summary", true, "Generates machine-readable render reports detailing duration, LUFS, and peak levels"))
+            .with_param(DspParamSchema::choice("priority_scheduling", "Batch Queue Priority Policy", &["FIFO Sequential", "Shortest Job First", "Largest Cache Hits First"], 0, "Scheduling algorithm ordering multiple render tasks in the batch dispatch queue"))
+            .with_param(DspParamSchema::toggle("halt_on_first_error", "Halt Queue Immediately on Failure", false, "Terminates remaining queued render jobs when an individual session encounters fatal error"))
+        );
+        descriptors.insert("CliPatchExporter".to_string(), DspNodeDescriptor::new("CliPatchExporter", "Portable Modular Patch & Device Preset Packager", DspNodeCategory::Utility, "Modular patch extractor serializing instrument and effect chains into portable, self-contained TOML preset bundles")
+            .with_param(DspParamSchema::toggle("include_samples_inline", "Embed Audio Sample Data in Patch", false, "Base64 encodes or packs referenced sample assets directly into the patch bundle"))
+            .with_param(DspParamSchema::choice("compression_algorithm", "Patch Bundle Compression Format", &["Uncompressed TOML", "Gzip Compressed", "Zstandard Fast", "Brotli High-Ratio"], 0, "Compression codec applied to decrease file size of exported modular patches"))
+            .with_param(DspParamSchema::knob("schema_version", "Preset Schema Specification Version", 1.0, 5.0, 1.0, "rev", MacroRole::Tone, "Compatibility version standard ensuring backwards compatibility with older DAW versions"))
+            .with_param(DspParamSchema::toggle("strip_unused_macros", "Strip Unassigned Macro Modulation Knobs", true, "Removes unconnected macro modulation routing channels to minimize payload size"))
+            .with_param(DspParamSchema::toggle("generate_checksum_sha256", "Generate SHA256 Integrity Checksum", true, "Computes cryptographic signature verifying patch has not been tampered with or corrupted"))
+            .with_param(DspParamSchema::choice("export_target_bundle", "Export Archive File Architecture", &["Single File .summonpatch", "Modular Folder", "ZIP Archive"], 0, "Packaging mode determining directory structure and archive format"))
+        );
+        descriptors.insert("CliClapPluginExporter".to_string(), DspNodeDescriptor::new("CliClapPluginExporter", "Automated C-ABI CLAP Plugin Generator & Bundler", DspNodeCategory::Utility, "Automatic code generator compiling Summoner DSP graphs into standalone, industry-standard C-ABI CLAP audio plugins")
+            .with_param(DspParamSchema::toggle("bundle_gui_editor", "Bundle Embedded egui Parameter UI", true, "Includes hardware-accelerated egui graphical interface inside the compiled CLAP binary"))
+            .with_param(DspParamSchema::choice("optimization_level", "Rust Compiler Optimization Profile", &["Debug (Fast Compile)", "Release (Opt 3)", "LTO Aggressive"], 1, "Cargo compilation flags balancing compilation time against runtime DSP performance"))
+            .with_param(DspParamSchema::choice("plugin_category", "CLAP Classification Category", &["Synthesizer", "Audio Effect", "Spatial Panner", "Mastering Processor", "MIDI Filter"], 0, "Plugin capability descriptor advertised to host DAWs (Bitwig, Reaper, Live)"))
+            .with_param(DspParamSchema::choice("vendor_identifier", "Vendor Namespace Identifier", &["Summoner DAW Community", "In-House Audio Lab", "Open Source Collective"], 0, "Plugin author and organizational metadata embedded in CLAP plugin descriptor"))
+            .with_param(DspParamSchema::toggle("hard_realtime_asserts", "Enable Audio Thread Hard Realtime Asserts", true, "Enforces lock-free and zero-allocation assertions during plugin process blocks"))
+            .with_param(DspParamSchema::knob("clap_abi_version", "CLAP ABI Specification Standard", 1.0, 2.0, 1.0, "abi", MacroRole::Space, "Target CLAP standard version ensuring ABI compatibility across audio hosts"))
+        );
+        descriptors.insert("CliCommitHistoryViewer".to_string(), DspNodeDescriptor::new("CliCommitHistoryViewer", "Session Micro-Commit DAG History & Diff Inspector", DspNodeCategory::Utility, "Visual directed acyclic graph inspector tracking fine-grained micro-commits, branching timelines, and parameter changes")
+            .with_param(DspParamSchema::knob("max_history_depth", "Maximum Commit History Depth", 10.0, 1000.0, 100.0, "commits", MacroRole::Tone, "Number of historical session commits rendered in the visual revision graph"))
+            .with_param(DspParamSchema::toggle("show_branch_forks", "Display Parallel Branch Forks & Merges", true, "Visualizes split branch paths created during collaborative editing sessions"))
+            .with_param(DspParamSchema::choice("diff_granularity", "Diff Inspection Detail Resolution", &["Track Summary Only", "Node Level Changes", "Full Floating Point AST Diff"], 1, "Level of granularity displayed when comparing session states across revisions"))
+            .with_param(DspParamSchema::knob("filter_by_track_id", "Filter History by Track Channel ID", 0.0, 64.0, 0.0, "trk", MacroRole::Tone, "Restricts commit timeline display to mutations affecting a specific track (0 for all)"))
+            .with_param(DspParamSchema::toggle("compact_graph_view", "Compact Linearized DAG Representation", true, "Condenses linear sequences of commits into single collapsible branch nodes"))
+            .with_param(DspParamSchema::toggle("highlight_merge_conflicts", "Highlight Divergent Conflict States", true, "Flags commits where concurrent edits required automated CRDT conflict resolution"))
+        );
+        descriptors.insert("CliUndoManager".to_string(), DspNodeDescriptor::new("CliUndoManager", "Immutable Session DAG Undo Controller & Pruner", DspNodeCategory::Utility, "Deterministic state rollback manager traversing immutable Git commit trees to restore past project states without data loss")
+            .with_param(DspParamSchema::knob("history_retention_limit", "Maximum Undo Snapshot Retention", 10.0, 500.0, 64.0, "states", MacroRole::Tone, "Maximum number of previous project revisions maintained in memory cache"))
+            .with_param(DspParamSchema::toggle("non_destructive_dag_pruning", "Non-Destructive DAG Branch Preservation", true, "Preserves orphaned undo branches in git history so undone edits can always be recovered"))
+            .with_param(DspParamSchema::toggle("auto_group_rapid_edits", "Aggregate Rapid Continuous Parameter Changes", true, "Combines slider drag events within a tight time window into a single undo step"))
+            .with_param(DspParamSchema::knob("group_window_ms", "Rapid Edit Aggregation Window", 50.0, 2000.0, 350.0, "ms", MacroRole::Space, "Time window threshold in milliseconds for coalescing continuous parameter adjustments"))
+            .with_param(DspParamSchema::toggle("restore_playback_position", "Restore Playhead Transport Position on Undo", false, "Moves playhead position back to where it was when the undone operation occurred"))
+            .with_param(DspParamSchema::toggle("persist_undo_history", "Persist Undo History Across Session Restarts", true, "Stores undo transaction log in project git storage between DAW launches"))
+        );
+        descriptors.insert("CliRedoManager".to_string(), DspNodeDescriptor::new("CliRedoManager", "Forward Timeline Fast-Forward & Redo Navigator", DspNodeCategory::Utility, "Forward timeline replay controller advancing across DAG child nodes to re-apply undone mutations deterministically")
+            .with_param(DspParamSchema::choice("forward_branch_policy", "Branch Resolution Navigation Policy", &["Most Recent Edit Path", "Explicit Branch Select", "Main Trunk Only"], 0, "Selects which divergent child branch to follow when multiple redos are possible"))
+            .with_param(DspParamSchema::toggle("auto_fast_forward", "Fast-Forward Through Unchanged Branches", true, "Steps quickly through linear chains of parameter adjustments to reach target revision"))
+            .with_param(DspParamSchema::toggle("preview_redo_state", "Live Audio Preview Before Applying Redo", true, "Temporarily previews audio graph output of target state before committing"))
+            .with_param(DspParamSchema::knob("max_redo_steps", "Maximum Redo History Step Capacity", 5.0, 250.0, 50.0, "steps", MacroRole::Tone, "Maximum number of re-doable child steps retained in the navigation buffer"))
+            .with_param(DspParamSchema::toggle("verify_ast_checksum", "Verify AST Checksum Integrity Before Redo", true, "Ensures target state TOML AST matches expected Blake3 cryptographic checksum"))
+            .with_param(DspParamSchema::toggle("notify_on_branch_switch", "Display HUD Alert on Divergent Branch Switch", true, "Alerts user when redo path diverges onto an alternate collaborative fork"))
+        );
+        descriptors.insert("CliGitHubPrCreator".to_string(), DspNodeDescriptor::new("CliGitHubPrCreator", "Direct Git Branch & GitHub Pull Request Bridge", DspNodeCategory::Utility, "Team collaboration bridge pushing session branches to GitHub and generating automated pull requests with audio diff summaries")
+            .with_param(DspParamSchema::choice("target_remote_name", "Target Git Remote Repository", &["origin (Default)", "upstream", "fork"], 0, "Destination remote repository to which the sound design branch will be pushed"))
+            .with_param(DspParamSchema::toggle("auto_sign_commits", "Cryptographically Sign Git Commits", true, "Signs pushed git commits using GPG or SSH key for verified author attribution"))
+            .with_param(DspParamSchema::choice("pr_template_selection", "Pull Request Documentation Template", &["Feature / Sound Design", "Bug Fix / Audio Glitch", "Macro Modulation Update"], 0, "Pre-formatted Markdown summary template describing the patch or mix changes"))
+            .with_param(DspParamSchema::toggle("create_draft_pr", "Open Pull Request in Draft Status", false, "Creates PR as draft allowing work-in-progress review before requesting formal merge"))
+            .with_param(DspParamSchema::toggle("include_audio_diff_summary", "Generate Automated Audio Diff Summary", true, "Computes and appends parameter changes, LUFS diffs, and plugin version checks to PR"))
+            .with_param(DspParamSchema::knob("auto_link_issue_id", "Associate GitHub Issue Tracking ID", 0.0, 9999.0, 0.0, "#", MacroRole::Tone, "Closes or references specific GitHub issue ticket number automatically (0 to skip)"))
+        );
+        descriptors.insert("CliLivePlayerEngine".to_string(), DspNodeDescriptor::new("CliLivePlayerEngine", "Real-Time Low-Latency Audio Streaming Engine", DspNodeCategory::Utility, "Interactive audio playback streamer dispatching lock-free DSP graph processing to hardware soundcards with clock synchronization")
+            .with_param(DspParamSchema::choice("buffer_latency_frames", "Hardware Audio Buffer Frame Size", &["64 frames (1.3ms)", "128 frames (2.7ms)", "256 frames (5.3ms)", "512 frames (10.6ms)"], 1, "Hardware buffer size determining roundtrip latency and CPU headroom"))
+            .with_param(DspParamSchema::toggle("realtime_priority_thread", "Elevate Audio Thread to Real-Time Priority", true, "Sets OS thread scheduler priority to SCHED_FIFO or REALTIME_PRIORITY_CLASS"))
+            .with_param(DspParamSchema::toggle("enable_midi_clock_output", "Broadcast Hardware MIDI Clock Pulses", true, "Transmits 24 PPQN MIDI clock pulses to sync external modular synthesizers and drum machines"))
+            .with_param(DspParamSchema::knob("clock_jitter_filter_alpha", "MIDI Clock PLL Smoothing Alpha", 0.0, 1.0, 0.8, "coef", MacroRole::Tone, "Phase-locked loop filter coefficient eliminating jitter from USB-MIDI clock transmissions"))
+            .with_param(DspParamSchema::choice("underrun_recovery_mode", "Audio Underrun (XRun) Mitigation", &["Mute Zero Fill", "Hold Previous Buffer", "Crossfade Interpolation"], 0, "Behavior when audio thread misses deadline to prevent loud clicks and speaker damage"))
+            .with_param(DspParamSchema::knob("cpu_core_affinity_pin", "Dedicated CPU Core Affinity Pinning", -1.0, 15.0, 0.0, "core", MacroRole::Space, "Pins audio thread to a specific CPU physical core (-1 for automatic OS scheduling)"))
+        );
+        descriptors.insert("CliAssetManager".to_string(), DspNodeDescriptor::new("CliAssetManager", "Content-Addressable Audio Asset & Sample Manager", DspNodeCategory::Utility, "High-performance asset manager indexing samples by cryptographic Blake3 hashes with deduplication and resample caching")
+            .with_param(DspParamSchema::toggle("blake3_deduplication", "Cryptographic Blake3 Content Deduplication", true, "Prevents duplicate sample storage by referencing unique file content hashes"))
+            .with_param(DspParamSchema::toggle("relative_path_aliasing", "Portable Workspace Relative Path Resolution", true, "Normalizes absolute paths into portable relative URIs for cross-platform sharing"))
+            .with_param(DspParamSchema::toggle("auto_resample_on_import", "Auto-Resample Audio to Project Sample Rate", true, "Resamples imported audio files to match project sampling rate on ingestion"))
+            .with_param(DspParamSchema::choice("target_resample_quality", "Band-Limited Sinc Interpolation Filter", &["Standard Linear", "Cubic Hermite", "Windowed Sinc 64", "Sinc 128 Mastering"], 2, "Filter steepness and anti-aliasing quality used during asset sample rate conversion"))
+            .with_param(DspParamSchema::toggle("embedded_metadata_read", "Parse Embedded WAV BEXT & ACID Chunks", true, "Extracts embedded root note, tempo, and loop marker metadata from audio headers"))
+            .with_param(DspParamSchema::toggle("cache_peak_waveforms", "Precompute Multiresolution Peak Waveforms", true, "Builds background mipmapped waveform peak caches for instant GUI rendering"))
+        );
+        descriptors.insert("CliProjectValidator".to_string(), DspNodeDescriptor::new("CliProjectValidator", "Deep TOML Schema & Audio Graph Integrity Validator", DspNodeCategory::Utility, "Comprehensive static analyzer verifying session TOML structure, audio file paths, acyclic routing, and parameter ranges")
+            .with_param(DspParamSchema::toggle("strict_schema_validation", "Strict TOML AST Schema Type Checking", true, "Enforces strict type rules preventing schema version mismatches and unexpected keys"))
+            .with_param(DspParamSchema::toggle("check_missing_audio_files", "Verify Sample Asset File Existence on Disk", true, "Scans all sampler nodes and impulse response references to detect missing audio assets"))
+            .with_param(DspParamSchema::toggle("dangling_node_routing_check", "Detect Orphaned Unconnected Nodes & Cords", true, "Warns about audio nodes that consume processing cycles without connecting to master output"))
+            .with_param(DspParamSchema::toggle("feedback_loop_verification", "Topological Sort Directed Cycle Detection", true, "Validates that audio routing graph is strictly acyclic or has unit-delay feedback guards"))
+            .with_param(DspParamSchema::knob("max_allowable_gain_db", "Extreme Gain Level Warning Ceiling", 0.0, 36.0, 12.0, "dB", MacroRole::Tone, "Flags node gain parameters exceeding safe levels to prevent unexpected speaker damage"))
+            .with_param(DspParamSchema::toggle("auto_fix_minor_errors", "Automatically Repair Minor Structural Faults", false, "Auto-populates missing default values and cleans dangling connections automatically"))
+        );
+        descriptors.insert("CliDspProfiler".to_string(), DspNodeDescriptor::new("CliDspProfiler", "Real-Time Audio Thread Performance & Latency Profiler", DspNodeCategory::Utility, "High-resolution DSP cycle profiler instrumenting audio graph nodes to detect CPU spikes, buffer underruns, and cache misses")
+            .with_param(DspParamSchema::knob("profiling_interval_blocks", "Performance Sampling Block Window", 16.0, 2048.0, 256.0, "blocks", MacroRole::Tone, "Number of audio blocks over which per-node CPU execution times are averaged"))
+            .with_param(DspParamSchema::knob("report_top_n_hotspots", "Number of Top Hotspots Monitored", 3.0, 20.0, 10.0, "nodes", MacroRole::Tone, "Number of most computationally demanding nodes highlighted in performance reports"))
+            .with_param(DspParamSchema::knob("cpu_usage_threshold_percent", "DSP Load Alert Threshold Warning", 1.0, 100.0, 80.0, "%", MacroRole::Tone, "Triggers visual warning when total DSP execution time exceeds target percentage of deadline"))
+            .with_param(DspParamSchema::toggle("track_memory_cache_misses", "Hardware Performance Counter Cache Tracking", true, "Monitors CPU L1/L2 data cache misses to identify memory-bound audio processing nodes"))
+            .with_param(DspParamSchema::toggle("export_flamegraph_svg", "Generate Interactive SVG Flamegraph", false, "Emits SVG visualization showing hierarchic CPU time allocation across DSP modules"))
+            .with_param(DspParamSchema::toggle("realtime_audio_thread_watch", "Real-Time Jitter & Deadline Monitor", true, "Continuously verifies audio callback finishes well ahead of DAC buffer deadline"))
+        );
+        descriptors.insert("CliPresetBaker".to_string(), DspNodeDescriptor::new("CliPresetBaker", "Offline Preset Cache Prewarmer & Binary Serializer", DspNodeCategory::Utility, "Performance pre-computation tool baking filter coefficients, wavetable MIP maps, and neural weights into instant-load memory maps")
+            .with_param(DspParamSchema::toggle("bake_simd_coefficients", "Precalculate Vectorized SIMD Filter Tables", true, "Precomputes biquad and ladder filter coefficients across all standard sample rates"))
+            .with_param(DspParamSchema::toggle("precompute_wavetable_mips", "Generate Band-Limited Wavetable Mipmaps", true, "Bakes oversampled Fourier wavetable mipmaps to eliminate runtime FFT allocation"))
+            .with_param(DspParamSchema::toggle("memory_map_binary_cache", "Memory-Mapped File Storage Architecture", true, "Formats cache for instant zero-copy mmap loading directly into sound generator memory"))
+            .with_param(DspParamSchema::toggle("strip_debug_descriptions", "Strip Debug Metadata & Human Descriptions", false, "Removes parameter documentation strings to create ultra-compact binary presets"))
+            .with_param(DspParamSchema::knob("cache_compression_level", "Binary Preset Compression Level", 0.0, 9.0, 3.0, "lvl", MacroRole::Tone, "Zstandard compression effort applied to baked binary preset repositories"))
+            .with_param(DspParamSchema::toggle("verify_baked_integrity", "Verify Checksum Integrity of Baked Presets", true, "Validates binary cache against original TOML preset hashes to prevent stale data"))
+        );
+        descriptors.insert("CliMultiStemExporter".to_string(), DspNodeDescriptor::new("CliMultiStemExporter", "Automated Multi-Track Stem Export & Naming Pipeline", DspNodeCategory::Utility, "Automated stem rendering pipeline bouncing individual tracks, return buses, and sidechains with customizable naming conventions")
+            .with_param(DspParamSchema::toggle("include_master_bus_stem", "Export Master Mix Stereo Bus Stem", true, "Renders full stereophonic master bus alongside individual stem tracks"))
+            .with_param(DspParamSchema::toggle("include_individual_tracks", "Export Individual Track Audio Stems", true, "Bounces every active audio and instrument track to its own dedicated stem file"))
+            .with_param(DspParamSchema::toggle("include_return_reverb_busses", "Export Auxiliary Return & Reverb Busses", true, "Bounces shared spatial reverb and delay auxiliary buses separately"))
+            .with_param(DspParamSchema::choice("stem_naming_pattern", "Stem Filename Template Format", &["{track_num}_{track_name}", "{project}_{track_name}", "{bpm}_{key}_{track_name}"], 0, "Naming convention pattern used to automatically name exported WAV stem files"))
+            .with_param(DspParamSchema::knob("tail_trimming_threshold_db", "Silence Reverb Tail Trimming Threshold", -90.0, -30.0, -60.0, "dB", MacroRole::Tone, "Audio level below which trailing reverb and delay decays are considered silence"))
+            .with_param(DspParamSchema::toggle("render_dry_and_wet_stems", "Render Both Dry and Effect-Wet Stems", false, "Produces both pre-effects dry and post-effects wet stem versions for remix flexibility"))
+        );
+        descriptors.insert("CliGrooveHumanizer".to_string(), DspNodeDescriptor::new("CliGrooveHumanizer", "Sub-Sample Micro-Groove Swing & Humanize Quantizer", DspNodeCategory::Modulation, "Musical humanization engine applying sub-millisecond micro-timing jitter, velocity humanization, and vintage MPC swing templates")
+            .with_param(DspParamSchema::knob("timing_jitter_ms", "Micro-Timing Jitter Randomization", 0.0, 25.0, 3.5, "ms", MacroRole::Tone, "Maximum random timing offset applied to note trigger events in milliseconds"))
+            .with_param(DspParamSchema::knob("velocity_variation_range", "MIDI Velocity Humanization Spread", 0.0, 40.0, 8.0, "vel", MacroRole::Tone, "Random dynamic velocity fluctuation applied around nominal note velocities"))
+            .with_param(DspParamSchema::choice("groove_template", "Rhythmic Groove Swing Template", &["Straight Grid (Strict)", "MPC 16-Swing 54%", "MPC 16-Swing 60%", "Dilla Laid-Back Quintuplet", "Afrobeat Polyrhythmic Triplet"], 1, "Musical groove template shaping micro-timing offsets across bars and subdivisions"))
+            .with_param(DspParamSchema::knob("pitch_drift_cents", "Acoustic Pitch Micro-Drift", 0.0, 15.0, 1.2, "cents", MacroRole::Space, "Subtle organic pitch fluctuation simulating acoustic instrument player variation"))
+            .with_param(DspParamSchema::toggle("preserve_downbeats", "Preserve Strict Downbeat Bar Timing", true, "Locks downbeats of measures strictly to timeline grid to keep song rhythm grounded"))
+            .with_param(DspParamSchema::toggle("humanize_release_timing", "Humanize Note Release Durations", true, "Applies subtle variation to note-off release times to avoid robotic gate lengths"))
+        );
+        descriptors.insert("CliAutomationThinner".to_string(), DspNodeDescriptor::new("CliAutomationThinner", "Ramer-Douglas-Peucker Curve Optimization Thinner", DspNodeCategory::Modulation, "Geometric curve optimizer thinning dense automation breakpoints and MIDI CC streams using the Ramer-Douglas-Peucker algorithm")
+            .with_param(DspParamSchema::knob("rdp_epsilon_tolerance", "RDP Algorithmic Error Tolerance", 0.0, 0.1, 0.0, "eps", MacroRole::Tone, "Maximum allowable perpendicular error distance between original and thinned curve"))
+            .with_param(DspParamSchema::knob("min_distance_between_points_ms", "Minimum Temporal Point Separation", 1.0, 100.0, 10.0, "ms", MacroRole::Tone, "Minimum time in milliseconds allowed between successive automation keyframes"))
+            .with_param(DspParamSchema::toggle("preserve_sharp_corners", "Preserve Sharp Corner Discontinuities", true, "Detects abrupt parameter step jumps and prevents algorithm from rounding sharp corners"))
+            .with_param(DspParamSchema::knob("corner_angle_threshold_deg", "Corner Angle Detection Threshold", 15.0, 90.0, 45.0, "deg", MacroRole::Space, "Geometric angle change considered an intentional step change that must not be thinned"))
+            .with_param(DspParamSchema::toggle("thin_dense_midi_cc", "Process High-Density MIDI CC Steams", true, "Compresses continuous MIDI control change data streams into clean bezier spline points"))
+            .with_param(DspParamSchema::toggle("dry_run_point_count_diff", "Display Point Count Reduction Statistics", true, "Prints before-and-after keyframe counts showing storage and CPU reduction percentage"))
+        );
+        descriptors.insert("CliAudioDeviceEnumerator".to_string(), DspNodeDescriptor::new("CliAudioDeviceEnumerator", "CPAL Hardware Audio Interface Prober & Inspector", DspNodeCategory::Utility, "Hardware prober querying host operating system audio APIs (WASAPI, ASIO, ALSA, CoreAudio) for device sample rates and buffer ranges")
+            .with_param(DspParamSchema::toggle("query_input_devices", "Probe Hardware Audio Input Channels", true, "Queries audio input microphones, audio interfaces, and external line inputs"))
+            .with_param(DspParamSchema::toggle("query_output_devices", "Probe Hardware Audio Output Channels", true, "Queries DAC outputs, headphone jacks, studio monitor buses, and multi-channel arrays"))
+            .with_param(DspParamSchema::toggle("probe_min_max_sample_rates", "Discover Supported Hardware Sample Rates", true, "Tests all hardware sample rates from 44.1 kHz up to 384 kHz to verify compatibility"))
+            .with_param(DspParamSchema::toggle("probe_buffer_size_ranges", "Query Hardware Buffer Size Bounds", true, "Queries driver minimum, maximum, and default buffer frame constraints"))
+            .with_param(DspParamSchema::toggle("test_loopback_latency", "Perform Sub-Sample Loopback Latency Test", false, "Emits acoustic test impulse to calculate precise hardware roundtrip converter latency"))
+            .with_param(DspParamSchema::choice("host_audio_api", "Preferred OS Host Audio Subsystem", &["Auto Detect Native", "WASAPI Exclusive", "ASIO Driver", "ALSA Direct", "CoreAudio Low-Latency"], 0, "Selects low-level audio driver framework used to interface with sound hardware"))
+        );
+        descriptors.insert("CliTempoMapExtractor".to_string(), DspNodeDescriptor::new("CliTempoMapExtractor", "Dynamic Tempo Map & Metric Beat Grid Extractor", DspNodeCategory::Modulation, "Intelligent transient analyzer detecting live recording tempo fluctuations and generating continuous BPM curve automations")
+            .with_param(DspParamSchema::knob("transient_sensitivity", "Onset Transient Detection Sensitivity", 0.1, 1.0, 0.7, "sens", MacroRole::Tone, "Sensitivity of spectral flux onset detector identifying musical beat attacks"))
+            .with_param(DspParamSchema::knob("min_expected_bpm", "Minimum Expected Song Tempo", 40.0, 120.0, 70.0, "BPM", MacroRole::Tone, "Lower tempo bound constraining beat tracker from detecting half-time subdivisions"))
+            .with_param(DspParamSchema::knob("max_expected_bpm", "Maximum Expected Song Tempo", 120.0, 300.0, 180.0, "BPM", MacroRole::Tone, "Upper tempo bound constraining beat tracker from detecting double-time subdivisions"))
+            .with_param(DspParamSchema::toggle("smooth_tempo_curves", "Apply Spline Smoothing to Tempo Curve", true, "Filters out momentary performance timing anomalies to create musical tempo ramps"))
+            .with_param(DspParamSchema::choice("auto_align_time_signature", "Time Signature Metric Meter Alignment", &["4/4 Standard", "3/4 Waltz", "6/8 Compound", "7/8 Balkan Irregular", "Polymetric Multi-Track"], 0, "Metric subdivision grouping detected onsets into coherent bars and downbeats"))
+            .with_param(DspParamSchema::choice("quantize_grid_resolution", "Timeline Beat Grid Quantization Resolution", &["1/4 Note Grid", "1/8 Note Grid", "1/16 Note Grid", "1/32 Precision"], 2, "Temporal resolution grid to which extracted tempo marker nodes are aligned"))
+        );
+        descriptors.insert("CliScriptEvaluator".to_string(), DspNodeDescriptor::new("CliScriptEvaluator", "Headless Lua DSP Script Runner & Unit Test Harness", DspNodeCategory::Utility, "Isolated headless scripting runtime evaluating procedural Lua audio scripts, automated DSP unit tests, and generative compositions")
+            .with_param(DspParamSchema::knob("sandbox_timeout_ms", "Script Execution Execution Timeout", 50.0, 5000.0, 500.0, "ms", MacroRole::Tone, "Maximum duration in milliseconds allowed for Lua script evaluation before aborting"))
+            .with_param(DspParamSchema::toggle("enable_unit_test_assertions", "Execute Built-in DSP Assertion Tests", true, "Runs internal unit test assert functions verifying filter stability and voice rendering"))
+            .with_param(DspParamSchema::choice("log_level", "Script Engine Console Logging Verbosity", &["Errors Only", "Warnings & Errors", "Verbose Debug", "Trace Cycle Logs"], 1, "Detail level of diagnostic telemetry and print outputs emitted to stdout"))
+            .with_param(DspParamSchema::choice("mock_audio_sample_rate", "Simulated Audio Sampling Rate", &["44100 Hz", "48000 Hz", "96000 Hz"], 1, "Clock rate simulated in headless test harness during audio block evaluation"))
+            .with_param(DspParamSchema::toggle("generate_json_benchmark", "Emit Structured JSON Benchmark Metrics", true, "Exports memory consumption, execution cycles, and test pass/fail status as JSON"))
+            .with_param(DspParamSchema::toggle("allow_file_system_read", "Allow Sandboxed File System Read Access", false, "Permits script to load local sample assets and data tables from project directory"))
+        );
 
         Self { descriptors }
     }
@@ -11706,6 +11874,27 @@ descriptors.insert("BellowsGesturePattern".to_string(), DspNodeDescriptor::new("
             ("CliAutoSlicer", DspNodeCategory::SamplerSlicer, "Spectral Flux Transient Auto-Slice Marker Generator"),
             ("CliSessionWatchDaemon", DspNodeCategory::Utility, "Live File System Watcher & Hot-Reloading Audio Daemon"),
             ("CliProjectNormalizer", DspNodeCategory::Utility, "Project TOML Canonical Formatting & ID Defragmenter"),
+            ("CliProjectInitializer", DspNodeCategory::Utility, "Headless CLI Project Scaffolding & Session Initializer"),
+            ("CliStubRenderer", DspNodeCategory::Utility, "Fast Headless Audio Pipeline Verification Stub"),
+            ("CliWavRenderer", DspNodeCategory::Utility, "Offline Studio Floating-Point WAV Master Bounce Engine"),
+            ("CliBatchManifestRenderer", DspNodeCategory::Utility, "Parallel Multi-Project Batch Render Farm Dispatcher"),
+            ("CliPatchExporter", DspNodeCategory::Utility, "Portable Modular Patch & Device Preset Packager"),
+            ("CliClapPluginExporter", DspNodeCategory::Utility, "Automated C-ABI CLAP Plugin Generator & Bundler"),
+            ("CliCommitHistoryViewer", DspNodeCategory::Utility, "Session Micro-Commit DAG History & Diff Inspector"),
+            ("CliUndoManager", DspNodeCategory::Utility, "Immutable Session DAG Undo Controller & Pruner"),
+            ("CliRedoManager", DspNodeCategory::Utility, "Forward Timeline Fast-Forward & Redo Navigator"),
+            ("CliGitHubPrCreator", DspNodeCategory::Utility, "Direct Git Branch & GitHub Pull Request Bridge"),
+            ("CliLivePlayerEngine", DspNodeCategory::Utility, "Real-Time Low-Latency Audio Streaming Engine"),
+            ("CliAssetManager", DspNodeCategory::Utility, "Content-Addressable Audio Asset & Sample Manager"),
+            ("CliProjectValidator", DspNodeCategory::Utility, "Deep TOML Schema & Audio Graph Integrity Validator"),
+            ("CliDspProfiler", DspNodeCategory::Utility, "Real-Time Audio Thread Performance & Latency Profiler"),
+            ("CliPresetBaker", DspNodeCategory::Utility, "Offline Preset Cache Prewarmer & Binary Serializer"),
+            ("CliMultiStemExporter", DspNodeCategory::Utility, "Automated Multi-Track Stem Export & Naming Pipeline"),
+            ("CliGrooveHumanizer", DspNodeCategory::Modulation, "Sub-Sample Micro-Groove Swing & Humanize Quantizer"),
+            ("CliAutomationThinner", DspNodeCategory::Modulation, "Ramer-Douglas-Peucker Curve Optimization Thinner"),
+            ("CliAudioDeviceEnumerator", DspNodeCategory::Utility, "CPAL Hardware Audio Interface Prober & Inspector"),
+            ("CliTempoMapExtractor", DspNodeCategory::Modulation, "Dynamic Tempo Map & Metric Beat Grid Extractor"),
+            ("CliScriptEvaluator", DspNodeCategory::Utility, "Headless Lua DSP Script Runner & Unit Test Harness"),
         ]
     }
 
@@ -14027,6 +14216,27 @@ descriptors.insert("BellowsGesturePattern".to_string(), DspNodeDescriptor::new("
             "cliautoslicer" | "clitransientslicer" | "clislicingmarker" => Some("CliAutoSlicer"),
             "clisessionwatchdaemon" | "sessionwatchdaemon" | "hotreloaddaemon" => Some("CliSessionWatchDaemon"),
             "cliprojectnormalizer" | "clitomlnormalizer" | "cliprojectformatter" => Some("CliProjectNormalizer"),
+            "cliprojectinitializer" | "projectinitializer" | "summoninit" => Some("CliProjectInitializer"),
+            "clistubrenderer" | "stubrenderer" | "renderstub" => Some("CliStubRenderer"),
+            "cliwavrenderer" | "wavrenderer" | "renderwav" => Some("CliWavRenderer"),
+            "clibatchmanifestrenderer" | "batchmanifestrenderer" | "renderbatch" => Some("CliBatchManifestRenderer"),
+            "clipatchexporter" | "patchexporter" | "patchexport" => Some("CliPatchExporter"),
+            "cliclappluginexporter" | "clappluginexporter" | "summonpatchexportclap" => Some("CliClapPluginExporter"),
+            "clicommithistoryviewer" | "commithistoryviewer" | "commithistory" => Some("CliCommitHistoryViewer"),
+            "cliundomanager" | "undomanager" | "summonundo" => Some("CliUndoManager"),
+            "cliredomanager" | "redomanager" | "summonredo" => Some("CliRedoManager"),
+            "cligithubprcreator" | "githubprcreator" | "summonpatchtopr" => Some("CliGitHubPrCreator"),
+            "cliliveplayerengine" | "liveplayerengine" | "summonplay" => Some("CliLivePlayerEngine"),
+            "cliassetmanager" | "assetmanager" | "assetadd" => Some("CliAssetManager"),
+            "cliprojectvalidator" | "projectschemavalidator" | "summonvalidate" => Some("CliProjectValidator"),
+            "clidspprofiler" | "cliaudiothreadprofiler" | "summonprofile" => Some("CliDspProfiler"),
+            "clipresetbaker" | "cliofflinepresetbaker" | "summonbakepresets" => Some("CliPresetBaker"),
+            "climultistemexporter" | "multistemexporter" | "exportstems" => Some("CliMultiStemExporter"),
+            "cligroovehumanizer" | "clitickinghumanizer" | "summonhumanize" => Some("CliGrooveHumanizer"),
+            "cliautomationthinner" | "rdpatomationthinner" | "summonthinautomation" => Some("CliAutomationThinner"),
+            "cliaudiodeviceenumerator" | "audiodeviceenumerator" | "listdevices" => Some("CliAudioDeviceEnumerator"),
+            "clitempomapextractor" | "tempomapgridextractor" | "summontempomap" => Some("CliTempoMapExtractor"),
+            "cliscriptevaluator" | "scriptevaluator" | "evalscript" => Some("CliScriptEvaluator"),
             "drumclass" => Some("DrumClassClassification"),
             "mpeevent" => Some("ClapMpeEvent"),
             "nativeaudiodriver" => Some("NativeAudioDriverTuner"),
@@ -24108,6 +24318,195 @@ descriptors.insert("BellowsGesturePattern".to_string(), DspNodeDescriptor::new("
                     .with_param(DspParamDescriptor::new_bool("sort_plugin_parameters", "Sort Plugin Parameter Dictionaries Alphabetically", true, (168, 85, 247)))
                     .with_param(DspParamDescriptor::new_bool("preserve_comments_and_docstrings", "Retain User Comments and Session Documentation", true, (239, 68, 68)))
             ),
+            "CliProjectInitializer" => Box::new(
+                GenericDspNodeUi::new("CliProjectInitializer", "Headless CLI Project Scaffolding & Session Initializer", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("sample_rate_khz", "Sample Rate Clock Master", 0.0, 4.0, 1.0, "scope", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("initial_tempo_bpm", "Initial Project Tempo", 20.0, 300.0, 120.0, "BPM", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("master_headroom_db", "Master Mix Bus Headroom Ceiling", -18.0, 0.0, -6.0, "dB", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_bool("scaffold_git_repo", "Initialize Git Tracking Repository", true, (52, 211, 153)))
+                    .with_param(DspParamDescriptor::new_linear("default_track_count", "Initial Track Channel Count", 1.0, 32.0, 4.0, "tracks", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("enable_metronome_bus", "Allocate Dedicated Metronome Click Bus", true, (239, 68, 68)))
+            ),
+            "CliStubRenderer" => Box::new(
+                GenericDspNodeUi::new("CliStubRenderer", "Fast Headless Audio Pipeline Verification Stub", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("verification_block_count", "Dry-Run Block Count", 1.0, 1024.0, 64.0, "blocks", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_bool("strict_alloc_guard", "Enforce Strict Zero-Allocation Guard", true, (52, 211, 153)))
+                    .with_param(DspParamDescriptor::new_linear("max_acceptable_nan_count", "Maximum Acceptable NaN/Inf Samples", 0.0, 10.0, 0.0, "samples", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("timeout_seconds", "Process Timeout Watchdog", 0.5, 30.0, 5.0, "s", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("headless_dry_run", "Headless Silent Dry Run Mode", true, (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_bool("report_dsp_cycles", "Report Per-Node CPU Cycle Consumption", true, (168, 85, 247)))
+            ),
+            "CliWavRenderer" => Box::new(
+                GenericDspNodeUi::new("CliWavRenderer", "Offline Studio Floating-Point WAV Master Bounce Engine", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("render_bit_depth", "Audio File Export Bit Depth", 0.0, 3.0, 2.0, "format", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("offline_render_speed", "Offline Render Throughput", 1.0, 64.0, 16.0, "x", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("true_peak_ceiling_db", "True-Peak Master Limiter Ceiling", -6.0, 0.0, -0.3, "dBFS", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("target_integrated_lufs", "Target Integrated Broadcast Loudness", -24.0, -6.0, -14.0, "LUFS", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("dither_noise_shaping", "Dither & Noise Shaping Filter", 0.0, 3.0, 2.0, "mode", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_bool("normalize_loudness", "Automatic Loudness Normalization", true, (52, 211, 153)))
+            ),
+            "CliBatchManifestRenderer" => Box::new(
+                GenericDspNodeUi::new("CliBatchManifestRenderer", "Parallel Multi-Project Batch Render Farm Dispatcher", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("max_concurrent_workers", "Parallel Worker Thread Count", 1.0, 32.0, 8.0, "threads", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_bool("retry_failed_jobs", "Automatic Fault-Tolerant Job Retry", true, (52, 211, 153)))
+                    .with_param(DspParamDescriptor::new_linear("memory_limit_mb", "Worker Memory Usage Ceiling", 512.0, 16384.0, 4096.0, "MB", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("export_manifest_json", "Emit JSON Telemetry Render Summary", true, (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_linear("priority_scheduling", "Batch Queue Priority Policy", 0.0, 2.0, 0.0, "policy", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_bool("halt_on_first_error", "Halt Queue Immediately on Failure", false, (239, 68, 68)))
+            ),
+            "CliPatchExporter" => Box::new(
+                GenericDspNodeUi::new("CliPatchExporter", "Portable Modular Patch & Device Preset Packager", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_bool("include_samples_inline", "Embed Audio Sample Data in Patch", false, (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("compression_algorithm", "Patch Bundle Compression Format", 0.0, 3.0, 0.0, "format", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("schema_version", "Preset Schema Specification Version", 1.0, 5.0, 1.0, "rev", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("strip_unused_macros", "Strip Unassigned Macro Modulation Knobs", true, (52, 211, 153)))
+                    .with_param(DspParamDescriptor::new_bool("generate_checksum_sha256", "Generate SHA256 Integrity Checksum", true, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("export_target_bundle", "Export Archive File Architecture", 0.0, 2.0, 0.0, "bundle", (56, 189, 248)))
+            ),
+            "CliClapPluginExporter" => Box::new(
+                GenericDspNodeUi::new("CliClapPluginExporter", "Automated C-ABI CLAP Plugin Generator & Bundler", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_bool("bundle_gui_editor", "Bundle Embedded egui Parameter UI", true, (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("optimization_level", "Rust Compiler Optimization Profile", 0.0, 2.0, 1.0, "opt", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("plugin_category", "CLAP Classification Category", 0.0, 4.0, 0.0, "category", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("vendor_identifier", "Vendor Namespace Identifier", 0.0, 2.0, 0.0, "vendor", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_bool("hard_realtime_asserts", "Enable Audio Thread Hard Realtime Asserts", true, (52, 211, 153)))
+                    .with_param(DspParamDescriptor::new_linear("clap_abi_version", "CLAP ABI Specification Standard", 1.0, 2.0, 1.0, "abi", (239, 68, 68)))
+            ),
+            "CliCommitHistoryViewer" => Box::new(
+                GenericDspNodeUi::new("CliCommitHistoryViewer", "Session Micro-Commit DAG History & Diff Inspector", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("max_history_depth", "Maximum Commit History Depth", 10.0, 1000.0, 100.0, "commits", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_bool("show_branch_forks", "Display Parallel Branch Forks & Merges", true, (52, 211, 153)))
+                    .with_param(DspParamDescriptor::new_linear("diff_granularity", "Diff Inspection Detail Resolution", 0.0, 2.0, 1.0, "granularity", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("filter_by_track_id", "Filter History by Track Channel ID", 0.0, 64.0, 0.0, "trk", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("compact_graph_view", "Compact Linearized DAG Representation", true, (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_bool("highlight_merge_conflicts", "Highlight Divergent Conflict States", true, (239, 68, 68)))
+            ),
+            "CliUndoManager" => Box::new(
+                GenericDspNodeUi::new("CliUndoManager", "Immutable Session DAG Undo Controller & Pruner", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("history_retention_limit", "Maximum Undo Snapshot Retention", 10.0, 500.0, 64.0, "states", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_bool("non_destructive_dag_pruning", "Non-Destructive DAG Branch Preservation", true, (52, 211, 153)))
+                    .with_param(DspParamDescriptor::new_bool("auto_group_rapid_edits", "Aggregate Rapid Continuous Parameter Changes", true, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("group_window_ms", "Rapid Edit Aggregation Window", 50.0, 2000.0, 350.0, "ms", (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_bool("restore_playback_position", "Restore Playhead Transport Position on Undo", false, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("persist_undo_history", "Persist Undo History Across Session Restarts", true, (239, 68, 68)))
+            ),
+            "CliRedoManager" => Box::new(
+                GenericDspNodeUi::new("CliRedoManager", "Forward Timeline Fast-Forward & Redo Navigator", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("forward_branch_policy", "Branch Resolution Navigation Policy", 0.0, 2.0, 0.0, "policy", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_bool("auto_fast_forward", "Fast-Forward Through Unchanged Branches", true, (52, 211, 153)))
+                    .with_param(DspParamDescriptor::new_bool("preview_redo_state", "Live Audio Preview Before Applying Redo", true, (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("max_redo_steps", "Maximum Redo History Step Capacity", 5.0, 250.0, 50.0, "steps", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("verify_ast_checksum", "Verify AST Checksum Integrity Before Redo", true, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("notify_on_branch_switch", "Display HUD Alert on Divergent Branch Switch", true, (168, 85, 247)))
+            ),
+            "CliGitHubPrCreator" => Box::new(
+                GenericDspNodeUi::new("CliGitHubPrCreator", "Direct Git Branch & GitHub Pull Request Bridge", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("target_remote_name", "Target Git Remote Repository", 0.0, 2.0, 0.0, "remote", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_bool("auto_sign_commits", "Cryptographically Sign Git Commits", true, (52, 211, 153)))
+                    .with_param(DspParamDescriptor::new_linear("pr_template_selection", "Pull Request Documentation Template", 0.0, 2.0, 0.0, "template", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_bool("create_draft_pr", "Open Pull Request in Draft Status", false, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("include_audio_diff_summary", "Generate Automated Audio Diff Summary", true, (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("auto_link_issue_id", "Associate GitHub Issue Tracking ID", 0.0, 9999.0, 0.0, "#", (239, 68, 68)))
+            ),
+            "CliLivePlayerEngine" => Box::new(
+                GenericDspNodeUi::new("CliLivePlayerEngine", "Real-Time Low-Latency Audio Streaming Engine", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("buffer_latency_frames", "Hardware Audio Buffer Frame Size", 0.0, 3.0, 1.0, "buffer", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_bool("realtime_priority_thread", "Elevate Audio Thread to Real-Time Priority", true, (52, 211, 153)))
+                    .with_param(DspParamDescriptor::new_bool("enable_midi_clock_output", "Broadcast Hardware MIDI Clock Pulses", true, (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("clock_jitter_filter_alpha", "MIDI Clock PLL Smoothing Alpha", 0.0, 1.0, 0.8, "coef", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("underrun_recovery_mode", "Audio Underrun (XRun) Mitigation", 0.0, 2.0, 0.0, "recovery", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("cpu_core_affinity_pin", "Dedicated CPU Core Affinity Pinning", -1.0, 15.0, 0.0, "core", (239, 68, 68)))
+            ),
+            "CliAssetManager" => Box::new(
+                GenericDspNodeUi::new("CliAssetManager", "Content-Addressable Audio Asset & Sample Manager", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_bool("blake3_deduplication", "Cryptographic Blake3 Content Deduplication", true, (52, 211, 153)))
+                    .with_param(DspParamDescriptor::new_bool("relative_path_aliasing", "Portable Workspace Relative Path Resolution", true, (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_bool("auto_resample_on_import", "Auto-Resample Audio to Project Sample Rate", true, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("target_resample_quality", "Band-Limited Sinc Interpolation Filter", 0.0, 3.0, 2.0, "quality", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_bool("embedded_metadata_read", "Parse Embedded WAV BEXT & ACID Chunks", true, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("cache_peak_waveforms", "Precompute Multiresolution Peak Waveforms", true, (239, 68, 68)))
+            ),
+            "CliProjectValidator" => Box::new(
+                GenericDspNodeUi::new("CliProjectValidator", "Deep TOML Schema & Audio Graph Integrity Validator", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_bool("strict_schema_validation", "Strict TOML AST Schema Type Checking", true, (52, 211, 153)))
+                    .with_param(DspParamDescriptor::new_bool("check_missing_audio_files", "Verify Sample Asset File Existence on Disk", true, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("dangling_node_routing_check", "Detect Orphaned Unconnected Nodes & Cords", true, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("feedback_loop_verification", "Topological Sort Directed Cycle Detection", true, (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("max_allowable_gain_db", "Extreme Gain Level Warning Ceiling", 0.0, 36.0, 12.0, "dB", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("auto_fix_minor_errors", "Automatically Repair Minor Structural Faults", false, (14, 165, 233)))
+            ),
+            "CliDspProfiler" => Box::new(
+                GenericDspNodeUi::new("CliDspProfiler", "Real-Time Audio Thread Performance & Latency Profiler", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("profiling_interval_blocks", "Performance Sampling Block Window", 16.0, 2048.0, 256.0, "blocks", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("report_top_n_hotspots", "Number of Top Hotspots Monitored", 3.0, 20.0, 10.0, "nodes", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("cpu_usage_threshold_percent", "DSP Load Alert Threshold Warning", 1.0, 100.0, 80.0, "%", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("track_memory_cache_misses", "Hardware Performance Counter Cache Tracking", true, (52, 211, 153)))
+                    .with_param(DspParamDescriptor::new_bool("export_flamegraph_svg", "Generate Interactive SVG Flamegraph", false, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("realtime_audio_thread_watch", "Real-Time Jitter & Deadline Monitor", true, (14, 165, 233)))
+            ),
+            "CliPresetBaker" => Box::new(
+                GenericDspNodeUi::new("CliPresetBaker", "Offline Preset Cache Prewarmer & Binary Serializer", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_bool("bake_simd_coefficients", "Precalculate Vectorized SIMD Filter Tables", true, (52, 211, 153)))
+                    .with_param(DspParamDescriptor::new_bool("precompute_wavetable_mips", "Generate Band-Limited Wavetable Mipmaps", true, (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_bool("memory_map_binary_cache", "Memory-Mapped File Storage Architecture", true, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("strip_debug_descriptions", "Strip Debug Metadata & Human Descriptions", false, (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_linear("cache_compression_level", "Binary Preset Compression Level", 0.0, 9.0, 3.0, "lvl", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("verify_baked_integrity", "Verify Checksum Integrity of Baked Presets", true, (239, 68, 68)))
+            ),
+            "CliMultiStemExporter" => Box::new(
+                GenericDspNodeUi::new("CliMultiStemExporter", "Automated Multi-Track Stem Export & Naming Pipeline", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_bool("include_master_bus_stem", "Export Master Mix Stereo Bus Stem", true, (52, 211, 153)))
+                    .with_param(DspParamDescriptor::new_bool("include_individual_tracks", "Export Individual Track Audio Stems", true, (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_bool("include_return_reverb_busses", "Export Auxiliary Return & Reverb Busses", true, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("stem_naming_pattern", "Stem Filename Template Format", 0.0, 2.0, 0.0, "pattern", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("tail_trimming_threshold_db", "Silence Reverb Tail Trimming Threshold", -90.0, -30.0, -60.0, "dB", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("render_dry_and_wet_stems", "Render Both Dry and Effect-Wet Stems", false, (168, 85, 247)))
+            ),
+            "CliGrooveHumanizer" => Box::new(
+                GenericDspNodeUi::new("CliGrooveHumanizer", "Sub-Sample Micro-Groove Swing & Humanize Quantizer", DspNodeCategory::Modulation)
+                    .with_param(DspParamDescriptor::new_linear("timing_jitter_ms", "Micro-Timing Jitter Randomization", 0.0, 25.0, 3.5, "ms", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("velocity_variation_range", "MIDI Velocity Humanization Spread", 0.0, 40.0, 8.0, "vel", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("groove_template", "Rhythmic Groove Swing Template", 0.0, 4.0, 1.0, "groove", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("pitch_drift_cents", "Acoustic Pitch Micro-Drift", 0.0, 15.0, 1.2, "cents", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("preserve_downbeats", "Preserve Strict Downbeat Bar Timing", true, (52, 211, 153)))
+                    .with_param(DspParamDescriptor::new_bool("humanize_release_timing", "Humanize Note Release Durations", true, (239, 68, 68)))
+            ),
+            "CliAutomationThinner" => Box::new(
+                GenericDspNodeUi::new("CliAutomationThinner", "Ramer-Douglas-Peucker Curve Optimization Thinner", DspNodeCategory::Modulation)
+                    .with_param(DspParamDescriptor::new_linear("rdp_epsilon_tolerance", "RDP Algorithmic Error Tolerance", 0.0, 0.1, 0.0, "eps", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("min_distance_between_points_ms", "Minimum Temporal Point Separation", 1.0, 100.0, 10.0, "ms", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("preserve_sharp_corners", "Preserve Sharp Corner Discontinuities", true, (52, 211, 153)))
+                    .with_param(DspParamDescriptor::new_linear("corner_angle_threshold_deg", "Corner Angle Detection Threshold", 15.0, 90.0, 45.0, "deg", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("thin_dense_midi_cc", "Process High-Density MIDI CC Steams", true, (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_bool("dry_run_point_count_diff", "Display Point Count Reduction Statistics", true, (239, 68, 68)))
+            ),
+            "CliAudioDeviceEnumerator" => Box::new(
+                GenericDspNodeUi::new("CliAudioDeviceEnumerator", "CPAL Hardware Audio Interface Prober & Inspector", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_bool("query_input_devices", "Probe Hardware Audio Input Channels", true, (52, 211, 153)))
+                    .with_param(DspParamDescriptor::new_bool("query_output_devices", "Probe Hardware Audio Output Channels", true, (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_bool("probe_min_max_sample_rates", "Discover Supported Hardware Sample Rates", true, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("probe_buffer_size_ranges", "Query Hardware Buffer Size Bounds", true, (14, 165, 233)))
+                    .with_param(DspParamDescriptor::new_bool("test_loopback_latency", "Perform Sub-Sample Loopback Latency Test", false, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("host_audio_api", "Preferred OS Host Audio Subsystem", 0.0, 4.0, 0.0, "api", (56, 189, 248)))
+            ),
+            "CliTempoMapExtractor" => Box::new(
+                GenericDspNodeUi::new("CliTempoMapExtractor", "Dynamic Tempo Map & Metric Beat Grid Extractor", DspNodeCategory::Modulation)
+                    .with_param(DspParamDescriptor::new_linear("transient_sensitivity", "Onset Transient Detection Sensitivity", 0.1, 1.0, 0.7, "sens", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("min_expected_bpm", "Minimum Expected Song Tempo", 40.0, 120.0, 70.0, "BPM", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("max_expected_bpm", "Maximum Expected Song Tempo", 120.0, 300.0, 180.0, "BPM", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("smooth_tempo_curves", "Apply Spline Smoothing to Tempo Curve", true, (52, 211, 153)))
+                    .with_param(DspParamDescriptor::new_linear("auto_align_time_signature", "Time Signature Metric Meter Alignment", 0.0, 4.0, 0.0, "meter", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("quantize_grid_resolution", "Timeline Beat Grid Quantization Resolution", 0.0, 3.0, 2.0, "grid", (56, 189, 248)))
+            ),
+            "CliScriptEvaluator" => Box::new(
+                GenericDspNodeUi::new("CliScriptEvaluator", "Headless Lua DSP Script Runner & Unit Test Harness", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("sandbox_timeout_ms", "Script Execution Execution Timeout", 50.0, 5000.0, 500.0, "ms", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_bool("enable_unit_test_assertions", "Execute Built-in DSP Assertion Tests", true, (52, 211, 153)))
+                    .with_param(DspParamDescriptor::new_linear("log_level", "Script Engine Console Logging Verbosity", 0.0, 3.0, 1.0, "level", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("mock_audio_sample_rate", "Simulated Audio Sampling Rate", 0.0, 2.0, 1.0, "rate", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_bool("generate_json_benchmark", "Emit Structured JSON Benchmark Metrics", true, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("allow_file_system_read", "Allow Sandboxed File System Read Access", false, (239, 68, 68)))
+            ),
             // Fallback dynamic generator for any unexpected or plugin node
             other => {
                 let cat = Self::inventory()
@@ -25880,7 +26279,7 @@ assert!(registry.get("BellowsGesturePattern").is_some());
     fn test_tier128_inventory_count_and_parameter_completeness() {
         let registry = DspNodeRegistry::new();
         let inv = DspNodeRegistry::inventory();
-        assert_eq!(inv.len(), 1298, "Inventory must contain exactly 1298 DSP modules");
+        assert!(inv.len() >= 1298, "Inventory must contain at least 1298 DSP modules");
         assert!(registry.list_all().len() >= 1298, "Registry list_all must be >= 1298");
 
         let tier128_nodes = [
@@ -25963,7 +26362,7 @@ assert!(registry.get("BellowsGesturePattern").is_some());
     fn test_tier129_inventory_count_and_parameter_completeness() {
         let registry = DspNodeRegistry::new();
         let inv = DspNodeRegistry::inventory();
-        assert_eq!(inv.len(), 1319, "Inventory must contain exactly 1319 DSP modules");
+        assert!(inv.len() >= 1319, "Inventory must contain at least 1319 DSP modules");
         assert!(registry.list_all().len() >= 1319, "Registry list_all must be >= 1319");
 
         let tier129_nodes = [
@@ -26040,6 +26439,89 @@ assert!(registry.get("BellowsGesturePattern").is_some());
         assert_eq!(DspNodeRegistry::normalize_type_name("sessionwatchdaemon"), Some("CliSessionWatchDaemon"));
         assert_eq!(DspNodeRegistry::normalize_type_name("cliprojectnormalizer"), Some("CliProjectNormalizer"));
         assert_eq!(DspNodeRegistry::normalize_type_name("cliprojectformatter"), Some("CliProjectNormalizer"));
+    }
+
+    #[test]
+    fn test_tier130_inventory_count_and_parameter_completeness() {
+        let registry = DspNodeRegistry::new();
+        let inv = DspNodeRegistry::inventory();
+        assert_eq!(inv.len(), 1340, "Inventory must contain exactly 1340 DSP modules");
+        assert!(registry.list_all().len() >= 1340, "Registry list_all must be >= 1340");
+
+        let tier130_nodes = [
+            ("CliProjectInitializer", DspNodeCategory::Utility),
+            ("CliStubRenderer", DspNodeCategory::Utility),
+            ("CliWavRenderer", DspNodeCategory::Utility),
+            ("CliBatchManifestRenderer", DspNodeCategory::Utility),
+            ("CliPatchExporter", DspNodeCategory::Utility),
+            ("CliClapPluginExporter", DspNodeCategory::Utility),
+            ("CliCommitHistoryViewer", DspNodeCategory::Utility),
+            ("CliUndoManager", DspNodeCategory::Utility),
+            ("CliRedoManager", DspNodeCategory::Utility),
+            ("CliGitHubPrCreator", DspNodeCategory::Utility),
+            ("CliLivePlayerEngine", DspNodeCategory::Utility),
+            ("CliAssetManager", DspNodeCategory::Utility),
+            ("CliProjectValidator", DspNodeCategory::Utility),
+            ("CliDspProfiler", DspNodeCategory::Utility),
+            ("CliPresetBaker", DspNodeCategory::Utility),
+            ("CliMultiStemExporter", DspNodeCategory::Utility),
+            ("CliGrooveHumanizer", DspNodeCategory::Modulation),
+            ("CliAutomationThinner", DspNodeCategory::Modulation),
+            ("CliAudioDeviceEnumerator", DspNodeCategory::Utility),
+            ("CliTempoMapExtractor", DspNodeCategory::Modulation),
+            ("CliScriptEvaluator", DspNodeCategory::Utility),
+        ];
+
+        for (name, expected_cat) in tier130_nodes {
+            let desc = registry.get(name).unwrap_or_else(|| panic!("Module {} missing", name));
+            assert_eq!(desc.category, expected_cat, "Category mismatch for {}", name);
+            assert!(desc.params.len() >= 5, "Module {} must have >= 5 params, found {}", name, desc.params.len());
+            assert!(DspNodeRegistry::create_node_ui(name).is_some(), "create_node_ui failed for {}", name);
+        }
+
+        // Test normalizations
+        assert_eq!(DspNodeRegistry::normalize_type_name("cliprojectinitializer"), Some("CliProjectInitializer"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("projectinitializer"), Some("CliProjectInitializer"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("clistubrenderer"), Some("CliStubRenderer"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("stubrenderer"), Some("CliStubRenderer"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("cliwavrenderer"), Some("CliWavRenderer"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("wavrenderer"), Some("CliWavRenderer"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("clibatchmanifestrenderer"), Some("CliBatchManifestRenderer"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("batchmanifestrenderer"), Some("CliBatchManifestRenderer"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("clipatchexporter"), Some("CliPatchExporter"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("patchexporter"), Some("CliPatchExporter"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("cliclappluginexporter"), Some("CliClapPluginExporter"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("clappluginexporter"), Some("CliClapPluginExporter"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("clicommithistoryviewer"), Some("CliCommitHistoryViewer"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("commithistoryviewer"), Some("CliCommitHistoryViewer"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("cliundomanager"), Some("CliUndoManager"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("undomanager"), Some("CliUndoManager"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("cliredomanager"), Some("CliRedoManager"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("redomanager"), Some("CliRedoManager"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("cligithubprcreator"), Some("CliGitHubPrCreator"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("githubprcreator"), Some("CliGitHubPrCreator"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("cliliveplayerengine"), Some("CliLivePlayerEngine"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("liveplayerengine"), Some("CliLivePlayerEngine"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("cliassetmanager"), Some("CliAssetManager"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("assetmanager"), Some("CliAssetManager"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("cliprojectvalidator"), Some("CliProjectValidator"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("projectschemavalidator"), Some("CliProjectValidator"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("clidspprofiler"), Some("CliDspProfiler"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("cliaudiothreadprofiler"), Some("CliDspProfiler"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("clipresetbaker"), Some("CliPresetBaker"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("cliofflinepresetbaker"), Some("CliPresetBaker"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("climultistemexporter"), Some("CliMultiStemExporter"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("multistemexporter"), Some("CliMultiStemExporter"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("cligroovehumanizer"), Some("CliGrooveHumanizer"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("clitickinghumanizer"), Some("CliGrooveHumanizer"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("cliautomationthinner"), Some("CliAutomationThinner"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("rdpatomationthinner"), Some("CliAutomationThinner"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("cliaudiodeviceenumerator"), Some("CliAudioDeviceEnumerator"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("audiodeviceenumerator"), Some("CliAudioDeviceEnumerator"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("clitempomapextractor"), Some("CliTempoMapExtractor"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("tempomapgridextractor"), Some("CliTempoMapExtractor"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("cliscriptevaluator"), Some("CliScriptEvaluator"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("scriptevaluator"), Some("CliScriptEvaluator"));
     }
 
     #[test]

@@ -8793,8 +8793,8 @@ mod tests {
         let registry = crate::dsp_node_ui::DspNodeRegistry::new();
         let inv = crate::dsp_node_ui::DspNodeRegistry::inventory();
 
-        // 1. Verify exact 1277 DSP module count
-        assert_eq!(inv.len(), 1277, "Inventory must contain exactly 1277 DSP modules");
+        // 1. Verify exact 1277+ DSP module count
+        assert!(inv.len() >= 1277, "Inventory must contain at least 1277 DSP modules");
         assert!(registry.list_all().len() >= 1277, "Registry list_all must be >= 1277");
 
         let tier127_modules = [
@@ -8929,7 +8929,7 @@ mod tests {
     fn test_tier128_full_workflow() {
         let registry = crate::dsp_node_ui::DspNodeRegistry::new();
         let inv = crate::dsp_node_ui::DspNodeRegistry::inventory();
-        assert_eq!(inv.len(), 1298, "Inventory must contain exactly 1298 DSP modules");
+        assert!(inv.len() >= 1298, "Inventory must contain at least 1298 DSP modules");
         assert!(registry.list_all().len() >= 1298, "Registry list_all must be >= 1298");
 
         // 1. Tier 128 registration and completeness
@@ -9065,7 +9065,7 @@ mod tests {
     fn test_tier129_full_workflow() {
         let registry = crate::dsp_node_ui::DspNodeRegistry::new();
         let inv = crate::dsp_node_ui::DspNodeRegistry::inventory();
-        assert_eq!(inv.len(), 1319, "Inventory must contain exactly 1319 DSP modules");
+        assert!(inv.len() >= 1319, "Inventory must contain at least 1319 DSP modules");
         assert!(registry.list_all().len() >= 1319, "Registry list_all must be >= 1319");
 
         // 1. Tier 129 registration and completeness
@@ -9180,6 +9180,139 @@ mod tests {
             ("Demucs v4 Neural Stem Separation & Vocal Isolation Matrix", "CliStemSeparatorEngine"),
             ("Real-Time OSC UDP Command Dispatcher & Control Protocol Bridge", "OscServer"),
             ("ITU-R BS.2076 ADM 3D Spatial Audio & Dolby Atmos Broadcast Master", "CliAdmSpatialExporter"),
+        ];
+
+        for (preset_name, target_node) in presets {
+            view.top_bar_state.selected_preset = preset_name.to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some(target_node.to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some(target_node.to_string()));
+        }
+    }
+
+    #[test]
+    fn test_tier130_full_workflow() {
+        let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+        let inv = crate::dsp_node_ui::DspNodeRegistry::inventory();
+        assert_eq!(inv.len(), 1340, "Inventory must contain exactly 1340 DSP modules");
+        assert!(registry.list_all().len() >= 1340, "Registry list_all must be >= 1340");
+
+        // 1. Tier 130 registration and completeness
+        let tier130_modules = [
+            ("CliProjectInitializer", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliStubRenderer", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliWavRenderer", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliBatchManifestRenderer", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliPatchExporter", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliClapPluginExporter", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliCommitHistoryViewer", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliUndoManager", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliRedoManager", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliGitHubPrCreator", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliLivePlayerEngine", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliAssetManager", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliProjectValidator", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliDspProfiler", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliPresetBaker", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliMultiStemExporter", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliGrooveHumanizer", crate::dsp_node_ui::DspNodeCategory::Modulation),
+            ("CliAutomationThinner", crate::dsp_node_ui::DspNodeCategory::Modulation),
+            ("CliAudioDeviceEnumerator", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CliTempoMapExtractor", crate::dsp_node_ui::DspNodeCategory::Modulation),
+            ("CliScriptEvaluator", crate::dsp_node_ui::DspNodeCategory::Utility),
+        ];
+
+        for (name, expected_cat) in tier130_modules {
+            let desc = registry.get(name).unwrap_or_else(|| panic!("Module {} missing in Tier 130", name));
+            assert_eq!(desc.category, expected_cat, "Category mismatch for {}", name);
+            assert!(desc.params.len() >= 5, "Module {} must have >= 5 params, found {}", name, desc.params.len());
+            assert!(crate::dsp_node_ui::DspNodeRegistry::create_node_ui(name).is_some(), "create_node_ui failed for {}", name);
+        }
+
+        // 2. Verify normalizations
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cliprojectinitializer"), Some("CliProjectInitializer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("projectinitializer"), Some("CliProjectInitializer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clistubrenderer"), Some("CliStubRenderer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("stubrenderer"), Some("CliStubRenderer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cliwavrenderer"), Some("CliWavRenderer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("wavrenderer"), Some("CliWavRenderer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clibatchmanifestrenderer"), Some("CliBatchManifestRenderer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("batchmanifestrenderer"), Some("CliBatchManifestRenderer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clipatchexporter"), Some("CliPatchExporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("patchexporter"), Some("CliPatchExporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cliclappluginexporter"), Some("CliClapPluginExporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clappluginexporter"), Some("CliClapPluginExporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clicommithistoryviewer"), Some("CliCommitHistoryViewer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("commithistoryviewer"), Some("CliCommitHistoryViewer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cliundomanager"), Some("CliUndoManager"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("undomanager"), Some("CliUndoManager"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cliredomanager"), Some("CliRedoManager"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("redomanager"), Some("CliRedoManager"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cligithubprcreator"), Some("CliGitHubPrCreator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("githubprcreator"), Some("CliGitHubPrCreator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cliliveplayerengine"), Some("CliLivePlayerEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("liveplayerengine"), Some("CliLivePlayerEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cliassetmanager"), Some("CliAssetManager"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("assetmanager"), Some("CliAssetManager"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cliprojectvalidator"), Some("CliProjectValidator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("projectschemavalidator"), Some("CliProjectValidator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clidspprofiler"), Some("CliDspProfiler"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cliaudiothreadprofiler"), Some("CliDspProfiler"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clipresetbaker"), Some("CliPresetBaker"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cliofflinepresetbaker"), Some("CliPresetBaker"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("climultistemexporter"), Some("CliMultiStemExporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("multistemexporter"), Some("CliMultiStemExporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cligroovehumanizer"), Some("CliGrooveHumanizer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clitickinghumanizer"), Some("CliGrooveHumanizer"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cliautomationthinner"), Some("CliAutomationThinner"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("rdpatomationthinner"), Some("CliAutomationThinner"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cliaudiodeviceenumerator"), Some("CliAudioDeviceEnumerator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("audiodeviceenumerator"), Some("CliAudioDeviceEnumerator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clitempomapextractor"), Some("CliTempoMapExtractor"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("tempomapgridextractor"), Some("CliTempoMapExtractor"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cliscriptevaluator"), Some("CliScriptEvaluator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("scriptevaluator"), Some("CliScriptEvaluator"));
+
+        // 3. Verify Asset Browser categorization
+        use crate::views::modern_asset_browser::BrowserCategory;
+
+        let midi_fx_folders = BrowserCategory::MidiFx.default_folders();
+        let routing_items = midi_fx_folders.iter().find(|(name, _)| *name == "Transforms & Routing").unwrap().1;
+        assert!(routing_items.contains(&"CliProjectInitializer"));
+        assert!(routing_items.contains(&"CliStubRenderer"));
+        assert!(routing_items.contains(&"CliWavRenderer"));
+        assert!(routing_items.contains(&"CliBatchManifestRenderer"));
+        assert!(routing_items.contains(&"CliPatchExporter"));
+        assert!(routing_items.contains(&"CliClapPluginExporter"));
+        assert!(routing_items.contains(&"CliCommitHistoryViewer"));
+        assert!(routing_items.contains(&"CliUndoManager"));
+        assert!(routing_items.contains(&"CliRedoManager"));
+        assert!(routing_items.contains(&"CliGitHubPrCreator"));
+        assert!(routing_items.contains(&"CliLivePlayerEngine"));
+        assert!(routing_items.contains(&"CliAssetManager"));
+        assert!(routing_items.contains(&"CliProjectValidator"));
+        assert!(routing_items.contains(&"CliDspProfiler"));
+        assert!(routing_items.contains(&"CliPresetBaker"));
+        assert!(routing_items.contains(&"CliMultiStemExporter"));
+        assert!(routing_items.contains(&"CliGrooveHumanizer"));
+        assert!(routing_items.contains(&"CliAutomationThinner"));
+        assert!(routing_items.contains(&"CliAudioDeviceEnumerator"));
+        assert!(routing_items.contains(&"CliTempoMapExtractor"));
+        assert!(routing_items.contains(&"CliScriptEvaluator"));
+
+        // 4. Verify interactive AwardWinningGuiView selects Tier 130 preset nodes
+        let mut view = crate::views::award_winning_gui_view::AwardWinningGuiView::default();
+        let ctx = eframe::egui::Context::default();
+
+        let presets = [
+            ("Deterministic Session Git DAG Commit & Visual Tree Diff", "CliCommitHistoryViewer"),
+            ("Automated C-ABI CLAP Standalone Audio Plugin Packager", "CliClapPluginExporter"),
+            ("Real-Time DSP Hardware Load Profiler & Thread Latency Monitor", "CliDspProfiler"),
+            ("Microtiming Groove Jitter Humanizer & Velocity Dynamism", "CliGrooveHumanizer"),
         ];
 
         for (preset_name, target_node) in presets {

@@ -524,6 +524,10 @@ impl AwardWinningGuiView {
                 "Demucs v4 Neural Stem Separation & Vocal Isolation Matrix" => "CliStemSeparatorEngine",
                 "Real-Time OSC UDP Command Dispatcher & Control Protocol Bridge" => "OscServer",
                 "ITU-R BS.2076 ADM 3D Spatial Audio & Dolby Atmos Broadcast Master" => "CliAdmSpatialExporter",
+                "Deterministic Session Git DAG Commit & Visual Tree Diff" => "CliCommitHistoryViewer",
+                "Automated C-ABI CLAP Standalone Audio Plugin Packager" => "CliClapPluginExporter",
+                "Real-Time DSP Hardware Load Profiler & Thread Latency Monitor" => "CliDspProfiler",
+                "Microtiming Groove Jitter Humanizer & Velocity Dynamism" => "CliGrooveHumanizer",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {
