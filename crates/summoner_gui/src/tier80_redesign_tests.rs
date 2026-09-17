@@ -7396,4 +7396,171 @@ mod tests {
             assert_eq!(view.inspector_state.selected_node_kind, Some("ZkPatchProof".to_string()));
         }
     }
+
+    #[test]
+    fn test_tier117_modern_gui_dsp_module_coverage_and_presets() {
+        use crate::dsp_node_ui::{DspNodeRegistry, DspNodeCategory};
+        use crate::views::modern_asset_browser::BrowserCategory;
+
+        let registry = DspNodeRegistry::new();
+
+        // 1. Verify exactly 1072 total DSP modules registered
+        let total_modules = DspNodeRegistry::inventory();
+        assert_eq!(total_modules.len(), 1072, "Must have exactly 1072 registered DSP modules");
+        assert!(
+            registry.list_all().len() >= 1072,
+            "Must have at least 1072 registered DSP modules, found {}",
+            registry.list_all().len()
+        );
+
+        // 2. Verify all 21 new modules exist with correct categories and tactile parameters (>= 5 params each)
+        let new_modules = [
+            ("ToneholeGrid", DspNodeCategory::AcousticPhysicalModel),
+            ("IdiophoneResonator", DspNodeCategory::AcousticPhysicalModel),
+            ("AutoUpdateChecker", DspNodeCategory::Utility),
+            ("UpdateInstaller", DspNodeCategory::Utility),
+            ("RollbackManager", DspNodeCategory::Utility),
+            ("CrashReporter", DspNodeCategory::Utility),
+            ("UsageTelemetry", DspNodeCategory::Utility),
+            ("PrivacyPolicyProvider", DspNodeCategory::Utility),
+            ("GdprComplianceExporter", DspNodeCategory::Utility),
+            ("FactoryResetManager", DspNodeCategory::Utility),
+            ("SystemSettingsBackup", DspNodeCategory::Utility),
+            ("PersistentLogin", DspNodeCategory::Utility),
+            ("CloudRenderJobSubmission", DspNodeCategory::Utility),
+            ("CloudCollaborationWorkspace", DspNodeCategory::Utility),
+            ("OfflineModeIndicator", DspNodeCategory::Utility),
+            ("CloudStorageQuota", DspNodeCategory::Utility),
+            ("PluginRatingReview", DspNodeCategory::Utility),
+            ("PluginBlacklist", DspNodeCategory::Utility),
+            ("PluginConflictDetector", DspNodeCategory::Utility),
+            ("PluginStateBackup", DspNodeCategory::Utility),
+            ("OfflineLocalProjectManager", DspNodeCategory::Utility),
+        ];
+
+        for (name, expected_cat) in new_modules {
+            let desc = registry.get(name).unwrap_or_else(|| panic!("Module {} not found", name));
+            assert_eq!(desc.category, expected_cat, "Module {} category mismatch", name);
+            assert!(desc.params.len() >= 5, "Module {} must have >= 5 tactile parameters, found {}", name, desc.params.len());
+        }
+
+        // 3. Verify normalization mappings
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("toneholegrid"), Some("ToneholeGrid"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("woodwindtoneholes"), Some("ToneholeGrid"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("idiophoneresonator"), Some("IdiophoneResonator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("marimbawood"), Some("IdiophoneResonator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("autoupdatechecker"), Some("AutoUpdateChecker"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("updatechecker"), Some("AutoUpdateChecker"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("updateinstaller"), Some("UpdateInstaller"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("patchinstaller"), Some("UpdateInstaller"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("rollbackmanager"), Some("RollbackManager"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("versionrollback"), Some("RollbackManager"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("crashreporter"), Some("CrashReporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("panicdump"), Some("CrashReporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("usagetelemetry"), Some("UsageTelemetry"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("telemetrymanager"), Some("UsageTelemetry"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("privacypolicyprovider"), Some("PrivacyPolicyProvider"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("privacypolicy"), Some("PrivacyPolicyProvider"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("gdprcomplianceexporter"), Some("GdprComplianceExporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("userdataexport"), Some("GdprComplianceExporter"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("factoryresetmanager"), Some("FactoryResetManager"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("factoryreset"), Some("FactoryResetManager"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("systemsettingsbackup"), Some("SystemSettingsBackup"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("settingsbackup"), Some("SystemSettingsBackup"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("persistentlogin"), Some("PersistentLogin"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cloudlogin"), Some("PersistentLogin"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cloudrenderjobsubmission"), Some("CloudRenderJobSubmission"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("distributedstemrender"), Some("CloudRenderJobSubmission"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cloudcollaborationworkspace"), Some("CloudCollaborationWorkspace"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("studiocollab"), Some("CloudCollaborationWorkspace"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("offlinemodeindicator"), Some("OfflineModeIndicator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("airgapindicator"), Some("OfflineModeIndicator"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cloudstoragequota"), Some("CloudStorageQuota"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("storagequotamonitor"), Some("CloudStorageQuota"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pluginratingreview"), Some("PluginRatingReview"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pluginreview"), Some("PluginRatingReview"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pluginblacklist"), Some("PluginBlacklist"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("quarantineplugins"), Some("PluginBlacklist"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pluginconflictdetector"), Some("PluginConflictDetector"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("driverconflicts"), Some("PluginConflictDetector"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pluginstatebackup"), Some("PluginStateBackup"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("preupdatesnapshot"), Some("PluginStateBackup"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("offlinelocalprojectmanager"), Some("OfflineLocalProjectManager"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("airgappedproject"), Some("OfflineLocalProjectManager"));
+
+        // 4. Verify Asset Browser categorization
+        let inst_folders = BrowserCategory::Instruments.default_folders();
+        let phys_items = inst_folders.iter().find(|(name, _)| *name == "Physical Modeling & Resonators").unwrap().1;
+        assert!(phys_items.contains(&"ToneholeGrid"));
+        assert!(phys_items.contains(&"IdiophoneResonator"));
+
+        let midi_folders = BrowserCategory::MidiFx.default_folders();
+        let routing_items = midi_folders.iter().find(|(name, _)| *name == "Transforms & Routing").unwrap().1;
+        assert!(routing_items.contains(&"AutoUpdateChecker"));
+        assert!(routing_items.contains(&"UpdateInstaller"));
+        assert!(routing_items.contains(&"RollbackManager"));
+        assert!(routing_items.contains(&"CrashReporter"));
+        assert!(routing_items.contains(&"UsageTelemetry"));
+        assert!(routing_items.contains(&"PrivacyPolicyProvider"));
+        assert!(routing_items.contains(&"GdprComplianceExporter"));
+        assert!(routing_items.contains(&"FactoryResetManager"));
+        assert!(routing_items.contains(&"SystemSettingsBackup"));
+        assert!(routing_items.contains(&"PersistentLogin"));
+        assert!(routing_items.contains(&"CloudRenderJobSubmission"));
+        assert!(routing_items.contains(&"CloudCollaborationWorkspace"));
+        assert!(routing_items.contains(&"OfflineModeIndicator"));
+        assert!(routing_items.contains(&"CloudStorageQuota"));
+        assert!(routing_items.contains(&"PluginRatingReview"));
+        assert!(routing_items.contains(&"PluginBlacklist"));
+        assert!(routing_items.contains(&"PluginConflictDetector"));
+        assert!(routing_items.contains(&"PluginStateBackup"));
+        assert!(routing_items.contains(&"OfflineLocalProjectManager"));
+
+        // 5. Verify Novice Presets synchronize in AwardWinningGuiView
+        #[cfg(feature = "gui")]
+        {
+            let mut view = crate::views::award_winning_gui_view::AwardWinningGuiView::default();
+            let ctx = eframe::egui::Context::default();
+
+            // Preset 1: Concert Flute 6-Tonehole Acoustic Resonant Waveguide -> ToneholeGrid
+            view.top_bar_state.selected_preset = "Concert Flute 6-Tonehole Acoustic Resonant Waveguide".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("ToneholeGrid".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("ToneholeGrid".to_string()));
+
+            // Preset 2: African Rosewood Concert Marimba Modal Resonator Bank -> IdiophoneResonator
+            view.top_bar_state.selected_preset = "African Rosewood Concert Marimba Modal Resonator Bank".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("IdiophoneResonator".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("IdiophoneResonator".to_string()));
+
+            // Preset 3: Air-Gapped Zero-Cloud Sovereign Project Workspace -> OfflineLocalProjectManager
+            view.top_bar_state.selected_preset = "Air-Gapped Zero-Cloud Sovereign Project Workspace".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("OfflineLocalProjectManager".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("OfflineLocalProjectManager".to_string()));
+
+            // Preset 4: Crash-Proof Third-Party Audio Plugin Sandbox Shield -> PluginBlacklist
+            view.top_bar_state.selected_preset = "Crash-Proof Third-Party Audio Plugin Sandbox Shield".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("PluginBlacklist".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("PluginBlacklist".to_string()));
+        }
+    }
 }

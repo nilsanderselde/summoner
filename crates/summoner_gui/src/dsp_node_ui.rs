@@ -8246,6 +8246,155 @@ descriptors.insert("BellowsGesturePattern".to_string(), DspNodeDescriptor::new("
             .with_param(DspParamSchema::knob("reconciliation_bandwidth_cap_kbps", "Background Sync Bandwidth Limit", 32.0, 2048.0, 256.0, "kbps", MacroRole::Space, "Bandwidth cap preventing network throttling during reconnection sync"))
             .with_param(DspParamSchema::toggle("compress_delta_payloads", "LZ4 Compression on Serialized CRDT Delta Packets", true, "Enables high-speed LZ4 block compression on outgoing offline mutation deltas"))
         );
+        descriptors.insert("ToneholeGrid".to_string(), DspNodeDescriptor::new("ToneholeGrid", "Acoustic Tonehole Impedance Lattice & Key Venting Grid", DspNodeCategory::AcousticPhysicalModel, "6-tonehole acoustic impedance network modeling boundary reflections, highpass radiation cutoff, and microtonal fingering vent ratios along a woodwind waveguide bore")
+            .with_param(DspParamSchema::knob("total_bore_length_m", "Nominal Acoustic Bore Length", 0.2, 1.5, 0.60, "m", MacroRole::Tone, "Nominal acoustic tube bore length in meters"))
+            .with_param(DspParamSchema::knob("bore_radius_m", "Acoustic Bore Inner Radius", 0.003, 0.030, 0.0095, "m", MacroRole::Character, "Inner bore radius of the waveguide tube"))
+            .with_param(DspParamSchema::log_knob("lattice_cutoff_hz", "Tonehole Lattice Cutoff Frequency", 500.0, 12000.0, 2200.0, "Hz", MacroRole::Tone, "Highpass radiation cutoff frequency of open tonehole network"))
+            .with_param(DspParamSchema::knob("junction_loss", "Wall Viscous-Thermal Damping Factor", 0.95, 0.9999, 0.998, "factor", MacroRole::Space, "Wall attenuation loss per discrete scattering junction"))
+            .with_param(DspParamSchema::choice("fingering_mask", "Active Fingering Key Mask Bitmask", &["All Open (C#)", "1 Hole Closed (B)", "2 Holes Closed (A)", "3 Holes Closed (G)", "4 Holes Closed (F)", "All Closed (C)"], 0, "Discrete woodwind fingering pattern for open toneholes"))
+            .with_param(DspParamSchema::knob("half_hole_vent_fraction", "Microtonal Half-Holing Shading Ratio", 0.0, 1.0, 0.0, "ratio", MacroRole::Punch, "Continuous opening fraction for microtonal pitch shading"))
+        );
+        descriptors.insert("IdiophoneResonator".to_string(), DspNodeDescriptor::new("IdiophoneResonator", "Struck Idiophone Modal Resonator Bank & Mallet Dynamics", DspNodeCategory::AcousticPhysicalModel, "8-mode modal synthesis bank for struck percussive idiophones (Marimba, Xylophone, Vibraphone, Steelpan, Kalimba, Glockenspiel) with non-linear Hertz contact dynamics and pipe coupling")
+            .with_param(DspParamSchema::choice("instrument_profile", "Idiophone Instrument Profile", &["Marimba Wood", "Xylophone Rosewood", "Vibraphone Aluminum", "Steelpan Trinidad", "Kalimba Mbira", "Glockenspiel Bell"], 0, "Selected percussive idiophone bar and resonator acoustics"))
+            .with_param(DspParamSchema::log_knob("fundamental_hz", "Resonator Fundamental Frequency", 20.0, 4000.0, 261.63, "Hz", MacroRole::Tone, "Resonating tuned bar fundamental vibration frequency"))
+            .with_param(DspParamSchema::knob("mallet_hardness", "Hertzian Mallet Contact Hardness", 0.05, 1.0, 0.5, "hardness", MacroRole::Punch, "Hertz non-linear striking contact stiffness"))
+            .with_param(DspParamSchema::knob("strike_velocity", "Striking Impact Velocity", 0.0, 127.0, 100.0, "vel", MacroRole::Punch, "Dynamic strike force and initial mallet velocity"))
+            .with_param(DspParamSchema::knob("decay_damping_time_s", "Modal Ring Decay Damping Time", 0.05, 15.0, 2.5, "s", MacroRole::Space, "Exponential modal decay duration"))
+            .with_param(DspParamSchema::knob("resonator_tube_coupling", "Tuned Acoustic Resonator Pipe Coupling", 0.0, 1.0, 0.8, "ratio", MacroRole::Character, "Coupling strength to Helmholtz resonator pipe underneath"))
+        );
+        descriptors.insert("AutoUpdateChecker".to_string(), DspNodeDescriptor::new("AutoUpdateChecker", "Automatic Update Notification & Channel Selector", DspNodeCategory::Utility, "Background release channel poller monitoring remote engine binaries, release notes, and semantic version updates")
+            .with_param(DspParamSchema::choice("release_channel", "Target Release Update Channel", &["Stable Official", "Release Candidate (RC)", "Nightly Bleeding-Edge", "Long-Term Support (LTS)"], 0, "Target software distribution channel"))
+            .with_param(DspParamSchema::knob("polling_interval_hours", "Background Update Check Cadence", 1.0, 168.0, 24.0, "hrs", MacroRole::Character, "Cadence between background release checks"))
+            .with_param(DspParamSchema::toggle("auto_notify_banner", "Display Notification Toast on New Release", true, "Render non-intrusive banner on update detection"))
+            .with_param(DspParamSchema::toggle("allow_prerelease_builds", "Permit Pre-Release Beta Builds", false, "Include experimental unstable release tags"))
+            .with_param(DspParamSchema::knob("download_bandwidth_limit_kbps", "Update Background Download Cap", 128.0, 10000.0, 1024.0, "kbps", MacroRole::Space, "Maximum background bandwidth allocated for update fetches"))
+        );
+        descriptors.insert("UpdateInstaller".to_string(), DspNodeDescriptor::new("UpdateInstaller", "One-Click Background Update Package Installer", DspNodeCategory::Utility, "Atomic binary update applicator staging cryptographic signature checks, zero-downtime hot replacement, and engine restart handoff")
+            .with_param(DspParamSchema::choice("installation_strategy", "Binary Staging & Update Strategy", &["Atomic Swap On Restart", "Hot-Reload Audio Engine In-Place", "Prompt Interactive Wizard", "Dry-Run Verification Only"], 0, "Execution policy when applying new DAW binaries"))
+            .with_param(DspParamSchema::choice("signature_verification_level", "GPG / SHA-256 Binary Integrity Check", &["Strict GPG & BLAKE3 Signature", "SHA-256 Hash Match Only", "Skip Verification (Development)"], 0, "Cryptographic integrity requirement for incoming updates"))
+            .with_param(DspParamSchema::toggle("auto_preserve_user_plugins", "Preserve Third-Party Installed CLAP Plugins", true, "Prevent updater from altering installed plugin directory"))
+            .with_param(DspParamSchema::toggle("post_install_benchmark", "Run Deterministic DSP Regression Suite Post-Install", true, "Verify bit-exact DSP integrity before activating new version"))
+            .with_param(DspParamSchema::knob("install_timeout_seconds", "Maximum Staging Timeout Before Abort", 10.0, 300.0, 60.0, "s", MacroRole::Punch, "Maximum permissible duration for update staging"))
+        );
+        descriptors.insert("RollbackManager".to_string(), DspNodeDescriptor::new("RollbackManager", "Rollback Engine Restoring Previous Stable DAW Binaries", DspNodeCategory::Utility, "Fault-tolerant previous release snapshot manager allowing instant single-click rollbacks if an update encounters hardware or driver regressions")
+            .with_param(DspParamSchema::choice("available_restore_points", "Select Available Engine Restore Snapshot", &["Previous Stable Version (v1.0.9)", "Factory Baseline (v1.0.0)", "Archived Build (v0.9.8)"], 0, "Target archived version for instant rollback"))
+            .with_param(DspParamSchema::toggle("auto_rollback_on_crash_loop", "Auto-Trigger Rollback on Repeated Engine Panics", true, "Revert automatically if newly installed version crashes consecutively"))
+            .with_param(DspParamSchema::knob("max_retained_backups", "Maximum Retained Previous Binary Snapshots", 1.0, 10.0, 3.0, "builds", MacroRole::Character, "Number of previous versions kept in local rollback cache"))
+            .with_param(DspParamSchema::toggle("preserve_project_compatibility", "Enforce Project TOML Schema Backward Compatibility", true, "Verify projects remain deserializable across rollback version"))
+            .with_param(DspParamSchema::knob("rollback_grace_window_days", "Time Window to Rollback After Installation", 1.0, 30.0, 14.0, "days", MacroRole::Space, "Retention window before older rollback archives are pruned"))
+        );
+        descriptors.insert("CrashReporter".to_string(), DspNodeDescriptor::new("CrashReporter", "Anonymized Crash Report Generator & Telemetry Dispatcher", DspNodeCategory::Utility, "Crash dump telemetry collector sanitizing user session names, scrubbing audio memory, and packaging call stacks with OS and architecture metadata")
+            .with_param(DspParamSchema::toggle("scrub_personal_identifiers", "Scrub File Paths, Track Titles & Personal Identifiers", true, "Removes usernames, absolute paths, and metadata from crash dump"))
+            .with_param(DspParamSchema::toggle("include_audio_buffer_dumps", "Include Muted Audio Buffer Waveform Snapshots", false, "Appends brief zero-volume sample history around panic point"))
+            .with_param(DspParamSchema::knob("stack_unwind_depth", "Call Stack Unwinding Frame Depth", 8.0, 128.0, 64.0, "frames", MacroRole::Character, "Maximum callstack frames recorded in crash backtrace"))
+            .with_param(DspParamSchema::choice("submission_endpoint_protocol", "Report Telemetry Transport Security", &["HTTPS TLS 1.3 Post", "Encrypted Signal Payload", "Local Offline File Dump Only"], 0, "Network transport mechanism for telemetry crash submission"))
+            .with_param(DspParamSchema::toggle("auto_prompt_before_send", "Prompt User Confirmation Dialog Before Sending", true, "Displays visual modal allowing user to review anonymized dump"))
+        );
+        descriptors.insert("UsageTelemetry".to_string(), DspNodeDescriptor::new("UsageTelemetry", "Privacy-First Opt-In Feature Usage & Heatmap Tracker", DspNodeCategory::Utility, "Privacy-first anonymized feature utilization engine tracking node instantiations, sample rates, and workflow speed to guide DAW optimization")
+            .with_param(DspParamSchema::choice("opt_in_telemetry_status", "Telemetry Data Collection Status", &["Fully Disabled (Zero Outbound)", "Opt-In Performance Statistics", "Full Diagnostic Analytics"], 0, "Telemetry consent policy governing data collection"))
+            .with_param(DspParamSchema::knob("metric_aggregation_window_min", "Metrics Aggregation Flush Window", 1.0, 60.0, 15.0, "min", MacroRole::Space, "Time window over which feature usage counters are batched"))
+            .with_param(DspParamSchema::toggle("track_dsp_underrun_events", "Log Real-Time Audio Buffer Underruns / Dropouts", true, "Counts buffer underruns to diagnose driver latency issues"))
+            .with_param(DspParamSchema::toggle("anonymize_session_uuid", "Rotate Random Session Hash Every Startup", true, "Prevents tracking activity across multiple DAW sessions"))
+            .with_param(DspParamSchema::knob("local_telemetry_cache_limit_mb", "Maximum Disk Size for Local Telemetry Cache", 1.0, 50.0, 10.0, "MB", MacroRole::Character, "Disk storage cap allocated for offline telemetry queuing"))
+        );
+        descriptors.insert("PrivacyPolicyProvider".to_string(), DspNodeDescriptor::new("PrivacyPolicyProvider", "Embedded Privacy Compliance & Telemetry Disclosure Manager", DspNodeCategory::Utility, "Local immutable privacy policy disclosure viewer detailing zero audio exfiltration, opt-in metrics, and hardware sandboxing policies")
+            .with_param(DspParamSchema::choice("displayed_policy_section", "Active Privacy Disclosure Section", &["Audio Data Sovereignty", "Network & Telemetry Guarantees", "Third-Party Plugin Isolation", "Cloud Collaboration Encryption"], 0, "Policy article currently rendered in HUD viewport"))
+            .with_param(DspParamSchema::choice("user_acknowledgement_status", "User Policy Acceptance Status", &["Accepted & Verified", "Pending Review", "Strict Enterprise Restricted"], 0, "State of user consent and compliance validation"))
+            .with_param(DspParamSchema::toggle("enforce_strict_offline_mode", "Block All Outbound Network Sockets DAW-Wide", false, "Air-gap guarantee disabling all network stack communication"))
+            .with_param(DspParamSchema::toggle("telemetry_audit_logging", "Log All Outbound Telemetry Payloads Locally", true, "Record all outgoing telemetry payloads to user-inspectable JSON file"))
+            .with_param(DspParamSchema::toggle("export_policy_pdf", "Export Signed Privacy Disclosure Document", false, "Generate exportable PDF receipt of active privacy guarantees"))
+        );
+        descriptors.insert("GdprComplianceExporter".to_string(), DspNodeDescriptor::new("GdprComplianceExporter", "GDPR Personal Audio Data & Telemetry Archive Exporter", DspNodeCategory::Utility, "Automated GDPR article 15/20 compliance utility bundling user settings, authorization keys, telemetry logs, and personal identifiers into a ZIP archive")
+            .with_param(DspParamSchema::choice("export_data_scope", "GDPR Archive Data Ingestion Scope", &["Complete User Data Archive", "Telemetry & Analytics Only", "System Settings & Keys Only", "Cloud Session History Only"], 0, "Scope of personal data assembled into export package"))
+            .with_param(DspParamSchema::choice("compression_format", "Archive Packaging & Compression Format", &["Encrypted ZIP (AES-256)", "Standard ZIP Archive", "Plain JSON Manifest Directory"], 0, "Format and encryption applied to personal data bundle"))
+            .with_param(DspParamSchema::toggle("include_ip_connection_logs", "Include Network IP Connection Timestamps", true, "Append historical network connection session timestamps"))
+            .with_param(DspParamSchema::toggle("purge_after_export", "Purge All Exported Local Telemetry Data On Disk", false, "Permanently delete telemetry and cache records after export"))
+            .with_param(DspParamSchema::knob("data_retention_horizon_days", "Personal Data Purge Retention Horizon", 30.0, 730.0, 365.0, "days", MacroRole::Space, "Maximum lifespan before cached user telemetry is expired"))
+        );
+        descriptors.insert("FactoryResetManager".to_string(), DspNodeDescriptor::new("FactoryResetManager", "Safe Factory Reset & Configuration Restoration Coordinator", DspNodeCategory::Utility, "Non-destructive factory reset coordinator restoring default audio buffer sizes, GUI layouts, and keybindings while preserving user project files")
+            .with_param(DspParamSchema::choice("reset_scope", "Factory Reset Restoration Scope", &["Full DAW Reset (Clean Slate)", "Audio Driver & Buffer Defaults Only", "GUI Layout & Theme Defaults Only", "Keybindings & Shortcuts Only"], 0, "Select which configuration subsystems to reset"))
+            .with_param(DspParamSchema::toggle("create_pre_reset_backup", "Create Cryptographic Backup ZIP Before Reset", true, "Auto-creates emergency backup archive prior to resetting"))
+            .with_param(DspParamSchema::toggle("preserve_audio_projects", "Enforce Preservation of Projects & Stems Folder", true, "Guarantee that user music sessions and recordings remain untouched"))
+            .with_param(DspParamSchema::toggle("preserve_cloud_credentials", "Preserve Cloud Login Tokens & Auth Credentials", true, "Keep active cloud collaboration login sessions intact"))
+            .with_param(DspParamSchema::toggle("auto_restart_after_reset", "Automatically Relaunch Engine Post Reset", false, "Triggers immediate clean DAW relaunch upon reset completion"))
+        );
+        descriptors.insert("SystemSettingsBackup".to_string(), DspNodeDescriptor::new("SystemSettingsBackup", "System Settings & Keybindings ZIP Archive Manager", DspNodeCategory::Utility, "Single-file ZIP exporter and importer for system settings, custom keybindings, theme colors, and audio interface calibrations")
+            .with_param(DspParamSchema::choice("backup_contents_mask", "Settings Archive Components Included", &["All Configurations & Mappings", "Keybindings & Hotkeys Only", "Theme & Palette Preferences Only", "Audio & MIDI I/O Matrix Only"], 0, "Selection mask of configuration tables packaged in ZIP"))
+            .with_param(DspParamSchema::toggle("include_plugin_scan_cache", "Include Cached CLAP/VST3 Plugin Scan Index", true, "Bundle plugin scanner cache to skip re-indexing after restore"))
+            .with_param(DspParamSchema::toggle("encryption_passphrase_enable", "Password-Protect Backup Archive", false, "Encrypts configuration archive with user passphrase"))
+            .with_param(DspParamSchema::knob("max_backup_history_slots", "Retained Automatic Rolling Backup Slots", 1.0, 20.0, 5.0, "slots", MacroRole::Space, "Number of historical settings snapshots maintained on disk"))
+            .with_param(DspParamSchema::toggle("auto_backup_on_shutdown", "Trigger Silent Settings Backup on DAW Exit", true, "Ensures latest preferences are always securely snapshotted"))
+        );
+        descriptors.insert("PersistentLogin".to_string(), DspNodeDescriptor::new("PersistentLogin", "Cloud Account SSO Session & JWT Credentials Vault", DspNodeCategory::Utility, "Secure token store managing persistent OAuth2/JWT authentication, session refresh tokens, and single sign-on for cloud workspaces")
+            .with_param(DspParamSchema::choice("auth_provider", "Authentication Single Sign-On Provider", &["Summoner Cloud ID (OAuth2)", "GitHub Enterprise SSO", "Decentralized DID Identity", "Local Offline Token"], 0, "Selected identity provider for cloud synchronization"))
+            .with_param(DspParamSchema::knob("session_duration_days", "Persistent Session Token Lifespan", 1.0, 90.0, 30.0, "days", MacroRole::Character, "Duration before re-authentication is strictly enforced"))
+            .with_param(DspParamSchema::toggle("auto_refresh_tokens", "Silently Refresh Expiring Bearer Tokens", true, "Refreshes JWT token before expiry to avoid session disruption"))
+            .with_param(DspParamSchema::toggle("biometric_unlock_required", "Require OS Biometric / Pin Unlock on Startup", false, "Enforces Windows Hello / Touch ID confirmation on login"))
+            .with_param(DspParamSchema::toggle("remote_session_kill_switch", "Enable Remote Session Revocation Nonce", true, "Permits terminating active desktop session from mobile / web dashboard"))
+        );
+        descriptors.insert("CloudRenderJobSubmission".to_string(), DspNodeDescriptor::new("CloudRenderJobSubmission", "Distributed Cloud Stem Render Job Dispatcher & Progress HUD", DspNodeCategory::Utility, "Headless render job coordinator uploading stem graph manifests, distributing chunk rendering to serverless worker nodes, and streaming down WAV bounces")
+            .with_param(DspParamSchema::choice("render_quality_preset", "Cloud Export Quality & Word Length", &["Mastering 32-bit Float 96kHz", "Production 24-bit PCM 48kHz", "Preview 16-bit PCM 44.1kHz", "Lossless FLAC Broadcast Stems"], 1, "Audio encoding format and sampling rate for bounced stems"))
+            .with_param(DspParamSchema::knob("parallel_cloud_workers", "Allocated Parallel Cloud Cluster Nodes", 1.0, 64.0, 16.0, "workers", MacroRole::Punch, "Number of concurrent cloud workers rendering stem chunks"))
+            .with_param(DspParamSchema::toggle("notify_on_render_finish", "Send Webhook / Email Notification on Completion", true, "Triggers OS and webhook alert when render is downloaded"))
+            .with_param(DspParamSchema::choice("stem_isolation_level", "Stem Separation Bouncing Granularity", &["Individual Track Stems (Full Mix)", "Instrument Group Buses Only", "Stereo Master Bounce Only"], 0, "Track grouping granularity for cloud stem bouncing"))
+            .with_param(DspParamSchema::knob("timeout_per_chunk_seconds", "Worker Node Max Render Time Per Chunk", 10.0, 600.0, 120.0, "s", MacroRole::Space, "Timeout limit per audio chunk before failover re-dispatch"))
+        );
+        descriptors.insert("CloudCollaborationWorkspace".to_string(), DspNodeDescriptor::new("CloudCollaborationWorkspace", "Real-Time Multi-Producer Cloud Collaboration Workspace Session", DspNodeCategory::Utility, "Collaborative multi-user arrangement session room with member invitation roles, real-time stem synchronization, and live playback locking")
+            .with_param(DspParamSchema::choice("workspace_privacy", "Collaboration Workspace Access Policy", &["Private Team Room (Invite-Only)", "Link-Shared Producer Space", "Public Community Jam Session"], 0, "Access authorization level for joining collaboration room"))
+            .with_param(DspParamSchema::knob("max_active_collaborators", "Maximum Concurrent Active Room Members", 2.0, 32.0, 8.0, "users", MacroRole::Punch, "Room user capacity limit for live synchronized editing"))
+            .with_param(DspParamSchema::toggle("sync_cursor_positions", "Broadcast Real-Time Arrangement Cursors", true, "Render remote producer mouse cursors and selections on arrangement"))
+            .with_param(DspParamSchema::toggle("allow_guest_audio_recording", "Permit Guest Roles to Arm Audio Recording", false, "Restrict audio recording permissions to verified producers"))
+            .with_param(DspParamSchema::knob("bandwidth_throttle_kbps", "Per-Peer Streaming Bandwidth Limit", 64.0, 4096.0, 512.0, "kbps", MacroRole::Space, "Network bandwidth cap per connected collaborator"))
+        );
+        descriptors.insert("OfflineModeIndicator".to_string(), DspNodeDescriptor::new("OfflineModeIndicator", "Offline Network State Monitor & Graceful Fallback Coordinator", DspNodeCategory::Utility, "Real-time network connectivity monitor dynamically disabling cloud features, buffering mutations, and guaranteeing 100% offline DAW functionality")
+            .with_param(DspParamSchema::knob("ping_heartbeat_interval_s", "Network Connectivity Heartbeat Cadence", 1.0, 60.0, 5.0, "s", MacroRole::Character, "Frequency of lightweight ICMP / HTTP connectivity probes"))
+            .with_param(DspParamSchema::knob("auto_reconnect_retry_limit", "Reconnection Attempt Retries Before Silent Mode", 1.0, 20.0, 5.0, "retries", MacroRole::Punch, "Maximum retry attempts before suppressing connection alerts"))
+            .with_param(DspParamSchema::toggle("suppress_offline_warning_toasts", "Mute Non-Intrusive Offline Notification Toasts", true, "Silence network disruption toasts when working offline"))
+            .with_param(DspParamSchema::toggle("local_cache_priority_mode", "Prefer Cached Local Samples Over Remote CDN", true, "Bypasses all remote fetches when local asset matches hash"))
+            .with_param(DspParamSchema::choice("graceful_degradation_active", "Active Graceful Degradation State", &["Offline Autonomous (Local Only)", "Connected & Synced", "Intermittent / Reconnecting"], 0, "Current network fallback operating mode"))
+        );
+        descriptors.insert("CloudStorageQuota".to_string(), DspNodeDescriptor::new("CloudStorageQuota", "Cloud Asset Storage Allocation & Quota Enforcement Monitor", DspNodeCategory::Utility, "Cloud storage quota telemetry HUD tracking total gigabytes allocated vs consumed across audio stems, sample packs, and project revisions")
+            .with_param(DspParamSchema::knob("allocated_quota_gb", "Total Account Storage Quota Tier", 1.0, 1000.0, 5.0, "GB", MacroRole::Tone, "Total cloud storage ceiling allocated to user account"))
+            .with_param(DspParamSchema::knob("used_storage_gb", "Currently Consumed Asset Storage", 0.0, 1000.0, 1.2, "GB", MacroRole::Character, "Total volume of stored cloud audio assets and stems"))
+            .with_param(DspParamSchema::knob("warning_threshold_percent", "Low Storage Warning Notification Threshold", 50.0, 95.0, 80.0, "%", MacroRole::Space, "Storage consumption percentage triggering warning alert"))
+            .with_param(DspParamSchema::toggle("auto_evict_stale_cache", "Auto-Purge Local Temporary Cloud Render Chunks", true, "Automatically reclaims disk space by purging old render chunks"))
+            .with_param(DspParamSchema::choice("storage_tier_type", "Cloud Subscription Storage Plan", &["Free Starter (5 GB)", "Creator Studio (50 GB)", "Pro Enterprise (500 GB)", "Self-Hosted S3 / MinIO"], 0, "Active cloud storage backend and subscription level"))
+        );
+        descriptors.insert("PluginRatingReview".to_string(), DspNodeDescriptor::new("PluginRatingReview", "User Plugin Community Rating, Compatibility Reporting & Review Hub", DspNodeCategory::Utility, "Decentralized plugin review and rating portal submitting compatibility reports, audio glitch logs, and quality scores to the community repository")
+            .with_param(DspParamSchema::knob("user_rating_stars", "Plugin Evaluation Score", 1.0, 5.0, 5.0, "stars", MacroRole::Tone, "User rating assigned to the selected plugin"))
+            .with_param(DspParamSchema::choice("reported_stability", "Reported DSP Stability & Crash Resistance", &["Flawless (Zero Glitches)", "Occasional Buffer Jitter", "Frequent Audio Drops", "Known Severe Crashes"], 0, "Plugin runtime stability classification"))
+            .with_param(DspParamSchema::choice("host_compatibility_version", "Verified DAW Compatibility Target Version", &["Summoner v1.1.x Current", "Summoner v1.0.x Stable", "Summoner v0.9.x Legacy"], 0, "Target DAW host version verified by reviewer"))
+            .with_param(DspParamSchema::toggle("submit_anonymously", "Anonymize Submitter User Credentials", true, "Submits review without linking user cloud identity"))
+            .with_param(DspParamSchema::knob("helpful_vote_counter", "Community Verified Helpful Vote Count", 0.0, 1000.0, 42.0, "votes", MacroRole::Space, "Helpful rating endorsements from other producers"))
+        );
+        descriptors.insert("PluginBlacklist".to_string(), DspNodeDescriptor::new("PluginBlacklist", "Unstable Plugin Blacklist & Audio Crash Shield", DspNodeCategory::Utility, "Real-time plugin blacklist and quarantine filter blocking known unstable, crash-prone, or memory-leaking VST3/CLAP plugins from polluting the audio thread")
+            .with_param(DspParamSchema::choice("quarantine_mode", "Blacklist Enforcement & Quarantine Action", &["Strict Block (Never Load)", "Isolate in External Sandbox", "Warn and Allow User Override", "Bypass DSP Processing"], 0, "Policy executed when a blacklisted plugin is encountered"))
+            .with_param(DspParamSchema::toggle("auto_blacklist_on_crash", "Auto-Blacklist Any Plugin Crashing Twice", true, "Automatically quarantines plugin if it causes two audio engine aborts"))
+            .with_param(DspParamSchema::knob("blacklisted_plugin_count", "Total Plugins Currently in Quarantine", 0.0, 100.0, 1.0, "plugins", MacroRole::Character, "Total count of third-party plugins in quarantine"))
+            .with_param(DspParamSchema::toggle("synchronize_cloud_blacklist", "Pull Community Curated Blacklist Definitions", true, "Fetches community-maintained database of known buggy plugins"))
+            .with_param(DspParamSchema::toggle("allow_whitelisted_fingerprints", "Permit Signed Verified Plugin Hash Overrides", true, "Permits developer-signed patched binaries to bypass blacklist"))
+        );
+        descriptors.insert("PluginConflictDetector".to_string(), DspNodeDescriptor::new("PluginConflictDetector", "Conflicting Third-Party Audio Driver & Plugin Incompatibility Detector", DspNodeCategory::Utility, "Real-time dependency conflict detector identifying dual-driver race conditions, mismatched sample rates, or conflicting audio bus topologies")
+            .with_param(DspParamSchema::choice("detection_sensitivity", "Conflict Heuristic Detection Strictness", &["Aggressive (Flag All Shared Hooks)", "Balanced (Standard Incompatibilities)", "Permissive (Strict Panics Only)"], 1, "Heuristic aggressiveness for flagging plugin collisions"))
+            .with_param(DspParamSchema::toggle("auto_resolve_driver_conflicts", "Automatically Serialize Conflicting Audio Drivers", true, "Forces conflicting plugins into sequential processing queues"))
+            .with_param(DspParamSchema::knob("detected_conflicts_count", "Currently Active Incompatible Plugin Pairs", 0.0, 20.0, 0.0, "pairs", MacroRole::Punch, "Total count of incompatible plugin pairs active in session"))
+            .with_param(DspParamSchema::toggle("log_driver_interceptions", "Log Driver Hook Collisions to Console", true, "Outputs diagnostic collision warnings to development log"))
+            .with_param(DspParamSchema::toggle("isolate_conflicting_instances", "Spawn Separate Memory Sandbox Per Conflicting Node", true, "Places each conflicting plugin inside its own sandbox process"))
+        );
+        descriptors.insert("PluginStateBackup".to_string(), DspNodeDescriptor::new("PluginStateBackup", "Pre-Update Plugin State Snapshot & Recovery Storage", DspNodeCategory::Utility, "Automatic pre-update plugin state snapshot engine preserving opaque binary chunks, parameter maps, and MIDI assignments before updating plugin versions")
+            .with_param(DspParamSchema::choice("backup_trigger_event", "Automatic State Snapshot Trigger Policy", &["Before Any Plugin Update", "On Project Manual Save", "Before Preset Replacement", "Manual Snapshot Only"], 0, "Event condition initiating plugin parameter snapshot"))
+            .with_param(DspParamSchema::choice("compression_algorithm", "Binary Chunk Storage Compression", &["Zstandard Level 9", "LZ4 Fast Real-Time", "Uncompressed Raw Bytes"], 0, "Compression codec applied to plugin binary state chunk"))
+            .with_param(DspParamSchema::knob("retained_snapshots_per_plugin", "Retained Snapshot Revisions Per Plugin", 1.0, 20.0, 5.0, "versions", MacroRole::Space, "Number of past state revisions saved for each plugin"))
+            .with_param(DspParamSchema::toggle("verify_chunk_checksum", "Verify Bit-for-Bit BLAKE3 Checksum on Restore", true, "Validates integrity hash before restoring state to plugin"))
+            .with_param(DspParamSchema::toggle("auto_restore_on_failed_load", "Revert to Last Known Good State on Load Failure", true, "Restores previous version snapshot if updated plugin fails to init"))
+        );
+        descriptors.insert("OfflineLocalProjectManager".to_string(), DspNodeDescriptor::new("OfflineLocalProjectManager", "Offline-First Local Project Storage & Zero-Cloud Isolation Manager", DspNodeCategory::Utility, "Offline-first local project storage coordinator ensuring zero outbound cloud dependencies, local TOML persistence, and deterministic offline stem rendering")
+            .with_param(DspParamSchema::choice("storage_isolation_level", "Project File System Isolation Level", &["Air-Gapped Strict Local", "Local Default with Optional Sync", "Encrypted Local Project Vault"], 0, "Storage isolation guarantee applied to active project"))
+            .with_param(DspParamSchema::knob("local_autosave_interval_min", "Local Project Autosave Interval", 0.5, 30.0, 3.0, "min", MacroRole::Space, "Cadence between background local TOML saves"))
+            .with_param(DspParamSchema::toggle("atomic_disk_writes", "Atomic Temporary File Renaming on Save", true, "Prevents corrupt project saves on sudden power loss"))
+            .with_param(DspParamSchema::knob("retain_local_revisions", "Maximum Stored Local Project Revisions", 5.0, 100.0, 25.0, "revisions", MacroRole::Punch, "Maximum local snapshot revisions kept in project folder"))
+            .with_param(DspParamSchema::toggle("zero_cloud_leak_guard", "Enforce Zero Outbound Cloud Socket Assertion", true, "Strict assertion killing any network thread attempting cloud sync"))
+        );
 
         Self { descriptors }
     }
@@ -9347,6 +9496,27 @@ descriptors.insert("BellowsGesturePattern".to_string(), DspNodeDescriptor::new("
             ("PermissionToken", DspNodeCategory::Utility, "Role-Based Access Control Security Token"),
             ("PendingMutation", DspNodeCategory::Utility, "Optimistic CRDT Mutation Buffer Coordinator"),
             ("OfflineCrdtQueue", DspNodeCategory::Utility, "Offline Conflict-Free Delta Reconciliation Engine"),
+            ("ToneholeGrid", DspNodeCategory::AcousticPhysicalModel, "Acoustic Tonehole Impedance Lattice & Key Venting Grid"),
+            ("IdiophoneResonator", DspNodeCategory::AcousticPhysicalModel, "Struck Idiophone Modal Resonator Bank & Mallet Dynamics"),
+            ("AutoUpdateChecker", DspNodeCategory::Utility, "Automatic Update Notification & Channel Selector"),
+            ("UpdateInstaller", DspNodeCategory::Utility, "One-Click Background Update Package Installer"),
+            ("RollbackManager", DspNodeCategory::Utility, "Rollback Engine Restoring Previous Stable DAW Binaries"),
+            ("CrashReporter", DspNodeCategory::Utility, "Anonymized Crash Report Generator & Telemetry Dispatcher"),
+            ("UsageTelemetry", DspNodeCategory::Utility, "Privacy-First Opt-In Feature Usage & Heatmap Tracker"),
+            ("PrivacyPolicyProvider", DspNodeCategory::Utility, "Embedded Privacy Compliance & Telemetry Disclosure Manager"),
+            ("GdprComplianceExporter", DspNodeCategory::Utility, "GDPR Personal Audio Data & Telemetry Archive Exporter"),
+            ("FactoryResetManager", DspNodeCategory::Utility, "Safe Factory Reset & Configuration Restoration Coordinator"),
+            ("SystemSettingsBackup", DspNodeCategory::Utility, "System Settings & Keybindings ZIP Archive Manager"),
+            ("PersistentLogin", DspNodeCategory::Utility, "Cloud Account SSO Session & JWT Credentials Vault"),
+            ("CloudRenderJobSubmission", DspNodeCategory::Utility, "Distributed Cloud Stem Render Job Dispatcher & Progress HUD"),
+            ("CloudCollaborationWorkspace", DspNodeCategory::Utility, "Real-Time Multi-Producer Cloud Collaboration Workspace Session"),
+            ("OfflineModeIndicator", DspNodeCategory::Utility, "Offline Network State Monitor & Graceful Fallback Coordinator"),
+            ("CloudStorageQuota", DspNodeCategory::Utility, "Cloud Asset Storage Allocation & Quota Enforcement Monitor"),
+            ("PluginRatingReview", DspNodeCategory::Utility, "User Plugin Community Rating, Compatibility Reporting & Review Hub"),
+            ("PluginBlacklist", DspNodeCategory::Utility, "Unstable Plugin Blacklist & Audio Crash Shield"),
+            ("PluginConflictDetector", DspNodeCategory::Utility, "Conflicting Third-Party Audio Driver & Plugin Incompatibility Detector"),
+            ("PluginStateBackup", DspNodeCategory::Utility, "Pre-Update Plugin State Snapshot & Recovery Storage"),
+            ("OfflineLocalProjectManager", DspNodeCategory::Utility, "Offline-First Local Project Storage & Zero-Cloud Isolation Manager"),
         ]
     }
 
@@ -11400,6 +11570,27 @@ descriptors.insert("BellowsGesturePattern".to_string(), DspNodeDescriptor::new("
             "permissiontoken" | "accesstoken" | "collaborationpermission" | "rbacsecuritytoken" => Some("PermissionToken"),
             "pendingmutation" | "crdtmutation" | "optimisticmutation" | "pendingchangequeue" => Some("PendingMutation"),
             "offlinecrdtqueue" | "crdtqueue" | "offlinesyncqueue" | "deltareconciliation" => Some("OfflineCrdtQueue"),
+            "toneholegrid" | "woodwindtoneholes" | "acousticventgrid" | "toneholegridnetwork" => Some("ToneholeGrid"),
+            "idiophoneresonator" | "marimbawood" | "xylophone" | "vibraphone" | "idiophonemodes" => Some("IdiophoneResonator"),
+            "autoupdatechecker" | "updatechecker" | "dawupdatechecker" | "versionchecker" => Some("AutoUpdateChecker"),
+            "updateinstaller" | "dawinstaller" | "patchinstaller" | "binaryupdater" => Some("UpdateInstaller"),
+            "rollbackmanager" | "versionrollback" | "snapshotrollback" | "enginefallback" => Some("RollbackManager"),
+            "crashreporter" | "crashreport" | "telemetryreporter" | "panicdump" => Some("CrashReporter"),
+            "usagetelemetry" | "telemetrymanager" | "telemetrycollector" | "usagetracker" => Some("UsageTelemetry"),
+            "privacypolicyprovider" | "privacypolicy" | "gdprprivacy" | "datagovernance" => Some("PrivacyPolicyProvider"),
+            "gdprcomplianceexporter" | "gdprnotice" | "gdprexporter" | "userdataexport" => Some("GdprComplianceExporter"),
+            "factoryresetmanager" | "factoryreset" | "resetsettings" | "defaultrestore" => Some("FactoryResetManager"),
+            "systemsettingsbackup" | "settingsbackup" | "settingszip" | "configexporter" => Some("SystemSettingsBackup"),
+            "persistentlogin" | "useraccount" | "cloudlogin" | "credentialsauth" => Some("PersistentLogin"),
+            "cloudrenderjobsubmission" | "cloudrenderjob" | "cloudrender" | "distributedstemrender" => Some("CloudRenderJobSubmission"),
+            "cloudcollaborationworkspace" | "collaborationsessionworkspace" | "sharedroomsession" | "studiocollab" => Some("CloudCollaborationWorkspace"),
+            "offlinemodeindicator" | "networkstatusindicator" | "offlinemonitor" | "airgapindicator" => Some("OfflineModeIndicator"),
+            "cloudstoragequota" | "storagequotamonitor" | "cloudquotadisplay" | "storageallocation" => Some("CloudStorageQuota"),
+            "pluginratingreview" | "pluginreview" | "communityrating" | "pluginratinghub" => Some("PluginRatingReview"),
+            "pluginblacklist" | "quarantineplugins" | "pluginshield" | "blacklistedplugins" => Some("PluginBlacklist"),
+            "pluginconflictdetector" | "conflictdetector" | "driverconflicts" | "pluginincompatibility" => Some("PluginConflictDetector"),
+            "pluginstatebackup" | "pluginstate" | "preupdatesnapshot" | "pluginrecoverysnapshot" => Some("PluginStateBackup"),
+            "offlinelocalprojectmanager" | "offlineprojectmanager" | "localprojectmanager" | "airgappedproject" => Some("OfflineLocalProjectManager"),
             _ => None,
         }
     }
@@ -19118,6 +19309,176 @@ descriptors.insert("BellowsGesturePattern".to_string(), DspNodeDescriptor::new("
                     .with_param(DspParamDescriptor::new_linear("reconciliation_bandwidth_cap_kbps", "Background Sync Bandwidth Limit", 32.0, 2048.0, 256.0, "kbps", (34, 197, 94)))
                     .with_param(DspParamDescriptor::new_bool("compress_delta_payloads", "LZ4 Compression on Serialized CRDT Delta Packets", true, (16, 185, 129)))
             ),
+            "ToneholeGrid" => Box::new(
+                GenericDspNodeUi::new("ToneholeGrid", "Acoustic Tonehole Impedance Lattice & Key Venting Grid", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("total_bore_length_m", "Nominal Acoustic Bore Length", 0.2, 1.5, 0.60, "m", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("bore_radius_m", "Acoustic Bore Inner Radius", 0.003, 0.030, 0.0095, "m", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_log("lattice_cutoff_hz", "Tonehole Lattice Cutoff Frequency", 500.0, 12000.0, 2200.0, "Hz", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("junction_loss", "Wall Viscous-Thermal Damping Factor", 0.95, 0.9999, 0.998, "factor", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("fingering_mask", "Active Fingering Key Mask Bitmask", 0.0, 5.0, 0.0, "mask", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_linear("half_hole_vent_fraction", "Microtonal Half-Holing Shading Ratio", 0.0, 1.0, 0.0, "ratio", (16, 185, 129)))
+            ),
+            "IdiophoneResonator" => Box::new(
+                GenericDspNodeUi::new("IdiophoneResonator", "Struck Idiophone Modal Resonator Bank & Mallet Dynamics", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("instrument_profile", "Idiophone Instrument Profile", 0.0, 5.0, 0.0, "prof", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_log("fundamental_hz", "Resonator Fundamental Frequency", 20.0, 4000.0, 261.63, "Hz", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("mallet_hardness", "Hertzian Mallet Contact Hardness", 0.05, 1.0, 0.5, "hard", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("strike_velocity", "Striking Impact Velocity", 0.0, 127.0, 100.0, "vel", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("decay_damping_time_s", "Modal Ring Decay Damping Time", 0.05, 15.0, 2.5, "s", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_linear("resonator_tube_coupling", "Tuned Acoustic Resonator Pipe Coupling", 0.0, 1.0, 0.8, "ratio", (16, 185, 129)))
+            ),
+            "AutoUpdateChecker" => Box::new(
+                GenericDspNodeUi::new("AutoUpdateChecker", "Automatic Update Notification & Channel Selector", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("release_channel", "Target Release Update Channel", 0.0, 3.0, 0.0, "chan", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("polling_interval_hours", "Background Update Check Cadence", 1.0, 168.0, 24.0, "hrs", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("auto_notify_banner", "Display Notification Toast on New Release", true, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("allow_prerelease_builds", "Permit Pre-Release Beta Builds", false, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("download_bandwidth_limit_kbps", "Update Background Download Cap", 128.0, 10000.0, 1024.0, "kbps", (34, 197, 94)))
+            ),
+            "UpdateInstaller" => Box::new(
+                GenericDspNodeUi::new("UpdateInstaller", "One-Click Background Update Package Installer", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("installation_strategy", "Binary Staging & Update Strategy", 0.0, 3.0, 0.0, "strat", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("signature_verification_level", "GPG / SHA-256 Binary Integrity Check", 0.0, 2.0, 0.0, "sec", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("auto_preserve_user_plugins", "Preserve Third-Party Installed CLAP Plugins", true, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("post_install_benchmark", "Run Deterministic DSP Regression Suite Post-Install", true, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("install_timeout_seconds", "Maximum Staging Timeout Before Abort", 10.0, 300.0, 60.0, "s", (34, 197, 94)))
+            ),
+            "RollbackManager" => Box::new(
+                GenericDspNodeUi::new("RollbackManager", "Rollback Engine Restoring Previous Stable DAW Binaries", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("available_restore_points", "Select Available Engine Restore Snapshot", 0.0, 2.0, 0.0, "snap", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_bool("auto_rollback_on_crash_loop", "Auto-Trigger Rollback on Repeated Engine Panics", true, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("max_retained_backups", "Maximum Retained Previous Binary Snapshots", 1.0, 10.0, 3.0, "builds", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("preserve_project_compatibility", "Enforce Project TOML Schema Backward Compatibility", true, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("rollback_grace_window_days", "Time Window to Rollback After Installation", 1.0, 30.0, 14.0, "days", (34, 197, 94)))
+            ),
+            "CrashReporter" => Box::new(
+                GenericDspNodeUi::new("CrashReporter", "Anonymized Crash Report Generator & Telemetry Dispatcher", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_bool("scrub_personal_identifiers", "Scrub File Paths, Track Titles & Personal Identifiers", true, (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_bool("include_audio_buffer_dumps", "Include Muted Audio Buffer Waveform Snapshots", false, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("stack_unwind_depth", "Call Stack Unwinding Frame Depth", 8.0, 128.0, 64.0, "frames", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("submission_endpoint_protocol", "Report Telemetry Transport Security", 0.0, 2.0, 0.0, "proto", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("auto_prompt_before_send", "Prompt User Confirmation Dialog Before Sending", true, (34, 197, 94)))
+            ),
+            "UsageTelemetry" => Box::new(
+                GenericDspNodeUi::new("UsageTelemetry", "Privacy-First Opt-In Feature Usage & Heatmap Tracker", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("opt_in_telemetry_status", "Telemetry Data Collection Status", 0.0, 2.0, 0.0, "opt", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("metric_aggregation_window_min", "Metrics Aggregation Flush Window", 1.0, 60.0, 15.0, "min", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("track_dsp_underrun_events", "Log Real-Time Audio Buffer Underruns / Dropouts", true, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("anonymize_session_uuid", "Rotate Random Session Hash Every Startup", true, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("local_telemetry_cache_limit_mb", "Maximum Disk Size for Local Telemetry Cache", 1.0, 50.0, 10.0, "MB", (34, 197, 94)))
+            ),
+            "PrivacyPolicyProvider" => Box::new(
+                GenericDspNodeUi::new("PrivacyPolicyProvider", "Embedded Privacy Compliance & Telemetry Disclosure Manager", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("displayed_policy_section", "Active Privacy Disclosure Section", 0.0, 3.0, 0.0, "sec", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("user_acknowledgement_status", "User Policy Acceptance Status", 0.0, 2.0, 0.0, "stat", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("enforce_strict_offline_mode", "Block All Outbound Network Sockets DAW-Wide", false, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("telemetry_audit_logging", "Log All Outbound Telemetry Payloads Locally", true, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("export_policy_pdf", "Export Signed Privacy Disclosure Document", false, (34, 197, 94)))
+            ),
+            "GdprComplianceExporter" => Box::new(
+                GenericDspNodeUi::new("GdprComplianceExporter", "GDPR Personal Audio Data & Telemetry Archive Exporter", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("export_data_scope", "GDPR Archive Data Ingestion Scope", 0.0, 3.0, 0.0, "scope", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("compression_format", "Archive Packaging & Compression Format", 0.0, 2.0, 0.0, "fmt", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("include_ip_connection_logs", "Include Network IP Connection Timestamps", true, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("purge_after_export", "Purge All Exported Local Telemetry Data On Disk", false, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("data_retention_horizon_days", "Personal Data Purge Retention Horizon", 30.0, 730.0, 365.0, "days", (34, 197, 94)))
+            ),
+            "FactoryResetManager" => Box::new(
+                GenericDspNodeUi::new("FactoryResetManager", "Safe Factory Reset & Configuration Restoration Coordinator", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("reset_scope", "Factory Reset Restoration Scope", 0.0, 3.0, 0.0, "scope", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_bool("create_pre_reset_backup", "Create Cryptographic Backup ZIP Before Reset", true, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("preserve_audio_projects", "Enforce Preservation of Projects & Stems Folder", true, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("preserve_cloud_credentials", "Preserve Cloud Login Tokens & Auth Credentials", true, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("auto_restart_after_reset", "Automatically Relaunch Engine Post Reset", false, (34, 197, 94)))
+            ),
+            "SystemSettingsBackup" => Box::new(
+                GenericDspNodeUi::new("SystemSettingsBackup", "System Settings & Keybindings ZIP Archive Manager", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("backup_contents_mask", "Settings Archive Components Included", 0.0, 3.0, 0.0, "mask", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_bool("include_plugin_scan_cache", "Include Cached CLAP/VST3 Plugin Scan Index", true, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("encryption_passphrase_enable", "Password-Protect Backup Archive", false, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("max_backup_history_slots", "Retained Automatic Rolling Backup Slots", 1.0, 20.0, 5.0, "slots", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("auto_backup_on_shutdown", "Trigger Silent Settings Backup on DAW Exit", true, (34, 197, 94)))
+            ),
+            "PersistentLogin" => Box::new(
+                GenericDspNodeUi::new("PersistentLogin", "Cloud Account SSO Session & JWT Credentials Vault", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("auth_provider", "Authentication Single Sign-On Provider", 0.0, 3.0, 0.0, "prov", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("session_duration_days", "Persistent Session Token Lifespan", 1.0, 90.0, 30.0, "days", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("auto_refresh_tokens", "Silently Refresh Expiring Bearer Tokens", true, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("biometric_unlock_required", "Require OS Biometric / Pin Unlock on Startup", false, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("remote_session_kill_switch", "Enable Remote Session Revocation Nonce", true, (34, 197, 94)))
+            ),
+            "CloudRenderJobSubmission" => Box::new(
+                GenericDspNodeUi::new("CloudRenderJobSubmission", "Distributed Cloud Stem Render Job Dispatcher & Progress HUD", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("render_quality_preset", "Cloud Export Quality & Word Length", 0.0, 3.0, 1.0, "qual", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("parallel_cloud_workers", "Allocated Parallel Cloud Cluster Nodes", 1.0, 64.0, 16.0, "workers", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("notify_on_render_finish", "Send Webhook / Email Notification on Completion", true, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("stem_isolation_level", "Stem Separation Bouncing Granularity", 0.0, 2.0, 0.0, "iso", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("timeout_per_chunk_seconds", "Worker Node Max Render Time Per Chunk", 10.0, 600.0, 120.0, "s", (34, 197, 94)))
+            ),
+            "CloudCollaborationWorkspace" => Box::new(
+                GenericDspNodeUi::new("CloudCollaborationWorkspace", "Real-Time Multi-Producer Cloud Collaboration Workspace Session", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("workspace_privacy", "Collaboration Workspace Access Policy", 0.0, 2.0, 0.0, "priv", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("max_active_collaborators", "Maximum Concurrent Active Room Members", 2.0, 32.0, 8.0, "users", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("sync_cursor_positions", "Broadcast Real-Time Arrangement Cursors", true, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("allow_guest_audio_recording", "Permit Guest Roles to Arm Audio Recording", false, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("bandwidth_throttle_kbps", "Per-Peer Streaming Bandwidth Limit", 64.0, 4096.0, 512.0, "kbps", (34, 197, 94)))
+            ),
+            "OfflineModeIndicator" => Box::new(
+                GenericDspNodeUi::new("OfflineModeIndicator", "Offline Network State Monitor & Graceful Fallback Coordinator", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("ping_heartbeat_interval_s", "Network Connectivity Heartbeat Cadence", 1.0, 60.0, 5.0, "s", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("auto_reconnect_retry_limit", "Reconnection Attempt Retries Before Silent Mode", 1.0, 20.0, 5.0, "retries", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("suppress_offline_warning_toasts", "Mute Non-Intrusive Offline Notification Toasts", true, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("local_cache_priority_mode", "Prefer Cached Local Samples Over Remote CDN", true, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("graceful_degradation_active", "Active Graceful Degradation State", 0.0, 2.0, 0.0, "deg", (34, 197, 94)))
+            ),
+            "CloudStorageQuota" => Box::new(
+                GenericDspNodeUi::new("CloudStorageQuota", "Cloud Asset Storage Allocation & Quota Enforcement Monitor", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("allocated_quota_gb", "Total Account Storage Quota Tier", 1.0, 1000.0, 5.0, "GB", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("used_storage_gb", "Currently Consumed Asset Storage", 0.0, 1000.0, 1.2, "GB", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("warning_threshold_percent", "Low Storage Warning Notification Threshold", 50.0, 95.0, 80.0, "%", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("auto_evict_stale_cache", "Auto-Purge Local Temporary Cloud Render Chunks", true, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("storage_tier_type", "Cloud Subscription Storage Plan", 0.0, 3.0, 0.0, "tier", (34, 197, 94)))
+            ),
+            "PluginRatingReview" => Box::new(
+                GenericDspNodeUi::new("PluginRatingReview", "User Plugin Community Rating, Compatibility Reporting & Review Hub", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("user_rating_stars", "Plugin Evaluation Score", 1.0, 5.0, 5.0, "stars", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("reported_stability", "Reported DSP Stability & Crash Resistance", 0.0, 3.0, 0.0, "stab", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("host_compatibility_version", "Verified DAW Compatibility Target Version", 0.0, 2.0, 0.0, "compat", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("submit_anonymously", "Anonymize Submitter User Credentials", true, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("helpful_vote_counter", "Community Verified Helpful Vote Count", 0.0, 1000.0, 42.0, "votes", (34, 197, 94)))
+            ),
+            "PluginBlacklist" => Box::new(
+                GenericDspNodeUi::new("PluginBlacklist", "Unstable Plugin Blacklist & Audio Crash Shield", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("quarantine_mode", "Blacklist Enforcement & Quarantine Action", 0.0, 3.0, 0.0, "mode", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_bool("auto_blacklist_on_crash", "Auto-Blacklist Any Plugin Crashing Twice", true, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("blacklisted_plugin_count", "Total Plugins Currently in Quarantine", 0.0, 100.0, 1.0, "plugins", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("synchronize_cloud_blacklist", "Pull Community Curated Blacklist Definitions", true, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("allow_whitelisted_fingerprints", "Permit Signed Verified Plugin Hash Overrides", true, (34, 197, 94)))
+            ),
+            "PluginConflictDetector" => Box::new(
+                GenericDspNodeUi::new("PluginConflictDetector", "Conflicting Third-Party Audio Driver & Plugin Incompatibility Detector", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("detection_sensitivity", "Conflict Heuristic Detection Strictness", 0.0, 2.0, 1.0, "sens", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_bool("auto_resolve_driver_conflicts", "Automatically Serialize Conflicting Audio Drivers", true, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("detected_conflicts_count", "Currently Active Incompatible Plugin Pairs", 0.0, 20.0, 0.0, "pairs", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("log_driver_interceptions", "Log Driver Hook Collisions to Console", true, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("isolate_conflicting_instances", "Spawn Separate Memory Sandbox Per Conflicting Node", true, (34, 197, 94)))
+            ),
+            "PluginStateBackup" => Box::new(
+                GenericDspNodeUi::new("PluginStateBackup", "Pre-Update Plugin State Snapshot & Recovery Storage", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("backup_trigger_event", "Automatic State Snapshot Trigger Policy", 0.0, 3.0, 0.0, "trig", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("compression_algorithm", "Binary Chunk Storage Compression", 0.0, 2.0, 0.0, "comp", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("retained_snapshots_per_plugin", "Retained Snapshot Revisions Per Plugin", 1.0, 20.0, 5.0, "versions", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("verify_chunk_checksum", "Verify Bit-for-Bit BLAKE3 Checksum on Restore", true, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("auto_restore_on_failed_load", "Revert to Last Known Good State on Load Failure", true, (34, 197, 94)))
+            ),
+            "OfflineLocalProjectManager" => Box::new(
+                GenericDspNodeUi::new("OfflineLocalProjectManager", "Offline-First Local Project Storage & Zero-Cloud Isolation Manager", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("storage_isolation_level", "Project File System Isolation Level", 0.0, 2.0, 0.0, "iso", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("local_autosave_interval_min", "Local Project Autosave Interval", 0.5, 30.0, 3.0, "min", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("atomic_disk_writes", "Atomic Temporary File Renaming on Save", true, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("retain_local_revisions", "Maximum Stored Local Project Revisions", 5.0, 100.0, 25.0, "revisions", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("zero_cloud_leak_guard", "Enforce Zero Outbound Cloud Socket Assertion", true, (34, 197, 94)))
+            ),
             // Fallback dynamic generator for any unexpected or plugin node
             other => {
                 let cat = Self::inventory()
@@ -19778,6 +20139,27 @@ assert!(registry.get("BellowsGesturePattern").is_some());
         assert!(registry.get("PermissionToken").is_some());
         assert!(registry.get("PendingMutation").is_some());
         assert!(registry.get("OfflineCrdtQueue").is_some());
+        assert!(registry.get("ToneholeGrid").is_some());
+        assert!(registry.get("IdiophoneResonator").is_some());
+        assert!(registry.get("AutoUpdateChecker").is_some());
+        assert!(registry.get("UpdateInstaller").is_some());
+        assert!(registry.get("RollbackManager").is_some());
+        assert!(registry.get("CrashReporter").is_some());
+        assert!(registry.get("UsageTelemetry").is_some());
+        assert!(registry.get("PrivacyPolicyProvider").is_some());
+        assert!(registry.get("GdprComplianceExporter").is_some());
+        assert!(registry.get("FactoryResetManager").is_some());
+        assert!(registry.get("SystemSettingsBackup").is_some());
+        assert!(registry.get("PersistentLogin").is_some());
+        assert!(registry.get("CloudRenderJobSubmission").is_some());
+        assert!(registry.get("CloudCollaborationWorkspace").is_some());
+        assert!(registry.get("OfflineModeIndicator").is_some());
+        assert!(registry.get("CloudStorageQuota").is_some());
+        assert!(registry.get("PluginRatingReview").is_some());
+        assert!(registry.get("PluginBlacklist").is_some());
+        assert!(registry.get("PluginConflictDetector").is_some());
+        assert!(registry.get("PluginStateBackup").is_some());
+        assert!(registry.get("OfflineLocalProjectManager").is_some());
     }
 
     #[test]
@@ -19801,6 +20183,71 @@ assert!(registry.get("BellowsGesturePattern").is_some());
         let cat_phys = DspNodeCategory::AcousticPhysicalModel;
         assert_eq!(cat_phys.icon(), "🎻");
         assert_eq!(cat_phys.color_rgb(), (245, 158, 11));
+    }
+
+    #[test]
+    fn test_tier117_inventory_count_and_parameter_completeness() {
+        let registry = DspNodeRegistry::new();
+        let inv = DspNodeRegistry::inventory();
+        assert_eq!(inv.len(), 1072, "Inventory must contain exactly 1072 DSP modules");
+        assert!(registry.list_all().len() >= 1072, "Registry list_all must be >= 1072");
+
+        let tier117_nodes = [
+            ("ToneholeGrid", DspNodeCategory::AcousticPhysicalModel),
+            ("IdiophoneResonator", DspNodeCategory::AcousticPhysicalModel),
+            ("AutoUpdateChecker", DspNodeCategory::Utility),
+            ("UpdateInstaller", DspNodeCategory::Utility),
+            ("RollbackManager", DspNodeCategory::Utility),
+            ("CrashReporter", DspNodeCategory::Utility),
+            ("UsageTelemetry", DspNodeCategory::Utility),
+            ("PrivacyPolicyProvider", DspNodeCategory::Utility),
+            ("GdprComplianceExporter", DspNodeCategory::Utility),
+            ("FactoryResetManager", DspNodeCategory::Utility),
+            ("SystemSettingsBackup", DspNodeCategory::Utility),
+            ("PersistentLogin", DspNodeCategory::Utility),
+            ("CloudRenderJobSubmission", DspNodeCategory::Utility),
+            ("CloudCollaborationWorkspace", DspNodeCategory::Utility),
+            ("OfflineModeIndicator", DspNodeCategory::Utility),
+            ("CloudStorageQuota", DspNodeCategory::Utility),
+            ("PluginRatingReview", DspNodeCategory::Utility),
+            ("PluginBlacklist", DspNodeCategory::Utility),
+            ("PluginConflictDetector", DspNodeCategory::Utility),
+            ("PluginStateBackup", DspNodeCategory::Utility),
+            ("OfflineLocalProjectManager", DspNodeCategory::Utility),
+        ];
+
+        for (name, expected_cat) in tier117_nodes {
+            let desc = registry.get(name).unwrap_or_else(|| panic!("Module {} missing", name));
+            assert_eq!(desc.category, expected_cat, "Category mismatch for {}", name);
+            assert!(desc.params.len() >= 5, "Module {} must have >= 5 params, found {}", name, desc.params.len());
+            assert!(DspNodeRegistry::create_node_ui(name).is_some(), "create_node_ui failed for {}", name);
+        }
+
+        // Test normalizations
+        assert_eq!(DspNodeRegistry::normalize_type_name("toneholegrid"), Some("ToneholeGrid"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("woodwindtoneholes"), Some("ToneholeGrid"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("idiophoneresonator"), Some("IdiophoneResonator"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("marimbawood"), Some("IdiophoneResonator"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("autoupdatechecker"), Some("AutoUpdateChecker"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("updatechecker"), Some("AutoUpdateChecker"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("updateinstaller"), Some("UpdateInstaller"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("rollbackmanager"), Some("RollbackManager"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("crashreporter"), Some("CrashReporter"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("usagetelemetry"), Some("UsageTelemetry"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("privacypolicyprovider"), Some("PrivacyPolicyProvider"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("gdprcomplianceexporter"), Some("GdprComplianceExporter"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("factoryresetmanager"), Some("FactoryResetManager"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("systemsettingsbackup"), Some("SystemSettingsBackup"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("persistentlogin"), Some("PersistentLogin"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("cloudrenderjobsubmission"), Some("CloudRenderJobSubmission"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("cloudcollaborationworkspace"), Some("CloudCollaborationWorkspace"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("offlinemodeindicator"), Some("OfflineModeIndicator"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("cloudstoragequota"), Some("CloudStorageQuota"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("pluginratingreview"), Some("PluginRatingReview"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("pluginblacklist"), Some("PluginBlacklist"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("pluginconflictdetector"), Some("PluginConflictDetector"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("pluginstatebackup"), Some("PluginStateBackup"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("offlinelocalprojectmanager"), Some("OfflineLocalProjectManager"));
     }
 
     #[test]

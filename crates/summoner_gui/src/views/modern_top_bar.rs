@@ -237,6 +237,10 @@ fn default_available_presets() -> Vec<String> {
         "Stochastic Chaos Modulation & Algorithmic Random Generator".to_string(),
         "Decentralized WebRTC Low-Latency Audio Peer Streamer".to_string(),
         "Zero-Knowledge Cryptographic DSP Patch & State Verifier".to_string(),
+        "Concert Flute 6-Tonehole Acoustic Resonant Waveguide".to_string(),
+        "African Rosewood Concert Marimba Modal Resonator Bank".to_string(),
+        "Air-Gapped Zero-Cloud Sovereign Project Workspace".to_string(),
+        "Crash-Proof Third-Party Audio Plugin Sandbox Shield".to_string(),
     ]
 }
 

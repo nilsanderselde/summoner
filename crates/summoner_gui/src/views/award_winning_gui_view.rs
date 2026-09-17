@@ -472,6 +472,10 @@ impl AwardWinningGuiView {
                 "Stochastic Chaos Modulation & Algorithmic Random Generator" => "LuaRandomEngine",
                 "Decentralized WebRTC Low-Latency Audio Peer Streamer" => "PeerNode",
                 "Zero-Knowledge Cryptographic DSP Patch & State Verifier" => "ZkPatchProof",
+                "Concert Flute 6-Tonehole Acoustic Resonant Waveguide" => "ToneholeGrid",
+                "African Rosewood Concert Marimba Modal Resonator Bank" => "IdiophoneResonator",
+                "Air-Gapped Zero-Cloud Sovereign Project Workspace" => "OfflineLocalProjectManager",
+                "Crash-Proof Third-Party Audio Plugin Sandbox Shield" => "PluginBlacklist",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {
