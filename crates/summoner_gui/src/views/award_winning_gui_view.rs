@@ -480,6 +480,10 @@ impl AwardWinningGuiView {
                 "Cathedral 64-Foot Mechanical Tracker Organ Pallet Action" => "PipeOrganArticulation",
                 "Ancient Asian Paulownia Zither Movable Bone Ji Bridge" => "JiBridgeProfile",
                 "Zero-Latency WebRTC High-Resolution MIDI 2.0 Network Jam" => "WebRtcMidiPacket",
+                "Cremona 1715 Stradivarius Solo Violin & Golden Amber Rosin" => "BowedInstrumentModel",
+                "Miles Dark Harmon Stem-Out Trumpet & Tractrix Brass Flare" => "HornAcousticMute",
+                "Kyoto Imperial 13-String Paulownia Koto Hira-Joshi Suite" => "KotoTuningSchema",
+                "Abbey Road Class-A 12AX7 Dual Triode Tube Console" => "VacuumTubeTopology",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {

@@ -7777,4 +7777,221 @@ mod tests {
             assert_eq!(view.inspector_state.selected_node_kind, Some("WebRtcMidiPacket".to_string()));
         }
     }
+
+    #[test]
+    fn test_tier119_modern_gui_dsp_module_coverage_and_presets() {
+        let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+        let inv = crate::dsp_node_ui::DspNodeRegistry::inventory();
+        assert_eq!(inv.len(), 1114, "Inventory must contain exactly 1114 DSP modules");
+        assert!(registry.list_all().len() >= 1114, "Registry list_all must be >= 1114");
+
+        // 1. Verify Tier 119 modules have valid categories and >= 5 parameters
+        let tier119_modules = [
+            ("BowedInstrumentModel", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("ClavinetPickupSelector", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("RosinFrictionProfile", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("GlottalVoicingMode", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("GrandPianoAcousticProfile", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("GrainWindowProfile", crate::dsp_node_ui::DspNodeCategory::CompositeSynth),
+            ("HammerExcitationType", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("HornFlareContour", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("HornAcousticMute", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("RagaScaleTuning", crate::dsp_node_ui::DspNodeCategory::Modulation),
+            ("JawariCurvatureProfile", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("KotoTuningSchema", crate::dsp_node_ui::DspNodeCategory::Modulation),
+            ("ModalExcitationEngine", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("RoomAcousticModel", crate::dsp_node_ui::DspNodeCategory::SpatialSurround),
+            ("WallAcousticMaterial", crate::dsp_node_ui::DspNodeCategory::SpatialSurround),
+            ("SpectrogramFrequencyMapping", crate::dsp_node_ui::DspNodeCategory::SpectralResynthesis),
+            ("SpectrogramColorMapping", crate::dsp_node_ui::DspNodeCategory::SpectralResynthesis),
+            ("SpectralMorphMode", crate::dsp_node_ui::DspNodeCategory::FilterEq),
+            ("VacuumTubeTopology", crate::dsp_node_ui::DspNodeCategory::DistortionSaturation),
+            ("BrassInstrumentProfile", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("WaveguideMeshBoundary", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+        ];
+
+        for (name, expected_cat) in tier119_modules {
+            let desc = registry.get(name).unwrap_or_else(|| panic!("Tier 119 module {} missing", name));
+            assert_eq!(desc.category, expected_cat, "Category mismatch for {}", name);
+            assert!(desc.params.len() >= 5, "Module {} must have >= 5 params, found {}", name, desc.params.len());
+            assert!(crate::dsp_node_ui::DspNodeRegistry::create_node_ui(name).is_some(), "create_node_ui failed for {}", name);
+        }
+
+        // 2. Normalization verification
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("bowedinstrumentmodel"), Some("BowedInstrumentModel"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("bowedinstrument"), Some("BowedInstrumentModel"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("violincello"), Some("BowedInstrumentModel"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("orchestralstringbody"), Some("BowedInstrumentModel"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clavinetpickupselector"), Some("ClavinetPickupSelector"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clavinetpickups"), Some("ClavinetPickupSelector"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clavinetd6pickups"), Some("ClavinetPickupSelector"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clavinetswitches"), Some("ClavinetPickupSelector"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("rosinfrictionprofile"), Some("RosinFrictionProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("rosintype"), Some("RosinFrictionProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("bowrosin"), Some("RosinFrictionProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sticksliprosin"), Some("RosinFrictionProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("glottalvoicingmode"), Some("GlottalVoicingMode"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("vocalvoicingmode"), Some("GlottalVoicingMode"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("phonationmode"), Some("GlottalVoicingMode"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("glottalflowregime"), Some("GlottalVoicingMode"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("grandpianoacousticprofile"), Some("GrandPianoAcousticProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("grandpianoprofile"), Some("GrandPianoAcousticProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pianosoundboardprofile"), Some("GrandPianoAcousticProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("concertgrandscale"), Some("GrandPianoAcousticProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("grainwindowprofile"), Some("GrainWindowProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("grainwindowtype"), Some("GrainWindowProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("grainenvelope"), Some("GrainWindowProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("granularwindowing"), Some("GrainWindowProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("hammerexcitationtype"), Some("HammerExcitationType"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("excitationtype"), Some("HammerExcitationType"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("strikermaterial"), Some("HammerExcitationType"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("strikermechanics"), Some("HammerExcitationType"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("hornflarecontour"), Some("HornFlareContour"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("hornflarepreset"), Some("HornFlareContour"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("brassbellcontour"), Some("HornFlareContour"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("websterhornflare"), Some("HornFlareContour"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("hornacousticmute"), Some("HornAcousticMute"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("hornmutetype"), Some("HornAcousticMute"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("brassmute"), Some("HornAcousticMute"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("harmonmute"), Some("HornAcousticMute"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("ragascaletuning"), Some("RagaScaleTuning"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("ragascale"), Some("RagaScaleTuning"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("shrutituning"), Some("RagaScaleTuning"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("indianmicrotonalscale"), Some("RagaScaleTuning"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("jawaricurvatureprofile"), Some("JawariCurvatureProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("jawariprofile"), Some("JawariCurvatureProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sitarjawarislope"), Some("JawariCurvatureProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("grazingobstacleprofile"), Some("JawariCurvatureProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("kototuningschema"), Some("KotoTuningSchema"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("hirajoshituning"), Some("KotoTuningSchema"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("kotomodalscale"), Some("KotoTuningSchema"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("japanesekototuning"), Some("KotoTuningSchema"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("modalexcitationengine"), Some("ModalExcitationEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("modalexcitationtype"), Some("ModalExcitationEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("modalexciter"), Some("ModalExcitationEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("resonatorexciter"), Some("ModalExcitationEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("roomacousticmodel"), Some("RoomAcousticModel"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("spatialroomacoustics"), Some("RoomAcousticModel"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("imagesourcemodel"), Some("RoomAcousticModel"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("shoeboxacousticmodel"), Some("RoomAcousticModel"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("wallacousticmaterial"), Some("WallAcousticMaterial"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("wallmaterial"), Some("WallAcousticMaterial"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("surfaceabsorption"), Some("WallAcousticMaterial"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("acousticmaterialpreset"), Some("WallAcousticMaterial"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("spectrogramfrequencymapping"), Some("SpectrogramFrequencyMapping"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("frequencymapping"), Some("SpectrogramFrequencyMapping"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("spectrogramscale"), Some("SpectrogramFrequencyMapping"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("imagespectrogrambins"), Some("SpectrogramFrequencyMapping"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("spectrogramcolormapping"), Some("SpectrogramColorMapping"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("colormappingmode"), Some("SpectrogramColorMapping"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("spectrogrampixeldecoder"), Some("SpectrogramColorMapping"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("imageamplitudedecoder"), Some("SpectrogramColorMapping"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("spectralmorphmode"), Some("SpectralMorphMode"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("spectralmorphalgo"), Some("SpectralMorphMode"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("crosssynthesismorph"), Some("SpectralMorphMode"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("spectralinterpolator"), Some("SpectralMorphMode"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("vacuumtubetopology"), Some("VacuumTubeTopology"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("tubetopology"), Some("VacuumTubeTopology"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("valvetopology"), Some("VacuumTubeTopology"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("vacuumtubesaturation"), Some("VacuumTubeTopology"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("brassinstrumentprofile"), Some("BrassInstrumentProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("brassinstrumenttype"), Some("BrassInstrumentProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("brassboreprofile"), Some("BrassInstrumentProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("brasswaveguide"), Some("BrassInstrumentProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("waveguidemeshboundary"), Some("WaveguideMeshBoundary"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("meshboundarytype"), Some("WaveguideMeshBoundary"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("drummembraneboundary"), Some("WaveguideMeshBoundary"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("waveguidemeshreflection"), Some("WaveguideMeshBoundary"));
+
+        // 3. Asset browser hierarchy coverage
+        let inst_folders = BrowserCategory::Instruments.default_folders();
+        let phys_items = inst_folders.iter().find(|(name, _)| *name == "Physical Models").unwrap().1;
+        assert!(phys_items.contains(&"BowedInstrumentModel"));
+        assert!(phys_items.contains(&"ClavinetPickupSelector"));
+        assert!(phys_items.contains(&"RosinFrictionProfile"));
+        assert!(phys_items.contains(&"GlottalVoicingMode"));
+        assert!(phys_items.contains(&"GrandPianoAcousticProfile"));
+        assert!(phys_items.contains(&"HammerExcitationType"));
+        assert!(phys_items.contains(&"HornFlareContour"));
+        assert!(phys_items.contains(&"HornAcousticMute"));
+        assert!(phys_items.contains(&"JawariCurvatureProfile"));
+        assert!(phys_items.contains(&"ModalExcitationEngine"));
+        assert!(phys_items.contains(&"BrassInstrumentProfile"));
+        assert!(phys_items.contains(&"WaveguideMeshBoundary"));
+
+        let synth_items = inst_folders.iter().find(|(name, _)| *name == "Synthesizers").unwrap().1;
+        assert!(synth_items.contains(&"GrainWindowProfile"));
+        assert!(synth_items.contains(&"SpectrogramFrequencyMapping"));
+        assert!(synth_items.contains(&"SpectrogramColorMapping"));
+
+        let audio_fx_folders = BrowserCategory::AudioFx.default_folders();
+        let dyn_items = audio_fx_folders.iter().find(|(name, _)| *name == "Dynamics & Level").unwrap().1;
+        assert!(dyn_items.contains(&"VacuumTubeTopology"));
+
+        let reverb_items = audio_fx_folders.iter().find(|(name, _)| *name == "Time & Reverb").unwrap().1;
+        assert!(reverb_items.contains(&"RoomAcousticModel"));
+        assert!(reverb_items.contains(&"WallAcousticMaterial"));
+
+        let filter_items = audio_fx_folders.iter().find(|(name, _)| *name == "Filters & EQ").unwrap().1;
+        assert!(filter_items.contains(&"SpectralMorphMode"));
+
+        let midi_folders = BrowserCategory::MidiFx.default_folders();
+        let gen_items = midi_folders.iter().find(|(name, _)| *name == "Generative & Sync").unwrap().1;
+        assert!(gen_items.contains(&"RagaScaleTuning"));
+        assert!(gen_items.contains(&"KotoTuningSchema"));
+
+        // 4. Novice Presets in ModernTopBarState and AwardWinningGuiView routing
+        let topbar = crate::views::modern_top_bar::ModernTopBarState::default();
+        let topbar_presets = &topbar.available_presets;
+        assert!(topbar_presets.contains(&"Cremona 1715 Stradivarius Solo Violin & Golden Amber Rosin".to_string()));
+        assert!(topbar_presets.contains(&"Miles Dark Harmon Stem-Out Trumpet & Tractrix Brass Flare".to_string()));
+        assert!(topbar_presets.contains(&"Kyoto Imperial 13-String Paulownia Koto Hira-Joshi Suite".to_string()));
+        assert!(topbar_presets.contains(&"Abbey Road Class-A 12AX7 Dual Triode Tube Console".to_string()));
+
+        #[cfg(feature = "gui")]
+        {
+            let mut view = crate::views::award_winning_gui_view::AwardWinningGuiView::default();
+            let ctx = eframe::egui::Context::default();
+
+            // Preset 1: Cremona 1715 Stradivarius Solo Violin & Golden Amber Rosin -> BowedInstrumentModel
+            view.top_bar_state.selected_preset = "Cremona 1715 Stradivarius Solo Violin & Golden Amber Rosin".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("BowedInstrumentModel".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("BowedInstrumentModel".to_string()));
+
+            // Preset 2: Miles Dark Harmon Stem-Out Trumpet & Tractrix Brass Flare -> HornAcousticMute
+            view.top_bar_state.selected_preset = "Miles Dark Harmon Stem-Out Trumpet & Tractrix Brass Flare".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("HornAcousticMute".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("HornAcousticMute".to_string()));
+
+            // Preset 3: Kyoto Imperial 13-String Paulownia Koto Hira-Joshi Suite -> KotoTuningSchema
+            view.top_bar_state.selected_preset = "Kyoto Imperial 13-String Paulownia Koto Hira-Joshi Suite".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("KotoTuningSchema".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("KotoTuningSchema".to_string()));
+
+            // Preset 4: Abbey Road Class-A 12AX7 Dual Triode Tube Console -> VacuumTubeTopology
+            view.top_bar_state.selected_preset = "Abbey Road Class-A 12AX7 Dual Triode Tube Console".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("VacuumTubeTopology".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("VacuumTubeTopology".to_string()));
+        }
+    }
 }

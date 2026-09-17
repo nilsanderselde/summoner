@@ -245,6 +245,10 @@ fn default_available_presets() -> Vec<String> {
         "Cathedral 64-Foot Mechanical Tracker Organ Pallet Action".to_string(),
         "Ancient Asian Paulownia Zither Movable Bone Ji Bridge".to_string(),
         "Zero-Latency WebRTC High-Resolution MIDI 2.0 Network Jam".to_string(),
+        "Cremona 1715 Stradivarius Solo Violin & Golden Amber Rosin".to_string(),
+        "Miles Dark Harmon Stem-Out Trumpet & Tractrix Brass Flare".to_string(),
+        "Kyoto Imperial 13-String Paulownia Koto Hira-Joshi Suite".to_string(),
+        "Abbey Road Class-A 12AX7 Dual Triode Tube Console".to_string(),
     ]
 }
 

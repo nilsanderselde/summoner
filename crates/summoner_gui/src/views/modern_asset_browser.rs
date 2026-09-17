@@ -219,6 +219,18 @@ impl BrowserCategory {
                         "SpringArticulation",
                         "WoodwindArticulation",
                         "JiBridgeProfile",
+                        "BowedInstrumentModel",
+                        "ClavinetPickupSelector",
+                        "RosinFrictionProfile",
+                        "GlottalVoicingMode",
+                        "GrandPianoAcousticProfile",
+                        "HammerExcitationType",
+                        "HornFlareContour",
+                        "HornAcousticMute",
+                        "JawariCurvatureProfile",
+                        "ModalExcitationEngine",
+                        "BrassInstrumentProfile",
+                        "WaveguideMeshBoundary",
                     ],
                 ),
                 (
@@ -248,6 +260,9 @@ impl BrowserCategory {
                         "HarmonicProfile",
                         "HarmonicPartial",
                         "QuantumTomographyData",
+                        "GrainWindowProfile",
+                        "SpectrogramFrequencyMapping",
+                        "SpectrogramColorMapping",
                     ],
                 ),
                 (
@@ -328,6 +343,7 @@ impl BrowserCategory {
                         "ControlEvent",
                         "SidechainBusId",
                         "RenderResult",
+                        "VacuumTubeTopology",
                     ],
                 ),
                 (
@@ -382,6 +398,8 @@ impl BrowserCategory {
                         "AcousticMaterial",
                         "PlateReverbProfile",
                         "SpringLatticeProfile",
+                        "RoomAcousticModel",
+                        "WallAcousticMaterial",
                     ],
                 ),
                 (
@@ -416,6 +434,7 @@ impl BrowserCategory {
                         "VowelNode",
                         "EqBand",
                         "AutoWahFilterMode",
+                        "SpectralMorphMode",
                     ],
                 ),
                 (
@@ -569,6 +588,8 @@ impl BrowserCategory {
                         "LuaUiLayout",
                         "LuaPainterBuffer",
                         "LuaMidiInputSubscriber",
+                        "RagaScaleTuning",
+                        "KotoTuningSchema",
                     ],
                 ),
                 (
