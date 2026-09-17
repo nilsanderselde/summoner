@@ -10673,6 +10673,174 @@ descriptors.insert("BellowsGesturePattern".to_string(), DspNodeDescriptor::new("
             .with_param(DspParamSchema::toggle("include_toc_navigation", "Generate Table of Contents Navigation", true, "Creates indexed header links at the top of the documentation file"))
             .with_param(DspParamSchema::toggle("sort_alphabetically", "Sort Functions Alphabetically", true, "Orders documented functions alphabetically rather than source order"))
         );
+        descriptors.insert("AudioWatermarkEmbedder".to_string(), DspNodeDescriptor::new("AudioWatermarkEmbedder", "Spread-Spectrum Audio Steganography Encoder & Metadata Watermarker", DspNodeCategory::Utility, "Cryptographic audio steganography encoder embedding inaudible spread-spectrum bitstreams and ownership watermarks into acoustic sub-bands")
+            .with_param(DspParamSchema::choice("carrier_frequency_band", "Carrier Frequency Sub-Band", &["Mid-Frequency Psychoacoustic (1-4 kHz)", "High-Frequency Masked (8-15 kHz)", "Sub-Bass Spread (40-120 Hz)", "Full-Band DSSS"], 0, "Selects psychoacoustic masking region for spread-spectrum carrier"))
+            .with_param(DspParamSchema::knob("watermark_payload_bytes", "Watermark Payload Size", 16.0, 256.0, 64.0, "bytes", MacroRole::None, "Size of embedded binary watermark payload in bytes"))
+            .with_param(DspParamSchema::knob("spread_spectrum_chip_rate", "DSSS Modulation Chip Rate", 100.0, 5000.0, 1000.0, "chips/s", MacroRole::None, "Direct-sequence spread-spectrum pseudorandom chip modulation frequency"))
+            .with_param(DspParamSchema::knob("embedding_strength_db", "Embedding Depth & Gain", -48.0, -12.0, -24.0, "dB", MacroRole::Tone, "Sub-audible watermark signal amplitude relative to carrier host audio"))
+            .with_param(DspParamSchema::toggle("cryptographic_salt_nonce", "Cryptographic Salt Nonce", true, "Injects cryptographically secure random salt into watermark frame header"))
+            .with_param(DspParamSchema::toggle("psychoacoustic_masking_guard", "Dynamic Auditory Masking Guard", true, "Dynamically adjusts watermark level below human temporal and frequency masking thresholds"))
+        );
+        descriptors.insert("AudioWatermarkExtractor".to_string(), DspNodeDescriptor::new("AudioWatermarkExtractor", "Inaudible Spread-Spectrum Watermark Detector & Correlator", DspNodeCategory::Utility, "Acoustic steganography analyzer decoding hidden spread-spectrum watermarks and verifying cryptographic ownership signatures")
+            .with_param(DspParamSchema::knob("detection_sensitivity", "Correlation Detection Sensitivity", 0.1, 1.0, 0.75, "ratio", MacroRole::None, "Threshold sensitivity for detecting pseudorandom watermark correlation peaks"))
+            .with_param(DspParamSchema::choice("correlation_window_size", "Cross-Correlation Window Size", &["1024 Samples", "2048 Samples", "4096 Samples", "8192 Samples"], 2, "Temporal analysis window size for sliding matched filter correlator"))
+            .with_param(DspParamSchema::knob("ber_tolerance_threshold", "Bit Error Rate (BER) Tolerance", 0.01, 0.20, 0.05, "BER", MacroRole::None, "Maximum permissible bit error rate before marking signature as untrusted"))
+            .with_param(DspParamSchema::choice("cross_correlation_mode", "Correlator Receiver Mode", &["Matched Filter FFT", "Direct Sequence Phase Shift", "Cyclostationary Feature Detector"], 0, "Algorithmic correlation receiver architecture"))
+            .with_param(DspParamSchema::toggle("validate_crypto_signature", "Verify Ed25519 Cryptographic Signature", true, "Validates embedded public key signature against known artist keystore"))
+            .with_param(DspParamSchema::toggle("error_correction_reed_solomon", "Reed-Solomon Error Correction", true, "Applies forward error correction to reconstruct partially damaged watermark bits"))
+        );
+        descriptors.insert("WaveformPngExporter".to_string(), DspNodeDescriptor::new("WaveformPngExporter", "Deterministic Multi-Channel Audio Waveform PNG Generator", DspNodeCategory::Utility, "Headless rasterizer generating transparent anti-aliased waveform images with configurable color schemes, RMS fill, and peak outlines")
+            .with_param(DspParamSchema::knob("image_width_pixels", "Rendered Image Width", 256.0, 8192.0, 1920.0, "px", MacroRole::None, "Horizontal pixel resolution of exported raster PNG image"))
+            .with_param(DspParamSchema::knob("image_height_pixels", "Rendered Image Height", 64.0, 2160.0, 480.0, "px", MacroRole::None, "Vertical pixel resolution of exported raster PNG image"))
+            .with_param(DspParamSchema::choice("color_theme_palette", "Color Theme & Gradient Palette", &["Cyberpunk Cyan/Neon", "Studio Dark Amber", "Monochrome Minimalist", "Classic Green Oscilloscope"], 0, "Color palette for background, RMS body, and peak boundary curves"))
+            .with_param(DspParamSchema::toggle("render_rms_energy_fill", "Render RMS Energy Fill Gradient", true, "Fills waveform inner area with transparent vertical energy gradient"))
+            .with_param(DspParamSchema::toggle("render_peak_outline", "Draw 1px Anti-Aliased Peak Line", true, "Draws smooth anti-aliased boundary curve around true-peak sample envelope"))
+            .with_param(DspParamSchema::toggle("transparent_background", "Transparent Alpha Background Channel", true, "Exports image with zero alpha background for seamless web/video compositing"))
+        );
+        descriptors.insert("SpectrogramPngExporter".to_string(), DspNodeDescriptor::new("SpectrogramPngExporter", "High-Resolution STFT Spectral Heatmap PNG Visualizer", DspNodeCategory::Utility, "High-fidelity STFT spectrogram image exporter rendering frequency vs time heatmaps with logarithmic pitch mapping")
+            .with_param(DspParamSchema::choice("fft_window_length", "FFT Analysis Window Size", &["512 Samples", "1024 Samples", "2048 Samples", "4096 Samples", "8192 Samples"], 2, "Temporal vs spectral resolution trade-off window size"))
+            .with_param(DspParamSchema::choice("frequency_scale", "Vertical Frequency Mapping Scale", &["Logarithmic (Mel/Bark)", "Linear Frequency", "Musical Pitch (Semitones)"], 0, "Vertical axis scaling distribution from 20 Hz to Nyquist"))
+            .with_param(DspParamSchema::choice("color_colormap", "Heatmap Energy Colormap", &["Magma Heatmap", "Viridis Perceptual", "Plasma Vibrant", "Monochrome Grayscale"], 0, "Perceptually uniform color ramp representing spectral magnitude in decibels"))
+            .with_param(DspParamSchema::knob("dynamic_range_db", "Display Dynamic Range Floor", 30.0, 120.0, 90.0, "dB", MacroRole::Tone, "Dynamic range range floor in decibels below 0 dBFS peak"))
+            .with_param(DspParamSchema::knob("temporal_smoothing_factor", "Temporal Smoothing Filter Factor", 0.0, 0.95, 0.2, "factor", MacroRole::None, "Temporal low-pass smoothing applied across successive STFT frames"))
+            .with_param(DspParamSchema::toggle("render_harmonic_frequency_grid", "Overlay Musical Pitch Grid Lines", true, "Draws semitone pitch lines and frequency markers across spectral image"))
+        );
+        descriptors.insert("PianoRollPngExporter".to_string(), DspNodeDescriptor::new("PianoRollPngExporter", "Multi-Track MIDI Piano Roll Sequence PNG Visualizer", DspNodeCategory::Utility, "Visualizes MIDI note events, pitch bend envelopes, and velocity intensities across measure grids as raster PNG graphics")
+            .with_param(DspParamSchema::choice("quantize_grid_view", "Background Beat Grid Subdivision", &["1/16 Note Grid", "1/32 Note Grid", "1/8 Triplet Grid", "Off / Free Time"], 0, "Measure and beat subdivision lines rendered behind MIDI note blocks"))
+            .with_param(DspParamSchema::knob("key_range_min_note", "Minimum Visible Note Pitch", 0.0, 127.0, 24.0, "midi", MacroRole::None, "Lowest MIDI pitch displayed on vertical piano roll axis (C1 = 24)"))
+            .with_param(DspParamSchema::knob("key_range_max_note", "Maximum Visible Note Pitch", 0.0, 127.0, 96.0, "midi", MacroRole::None, "Highest MIDI pitch displayed on vertical piano roll axis (C7 = 96)"))
+            .with_param(DspParamSchema::toggle("velocity_alpha_shading", "Velocity-Based Opacity & Shading", true, "Scales note rectangle color saturation and opacity by note velocity"))
+            .with_param(DspParamSchema::toggle("render_pitchbend_overlays", "Render Pitch Bend Curve Splines", true, "Draws smooth pitch bend envelope curves over active MIDI notes"))
+            .with_param(DspParamSchema::choice("track_color_mode", "Track Color Assignment Scheme", &["Per-Track Assigned Colors", "Velocity Heatmap", "Channel Index Rainbow"], 0, "Color scheme mapping MIDI tracks or channels to display tints"))
+        );
+        descriptors.insert("ProjectLayoutPdfExporter".to_string(), DspNodeDescriptor::new("ProjectLayoutPdfExporter", "Vector PDF Session Routing Schematic & Architecture Exporter", DspNodeCategory::Utility, "Generates high-resolution vector PDF architectural wiring diagrams detailing audio graphs, bus sends, sidechains, and plugin orders")
+            .with_param(DspParamSchema::choice("paper_page_format", "Target PDF Page Dimensions", &["A4 Landscape", "A3 Architectural Schematic", "Letter Landscape", "Tabloid Wide"], 1, "Standard print page format and orientation for vector PDF document"))
+            .with_param(DspParamSchema::choice("routing_cord_style", "Routing Patch Cord Vector Style", &["Orthogonal Manhattan Cords", "Smooth Bezier Curves", "Direct Linear Lines"], 1, "Vector curve style for bus sends and track audio interconnects"))
+            .with_param(DspParamSchema::toggle("include_sidechain_edges", "Include Auxiliary Sidechain Edges", true, "Draws dashed lines indicating sidechain compression and modulation links"))
+            .with_param(DspParamSchema::toggle("include_plugin_parameter_summaries", "Display Key Plugin Parameter Values", true, "Embeds primary macro parameter readouts inside node schematic blocks"))
+            .with_param(DspParamSchema::choice("vector_color_palette", "PDF Architectural Color Theme", &["Dark Theme Blueprint", "Clean Technical White", "Monochrome CAD Line Art"], 0, "Color scheme for background paper, track blocks, and signal cords"))
+            .with_param(DspParamSchema::toggle("group_busses_into_clusters", "Cluster Submix Busses & Groups", true, "Encloses related tracks into visual group boundary boxes"))
+        );
+        descriptors.insert("SessionNotesPdfExporter".to_string(), DspNodeDescriptor::new("SessionNotesPdfExporter", "Engineering Session Notes & Track Credits PDF Baker", DspNodeCategory::Utility, "Publishes comprehensive session documentation, track stem checklists, ISRC metadata, and engineer mixing logs to formatted PDF")
+            .with_param(DspParamSchema::choice("document_page_layout", "Document Template & Styling", &["Executive Studio Dossier", "Track Sheet Checklist", "Archival Master Log", "Compact 1-Page Summary"], 0, "Overall typographic layout and section formatting style"))
+            .with_param(DspParamSchema::toggle("include_git_commit_digest", "Include Git Revision Digest", true, "Appends latest Git commit hash, branch name, and commit log to header"))
+            .with_param(DspParamSchema::toggle("include_stem_loudness_readouts", "Tabulate Stem Integrated LUFS & Peaks", true, "Generates detailed table of integrated LUFS, loudness range, and true peaks"))
+            .with_param(DspParamSchema::toggle("embed_custom_studio_logo", "Embed Custom Studio Logo Header", false, "Embeds optional studio branding PNG/SVG in top title banner"))
+            .with_param(DspParamSchema::toggle("include_musician_credits_table", "Include Performer & Engineer Credits", true, "Formats track credits table listing musicians, roles, and ISRC codes"))
+            .with_param(DspParamSchema::toggle("pdf_metadata_encryption", "PDF Read-Only Permission Encryption", false, "Applies standard AES encryption preventing unauthorized document modification"))
+        );
+        descriptors.insert("ProjectAes256Encryptor".to_string(), DspNodeDescriptor::new("ProjectAes256Encryptor", "Zero-Knowledge AES-256 GCM Session Encryption & Cryptographer", DspNodeCategory::Utility, "Cryptographically packages project TOML files, Lua scripts, and audio assets into authenticated AES-256-GCM cipher containers")
+            .with_param(DspParamSchema::choice("key_derivation_function", "Key Derivation Function (KDF)", &["Argon2id (High Memory)", "PBKDF2-HMAC-SHA256 (Compatible)", "Scrypt (Asic Resistant)"], 0, "Cryptographic KDF algorithm used to derive 256-bit key from passphrase"))
+            .with_param(DspParamSchema::knob("kdf_iteration_cost", "KDF Iteration & Time Cost", 1000.0, 1000000.0, 65536.0, "iters", MacroRole::None, "Computational cost parameter for resisting brute-force dictionary attacks"))
+            .with_param(DspParamSchema::choice("cipher_block_mode", "Symmetric Cipher Mode", &["AES-256-GCM (Authenticated)", "ChaCha20-Poly1305 (Fast Stream)"], 0, "Underlying authenticated symmetric cipher implementation"))
+            .with_param(DspParamSchema::toggle("encrypt_raw_audio_stems", "Encrypt Audio Stem Waveforms", true, "Encrypts large WAV and FLAC stem files in addition to project TOML metadata"))
+            .with_param(DspParamSchema::toggle("include_integrity_checksum", "Embed Blake3 Merkle Root Checksum", true, "Computes Blake3 tree hash for tamper detection and validation on decrypt"))
+            .with_param(DspParamSchema::toggle("wipe_plaintext_after_crypt", "Securely Shred Plaintext Cache Files", false, "Overwrites plaintext temporary session files with zero bytes on disk"))
+        );
+        descriptors.insert("ProjectAes256Decryptor".to_string(), DspNodeDescriptor::new("ProjectAes256Decryptor", "Zero-Knowledge AES-256 Session Decryption & Authentication Engine", DspNodeCategory::Utility, "Authenticates cryptographic signatures, unpacks AES-256-GCM containers, and restores encrypted project assets to memory")
+            .with_param(DspParamSchema::knob("memory_unlock_duration_seconds", "In-Memory Key Cache Timeout", 30.0, 3600.0, 300.0, "sec", MacroRole::None, "Duration decrypted session keys remain cached in RAM before auto-purge"))
+            .with_param(DspParamSchema::choice("integrity_check_strictness", "Integrity Check Severity", &["Strict Halt on Blake3 Mismatch", "Warn on Non-Fatal Header Discrepancy", "Ignore Checksum Errors"], 0, "Behavior when encountering corrupted or mismatched container integrity hashes"))
+            .with_param(DspParamSchema::toggle("decrypt_to_ram_disk_only", "Mount Audio Assets in RAM Disk Only", true, "Prevents decrypted audio stems from being written to non-volatile physical storage"))
+            .with_param(DspParamSchema::toggle("cache_decryption_keys_in_secure_enclave", "Store Keys in OS Secure Enclave", true, "Leverages operating system keychain / credential manager for key storage"))
+            .with_param(DspParamSchema::toggle("auto_lock_on_daw_idle", "Auto-Lock Container When DAW Idles", true, "Automatically shreds decrypted RAM cache when no user activity occurs for 15m"))
+            .with_param(DspParamSchema::toggle("audit_log_access_events", "Log Timestamped Decryption Events", true, "Maintains encrypted audit journal of container access times and identities"))
+        );
+        descriptors.insert("GitChangeAttributor".to_string(), DspNodeDescriptor::new("GitChangeAttributor", "Per-Track Git Micro-Commit Blame & Acoustic Change History Analyzer", DspNodeCategory::Utility, "Correlates Git commit DAG history with track timeline changes, identifying which author modified specific notes, automation points, or DSP parameters")
+            .with_param(DspParamSchema::choice("blame_granularity_mode", "Attribution Granularity Level", &["Per-Automation Point / Note", "Per-Clip Level", "Per-Track Channel", "Per-Project Commit"], 0, "Granularity of commit blame matching across DAW timeline"))
+            .with_param(DspParamSchema::knob("history_depth_commits", "Commit DAG History Search Depth", 5.0, 500.0, 50.0, "commits", MacroRole::None, "Maximum number of ancestor Git commits traversed when attributing changes"))
+            .with_param(DspParamSchema::choice("author_filter_selection", "Author Attribution Filter", &["All Authors Combined", "Current User Only", "Collaborator Pull Requests"], 0, "Filters commit attribution by specific author identity or remote team branch"))
+            .with_param(DspParamSchema::toggle("highlight_uncommitted_working_changes", "Highlight Working Tree Modifications", true, "Colors tracks and automation nodes modified since last local commit"))
+            .with_param(DspParamSchema::toggle("correlate_acoustic_loudness_delta", "Correlate LUFS Loudness Delta", true, "Computes acoustic energy change introduced by selected commit revision"))
+            .with_param(DspParamSchema::toggle("cache_git_tree_in_memory", "Cache Commit DAG Tree in Memory", true, "Caches parsed Git objects in RAM for real-time interactive timeline scrubbing"))
+        );
+        descriptors.insert("TomlConflictResolver".to_string(), DspNodeDescriptor::new("TomlConflictResolver", "Three-Way Project AST Conflict Resolution & Merge Engine", DspNodeCategory::Utility, "Syntax-aware 3-way merge engine for Summoner project TOML files, resolving concurrent automation edits without breaking audio routing graphs")
+            .with_param(DspParamSchema::choice("merge_strategy_heuristic", "Conflict Resolution Heuristic", &["Syntactic AST 3-Way Merge", "Favor Most Recent Timestamp", "Favor Remote Branch", "Prompt Interactive UI"], 0, "Automated resolution algorithm for conflicting parameter keyframes"))
+            .with_param(DspParamSchema::choice("automation_curve_collision_handling", "Automation Collision Behavior", &["Blend / Crossfade Automation Curves", "Keep Both on Separate Sub-Tracks", "Keep Highest Density Keyframes"], 0, "Strategy for handling simultaneous overlapping automation curve edits"))
+            .with_param(DspParamSchema::toggle("preserve_unique_clip_uuid", "Regenerate Duplicate Clip UUIDs", true, "Ensures all audio clip instances maintain globally unique UUIDs after merge"))
+            .with_param(DspParamSchema::toggle("backup_conflicting_project_file", "Generate Pre-Merge .bak Archive", true, "Creates timestamped backup copy of current project file before applying merge"))
+            .with_param(DspParamSchema::toggle("auto_resolve_non_overlapping_tracks", "Auto-Accept Non-Overlapping Tracks", true, "Automatically accepts incoming changes for tracks untouched on local branch"))
+            .with_param(DspParamSchema::toggle("validate_merged_dsp_graph_integrity", "Verify DSP Graph Acyclicity", true, "Executes cycle detection and node validation before serializing merged project"))
+        );
+        descriptors.insert("VideoMetadataExporter".to_string(), DspNodeDescriptor::new("VideoMetadataExporter", "Stems Video Metadata & Social Media Chapter Marker Builder", DspNodeCategory::Utility, "Generates YouTube chapter timestamps, Spotify canvas cues, podcast ID3v2 chapter frames, and broadcast BWF markers from DAW cues")
+            .with_param(DspParamSchema::choice("metadata_output_target", "Metadata Target Platform", &["YouTube / Social Video Description", "ID3v2 Chapter Markers (Podcast)", "Broadcast Wave XML Metadata", "Final Cut Pro / Premiere XML"], 0, "Destination platform formatting standard for exported chapter cues"))
+            .with_param(DspParamSchema::choice("timecode_format_display", "Timecode Display Format", &["HH:MM:SS Standard Video", "Bars:Beats:Ticks Musical", "SMPTE 29.97 fps Drop-Frame", "SMPTE 24 fps Film"], 0, "Time representation standard for markers and video cue descriptions"))
+            .with_param(DspParamSchema::knob("minimum_marker_interval_seconds", "Minimum Chapter Gap Threshold", 2.0, 60.0, 10.0, "sec", MacroRole::None, "Minimum allowable elapsed time between consecutive chapter markers"))
+            .with_param(DspParamSchema::toggle("include_lyrics_cues_in_chapters", "Include Vocal Cue Subtitles", true, "Exports vocal marker cues as subtitle lines or lyric chapter descriptions"))
+            .with_param(DspParamSchema::toggle("include_social_media_tags", "Include Social Hashtags & Credits", true, "Appends production credits and genre hashtags to chapter descriptions"))
+            .with_param(DspParamSchema::toggle("url_encode_output_text", "URL-Encode Output Text", false, "Encodes generated output string for direct HTTP POST / API dispatch"))
+        );
+        descriptors.insert("LuaBytecodeCompiler".to_string(), DspNodeDescriptor::new("LuaBytecodeCompiler", "Ahead-Of-Time Lua Script Bytecode Compiler & Cache Engine", DspNodeCategory::Utility, "AOT compiler transforming Lua source files into optimized bytecode caches for zero-allocation audio thread script execution")
+            .with_param(DspParamSchema::choice("target_bytecode_format", "Target Lua Bytecode Format", &["Lua 5.4 Standard Bytecode", "LuaJIT 2.1 64-bit Bytecode", "Luau Bytecode (Roblox/Strict)"], 1, "Target virtual machine bytecode dialect and instruction set"))
+            .with_param(DspParamSchema::knob("optimization_pass_level", "Optimization Pipeline Level", 0.0, 3.0, 2.0, "level", MacroRole::None, "Aggressiveness of AST constant folding and dead-code elimination passes"))
+            .with_param(DspParamSchema::toggle("strip_debug_symbol_names", "Strip Local Debug Names & Line Numbers", true, "Removes debug symbols from compiled binary chunk to minimize file size"))
+            .with_param(DspParamSchema::toggle("enable_constant_folding", "Evaluate Constant Math Expressions", true, "Precomputes constant mathematical operations at compile time"))
+            .with_param(DspParamSchema::toggle("cache_compiled_bytecode_to_disk", "Persist Bytecode Cache on Disk", true, "Caches compiled chunks in project scratch directory for instant reload"))
+            .with_param(DspParamSchema::toggle("verify_bytecode_safety_verifier", "Run Static Bytecode Safety Verifier", true, "Verifies bytecode integrity and validates bounds to prevent VM crashes"))
+        );
+        descriptors.insert("LuaAstLinter".to_string(), DspNodeDescriptor::new("LuaAstLinter", "Static AST Diagnostics, Linting, and Type Checking Engine for Lua Scripts", DspNodeCategory::Utility, "Deep static analysis parser inspecting Lua ASTs for global variable leaks, uninitialized parameters, and real-time audio safety hazards")
+            .with_param(DspParamSchema::choice("linting_strictness_level", "Real-Time Audio Linting Strictness", &["Strict Real-Time Audio (No Allocations)", "Standard Linting (Warnings)", "Permissive / Syntax Only"], 0, "Severity threshold for non-realtime patterns like GC allocations in audio loops"))
+            .with_param(DspParamSchema::toggle("flag_implicit_global_assignments", "Reject Implicit Global Variables", true, "Treats undeclared global variables as severe compilation errors"))
+            .with_param(DspParamSchema::toggle("forbid_runtime_table_allocations", "Forbid Table Allocations in Audio Loop", true, "Flags table literals `{}` inside process_sample() as audio safety violation"))
+            .with_param(DspParamSchema::toggle("check_dsp_parameter_range_bounds", "Verify Parameter Bounds & Clamping", true, "Validates that DSP modulation outputs respect standard normalized bounds"))
+            .with_param(DspParamSchema::knob("max_reported_lint_diagnostics", "Maximum Diagnostic Issues Displayed", 10.0, 200.0, 50.0, "issues", MacroRole::None, "Maximum number of linting issues displayed in inspector panel"))
+            .with_param(DspParamSchema::toggle("auto_format_quick_fix_suggestions", "Provide Automated Quick-Fix Patches", true, "Generates suggested code diffs for automatic resolution of common linter errors"))
+        );
+        descriptors.insert("LuaForeignFunctionBridge".to_string(), DspNodeDescriptor::new("LuaForeignFunctionBridge", "High-Performance C/FFI & Rust Binding Bridge for External Lua DSP Extensions", DspNodeCategory::Utility, "Zero-copy foreign function interface bridge facilitating high-speed C ABI and Rust crate interop from user DSP Lua scripts")
+            .with_param(DspParamSchema::choice("ffi_sandbox_isolation_policy", "Native Library Isolation Policy", &["Strict Whitelisted Symbols Only", "Allow Shared Audio Libraries (.so/.dll)", "Full C-FFI Access (Unrestricted)"], 0, "Security isolation level governing external native dynamic library loading"))
+            .with_param(DspParamSchema::choice("buffer_memory_sharing_mode", "Audio Buffer Interop Memory Mode", &["Zero-Copy Direct Pointer Borrow", "Double-Buffered Mirrored RAM", "Lock-Free Ring Buffer"], 0, "Memory management architecture for passing raw audio blocks across FFI boundary"))
+            .with_param(DspParamSchema::knob("max_simultaneous_c_function_calls", "Maximum FFI Calls Per Block", 16.0, 1024.0, 256.0, "calls/blk", MacroRole::None, "Execution cap preventing external native loops from starving audio thread"))
+            .with_param(DspParamSchema::toggle("enforce_simd_alignment_32byte", "Enforce 32-Byte AVX SIMD Alignment", true, "Guarantees passed audio pointers meet 32-byte alignment for vectorized kernels"))
+            .with_param(DspParamSchema::toggle("panic_recovery_catch_unwind", "Catch Native Panics via Unwind", true, "Traps C++ or Rust panics preventing host DAW process from crashing"))
+            .with_param(DspParamSchema::toggle("log_ffi_execution_timing_us", "Profile FFI Call Latency in Microseconds", false, "Measures foreign function invocation duration for audio thread jitter debugging"))
+        );
+        descriptors.insert("LuaMemoryWatchdog".to_string(), DspNodeDescriptor::new("LuaMemoryWatchdog", "Real-Time Memory Allocation Watchdog & GC Pause Budget Profiler for Audio Thread Lua", DspNodeCategory::Utility, "Monitors Lua runtime heap memory allocations, enforcing strict zero-allocation budgets during audio rendering blocks")
+            .with_param(DspParamSchema::knob("max_audio_thread_heap_kb", "Audio Thread Maximum Heap Size", 64.0, 8192.0, 512.0, "KB", MacroRole::None, "Maximum allowable heap memory footprint for real-time Lua VM instance"))
+            .with_param(DspParamSchema::knob("gc_step_budget_microseconds", "Garbage Collector Step Pause Budget", 5.0, 500.0, 50.0, "us", MacroRole::None, "Maximum time budget allocated to incremental GC per audio buffer cycle"))
+            .with_param(DspParamSchema::choice("heap_overflow_action", "Heap Quota Exceeded Policy", &["Mute Audio & Alert User", "Hard Abort Script VM", "Bypass Script DSP Node", "Log Warning Only"], 0, "Safety measure executed when script exceeds allotted memory quota"))
+            .with_param(DspParamSchema::toggle("realtime_allocation_sentinel", "Intercept Audio Thread Heap Allocations", true, "Traps any OS malloc/realloc calls initiated within real-time process callback"))
+            .with_param(DspParamSchema::toggle("incremental_gc_pacing", "Paced Incremental GC Scheduling", true, "Schedules fine-grained GC sweeps to eliminate audio dropout spikes"))
+            .with_param(DspParamSchema::toggle("record_heap_growth_telemetry", "Record Heap Allocation Telemetry", true, "Collects historical memory usage curves for graphical analysis in inspector"))
+        );
+        descriptors.insert("LuaCustomDspSandbox".to_string(), DspNodeDescriptor::new("LuaCustomDspSandbox", "Isolated Lua JIT Virtual Machine Sandbox for Custom Algorithmic Synthesis", DspNodeCategory::Modulation, "Sandboxed algorithmic DSP environment allowing custom user synthesis and modulation functions with strict instruction-count limits")
+            .with_param(DspParamSchema::knob("instruction_step_limit_per_sample", "Instruction Step Limit Per Sample", 100.0, 10000.0, 1000.0, "steps", MacroRole::None, "Maximum VM bytecode instructions executed per audio sample calculation"))
+            .with_param(DspParamSchema::choice("vm_execution_backend", "Virtual Machine Execution Engine", &["LuaJIT Fast JIT Engine", "Lua 5.4 Bytecode Interpreter", "Deterministic Pure Software VM"], 0, "Runtime execution engine balancing peak throughput against determinism"))
+            .with_param(DspParamSchema::toggle("expose_spectral_fft_api", "Expose Native Spectral FFT API", true, "Provides high-speed native FFT and IFFT transforms to Lua script environment"))
+            .with_param(DspParamSchema::toggle("expose_sample_table_ram", "Expose Sample Table Memory Access", true, "Permits script to read raw wave samples from loaded project sample buffers"))
+            .with_param(DspParamSchema::toggle("denormal_number_flushing", "Flush Denormals & Subnormals to Zero", true, "Forces floating point denormals to zero to prevent massive CPU performance drops"))
+            .with_param(DspParamSchema::choice("sample_rate_scaling_oversample", "Internal Oversampling Ratio", &["1x Native Rate", "2x Oversampling", "4x Oversampling (Pristine)"], 0, "Applies internal polyphase oversampling to minimize non-linear aliasing distortion"))
+        );
+        descriptors.insert("LuaBytecodeDisassembler".to_string(), DspNodeDescriptor::new("LuaBytecodeDisassembler", "Low-Level Lua VM Opcode Inspector & Register Allocation Analyzer", DspNodeCategory::Utility, "Disassembles compiled Lua chunks into VM bytecode instructions, profiling register pressure and branch optimization opportunities")
+            .with_param(DspParamSchema::choice("disassembly_view_format", "Disassembly Presentation Format", &["Annotated Opcode Listing", "Control Flow Graph (CFG)", "Raw Byte Stream Hex", "Side-by-Side Source Mapping"], 0, "Visualization style for disassembled Lua virtual machine bytecode instructions"))
+            .with_param(DspParamSchema::toggle("highlight_expensive_opcodes", "Highlight Metamethod & Table Lookups", true, "Visually marks opcodes with high CPU overhead such as TGETV, TSETV, or METACALL"))
+            .with_param(DspParamSchema::toggle("show_register_allocation_table", "Display Register Allocation Map", true, "Displays register usage and stack frame occupancy per compiled Lua function"))
+            .with_param(DspParamSchema::toggle("track_constant_pool_size", "Inspect Literal Constant Pool Table", true, "Lists all string, numeric, and boolean constants stored in compiled chunk"))
+            .with_param(DspParamSchema::knob("max_disassembled_lines", "Maximum Output Listing Lines", 50.0, 2000.0, 500.0, "lines", MacroRole::None, "Truncation limit for disassembled opcode display list"))
+            .with_param(DspParamSchema::toggle("export_cfg_mermaid_diagram", "Export Flow Graph as Mermaid Markdown", false, "Generates interactive Mermaid markdown control flow graph for flowchart view"))
+        );
+        descriptors.insert("LuaScriptMergeDetector".to_string(), DspNodeDescriptor::new("LuaScriptMergeDetector", "Granular AST Difference & Collision Detector for Collaborative Lua Scripts", DspNodeCategory::Utility, "AST-based diff engine identifying structural semantic changes between versions of musical scripts, avoiding cosmetic whitespace conflicts")
+            .with_param(DspParamSchema::choice("diff_comparison_mode", "Structural AST Diff Mode", &["Semantic AST Tree Comparison", "Line-by-Line Unified Diff", "Function Scope Breakdown"], 0, "Depth of syntactic tree comparison applied to incoming Lua script revisions"))
+            .with_param(DspParamSchema::toggle("ignore_whitespace_and_formatting", "Ignore Whitespace & Comment Formatting", true, "Disregards indentation, blank lines, and comment changes during comparison"))
+            .with_param(DspParamSchema::toggle("detect_renamed_local_identifiers", "Detect Renamed Local Variables", true, "Recognizes renamed local variables as identical semantic logic"))
+            .with_param(DspParamSchema::knob("similarity_matching_threshold", "Fuzzy Function Similarity Match", 0.5, 1.0, 0.85, "ratio", MacroRole::None, "Threshold for pairing modified functions across diverging script branches"))
+            .with_param(DspParamSchema::toggle("highlight_audio_parameter_modifications", "Highlight DSP Parameter Changes", true, "Draws immediate attention to modifications affecting audio coefficients or ranges"))
+            .with_param(DspParamSchema::toggle("generate_collaborative_patch_file", "Generate Semantic AST Patch File", true, "Produces clean unified script patch incorporating only intentional logic changes"))
+        );
+        descriptors.insert("LuaSpectralBufferHook".to_string(), DspNodeDescriptor::new("LuaSpectralBufferHook", "Real-Time STFT / FFT Spectral Frame Interception Hook for Lua Scripts", DspNodeCategory::Modulation, "Intercepts frequency-domain magnitude and phase frames, exposing them to Lua scripts for phase vocoding, spectral freezing, and morphing")
+            .with_param(DspParamSchema::choice("fft_frame_size", "Spectral FFT Bin Frame Size", &["512 Bins (Fast)", "1024 Bins (Balanced)", "2048 Bins (High-Res)", "4096 Bins (Surgical)"], 1, "Frequency bin resolution for intercepted STFT frames"))
+            .with_param(DspParamSchema::choice("window_overlap_factor", "STFT Analysis Overlap Ratio", &["2x (50% Overlap)", "4x (75% Overlap)", "8x (87.5% Overlap)"], 1, "Hop size and window overlap factor for analysis/synthesis resynthesis"))
+            .with_param(DspParamSchema::choice("spectral_data_representation", "Spectral Complex Data Format", &["Magnitude & Phase Polar", "Complex Real & Imaginary", "Log-Magnitude Decibels"], 0, "Coordinate system of spectral arrays presented to Lua script callback"))
+            .with_param(DspParamSchema::toggle("phase_vocoder_lock_phases", "Phase Vocoder Identity Phase Locking", true, "Locks phase differences across neighboring bins to eliminate phasiness distortion"))
+            .with_param(DspParamSchema::knob("spectral_magnitude_gain_db", "Spectral Pre-Hook Gain Trim", -24.0, 24.0, 0.0, "dB", MacroRole::Tone, "Gain boost or attenuation applied to magnitude bins prior to script execution"))
+            .with_param(DspParamSchema::toggle("freeze_spectral_frame_buffer", "Infinite Spectral Freeze Latch", false, "Locks and loops current spectral frame indefinitely for ambient textural pads"))
+        );
+        descriptors.insert("LuaTimerScheduler".to_string(), DspNodeDescriptor::new("LuaTimerScheduler", "Sample-Accurate Musical Beat Timer & Deferred Task Scheduler", DspNodeCategory::Modulation, "High-precision musical timer executing deferred Lua callbacks and parameter modulation triggers synchronized to DAW transport beats")
+            .with_param(DspParamSchema::choice("transport_sync_quantization", "Transport Beat Sync Quantization", &["1/16 Note Step", "1/8 Note Step", "1/4 Beat Bar", "1 Bar Measure", "Free Unquantized"], 0, "Musical grid subdivision aligning scheduled task triggers"))
+            .with_param(DspParamSchema::knob("timer_repeat_interval_beats", "Recurring Timer Interval", 0.25, 64.0, 4.0, "beats", MacroRole::None, "Interval in musical beats for periodic recurring timer execution"))
+            .with_param(DspParamSchema::knob("timing_jitter_tolerance_samples", "Timing Jitter Tolerance", 0.0, 128.0, 0.0, "samples", MacroRole::None, "Maximum allowable sample jitter threshold for sub-sample interpolation"))
+            .with_param(DspParamSchema::knob("shuffle_swing_percentage", "Groove Swing & Shuffle Offset", 0.0, 75.0, 0.0, "%", MacroRole::None, "Applies rhythmic groove swing to odd-numbered beat quantized task triggers"))
+            .with_param(DspParamSchema::toggle("enable_drift_compensation", "Tempo Map Drift Compensation", true, "Continuously compensates for tempo changes and variable buffer sizes"))
+            .with_param(DspParamSchema::knob("active_timer_instances_count", "Concurrent Active Timers Limit", 1.0, 32.0, 4.0, "timers", MacroRole::None, "Maximum number of simultaneous deferred timer triggers queued in memory"))
+        );
 
         Self { descriptors }
     }
@@ -12084,6 +12252,27 @@ descriptors.insert("BellowsGesturePattern".to_string(), DspNodeDescriptor::new("
             ("CliScriptLinter", DspNodeCategory::Utility, "Real-Time Lua AST Syntax Linter & Diagnostics Analyzer"),
             ("CliScriptMinifier", DspNodeCategory::Utility, "Production Lua AST Code Minifier & Comment Stripper"),
             ("CliScriptDocGenerator", DspNodeCategory::Utility, "EmmyLua / LDoc Markdown Documentation Generator"),
+            ("AudioWatermarkEmbedder", DspNodeCategory::Utility, "Spread-Spectrum Audio Steganography Encoder & Metadata Watermarker"),
+            ("AudioWatermarkExtractor", DspNodeCategory::Utility, "Inaudible Spread-Spectrum Watermark Detector & Correlator"),
+            ("WaveformPngExporter", DspNodeCategory::Utility, "Deterministic Multi-Channel Audio Waveform PNG Generator"),
+            ("SpectrogramPngExporter", DspNodeCategory::Utility, "High-Resolution STFT Spectral Heatmap PNG Visualizer"),
+            ("PianoRollPngExporter", DspNodeCategory::Utility, "Multi-Track MIDI Piano Roll Sequence PNG Visualizer"),
+            ("ProjectLayoutPdfExporter", DspNodeCategory::Utility, "Vector PDF Session Routing Schematic & Architecture Exporter"),
+            ("SessionNotesPdfExporter", DspNodeCategory::Utility, "Engineering Session Notes & Track Credits PDF Baker"),
+            ("ProjectAes256Encryptor", DspNodeCategory::Utility, "Zero-Knowledge AES-256 GCM Session Encryption & Cryptographer"),
+            ("ProjectAes256Decryptor", DspNodeCategory::Utility, "Zero-Knowledge AES-256 Session Decryption & Authentication Engine"),
+            ("GitChangeAttributor", DspNodeCategory::Utility, "Per-Track Git Micro-Commit Blame & Acoustic Change History Analyzer"),
+            ("TomlConflictResolver", DspNodeCategory::Utility, "Three-Way Project AST Conflict Resolution & Merge Engine"),
+            ("VideoMetadataExporter", DspNodeCategory::Utility, "Stems Video Metadata & Social Media Chapter Marker Builder"),
+            ("LuaBytecodeCompiler", DspNodeCategory::Utility, "Ahead-Of-Time Lua Script Bytecode Compiler & Cache Engine"),
+            ("LuaAstLinter", DspNodeCategory::Utility, "Static AST Diagnostics, Linting, and Type Checking Engine for Lua Scripts"),
+            ("LuaForeignFunctionBridge", DspNodeCategory::Utility, "High-Performance C/FFI & Rust Binding Bridge for External Lua DSP Extensions"),
+            ("LuaMemoryWatchdog", DspNodeCategory::Utility, "Real-Time Memory Allocation Watchdog & GC Pause Budget Profiler for Audio Thread Lua"),
+            ("LuaCustomDspSandbox", DspNodeCategory::Modulation, "Isolated Lua JIT Virtual Machine Sandbox for Custom Algorithmic Synthesis"),
+            ("LuaBytecodeDisassembler", DspNodeCategory::Utility, "Low-Level Lua VM Opcode Inspector & Register Allocation Analyzer"),
+            ("LuaScriptMergeDetector", DspNodeCategory::Utility, "Granular AST Difference & Collision Detector for Collaborative Lua Scripts"),
+            ("LuaSpectralBufferHook", DspNodeCategory::Modulation, "Real-Time STFT / FFT Spectral Frame Interception Hook for Lua Scripts"),
+            ("LuaTimerScheduler", DspNodeCategory::Modulation, "Sample-Accurate Musical Beat Timer & Deferred Task Scheduler"),
         ]
     }
 
@@ -14447,6 +14636,27 @@ descriptors.insert("BellowsGesturePattern".to_string(), DspNodeDescriptor::new("
             "cliscriptlinter" | "scriptlinter" | "summonlintlua" | "lualint" => Some("CliScriptLinter"),
             "cliscriptminifier" | "scriptminifier" | "summonminifylua" | "luaminify" => Some("CliScriptMinifier"),
             "cliscriptdocgenerator" | "scriptdocgenerator" | "summondoclua" | "luadoc" => Some("CliScriptDocGenerator"),
+            "audiowatermarkembedder" | "watermarkembedder" | "steganographyencoder" => Some("AudioWatermarkEmbedder"),
+            "audiowatermarkextractor" | "watermarkextractor" | "steganographydetector" => Some("AudioWatermarkExtractor"),
+            "waveformpngexporter" | "waveformpng" | "audiowaveformrender" => Some("WaveformPngExporter"),
+            "spectrogrampngexporter" | "spectrogrampng" | "spectralheatmaprender" => Some("SpectrogramPngExporter"),
+            "pianorollpngexporter" | "pianorollpng" | "midisequenceexporter" => Some("PianoRollPngExporter"),
+            "projectlayoutpdfexporter" | "projectlayoutpdf" | "routingschematicpdf" => Some("ProjectLayoutPdfExporter"),
+            "sessionnotespdfexporter" | "sessionnotespdf" | "trackcreditspdf" => Some("SessionNotesPdfExporter"),
+            "projectaes256encryptor" | "projectaes256" | "sessionaes256encrypt" => Some("ProjectAes256Encryptor"),
+            "projectaes256decryptor" | "projectaes256decrypt" | "sessionaes256decrypt" => Some("ProjectAes256Decryptor"),
+            "gitchangeattributor" | "changeattributor" | "trackgitblame" => Some("GitChangeAttributor"),
+            "tomlconflictresolver" | "tomlconflict" | "sessionconflictresolver" => Some("TomlConflictResolver"),
+            "videometadataexporter" | "videometadata" | "stemsvideometadata" => Some("VideoMetadataExporter"),
+            "luabytecodecompiler" | "luacompiler" | "luabytecodecache" => Some("LuaBytecodeCompiler"),
+            "luaastlinter" | "lualinter" | "luastaticanalyzer" => Some("LuaAstLinter"),
+            "luaforeignfunctionbridge" | "luaffibridge" | "luarustbridge" => Some("LuaForeignFunctionBridge"),
+            "luamemorywatchdog" | "luagcwatchdog" | "luamemoryguard" => Some("LuaMemoryWatchdog"),
+            "luacustomdspsandbox" | "luadspsandbox" | "luajitsandbox" => Some("LuaCustomDspSandbox"),
+            "luabytecodedisassembler" | "luadisassembler" | "luaopcodetracer" => Some("LuaBytecodeDisassembler"),
+            "luascriptmergedetector" | "luamergedetector" | "luadiffdetector" => Some("LuaScriptMergeDetector"),
+            "luaspectralbufferhook" | "luaspectralhook" | "luaffthook" => Some("LuaSpectralBufferHook"),
+            "luatimerscheduler" | "musicalbeattimer" | "luabeattimer" => Some("LuaTimerScheduler"),
             "drumclass" => Some("DrumClassClassification"),
             "mpeevent" => Some("ClapMpeEvent"),
             "nativeaudiodriver" => Some("NativeAudioDriverTuner"),
@@ -24906,6 +25116,195 @@ descriptors.insert("BellowsGesturePattern".to_string(), DspNodeDescriptor::new("
                     .with_param(DspParamDescriptor::new_bool("include_toc_navigation", "Generate Table of Contents Navigation", true, (14, 165, 233)))
                     .with_param(DspParamDescriptor::new_bool("sort_alphabetically", "Sort Functions Alphabetically", true, (56, 189, 248)))
             ),
+            "AudioWatermarkEmbedder" => Box::new(
+                GenericDspNodeUi::new("AudioWatermarkEmbedder", "Spread-Spectrum Audio Steganography Encoder & Metadata Watermarker", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("carrier_frequency_band", "Carrier Frequency Sub-Band", 0.0, 3.0, 0.0, "band", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("watermark_payload_bytes", "Watermark Payload Size", 16.0, 256.0, 64.0, "bytes", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("spread_spectrum_chip_rate", "DSSS Modulation Chip Rate", 100.0, 5000.0, 1000.0, "chips/s", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("embedding_strength_db", "Embedding Depth & Gain", -48.0, -12.0, -24.0, "dB", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("cryptographic_salt_nonce", "Cryptographic Salt Nonce", true, (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("psychoacoustic_masking_guard", "Dynamic Auditory Masking Guard", true, (14, 165, 233)))
+            ),
+            "AudioWatermarkExtractor" => Box::new(
+                GenericDspNodeUi::new("AudioWatermarkExtractor", "Inaudible Spread-Spectrum Watermark Detector & Correlator", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("detection_sensitivity", "Correlation Detection Sensitivity", 0.1, 1.0, 0.75, "ratio", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("correlation_window_size", "Cross-Correlation Window Size", 0.0, 3.0, 2.0, "win", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("ber_tolerance_threshold", "Bit Error Rate (BER) Tolerance", 0.01, 0.20, 0.05, "BER", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("cross_correlation_mode", "Correlator Receiver Mode", 0.0, 2.0, 0.0, "mode", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("validate_crypto_signature", "Verify Ed25519 Cryptographic Signature", true, (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("error_correction_reed_solomon", "Reed-Solomon Error Correction", true, (14, 165, 233)))
+            ),
+            "WaveformPngExporter" => Box::new(
+                GenericDspNodeUi::new("WaveformPngExporter", "Deterministic Multi-Channel Audio Waveform PNG Generator", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("image_width_pixels", "Rendered Image Width", 256.0, 8192.0, 1920.0, "px", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("image_height_pixels", "Rendered Image Height", 64.0, 2160.0, 480.0, "px", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("color_theme_palette", "Color Theme & Gradient Palette", 0.0, 3.0, 0.0, "theme", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("render_rms_energy_fill", "Render RMS Energy Fill Gradient", true, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("render_peak_outline", "Draw 1px Anti-Aliased Peak Line", true, (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("transparent_background", "Transparent Alpha Background Channel", true, (14, 165, 233)))
+            ),
+            "SpectrogramPngExporter" => Box::new(
+                GenericDspNodeUi::new("SpectrogramPngExporter", "High-Resolution STFT Spectral Heatmap PNG Visualizer", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("fft_window_length", "FFT Analysis Window Size", 0.0, 4.0, 2.0, "win", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("frequency_scale", "Vertical Frequency Mapping Scale", 0.0, 2.0, 0.0, "scale", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("color_colormap", "Heatmap Energy Colormap", 0.0, 3.0, 0.0, "cmap", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("dynamic_range_db", "Display Dynamic Range Floor", 30.0, 120.0, 90.0, "dB", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("temporal_smoothing_factor", "Temporal Smoothing Filter Factor", 0.0, 0.95, 0.2, "fact", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("render_harmonic_frequency_grid", "Overlay Musical Pitch Grid Lines", true, (14, 165, 233)))
+            ),
+            "PianoRollPngExporter" => Box::new(
+                GenericDspNodeUi::new("PianoRollPngExporter", "Multi-Track MIDI Piano Roll Sequence PNG Visualizer", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("quantize_grid_view", "Background Beat Grid Subdivision", 0.0, 3.0, 0.0, "grid", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("key_range_min_note", "Minimum Visible Note Pitch", 0.0, 127.0, 24.0, "midi", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("key_range_max_note", "Maximum Visible Note Pitch", 0.0, 127.0, 96.0, "midi", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("velocity_alpha_shading", "Velocity-Based Opacity & Shading", true, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("render_pitchbend_overlays", "Render Pitch Bend Curve Splines", true, (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_linear("track_color_mode", "Track Color Assignment Scheme", 0.0, 2.0, 0.0, "col", (14, 165, 233)))
+            ),
+            "ProjectLayoutPdfExporter" => Box::new(
+                GenericDspNodeUi::new("ProjectLayoutPdfExporter", "Vector PDF Session Routing Schematic & Architecture Exporter", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("paper_page_format", "Target PDF Page Dimensions", 0.0, 3.0, 1.0, "fmt", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("routing_cord_style", "Routing Patch Cord Vector Style", 0.0, 2.0, 1.0, "cord", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("include_sidechain_edges", "Include Auxiliary Sidechain Edges", true, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("include_plugin_parameter_summaries", "Display Key Plugin Parameter Values", true, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("vector_color_palette", "PDF Architectural Color Theme", 0.0, 2.0, 0.0, "pal", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("group_busses_into_clusters", "Cluster Submix Busses & Groups", true, (14, 165, 233)))
+            ),
+            "SessionNotesPdfExporter" => Box::new(
+                GenericDspNodeUi::new("SessionNotesPdfExporter", "Engineering Session Notes & Track Credits PDF Baker", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("document_page_layout", "Document Template & Styling", 0.0, 3.0, 0.0, "lay", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_bool("include_git_commit_digest", "Include Git Revision Digest", true, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("include_stem_loudness_readouts", "Tabulate Stem Integrated LUFS & Peaks", true, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("embed_custom_studio_logo", "Embed Custom Studio Logo Header", false, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("include_musician_credits_table", "Include Performer & Engineer Credits", true, (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("pdf_metadata_encryption", "PDF Read-Only Permission Encryption", false, (14, 165, 233)))
+            ),
+            "ProjectAes256Encryptor" => Box::new(
+                GenericDspNodeUi::new("ProjectAes256Encryptor", "Zero-Knowledge AES-256 GCM Session Encryption & Cryptographer", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("key_derivation_function", "Key Derivation Function (KDF)", 0.0, 2.0, 0.0, "kdf", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("kdf_iteration_cost", "KDF Iteration & Time Cost", 1000.0, 1000000.0, 65536.0, "iters", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("cipher_block_mode", "Symmetric Cipher Mode", 0.0, 1.0, 0.0, "cipher", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("encrypt_raw_audio_stems", "Encrypt Audio Stem Waveforms", true, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("include_integrity_checksum", "Embed Blake3 Merkle Root Checksum", true, (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("wipe_plaintext_after_crypt", "Securely Shred Plaintext Cache Files", false, (14, 165, 233)))
+            ),
+            "ProjectAes256Decryptor" => Box::new(
+                GenericDspNodeUi::new("ProjectAes256Decryptor", "Zero-Knowledge AES-256 Session Decryption & Authentication Engine", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("memory_unlock_duration_seconds", "In-Memory Key Cache Timeout", 30.0, 3600.0, 300.0, "sec", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("integrity_check_strictness", "Integrity Check Severity", 0.0, 2.0, 0.0, "str", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("decrypt_to_ram_disk_only", "Mount Audio Assets in RAM Disk Only", true, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("cache_decryption_keys_in_secure_enclave", "Store Keys in OS Secure Enclave", true, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("auto_lock_on_daw_idle", "Auto-Lock Container When DAW Idles", true, (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("audit_log_access_events", "Log Timestamped Decryption Events", true, (14, 165, 233)))
+            ),
+            "GitChangeAttributor" => Box::new(
+                GenericDspNodeUi::new("GitChangeAttributor", "Per-Track Git Micro-Commit Blame & Acoustic Change History Analyzer", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("blame_granularity_mode", "Attribution Granularity Level", 0.0, 3.0, 0.0, "mode", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("history_depth_commits", "Commit DAG History Search Depth", 5.0, 500.0, 50.0, "commits", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("author_filter_selection", "Author Attribution Filter", 0.0, 2.0, 0.0, "auth", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("highlight_uncommitted_working_changes", "Highlight Working Tree Modifications", true, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("correlate_acoustic_loudness_delta", "Correlate LUFS Loudness Delta", true, (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("cache_git_tree_in_memory", "Cache Commit DAG Tree in Memory", true, (14, 165, 233)))
+            ),
+            "TomlConflictResolver" => Box::new(
+                GenericDspNodeUi::new("TomlConflictResolver", "Three-Way Project AST Conflict Resolution & Merge Engine", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("merge_strategy_heuristic", "Conflict Resolution Heuristic", 0.0, 3.0, 0.0, "strat", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("automation_curve_collision_handling", "Automation Collision Behavior", 0.0, 2.0, 0.0, "coll", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("preserve_unique_clip_uuid", "Regenerate Duplicate Clip UUIDs", true, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("backup_conflicting_project_file", "Generate Pre-Merge .bak Archive", true, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("auto_resolve_non_overlapping_tracks", "Auto-Accept Non-Overlapping Tracks", true, (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("validate_merged_dsp_graph_integrity", "Verify DSP Graph Acyclicity", true, (14, 165, 233)))
+            ),
+            "VideoMetadataExporter" => Box::new(
+                GenericDspNodeUi::new("VideoMetadataExporter", "Stems Video Metadata & Social Media Chapter Marker Builder", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("metadata_output_target", "Metadata Target Platform", 0.0, 3.0, 0.0, "tgt", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("timecode_format_display", "Timecode Display Format", 0.0, 3.0, 0.0, "tc", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("minimum_marker_interval_seconds", "Minimum Chapter Gap Threshold", 2.0, 60.0, 10.0, "sec", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("include_lyrics_cues_in_chapters", "Include Vocal Cue Subtitles", true, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("include_social_media_tags", "Include Social Hashtags & Credits", true, (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("url_encode_output_text", "URL-Encode Output Text", false, (14, 165, 233)))
+            ),
+            "LuaBytecodeCompiler" => Box::new(
+                GenericDspNodeUi::new("LuaBytecodeCompiler", "Ahead-Of-Time Lua Script Bytecode Compiler & Cache Engine", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("target_bytecode_format", "Target Lua Bytecode Format", 0.0, 2.0, 1.0, "fmt", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("optimization_pass_level", "Optimization Pipeline Level", 0.0, 3.0, 2.0, "level", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("strip_debug_symbol_names", "Strip Local Debug Names & Line Numbers", true, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("enable_constant_folding", "Evaluate Constant Math Expressions", true, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("cache_compiled_bytecode_to_disk", "Persist Bytecode Cache on Disk", true, (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("verify_bytecode_safety_verifier", "Run Static Bytecode Safety Verifier", true, (14, 165, 233)))
+            ),
+            "LuaAstLinter" => Box::new(
+                GenericDspNodeUi::new("LuaAstLinter", "Static AST Diagnostics, Linting, and Type Checking Engine for Lua Scripts", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("linting_strictness_level", "Real-Time Audio Linting Strictness", 0.0, 2.0, 0.0, "strict", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_bool("flag_implicit_global_assignments", "Reject Implicit Global Variables", true, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("forbid_runtime_table_allocations", "Forbid Table Allocations in Audio Loop", true, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("check_dsp_parameter_range_bounds", "Verify Parameter Bounds & Clamping", true, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("max_reported_lint_diagnostics", "Maximum Diagnostic Issues Displayed", 10.0, 200.0, 50.0, "issues", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("auto_format_quick_fix_suggestions", "Provide Automated Quick-Fix Patches", true, (14, 165, 233)))
+            ),
+            "LuaForeignFunctionBridge" => Box::new(
+                GenericDspNodeUi::new("LuaForeignFunctionBridge", "High-Performance C/FFI & Rust Binding Bridge for External Lua DSP Extensions", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("ffi_sandbox_isolation_policy", "Native Library Isolation Policy", 0.0, 2.0, 0.0, "pol", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("buffer_memory_sharing_mode", "Audio Buffer Interop Memory Mode", 0.0, 2.0, 0.0, "buf", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("max_simultaneous_c_function_calls", "Maximum FFI Calls Per Block", 16.0, 1024.0, 256.0, "calls", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("enforce_simd_alignment_32byte", "Enforce 32-Byte AVX SIMD Alignment", true, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("panic_recovery_catch_unwind", "Catch Native Panics via Unwind", true, (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("log_ffi_execution_timing_us", "Profile FFI Call Latency in Microseconds", false, (14, 165, 233)))
+            ),
+            "LuaMemoryWatchdog" => Box::new(
+                GenericDspNodeUi::new("LuaMemoryWatchdog", "Real-Time Memory Allocation Watchdog & GC Pause Budget Profiler for Audio Thread Lua", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("max_audio_thread_heap_kb", "Audio Thread Maximum Heap Size", 64.0, 8192.0, 512.0, "KB", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("gc_step_budget_microseconds", "Garbage Collector Step Pause Budget", 5.0, 500.0, 50.0, "us", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("heap_overflow_action", "Heap Quota Exceeded Policy", 0.0, 3.0, 0.0, "act", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("realtime_allocation_sentinel", "Intercept Audio Thread Heap Allocations", true, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("incremental_gc_pacing", "Paced Incremental GC Scheduling", true, (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("record_heap_growth_telemetry", "Record Heap Allocation Telemetry", true, (14, 165, 233)))
+            ),
+            "LuaCustomDspSandbox" => Box::new(
+                GenericDspNodeUi::new("LuaCustomDspSandbox", "Isolated Lua JIT Virtual Machine Sandbox for Custom Algorithmic Synthesis", DspNodeCategory::Modulation)
+                    .with_param(DspParamDescriptor::new_linear("instruction_step_limit_per_sample", "Instruction Step Limit Per Sample", 100.0, 10000.0, 1000.0, "steps", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("vm_execution_backend", "Virtual Machine Execution Engine", 0.0, 2.0, 0.0, "vm", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("expose_spectral_fft_api", "Expose Native Spectral FFT API", true, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("expose_sample_table_ram", "Expose Sample Table Memory Access", true, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("denormal_number_flushing", "Flush Denormals & Subnormals to Zero", true, (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_linear("sample_rate_scaling_oversample", "Internal Oversampling Ratio", 0.0, 2.0, 0.0, "rate", (14, 165, 233)))
+            ),
+            "LuaBytecodeDisassembler" => Box::new(
+                GenericDspNodeUi::new("LuaBytecodeDisassembler", "Low-Level Lua VM Opcode Inspector & Register Allocation Analyzer", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("disassembly_view_format", "Disassembly Presentation Format", 0.0, 3.0, 0.0, "view", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_bool("highlight_expensive_opcodes", "Highlight Metamethod & Table Lookups", true, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("show_register_allocation_table", "Display Register Allocation Map", true, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("track_constant_pool_size", "Inspect Literal Constant Pool Table", true, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("max_disassembled_lines", "Maximum Output Listing Lines", 50.0, 2000.0, 500.0, "lines", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("export_cfg_mermaid_diagram", "Export Flow Graph as Mermaid Markdown", false, (14, 165, 233)))
+            ),
+            "LuaScriptMergeDetector" => Box::new(
+                GenericDspNodeUi::new("LuaScriptMergeDetector", "Granular AST Difference & Collision Detector for Collaborative Lua Scripts", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("diff_comparison_mode", "Structural AST Diff Mode", 0.0, 2.0, 0.0, "mode", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_bool("ignore_whitespace_and_formatting", "Ignore Whitespace & Comment Formatting", true, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("detect_renamed_local_identifiers", "Detect Renamed Local Variables", true, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("similarity_matching_threshold", "Fuzzy Function Similarity Match", 0.5, 1.0, 0.85, "ratio", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("highlight_audio_parameter_modifications", "Highlight DSP Parameter Changes", true, (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("generate_collaborative_patch_file", "Generate Semantic AST Patch File", true, (14, 165, 233)))
+            ),
+            "LuaSpectralBufferHook" => Box::new(
+                GenericDspNodeUi::new("LuaSpectralBufferHook", "Real-Time STFT / FFT Spectral Frame Interception Hook for Lua Scripts", DspNodeCategory::Modulation)
+                    .with_param(DspParamDescriptor::new_linear("fft_frame_size", "Spectral FFT Bin Frame Size", 0.0, 3.0, 1.0, "bins", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("window_overlap_factor", "STFT Analysis Overlap Ratio", 0.0, 2.0, 1.0, "over", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("spectral_data_representation", "Spectral Complex Data Format", 0.0, 2.0, 0.0, "rep", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("phase_vocoder_lock_phases", "Phase Vocoder Identity Phase Locking", true, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("spectral_magnitude_gain_db", "Spectral Pre-Hook Gain Trim", -24.0, 24.0, 0.0, "dB", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("freeze_spectral_frame_buffer", "Infinite Spectral Freeze Latch", false, (14, 165, 233)))
+            ),
+            "LuaTimerScheduler" => Box::new(
+                GenericDspNodeUi::new("LuaTimerScheduler", "Sample-Accurate Musical Beat Timer & Deferred Task Scheduler", DspNodeCategory::Modulation)
+                    .with_param(DspParamDescriptor::new_linear("transport_sync_quantization", "Transport Beat Sync Quantization", 0.0, 4.0, 0.0, "quant", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("timer_repeat_interval_beats", "Recurring Timer Interval", 0.25, 64.0, 4.0, "beats", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("timing_jitter_tolerance_samples", "Timing Jitter Tolerance", 0.0, 128.0, 0.0, "samples", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("shuffle_swing_percentage", "Groove Swing & Shuffle Offset", 0.0, 75.0, 0.0, "%", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("enable_drift_compensation", "Tempo Map Drift Compensation", true, (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_linear("active_timer_instances_count", "Concurrent Active Timers Limit", 1.0, 32.0, 4.0, "timers", (14, 165, 233)))
+            ),
             // Fallback dynamic generator for any unexpected or plugin node
             other => {
                 let cat = Self::inventory()
@@ -26927,7 +27326,7 @@ assert!(registry.get("BellowsGesturePattern").is_some());
     fn test_tier131_inventory_count_and_parameter_completeness() {
         let registry = DspNodeRegistry::new();
         let inv = DspNodeRegistry::inventory();
-        assert_eq!(inv.len(), 1361, "Inventory must contain exactly 1361 DSP modules");
+        assert!(inv.len() >= 1361, "Inventory must contain at least 1361 DSP modules");
         assert!(registry.list_all().len() >= 1361, "Registry list_all must be >= 1361");
 
         let tier131_nodes = [
@@ -27004,6 +27403,89 @@ assert!(registry.get("BellowsGesturePattern").is_some());
         assert_eq!(DspNodeRegistry::normalize_type_name("scriptminifier"), Some("CliScriptMinifier"));
         assert_eq!(DspNodeRegistry::normalize_type_name("cliscriptdocgenerator"), Some("CliScriptDocGenerator"));
         assert_eq!(DspNodeRegistry::normalize_type_name("scriptdocgenerator"), Some("CliScriptDocGenerator"));
+    }
+
+    #[test]
+    fn test_tier132_inventory_count_and_parameter_completeness() {
+        let registry = DspNodeRegistry::new();
+        let inv = DspNodeRegistry::inventory();
+        assert_eq!(inv.len(), 1382, "Inventory must contain exactly 1382 DSP modules");
+        assert!(registry.list_all().len() >= 1382, "Registry list_all must be >= 1382");
+
+        let tier132_nodes = [
+            ("AudioWatermarkEmbedder", DspNodeCategory::Utility),
+            ("AudioWatermarkExtractor", DspNodeCategory::Utility),
+            ("WaveformPngExporter", DspNodeCategory::Utility),
+            ("SpectrogramPngExporter", DspNodeCategory::Utility),
+            ("PianoRollPngExporter", DspNodeCategory::Utility),
+            ("ProjectLayoutPdfExporter", DspNodeCategory::Utility),
+            ("SessionNotesPdfExporter", DspNodeCategory::Utility),
+            ("ProjectAes256Encryptor", DspNodeCategory::Utility),
+            ("ProjectAes256Decryptor", DspNodeCategory::Utility),
+            ("GitChangeAttributor", DspNodeCategory::Utility),
+            ("TomlConflictResolver", DspNodeCategory::Utility),
+            ("VideoMetadataExporter", DspNodeCategory::Utility),
+            ("LuaBytecodeCompiler", DspNodeCategory::Utility),
+            ("LuaAstLinter", DspNodeCategory::Utility),
+            ("LuaForeignFunctionBridge", DspNodeCategory::Utility),
+            ("LuaMemoryWatchdog", DspNodeCategory::Utility),
+            ("LuaCustomDspSandbox", DspNodeCategory::Modulation),
+            ("LuaBytecodeDisassembler", DspNodeCategory::Utility),
+            ("LuaScriptMergeDetector", DspNodeCategory::Utility),
+            ("LuaSpectralBufferHook", DspNodeCategory::Modulation),
+            ("LuaTimerScheduler", DspNodeCategory::Modulation),
+        ];
+
+        for (name, expected_cat) in tier132_nodes {
+            let desc = registry.get(name).unwrap_or_else(|| panic!("Module {} missing from registry", name));
+            assert_eq!(desc.category, expected_cat, "Category mismatch for {}", name);
+            assert!(desc.params.len() >= 5, "Module {} must have >= 5 params, found {}", name, desc.params.len());
+            assert!(DspNodeRegistry::create_node_ui(name).is_some(), "create_node_ui failed for {}", name);
+        }
+
+        // Test normalizations
+        assert_eq!(DspNodeRegistry::normalize_type_name("audiowatermarkembedder"), Some("AudioWatermarkEmbedder"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("watermarkembedder"), Some("AudioWatermarkEmbedder"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("audiowatermarkextractor"), Some("AudioWatermarkExtractor"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("watermarkextractor"), Some("AudioWatermarkExtractor"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("waveformpngexporter"), Some("WaveformPngExporter"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("waveformpng"), Some("WaveformPngExporter"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("spectrogrampngexporter"), Some("SpectrogramPngExporter"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("spectrogrampng"), Some("SpectrogramPngExporter"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("pianorollpngexporter"), Some("PianoRollPngExporter"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("pianorollpng"), Some("PianoRollPngExporter"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("projectlayoutpdfexporter"), Some("ProjectLayoutPdfExporter"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("projectlayoutpdf"), Some("ProjectLayoutPdfExporter"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("sessionnotespdfexporter"), Some("SessionNotesPdfExporter"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("sessionnotespdf"), Some("SessionNotesPdfExporter"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("projectaes256encryptor"), Some("ProjectAes256Encryptor"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("projectaes256"), Some("ProjectAes256Encryptor"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("projectaes256decryptor"), Some("ProjectAes256Decryptor"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("projectaes256decrypt"), Some("ProjectAes256Decryptor"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("gitchangeattributor"), Some("GitChangeAttributor"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("changeattributor"), Some("GitChangeAttributor"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("tomlconflictresolver"), Some("TomlConflictResolver"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("tomlconflict"), Some("TomlConflictResolver"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("videometadataexporter"), Some("VideoMetadataExporter"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("videometadata"), Some("VideoMetadataExporter"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luabytecodecompiler"), Some("LuaBytecodeCompiler"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luacompiler"), Some("LuaBytecodeCompiler"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luaastlinter"), Some("LuaAstLinter"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("lualinter"), Some("LuaAstLinter"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luaforeignfunctionbridge"), Some("LuaForeignFunctionBridge"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luaffibridge"), Some("LuaForeignFunctionBridge"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luamemorywatchdog"), Some("LuaMemoryWatchdog"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luagcwatchdog"), Some("LuaMemoryWatchdog"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luacustomdspsandbox"), Some("LuaCustomDspSandbox"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luadspsandbox"), Some("LuaCustomDspSandbox"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luabytecodedisassembler"), Some("LuaBytecodeDisassembler"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luadisassembler"), Some("LuaBytecodeDisassembler"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luascriptmergedetector"), Some("LuaScriptMergeDetector"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luamergedetector"), Some("LuaScriptMergeDetector"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luaspectralbufferhook"), Some("LuaSpectralBufferHook"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luaspectralhook"), Some("LuaSpectralBufferHook"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luatimerscheduler"), Some("LuaTimerScheduler"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("musicalbeattimer"), Some("LuaTimerScheduler"));
     }
 
     #[test]
