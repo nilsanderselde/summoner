@@ -241,6 +241,10 @@ fn default_available_presets() -> Vec<String> {
         "African Rosewood Concert Marimba Modal Resonator Bank".to_string(),
         "Air-Gapped Zero-Cloud Sovereign Project Workspace".to_string(),
         "Crash-Proof Third-Party Audio Plugin Sandbox Shield".to_string(),
+        "Imperial 97-Key Concert Grand Escapement & Duplex Resonance".to_string(),
+        "Cathedral 64-Foot Mechanical Tracker Organ Pallet Action".to_string(),
+        "Ancient Asian Paulownia Zither Movable Bone Ji Bridge".to_string(),
+        "Zero-Latency WebRTC High-Resolution MIDI 2.0 Network Jam".to_string(),
     ]
 }
 

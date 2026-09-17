@@ -8395,6 +8395,155 @@ descriptors.insert("BellowsGesturePattern".to_string(), DspNodeDescriptor::new("
             .with_param(DspParamSchema::knob("retain_local_revisions", "Maximum Stored Local Project Revisions", 5.0, 100.0, 25.0, "revisions", MacroRole::Punch, "Maximum local snapshot revisions kept in project folder"))
             .with_param(DspParamSchema::toggle("zero_cloud_leak_guard", "Enforce Zero Outbound Cloud Socket Assertion", true, "Strict assertion killing any network thread attempting cloud sync"))
         );
+        descriptors.insert("GrandPianoArticulation".to_string(), DspNodeDescriptor::new("GrandPianoArticulation", "Concert Grand Piano Hammer Strike & Escapement Articulation", DspNodeCategory::AcousticPhysicalModel, "Physical modeling acoustic articulation controller configuring hammer escapement blow distance, una corda soft pedal shift, sostenuto damper resonance, and key release noise")
+            .with_param(DspParamSchema::choice("touch_velocity_curve", "Hammer Strike Velocity Response Curve", &["Linear Concert Touch", "Heavy German Grand", "Light Viennese Action", "Mellow Intimate Touch"], 0, "Velocity-to-force response curve"))
+            .with_param(DspParamSchema::knob("escapement_distance_mm", "Hammer Escapement Blow Distance", 1.0, 5.0, 2.5, "mm", MacroRole::Tone, "Mechanical key-to-string escapement gap"))
+            .with_param(DspParamSchema::knob("una_corda_shift", "Una Corda Soft Pedal Hammer Offset", 0.0, 1.0, 0.0, "ratio", MacroRole::Space, "Una corda mechanical lateral shift exposing ungrooved felt"))
+            .with_param(DspParamSchema::knob("damper_resonance_gain", "Sympathetic Duplex Damper Resonance Gain", 0.0, 2.0, 1.0, "gain", MacroRole::Character, "Acoustic damper lift sympathetic string resonance amplitude"))
+            .with_param(DspParamSchema::toggle("enable_key_release_thud", "Synthesize Mechanical Key Release Thud", true, "Simulate damper felt impact and back-check key landing sound"))
+            .with_param(DspParamSchema::knob("hammer_hardness_aging", "Felt Wear & Hardness Voicing Factor", 0.1, 2.0, 1.0, "factor", MacroRole::Punch, "Hardness factor reflecting hammer needle voicing and wear"))
+        );
+        descriptors.insert("PipeOrganArticulation".to_string(), DspNodeDescriptor::new("PipeOrganArticulation", "Pipe Organ Pallet Valve Tracker Touch & Windchest Articulation", DspNodeCategory::AcousticPhysicalModel, "Mechanical tracker action simulator modeling pallet valve opening speed, windchest pressure fluctuations, swell box shutter angle, and organ pipe onset chif")
+            .with_param(DspParamSchema::choice("tracker_action_style", "Mechanical Tracker Valve Responsiveness", &["Direct Mechanical Tracker", "Pneumatic Barker Lever", "Electro-Pneumatic Action", "Direct Electric Valve"], 0, "Tracker mechanical coupling type"))
+            .with_param(DspParamSchema::knob("pallet_opening_time_ms", "Pallet Valve Opening Velocity", 2.0, 80.0, 15.0, "ms", MacroRole::Punch, "Transition time for windchest pallet valve opening"))
+            .with_param(DspParamSchema::knob("windchest_sag_depth", "Windchest Pressure Sag on Dense Chords", 0.0, 0.30, 0.08, "ratio", MacroRole::Character, "Windchest pressure drop during high organ wind demand"))
+            .with_param(DspParamSchema::knob("chif_transient_intensity", "Pipe Attack Transient Chif Intensity", 0.0, 1.5, 0.7, "intensity", MacroRole::Tone, "Harmonic chiff transient amplitude on initial pipe speech"))
+            .with_param(DspParamSchema::knob("swell_shutter_angle_deg", "Swell Chamber Enclosure Shutter Angle", 0.0, 90.0, 45.0, "deg", MacroRole::Space, "Acoustic swell box shutter angle modulating high-frequency cutoff"))
+        );
+        descriptors.insert("MalletArticulation".to_string(), DspNodeDescriptor::new("MalletArticulation", "Struck Idiophone Mallet Impact Dynamics & Articulation", DspNodeCategory::AcousticPhysicalModel, "Percussive mallet modeling engine specifying striking contact hardness, contact point eccentricity, roll cadence damping, and mallet head core resilience")
+            .with_param(DspParamSchema::choice("mallet_core_material", "Mallet Head Core Construction Material", &["Soft Yarn Wrapped", "Medium Corded Rubber", "Hard Phenolic Plastic", "Brass / Bell Metal", "Rosewood Core"], 1, "Core mallet material and hardness profile"))
+            .with_param(DspParamSchema::knob("contact_eccentricity", "Bar Strike Eccentricity Off-Center Ratio", 0.0, 0.8, 0.15, "ratio", MacroRole::Tone, "Offset from bar center influencing anti-nodal harmonic excitation"))
+            .with_param(DspParamSchema::knob("felt_wrap_thickness_mm", "Outer Yarn / Felt Cushion Thickness", 0.5, 10.0, 3.0, "mm", MacroRole::Character, "Thickness of yarn cushion damping ultra-high attack harmonics"))
+            .with_param(DspParamSchema::knob("roll_cadence_damping", "Mallet Tremolo Roll Resonance Damping", 0.0, 1.0, 0.25, "ratio", MacroRole::Space, "Inter-strike damping factor during continuous mallet rolls"))
+            .with_param(DspParamSchema::knob("impact_bite_velocity", "Nonlinear Contact Deformation Force", 0.5, 3.0, 1.2, "force", MacroRole::Punch, "Hertzian power coefficient for nonlinear striking hardness"))
+        );
+        descriptors.insert("EpModelType".to_string(), DspNodeDescriptor::new("EpModelType", "Electromechanical Vintage Stage Piano Voice Architecture", DspNodeCategory::AcousticPhysicalModel, "Multi-model electromechanical engine selecting vintage tine and reed piano topologies (Rhodes Mark I, Mark II, Wurlitzer 200A, Hohner Pianet) with inductive pickup geometry")
+            .with_param(DspParamSchema::choice("vintage_model_selection", "Electromechanical Piano Model Architecture", &["Rhodes Mark I Suitcase 1973", "Rhodes Mark II Stage 1979", "Wurlitzer 200A Electrostatic", "Hohner Pianet T Sticky-Pad", "Yamaha CP-70 Electric Grand"], 0, "Selected electromechanical piano hardware architecture"))
+            .with_param(DspParamSchema::knob("pickup_tine_distance_mm", "Inductive Pickup to Tine Air Gap", 0.5, 5.0, 1.5, "mm", MacroRole::Tone, "Distance between electromagnetic pickup coil and vibrating tine"))
+            .with_param(DspParamSchema::knob("tine_bark_saturation", "High-Velocity Neoprene Hammer Bark", 0.0, 2.0, 0.85, "drive", MacroRole::Punch, "Harmonic distortion overdrive on aggressive forte keystrokes"))
+            .with_param(DspParamSchema::knob("tonebar_sustain_seconds", "Cast Iron Tonebar Sympathetic Ring Time", 1.0, 12.0, 4.5, "s", MacroRole::Space, "Resonant sustain duration of heavy tonebar mass"))
+            .with_param(DspParamSchema::toggle("enable_damper_felt_buzz", "Model Damper Felt Partial Buzz on Release", true, "Acoustic buzzing transient when damper touches vibrating tine"))
+        );
+        descriptors.insert("PluckArticulation".to_string(), DspNodeDescriptor::new("PluckArticulation", "Acoustic Plectrum Plucking Physics & Scrape Dynamics", DspNodeCategory::AcousticPhysicalModel, "String pluck exciter simulation configuring plectrum gauge, release angle, flesh-to-nail blend, and pick scrape friction along wound bass strings")
+            .with_param(DspParamSchema::choice("plectrum_material_gauge", "Plectrum Material & Thickness Specification", &["Nylon Light (0.60mm)", "Tortoise Shell Medium (0.88mm)", "Heavy Delrin (1.14mm)", "Fingerstyle Flesh & Nail", "Metal Fingerpick (0.025in)"], 1, "Plectrum stiffness and material profile"))
+            .with_param(DspParamSchema::knob("pluck_angle_degrees", "Plectrum Attack Angle Relative to String", 0.0, 60.0, 20.0, "deg", MacroRole::Tone, "Angle of attack determining initial spectral brightness"))
+            .with_param(DspParamSchema::knob("flesh_nail_ratio", "Fingerstyle Flesh vs Nail Contact Blend", 0.0, 1.0, 0.5, "ratio", MacroRole::Character, "Blend between soft finger pulp and sharp keratin fingernail"))
+            .with_param(DspParamSchema::knob("pick_release_snap", "String Snap Release Transient Velocity", 0.1, 2.0, 1.0, "vel", MacroRole::Punch, "Release acceleration creating high-frequency snap transient"))
+            .with_param(DspParamSchema::knob("wound_string_scrape", "Wound Bass String Longitudinal Scrape Amount", 0.0, 1.0, 0.15, "amount", MacroRole::Space, "Longitudinal plectrum scrape friction noise on wound strings"))
+        );
+        descriptors.insert("RotaryArticulation".to_string(), DspNodeDescriptor::new("RotaryArticulation", "Dual-Rotor Horn & Drum Mechanical Leslie Dynamics", DspNodeCategory::AcousticPhysicalModel, "Acoustic rotary speaker physical dynamics modeling horn and drum rotor acceleration rates, mechanical motor belt slip, brake deceleration, and mic placement")
+            .with_param(DspParamSchema::choice("motor_speed_command", "Mechanical Motor Speed Setting", &["Fast (Tremolo 6.8 Hz)", "Slow (Chorale 0.8 Hz)", "Stop (Brake Engaged)", "Coast (Unpowered Deceleration)"], 1, "Operating speed command for rotating horn and drum"))
+            .with_param(DspParamSchema::knob("horn_accel_time_s", "High-Frequency Horn Acceleration Time", 0.5, 4.0, 1.6, "s", MacroRole::Punch, "Time for lightweight horn rotor to reach tremolo speed"))
+            .with_param(DspParamSchema::knob("drum_accel_time_s", "Low-Frequency Drum Rotor Inertia Time", 2.0, 10.0, 5.5, "s", MacroRole::Space, "Time for massive wooden drum rotor to accelerate"))
+            .with_param(DspParamSchema::knob("doppler_pitch_depth_cents", "Acoustic Doppler Pitch Modulation Depth", 5.0, 60.0, 25.0, "cents", MacroRole::Tone, "Doppler pitch deviation frequency excursion"))
+            .with_param(DspParamSchema::knob("mic_separation_angle_deg", "Stereo Microphone Pair Placement Angle", 60.0, 180.0, 120.0, "deg", MacroRole::Character, "Angle between cardioid microphone capsules capturing horn"))
+        );
+        descriptors.insert("ShakuhachiArticulation".to_string(), DspNodeDescriptor::new("ShakuhachiArticulation", "Traditional Japanese Shakuhachi Bamboo Articulation", DspNodeCategory::AcousticPhysicalModel, "Acoustic bamboo flute articulation controller simulating meri/kari head angle pitch bending, muraiki breath bursts, nayashi bending, and utaguchi jet splitting")
+            .with_param(DspParamSchema::choice("head_tilt_posture", "Shakuhachi Head Angle Pitch Bending", &["Neutral Center (Chuu)", "Meri Deep Tilt (-200 cents)", "Dai-Meri Extreme (-400 cents)", "Kari Lift Up (+100 cents)"], 0, "Emboucure head tilt angle altering effective bore length"))
+            .with_param(DspParamSchema::knob("muraiki_breath_burst", "Muraiki Explosive Breath Noise Turbulence", 0.0, 1.0, 0.2, "amount", MacroRole::Punch, "Turbulent non-tonal wind noise burst on attacks"))
+            .with_param(DspParamSchema::knob("nayashi_glide_rate", "Nayashi Microtonal Pitch Glide Transition Rate", 10.0, 500.0, 80.0, "ms", MacroRole::Character, "Smooth upward pitch glide portamento time"))
+            .with_param(DspParamSchema::knob("utaguchi_jet_distance_mm", "Utaguchi Sharp Edge Lip Distance", 2.0, 12.0, 5.5, "mm", MacroRole::Tone, "Distance from lips to sharp buffalo horn utaguchi splitting edge"))
+            .with_param(DspParamSchema::knob("bamboo_node_resonance", "Root-End Bamboo Node Internal Irregularity", 0.0, 1.0, 0.65, "ratio", MacroRole::Space, "Acoustic bore irregularities from natural bamboo root rings"))
+        );
+        descriptors.insert("SitarArticulation".to_string(), DspNodeDescriptor::new("SitarArticulation", "Classical Indian Sitar Meend Bending & Jawari Buzz Articulation", DspNodeCategory::AcousticPhysicalModel, "Sitar articulation physical model simulating transverse fret string deflection (meend up to 5 semitones), chikari rhythmic pulse excitation, and jawari bridge buzzing")
+            .with_param(DspParamSchema::knob("meend_bend_semitones", "Transverse String Pull Meend Range", 0.0, 7.0, 4.0, "semitones", MacroRole::Tone, "Lateral string pulling distance across arched curved frets"))
+            .with_param(DspParamSchema::choice("jawari_bridge_curvature", "Camel Bone Jawari Bridge Slope Profile", &["Open Jawari (Buzzing & Rich)", "Medium Classical (Balanced)", "Closed Khali (Muted & Pure)", "Synthetic Bone Profile"], 0, "Curvature profile of wide vibrating bridge surface"))
+            .with_param(DspParamSchema::knob("chikari_drone_level", "Chikari High Drone String Strike Energy", 0.0, 1.5, 0.8, "energy", MacroRole::Punch, "Excitation amplitude of rhythmic chikari drone strings"))
+            .with_param(DspParamSchema::knob("sympathetic_tarab_resonance", "Tarab Resonant String Sympathetic Coupling", 0.0, 2.0, 1.2, "gain", MacroRole::Space, "Energy transferred to 13 tuned sympathetic tarab strings"))
+            .with_param(DspParamSchema::toggle("mizrab_wire_strike", "Model Wire Mizrab Finger-Plectrum Metallic Attack", true, "Simulate stiff steel wire plectrum click on baj tar playing string"))
+        );
+        descriptors.insert("SpringArticulation".to_string(), DspNodeDescriptor::new("SpringArticulation", "Electromechanical Spring Reverb Tank Kick & Dispersion Articulation", DspNodeCategory::AcousticPhysicalModel, "Mechanical spring tank articulation simulator modeling physical kick impulse excitation, non-linear dispersion chirp, transmission transducer magnetic saturation, and damper pads")
+            .with_param(DspParamSchema::choice("spring_tank_geometry", "Physical Reverb Tank Mechanical Geometry", &["2 Springs Short (Type 4)", "3 Springs Long (Type 9)", "Twin Parallel Counter-Wound", "Vintage Tube Preamp Tank"], 1, "Physical count and length of interlocking coiled springs"))
+            .with_param(DspParamSchema::knob("spring_tank_kick_impulse", "Mechanical Chassis Impact / Kick Force", 0.0, 2.0, 0.0, "impulse", MacroRole::Punch, "Direct mechanical chassis strike producing thunderous spring crash"))
+            .with_param(DspParamSchema::knob("dispersion_chirp_coefficient", "High-Frequency Chirp Dispersion Constant", 10.0, 100.0, 45.0, "disp", MacroRole::Tone, "Dispersion causing high frequencies to travel slower than lows"))
+            .with_param(DspParamSchema::knob("transducer_drive_saturation", "Input Electromagnetic Transducer Overdrive", 0.0, 2.0, 0.4, "drive", MacroRole::Character, "Magnetic core saturation at the sending transducer coil"))
+            .with_param(DspParamSchema::knob("felt_damper_pad_damping", "Mechanical Felt Edge Damper Attenuation", 0.0, 1.0, 0.25, "ratio", MacroRole::Space, "Decay damping applied by physical felt stopper pads"))
+        );
+        descriptors.insert("WoodwindArticulation".to_string(), DspNodeDescriptor::new("WoodwindArticulation", "Woodwind Embouchure Bite Pressure & Acoustic Jet Articulation", DspNodeCategory::AcousticPhysicalModel, "Acoustic woodwind articulation engine simulating reed bite pressure, air jet velocity flutter, tongue articulation damping, and overblow register transitions")
+            .with_param(DspParamSchema::choice("reed_damping_mode", "Tongue Articulation Damping Mode", &["Open Sustain (Legato)", "Soft Tongued (Portato)", "Hard Tongued (Staccato)", "Fluttertongue (Tremolo Roll)"], 0, "Tongue contact with reed controlling attack and release damping"))
+            .with_param(DspParamSchema::knob("embouchure_bite_pressure", "Lip Embouchure Pinch Pressure", 0.1, 2.0, 1.0, "pressure", MacroRole::Tone, "Lip bite pressure damping reed tip aperture and raising pitch"))
+            .with_param(DspParamSchema::knob("flutter_tongue_rate_hz", "Fluttertongue Vibration Frequency", 10.0, 35.0, 22.0, "Hz", MacroRole::Punch, "Frequency of rapid tongue roll modulating air stream"))
+            .with_param(DspParamSchema::knob("overblow_register_hysteresis", "Register Transition Overblow Hysteresis", 0.1, 1.0, 0.4, "ratio", MacroRole::Character, "Latching hysteresis threshold for jumping to second register"))
+            .with_param(DspParamSchema::knob("breath_noise_ratio", "Unvoiced Breath Noise Air Leakage", 0.0, 0.5, 0.08, "ratio", MacroRole::Space, "Turbulent air escaping around the player's lips"))
+        );
+        descriptors.insert("JiBridgeProfile".to_string(), DspNodeDescriptor::new("JiBridgeProfile", "Movable Triangular Ji Bridge Acoustic Profile & Paulownia Coupling", DspNodeCategory::AcousticPhysicalModel, "Acoustic bridge profile selector for traditional Asian zithers (Koto / Guzheng) modeling movable bridge material density, boundary compliance, and behind-the-bridge sympathetic string reflection")
+            .with_param(DspParamSchema::choice("bridge_material_profile", "Movable Ji Bridge Material Density Profile", &["Paulownia Hardwood (Traditional)", "Ivory Bone (Classical Bright)", "Rosewood Guzheng (Concert Resonance)", "Synthetic Plastic (Modern Stable)", "Smoked Bamboo (Vintage Mellow)"], 0, "Physical material density and acoustic impedance of movable bridge"))
+            .with_param(DspParamSchema::knob("bridge_position_fraction", "Movable Bridge Location Along String Length", 0.1, 0.9, 0.65, "pos", MacroRole::Tone, "Bridge placement defining playing vs behind-the-bridge segment length"))
+            .with_param(DspParamSchema::knob("behind_bridge_sympathetic_bleed", "Behind-the-Bridge Resonant Energy Bleed", 0.0, 0.5, 0.12, "bleed", MacroRole::Space, "Energy transmission into unplayed string segment behind bridge"))
+            .with_param(DspParamSchema::knob("oshi_ite_tension_ratio", "Oshi-Ite Left Hand String Press Tension", 1.0, 1.5, 1.0, "ratio", MacroRole::Punch, "Tension increase from left hand pushing string behind bridge"))
+            .with_param(DspParamSchema::knob("soundboard_impedance_coupling", "Paulownia Soundboard Modal Impedance Matching", 0.1, 1.0, 0.75, "ratio", MacroRole::Character, "Impedance matching factor between triangular bridge foot and soundboard"))
+        );
+        descriptors.insert("AutoWahFilterMode".to_string(), DspNodeDescriptor::new("AutoWahFilterMode", "Dynamic Auto-Wah State-Variable Filter & Envelope Sweep Engine", DspNodeCategory::FilterEq, "Tactile auto-wah envelope follower modulating a multi-mode state-variable filter (Lowpass, Bandpass, Highpass, Peaking) with variable sensitivity, Q resonance, and up/down sweep direction")
+            .with_param(DspParamSchema::choice("filter_sweep_topology", "Auto-Wah Filter Sweep Topology", &["Bandpass Vocal Wah (Classic Q)", "Lowpass Funk Sweep", "Highpass Laser Sweep", "Dual Bandpass Formant Wah"], 0, "Filter topology swept by dynamic envelope follower"))
+            .with_param(DspParamSchema::knob("envelope_sensitivity", "Input Level Envelope Detection Sensitivity", 0.1, 10.0, 2.5, "gain", MacroRole::Punch, "Input gain driving envelope follower threshold"))
+            .with_param(DspParamSchema::knob("filter_resonance_q", "Filter Resonant Peak Sharpness Q", 0.5, 30.0, 8.0, "Q", MacroRole::Tone, "Resonance peak intensity producing vocal wah vowel sound"))
+            .with_param(DspParamSchema::choice("sweep_direction", "Envelope Cutoff Frequency Sweep Direction", &["Sweep Up (Level -> Higher Freq)", "Sweep Down (Level -> Lower Freq)", "Bipolar LFO / Follower Mix"], 0, "Direction of cutoff excursion with increasing signal volume"))
+            .with_param(DspParamSchema::log_knob("base_frequency_hz", "Base Filter Frequency at Zero Input", 100.0, 2500.0, 450.0, "Hz", MacroRole::Character, "Resting center frequency before envelope modulation"))
+            .with_param(DspParamSchema::knob("attack_release_speed_ms", "Envelope Follower Reaction Time", 5.0, 200.0, 25.0, "ms", MacroRole::Space, "Envelope follower integration time constant"))
+        );
+        descriptors.insert("DrumClassClassification".to_string(), DspNodeDescriptor::new("DrumClassClassification", "Deep Neural Drum Hit Categorization & Transient Tagging HUD", DspNodeCategory::NeuralAi, "Real-time AI audio classifier identifying incoming drum transients into 7 standard percussion classes (Kick, Snare, Closed HiHat, Open HiHat, Tom, Cymbal, Percussion) with confidence scoring")
+            .with_param(DspParamSchema::choice("classified_drum_class", "Predicted Percussion Classification", &["Kick Drum (Bass)", "Snare Drum (Acoustic/Electronic)", "Closed Hi-Hat", "Open Hi-Hat", "Tom-Tom (Floor/Rack)", "Crash/Ride Cymbal", "Auxiliary Percussion"], 0, "Real-time neural inference drum category output"))
+            .with_param(DspParamSchema::knob("prediction_confidence_pct", "Neural Classifier Inference Confidence", 0.0, 100.0, 94.5, "%", MacroRole::Tone, "Inference certainty metric for classified transient"))
+            .with_param(DspParamSchema::knob("transient_sensitivity", "Onset Transient Detection Sensitivity", 0.05, 1.0, 0.45, "thresh", MacroRole::Punch, "Threshold for isolating discrete drum hits from audio stream"))
+            .with_param(DspParamSchema::toggle("auto_tag_sample_markers", "Auto-Tag Slices with Classified Drum Name", true, "Automatically label slice markers in sampler with predicted drum class"))
+            .with_param(DspParamSchema::choice("inference_model_precision", "Neural Model Quantization & Inference Speed", &["INT8 Quantized Fast (0.2ms)", "FP16 TensorRT Accurate (0.6ms)", "FP32 Full Analytical"], 0, "Weight precision for the ONNX drum classifier network"))
+        );
+        descriptors.insert("PluginMarketplace".to_string(), DspNodeDescriptor::new("PluginMarketplace", "Decentralized CLAP & VST3 Plugin Marketplace Catalog", DspNodeCategory::Utility, "Community plugin discovery and installation portal with semantic search, verified SHA-256 integrity hashes, developer tags, licensing tiers, and single-click downloading")
+            .with_param(DspParamSchema::choice("marketplace_filter_category", "Catalog Plugin Category Filter", &["All Categories", "Instruments & Synths", "Dynamics & Compressors", "EQ & Spatial Filters", "Reverb & Delay Delights", "Creative Glitch & Neural AI"], 0, "Active catalog browsing filter"))
+            .with_param(DspParamSchema::choice("license_filter_tier", "Plugin License & Pricing Tier", &["Free & Open Source (FOSS)", "Commercial Verified", "Freeware Community", "All Licenses"], 0, "Licensing restriction filter for catalog results"))
+            .with_param(DspParamSchema::toggle("show_only_clap_plugins", "Filter Exclusively for Native CLAP Plugins", false, "Show only plugins supporting CLAP sample-accurate automation"))
+            .with_param(DspParamSchema::knob("catalog_items_per_page", "Marketplace Catalog Display Density", 10.0, 100.0, 25.0, "items", MacroRole::Character, "Number of plugins displayed per catalog page"))
+            .with_param(DspParamSchema::toggle("auto_verify_sha256_checksum", "Enforce Strict SHA-256 Hash Verification on Install", true, "Verify cryptographic checksum before extracting downloaded plugin"))
+        );
+        descriptors.insert("PluginLatencyCompensationEngine".to_string(), DspNodeDescriptor::new("PluginLatencyCompensationEngine", "Sample-Accurate Plugin Delay Compensation (PDC) Matrix HUD", DspNodeCategory::Utility, "Mixer delay alignment engine analyzing internal DSP lookahead across tracks, buses, and sidechain sends, dynamically applying sample-accurate delay compensation buffers")
+            .with_param(DspParamSchema::choice("pdc_alignment_mode", "PDC Delay Alignment Calculation Mode", &["Full Mix & Sidechain Alignment", "Audio Tracks Only (Low Latency)", "Master Bus Lookahead Only", "Disabled (Zero Extra Delay)"], 0, "Mixer phase alignment policy across signal paths"))
+            .with_param(DspParamSchema::knob("max_system_latency_samples", "Detected Maximum Chain Delay", 0.0, 8192.0, 256.0, "samples", MacroRole::Space, "Maximum detected lookahead delay among all active plugins"))
+            .with_param(DspParamSchema::knob("sidechain_lookahead_padding", "Sidechain Pre-Delay Timing Compensation", 0.0, 50.0, 10.0, "ms", MacroRole::Tone, "Advance time for ducking sidechain triggers ahead of peaks"))
+            .with_param(DspParamSchema::toggle("realtime_low_latency_override", "Engage Low-Latency Live Record Monitoring", false, "Bypasses high-latency plugins on armed recording tracks"))
+            .with_param(DspParamSchema::knob("compensated_audio_tracks_count", "Total Delay-Compensated Active Tracks", 1.0, 128.0, 16.0, "tracks", MacroRole::Punch, "Number of audio routing tracks currently aligned by delay buffers"))
+        );
+        descriptors.insert("LuaScriptMarketplace".to_string(), DspNodeDescriptor::new("LuaScriptMarketplace", "Community Lua DSP & Sequencer Script Exchange Hub", DspNodeCategory::Utility, "Curated repository of user-submitted Lua DSP modules, generative MIDI transformers, and custom GUI inspectors with rating stars, script author attribution, and live test run")
+            .with_param(DspParamSchema::choice("script_repository_branch", "Lua Script Community Repository Branch", &["Official Curated (Stable)", "Experimental Community Jam", "Personal Local Scripts", "Archived Contrib"], 0, "Target repository catalog for script browsing"))
+            .with_param(DspParamSchema::choice("script_category_filter", "Target Script Functional Category", &["All Script Types", "Generative MIDI Mutators", "Custom DSP Audio Effects", "Procedural Synth Generators", "Theme & Palette Tools"], 0, "Functional filter for available Lua scripts"))
+            .with_param(DspParamSchema::toggle("require_sandbox_safe_declaration", "Require Strict Sandboxed Permission Declaration", true, "Filter out scripts requesting unrestricted filesystem access"))
+            .with_param(DspParamSchema::knob("script_download_cache_mb", "Local Lua Script Cache Storage Limit", 10.0, 500.0, 50.0, "MB", MacroRole::Space, "Maximum local storage allocated for downloaded script bundles"))
+            .with_param(DspParamSchema::toggle("auto_check_script_updates", "Check for Updated Script Versions on Startup", true, "Automatically check for newer revisions of installed Lua scripts"))
+        );
+        descriptors.insert("LuaScriptSafeMode".to_string(), DspNodeDescriptor::new("LuaScriptSafeMode", "Sandboxed Lua Virtual Machine Security & Resource Governor", DspNodeCategory::Utility, "Multi-tenant sandboxed Lua runtime restricting memory allocation, instruction cycle count limits, blocking dangerous OS syscalls, and providing panic recovery")
+            .with_param(DspParamSchema::choice("sandbox_isolation_tier", "Lua VM Sandbox Isolation Level", &["Strict Isolated (Zero OS Access)", "Permissive (Local Project Directory Only)", "Developer Unrestricted (All Syscalls)"], 0, "Execution security level applied to running Lua scripts"))
+            .with_param(DspParamSchema::knob("max_instruction_cycles_k", "Maximum Instruction Execution Limit Per Block", 10.0, 1000.0, 100.0, "k-ops", MacroRole::Punch, "Instruction cycle ceiling preventing infinite loops in audio thread"))
+            .with_param(DspParamSchema::knob("max_memory_allocation_mb", "Per-Script Heap Memory Allocation Limit", 1.0, 64.0, 8.0, "MB", MacroRole::Character, "Memory quota limit before garbage collector force-terminates script"))
+            .with_param(DspParamSchema::toggle("intercept_fatal_lua_panics", "Catch Lua Runtime Panics Without Host Crash", true, "Intercept syntax and evaluation exceptions with graceful degradation"))
+            .with_param(DspParamSchema::toggle("log_blocked_syscall_attempts", "Log Unauthorized File/Network Access to Console", true, "Output security alerts when scripts attempt forbidden IO operations"))
+        );
+        descriptors.insert("RemoteUserCursorSync".to_string(), DspNodeDescriptor::new("RemoteUserCursorSync", "Real-Time Multi-Producer Cursor & Selection Broadcaster", DspNodeCategory::Utility, "Low-latency network synchronizer rendering remote collaborator mouse pointers, track selections, time-range highlights, and active parameter focus with distinct user colors")
+            .with_param(DspParamSchema::knob("cursor_broadcast_rate_hz", "Cursor Coordinates Network Broadcast Rate", 10.0, 60.0, 30.0, "Hz", MacroRole::Character, "Network packet frequency for smooth remote pointer motion"))
+            .with_param(DspParamSchema::knob("remote_cursor_smoothing_ms", "Remote Pointer Interpolation Smoothing", 10.0, 100.0, 35.0, "ms", MacroRole::Space, "Hermite interpolation time constant smoothing network jitter"))
+            .with_param(DspParamSchema::toggle("display_user_nameplates", "Render Remote Collaborator Name Badges", true, "Display producer username tags floating next to mouse cursors"))
+            .with_param(DspParamSchema::toggle("highlight_remote_track_focus", "Highlight Tracks Currently Edited by Peers", true, "Draw glowing outline around tracks currently selected by collaborators"))
+            .with_param(DspParamSchema::choice("inactive_cursor_fade_mode", "Idle Collaborator Cursor Disappearance", &["Fade Out After 10 Seconds", "Dim Cursor & Retain Name", "Always Visible At Last Point"], 0, "Visual behavior when a collaborator's mouse remains motionless"))
+        );
+        descriptors.insert("VoiceMemoAnnotation".to_string(), DspNodeDescriptor::new("VoiceMemoAnnotation", "Arrangement Timeline Voice Memo & Spoken Annotation HUD", DspNodeCategory::Utility, "Collaborative spoken voice note recorder anchoring microphone memos to timeline bars, with automatic local speech-to-text transcriptions and team review badges")
+            .with_param(DspParamSchema::choice("audio_recording_quality", "Voice Note Audio Compression Codec", &["Opus Voice 24kbps Mono", "Opus Music 64kbps Stereo", "Lossless FLAC 16-bit", "Raw PCM WAV"], 0, "Audio compression format for stored voice notes"))
+            .with_param(DspParamSchema::knob("voice_memo_playback_volume", "Voice Memo Audition Playback Gain", 0.0, 2.0, 1.0, "gain", MacroRole::Tone, "Playback level of spoken annotations relative to song mix"))
+            .with_param(DspParamSchema::toggle("duck_song_mix_during_memo", "Auto-Duck Musical Mix While Auditioning Memos", true, "Attenuate song playback by -12dB when a voice memo plays"))
+            .with_param(DspParamSchema::toggle("auto_transcribe_speech_to_text", "Generate Local Offline Speech Transcription", true, "Run lightweight Whisper model to produce text transcript bubbles"))
+            .with_param(DspParamSchema::knob("max_voice_memo_duration_s", "Maximum Single Memo Duration Limit", 10.0, 300.0, 60.0, "s", MacroRole::Space, "Maximum recording duration cap per individual spoken note"))
+        );
+        descriptors.insert("SynchronizedPatternTrigger".to_string(), DspNodeDescriptor::new("SynchronizedPatternTrigger", "Peer-to-Peer Quantized MIDI Pattern Launch & Phase Lock", DspNodeCategory::Utility, "Distributed pattern sequencer sync coordinator ensuring that scene launches, clip triggers, and pattern changes trigger on identical musical beat boundaries across all connected peers")
+            .with_param(DspParamSchema::choice("quantize_launch_grid", "Musical Beat Quantization Launch Grid", &["1 Bar (Strict Downbeat)", "1/2 Bar (2 Beats)", "1/4 Bar (1 Beat)", "1/8 Note Fast Launch", "Instant (Zero Quantize)"], 0, "Musical grid boundary required for firing synchronized clips"))
+            .with_param(DspParamSchema::knob("network_latency_anticipation_ms", "Predictive Network Latency Compensation", 0.0, 200.0, 45.0, "ms", MacroRole::Punch, "Pre-scheduled trigger lead time offsetting Internet packet transit"))
+            .with_param(DspParamSchema::toggle("enforce_tempo_master_lock", "Designate Session Host as Exclusive Tempo Clock", true, "Locks BPM transport controls to prevent conflicting tempo changes"))
+            .with_param(DspParamSchema::knob("phase_drift_tolerance_us", "Sub-Sample Phase Synchronization Drift Cap", 100.0, 5000.0, 500.0, "us", MacroRole::Tone, "Permissible clock phase drift before hard resynchronization occurs"))
+            .with_param(DspParamSchema::choice("late_packet_behavior", "Action on Packets Arriving Past Grid Boundary", &["Execute at Next Quantize Boundary", "Drop Late Pattern Trigger", "Fire Immediately with Catch-Up"], 0, "Fail-safe behavior when a peer's trigger packet suffers packet loss"))
+        );
+        descriptors.insert("WebRtcMidiPacket".to_string(), DspNodeDescriptor::new("WebRtcMidiPacket", "Low-Latency WebRTC Data Channel MIDI & MPE Packetizer", DspNodeCategory::Utility, "Zero-allocation binary serializer packing high-resolution MIDI 2.0, MPE per-note pitch bend, and transport sync messages into ultra-low-latency WebSockets/WebRTC datagrams")
+            .with_param(DspParamSchema::choice("transport_protocol_type", "Low-Latency Network Transport Protocol", &["WebRTC DataChannel (SCTP UDP)", "WebSocket Binary Stream (TCP)", "Local LAN Raw UDP Multicast"], 0, "Underlying network transport technology for streaming MIDI"))
+            .with_param(DspParamSchema::toggle("enable_midi2_per_note_pitch", "Stream High-Res 32-bit MIDI 2.0 Pitch Bends", true, "Include full 32-bit floating point microtonal pitch bends"))
+            .with_param(DspParamSchema::knob("datagram_bundle_cadence_ms", "Packet Aggregation Window Before Send", 0.5, 20.0, 2.0, "ms", MacroRole::Tone, "Aggregation interval bundling simultaneous note events"))
+            .with_param(DspParamSchema::toggle("packet_loss_retransmission", "Selective NACK Retransmission for Note-Offs", true, "Guarantee that Note-Off messages never get lost, avoiding hung notes"))
+            .with_param(DspParamSchema::knob("active_midi_channels_mask", "Streamed MIDI Channels Bitmask", 1.0, 16.0, 16.0, "ch", MacroRole::Punch, "Count of active MIDI channels multiplexed over network socket"))
+        );
 
         Self { descriptors }
     }
@@ -9517,6 +9666,27 @@ descriptors.insert("BellowsGesturePattern".to_string(), DspNodeDescriptor::new("
             ("PluginConflictDetector", DspNodeCategory::Utility, "Conflicting Third-Party Audio Driver & Plugin Incompatibility Detector"),
             ("PluginStateBackup", DspNodeCategory::Utility, "Pre-Update Plugin State Snapshot & Recovery Storage"),
             ("OfflineLocalProjectManager", DspNodeCategory::Utility, "Offline-First Local Project Storage & Zero-Cloud Isolation Manager"),
+            ("GrandPianoArticulation", DspNodeCategory::AcousticPhysicalModel, "Concert Grand Piano Hammer Strike & Escapement Articulation"),
+            ("PipeOrganArticulation", DspNodeCategory::AcousticPhysicalModel, "Pipe Organ Pallet Valve Tracker Touch & Windchest Articulation"),
+            ("MalletArticulation", DspNodeCategory::AcousticPhysicalModel, "Struck Idiophone Mallet Impact Dynamics & Articulation"),
+            ("EpModelType", DspNodeCategory::AcousticPhysicalModel, "Electromechanical Vintage Stage Piano Voice Architecture"),
+            ("PluckArticulation", DspNodeCategory::AcousticPhysicalModel, "Acoustic Plectrum Plucking Physics & Scrape Dynamics"),
+            ("RotaryArticulation", DspNodeCategory::AcousticPhysicalModel, "Dual-Rotor Horn & Drum Mechanical Leslie Dynamics"),
+            ("ShakuhachiArticulation", DspNodeCategory::AcousticPhysicalModel, "Traditional Japanese Shakuhachi Bamboo Articulation"),
+            ("SitarArticulation", DspNodeCategory::AcousticPhysicalModel, "Classical Indian Sitar Meend Bending & Jawari Buzz Articulation"),
+            ("SpringArticulation", DspNodeCategory::AcousticPhysicalModel, "Electromechanical Spring Reverb Tank Kick & Dispersion Articulation"),
+            ("WoodwindArticulation", DspNodeCategory::AcousticPhysicalModel, "Woodwind Embouchure Bite Pressure & Acoustic Jet Articulation"),
+            ("JiBridgeProfile", DspNodeCategory::AcousticPhysicalModel, "Movable Triangular Ji Bridge Acoustic Profile & Paulownia Coupling"),
+            ("AutoWahFilterMode", DspNodeCategory::FilterEq, "Dynamic Auto-Wah State-Variable Filter & Envelope Sweep Engine"),
+            ("DrumClassClassification", DspNodeCategory::NeuralAi, "Deep Neural Drum Hit Categorization & Transient Tagging HUD"),
+            ("PluginMarketplace", DspNodeCategory::Utility, "Decentralized CLAP & VST3 Plugin Marketplace Catalog"),
+            ("PluginLatencyCompensationEngine", DspNodeCategory::Utility, "Sample-Accurate Plugin Delay Compensation (PDC) Matrix HUD"),
+            ("LuaScriptMarketplace", DspNodeCategory::Utility, "Community Lua DSP & Sequencer Script Exchange Hub"),
+            ("LuaScriptSafeMode", DspNodeCategory::Utility, "Sandboxed Lua Virtual Machine Security & Resource Governor"),
+            ("RemoteUserCursorSync", DspNodeCategory::Utility, "Real-Time Multi-Producer Cursor & Selection Broadcaster"),
+            ("VoiceMemoAnnotation", DspNodeCategory::Utility, "Arrangement Timeline Voice Memo & Spoken Annotation HUD"),
+            ("SynchronizedPatternTrigger", DspNodeCategory::Utility, "Peer-to-Peer Quantized MIDI Pattern Launch & Phase Lock"),
+            ("WebRtcMidiPacket", DspNodeCategory::Utility, "Low-Latency WebRTC Data Channel MIDI & MPE Packetizer"),
         ]
     }
 
@@ -11591,6 +11761,27 @@ descriptors.insert("BellowsGesturePattern".to_string(), DspNodeDescriptor::new("
             "pluginconflictdetector" | "conflictdetector" | "driverconflicts" | "pluginincompatibility" => Some("PluginConflictDetector"),
             "pluginstatebackup" | "pluginstate" | "preupdatesnapshot" | "pluginrecoverysnapshot" => Some("PluginStateBackup"),
             "offlinelocalprojectmanager" | "offlineprojectmanager" | "localprojectmanager" | "airgappedproject" => Some("OfflineLocalProjectManager"),
+            "grandpianoarticulation" | "grandpianoaction" | "pianotouch" | "pianohammeraction" => Some("GrandPianoArticulation"),
+            "pipeorganarticulation" | "organtracker" | "pipeorganaction" | "organchif" => Some("PipeOrganArticulation"),
+            "malletarticulation" | "malletdynamics" | "malletphysics" | "idiophonestrike" => Some("MalletArticulation"),
+            "epmodeltype" | "vintageepiano" | "rhodesmodel" | "epianovoice" => Some("EpModelType"),
+            "pluckarticulation" | "plectrumdynamics" | "guitarpluck" | "pickscrape" => Some("PluckArticulation"),
+            "rotaryarticulation" | "lesliedynamics" | "rotorspeed" | "rotaryrotoraccel" => Some("RotaryArticulation"),
+            "shakuhachiarticulation" | "shakuhachimerikari" | "muraiki" | "nayashi" => Some("ShakuhachiArticulation"),
+            "sitararticulation" | "sitarmeend" | "sitarchikari" | "tarabresonance" => Some("SitarArticulation"),
+            "springarticulation" | "springtankkick" | "springboing" | "springdispersion" => Some("SpringArticulation"),
+            "woodwindarticulation" | "woodwindembouchure" | "fluttertongue" | "overblowregister" => Some("WoodwindArticulation"),
+            "jibridgeprofile" | "jibridgematerial" | "zitherbridge" | "guzhengbridge" => Some("JiBridgeProfile"),
+            "autowahfiltermode" | "autowahmode" | "envelopesweepfilter" | "vocalwahfilter" => Some("AutoWahFilterMode"),
+            "drumclassclassification" | "drumclassifier" | "aidrumtagger" | "neuraldrumclass" => Some("DrumClassClassification"),
+            "communitypluginmarket" | "pluginmarket" | "pluginstore" | "clapmarketplace" => Some("PluginMarketplace"),
+            "pluginlatencycompensationengine" | "pdcengine" | "latencycompensation" | "pluginlookaheadalign" => Some("PluginLatencyCompensationEngine"),
+            "luascriptmarketplace" | "luamarket" | "luascripts" | "luahub" => Some("LuaScriptMarketplace"),
+            "luascriptsafemode" | "luasandbox" | "luasafemode" | "luagovernor" => Some("LuaScriptSafeMode"),
+            "remoteusercursorsync" | "remotecursors" | "collabcursors" | "multiuserpointers" => Some("RemoteUserCursorSync"),
+            "voicememoannotation" | "voicememo" | "timelinevoicenote" | "audiomemo" => Some("VoiceMemoAnnotation"),
+            "synchronizedpatterntrigger" | "patterntrigger" | "quantizedcliplaunch" | "networkphaselock" => Some("SynchronizedPatternTrigger"),
+            "webrtcmidipacket" | "webrtcmidi" | "networkmidi" | "mpedatachannel" => Some("WebRtcMidiPacket"),
             _ => None,
         }
     }
@@ -19479,6 +19670,176 @@ descriptors.insert("BellowsGesturePattern".to_string(), DspNodeDescriptor::new("
                     .with_param(DspParamDescriptor::new_linear("retain_local_revisions", "Maximum Stored Local Project Revisions", 5.0, 100.0, 25.0, "revisions", (168, 85, 247)))
                     .with_param(DspParamDescriptor::new_bool("zero_cloud_leak_guard", "Enforce Zero Outbound Cloud Socket Assertion", true, (34, 197, 94)))
             ),
+            "GrandPianoArticulation" => Box::new(
+                GenericDspNodeUi::new("GrandPianoArticulation", "Concert Grand Piano Hammer Strike & Escapement Articulation", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("touch_velocity_curve", "Hammer Strike Velocity Response Curve", 0.0, 3.0, 0.0, "curve", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("escapement_distance_mm", "Hammer Escapement Blow Distance", 1.0, 5.0, 2.5, "mm", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("una_corda_shift", "Una Corda Soft Pedal Hammer Offset", 0.0, 1.0, 0.0, "ratio", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("damper_resonance_gain", "Sympathetic Duplex Damper Resonance Gain", 0.0, 2.0, 1.0, "gain", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("enable_key_release_thud", "Synthesize Mechanical Key Release Thud", true, (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_linear("hammer_hardness_aging", "Felt Wear & Hardness Voicing Factor", 0.1, 2.0, 1.0, "factor", (249, 115, 22)))
+            ),
+            "PipeOrganArticulation" => Box::new(
+                GenericDspNodeUi::new("PipeOrganArticulation", "Pipe Organ Pallet Valve Tracker Touch & Windchest Articulation", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("tracker_action_style", "Mechanical Tracker Valve Responsiveness", 0.0, 3.0, 0.0, "style", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("pallet_opening_time_ms", "Pallet Valve Opening Velocity", 2.0, 80.0, 15.0, "ms", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("windchest_sag_depth", "Windchest Pressure Sag on Dense Chords", 0.0, 0.30, 0.08, "ratio", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("chif_transient_intensity", "Pipe Attack Transient Chif Intensity", 0.0, 1.5, 0.7, "intensity", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("swell_shutter_angle_deg", "Swell Chamber Enclosure Shutter Angle", 0.0, 90.0, 45.0, "deg", (34, 197, 94)))
+            ),
+            "MalletArticulation" => Box::new(
+                GenericDspNodeUi::new("MalletArticulation", "Struck Idiophone Mallet Impact Dynamics & Articulation", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("mallet_core_material", "Mallet Head Core Construction Material", 0.0, 4.0, 1.0, "core", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("contact_eccentricity", "Bar Strike Eccentricity Off-Center Ratio", 0.0, 0.8, 0.15, "ratio", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("felt_wrap_thickness_mm", "Outer Yarn / Felt Cushion Thickness", 0.5, 10.0, 3.0, "mm", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("roll_cadence_damping", "Mallet Tremolo Roll Resonance Damping", 0.0, 1.0, 0.25, "ratio", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("impact_bite_velocity", "Nonlinear Contact Deformation Force", 0.5, 3.0, 1.2, "force", (34, 197, 94)))
+            ),
+            "EpModelType" => Box::new(
+                GenericDspNodeUi::new("EpModelType", "Electromechanical Vintage Stage Piano Voice Architecture", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("vintage_model_selection", "Electromechanical Piano Model Architecture", 0.0, 4.0, 0.0, "model", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("pickup_tine_distance_mm", "Inductive Pickup to Tine Air Gap", 0.5, 5.0, 1.5, "mm", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("tine_bark_saturation", "High-Velocity Neoprene Hammer Bark", 0.0, 2.0, 0.85, "drive", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("tonebar_sustain_seconds", "Cast Iron Tonebar Sympathetic Ring Time", 1.0, 12.0, 4.5, "s", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("enable_damper_felt_buzz", "Model Damper Felt Partial Buzz on Release", true, (34, 197, 94)))
+            ),
+            "PluckArticulation" => Box::new(
+                GenericDspNodeUi::new("PluckArticulation", "Acoustic Plectrum Plucking Physics & Scrape Dynamics", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("plectrum_material_gauge", "Plectrum Material & Thickness Specification", 0.0, 4.0, 1.0, "gauge", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("pluck_angle_degrees", "Plectrum Attack Angle Relative to String", 0.0, 60.0, 20.0, "deg", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("flesh_nail_ratio", "Fingerstyle Flesh vs Nail Contact Blend", 0.0, 1.0, 0.5, "ratio", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("pick_release_snap", "String Snap Release Transient Velocity", 0.1, 2.0, 1.0, "vel", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("wound_string_scrape", "Wound Bass String Longitudinal Scrape Amount", 0.0, 1.0, 0.15, "amount", (34, 197, 94)))
+            ),
+            "RotaryArticulation" => Box::new(
+                GenericDspNodeUi::new("RotaryArticulation", "Dual-Rotor Horn & Drum Mechanical Leslie Dynamics", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("motor_speed_command", "Mechanical Motor Speed Setting", 0.0, 3.0, 1.0, "speed", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("horn_accel_time_s", "High-Frequency Horn Acceleration Time", 0.5, 4.0, 1.6, "s", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("drum_accel_time_s", "Low-Frequency Drum Rotor Inertia Time", 2.0, 10.0, 5.5, "s", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("doppler_pitch_depth_cents", "Acoustic Doppler Pitch Modulation Depth", 5.0, 60.0, 25.0, "cents", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("mic_separation_angle_deg", "Stereo Microphone Pair Placement Angle", 60.0, 180.0, 120.0, "deg", (34, 197, 94)))
+            ),
+            "ShakuhachiArticulation" => Box::new(
+                GenericDspNodeUi::new("ShakuhachiArticulation", "Traditional Japanese Shakuhachi Bamboo Articulation", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("head_tilt_posture", "Shakuhachi Head Angle Pitch Bending", 0.0, 3.0, 0.0, "angle", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("muraiki_breath_burst", "Muraiki Explosive Breath Noise Turbulence", 0.0, 1.0, 0.2, "amount", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("nayashi_glide_rate", "Nayashi Microtonal Pitch Glide Transition Rate", 10.0, 500.0, 80.0, "ms", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("utaguchi_jet_distance_mm", "Utaguchi Sharp Edge Lip Distance", 2.0, 12.0, 5.5, "mm", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("bamboo_node_resonance", "Root-End Bamboo Node Internal Irregularity", 0.0, 1.0, 0.65, "ratio", (34, 197, 94)))
+            ),
+            "SitarArticulation" => Box::new(
+                GenericDspNodeUi::new("SitarArticulation", "Classical Indian Sitar Meend Bending & Jawari Buzz Articulation", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("meend_bend_semitones", "Transverse String Pull Meend Range", 0.0, 7.0, 4.0, "semitones", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("jawari_bridge_curvature", "Camel Bone Jawari Bridge Slope Profile", 0.0, 3.0, 0.0, "curv", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("chikari_drone_level", "Chikari High Drone String Strike Energy", 0.0, 1.5, 0.8, "energy", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("sympathetic_tarab_resonance", "Tarab Resonant String Sympathetic Coupling", 0.0, 2.0, 1.2, "gain", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("mizrab_wire_strike", "Model Wire Mizrab Finger-Plectrum Metallic Attack", true, (34, 197, 94)))
+            ),
+            "SpringArticulation" => Box::new(
+                GenericDspNodeUi::new("SpringArticulation", "Electromechanical Spring Reverb Tank Kick & Dispersion Articulation", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("spring_tank_geometry", "Physical Reverb Tank Mechanical Geometry", 0.0, 3.0, 1.0, "geom", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("spring_tank_kick_impulse", "Mechanical Chassis Impact / Kick Force", 0.0, 2.0, 0.0, "impulse", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("dispersion_chirp_coefficient", "High-Frequency Chirp Dispersion Constant", 10.0, 100.0, 45.0, "disp", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("transducer_drive_saturation", "Input Electromagnetic Transducer Overdrive", 0.0, 2.0, 0.4, "drive", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("felt_damper_pad_damping", "Mechanical Felt Edge Damper Attenuation", 0.0, 1.0, 0.25, "ratio", (34, 197, 94)))
+            ),
+            "WoodwindArticulation" => Box::new(
+                GenericDspNodeUi::new("WoodwindArticulation", "Woodwind Embouchure Bite Pressure & Acoustic Jet Articulation", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("reed_damping_mode", "Tongue Articulation Damping Mode", 0.0, 3.0, 0.0, "mode", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("embouchure_bite_pressure", "Lip Embouchure Pinch Pressure", 0.1, 2.0, 1.0, "pressure", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("flutter_tongue_rate_hz", "Fluttertongue Vibration Frequency", 10.0, 35.0, 22.0, "Hz", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("overblow_register_hysteresis", "Register Transition Overblow Hysteresis", 0.1, 1.0, 0.4, "ratio", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("breath_noise_ratio", "Unvoiced Breath Noise Air Leakage", 0.0, 0.5, 0.08, "ratio", (34, 197, 94)))
+            ),
+            "JiBridgeProfile" => Box::new(
+                GenericDspNodeUi::new("JiBridgeProfile", "Movable Triangular Ji Bridge Acoustic Profile & Paulownia Coupling", DspNodeCategory::AcousticPhysicalModel)
+                    .with_param(DspParamDescriptor::new_linear("bridge_material_profile", "Movable Ji Bridge Material Density Profile", 0.0, 4.0, 0.0, "mat", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("bridge_position_fraction", "Movable Bridge Location Along String Length", 0.1, 0.9, 0.65, "pos", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("behind_bridge_sympathetic_bleed", "Behind-the-Bridge Resonant Energy Bleed", 0.0, 0.5, 0.12, "bleed", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("oshi_ite_tension_ratio", "Oshi-Ite Left Hand String Press Tension", 1.0, 1.5, 1.0, "ratio", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("soundboard_impedance_coupling", "Paulownia Soundboard Modal Impedance Matching", 0.1, 1.0, 0.75, "ratio", (34, 197, 94)))
+            ),
+            "AutoWahFilterMode" => Box::new(
+                GenericDspNodeUi::new("AutoWahFilterMode", "Dynamic Auto-Wah State-Variable Filter & Envelope Sweep Engine", DspNodeCategory::FilterEq)
+                    .with_param(DspParamDescriptor::new_linear("filter_sweep_topology", "Auto-Wah Filter Sweep Topology", 0.0, 3.0, 0.0, "topo", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("envelope_sensitivity", "Input Level Envelope Detection Sensitivity", 0.1, 10.0, 2.5, "gain", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("filter_resonance_q", "Filter Resonant Peak Sharpness Q", 0.5, 30.0, 8.0, "Q", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("sweep_direction", "Envelope Cutoff Frequency Sweep Direction", 0.0, 2.0, 0.0, "dir", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("base_frequency_hz", "Base Filter Frequency at Zero Input", 100.0, 2500.0, 450.0, "Hz", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_linear("attack_release_speed_ms", "Envelope Follower Reaction Time", 5.0, 200.0, 25.0, "ms", (249, 115, 22)))
+            ),
+            "DrumClassClassification" => Box::new(
+                GenericDspNodeUi::new("DrumClassClassification", "Deep Neural Drum Hit Categorization & Transient Tagging HUD", DspNodeCategory::NeuralAi)
+                    .with_param(DspParamDescriptor::new_linear("classified_drum_class", "Predicted Percussion Classification", 0.0, 6.0, 0.0, "class", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("prediction_confidence_pct", "Neural Classifier Inference Confidence", 0.0, 100.0, 94.5, "%", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("transient_sensitivity", "Onset Transient Detection Sensitivity", 0.05, 1.0, 0.45, "thresh", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("auto_tag_sample_markers", "Auto-Tag Slices with Classified Drum Name", true, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("inference_model_precision", "Neural Model Quantization & Inference Speed", 0.0, 2.0, 0.0, "prec", (34, 197, 94)))
+            ),
+            "PluginMarketplace" => Box::new(
+                GenericDspNodeUi::new("PluginMarketplace", "Decentralized CLAP & VST3 Plugin Marketplace Catalog", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("marketplace_filter_category", "Catalog Plugin Category Filter", 0.0, 5.0, 0.0, "cat", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("license_filter_tier", "Plugin License & Pricing Tier", 0.0, 3.0, 0.0, "tier", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("show_only_clap_plugins", "Filter Exclusively for Native CLAP Plugins", false, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("catalog_items_per_page", "Marketplace Catalog Display Density", 10.0, 100.0, 25.0, "items", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("auto_verify_sha256_checksum", "Enforce Strict SHA-256 Hash Verification on Install", true, (34, 197, 94)))
+            ),
+            "PluginLatencyCompensationEngine" => Box::new(
+                GenericDspNodeUi::new("PluginLatencyCompensationEngine", "Sample-Accurate Plugin Delay Compensation (PDC) Matrix HUD", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("pdc_alignment_mode", "PDC Delay Alignment Calculation Mode", 0.0, 3.0, 0.0, "mode", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("max_system_latency_samples", "Detected Maximum Chain Delay", 0.0, 8192.0, 256.0, "samples", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("sidechain_lookahead_padding", "Sidechain Pre-Delay Timing Compensation", 0.0, 50.0, 10.0, "ms", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("realtime_low_latency_override", "Engage Low-Latency Live Record Monitoring", false, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("compensated_audio_tracks_count", "Total Delay-Compensated Active Tracks", 1.0, 128.0, 16.0, "tracks", (34, 197, 94)))
+            ),
+            "LuaScriptMarketplace" => Box::new(
+                GenericDspNodeUi::new("LuaScriptMarketplace", "Community Lua DSP & Sequencer Script Exchange Hub", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("script_repository_branch", "Lua Script Community Repository Branch", 0.0, 3.0, 0.0, "branch", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("script_category_filter", "Target Script Functional Category", 0.0, 4.0, 0.0, "filter", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("require_sandbox_safe_declaration", "Require Strict Sandboxed Permission Declaration", true, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("script_download_cache_mb", "Local Lua Script Cache Storage Limit", 10.0, 500.0, 50.0, "MB", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("auto_check_script_updates", "Check for Updated Script Versions on Startup", true, (34, 197, 94)))
+            ),
+            "LuaScriptSafeMode" => Box::new(
+                GenericDspNodeUi::new("LuaScriptSafeMode", "Sandboxed Lua Virtual Machine Security & Resource Governor", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("sandbox_isolation_tier", "Lua VM Sandbox Isolation Level", 0.0, 2.0, 0.0, "tier", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("max_instruction_cycles_k", "Maximum Instruction Execution Limit Per Block", 10.0, 1000.0, 100.0, "k-ops", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("max_memory_allocation_mb", "Per-Script Heap Memory Allocation Limit", 1.0, 64.0, 8.0, "MB", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("intercept_fatal_lua_panics", "Catch Lua Runtime Panics Without Host Crash", true, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("log_blocked_syscall_attempts", "Log Unauthorized File/Network Access to Console", true, (34, 197, 94)))
+            ),
+            "RemoteUserCursorSync" => Box::new(
+                GenericDspNodeUi::new("RemoteUserCursorSync", "Real-Time Multi-Producer Cursor & Selection Broadcaster", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("cursor_broadcast_rate_hz", "Cursor Coordinates Network Broadcast Rate", 10.0, 60.0, 30.0, "Hz", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("remote_cursor_smoothing_ms", "Remote Pointer Interpolation Smoothing", 10.0, 100.0, 35.0, "ms", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("display_user_nameplates", "Render Remote Collaborator Name Badges", true, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("highlight_remote_track_focus", "Highlight Tracks Currently Edited by Peers", true, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("inactive_cursor_fade_mode", "Idle Collaborator Cursor Disappearance", 0.0, 2.0, 0.0, "mode", (34, 197, 94)))
+            ),
+            "VoiceMemoAnnotation" => Box::new(
+                GenericDspNodeUi::new("VoiceMemoAnnotation", "Arrangement Timeline Voice Memo & Spoken Annotation HUD", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("audio_recording_quality", "Voice Note Audio Compression Codec", 0.0, 3.0, 0.0, "codec", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("voice_memo_playback_volume", "Voice Memo Audition Playback Gain", 0.0, 2.0, 1.0, "gain", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("duck_song_mix_during_memo", "Auto-Duck Musical Mix While Auditioning Memos", true, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("auto_transcribe_speech_to_text", "Generate Local Offline Speech Transcription", true, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("max_voice_memo_duration_s", "Maximum Single Memo Duration Limit", 10.0, 300.0, 60.0, "s", (34, 197, 94)))
+            ),
+            "SynchronizedPatternTrigger" => Box::new(
+                GenericDspNodeUi::new("SynchronizedPatternTrigger", "Peer-to-Peer Quantized MIDI Pattern Launch & Phase Lock", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("quantize_launch_grid", "Musical Beat Quantization Launch Grid", 0.0, 4.0, 0.0, "grid", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("network_latency_anticipation_ms", "Predictive Network Latency Compensation", 0.0, 200.0, 45.0, "ms", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_bool("enforce_tempo_master_lock", "Designate Session Host as Exclusive Tempo Clock", true, (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("phase_drift_tolerance_us", "Sub-Sample Phase Synchronization Drift Cap", 100.0, 5000.0, 500.0, "us", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("late_packet_behavior", "Action on Packets Arriving Past Grid Boundary", 0.0, 2.0, 0.0, "act", (34, 197, 94)))
+            ),
+            "WebRtcMidiPacket" => Box::new(
+                GenericDspNodeUi::new("WebRtcMidiPacket", "Low-Latency WebRTC Data Channel MIDI & MPE Packetizer", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("transport_protocol_type", "Low-Latency Network Transport Protocol", 0.0, 2.0, 0.0, "proto", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_bool("enable_midi2_per_note_pitch", "Stream High-Res 32-bit MIDI 2.0 Pitch Bends", true, (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("datagram_bundle_cadence_ms", "Packet Aggregation Window Before Send", 0.5, 20.0, 2.0, "ms", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_bool("packet_loss_retransmission", "Selective NACK Retransmission for Note-Offs", true, (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("active_midi_channels_mask", "Streamed MIDI Channels Bitmask", 1.0, 16.0, 16.0, "ch", (34, 197, 94)))
+            ),
             // Fallback dynamic generator for any unexpected or plugin node
             other => {
                 let cat = Self::inventory()
@@ -20160,6 +20521,27 @@ assert!(registry.get("BellowsGesturePattern").is_some());
         assert!(registry.get("PluginConflictDetector").is_some());
         assert!(registry.get("PluginStateBackup").is_some());
         assert!(registry.get("OfflineLocalProjectManager").is_some());
+        assert!(registry.get("GrandPianoArticulation").is_some());
+        assert!(registry.get("PipeOrganArticulation").is_some());
+        assert!(registry.get("MalletArticulation").is_some());
+        assert!(registry.get("EpModelType").is_some());
+        assert!(registry.get("PluckArticulation").is_some());
+        assert!(registry.get("RotaryArticulation").is_some());
+        assert!(registry.get("ShakuhachiArticulation").is_some());
+        assert!(registry.get("SitarArticulation").is_some());
+        assert!(registry.get("SpringArticulation").is_some());
+        assert!(registry.get("WoodwindArticulation").is_some());
+        assert!(registry.get("JiBridgeProfile").is_some());
+        assert!(registry.get("AutoWahFilterMode").is_some());
+        assert!(registry.get("DrumClassClassification").is_some());
+        assert!(registry.get("PluginMarketplace").is_some());
+        assert!(registry.get("PluginLatencyCompensationEngine").is_some());
+        assert!(registry.get("LuaScriptMarketplace").is_some());
+        assert!(registry.get("LuaScriptSafeMode").is_some());
+        assert!(registry.get("RemoteUserCursorSync").is_some());
+        assert!(registry.get("VoiceMemoAnnotation").is_some());
+        assert!(registry.get("SynchronizedPatternTrigger").is_some());
+        assert!(registry.get("WebRtcMidiPacket").is_some());
     }
 
     #[test]
@@ -20189,7 +20571,7 @@ assert!(registry.get("BellowsGesturePattern").is_some());
     fn test_tier117_inventory_count_and_parameter_completeness() {
         let registry = DspNodeRegistry::new();
         let inv = DspNodeRegistry::inventory();
-        assert_eq!(inv.len(), 1072, "Inventory must contain exactly 1072 DSP modules");
+        assert!(inv.len() >= 1072, "Inventory must contain at least 1072 DSP modules");
         assert!(registry.list_all().len() >= 1072, "Registry list_all must be >= 1072");
 
         let tier117_nodes = [
@@ -20248,6 +20630,131 @@ assert!(registry.get("BellowsGesturePattern").is_some());
         assert_eq!(DspNodeRegistry::normalize_type_name("pluginconflictdetector"), Some("PluginConflictDetector"));
         assert_eq!(DspNodeRegistry::normalize_type_name("pluginstatebackup"), Some("PluginStateBackup"));
         assert_eq!(DspNodeRegistry::normalize_type_name("offlinelocalprojectmanager"), Some("OfflineLocalProjectManager"));
+    }
+
+    #[test]
+    fn test_tier118_inventory_count_and_parameter_completeness() {
+        let registry = DspNodeRegistry::new();
+        let inv = DspNodeRegistry::inventory();
+        assert_eq!(inv.len(), 1093, "Inventory must contain exactly 1093 DSP modules");
+        assert!(registry.list_all().len() >= 1093, "Registry list_all must be >= 1093");
+
+        let tier118_nodes = [
+            ("GrandPianoArticulation", DspNodeCategory::AcousticPhysicalModel),
+            ("PipeOrganArticulation", DspNodeCategory::AcousticPhysicalModel),
+            ("MalletArticulation", DspNodeCategory::AcousticPhysicalModel),
+            ("EpModelType", DspNodeCategory::AcousticPhysicalModel),
+            ("PluckArticulation", DspNodeCategory::AcousticPhysicalModel),
+            ("RotaryArticulation", DspNodeCategory::AcousticPhysicalModel),
+            ("ShakuhachiArticulation", DspNodeCategory::AcousticPhysicalModel),
+            ("SitarArticulation", DspNodeCategory::AcousticPhysicalModel),
+            ("SpringArticulation", DspNodeCategory::AcousticPhysicalModel),
+            ("WoodwindArticulation", DspNodeCategory::AcousticPhysicalModel),
+            ("JiBridgeProfile", DspNodeCategory::AcousticPhysicalModel),
+            ("AutoWahFilterMode", DspNodeCategory::FilterEq),
+            ("DrumClassClassification", DspNodeCategory::NeuralAi),
+            ("PluginMarketplace", DspNodeCategory::Utility),
+            ("PluginLatencyCompensationEngine", DspNodeCategory::Utility),
+            ("LuaScriptMarketplace", DspNodeCategory::Utility),
+            ("LuaScriptSafeMode", DspNodeCategory::Utility),
+            ("RemoteUserCursorSync", DspNodeCategory::Utility),
+            ("VoiceMemoAnnotation", DspNodeCategory::Utility),
+            ("SynchronizedPatternTrigger", DspNodeCategory::Utility),
+            ("WebRtcMidiPacket", DspNodeCategory::Utility),
+        ];
+
+        for (name, expected_cat) in tier118_nodes {
+            let desc = registry.get(name).unwrap_or_else(|| panic!("Module {} missing", name));
+            assert_eq!(desc.category, expected_cat, "Category mismatch for {}", name);
+            assert!(desc.params.len() >= 5, "Module {} must have >= 5 params, found {}", name, desc.params.len());
+            assert!(DspNodeRegistry::create_node_ui(name).is_some(), "create_node_ui failed for {}", name);
+        }
+
+        // Test normalizations
+        assert_eq!(DspNodeRegistry::normalize_type_name("grandpianoarticulation"), Some("GrandPianoArticulation"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("grandpianoaction"), Some("GrandPianoArticulation"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("pianotouch"), Some("GrandPianoArticulation"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("pianohammeraction"), Some("GrandPianoArticulation"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("pipeorganarticulation"), Some("PipeOrganArticulation"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("organtracker"), Some("PipeOrganArticulation"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("pipeorganaction"), Some("PipeOrganArticulation"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("organchif"), Some("PipeOrganArticulation"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("malletarticulation"), Some("MalletArticulation"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("malletdynamics"), Some("MalletArticulation"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("malletphysics"), Some("MalletArticulation"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("idiophonestrike"), Some("MalletArticulation"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("epmodeltype"), Some("EpModelType"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("vintageepiano"), Some("EpModelType"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("rhodesmodel"), Some("EpModelType"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("epianovoice"), Some("EpModelType"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("pluckarticulation"), Some("PluckArticulation"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("plectrumdynamics"), Some("PluckArticulation"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("guitarpluck"), Some("PluckArticulation"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("pickscrape"), Some("PluckArticulation"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("rotaryarticulation"), Some("RotaryArticulation"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("lesliedynamics"), Some("RotaryArticulation"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("rotorspeed"), Some("RotaryArticulation"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("rotaryrotoraccel"), Some("RotaryArticulation"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("shakuhachiarticulation"), Some("ShakuhachiArticulation"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("shakuhachimerikari"), Some("ShakuhachiArticulation"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("muraiki"), Some("ShakuhachiArticulation"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("nayashi"), Some("ShakuhachiArticulation"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("sitararticulation"), Some("SitarArticulation"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("sitarmeend"), Some("SitarArticulation"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("sitarchikari"), Some("SitarArticulation"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("tarabresonance"), Some("SitarArticulation"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("springarticulation"), Some("SpringArticulation"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("springtankkick"), Some("SpringArticulation"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("springboing"), Some("SpringArticulation"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("springdispersion"), Some("SpringArticulation"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("woodwindarticulation"), Some("WoodwindArticulation"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("woodwindembouchure"), Some("WoodwindArticulation"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("fluttertongue"), Some("WoodwindArticulation"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("overblowregister"), Some("WoodwindArticulation"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("jibridgeprofile"), Some("JiBridgeProfile"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("jibridgematerial"), Some("JiBridgeProfile"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("zitherbridge"), Some("JiBridgeProfile"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("guzhengbridge"), Some("JiBridgeProfile"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("autowahfiltermode"), Some("AutoWahFilterMode"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("autowahmode"), Some("AutoWahFilterMode"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("envelopesweepfilter"), Some("AutoWahFilterMode"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("vocalwahfilter"), Some("AutoWahFilterMode"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("drumclassclassification"), Some("DrumClassClassification"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("drumclassifier"), Some("DrumClassClassification"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("aidrumtagger"), Some("DrumClassClassification"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("neuraldrumclass"), Some("DrumClassClassification"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("communitypluginmarket"), Some("PluginMarketplace"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("pluginmarket"), Some("PluginMarketplace"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("pluginstore"), Some("PluginMarketplace"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("clapmarketplace"), Some("PluginMarketplace"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("pluginlatencycompensationengine"), Some("PluginLatencyCompensationEngine"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("pdcengine"), Some("PluginLatencyCompensationEngine"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("latencycompensation"), Some("PluginLatencyCompensationEngine"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("pluginlookaheadalign"), Some("PluginLatencyCompensationEngine"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luascriptmarketplace"), Some("LuaScriptMarketplace"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luamarket"), Some("LuaScriptMarketplace"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luascripts"), Some("LuaScriptMarketplace"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luahub"), Some("LuaScriptMarketplace"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luascriptsafemode"), Some("LuaScriptSafeMode"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luasandbox"), Some("LuaScriptSafeMode"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luasafemode"), Some("LuaScriptSafeMode"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luagovernor"), Some("LuaScriptSafeMode"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("remoteusercursorsync"), Some("RemoteUserCursorSync"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("remotecursors"), Some("RemoteUserCursorSync"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("collabcursors"), Some("RemoteUserCursorSync"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("multiuserpointers"), Some("RemoteUserCursorSync"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("voicememoannotation"), Some("VoiceMemoAnnotation"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("voicememo"), Some("VoiceMemoAnnotation"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("timelinevoicenote"), Some("VoiceMemoAnnotation"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("audiomemo"), Some("VoiceMemoAnnotation"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("synchronizedpatterntrigger"), Some("SynchronizedPatternTrigger"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("patterntrigger"), Some("SynchronizedPatternTrigger"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("quantizedcliplaunch"), Some("SynchronizedPatternTrigger"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("networkphaselock"), Some("SynchronizedPatternTrigger"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("webrtcmidipacket"), Some("WebRtcMidiPacket"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("webrtcmidi"), Some("WebRtcMidiPacket"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("networkmidi"), Some("WebRtcMidiPacket"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("mpedatachannel"), Some("WebRtcMidiPacket"));
     }
 
     #[test]

@@ -476,6 +476,10 @@ impl AwardWinningGuiView {
                 "African Rosewood Concert Marimba Modal Resonator Bank" => "IdiophoneResonator",
                 "Air-Gapped Zero-Cloud Sovereign Project Workspace" => "OfflineLocalProjectManager",
                 "Crash-Proof Third-Party Audio Plugin Sandbox Shield" => "PluginBlacklist",
+                "Imperial 97-Key Concert Grand Escapement & Duplex Resonance" => "GrandPianoArticulation",
+                "Cathedral 64-Foot Mechanical Tracker Organ Pallet Action" => "PipeOrganArticulation",
+                "Ancient Asian Paulownia Zither Movable Bone Ji Bridge" => "JiBridgeProfile",
+                "Zero-Latency WebRTC High-Resolution MIDI 2.0 Network Jam" => "WebRtcMidiPacket",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {

@@ -7068,7 +7068,7 @@ mod tests {
 
         // 1. Verify 1030 total DSP modules registered
         let total_modules = DspNodeRegistry::inventory();
-        assert_eq!(total_modules.len(), 1030, "Must have exactly 1030 registered DSP modules");
+        assert!(total_modules.len() >= 1030, "Must have at least 1030 registered DSP modules");
         assert!(
             registry.list_all().len() >= 1030,
             "Must have at least 1030 registered DSP modules, found {}",
@@ -7237,7 +7237,7 @@ mod tests {
 
         // 1. Verify exactly 1051 total DSP modules registered
         let total_modules = DspNodeRegistry::inventory();
-        assert_eq!(total_modules.len(), 1051, "Must have exactly 1051 registered DSP modules");
+        assert!(total_modules.len() >= 1051, "Must have at least 1051 registered DSP modules");
         assert!(
             registry.list_all().len() >= 1051,
             "Must have at least 1051 registered DSP modules, found {}",
@@ -7406,7 +7406,7 @@ mod tests {
 
         // 1. Verify exactly 1072 total DSP modules registered
         let total_modules = DspNodeRegistry::inventory();
-        assert_eq!(total_modules.len(), 1072, "Must have exactly 1072 registered DSP modules");
+        assert!(total_modules.len() >= 1072, "Must have at least 1072 registered DSP modules");
         assert!(
             registry.list_all().len() >= 1072,
             "Must have at least 1072 registered DSP modules, found {}",
@@ -7490,7 +7490,7 @@ mod tests {
 
         // 4. Verify Asset Browser categorization
         let inst_folders = BrowserCategory::Instruments.default_folders();
-        let phys_items = inst_folders.iter().find(|(name, _)| *name == "Physical Modeling & Resonators").unwrap().1;
+        let phys_items = inst_folders.iter().find(|(name, _)| *name == "Physical Models").unwrap().1;
         assert!(phys_items.contains(&"ToneholeGrid"));
         assert!(phys_items.contains(&"IdiophoneResonator"));
 
@@ -7561,6 +7561,220 @@ mod tests {
             });
             assert_eq!(view.device_rack_state.selected_node_kind, Some("PluginBlacklist".to_string()));
             assert_eq!(view.inspector_state.selected_node_kind, Some("PluginBlacklist".to_string()));
+        }
+    }
+
+    #[test]
+    fn test_tier118_modern_gui_dsp_module_coverage_and_presets() {
+        use crate::dsp_node_ui::{DspNodeRegistry, DspNodeCategory};
+        use crate::views::modern_asset_browser::BrowserCategory;
+
+        let registry = DspNodeRegistry::new();
+
+        // 1. Verify exactly 1093 total DSP modules registered
+        let total_modules = DspNodeRegistry::inventory();
+        assert_eq!(total_modules.len(), 1093, "Must have exactly 1093 registered DSP modules");
+        assert!(
+            registry.list_all().len() >= 1093,
+            "Must have at least 1093 registered DSP modules, found {}",
+            registry.list_all().len()
+        );
+
+        // 2. Verify all 21 new modules exist with correct categories and tactile parameters (>= 5 params each)
+        let new_modules = [
+            ("GrandPianoArticulation", DspNodeCategory::AcousticPhysicalModel),
+            ("PipeOrganArticulation", DspNodeCategory::AcousticPhysicalModel),
+            ("MalletArticulation", DspNodeCategory::AcousticPhysicalModel),
+            ("EpModelType", DspNodeCategory::AcousticPhysicalModel),
+            ("PluckArticulation", DspNodeCategory::AcousticPhysicalModel),
+            ("RotaryArticulation", DspNodeCategory::AcousticPhysicalModel),
+            ("ShakuhachiArticulation", DspNodeCategory::AcousticPhysicalModel),
+            ("SitarArticulation", DspNodeCategory::AcousticPhysicalModel),
+            ("SpringArticulation", DspNodeCategory::AcousticPhysicalModel),
+            ("WoodwindArticulation", DspNodeCategory::AcousticPhysicalModel),
+            ("JiBridgeProfile", DspNodeCategory::AcousticPhysicalModel),
+            ("AutoWahFilterMode", DspNodeCategory::FilterEq),
+            ("DrumClassClassification", DspNodeCategory::NeuralAi),
+            ("PluginMarketplace", DspNodeCategory::Utility),
+            ("PluginLatencyCompensationEngine", DspNodeCategory::Utility),
+            ("LuaScriptMarketplace", DspNodeCategory::Utility),
+            ("LuaScriptSafeMode", DspNodeCategory::Utility),
+            ("RemoteUserCursorSync", DspNodeCategory::Utility),
+            ("VoiceMemoAnnotation", DspNodeCategory::Utility),
+            ("SynchronizedPatternTrigger", DspNodeCategory::Utility),
+            ("WebRtcMidiPacket", DspNodeCategory::Utility),
+        ];
+
+        for (name, expected_cat) in new_modules {
+            let desc = registry.get(name).unwrap_or_else(|| panic!("Module {} not found", name));
+            assert_eq!(desc.category, expected_cat, "Module {} category mismatch", name);
+            assert!(desc.params.len() >= 5, "Module {} must have >= 5 tactile parameters, found {}", name, desc.params.len());
+        }
+
+        // 3. Verify normalization mappings
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("grandpianoarticulation"), Some("GrandPianoArticulation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("grandpianoaction"), Some("GrandPianoArticulation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pianotouch"), Some("GrandPianoArticulation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pianohammeraction"), Some("GrandPianoArticulation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pipeorganarticulation"), Some("PipeOrganArticulation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("organtracker"), Some("PipeOrganArticulation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pipeorganaction"), Some("PipeOrganArticulation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("organchif"), Some("PipeOrganArticulation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("malletarticulation"), Some("MalletArticulation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("malletdynamics"), Some("MalletArticulation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("malletphysics"), Some("MalletArticulation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("idiophonestrike"), Some("MalletArticulation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("epmodeltype"), Some("EpModelType"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("vintageepiano"), Some("EpModelType"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("rhodesmodel"), Some("EpModelType"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("epianovoice"), Some("EpModelType"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pluckarticulation"), Some("PluckArticulation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("plectrumdynamics"), Some("PluckArticulation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("guitarpluck"), Some("PluckArticulation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pickscrape"), Some("PluckArticulation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("rotaryarticulation"), Some("RotaryArticulation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("lesliedynamics"), Some("RotaryArticulation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("rotorspeed"), Some("RotaryArticulation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("rotaryrotoraccel"), Some("RotaryArticulation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("shakuhachiarticulation"), Some("ShakuhachiArticulation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("shakuhachimerikari"), Some("ShakuhachiArticulation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("muraiki"), Some("ShakuhachiArticulation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("nayashi"), Some("ShakuhachiArticulation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sitararticulation"), Some("SitarArticulation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sitarmeend"), Some("SitarArticulation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sitarchikari"), Some("SitarArticulation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("tarabresonance"), Some("SitarArticulation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("springarticulation"), Some("SpringArticulation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("springtankkick"), Some("SpringArticulation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("springboing"), Some("SpringArticulation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("springdispersion"), Some("SpringArticulation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("woodwindarticulation"), Some("WoodwindArticulation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("woodwindembouchure"), Some("WoodwindArticulation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("fluttertongue"), Some("WoodwindArticulation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("overblowregister"), Some("WoodwindArticulation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("jibridgeprofile"), Some("JiBridgeProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("jibridgematerial"), Some("JiBridgeProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("zitherbridge"), Some("JiBridgeProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("guzhengbridge"), Some("JiBridgeProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("autowahfiltermode"), Some("AutoWahFilterMode"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("autowahmode"), Some("AutoWahFilterMode"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("envelopesweepfilter"), Some("AutoWahFilterMode"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("vocalwahfilter"), Some("AutoWahFilterMode"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("drumclassclassification"), Some("DrumClassClassification"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("drumclassifier"), Some("DrumClassClassification"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("aidrumtagger"), Some("DrumClassClassification"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("neuraldrumclass"), Some("DrumClassClassification"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("communitypluginmarket"), Some("PluginMarketplace"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pluginmarket"), Some("PluginMarketplace"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pluginstore"), Some("PluginMarketplace"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clapmarketplace"), Some("PluginMarketplace"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pluginlatencycompensationengine"), Some("PluginLatencyCompensationEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pdcengine"), Some("PluginLatencyCompensationEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("latencycompensation"), Some("PluginLatencyCompensationEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pluginlookaheadalign"), Some("PluginLatencyCompensationEngine"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luascriptmarketplace"), Some("LuaScriptMarketplace"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luamarket"), Some("LuaScriptMarketplace"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luascripts"), Some("LuaScriptMarketplace"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luahub"), Some("LuaScriptMarketplace"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luascriptsafemode"), Some("LuaScriptSafeMode"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luasandbox"), Some("LuaScriptSafeMode"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luasafemode"), Some("LuaScriptSafeMode"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luagovernor"), Some("LuaScriptSafeMode"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("remoteusercursorsync"), Some("RemoteUserCursorSync"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("remotecursors"), Some("RemoteUserCursorSync"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("collabcursors"), Some("RemoteUserCursorSync"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("multiuserpointers"), Some("RemoteUserCursorSync"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("voicememoannotation"), Some("VoiceMemoAnnotation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("voicememo"), Some("VoiceMemoAnnotation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("timelinevoicenote"), Some("VoiceMemoAnnotation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("audiomemo"), Some("VoiceMemoAnnotation"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("synchronizedpatterntrigger"), Some("SynchronizedPatternTrigger"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("patterntrigger"), Some("SynchronizedPatternTrigger"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("quantizedcliplaunch"), Some("SynchronizedPatternTrigger"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("networkphaselock"), Some("SynchronizedPatternTrigger"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("webrtcmidipacket"), Some("WebRtcMidiPacket"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("webrtcmidi"), Some("WebRtcMidiPacket"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("networkmidi"), Some("WebRtcMidiPacket"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("mpedatachannel"), Some("WebRtcMidiPacket"));
+
+        // 4. Verify Asset Browser categorization
+        let inst_folders = BrowserCategory::Instruments.default_folders();
+        let phys_items = inst_folders.iter().find(|(name, _)| *name == "Physical Models").unwrap().1;
+        assert!(phys_items.contains(&"GrandPianoArticulation"));
+        assert!(phys_items.contains(&"PipeOrganArticulation"));
+        assert!(phys_items.contains(&"MalletArticulation"));
+        assert!(phys_items.contains(&"EpModelType"));
+        assert!(phys_items.contains(&"PluckArticulation"));
+        assert!(phys_items.contains(&"RotaryArticulation"));
+        assert!(phys_items.contains(&"ShakuhachiArticulation"));
+        assert!(phys_items.contains(&"SitarArticulation"));
+        assert!(phys_items.contains(&"SpringArticulation"));
+        assert!(phys_items.contains(&"WoodwindArticulation"));
+        assert!(phys_items.contains(&"JiBridgeProfile"));
+
+        let sampler_items = inst_folders.iter().find(|(name, _)| *name == "Samplers & Slicers").unwrap().1;
+        assert!(sampler_items.contains(&"DrumClassClassification"));
+
+        let audio_fx_folders = BrowserCategory::AudioFx.default_folders();
+        let filter_items = audio_fx_folders.iter().find(|(name, _)| *name == "Filters & EQ").unwrap().1;
+        assert!(filter_items.contains(&"AutoWahFilterMode"));
+
+        let midi_folders = BrowserCategory::MidiFx.default_folders();
+        let routing_items = midi_folders.iter().find(|(name, _)| *name == "Transforms & Routing").unwrap().1;
+        assert!(routing_items.contains(&"PluginMarketplace"));
+        assert!(routing_items.contains(&"PluginLatencyCompensationEngine"));
+        assert!(routing_items.contains(&"LuaScriptMarketplace"));
+        assert!(routing_items.contains(&"LuaScriptSafeMode"));
+        assert!(routing_items.contains(&"RemoteUserCursorSync"));
+        assert!(routing_items.contains(&"VoiceMemoAnnotation"));
+        assert!(routing_items.contains(&"SynchronizedPatternTrigger"));
+        assert!(routing_items.contains(&"WebRtcMidiPacket"));
+
+        // 5. Verify Novice Presets synchronize in AwardWinningGuiView
+        #[cfg(feature = "gui")]
+        {
+            let mut view = crate::views::award_winning_gui_view::AwardWinningGuiView::default();
+            let ctx = eframe::egui::Context::default();
+
+            // Preset 1: Imperial 97-Key Concert Grand Escapement & Duplex Resonance -> GrandPianoArticulation
+            view.top_bar_state.selected_preset = "Imperial 97-Key Concert Grand Escapement & Duplex Resonance".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("GrandPianoArticulation".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("GrandPianoArticulation".to_string()));
+
+            // Preset 2: Cathedral 64-Foot Mechanical Tracker Organ Pallet Action -> PipeOrganArticulation
+            view.top_bar_state.selected_preset = "Cathedral 64-Foot Mechanical Tracker Organ Pallet Action".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("PipeOrganArticulation".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("PipeOrganArticulation".to_string()));
+
+            // Preset 3: Ancient Asian Paulownia Zither Movable Bone Ji Bridge -> JiBridgeProfile
+            view.top_bar_state.selected_preset = "Ancient Asian Paulownia Zither Movable Bone Ji Bridge".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("JiBridgeProfile".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("JiBridgeProfile".to_string()));
+
+            // Preset 4: Zero-Latency WebRTC High-Resolution MIDI 2.0 Network Jam -> WebRtcMidiPacket
+            view.top_bar_state.selected_preset = "Zero-Latency WebRTC High-Resolution MIDI 2.0 Network Jam".to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some("WebRtcMidiPacket".to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some("WebRtcMidiPacket".to_string()));
         }
     }
 }
