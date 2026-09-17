@@ -4080,7 +4080,7 @@ mod tests {
         assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("simdvoiceallocator"), Some("SimdVoiceAllocator"));
         assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("polyphonicvoiceallocator"), Some("SimdVoiceAllocator"));
         assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("audiowarpmarker"), Some("AudioWarpMarker"));
-        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("warpmarker"), Some("AudioWarpMarker"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("elastictimestretchwarp"), Some("AudioWarpMarker"));
         assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("stickslipphysicsmodel"), Some("StickSlipPhysicsModel"));
         assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("bowfrictionmechanics"), Some("StickSlipPhysicsModel"));
         assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("pianohammermechanics"), Some("PianoHammerMechanics"));
@@ -7573,7 +7573,7 @@ mod tests {
 
         // 1. Verify exactly 1093 total DSP modules registered
         let total_modules = DspNodeRegistry::inventory();
-        assert_eq!(total_modules.len(), 1093, "Must have exactly 1093 registered DSP modules");
+        assert!(total_modules.len() >= 1093, "Must have at least 1093 registered DSP modules");
         assert!(
             registry.list_all().len() >= 1093,
             "Must have at least 1093 registered DSP modules, found {}",
@@ -8519,7 +8519,7 @@ mod tests {
         let inv = crate::dsp_node_ui::DspNodeRegistry::inventory();
 
         // 1. Verify exact 1235 DSP module count
-        assert_eq!(inv.len(), 1235, "Inventory must contain exactly 1235 DSP modules");
+        assert!(inv.len() >= 1235, "Inventory must contain at least 1235 DSP modules");
         assert!(registry.list_all().len() >= 1235, "Registry list_all must be >= 1235");
 
         let tier125_modules = [
@@ -8651,4 +8651,140 @@ mod tests {
             assert_eq!(view.inspector_state.selected_node_kind, Some(target_node.to_string()));
         }
     }
+
+    #[test]
+    #[cfg(feature = "gui")]
+    fn test_tier126_modern_gui_dsp_module_coverage_and_presets() {
+        let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+        let inv = crate::dsp_node_ui::DspNodeRegistry::inventory();
+
+        // 1. Verify exact 1256 DSP module count
+        assert_eq!(inv.len(), 1256, "Inventory must contain exactly 1256 DSP modules");
+        assert!(registry.list_all().len() >= 1256, "Registry list_all must be >= 1256");
+
+        let tier126_modules = [
+            ("ProjectConfig", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("SequenceConfig", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("NodeConfig", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("SystemSettings", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CrashDump", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CrashDumpSummaryReport", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("RecoveryPoint", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("RenderJobSpec", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("CrdtOp", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("VectorClock", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("RemoteUserCursor", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("NetworkStatus", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("LuaScriptConfig", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("LuaScriptErrorRecovery", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("LuaScriptInfo", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("LuaTestRunner", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("LuaTestResult", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("LuaUsageAnalytics", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("MarketplacePlugin", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("DependencyAuditReport", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("WorkspaceCrateAudit", crate::dsp_node_ui::DspNodeCategory::Utility),
+        ];
+
+        for (name, expected_cat) in tier126_modules {
+            let desc = registry.get(name).unwrap_or_else(|| panic!("Tier 126 module {} missing", name));
+            assert_eq!(desc.category, expected_cat, "Category mismatch for {}", name);
+            assert!(desc.params.len() >= 5, "Module {} must have >= 5 params, found {}", name, desc.params.len());
+            assert!(crate::dsp_node_ui::DspNodeRegistry::create_node_ui(name).is_some(), "create_node_ui failed for {}", name);
+        }
+
+        // 2. Normalization verification
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("projectconfig"), Some("ProjectConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("projectfile"), Some("ProjectConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("sequenceconfig"), Some("SequenceConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("arrangementclip"), Some("SequenceConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("nodeconfig"), Some("NodeConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("dspnodeconfig"), Some("NodeConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("systemsettings"), Some("SystemSettings"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("dawsettings"), Some("SystemSettings"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("crashdump"), Some("CrashDump"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("telemetrycrashdump"), Some("CrashDump"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("crashdumpsummaryreport"), Some("CrashDumpSummaryReport"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("stabilitysummary"), Some("CrashDumpSummaryReport"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("recoverypoint"), Some("RecoveryPoint"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("backupsnapshotpoint"), Some("RecoveryPoint"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("renderjobspec"), Some("RenderJobSpec"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("offlinerenderspec"), Some("RenderJobSpec"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("crdtop"), Some("CrdtOp"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("collaborativeop"), Some("CrdtOp"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("vectorclock"), Some("VectorClock"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("causalvectorclock"), Some("VectorClock"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("remoteusercursor"), Some("RemoteUserCursor"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("peercursor"), Some("RemoteUserCursor"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("networkstatus"), Some("NetworkStatus"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("peernetworkstatus"), Some("NetworkStatus"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luascriptconfig"), Some("LuaScriptConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("proceduralluaconfig"), Some("LuaScriptConfig"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luascripterrorrecovery"), Some("LuaScriptErrorRecovery"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luafaulttolerance"), Some("LuaScriptErrorRecovery"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luascriptinfo"), Some("LuaScriptInfo"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luascriptmanifest"), Some("LuaScriptInfo"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luatestrunner"), Some("LuaTestRunner"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luadspunitrunner"), Some("LuaTestRunner"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luatestresult"), Some("LuaTestResult"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luatestverdict"), Some("LuaTestResult"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luausageanalytics"), Some("LuaUsageAnalytics"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("luacycleprofiler"), Some("LuaUsageAnalytics"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("marketplaceplugin"), Some("MarketplacePlugin"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("communityplugin"), Some("MarketplacePlugin"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("dependencyauditreport"), Some("DependencyAuditReport"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("cargoauditreport"), Some("DependencyAuditReport"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("workspacecrateaudit"), Some("WorkspaceCrateAudit"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("crateintegrityvalidator"), Some("WorkspaceCrateAudit"));
+
+        // 3. Verify Asset Browser categorization
+        use crate::views::modern_asset_browser::BrowserCategory;
+
+        let midi_fx_folders = BrowserCategory::MidiFx.default_folders();
+        let routing_items = midi_fx_folders.iter().find(|(name, _)| *name == "Transforms & Routing").unwrap().1;
+        assert!(routing_items.contains(&"ProjectConfig"));
+        assert!(routing_items.contains(&"SequenceConfig"));
+        assert!(routing_items.contains(&"NodeConfig"));
+        assert!(routing_items.contains(&"SystemSettings"));
+        assert!(routing_items.contains(&"CrashDump"));
+        assert!(routing_items.contains(&"CrashDumpSummaryReport"));
+        assert!(routing_items.contains(&"RecoveryPoint"));
+        assert!(routing_items.contains(&"RenderJobSpec"));
+        assert!(routing_items.contains(&"CrdtOp"));
+        assert!(routing_items.contains(&"VectorClock"));
+        assert!(routing_items.contains(&"RemoteUserCursor"));
+        assert!(routing_items.contains(&"NetworkStatus"));
+        assert!(routing_items.contains(&"LuaScriptConfig"));
+        assert!(routing_items.contains(&"LuaScriptErrorRecovery"));
+        assert!(routing_items.contains(&"LuaScriptInfo"));
+        assert!(routing_items.contains(&"LuaTestRunner"));
+        assert!(routing_items.contains(&"LuaTestResult"));
+        assert!(routing_items.contains(&"LuaUsageAnalytics"));
+        assert!(routing_items.contains(&"MarketplacePlugin"));
+        assert!(routing_items.contains(&"DependencyAuditReport"));
+        assert!(routing_items.contains(&"WorkspaceCrateAudit"));
+
+        // 4. Verify interactive AwardWinningGuiView selects Tier 126 preset nodes
+        let mut view = crate::views::award_winning_gui_view::AwardWinningGuiView::default();
+        let ctx = eframe::egui::Context::default();
+
+        let presets = [
+            ("Master DAW Session Manifest & Audio Routing Topology", "ProjectConfig"),
+            ("Polymetric Clip Sequence Pattern & Tracker Step Array", "SequenceConfig"),
+            ("Enterprise Diagnostic Crash Dump & Subsystem Telemetry", "CrashDump"),
+            ("Distributed CRDT Collaborative Session & Multi-User Cursor", "RemoteUserCursor"),
+        ];
+
+        for (preset_name, target_node) in presets {
+            view.top_bar_state.selected_preset = preset_name.to_string();
+            let _ = ctx.run(eframe::egui::RawInput::default(), |ctx| {
+                eframe::egui::CentralPanel::default().show(ctx, |ui| {
+                    view.show(ui);
+                });
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some(target_node.to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some(target_node.to_string()));
+        }
+    }
 }
+

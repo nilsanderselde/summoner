@@ -508,6 +508,10 @@ impl AwardWinningGuiView {
                 "Orchestral String Bowing Phrase Gesture & Friction Slew" => "GestureInterpolationCurve",
                 "FastTracker Chromatic Note Pattern & Microtonal Detune" => "TrackerStepConfig",
                 "Deterministic Master Audio Transport & Cycle Looper Clock" => "TransportConfig",
+                "Master DAW Session Manifest & Audio Routing Topology" => "ProjectConfig",
+                "Polymetric Clip Sequence Pattern & Tracker Step Array" => "SequenceConfig",
+                "Enterprise Diagnostic Crash Dump & Subsystem Telemetry" => "CrashDump",
+                "Distributed CRDT Collaborative Session & Multi-User Cursor" => "RemoteUserCursor",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {

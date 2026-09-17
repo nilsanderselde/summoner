@@ -273,6 +273,10 @@ fn default_available_presets() -> Vec<String> {
         "Orchestral String Bowing Phrase Gesture & Friction Slew".to_string(),
         "FastTracker Chromatic Note Pattern & Microtonal Detune".to_string(),
         "Deterministic Master Audio Transport & Cycle Looper Clock".to_string(),
+        "Master DAW Session Manifest & Audio Routing Topology".to_string(),
+        "Polymetric Clip Sequence Pattern & Tracker Step Array".to_string(),
+        "Enterprise Diagnostic Crash Dump & Subsystem Telemetry".to_string(),
+        "Distributed CRDT Collaborative Session & Multi-User Cursor".to_string(),
     ]
 }
 

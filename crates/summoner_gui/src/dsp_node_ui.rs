@@ -9680,6 +9680,159 @@ descriptors.insert("BellowsGesturePattern".to_string(), DspNodeDescriptor::new("
             .with_param(DspParamSchema::choice("collaborative_access_permissions", "Multi-User CRDT Session Access Level", &["ReadOnlyGuest (Audition and Monitor Only)", "CollaboratorProducer (Edit Tracks and Sequences)", "StudioEngineer (Full Routing and Plugin Access)", "MasterAdmin (Ownership and Project Settings)"], 1, "Session security permissions for collaborative remote peers"))
             .with_param(DspParamSchema::toggle("enable_session_crash_protection", "Enable Real-Time Crash Dump Auto-Recovery", true, "Maintain crash dump transaction journals for instant session restoration"))
         );
+        descriptors.insert("ProjectConfig".to_string(), DspNodeDescriptor::new("ProjectConfig", "Master DAW Session & Project Document Manifest", DspNodeCategory::Utility, "Top-level DAW project configuration schema managing session title, author signature, loop cycle bounds, track layout, and audio sample rate")
+            .with_param(DspParamSchema::knob("master_sample_rate_hz", "Master Engine Target Audio Sample Rate", 44100.0, 192000.0, 48000.0, "Hz", MacroRole::Tone, "Session audio processing and export sample rate"))
+            .with_param(DspParamSchema::knob("loop_start_beat", "Playback Loop Cycle Start Position", 0.0, 4096.0, 0.0, "beats", MacroRole::Space, "Timeline beat marker where playback loop repeats"))
+            .with_param(DspParamSchema::knob("loop_end_beat", "Playback Loop Cycle End Position", 0.0, 4096.0, 16.0, "beats", MacroRole::Character, "Timeline beat marker where playback cycle ends"))
+            .with_param(DspParamSchema::knob("punch_in_beat", "Automated Punch-In Record Marker", 0.0, 4096.0, 0.0, "beats", MacroRole::Punch, "Timeline position where recording automatically engages"))
+            .with_param(DspParamSchema::knob("tempo_bpm", "Nominal Project Transport Tempo", 20.0, 300.0, 120.0, "BPM", MacroRole::Tone, "Master transport beats per minute for project timeline"))
+            .with_param(DspParamSchema::toggle("loop_enabled", "Enable Timeline Cycle Playback Looping", true, "Automatically loops between loop start and loop end markers"))
+        );
+        descriptors.insert("SequenceConfig".to_string(), DspNodeDescriptor::new("SequenceConfig", "Polymetric Track Sequence & Clip Pattern Config", DspNodeCategory::Utility, "Polymetric track arrangement sequence configuration holding step division, track gain, start beat, reverse state, and time-stretching")
+            .with_param(DspParamSchema::knob("start_beat", "Clip Arrangement Start Beat Location", 0.0, 4096.0, 0.0, "beats", MacroRole::Space, "Arrangement timeline beat position where clip begins"))
+            .with_param(DspParamSchema::knob("step_division", "Tracker Grid Step Beat Division Multiplier", 0.0625, 4.0, 0.25, "beats", MacroRole::Tone, "Subdivision length per step (0.25 = sixteenth note)"))
+            .with_param(DspParamSchema::knob("gain", "Clip Playback Output Trim Gain Factor", 0.0, 4.0, 1.0, "x", MacroRole::Punch, "Linear gain multiplier applied to note velocity and audio events"))
+            .with_param(DspParamSchema::knob("time_stretch", "Polyphonic Time-Stretch Expansion Ratio", 0.25, 4.0, 1.0, "ratio", MacroRole::Character, "Playback duration scaling factor preserving original pitch"))
+            .with_param(DspParamSchema::knob("fade_in", "Clip Head Crossfade Fade-In Duration", 0.0, 16.0, 0.0, "beats", MacroRole::Space, "Linear or curve ramp duration applied to start of clip"))
+            .with_param(DspParamSchema::toggle("is_reversed", "Reverse Note and Step Playback Sequence", false, "Plays tracker sequence steps backwards from tail to head"))
+        );
+        descriptors.insert("NodeConfig".to_string(), DspNodeDescriptor::new("NodeConfig", "Modular DSP Graph Node Configuration Schema", DspNodeCategory::Utility, "Modular audio graph node instance descriptor holding node type identifier, float parameters mapping, and plugin state payload")
+            .with_param(DspParamSchema::knob("node_instance_id", "Graph Node Instance Topology Identifier", 1.0, 1024.0, 1.0, "id", MacroRole::Tone, "Unique graph node identifier inside processing DAG"))
+            .with_param(DspParamSchema::knob("bypass_crossfade_ms", "Smooth Node Bypass Crossfade Slew Time", 1.0, 100.0, 15.0, "ms", MacroRole::Space, "Crossfade duration when bypassing node to prevent clicks"))
+            .with_param(DspParamSchema::knob("oversampling_factor", "Internal DSP Voice Oversampling Multiplier", 1.0, 8.0, 1.0, "x", MacroRole::Character, "Anti-aliasing oversampling factor for non-linear processing"))
+            .with_param(DspParamSchema::knob("channel_routing_mask", "Audio Channel Routing Input Mask", 0.0, 255.0, 3.0, "mask", MacroRole::Punch, "Bitmask selecting active audio channels (1=L, 2=R, 3=Stereo)"))
+            .with_param(DspParamSchema::choice("processing_precision", "Floating Point Internal DSP Precision", &["Float32 (Standard SSE/AVX)", "Float64 (High Precision 64-bit)", "SIMD128 (4-wide Parallel SIMD)", "SIMD256 (8-wide AVX2 Bank)"], 0, "DSP floating-point calculation word width and vectorization"))
+            .with_param(DspParamSchema::toggle("enable_node_processing", "Engage Modular Node in Audio DAG", true, "Active switch to run node computation during render cycle"))
+        );
+        descriptors.insert("SystemSettings".to_string(), DspNodeDescriptor::new("SystemSettings", "Summoner Host Audio & System Preferences", DspNodeCategory::Utility, "Global DAW host application settings managing real-time audio buffer size, sample rate, UI theme, and crash telemetry")
+            .with_param(DspParamSchema::knob("buffer_size_samples", "Audio Hardware Buffer Size in Samples", 64.0, 2048.0, 512.0, "smp", MacroRole::Punch, "Hardware I/O buffer latency (64=ultra-low latency, 2048=maximum DSP headroom)"))
+            .with_param(DspParamSchema::knob("target_sample_rate_hz", "Hardware Audio Driver Output Sample Rate", 44100.0, 192000.0, 48000.0, "Hz", MacroRole::Tone, "Master hardware sampling frequency for ASIO, WASAPI, CoreAudio, and ALSA"))
+            .with_param(DspParamSchema::knob("dsp_thread_pool_count", "Real-Time Parallel Audio Worker Threads", 1.0, 64.0, 8.0, "cores", MacroRole::Character, "Number of worker threads allocated for parallel audio graph rendering"))
+            .with_param(DspParamSchema::choice("theme_preset", "Summoner GUI Visual Theme Preset", &["Dark Hybrid (High Contrast Studio)", "Cyberpunk Neon (Vivid Cyan & Amber)", "OLED Minimal (Deep Black Low Power)", "Solarized Dark (Warm Muted Studio)"], 0, "Color palette and visual styling scheme across GUI windows"))
+            .with_param(DspParamSchema::toggle("telemetry_enabled", "Opt-In Anonymous Diagnostic Telemetry", false, "Send anonymized crash logs and performance metrics to improve stability"))
+            .with_param(DspParamSchema::toggle("auto_update_enabled", "Automatically Check for DAW Application Updates", true, "Query GitHub releases periodically for new Summoner DAW versions"))
+        );
+        descriptors.insert("CrashDump".to_string(), DspNodeDescriptor::new("CrashDump", "Telemetry Crash Dump & Diagnostic Report", DspNodeCategory::Utility, "Offline telemetry crash report inspector detailing subsystem failure, error message string, stack trace depth, and system hardware metadata")
+            .with_param(DspParamSchema::knob("stack_trace_depth", "Captured Call Stack Frame Trace Depth", 1.0, 128.0, 24.0, "frames", MacroRole::Tone, "Number of execution frames captured during panic unwind"))
+            .with_param(DspParamSchema::knob("log_context_lines", "Diagnostic Ring Buffer Log Context Lines", 10.0, 500.0, 50.0, "lines", MacroRole::Space, "Number of preceding trace log entries captured before failure"))
+            .with_param(DspParamSchema::knob("system_memory_usage_mb", "Host System Memory Footprint at Crash", 128.0, 65536.0, 1024.0, "MB", MacroRole::Character, "RAM consumed by Summoner DAW at moment of crash dump"))
+            .with_param(DspParamSchema::choice("crash_severity", "Panic Severity Classification Level", &["Low (Non-Fatal Warning Recovered)", "Medium (Subsystem Thread Panic Restarted)", "High (Project Session Unsaved Crash)", "Critical (Kernel / Driver Hard Fault)"], 1, "Severity rating of the crash event for diagnostic triage"))
+            .with_param(DspParamSchema::choice("failing_subsystem", "Failing Architecture Subsystem Identifier", &["DspEngine (Audio Thread Processing)", "MidiEngine (Hardware MIDI & MPE Parser)", "GuiRenderer (egui / WGPU Frame Render)", "ProjectIO (Disk File Serialization)", "CloudFederation (CRDT Peer Networking)"], 0, "Architectural subsystem that triggered the panic or unhandled error"))
+            .with_param(DspParamSchema::toggle("auto_generate_minidump", "Generate Compressed Minidump ZIP Archive", true, "Packages error message, stack trace, and logs into a local crash report"))
+        );
+        descriptors.insert("CrashDumpSummaryReport".to_string(), DspNodeDescriptor::new("CrashDumpSummaryReport", "Aggregated Crash Diagnostics & Stability Summary", DspNodeCategory::Utility, "Statistical analyzer and summary report compiler aggregating offline crash dumps, identifying root cause frequencies, and generating stability suggestions")
+            .with_param(DspParamSchema::knob("total_dumps_analyzed", "Total Historical Crash Dumps Parsed", 1.0, 1000.0, 12.0, "dumps", MacroRole::Tone, "Number of crash reports indexed in local telemetry repository"))
+            .with_param(DspParamSchema::knob("critical_severity_count", "Critical Severity Incident Count", 0.0, 100.0, 0.0, "dumps", MacroRole::Punch, "Total fatal crashes that prevented immediate session restoration"))
+            .with_param(DspParamSchema::knob("average_mtbf_hours", "Mean Time Between Subsystem Failures (MTBF)", 1.0, 720.0, 168.0, "hrs", MacroRole::Space, "Statistical operational uptime between recorded panic events"))
+            .with_param(DspParamSchema::choice("primary_root_cause", "Most Frequent Panic Root Cause Signature", &["BufferOverrun (Out-of-Bounds Audio Slice)", "UnwrapPanic (Option/Result Unwrap on None)", "DriverTimeout (Hardware Audio Buffer Hang)", "OomAllocation (Memory Exhaustion on Massive Sample)"], 1, "Statistical root cause signature with highest occurrence frequency"))
+            .with_param(DspParamSchema::toggle("generate_remediation_plan", "Compile Automated Remediation Checklist", true, "Generates actionable developer recommendations to fix recurring crashes"))
+        );
+        descriptors.insert("RecoveryPoint".to_string(), DspNodeDescriptor::new("RecoveryPoint", "Transactional Session Snapshot Recovery Point", DspNodeCategory::Utility, "Continuous backup recovery point capturing complete CRDT session state, transaction timestamp, and undo restore point")
+            .with_param(DspParamSchema::knob("snapshot_index", "Sequential Recovery Point Index Number", 1.0, 1000.0, 1.0, "idx", MacroRole::Tone, "Linear sequence counter for session transaction snapshots"))
+            .with_param(DspParamSchema::knob("snapshot_size_kb", "Serialized Snapshot Document Size on Disk", 1.0, 65536.0, 128.0, "KB", MacroRole::Space, "Payload size of the compressed session snapshot archive"))
+            .with_param(DspParamSchema::knob("auto_snapshot_frequency_min", "Auto-Snapshot Background Period in Minutes", 1.0, 60.0, 5.0, "min", MacroRole::Character, "Timer period for capturing automatic recovery snapshots"))
+            .with_param(DspParamSchema::choice("snapshot_storage_tier", "Recovery Point Storage Destination", &["LocalStorage (Fast SSD Journal File)", "EncryptedZip (Compressed Session Archive)", "CloudBackup (Encrypted S3 Remote Sync)", "GitCommit (Local Version Control Tree)"], 0, "Target storage medium for snapshot persistence"))
+            .with_param(DspParamSchema::toggle("verify_snapshot_checksum", "Verify SHA-256 Snapshot Integrity on Write", true, "Computes cryptographic hash to guarantee uncorrupted restoration"))
+        );
+        descriptors.insert("RenderJobSpec".to_string(), DspNodeDescriptor::new("RenderJobSpec", "Offline Stem Render Farm Job Specification", DspNodeCategory::Utility, "Background stem export and render farm job specification configuring target format, audio resolution, render priority, and normalization")
+            .with_param(DspParamSchema::knob("render_priority", "Background Thread Scheduling Priority", 1.0, 10.0, 5.0, "prio", MacroRole::Punch, "Thread priority (1=low/background idle, 10=maximum CPU rendering)"))
+            .with_param(DspParamSchema::knob("progress_percentage", "Offline Audio Rendering Completion Progress", 0.0, 100.0, 0.0, "%", MacroRole::Tone, "Real-time percentage progress of the active audio export job"))
+            .with_param(DspParamSchema::knob("target_sample_rate_hz", "Rendered Audio File Sample Rate", 22050.0, 192000.0, 48000.0, "Hz", MacroRole::Character, "Output sampling frequency for exported WAV, FLAC, or MP3 stems"))
+            .with_param(DspParamSchema::choice("target_format", "Audio File Container and Compression Format", &["WAV (Linear PCM 24-bit Lossless)", "FLAC (Free Lossless Audio Codec)", "MP3 (320kbps High Quality CBR)", "OGG (Vorbis Compressed Audio)"], 0, "Output file format and compression encoding algorithm"))
+            .with_param(DspParamSchema::choice("bit_depth_resolution", "Output Audio Sample Bit Depth Resolution", &["Int16 (16-bit Red Book Audio)", "Int24 (24-bit Studio Master Quality)", "Float32 (32-bit Floating Point Headroom)", "Int32 (32-bit Fixed Precision)"], 1, "Quantization word bit depth for exported audio samples"))
+            .with_param(DspParamSchema::toggle("normalize_peak_levels", "Normalize Output Stems to -0.1 dBFS Peak", true, "Applies automatic gain scaling so peak transient reaches -0.1 dBFS"))
+        );
+        descriptors.insert("CrdtOp".to_string(), DspNodeDescriptor::new("CrdtOp", "Real-Time Collaborative CRDT Operation", DspNodeCategory::Utility, "Conflict-free replicated data type operation carrying site identity, sequence counter, track muting, parameter adjustments, and lane edits")
+            .with_param(DspParamSchema::knob("site_id_index", "Authoring Peer Network Site Index Identifier", 0.0, 128.0, 1.0, "site", MacroRole::Tone, "Originating peer workstation identifier in distributed session"))
+            .with_param(DspParamSchema::knob("op_sequence_clock", "Monotonic Sequence Counter Clock Value", 1.0, 1000000.0, 1.0, "seq", MacroRole::Character, "Per-site monotonically increasing sequence number"))
+            .with_param(DspParamSchema::knob("parameter_delta_value", "Floating-Point Parameter Modification Delta", -1.0, 1.0, 0.0, "delta", MacroRole::Punch, "Numerical change applied to target DSP or mixer parameter"))
+            .with_param(DspParamSchema::choice("operation_kind", "CRDT Edit Operation Payload Category", &["TrackMute (Toggle Mixer Channel Mute)", "TrackSolo (Toggle Mixer Channel Solo)", "ParameterTweak (Continuous Knob Modification)", "ClipInsert (Add Note or Audio Clip to Timeline)", "ClipDelete (Remove Region from Arrangement)"], 2, "Semantic operation type applied to session graph"))
+            .with_param(DspParamSchema::toggle("is_conflict_free_merged", "Verify Automatic Deterministic Convergence", true, "Asserts operation satisfies Commutative CRDT invariants"))
+        );
+        descriptors.insert("VectorClock".to_string(), DspNodeDescriptor::new("VectorClock", "Distributed Multi-Peer Causal Vector Clock", DspNodeCategory::Utility, "Distributed logical vector clock tracking causal relationships and edit concurrency among participating collaborative DAW peers")
+            .with_param(DspParamSchema::knob("total_peer_sites", "Number of Participating Collaborative Sites", 1.0, 64.0, 4.0, "peers", MacroRole::Tone, "Count of distinct workstation sites registered in vector clock"))
+            .with_param(DspParamSchema::knob("local_clock_tick", "Local Workstation Logical Clock Tick Value", 0.0, 100000.0, 42.0, "ticks", MacroRole::Punch, "Current tick value for local workstation site ID"))
+            .with_param(DspParamSchema::knob("max_concurrency_skew", "Maximum Observed Multi-Peer Clock Skew", 0.0, 1000.0, 2.0, "ticks", MacroRole::Space, "Maximum tick disparity between slowest and fastest connected peers"))
+            .with_param(DspParamSchema::choice("causal_ordering_mode", "Event Causal Sequencing Arbitration Mode", &["LamportTotal (Total Order with Tie-Breaking)", "VectorCausal (Strict Happens-Before Partial Order)", "WallClockHybrid (Hybrid Logical Clock with NTP)", "OptimisticReorder (Local Instant Render with Rewind)"], 1, "Causal ordering algorithm governing event reconciliation"))
+            .with_param(DspParamSchema::toggle("enable_automatic_pruning", "Prune Stale Vector Clock Entries for Inactive Peers", true, "Removes disconnected peer sites to bound network message overhead"))
+        );
+        descriptors.insert("RemoteUserCursor".to_string(), DspNodeDescriptor::new("RemoteUserCursor", "Collaborative Remote User Arrangement Cursor", DspNodeCategory::Utility, "Real-time collaborative multi-user presence cursor tracking remote peer playhead position, selected track, active note index, and user color")
+            .with_param(DspParamSchema::knob("playhead_beat", "Remote Peer Current Playhead Beat Position", 0.0, 4096.0, 32.0, "beats", MacroRole::Space, "Timeline beat position where remote collaborator is auditioning or editing"))
+            .with_param(DspParamSchema::knob("selected_track_id", "Selected Channel Strip or Track Index", 0.0, 128.0, 1.0, "trk", MacroRole::Tone, "Arrangement track currently highlighted by remote peer"))
+            .with_param(DspParamSchema::knob("selected_note_index", "Selected Note or Tracker Step Index Number", 0.0, 1024.0, 0.0, "step", MacroRole::Character, "Note event or step cell currently under active inspection"))
+            .with_param(DspParamSchema::choice("user_color_tag", "Remote Collaborator Identity Color Palette", &["NeonCyan (#00E5FF - Synthesizer Lead)", "AmberOrange (#FFAB00 - Drum Producer)", "EmeraldGreen (#10B981 - Mixing Engineer)", "ElectricPurple (#A855F7 - Vocal Arranger)", "CrimsonRed (#EF4444 - Mastering Engineer)"], 0, "Color accent used to paint remote user playhead and region bounds in GUI"))
+            .with_param(DspParamSchema::toggle("broadcast_cursor_presence", "Broadcast Local Cursor Position to Remote Peers", true, "Transmits real-time playhead and mouse cursor coordinates over P2P mesh"))
+        );
+        descriptors.insert("NetworkStatus".to_string(), DspNodeDescriptor::new("NetworkStatus", "Collaborative P2P Network Connection Telemetry", DspNodeCategory::Utility, "P2P collaborative network connection monitor tracking online/offline status, round-trip ping latency, packet loss, and graceful offline degradation")
+            .with_param(DspParamSchema::knob("round_trip_ping_ms", "Peer Mesh Round-Trip Transmission Latency", 1.0, 500.0, 24.0, "ms", MacroRole::Tone, "Round-trip network latency to primary collaborative relay server"))
+            .with_param(DspParamSchema::knob("packet_loss_percentage", "UDP Network Packet Loss Rate Ratio", 0.0, 50.0, 0.1, "%", MacroRole::Punch, "Percentage of dropped packets in audio stream / CRDT transport"))
+            .with_param(DspParamSchema::knob("peer_connection_count", "Active Peer Workstations Connected in Mesh", 0.0, 32.0, 3.0, "peers", MacroRole::Character, "Number of remote musicians actively connected in session"))
+            .with_param(DspParamSchema::choice("network_transport_protocol", "Peer-to-Peer Transport Protocol Architecture", &["WebRTCDataChannel (Low Latency Direct UDP)", "WebSocketRelay (Encrypted TLS Fallback Relay)", "QuicMux (Multiplexed Fast Stream Transport)", "LocalSubnetBroadcast (Zero-Config mDNS LAN)"], 0, "Underlying network transport stack for multi-user collaboration"))
+            .with_param(DspParamSchema::toggle("is_online", "Collaborative Peer Network Status Online", true, "Network connection indicator; if false, seamless offline mode engages"))
+        );
+        descriptors.insert("LuaScriptConfig".to_string(), DspNodeDescriptor::new("LuaScriptConfig", "Embedded Lua Procedural Script Configuration", DspNodeCategory::Utility, "Procedural Lua script configuration managing script name, bound MIDI CC, bound parameter automation lane, and filesystem sandbox isolation")
+            .with_param(DspParamSchema::knob("bound_midi_cc", "Hardware MIDI CC Target Control Number", 0.0, 127.0, 16.0, "CC", MacroRole::Tone, "Hardware continuous controller routing events into Lua script"))
+            .with_param(DspParamSchema::knob("max_execution_cycles", "Real-Time CPU Cycle Budget per Audio Block", 1000.0, 500000.0, 50000.0, "cyc", MacroRole::Punch, "Strict execution cycle limit to prevent audio dropouts"))
+            .with_param(DspParamSchema::knob("memory_allocation_limit_kb", "Lua Sandbox Memory Heap Quota in Kilobytes", 64.0, 8192.0, 512.0, "KB", MacroRole::Space, "Maximum memory allocation permitted for script state and tables"))
+            .with_param(DspParamSchema::choice("script_execution_hook", "Audio Processing Script Invocation Hook", &["ProcessBlock (Runs Every Audio Buffer Callback)", "MidiNoteOn (Runs on Every Incoming Note)", "AutomationTick (Runs at Timeline Tempo Subdivision)", "GuiFrameRender (Runs During Screen Draw Pass)"], 0, "Event trigger point in audio engine where script executes"))
+            .with_param(DspParamSchema::toggle("sandbox_fs", "Enforce Strict Read-Only Filesystem Sandbox", true, "Prevents script from reading or writing unauthorized files outside project"))
+        );
+        descriptors.insert("LuaScriptErrorRecovery".to_string(), DspNodeDescriptor::new("LuaScriptErrorRecovery", "Fault-Tolerant Lua Script Runtime Error Recovery", DspNodeCategory::Utility, "Fault-tolerant script exception containment engine isolating Lua panics, maintaining last-valid script buffers, and preventing audio dropouts")
+            .with_param(DspParamSchema::knob("consecutive_error_count", "Consecutive Runtime Exception Counter", 0.0, 50.0, 0.0, "errs", MacroRole::Punch, "Number of continuous failures before script is auto-suspended"))
+            .with_param(DspParamSchema::knob("restart_cooldown_ms", "Sandbox Auto-Restart Holdoff Delay", 50.0, 2000.0, 250.0, "ms", MacroRole::Space, "Delay before re-attempting script execution after syntax fix"))
+            .with_param(DspParamSchema::knob("error_ring_buffer_depth", "Captured Script Error History Depth", 1.0, 32.0, 8.0, "logs", MacroRole::Tone, "Number of past exception traces retained for debugging"))
+            .with_param(DspParamSchema::choice("recovery_action_policy", "Uncaught Exception Recovery Policy", &["RollbackToLastValid (Seamless Instant Rollback)", "BypassScriptOnly (Pass Input Signal Cleanly)", "MuteScriptOutput (Zero Out Script Audio Stream)", "PanicSubsystemRestart (Fresh Sandbox Initialization)"], 0, "Action taken by audio engine upon encountering a Lua runtime error"))
+            .with_param(DspParamSchema::toggle("has_error", "Lua Script Runtime Error Currently Active", false, "Flag indicating script threw an error; cleared when user edits script"))
+        );
+        descriptors.insert("LuaScriptInfo".to_string(), DspNodeDescriptor::new("LuaScriptInfo", "Lua Procedural Script Metadata & Signature Manifest", DspNodeCategory::Utility, "Lua procedural generator and DSP script manifest tracking module name, author, description, function export count, and API compatibility")
+            .with_param(DspParamSchema::knob("api_version_major", "Summoner Lua DSP API Major Version", 1.0, 10.0, 1.0, "ver", MacroRole::Tone, "Compatibility version of the Summoner Lua audio library"))
+            .with_param(DspParamSchema::knob("exported_function_count", "Total Global Functions Exported by Script", 1.0, 64.0, 3.0, "funcs", MacroRole::Character, "Count of callable interface functions (e.g. init, process, cleanup)"))
+            .with_param(DspParamSchema::knob("script_loc_count", "Total Source Code Lines of Code (LOC)", 10.0, 2000.0, 85.0, "lines", MacroRole::Space, "Line count of the embedded Lua procedural script"))
+            .with_param(DspParamSchema::choice("script_category", "Procedural Script Architectural Domain", &["SynthGenerator (Sound Synthesis & Waveforms)", "MidiProcessor (Arpeggiators & Note Transforms)", "AudioEffect (DSP Filtering, Distortion, Delay)", "AnalysisVisualizer (Custom Scope & Meter Art)"], 0, "Functional domain and role of the procedural Lua module"))
+            .with_param(DspParamSchema::toggle("require_cryptographic_signature", "Verify Author GPG Cryptographic Signature", false, "Enforces signed script execution for third-party marketplace plugins"))
+        );
+        descriptors.insert("LuaTestRunner".to_string(), DspNodeDescriptor::new("LuaTestRunner", "Automated Procedural Lua DSP Unit Test Runner", DspNodeCategory::Utility, "Automated DSP unit testing framework for procedural Lua scripts verifying mathematical precision, tolerance bounds, and DSP audio buffer stability")
+            .with_param(DspParamSchema::knob("float_tolerance_epsilon", "Numerical Floating-Point Equality Epsilon", 0.0000001, 0.01, 0.000001, "eps", MacroRole::Character, "Tolerance window for assert_near floating-point comparisons"))
+            .with_param(DspParamSchema::knob("test_timeout_limit_ms", "Individual Test Execution Timeout Limit", 10.0, 5000.0, 200.0, "ms", MacroRole::Punch, "Maximum execution duration allowed before timing out a test"))
+            .with_param(DspParamSchema::knob("max_assertion_count", "Maximum Assertions Evaluated per Test Suite", 10.0, 10000.0, 1000.0, "asserts", MacroRole::Tone, "Safety ceiling on total assertions per verification run"))
+            .with_param(DspParamSchema::choice("test_execution_mode", "Unit Test Execution Trigger Mode", &["OnScriptSave (Run Automatically on Script File Save)", "PreRenderVerification (Run Before Offline Audio Export)", "ManualTriggerOnly (Run Only on User GUI Button Click)", "ContinuousWatch (Run in Background on Code Change)"], 0, "Trigger strategy for launching procedural script unit tests"))
+            .with_param(DspParamSchema::toggle("halt_on_first_failure", "Abort Test Suite Execution on First Assertion Failure", false, "Immediately stops test execution when a failure is detected"))
+        );
+        descriptors.insert("LuaTestResult".to_string(), DspNodeDescriptor::new("LuaTestResult", "Unit Test Execution Result & Diagnostic Reporter", DspNodeCategory::Utility, "Unit test result reporter tracking test case title, pass/fail status, execution time in microseconds, and detailed assertion diagnostics")
+            .with_param(DspParamSchema::knob("execution_time_us", "Test Case Execution Elapsed Duration", 0.1, 10000.0, 45.0, "us", MacroRole::Tone, "Execution time consumed to complete all assertions in test case"))
+            .with_param(DspParamSchema::knob("assertions_passed_count", "Total Successful Assertions in Test Case", 0.0, 500.0, 12.0, "pass", MacroRole::Character, "Number of assert_eq and assert_near checks that passed"))
+            .with_param(DspParamSchema::knob("assertions_failed_count", "Total Failed Assertions in Test Case", 0.0, 50.0, 0.0, "fail", MacroRole::Punch, "Number of assertion checks that violated tolerance bounds"))
+            .with_param(DspParamSchema::choice("result_verdict", "Unit Test Diagnostic Overall Verdict", &["Passed (All Assertions Satisfied)", "FailedAssertion (Numerical Mismatch Exceeded Epsilon)", "TimedOut (Execution Exceeded Time Limit)", "PanicCrashed (Uncaught Lua Runtime Exception)"], 0, "Final evaluation outcome of the executed test suite"))
+            .with_param(DspParamSchema::toggle("passed", "Test Suite Verification Case Passed Cleanly", true, "Green pass indicator; false if any assertion failed or panicked"))
+        );
+        descriptors.insert("LuaUsageAnalytics".to_string(), DspNodeDescriptor::new("LuaUsageAnalytics", "Real-Time Lua DSP Execution Profiler & Analytics", DspNodeCategory::Utility, "Real-time execution profiling and cycle monitor tracking function call frequencies, audio block CPU load, and heap allocation rates for Lua scripts")
+            .with_param(DspParamSchema::knob("total_invocations_count", "Cumulative Script Function Invocations", 0.0, 10000000.0, 44100.0, "calls", MacroRole::Tone, "Total number of times process() has been invoked by audio engine"))
+            .with_param(DspParamSchema::knob("peak_cycle_cost", "Peak CPU Cycles Measured per Audio Callback", 100.0, 200000.0, 12500.0, "cyc", MacroRole::Punch, "Worst-case CPU cycle count observed across all callbacks"))
+            .with_param(DspParamSchema::knob("average_dsp_load_pct", "Average DSP Audio Thread Load Contribution", 0.0, 100.0, 1.8, "%", MacroRole::Space, "Percentage of available audio block time consumed by script"))
+            .with_param(DspParamSchema::knob("heap_allocation_rate_kps", "Dynamic Memory Allocation Rate per Second", 0.0, 1024.0, 0.0, "KB/s", MacroRole::Character, "Memory churn rate (0 KB/s indicates optimal zero-allocation audio)"))
+            .with_param(DspParamSchema::toggle("enable_profiler_sampling", "Engage Real-Time High-Resolution Profiler", true, "Measures cycle counter stamps on entry and exit of script functions"))
+        );
+        descriptors.insert("MarketplacePlugin".to_string(), DspNodeDescriptor::new("MarketplacePlugin", "Community DSP Plugin & Extension Package Manifest", DspNodeCategory::Utility, "Summoner ecosystem community plugin manifest managing package name, author, semantic version, user rating, and verified downloads")
+            .with_param(DspParamSchema::knob("user_rating_stars", "Community User Review Average Rating", 1.0, 5.0, 4.8, "stars", MacroRole::Tone, "Average community star rating (1.0 to 5.0 stars)"))
+            .with_param(DspParamSchema::knob("total_downloads_count", "Verified Total Community Download Count", 0.0, 100000.0, 3420.0, "dl", MacroRole::Character, "Verified downloads from the Summoner package repository"))
+            .with_param(DspParamSchema::knob("user_reviews_count", "Total Written Community User Reviews", 0.0, 1000.0, 45.0, "rev", MacroRole::Space, "Number of written feedback reviews submitted for this plugin"))
+            .with_param(DspParamSchema::choice("package_license", "Open-Source / Commercial Package License", &["MIT (Permissive Open Source)", "Apache2 (Permissive with Patent Grant)", "GPLv3 (Copyleft Reciprocal License)", "Commercial (Proprietary Paid License)"], 0, "Software license terms governing plugin distribution and use"))
+            .with_param(DspParamSchema::toggle("is_verified_by_team", "Deepmind / Summoner Official Security Audit Verified", true, "Verified badge confirming package has been scanned for malware and CVEs"))
+        );
+        descriptors.insert("DependencyAuditReport".to_string(), DspNodeDescriptor::new("DependencyAuditReport", "Cargo Dependency Security & License Audit Report", DspNodeCategory::Utility, "Offline security auditor analyzing workspace dependencies for CVE vulnerabilities, wildcard version specifications, and non-FOSS licenses")
+            .with_param(DspParamSchema::knob("total_workspace_crates", "Summoner Workspace Internal Crate Count", 1.0, 32.0, 6.0, "crates", MacroRole::Tone, "Count of first-party crates comprising Summoner DAW workspace"))
+            .with_param(DspParamSchema::knob("total_dependencies_audited", "Total Third-Party Cargo Dependencies Scanned", 10.0, 1000.0, 142.0, "deps", MacroRole::Space, "Direct and transitive third-party dependencies audited in tree"))
+            .with_param(DspParamSchema::knob("vulnerabilities_found", "Known CVE Security Vulnerabilities Detected", 0.0, 20.0, 0.0, "CVEs", MacroRole::Punch, "Total security advisories matching audited dependency versions"))
+            .with_param(DspParamSchema::knob("wildcard_dependencies_found", "Disallowed Wildcard Version Specifications", 0.0, 20.0, 0.0, "wild", MacroRole::Character, "Dependencies using '*' instead of pinned semantic versions"))
+            .with_param(DspParamSchema::toggle("is_security_compliant", "Summoner Enterprise Security Compliance Certified", true, "True if zero CVEs, zero wildcards, and all licenses are approved"))
+        );
+        descriptors.insert("WorkspaceCrateAudit".to_string(), DspNodeDescriptor::new("WorkspaceCrateAudit", "Workspace Internal Crate Integrity & License Validator", DspNodeCategory::Utility, "Workspace architectural validator checking internal crate dependency graphs, license headers, file locations, and build targets")
+            .with_param(DspParamSchema::knob("internal_crate_index", "Workspace Crate Ordinal Index in Topological Sort", 1.0, 16.0, 1.0, "idx", MacroRole::Tone, "Topological compilation order index within cargo workspace"))
+            .with_param(DspParamSchema::knob("direct_dependency_count", "Direct First-Party & Third-Party Dependencies", 0.0, 64.0, 8.0, "deps", MacroRole::Character, "Number of direct cargo dependencies declared in Cargo.toml"))
+            .with_param(DspParamSchema::knob("loc_codebase_volume", "Crate Total Lines of Pure Rust Code (LOC)", 100.0, 50000.0, 4200.0, "LOC", MacroRole::Space, "Rust source code volume within crate src/ directory"))
+            .with_param(DspParamSchema::choice("crate_domain_tier", "Architectural Domain Layer Classification", &["Core (Zero-GUI Pure Audio & Bus Types)", "Dsp (Physical Modeling, Filters, Synthesizers)", "Sequencer (Timeline, Automation & Clips)", "Project (File Formats, CRDT & Telemetry)", "Gui (egui Views, Visualizers & Widgets)"], 1, "Architectural tier defining allowed dependency direction"))
+            .with_param(DspParamSchema::toggle("is_license_header_present", "Verify Open-Source License Header in All Files", true, "Guarantees all source files contain standardized copyright notices"))
+        );
 
         Self { descriptors }
     }
@@ -10965,6 +11118,27 @@ descriptors.insert("BellowsGesturePattern".to_string(), DspNodeDescriptor::new("
             ("TrackConfig", DspNodeCategory::Utility, "Multi-Track Channel Strip & Audio Mixer Config"),
             ("TransportConfig", DspNodeCategory::Utility, "Master Audio Engine Transport & Clock Timing Config"),
             ("ProjectMetadata", DspNodeCategory::Utility, "Project Master Identity, Metadata & Licensing Config"),
+            ("ProjectConfig", DspNodeCategory::Utility, "Master DAW Session & Project Document Manifest"),
+            ("SequenceConfig", DspNodeCategory::Utility, "Polymetric Track Sequence & Clip Pattern Config"),
+            ("NodeConfig", DspNodeCategory::Utility, "Modular DSP Graph Node Configuration Schema"),
+            ("SystemSettings", DspNodeCategory::Utility, "Summoner Host Audio & System Preferences"),
+            ("CrashDump", DspNodeCategory::Utility, "Telemetry Crash Dump & Diagnostic Report"),
+            ("CrashDumpSummaryReport", DspNodeCategory::Utility, "Aggregated Crash Diagnostics & Stability Summary"),
+            ("RecoveryPoint", DspNodeCategory::Utility, "Transactional Session Snapshot Recovery Point"),
+            ("RenderJobSpec", DspNodeCategory::Utility, "Offline Stem Render Farm Job Specification"),
+            ("CrdtOp", DspNodeCategory::Utility, "Real-Time Collaborative CRDT Operation"),
+            ("VectorClock", DspNodeCategory::Utility, "Distributed Multi-Peer Causal Vector Clock"),
+            ("RemoteUserCursor", DspNodeCategory::Utility, "Collaborative Remote User Arrangement Cursor"),
+            ("NetworkStatus", DspNodeCategory::Utility, "Collaborative P2P Network Connection Telemetry"),
+            ("LuaScriptConfig", DspNodeCategory::Utility, "Embedded Lua Procedural Script Configuration"),
+            ("LuaScriptErrorRecovery", DspNodeCategory::Utility, "Fault-Tolerant Lua Script Runtime Error Recovery"),
+            ("LuaScriptInfo", DspNodeCategory::Utility, "Lua Procedural Script Metadata & Signature Manifest"),
+            ("LuaTestRunner", DspNodeCategory::Utility, "Automated Procedural Lua DSP Unit Test Runner"),
+            ("LuaTestResult", DspNodeCategory::Utility, "Unit Test Execution Result & Diagnostic Reporter"),
+            ("LuaUsageAnalytics", DspNodeCategory::Utility, "Real-Time Lua DSP Execution Profiler & Analytics"),
+            ("MarketplacePlugin", DspNodeCategory::Utility, "Community DSP Plugin & Extension Package Manifest"),
+            ("DependencyAuditReport", DspNodeCategory::Utility, "Cargo Dependency Security & License Audit Report"),
+            ("WorkspaceCrateAudit", DspNodeCategory::Utility, "Workspace Internal Crate Integrity & License Validator"),
         ]
     }
 
@@ -13202,6 +13376,27 @@ descriptors.insert("BellowsGesturePattern".to_string(), DspNodeDescriptor::new("
             "trackconfig" | "mixerchannelconfig" | "channelstripconfig" | "audiotrackconfig" => Some("TrackConfig"),
             "transportconfig" | "mastertransportconfig" | "sessionclockconfig" | "engineclockconfig" => Some("TransportConfig"),
             "projectmetadata" | "projectmetadataconfig" | "projectmanifest" | "dawsessionmetadata" => Some("ProjectMetadata"),
+            "projectconfig" | "projectfile" | "dawsessionconfig" | "projectdoc" => Some("ProjectConfig"),
+            "sequenceconfig" | "polymetricsequence" | "tracksequenceconfig" | "arrangementclip" => Some("SequenceConfig"),
+            "nodeconfig" | "dspnodeconfig" | "modularnodeconfig" | "graphnodeconfig" => Some("NodeConfig"),
+            "systemsettings" | "dawsettings" | "hostsettings" | "globalsettings" => Some("SystemSettings"),
+            "crashdump" | "telemetrycrashdump" | "panicdumpcollector" | "crashfile" => Some("CrashDump"),
+            "crashdumpsummaryreport" | "crashsummaryreport" | "stabilitysummary" | "crashanalyticsreport" => Some("CrashDumpSummaryReport"),
+            "recoverypoint" | "sessionrecoverypoint" | "crdtrecoverypoint" | "backupsnapshotpoint" => Some("RecoveryPoint"),
+            "renderjobspec" | "stemrenderjob" | "renderfarmjob" | "offlinerenderspec" => Some("RenderJobSpec"),
+            "crdtop" | "crdtmutationop" | "collaborativeop" | "graphcrdtop" => Some("CrdtOp"),
+            "vectorclock" | "causalvectorclock" | "peervectorclock" | "distributedclock" => Some("VectorClock"),
+            "remoteusercursor" | "remoteplayheadcursor" | "collaborativecursor" | "peercursor" => Some("RemoteUserCursor"),
+            "networkstatus" | "peernetworkstatus" | "collaborativestatus" | "p2pnetworkstatus" => Some("NetworkStatus"),
+            "luascriptconfig" | "luaconfig" | "luasandboxconfig" | "proceduralluaconfig" => Some("LuaScriptConfig"),
+            "luascripterrorrecovery" | "luarecovery" | "luafaulttolerance" | "luaruntimerecovery" => Some("LuaScriptErrorRecovery"),
+            "luascriptinfo" | "luainfo" | "luametadata" | "luascriptmanifest" => Some("LuaScriptInfo"),
+            "luatestrunner" | "luatests" | "luadspunitrunner" | "luascripttestrunner" => Some("LuaTestRunner"),
+            "luatestresult" | "luatestverdict" | "luadiagnosticresult" | "luatestreport" => Some("LuaTestResult"),
+            "luausageanalytics" | "luascriptprofiler" | "luaperformanceanalytics" | "luacycleprofiler" => Some("LuaUsageAnalytics"),
+            "marketplaceplugin" | "communityplugin" | "pluginpackagemanifest" | "ecosystemplugin" => Some("MarketplacePlugin"),
+            "dependencyauditreport" | "cargoauditreport" | "securityauditreport" | "dependencyreport" => Some("DependencyAuditReport"),
+            "workspacecrateaudit" | "crateaudit" | "workspacevalidator" | "crateintegrityvalidator" => Some("WorkspaceCrateAudit"),
             "drumclass" => Some("DrumClassClassification"),
             "mpeevent" => Some("ClapMpeEvent"),
             "nativeaudiodriver" => Some("NativeAudioDriverTuner"),
@@ -22542,6 +22737,180 @@ descriptors.insert("BellowsGesturePattern".to_string(), DspNodeDescriptor::new("
                     .with_param(DspParamDescriptor::new_linear("collaborative_access_permissions", "Multi-User CRDT Session Access Level", 0.0, 3.0, 1.0, "perm", (34, 197, 94)))
                     .with_param(DspParamDescriptor::new_bool("enable_session_crash_protection", "Enable Real-Time Crash Dump Auto-Recovery", true, (14, 165, 233)))
             ),
+            "ProjectConfig" => Box::new(
+                GenericDspNodeUi::new("ProjectConfig", "Master DAW Session & Project Document Manifest", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("master_sample_rate_hz", "Master Engine Target Audio Sample Rate", 44100.0, 192000.0, 48000.0, "Hz", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("loop_start_beat", "Playback Loop Cycle Start Position", 0.0, 4096.0, 0.0, "beats", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("loop_end_beat", "Playback Loop Cycle End Position", 0.0, 4096.0, 16.0, "beats", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("punch_in_beat", "Automated Punch-In Record Marker", 0.0, 4096.0, 0.0, "beats", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("tempo_bpm", "Nominal Project Transport Tempo", 20.0, 300.0, 120.0, "BPM", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("loop_enabled", "Enable Timeline Cycle Playback Looping", true, (14, 165, 233)))
+            ),
+            "SequenceConfig" => Box::new(
+                GenericDspNodeUi::new("SequenceConfig", "Polymetric Track Sequence & Clip Pattern Config", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("start_beat", "Clip Arrangement Start Beat Location", 0.0, 4096.0, 0.0, "beats", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("step_division", "Tracker Grid Step Beat Division Multiplier", 0.0625, 4.0, 0.25, "beats", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("gain", "Clip Playback Output Trim Gain Factor", 0.0, 4.0, 1.0, "x", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("time_stretch", "Polyphonic Time-Stretch Expansion Ratio", 0.25, 4.0, 1.0, "ratio", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("fade_in", "Clip Head Crossfade Fade-In Duration", 0.0, 16.0, 0.0, "beats", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("is_reversed", "Reverse Note and Step Playback Sequence", false, (14, 165, 233)))
+            ),
+            "NodeConfig" => Box::new(
+                GenericDspNodeUi::new("NodeConfig", "Modular DSP Graph Node Configuration Schema", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("node_instance_id", "Graph Node Instance Topology Identifier", 1.0, 1024.0, 1.0, "id", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("bypass_crossfade_ms", "Smooth Node Bypass Crossfade Slew Time", 1.0, 100.0, 15.0, "ms", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("oversampling_factor", "Internal DSP Voice Oversampling Multiplier", 1.0, 8.0, 1.0, "x", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("channel_routing_mask", "Audio Channel Routing Input Mask", 0.0, 255.0, 3.0, "mask", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("processing_precision", "Floating Point Internal DSP Precision", 0.0, 3.0, 0.0, "mode", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("enable_node_processing", "Engage Modular Node in Audio DAG", true, (14, 165, 233)))
+            ),
+            "SystemSettings" => Box::new(
+                GenericDspNodeUi::new("SystemSettings", "Summoner Host Audio & System Preferences", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("buffer_size_samples", "Audio Hardware Buffer Size in Samples", 64.0, 2048.0, 512.0, "smp", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("target_sample_rate_hz", "Hardware Audio Driver Output Sample Rate", 44100.0, 192000.0, 48000.0, "Hz", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("dsp_thread_pool_count", "Real-Time Parallel Audio Worker Threads", 1.0, 64.0, 8.0, "cores", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("theme_preset", "Summoner GUI Visual Theme Preset", 0.0, 3.0, 0.0, "theme", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("telemetry_enabled", "Opt-In Anonymous Diagnostic Telemetry", false, (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("auto_update_enabled", "Automatically Check for DAW Application Updates", true, (14, 165, 233)))
+            ),
+            "CrashDump" => Box::new(
+                GenericDspNodeUi::new("CrashDump", "Telemetry Crash Dump & Diagnostic Report", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("stack_trace_depth", "Captured Call Stack Frame Trace Depth", 1.0, 128.0, 24.0, "frames", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("log_context_lines", "Diagnostic Ring Buffer Log Context Lines", 10.0, 500.0, 50.0, "lines", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("system_memory_usage_mb", "Host System Memory Footprint at Crash", 128.0, 65536.0, 1024.0, "MB", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("crash_severity", "Panic Severity Classification Level", 0.0, 3.0, 1.0, "level", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("failing_subsystem", "Failing Architecture Subsystem Identifier", 0.0, 4.0, 0.0, "sub", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("auto_generate_minidump", "Generate Compressed Minidump ZIP Archive", true, (14, 165, 233)))
+            ),
+            "CrashDumpSummaryReport" => Box::new(
+                GenericDspNodeUi::new("CrashDumpSummaryReport", "Aggregated Crash Diagnostics & Stability Summary", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("total_dumps_analyzed", "Total Historical Crash Dumps Parsed", 1.0, 1000.0, 12.0, "dumps", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("critical_severity_count", "Critical Severity Incident Count", 0.0, 100.0, 0.0, "dumps", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("average_mtbf_hours", "Mean Time Between Subsystem Failures (MTBF)", 1.0, 720.0, 168.0, "hrs", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("primary_root_cause", "Most Frequent Panic Root Cause Signature", 0.0, 3.0, 1.0, "sig", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("generate_remediation_plan", "Compile Automated Remediation Checklist", true, (14, 165, 233)))
+            ),
+            "RecoveryPoint" => Box::new(
+                GenericDspNodeUi::new("RecoveryPoint", "Transactional Session Snapshot Recovery Point", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("snapshot_index", "Sequential Recovery Point Index Number", 1.0, 1000.0, 1.0, "idx", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("snapshot_size_kb", "Serialized Snapshot Document Size on Disk", 1.0, 65536.0, 128.0, "KB", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("auto_snapshot_frequency_min", "Auto-Snapshot Background Period in Minutes", 1.0, 60.0, 5.0, "min", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("snapshot_storage_tier", "Recovery Point Storage Destination", 0.0, 3.0, 0.0, "tier", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("verify_snapshot_checksum", "Verify SHA-256 Snapshot Integrity on Write", true, (14, 165, 233)))
+            ),
+            "RenderJobSpec" => Box::new(
+                GenericDspNodeUi::new("RenderJobSpec", "Offline Stem Render Farm Job Specification", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("render_priority", "Background Thread Scheduling Priority", 1.0, 10.0, 5.0, "prio", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("progress_percentage", "Offline Audio Rendering Completion Progress", 0.0, 100.0, 0.0, "%", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("target_sample_rate_hz", "Rendered Audio File Sample Rate", 22050.0, 192000.0, 48000.0, "Hz", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("target_format", "Audio File Container and Compression Format", 0.0, 3.0, 0.0, "fmt", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_linear("bit_depth_resolution", "Output Audio Sample Bit Depth Resolution", 0.0, 3.0, 1.0, "bits", (34, 197, 94)))
+                    .with_param(DspParamDescriptor::new_bool("normalize_peak_levels", "Normalize Output Stems to -0.1 dBFS Peak", true, (14, 165, 233)))
+            ),
+            "CrdtOp" => Box::new(
+                GenericDspNodeUi::new("CrdtOp", "Real-Time Collaborative CRDT Operation", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("site_id_index", "Authoring Peer Network Site Index Identifier", 0.0, 128.0, 1.0, "site", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("op_sequence_clock", "Monotonic Sequence Counter Clock Value", 1.0, 1000000.0, 1.0, "seq", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("parameter_delta_value", "Floating-Point Parameter Modification Delta", -1.0, 1.0, 0.0, "delta", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("operation_kind", "CRDT Edit Operation Payload Category", 0.0, 4.0, 2.0, "kind", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("is_conflict_free_merged", "Verify Automatic Deterministic Convergence", true, (14, 165, 233)))
+            ),
+            "VectorClock" => Box::new(
+                GenericDspNodeUi::new("VectorClock", "Distributed Multi-Peer Causal Vector Clock", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("total_peer_sites", "Number of Participating Collaborative Sites", 1.0, 64.0, 4.0, "peers", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("local_clock_tick", "Local Workstation Logical Clock Tick Value", 0.0, 100000.0, 42.0, "ticks", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("max_concurrency_skew", "Maximum Observed Multi-Peer Clock Skew", 0.0, 1000.0, 2.0, "ticks", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("causal_ordering_mode", "Event Causal Sequencing Arbitration Mode", 0.0, 3.0, 1.0, "order", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("enable_automatic_pruning", "Prune Stale Vector Clock Entries for Inactive Peers", true, (14, 165, 233)))
+            ),
+            "RemoteUserCursor" => Box::new(
+                GenericDspNodeUi::new("RemoteUserCursor", "Collaborative Remote User Arrangement Cursor", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("playhead_beat", "Remote Peer Current Playhead Beat Position", 0.0, 4096.0, 32.0, "beats", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("selected_track_id", "Selected Channel Strip or Track Index", 0.0, 128.0, 1.0, "trk", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("selected_note_index", "Selected Note or Tracker Step Index Number", 0.0, 1024.0, 0.0, "step", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("user_color_tag", "Remote Collaborator Identity Color Palette", 0.0, 4.0, 0.0, "col", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("broadcast_cursor_presence", "Broadcast Local Cursor Position to Remote Peers", true, (14, 165, 233)))
+            ),
+            "NetworkStatus" => Box::new(
+                GenericDspNodeUi::new("NetworkStatus", "Collaborative P2P Network Connection Telemetry", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("round_trip_ping_ms", "Peer Mesh Round-Trip Transmission Latency", 1.0, 500.0, 24.0, "ms", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("packet_loss_percentage", "UDP Network Packet Loss Rate Ratio", 0.0, 50.0, 0.1, "%", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("peer_connection_count", "Active Peer Workstations Connected in Mesh", 0.0, 32.0, 3.0, "peers", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("network_transport_protocol", "Peer-to-Peer Transport Protocol Architecture", 0.0, 3.0, 0.0, "proto", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("is_online", "Collaborative Peer Network Status Online", true, (14, 165, 233)))
+            ),
+            "LuaScriptConfig" => Box::new(
+                GenericDspNodeUi::new("LuaScriptConfig", "Embedded Lua Procedural Script Configuration", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("bound_midi_cc", "Hardware MIDI CC Target Control Number", 0.0, 127.0, 16.0, "CC", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("max_execution_cycles", "Real-Time CPU Cycle Budget per Audio Block", 1000.0, 500000.0, 50000.0, "cyc", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("memory_allocation_limit_kb", "Lua Sandbox Memory Heap Quota in Kilobytes", 64.0, 8192.0, 512.0, "KB", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("script_execution_hook", "Audio Processing Script Invocation Hook", 0.0, 3.0, 0.0, "hook", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("sandbox_fs", "Enforce Strict Read-Only Filesystem Sandbox", true, (14, 165, 233)))
+            ),
+            "LuaScriptErrorRecovery" => Box::new(
+                GenericDspNodeUi::new("LuaScriptErrorRecovery", "Fault-Tolerant Lua Script Runtime Error Recovery", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("consecutive_error_count", "Consecutive Runtime Exception Counter", 0.0, 50.0, 0.0, "errs", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("restart_cooldown_ms", "Sandbox Auto-Restart Holdoff Delay", 50.0, 2000.0, 250.0, "ms", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("error_ring_buffer_depth", "Captured Script Error History Depth", 1.0, 32.0, 8.0, "logs", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("recovery_action_policy", "Uncaught Exception Recovery Policy", 0.0, 3.0, 0.0, "act", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("has_error", "Lua Script Runtime Error Currently Active", false, (14, 165, 233)))
+            ),
+            "LuaScriptInfo" => Box::new(
+                GenericDspNodeUi::new("LuaScriptInfo", "Lua Procedural Script Metadata & Signature Manifest", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("api_version_major", "Summoner Lua DSP API Major Version", 1.0, 10.0, 1.0, "ver", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("exported_function_count", "Total Global Functions Exported by Script", 1.0, 64.0, 3.0, "funcs", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("script_loc_count", "Total Source Code Lines of Code (LOC)", 10.0, 2000.0, 85.0, "lines", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("script_category", "Procedural Script Architectural Domain", 0.0, 3.0, 0.0, "dom", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("require_cryptographic_signature", "Verify Author GPG Cryptographic Signature", false, (14, 165, 233)))
+            ),
+            "LuaTestRunner" => Box::new(
+                GenericDspNodeUi::new("LuaTestRunner", "Automated Procedural Lua DSP Unit Test Runner", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("float_tolerance_epsilon", "Numerical Floating-Point Equality Epsilon", 0.0000001, 0.01, 0.000001, "eps", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("test_timeout_limit_ms", "Individual Test Execution Timeout Limit", 10.0, 5000.0, 200.0, "ms", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("max_assertion_count", "Maximum Assertions Evaluated per Test Suite", 10.0, 10000.0, 1000.0, "asserts", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("test_execution_mode", "Unit Test Execution Trigger Mode", 0.0, 3.0, 0.0, "mode", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("halt_on_first_failure", "Abort Test Suite Execution on First Assertion Failure", false, (14, 165, 233)))
+            ),
+            "LuaTestResult" => Box::new(
+                GenericDspNodeUi::new("LuaTestResult", "Unit Test Execution Result & Diagnostic Reporter", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("execution_time_us", "Test Case Execution Elapsed Duration", 0.1, 10000.0, 45.0, "us", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("assertions_passed_count", "Total Successful Assertions in Test Case", 0.0, 500.0, 12.0, "pass", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("assertions_failed_count", "Total Failed Assertions in Test Case", 0.0, 50.0, 0.0, "fail", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("result_verdict", "Unit Test Diagnostic Overall Verdict", 0.0, 3.0, 0.0, "res", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("passed", "Test Suite Verification Case Passed Cleanly", true, (14, 165, 233)))
+            ),
+            "LuaUsageAnalytics" => Box::new(
+                GenericDspNodeUi::new("LuaUsageAnalytics", "Real-Time Lua DSP Execution Profiler & Analytics", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("total_invocations_count", "Cumulative Script Function Invocations", 0.0, 10000000.0, 44100.0, "calls", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("peak_cycle_cost", "Peak CPU Cycles Measured per Audio Callback", 100.0, 200000.0, 12500.0, "cyc", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("average_dsp_load_pct", "Average DSP Audio Thread Load Contribution", 0.0, 100.0, 1.8, "%", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("heap_allocation_rate_kps", "Dynamic Memory Allocation Rate per Second", 0.0, 1024.0, 0.0, "KB/s", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("enable_profiler_sampling", "Engage Real-Time High-Resolution Profiler", true, (14, 165, 233)))
+            ),
+            "MarketplacePlugin" => Box::new(
+                GenericDspNodeUi::new("MarketplacePlugin", "Community DSP Plugin & Extension Package Manifest", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("user_rating_stars", "Community User Review Average Rating", 1.0, 5.0, 4.8, "stars", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("total_downloads_count", "Verified Total Community Download Count", 0.0, 100000.0, 3420.0, "dl", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("user_reviews_count", "Total Written Community User Reviews", 0.0, 1000.0, 45.0, "rev", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("package_license", "Open-Source / Commercial Package License", 0.0, 3.0, 0.0, "lic", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("is_verified_by_team", "Deepmind / Summoner Official Security Audit Verified", true, (14, 165, 233)))
+            ),
+            "DependencyAuditReport" => Box::new(
+                GenericDspNodeUi::new("DependencyAuditReport", "Cargo Dependency Security & License Audit Report", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("total_workspace_crates", "Summoner Workspace Internal Crate Count", 1.0, 32.0, 6.0, "crates", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("total_dependencies_audited", "Total Third-Party Cargo Dependencies Scanned", 10.0, 1000.0, 142.0, "deps", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("vulnerabilities_found", "Known CVE Security Vulnerabilities Detected", 0.0, 20.0, 0.0, "CVEs", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("wildcard_dependencies_found", "Disallowed Wildcard Version Specifications", 0.0, 20.0, 0.0, "wild", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("is_security_compliant", "Summoner Enterprise Security Compliance Certified", true, (14, 165, 233)))
+            ),
+            "WorkspaceCrateAudit" => Box::new(
+                GenericDspNodeUi::new("WorkspaceCrateAudit", "Workspace Internal Crate Integrity & License Validator", DspNodeCategory::Utility)
+                    .with_param(DspParamDescriptor::new_linear("internal_crate_index", "Workspace Crate Ordinal Index in Topological Sort", 1.0, 16.0, 1.0, "idx", (56, 189, 248)))
+                    .with_param(DspParamDescriptor::new_linear("direct_dependency_count", "Direct First-Party & Third-Party Dependencies", 0.0, 64.0, 8.0, "deps", (245, 158, 11)))
+                    .with_param(DspParamDescriptor::new_linear("loc_codebase_volume", "Crate Total Lines of Pure Rust Code (LOC)", 100.0, 50000.0, 4200.0, "LOC", (168, 85, 247)))
+                    .with_param(DspParamDescriptor::new_linear("crate_domain_tier", "Architectural Domain Layer Classification", 0.0, 4.0, 1.0, "tier", (239, 68, 68)))
+                    .with_param(DspParamDescriptor::new_bool("is_license_header_present", "Verify Open-Source License Header in All Files", true, (14, 165, 233)))
+            ),
             // Fallback dynamic generator for any unexpected or plugin node
             other => {
                 let cat = Self::inventory()
@@ -24063,7 +24432,7 @@ assert!(registry.get("BellowsGesturePattern").is_some());
     fn test_tier125_inventory_count_and_parameter_completeness() {
         let registry = DspNodeRegistry::new();
         let inv = DspNodeRegistry::inventory();
-        assert_eq!(inv.len(), 1235, "Inventory must contain exactly 1235 DSP modules");
+        assert!(inv.len() >= 1235, "Inventory must contain at least 1235 DSP modules");
         assert!(registry.list_all().len() >= 1235, "Registry list_all must be >= 1235");
 
         let tier125_nodes = [
@@ -24140,6 +24509,91 @@ assert!(registry.get("BellowsGesturePattern").is_some());
         assert_eq!(DspNodeRegistry::normalize_type_name("mastertransportconfig"), Some("TransportConfig"));
         assert_eq!(DspNodeRegistry::normalize_type_name("projectmetadata"), Some("ProjectMetadata"));
         assert_eq!(DspNodeRegistry::normalize_type_name("projectmanifest"), Some("ProjectMetadata"));
+    }
+
+    #[test]
+    fn test_tier126_inventory_count_and_parameter_completeness() {
+        let registry = DspNodeRegistry::new();
+        let inv = DspNodeRegistry::inventory();
+        assert_eq!(inv.len(), 1256, "Inventory must contain exactly 1256 DSP modules");
+        assert!(registry.list_all().len() >= 1256, "Registry list_all must be >= 1256");
+
+        let tier126_nodes = [
+            ("ProjectConfig", DspNodeCategory::Utility),
+            ("SequenceConfig", DspNodeCategory::Utility),
+            ("NodeConfig", DspNodeCategory::Utility),
+            ("SystemSettings", DspNodeCategory::Utility),
+            ("CrashDump", DspNodeCategory::Utility),
+            ("CrashDumpSummaryReport", DspNodeCategory::Utility),
+            ("RecoveryPoint", DspNodeCategory::Utility),
+            ("RenderJobSpec", DspNodeCategory::Utility),
+            ("CrdtOp", DspNodeCategory::Utility),
+            ("VectorClock", DspNodeCategory::Utility),
+            ("RemoteUserCursor", DspNodeCategory::Utility),
+            ("NetworkStatus", DspNodeCategory::Utility),
+            ("LuaScriptConfig", DspNodeCategory::Utility),
+            ("LuaScriptErrorRecovery", DspNodeCategory::Utility),
+            ("LuaScriptInfo", DspNodeCategory::Utility),
+            ("LuaTestRunner", DspNodeCategory::Utility),
+            ("LuaTestResult", DspNodeCategory::Utility),
+            ("LuaUsageAnalytics", DspNodeCategory::Utility),
+            ("MarketplacePlugin", DspNodeCategory::Utility),
+            ("DependencyAuditReport", DspNodeCategory::Utility),
+            ("WorkspaceCrateAudit", DspNodeCategory::Utility),
+        ];
+
+        for (name, expected_cat) in tier126_nodes {
+            let desc = registry.get(name).unwrap_or_else(|| panic!("Module {} missing", name));
+            assert_eq!(desc.category, expected_cat, "Category mismatch for {}", name);
+            assert!(desc.params.len() >= 5, "Module {} must have >= 5 params, found {}", name, desc.params.len());
+            assert!(DspNodeRegistry::create_node_ui(name).is_some(), "create_node_ui failed for {}", name);
+        }
+
+        // Test normalizations
+        assert_eq!(DspNodeRegistry::normalize_type_name("projectconfig"), Some("ProjectConfig"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("projectfile"), Some("ProjectConfig"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("sequenceconfig"), Some("SequenceConfig"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("arrangementclip"), Some("SequenceConfig"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("nodeconfig"), Some("NodeConfig"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("dspnodeconfig"), Some("NodeConfig"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("systemsettings"), Some("SystemSettings"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("dawsettings"), Some("SystemSettings"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("crashdump"), Some("CrashDump"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("telemetrycrashdump"), Some("CrashDump"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("crashdumpsummaryreport"), Some("CrashDumpSummaryReport"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("stabilitysummary"), Some("CrashDumpSummaryReport"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("recoverypoint"), Some("RecoveryPoint"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("backupsnapshotpoint"), Some("RecoveryPoint"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("renderjobspec"), Some("RenderJobSpec"),);
+        assert_eq!(DspNodeRegistry::normalize_type_name("offlinerenderspec"), Some("RenderJobSpec"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("crdtop"), Some("CrdtOp"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("crdtmutationop"), Some("CrdtOp"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("collaborativeop"), Some("CrdtOp"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("vectorclock"), Some("VectorClock"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("causalvectorclock"), Some("VectorClock"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("remoteusercursor"), Some("RemoteUserCursor"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("peercursor"), Some("RemoteUserCursor"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("networkstatus"), Some("NetworkStatus"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("peernetworkstatus"), Some("NetworkStatus"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luascriptconfig"), Some("LuaScriptConfig"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("proceduralluaconfig"), Some("LuaScriptConfig"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luascripterrorrecovery"), Some("LuaScriptErrorRecovery"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luafaulttolerance"), Some("LuaScriptErrorRecovery"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luascriptinfo"), Some("LuaScriptInfo"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luascriptmanifest"), Some("LuaScriptInfo"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luatestrunner"), Some("LuaTestRunner"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luadspunitrunner"), Some("LuaTestRunner"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luatestresult"), Some("LuaTestResult"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luatestverdict"), Some("LuaTestResult"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luausageanalytics"), Some("LuaUsageAnalytics"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luascriptprofiler"), Some("LuaUsageAnalytics"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("luacycleprofiler"), Some("LuaUsageAnalytics"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("marketplaceplugin"), Some("MarketplacePlugin"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("communityplugin"), Some("MarketplacePlugin"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("dependencyauditreport"), Some("DependencyAuditReport"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("cargoauditreport"), Some("DependencyAuditReport"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("workspacecrateaudit"), Some("WorkspaceCrateAudit"));
+        assert_eq!(DspNodeRegistry::normalize_type_name("crateintegrityvalidator"), Some("WorkspaceCrateAudit"));
     }
 
     #[test]
