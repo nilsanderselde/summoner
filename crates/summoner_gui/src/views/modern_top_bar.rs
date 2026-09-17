@@ -253,6 +253,10 @@ fn default_available_presets() -> Vec<String> {
         "Bourbonnais Vielle à Roue Wrist Accent Coup de Poignet".to_string(),
         "Hammond B3 3rd Fast Percussion & C3 Scanner Chorus Suite".to_string(),
         "Kelly-Lochbaum Formant Vowel Kelly Acoustic Waveguide".to_string(),
+        "Dolby Atmos 7.1.4 Multi-Channel Surround Immersion".to_string(),
+        "Hohner D6 Dual-Coil Parallel Out-of-Phase Funk Quack".to_string(),
+        "Multi-Topology Dynamic Wavefolder & Tanh Tube Saturation".to_string(),
+        "Mastering Psychoacoustic Noise-Shaped 24-Bit Dither".to_string(),
     ]
 }
 

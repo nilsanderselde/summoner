@@ -488,6 +488,10 @@ impl AwardWinningGuiView {
                 "Bourbonnais Vielle à Roue Wrist Accent Coup de Poignet" => "HurdyGurdyArticulation",
                 "Hammond B3 3rd Fast Percussion & C3 Scanner Chorus Suite" => "PercussionHarmonic",
                 "Kelly-Lochbaum Formant Vowel Kelly Acoustic Waveguide" => "VowelPreset",
+                "Dolby Atmos 7.1.4 Multi-Channel Surround Immersion" => "ChannelLayout",
+                "Hohner D6 Dual-Coil Parallel Out-of-Phase Funk Quack" => "ClavinetPickupSelection",
+                "Multi-Topology Dynamic Wavefolder & Tanh Tube Saturation" => "DistortionType",
+                "Mastering Psychoacoustic Noise-Shaped 24-Bit Dither" => "DitherType",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {

@@ -7998,7 +7998,7 @@ mod tests {
     fn test_tier120_modern_gui_dsp_module_coverage_and_presets() {
         let registry = crate::dsp_node_ui::DspNodeRegistry::new();
         let inv = crate::dsp_node_ui::DspNodeRegistry::inventory();
-        assert_eq!(inv.len(), 1135, "Inventory must contain exactly 1135 DSP modules");
+        assert!(inv.len() >= 1135, "Inventory must contain at least 1135 DSP modules");
         assert!(registry.list_all().len() >= 1135, "Registry list_all must be >= 1135");
 
         // 1. Verify Tier 120 modules have valid categories and >= 5 parameters
@@ -8083,4 +8083,80 @@ mod tests {
             assert_eq!(view.inspector_state.selected_node_kind, Some(target_node.to_string()));
         }
     }
+    #[test]
+    fn test_tier121_modern_gui_dsp_module_coverage_and_presets() {
+        let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+        let inv = crate::dsp_node_ui::DspNodeRegistry::inventory();
+        assert_eq!(inv.len(), 1151, "Inventory must contain exactly 1151 DSP modules");
+        assert!(registry.list_all().len() >= 1151, "Registry list_all must be >= 1151");
+
+        // 1. Verify Tier 121 modules have valid categories and >= 5 parameters
+        let tier121_modules = [
+            ("ChannelLayout", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("ClavinetPickupSelection", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("DistortionType", crate::dsp_node_ui::DspNodeCategory::DistortionSaturation),
+            ("DitherType", crate::dsp_node_ui::DspNodeCategory::DynamicsMaster),
+            ("EnvState", crate::dsp_node_ui::DspNodeCategory::Modulation),
+            ("ExpressionCurveType", crate::dsp_node_ui::DspNodeCategory::Modulation),
+            ("FilterType", crate::dsp_node_ui::DspNodeCategory::FilterEq),
+            ("GpioEvent", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("IdiophoneInstrumentProfile", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("IpaVowel", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("KSystemScale", crate::dsp_node_ui::DspNodeCategory::DynamicsMaster),
+            ("KotoProfile", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+            ("LaunchpadMode", crate::dsp_node_ui::DspNodeCategory::Utility),
+            ("LfoShape", crate::dsp_node_ui::DspNodeCategory::Modulation),
+            ("LoopMode", crate::dsp_node_ui::DspNodeCategory::SamplerSlicer),
+            ("MalletMaterial", crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel),
+        ];
+
+        for (name, expected_cat) in tier121_modules {
+            let desc = registry.get(name).unwrap_or_else(|| panic!("Tier 121 module {} missing", name));
+            assert_eq!(desc.category, expected_cat, "Category mismatch for {}", name);
+            assert!(desc.params.len() >= 5, "Module {} must have >= 5 params, found {}", name, desc.params.len());
+            assert!(crate::dsp_node_ui::DspNodeRegistry::create_node_ui(name).is_some(), "create_node_ui failed for {}", name);
+        }
+
+        // 2. Normalization verification
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("channellayout"), Some("ChannelLayout"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("surroundchannellayout"), Some("ChannelLayout"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("clavinetpickupselection"), Some("ClavinetPickupSelection"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("distortiontype"), Some("DistortionType"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("dithertype"), Some("DitherType"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("envstate"), Some("EnvState"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("expressioncurvetype"), Some("ExpressionCurveType"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("filtertype"), Some("FilterType"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("gpioevent"), Some("GpioEvent"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("idiophoneinstrumentprofile"), Some("IdiophoneInstrumentProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("ipavowel"), Some("IpaVowel"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("ksystemscale"), Some("KSystemScale"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("kotoprofile"), Some("KotoProfile"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("launchpadmode"), Some("LaunchpadMode"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("lfoshape"), Some("LfoShape"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("loopmode"), Some("LoopMode"));
+        assert_eq!(crate::dsp_node_ui::DspNodeRegistry::normalize_type_name("malletmaterial"), Some("MalletMaterial"));
+
+        // 3. Verify interactive AwardWinningGuiView selects Tier 121 preset nodes
+        let mut view = crate::views::AwardWinningGuiView::new();
+        let ctx = egui::Context::default();
+        let mut audio_state = crate::audio_bridge::AudioEngineBridge::new(48000);
+        let param_bus = summoner_core::param_bus::ParamBus::new();
+
+        let presets = [
+            ("Dolby Atmos 7.1.4 Multi-Channel Surround Immersion", "ChannelLayout"),
+            ("Hohner D6 Dual-Coil Parallel Out-of-Phase Funk Quack", "ClavinetPickupSelection"),
+            ("Multi-Topology Dynamic Wavefolder & Tanh Tube Saturation", "DistortionType"),
+            ("Mastering Psychoacoustic Noise-Shaped 24-Bit Dither", "DitherType"),
+        ];
+
+        for (preset_name, target_node) in presets {
+            view.selected_preset = preset_name.to_string();
+            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+                view.render(ctx, &mut audio_state, Some(&param_bus));
+            });
+            assert_eq!(view.device_rack_state.selected_node_kind, Some(target_node.to_string()));
+            assert_eq!(view.inspector_state.selected_node_kind, Some(target_node.to_string()));
+        }
+    }
+
 }
