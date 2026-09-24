@@ -176,8 +176,24 @@ def auto_checkpoint_if_clean_build(step_num):
         log(f"Checkpoint check skipped: {e}", "\033[33m")
 
 def run_vibe_turn(step_num, build_prompt_fn, log_file_path):
+    # Hot-reload prompt builder if its source file was updated
+    module_name = getattr(build_prompt_fn, "__module__", None)
+    if module_name and module_name in sys.modules:
+        try:
+            import importlib
+            reloaded_mod = importlib.reload(sys.modules[module_name])
+            fn_name = getattr(build_prompt_fn, "__name__", None)
+            if fn_name and hasattr(reloaded_mod, fn_name):
+                build_prompt_fn = getattr(reloaded_mod, fn_name)
+        except Exception:
+            pass
+
     latest_roadmap = get_latest_roadmap_path()
     prompt = build_prompt_fn(latest_roadmap, step_num)
+    
+    progress_file = os.path.join(PROJECT_ROOT, "PROGRESS.md")
+    if os.path.exists(progress_file) and (step_num % 3 == 0 or step_num == 1):
+        log(f"📋 Consulting PROGRESS.md for Sprint Guidance (Turn #{step_num})...", "\033[1;35m")
     
     log(f"🤖 Starting Vibe Turn #{step_num} (Active Roadmap: {latest_roadmap})...", "\033[1;36m")
     
