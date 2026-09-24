@@ -11,6 +11,9 @@ pub struct MixerState {
     pub master_muted: bool,
     pub peak_holds: HashMap<u64, f32>, // track_id (0 for Master) -> peak_level (0.0 ..= 1.0)
     pub fx_popup_track_id: Option<u64>,
+    pub fx_search_query: String,
+    pub selected_category: Option<crate::dsp_node_ui::DspCategory>,
+    pub requested_navigation: Option<(u64, String)>,
 }
 
 impl Default for MixerState {
@@ -21,6 +24,9 @@ impl Default for MixerState {
             master_muted: false,
             peak_holds: HashMap::new(),
             fx_popup_track_id: None,
+            fx_search_query: String::new(),
+            selected_category: None,
+            requested_navigation: None,
         }
     }
 }
@@ -44,7 +50,7 @@ pub fn show_mixer(
     project: &mut ProjectConfig,
     selected_track_id: &mut Option<u64>,
     spectrum: Option<&SpectrumAnalyzer>,
-) {
+) -> Option<(u64, String)> {
     let state_id = ui.id().with("mixer_state");
     let mut state = ui
         .data_mut(|d| d.get_temp::<MixerState>(state_id))
@@ -52,7 +58,9 @@ pub fn show_mixer(
 
     show_mixer_impl(ui, project, selected_track_id, spectrum, &mut state);
 
+    let nav = state.requested_navigation.take();
     ui.data_mut(|d| d.insert_temp(state_id, state));
+    nav
 }
 
 pub fn show_mixer_impl(
@@ -209,6 +217,21 @@ pub fn show_mixer_impl(
 
                             ui.separator();
 
+                            // Pro View Launchers
+                            ui.horizontal(|ui| {
+                                if ui.button(egui::RichText::new("🎛 DAG").size(10.0)).on_hover_text("Open Node Graph DAG for this track").clicked() {
+                                    state.requested_navigation = Some((track.id, "dag".to_string()));
+                                }
+                                if ui.button(egui::RichText::new("🔬 Rack").size(10.0)).on_hover_text("Inspect DSP Device Rack for this track").clicked() {
+                                    state.requested_navigation = Some((track.id, "rack".to_string()));
+                                }
+                                if ui.button(egui::RichText::new("📈 Auto").size(10.0)).on_hover_text("Open Bezier Automation for this track").clicked() {
+                                    state.requested_navigation = Some((track.id, "auto".to_string()));
+                                }
+                            });
+
+                            ui.add_space(2.0);
+
                             // Insert FX Button & count
                             if ui.button("➕ Insert FX").clicked() {
                                 state.fx_popup_track_id =
@@ -356,35 +379,113 @@ pub fn show_mixer_impl(
         });
     });
 
-    // Effect selector popup window
+    // Universal DSP Effect selector popup window (Zero CLI Left Behind)
     if let Some(target_tid) = state.fx_popup_track_id {
-        egui::Window::new("Insert Effect Node")
+        egui::Window::new("Insert DSP Effect Node")
             .collapsible(false)
-            .resizable(false)
+            .resizable(true)
+            .default_size(egui::vec2(400.0, 420.0))
             .show(ui.ctx(), |ui| {
-                ui.label("Select effect node to insert:".to_string());
-                let effects = [
-                    "BiquadFilter",
-                    "DistortionNode",
-                    "ChorusNode",
-                    "FlangerNode",
-                    "PhaserNode",
-                    "DelayNode",
-                    "ReverbNode",
-                    "CompressorNode",
-                ];
-                for fx_kind in effects {
-                    if ui.button(fx_kind).clicked() {
-                        if let Some(tr) = project.tracks.iter_mut().find(|t| t.id == target_tid) {
-                            tr.nodes.push(NodeConfig {
-                                kind: fx_kind.to_string(),
-                                params: HashMap::new(),
-                                plugin_state: None,
-                            });
-                        }
-                        state.fx_popup_track_id = None;
+                ui.horizontal(|ui| {
+                    ui.label(egui::RichText::new("🔍 Search:").size(11.0));
+                    ui.text_edit_singleline(&mut state.fx_search_query);
+                    if ui.button("✕").on_hover_text("Clear search").clicked() {
+                        state.fx_search_query.clear();
                     }
-                }
+                });
+
+                ui.add_space(4.0);
+
+                // Category Filter Pills
+                ui.horizontal_wrapped(|ui| {
+                    let is_all = state.selected_category.is_none();
+                    if ui.selectable_label(is_all, "All").clicked() {
+                        state.selected_category = None;
+                    }
+                    use crate::dsp_node_ui::DspCategory;
+                    let categories = [
+                        DspCategory::FilterEq,
+                        DspCategory::DynamicsMaster,
+                        DspCategory::DistortionSaturation,
+                        DspCategory::Modulation,
+                        DspCategory::TimeSpace,
+                        DspCategory::SpatialSurround,
+                        DspCategory::AcousticPhysicalModel,
+                        DspCategory::SpectralResynthesis,
+                        DspCategory::NeuralAi,
+                        DspCategory::Oscillator,
+                        DspCategory::Utility,
+                    ];
+                    for cat in categories {
+                        let is_sel = state.selected_category == Some(cat);
+                        let (r, g, b) = cat.theme_color_rgb();
+                        let cat_col = egui::Color32::from_rgb(r, g, b);
+                        if ui.selectable_label(is_sel, egui::RichText::new(cat.display_label()).color(cat_col).size(10.0)).clicked() {
+                            state.selected_category = if is_sel { None } else { Some(cat) };
+                        }
+                    }
+                });
+
+                ui.separator();
+
+                let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+                let q = state.fx_search_query.trim().to_lowercase();
+                let matching_nodes: Vec<_> = registry.list_all().into_iter().filter(|desc| {
+                    if let Some(sel_cat) = state.selected_category {
+                        if desc.category != sel_cat {
+                            return false;
+                        }
+                    }
+                    if !q.is_empty() {
+                        let name_match = desc.display_name.to_lowercase().contains(&q);
+                        let kind_match = desc.kind_id.to_lowercase().contains(&q);
+                        name_match || kind_match
+                    } else {
+                        true
+                    }
+                }).collect();
+
+                ui.label(egui::RichText::new(format!("Available Modules ({} registered):", matching_nodes.len()))
+                    .size(11.0)
+                    .color(egui::Color32::from_rgb(148, 163, 184)));
+
+                egui::ScrollArea::vertical().max_height(260.0).show(ui, |ui| {
+                    for desc in matching_nodes {
+                        let (r, g, b) = desc.category.theme_color_rgb();
+                        let cat_col = egui::Color32::from_rgb(r, g, b);
+
+                        ui.horizontal(|ui| {
+                            let btn = ui.button(egui::RichText::new(&desc.display_name).strong().color(cat_col));
+                            ui.label(egui::RichText::new(format!("({})", desc.category.display_label()))
+                                .size(10.0)
+                                .color(egui::Color32::from_rgb(120, 130, 150)));
+
+                            if btn.clicked() {
+                                if let Some(tr) = project.tracks.iter_mut().find(|t| t.id == target_tid) {
+                                    let mut params = HashMap::new();
+                                    for p in &desc.params {
+                                        let default_val = match &p.widget {
+                                            crate::dsp_node_ui::DspWidgetKind::RotaryKnob { default, .. }
+                                            | crate::dsp_node_ui::DspWidgetKind::VerticalFader { default, .. } => *default,
+                                            crate::dsp_node_ui::DspWidgetKind::Toggle { default } => if *default { 1.0 } else { 0.0 },
+                                            crate::dsp_node_ui::DspWidgetKind::EnumChoice { default_idx, .. } => *default_idx as f32,
+                                            _ => 0.0,
+                                        };
+                                        params.insert(p.id.clone(), default_val);
+                                    }
+                                    tr.nodes.push(NodeConfig {
+                                        kind: desc.kind_id.clone(),
+                                        params,
+                                        plugin_state: None,
+                                    });
+                                }
+                                state.fx_popup_track_id = None;
+                            }
+                        });
+                    }
+                });
+
+                ui.separator();
                 if ui.button("Close").clicked() {
                     state.fx_popup_track_id = None;
                 }
@@ -447,5 +548,53 @@ mod tests {
         });
 
         assert_eq!(project.tracks[0].send_level, 0.75);
+    }
+
+    #[test]
+    fn test_mixer_pro_launchers_and_navigation() {
+        let mut project = create_default_project("Launcher Test");
+        let mut selected_track_id = Some(1);
+        let mut state = MixerState::default();
+
+        // Simulate requested navigation
+        state.requested_navigation = Some((1, "dag".to_string()));
+        assert_eq!(state.requested_navigation, Some((1, "dag".to_string())));
+
+        state.requested_navigation = Some((1, "rack".to_string()));
+        assert_eq!(state.requested_navigation, Some((1, "rack".to_string())));
+
+        state.requested_navigation = Some((1, "auto".to_string()));
+        assert_eq!(state.requested_navigation, Some((1, "auto".to_string())));
+    }
+
+    #[test]
+    fn test_mixer_universal_fx_insertion() {
+        let mut project = create_default_project("FX Insertion Test");
+        let track_id = project.tracks[0].id;
+        let mut state = MixerState::default();
+
+        state.fx_popup_track_id = Some(track_id);
+        state.fx_search_query = "chorus".to_string();
+
+        let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+        let q = state.fx_search_query.trim().to_lowercase();
+        let matches: Vec<_> = registry.list_all().into_iter().filter(|desc| {
+            desc.display_name.to_lowercase().contains(&q) || desc.kind_id.to_lowercase().contains(&q)
+        }).collect();
+
+        assert!(!matches.is_empty(), "Search for chorus should yield DSP nodes");
+
+        // Insert first match
+        let first = &matches[0];
+        let tr = project.tracks.iter_mut().find(|t| t.id == track_id).unwrap();
+        let initial_count = tr.nodes.len();
+        tr.nodes.push(NodeConfig {
+            kind: first.kind_id.clone(),
+            params: HashMap::new(),
+            plugin_state: None,
+        });
+
+        assert_eq!(tr.nodes.len(), initial_count + 1);
+        assert_eq!(tr.nodes.last().unwrap().kind, first.kind_id);
     }
 }

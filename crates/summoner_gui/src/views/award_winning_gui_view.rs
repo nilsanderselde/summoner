@@ -762,6 +762,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.node_param_values.insert("character".to_string(), cur_macros[3]);
         }
 
+        // Synchronize Two-Tier Mode between Top Bar and Device Rack / Inspector
+        if self.top_bar_state.is_pro_mode {
+            self.top_bar_state.is_novice_macro_visible = false;
+            self.device_rack_state.is_minimized = false;
+            self.device_rack_state.is_expanded_params = true;
+            self.inspector_state.is_collapsed = false;
+        } else {
+            self.top_bar_state.is_novice_macro_visible = true;
+        }
+
         // Synchronize Master Gain from Novice / Top Bar if adjusted
         if (self.top_bar_state.master_gain - self.last_applied_master_gain).abs() > 0.001 {
             self.last_applied_master_gain = self.top_bar_state.master_gain;
@@ -2177,6 +2187,40 @@ impl AwardWinningGuiView {
                     *v = val;
                 }
             }
+
+            // Evaluate Top Bar Macros & Master Volume from automation timeline
+            let macro_keys = [
+                ("macro_tone", &mut self.top_bar_state.macro_tone),
+                ("macro_space", &mut self.top_bar_state.macro_space),
+                ("macro_punch", &mut self.top_bar_state.macro_punch),
+                ("macro_character", &mut self.top_bar_state.macro_character),
+            ];
+            for (m_key, m_val_ref) in macro_keys {
+                let lane_key = format!("track_{}_{}", track_id, m_key);
+                if let Some(val) = automation_timeline.evaluate(&lane_key, playhead_beat) {
+                    *m_val_ref = val;
+                }
+            }
+            if let Some(val) = automation_timeline.evaluate("master_gain", playhead_beat) {
+                self.top_bar_state.master_gain = val;
+            }
+
+            let gain_lane = format!("track_{}_gain", track_id);
+            if let Some(val) = automation_timeline.evaluate(&gain_lane, playhead_beat) {
+                if let Some(vt) = self.tracks.get_mut(self.selected_track_idx) {
+                    vt.gain = val;
+                    self.inspector_state.gain_db = (val - 1.0) * 12.0;
+                    self.last_inspector_gain_db = self.inspector_state.gain_db;
+                }
+            }
+            let pan_lane = format!("track_{}_pan", track_id);
+            if let Some(val) = automation_timeline.evaluate(&pan_lane, playhead_beat) {
+                if let Some(vt) = self.tracks.get_mut(self.selected_track_idx) {
+                    vt.pan = val;
+                    self.inspector_state.pan_val = val;
+                    self.last_inspector_pan = val;
+                }
+            }
         }
 
         // 2. Dispatch all parameters to ParamBus and AutomationRegistry
@@ -2255,6 +2299,115 @@ impl AwardWinningGuiView {
                 let lane = automation_timeline.lanes.entry(auto_key.clone()).or_insert_with(|| {
                     summoner_sequencer::automation_timeline::AutomationLane {
                         param_id: auto_key.clone(),
+                        curve: summoner_sequencer::automation_timeline::AutomationCurve { points: Vec::new() },
+                    }
+                });
+                match lane.curve.points.binary_search_by(|p| p.beat.partial_cmp(&playhead_beat).unwrap()) {
+                    Ok(idx) => lane.curve.points[idx] = point,
+                    Err(idx) => lane.curve.points.insert(idx, point),
+                }
+            }
+        }
+
+        // 3. Novice Top Bar Macros Dispatch & Live Recording
+        let top_macros = [
+            ("macro_tone", self.top_bar_state.macro_tone, 100),
+            ("macro_space", self.top_bar_state.macro_space, 102),
+            ("macro_punch", self.top_bar_state.macro_punch, 105),
+            ("macro_character", self.top_bar_state.macro_character, 106),
+        ];
+        for (m_name, m_val, offset) in top_macros {
+            let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + offset);
+            if param_bus.get(pid).is_some() {
+                param_bus.set(pid, m_val);
+            }
+            let auto_key = format!("track_{}_{}", track_id, m_name);
+            if automation_registry.get_param(&auto_key).is_none() {
+                automation_registry.register_param(&auto_key, m_val);
+            }
+            automation_registry.set(&auto_key, m_val);
+
+            if is_recording_automation {
+                let point = summoner_sequencer::automation_timeline::AutomationPoint {
+                    beat: playhead_beat,
+                    value: m_val,
+                    interp: summoner_sequencer::automation_timeline::Interpolation::Linear,
+                };
+                let lane = automation_timeline.lanes.entry(auto_key.clone()).or_insert_with(|| {
+                    summoner_sequencer::automation_timeline::AutomationLane {
+                        param_id: auto_key.clone(),
+                        curve: summoner_sequencer::automation_timeline::AutomationCurve { points: Vec::new() },
+                    }
+                });
+                match lane.curve.points.binary_search_by(|p| p.beat.partial_cmp(&playhead_beat).unwrap()) {
+                    Ok(idx) => lane.curve.points[idx] = point,
+                    Err(idx) => lane.curve.points.insert(idx, point),
+                }
+            }
+        }
+
+        // 4. Master Gain Dispatch & Live Recording
+        let m_pid = summoner_core::param_bus::ParamId(9999);
+        if param_bus.get(m_pid).is_some() {
+            param_bus.set(m_pid, self.top_bar_state.master_gain);
+        }
+        let master_auto_key = "master_gain".to_string();
+        if automation_registry.get_param(&master_auto_key).is_none() {
+            automation_registry.register_param(&master_auto_key, self.top_bar_state.master_gain);
+        }
+        automation_registry.set(&master_auto_key, self.top_bar_state.master_gain);
+
+        if is_recording_automation {
+            let point = summoner_sequencer::automation_timeline::AutomationPoint {
+                beat: playhead_beat,
+                value: self.top_bar_state.master_gain,
+                interp: summoner_sequencer::automation_timeline::Interpolation::Linear,
+            };
+            let lane = automation_timeline.lanes.entry(master_auto_key.clone()).or_insert_with(|| {
+                summoner_sequencer::automation_timeline::AutomationLane {
+                    param_id: master_auto_key.clone(),
+                    curve: summoner_sequencer::automation_timeline::AutomationCurve { points: Vec::new() },
+                }
+            });
+            match lane.curve.points.binary_search_by(|p| p.beat.partial_cmp(&playhead_beat).unwrap()) {
+                Ok(idx) => lane.curve.points[idx] = point,
+                Err(idx) => lane.curve.points.insert(idx, point),
+            }
+        }
+
+        // 5. Track Gain & Pan Dispatch & Live Recording
+        let t_gain = self.tracks.get(self.selected_track_idx).map(|t| t.gain).unwrap_or(1.0);
+        let t_pan = self.tracks.get(self.selected_track_idx).map(|t| t.pan).unwrap_or(0.0);
+        let g_pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 200);
+        if param_bus.get(g_pid).is_some() {
+            param_bus.set(g_pid, t_gain);
+        }
+        let p_pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 201);
+        if param_bus.get(p_pid).is_some() {
+            param_bus.set(p_pid, t_pan);
+        }
+        let gain_auto_key = format!("track_{}_gain", track_id);
+        if automation_registry.get_param(&gain_auto_key).is_none() {
+            automation_registry.register_param(&gain_auto_key, t_gain);
+        }
+        automation_registry.set(&gain_auto_key, t_gain);
+
+        let pan_auto_key = format!("track_{}_pan", track_id);
+        if automation_registry.get_param(&pan_auto_key).is_none() {
+            automation_registry.register_param(&pan_auto_key, t_pan);
+        }
+        automation_registry.set(&pan_auto_key, t_pan);
+
+        if is_recording_automation {
+            for (key, val) in [(&gain_auto_key, t_gain), (&pan_auto_key, t_pan)] {
+                let point = summoner_sequencer::automation_timeline::AutomationPoint {
+                    beat: playhead_beat,
+                    value: *val,
+                    interp: summoner_sequencer::automation_timeline::Interpolation::Linear,
+                };
+                let lane = automation_timeline.lanes.entry(key.clone()).or_insert_with(|| {
+                    summoner_sequencer::automation_timeline::AutomationLane {
+                        param_id: key.clone(),
                         curve: summoner_sequencer::automation_timeline::AutomationCurve { points: Vec::new() },
                     }
                 });

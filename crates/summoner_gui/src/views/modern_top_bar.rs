@@ -58,6 +58,8 @@ pub struct ModernTopBarState {
     #[serde(default = "default_true_novice")]
     pub is_novice_macro_visible: bool,
     #[serde(default)]
+    pub is_pro_mode: bool,
+    #[serde(default)]
     pub pending_demo_template: Option<String>,
 }
 
@@ -335,6 +337,7 @@ impl Default for ModernTopBarState {
             macro_punch: default_macro_punch(),
             macro_character: default_macro_character(),
             is_novice_macro_visible: default_true_novice(),
+            is_pro_mode: false,
             pending_demo_template: None,
         }
     }
@@ -627,6 +630,32 @@ pub fn show_modern_top_bar(
                 ui.label(RichText::new(format!("+{:.1}dB", state.master_peak_db)).font(FontId::proportional(10.0)).strong().color(peak_color));
             });
 
+            ui.add_space(8.0);
+
+            // Two-Tier Mode Switcher [🌱 NOVICE / 🔬 PRO]
+            let mode_label = if state.is_pro_mode { "🔬 PRO" } else { "🌱 NOVICE" };
+            let mode_color = if state.is_pro_mode {
+                Color32::from_rgb(168, 85, 247) // Purple Pro
+            } else {
+                Color32::from_rgb(34, 197, 94)  // Green Novice
+            };
+            let mode_tooltip = if state.is_pro_mode {
+                "Pro Mode Active: Full surgical parameter inspection, expandable modular device rack drawer, and routing matrix."
+            } else {
+                "Novice Mode Active: Clean high-level macro knobs (Tone, Space, Punch, Character), instant presets, and streamlined workflow."
+            };
+            let mode_btn = ui.add(
+                egui::Button::new(RichText::new(mode_label).font(FontId::proportional(10.0)).strong().color(mode_color))
+                    .fill(Color32::from_rgb(18, 24, 36))
+                    .stroke(Stroke::new(1.0_f32, mode_color))
+                    .rounding(Rounding::same(4.0))
+                    .min_size(Vec2::new(60.0, 24.0))
+            ).on_hover_text(mode_tooltip);
+            if mode_btn.clicked() {
+                state.is_pro_mode = !state.is_pro_mode;
+                state.is_novice_macro_visible = !state.is_pro_mode;
+            }
+
             // Right-aligned Tab Mode Switcher
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 ui.add_space(12.0);
@@ -743,6 +772,26 @@ mod tests {
         assert_eq!(state.macro_space, 0.40);
         assert_eq!(state.macro_punch, 0.55);
         assert_eq!(state.macro_character, 0.50);
+        assert!(state.is_novice_macro_visible);
+        assert!(!state.is_pro_mode);
+    }
+
+    #[test]
+    fn test_modern_top_bar_two_tier_mode_toggle() {
+        let mut state = ModernTopBarState::default();
+        assert!(!state.is_pro_mode);
+        assert!(state.is_novice_macro_visible);
+
+        // Switch to Pro mode
+        state.is_pro_mode = true;
+        state.is_novice_macro_visible = false;
+        assert!(state.is_pro_mode);
+        assert!(!state.is_novice_macro_visible);
+
+        // Switch back to Novice mode
+        state.is_pro_mode = false;
+        state.is_novice_macro_visible = true;
+        assert!(!state.is_pro_mode);
         assert!(state.is_novice_macro_visible);
     }
 

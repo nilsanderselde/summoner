@@ -2532,7 +2532,26 @@ impl eframe::App for SummonerApp {
                     show_node_graph(ui, &mut self.dummy_graph, &mut self.node_graph_state, &mut selected_edge, osc);
                 }
                 ViewMode::Mixer => {
-                    show_mixer(ui, &mut self.project, &mut self.selected_track_id, Some(&self.spectrum_analyzer));
+                    if let Some((nav_tid, nav_kind)) = show_mixer(ui, &mut self.project, &mut self.selected_track_id, Some(&self.spectrum_analyzer)) {
+                        match nav_kind.as_str() {
+                            "dag" => {
+                                self.selected_track_id = Some(nav_tid);
+                                self.sync_track_to_graph(nav_tid);
+                                self.current_view = ViewMode::NodeGraph(nav_tid);
+                            }
+                            "rack" => {
+                                self.selected_track_id = Some(nav_tid);
+                                self.show_rack = true;
+                                self.current_view = ViewMode::ModernStudio;
+                            }
+                            "auto" => {
+                                self.selected_track_id = Some(nav_tid);
+                                let param_name = format!("track_{}_gain", nav_tid);
+                                self.current_view = ViewMode::AutomationEditor(nav_tid, param_name);
+                            }
+                            _ => {}
+                        }
+                    }
                 }
                 ViewMode::Performance => {
                     show_stage_view(ui, &mut self.stage_view, &mut self.transport);
