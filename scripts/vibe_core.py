@@ -13,6 +13,7 @@ import re
 import os
 import glob
 from datetime import datetime, timedelta
+import signal
 
 # Ensure stdout and stderr use UTF-8 on Windows
 if hasattr(sys.stdout, "reconfigure"):
@@ -22,6 +23,32 @@ if hasattr(sys.stderr, "reconfigure"):
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
+
+STOP_AFTER_CURRENT_TURN = False
+ACTIVE_PROC = None
+
+def sigint_handler(signum, frame):
+    global STOP_AFTER_CURRENT_TURN, ACTIVE_PROC
+    if not STOP_AFTER_CURRENT_TURN:
+        STOP_AFTER_CURRENT_TURN = True
+        log("\n⚠️  Ctrl+C pressed: Quitting after current turn. Press Ctrl+C again to quit immediately.", "\033[1;33m")
+    else:
+        log("\n🛑 Ctrl+C pressed again: Quitting immediately...", "\033[1;31m")
+        if ACTIVE_PROC and ACTIVE_PROC.poll() is None:
+            try:
+                ACTIVE_PROC.terminate()
+                ACTIVE_PROC.kill()
+            except Exception:
+                pass
+        sys.exit(130)
+
+def interruptible_sleep(seconds):
+    """Sleeps in short slices, returning early if STOP_AFTER_CURRENT_TURN is set."""
+    end_time = time.time() + seconds
+    while time.time() < end_time:
+        if STOP_AFTER_CURRENT_TURN:
+            break
+        time.sleep(min(0.2, max(0.01, end_time - time.time())))
 
 QUOTA_PATTERNS = [
     r"resets?\s+in",
@@ -208,16 +235,24 @@ def run_vibe_turn(step_num, build_prompt_fn, log_file_path):
         "--print-timeout", "30m"
     ]
     
-    proc = subprocess.Popen(
-        agy_flags,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        bufsize=1,
-        cwd=PROJECT_ROOT
-    )
+    global ACTIVE_PROC
+
+    popen_kwargs = {
+        "stdout": subprocess.PIPE,
+        "stderr": subprocess.STDOUT,
+        "text": True,
+        "encoding": "utf-8",
+        "errors": "replace",
+        "bufsize": 1,
+        "cwd": PROJECT_ROOT,
+    }
+    if sys.platform == "win32":
+        popen_kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+    else:
+        popen_kwargs["start_new_session"] = True
+
+    proc = subprocess.Popen(agy_flags, **popen_kwargs)
+    ACTIVE_PROC = proc
 
     full_output = []
 
@@ -266,6 +301,8 @@ def run_vibe_turn(step_num, build_prompt_fn, log_file_path):
                 print(f"  {line_str}", flush=True)
     except Exception as e:
         log(f"  ⚠️ Stream read error: {e}", "\033[31m")
+    finally:
+        ACTIVE_PROC = None
 
     proc.wait()
     
@@ -281,19 +318,28 @@ def run_vibe_turn(step_num, build_prompt_fn, log_file_path):
     return proc.returncode, "\n".join(full_output)
 
 def run_vibe_loop(build_prompt_fn, log_file_name, runner_title):
+    signal.signal(signal.SIGINT, sigint_handler)
     log_file_path = os.path.join(SCRIPT_DIR, log_file_name)
     step = 1
     consecutive_failures = 0
     log(f"🚀 {runner_title} Started", "\033[1;35m")
     
     while True:
+        if STOP_AFTER_CURRENT_TURN:
+            log("🛑 Graceful shutdown requested. Exiting vibe runner.", "\033[1;32m")
+            break
+
         code, output = run_vibe_turn(step, build_prompt_fn, log_file_path)
         
+        if STOP_AFTER_CURRENT_TURN:
+            log(f"🛑 Graceful shutdown: stopped after Turn #{step}. Exiting vibe runner.", "\033[1;32m")
+            break
+
         if code == 0:
             consecutive_failures = 0
             log(f"🎉 Step #{step} complete. Sleeping 10s before next task...", "\033[32m")
             step += 1
-            time.sleep(10)
+            interruptible_sleep(10)
         else:
             consecutive_failures += 1
             log("\n❌ ------------------- TURN ERROR DETECTED -------------------", "\033[1;31m")
@@ -309,9 +355,9 @@ def run_vibe_loop(build_prompt_fn, log_file_name, runner_title):
                 log("   Detected Issue: Quota / Backend Rate Limit reached.", "\033[1;33m")
                 log(f"   👉 Sleeping {sleep_seconds}s. Resuming at ~{resume_time}.", "\033[1;32m")
                 log("----------------------------------------------------------------\n", "\033[1;31m")
-                time.sleep(sleep_seconds)
+                interruptible_sleep(sleep_seconds)
             else:
                 backoff_seconds = min(30 * (2 ** (consecutive_failures - 1)), 600)
                 log(f"   Turn exited with code {code} (Failures: {consecutive_failures}). Retrying in {backoff_seconds}s.", "\033[1;31m")
                 log("----------------------------------------------------------------\n", "\033[1;31m")
-                time.sleep(backoff_seconds)
+                interruptible_sleep(backoff_seconds)
