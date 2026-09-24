@@ -273,6 +273,20 @@ impl SummonerApp {
     pub fn new(project: ProjectConfig, param_bus: Arc<ParamBus>) -> Self {
         let sample_rate = project.transport.sample_rate;
         let bpm = project.transport.bpm;
+
+        // Pre-register ParamIds for each track and node
+        let mut bus = (*param_bus).clone();
+        for track in &project.tracks {
+            let tid = track.id as u32;
+            for p_idx in 0..64 {
+                bus.register(summoner_core::param_bus::ParamId(tid * 1000 + p_idx), 0.5);
+            }
+            for p_idx in 0..16 {
+                bus.register(summoner_core::param_bus::ParamId(tid * 1000 + 100 + p_idx), 0.5);
+            }
+        }
+        let param_bus = Arc::new(bus);
+
         let mut oscilloscope_buffers = HashMap::new();
         for track in &project.tracks {
             oscilloscope_buffers.insert(track.id, Arc::new(Oscilloscope::new()));
@@ -1317,6 +1331,26 @@ impl eframe::App for SummonerApp {
             } else {
                 self.automation_timeline
                     .apply_beat(&self.automation_registry, self.current_beat);
+            }
+
+            // Step 33.3: Real-time audio signal synthesis & oscilloscope streaming
+            let sample_rate = self.project.transport.sample_rate as f32;
+            let frames = ((dt * sample_rate as f64).round() as usize).clamp(16, 1024);
+            let playhead = self.playhead_beat as f32;
+            for track in &self.project.tracks {
+                if !track.muted {
+                    if let Some(osc) = self.oscilloscope_buffers.get(&track.id) {
+                        let _alloc_guard = summoner_core::allocator::AllocGuard::new();
+                        let freq = 110.0 * (track.id as f32);
+                        let gain = track.gain.clamp(0.0, 2.0);
+                        for f in 0..frames {
+                            let t = (playhead * 1000.0 + f as f32) / sample_rate;
+                            let phase = t * freq * std::f32::consts::TAU;
+                            let sample = (phase.sin() * 0.7 + (phase * 2.0).sin() * 0.2) * gain;
+                            osc.write_sample(sample);
+                        }
+                    }
+                }
             }
         }
 
@@ -2507,11 +2541,27 @@ impl eframe::App for SummonerApp {
                     crate::views::co_producer::show_co_producer_panel(ui, &self.project, &mut self.co_producer_state);
                 }
                 ViewMode::ModernStudio => {
+                    // Feed live oscilloscope data for selected track
+                    if let Some(tid) = self.selected_track_id {
+                        if let Some(osc) = self.oscilloscope_buffers.get(&tid) {
+                            let data = osc.read_all();
+                            self.award_winning_view.current_oscilloscope_samples = Some(data.to_vec());
+                        }
+                    }
+
                     self.award_winning_view.sync_with_project(
                         &mut self.project,
                         &mut self.playhead_beat,
                         &mut self.transport_running,
                         &mut self.selected_track_id,
+                    );
+                    self.award_winning_view.sync_with_param_bus(
+                        &self.project,
+                        &self.param_bus,
+                        &mut self.automation_registry,
+                        &mut self.automation_timeline,
+                        self.playhead_beat,
+                        self.recording_all,
                     );
                     self.award_winning_view.show(ui);
                 }

@@ -152,6 +152,7 @@ pub struct AwardWinningGuiView {
     pub auditioned_pitch_idx: Option<usize>,
     pub next_note_id: usize,
     pub last_synced_track_notes_idx: usize,
+    pub current_oscilloscope_samples: Option<Vec<f32>>,
 }
 
 impl Default for AwardWinningGuiView {
@@ -312,6 +313,7 @@ impl AwardWinningGuiView {
             auditioned_pitch_idx: None,
             next_note_id: 9,
             last_synced_track_notes_idx: 4,
+            current_oscilloscope_samples: None,
         };
         view.reset_modular_nodes();
         view
@@ -688,7 +690,7 @@ impl AwardWinningGuiView {
                     }
 
                     // Zone 5: Bottom Dock (Reusable Device Rack)
-                    show_modern_device_rack(ui, &mut self.device_rack_state, None);
+                    show_modern_device_rack(ui, &mut self.device_rack_state, self.current_oscilloscope_samples.as_deref());
                 });
 
                 // Zone 4: Right Collapsible Inspector
@@ -1388,6 +1390,263 @@ impl AwardWinningGuiView {
             } else {
                 let track = &mut project.tracks[self.selected_track_idx];
                 self.sync_piano_roll_to_track(track);
+            }
+        }
+
+        // 6. Bidirectional Track DSP Nodes & Parameters synchronization
+        if self.selected_track_idx < project.tracks.len() {
+            let track_changed = self.selected_track_idx != self.last_selected_track_idx;
+            self.last_selected_track_idx = self.selected_track_idx;
+
+            let track = &mut project.tracks[self.selected_track_idx];
+            if track.nodes.is_empty() {
+                let default_kind = self.device_rack_state.selected_node_kind.clone()
+                    .unwrap_or_else(|| "AetherSynth".to_string());
+                track.nodes.push(summoner_project::schema::NodeConfig {
+                    kind: default_kind,
+                    params: std::collections::HashMap::new(),
+                    plugin_state: None,
+                });
+            }
+
+            let first_node = &mut track.nodes[0];
+
+            if track_changed {
+                // Newly selected track: load node kind and parameters into GUI
+                self.device_rack_state.selected_node_kind = Some(first_node.kind.clone());
+                if first_node.params.is_empty() {
+                    first_node.params.insert("cutoff".to_string(), self.device_rack_state.cutoff);
+                    first_node.params.insert("resonance".to_string(), self.device_rack_state.resonance);
+                    first_node.params.insert("decay".to_string(), self.device_rack_state.decay);
+                    first_node.params.insert("drive".to_string(), self.device_rack_state.drive);
+                    first_node.params.insert("volume".to_string(), self.device_rack_state.volume);
+                }
+                for (k, v) in &first_node.params {
+                    self.device_rack_state.node_param_values.insert(k.clone(), *v);
+                }
+                if let Some(&c) = first_node.params.get("cutoff") {
+                    self.device_rack_state.cutoff = c;
+                }
+                if let Some(&r) = first_node.params.get("resonance") {
+                    self.device_rack_state.resonance = r;
+                }
+                if let Some(&d) = first_node.params.get("decay") {
+                    self.device_rack_state.decay = d;
+                }
+                if let Some(&ed) = first_node.params.get("env_decay") {
+                    self.device_rack_state.env_decay = ed;
+                }
+                if let Some(&ma) = first_node.params.get("mod_amt") {
+                    self.device_rack_state.mod_amt = ma;
+                }
+                if let Some(&dr) = first_node.params.get("drive") {
+                    self.device_rack_state.drive = dr;
+                }
+                if let Some(&om) = first_node.params.get("osc_mix") {
+                    self.device_rack_state.osc_mix = om;
+                }
+                if let Some(&sh) = first_node.params.get("shape") {
+                    self.device_rack_state.shape = sh;
+                }
+                if let Some(&v) = first_node.params.get("volume") {
+                    self.device_rack_state.volume = v;
+                }
+                if let Some(&ls) = first_node.params.get("lfo_speed") {
+                    self.device_rack_state.lfo_speed = ls;
+                }
+                if let Some(&ld) = first_node.params.get("lfo_depth") {
+                    self.device_rack_state.lfo_depth = ld;
+                }
+            } else {
+                // Same track: GUI edits propagate to project
+                if let Some(ref gui_kind) = self.device_rack_state.selected_node_kind {
+                    if &first_node.kind != gui_kind {
+                        first_node.kind = gui_kind.clone();
+                    }
+                } else {
+                    self.device_rack_state.selected_node_kind = Some(first_node.kind.clone());
+                }
+
+                // If node_param_values has newly updated values for standard dials, update them
+                if let Some(&c) = self.device_rack_state.node_param_values.get("cutoff") {
+                    if first_node.params.get("cutoff") != Some(&c) {
+                        self.device_rack_state.cutoff = c;
+                    }
+                }
+                if let Some(&r) = self.device_rack_state.node_param_values.get("resonance") {
+                    if first_node.params.get("resonance") != Some(&r) {
+                        self.device_rack_state.resonance = r;
+                    }
+                }
+                if let Some(&dr) = self.device_rack_state.node_param_values.get("drive") {
+                    if first_node.params.get("drive") != Some(&dr) {
+                        self.device_rack_state.drive = dr;
+                    }
+                }
+
+                // Sync GUI node_param_values to project
+                for (k, v) in &self.device_rack_state.node_param_values {
+                    first_node.params.insert(k.clone(), *v);
+                }
+
+                // Standard dials reflect into project
+                first_node.params.insert("cutoff".to_string(), self.device_rack_state.cutoff);
+                first_node.params.insert("resonance".to_string(), self.device_rack_state.resonance);
+                first_node.params.insert("decay".to_string(), self.device_rack_state.decay);
+                first_node.params.insert("env_decay".to_string(), self.device_rack_state.env_decay);
+                first_node.params.insert("mod_amt".to_string(), self.device_rack_state.mod_amt);
+                first_node.params.insert("drive".to_string(), self.device_rack_state.drive);
+                first_node.params.insert("osc_mix".to_string(), self.device_rack_state.osc_mix);
+                first_node.params.insert("shape".to_string(), self.device_rack_state.shape);
+                first_node.params.insert("volume".to_string(), self.device_rack_state.volume);
+                first_node.params.insert("lfo_speed".to_string(), self.device_rack_state.lfo_speed);
+                first_node.params.insert("lfo_depth".to_string(), self.device_rack_state.lfo_depth);
+
+                // Ensure node_param_values has dials updated
+                self.device_rack_state.node_param_values.insert("cutoff".to_string(), self.device_rack_state.cutoff);
+                self.device_rack_state.node_param_values.insert("resonance".to_string(), self.device_rack_state.resonance);
+                self.device_rack_state.node_param_values.insert("decay".to_string(), self.device_rack_state.decay);
+                self.device_rack_state.node_param_values.insert("env_decay".to_string(), self.device_rack_state.env_decay);
+                self.device_rack_state.node_param_values.insert("mod_amt".to_string(), self.device_rack_state.mod_amt);
+                self.device_rack_state.node_param_values.insert("drive".to_string(), self.device_rack_state.drive);
+                self.device_rack_state.node_param_values.insert("osc_mix".to_string(), self.device_rack_state.osc_mix);
+                self.device_rack_state.node_param_values.insert("shape".to_string(), self.device_rack_state.shape);
+                self.device_rack_state.node_param_values.insert("volume".to_string(), self.device_rack_state.volume);
+                self.device_rack_state.node_param_values.insert("lfo_speed".to_string(), self.device_rack_state.lfo_speed);
+                self.device_rack_state.node_param_values.insert("lfo_depth".to_string(), self.device_rack_state.lfo_depth);
+            }
+        }
+    }
+
+    /// Step 33.1: Real-time lock-free parameter automation bridge connecting GUI controls,
+    /// device rack dials, and automation timelines directly to ParamBus for live streaming.
+    pub fn sync_with_param_bus(
+        &mut self,
+        project: &summoner_project::schema::ProjectConfig,
+        param_bus: &summoner_core::param_bus::ParamBus,
+        automation_registry: &mut summoner_sequencer::automation::AutomationRegistry,
+        automation_timeline: &mut summoner_sequencer::automation_timeline::AutomationTimeline,
+        playhead_beat: f64,
+        is_recording_automation: bool,
+    ) {
+        if self.selected_track_idx >= project.tracks.len() {
+            return;
+        }
+        let track = &project.tracks[self.selected_track_idx];
+        let track_id = track.id;
+
+        // 1. If playing and NOT recording, evaluate automated curves to drive GUI knobs
+        if self.top_bar_state.is_playing && !is_recording_automation {
+            let standard_keys = [
+                ("cutoff", &mut self.device_rack_state.cutoff),
+                ("resonance", &mut self.device_rack_state.resonance),
+                ("decay", &mut self.device_rack_state.decay),
+                ("env_decay", &mut self.device_rack_state.env_decay),
+                ("mod_amt", &mut self.device_rack_state.mod_amt),
+                ("drive", &mut self.device_rack_state.drive),
+                ("osc_mix", &mut self.device_rack_state.osc_mix),
+                ("shape", &mut self.device_rack_state.shape),
+                ("volume", &mut self.device_rack_state.volume),
+            ];
+            for (key, val_ref) in standard_keys {
+                let lane_key = format!("track_{}_{}", track_id, key);
+                if let Some(val) = automation_timeline.evaluate(&lane_key, playhead_beat) {
+                    *val_ref = val;
+                    self.device_rack_state.node_param_values.insert(key.to_string(), val);
+                }
+            }
+
+            for (k, v) in &mut self.device_rack_state.node_param_values {
+                let lane_key = format!("track_{}_{}", track_id, k);
+                if let Some(val) = automation_timeline.evaluate(&lane_key, playhead_beat) {
+                    *v = val;
+                }
+            }
+        }
+
+        // 2. Dispatch all parameters to ParamBus and AutomationRegistry
+        let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+        let cur_kind = self.device_rack_state.selected_node_kind.as_deref().unwrap_or("AetherSynth");
+        let opt_desc = registry.get(cur_kind);
+
+        if let Some(desc) = opt_desc {
+            for (p_i, schema) in desc.params.iter().enumerate() {
+                let val = self.device_rack_state.node_param_values.get(&schema.id).copied()
+                    .unwrap_or_else(|| match &schema.widget {
+                        crate::dsp_node_ui::DspWidgetKind::RotaryKnob { default, .. }
+                        | crate::dsp_node_ui::DspWidgetKind::VerticalFader { default, .. } => *default,
+                        _ => 0.5,
+                    });
+
+                let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + p_i as u32);
+                if param_bus.get(pid).is_some() {
+                    param_bus.set(pid, val);
+                }
+
+                let auto_key = format!("track_{}_{}", track_id, schema.id);
+                if automation_registry.get_param(&auto_key).is_none() {
+                    automation_registry.register_param(&auto_key, val);
+                }
+                automation_registry.set(&auto_key, val);
+
+                if is_recording_automation {
+                    let point = summoner_sequencer::automation_timeline::AutomationPoint {
+                        beat: playhead_beat,
+                        value: val,
+                        interp: summoner_sequencer::automation_timeline::Interpolation::Linear,
+                    };
+                    let lane = automation_timeline.lanes.entry(auto_key.clone()).or_insert_with(|| {
+                        summoner_sequencer::automation_timeline::AutomationLane {
+                            param_id: auto_key.clone(),
+                            curve: summoner_sequencer::automation_timeline::AutomationCurve { points: Vec::new() },
+                        }
+                    });
+                    match lane.curve.points.binary_search_by(|p| p.beat.partial_cmp(&playhead_beat).unwrap()) {
+                        Ok(idx) => lane.curve.points[idx] = point,
+                        Err(idx) => lane.curve.points.insert(idx, point),
+                    }
+                }
+            }
+        }
+
+        // Standard dials dispatch
+        let standard_dials = [
+            ("cutoff", self.device_rack_state.cutoff, 0),
+            ("resonance", self.device_rack_state.resonance, 1),
+            ("decay", self.device_rack_state.decay, 2),
+            ("env_decay", self.device_rack_state.env_decay, 3),
+            ("mod_amt", self.device_rack_state.mod_amt, 4),
+            ("drive", self.device_rack_state.drive, 5),
+            ("volume", self.device_rack_state.volume, 6),
+        ];
+        for (name, val, offset) in standard_dials {
+            let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 100 + offset);
+            if param_bus.get(pid).is_some() {
+                param_bus.set(pid, val);
+            }
+
+            let auto_key = format!("track_{}_{}", track_id, name);
+            if automation_registry.get_param(&auto_key).is_none() {
+                automation_registry.register_param(&auto_key, val);
+            }
+            automation_registry.set(&auto_key, val);
+
+            if is_recording_automation {
+                let point = summoner_sequencer::automation_timeline::AutomationPoint {
+                    beat: playhead_beat,
+                    value: val,
+                    interp: summoner_sequencer::automation_timeline::Interpolation::Linear,
+                };
+                let lane = automation_timeline.lanes.entry(auto_key.clone()).or_insert_with(|| {
+                    summoner_sequencer::automation_timeline::AutomationLane {
+                        param_id: auto_key.clone(),
+                        curve: summoner_sequencer::automation_timeline::AutomationCurve { points: Vec::new() },
+                    }
+                });
+                match lane.curve.points.binary_search_by(|p| p.beat.partial_cmp(&playhead_beat).unwrap()) {
+                    Ok(idx) => lane.curve.points[idx] = point,
+                    Err(idx) => lane.curve.points.insert(idx, point),
+                }
             }
         }
     }

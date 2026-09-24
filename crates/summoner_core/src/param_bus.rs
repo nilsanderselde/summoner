@@ -57,7 +57,7 @@ impl AtomicParam {
 
 /// A pre-allocated, fixed registry of parameters.
 /// Built at project load time and passed to both the UI and the audio engine.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct ParamBus {
     params: Vec<Arc<AtomicParam>>,
 }
