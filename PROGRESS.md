@@ -190,6 +190,14 @@ While the engineering achievements in this repository are staggering, a product 
   3. Upgraded Console Mixer (`mixer.rs`) with 1-click Pro view launchers (`[🎛 DAG]`, `[🔬 Rack]`, `[📈 Auto]`) and full universal DSP effect insertion querying `DspNodeRegistry` across all 11 `DspCategory` sections with category filter pills and live search.
   4. Verified via comprehensive unit and regression test suite in `tier85_turn11_tests.rs`.
 
+### Gap 7: Two-Tier Arranger Pro Launchers, Universal Modular Catalog & M33 Expansion (RESOLVED & VERIFIED)
+- **Status:** **Resolved in Turn #16.**
+- **Implementation:**
+  1. Delivered Two-Tier Arranger Track Header: expanded header width to 190.0 pt in Pro Mode (`is_pro_mode == true`) with tactile Mute (`M`), Solo (`S`), Arm (`●`), and 1-Click Pro View Launchers (`[🎹]` Piano Roll, `[∿]` Modular Graph, `[🎚]` Mixer) alongside the level slider pill, preserving clean minimalism in Novice Mode.
+  2. Built Universal Modular DSP Module Catalog Window (`show_modular_dsp_catalog_window`): replaced legacy ComboBox dropdown with modal dialog featuring category filter pills across all 13 categories, real-time text query search, parameter count badge, and 1-click node insertion into the `NodeGraph`.
+  3. Extended Milestone 33 live parameter automation bridge in `award_winning_gui_view.rs::sync_with_param_bus`: real-time curve playback and recording for track `mute` (`ParamId(track_id * 1000 + 202)`), `solo` (`ParamId(track_id * 1000 + 203)`), and modular node parameters (`ParamId(track_id * 1000 + 500 + p_idx)`).
+  4. Verified via comprehensive unit and integration test suite in `tier86_turn16_tests.rs` (5/5 tests passing).
+
 ---
 
 ## 6. Release Roadmap to v1.0 Production Launch
@@ -207,7 +215,9 @@ Phase 2: Factory Content & Soundbanks [COMPLETED]
 Phase 3: Ergonomics & Hardware Field Testing (Target: 1-2 Weeks)
 ├── Two-Tier UX mode switcher (Novice Macro Strip vs Pro Parameter Drawer & Inspector) (RESOLVED)
 ├── Universal Console Mixer DSP insertion catalog across all 11 categories (RESOLVED)
-├── Milestone 33 Live ParamBus automation curve evaluation & recording (RESOLVED)
+├── Two-Tier Arranger Track Pro Launchers & Mute/Solo/Arm Toggles (RESOLVED - Turn #16)
+├── Universal Modular DSP Catalog Window across all 13 categories (RESOLVED - Turn #16)
+├── Milestone 33 Live ParamBus automation curve evaluation & recording for track & modular parameters (RESOLVED - Turn #16)
 ├── Split dsp_node_ui.rs into modular sub-modules to optimize build times
 ├── Multi-platform driver stress test (Windows WASAPI/ASIO, macOS CoreAudio, Linux PipeWire)
 └── Continuous audio buffer underrun fuzzing under AllocGuard

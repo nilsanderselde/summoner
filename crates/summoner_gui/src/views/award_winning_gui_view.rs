@@ -277,6 +277,9 @@ pub struct AwardWinningGuiView {
     pub last_inspector_node_kind: Option<String>,
     pub last_device_rack_node_param_values: std::collections::HashMap<String, f32>,
     pub last_inspector_node_param_values: std::collections::HashMap<String, f32>,
+    pub modular_add_modal_open: bool,
+    pub modular_search_query: String,
+    pub modular_selected_category: Option<crate::dsp_node_ui::DspCategory>,
 }
 
 impl Default for AwardWinningGuiView {
@@ -454,6 +457,9 @@ impl AwardWinningGuiView {
             last_inspector_node_kind: Some("AetherSynth".to_string()),
             last_device_rack_node_param_values: std::collections::HashMap::new(),
             last_inspector_node_param_values: std::collections::HashMap::new(),
+            modular_add_modal_open: false,
+            modular_search_query: String::new(),
+            modular_selected_category: None,
         };
         view.reset_modular_nodes();
         view
@@ -961,7 +967,8 @@ impl AwardWinningGuiView {
                 let (resp, painter) = ui.allocate_painter(Vec2::new(ui.available_width(), canvas_height), egui::Sense::click_and_drag());
                 let rect = resp.rect;
 
-                let header_w = 140.0;
+                let is_pro = self.top_bar_state.is_pro_mode;
+                let header_w = if is_pro { 190.0 } else { 140.0 };
                 let track_area_w = (rect.width() - header_w).max(200.0);
                 let ppb = track_area_w / 18.0; // 18 measures visible
 
@@ -1030,9 +1037,41 @@ impl AwardWinningGuiView {
                                 let row_top = rect.top() + ruler_h + (idx as f32 * (row_h + 2.0));
                                 let head_rect = Rect::from_min_size(egui::pos2(rect.left(), row_top), Vec2::new(header_w, row_h));
                                 let lane_rect = Rect::from_min_size(egui::pos2(rect.left() + header_w, row_top), Vec2::new(track_area_w, row_h));
-                                let pill_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 72.0, head_rect.center().y - 4.0), Vec2::new(45.0, 8.0));
+                                let pill_rect = if is_pro {
+                                    Rect::from_min_size(egui::pos2(head_rect.left() + 124.0, head_rect.center().y - 4.0), Vec2::new(24.0, 8.0))
+                                } else {
+                                    Rect::from_min_size(egui::pos2(head_rect.left() + 72.0, head_rect.center().y - 4.0), Vec2::new(45.0, 8.0))
+                                };
 
-                                if pill_rect.expand(4.0).contains(pos) {
+                                let m_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 70.0, head_rect.center().y - 8.0), Vec2::new(16.0, 16.0));
+                                let s_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 88.0, head_rect.center().y - 8.0), Vec2::new(16.0, 16.0));
+                                let a_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 106.0, head_rect.center().y - 8.0), Vec2::new(16.0, 16.0));
+                                let p_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 152.0, head_rect.center().y - 7.0), Vec2::new(10.0, 14.0));
+                                let mod_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 164.0, head_rect.center().y - 7.0), Vec2::new(10.0, 14.0));
+                                let mix_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 176.0, head_rect.center().y - 7.0), Vec2::new(10.0, 14.0));
+
+                                if is_pro && m_rect.contains(pos) && is_click {
+                                    track.is_muted = !track.is_muted;
+                                    selected_idx = Some(idx);
+                                } else if is_pro && s_rect.contains(pos) && is_click {
+                                    track.is_soloed = !track.is_soloed;
+                                    selected_idx = Some(idx);
+                                } else if is_pro && a_rect.contains(pos) && is_click {
+                                    track.is_armed = !track.is_armed;
+                                    selected_idx = Some(idx);
+                                } else if is_pro && p_rect.contains(pos) && is_click {
+                                    selected_idx = Some(idx);
+                                    self.selected_track_idx = idx;
+                                    self.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::PianoRoll;
+                                } else if is_pro && mod_rect.contains(pos) && is_click {
+                                    selected_idx = Some(idx);
+                                    self.selected_track_idx = idx;
+                                    self.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::Modular;
+                                } else if is_pro && mix_rect.contains(pos) && is_click {
+                                    selected_idx = Some(idx);
+                                    self.selected_track_idx = idx;
+                                    self.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::Mixer;
+                                } else if pill_rect.expand(4.0).contains(pos) {
                                     let new_gain = ((pos.x - pill_rect.left()) / pill_rect.width() * 1.5).clamp(0.0, 1.5);
                                     track.gain = new_gain;
                                     selected_idx = Some(idx);
@@ -1074,14 +1113,57 @@ impl AwardWinningGuiView {
 
                     // Track Index & Name
                     let col = Color32::from_rgb(track.color_rgb[0], track.color_rgb[1], track.color_rgb[2]);
-                    painter.text(egui::pos2(head_rect.left() + 8.0, head_rect.center().y), egui::Align2::LEFT_CENTER, format!("{}", idx + 1), FontId::proportional(10.0), Color32::from_rgb(100, 116, 139));
-                    painter.text(egui::pos2(head_rect.left() + 24.0, head_rect.center().y), egui::Align2::LEFT_CENTER, &track.name, FontId::proportional(11.0), Color32::from_rgb(241, 245, 249));
+                    painter.text(egui::pos2(head_rect.left() + 4.0, head_rect.center().y), egui::Align2::LEFT_CENTER, format!("{}", idx + 1), FontId::proportional(10.0), Color32::from_rgb(100, 116, 139));
+                    let name_str = if is_pro && track.name.len() > 6 {
+                        format!("{}..", &track.name[..5])
+                    } else {
+                        track.name.clone()
+                    };
+                    painter.text(egui::pos2(head_rect.left() + 18.0, head_rect.center().y), egui::Align2::LEFT_CENTER, &name_str, FontId::proportional(10.5), Color32::from_rgb(241, 245, 249));
+
+                    if is_pro {
+                        let m_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 70.0, head_rect.center().y - 8.0), Vec2::new(16.0, 16.0));
+                        let s_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 88.0, head_rect.center().y - 8.0), Vec2::new(16.0, 16.0));
+                        let a_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 106.0, head_rect.center().y - 8.0), Vec2::new(16.0, 16.0));
+                        let p_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 152.0, head_rect.center().y - 7.0), Vec2::new(10.0, 14.0));
+                        let mod_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 164.0, head_rect.center().y - 7.0), Vec2::new(10.0, 14.0));
+                        let mix_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 176.0, head_rect.center().y - 7.0), Vec2::new(10.0, 14.0));
+
+                        // Mute button
+                        let m_bg = if track.is_muted { Color32::from_rgb(239, 68, 68) } else { Color32::from_rgb(24, 34, 52) };
+                        painter.rect_filled(m_rect, 2.0, m_bg);
+                        painter.text(m_rect.center(), egui::Align2::CENTER_CENTER, "M", FontId::proportional(8.5), Color32::WHITE);
+
+                        // Solo button
+                        let s_bg = if track.is_soloed { Color32::from_rgb(234, 179, 8) } else { Color32::from_rgb(24, 34, 52) };
+                        painter.rect_filled(s_rect, 2.0, s_bg);
+                        painter.text(s_rect.center(), egui::Align2::CENTER_CENTER, "S", FontId::proportional(8.5), Color32::WHITE);
+
+                        // Arm button
+                        let a_bg = if track.is_armed { Color32::from_rgb(220, 38, 38) } else { Color32::from_rgb(24, 34, 52) };
+                        painter.rect_filled(a_rect, 2.0, a_bg);
+                        painter.text(a_rect.center(), egui::Align2::CENTER_CENTER, "●", FontId::proportional(8.5), if track.is_armed { Color32::WHITE } else { Color32::from_rgb(148, 163, 184) });
+
+                        // 1-Click Pro View Launchers [🎹] [∿] [🎚]
+                        painter.rect_filled(p_rect, 2.0, Color32::from_rgb(18, 26, 42));
+                        painter.text(p_rect.center(), egui::Align2::CENTER_CENTER, "🎹", FontId::proportional(7.5), Color32::from_rgb(168, 85, 247));
+
+                        painter.rect_filled(mod_rect, 2.0, Color32::from_rgb(18, 26, 42));
+                        painter.text(mod_rect.center(), egui::Align2::CENTER_CENTER, "∿", FontId::proportional(8.0), Color32::from_rgb(56, 189, 248));
+
+                        painter.rect_filled(mix_rect, 2.0, Color32::from_rgb(18, 26, 42));
+                        painter.text(mix_rect.center(), egui::Align2::CENTER_CENTER, "🎚", FontId::proportional(7.5), Color32::from_rgb(34, 197, 94));
+                    }
 
                     // Colored Volume Slider Pill
-                    let pill_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 72.0, head_rect.center().y - 4.0), Vec2::new(45.0, 8.0));
+                    let pill_rect = if is_pro {
+                        Rect::from_min_size(egui::pos2(head_rect.left() + 124.0, head_rect.center().y - 4.0), Vec2::new(24.0, 8.0))
+                    } else {
+                        Rect::from_min_size(egui::pos2(head_rect.left() + 72.0, head_rect.center().y - 4.0), Vec2::new(45.0, 8.0))
+                    };
                     painter.rect_filled(pill_rect, 4.0, Color32::from_rgb(8, 12, 20));
                     let fill_w = pill_rect.width() * (track.gain / 1.5).clamp(0.0, 1.0);
-                    painter.rect_filled(Rect::from_min_size(pill_rect.min, Vec2::new(fill_w, 8.0)), 4.0, col);
+                    painter.rect_filled(Rect::from_min_size(pill_rect.min, Vec2::new(fill_w, pill_rect.height())), 4.0, col);
 
                     // Track Timeline Lane
                     let lane_rect = Rect::from_min_size(egui::pos2(rect.left() + header_w, row_top), Vec2::new(track_area_w, row_h));
@@ -2242,6 +2324,32 @@ impl AwardWinningGuiView {
                     self.last_inspector_pan = val;
                 }
             }
+            let mute_lane = format!("track_{}_mute", track_id);
+            if let Some(val) = automation_timeline.evaluate(&mute_lane, playhead_beat) {
+                let is_m = val >= 0.5;
+                if let Some(vt) = self.tracks.get_mut(track_idx) {
+                    vt.is_muted = is_m;
+                    self.inspector_state.is_muted = is_m;
+                    self.last_inspector_muted = is_m;
+                }
+            }
+            let solo_lane = format!("track_{}_solo", track_id);
+            if let Some(val) = automation_timeline.evaluate(&solo_lane, playhead_beat) {
+                let is_s = val >= 0.5;
+                if let Some(vt) = self.tracks.get_mut(track_idx) {
+                    vt.is_soloed = is_s;
+                    self.inspector_state.is_soloed = is_s;
+                    self.last_inspector_soloed = is_s;
+                }
+            }
+            if let Some(ref mod_node_id) = self.selected_modular_node_id {
+                for (k, v) in &mut self.inspector_state.node_param_values {
+                    let auto_key = format!("modular_{}_{}", mod_node_id, k);
+                    if let Some(val) = automation_timeline.evaluate(&auto_key, playhead_beat) {
+                        *v = val;
+                    }
+                }
+            }
         }
 
         // 2. Dispatch all parameters to ParamBus and AutomationRegistry
@@ -2438,6 +2546,86 @@ impl AwardWinningGuiView {
                 }
             }
         }
+
+        // 6. Track Mute & Solo Dispatch & Live Recording
+        let t_muted = self.tracks.get(self.selected_track_idx).map(|t| t.is_muted).unwrap_or(false);
+        let t_soloed = self.tracks.get(self.selected_track_idx).map(|t| t.is_soloed).unwrap_or(false);
+        let m_val = if t_muted { 1.0 } else { 0.0 };
+        let s_val = if t_soloed { 1.0 } else { 0.0 };
+
+        let mute_pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 202);
+        if param_bus.get(mute_pid).is_some() {
+            param_bus.set(mute_pid, m_val);
+        }
+        let solo_pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 203);
+        if param_bus.get(solo_pid).is_some() {
+            param_bus.set(solo_pid, s_val);
+        }
+
+        let mute_auto_key = format!("track_{}_mute", track_id);
+        if automation_registry.get_param(&mute_auto_key).is_none() {
+            automation_registry.register_param(&mute_auto_key, m_val);
+        }
+        automation_registry.set(&mute_auto_key, m_val);
+
+        let solo_auto_key = format!("track_{}_solo", track_id);
+        if automation_registry.get_param(&solo_auto_key).is_none() {
+            automation_registry.register_param(&solo_auto_key, s_val);
+        }
+        automation_registry.set(&solo_auto_key, s_val);
+
+        if is_recording_automation {
+            for (key, val) in [(&mute_auto_key, m_val), (&solo_auto_key, s_val)] {
+                let point = summoner_sequencer::automation_timeline::AutomationPoint {
+                    beat: playhead_beat,
+                    value: val,
+                    interp: summoner_sequencer::automation_timeline::Interpolation::Step,
+                };
+                let lane = automation_timeline.lanes.entry(key.clone()).or_insert_with(|| {
+                    summoner_sequencer::automation_timeline::AutomationLane {
+                        param_id: key.clone(),
+                        curve: summoner_sequencer::automation_timeline::AutomationCurve { points: Vec::new() },
+                    }
+                });
+                match lane.curve.points.binary_search_by(|p| p.beat.partial_cmp(&playhead_beat).unwrap()) {
+                    Ok(idx) => lane.curve.points[idx] = point,
+                    Err(idx) => lane.curve.points.insert(idx, point),
+                }
+            }
+        }
+
+        // 7. Selected Modular Node Parameters Dispatch & Live Recording
+        if let Some(ref mod_node_id) = self.selected_modular_node_id {
+            for (p_idx, (k, &v)) in self.inspector_state.node_param_values.iter().enumerate() {
+                let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 500 + p_idx as u32);
+                if param_bus.get(pid).is_some() {
+                    param_bus.set(pid, v);
+                }
+                let auto_key = format!("modular_{}_{}", mod_node_id, k);
+                if automation_registry.get_param(&auto_key).is_none() {
+                    automation_registry.register_param(&auto_key, v);
+                }
+                automation_registry.set(&auto_key, v);
+
+                if is_recording_automation {
+                    let point = summoner_sequencer::automation_timeline::AutomationPoint {
+                        beat: playhead_beat,
+                        value: v,
+                        interp: summoner_sequencer::automation_timeline::Interpolation::Linear,
+                    };
+                    let lane = automation_timeline.lanes.entry(auto_key.clone()).or_insert_with(|| {
+                        summoner_sequencer::automation_timeline::AutomationLane {
+                            param_id: auto_key.clone(),
+                            curve: summoner_sequencer::automation_timeline::AutomationCurve { points: Vec::new() },
+                        }
+                    });
+                    match lane.curve.points.binary_search_by(|p| p.beat.partial_cmp(&playhead_beat).unwrap()) {
+                        Ok(idx) => lane.curve.points[idx] = point,
+                        Err(idx) => lane.curve.points.insert(idx, point),
+                    }
+                }
+            }
+        }
     }
 
     /// Load sequence steps from a ProjectConfig track into the interactive piano roll.
@@ -2531,18 +2719,16 @@ impl AwardWinningGuiView {
 
                     ui.separator();
 
-                    // "➕ Add Module" Dropdown
-                    let registry = crate::dsp_node_ui::DspNodeRegistry::new();
-                    egui::ComboBox::from_id_source("modular_canvas_add_module_combo")
-                        .selected_text(RichText::new("➕ Add DSP Module...").font(FontId::proportional(10.0)).color(Color32::from_rgb(56, 189, 248)))
-                        .show_ui(ui, |ui| {
-                            for desc in registry.list_all() {
-                                let label = format!("{} {} ({})", desc.category.icon(), desc.display_name, desc.category.name());
-                                if ui.selectable_label(false, label).clicked() {
-                                    self.add_modular_node_from_descriptor(desc);
-                                }
-                            }
-                        });
+                    // "➕ Add DSP Module..." Universal Catalog Launcher
+                    let add_btn = ui.add(
+                        egui::Button::new(RichText::new("➕ Add DSP Module...").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248)))
+                            .fill(Color32::from_rgb(20, 28, 44))
+                            .stroke(Stroke::new(1.0_f32, Color32::from_rgb(56, 189, 248)))
+                            .rounding(Rounding::same(4.0))
+                    );
+                    if add_btn.clicked() {
+                        self.modular_add_modal_open = !self.modular_add_modal_open;
+                    }
 
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         if ui.small_button("Clear Cords").clicked() {
@@ -2565,7 +2751,218 @@ impl AwardWinningGuiView {
                         self.render_patch_cords_canvas(ui, canvas_height - 38.0);
                     }
                 }
+
+                self.show_modular_dsp_catalog_window(ui);
             });
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_modular_dsp_catalog_window(&mut self, ui: &mut egui::Ui) {
+        if !self.modular_add_modal_open {
+            return;
+        }
+
+        let mut is_open = self.modular_add_modal_open;
+        let mut node_to_add_kind: Option<String> = None;
+        let mut close_modal = false;
+
+        egui::Window::new("Modular DSP Module Catalog (2,012+ Nodes Registered)")
+            .id(egui::Id::new("modular_dsp_catalog_modal"))
+            .open(&mut is_open)
+            .default_size([540.0, 420.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(RichText::new("🔍").font(FontId::proportional(12.0)));
+                    ui.add(
+                        egui::TextEdit::singleline(&mut self.modular_search_query)
+                            .hint_text("Search 2,012+ DSP modules by name, kind, or category...")
+                            .desired_width(ui.available_width() - 60.0),
+                    );
+                    if ui.button("Clear").clicked() {
+                        self.modular_search_query.clear();
+                        self.modular_selected_category = None;
+                    }
+                });
+
+                ui.add_space(6.0);
+
+                // Category Filter Bar (Horizontal scroll with category pills)
+                egui::ScrollArea::horizontal()
+                    .id_source("modular_dsp_cat_scroll")
+                    .show(ui, |ui| {
+                        ui.horizontal(|ui| {
+                            let is_all = self.modular_selected_category.is_none();
+                            if ui.selectable_label(is_all, "All Categories").clicked() {
+                                self.modular_selected_category = None;
+                            }
+
+                            let categories = [
+                                crate::dsp_node_ui::DspCategory::Oscillator,
+                                crate::dsp_node_ui::DspCategory::CompositeSynth,
+                                crate::dsp_node_ui::DspCategory::AcousticPhysicalModel,
+                                crate::dsp_node_ui::DspCategory::SamplerSlicer,
+                                crate::dsp_node_ui::DspCategory::FilterEq,
+                                crate::dsp_node_ui::DspCategory::DynamicsMaster,
+                                crate::dsp_node_ui::DspCategory::DistortionSaturation,
+                                crate::dsp_node_ui::DspCategory::Modulation,
+                                crate::dsp_node_ui::DspCategory::TimeSpace,
+                                crate::dsp_node_ui::DspCategory::SpatialSurround,
+                                crate::dsp_node_ui::DspCategory::SpectralResynthesis,
+                                crate::dsp_node_ui::DspCategory::NeuralAi,
+                                crate::dsp_node_ui::DspCategory::Utility,
+                            ];
+
+                            for cat in categories {
+                                let is_sel = self.modular_selected_category == Some(cat);
+                                let label = format!("{} {}", cat.icon(), cat.display_label());
+                                if ui.selectable_label(is_sel, label).clicked() {
+                                    self.modular_selected_category = if is_sel { None } else { Some(cat) };
+                                }
+                            }
+                        });
+                    });
+
+                ui.add_space(6.0);
+                ui.separator();
+                ui.add_space(4.0);
+
+                let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+                let all_nodes = registry.list_all();
+                let q = self.modular_search_query.trim().to_lowercase();
+                let sel_cat = self.modular_selected_category;
+
+                let filtered_nodes: Vec<_> = all_nodes
+                    .into_iter()
+                    .filter(|desc| {
+                        if let Some(cat) = sel_cat {
+                            if desc.category != cat {
+                                return false;
+                            }
+                        }
+                        if !q.is_empty() {
+                            let name_match = desc.display_name.to_lowercase().contains(&q);
+                            let kind_match = desc.kind_id.to_lowercase().contains(&q);
+                            let desc_match = desc.description.to_lowercase().contains(&q);
+                            if !name_match && !kind_match && !desc_match {
+                                return false;
+                            }
+                        }
+                        true
+                    })
+                    .collect();
+
+                ui.label(
+                    RichText::new(format!(
+                        "Showing {} of 2,012+ registered DSP modules:",
+                        filtered_nodes.len()
+                    ))
+                    .font(FontId::proportional(10.0))
+                    .color(Color32::from_rgb(148, 163, 184)),
+                );
+
+                ui.add_space(4.0);
+
+                egui::ScrollArea::vertical()
+                    .id_source("modular_dsp_node_list_scroll")
+                    .max_height(280.0)
+                    .show(ui, |ui| {
+                        for desc in &filtered_nodes {
+                            let (r, g, b) = desc.category.theme_color_rgb();
+                            let cat_col = Color32::from_rgb(r, g, b);
+
+                            egui::Frame::none()
+                                .fill(Color32::from_rgb(16, 22, 34))
+                                .stroke(Stroke::new(1.0_f32, Color32::from_rgb(28, 40, 60)))
+                                .rounding(Rounding::same(4.0))
+                                .inner_margin(egui::Margin::symmetric(8.0, 6.0))
+                                .show(ui, |ui| {
+                                    ui.horizontal(|ui| {
+                                        ui.label(
+                                            RichText::new(desc.category.icon())
+                                                .font(FontId::proportional(14.0)),
+                                        );
+                                        ui.vertical(|ui| {
+                                            ui.horizontal(|ui| {
+                                                ui.label(
+                                                    RichText::new(&desc.display_name)
+                                                        .font(FontId::proportional(11.0))
+                                                        .strong()
+                                                        .color(cat_col),
+                                                );
+                                                ui.label(
+                                                    RichText::new(format!(
+                                                        "({})",
+                                                        desc.category.display_label()
+                                                    ))
+                                                    .font(FontId::proportional(9.0))
+                                                    .color(Color32::from_rgb(100, 116, 139)),
+                                                );
+                                            });
+                                            if !desc.description.is_empty() {
+                                                ui.label(
+                                                    RichText::new(&desc.description)
+                                                        .font(FontId::proportional(9.0))
+                                                        .color(Color32::from_rgb(148, 163, 184)),
+                                                );
+                                            }
+                                        });
+
+                                        ui.with_layout(
+                                            egui::Layout::right_to_left(egui::Align::Center),
+                                            |ui| {
+                                                let btn = ui.add(
+                                                    egui::Button::new(
+                                                        RichText::new("➕ Insert")
+                                                            .font(FontId::proportional(10.0))
+                                                            .strong()
+                                                            .color(cat_col),
+                                                    )
+                                                    .fill(Color32::from_rgba_unmultiplied(
+                                                        r, g, b, 30,
+                                                    ))
+                                                    .stroke(Stroke::new(1.0_f32, cat_col))
+                                                    .rounding(Rounding::same(3.0)),
+                                                );
+                                                if btn.clicked() {
+                                                    node_to_add_kind = Some(desc.kind_id.clone());
+                                                }
+                                                ui.label(
+                                                    RichText::new(format!(
+                                                        "{} params",
+                                                        desc.params.len()
+                                                    ))
+                                                    .font(FontId::proportional(9.0))
+                                                    .color(Color32::from_rgb(100, 116, 139)),
+                                                );
+                                            },
+                                        );
+                                    });
+                                });
+                            ui.add_space(2.0);
+                        }
+                    });
+
+                if let Some(ref kind) = node_to_add_kind {
+                    if let Some(desc) = registry.get(kind) {
+                        self.add_modular_node_from_descriptor(desc);
+                        close_modal = true;
+                    }
+                }
+
+                ui.separator();
+                ui.horizontal(|ui| {
+                    if ui.button("Close").clicked() {
+                        close_modal = true;
+                    }
+                });
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.modular_add_modal_open = is_open;
     }
 
     #[cfg(feature = "gui")]
