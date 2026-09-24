@@ -770,6 +770,7 @@ impl AwardWinningGuiView {
             self.inspector_state.is_collapsed = false;
         } else {
             self.top_bar_state.is_novice_macro_visible = true;
+            self.device_rack_state.is_expanded_params = false;
         }
 
         // Synchronize Master Gain from Novice / Top Bar if adjusted
@@ -934,12 +935,16 @@ impl AwardWinningGuiView {
                     }
 
                     // Zone 5: Bottom Dock (Reusable Device Rack)
-                    show_modern_device_rack(ui, &mut self.device_rack_state, self.current_oscilloscope_samples.as_deref());
+                    if self.top_bar_state.active_tab != crate::views::modern_top_bar::ModernViewTab::Performance {
+                        show_modern_device_rack(ui, &mut self.device_rack_state, self.current_oscilloscope_samples.as_deref());
+                    }
                 });
 
                 // Zone 4: Right Collapsible Inspector
-                let cur_track_id = self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1);
-                show_modern_inspector_with_context(ui, &mut self.inspector_state, None, cur_track_id);
+                if self.top_bar_state.active_tab != crate::views::modern_top_bar::ModernViewTab::Performance {
+                    let cur_track_id = self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1);
+                    show_modern_inspector_with_context(ui, &mut self.inspector_state, None, cur_track_id);
+                }
             });
         });
     }
@@ -2154,11 +2159,23 @@ impl AwardWinningGuiView {
         playhead_beat: f64,
         is_recording_automation: bool,
     ) {
-        if self.selected_track_idx >= project.tracks.len() {
+        if project.tracks.is_empty() {
             return;
         }
-        let track = &project.tracks[self.selected_track_idx];
+        let track_idx = if self.selected_track_idx < project.tracks.len() {
+            self.selected_track_idx
+        } else {
+            0
+        };
+        let track = &project.tracks[track_idx];
         let track_id = track.id;
+
+        // Synchronize Novice Macro knobs with Device Rack dials before dispatch/recording
+        if !self.top_bar_state.is_pro_mode {
+            self.device_rack_state.cutoff = self.top_bar_state.macro_tone;
+            self.device_rack_state.decay = self.top_bar_state.macro_space;
+            self.device_rack_state.drive = self.top_bar_state.macro_punch;
+        }
 
         // 1. If playing and NOT recording, evaluate automated curves to drive GUI knobs
         if self.top_bar_state.is_playing && !is_recording_automation {
@@ -2201,13 +2218,17 @@ impl AwardWinningGuiView {
                     *m_val_ref = val;
                 }
             }
+            self.device_rack_state.cutoff = self.top_bar_state.macro_tone;
+            self.device_rack_state.decay = self.top_bar_state.macro_space;
+            self.device_rack_state.drive = self.top_bar_state.macro_punch;
+
             if let Some(val) = automation_timeline.evaluate("master_gain", playhead_beat) {
                 self.top_bar_state.master_gain = val;
             }
 
             let gain_lane = format!("track_{}_gain", track_id);
             if let Some(val) = automation_timeline.evaluate(&gain_lane, playhead_beat) {
-                if let Some(vt) = self.tracks.get_mut(self.selected_track_idx) {
+                if let Some(vt) = self.tracks.get_mut(track_idx) {
                     vt.gain = val;
                     self.inspector_state.gain_db = (val - 1.0) * 12.0;
                     self.last_inspector_gain_db = self.inspector_state.gain_db;
@@ -2215,7 +2236,7 @@ impl AwardWinningGuiView {
             }
             let pan_lane = format!("track_{}_pan", track_id);
             if let Some(val) = automation_timeline.evaluate(&pan_lane, playhead_beat) {
-                if let Some(vt) = self.tracks.get_mut(self.selected_track_idx) {
+                if let Some(vt) = self.tracks.get_mut(track_idx) {
                     vt.pan = val;
                     self.inspector_state.pan_val = val;
                     self.last_inspector_pan = val;
@@ -2402,7 +2423,7 @@ impl AwardWinningGuiView {
             for (key, val) in [(&gain_auto_key, t_gain), (&pan_auto_key, t_pan)] {
                 let point = summoner_sequencer::automation_timeline::AutomationPoint {
                     beat: playhead_beat,
-                    value: *val,
+                    value: val,
                     interp: summoner_sequencer::automation_timeline::Interpolation::Linear,
                 };
                 let lane = automation_timeline.lanes.entry(key.clone()).or_insert_with(|| {
@@ -2970,6 +2991,9 @@ impl AwardWinningGuiView {
                 let panic_rect = Rect::from_min_size(egui::pos2(rect.right() - 90.0, rect.top() + 4.0), Vec2::new(80.0, 20.0));
                 let panic_hovered = pointer_pos.map(|p| panic_rect.contains(p)).unwrap_or(false);
                 if let Some(pos) = pointer_pos {
+                    if pos.x > 1000.0 {
+                        eprintln!("[STAGE PANIC DEBUG] rect={:?}, panic_rect={:?}, pointer_pos={:?}, is_click={}", rect, panic_rect, pos, is_click);
+                    }
                     if panic_rect.contains(pos) && is_click {
                         self.top_bar_state.is_playing = false;
                         self.last_synced_is_playing = false;

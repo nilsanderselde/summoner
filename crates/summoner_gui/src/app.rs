@@ -501,6 +501,32 @@ impl SummonerApp {
         let _ = std::fs::remove_file(".summoner_dirty.lock");
     }
 
+    pub fn sync_track_to_graph(&mut self, track_id: u64) {
+        if let Some(track) = self.project.tracks.iter().find(|t| t.id == track_id) {
+            let mut graph = NodeGraph::new(&format!("Track {} Graph", track_id), 64, 2);
+            self.node_graph_state.positions.clear();
+            for (idx, _node_cfg) in track.nodes.iter().enumerate() {
+                graph.nodes.push(Box::new(summoner_core::node::PassthroughNode));
+                self.node_graph_state.positions.insert(
+                    idx,
+                    egui::pos2(120.0 + (idx as f32) * 160.0, 120.0 + (idx as f32) * 30.0),
+                );
+            }
+            if graph.nodes.len() > 1 {
+                for i in 0..(graph.nodes.len() - 1) {
+                    graph.edges.push(summoner_core::graph::Edge {
+                        from_node: i,
+                        from_port: 0,
+                        to_node: i + 1,
+                        to_port: 0,
+                    });
+                }
+            }
+            graph.compile();
+            self.dummy_graph = graph;
+        }
+    }
+
     /// Step 823: Handle dropped files from desktop (.wav, .flac, .toml).
     pub fn handle_dropped_file(&mut self, path: &std::path::Path) -> Result<String, String> {
         let ext = path
@@ -2546,8 +2572,8 @@ impl eframe::App for SummonerApp {
                             }
                             "auto" => {
                                 self.selected_track_id = Some(nav_tid);
-                                let param_name = format!("track_{}_gain", nav_tid);
-                                self.current_view = ViewMode::AutomationEditor(nav_tid, param_name);
+                                self.show_rack = true;
+                                self.current_view = ViewMode::ModernStudio;
                             }
                             _ => {}
                         }

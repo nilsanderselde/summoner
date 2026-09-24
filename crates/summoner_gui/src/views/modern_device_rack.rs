@@ -75,6 +75,11 @@ pub fn show_modern_device_rack(
     state: &mut ModernDeviceRackState,
     oscilloscope_data: Option<&[f32]>,
 ) {
+    state.node_param_values.entry("cutoff".to_string()).or_insert(state.cutoff);
+    state.node_param_values.entry("resonance".to_string()).or_insert(state.resonance);
+    state.node_param_values.entry("decay".to_string()).or_insert(state.decay);
+    state.node_param_values.entry("drive".to_string()).or_insert(state.drive);
+
     let registry = crate::dsp_node_ui::DspNodeRegistry::new();
     let cur_selection = state.selected_node_kind.clone().unwrap_or_else(|| "AetherSynth".to_string());
     let opt_desc = registry.get(&cur_selection);

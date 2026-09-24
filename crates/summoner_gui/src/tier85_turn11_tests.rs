@@ -97,7 +97,6 @@ pub mod pure_tests {
 
 #[cfg(all(test, feature = "gui"))]
 mod tests {
-    use super::*;
     use eframe::egui;
     use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use crate::views::mixer::MixerState;

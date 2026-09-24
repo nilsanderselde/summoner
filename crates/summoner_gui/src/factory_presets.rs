@@ -929,7 +929,7 @@ pub static FACTORY_PRESETS: &[FactoryPreset] = &[
         id: "emt140_plate_reverb",
         name: "Vintage EMT-140 Cold-Rolled Steel Suspension Reverb",
         category: FactoryPresetCategory::StudioFx,
-        target_node_kind: "PlateTank",
+        target_node_kind: "PlateReverbProfile",
         description: "Legendary 600-pound cold-rolled steel sheet mechanical plate reverb with continuous dispersion and high density.",
         tags: &["reverb", "plate", "emt140", "vintage", "space", "studio_fx"],
         macro_tone: 0.65,
@@ -1036,7 +1036,7 @@ pub static FACTORY_PRESETS: &[FactoryPreset] = &[
         id: "orchestral_timpani",
         name: "Tuned Orchestral Timpani Membrane",
         category: FactoryPresetCategory::DrumsPercussion,
-        target_node_kind: "PercussionMembrane",
+        target_node_kind: "PercussionMembraneNode",
         description: "2D circular Bessel membrane acoustic copper kettle timpani with pedal pitch tuning and felt mallet strike.",
         tags: &["timpani", "orchestral", "membrane", "percussion", "copper"],
         macro_tone: 0.55,
@@ -1099,7 +1099,7 @@ pub static FACTORY_PRESETS: &[FactoryPreset] = &[
         id: "struck_bell_idiophone",
         name: "Concert Rosewood Marimba",
         category: FactoryPresetCategory::DrumsPercussion,
-        target_node_kind: "IdiophoneResonator",
+        target_node_kind: "StruckIdiophoneResonator",
         description: "Struck wooden idiophone bar matrix with tuned resonator cavities and polyphonic mallet routing.",
         tags: &["marimba", "idiophone", "tuned", "percussion", "acoustic"],
         macro_tone: 0.70,
@@ -1581,12 +1581,9 @@ pub fn all_factory_presets() -> &'static [FactoryPreset] {
 
 /// Finds a factory preset by case-insensitive name or ID.
 pub fn find_preset(name_or_id: &str) -> Option<&'static FactoryPreset> {
-    let query = name_or_id.trim().to_lowercase();
+    let query = name_or_id.trim();
     FACTORY_PRESETS.iter().find(|p| {
-        p.id.eq_ignore_ascii_case(&query)
-            || p.name.eq_ignore_ascii_case(&query)
-            || query.contains(&p.id.to_lowercase())
-            || query.contains(&p.name.to_lowercase())
+        p.id.eq_ignore_ascii_case(query) || p.name.eq_ignore_ascii_case(query)
     })
 }
 

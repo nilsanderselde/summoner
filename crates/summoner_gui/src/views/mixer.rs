@@ -552,8 +552,8 @@ mod tests {
 
     #[test]
     fn test_mixer_pro_launchers_and_navigation() {
-        let mut project = create_default_project("Launcher Test");
-        let mut selected_track_id = Some(1);
+        let _project = create_default_project("Launcher Test");
+        let _selected_track_id = Some(1);
         let mut state = MixerState::default();
 
         // Simulate requested navigation

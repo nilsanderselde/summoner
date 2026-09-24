@@ -352,7 +352,7 @@ pub fn show_modern_top_bar(
     let bar_height = 48.0;
     ui.allocate_ui_with_layout(
         Vec2::new(ui.available_width(), bar_height),
-        egui::Layout::left_to_right(egui::Align::Center),
+        egui::Layout::left_to_right(egui::Align::Center).with_main_wrap(false),
         |ui| {
             // Background frame
             let full_rect = ui.available_rect_before_wrap();
