@@ -521,6 +521,7 @@ pub fn show_arranger(
 
         // Track Lanes & Reordering (Step 419)
         let mut duplicate_clip_target: Option<(u64, SequenceConfig)> = None;
+        let mut split_clip_target: Option<(u64, SequenceConfig)> = None;
         let mut reorder_swap: Option<(usize, usize)> = None;
         let mut clips_to_delete: Vec<(u64, usize)> = Vec::new();
 
@@ -775,7 +776,20 @@ pub fn show_arranger(
                         if ui.input(|i| i.modifiers.ctrl) {
                             if let Some(pos) = clip_resp.interact_pointer_pos() {
                                 let split_beat = ((pos.x - clip_rect.left()) / ppb) as f64;
-                                split_clip_at(seq, split_beat);
+                                if let Some(new_seq) = split_clip_at(seq, split_beat) {
+                                    split_clip_target = Some((track_id, new_seq));
+                                }
+                            }
+                        }
+                    }
+
+                    // S key shortcut to split selected clip at playhead
+                    let s_pressed = ui.input(|i| i.key_pressed(egui::Key::S) && !i.modifiers.ctrl);
+                    if is_clip_selected && s_pressed {
+                        let playhead_rel = *playhead_beat - seq.start_beat;
+                        if playhead_rel > 0.0 && playhead_rel < clip_beats {
+                            if let Some(new_seq) = split_clip_at(seq, playhead_rel) {
+                                split_clip_target = Some((track_id, new_seq));
                             }
                         }
                     }
@@ -794,6 +808,15 @@ pub fn show_arranger(
                     let mut del_clip = false;
 
                     clip_resp.context_menu(|ui| {
+                        let playhead_rel = *playhead_beat - seq.start_beat;
+                        if playhead_rel > 0.0 && playhead_rel < clip_beats {
+                            if ui.button("✂ Split at Playhead (S)").clicked() {
+                                if let Some(new_seq) = split_clip_at(seq, playhead_rel) {
+                                    split_clip_target = Some((track_id, new_seq));
+                                }
+                                ui.close_menu();
+                            }
+                        }
                         if ui.button("🎹 Edit in Piano Roll").clicked() {
                             navigation_target = Some(ViewMode::PianoRoll(track_id));
                             ui.close_menu();
@@ -968,6 +991,37 @@ pub fn show_arranger(
                         ));
                     }
 
+                    // Interactive fade drag handles (Step 582)
+                    if !track_is_collapsed {
+                        let fade_in_handle_rect = egui::Rect::from_center_size(
+                            egui::pos2(clip_rect.left() + (seq.fade_in as f32 * ppb).min(clip_rect.width() * 0.5), clip_rect.top() + 4.0),
+                            egui::vec2(10.0, 10.0),
+                        );
+                        let fade_in_resp = ui.interact(fade_in_handle_rect, clip_id.with("fade_in_h"), egui::Sense::drag());
+                        if fade_in_resp.dragged() {
+                            let delta_beats = (fade_in_resp.drag_delta().x / ppb) as f64;
+                            seq.fade_in = (seq.fade_in + delta_beats).clamp(0.0, clip_beats * 0.5);
+                        }
+                        if fade_in_resp.hovered() || seq.fade_in > 0.0 {
+                            painter.circle_filled(fade_in_handle_rect.center(), 3.5, egui::Color32::WHITE);
+                            painter.circle_stroke(fade_in_handle_rect.center(), 4.5, egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(56, 189, 248)));
+                        }
+
+                        let fade_out_handle_rect = egui::Rect::from_center_size(
+                            egui::pos2(clip_rect.right() - (seq.fade_out as f32 * ppb).min(clip_rect.width() * 0.5), clip_rect.top() + 4.0),
+                            egui::vec2(10.0, 10.0),
+                        );
+                        let fade_out_resp = ui.interact(fade_out_handle_rect, clip_id.with("fade_out_h"), egui::Sense::drag());
+                        if fade_out_resp.dragged() {
+                            let delta_beats = (-fade_out_resp.drag_delta().x / ppb) as f64;
+                            seq.fade_out = (seq.fade_out + delta_beats).clamp(0.0, clip_beats * 0.5);
+                        }
+                        if fade_out_resp.hovered() || seq.fade_out > 0.0 {
+                            painter.circle_filled(fade_out_handle_rect.center(), 3.5, egui::Color32::WHITE);
+                            painter.circle_stroke(fade_out_handle_rect.center(), 4.5, egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(56, 189, 248)));
+                        }
+                    }
+
                     // Clip Name, Gain/Pitch & Step Count Label (Steps 584, 585)
                     let clip_label = seq.clip_name.as_deref().unwrap_or("Pattern");
                     let rev_flag = if seq.is_reversed { " 🔄" } else { "" };
@@ -1037,6 +1091,17 @@ pub fn show_arranger(
                                 [xf_rect.left_bottom(), xf_rect.right_top()],
                                 egui::Stroke::new(1.5_f32, egui::Color32::WHITE),
                             );
+                            let xf_width = overlap_end - overlap_start;
+                            let xf_beats = xf_width / ppb;
+                            if xf_width > 24.0 {
+                                painter.text(
+                                    xf_rect.center(),
+                                    egui::Align2::CENTER_CENTER,
+                                    format!("XFade {:.1}b", xf_beats),
+                                    egui::FontId::proportional(9.0),
+                                    egui::Color32::from_rgb(220, 255, 230),
+                                );
+                            }
                         }
                     }
                 }
@@ -1094,6 +1159,13 @@ pub fn show_arranger(
 
         // Handle clip additions from duplicate targets
         if let Some((t_id, new_clip)) = duplicate_clip_target {
+            if let Some(t) = project.tracks.iter_mut().find(|tr| tr.id == t_id) {
+                t.clips.push(new_clip);
+            }
+        }
+
+        // Handle clip additions from split targets
+        if let Some((t_id, new_clip)) = split_clip_target {
             if let Some(t) = project.tracks.iter_mut().find(|tr| tr.id == t_id) {
                 t.clips.push(new_clip);
             }
@@ -1179,13 +1251,23 @@ pub fn trim_silence(seq: &mut SequenceConfig) {
 }
 
 /// Helper to split a sequence clip at a given beat offset (Step 429).
-pub fn split_clip_at(seq: &mut SequenceConfig, split_beat: f64) {
+pub fn split_clip_at(seq: &mut SequenceConfig, split_beat: f64) -> Option<SequenceConfig> {
     if split_beat <= 0.0 {
-        return;
+        return None;
     }
     let step_idx = (split_beat / seq.step_division).round() as usize;
     if step_idx > 0 && step_idx < seq.steps.len() {
-        let _remaining_steps = seq.steps.split_off(step_idx);
+        let remaining_steps = seq.steps.split_off(step_idx);
+        let mut new_seq = seq.clone();
+        new_seq.steps = remaining_steps;
+        new_seq.start_beat = seq.start_beat + (step_idx as f64 * seq.step_division);
+        new_seq.fade_in = 0.0;
+        if let Some(ref name) = seq.clip_name {
+            new_seq.clip_name = Some(format!("{} (Part 2)", name));
+        }
+        Some(new_seq)
+    } else {
+        None
     }
 }
 

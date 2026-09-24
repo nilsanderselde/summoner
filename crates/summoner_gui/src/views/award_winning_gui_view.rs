@@ -9,6 +9,7 @@ use crate::views::modern_asset_browser::{show_modern_asset_browser, ModernAssetB
 use crate::views::modern_device_rack::{show_modern_device_rack, ModernDeviceRackState};
 use crate::views::modern_inspector::{show_modern_inspector_with_context, ModernInspectorState};
 use crate::views::modern_top_bar::{show_modern_top_bar, ModernTopBarState};
+use summoner_core::node::AudioNode;
 
 #[cfg(feature = "gui")]
 use eframe::egui::{self, Color32, FontId, Rect, RichText, Rounding, Stroke, Vec2};
@@ -27,6 +28,121 @@ pub struct TrackVisualData {
     pub is_armed: bool,
     pub clip_start_beat: f32,
     pub clip_length_beats: f32,
+    #[serde(default)]
+    pub clips: Vec<ArrangerClipVisual>,
+}
+
+/// Interactive Arranger Clip visual data representation supporting slicing, trimming, and crossfading.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct ArrangerClipVisual {
+    pub id: usize,
+    pub name: String,
+    pub start_beat: f32,
+    pub length_beats: f32,
+    pub fade_in: f32,
+    pub fade_out: f32,
+    pub gain: f32,
+    pub is_selected: bool,
+}
+
+impl Default for ArrangerClipVisual {
+    fn default() -> Self {
+        Self {
+            id: 0,
+            name: "Clip".to_string(),
+            start_beat: 0.0,
+            length_beats: 4.0,
+            fade_in: 0.0,
+            fade_out: 0.0,
+            gain: 1.0,
+            is_selected: false,
+        }
+    }
+}
+
+/// Active tool mode for the Arranger timeline canvas.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
+pub enum ArrangerToolMode {
+    #[default]
+    Pointer,
+    Slice,
+    Fade,
+}
+
+impl TrackVisualData {
+    /// Ensure the track has at least one active Arranger clip based on defaults.
+    pub fn ensure_clips(&mut self) {
+        if self.clips.is_empty() && self.clip_length_beats > 0.0 {
+            self.clips.push(ArrangerClipVisual {
+                id: 1,
+                name: self.name.clone(),
+                start_beat: self.clip_start_beat,
+                length_beats: self.clip_length_beats,
+                fade_in: 0.0,
+                fade_out: 0.0,
+                gain: 1.0,
+                is_selected: false,
+            });
+        }
+    }
+
+    /// Split a clip into two distinct clips at a given beat offset along the timeline.
+    pub fn split_clip_at_beat(&mut self, clip_id: usize, beat: f32) -> bool {
+        self.ensure_clips();
+        if let Some(pos) = self.clips.iter().position(|c| c.id == clip_id) {
+            let clip = &self.clips[pos];
+            if beat > clip.start_beat && beat < clip.start_beat + clip.length_beats {
+                let first_len = beat - clip.start_beat;
+                let second_len = clip.length_beats - first_len;
+                let second_start = beat;
+                let orig_name = clip.name.clone();
+                let orig_gain = clip.gain;
+                let orig_fade_out = clip.fade_out;
+
+                // Truncate first clip
+                self.clips[pos].length_beats = first_len;
+                self.clips[pos].fade_out = 0.05_f32.min(first_len * 0.25);
+
+                // Add second clip
+                let next_id = self.clips.iter().map(|c| c.id).max().unwrap_or(0) + 1;
+                let second_clip = ArrangerClipVisual {
+                    id: next_id,
+                    name: format!("{} (2)", orig_name),
+                    start_beat: second_start,
+                    length_beats: second_len,
+                    fade_in: 0.05_f32.min(second_len * 0.25),
+                    fade_out: orig_fade_out,
+                    gain: orig_gain,
+                    is_selected: false,
+                };
+                self.clips.insert(pos + 1, second_clip);
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Detect overlapping regions between clips on this track for crossfading.
+    /// Returns vector of (overlap_start_beat, overlap_end_beat, clip1_id, clip2_id).
+    pub fn detect_crossfades(&self) -> Vec<(f32, f32, usize, usize)> {
+        let mut xfades = Vec::new();
+        for i in 0..self.clips.len() {
+            for j in (i + 1)..self.clips.len() {
+                let c1 = &self.clips[i];
+                let c2 = &self.clips[j];
+                let s1 = c1.start_beat;
+                let e1 = c1.start_beat + c1.length_beats;
+                let s2 = c2.start_beat;
+                let e2 = c2.start_beat + c2.length_beats;
+                let o_start = s1.max(s2);
+                let o_end = e1.min(e2);
+                if o_end > o_start {
+                    xfades.push((o_start, o_end, c1.id, c2.id));
+                }
+            }
+        }
+        xfades
+    }
 }
 
 /// Canvas display mode for Pro Modular view.
@@ -94,6 +210,8 @@ pub struct ModularNodeInstance {
     pub pos: (f32, f32),
     pub size: (f32, f32),
     pub ports: Vec<ModularPort>,
+    #[serde(default)]
+    pub graph_node_idx: Option<usize>,
 }
 
 /// A routed patch cord between two modular node ports.
@@ -134,6 +252,8 @@ pub struct AwardWinningGuiView {
     pub patch_cords: Vec<ModularPatchCord>,
     pub selected_modular_node_id: Option<String>,
     pub pending_cord_source: Option<(String, String)>,
+    pub arranger_tool_mode: ArrangerToolMode,
+    pub audio_graph: std::sync::Arc<std::sync::Mutex<summoner_core::graph::NodeGraph>>,
     pub last_applied_preset: String,
     pub last_applied_macros: [f32; 4],
     pub last_synced_bpm: f64,
@@ -180,6 +300,7 @@ impl AwardWinningGuiView {
                 is_armed: false,
                 clip_start_beat: 0.0,
                 clip_length_beats: 16.0,
+                clips: Vec::new(),
             },
             TrackVisualData {
                 id: 2,
@@ -193,6 +314,7 @@ impl AwardWinningGuiView {
                 is_armed: false,
                 clip_start_beat: 2.0,
                 clip_length_beats: 14.0,
+                clips: Vec::new(),
             },
             TrackVisualData {
                 id: 3,
@@ -206,6 +328,7 @@ impl AwardWinningGuiView {
                 is_armed: false,
                 clip_start_beat: 2.0,
                 clip_length_beats: 14.0,
+                clips: Vec::new(),
             },
             TrackVisualData {
                 id: 4,
@@ -219,6 +342,7 @@ impl AwardWinningGuiView {
                 is_armed: false,
                 clip_start_beat: 1.0,
                 clip_length_beats: 15.0,
+                clips: Vec::new(),
             },
             TrackVisualData {
                 id: 5,
@@ -232,6 +356,7 @@ impl AwardWinningGuiView {
                 is_armed: true,
                 clip_start_beat: 4.0,
                 clip_length_beats: 12.0,
+                clips: Vec::new(),
             },
             TrackVisualData {
                 id: 6,
@@ -245,6 +370,7 @@ impl AwardWinningGuiView {
                 is_armed: false,
                 clip_start_beat: 2.0,
                 clip_length_beats: 10.0,
+                clips: Vec::new(),
             },
             TrackVisualData {
                 id: 7,
@@ -258,6 +384,7 @@ impl AwardWinningGuiView {
                 is_armed: false,
                 clip_start_beat: 6.0,
                 clip_length_beats: 10.0,
+                clips: Vec::new(),
             },
             TrackVisualData {
                 id: 8,
@@ -271,6 +398,7 @@ impl AwardWinningGuiView {
                 is_armed: false,
                 clip_start_beat: 7.0,
                 clip_length_beats: 9.0,
+                clips: Vec::new(),
             },
         ];
 
@@ -290,6 +418,10 @@ impl AwardWinningGuiView {
             patch_cords: Vec::new(),
             selected_modular_node_id: Some("osc_1".to_string()),
             pending_cord_source: None,
+            arranger_tool_mode: ArrangerToolMode::Pointer,
+            audio_graph: std::sync::Arc::new(std::sync::Mutex::new(
+                summoner_core::graph::NodeGraph::new("ModularCanvasGraph", 512, 2)
+            )),
             last_applied_preset: "Init Synth 1".to_string(),
             last_applied_macros: [0.65, 0.40, 0.55, 0.50],
             last_synced_bpm: 120.0,
@@ -789,17 +921,45 @@ impl AwardWinningGuiView {
                     painter.text(egui::pos2(bar_x + 4.0, ruler_rect.top() + 6.0), egui::Align2::LEFT_TOP, format!("{}", bar), FontId::proportional(10.0), Color32::from_rgb(148, 163, 184));
                 }
 
+                // Arranger Tools Selector (Pointer / Slice / Fade)
+                let tool_btn_w = 40.0;
+                let tool_btn_h = 20.0;
+                let t_pointer = Rect::from_min_size(egui::pos2(rect.left() + 4.0, ruler_rect.top() + 4.0), Vec2::new(tool_btn_w, tool_btn_h));
+                let t_slice = Rect::from_min_size(egui::pos2(rect.left() + 48.0, ruler_rect.top() + 4.0), Vec2::new(tool_btn_w, tool_btn_h));
+                let t_fade = Rect::from_min_size(egui::pos2(rect.left() + 92.0, ruler_rect.top() + 4.0), Vec2::new(tool_btn_w + 2.0, tool_btn_h));
+
+                let p_bg = if self.arranger_tool_mode == ArrangerToolMode::Pointer { Color32::from_rgb(26, 140, 255) } else { Color32::from_rgb(20, 28, 44) };
+                let s_bg = if self.arranger_tool_mode == ArrangerToolMode::Slice { Color32::from_rgb(236, 72, 153) } else { Color32::from_rgb(20, 28, 44) };
+                let f_bg = if self.arranger_tool_mode == ArrangerToolMode::Fade { Color32::from_rgb(16, 185, 129) } else { Color32::from_rgb(20, 28, 44) };
+
+                painter.rect_filled(t_pointer, 3.0, p_bg);
+                painter.text(t_pointer.center(), egui::Align2::CENTER_CENTER, "↖ Sel", FontId::proportional(9.0), Color32::WHITE);
+
+                painter.rect_filled(t_slice, 3.0, s_bg);
+                painter.text(t_slice.center(), egui::Align2::CENTER_CENTER, "✂ Cut", FontId::proportional(9.0), Color32::WHITE);
+
+                painter.rect_filled(t_fade, 3.0, f_bg);
+                painter.text(t_fade.center(), egui::Align2::CENTER_CENTER, "◿ Fade", FontId::proportional(9.0), Color32::WHITE);
+
+                let s_key_pressed = ui.input(|i| i.key_pressed(egui::Key::S) && !i.modifiers.ctrl);
+
                 // Interaction handling (Scrubbing playhead, selecting track, adjusting track gain)
                 let pointer_pos = resp.interact_pointer_pos().or_else(|| ui.input(|i| i.pointer.latest_pos()));
                 let is_interacting = resp.clicked() || resp.dragged() || ui.input(|i| i.pointer.primary_down() || i.pointer.primary_clicked());
                 let is_click = resp.clicked() || ui.input(|i| i.pointer.primary_clicked() || (i.pointer.primary_down() && !resp.dragged()));
 
                 if let Some(pos) = pointer_pos {
+                    if is_click {
+                        if t_pointer.contains(pos) { self.arranger_tool_mode = ArrangerToolMode::Pointer; }
+                        else if t_slice.contains(pos) { self.arranger_tool_mode = ArrangerToolMode::Slice; }
+                        else if t_fade.contains(pos) { self.arranger_tool_mode = ArrangerToolMode::Fade; }
+                    }
+
                     if is_interacting {
-                        if pos.y <= rect.top() + ruler_h {
+                        if pos.y <= rect.top() + ruler_h && pos.x >= rect.left() + header_w {
                             let beat = ((pos.x - (rect.left() + header_w)) / ppb).max(0.0);
                             self.playhead_beat = beat;
-                        } else {
+                        } else if pos.y > rect.top() + ruler_h {
                             let mut selected_idx = None;
                             let row_h = 32.0;
                             for (idx, track) in self.tracks.iter_mut().enumerate() {
@@ -835,7 +995,10 @@ impl AwardWinningGuiView {
 
                 // 2. Track Lanes
                 let row_h = 32.0;
-                for (idx, track) in self.tracks.iter().enumerate() {
+                let mut split_action: Option<(usize, usize, f32)> = None;
+
+                for (idx, track) in self.tracks.iter_mut().enumerate() {
+                    track.ensure_clips();
                     let row_top = rect.top() + ruler_h + (idx as f32 * (row_h + 2.0));
                     let is_sel = idx == self.selected_track_idx;
 
@@ -867,38 +1030,127 @@ impl AwardWinningGuiView {
                         painter.line_segment([egui::pos2(bar_x, lane_rect.top()), egui::pos2(bar_x, lane_rect.bottom())], Stroke::new(0.5_f32, Color32::from_rgb(24, 32, 48)));
                     }
 
-                    // Clip Block
-                    let clip_x = rect.left() + header_w + (track.clip_start_beat * ppb);
-                    let clip_w = (track.clip_length_beats * ppb).max(20.0);
-                    let clip_rect = Rect::from_min_size(egui::pos2(clip_x, lane_rect.top() + 2.0), Vec2::new(clip_w, lane_rect.height() - 4.0));
+                    // Render Clips on this track
+                    for clip in &mut track.clips {
+                        let clip_x = rect.left() + header_w + (clip.start_beat * ppb);
+                        let clip_w = (clip.length_beats * ppb).max(18.0);
+                        let clip_rect = Rect::from_min_size(egui::pos2(clip_x, lane_rect.top() + 2.0), Vec2::new(clip_w, lane_rect.height() - 4.0));
 
-                    // Clip fill with soft color glow
-                    painter.rect_filled(clip_rect, 4.0, Color32::from_rgba_unmultiplied(track.color_rgb[0], track.color_rgb[1], track.color_rgb[2], 40));
-                    painter.rect_stroke(clip_rect, 4.0, Stroke::new(1.2_f32, col));
+                        // Slicing interaction on click / shortcut
+                        if let Some(pos) = pointer_pos {
+                            if clip_rect.contains(pos) {
+                                if (self.arranger_tool_mode == ArrangerToolMode::Slice || ui.input(|i| i.modifiers.ctrl)) && is_click {
+                                    let click_beat = ((pos.x - (rect.left() + header_w)) / ppb).max(0.0);
+                                    split_action = Some((idx, clip.id, click_beat));
+                                } else if s_key_pressed {
+                                    split_action = Some((idx, clip.id, self.playhead_beat));
+                                }
 
-                    // Clip content (waveform spikes or MIDI note blocks)
-                    if track.is_audio {
-                        // Waveform spikes
-                        let num_spikes = (clip_rect.width() / 4.0) as usize;
-                        for s in 0..num_spikes {
-                            let sx = clip_rect.left() + s as f32 * 4.0 + 2.0;
-                            let norm = s as f32 / num_spikes.max(1) as f32;
-                            let amp = (norm * 12.0 * std::f32::consts::PI).sin().abs() * 0.70 + 0.15;
-                            let h = (clip_rect.height() - 6.0) * amp;
-                            let sy1 = clip_rect.center().y - h * 0.5;
-                            let sy2 = clip_rect.center().y + h * 0.5;
-                            painter.line_segment([egui::pos2(sx, sy1), egui::pos2(sx, sy2)], Stroke::new(1.8_f32, col));
+                                // Draggable Fade handles interaction
+                                let fade_in_h = egui::pos2(clip_rect.left() + (clip.fade_in * ppb).min(clip_rect.width() * 0.5), clip_rect.top() + 4.0);
+                                let fade_out_h = egui::pos2(clip_rect.right() - (clip.fade_out * ppb).min(clip_rect.width() * 0.5), clip_rect.top() + 4.0);
+
+                                if pos.distance(fade_in_h) < 10.0 && resp.dragged() {
+                                    let delta_b = resp.drag_delta().x / ppb;
+                                    clip.fade_in = (clip.fade_in + delta_b).clamp(0.0, clip.length_beats * 0.5);
+                                } else if pos.distance(fade_out_h) < 10.0 && resp.dragged() {
+                                    let delta_b = -resp.drag_delta().x / ppb;
+                                    clip.fade_out = (clip.fade_out + delta_b).clamp(0.0, clip.length_beats * 0.5);
+                                }
+                            }
                         }
-                    } else {
-                        // MIDI note blocks
-                        let num_steps = 12;
-                        for step in 0..num_steps {
-                            let st = step as f32 / num_steps as f32;
-                            let nx = clip_rect.left() + st * (clip_rect.width() - 14.0) + 4.0;
-                            let note_y = clip_rect.top() + 6.0 + (step % 4) as f32 * 4.0;
-                            let note_rect = Rect::from_min_size(egui::pos2(nx, note_y), Vec2::new(10.0, 3.0));
-                            painter.rect_filled(note_rect, 1.0, col);
+
+                        // Clip fill with soft color glow
+                        painter.rect_filled(clip_rect, 4.0, Color32::from_rgba_unmultiplied(track.color_rgb[0], track.color_rgb[1], track.color_rgb[2], 40));
+                        painter.rect_stroke(clip_rect, 4.0, Stroke::new(1.2_f32, col));
+
+                        // Fade In Polygon & Curve
+                        if clip.fade_in > 0.0 {
+                            let fade_w = (clip.fade_in * ppb).min(clip_rect.width() * 0.5);
+                            let pts = vec![
+                                clip_rect.left_bottom(),
+                                clip_rect.left_top(),
+                                egui::pos2(clip_rect.left() + fade_w, clip_rect.top()),
+                            ];
+                            painter.add(egui::Shape::convex_polygon(
+                                pts,
+                                Color32::from_rgba_unmultiplied(255, 255, 255, 30),
+                                Stroke::new(1.0_f32, Color32::WHITE),
+                            ));
                         }
+
+                        // Fade Out Polygon & Curve
+                        if clip.fade_out > 0.0 {
+                            let fade_w = (clip.fade_out * ppb).min(clip_rect.width() * 0.5);
+                            let pts = vec![
+                                egui::pos2(clip_rect.right() - fade_w, clip_rect.top()),
+                                clip_rect.right_top(),
+                                clip_rect.right_bottom(),
+                            ];
+                            painter.add(egui::Shape::convex_polygon(
+                                pts,
+                                Color32::from_rgba_unmultiplied(255, 255, 255, 30),
+                                Stroke::new(1.0_f32, Color32::WHITE),
+                            ));
+                        }
+
+                        // Fade Handle points
+                        let fade_in_pos = egui::pos2(clip_rect.left() + (clip.fade_in * ppb).min(clip_rect.width() * 0.5), clip_rect.top() + 4.0);
+                        let fade_out_pos = egui::pos2(clip_rect.right() - (clip.fade_out * ppb).min(clip_rect.width() * 0.5), clip_rect.top() + 4.0);
+                        painter.circle_filled(fade_in_pos, 2.5, Color32::WHITE);
+                        painter.circle_filled(fade_out_pos, 2.5, Color32::WHITE);
+
+                        // Clip content (waveform spikes or MIDI note blocks)
+                        if track.is_audio {
+                            let num_spikes = (clip_rect.width() / 4.0) as usize;
+                            for s in 0..num_spikes {
+                                let sx = clip_rect.left() + s as f32 * 4.0 + 2.0;
+                                let norm = s as f32 / num_spikes.max(1) as f32;
+                                let amp = (norm * 12.0 * std::f32::consts::PI).sin().abs() * 0.70 + 0.15;
+                                let h = (clip_rect.height() - 6.0) * amp;
+                                let sy1 = clip_rect.center().y - h * 0.5;
+                                let sy2 = clip_rect.center().y + h * 0.5;
+                                painter.line_segment([egui::pos2(sx, sy1), egui::pos2(sx, sy2)], Stroke::new(1.8_f32, col));
+                            }
+                        } else {
+                            let num_steps = 12;
+                            for step in 0..num_steps {
+                                let st = step as f32 / num_steps as f32;
+                                let nx = clip_rect.left() + st * (clip_rect.width() - 14.0) + 4.0;
+                                let note_y = clip_rect.top() + 6.0 + (step % 4) as f32 * 4.0;
+                                let note_rect = Rect::from_min_size(egui::pos2(nx, note_y), Vec2::new(10.0, 3.0));
+                                painter.rect_filled(note_rect, 1.0, col);
+                            }
+                        }
+
+                        // Clip Name Label
+                        painter.text(
+                            egui::pos2(clip_rect.left() + 6.0, clip_rect.top() + 3.0),
+                            egui::Align2::LEFT_TOP,
+                            &clip.name,
+                            FontId::proportional(10.0),
+                            Color32::from_rgb(241, 245, 249),
+                        );
+                    }
+
+                    // Crossfades between overlapping clips on this track
+                    for (o_start, o_end, _c1, _c2) in track.detect_crossfades() {
+                        let xf_x1 = rect.left() + header_w + (o_start * ppb);
+                        let xf_x2 = rect.left() + header_w + (o_end * ppb);
+                        let xf_rect = Rect::from_min_max(egui::pos2(xf_x1, lane_rect.top() + 2.0), egui::pos2(xf_x2, lane_rect.bottom() - 2.0));
+                        painter.rect_filled(xf_rect, 2.0, Color32::from_rgba_unmultiplied(16, 185, 129, 60));
+                        painter.line_segment([xf_rect.left_top(), xf_rect.right_bottom()], Stroke::new(1.2_f32, Color32::from_rgb(16, 185, 129)));
+                        painter.line_segment([xf_rect.left_bottom(), xf_rect.right_top()], Stroke::new(1.2_f32, Color32::from_rgb(16, 185, 129)));
+                        if xf_rect.width() > 24.0 {
+                            painter.text(xf_rect.center(), egui::Align2::CENTER_CENTER, format!("XFade {:.1}b", o_end - o_start), FontId::proportional(8.5), Color32::from_rgb(200, 255, 235));
+                        }
+                    }
+                }
+
+                // Apply split action if triggered
+                if let Some((t_idx, c_id, split_beat)) = split_action {
+                    if let Some(track) = self.tracks.get_mut(t_idx) {
+                        track.split_clip_at_beat(c_id, split_beat);
                     }
                 }
 
@@ -1189,6 +1441,18 @@ impl AwardWinningGuiView {
     }
 
     pub fn reset_modular_nodes(&mut self) {
+        let mut graph = summoner_core::graph::NodeGraph::new("ModularCanvasGraph", 512, 2);
+        let osc_idx = graph.add_node(Box::new(summoner_core::node::SineOscillatorNode::new(440.0)));
+        let filter_idx = graph.add_node(Box::new(summoner_core::node::GainNode::new(1.0)));
+        let env_idx = graph.add_node(Box::new(summoner_core::node::GainNode::new(1.0)));
+        let vca_idx = graph.add_node(Box::new(summoner_core::node::GainNode::new(1.0)));
+
+        graph.connect(osc_idx, 0, filter_idx, 0);
+        graph.connect(filter_idx, 0, vca_idx, 0);
+        graph.connect(env_idx, 0, vca_idx, 1);
+
+        self.audio_graph = std::sync::Arc::new(std::sync::Mutex::new(graph));
+
         self.modular_nodes = vec![
             ModularNodeInstance {
                 id: "osc_1".into(),
@@ -1202,6 +1466,7 @@ impl AwardWinningGuiView {
                     ModularPort { id: "sync".into(), name: "Sync".into(), kind: ModularPortKind::GateIn, rel_pos: (45.0, 88.0) },
                     ModularPort { id: "out".into(), name: "Out".into(), kind: ModularPortKind::AudioOut, rel_pos: (126.0, 88.0) },
                 ],
+                graph_node_idx: Some(osc_idx),
             },
             ModularNodeInstance {
                 id: "filter_1".into(),
@@ -1215,6 +1480,7 @@ impl AwardWinningGuiView {
                     ModularPort { id: "cv_cut".into(), name: "CV Cut".into(), kind: ModularPortKind::ModulationIn, rel_pos: (14.0, 75.0) },
                     ModularPort { id: "lp".into(), name: "LP".into(), kind: ModularPortKind::AudioOut, rel_pos: (136.0, 45.0) },
                 ],
+                graph_node_idx: Some(filter_idx),
             },
             ModularNodeInstance {
                 id: "env_1".into(),
@@ -1227,6 +1493,7 @@ impl AwardWinningGuiView {
                     ModularPort { id: "gate".into(), name: "Gate".into(), kind: ModularPortKind::GateIn, rel_pos: (14.0, 88.0) },
                     ModularPort { id: "cv".into(), name: "CV".into(), kind: ModularPortKind::ModulationOut, rel_pos: (126.0, 88.0) },
                 ],
+                graph_node_idx: Some(env_idx),
             },
             ModularNodeInstance {
                 id: "vca_1".into(),
@@ -1240,6 +1507,7 @@ impl AwardWinningGuiView {
                     ModularPort { id: "cv".into(), name: "CV".into(), kind: ModularPortKind::ModulationIn, rel_pos: (14.0, 75.0) },
                     ModularPort { id: "main".into(), name: "Main".into(), kind: ModularPortKind::AudioOut, rel_pos: (126.0, 60.0) },
                 ],
+                graph_node_idx: Some(vca_idx),
             },
         ];
 
@@ -1318,6 +1586,19 @@ impl AwardWinningGuiView {
             ports.push(ModularPort { id: "out".into(), name: "Out".into(), kind: ModularPortKind::AudioOut, rel_pos: (126.0, 60.0) });
         }
 
+        let mut graph_node_idx = None;
+        if let Ok(mut g) = self.audio_graph.lock() {
+            let node_box: Box<dyn summoner_core::node::AudioNode> = match desc.category {
+                crate::dsp_node_ui::DspNodeCategory::Oscillator
+                | crate::dsp_node_ui::DspNodeCategory::CompositeSynth
+                | crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel => {
+                    Box::new(summoner_core::node::SineOscillatorNode::new(440.0))
+                }
+                _ => Box::new(summoner_core::node::GainNode::new(1.0)),
+            };
+            graph_node_idx = Some(g.add_node(node_box));
+        }
+
         let instance = ModularNodeInstance {
             id: node_id.clone(),
             kind_id: desc.kind_id.clone(),
@@ -1326,6 +1607,7 @@ impl AwardWinningGuiView {
             pos: (x, y),
             size: (145.0, 105.0),
             ports,
+            graph_node_idx,
         };
         self.selected_modular_node_id = Some(node_id);
         self.device_rack_state.selected_node_kind = Some(desc.kind_id.clone());
@@ -1333,6 +1615,57 @@ impl AwardWinningGuiView {
         self.inspector_state.selected_node_kind = Some(desc.kind_id.clone());
         self.inspector_state.target_name = desc.display_name.clone();
         self.modular_nodes.push(instance);
+    }
+
+    /// Dynamically connect two modular nodes with an audio or CV cord in the underlying NodeGraph.
+    pub fn connect_patch_cord_in_graph(&mut self, src_node_id: &str, src_port_id: &str, dst_node_id: &str, dst_port_id: &str) {
+        let from_node = self.modular_nodes.iter().find(|n| n.id == src_node_id);
+        let to_node = self.modular_nodes.iter().find(|n| n.id == dst_node_id);
+
+        if let (Some(from), Some(to)) = (from_node, to_node) {
+            if let (Some(f_idx), Some(t_idx)) = (from.graph_node_idx, to.graph_node_idx) {
+                let from_port_idx = from.ports.iter().position(|p| p.id == src_port_id).unwrap_or(0);
+                let to_port_idx = to.ports.iter().position(|p| p.id == dst_port_id).unwrap_or(0);
+
+                if let Ok(mut g) = self.audio_graph.lock() {
+                    g.connect(f_idx, from_port_idx, t_idx, to_port_idx);
+                }
+            }
+        }
+    }
+
+    /// Disconnect an edge from the underlying NodeGraph.
+    pub fn disconnect_patch_cord_in_graph(&mut self, src_node_id: &str, src_port_id: &str, dst_node_id: &str, dst_port_id: &str) {
+        let from_node = self.modular_nodes.iter().find(|n| n.id == src_node_id);
+        let to_node = self.modular_nodes.iter().find(|n| n.id == dst_node_id);
+
+        if let (Some(from), Some(to)) = (from_node, to_node) {
+            if let (Some(f_idx), Some(t_idx)) = (from.graph_node_idx, to.graph_node_idx) {
+                let from_port_idx = from.ports.iter().position(|p| p.id == src_port_id).unwrap_or(0);
+                let to_port_idx = to.ports.iter().position(|p| p.id == dst_port_id).unwrap_or(0);
+
+                if let Ok(mut g) = self.audio_graph.lock() {
+                    g.remove_edge(summoner_core::graph::Edge {
+                        from_node: f_idx,
+                        from_port: from_port_idx,
+                        to_node: t_idx,
+                        to_port: to_port_idx,
+                    });
+                }
+            }
+        }
+    }
+
+    /// Run real-time block processing through the live modular NodeGraph.
+    pub fn process_modular_graph(
+        &self,
+        input: &[&[summoner_core::audio::Sample]],
+        output: &mut [&mut [summoner_core::audio::Sample]],
+        ctx: &summoner_core::node::ProcessContext,
+    ) {
+        if let Ok(mut g) = self.audio_graph.lock() {
+            g.process(input, output, ctx);
+        }
     }
 
     /// Synchronize live session configuration, transport position, and active track between Summoner Core and the Studio GUI.
@@ -1371,6 +1704,31 @@ impl AwardWinningGuiView {
                         let k = n.kind.to_lowercase();
                         k.contains("audio") || k.contains("sample") || k.contains("wav")
                     });
+                    let mut clips = Vec::new();
+                    for (c_i, c) in t.clips.iter().enumerate() {
+                        clips.push(ArrangerClipVisual {
+                            id: c_i + 1,
+                            name: c.clip_name.clone().unwrap_or_else(|| format!("{} {}", t.name, c_i + 1)),
+                            start_beat: c.start_beat as f32,
+                            length_beats: (c.steps.len() as f32 * c.step_division as f32).max(1.0),
+                            fade_in: c.fade_in as f32,
+                            fade_out: c.fade_out as f32,
+                            gain: c.gain as f32,
+                            is_selected: false,
+                        });
+                    }
+                    if clips.is_empty() && clip_len > 0.0 {
+                        clips.push(ArrangerClipVisual {
+                            id: 1,
+                            name: t.name.clone(),
+                            start_beat: clip_start,
+                            length_beats: clip_len,
+                            fade_in: 0.0,
+                            fade_out: 0.0,
+                            gain: 1.0,
+                            is_selected: false,
+                        });
+                    }
                     TrackVisualData {
                         id: t.id,
                         name: t.name.clone(),
@@ -1383,6 +1741,7 @@ impl AwardWinningGuiView {
                         is_armed: t.record_armed,
                         clip_start_beat: clip_start,
                         clip_length_beats: clip_len,
+                        clips,
                     }
                 }).collect();
             } else {
@@ -1896,19 +2255,28 @@ impl AwardWinningGuiView {
                         let is_audio = !port_kind.is_modulation();
                         if let Some(pos) = self.patch_cords.iter().position(|c| c.from_node_id == src_node && c.from_port_id == src_port && c.to_node_id == node_id && c.to_port_id == port_id) {
                             self.patch_cords.remove(pos);
+                            self.disconnect_patch_cord_in_graph(&src_node, &src_port, &node_id, &port_id);
                         } else {
                             self.patch_cords.push(ModularPatchCord {
-                                from_node_id: src_node,
-                                from_port_id: src_port,
-                                to_node_id: node_id,
-                                to_port_id: port_id,
+                                from_node_id: src_node.clone(),
+                                from_port_id: src_port.clone(),
+                                to_node_id: node_id.clone(),
+                                to_port_id: port_id.clone(),
                                 is_audio,
                                 intensity: 1.0,
                             });
+                            self.connect_patch_cord_in_graph(&src_node, &src_port, &node_id, &port_id);
                         }
                     }
                 } else {
                     // Disconnect existing cable to this input socket
+                    let cords_to_remove: Vec<ModularPatchCord> = self.patch_cords.iter()
+                        .filter(|c| c.to_node_id == node_id && c.to_port_id == port_id)
+                        .cloned()
+                        .collect();
+                    for c in cords_to_remove {
+                        self.disconnect_patch_cord_in_graph(&c.from_node_id, &c.from_port_id, &c.to_node_id, &c.to_port_id);
+                    }
                     self.patch_cords.retain(|c| !(c.to_node_id == node_id && c.to_port_id == port_id));
                 }
             }
