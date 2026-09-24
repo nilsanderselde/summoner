@@ -461,11 +461,55 @@ impl AwardWinningGuiView {
 
     #[cfg(feature = "gui")]
     pub fn show(&mut self, ui: &mut egui::Ui) {
+        // 0. Handle Pending Factory Demo Template load request
+        if let Some(ref tmpl_id) = self.top_bar_state.pending_demo_template.take() {
+            self.load_factory_demo_template(tmpl_id);
+        }
+
         // 1. Synchronize Novice Presets to Active Device Rack & Inspector
         if self.top_bar_state.selected_preset != self.last_applied_preset {
             self.last_applied_preset = self.top_bar_state.selected_preset.clone();
-            let registry = crate::dsp_node_ui::DspNodeRegistry::new();
-            let target_node = match self.last_applied_preset.as_str() {
+            if let Some(preset) = crate::factory_presets::find_preset(&self.last_applied_preset) {
+                self.top_bar_state.macro_tone = preset.macro_tone;
+                self.top_bar_state.macro_space = preset.macro_space;
+                self.top_bar_state.macro_punch = preset.macro_punch;
+                self.top_bar_state.macro_character = preset.macro_character;
+                self.last_applied_macros = [
+                    preset.macro_tone,
+                    preset.macro_space,
+                    preset.macro_punch,
+                    preset.macro_character,
+                ];
+
+                self.device_rack_state.selected_node_kind = Some(preset.target_node_kind.to_string());
+                self.device_rack_state.device_name = preset.name.to_string();
+                self.device_rack_state.cutoff = preset.macro_tone;
+                self.device_rack_state.decay = preset.macro_space;
+                self.device_rack_state.drive = preset.macro_punch;
+                self.device_rack_state.mod_amt = preset.macro_character;
+                self.device_rack_state.node_param_values.clear();
+                for &(p_name, p_val) in preset.params {
+                    self.device_rack_state.node_param_values.insert(p_name.to_string(), p_val);
+                }
+
+                self.inspector_state.selected_node_kind = Some(preset.target_node_kind.to_string());
+                self.inspector_state.target_name = preset.name.to_string();
+                self.inspector_state.node_param_values.clear();
+                for &(p_name, p_val) in preset.params {
+                    self.inspector_state.node_param_values.insert(p_name.to_string(), p_val);
+                }
+
+                if let Some(edo) = preset.tuning_edo {
+                    self.inspector_state.scale_name = format!("{}-EDO Microtonal", edo);
+                    self.top_bar_state.key_signature = format!("{}-EDO", edo);
+                }
+
+                if let Some(track) = self.tracks.get_mut(self.selected_track_idx) {
+                    track.name = preset.name.to_string();
+                }
+            } else {
+                let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+                let target_node = match self.last_applied_preset.as_str() {
                 "Init Synth 1" => "AetherSynth",
                 "Aether Warm Pad" => "AtmosphericPadSynth",
                 "808 Sub Kick" => "CyberpunkSubSynth",
@@ -696,6 +740,7 @@ impl AwardWinningGuiView {
                 self.inspector_state.target_name = desc.display_name.clone();
             }
         }
+    }
 
         // 2. Synchronize Novice Macro Strip Knobs to Active Device Rack
         let cur_macros = [
@@ -843,14 +888,18 @@ impl AwardWinningGuiView {
                     selected_asset = Some(drag_preset.to_string());
                 });
                 if let Some(asset) = selected_asset {
-                    let registry = crate::dsp_node_ui::DspNodeRegistry::new();
-                    if let Some(desc) = registry.get(&asset) {
-                        self.device_rack_state.selected_node_kind = Some(desc.kind_id.clone());
-                        self.device_rack_state.device_name = desc.display_name.clone();
-                        self.inspector_state.selected_node_kind = Some(desc.kind_id.clone());
-                        self.inspector_state.target_name = desc.display_name.clone();
-                    } else {
-                        self.inspector_state.target_name = asset;
+                    if let Some(tmpl) = crate::factory_presets::find_demo_template(&asset) {
+                        self.load_factory_demo_template(tmpl.id);
+                    } else if !self.apply_factory_preset(&asset, None) {
+                        let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+                        if let Some(desc) = registry.get(&asset) {
+                            self.device_rack_state.selected_node_kind = Some(desc.kind_id.clone());
+                            self.device_rack_state.device_name = desc.display_name.clone();
+                            self.inspector_state.selected_node_kind = Some(desc.kind_id.clone());
+                            self.inspector_state.target_name = desc.display_name.clone();
+                        } else {
+                            self.inspector_state.target_name = asset;
+                        }
                     }
                 }
 
@@ -1928,6 +1977,142 @@ impl AwardWinningGuiView {
                 self.device_rack_state.node_param_values.insert("lfo_speed".to_string(), self.device_rack_state.lfo_speed);
                 self.device_rack_state.node_param_values.insert("lfo_depth".to_string(), self.device_rack_state.lfo_depth);
             }
+        }
+    }
+
+    /// Loads a factory preset into the device rack, inspector, macros, and active track.
+    /// If param_bus is provided, parameters are dispatched to the real-time audio thread without allocations.
+    pub fn apply_factory_preset(
+        &mut self,
+        preset_name_or_id: &str,
+        param_bus: Option<&summoner_core::param_bus::ParamBus>,
+    ) -> bool {
+        self.top_bar_state.selected_preset = preset_name_or_id.to_string();
+        self.last_applied_preset = preset_name_or_id.to_string();
+
+        if let Some(preset) = crate::factory_presets::find_preset(preset_name_or_id) {
+            self.top_bar_state.macro_tone = preset.macro_tone;
+            self.top_bar_state.macro_space = preset.macro_space;
+            self.top_bar_state.macro_punch = preset.macro_punch;
+            self.top_bar_state.macro_character = preset.macro_character;
+            self.last_applied_macros = [
+                preset.macro_tone,
+                preset.macro_space,
+                preset.macro_punch,
+                preset.macro_character,
+            ];
+
+            self.device_rack_state.selected_node_kind = Some(preset.target_node_kind.to_string());
+            self.device_rack_state.device_name = preset.name.to_string();
+            self.device_rack_state.cutoff = preset.macro_tone;
+            self.device_rack_state.decay = preset.macro_space;
+            self.device_rack_state.drive = preset.macro_punch;
+            self.device_rack_state.mod_amt = preset.macro_character;
+            self.device_rack_state.node_param_values.clear();
+            for &(p_name, p_val) in preset.params {
+                self.device_rack_state.node_param_values.insert(p_name.to_string(), p_val);
+            }
+
+            self.inspector_state.selected_node_kind = Some(preset.target_node_kind.to_string());
+            self.inspector_state.target_name = preset.name.to_string();
+            self.inspector_state.node_param_values.clear();
+            for &(p_name, p_val) in preset.params {
+                self.inspector_state.node_param_values.insert(p_name.to_string(), p_val);
+            }
+
+            if let Some(edo) = preset.tuning_edo {
+                self.inspector_state.scale_name = format!("{}-EDO Microtonal", edo);
+                self.top_bar_state.key_signature = format!("{}-EDO", edo);
+            }
+
+            if let Some(track) = self.tracks.get_mut(self.selected_track_idx) {
+                track.name = preset.name.to_string();
+            }
+
+            if let Some(bus) = param_bus {
+                let track_id = (self.selected_track_idx + 1) as u32;
+                let _ = bus.set(summoner_core::param_bus::ParamId(track_id * 1000 + 100), preset.macro_tone);
+                let _ = bus.set(summoner_core::param_bus::ParamId(track_id * 1000 + 102), preset.macro_space);
+                let _ = bus.set(summoner_core::param_bus::ParamId(track_id * 1000 + 105), preset.macro_punch);
+                let _ = bus.set(summoner_core::param_bus::ParamId(track_id * 1000 + 106), self.device_rack_state.volume);
+
+                for (p_idx, &(_p_name, p_val)) in preset.params.iter().enumerate() {
+                    let _ = bus.set(summoner_core::param_bus::ParamId(track_id * 1000 + p_idx as u32), p_val);
+                }
+            }
+            true
+        } else {
+            let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+            if let Some(desc) = registry.get(preset_name_or_id) {
+                self.device_rack_state.selected_node_kind = Some(desc.kind_id.clone());
+                self.device_rack_state.device_name = desc.display_name.clone();
+                self.inspector_state.selected_node_kind = Some(desc.kind_id.clone());
+                self.inspector_state.target_name = desc.display_name.clone();
+                true
+            } else {
+                false
+            }
+        }
+    }
+
+    /// Loads a full factory multi-track demo project template into the arranger, mixer, and device racks.
+    pub fn load_factory_demo_template(&mut self, template_id: &str) -> bool {
+        if let Some(template) = crate::factory_presets::find_demo_template(template_id) {
+            self.top_bar_state.bpm = template.bpm;
+            self.top_bar_state.key_signature = template.key_signature.to_string();
+            self.top_bar_state.time_signature = template.time_signature.to_string();
+            if let Some(edo) = template.tuning_edo {
+                self.inspector_state.scale_name = format!("{}-EDO Microtonal", edo);
+            } else {
+                self.inspector_state.scale_name = template.tuning_name.to_string();
+            }
+
+            self.tracks.clear();
+            self.piano_roll_notes.clear();
+
+            for (idx, dt) in template.tracks.iter().enumerate() {
+                self.tracks.push(TrackVisualData {
+                    id: dt.id as u64,
+                    name: dt.name.to_string(),
+                    color_rgb: dt.color_rgb,
+                    is_audio: dt.is_audio,
+                    gain: dt.gain,
+                    pan: dt.pan,
+                    is_muted: false,
+                    is_soloed: false,
+                    is_armed: idx == 0,
+                    clip_start_beat: dt.clip_start_beat as f32,
+                    clip_length_beats: dt.clip_length_beats as f32,
+                    clips: Vec::new(),
+                });
+
+                if idx == 0 {
+                    for (n_i, &(pitch, start, len, vel)) in dt.notes.iter().enumerate() {
+                        self.piano_roll_notes.push(PianoRollNote {
+                            id: n_i + 1,
+                            pitch_idx: pitch as usize,
+                            start_beat: start as f32,
+                            length_beats: len as f32,
+                            velocity: vel,
+                        });
+                    }
+                    self.next_note_id = dt.notes.len() + 1;
+                    if !self.piano_roll_notes.is_empty() {
+                        self.selected_note_id = Some(1);
+                    }
+                }
+            }
+
+            self.selected_track_idx = 0;
+            self.last_selected_track_idx = 0;
+            self.playhead_beat = 0.0;
+
+            if let Some(first_track) = template.tracks.first() {
+                self.apply_factory_preset(first_track.preset_id, None);
+            }
+            true
+        } else {
+            false
         }
     }
 

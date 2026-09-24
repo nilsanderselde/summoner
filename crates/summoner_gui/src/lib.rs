@@ -18,6 +18,7 @@
 pub mod ascii_renderer;
 pub mod docking_layout;
 pub mod dsp_node_ui;
+pub mod factory_presets;
 pub mod gpu_waveform;
 pub mod hud_overlay;
 pub mod layout_math;
@@ -131,6 +132,7 @@ pub mod tier80_redesign_tests;
 pub mod tier81_m33_tests;
 pub mod tier82_turn2_tests;
 pub mod tier83_turn3_tests;
+pub mod tier84_turn6_tests;
 #[cfg(feature = "gui")]
 pub mod touch_gestures;
 #[cfg(feature = "gui")]

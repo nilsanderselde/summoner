@@ -40,7 +40,6 @@ mod pure_tests {
 mod tests {
     use eframe::egui;
     use summoner_core::param_bus::{ParamBus, ParamId};
-    use summoner_project::create_default_project;
     use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use crate::views::modern_device_rack::{show_modern_device_rack, ModernDeviceRackState};
     use crate::views::modern_inspector::{show_modern_inspector_with_context, ModernInspectorState};

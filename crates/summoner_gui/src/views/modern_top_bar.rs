@@ -57,6 +57,8 @@ pub struct ModernTopBarState {
     pub macro_character: f32,
     #[serde(default = "default_true_novice")]
     pub is_novice_macro_visible: bool,
+    #[serde(default)]
+    pub pending_demo_template: Option<String>,
 }
 
 fn default_master_gain() -> f32 {
@@ -333,6 +335,7 @@ impl Default for ModernTopBarState {
             macro_punch: default_macro_punch(),
             macro_character: default_macro_character(),
             is_novice_macro_visible: default_true_novice(),
+            pending_demo_template: None,
         }
     }
 }
@@ -393,6 +396,30 @@ pub fn show_modern_top_bar(
                                     let is_sel = state.selected_preset == *preset;
                                     if ui.selectable_label(is_sel, preset).clicked() {
                                         state.selected_preset = preset.clone();
+                                    }
+                                }
+                            });
+                    });
+                });
+
+            ui.add_space(8.0);
+
+            // Quick Demo Song / Template Selector (Out-of-the-box factory content)
+            egui::Frame::none()
+                .fill(Color32::from_rgb(14, 20, 32))
+                .stroke(Stroke::new(1.0_f32, Color32::from_rgb(28, 40, 60)))
+                .rounding(Rounding::same(6.0))
+                .inner_margin(egui::Margin::symmetric(8.0, 4.0))
+                .show(ui, |ui| {
+                    ui.horizontal(|ui| {
+                        ui.label(RichText::new("Demos:").font(FontId::proportional(9.0)).color(Color32::from_rgb(100, 116, 139)));
+                        egui::ComboBox::from_id_source("top_bar_demo_selector")
+                            .selected_text(RichText::new("🎵 Demo Songs").font(FontId::proportional(11.0)).strong().color(Color32::from_rgb(234, 179, 8)))
+                            .show_ui(ui, |ui| {
+                                for tmpl in crate::factory_presets::all_demo_templates() {
+                                    let label = format!("🎵 {} ({}, {} BPM)", tmpl.title, tmpl.tuning_name, tmpl.bpm as u32);
+                                    if ui.selectable_label(false, label).clicked() {
+                                        state.pending_demo_template = Some(tmpl.id.to_string());
                                     }
                                 }
                             });

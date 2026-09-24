@@ -15,6 +15,7 @@ pub enum BrowserCategory {
     MidiFx,
     #[default]
     Samples,
+    Soundbanks,
 }
 
 impl BrowserCategory {
@@ -24,6 +25,7 @@ impl BrowserCategory {
             BrowserCategory::AudioFx => "Audio FX",
             BrowserCategory::MidiFx => "MIDI FX",
             BrowserCategory::Samples => "Samples",
+            BrowserCategory::Soundbanks => "Soundbanks",
         }
     }
 
@@ -33,6 +35,7 @@ impl BrowserCategory {
             BrowserCategory::AudioFx => "🎛",
             BrowserCategory::MidiFx => "🎼",
             BrowserCategory::Samples => "📁",
+            BrowserCategory::Soundbanks => "📦",
         }
     }
 
@@ -1114,6 +1117,90 @@ impl BrowserCategory {
                     ],
                 ),
             ],
+            BrowserCategory::Soundbanks => &[
+                (
+                    "Physical Modeling",
+                    &[
+                        "Steinway Concert Grand Piano",
+                        "Japanese Bamboo Shakuhachi",
+                        "Hindustani Ravi Shankar Sitar",
+                        "Cremona Stradivarius Bowed Cello",
+                        "Hammond B3 Tonewheel Organ",
+                        "Hohner D6 Funk Clavinet",
+                        "Rhodes Mark I Stage Electric Piano",
+                        "Baroque Cathedral Pipe Organ",
+                        "Rosewood Concert Marimba",
+                        "Celtic Concert Lever Harp",
+                        "Bourbonnais Hurdy-Gurdy",
+                        "Benjamin Franklin Glass Armonica",
+                    ],
+                ),
+                (
+                    "General MIDI Soundbank",
+                    &[
+                        "General MIDI Acoustic Grand Piano",
+                        "General MIDI Electric Piano 1 (Rhodes)",
+                        "General MIDI Drawbar Organ",
+                        "General MIDI Church Pipe Organ",
+                        "General MIDI Nylon String Guitar",
+                        "General MIDI Overdriven Rock Guitar",
+                        "General MIDI Acoustic Bass",
+                        "General MIDI Synth Brass 1",
+                        "General MIDI Shakuhachi Flute",
+                        "General MIDI Standard Drum Kit 1",
+                    ],
+                ),
+                (
+                    "Chiptune & Tracker",
+                    &[
+                        "Chiptune 8-Bit NES Pulse Lead",
+                        "Chiptune 8-Bit GameBoy Triangle Bass",
+                        "Commodore 64 SID 6581 Arpeggiator",
+                        "Chiptune FastTracker II Arp Arpeggio",
+                        "Chiptune Noise Snare & Hi-Hat",
+                    ],
+                ),
+                (
+                    "Microtonal & Harmony",
+                    &[
+                        "Microtonal 19-EDO Neutral Third Pad",
+                        "Microtonal 31-EDO Extended Justness Lead",
+                        "Microtonal 53-EDO Turkish Makam Drone",
+                        "Bohlen-Pierce Non-Octave Tritave Chime",
+                        "Microtonal 22-EDO Porcupine Bass",
+                    ],
+                ),
+                (
+                    "Modern Synth & Lo-Fi",
+                    &[
+                        "Aether Warm Pad",
+                        "808 Sub Kick",
+                        "Moog 4-Pole Ladder Self-Oscillation",
+                        "Kelly-Lochbaum Formant Vowel Kelly Acoustic Waveguide",
+                        "Stochastic Chaos Modulation & Algorithmic Random Generator",
+                    ],
+                ),
+                (
+                    "Studio FX & Mastering",
+                    &[
+                        "Vintage Tape Lead",
+                        "Vintage EMT-140 Cold-Rolled Steel Suspension Reverb",
+                        "Master Brickwall True-Peak Limiter",
+                        "Spherical Harmonic 3D Binaural HRTF Soundfield",
+                        "Neural High-Gain Amp Stack",
+                    ],
+                ),
+                (
+                    "Starter Demo Templates",
+                    &[
+                        "Physical Modeling Acoustic Showcase",
+                        "19-EDO Microtonal Odyssey",
+                        "Bohlen-Pierce Tritave Ambient",
+                        "Chiptune Tracker 8-Bit Anthem",
+                        "General MIDI Standard Quintet",
+                    ],
+                ),
+            ],
         }
     }
 }
@@ -1236,6 +1323,7 @@ pub fn show_modern_asset_browser(
                         BrowserCategory::AudioFx,
                         BrowserCategory::MidiFx,
                         BrowserCategory::Samples,
+                        BrowserCategory::Soundbanks,
                     ];
 
                     for cat in categories {
