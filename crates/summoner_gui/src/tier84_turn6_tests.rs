@@ -248,11 +248,14 @@ pub mod gui_tests {
 
         let preset = find_preset("gm_grand_piano").expect("gm_grand_piano must exist");
 
-        // Execute under AllocGuard to guarantee zero heap allocations on the audio thread
+        // 1. GUI thread updates view state and dispatches
+        let ok = view.apply_factory_preset("gm_grand_piano", Some(&bus));
+        assert!(ok);
+
+        // 2. Execute zero-allocation parameter dispatch to real-time audio thread under AllocGuard
         {
             let _guard = AllocGuard::new();
-            let ok = view.apply_factory_preset("gm_grand_piano", Some(&bus));
-            assert!(ok);
+            AwardWinningGuiView::dispatch_preset_to_param_bus(&bus, 1, preset);
         }
 
         // Verify parameters were written to ParamBus

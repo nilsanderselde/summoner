@@ -1987,10 +1987,10 @@ impl AwardWinningGuiView {
         preset_name_or_id: &str,
         param_bus: Option<&summoner_core::param_bus::ParamBus>,
     ) -> bool {
-        self.top_bar_state.selected_preset = preset_name_or_id.to_string();
-        self.last_applied_preset = preset_name_or_id.to_string();
-
         if let Some(preset) = crate::factory_presets::find_preset(preset_name_or_id) {
+            self.top_bar_state.selected_preset = preset.name.to_string();
+            self.last_applied_preset = preset.name.to_string();
+
             self.top_bar_state.macro_tone = preset.macro_tone;
             self.top_bar_state.macro_space = preset.macro_space;
             self.top_bar_state.macro_punch = preset.macro_punch;
@@ -2031,17 +2031,14 @@ impl AwardWinningGuiView {
 
             if let Some(bus) = param_bus {
                 let track_id = (self.selected_track_idx + 1) as u32;
-                let _ = bus.set(summoner_core::param_bus::ParamId(track_id * 1000 + 100), preset.macro_tone);
-                let _ = bus.set(summoner_core::param_bus::ParamId(track_id * 1000 + 102), preset.macro_space);
-                let _ = bus.set(summoner_core::param_bus::ParamId(track_id * 1000 + 105), preset.macro_punch);
+                Self::dispatch_preset_to_param_bus(bus, track_id, preset);
                 let _ = bus.set(summoner_core::param_bus::ParamId(track_id * 1000 + 106), self.device_rack_state.volume);
-
-                for (p_idx, &(_p_name, p_val)) in preset.params.iter().enumerate() {
-                    let _ = bus.set(summoner_core::param_bus::ParamId(track_id * 1000 + p_idx as u32), p_val);
-                }
             }
             true
         } else {
+            self.top_bar_state.selected_preset = preset_name_or_id.to_string();
+            self.last_applied_preset = preset_name_or_id.to_string();
+
             let registry = crate::dsp_node_ui::DspNodeRegistry::new();
             if let Some(desc) = registry.get(preset_name_or_id) {
                 self.device_rack_state.selected_node_kind = Some(desc.kind_id.clone());
@@ -2052,6 +2049,23 @@ impl AwardWinningGuiView {
             } else {
                 false
             }
+        }
+    }
+
+    /// Dispatches a factory preset's macro parameters and node parameters to ParamBus
+    /// without any dynamic heap allocations, safe for real-time threads.
+    #[inline]
+    pub fn dispatch_preset_to_param_bus(
+        bus: &summoner_core::param_bus::ParamBus,
+        track_id: u32,
+        preset: &crate::factory_presets::FactoryPreset,
+    ) {
+        let _ = bus.set(summoner_core::param_bus::ParamId(track_id * 1000 + 100), preset.macro_tone);
+        let _ = bus.set(summoner_core::param_bus::ParamId(track_id * 1000 + 102), preset.macro_space);
+        let _ = bus.set(summoner_core::param_bus::ParamId(track_id * 1000 + 105), preset.macro_punch);
+
+        for (p_idx, &(_p_name, p_val)) in preset.params.iter().enumerate() {
+            let _ = bus.set(summoner_core::param_bus::ParamId(track_id * 1000 + p_idx as u32), p_val);
         }
     }
 
@@ -2108,7 +2122,10 @@ impl AwardWinningGuiView {
             self.playhead_beat = 0.0;
 
             if let Some(first_track) = template.tracks.first() {
+                let saved_track_name = self.tracks[0].name.clone();
                 self.apply_factory_preset(first_track.preset_id, None);
+                self.tracks[0].name = saved_track_name;
+                self.top_bar_state.key_signature = template.key_signature.to_string();
             }
             true
         } else {
