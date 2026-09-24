@@ -51,6 +51,16 @@ impl Default for ModernInspectorState {
 
 #[cfg(feature = "gui")]
 pub fn show_modern_inspector(ui: &mut egui::Ui, state: &mut ModernInspectorState) {
+    show_modern_inspector_with_context(ui, state, None, 1);
+}
+
+#[cfg(feature = "gui")]
+pub fn show_modern_inspector_with_context(
+    ui: &mut egui::Ui,
+    state: &mut ModernInspectorState,
+    param_bus: Option<&summoner_core::param_bus::ParamBus>,
+    track_id: u64,
+) {
     if state.is_collapsed {
         if ui.button("◀").clicked() {
             state.is_collapsed = false;
@@ -254,9 +264,39 @@ pub fn show_modern_inspector(ui: &mut egui::Ui, state: &mut ModernInspectorState
 
             if let Some(ref node_kind) = state.selected_node_kind {
                 if let Some(descriptor) = registry.get(node_kind) {
-                    descriptor.render_pro_inspector(ui, &mut state.node_param_values, None, 1, 0);
+                    descriptor.render_pro_inspector(ui, &mut state.node_param_values, param_bus, track_id, 0);
                 }
             }
                 });
         });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_modern_inspector_defaults() {
+        let state = ModernInspectorState::default();
+        assert_eq!(state.target_name, "Synth 1");
+        assert_eq!(state.selected_node_kind.as_deref(), Some("AetherSynth"));
+        assert_eq!(state.gain_db, 0.0);
+        assert!(!state.is_collapsed);
+    }
+
+    #[test]
+    #[cfg(feature = "gui")]
+    fn test_modern_inspector_headless_rendering_with_context() {
+        let mut state = ModernInspectorState::default();
+        let ctx = egui::Context::default();
+        let bus = summoner_core::param_bus::ParamBus::new();
+
+        let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                show_modern_inspector_with_context(ui, &mut state, Some(&bus), 2);
+            });
+        });
+
+        assert!(!state.node_param_values.is_empty());
+    }
 }

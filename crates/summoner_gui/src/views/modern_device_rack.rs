@@ -35,6 +35,8 @@ pub struct ModernDeviceRackState {
     // LFO params
     pub lfo_speed: f32,
     pub lfo_depth: f32,
+    #[serde(default)]
+    pub is_expanded_params: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -45,6 +47,7 @@ impl Default for ModernDeviceRackState {
             node_param_values: std::collections::HashMap::new(),
             is_enabled: true,
             is_minimized: false,
+            is_expanded_params: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -91,6 +94,10 @@ pub fn show_modern_device_rack(
                 ui.horizontal(|ui| {
                     if ui.button(RichText::new("▲ EXPAND RACK").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).clicked() {
                         state.is_minimized = false;
+                    }
+                    if ui.button(RichText::new("⊞ PRO").font(FontId::proportional(10.0)).color(Color32::from_rgb(200, 215, 235))).clicked() {
+                        state.is_minimized = false;
+                        state.is_expanded_params = true;
                     }
                     ui.add_space(4.0);
                     let pwr_col = if state.is_enabled { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(100, 116, 139) };
@@ -150,7 +157,7 @@ pub fn show_modern_device_rack(
         return;
     }
 
-    let rack_height = 190.0;
+    let rack_height = if state.is_expanded_params { 250.0 } else { 190.0 };
     egui::Frame::none()
         .fill(Color32::from_rgb(14, 20, 32))
         .stroke(Stroke::new(1.0_f32, Color32::from_rgb(28, 40, 60)))
@@ -199,8 +206,12 @@ pub fn show_modern_device_rack(
                     if ui.button(RichText::new("▼ COLLAPSE").font(FontId::proportional(10.0)).color(Color32::from_rgb(148, 163, 184))).clicked() {
                         state.is_minimized = true;
                     }
+                    let pro_text = if state.is_expanded_params { "⊟ OVERVIEW" } else { "⊞ PRO PARAMS" };
+                    let pro_col = if state.is_expanded_params { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(200, 215, 235) };
+                    if ui.button(RichText::new(pro_text).font(FontId::proportional(10.0)).strong().color(pro_col)).clicked() {
+                        state.is_expanded_params = !state.is_expanded_params;
+                    }
                     let _ = ui.small_button("✕");
-                    let _ = ui.small_button("⋯");
                     egui::Frame::none()
                         .fill(Color32::from_rgb(24, 34, 52))
                         .rounding(Rounding::same(3.0))
@@ -219,6 +230,12 @@ pub fn show_modern_device_rack(
                 ui.centered_and_justified(|ui| {
                     ui.label(RichText::new("DEVICE BYPASSED").font(FontId::proportional(14.0)).color(Color32::from_rgb(100, 116, 139)));
                 });
+                return;
+            }
+
+            // Check if expanded Pro Parameters drawer is active
+            if state.is_expanded_params {
+                show_pro_parameter_drawer(ui, state, opt_desc, oscilloscope_data, cat_accent);
                 return;
             }
 
@@ -577,6 +594,235 @@ pub fn show_modern_device_rack(
 }
 
 #[cfg(feature = "gui")]
+fn show_pro_parameter_drawer(
+    ui: &mut egui::Ui,
+    state: &mut ModernDeviceRackState,
+    opt_desc: Option<&crate::dsp_node_ui::DspNodeDescriptor>,
+    oscilloscope_data: Option<&[f32]>,
+    cat_accent: Color32,
+) {
+    ui.horizontal(|ui| {
+        // Left Visualizer Column: CRT Mini Oscilloscope + Filter Curve
+        egui::Frame::none()
+            .fill(Color32::from_rgb(10, 14, 24))
+            .stroke(Stroke::new(1.0_f32, Color32::from_rgb(36, 50, 74)))
+            .rounding(Rounding::same(4.0))
+            .inner_margin(egui::Margin::symmetric(6.0, 6.0))
+            .show(ui, |ui| {
+                ui.set_width(170.0);
+                ui.vertical(|ui| {
+                    ui.horizontal(|ui| {
+                        ui.label(RichText::new("Scope & Curve").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(148, 163, 184)));
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            ui.label(RichText::new("〰").font(FontId::proportional(10.0)).color(Color32::from_rgb(16, 185, 129)));
+                        });
+                    });
+                    ui.add_space(2.0);
+
+                    // CRT Mini Scope
+                    let (osc_resp, osc_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::hover());
+                    let osc_rect = osc_resp.rect;
+                    osc_painter.rect_filled(osc_rect, 2.0, Color32::from_rgb(4, 7, 12));
+                    for g_y in 1..3 {
+                        let gy = osc_rect.top() + (osc_rect.height() * (g_y as f32 / 3.0));
+                        osc_painter.line_segment([egui::pos2(osc_rect.left(), gy), egui::pos2(osc_rect.right(), gy)], Stroke::new(0.5_f32, Color32::from_rgb(15, 25, 35)));
+                    }
+                    let points_count = 50;
+                    let mut prev_pt = None;
+                    for i in 0..points_count {
+                        let norm_x = i as f32 / (points_count - 1) as f32;
+                        let px = osc_rect.left() + norm_x * osc_rect.width();
+                        let sample = if let Some(buf) = oscilloscope_data {
+                            let idx = (norm_x * (buf.len() as f32 - 1.0)) as usize;
+                            buf.get(idx).copied().unwrap_or(0.0)
+                        } else {
+                            (norm_x * 8.0 * std::f32::consts::PI).sin() * 0.45
+                        };
+                        let py = osc_rect.center().y - (sample * (osc_rect.height() * 0.42));
+                        let current_pt = egui::pos2(px, py);
+                        if let Some(last) = prev_pt {
+                            osc_painter.line_segment([last, current_pt], Stroke::new(1.5_f32, Color32::from_rgb(16, 185, 129)));
+                        }
+                        prev_pt = Some(current_pt);
+                    }
+
+                    ui.add_space(4.0);
+
+                    // Filter Curve Mini View
+                    let (filt_resp, filt_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                    let filt_rect = filt_resp.rect;
+                    filt_painter.rect_filled(filt_rect, 2.0, Color32::from_rgb(8, 12, 20));
+                    if filt_resp.dragged() {
+                        if let Some(pos) = filt_resp.interact_pointer_pos() {
+                            let nx = ((pos.x - filt_rect.left()) / filt_rect.width()).clamp(0.05, 0.95);
+                            let ny = (1.0 - ((pos.y - filt_rect.top()) / filt_rect.height())).clamp(0.05, 0.95);
+                            state.filter_nodes[1] = (nx, ny);
+                            state.cutoff = nx;
+                            state.resonance = ny;
+                            state.node_param_values.insert("cutoff".to_string(), nx);
+                            state.node_param_values.insert("resonance".to_string(), ny);
+                        }
+                    }
+                    let steps = 30;
+                    let mut curve_pts = Vec::with_capacity(steps);
+                    for i in 0..steps {
+                        let t = i as f32 / (steps - 1) as f32;
+                        let px = filt_rect.left() + t * filt_rect.width();
+                        let cutoff_norm = state.filter_nodes[1].0;
+                        let q = state.filter_nodes[1].1;
+                        let gain = if t <= cutoff_norm {
+                            1.0 + (t / cutoff_norm) * (q - 0.5) * 0.6
+                        } else {
+                            let roll = (t - cutoff_norm) / (1.0 - cutoff_norm).max(0.01);
+                            (1.0 + (q - 0.5) * 0.6) * (-roll * 3.5).exp()
+                        };
+                        let py = filt_rect.bottom() - (gain * filt_rect.height() * 0.70).clamp(2.0, filt_rect.height() - 2.0);
+                        curve_pts.push(egui::pos2(px, py));
+                    }
+                    for w in curve_pts.windows(2) {
+                        filt_painter.line_segment([w[0], w[1]], Stroke::new(1.5_f32, Color32::from_rgb(56, 189, 248)));
+                    }
+                    for &(nx, ny) in &state.filter_nodes {
+                        let px = filt_rect.left() + nx * filt_rect.width();
+                        let py = filt_rect.top() + (1.0 - ny) * filt_rect.height();
+                        filt_painter.circle_filled(egui::pos2(px, py), 3.5, Color32::from_rgb(56, 189, 248));
+                    }
+                });
+            });
+
+        ui.add_space(8.0);
+
+        // Main Parameters Drawer (Scrollable Grid of Cards)
+        egui::ScrollArea::horizontal()
+            .id_source("pro_device_rack_scroll_area")
+            .auto_shrink([false, false])
+            .show(ui, |ui| {
+                if let Some(desc) = opt_desc {
+                    let chunks: Vec<&[crate::dsp_node_ui::DspParamSchema]> = desc.params.chunks(2).collect();
+                    for chunk in chunks {
+                        ui.vertical(|ui| {
+                            ui.set_width(128.0);
+                            for p in chunk {
+                                egui::Frame::none()
+                                    .fill(Color32::from_rgb(18, 24, 36))
+                                    .stroke(Stroke::new(1.0_f32, Color32::from_rgb(36, 50, 74)))
+                                    .rounding(Rounding::same(4.0))
+                                    .inner_margin(egui::Margin::symmetric(6.0, 5.0))
+                                    .show(ui, |ui| {
+                                        ui.horizontal(|ui| {
+                                            ui.label(RichText::new(&p.name).font(FontId::proportional(9.5)).strong().color(Color32::from_rgb(226, 232, 240)));
+                                            if p.macro_role != crate::dsp_node_ui::MacroRole::None {
+                                                let (role_label, role_col) = match p.macro_role {
+                                                    crate::dsp_node_ui::MacroRole::Tone => ("T", Color32::from_rgb(56, 189, 248)),
+                                                    crate::dsp_node_ui::MacroRole::Space => ("S", Color32::from_rgb(99, 102, 241)),
+                                                    crate::dsp_node_ui::MacroRole::Punch => ("P", Color32::from_rgb(239, 68, 68)),
+                                                    crate::dsp_node_ui::MacroRole::Character => ("C", Color32::from_rgb(245, 158, 11)),
+                                                    _ => ("", Color32::WHITE),
+                                                };
+                                                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                                    egui::Frame::none()
+                                                        .fill(Color32::from_rgba_unmultiplied(role_col.r(), role_col.g(), role_col.b(), 40))
+                                                        .rounding(Rounding::same(2.0))
+                                                        .inner_margin(egui::Margin::symmetric(3.0, 1.0))
+                                                        .show(ui, |ui| {
+                                                            ui.label(RichText::new(role_label).font(FontId::proportional(8.0)).strong().color(role_col));
+                                                        });
+                                                });
+                                            }
+                                        });
+
+                                        let default_norm = match &p.widget {
+                                            crate::dsp_node_ui::DspWidgetKind::RotaryKnob { min, max, default, .. }
+                                            | crate::dsp_node_ui::DspWidgetKind::VerticalFader { min, max, default, .. } => {
+                                                ((*default - *min) / (*max - *min).max(1e-5)).clamp(0.0, 1.0)
+                                            }
+                                            crate::dsp_node_ui::DspWidgetKind::Toggle { default } => {
+                                                if *default { 1.0 } else { 0.0 }
+                                            }
+                                            crate::dsp_node_ui::DspWidgetKind::EnumChoice { default_idx, .. } => {
+                                                *default_idx as f32
+                                            }
+                                            _ => 0.5,
+                                        };
+                                        let val = state.node_param_values.entry(p.id.clone()).or_insert(default_norm);
+
+                                        match &p.widget {
+                                            crate::dsp_node_ui::DspWidgetKind::RotaryKnob { min, max, unit, is_logarithmic, .. } => {
+                                                let actual_val = *min + *val * (*max - *min);
+                                                ui.horizontal(|ui| {
+                                                    draw_rotary_dial(ui, "", val, cat_accent);
+                                                    ui.vertical(|ui| {
+                                                        ui.label(RichText::new(format!("{:.1} {}", actual_val, unit)).font(FontId::proportional(8.5)).color(Color32::from_rgb(56, 189, 248)));
+                                                        let slider = if *is_logarithmic {
+                                                            egui::Slider::new(val, 0.0..=1.0).logarithmic(true).show_value(false)
+                                                        } else {
+                                                            egui::Slider::new(val, 0.0..=1.0).show_value(false)
+                                                        };
+                                                        ui.add(slider);
+                                                    });
+                                                });
+                                            }
+                                            crate::dsp_node_ui::DspWidgetKind::VerticalFader { min, max, unit, .. } => {
+                                                let actual_val = *min + *val * (*max - *min);
+                                                ui.horizontal(|ui| {
+                                                    ui.label(RichText::new(format!("{:.1} {}", actual_val, unit)).font(FontId::proportional(8.5)).color(Color32::from_rgb(56, 189, 248)));
+                                                    ui.add(egui::Slider::new(val, 0.0..=1.0).show_value(false));
+                                                });
+                                            }
+                                            crate::dsp_node_ui::DspWidgetKind::Toggle { .. } => {
+                                                let mut b = *val >= 0.5;
+                                                let tog_text = if b { "ON" } else { "OFF" };
+                                                let tog_col = if b { Color32::from_rgb(34, 197, 94) } else { Color32::from_rgb(148, 163, 184) };
+                                                if ui.button(RichText::new(tog_text).font(FontId::proportional(9.0)).color(tog_col)).clicked() {
+                                                    b = !b;
+                                                    *val = if b { 1.0 } else { 0.0 };
+                                                }
+                                            }
+                                            crate::dsp_node_ui::DspWidgetKind::EnumChoice { choices, .. } => {
+                                                let idx = (*val as usize).min(choices.len().saturating_sub(1));
+                                                let cur_choice = choices.get(idx).cloned().unwrap_or_default();
+                                                egui::ComboBox::from_id_source(format!("pro_rack_combo_{}_{}", desc.kind_id, p.id))
+                                                    .selected_text(RichText::new(&cur_choice).font(FontId::proportional(9.0)).color(cat_accent))
+                                                    .show_ui(ui, |ui| {
+                                                        for (c_i, choice) in choices.iter().enumerate() {
+                                                            ui.selectable_value(val, c_i as f32, choice);
+                                                        }
+                                                    });
+                                            }
+                                            _ => {
+                                                ui.add(egui::Slider::new(val, 0.0..=1.0).show_value(false));
+                                            }
+                                        }
+
+                                        // Synchronize standard dial values if modified
+                                        match p.id.as_str() {
+                                            "cutoff" => state.cutoff = *val,
+                                            "resonance" => state.resonance = *val,
+                                            "decay" => state.decay = *val,
+                                            "env_decay" => state.env_decay = *val,
+                                            "mod_amt" => state.mod_amt = *val,
+                                            "drive" => state.drive = *val,
+                                            "osc_mix" => state.osc_mix = *val,
+                                            "shape" => state.shape = *val,
+                                            "volume" => state.volume = *val,
+                                            "lfo_speed" => state.lfo_speed = *val,
+                                            "lfo_depth" => state.lfo_depth = *val,
+                                            _ => {}
+                                        }
+                                    });
+                                ui.add_space(4.0);
+                            }
+                        });
+                        ui.add_space(4.0);
+                    }
+                } else {
+                    ui.label(RichText::new("No descriptor for selected module").font(FontId::proportional(11.0)).color(Color32::from_rgb(148, 163, 184)));
+                }
+            });
+    });
+}
+
+#[cfg(feature = "gui")]
 fn draw_rotary_dial(ui: &mut egui::Ui, label: &str, value: &mut f32, ring_color: Color32) {
     let size = Vec2::new(38.0, 52.0);
     let (resp, painter) = ui.allocate_painter(size, egui::Sense::click_and_drag());
@@ -760,5 +1006,25 @@ mod tests {
         assert!(state.node_param_values.contains_key("target_lufs"));
         assert!(state.node_param_values.contains_key("ceiling_db"));
         assert!(state.node_param_values.contains_key("punch"));
+    }
+
+    #[test]
+    #[cfg(feature = "gui")]
+    fn test_modern_device_rack_expanded_pro_params_drawer() {
+        let mut state = ModernDeviceRackState::default();
+        let ctx = egui::Context::default();
+
+        state.selected_node_kind = Some("AetherSynth".to_string());
+        state.is_expanded_params = true;
+
+        let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                show_modern_device_rack(ui, &mut state, None);
+            });
+        });
+
+        assert!(state.is_expanded_params);
+        assert!(!state.node_param_values.is_empty());
+        assert!(state.node_param_values.contains_key("cutoff"));
     }
 }

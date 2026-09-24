@@ -129,6 +129,7 @@ pub mod tier79_tests;
 pub mod tier80_redesign_tests;
 #[cfg(feature = "gui")]
 pub mod tier81_m33_tests;
+pub mod tier82_turn2_tests;
 #[cfg(feature = "gui")]
 pub mod touch_gestures;
 #[cfg(feature = "gui")]

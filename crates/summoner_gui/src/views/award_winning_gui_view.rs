@@ -7,7 +7,7 @@
 
 use crate::views::modern_asset_browser::{show_modern_asset_browser, ModernAssetBrowserState};
 use crate::views::modern_device_rack::{show_modern_device_rack, ModernDeviceRackState};
-use crate::views::modern_inspector::{show_modern_inspector, ModernInspectorState};
+use crate::views::modern_inspector::{show_modern_inspector_with_context, ModernInspectorState};
 use crate::views::modern_top_bar::{show_modern_top_bar, ModernTopBarState};
 
 #[cfg(feature = "gui")]
@@ -153,6 +153,10 @@ pub struct AwardWinningGuiView {
     pub next_note_id: usize,
     pub last_synced_track_notes_idx: usize,
     pub current_oscilloscope_samples: Option<Vec<f32>>,
+    pub last_device_rack_node_kind: Option<String>,
+    pub last_inspector_node_kind: Option<String>,
+    pub last_device_rack_node_param_values: std::collections::HashMap<String, f32>,
+    pub last_inspector_node_param_values: std::collections::HashMap<String, f32>,
 }
 
 impl Default for AwardWinningGuiView {
@@ -314,6 +318,10 @@ impl AwardWinningGuiView {
             next_note_id: 9,
             last_synced_track_notes_idx: 4,
             current_oscilloscope_samples: None,
+            last_device_rack_node_kind: Some("AetherSynth".to_string()),
+            last_inspector_node_kind: Some("AetherSynth".to_string()),
+            last_device_rack_node_param_values: std::collections::HashMap::new(),
+            last_inspector_node_param_values: std::collections::HashMap::new(),
         };
         view.reset_modular_nodes();
         view
@@ -534,6 +542,19 @@ impl AwardWinningGuiView {
                 "Universal Open Standard DAWproject Cross-DAW Container Packager" => "CliDawprojectExporter",
                 "Real-Time Audio Graph Throughput Benchmark & Latency Profiler" => "CliAudioBenchmarkRunner",
                 "Static Lua DSP AST Security Guard & Sandbox Privilege Auditor" => "CliScriptSecurityAuditor",
+                "General MIDI Acoustic Grand Piano" => "GrandPianoModel",
+                "General MIDI Electric Piano 1 (Rhodes)" => "ElectricPianoModel",
+                "General MIDI Church Pipe Organ" => "PipeOrganModel",
+                "General MIDI Nylon String Guitar" => "PluckSynth",
+                "General MIDI Overdriven Rock Guitar" => "DistortionNode",
+                "General MIDI Acoustic Bass" => "BowedStringModel",
+                "General MIDI Synth Brass 1" => "WaveguideBrassModel",
+                "General MIDI Shakuhachi Flute" => "ShakuhachiModel",
+                "General MIDI Standard Drum Kit 1" => "DrumMachineDevice",
+                "Chiptune 8-Bit NES Pulse Lead" => "OscPulse",
+                "Chiptune 8-Bit GameBoy Triangle Bass" => "OscTriangle",
+                "Chiptune FastTracker II Arp Arpeggio" => "TrackerStepConfig",
+                "Chiptune Noise Snare & Hi-Hat" => "NoiseGen",
                 _ => "AetherSynth",
             };
             if let Some(desc) = registry.get(target_node) {
@@ -632,19 +653,51 @@ impl AwardWinningGuiView {
             }
         }
 
-        // 4. Synchronize selected DSP module across Modular Canvas, Rack & Inspector
-        if self.device_rack_state.selected_node_kind != self.inspector_state.selected_node_kind {
-            if let Some(ref r_kind) = self.device_rack_state.selected_node_kind {
-                self.inspector_state.selected_node_kind = Some(r_kind.clone());
-                self.inspector_state.target_name = self.device_rack_state.device_name.clone();
+        // 4. Robust Bidirectional Synchronization across Modular Canvas, Rack & Inspector
+        let rack_kind_changed = self.device_rack_state.selected_node_kind != self.last_device_rack_node_kind;
+        let inspector_kind_changed = self.inspector_state.selected_node_kind != self.last_inspector_node_kind;
+
+        if inspector_kind_changed && !rack_kind_changed {
+            // User changed module in Inspector dropdown
+            self.device_rack_state.selected_node_kind = self.inspector_state.selected_node_kind.clone();
+            self.device_rack_state.device_name = self.inspector_state.target_name.clone();
+        } else if rack_kind_changed {
+            // User changed module in Device Rack dropdown
+            self.inspector_state.selected_node_kind = self.device_rack_state.selected_node_kind.clone();
+            self.inspector_state.target_name = self.device_rack_state.device_name.clone();
+        }
+        self.last_device_rack_node_kind = self.device_rack_state.selected_node_kind.clone();
+        self.last_inspector_node_kind = self.inspector_state.selected_node_kind.clone();
+
+        // Detect parameter changes made in Inspector and propagate to Device Rack
+        for (k, v) in &self.inspector_state.node_param_values {
+            if let Some(last_val) = self.last_inspector_node_param_values.get(k) {
+                if (v - last_val).abs() > 1e-5 {
+                    self.device_rack_state.node_param_values.insert(k.clone(), *v);
+                }
+            } else {
+                self.device_rack_state.node_param_values.insert(k.clone(), *v);
             }
         }
+        // Detect parameter changes made in Device Rack and propagate to Inspector
         for (k, v) in &self.device_rack_state.node_param_values {
-            self.inspector_state.node_param_values.insert(k.clone(), *v);
+            if let Some(last_val) = self.last_device_rack_node_param_values.get(k) {
+                if (v - last_val).abs() > 1e-5 {
+                    self.inspector_state.node_param_values.insert(k.clone(), *v);
+                }
+            } else {
+                self.inspector_state.node_param_values.insert(k.clone(), *v);
+            }
+        }
+        // Mirror any missing keys between both maps
+        for (k, v) in &self.device_rack_state.node_param_values {
+            self.inspector_state.node_param_values.entry(k.clone()).or_insert(*v);
         }
         for (k, v) in &self.inspector_state.node_param_values {
-            self.device_rack_state.node_param_values.insert(k.clone(), *v);
+            self.device_rack_state.node_param_values.entry(k.clone()).or_insert(*v);
         }
+        self.last_inspector_node_param_values = self.inspector_state.node_param_values.clone();
+        self.last_device_rack_node_param_values = self.device_rack_state.node_param_values.clone();
 
         ui.vertical(|ui| {
             // Zone 1: Top Bar
@@ -694,7 +747,8 @@ impl AwardWinningGuiView {
                 });
 
                 // Zone 4: Right Collapsible Inspector
-                show_modern_inspector(ui, &mut self.inspector_state);
+                let cur_track_id = self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1);
+                show_modern_inspector_with_context(ui, &mut self.inspector_state, None, cur_track_id);
             });
         });
     }

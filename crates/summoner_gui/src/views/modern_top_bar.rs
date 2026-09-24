@@ -297,6 +297,19 @@ fn default_available_presets() -> Vec<String> {
         "Universal Open Standard DAWproject Cross-DAW Container Packager".to_string(),
         "Real-Time Audio Graph Throughput Benchmark & Latency Profiler".to_string(),
         "Static Lua DSP AST Security Guard & Sandbox Privilege Auditor".to_string(),
+        "General MIDI Acoustic Grand Piano".to_string(),
+        "General MIDI Electric Piano 1 (Rhodes)".to_string(),
+        "General MIDI Church Pipe Organ".to_string(),
+        "General MIDI Nylon String Guitar".to_string(),
+        "General MIDI Overdriven Rock Guitar".to_string(),
+        "General MIDI Acoustic Bass".to_string(),
+        "General MIDI Synth Brass 1".to_string(),
+        "General MIDI Shakuhachi Flute".to_string(),
+        "General MIDI Standard Drum Kit 1".to_string(),
+        "Chiptune 8-Bit NES Pulse Lead".to_string(),
+        "Chiptune 8-Bit GameBoy Triangle Bass".to_string(),
+        "Chiptune FastTracker II Arp Arpeggio".to_string(),
+        "Chiptune Noise Snare & Hi-Hat".to_string(),
     ]
 }
 
