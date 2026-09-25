@@ -436,6 +436,7 @@ pub struct AwardWinningGuiView {
     pub unmuted_master_gain: f32,
     pub piano_roll_lane_mode: PianoRollLaneMode,
     pub is_piano_roll_audition_enabled: bool,
+    pub is_master_mono: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -641,6 +642,7 @@ impl AwardWinningGuiView {
             unmuted_master_gain: 1.0,
             piano_roll_lane_mode: PianoRollLaneMode::Velocity,
             is_piano_roll_audition_enabled: true,
+            is_master_mono: false,
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -3191,6 +3193,36 @@ impl AwardWinningGuiView {
         self.is_master_muted
     }
 
+    /// Toggle master output mono summing audition mode.
+    pub fn toggle_master_mono(&mut self) -> bool {
+        self.is_master_mono = !self.is_master_mono;
+        self.is_master_mono
+    }
+
+    /// Reset all track channel faders to unity gain (1.0 = 0.0 dB) and center stereo pans (0.0).
+    pub fn reset_all_channel_faders(&mut self) {
+        for tr in &mut self.tracks {
+            tr.gain = 1.0;
+            tr.pan = 0.0;
+        }
+        if self.selected_track_idx < self.tracks.len() {
+            self.inspector_state.gain_db = 0.0;
+            self.inspector_state.pan_val = 0.0;
+        }
+    }
+
+    /// Toggle mute across all tracks. If any track is unmuted, mute all; otherwise unmute all.
+    pub fn toggle_all_tracks_mute(&mut self) -> bool {
+        let any_unmuted = self.tracks.iter().any(|t| !t.is_muted);
+        for tr in &mut self.tracks {
+            tr.is_muted = any_unmuted;
+        }
+        if self.selected_track_idx < self.tracks.len() {
+            self.inspector_state.is_muted = any_unmuted;
+        }
+        any_unmuted
+    }
+
     /// Synchronize all modular node sockets and active patch cords into the PatchMatrixView.
     pub fn sync_modular_to_routing_matrix(&mut self) {
         let mut sources = Vec::new();
@@ -3801,38 +3833,41 @@ impl AwardWinningGuiView {
                 self.top_bar_state.master_gain = val;
             }
 
-            let gain_lane = format!("track_{}_gain", track_id);
-            if let Some(val) = automation_timeline.evaluate(&gain_lane, playhead_beat) {
-                if let Some(vt) = self.tracks.get_mut(track_idx) {
+            for (t_i, vt) in self.tracks.iter_mut().enumerate() {
+                let t_id = vt.id;
+                let gain_lane = format!("track_{}_gain", t_id);
+                if let Some(val) = automation_timeline.evaluate(&gain_lane, playhead_beat) {
                     vt.gain = val;
-                    self.inspector_state.gain_db = (val - 1.0) * 12.0;
-                    self.last_inspector_gain_db = self.inspector_state.gain_db;
+                    if t_i == track_idx {
+                        self.inspector_state.gain_db = (val - 1.0) * 12.0;
+                        self.last_inspector_gain_db = self.inspector_state.gain_db;
+                    }
                 }
-            }
-            let pan_lane = format!("track_{}_pan", track_id);
-            if let Some(val) = automation_timeline.evaluate(&pan_lane, playhead_beat) {
-                if let Some(vt) = self.tracks.get_mut(track_idx) {
+                let pan_lane = format!("track_{}_pan", t_id);
+                if let Some(val) = automation_timeline.evaluate(&pan_lane, playhead_beat) {
                     vt.pan = val;
-                    self.inspector_state.pan_val = val;
-                    self.last_inspector_pan = val;
+                    if t_i == track_idx {
+                        self.inspector_state.pan_val = val;
+                        self.last_inspector_pan = val;
+                    }
                 }
-            }
-            let mute_lane = format!("track_{}_mute", track_id);
-            if let Some(val) = automation_timeline.evaluate(&mute_lane, playhead_beat) {
-                let is_m = val >= 0.5;
-                if let Some(vt) = self.tracks.get_mut(track_idx) {
+                let mute_lane = format!("track_{}_mute", t_id);
+                if let Some(val) = automation_timeline.evaluate(&mute_lane, playhead_beat) {
+                    let is_m = val >= 0.5;
                     vt.is_muted = is_m;
-                    self.inspector_state.is_muted = is_m;
-                    self.last_inspector_muted = is_m;
+                    if t_i == track_idx {
+                        self.inspector_state.is_muted = is_m;
+                        self.last_inspector_muted = is_m;
+                    }
                 }
-            }
-            let solo_lane = format!("track_{}_solo", track_id);
-            if let Some(val) = automation_timeline.evaluate(&solo_lane, playhead_beat) {
-                let is_s = val >= 0.5;
-                if let Some(vt) = self.tracks.get_mut(track_idx) {
+                let solo_lane = format!("track_{}_solo", t_id);
+                if let Some(val) = automation_timeline.evaluate(&solo_lane, playhead_beat) {
+                    let is_s = val >= 0.5;
                     vt.is_soloed = is_s;
-                    self.inspector_state.is_soloed = is_s;
-                    self.last_inspector_soloed = is_s;
+                    if t_i == track_idx {
+                        self.inspector_state.is_soloed = is_s;
+                        self.last_inspector_soloed = is_s;
+                    }
                 }
             }
             for mod_node in &mut self.modular_nodes {
@@ -3982,10 +4017,14 @@ impl AwardWinningGuiView {
             }
         }
 
-        // 4. Master Gain Dispatch & Live Recording
+        // 4. Master Gain & Mono Dispatch & Live Recording
         let m_pid = summoner_core::param_bus::ParamId(9999);
         if param_bus.get(m_pid).is_some() {
             param_bus.set(m_pid, self.top_bar_state.master_gain);
+        }
+        let mono_pid = summoner_core::param_bus::ParamId(9998);
+        if param_bus.get(mono_pid).is_some() {
+            param_bus.set(mono_pid, if self.is_master_mono { 1.0 } else { 0.0 });
         }
         let master_auto_key = "master_gain".to_string();
         if automation_registry.get_param(&master_auto_key).is_none() {
@@ -4011,92 +4050,79 @@ impl AwardWinningGuiView {
             }
         }
 
-        // 5. Track Gain & Pan Dispatch & Live Recording
-        let t_gain = self.tracks.get(self.selected_track_idx).map(|t| t.gain).unwrap_or(1.0);
-        let t_pan = self.tracks.get(self.selected_track_idx).map(|t| t.pan).unwrap_or(0.0);
-        let g_pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 200);
-        if param_bus.get(g_pid).is_some() {
-            param_bus.set(g_pid, t_gain);
-        }
-        let p_pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 201);
-        if param_bus.get(p_pid).is_some() {
-            param_bus.set(p_pid, t_pan);
-        }
-        let gain_auto_key = format!("track_{}_gain", track_id);
-        if automation_registry.get_param(&gain_auto_key).is_none() {
-            automation_registry.register_param(&gain_auto_key, t_gain);
-        }
-        automation_registry.set(&gain_auto_key, t_gain);
+        // 5. Track Gain, Pan, Mute, Solo Dispatch & Live Recording across All Tracks
+        for (t_i, tr) in self.tracks.iter().enumerate() {
+            let t_id = tr.id;
+            let t_gain = tr.gain;
+            let t_pan = tr.pan;
+            let t_muted = tr.is_muted;
+            let t_soloed = tr.is_soloed;
+            let m_val = if t_muted { 1.0 } else { 0.0 };
+            let s_val = if t_soloed { 1.0 } else { 0.0 };
 
-        let pan_auto_key = format!("track_{}_pan", track_id);
-        if automation_registry.get_param(&pan_auto_key).is_none() {
-            automation_registry.register_param(&pan_auto_key, t_pan);
-        }
-        automation_registry.set(&pan_auto_key, t_pan);
-
-        if is_recording_automation {
-            for (key, val) in [(&gain_auto_key, t_gain), (&pan_auto_key, t_pan)] {
-                let point = summoner_sequencer::automation_timeline::AutomationPoint {
-                    beat: playhead_beat,
-                    value: val,
-                    interp: summoner_sequencer::automation_timeline::Interpolation::Linear,
-                };
-                let lane = automation_timeline.lanes.entry(key.clone()).or_insert_with(|| {
-                    summoner_sequencer::automation_timeline::AutomationLane {
-                        param_id: key.clone(),
-                        curve: summoner_sequencer::automation_timeline::AutomationCurve { points: Vec::new() },
-                    }
-                });
-                match lane.curve.points.binary_search_by(|p| p.beat.partial_cmp(&playhead_beat).unwrap()) {
-                    Ok(idx) => lane.curve.points[idx] = point,
-                    Err(idx) => lane.curve.points.insert(idx, point),
-                }
+            let g_pid = summoner_core::param_bus::ParamId(t_id as u32 * 1000 + 200);
+            if param_bus.get(g_pid).is_some() {
+                param_bus.set(g_pid, t_gain);
             }
-        }
+            let p_pid = summoner_core::param_bus::ParamId(t_id as u32 * 1000 + 201);
+            if param_bus.get(p_pid).is_some() {
+                param_bus.set(p_pid, t_pan);
+            }
+            let mute_pid = summoner_core::param_bus::ParamId(t_id as u32 * 1000 + 202);
+            if param_bus.get(mute_pid).is_some() {
+                param_bus.set(mute_pid, m_val);
+            }
+            let solo_pid = summoner_core::param_bus::ParamId(t_id as u32 * 1000 + 203);
+            if param_bus.get(solo_pid).is_some() {
+                param_bus.set(solo_pid, s_val);
+            }
 
-        // 6. Track Mute & Solo Dispatch & Live Recording
-        let t_muted = self.tracks.get(self.selected_track_idx).map(|t| t.is_muted).unwrap_or(false);
-        let t_soloed = self.tracks.get(self.selected_track_idx).map(|t| t.is_soloed).unwrap_or(false);
-        let m_val = if t_muted { 1.0 } else { 0.0 };
-        let s_val = if t_soloed { 1.0 } else { 0.0 };
+            let gain_auto_key = format!("track_{}_gain", t_id);
+            if automation_registry.get_param(&gain_auto_key).is_none() {
+                automation_registry.register_param(&gain_auto_key, t_gain);
+            }
+            automation_registry.set(&gain_auto_key, t_gain);
 
-        let mute_pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 202);
-        if param_bus.get(mute_pid).is_some() {
-            param_bus.set(mute_pid, m_val);
-        }
-        let solo_pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 203);
-        if param_bus.get(solo_pid).is_some() {
-            param_bus.set(solo_pid, s_val);
-        }
+            let pan_auto_key = format!("track_{}_pan", t_id);
+            if automation_registry.get_param(&pan_auto_key).is_none() {
+                automation_registry.register_param(&pan_auto_key, t_pan);
+            }
+            automation_registry.set(&pan_auto_key, t_pan);
 
-        let mute_auto_key = format!("track_{}_mute", track_id);
-        if automation_registry.get_param(&mute_auto_key).is_none() {
-            automation_registry.register_param(&mute_auto_key, m_val);
-        }
-        automation_registry.set(&mute_auto_key, m_val);
+            let mute_auto_key = format!("track_{}_mute", t_id);
+            if automation_registry.get_param(&mute_auto_key).is_none() {
+                automation_registry.register_param(&mute_auto_key, m_val);
+            }
+            automation_registry.set(&mute_auto_key, m_val);
 
-        let solo_auto_key = format!("track_{}_solo", track_id);
-        if automation_registry.get_param(&solo_auto_key).is_none() {
-            automation_registry.register_param(&solo_auto_key, s_val);
-        }
-        automation_registry.set(&solo_auto_key, s_val);
+            let solo_auto_key = format!("track_{}_solo", t_id);
+            if automation_registry.get_param(&solo_auto_key).is_none() {
+                automation_registry.register_param(&solo_auto_key, s_val);
+            }
+            automation_registry.set(&solo_auto_key, s_val);
 
-        if is_recording_automation {
-            for (key, val) in [(&mute_auto_key, m_val), (&solo_auto_key, s_val)] {
-                let point = summoner_sequencer::automation_timeline::AutomationPoint {
-                    beat: playhead_beat,
-                    value: val,
-                    interp: summoner_sequencer::automation_timeline::Interpolation::Step,
-                };
-                let lane = automation_timeline.lanes.entry(key.clone()).or_insert_with(|| {
-                    summoner_sequencer::automation_timeline::AutomationLane {
-                        param_id: key.clone(),
-                        curve: summoner_sequencer::automation_timeline::AutomationCurve { points: Vec::new() },
+            if is_recording_automation && t_i == track_idx {
+                for (key, val, interp) in [
+                    (&gain_auto_key, t_gain, summoner_sequencer::automation_timeline::Interpolation::Linear),
+                    (&pan_auto_key, t_pan, summoner_sequencer::automation_timeline::Interpolation::Linear),
+                    (&mute_auto_key, m_val, summoner_sequencer::automation_timeline::Interpolation::Step),
+                    (&solo_auto_key, s_val, summoner_sequencer::automation_timeline::Interpolation::Step),
+                ] {
+                    let point = summoner_sequencer::automation_timeline::AutomationPoint {
+                        beat: playhead_beat,
+                        value: val,
+                        interp,
+                    };
+                    let lane = automation_timeline.lanes.entry(key.clone()).or_insert_with(|| {
+                        summoner_sequencer::automation_timeline::AutomationLane {
+                            param_id: key.clone(),
+                            curve: summoner_sequencer::automation_timeline::AutomationCurve { points: Vec::new() },
+                        }
+                    });
+                    match lane.curve.points.binary_search_by(|p| p.beat.partial_cmp(&playhead_beat).unwrap()) {
+                        Ok(idx) => lane.curve.points[idx] = point,
+                        Err(idx) => lane.curve.points.insert(idx, point),
                     }
-                });
-                match lane.curve.points.binary_search_by(|p| p.beat.partial_cmp(&playhead_beat).unwrap()) {
-                    Ok(idx) => lane.curve.points[idx] = point,
-                    Err(idx) => lane.curve.points.insert(idx, point),
                 }
             }
         }
@@ -4381,6 +4407,26 @@ impl AwardWinningGuiView {
 
     /// Select active track for Stage / Live Performance Matrix and reflect its state across Inspector and Device Rack.
     pub fn select_track_for_stage(&mut self, track_idx: usize) -> bool {
+        if track_idx < self.tracks.len() {
+            self.selected_track_idx = track_idx;
+            let tr_name = self.tracks[track_idx].name.clone();
+            self.device_rack_state.device_name = tr_name.clone();
+            self.inspector_state.target_name = tr_name;
+            if let Some(tr) = self.tracks.get(track_idx) {
+                self.inspector_state.gain_db = (tr.gain - 1.0) * 12.0;
+                self.inspector_state.pan_val = tr.pan;
+                self.inspector_state.is_muted = tr.is_muted;
+                self.inspector_state.is_soloed = tr.is_soloed;
+                self.inspector_state.is_armed = tr.is_armed;
+            }
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Select active track for Console Mixer and reflect its state across Inspector and Device Rack.
+    pub fn select_track_for_mixer(&mut self, track_idx: usize) -> bool {
         if track_idx < self.tracks.len() {
             self.selected_track_idx = track_idx;
             let tr_name = self.tracks[track_idx].name.clone();
@@ -5546,7 +5592,8 @@ impl AwardWinningGuiView {
 
     #[cfg(feature = "gui")]
     fn show_mixer_canvas(&mut self, ui: &mut egui::Ui) {
-        let canvas_height = (self.tracks.len() as f32 * 36.0 + 36.0).max(280.0);
+        let bar_h = 28.0;
+        let canvas_height = (self.tracks.len() as f32 * 36.0 + 36.0 + bar_h).max(300.0);
         egui::Frame::none()
             .fill(Color32::from_rgb(10, 14, 24))
             .stroke(Stroke::new(1.0_f32, Color32::from_rgb(28, 40, 60)))
@@ -5572,12 +5619,74 @@ impl AwardWinningGuiView {
                 let mut track_to_open_auto: Option<u64> = None;
                 let mut master_to_open_auto = false;
 
+                // 1. Top Bar inside Mixer: Title, 1-Click Pro View Switchers, Quick Utilities
+                painter.rect_filled(Rect::from_min_size(rect.min, Vec2::new(rect.width(), bar_h)), 0.0, Color32::from_rgb(14, 20, 32));
+                painter.text(egui::pos2(rect.left() + 12.0, rect.top() + 7.0), egui::Align2::LEFT_TOP, "CONSOLE MIXER (PRO CHANNEL STRIPS & MASTER BUS)", FontId::proportional(11.0), Color32::from_rgb(56, 189, 248));
+
+                let arr_header_rect = Rect::from_min_size(egui::pos2(rect.left() + 320.0, rect.top() + 4.0), Vec2::new(75.0, 20.0));
+                let pno_header_rect = Rect::from_min_size(egui::pos2(arr_header_rect.right() + 4.0, rect.top() + 4.0), Vec2::new(85.0, 20.0));
+                let mod_header_rect = Rect::from_min_size(egui::pos2(pno_header_rect.right() + 4.0, rect.top() + 4.0), Vec2::new(75.0, 20.0));
+                let stg_header_rect = Rect::from_min_size(egui::pos2(mod_header_rect.right() + 4.0, rect.top() + 4.0), Vec2::new(65.0, 20.0));
+
+                let unity_all_rect = Rect::from_min_size(egui::pos2(stg_header_rect.right() + 8.0, rect.top() + 4.0), Vec2::new(70.0, 20.0));
+                let mute_all_rect = Rect::from_min_size(egui::pos2(unity_all_rect.right() + 4.0, rect.top() + 4.0), Vec2::new(65.0, 20.0));
+                let auto_header_rect = Rect::from_min_size(egui::pos2(mute_all_rect.right() + 4.0, rect.top() + 4.0), Vec2::new(60.0, 20.0));
+
+                let arr_hov = pointer_pos.map(|p| arr_header_rect.contains(p)).unwrap_or(false);
+                let pno_hov = pointer_pos.map(|p| pno_header_rect.contains(p)).unwrap_or(false);
+                let mod_hov = pointer_pos.map(|p| mod_header_rect.contains(p)).unwrap_or(false);
+                let stg_hov = pointer_pos.map(|p| stg_header_rect.contains(p)).unwrap_or(false);
+                let unity_hov = pointer_pos.map(|p| unity_all_rect.contains(p)).unwrap_or(false);
+                let mute_hov = pointer_pos.map(|p| mute_all_rect.contains(p)).unwrap_or(false);
+                let auto_hov = pointer_pos.map(|p| auto_header_rect.contains(p)).unwrap_or(false);
+
+                let draw_nav_btn = |p: &egui::Painter, r: Rect, label: &str, is_hov: bool, text_col: Color32| {
+                    let bg = if is_hov { Color32::from_rgb(32, 44, 68) } else { Color32::from_rgb(20, 28, 44) };
+                    p.rect_filled(r, 3.0, bg);
+                    p.rect_stroke(r, 3.0, Stroke::new(1.0_f32, Color32::from_rgb(56, 189, 248)));
+                    p.text(r.center(), egui::Align2::CENTER_CENTER, label, FontId::proportional(9.0), text_col);
+                };
+
+                draw_nav_btn(&painter, arr_header_rect, "📋 Arranger", arr_hov, Color32::from_rgb(200, 215, 235));
+                draw_nav_btn(&painter, pno_header_rect, "🎹 Piano Roll", pno_hov, Color32::from_rgb(200, 215, 235));
+                draw_nav_btn(&painter, mod_header_rect, "∿ Modular", mod_hov, Color32::from_rgb(200, 215, 235));
+                draw_nav_btn(&painter, stg_header_rect, "🎭 Stage", stg_hov, Color32::from_rgb(200, 215, 235));
+                draw_nav_btn(&painter, unity_all_rect, "↺ Unity All", unity_hov, Color32::from_rgb(168, 85, 247));
+                draw_nav_btn(&painter, mute_all_rect, "🔇 Mute All", mute_hov, Color32::from_rgb(239, 68, 68));
+                draw_nav_btn(&painter, auto_header_rect, "📈 Auto", auto_hov, Color32::from_rgb(245, 158, 11));
+
+                if let Some(pos) = pointer_pos {
+                    if is_click {
+                        if arr_header_rect.contains(pos) {
+                            self.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::Arranger;
+                        } else if pno_header_rect.contains(pos) {
+                            self.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::PianoRoll;
+                        } else if mod_header_rect.contains(pos) {
+                            self.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::Modular;
+                        } else if stg_header_rect.contains(pos) {
+                            self.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::Performance;
+                        } else if unity_all_rect.contains(pos) {
+                            self.reset_all_channel_faders();
+                        } else if mute_all_rect.contains(pos) {
+                            self.toggle_all_tracks_mute();
+                        } else if auto_header_rect.contains(pos) {
+                            if let Some(tr) = self.tracks.get(self.selected_track_idx) {
+                                track_to_open_auto = Some(tr.id);
+                            }
+                        }
+                    }
+                }
+
+                let top_offset = rect.top() + bar_h + 4.0;
+                let strip_h = (canvas_height - bar_h - 8.0).max(180.0);
+
                 if let Some(pos) = pointer_pos {
                     if is_interacting {
                         let mut selected_idx = None;
+                        let mut nav_to_tab: Option<crate::views::modern_top_bar::ModernViewTab> = None;
                         for (idx, track) in self.tracks.iter_mut().enumerate() {
                             let sx = rect.left() + idx as f32 * strip_w;
-                            let strip_rect = Rect::from_min_size(egui::pos2(sx, rect.top() + 4.0), Vec2::new(strip_w - 4.0, canvas_height - 8.0));
+                            let strip_rect = Rect::from_min_size(egui::pos2(sx, top_offset), Vec2::new(strip_w - 4.0, strip_h));
                             if strip_rect.contains(pos) {
                                 let pan_y = strip_rect.top() + 32.0;
                                 let pan_center = egui::pos2(strip_rect.center().x, pan_y);
@@ -5588,19 +5697,21 @@ impl AwardWinningGuiView {
 
                                 // 1-Click Pro View Launchers hit testing
                                 let pro_nav_y = strip_rect.top() + 20.0;
-                                let p_rect = Rect::from_min_size(egui::pos2(strip_rect.left() + 4.0, pro_nav_y), Vec2::new(10.0, 10.0));
-                                let mod_rect = Rect::from_min_size(egui::pos2(p_rect.right() + 2.0, pro_nav_y), Vec2::new(10.0, 10.0));
-                                let auto_rect = Rect::from_min_size(egui::pos2(mod_rect.right() + 2.0, pro_nav_y), Vec2::new(10.0, 10.0));
+                                let arr_btn = Rect::from_min_size(egui::pos2(strip_rect.left() + 3.0, pro_nav_y), Vec2::new(10.0, 10.0));
+                                let p_btn = Rect::from_min_size(egui::pos2(arr_btn.right() + 2.0, pro_nav_y), Vec2::new(10.0, 10.0));
+                                let mod_btn = Rect::from_min_size(egui::pos2(p_btn.right() + 2.0, pro_nav_y), Vec2::new(10.0, 10.0));
+                                let auto_btn = Rect::from_min_size(egui::pos2(mod_btn.right() + 2.0, pro_nav_y), Vec2::new(10.0, 10.0));
 
-                                if is_pro && p_rect.contains(pos) && is_click {
+                                if is_pro && arr_btn.contains(pos) && is_click {
                                     selected_idx = Some(idx);
-                                    self.selected_track_idx = idx;
-                                    self.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::PianoRoll;
-                                } else if is_pro && mod_rect.contains(pos) && is_click {
+                                    nav_to_tab = Some(crate::views::modern_top_bar::ModernViewTab::Arranger);
+                                } else if is_pro && p_btn.contains(pos) && is_click {
                                     selected_idx = Some(idx);
-                                    self.selected_track_idx = idx;
-                                    self.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::Modular;
-                                } else if is_pro && auto_rect.contains(pos) && is_click {
+                                    nav_to_tab = Some(crate::views::modern_top_bar::ModernViewTab::PianoRoll);
+                                } else if is_pro && mod_btn.contains(pos) && is_click {
+                                    selected_idx = Some(idx);
+                                    nav_to_tab = Some(crate::views::modern_top_bar::ModernViewTab::Modular);
+                                } else if is_pro && auto_btn.contains(pos) && is_click {
                                     selected_idx = Some(idx);
                                     track_to_open_auto = Some(track.id);
                                 } else if pos.distance(pan_center) <= 10.0 {
@@ -5634,18 +5745,11 @@ impl AwardWinningGuiView {
                                 }
                             }
                         }
+                        if let Some(tab) = nav_to_tab {
+                            self.top_bar_state.active_tab = tab;
+                        }
                         if let Some(s_idx) = selected_idx {
-                            self.selected_track_idx = s_idx;
-                            if let Some(tr) = self.tracks.get(s_idx) {
-                                self.top_bar_state.master_gain = tr.gain;
-                                self.inspector_state.target_name = tr.name.clone();
-                                self.inspector_state.gain_db = (tr.gain - 1.0) * 12.0;
-                                self.inspector_state.pan_val = tr.pan;
-                                self.inspector_state.is_muted = tr.is_muted;
-                                self.inspector_state.is_soloed = tr.is_soloed;
-                                self.inspector_state.is_armed = tr.is_armed;
-                                self.device_rack_state.device_name = tr.name.clone();
-                            }
+                            self.select_track_for_mixer(s_idx);
                         }
                     }
                 }
@@ -5653,7 +5757,7 @@ impl AwardWinningGuiView {
                 // Draw Track Channel Strips 1..8
                 for (idx, track) in self.tracks.iter().enumerate() {
                     let sx = rect.left() + idx as f32 * strip_w;
-                    let strip_rect = Rect::from_min_size(egui::pos2(sx, rect.top() + 4.0), Vec2::new(strip_w - 4.0, canvas_height - 8.0));
+                    let strip_rect = Rect::from_min_size(egui::pos2(sx, top_offset), Vec2::new(strip_w - 4.0, strip_h));
                     let is_sel = idx == self.selected_track_idx;
                     let bg = if is_sel { Color32::from_rgb(18, 26, 42) } else { Color32::from_rgb(12, 16, 26) };
                     painter.rect_filled(strip_rect, 4.0, bg);
@@ -5664,21 +5768,25 @@ impl AwardWinningGuiView {
                     painter.rect_filled(Rect::from_min_size(egui::pos2(strip_rect.left() + 4.0, strip_rect.top() + 4.0), Vec2::new(strip_rect.width() - 8.0, 4.0)), 2.0, col);
                     painter.text(egui::pos2(strip_rect.center().x, strip_rect.top() + 11.0), egui::Align2::CENTER_TOP, format!("{}. {}", idx + 1, track.name), FontId::proportional(9.5), Color32::from_rgb(241, 245, 249));
 
-                    // 1-Click Pro View Launchers [🎹] [∿] [📈] in Pro Mode
+                    // 1-Click Pro View Launchers [📋] [🎹] [∿] [📈] in Pro Mode
                     if is_pro {
                         let pro_nav_y = strip_rect.top() + 20.0;
-                        let p_rect = Rect::from_min_size(egui::pos2(strip_rect.left() + 4.0, pro_nav_y), Vec2::new(10.0, 10.0));
-                        let mod_rect = Rect::from_min_size(egui::pos2(p_rect.right() + 2.0, pro_nav_y), Vec2::new(10.0, 10.0));
-                        let auto_rect = Rect::from_min_size(egui::pos2(mod_rect.right() + 2.0, pro_nav_y), Vec2::new(10.0, 10.0));
+                        let arr_btn = Rect::from_min_size(egui::pos2(strip_rect.left() + 3.0, pro_nav_y), Vec2::new(10.0, 10.0));
+                        let p_btn = Rect::from_min_size(egui::pos2(arr_btn.right() + 2.0, pro_nav_y), Vec2::new(10.0, 10.0));
+                        let mod_btn = Rect::from_min_size(egui::pos2(p_btn.right() + 2.0, pro_nav_y), Vec2::new(10.0, 10.0));
+                        let auto_btn = Rect::from_min_size(egui::pos2(mod_btn.right() + 2.0, pro_nav_y), Vec2::new(10.0, 10.0));
 
-                        painter.rect_filled(p_rect, 2.0, Color32::from_rgb(22, 30, 46));
-                        painter.text(p_rect.center(), egui::Align2::CENTER_CENTER, "🎹", FontId::proportional(7.0), Color32::from_rgb(168, 85, 247));
+                        painter.rect_filled(arr_btn, 2.0, Color32::from_rgb(22, 30, 46));
+                        painter.text(arr_btn.center(), egui::Align2::CENTER_CENTER, "📋", FontId::proportional(7.0), Color32::from_rgb(200, 215, 235));
 
-                        painter.rect_filled(mod_rect, 2.0, Color32::from_rgb(22, 30, 46));
-                        painter.text(mod_rect.center(), egui::Align2::CENTER_CENTER, "∿", FontId::proportional(7.5), Color32::from_rgb(56, 189, 248));
+                        painter.rect_filled(p_btn, 2.0, Color32::from_rgb(22, 30, 46));
+                        painter.text(p_btn.center(), egui::Align2::CENTER_CENTER, "🎹", FontId::proportional(7.0), Color32::from_rgb(168, 85, 247));
 
-                        painter.rect_filled(auto_rect, 2.0, Color32::from_rgb(22, 30, 46));
-                        painter.text(auto_rect.center(), egui::Align2::CENTER_CENTER, "📈", FontId::proportional(7.0), Color32::from_rgb(245, 158, 11));
+                        painter.rect_filled(mod_btn, 2.0, Color32::from_rgb(22, 30, 46));
+                        painter.text(mod_btn.center(), egui::Align2::CENTER_CENTER, "∿", FontId::proportional(7.5), Color32::from_rgb(56, 189, 248));
+
+                        painter.rect_filled(auto_btn, 2.0, Color32::from_rgb(22, 30, 46));
+                        painter.text(auto_btn.center(), egui::Align2::CENTER_CENTER, "📈", FontId::proportional(7.0), Color32::from_rgb(245, 158, 11));
                     }
 
                     // Tactile Rotary Pan Pot with 12 o'clock center tick and angle needle
@@ -5737,27 +5845,40 @@ impl AwardWinningGuiView {
 
                 // Master Bus Strip on the Right
                 let m_x = rect.right() - master_w - 4.0;
-                let m_strip = Rect::from_min_size(egui::pos2(m_x, rect.top() + 4.0), Vec2::new(master_w, canvas_height - 8.0));
+                let m_strip = Rect::from_min_size(egui::pos2(m_x, top_offset), Vec2::new(master_w, strip_h));
                 painter.rect_filled(m_strip, 4.0, Color32::from_rgb(16, 24, 38));
                 painter.rect_stroke(m_strip, 4.0, Stroke::new(1.5_f32, Color32::from_rgb(56, 189, 248)));
                 painter.text(egui::pos2(m_strip.center().x, m_strip.top() + 6.0), egui::Align2::CENTER_TOP, "MASTER", FontId::proportional(11.0), Color32::from_rgb(56, 189, 248));
 
-                // Master Mute Button
-                let m_mute_rect = Rect::from_min_size(egui::pos2(m_strip.left() + 6.0, m_strip.top() + 18.0), Vec2::new(m_strip.width() - 12.0, 11.0));
+                // Master Mute & Mono Audition Buttons Side-by-Side
+                let btn_w = (m_strip.width() - 15.0) / 2.0;
+                let m_mute_rect = Rect::from_min_size(egui::pos2(m_strip.left() + 5.0, m_strip.top() + 18.0), Vec2::new(btn_w, 11.0));
+                let m_mono_rect = Rect::from_min_size(egui::pos2(m_mute_rect.right() + 4.0, m_strip.top() + 18.0), Vec2::new(btn_w, 11.0));
+
                 let m_mute_bg = if self.is_master_muted { Color32::from_rgb(239, 68, 68) } else { Color32::from_rgb(24, 34, 52) };
                 painter.rect_filled(m_mute_rect, 2.0, m_mute_bg);
-                painter.text(m_mute_rect.center(), egui::Align2::CENTER_CENTER, if self.is_master_muted { "MUTED" } else { "MUTE" }, FontId::proportional(7.5), Color32::WHITE);
+                painter.text(m_mute_rect.center(), egui::Align2::CENTER_CENTER, if self.is_master_muted { "MUTED" } else { "MUTE" }, FontId::proportional(7.0), Color32::WHITE);
+
+                let m_mono_bg = if self.is_master_mono { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(24, 34, 52) };
+                let m_mono_fg = if self.is_master_mono { Color32::from_rgb(10, 14, 24) } else { Color32::from_rgb(148, 163, 184) };
+                painter.rect_filled(m_mono_rect, 2.0, m_mono_bg);
+                painter.text(m_mono_rect.center(), egui::Align2::CENTER_CENTER, if self.is_master_mono { "MONO" } else { "ST" }, FontId::proportional(7.0), m_mono_fg);
 
                 let m_fader_top = m_strip.top() + 32.0;
                 let m_fader_bot = m_strip.bottom() - 24.0;
                 let m_fader_x = m_strip.left() + m_strip.width() * 0.35;
 
-                let m_auto_rect = Rect::from_min_size(egui::pos2(m_strip.left() + 6.0, m_fader_bot + 1.0), Vec2::new(m_strip.width() - 12.0, 10.0));
+                let m_unity_rect = Rect::from_min_size(egui::pos2(m_strip.left() + 5.0, m_fader_bot + 1.0), Vec2::new(btn_w, 10.0));
+                let m_auto_rect = Rect::from_min_size(egui::pos2(m_unity_rect.right() + 4.0, m_fader_bot + 1.0), Vec2::new(btn_w, 10.0));
 
                 if let Some(pos) = pointer_pos {
                     if is_interacting && m_strip.contains(pos) {
                         if m_mute_rect.contains(pos) && is_click {
                             self.toggle_master_mute();
+                        } else if m_mono_rect.contains(pos) && is_click {
+                            self.toggle_master_mono();
+                        } else if m_unity_rect.contains(pos) && is_click {
+                            self.reset_master_gain();
                         } else if m_auto_rect.contains(pos) && is_click {
                             master_to_open_auto = true;
                         } else if pos.y >= m_fader_top - 6.0 && pos.y <= m_fader_bot + 6.0 {
@@ -5780,7 +5901,10 @@ impl AwardWinningGuiView {
                 painter.rect_filled(m_thumb_r, 2.0, Color32::from_rgb(56, 189, 248));
                 painter.rect_stroke(m_thumb_r, 2.0, Stroke::new(1.0_f32, Color32::WHITE));
 
-                // Master Auto Button [📈 Auto]
+                // Master Unity Reset & Auto Buttons [0dB] [📈 Auto]
+                painter.rect_filled(m_unity_rect, 2.0, Color32::from_rgb(22, 30, 46));
+                painter.text(m_unity_rect.center(), egui::Align2::CENTER_CENTER, "0dB", FontId::proportional(7.0), Color32::from_rgb(168, 85, 247));
+
                 painter.rect_filled(m_auto_rect, 2.0, Color32::from_rgb(22, 30, 46));
                 painter.text(m_auto_rect.center(), egui::Align2::CENTER_CENTER, "📈 Auto", FontId::proportional(7.0), Color32::from_rgb(245, 158, 11));
 
