@@ -212,6 +212,8 @@ pub struct ModularNodeInstance {
     pub ports: Vec<ModularPort>,
     #[serde(default)]
     pub graph_node_idx: Option<usize>,
+    #[serde(default)]
+    pub bypassed: bool,
 }
 
 /// A routed patch cord between two modular node ports.
@@ -1931,6 +1933,7 @@ impl AwardWinningGuiView {
                     ModularPort { id: "out".into(), name: "Out".into(), kind: ModularPortKind::AudioOut, rel_pos: (126.0, 88.0) },
                 ],
                 graph_node_idx: Some(osc_idx),
+                bypassed: false,
             },
             ModularNodeInstance {
                 id: "filter_1".into(),
@@ -1945,6 +1948,7 @@ impl AwardWinningGuiView {
                     ModularPort { id: "lp".into(), name: "LP".into(), kind: ModularPortKind::AudioOut, rel_pos: (136.0, 45.0) },
                 ],
                 graph_node_idx: Some(filter_idx),
+                bypassed: false,
             },
             ModularNodeInstance {
                 id: "env_1".into(),
@@ -1958,6 +1962,7 @@ impl AwardWinningGuiView {
                     ModularPort { id: "cv".into(), name: "CV".into(), kind: ModularPortKind::ModulationOut, rel_pos: (126.0, 88.0) },
                 ],
                 graph_node_idx: Some(env_idx),
+                bypassed: false,
             },
             ModularNodeInstance {
                 id: "vca_1".into(),
@@ -1972,6 +1977,7 @@ impl AwardWinningGuiView {
                     ModularPort { id: "main".into(), name: "Main".into(), kind: ModularPortKind::AudioOut, rel_pos: (126.0, 60.0) },
                 ],
                 graph_node_idx: Some(vca_idx),
+                bypassed: false,
             },
         ];
 
@@ -2072,6 +2078,7 @@ impl AwardWinningGuiView {
             size: (145.0, 105.0),
             ports,
             graph_node_idx,
+            bypassed: false,
         };
         self.selected_modular_node_id = Some(node_id);
         self.device_rack_state.selected_node_kind = Some(desc.kind_id.clone());
@@ -2079,6 +2086,106 @@ impl AwardWinningGuiView {
         self.inspector_state.selected_node_kind = Some(desc.kind_id.clone());
         self.inspector_state.target_name = desc.display_name.clone();
         self.modular_nodes.push(instance);
+    }
+
+    /// Remove a modular node from the canvas, disconnect all its cables, and update the graph.
+    pub fn remove_modular_node(&mut self, node_id: &str) -> bool {
+        if let Some(pos) = self.modular_nodes.iter().position(|n| n.id == node_id) {
+            let node = self.modular_nodes.remove(pos);
+
+            // Disconnect and remove all cords connected to this node
+            let cords_to_remove: Vec<ModularPatchCord> = self.patch_cords.iter()
+                .filter(|c| c.from_node_id == node_id || c.to_node_id == node_id)
+                .cloned()
+                .collect();
+            for c in cords_to_remove {
+                self.disconnect_patch_cord_in_graph(&c.from_node_id, &c.from_port_id, &c.to_node_id, &c.to_port_id);
+            }
+            self.patch_cords.retain(|c| c.from_node_id != node_id && c.to_node_id != node_id);
+
+            // Clean up graph node edges if present
+            if let Some(g_idx) = node.graph_node_idx {
+                if let Ok(mut g) = self.audio_graph.lock() {
+                    let edges_to_remove: Vec<summoner_core::graph::Edge> = g.edges
+                        .iter()
+                        .filter(|e| e.from_node == g_idx || e.to_node == g_idx)
+                        .cloned()
+                        .collect();
+                    for e in edges_to_remove {
+                        g.remove_edge(e);
+                    }
+                }
+            }
+
+            // Update selection if the removed node was selected
+            if self.selected_modular_node_id.as_deref() == Some(node_id) {
+                self.selected_modular_node_id = self.modular_nodes.first().map(|n| n.id.clone());
+                if let Some(ref first_id) = self.selected_modular_node_id {
+                    if let Some(first_node) = self.modular_nodes.iter().find(|n| &n.id == first_id) {
+                        self.device_rack_state.selected_node_kind = Some(first_node.kind_id.clone());
+                        self.device_rack_state.device_name = first_node.display_name.clone();
+                        self.inspector_state.selected_node_kind = Some(first_node.kind_id.clone());
+                        self.inspector_state.target_name = first_node.display_name.clone();
+                    }
+                } else {
+                    self.device_rack_state.selected_node_kind = None;
+                    self.inspector_state.selected_node_kind = None;
+                }
+            }
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Duplicate an existing modular node with an offset position.
+    pub fn duplicate_modular_node(&mut self, node_id: &str) -> Option<String> {
+        let source_node = self.modular_nodes.iter().find(|n| n.id == node_id)?.clone();
+        let new_id = format!("{}_copy_{}", node_id, self.modular_nodes.len() + 1);
+        let new_pos = (
+            (source_node.pos.0 + 25.0).clamp(0.0, 1200.0),
+            (source_node.pos.1 + 25.0).clamp(0.0, 800.0),
+        );
+
+        let mut graph_node_idx = None;
+        if let Ok(mut g) = self.audio_graph.lock() {
+            let node_box: Box<dyn summoner_core::node::AudioNode> = match source_node.category {
+                crate::dsp_node_ui::DspNodeCategory::Oscillator
+                | crate::dsp_node_ui::DspNodeCategory::CompositeSynth
+                | crate::dsp_node_ui::DspNodeCategory::AcousticPhysicalModel => {
+                    Box::new(summoner_core::node::SineOscillatorNode::new(440.0))
+                }
+                _ => Box::new(summoner_core::node::GainNode::new(1.0)),
+            };
+            graph_node_idx = Some(g.add_node(node_box));
+        }
+
+        let new_instance = ModularNodeInstance {
+            id: new_id.clone(),
+            kind_id: source_node.kind_id.clone(),
+            display_name: format!("{} (Copy)", source_node.display_name),
+            category: source_node.category,
+            pos: new_pos,
+            size: source_node.size,
+            ports: source_node.ports.clone(),
+            graph_node_idx,
+            bypassed: source_node.bypassed,
+        };
+
+        self.selected_modular_node_id = Some(new_id.clone());
+        self.device_rack_state.selected_node_kind = Some(new_instance.kind_id.clone());
+        self.device_rack_state.device_name = new_instance.display_name.clone();
+        self.inspector_state.selected_node_kind = Some(new_instance.kind_id.clone());
+        self.inspector_state.target_name = new_instance.display_name.clone();
+        self.modular_nodes.push(new_instance);
+        Some(new_id)
+    }
+
+    /// Toggle the bypass state of a modular node.
+    pub fn toggle_bypass_modular_node(&mut self, node_id: &str) -> Option<bool> {
+        let node = self.modular_nodes.iter_mut().find(|n| n.id == node_id)?;
+        node.bypassed = !node.bypassed;
+        Some(node.bypassed)
     }
 
     /// Dynamically connect two modular nodes with an audio or CV cord in the underlying NodeGraph.
@@ -2912,7 +3019,39 @@ impl AwardWinningGuiView {
             }
         }
 
-        // 7. Selected Modular Node Parameters Dispatch & Live Recording
+        // 7. Modular Node Bypass Dispatch & Live Recording
+        for (m_idx, mod_node) in self.modular_nodes.iter().enumerate() {
+            let byp_pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 600 + m_idx as u32);
+            let byp_val = if mod_node.bypassed { 1.0 } else { 0.0 };
+            if param_bus.get(byp_pid).is_some() {
+                param_bus.set(byp_pid, byp_val);
+            }
+            let byp_auto_key = format!("modular_{}_bypassed", mod_node.id);
+            if automation_registry.get_param(&byp_auto_key).is_none() {
+                automation_registry.register_param(&byp_auto_key, byp_val);
+            }
+            automation_registry.set(&byp_auto_key, byp_val);
+
+            if is_recording_automation {
+                let point = summoner_sequencer::automation_timeline::AutomationPoint {
+                    beat: playhead_beat,
+                    value: byp_val,
+                    interp: summoner_sequencer::automation_timeline::Interpolation::Step,
+                };
+                let lane = automation_timeline.lanes.entry(byp_auto_key.clone()).or_insert_with(|| {
+                    summoner_sequencer::automation_timeline::AutomationLane {
+                        param_id: byp_auto_key.clone(),
+                        curve: summoner_sequencer::automation_timeline::AutomationCurve { points: Vec::new() },
+                    }
+                });
+                match lane.curve.points.binary_search_by(|p| p.beat.partial_cmp(&playhead_beat).unwrap()) {
+                    Ok(idx) => lane.curve.points[idx] = point,
+                    Err(idx) => lane.curve.points.insert(idx, point),
+                }
+            }
+        }
+
+        // 7b. Selected Modular Node Parameters Dispatch & Live Recording
         if let Some(ref mod_node_id) = self.selected_modular_node_id {
             for (p_idx, (k, &v)) in self.inspector_state.node_param_values.iter().enumerate() {
                 let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 500 + p_idx as u32);
@@ -3323,6 +3462,9 @@ impl AwardWinningGuiView {
 
         let mut node_selected = None;
         let mut clicked_socket = None;
+        let mut node_to_delete = None;
+        let mut node_to_bypass = None;
+        let mut node_to_duplicate = None;
 
         for node in &self.modular_nodes {
             let n_rect = Rect::from_min_size(
@@ -3340,11 +3482,61 @@ impl AwardWinningGuiView {
                 }
             }
 
+            // Check header action button clicks
             if clicked_socket.is_none() && clicked {
+                if let Some(pos) = pointer_pos {
+                    let del_rect = Rect::from_min_size(egui::pos2(n_rect.right() - 18.0, n_rect.top() + 4.0), Vec2::new(14.0, 14.0));
+                    let byp_rect = Rect::from_min_size(egui::pos2(del_rect.left() - 22.0, n_rect.top() + 4.0), Vec2::new(20.0, 14.0));
+                    let dup_rect = Rect::from_min_size(egui::pos2(byp_rect.left() - 18.0, n_rect.top() + 4.0), Vec2::new(16.0, 14.0));
+
+                    if del_rect.contains(pos) {
+                        node_to_delete = Some(node.id.clone());
+                    } else if byp_rect.contains(pos) {
+                        node_to_bypass = Some(node.id.clone());
+                    } else if dup_rect.contains(pos) {
+                        node_to_duplicate = Some(node.id.clone());
+                    } else if n_rect.contains(pos) {
+                        node_selected = Some((node.id.clone(), node.kind_id.clone(), node.display_name.clone()));
+                    }
+                }
+            } else if clicked_socket.is_none() && resp.dragged() && self.selected_modular_node_id.is_none() {
                 if let Some(pos) = pointer_pos {
                     if n_rect.contains(pos) {
                         node_selected = Some((node.id.clone(), node.kind_id.clone(), node.display_name.clone()));
                     }
+                }
+            }
+        }
+
+        // Tactile node drag-to-reposition
+        let drag_delta = resp.drag_delta();
+        if resp.dragged() && self.pending_cord_source.is_none() && (drag_delta.x.abs() > 0.0 || drag_delta.y.abs() > 0.0) {
+            if let Some(ref sel_id) = self.selected_modular_node_id {
+                if let Some(node) = self.modular_nodes.iter_mut().find(|n| &n.id == sel_id) {
+                    node.pos.0 = (node.pos.0 + drag_delta.x).clamp(0.0, (rect.width() - node.size.0).max(0.0));
+                    node.pos.1 = (node.pos.1 + drag_delta.y).clamp(0.0, (available_h - node.size.1).max(0.0));
+                }
+            }
+        }
+
+        // Execute header button actions
+        if let Some(id) = node_to_delete {
+            self.remove_modular_node(&id);
+        } else if let Some(id) = node_to_bypass {
+            self.toggle_bypass_modular_node(&id);
+        } else if let Some(id) = node_to_duplicate {
+            self.duplicate_modular_node(&id);
+        }
+
+        // Right-click on empty canvas opens the Modular DSP Catalog
+        if resp.secondary_clicked() {
+            if let Some(pos) = pointer_pos {
+                let hit_node = self.modular_nodes.iter().any(|n| {
+                    let nr = Rect::from_min_size(egui::pos2(rect.left() + n.pos.0, rect.top() + n.pos.1), Vec2::new(n.size.0, n.size.1));
+                    nr.contains(pos)
+                });
+                if !hit_node {
+                    self.modular_add_modal_open = true;
                 }
             }
         }
@@ -3410,32 +3602,73 @@ impl AwardWinningGuiView {
             );
             let is_sel = self.selected_modular_node_id.as_deref() == Some(&node.id);
             let (cr, cg, cb) = node.category.color_rgb();
-            let cat_col = Color32::from_rgb(cr, cg, cb);
+            let cat_col = if node.bypassed {
+                Color32::from_rgb(100, 116, 139)
+            } else {
+                Color32::from_rgb(cr, cg, cb)
+            };
 
             // Background chassis
-            painter.rect_filled(n_rect, 4.0, Color32::from_rgb(16, 24, 38));
+            let bg_color = if node.bypassed {
+                Color32::from_rgb(10, 14, 22)
+            } else if is_sel {
+                Color32::from_rgb(18, 26, 42)
+            } else {
+                Color32::from_rgb(16, 24, 38)
+            };
+            painter.rect_filled(n_rect, 4.0, bg_color);
             if is_sel {
                 painter.rect_stroke(n_rect.expand(2.0), 5.0, Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(cr, cg, cb, 60)));
                 painter.rect_stroke(n_rect, 4.0, Stroke::new(1.8_f32, cat_col));
             } else {
-                painter.rect_stroke(n_rect, 4.0, Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(cr, cg, cb, 140)));
+                painter.rect_stroke(n_rect, 4.0, Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(cr, cg, cb, if node.bypassed { 60 } else { 140 })));
             }
 
-            // Header
+            // Header text
+            let header_title = if node.bypassed {
+                format!("{} {} [BYP]", node.category.icon(), node.display_name)
+            } else {
+                format!("{} {}", node.category.icon(), node.display_name)
+            };
             painter.text(
                 egui::pos2(n_rect.left() + 8.0, n_rect.top() + 6.0),
                 egui::Align2::LEFT_TOP,
-                format!("{} {}", node.category.icon(), node.display_name),
+                header_title,
                 FontId::proportional(11.0),
-                Color32::from_rgb(241, 245, 249),
+                if node.bypassed { Color32::from_rgb(148, 163, 184) } else { Color32::from_rgb(241, 245, 249) },
             );
-            painter.circle_filled(egui::pos2(n_rect.right() - 12.0, n_rect.top() + 12.0), 3.5, cat_col);
+
+            // Action buttons on header
+            let del_rect = Rect::from_min_size(egui::pos2(n_rect.right() - 18.0, n_rect.top() + 4.0), Vec2::new(14.0, 14.0));
+            let byp_rect = Rect::from_min_size(egui::pos2(del_rect.left() - 22.0, n_rect.top() + 4.0), Vec2::new(20.0, 14.0));
+            let dup_rect = Rect::from_min_size(egui::pos2(byp_rect.left() - 18.0, n_rect.top() + 4.0), Vec2::new(16.0, 14.0));
+
+            let del_hovered = pointer_pos.map(|p| del_rect.contains(p)).unwrap_or(false);
+            let byp_hovered = pointer_pos.map(|p| byp_rect.contains(p)).unwrap_or(false);
+            let dup_hovered = pointer_pos.map(|p| dup_rect.contains(p)).unwrap_or(false);
+
+            // Duplicate button
+            painter.rect_filled(dup_rect, 2.0, if dup_hovered { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(24, 34, 52) });
+            painter.text(dup_rect.center(), egui::Align2::CENTER_CENTER, "⧉", FontId::proportional(9.0), Color32::from_rgb(241, 245, 249));
+
+            // Bypass button
+            painter.rect_filled(byp_rect, 2.0, if node.bypassed { Color32::from_rgb(245, 158, 11) } else if byp_hovered { Color32::from_rgb(38, 54, 82) } else { Color32::from_rgb(24, 34, 52) });
+            let byp_text = if node.bypassed { "OFF" } else { "ON" };
+            painter.text(byp_rect.center(), egui::Align2::CENTER_CENTER, byp_text, FontId::proportional(8.0), if node.bypassed { Color32::BLACK } else { Color32::from_rgb(148, 163, 184) });
+
+            // Delete button
+            painter.rect_filled(del_rect, 2.0, if del_hovered { Color32::from_rgb(220, 38, 38) } else { Color32::from_rgb(24, 34, 52) });
+            painter.text(del_rect.center(), egui::Align2::CENTER_CENTER, "✕", FontId::proportional(9.0), Color32::from_rgb(241, 245, 249));
 
             // Sockets
             for port in &node.ports {
                 let s_pos = egui::pos2(n_rect.left() + port.rel_pos.0, n_rect.top() + port.rel_pos.1);
                 let (pr, pg, pb) = port.kind.color_rgb();
-                let port_col = Color32::from_rgb(pr, pg, pb);
+                let port_col = if node.bypassed {
+                    Color32::from_rgb(71, 85, 105)
+                } else {
+                    Color32::from_rgb(pr, pg, pb)
+                };
 
                 // Outer metallic ring
                 painter.circle_stroke(s_pos, 6.0, Stroke::new(1.5_f32, Color32::from_rgb(45, 60, 85)));
@@ -3451,7 +3684,7 @@ impl AwardWinningGuiView {
                     egui::pos2(s_pos.x + 10.0, s_pos.y)
                 };
                 let align = if port.kind.is_output() { egui::Align2::RIGHT_CENTER } else { egui::Align2::LEFT_CENTER };
-                painter.text(text_pos, align, &port.name, FontId::proportional(9.0), Color32::from_rgb(148, 163, 184));
+                painter.text(text_pos, align, &port.name, FontId::proportional(9.0), if node.bypassed { Color32::from_rgb(100, 116, 139) } else { Color32::from_rgb(148, 163, 184) });
             }
         }
 
