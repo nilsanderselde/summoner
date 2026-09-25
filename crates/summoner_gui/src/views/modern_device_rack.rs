@@ -37,6 +37,8 @@ pub struct ModernDeviceRackState {
     pub lfo_depth: f32,
     #[serde(default)]
     pub is_expanded_params: bool,
+    #[serde(default)]
+    pub requested_automation_param: Option<String>,
 }
 
 impl Default for ModernDeviceRackState {
@@ -48,6 +50,7 @@ impl Default for ModernDeviceRackState {
             is_enabled: true,
             is_minimized: false,
             is_expanded_params: false,
+            requested_automation_param: None,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -103,6 +106,10 @@ pub fn show_modern_device_rack(
                     if ui.button(RichText::new("⊞ PRO").font(FontId::proportional(10.0)).color(Color32::from_rgb(200, 215, 235))).clicked() {
                         state.is_minimized = false;
                         state.is_expanded_params = true;
+                    }
+                    if ui.button(RichText::new("📈 AUTO").font(FontId::proportional(10.0)).color(Color32::from_rgb(234, 179, 8))).on_hover_text("Open Live Bézier Automation Lane for primary parameter").clicked() {
+                        let primary = opt_desc.and_then(|d| d.params.first()).map(|p| p.id.clone()).unwrap_or_else(|| "cutoff".to_string());
+                        state.requested_automation_param = Some(primary);
                     }
                     ui.add_space(4.0);
                     let pwr_col = if state.is_enabled { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(100, 116, 139) };
@@ -215,6 +222,10 @@ pub fn show_modern_device_rack(
                     let pro_col = if state.is_expanded_params { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(200, 215, 235) };
                     if ui.button(RichText::new(pro_text).font(FontId::proportional(10.0)).strong().color(pro_col)).clicked() {
                         state.is_expanded_params = !state.is_expanded_params;
+                    }
+                    if ui.button(RichText::new("📈 Auto").font(FontId::proportional(10.0)).color(Color32::from_rgb(234, 179, 8))).on_hover_text("Open Live Bézier Automation Lane for primary parameter").clicked() {
+                        let primary = opt_desc.and_then(|d| d.params.first()).map(|p| p.id.clone()).unwrap_or_else(|| "cutoff".to_string());
+                        state.requested_automation_param = Some(primary);
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()

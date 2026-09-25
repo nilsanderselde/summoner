@@ -615,8 +615,44 @@ Product Management has conducted a comprehensive readiness audit:
   - `cargo test -p summoner_gui --features gui`: 880 feature tests passing in 1.32s (100% pass rate).
   - Total: 1,182 GUI unit & integration tests passing with 0 failures.
 
+### Turn #28 — Arranger 1-Click Pro View Launchers, Stage Performance Matrix & Global Live Modal Windows
+- [x] Arranger Track Header Pro View Launchers (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - 1-click Pro view launchers on Arranger track headers: `[🎹]` (Piano Roll), `[∿]` (Modular Canvas), `[🎚]` (Mixer), and `[📈]` (Live Parameter Automation).
+  - Volume pill double-click reset to unity gain (`1.0` = 0.0 dB) with synchronization to `inspector_state.gain_db`.
+- [x] Extended Track Parameter Automation & Global Modal Lifecycle:
+  - Universal track parameter live Bézier automation for `"gain"`, `"pan"`, `"mute"`, `"solo"`, and `"cutoff"`.
+  - Promoted Bézier parameter automation editor and Modular DSP Catalog modals to global window layer across all tabs (Arranger, Mixer, Stage/Performance).
+- [x] Stage / Live Performance Matrix & Panic Killswitch:
+  - Scene launching (`launch_scene`) and scene stopping (`stop_scene`) with automated playhead relocation and transport playback triggering.
+  - Global Panic killswitch (`trigger_panic`) muting transport, disarming tracks, and silencing active audio voices.
+  - 5-tab view switcher integration in `ModernTopBarState` (`ModernViewTab::Performance`).
+- [x] Unit Tests & Verification:
+  - Created test suite `crates/summoner_gui/src/tier93_turn28_tests.rs` (7 tests, 100% pass rate).
 
-
-
-
-
+### Turn #29 — Piano Roll Multi-Lane Ergonomics, 1-Click Pro View Switchers, Audition Gate & Universal DSP Parameter Live Automation Bridge
+- [x] Piano Roll Two-Tier UX & Pro View Switchers (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Interactive Track Selector ComboBox `[🎚 Track: <name> ▾]` allowing instant track switching directly from the Piano Roll with automatic synchronization to `selected_track_idx` and `device_rack_state.device_name`.
+  - 1-Click Pro View Switchers: `[📋 Arranger]`, `[∿ Modular]`, and `[🎚 Mixer]` buttons for seamless workflow switching.
+  - 1-Click Parameter Automation launcher `[📈 Auto ▾]` in Piano Roll header providing one-click live Bézier curve opening for standard parameters and track-specific DSP controls.
+  - Interactive Audition Toggle `[🔊 Audition]` muting/unmuting live note preview, with ParamBus gate and pitch live silencing when disabled.
+  - Multi-Lane Mode Switcher (`Velocity`, `Gate Length`, `Pitch Bend`) with visual stick indicators, interactive mouse dragging, and lower-left cycling badge.
+  - Surgical Note Operations in Pro toolbar: `[⇥ Quantize]` to active snap grid, `[▲ +1]` / `[▼ -1]` semitone transpose, `[▲▲ +Oct]` / `[▼▼ -Oct]` octave/tritave transpose respecting tuning system (12-EDO, 19-EDO, 31-EDO, Bohlen-Pierce), `[🎲 Humanize]` micro-timing and velocity jitter, `[⎘ Duplicate]` note advancing by snap grid, and `[⊘ Clear]` all notes.
+- [x] Universal Parameter Reflection in Live Automation Bridge (Milestone 33):
+  - Upgraded `open_track_automation_editor` to support standard DAW parameters (`gain`, `pan`, `mute`, `solo`, `cutoff`, `resonance`, `decay`, `drive`, `mod`, `volume`, `osc_mix`, `shape`, `pitch`, `velocity`, `expression`) AND dynamically reflect any arbitrary parameter schema from `DspNodeRegistry::new()` across all 1,090 registered DSP nodes into Bézier automation curves without audio thread allocations.
+- [x] Inspector & Device Rack 1-Click Automation Bridges:
+  - Added `requested_automation_param` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added tactile 1-click live automation launcher buttons `[📈]` next to Gain Fader and Pan Fader in `ModernInspectorState`, and `[📈 AUTO]` in `ModernDeviceRackState`.
+  - Automated event consumption and modal dispatch directly in `AwardWinningGuiView::show`.
+- [x] Unit Tests & Verification:
+  - Created dedicated test suite `crates/summoner_gui/src/tier94_turn29_tests.rs`:
+    - `test_turn29_piano_roll_track_selection_and_device_name`
+    - `test_turn29_piano_roll_audition_toggle_and_param_bus_muting`
+    - `test_turn29_piano_roll_multi_lane_modes`
+    - `test_turn29_piano_roll_note_operations_quantize_transpose_duplicate_clear`
+    - `test_turn29_universal_dsp_module_live_automation_reflection`
+    - `test_turn29_inspector_and_device_rack_automation_request_dispatch`
+    - `test_turn29_piano_roll_canvas_rendering_without_panic`
+    - `test_turn29_inspector_and_rack_automation_click_dispatch_in_show`
+  - Registered in `crates/summoner_gui/src/lib.rs` under `#[cfg(feature = "gui")]`.
+  - 100% test pass rate across pure unit tests (302/302) and feature tests (888/888).
+  - Clean `cargo check` and `cargo clippy -- -D warnings`.

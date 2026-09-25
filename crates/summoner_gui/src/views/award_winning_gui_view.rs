@@ -359,6 +359,25 @@ impl PianoRollSnapResolution {
     }
 }
 
+/// Editing mode for the lower lane in Piano Roll canvas.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
+pub enum PianoRollLaneMode {
+    #[default]
+    Velocity,
+    Gate,
+    PitchBend,
+}
+
+impl PianoRollLaneMode {
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::Velocity => "Velocity",
+            Self::Gate => "Gate Length",
+            Self::PitchBend => "Pitch Bend",
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct AwardWinningGuiView {
     pub top_bar_state: ModernTopBarState,
@@ -415,6 +434,8 @@ pub struct AwardWinningGuiView {
     pub automation_editor: Option<crate::views::bezier_automation_editor::BezierAutomationEditorView>,
     pub is_master_muted: bool,
     pub unmuted_master_gain: f32,
+    pub piano_roll_lane_mode: PianoRollLaneMode,
+    pub is_piano_roll_audition_enabled: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -618,6 +639,8 @@ impl AwardWinningGuiView {
             automation_editor: None,
             is_master_muted: false,
             unmuted_master_gain: 1.0,
+            piano_roll_lane_mode: PianoRollLaneMode::Velocity,
+            is_piano_roll_audition_enabled: true,
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -1119,6 +1142,16 @@ impl AwardWinningGuiView {
             });
         });
 
+        // Handle 1-click live automation requests from Inspector & Device Rack
+        if let Some(param) = self.inspector_state.requested_automation_param.take() {
+            let cur_track_id = self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1);
+            self.open_track_automation_editor(cur_track_id, &param);
+        }
+        if let Some(param) = self.device_rack_state.requested_automation_param.take() {
+            let cur_track_id = self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1);
+            self.open_track_automation_editor(cur_track_id, &param);
+        }
+
         // Global Modal Windows: Live Parameter Automation Editor & Modular DSP Catalog
         self.show_modular_automation_editor_window(ui);
         self.show_modular_dsp_catalog_window(ui);
@@ -1508,13 +1541,102 @@ impl AwardWinningGuiView {
         let is_pro = self.top_bar_state.is_pro_mode;
         let pitch_names = self.piano_roll_tuning.pitch_names();
         let num_pitches = pitch_names.len();
+        let cur_track_id = self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1);
+        let cur_track_name = self.tracks.get(self.selected_track_idx).map(|t| t.name.clone()).unwrap_or_else(|| "Track 1".to_string());
 
         // 0. Piano Roll Top Toolbar (Two-Tier: Novice vs Pro)
         ui.horizontal(|ui| {
             ui.label(RichText::new("🎹 Piano Roll").font(FontId::proportional(12.0)).strong().color(Color32::from_rgb(241, 245, 249)));
-            ui.add_space(8.0);
+            ui.add_space(6.0);
 
-            if is_pro {
+            // Track Selector ComboBox
+            egui::ComboBox::from_id_source("piano_roll_track_selector")
+                .selected_text(RichText::new(format!("🎚 {}", cur_track_name)).font(FontId::proportional(10.5)).color(Color32::from_rgb(56, 189, 248)))
+                .show_ui(ui, |ui| {
+                    for (t_idx, tr) in self.tracks.iter().enumerate() {
+                        let is_sel = t_idx == self.selected_track_idx;
+                        if ui.selectable_label(is_sel, format!("{}: {}", tr.id, tr.name)).clicked() {
+                            self.selected_track_idx = t_idx;
+                            self.device_rack_state.device_name = tr.name.clone();
+                        }
+                    }
+                });
+
+            ui.add_space(4.0);
+
+            // 1-Click Pro View Launchers
+            if ui.button(RichText::new("📋 Arranger").font(FontId::proportional(10.0)).color(Color32::from_rgb(200, 215, 235))).clicked() {
+                self.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::Arranger;
+            }
+            if ui.button(RichText::new("∿ Modular").font(FontId::proportional(10.0)).color(Color32::from_rgb(200, 215, 235))).clicked() {
+                self.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::Modular;
+            }
+            if ui.button(RichText::new("🎚 Mixer").font(FontId::proportional(10.0)).color(Color32::from_rgb(200, 215, 235))).clicked() {
+                self.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::Mixer;
+            }
+
+            ui.add_space(4.0);
+
+            // 1-Click Live Parameter Automation Launcher
+            egui::ComboBox::from_id_source("piano_roll_auto_selector")
+                .selected_text(RichText::new("📈 Auto ▾").font(FontId::proportional(10.0)).color(Color32::from_rgb(234, 179, 8)))
+                .show_ui(ui, |ui| {
+                    if ui.selectable_label(false, "📈 Cutoff (Filter)").clicked() {
+                        self.open_track_automation_editor(cur_track_id, "cutoff");
+                    }
+                    if ui.selectable_label(false, "📈 Pitch Bend").clicked() {
+                        self.open_track_automation_editor(cur_track_id, "pitch");
+                    }
+                    if ui.selectable_label(false, "📈 Modulation Wheel").clicked() {
+                        self.open_track_automation_editor(cur_track_id, "mod");
+                    }
+                    if ui.selectable_label(false, "📈 Note Velocity").clicked() {
+                        self.open_track_automation_editor(cur_track_id, "velocity");
+                    }
+                    if ui.selectable_label(false, "📈 Volume Gain").clicked() {
+                        self.open_track_automation_editor(cur_track_id, "gain");
+                    }
+                    if ui.selectable_label(false, "📈 Stereo Pan").clicked() {
+                        self.open_track_automation_editor(cur_track_id, "pan");
+                    }
+                });
+
+            ui.add_space(4.0);
+
+            // Audition sound toggle
+            let aud_col = if self.is_piano_roll_audition_enabled { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(100, 116, 139) };
+            let aud_txt = if self.is_piano_roll_audition_enabled { "🔊 Audition" } else { "🔇 Muted" };
+            if ui.button(RichText::new(aud_txt).font(FontId::proportional(10.0)).color(aud_col)).on_hover_text("Toggle live keyboard note auditioning audio").clicked() {
+                self.toggle_piano_roll_audition();
+            }
+
+            ui.add_space(6.0);
+            ui.separator();
+            ui.add_space(6.0);
+
+            // Lower lane mode selector
+            let v_col = if self.piano_roll_lane_mode == PianoRollLaneMode::Velocity { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(148, 163, 184) };
+            let g_col = if self.piano_roll_lane_mode == PianoRollLaneMode::Gate { Color32::from_rgb(34, 197, 94) } else { Color32::from_rgb(148, 163, 184) };
+            let p_col = if self.piano_roll_lane_mode == PianoRollLaneMode::PitchBend { Color32::from_rgb(245, 158, 11) } else { Color32::from_rgb(148, 163, 184) };
+            if ui.selectable_label(self.piano_roll_lane_mode == PianoRollLaneMode::Velocity, RichText::new("Vel").font(FontId::proportional(10.0)).color(v_col)).clicked() {
+                self.piano_roll_lane_mode = PianoRollLaneMode::Velocity;
+            }
+            if ui.selectable_label(self.piano_roll_lane_mode == PianoRollLaneMode::Gate, RichText::new("Gate").font(FontId::proportional(10.0)).color(g_col)).clicked() {
+                self.piano_roll_lane_mode = PianoRollLaneMode::Gate;
+            }
+            if ui.selectable_label(self.piano_roll_lane_mode == PianoRollLaneMode::PitchBend, RichText::new("Pitch").font(FontId::proportional(10.0)).color(p_col)).clicked() {
+                self.piano_roll_lane_mode = PianoRollLaneMode::PitchBend;
+            }
+
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                let note_count = self.piano_roll_notes.len();
+                ui.label(RichText::new(format!("{} Notes", note_count)).font(FontId::proportional(9.5)).color(Color32::from_rgb(100, 116, 139)));
+            });
+        });
+        ui.add_space(3.0);
+
+        if is_pro {
+            ui.horizontal(|ui| {
                 // Tuning System Selector
                 egui::ComboBox::from_id_source("piano_roll_tuning_selector")
                     .selected_text(RichText::new(format!("∿ {}", self.piano_roll_tuning.name())).font(FontId::proportional(10.5)).color(Color32::from_rgb(56, 189, 248)))
@@ -1547,33 +1669,15 @@ impl AwardWinningGuiView {
 
                 // Surgical Note Operations
                 if ui.button(RichText::new("⇥ Quantize").font(FontId::proportional(10.0)).color(Color32::from_rgb(200, 215, 235))).on_hover_text("Quantize notes to active snap grid").clicked() {
-                    let snap = self.piano_roll_snap;
-                    if let Some(sel_id) = self.selected_note_id {
-                        if let Some(n) = self.piano_roll_notes.iter_mut().find(|n| n.id == sel_id) {
-                            n.start_beat = snap.snap(n.start_beat);
-                        }
-                    } else {
-                        for n in &mut self.piano_roll_notes {
-                            n.start_beat = snap.snap(n.start_beat);
-                        }
-                    }
+                    self.quantize_piano_roll_notes();
                 }
 
                 if ui.button(RichText::new("▲ +1").font(FontId::proportional(10.0)).color(Color32::from_rgb(200, 215, 235))).on_hover_text("Transpose +1 pitch step").clicked() {
-                    if let Some(sel_id) = self.selected_note_id {
-                        if let Some(n) = self.piano_roll_notes.iter_mut().find(|n| n.id == sel_id) {
-                            if n.pitch_idx > 0 { n.pitch_idx -= 1; }
-                        }
-                    }
+                    self.transpose_selected_piano_roll_note(1);
                 }
 
-                let max_p = num_pitches.saturating_sub(1);
                 if ui.button(RichText::new("▼ -1").font(FontId::proportional(10.0)).color(Color32::from_rgb(200, 215, 235))).on_hover_text("Transpose -1 pitch step").clicked() {
-                    if let Some(sel_id) = self.selected_note_id {
-                        if let Some(n) = self.piano_roll_notes.iter_mut().find(|n| n.id == sel_id) {
-                            if n.pitch_idx < max_p { n.pitch_idx += 1; }
-                        }
-                    }
+                    self.transpose_selected_piano_roll_note(-1);
                 }
 
                 let oct_steps = match self.piano_roll_tuning {
@@ -1584,19 +1688,11 @@ impl AwardWinningGuiView {
                 };
 
                 if ui.button(RichText::new("▲▲ +Oct").font(FontId::proportional(10.0)).color(Color32::from_rgb(200, 215, 235))).on_hover_text("Transpose +1 Octave / Tritave").clicked() {
-                    if let Some(sel_id) = self.selected_note_id {
-                        if let Some(n) = self.piano_roll_notes.iter_mut().find(|n| n.id == sel_id) {
-                            n.pitch_idx = n.pitch_idx.saturating_sub(oct_steps);
-                        }
-                    }
+                    self.transpose_selected_piano_roll_note(oct_steps);
                 }
 
                 if ui.button(RichText::new("▼▼ -Oct").font(FontId::proportional(10.0)).color(Color32::from_rgb(200, 215, 235))).on_hover_text("Transpose -1 Octave / Tritave").clicked() {
-                    if let Some(sel_id) = self.selected_note_id {
-                        if let Some(n) = self.piano_roll_notes.iter_mut().find(|n| n.id == sel_id) {
-                            n.pitch_idx = (n.pitch_idx + oct_steps).min(max_p);
-                        }
-                    }
+                    self.transpose_selected_piano_roll_note(-oct_steps);
                 }
 
                 if ui.button(RichText::new("🎲 Humanize").font(FontId::proportional(10.0)).color(Color32::from_rgb(200, 215, 235))).on_hover_text("Apply subtle micro-timing and velocity humanization").clicked() {
@@ -1609,21 +1705,7 @@ impl AwardWinningGuiView {
                 }
 
                 if ui.button(RichText::new("⧉ Duplicate").font(FontId::proportional(10.0)).color(Color32::from_rgb(200, 215, 235))).on_hover_text("Duplicate selected note").clicked() {
-                    if let Some(sel_id) = self.selected_note_id {
-                        if let Some(n) = self.piano_roll_notes.iter().find(|n| n.id == sel_id).cloned() {
-                            let step = self.piano_roll_snap.step_beats().max(0.5);
-                            let new_id = self.next_note_id;
-                            self.next_note_id += 1;
-                            self.piano_roll_notes.push(PianoRollNote {
-                                id: new_id,
-                                pitch_idx: n.pitch_idx,
-                                start_beat: n.start_beat + step,
-                                length_beats: n.length_beats,
-                                velocity: n.velocity,
-                            });
-                            self.selected_note_id = Some(new_id);
-                        }
-                    }
+                    self.duplicate_selected_piano_roll_note();
                 }
 
                 if ui.button(RichText::new("✕ Delete").font(FontId::proportional(10.0)).color(Color32::from_rgb(244, 63, 94))).clicked() {
@@ -1632,7 +1714,13 @@ impl AwardWinningGuiView {
                         self.selected_note_id = None;
                     }
                 }
-            } else {
+
+                if ui.button(RichText::new("⊘ Clear").font(FontId::proportional(10.0)).color(Color32::from_rgb(244, 63, 94))).on_hover_text("Clear all notes from piano roll").clicked() {
+                    self.clear_piano_roll_notes();
+                }
+            });
+        } else {
+            ui.horizontal(|ui| {
                 egui::Frame::none()
                     .fill(Color32::from_rgb(20, 28, 44))
                     .rounding(Rounding::same(3.0))
@@ -1642,17 +1730,10 @@ impl AwardWinningGuiView {
                     });
                 ui.add_space(4.0);
                 if ui.button(RichText::new("⇥ Quantize").font(FontId::proportional(10.0)).color(Color32::from_rgb(200, 215, 235))).clicked() {
-                    for n in &mut self.piano_roll_notes {
-                        n.start_beat = (n.start_beat * 2.0).round() / 2.0;
-                    }
+                    self.quantize_piano_roll_notes();
                 }
-            }
-
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                let note_count = self.piano_roll_notes.len();
-                ui.label(RichText::new(format!("{} Notes", note_count)).font(FontId::proportional(9.5)).color(Color32::from_rgb(100, 116, 139)));
             });
-        });
+        }
         ui.add_space(4.0);
 
         let min_row_h = if num_pitches > 24 { 14.0 } else if num_pitches > 16 { 18.0 } else { 22.0 };
@@ -1717,14 +1798,23 @@ impl AwardWinningGuiView {
                             let freq_hz = self.piano_roll_tuning.pitch_to_hz(p_idx, num_pitches);
                             self.auditioned_pitch_idx = Some(p_idx);
                             self.last_auditioned_pitch_hz = freq_hz;
-                            self.last_auditioned_gate = 1.0;
+                            self.last_auditioned_gate = if self.is_piano_roll_audition_enabled { 1.0 } else { 0.0 };
                             self.inspector_state.target_name = format!("Pitch {} ({:.1} Hz)", pitch_names[p_idx], freq_hz);
                             self.inspector_state.scale_ratio_num = (num_pitches - p_idx) as i32;
                             self.inspector_state.root_ratio = freq_hz;
                             self.inspector_state.octave_offset = if p_idx < 1 { 5 } else { 4 };
                         }
+                    } else if pos.x <= rect.left() + key_w && pos.y >= rect.bottom() - vel_lane_h {
+                        // 2D. Interactive Lane Mode Badge Cycling
+                        if is_click {
+                            self.piano_roll_lane_mode = match self.piano_roll_lane_mode {
+                                PianoRollLaneMode::Velocity => PianoRollLaneMode::Gate,
+                                PianoRollLaneMode::Gate => PianoRollLaneMode::PitchBend,
+                                PianoRollLaneMode::PitchBend => PianoRollLaneMode::Velocity,
+                            };
+                        }
                     } else if pos.y >= rect.bottom() - vel_lane_h && pos.x > rect.left() + key_w {
-                        // 2B. Interactive Velocity Lane Dragging
+                        // 2B. Interactive Bottom Lane Dragging (Velocity / Gate Length / Pitch Bend)
                         if is_down || is_click || resp.dragged() {
                             let mut closest_idx = None;
                             let mut min_dist = f32::MAX;
@@ -1736,16 +1826,49 @@ impl AwardWinningGuiView {
                                     closest_idx = Some(idx);
                                 }
                             }
+                            let norm_y = ((rect.bottom() - 2.0 - pos.y) / (vel_lane_h * 0.85)).clamp(0.05, 1.0);
                             if min_dist < (ppb * 1.5).max(14.0) {
                                 if let Some(idx) = closest_idx {
-                                    let new_vel = ((rect.bottom() - 2.0 - pos.y) / (vel_lane_h * 0.85)).clamp(0.05, 1.0);
-                                    self.piano_roll_notes[idx].velocity = new_vel;
+                                    match self.piano_roll_lane_mode {
+                                        PianoRollLaneMode::Velocity => {
+                                            self.piano_roll_notes[idx].velocity = norm_y;
+                                        }
+                                        PianoRollLaneMode::Gate => {
+                                            let step = self.piano_roll_snap.step_beats().max(0.125);
+                                            let raw_len = (norm_y * 4.0).max(0.125);
+                                            self.piano_roll_notes[idx].length_beats = if self.piano_roll_snap != PianoRollSnapResolution::Free {
+                                                (raw_len / step).round() * step
+                                            } else {
+                                                raw_len
+                                            };
+                                        }
+                                        PianoRollLaneMode::PitchBend => {
+                                            let track_id = self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1);
+                                            self.open_track_automation_editor(track_id, "pitch");
+                                        }
+                                    }
                                     self.selected_note_id = Some(self.piano_roll_notes[idx].id);
                                 }
                             } else if let Some(sel_id) = self.selected_note_id {
                                 if let Some(note) = self.piano_roll_notes.iter_mut().find(|n| n.id == sel_id) {
-                                    let new_vel = ((rect.bottom() - 2.0 - pos.y) / (vel_lane_h * 0.85)).clamp(0.05, 1.0);
-                                    note.velocity = new_vel;
+                                    match self.piano_roll_lane_mode {
+                                        PianoRollLaneMode::Velocity => {
+                                            note.velocity = norm_y;
+                                        }
+                                        PianoRollLaneMode::Gate => {
+                                            let step = self.piano_roll_snap.step_beats().max(0.125);
+                                            let raw_len = (norm_y * 4.0).max(0.125);
+                                            note.length_beats = if self.piano_roll_snap != PianoRollSnapResolution::Free {
+                                                (raw_len / step).round() * step
+                                            } else {
+                                                raw_len
+                                            };
+                                        }
+                                        PianoRollLaneMode::PitchBend => {
+                                            let track_id = self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1);
+                                            self.open_track_automation_editor(track_id, "pitch");
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1799,7 +1922,7 @@ impl AwardWinningGuiView {
                                     let clamped_p = note.pitch_idx.min(num_pitches - 1);
                                     let freq_hz = self.piano_roll_tuning.pitch_to_hz(clamped_p, num_pitches);
                                     self.last_auditioned_pitch_hz = freq_hz;
-                                    self.last_auditioned_gate = 1.0;
+                                    self.last_auditioned_gate = if self.is_piano_roll_audition_enabled { 1.0 } else { 0.0 };
                                     self.inspector_state.target_name = format!("Note {} ({:.1} Hz)", pitch_names[clamped_p], freq_hz);
                                     self.inspector_state.scale_ratio_num = (num_pitches - clamped_p) as i32;
                                     self.inspector_state.root_ratio = freq_hz;
@@ -1823,7 +1946,7 @@ impl AwardWinningGuiView {
                                 self.selected_note_id = Some(new_id);
                                 let freq_hz = self.piano_roll_tuning.pitch_to_hz(p_idx, num_pitches);
                                 self.last_auditioned_pitch_hz = freq_hz;
-                                self.last_auditioned_gate = 1.0;
+                                self.last_auditioned_gate = if self.is_piano_roll_audition_enabled { 1.0 } else { 0.0 };
                                 self.inspector_state.target_name = format!("Note {} ({:.1} Hz)", pitch_names[p_idx], freq_hz);
                                 self.inspector_state.scale_ratio_num = (num_pitches - p_idx) as i32;
                                 self.inspector_state.root_ratio = freq_hz;
@@ -1891,13 +2014,23 @@ impl AwardWinningGuiView {
                     }
                 }
 
-                // 3. Velocity Lane Background & Separator
+                // 3. Velocity / Gate / Pitch Lane Background & Separator
                 let vel_sep_y = rect.bottom() - vel_lane_h;
                 painter.line_segment([egui::pos2(rect.left(), vel_sep_y), egui::pos2(rect.right(), vel_sep_y)], Stroke::new(1.0_f32, Color32::from_rgb(36, 50, 74)));
                 painter.rect_filled(Rect::from_min_size(egui::pos2(rect.left(), vel_sep_y), Vec2::new(rect.width(), vel_lane_h)), 0.0, Color32::from_rgb(12, 16, 26));
-                painter.text(egui::pos2(rect.left() + 8.0, vel_sep_y + 4.0), egui::Align2::LEFT_TOP, "VELOCITY", FontId::proportional(8.0), Color32::from_rgb(100, 116, 139));
 
-                // 4. MIDI Note Blocks & Velocity Lane Sticks
+                // 3B. Bottom-Left Mode Badge
+                let lane_badge_rect = Rect::from_min_size(egui::pos2(rect.left() + 2.0, vel_sep_y + 4.0), Vec2::new(key_w - 4.0, vel_lane_h - 8.0));
+                painter.rect_filled(lane_badge_rect, 3.0, Color32::from_rgb(18, 24, 36));
+                painter.rect_stroke(lane_badge_rect, 3.0, Stroke::new(1.0_f32, Color32::from_rgb(36, 50, 74)));
+                let (badge_col, badge_txt) = match self.piano_roll_lane_mode {
+                    PianoRollLaneMode::Velocity => (Color32::from_rgb(56, 189, 248), "VELOCITY"),
+                    PianoRollLaneMode::Gate => (Color32::from_rgb(34, 197, 94), "GATE LEN"),
+                    PianoRollLaneMode::PitchBend => (Color32::from_rgb(245, 158, 11), "PITCH BEND"),
+                };
+                painter.text(lane_badge_rect.center(), egui::Align2::CENTER_CENTER, badge_txt, FontId::proportional(8.5), badge_col);
+
+                // 4. MIDI Note Blocks & Multi-Lane Sticks
                 for note in &self.piano_roll_notes {
                     let is_sel = self.selected_note_id == Some(note.id);
                     let clamped_p = note.pitch_idx.min(num_pitches - 1);
@@ -1942,20 +2075,36 @@ impl AwardWinningGuiView {
                         );
                     }
 
-                    // Velocity lane stick
-                    let v_height = vel_lane_h * note.velocity * 0.85;
+                    // Bottom lane stick based on piano_roll_lane_mode
+                    let (lane_val_norm, readout_text, stick_col) = match self.piano_roll_lane_mode {
+                        PianoRollLaneMode::Velocity => (
+                            note.velocity,
+                            format!("{:.0}%", note.velocity * 100.0),
+                            if is_sel { Color32::WHITE } else { Color32::from_rgb(56, 189, 248) },
+                        ),
+                        PianoRollLaneMode::Gate => (
+                            (note.length_beats / 4.0).clamp(0.05, 1.0),
+                            format!("{:.2}b", note.length_beats),
+                            if is_sel { Color32::WHITE } else { Color32::from_rgb(34, 197, 94) },
+                        ),
+                        PianoRollLaneMode::PitchBend => (
+                            0.5_f32,
+                            "0st".to_string(),
+                            if is_sel { Color32::WHITE } else { Color32::from_rgb(245, 158, 11) },
+                        ),
+                    };
+                    let v_height = vel_lane_h * lane_val_norm * 0.85;
                     let stick_x = note_x + 2.0;
                     let cap_y = rect.bottom() - 2.0 - v_height;
-                    let stick_col = if is_sel { Color32::WHITE } else { Color32::from_rgb(56, 189, 248) };
                     painter.line_segment([egui::pos2(stick_x, rect.bottom() - 2.0), egui::pos2(stick_x, cap_y)], Stroke::new(if is_sel { 2.0_f32 } else { 1.5_f32 }, stick_col));
                     painter.circle_filled(egui::pos2(stick_x, cap_y), if is_sel { 3.5 } else { 2.5 }, stick_col);
                     if is_sel {
                         painter.text(
                             egui::pos2(stick_x + 6.0, cap_y),
                             egui::Align2::LEFT_CENTER,
-                            format!("{:.0}%", note.velocity * 100.0),
+                            readout_text,
                             FontId::proportional(8.0),
-                            Color32::from_rgb(56, 189, 248),
+                            stick_col,
                         );
                     }
                 }
@@ -2711,7 +2860,7 @@ impl AwardWinningGuiView {
                     format!("{} — Volume Gain", track.name),
                     0.0_f32,
                     1.5_f32,
-                    "x",
+                    "x".to_string(),
                     (track.gain / 1.5).clamp(0.0, 1.0),
                 ),
                 "pan" => (
@@ -2719,7 +2868,7 @@ impl AwardWinningGuiView {
                     format!("{} — Stereo Pan", track.name),
                     -1.0_f32,
                     1.0_f32,
-                    "",
+                    "".to_string(),
                     ((track.pan + 1.0) * 0.5).clamp(0.0, 1.0),
                 ),
                 "mute" => (
@@ -2727,7 +2876,7 @@ impl AwardWinningGuiView {
                     format!("{} — Mute", track.name),
                     0.0_f32,
                     1.0_f32,
-                    "",
+                    "".to_string(),
                     if track.is_muted { 1.0 } else { 0.0 },
                 ),
                 "solo" => (
@@ -2735,7 +2884,7 @@ impl AwardWinningGuiView {
                     format!("{} — Solo", track.name),
                     0.0_f32,
                     1.0_f32,
-                    "",
+                    "".to_string(),
                     if track.is_soloed { 1.0 } else { 0.0 },
                 ),
                 "cutoff" => (
@@ -2743,10 +2892,122 @@ impl AwardWinningGuiView {
                     format!("{} — Filter Cutoff", track.name),
                     20.0_f32,
                     20000.0_f32,
-                    "Hz",
+                    "Hz".to_string(),
+                    self.device_rack_state.cutoff.clamp(0.0, 1.0),
+                ),
+                "resonance" => (
+                    format!("track_{}_resonance", track_id),
+                    format!("{} — Filter Resonance", track.name),
+                    0.1_f32,
+                    10.0_f32,
+                    "Q".to_string(),
+                    self.device_rack_state.resonance.clamp(0.0, 1.0),
+                ),
+                "decay" => (
+                    format!("track_{}_decay", track_id),
+                    format!("{} — Envelope Decay", track.name),
+                    0.01_f32,
+                    5.0_f32,
+                    "s".to_string(),
+                    self.device_rack_state.decay.clamp(0.0, 1.0),
+                ),
+                "drive" => (
+                    format!("track_{}_drive", track_id),
+                    format!("{} — Saturation Drive", track.name),
+                    0.0_f32,
+                    2.0_f32,
+                    "x".to_string(),
+                    self.device_rack_state.drive.clamp(0.0, 1.0),
+                ),
+                "mod" | "mod_amt" => (
+                    format!("track_{}_mod_amt", track_id),
+                    format!("{} — Modulation Depth", track.name),
+                    0.0_f32,
+                    1.0_f32,
+                    "%".to_string(),
+                    self.device_rack_state.mod_amt.clamp(0.0, 1.0),
+                ),
+                "volume" => (
+                    format!("track_{}_volume", track_id),
+                    format!("{} — Track Volume", track.name),
+                    0.0_f32,
+                    1.5_f32,
+                    "x".to_string(),
+                    self.device_rack_state.volume.clamp(0.0, 1.0),
+                ),
+                "osc_mix" => (
+                    format!("track_{}_osc_mix", track_id),
+                    format!("{} — Oscillator Mix", track.name),
+                    0.0_f32,
+                    1.0_f32,
+                    "%".to_string(),
+                    self.device_rack_state.osc_mix.clamp(0.0, 1.0),
+                ),
+                "shape" => (
+                    format!("track_{}_shape", track_id),
+                    format!("{} — Oscillator Shape", track.name),
+                    0.0_f32,
+                    1.0_f32,
+                    "%".to_string(),
+                    self.device_rack_state.shape.clamp(0.0, 1.0),
+                ),
+                "pitch" | "pitch_bend" => (
+                    format!("track_{}_pitch", track_id),
+                    format!("{} — Pitch Bend", track.name),
+                    -12.0_f32,
+                    12.0_f32,
+                    "st".to_string(),
                     0.5_f32,
                 ),
-                _ => return false,
+                "velocity" => (
+                    format!("track_{}_velocity", track_id),
+                    format!("{} — Note Velocity", track.name),
+                    0.0_f32,
+                    1.0_f32,
+                    "%".to_string(),
+                    self.selected_note_id
+                        .and_then(|sid| self.piano_roll_notes.iter().find(|n| n.id == sid))
+                        .map(|n| n.velocity)
+                        .unwrap_or(0.85),
+                ),
+                "expression" => (
+                    format!("track_{}_expression", track_id),
+                    format!("{} — Expression", track.name),
+                    0.0_f32,
+                    1.0_f32,
+                    "%".to_string(),
+                    1.0_f32,
+                ),
+                other_name => {
+                    let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+                    let cur_kind = self.device_rack_state.selected_node_kind.as_deref().unwrap_or("AetherSynth");
+                    if let Some(desc) = registry.get(cur_kind) {
+                        if let Some(param) = desc.params.iter().find(|p| p.id == other_name) {
+                            let (min_v, max_v, unit_s) = match &param.widget {
+                                crate::dsp_node_ui::DspWidgetKind::RotaryKnob { min, max, unit, .. } => (*min, *max, unit.clone()),
+                                crate::dsp_node_ui::DspWidgetKind::VerticalFader { min, max, unit, .. } => (*min, *max, unit.clone()),
+                                crate::dsp_node_ui::DspWidgetKind::Toggle { .. } => (0.0, 1.0, "state".to_string()),
+                                crate::dsp_node_ui::DspWidgetKind::EnumChoice { .. } => (0.0, 1.0, "enum".to_string()),
+                                _ => (0.0, 1.0, String::new()),
+                            };
+                            let norm_v = self.device_rack_state.node_param_values.get(other_name).copied()
+                                .map(|v| ((v - min_v) / (max_v - min_v).max(1e-5)).clamp(0.0, 1.0))
+                                .unwrap_or(0.5);
+                            (
+                                format!("track_{}_{}", track_id, param.id),
+                                format!("{} — {}", track.name, param.name),
+                                min_v,
+                                max_v,
+                                unit_s,
+                                norm_v,
+                            )
+                        } else {
+                            return false;
+                        }
+                    } else {
+                        return false;
+                    }
+                }
             };
             self.requested_modular_automation_param = Some(lane_key);
             self.show_automation_editor_window = true;
@@ -3952,11 +4213,13 @@ impl AwardWinningGuiView {
         // 8. Piano Roll Note Audition Live Dispatch (M33)
         let pitch_pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 300);
         if param_bus.get(pitch_pid).is_some() {
-            param_bus.set(pitch_pid, self.last_auditioned_pitch_hz);
+            let pitch = if self.is_piano_roll_audition_enabled { self.last_auditioned_pitch_hz } else { 0.0 };
+            param_bus.set(pitch_pid, pitch);
         }
         let gate_pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 301);
         if param_bus.get(gate_pid).is_some() {
-            param_bus.set(gate_pid, self.last_auditioned_gate);
+            let gate = if self.is_piano_roll_audition_enabled { self.last_auditioned_gate } else { 0.0 };
+            param_bus.set(gate_pid, gate);
         }
         let vel_pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 302);
         if param_bus.get(vel_pid).is_some() {
@@ -4030,6 +4293,95 @@ impl AwardWinningGuiView {
             step.active = true;
             step.muted = false;
         }
+    }
+
+    /// Select active track for Piano Roll editing and reflect its device name.
+    pub fn select_track_for_piano_roll(&mut self, track_idx: usize) -> bool {
+        if track_idx < self.tracks.len() {
+            self.selected_track_idx = track_idx;
+            let tr_name = self.tracks[track_idx].name.clone();
+            self.device_rack_state.device_name = tr_name;
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Set whether note auditioning sound is enabled during Piano Roll editing.
+    pub fn set_piano_roll_audition(&mut self, enabled: bool) {
+        self.is_piano_roll_audition_enabled = enabled;
+        if !enabled {
+            self.last_auditioned_gate = 0.0;
+        }
+    }
+
+    /// Toggle Piano Roll note auditioning sound state.
+    pub fn toggle_piano_roll_audition(&mut self) -> bool {
+        self.is_piano_roll_audition_enabled = !self.is_piano_roll_audition_enabled;
+        if !self.is_piano_roll_audition_enabled {
+            self.last_auditioned_gate = 0.0;
+        }
+        self.is_piano_roll_audition_enabled
+    }
+
+    /// Set the lower lane mode (Velocity, Gate Length, Pitch Bend).
+    pub fn set_piano_roll_lane_mode(&mut self, mode: PianoRollLaneMode) {
+        self.piano_roll_lane_mode = mode;
+    }
+
+    /// Clear all notes from the interactive Piano Roll.
+    pub fn clear_piano_roll_notes(&mut self) {
+        self.piano_roll_notes.clear();
+        self.selected_note_id = None;
+    }
+
+    /// Duplicate currently selected note in the Piano Roll, advancing by active snap grid.
+    pub fn duplicate_selected_piano_roll_note(&mut self) -> Option<usize> {
+        if let Some(sel_id) = self.selected_note_id {
+            if let Some(n) = self.piano_roll_notes.iter().find(|n| n.id == sel_id).cloned() {
+                let step = self.piano_roll_snap.step_beats().max(0.5);
+                let new_id = self.next_note_id;
+                self.next_note_id += 1;
+                self.piano_roll_notes.push(PianoRollNote {
+                    id: new_id,
+                    pitch_idx: n.pitch_idx,
+                    start_beat: n.start_beat + step,
+                    length_beats: n.length_beats,
+                    velocity: n.velocity,
+                });
+                self.selected_note_id = Some(new_id);
+                return Some(new_id);
+            }
+        }
+        None
+    }
+
+    /// Quantize all notes or selected note to the active snap grid resolution.
+    pub fn quantize_piano_roll_notes(&mut self) {
+        let snap = self.piano_roll_snap;
+        if let Some(sel_id) = self.selected_note_id {
+            if let Some(n) = self.piano_roll_notes.iter_mut().find(|n| n.id == sel_id) {
+                n.start_beat = snap.snap(n.start_beat);
+            }
+        } else {
+            for n in &mut self.piano_roll_notes {
+                n.start_beat = snap.snap(n.start_beat);
+            }
+        }
+    }
+
+    /// Transpose selected note by a number of semitones / steps.
+    pub fn transpose_selected_piano_roll_note(&mut self, steps: i32) -> bool {
+        let num_pitches = self.piano_roll_tuning.pitch_names().len();
+        let max_p = num_pitches.saturating_sub(1);
+        if let Some(sel_id) = self.selected_note_id {
+            if let Some(n) = self.piano_roll_notes.iter_mut().find(|n| n.id == sel_id) {
+                let new_p = (n.pitch_idx as i32 - steps).clamp(0, max_p as i32) as usize;
+                n.pitch_idx = new_p;
+                return true;
+            }
+        }
+        false
     }
 
     #[cfg(feature = "gui")]

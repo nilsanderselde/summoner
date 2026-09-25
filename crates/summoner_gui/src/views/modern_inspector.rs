@@ -26,6 +26,8 @@ pub struct ModernInspectorState {
     pub root_ratio: f32,
     pub octave_offset: i32,
     pub is_collapsed: bool,
+    #[serde(default)]
+    pub requested_automation_param: Option<String>,
 }
 
 impl Default for ModernInspectorState {
@@ -45,6 +47,7 @@ impl Default for ModernInspectorState {
             root_ratio: 1.0,
             octave_offset: -1,
             is_collapsed: false,
+            requested_automation_param: None,
         }
     }
 }
@@ -113,6 +116,9 @@ pub fn show_modern_inspector_with_context(
             // Gain Fader
             ui.horizontal(|ui| {
                 ui.label(RichText::new("Gain Fader").font(FontId::proportional(10.0)).color(Color32::from_rgb(148, 163, 184)));
+                if ui.small_button(RichText::new("📈").font(FontId::proportional(9.0))).on_hover_text("Open Live Bézier Automation Lane for Volume Gain").clicked() {
+                    state.requested_automation_param = Some("gain".to_string());
+                }
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     ui.label(RichText::new(format!("{:.1}dB", state.gain_db)).font(FontId::proportional(10.0)).color(Color32::from_rgb(56, 189, 248)));
                 });
@@ -124,6 +130,9 @@ pub fn show_modern_inspector_with_context(
             // Pan Fader
             ui.horizontal(|ui| {
                 ui.label(RichText::new("Pan").font(FontId::proportional(10.0)).color(Color32::from_rgb(148, 163, 184)));
+                if ui.small_button(RichText::new("📈").font(FontId::proportional(9.0))).on_hover_text("Open Live Bézier Automation Lane for Stereo Pan").clicked() {
+                    state.requested_automation_param = Some("pan".to_string());
+                }
                 let pan_text = if state.pan_val.abs() < 0.05 {
                     "C".to_string()
                 } else if state.pan_val < 0.0 {
