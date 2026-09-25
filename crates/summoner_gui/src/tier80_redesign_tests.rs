@@ -938,9 +938,9 @@ mod tests {
         assert_eq!(view.inspector_state.target_name, sel_name);
         assert_eq!(view.device_rack_state.device_name, sel_name);
 
-        // 4. Click PANIC Button (top right of stage canvas: x=1135.0, y=84.0)
+        // 4. Click PANIC Button (top right of stage canvas: x=1278.0, y=106.0)
         let mut press_panic = raw_input.clone();
-        let panic_pos = eframe::egui::pos2(1278.0, 84.0);
+        let panic_pos = eframe::egui::pos2(1278.0, 106.0);
         press_panic.events.push(eframe::egui::Event::PointerMoved(panic_pos));
         press_panic.events.push(eframe::egui::Event::PointerButton {
             pos: panic_pos,
