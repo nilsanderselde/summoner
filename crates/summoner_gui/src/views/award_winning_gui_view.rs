@@ -411,6 +411,20 @@ pub struct AwardWinningGuiView {
     pub last_auditioned_pitch_hz: f32,
     pub last_auditioned_gate: f32,
     pub requested_modular_automation_param: Option<String>,
+    pub show_automation_editor_window: bool,
+    pub automation_editor: Option<crate::views::bezier_automation_editor::BezierAutomationEditorView>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AutomationQuickShape {
+    Flat,
+    RampUp,
+    RampDown,
+    SineLfo,
+    ExpDrop,
+    SCurve,
+    Invert,
+    Smooth,
 }
 
 impl Default for AwardWinningGuiView {
@@ -598,6 +612,8 @@ impl AwardWinningGuiView {
             last_auditioned_pitch_hz: 440.0,
             last_auditioned_gate: 0.0,
             requested_modular_automation_param: None,
+            show_automation_editor_window: false,
+            automation_editor: None,
         };
         view.reset_modular_nodes();
         view
@@ -2473,9 +2489,13 @@ impl AwardWinningGuiView {
             self.inspector_state.target_name = node.display_name;
             self.inspector_state.node_param_values.clear();
             self.device_rack_state.node_param_values.clear();
+            self.last_inspector_node_param_values.clear();
+            self.last_device_rack_node_param_values.clear();
             for p in &node.params {
                 self.inspector_state.node_param_values.insert(p.id.clone(), p.value);
+                self.last_inspector_node_param_values.insert(p.id.clone(), p.value);
                 self.device_rack_state.node_param_values.insert(p.id.clone(), p.value);
+                self.last_device_rack_node_param_values.insert(p.id.clone(), p.value);
             }
             return true;
         }
@@ -2488,20 +2508,38 @@ impl AwardWinningGuiView {
         if let Some(ref sel_node_id) = self.selected_modular_node_id {
             if let Some(node) = self.modular_nodes.iter_mut().find(|n| &n.id == sel_node_id) {
                 for param in &mut node.params {
-                    if let Some(&insp_val) = self.inspector_state.node_param_values.get(&param.id) {
-                        if (insp_val - param.value).abs() > 1e-4 {
-                            param.value = insp_val.clamp(param.min, param.max);
+                    let insp_val = self.inspector_state.node_param_values.get(&param.id).copied();
+                    let last_insp = self.last_inspector_node_param_values.get(&param.id).copied();
+                    let rack_val = self.device_rack_state.node_param_values.get(&param.id).copied();
+                    let last_rack = self.last_device_rack_node_param_values.get(&param.id).copied();
+
+                    // If inspector changed, it takes precedence
+                    if let (Some(iv), Some(liv)) = (insp_val, last_insp) {
+                        if (iv - liv).abs() > 1e-4 {
+                            param.value = iv.clamp(param.min, param.max);
                         }
-                    } else {
-                        self.inspector_state.node_param_values.insert(param.id.clone(), param.value);
-                    }
-                    if let Some(&rack_val) = self.device_rack_state.node_param_values.get(&param.id) {
-                        if (rack_val - param.value).abs() > 1e-4 {
-                            param.value = rack_val.clamp(param.min, param.max);
+                    } else if let Some(iv) = insp_val {
+                        if (iv - param.value).abs() > 1e-4 && last_insp.is_none() {
+                            param.value = iv.clamp(param.min, param.max);
                         }
-                    } else {
-                        self.device_rack_state.node_param_values.insert(param.id.clone(), param.value);
                     }
+
+                    // If rack changed, it takes precedence
+                    if let (Some(rv), Some(lrv)) = (rack_val, last_rack) {
+                        if (rv - lrv).abs() > 1e-4 {
+                            param.value = rv.clamp(param.min, param.max);
+                        }
+                    } else if let Some(rv) = rack_val {
+                        if (rv - param.value).abs() > 1e-4 && last_rack.is_none() {
+                            param.value = rv.clamp(param.min, param.max);
+                        }
+                    }
+
+                    // Keep both maps and shadows updated to param.value
+                    self.inspector_state.node_param_values.insert(param.id.clone(), param.value);
+                    self.last_inspector_node_param_values.insert(param.id.clone(), param.value);
+                    self.device_rack_state.node_param_values.insert(param.id.clone(), param.value);
+                    self.last_device_rack_node_param_values.insert(param.id.clone(), param.value);
                 }
             }
         }
@@ -2510,6 +2548,126 @@ impl AwardWinningGuiView {
     /// Take any pending requested modular parameter automation lane.
     pub fn take_requested_modular_automation_param(&mut self) -> Option<String> {
         self.requested_modular_automation_param.take()
+    }
+
+    /// Open the live Bézier parameter automation editor for a specific modular node parameter.
+    pub fn open_modular_automation_editor(&mut self, node_id: &str, param_id: &str) -> bool {
+        if let Some(node) = self.modular_nodes.iter().find(|n| n.id == node_id) {
+            if let Some(param) = node.params.iter().find(|p| p.id == param_id) {
+                let lane_key = format!("modular_{}_{}", node.id, param.id);
+                self.requested_modular_automation_param = Some(lane_key.clone());
+                self.show_automation_editor_window = true;
+                let title = format!("{} — {}", node.display_name, param.name);
+                let mut editor = crate::views::bezier_automation_editor::BezierAutomationEditorView::new(
+                    title,
+                    &param.unit,
+                    param.min,
+                    param.max,
+                    16.0,
+                );
+                let norm = if (param.max - param.min).abs() > 1e-4 {
+                    ((param.value - param.min) / (param.max - param.min)).clamp(0.0, 1.0)
+                } else {
+                    0.5
+                };
+                editor.nodes.clear();
+                editor.nodes.push(crate::views::bezier_automation_editor::AutomationNode::new(
+                    "start",
+                    0.0,
+                    norm,
+                    crate::views::bezier_automation_editor::AutomationCurveType::Bezier {
+                        handle_out_y: norm,
+                        handle_in_y: norm,
+                    },
+                ));
+                editor.nodes.push(crate::views::bezier_automation_editor::AutomationNode::new(
+                    "end",
+                    16.0,
+                    norm,
+                    crate::views::bezier_automation_editor::AutomationCurveType::Linear,
+                ));
+                self.automation_editor = Some(editor);
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Close the modular parameter automation editor window.
+    pub fn close_modular_automation_editor(&mut self) {
+        self.show_automation_editor_window = false;
+    }
+
+    /// Apply an instant quick shape to the active automation curve.
+    pub fn apply_automation_quick_shape(&mut self, shape: AutomationQuickShape) {
+        if let Some(ref mut editor) = self.automation_editor {
+            match shape {
+                AutomationQuickShape::Flat => {
+                    let cur_norm = editor.nodes.first().map(|n| n.value).unwrap_or(0.5);
+                    editor.nodes = vec![
+                        crate::views::bezier_automation_editor::AutomationNode::new("n0", 0.0, cur_norm, crate::views::bezier_automation_editor::AutomationCurveType::Linear),
+                        crate::views::bezier_automation_editor::AutomationNode::new("n1", editor.total_beats, cur_norm, crate::views::bezier_automation_editor::AutomationCurveType::Linear),
+                    ];
+                }
+                AutomationQuickShape::RampUp => {
+                    editor.nodes = vec![
+                        crate::views::bezier_automation_editor::AutomationNode::new("n0", 0.0, 0.0, crate::views::bezier_automation_editor::AutomationCurveType::Linear),
+                        crate::views::bezier_automation_editor::AutomationNode::new("n1", editor.total_beats, 1.0, crate::views::bezier_automation_editor::AutomationCurveType::Linear),
+                    ];
+                }
+                AutomationQuickShape::RampDown => {
+                    editor.nodes = vec![
+                        crate::views::bezier_automation_editor::AutomationNode::new("n0", 0.0, 1.0, crate::views::bezier_automation_editor::AutomationCurveType::Linear),
+                        crate::views::bezier_automation_editor::AutomationNode::new("n1", editor.total_beats, 0.0, crate::views::bezier_automation_editor::AutomationCurveType::Linear),
+                    ];
+                }
+                AutomationQuickShape::SineLfo => {
+                    editor.nodes.clear();
+                    let steps = 8;
+                    for s in 0..=steps {
+                        let beat = (s as f64 / steps as f64) * editor.total_beats;
+                        let phase = (s as f32 / steps as f32) * std::f32::consts::TAU * 2.0;
+                        let val = 0.5 + 0.5 * phase.sin();
+                        editor.nodes.push(crate::views::bezier_automation_editor::AutomationNode::new(
+                            format!("n{}", s),
+                            beat,
+                            val,
+                            crate::views::bezier_automation_editor::AutomationCurveType::Bezier {
+                                handle_out_y: val,
+                                handle_in_y: val,
+                            },
+                        ));
+                    }
+                }
+                AutomationQuickShape::ExpDrop => {
+                    editor.nodes = vec![
+                        crate::views::bezier_automation_editor::AutomationNode::new("n0", 0.0, 1.0, crate::views::bezier_automation_editor::AutomationCurveType::Exponential { tension: 0.7 }),
+                        crate::views::bezier_automation_editor::AutomationNode::new("n1", editor.total_beats, 0.05, crate::views::bezier_automation_editor::AutomationCurveType::Linear),
+                    ];
+                }
+                AutomationQuickShape::SCurve => {
+                    editor.nodes = vec![
+                        crate::views::bezier_automation_editor::AutomationNode::new("n0", 0.0, 0.0, crate::views::bezier_automation_editor::AutomationCurveType::Bezier { handle_out_y: 0.1, handle_in_y: 0.9 }),
+                        crate::views::bezier_automation_editor::AutomationNode::new("n1", editor.total_beats, 1.0, crate::views::bezier_automation_editor::AutomationCurveType::Linear),
+                    ];
+                }
+                AutomationQuickShape::Invert => {
+                    for node in &mut editor.nodes {
+                        node.value = (1.0 - node.value).clamp(0.0, 1.0);
+                    }
+                }
+                AutomationQuickShape::Smooth => {
+                    for node in &mut editor.nodes {
+                        if let crate::views::bezier_automation_editor::AutomationCurveType::Linear = node.curve {
+                            node.curve = crate::views::bezier_automation_editor::AutomationCurveType::Bezier {
+                                handle_out_y: node.value,
+                                handle_in_y: node.value,
+                            };
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /// Synchronize all modular node sockets and active patch cords into the PatchMatrixView.
@@ -3427,14 +3585,47 @@ impl AwardWinningGuiView {
             }
         }
 
+        // 7a-2. Sync active Bézier automation editor curve into automation timeline (M33)
+        if let Some(ref lane_key) = self.requested_modular_automation_param {
+            if let Some(ref editor) = self.automation_editor {
+                let lane = automation_timeline.lanes.entry(lane_key.clone()).or_insert_with(|| {
+                    summoner_sequencer::automation_timeline::AutomationLane {
+                        param_id: lane_key.clone(),
+                        curve: summoner_sequencer::automation_timeline::AutomationCurve { points: Vec::new() },
+                    }
+                });
+                lane.curve.points.clear();
+                for node in &editor.nodes {
+                    let val = editor.min_display + node.value * (editor.max_display - editor.min_display);
+                    let interp = match node.curve {
+                        crate::views::bezier_automation_editor::AutomationCurveType::Hold => summoner_sequencer::automation_timeline::Interpolation::Step,
+                        _ => summoner_sequencer::automation_timeline::Interpolation::Linear,
+                    };
+                    lane.curve.points.push(summoner_sequencer::automation_timeline::AutomationPoint {
+                        beat: node.time_beats,
+                        value: val,
+                        interp,
+                    });
+                }
+            }
+        }
+
+        // Keep selected modular node parameters synchronized with Inspector & Device Rack
+        self.sync_selected_modular_node_params();
+
         // 7b. All Modular Nodes Faceplate Parameters Dispatch & Live Recording (M33)
-        for (n_idx, mod_node) in self.modular_nodes.iter().enumerate() {
-            for (p_idx, param) in mod_node.params.iter().enumerate() {
+        for (n_idx, mod_node) in self.modular_nodes.iter_mut().enumerate() {
+            for (p_idx, param) in mod_node.params.iter_mut().enumerate() {
+                let auto_key = format!("modular_{}_{}", mod_node.id, param.id);
+                if !is_recording_automation {
+                    if let Some(val) = automation_timeline.evaluate(&auto_key, playhead_beat) {
+                        param.value = val.clamp(param.min, param.max);
+                    }
+                }
                 let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 500 + (n_idx as u32 * 16) + p_idx as u32);
                 if param_bus.get(pid).is_some() {
                     param_bus.set(pid, param.value);
                 }
-                let auto_key = format!("modular_{}_{}", mod_node.id, param.id);
                 if automation_registry.get_param(&auto_key).is_none() {
                     automation_registry.register_param(&auto_key, param.value);
                 }
@@ -3461,22 +3652,34 @@ impl AwardWinningGuiView {
         }
 
         if let Some(ref mod_node_id) = self.selected_modular_node_id {
-            for (k, &v) in &self.inspector_state.node_param_values {
+            let is_external = self.modular_nodes.iter().all(|n| &n.id != mod_node_id);
+            for (p_idx, (k, &v)) in self.inspector_state.node_param_values.iter().enumerate() {
                 let auto_key = format!("modular_{}_{}", mod_node_id, k);
                 if automation_registry.get_param(&auto_key).is_none() {
                     automation_registry.register_param(&auto_key, v);
                 }
                 automation_registry.set(&auto_key, v);
+                if is_external {
+                    let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 500 + p_idx as u32);
+                    if param_bus.get(pid).is_some() {
+                        param_bus.set(pid, v);
+                    }
+                }
             }
         }
 
         // 7c. Modular Patch Cord Intensity Dispatch & Live Recording (M33)
-        for (c_idx, cord) in self.patch_cords.iter().enumerate() {
+        for (c_idx, cord) in self.patch_cords.iter_mut().enumerate() {
+            let cord_auto_key = format!("modular_cord_{}_{}_{}_{}_intensity", cord.from_node_id, cord.from_port_id, cord.to_node_id, cord.to_port_id);
+            if !is_recording_automation {
+                if let Some(val) = automation_timeline.evaluate(&cord_auto_key, playhead_beat) {
+                    cord.intensity = val.clamp(-1.0, 1.0);
+                }
+            }
             let cord_pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 700 + c_idx as u32);
             if param_bus.get(cord_pid).is_some() {
                 param_bus.set(cord_pid, cord.intensity);
             }
-            let cord_auto_key = format!("modular_cord_{}_{}_{}_{}_intensity", cord.from_node_id, cord.from_port_id, cord.to_node_id, cord.to_port_id);
             if automation_registry.get_param(&cord_auto_key).is_none() {
                 automation_registry.register_param(&cord_auto_key, cord.intensity);
             }
@@ -3685,6 +3888,7 @@ impl AwardWinningGuiView {
                 }
 
                 self.show_modular_dsp_catalog_window(ui);
+                self.show_modular_automation_editor_window(ui);
             });
     }
 
@@ -3898,6 +4102,69 @@ impl AwardWinningGuiView {
     }
 
     #[cfg(feature = "gui")]
+    fn show_modular_automation_editor_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_automation_editor_window {
+            return;
+        }
+
+        let mut is_open = self.show_automation_editor_window;
+        let mut close_window = false;
+        let param_title = self.requested_modular_automation_param.clone().unwrap_or_else(|| "Parameter".into());
+        let window_title = format!("🎛️ Live Parameter Automation — {} (M33)", param_title);
+
+        egui::Window::new(window_title)
+            .id(egui::Id::new("modular_automation_editor_modal"))
+            .open(&mut is_open)
+            .default_size([720.0, 420.0])
+            .min_size([580.0, 340.0])
+            .collapsible(true)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal_wrapped(|ui| {
+                    ui.label(RichText::new("Quick Shapes:").font(FontId::proportional(11.0)).strong().color(Color32::from_rgb(148, 163, 184)));
+                    if ui.button("Flat").clicked() {
+                        self.apply_automation_quick_shape(AutomationQuickShape::Flat);
+                    }
+                    if ui.button("📈 Ramp Up").clicked() {
+                        self.apply_automation_quick_shape(AutomationQuickShape::RampUp);
+                    }
+                    if ui.button("📉 Ramp Down").clicked() {
+                        self.apply_automation_quick_shape(AutomationQuickShape::RampDown);
+                    }
+                    if ui.button("∿ Sine LFO").clicked() {
+                        self.apply_automation_quick_shape(AutomationQuickShape::SineLfo);
+                    }
+                    if ui.button("⚡ Exp Drop").clicked() {
+                        self.apply_automation_quick_shape(AutomationQuickShape::ExpDrop);
+                    }
+                    if ui.button("〰 S-Curve").clicked() {
+                        self.apply_automation_quick_shape(AutomationQuickShape::SCurve);
+                    }
+                    if ui.button("⇅ Invert").clicked() {
+                        self.apply_automation_quick_shape(AutomationQuickShape::Invert);
+                    }
+                    if ui.button("✨ Smooth").clicked() {
+                        self.apply_automation_quick_shape(AutomationQuickShape::Smooth);
+                    }
+                    ui.separator();
+                    if ui.button("✕ Close").clicked() {
+                        close_window = true;
+                    }
+                });
+                ui.separator();
+
+                if let Some(ref mut editor) = self.automation_editor {
+                    editor.show(ui);
+                }
+            });
+
+        if close_window {
+            is_open = false;
+        }
+        self.show_automation_editor_window = is_open;
+    }
+
+    #[cfg(feature = "gui")]
     fn render_patch_cords_canvas(&mut self, ui: &mut egui::Ui, available_h: f32) {
         let (resp, painter) = ui.allocate_painter(Vec2::new(ui.available_width(), available_h), egui::Sense::click_and_drag());
         let rect = resp.rect;
@@ -3993,6 +4260,10 @@ impl AwardWinningGuiView {
 
         let mut node_selected = None;
         let mut clicked_socket = None;
+        let mut clicked_knob_auto = None;
+        let mut node_to_delete = None;
+        let mut node_to_bypass = None;
+        let mut node_to_duplicate = None;
         let mut node_to_inspect = None;
         let mut node_to_auto = None;
 
@@ -4010,6 +4281,8 @@ impl AwardWinningGuiView {
                         if pos.distance(k_pos) <= 13.0 {
                             if resp.double_clicked() {
                                 clicked_knob = Some((node.id.clone(), param.id.clone(), true));
+                            } else if resp.secondary_clicked() {
+                                clicked_knob_auto = Some((node.id.clone(), param.id.clone()));
                             } else if clicked {
                                 clicked_knob = Some((node.id.clone(), param.id.clone(), false));
                             } else if resp.dragged() {
@@ -4117,12 +4390,16 @@ impl AwardWinningGuiView {
             self.inspector_state.is_collapsed = false;
         } else if let Some(id) = node_to_auto {
             self.select_modular_node(&id);
-            if let Some(node) = self.modular_nodes.iter().find(|n| n.id == id) {
-                if let Some(first_p) = node.params.first() {
-                    let lane_key = format!("modular_{}_{}", node.id, first_p.id);
-                    self.requested_modular_automation_param = Some(lane_key);
-                }
+            let first_p_id = self.modular_nodes.iter().find(|n| n.id == id)
+                .and_then(|node| node.params.first().map(|p| p.id.clone()));
+            if let Some(p_id) = first_p_id {
+                self.open_modular_automation_editor(&id, &p_id);
             }
+        }
+
+        if let Some((n_id, p_id)) = clicked_knob_auto {
+            self.select_modular_node(&n_id);
+            self.open_modular_automation_editor(&n_id, &p_id);
         }
 
         // Right-click on empty canvas opens the Modular DSP Catalog
@@ -4241,24 +4518,36 @@ impl AwardWinningGuiView {
             );
 
             // Action buttons on header
-            let del_rect = Rect::from_min_size(egui::pos2(n_rect.right() - 18.0, n_rect.top() + 4.0), Vec2::new(14.0, 14.0));
-            let byp_rect = Rect::from_min_size(egui::pos2(del_rect.left() - 22.0, n_rect.top() + 4.0), Vec2::new(20.0, 14.0));
-            let dup_rect = Rect::from_min_size(egui::pos2(byp_rect.left() - 18.0, n_rect.top() + 4.0), Vec2::new(16.0, 14.0));
+            let del_rect = Rect::from_min_size(egui::pos2(n_rect.right() - 16.0, n_rect.top() + 4.0), Vec2::new(13.0, 14.0));
+            let byp_rect = Rect::from_min_size(egui::pos2(del_rect.left() - 20.0, n_rect.top() + 4.0), Vec2::new(18.0, 14.0));
+            let dup_rect = Rect::from_min_size(egui::pos2(byp_rect.left() - 16.0, n_rect.top() + 4.0), Vec2::new(14.0, 14.0));
+            let insp_rect = Rect::from_min_size(egui::pos2(dup_rect.left() - 16.0, n_rect.top() + 4.0), Vec2::new(14.0, 14.0));
+            let auto_rect = Rect::from_min_size(egui::pos2(insp_rect.left() - 16.0, n_rect.top() + 4.0), Vec2::new(14.0, 14.0));
 
             let del_hovered = pointer_pos.map(|p| del_rect.contains(p)).unwrap_or(false);
             let byp_hovered = pointer_pos.map(|p| byp_rect.contains(p)).unwrap_or(false);
             let dup_hovered = pointer_pos.map(|p| dup_rect.contains(p)).unwrap_or(false);
+            let insp_hovered = pointer_pos.map(|p| insp_rect.contains(p)).unwrap_or(false);
+            let auto_hovered = pointer_pos.map(|p| auto_rect.contains(p)).unwrap_or(false);
 
-            // Duplicate button
+            // Auto button (∿)
+            painter.rect_filled(auto_rect, 2.0, if auto_hovered { Color32::from_rgb(168, 85, 247) } else { Color32::from_rgb(24, 34, 52) });
+            painter.text(auto_rect.center(), egui::Align2::CENTER_CENTER, "∿", FontId::proportional(9.0), Color32::from_rgb(241, 245, 249));
+
+            // Inspector button (🔎)
+            painter.rect_filled(insp_rect, 2.0, if insp_hovered { Color32::from_rgb(14, 165, 233) } else { Color32::from_rgb(24, 34, 52) });
+            painter.text(insp_rect.center(), egui::Align2::CENTER_CENTER, "🔎", FontId::proportional(8.0), Color32::from_rgb(241, 245, 249));
+
+            // Duplicate button (⧉)
             painter.rect_filled(dup_rect, 2.0, if dup_hovered { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(24, 34, 52) });
             painter.text(dup_rect.center(), egui::Align2::CENTER_CENTER, "⧉", FontId::proportional(9.0), Color32::from_rgb(241, 245, 249));
 
-            // Bypass button
+            // Bypass button (ON/OFF)
             painter.rect_filled(byp_rect, 2.0, if node.bypassed { Color32::from_rgb(245, 158, 11) } else if byp_hovered { Color32::from_rgb(38, 54, 82) } else { Color32::from_rgb(24, 34, 52) });
             let byp_text = if node.bypassed { "OFF" } else { "ON" };
             painter.text(byp_rect.center(), egui::Align2::CENTER_CENTER, byp_text, FontId::proportional(8.0), if node.bypassed { Color32::BLACK } else { Color32::from_rgb(148, 163, 184) });
 
-            // Delete button
+            // Delete button (✕)
             painter.rect_filled(del_rect, 2.0, if del_hovered { Color32::from_rgb(220, 38, 38) } else { Color32::from_rgb(24, 34, 52) });
             painter.text(del_rect.center(), egui::Align2::CENTER_CENTER, "✕", FontId::proportional(9.0), Color32::from_rgb(241, 245, 249));
 
