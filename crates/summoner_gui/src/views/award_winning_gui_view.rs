@@ -410,6 +410,7 @@ pub struct AwardWinningGuiView {
     pub piano_roll_resizing_note_id: Option<usize>,
     pub last_auditioned_pitch_hz: f32,
     pub last_auditioned_gate: f32,
+    pub requested_modular_automation_param: Option<String>,
 }
 
 impl Default for AwardWinningGuiView {
@@ -596,6 +597,7 @@ impl AwardWinningGuiView {
             piano_roll_resizing_note_id: None,
             last_auditioned_pitch_hz: 440.0,
             last_auditioned_gate: 0.0,
+            requested_modular_automation_param: None,
         };
         view.reset_modular_nodes();
         view
@@ -1028,6 +1030,7 @@ impl AwardWinningGuiView {
         }
         self.last_inspector_node_param_values = self.inspector_state.node_param_values.clone();
         self.last_device_rack_node_param_values = self.device_rack_state.node_param_values.clone();
+        self.sync_selected_modular_node_params();
 
         ui.vertical(|ui| {
             // Zone 1: Top Bar
@@ -2122,6 +2125,7 @@ impl AwardWinningGuiView {
             },
         ];
         self.selected_patch_cord_idx = None;
+        self.select_modular_node("osc_1");
     }
 
     pub fn add_modular_node_from_descriptor(&mut self, desc: &crate::dsp_node_ui::DspNodeDescriptor) {
@@ -2224,12 +2228,9 @@ impl AwardWinningGuiView {
             graph_node_idx,
             bypassed: false,
         };
-        self.selected_modular_node_id = Some(node_id);
-        self.device_rack_state.selected_node_kind = Some(desc.kind_id.clone());
-        self.device_rack_state.device_name = desc.display_name.clone();
-        self.inspector_state.selected_node_kind = Some(desc.kind_id.clone());
-        self.inspector_state.target_name = desc.display_name.clone();
+        let n_id = node_id.clone();
         self.modular_nodes.push(instance);
+        self.select_modular_node(&n_id);
     }
 
     /// Remove a modular node from the canvas, disconnect all its cables, and update the graph.
@@ -2432,6 +2433,7 @@ impl AwardWinningGuiView {
                 param.value = value.clamp(param.min, param.max);
                 if self.selected_modular_node_id.as_deref() == Some(node_id) {
                     self.inspector_state.node_param_values.insert(param_id.to_string(), param.value);
+                    self.device_rack_state.node_param_values.insert(param_id.to_string(), param.value);
                 }
                 return true;
             }
@@ -2454,8 +2456,60 @@ impl AwardWinningGuiView {
         let def = param.default_value;
         if self.selected_modular_node_id.as_deref() == Some(node_id) {
             self.inspector_state.node_param_values.insert(param_id.to_string(), def);
+            self.device_rack_state.node_param_values.insert(param_id.to_string(), def);
         }
         Some(def)
+    }
+
+    /// Programmatically select a modular node by id, synchronizing its descriptor and parameters
+    /// into both the Pro Inspector and Device Rack drawers.
+    pub fn select_modular_node(&mut self, node_id: &str) -> bool {
+        if let Some(node) = self.modular_nodes.iter().find(|n| n.id == node_id).cloned() {
+            self.selected_patch_cord_idx = None;
+            self.selected_modular_node_id = Some(node_id.to_string());
+            self.device_rack_state.selected_node_kind = Some(node.kind_id.clone());
+            self.device_rack_state.device_name = node.display_name.clone();
+            self.inspector_state.selected_node_kind = Some(node.kind_id);
+            self.inspector_state.target_name = node.display_name;
+            self.inspector_state.node_param_values.clear();
+            self.device_rack_state.node_param_values.clear();
+            for p in &node.params {
+                self.inspector_state.node_param_values.insert(p.id.clone(), p.value);
+                self.device_rack_state.node_param_values.insert(p.id.clone(), p.value);
+            }
+            return true;
+        }
+        false
+    }
+
+    /// Synchronize parameter values bidirectionally between selected modular node faceplate
+    /// and the active Inspector / Device Rack parameter maps.
+    pub fn sync_selected_modular_node_params(&mut self) {
+        if let Some(ref sel_node_id) = self.selected_modular_node_id {
+            if let Some(node) = self.modular_nodes.iter_mut().find(|n| &n.id == sel_node_id) {
+                for param in &mut node.params {
+                    if let Some(&insp_val) = self.inspector_state.node_param_values.get(&param.id) {
+                        if (insp_val - param.value).abs() > 1e-4 {
+                            param.value = insp_val.clamp(param.min, param.max);
+                        }
+                    } else {
+                        self.inspector_state.node_param_values.insert(param.id.clone(), param.value);
+                    }
+                    if let Some(&rack_val) = self.device_rack_state.node_param_values.get(&param.id) {
+                        if (rack_val - param.value).abs() > 1e-4 {
+                            param.value = rack_val.clamp(param.min, param.max);
+                        }
+                    } else {
+                        self.device_rack_state.node_param_values.insert(param.id.clone(), param.value);
+                    }
+                }
+            }
+        }
+    }
+
+    /// Take any pending requested modular parameter automation lane.
+    pub fn take_requested_modular_automation_param(&mut self) -> Option<String> {
+        self.requested_modular_automation_param.take()
     }
 
     /// Synchronize all modular node sockets and active patch cords into the PatchMatrixView.
@@ -3085,11 +3139,15 @@ impl AwardWinningGuiView {
                     self.last_inspector_soloed = is_s;
                 }
             }
-            if let Some(ref mod_node_id) = self.selected_modular_node_id {
-                for (k, v) in &mut self.inspector_state.node_param_values {
-                    let auto_key = format!("modular_{}_{}", mod_node_id, k);
+            for mod_node in &mut self.modular_nodes {
+                for param in &mut mod_node.params {
+                    let auto_key = format!("modular_{}_{}", mod_node.id, param.id);
                     if let Some(val) = automation_timeline.evaluate(&auto_key, playhead_beat) {
-                        *v = val;
+                        param.value = val.clamp(param.min, param.max);
+                        if self.selected_modular_node_id.as_deref() == Some(&mod_node.id) {
+                            self.inspector_state.node_param_values.insert(param.id.clone(), param.value);
+                            self.device_rack_state.node_param_values.insert(param.id.clone(), param.value);
+                        }
                     }
                 }
             }
@@ -3897,8 +3955,10 @@ impl AwardWinningGuiView {
 
                 if let Some(pos) = pointer_pos {
                     if pos.distance(mid_pt) <= 14.0 {
-                        if clicked || resp.secondary_clicked() {
-                            clicked_cord_puck = Some((c_idx, resp.secondary_clicked()));
+                        if resp.double_clicked() {
+                            clicked_cord_puck = Some((c_idx, false, true));
+                        } else if clicked || resp.secondary_clicked() {
+                            clicked_cord_puck = Some((c_idx, resp.secondary_clicked(), false));
                         } else if resp.dragged() {
                             dragged_cord_puck = Some(c_idx);
                         }
@@ -3908,8 +3968,10 @@ impl AwardWinningGuiView {
         }
 
         let drag_delta = resp.drag_delta();
-        if let Some((c_idx, is_sec)) = clicked_cord_puck {
-            if is_sec {
+        if let Some((c_idx, is_sec, is_double)) = clicked_cord_puck {
+            if is_double {
+                self.patch_cords[c_idx].intensity = 1.0;
+            } else if is_sec {
                 self.patch_cords[c_idx].intensity = -self.patch_cords[c_idx].intensity;
             }
             self.selected_patch_cord_idx = Some(c_idx);
@@ -3923,16 +3985,16 @@ impl AwardWinningGuiView {
             );
         } else if let Some(c_idx) = dragged_cord_puck {
             let delta_y = drag_delta.y;
-            self.patch_cords[c_idx].intensity = (self.patch_cords[c_idx].intensity - delta_y * 0.015).clamp(-1.0, 1.0);
+            let speed = if ui.input(|i| i.modifiers.shift) { 0.003 } else { 0.015 };
+            self.patch_cords[c_idx].intensity = (self.patch_cords[c_idx].intensity - delta_y * speed).clamp(-1.0, 1.0);
             self.selected_patch_cord_idx = Some(c_idx);
             self.selected_modular_node_id = None;
         }
 
         let mut node_selected = None;
         let mut clicked_socket = None;
-        let mut node_to_delete = None;
-        let mut node_to_bypass = None;
-        let mut node_to_duplicate = None;
+        let mut node_to_inspect = None;
+        let mut node_to_auto = None;
 
         if clicked_cord_puck.is_none() && dragged_cord_puck.is_none() {
             for node in &self.modular_nodes {
@@ -3972,9 +4034,11 @@ impl AwardWinningGuiView {
                 // Check header action button clicks
                 if clicked_knob.is_none() && dragged_knob.is_none() && clicked_socket.is_none() && clicked {
                     if let Some(pos) = pointer_pos {
-                        let del_rect = Rect::from_min_size(egui::pos2(n_rect.right() - 18.0, n_rect.top() + 4.0), Vec2::new(14.0, 14.0));
-                        let byp_rect = Rect::from_min_size(egui::pos2(del_rect.left() - 22.0, n_rect.top() + 4.0), Vec2::new(20.0, 14.0));
-                        let dup_rect = Rect::from_min_size(egui::pos2(byp_rect.left() - 18.0, n_rect.top() + 4.0), Vec2::new(16.0, 14.0));
+                        let del_rect = Rect::from_min_size(egui::pos2(n_rect.right() - 16.0, n_rect.top() + 4.0), Vec2::new(13.0, 14.0));
+                        let byp_rect = Rect::from_min_size(egui::pos2(del_rect.left() - 20.0, n_rect.top() + 4.0), Vec2::new(18.0, 14.0));
+                        let dup_rect = Rect::from_min_size(egui::pos2(byp_rect.left() - 16.0, n_rect.top() + 4.0), Vec2::new(14.0, 14.0));
+                        let insp_rect = Rect::from_min_size(egui::pos2(dup_rect.left() - 16.0, n_rect.top() + 4.0), Vec2::new(14.0, 14.0));
+                        let auto_rect = Rect::from_min_size(egui::pos2(insp_rect.left() - 16.0, n_rect.top() + 4.0), Vec2::new(14.0, 14.0));
 
                         if del_rect.contains(pos) {
                             node_to_delete = Some(node.id.clone());
@@ -3982,6 +4046,10 @@ impl AwardWinningGuiView {
                             node_to_bypass = Some(node.id.clone());
                         } else if dup_rect.contains(pos) {
                             node_to_duplicate = Some(node.id.clone());
+                        } else if insp_rect.contains(pos) {
+                            node_to_inspect = Some(node.id.clone());
+                        } else if auto_rect.contains(pos) {
+                            node_to_auto = Some(node.id.clone());
                         } else if n_rect.contains(pos) {
                             node_selected = Some((node.id.clone(), node.kind_id.clone(), node.display_name.clone()));
                         }
@@ -4006,6 +4074,7 @@ impl AwardWinningGuiView {
                     param.value = (param.value - delta_y * range * speed).clamp(param.min, param.max);
                     if self.selected_modular_node_id.as_deref() == Some(&n_id) {
                         self.inspector_state.node_param_values.insert(param.id.clone(), param.value);
+                        self.device_rack_state.node_param_values.insert(param.id.clone(), param.value);
                     }
                 }
             }
@@ -4014,7 +4083,12 @@ impl AwardWinningGuiView {
             }
         } else if let Some((n_id, p_id, is_double)) = clicked_knob {
             if is_double {
-                self.reset_modular_node_param(&n_id, &p_id);
+                if let Some(def_val) = self.reset_modular_node_param(&n_id, &p_id) {
+                    if self.selected_modular_node_id.as_deref() == Some(&n_id) {
+                        self.inspector_state.node_param_values.insert(p_id.clone(), def_val);
+                        self.device_rack_state.node_param_values.insert(p_id.clone(), def_val);
+                    }
+                }
             }
             if let Some(node) = self.modular_nodes.iter().find(|n| n.id == n_id) {
                 node_selected = Some((node.id.clone(), node.kind_id.clone(), node.display_name.clone()));
@@ -4038,6 +4112,17 @@ impl AwardWinningGuiView {
             self.toggle_bypass_modular_node(&id);
         } else if let Some(id) = node_to_duplicate {
             self.duplicate_modular_node(&id);
+        } else if let Some(id) = node_to_inspect {
+            self.select_modular_node(&id);
+            self.inspector_state.is_collapsed = false;
+        } else if let Some(id) = node_to_auto {
+            self.select_modular_node(&id);
+            if let Some(node) = self.modular_nodes.iter().find(|n| n.id == id) {
+                if let Some(first_p) = node.params.first() {
+                    let lane_key = format!("modular_{}_{}", node.id, first_p.id);
+                    self.requested_modular_automation_param = Some(lane_key);
+                }
+            }
         }
 
         // Right-click on empty canvas opens the Modular DSP Catalog
@@ -4079,6 +4164,7 @@ impl AwardWinningGuiView {
                                 intensity: 1.0,
                             });
                             self.connect_patch_cord_in_graph(&src_node, &src_port, &node_id, &port_id);
+                            self.selected_patch_cord_idx = Some(self.patch_cords.len() - 1);
                         }
                     }
                 } else {
@@ -4099,13 +4185,8 @@ impl AwardWinningGuiView {
             self.selected_patch_cord_idx = None;
         }
 
-        if let Some((node_id, kind_id, display_name)) = node_selected {
-            self.selected_patch_cord_idx = None;
-            self.selected_modular_node_id = Some(node_id);
-            self.device_rack_state.selected_node_kind = Some(kind_id.clone());
-            self.device_rack_state.device_name = display_name.clone();
-            self.inspector_state.selected_node_kind = Some(kind_id);
-            self.inspector_state.target_name = display_name;
+        if let Some((node_id, _kind_id, _display_name)) = node_selected {
+            self.select_modular_node(&node_id);
         }
 
         // Keyboard shortcuts for modular canvas: Delete/Backspace removes selected cord
