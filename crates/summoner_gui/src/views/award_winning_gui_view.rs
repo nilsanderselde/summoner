@@ -2779,6 +2779,50 @@ impl AwardWinningGuiView {
         self.show_automation_editor_window = false;
     }
 
+    /// Open the live Bézier automation editor for a modular patch cord's intensity attenuator.
+    pub fn open_patch_cord_automation_editor(&mut self, cord_idx: usize) -> bool {
+        if cord_idx >= self.patch_cords.len() {
+            return false;
+        }
+        let cord = &self.patch_cords[cord_idx];
+        let lane_key = format!(
+            "modular_cord_{}_{}_{}_{}_intensity",
+            cord.from_node_id, cord.from_port_id, cord.to_node_id, cord.to_port_id
+        );
+        self.requested_modular_automation_param = Some(lane_key);
+        self.show_automation_editor_window = true;
+        let title = format!(
+            "Cable: {}:{} ➔ {}:{} Attenuation",
+            cord.from_node_id, cord.from_port_id, cord.to_node_id, cord.to_port_id
+        );
+        let mut editor = crate::views::bezier_automation_editor::BezierAutomationEditorView::new(
+            title,
+            "%",
+            -1.0,
+            1.0,
+            16.0,
+        );
+        let norm = ((cord.intensity + 1.0) / 2.0).clamp(0.0, 1.0);
+        editor.nodes.clear();
+        editor.nodes.push(crate::views::bezier_automation_editor::AutomationNode::new(
+            "start",
+            0.0,
+            norm,
+            crate::views::bezier_automation_editor::AutomationCurveType::Bezier {
+                handle_out_y: norm,
+                handle_in_y: norm,
+            },
+        ));
+        editor.nodes.push(crate::views::bezier_automation_editor::AutomationNode::new(
+            "end",
+            16.0,
+            norm,
+            crate::views::bezier_automation_editor::AutomationCurveType::Linear,
+        ));
+        self.automation_editor = Some(editor);
+        true
+    }
+
     /// Apply an instant quick shape to the active automation curve.
     pub fn apply_automation_quick_shape(&mut self, shape: AutomationQuickShape) {
         if let Some(ref mut editor) = self.automation_editor {
@@ -4300,7 +4344,55 @@ impl AwardWinningGuiView {
         if track_idx < self.tracks.len() {
             self.selected_track_idx = track_idx;
             let tr_name = self.tracks[track_idx].name.clone();
-            self.device_rack_state.device_name = tr_name;
+            self.device_rack_state.device_name = tr_name.clone();
+            self.inspector_state.target_name = tr_name;
+            if let Some(tr) = self.tracks.get(track_idx) {
+                self.inspector_state.gain_db = (tr.gain - 1.0) * 12.0;
+                self.inspector_state.pan_val = tr.pan;
+                self.inspector_state.is_muted = tr.is_muted;
+                self.inspector_state.is_soloed = tr.is_soloed;
+                self.inspector_state.is_armed = tr.is_armed;
+            }
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Select active track for Modular canvas routing and reflect its state across Inspector and Device Rack.
+    pub fn select_track_for_modular(&mut self, track_idx: usize) -> bool {
+        if track_idx < self.tracks.len() {
+            self.selected_track_idx = track_idx;
+            let tr_name = self.tracks[track_idx].name.clone();
+            self.device_rack_state.device_name = tr_name.clone();
+            self.inspector_state.target_name = tr_name;
+            if let Some(tr) = self.tracks.get(track_idx) {
+                self.inspector_state.gain_db = (tr.gain - 1.0) * 12.0;
+                self.inspector_state.pan_val = tr.pan;
+                self.inspector_state.is_muted = tr.is_muted;
+                self.inspector_state.is_soloed = tr.is_soloed;
+                self.inspector_state.is_armed = tr.is_armed;
+            }
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Select active track for Stage / Live Performance Matrix and reflect its state across Inspector and Device Rack.
+    pub fn select_track_for_stage(&mut self, track_idx: usize) -> bool {
+        if track_idx < self.tracks.len() {
+            self.selected_track_idx = track_idx;
+            let tr_name = self.tracks[track_idx].name.clone();
+            self.device_rack_state.device_name = tr_name.clone();
+            self.inspector_state.target_name = tr_name;
+            if let Some(tr) = self.tracks.get(track_idx) {
+                self.inspector_state.gain_db = (tr.gain - 1.0) * 12.0;
+                self.inspector_state.pan_val = tr.pan;
+                self.inspector_state.is_muted = tr.is_muted;
+                self.inspector_state.is_soloed = tr.is_soloed;
+                self.inspector_state.is_armed = tr.is_armed;
+            }
             true
         } else {
             false
@@ -4397,7 +4489,82 @@ impl AwardWinningGuiView {
                 // Modular Pro Toolbar: Switch between Patch Cords & Routing Matrix, Add Modules from DspNodeRegistry
                 ui.horizontal(|ui| {
                     ui.label(RichText::new("Modular Routing").font(FontId::proportional(11.0)).strong().color(Color32::from_rgb(241, 245, 249)));
-                    ui.add_space(8.0);
+                    ui.add_space(4.0);
+
+                    // 1-Click Pro View Switchers
+                    if ui.button(RichText::new("📋 Arranger").font(FontId::proportional(10.0)).color(Color32::from_rgb(200, 215, 235))).clicked() {
+                        self.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::Arranger;
+                    }
+                    if ui.button(RichText::new("🎹 Piano Roll").font(FontId::proportional(10.0)).color(Color32::from_rgb(200, 215, 235))).clicked() {
+                        self.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::PianoRoll;
+                    }
+                    if ui.button(RichText::new("🎚 Mixer").font(FontId::proportional(10.0)).color(Color32::from_rgb(200, 215, 235))).clicked() {
+                        self.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::Mixer;
+                    }
+
+                    ui.add_space(4.0);
+
+                    // Track Selector ComboBox
+                    let cur_tname = self.tracks.get(self.selected_track_idx).map(|t| t.name.as_str()).unwrap_or("Master");
+                    let mut switch_track = None;
+                    egui::ComboBox::from_id_source("modular_track_selector")
+                        .selected_text(RichText::new(format!("🎚 Track: {}", cur_tname)).font(FontId::proportional(10.0)).color(Color32::from_rgb(56, 189, 248)))
+                        .show_ui(ui, |ui| {
+                            for (t_idx, t) in self.tracks.iter().enumerate() {
+                                let is_sel = t_idx == self.selected_track_idx;
+                                if ui.selectable_label(is_sel, &t.name).clicked() {
+                                    switch_track = Some(t_idx);
+                                }
+                            }
+                        });
+                    if let Some(idx) = switch_track {
+                        self.select_track_for_modular(idx);
+                    }
+
+                    ui.add_space(4.0);
+
+                    // 1-Click Live Parameter Automation Launcher
+                    let mut auto_req = None;
+                    let mut mod_auto_req = None;
+                    egui::ComboBox::from_id_source("modular_auto_selector")
+                        .selected_text(RichText::new("📈 Auto ▾").font(FontId::proportional(10.0)).color(Color32::from_rgb(234, 179, 8)))
+                        .show_ui(ui, |ui| {
+                            let cur_tid = self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1);
+                            if ui.button("Gain").clicked() {
+                                auto_req = Some((cur_tid, "gain".to_string()));
+                            }
+                            if ui.button("Pan").clicked() {
+                                auto_req = Some((cur_tid, "pan".to_string()));
+                            }
+                            if ui.button("Cutoff").clicked() {
+                                auto_req = Some((cur_tid, "cutoff".to_string()));
+                            }
+                            if ui.button("Resonance").clicked() {
+                                auto_req = Some((cur_tid, "resonance".to_string()));
+                            }
+                            if ui.button("Drive").clicked() {
+                                auto_req = Some((cur_tid, "drive".to_string()));
+                            }
+                            if let Some(ref sel_n_id) = self.selected_modular_node_id {
+                                if let Some(node) = self.modular_nodes.iter().find(|n| &n.id == sel_n_id) {
+                                    ui.separator();
+                                    ui.label(RichText::new(&node.display_name).font(FontId::proportional(9.0)).color(Color32::from_rgb(148, 163, 184)));
+                                    for p in &node.params {
+                                        if ui.button(&p.name).clicked() {
+                                            mod_auto_req = Some((node.id.clone(), p.id.clone()));
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    if let Some((tid, param)) = auto_req {
+                        self.open_track_automation_editor(tid, &param);
+                    }
+                    if let Some((node_id, param_id)) = mod_auto_req {
+                        self.open_modular_automation_editor(&node_id, &param_id);
+                    }
+
+                    ui.separator();
 
                     // Mode Toggle: Patch Cords vs Matrix Grid
                     let cords_active = self.modular_mode == ModularCanvasMode::PatchCords;
@@ -4440,6 +4607,7 @@ impl AwardWinningGuiView {
                 });
 
                 let mut cord_to_remove = None;
+                let mut cord_to_auto = None;
                 if let Some(c_idx) = self.selected_patch_cord_idx {
                     if c_idx < self.patch_cords.len() {
                         let cord = &mut self.patch_cords[c_idx];
@@ -4462,11 +4630,17 @@ impl AwardWinningGuiView {
                             if ui.small_button("100%").clicked() {
                                 cord.intensity = 1.0;
                             }
+                            if ui.small_button(RichText::new("📈 Auto").color(Color32::from_rgb(234, 179, 8))).clicked() {
+                                cord_to_auto = Some(c_idx);
+                            }
                             if ui.small_button(RichText::new("✕ Disconnect").color(Color32::from_rgb(239, 68, 68))).clicked() {
                                 cord_to_remove = Some(c_idx);
                             }
                         });
                     }
+                }
+                if let Some(c_idx) = cord_to_auto {
+                    self.open_patch_cord_automation_editor(c_idx);
                 }
                 if let Some(c_idx) = cord_to_remove {
                     self.remove_patch_cord_by_index(c_idx);
@@ -5647,10 +5821,47 @@ impl AwardWinningGuiView {
                 let pointer_pos = resp.interact_pointer_pos().or_else(|| ui.input(|i| i.pointer.latest_pos()));
                 let is_click = resp.clicked() || ui.input(|i| i.pointer.primary_clicked() || (i.pointer.primary_down() && !resp.dragged()));
 
-                // 1. Top Bar inside Stage: TAP Tempo, Panic, Quantize Mode
+                // 1. Top Bar inside Stage: TAP Tempo, Panic, Quantize Mode, 1-Click Pro View Switchers
                 let bar_h = 28.0;
                 painter.rect_filled(Rect::from_min_size(rect.min, Vec2::new(rect.width(), bar_h)), 0.0, Color32::from_rgb(14, 20, 32));
                 painter.text(egui::pos2(rect.left() + 12.0, rect.top() + 7.0), egui::Align2::LEFT_TOP, "STAGE VIEW (LIVE PERFORMANCE MATRIX)", FontId::proportional(11.0), Color32::from_rgb(56, 189, 248));
+
+                // 1-Click Pro View Switchers on Stage Header
+                let arr_rect = Rect::from_min_size(egui::pos2(rect.left() + 250.0, rect.top() + 4.0), Vec2::new(75.0, 20.0));
+                let pno_rect = Rect::from_min_size(egui::pos2(arr_rect.right() + 4.0, rect.top() + 4.0), Vec2::new(85.0, 20.0));
+                let mod_rect = Rect::from_min_size(egui::pos2(pno_rect.right() + 4.0, rect.top() + 4.0), Vec2::new(75.0, 20.0));
+                let mix_rect = Rect::from_min_size(egui::pos2(mod_rect.right() + 4.0, rect.top() + 4.0), Vec2::new(65.0, 20.0));
+
+                let arr_hov = pointer_pos.map(|p| arr_rect.contains(p)).unwrap_or(false);
+                let pno_hov = pointer_pos.map(|p| pno_rect.contains(p)).unwrap_or(false);
+                let mod_hov = pointer_pos.map(|p| mod_rect.contains(p)).unwrap_or(false);
+                let mix_hov = pointer_pos.map(|p| mix_rect.contains(p)).unwrap_or(false);
+
+                let draw_nav_btn = |p: &egui::Painter, r: Rect, label: &str, is_hov: bool| {
+                    let bg = if is_hov { Color32::from_rgb(32, 44, 68) } else { Color32::from_rgb(20, 28, 44) };
+                    p.rect_filled(r, 3.0, bg);
+                    p.rect_stroke(r, 3.0, Stroke::new(1.0_f32, Color32::from_rgb(56, 189, 248)));
+                    p.text(r.center(), egui::Align2::CENTER_CENTER, label, FontId::proportional(9.0), Color32::from_rgb(200, 215, 235));
+                };
+
+                draw_nav_btn(&painter, arr_rect, "📋 Arranger", arr_hov);
+                draw_nav_btn(&painter, pno_rect, "🎹 Piano Roll", pno_hov);
+                draw_nav_btn(&painter, mod_rect, "∿ Modular", mod_hov);
+                draw_nav_btn(&painter, mix_rect, "🎚 Mixer", mix_hov);
+
+                if let Some(pos) = pointer_pos {
+                    if is_click {
+                        if arr_rect.contains(pos) {
+                            self.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::Arranger;
+                        } else if pno_rect.contains(pos) {
+                            self.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::PianoRoll;
+                        } else if mod_rect.contains(pos) {
+                            self.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::Modular;
+                        } else if mix_rect.contains(pos) {
+                            self.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::Mixer;
+                        }
+                    }
+                }
 
                 // Panic Button & ESC hotkey
                 let esc_pressed = ui.input(|i| i.key_pressed(egui::Key::Escape));
@@ -5679,10 +5890,11 @@ impl AwardWinningGuiView {
 
                 // 2. Matrix Grid: Tracks x 4 Scenes
                 let scene_names = ["1 Intro", "2 Verse", "3 Drop", "4 Outro"];
-                let grid_top = rect.top() + bar_h + 8.0;
+                let hdr_h = 16.0;
+                let grid_top = rect.top() + bar_h + hdr_h + 8.0;
                 let track_count = self.tracks.len();
                 let col_w = (rect.width() - 80.0) / track_count.max(1) as f32;
-                let row_h = (canvas_height - bar_h - 20.0) / scene_names.len() as f32;
+                let row_h = (canvas_height - bar_h - hdr_h - 20.0) / scene_names.len() as f32;
 
                 // Scene Launch Buttons (Leftmost column)
                 for (s_idx, s_name) in scene_names.iter().enumerate() {
@@ -5717,12 +5929,27 @@ impl AwardWinningGuiView {
                     painter.text(egui::pos2(sc_rect.right() - 8.0, sc_rect.center().y), egui::Align2::RIGHT_CENTER, launch_icon, FontId::proportional(8.0), if is_active_scene { Color32::from_rgb(16, 185, 129) } else { Color32::from_rgb(100, 116, 139) });
                 }
 
-                // Grid Pads
+                // Grid Column Track Headers & Pads
                 let mut pad_track_selected = None;
                 let mut scene_to_launch = None;
                 for (t_idx, track) in self.tracks.iter().enumerate() {
                     let col_x = rect.left() + 80.0 + t_idx as f32 * col_w;
                     let col = Color32::from_rgb(track.color_rgb[0], track.color_rgb[1], track.color_rgb[2]);
+
+                    // Track Header
+                    let hdr_rect = Rect::from_min_size(egui::pos2(col_x + 2.0, grid_top - hdr_h - 2.0), Vec2::new(col_w - 4.0, hdr_h));
+                    let is_sel = t_idx == self.selected_track_idx;
+                    let hdr_bg = if is_sel { Color32::from_rgb(28, 42, 65) } else { Color32::from_rgb(16, 22, 34) };
+                    let border_col = if is_sel { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(28, 38, 56) };
+                    painter.rect_filled(hdr_rect, 2.0, hdr_bg);
+                    painter.rect_stroke(hdr_rect, 2.0, Stroke::new(1.0_f32, border_col));
+                    painter.text(hdr_rect.center(), egui::Align2::CENTER_CENTER, &track.name, FontId::proportional(8.5), col);
+
+                    if let Some(pos) = pointer_pos {
+                        if hdr_rect.contains(pos) && is_click {
+                            pad_track_selected = Some(t_idx);
+                        }
+                    }
 
                     for (s_idx, _) in scene_names.iter().enumerate() {
                         let row_y = grid_top + s_idx as f32 * row_h;
@@ -5755,16 +5982,7 @@ impl AwardWinningGuiView {
                 }
 
                 if let Some(s_idx) = pad_track_selected {
-                    self.selected_track_idx = s_idx;
-                    if let Some(tr) = self.tracks.get(s_idx) {
-                        self.inspector_state.target_name = tr.name.clone();
-                        self.inspector_state.gain_db = (tr.gain - 1.0) * 12.0;
-                        self.inspector_state.pan_val = tr.pan;
-                        self.inspector_state.is_muted = tr.is_muted;
-                        self.inspector_state.is_soloed = tr.is_soloed;
-                        self.inspector_state.is_armed = tr.is_armed;
-                        self.device_rack_state.device_name = tr.name.clone();
-                    }
+                    self.select_track_for_stage(s_idx);
                 }
             });
     }
