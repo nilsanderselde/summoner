@@ -359,6 +359,7 @@ pub struct AwardWinningGuiView {
     pub modular_nodes: Vec<ModularNodeInstance>,
     pub patch_cords: Vec<ModularPatchCord>,
     pub selected_modular_node_id: Option<String>,
+    pub selected_patch_cord_idx: Option<usize>,
     pub pending_cord_source: Option<(String, String)>,
     pub arranger_tool_mode: ArrangerToolMode,
     pub audio_graph: std::sync::Arc<std::sync::Mutex<summoner_core::graph::NodeGraph>>,
@@ -533,6 +534,7 @@ impl AwardWinningGuiView {
             modular_nodes: Vec::new(),
             patch_cords: Vec::new(),
             selected_modular_node_id: Some("osc_1".to_string()),
+            selected_patch_cord_idx: None,
             pending_cord_source: None,
             arranger_tool_mode: ArrangerToolMode::Pointer,
             audio_graph: std::sync::Arc::new(std::sync::Mutex::new(
@@ -2007,6 +2009,7 @@ impl AwardWinningGuiView {
                 intensity: 1.0,
             },
         ];
+        self.selected_patch_cord_idx = None;
     }
 
     pub fn add_modular_node_from_descriptor(&mut self, desc: &crate::dsp_node_ui::DspNodeDescriptor) {
@@ -2102,6 +2105,11 @@ impl AwardWinningGuiView {
                 self.disconnect_patch_cord_in_graph(&c.from_node_id, &c.from_port_id, &c.to_node_id, &c.to_port_id);
             }
             self.patch_cords.retain(|c| c.from_node_id != node_id && c.to_node_id != node_id);
+            if let Some(sel) = self.selected_patch_cord_idx {
+                if sel >= self.patch_cords.len() {
+                    self.selected_patch_cord_idx = None;
+                }
+            }
 
             // Clean up graph node edges if present
             if let Some(g_idx) = node.graph_node_idx {
@@ -2225,6 +2233,54 @@ impl AwardWinningGuiView {
                 }
             }
         }
+    }
+
+    /// Set a patch cord's intensity / attenuation factor (-1.0..=1.0).
+    pub fn set_patch_cord_intensity(&mut self, cord_idx: usize, intensity: f32) -> bool {
+        if let Some(cord) = self.patch_cords.get_mut(cord_idx) {
+            cord.intensity = intensity.clamp(-1.0, 1.0);
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Toggle patch cord polarity (+ / -) or invert its intensity.
+    pub fn toggle_patch_cord_polarity(&mut self, cord_idx: usize) -> Option<f32> {
+        if let Some(cord) = self.patch_cords.get_mut(cord_idx) {
+            cord.intensity = -cord.intensity;
+            Some(cord.intensity)
+        } else {
+            None
+        }
+    }
+
+    /// Remove a patch cord by index, disconnecting it from the underlying graph and updating selection.
+    pub fn remove_patch_cord_by_index(&mut self, cord_idx: usize) -> bool {
+        if cord_idx < self.patch_cords.len() {
+            let cord = self.patch_cords.remove(cord_idx);
+            self.disconnect_patch_cord_in_graph(&cord.from_node_id, &cord.from_port_id, &cord.to_node_id, &cord.to_port_id);
+            if self.selected_patch_cord_idx == Some(cord_idx) {
+                self.selected_patch_cord_idx = None;
+            } else if let Some(sel) = self.selected_patch_cord_idx {
+                if sel > cord_idx {
+                    self.selected_patch_cord_idx = Some(sel - 1);
+                }
+            }
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Get reference to currently selected patch cord, if any.
+    pub fn selected_patch_cord(&self) -> Option<&ModularPatchCord> {
+        self.selected_patch_cord_idx.and_then(|idx| self.patch_cords.get(idx))
+    }
+
+    /// Get mutable reference to currently selected patch cord, if any.
+    pub fn selected_patch_cord_mut(&mut self) -> Option<&mut ModularPatchCord> {
+        self.selected_patch_cord_idx.and_then(|idx| self.patch_cords.get_mut(idx))
     }
 
     /// Run real-time block processing through the live modular NodeGraph.
@@ -3084,6 +3140,37 @@ impl AwardWinningGuiView {
             }
         }
 
+        // 7c. Modular Patch Cord Intensity Dispatch & Live Recording (M33)
+        for (c_idx, cord) in self.patch_cords.iter().enumerate() {
+            let cord_pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 700 + c_idx as u32);
+            if param_bus.get(cord_pid).is_some() {
+                param_bus.set(cord_pid, cord.intensity);
+            }
+            let cord_auto_key = format!("modular_cord_{}_{}_{}_{}_intensity", cord.from_node_id, cord.from_port_id, cord.to_node_id, cord.to_port_id);
+            if automation_registry.get_param(&cord_auto_key).is_none() {
+                automation_registry.register_param(&cord_auto_key, cord.intensity);
+            }
+            automation_registry.set(&cord_auto_key, cord.intensity);
+
+            if is_recording_automation {
+                let point = summoner_sequencer::automation_timeline::AutomationPoint {
+                    beat: playhead_beat,
+                    value: cord.intensity,
+                    interp: summoner_sequencer::automation_timeline::Interpolation::Linear,
+                };
+                let lane = automation_timeline.lanes.entry(cord_auto_key.clone()).or_insert_with(|| {
+                    summoner_sequencer::automation_timeline::AutomationLane {
+                        param_id: cord_auto_key.clone(),
+                        curve: summoner_sequencer::automation_timeline::AutomationCurve { points: Vec::new() },
+                    }
+                });
+                match lane.curve.points.binary_search_by(|p| p.beat.partial_cmp(&playhead_beat).unwrap()) {
+                    Ok(idx) => lane.curve.points[idx] = point,
+                    Err(idx) => lane.curve.points.insert(idx, point),
+                }
+            }
+        }
+
         // 8. Piano Roll Note Audition Live Dispatch (M33)
         let pitch_pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 300);
         if param_bus.get(pitch_pid).is_some() {
@@ -3215,6 +3302,39 @@ impl AwardWinningGuiView {
                         ui.label(RichText::new(format!("{} Nodes | {} Cables", self.modular_nodes.len(), self.patch_cords.len())).font(FontId::proportional(9.0)).color(Color32::from_rgb(148, 163, 184)));
                     });
                 });
+
+                let mut cord_to_remove = None;
+                if let Some(c_idx) = self.selected_patch_cord_idx {
+                    if c_idx < self.patch_cords.len() {
+                        let cord = &mut self.patch_cords[c_idx];
+                        ui.horizontal(|ui| {
+                            ui.label(RichText::new("Cable:").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248)));
+                            ui.label(RichText::new(format!("{}:{} ➔ {}:{}", cord.from_node_id, cord.from_port_id, cord.to_node_id, cord.to_port_id)).font(FontId::proportional(10.0)).color(Color32::from_rgb(241, 245, 249)));
+                            let sig_text = if cord.is_audio { "[Audio]" } else { "[Modulation]" };
+                            let sig_col = if cord.is_audio { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(245, 158, 11) };
+                            ui.label(RichText::new(sig_text).font(FontId::proportional(9.0)).color(sig_col));
+
+                            ui.label(RichText::new("Attenuator:").font(FontId::proportional(10.0)).color(Color32::from_rgb(148, 163, 184)));
+                            ui.add(egui::Slider::new(&mut cord.intensity, -1.0..=1.0).show_value(true).text(""));
+
+                            if ui.small_button("± Invert").clicked() {
+                                cord.intensity = -cord.intensity;
+                            }
+                            if ui.small_button("🔇 Mute").clicked() {
+                                cord.intensity = 0.0;
+                            }
+                            if ui.small_button("100%").clicked() {
+                                cord.intensity = 1.0;
+                            }
+                            if ui.small_button(RichText::new("✕ Disconnect").color(Color32::from_rgb(239, 68, 68))).clicked() {
+                                cord_to_remove = Some(c_idx);
+                            }
+                        });
+                    }
+                }
+                if let Some(c_idx) = cord_to_remove {
+                    self.remove_patch_cord_by_index(c_idx);
+                }
 
                 ui.separator();
 
@@ -3460,57 +3580,125 @@ impl AwardWinningGuiView {
         let pointer_pos = resp.interact_pointer_pos();
         let clicked = resp.clicked();
 
+        // Helper to locate socket position by (node_id, port_id)
+        let find_socket_pos = |node_id: &str, port_id: &str, nodes: &[ModularNodeInstance]| -> Option<egui::Pos2> {
+            for n in nodes {
+                if n.id == node_id {
+                    for p in &n.ports {
+                        if p.id == port_id {
+                            return Some(egui::pos2(
+                                rect.left() + n.pos.0 + p.rel_pos.0,
+                                rect.top() + n.pos.1 + p.rel_pos.1,
+                            ));
+                        }
+                    }
+                }
+            }
+            None
+        };
+
+        // Check cord attenuverter puck interactions first
+        let mut clicked_cord_puck = None;
+        let mut dragged_cord_puck = None;
+
+        for (c_idx, cord) in self.patch_cords.iter().enumerate() {
+            if let (Some(src_pt), Some(dst_pt)) = (
+                find_socket_pos(&cord.from_node_id, &cord.from_port_id, &self.modular_nodes),
+                find_socket_pos(&cord.to_node_id, &cord.to_port_id, &self.modular_nodes),
+            ) {
+                let sag = ((dst_pt.x - src_pt.x).abs() * 0.2 + (dst_pt.y - src_pt.y).abs() * 0.15).clamp(20.0, 60.0);
+                let c1 = egui::pos2(src_pt.x + 30.0, src_pt.y + sag);
+                let c2 = egui::pos2(dst_pt.x - 30.0, dst_pt.y + sag);
+                let mid_pt = egui::pos2(
+                    0.125 * src_pt.x + 0.375 * c1.x + 0.375 * c2.x + 0.125 * dst_pt.x,
+                    0.125 * src_pt.y + 0.375 * c1.y + 0.375 * c2.y + 0.125 * dst_pt.y,
+                );
+
+                if let Some(pos) = pointer_pos {
+                    if pos.distance(mid_pt) <= 14.0 {
+                        if clicked || resp.secondary_clicked() {
+                            clicked_cord_puck = Some((c_idx, resp.secondary_clicked()));
+                        } else if resp.dragged() {
+                            dragged_cord_puck = Some(c_idx);
+                        }
+                    }
+                }
+            }
+        }
+
+        let drag_delta = resp.drag_delta();
+        if let Some((c_idx, is_sec)) = clicked_cord_puck {
+            if is_sec {
+                self.patch_cords[c_idx].intensity = -self.patch_cords[c_idx].intensity;
+            }
+            self.selected_patch_cord_idx = Some(c_idx);
+            self.selected_modular_node_id = None;
+            self.inspector_state.target_name = format!(
+                "Cable: {}:{} ➔ {}:{}",
+                self.patch_cords[c_idx].from_node_id,
+                self.patch_cords[c_idx].from_port_id,
+                self.patch_cords[c_idx].to_node_id,
+                self.patch_cords[c_idx].to_port_id
+            );
+        } else if let Some(c_idx) = dragged_cord_puck {
+            let delta_y = drag_delta.y;
+            self.patch_cords[c_idx].intensity = (self.patch_cords[c_idx].intensity - delta_y * 0.015).clamp(-1.0, 1.0);
+            self.selected_patch_cord_idx = Some(c_idx);
+            self.selected_modular_node_id = None;
+        }
+
         let mut node_selected = None;
         let mut clicked_socket = None;
         let mut node_to_delete = None;
         let mut node_to_bypass = None;
         let mut node_to_duplicate = None;
 
-        for node in &self.modular_nodes {
-            let n_rect = Rect::from_min_size(
-                egui::pos2(rect.left() + node.pos.0, rect.top() + node.pos.1),
-                Vec2::new(node.size.0, node.size.1),
-            );
+        if clicked_cord_puck.is_none() && dragged_cord_puck.is_none() {
+            for node in &self.modular_nodes {
+                let n_rect = Rect::from_min_size(
+                    egui::pos2(rect.left() + node.pos.0, rect.top() + node.pos.1),
+                    Vec2::new(node.size.0, node.size.1),
+                );
 
-            // Check socket clicks first
-            for port in &node.ports {
-                let s_pos = egui::pos2(n_rect.left() + port.rel_pos.0, n_rect.top() + port.rel_pos.1);
-                if let Some(pos) = pointer_pos {
-                    if pos.distance(s_pos) <= 8.0 && clicked {
-                        clicked_socket = Some((node.id.clone(), port.id.clone(), port.kind));
+                // Check socket clicks first
+                for port in &node.ports {
+                    let s_pos = egui::pos2(n_rect.left() + port.rel_pos.0, n_rect.top() + port.rel_pos.1);
+                    if let Some(pos) = pointer_pos {
+                        if pos.distance(s_pos) <= 8.0 && clicked {
+                            clicked_socket = Some((node.id.clone(), port.id.clone(), port.kind));
+                        }
                     }
                 }
-            }
 
-            // Check header action button clicks
-            if clicked_socket.is_none() && clicked {
-                if let Some(pos) = pointer_pos {
-                    let del_rect = Rect::from_min_size(egui::pos2(n_rect.right() - 18.0, n_rect.top() + 4.0), Vec2::new(14.0, 14.0));
-                    let byp_rect = Rect::from_min_size(egui::pos2(del_rect.left() - 22.0, n_rect.top() + 4.0), Vec2::new(20.0, 14.0));
-                    let dup_rect = Rect::from_min_size(egui::pos2(byp_rect.left() - 18.0, n_rect.top() + 4.0), Vec2::new(16.0, 14.0));
+                // Check header action button clicks
+                if clicked_socket.is_none() && clicked {
+                    if let Some(pos) = pointer_pos {
+                        let del_rect = Rect::from_min_size(egui::pos2(n_rect.right() - 18.0, n_rect.top() + 4.0), Vec2::new(14.0, 14.0));
+                        let byp_rect = Rect::from_min_size(egui::pos2(del_rect.left() - 22.0, n_rect.top() + 4.0), Vec2::new(20.0, 14.0));
+                        let dup_rect = Rect::from_min_size(egui::pos2(byp_rect.left() - 18.0, n_rect.top() + 4.0), Vec2::new(16.0, 14.0));
 
-                    if del_rect.contains(pos) {
-                        node_to_delete = Some(node.id.clone());
-                    } else if byp_rect.contains(pos) {
-                        node_to_bypass = Some(node.id.clone());
-                    } else if dup_rect.contains(pos) {
-                        node_to_duplicate = Some(node.id.clone());
-                    } else if n_rect.contains(pos) {
-                        node_selected = Some((node.id.clone(), node.kind_id.clone(), node.display_name.clone()));
+                        if del_rect.contains(pos) {
+                            node_to_delete = Some(node.id.clone());
+                        } else if byp_rect.contains(pos) {
+                            node_to_bypass = Some(node.id.clone());
+                        } else if dup_rect.contains(pos) {
+                            node_to_duplicate = Some(node.id.clone());
+                        } else if n_rect.contains(pos) {
+                            node_selected = Some((node.id.clone(), node.kind_id.clone(), node.display_name.clone()));
+                        }
                     }
-                }
-            } else if clicked_socket.is_none() && resp.dragged() && self.selected_modular_node_id.is_none() {
-                if let Some(pos) = pointer_pos {
-                    if n_rect.contains(pos) {
-                        node_selected = Some((node.id.clone(), node.kind_id.clone(), node.display_name.clone()));
+                } else if clicked_socket.is_none() && resp.dragged() && self.selected_modular_node_id.is_none() {
+                    if let Some(pos) = pointer_pos {
+                        if n_rect.contains(pos) {
+                            node_selected = Some((node.id.clone(), node.kind_id.clone(), node.display_name.clone()));
+                        }
                     }
                 }
             }
         }
 
         // Tactile node drag-to-reposition
-        let drag_delta = resp.drag_delta();
-        if resp.dragged() && self.pending_cord_source.is_none() && (drag_delta.x.abs() > 0.0 || drag_delta.y.abs() > 0.0) {
+        if resp.dragged() && self.pending_cord_source.is_none() && dragged_cord_puck.is_none() && (drag_delta.x.abs() > 0.0 || drag_delta.y.abs() > 0.0) {
             if let Some(ref sel_id) = self.selected_modular_node_id {
                 if let Some(node) = self.modular_nodes.iter_mut().find(|n| &n.id == sel_id) {
                     node.pos.0 = (node.pos.0 + drag_delta.x).clamp(0.0, (rect.width() - node.size.0).max(0.0));
@@ -3581,17 +3769,26 @@ impl AwardWinningGuiView {
                     self.patch_cords.retain(|c| !(c.to_node_id == node_id && c.to_port_id == port_id));
                 }
             }
-        } else if clicked && pointer_pos.is_some() && node_selected.is_none() {
-            // Clicked on empty space: cancel pending cord
+        } else if clicked && pointer_pos.is_some() && node_selected.is_none() && clicked_cord_puck.is_none() {
+            // Clicked on empty space: cancel pending cord and deselect cord
             self.pending_cord_source = None;
+            self.selected_patch_cord_idx = None;
         }
 
         if let Some((node_id, kind_id, display_name)) = node_selected {
+            self.selected_patch_cord_idx = None;
             self.selected_modular_node_id = Some(node_id);
             self.device_rack_state.selected_node_kind = Some(kind_id.clone());
             self.device_rack_state.device_name = display_name.clone();
             self.inspector_state.selected_node_kind = Some(kind_id);
             self.inspector_state.target_name = display_name;
+        }
+
+        // Keyboard shortcuts for modular canvas: Delete/Backspace removes selected cord
+        if ui.input(|i| i.key_pressed(egui::Key::Delete) || i.key_pressed(egui::Key::Backspace)) {
+            if let Some(sel_c) = self.selected_patch_cord_idx {
+                self.remove_patch_cord_by_index(sel_c);
+            }
         }
 
         // 2. Render Nodes
@@ -3688,25 +3885,8 @@ impl AwardWinningGuiView {
             }
         }
 
-        // Helper to locate socket position by (node_id, port_id)
-        let find_socket_pos = |node_id: &str, port_id: &str, nodes: &[ModularNodeInstance]| -> Option<egui::Pos2> {
-            for n in nodes {
-                if n.id == node_id {
-                    for p in &n.ports {
-                        if p.id == port_id {
-                            return Some(egui::pos2(
-                                rect.left() + n.pos.0 + p.rel_pos.0,
-                                rect.top() + n.pos.1 + p.rel_pos.1,
-                            ));
-                        }
-                    }
-                }
-            }
-            None
-        };
-
-        // 3. Render Patch Cords (Bézier curves with gravity sag and glow)
-        for cord in &self.patch_cords {
+        // 3. Render Patch Cords (Bézier curves with gravity sag, glow, and attenuverter pucks)
+        for (c_idx, cord) in self.patch_cords.iter().enumerate() {
             if let (Some(src_pt), Some(dst_pt)) = (
                 find_socket_pos(&cord.from_node_id, &cord.from_port_id, &self.modular_nodes),
                 find_socket_pos(&cord.to_node_id, &cord.to_port_id, &self.modular_nodes),
@@ -3714,46 +3894,102 @@ impl AwardWinningGuiView {
                 let sag = ((dst_pt.x - src_pt.x).abs() * 0.2 + (dst_pt.y - src_pt.y).abs() * 0.15).clamp(20.0, 60.0);
                 let c1 = egui::pos2(src_pt.x + 30.0, src_pt.y + sag);
                 let c2 = egui::pos2(dst_pt.x - 30.0, dst_pt.y + sag);
+                let mid_pt = egui::pos2(
+                    0.125 * src_pt.x + 0.375 * c1.x + 0.375 * c2.x + 0.125 * dst_pt.x,
+                    0.125 * src_pt.y + 0.375 * c1.y + 0.375 * c2.y + 0.125 * dst_pt.y,
+                );
+
+                let is_cord_sel = self.selected_patch_cord_idx == Some(c_idx);
 
                 let color = if cord.is_audio {
-                    Color32::from_rgb(56, 189, 248) // Cyan
+                    Color32::from_rgb(56, 189, 248) // Cyan for audio
+                } else if cord.intensity < -0.01 {
+                    Color32::from_rgb(236, 72, 153) // Magenta for inverted modulation
+                } else if cord.intensity.abs() < 0.01 {
+                    Color32::from_rgb(100, 116, 139) // Slate for muted
                 } else {
-                    Color32::from_rgb(245, 158, 11) // Amber
+                    Color32::from_rgb(245, 158, 11) // Amber for positive modulation
                 };
 
                 // Glow shadow
-                let shadow_col = Color32::from_rgba_unmultiplied(color.r(), color.g(), color.b(), 65);
+                let shadow_col = Color32::from_rgba_unmultiplied(
+                    color.r(),
+                    color.g(),
+                    color.b(),
+                    if is_cord_sel { 120 } else { ((cord.intensity.abs() * 65.0).clamp(15.0, 70.0)) as u8 },
+                );
                 let b_glow = egui::epaint::CubicBezierShape::from_points_stroke(
                     [src_pt, c1, c2, dst_pt],
                     false,
                     Color32::TRANSPARENT,
-                    Stroke::new(3.5_f32, shadow_col),
+                    Stroke::new(if is_cord_sel { 4.5_f32 } else { 3.2_f32 }, shadow_col),
                 );
                 painter.add(b_glow);
 
                 // Core cable
+                let core_w = if is_cord_sel { 2.4_f32 } else { (1.2 + 1.2 * cord.intensity.abs()).clamp(1.0, 2.6) };
                 let b_core = egui::epaint::CubicBezierShape::from_points_stroke(
                     [src_pt, c1, c2, dst_pt],
                     false,
                     Color32::TRANSPARENT,
-                    Stroke::new(1.8_f32, color),
+                    Stroke::new(core_w, if is_cord_sel { Color32::WHITE } else { color }),
                 );
                 painter.add(b_core);
 
                 // Active animated signal pulse along the cord
-                let pulse_t = (self.playhead_beat * 0.25).fract();
-                let pulse_pt = egui::pos2(
-                    (1.0 - pulse_t) * (1.0 - pulse_t) * (1.0 - pulse_t) * src_pt.x
-                        + 3.0 * (1.0 - pulse_t) * (1.0 - pulse_t) * pulse_t * c1.x
-                        + 3.0 * (1.0 - pulse_t) * pulse_t * pulse_t * c2.x
-                        + pulse_t * pulse_t * pulse_t * dst_pt.x,
-                    (1.0 - pulse_t) * (1.0 - pulse_t) * (1.0 - pulse_t) * src_pt.y
-                        + 3.0 * (1.0 - pulse_t) * (1.0 - pulse_t) * pulse_t * c1.y
-                        + 3.0 * (1.0 - pulse_t) * pulse_t * pulse_t * c2.y
-                        + pulse_t * pulse_t * pulse_t * dst_pt.y,
-                );
-                painter.circle_filled(pulse_pt, 2.8, Color32::WHITE);
-                painter.circle_stroke(pulse_pt, 4.0, Stroke::new(1.0_f32, color));
+                if cord.intensity.abs() > 0.02 {
+                    let pulse_t = (self.playhead_beat * 0.25).fract();
+                    let pulse_pt = egui::pos2(
+                        (1.0 - pulse_t) * (1.0 - pulse_t) * (1.0 - pulse_t) * src_pt.x
+                            + 3.0 * (1.0 - pulse_t) * (1.0 - pulse_t) * pulse_t * c1.x
+                            + 3.0 * (1.0 - pulse_t) * pulse_t * pulse_t * c2.x
+                            + pulse_t * pulse_t * pulse_t * dst_pt.x,
+                        (1.0 - pulse_t) * (1.0 - pulse_t) * (1.0 - pulse_t) * src_pt.y
+                            + 3.0 * (1.0 - pulse_t) * (1.0 - pulse_t) * pulse_t * c1.y
+                            + 3.0 * (1.0 - pulse_t) * pulse_t * pulse_t * c2.y
+                            + pulse_t * pulse_t * pulse_t * dst_pt.y,
+                    );
+                    let p_scale = cord.intensity.abs().clamp(0.4, 1.0);
+                    painter.circle_filled(pulse_pt, 2.8 * p_scale, Color32::WHITE);
+                    painter.circle_stroke(pulse_pt, 4.0 * p_scale, Stroke::new(1.0_f32, color));
+                }
+
+                // Attenuverter / Attenuator Puck at mid_pt
+                let puck_radius = if is_cord_sel { 9.0 } else { 7.5 };
+                let is_puck_hovered = pointer_pos.map(|p| p.distance(mid_pt) <= 14.0).unwrap_or(false);
+
+                if is_cord_sel {
+                    painter.circle_stroke(mid_pt, puck_radius + 4.0, Stroke::new(1.5_f32, Color32::from_rgba_unmultiplied(56, 189, 248, 140)));
+                    painter.circle_stroke(mid_pt, puck_radius + 1.5, Stroke::new(1.8_f32, Color32::WHITE));
+                } else if is_puck_hovered {
+                    painter.circle_stroke(mid_pt, puck_radius + 2.0, Stroke::new(1.0_f32, Color32::from_rgb(148, 163, 184)));
+                }
+
+                let puck_bg = if is_cord_sel {
+                    Color32::from_rgb(28, 42, 68)
+                } else if is_puck_hovered {
+                    Color32::from_rgb(24, 34, 52)
+                } else {
+                    Color32::from_rgb(14, 20, 32)
+                };
+                painter.circle_filled(mid_pt, puck_radius, puck_bg);
+                painter.circle_stroke(mid_pt, puck_radius, Stroke::new(1.2_f32, color));
+
+                let text = if cord.intensity < -0.05 {
+                    format!("-{:.0}%", cord.intensity.abs() * 100.0)
+                } else if cord.intensity > 0.05 {
+                    format!("{:.0}%", cord.intensity * 100.0)
+                } else {
+                    "0%".to_string()
+                };
+                let text_col = if cord.intensity < -0.05 {
+                    Color32::from_rgb(244, 114, 182)
+                } else if cord.intensity > 0.05 {
+                    Color32::from_rgb(241, 245, 249)
+                } else {
+                    Color32::from_rgb(100, 116, 139)
+                };
+                painter.text(mid_pt, egui::Align2::CENTER_CENTER, text, FontId::proportional(7.5), text_col);
             }
         }
 

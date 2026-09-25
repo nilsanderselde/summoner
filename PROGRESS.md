@@ -460,5 +460,39 @@ Product Management has conducted a comprehensive readiness audit:
     - `cargo test -p summoner_gui`: 302 passed in 0.24s (100% pass rate).
     - `cargo check -p summoner_gui --features gui`: 0 warnings, passes cleanly.
 
+### Turn #20 — Modular Canvas Patch Cord Attenuverter Pucks, Selection Toolbar & M33 Live Cable Intensity Automation Bridge
+- [x] Interactive Modular Canvas Patch Cord Attenuation & Attenuversion (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added tactile **attenuverter pucks** rendered at the exact Bézier curve midpoint ($t = 0.5$) of every patch cord.
+  - Puck hit-detection (radius 7.5-9.0 pt, hit tolerance 14.0 pt) with vertical touch dragging smoothly adjusting attenuation intensity from `-1.0` (-100%) to `+1.0` (+100%).
+  - Right-click or secondary click on puck instantly inverts cable polarity (`cord.intensity = -cord.intensity`).
+  - Active visual feedback:
+    - Inverted modulation cords render in vibrant magenta (`Color32::from_rgb(236, 72, 153)`) with `-100%` indicators.
+    - Standard positive modulation cords render in warm amber (`Color32::from_rgb(245, 158, 11)`).
+    - Audio cords render in radiant cyan (`Color32::from_rgb(56, 189, 248)`).
+    - Muted cords (`0.0`) dim to slate gray (`Color32::from_rgb(100, 116, 139)`).
+    - Cable core stroke width and outer glow shadows dynamically scale with `cord.intensity.abs()`.
+    - Signal pulse particle sizes and animations dynamically reflect active modulation intensity.
+- [x] Dedicated Patch Cord Selection & Toolbar Controls:
+  - Added `selected_patch_cord_idx: Option<usize>` state to `AwardWinningGuiView`.
+  - Clicking any cable or puck selects it, highlighting the cord with a glowing white core and dual cyan rings.
+  - Dedicated Cable Inspector strip integrated into the modular canvas toolbar with source/destination readout, signal badge (`[Audio]` / `[Modulation]`), slider (`-1.0..=1.0`), and action buttons: `[± Invert]`, `[🔇 Mute]`, `[100%]`, and `[✕ Disconnect]`.
+  - Keyboard shortcuts: pressing `Delete` or `Backspace` cleanly removes the selected patch cord from the canvas and disconnects the edge from `audio_graph`.
+  - Added public helper methods: `set_patch_cord_intensity`, `toggle_patch_cord_polarity`, `remove_patch_cord_by_index`, `selected_patch_cord`, and `selected_patch_cord_mut`.
+- [x] Milestone 33 Lockstep Live Cable Automation Bridge (`sync_with_param_bus`):
+  - Dispatches every patch cord's intensity to `ParamBus` at `track_id * 1000 + 700 + cord_idx` without audio-thread heap allocations.
+  - Registers and synchronizes `modular_cord_{from}_{src}_{to}_{dst}_intensity` into `AutomationRegistry`.
+  - When `is_recording_automation` is active during playback, records linear interpolation points into `AutomationTimeline`.
+- [x] Unit Tests & Verification:
+  - Created test suite `crates/summoner_gui/src/tier89_turn20_tests.rs`:
+    - `test_turn20_patch_cord_attenuation_and_attenuversion`
+    - `test_turn20_patch_cord_removal_and_selection_shift`
+    - `test_turn20_m33_patch_cord_intensity_param_bus_and_automation_bridge`
+    - `test_turn20_modular_canvas_headless_rendering_and_cord_inspector`
+  - Registered in `crates/summoner_gui/src/lib.rs` under `#[cfg(feature = "gui")]`.
+  - Verification results:
+    - `cargo check -p summoner_gui`: 0 warnings, passes cleanly in 0.24s.
+    - `cargo check -p summoner_gui --features gui`: 0 warnings, passes in 3.40s.
+    - `cargo test -p summoner_gui`: 302 passed in 0.22s (100% pass rate).
+
 
 
