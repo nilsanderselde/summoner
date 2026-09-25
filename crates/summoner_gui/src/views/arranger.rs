@@ -783,14 +783,12 @@ pub fn show_arranger(
                         }
                     }
 
+                    let playhead_rel = *playhead_beat - seq.start_beat;
                     // S key shortcut to split selected clip at playhead
                     let s_pressed = ui.input(|i| i.key_pressed(egui::Key::S) && !i.modifiers.ctrl);
-                    if is_clip_selected && s_pressed {
-                        let playhead_rel = *playhead_beat - seq.start_beat;
-                        if playhead_rel > 0.0 && playhead_rel < clip_beats {
-                            if let Some(new_seq) = split_clip_at(seq, playhead_rel) {
-                                split_clip_target = Some((track_id, new_seq));
-                            }
+                    if is_clip_selected && s_pressed && playhead_rel > 0.0 && playhead_rel < clip_beats {
+                        if let Some(new_seq) = split_clip_at(seq, playhead_rel) {
+                            split_clip_target = Some((track_id, new_seq));
                         }
                     }
 
@@ -808,14 +806,13 @@ pub fn show_arranger(
                     let mut del_clip = false;
 
                     clip_resp.context_menu(|ui| {
-                        let playhead_rel = *playhead_beat - seq.start_beat;
-                        if playhead_rel > 0.0 && playhead_rel < clip_beats {
-                            if ui.button("✂ Split at Playhead (S)").clicked() {
-                                if let Some(new_seq) = split_clip_at(seq, playhead_rel) {
-                                    split_clip_target = Some((track_id, new_seq));
-                                }
-                                ui.close_menu();
+                        if playhead_rel > 0.0 && playhead_rel < clip_beats
+                            && ui.button("✂ Split at Playhead (S)").clicked()
+                        {
+                            if let Some(new_seq) = split_clip_at(seq, playhead_rel) {
+                                split_clip_target = Some((track_id, new_seq));
                             }
+                            ui.close_menu();
                         }
                         if ui.button("🎹 Edit in Piano Roll").clicked() {
                             navigation_target = Some(ViewMode::PianoRoll(track_id));

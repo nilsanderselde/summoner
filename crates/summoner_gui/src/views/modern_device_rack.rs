@@ -261,12 +261,10 @@ pub fn show_modern_device_rack(
                                     .filter(|p| matches!(p.widget, crate::dsp_node_ui::DspWidgetKind::RotaryKnob { .. } | crate::dsp_node_ui::DspWidgetKind::VerticalFader { .. }))
                                     .collect();
 
-                                let p_len = knob_params.len();
                                 // Top Row: first 3 parameters
                                 ui.horizontal(|ui| {
                                     for i in 0..3 {
-                                        if i < p_len {
-                                            let p = knob_params[i];
+                                        if let Some(&p) = knob_params.get(i) {
                                             let default_norm = match &p.widget {
                                                 crate::dsp_node_ui::DspWidgetKind::RotaryKnob { min, max, default, .. } => {
                                                     ((*default - *min) / (*max - *min).max(1e-5)).clamp(0.0, 1.0)
@@ -293,8 +291,7 @@ pub fn show_modern_device_rack(
                                 // Bottom Row: next 3 parameters (indices 3..6)
                                 ui.horizontal(|ui| {
                                     for i in 3..6 {
-                                        if i < p_len {
-                                            let p = knob_params[i];
+                                        if let Some(&p) = knob_params.get(i) {
                                             let default_norm = match &p.widget {
                                                 crate::dsp_node_ui::DspWidgetKind::RotaryKnob { min, max, default, .. } => {
                                                     ((*default - *min) / (*max - *min).max(1e-5)).clamp(0.0, 1.0)

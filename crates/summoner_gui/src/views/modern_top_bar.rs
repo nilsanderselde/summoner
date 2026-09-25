@@ -661,6 +661,7 @@ pub fn show_modern_top_bar(
                 ui.add_space(12.0);
 
                 let tabs = [
+                    ModernViewTab::Performance,
                     ModernViewTab::Mixer,
                     ModernViewTab::Modular,
                     ModernViewTab::PianoRoll,

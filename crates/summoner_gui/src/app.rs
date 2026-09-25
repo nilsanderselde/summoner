@@ -503,7 +503,7 @@ impl SummonerApp {
 
     pub fn sync_track_to_graph(&mut self, track_id: u64) {
         if let Some(track) = self.project.tracks.iter().find(|t| t.id == track_id) {
-            let mut graph = NodeGraph::new(&format!("Track {} Graph", track_id), 64, 2);
+            let mut graph = NodeGraph::new(format!("Track {} Graph", track_id), 64, 2);
             self.node_graph_state.positions.clear();
             for (idx, _node_cfg) in track.nodes.iter().enumerate() {
                 graph.nodes.push(Box::new(summoner_core::node::PassthroughNode));
