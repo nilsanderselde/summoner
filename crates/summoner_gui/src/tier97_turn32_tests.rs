@@ -60,6 +60,7 @@ pub mod pure_tests {
                 gain: 1.0,
                 is_selected: false,
             }],
+            active_clip_idx: None,
         };
 
         let new_id = track.duplicate_clip(1);
@@ -110,6 +111,7 @@ pub mod pure_tests {
                     is_selected: false,
                 },
             ],
+            active_clip_idx: None,
         };
 
         assert!(track.delete_clip(1));
@@ -149,6 +151,7 @@ pub mod pure_tests {
                 gain: 1.0,
                 is_selected: false,
             }],
+            active_clip_idx: None,
         };
 
         // Move clip by 1.5 beats

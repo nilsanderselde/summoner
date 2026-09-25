@@ -30,6 +30,8 @@ pub struct TrackVisualData {
     pub clip_length_beats: f32,
     #[serde(default)]
     pub clips: Vec<ArrangerClipVisual>,
+    #[serde(default)]
+    pub active_clip_idx: Option<usize>,
 }
 
 /// Interactive Arranger Clip visual data representation supporting slicing, trimming, and crossfading.
@@ -107,6 +109,45 @@ impl ArrangerSnapResolution {
             beat
         } else {
             (beat / step).round() * step
+        }
+    }
+}
+
+/// Quantization resolution for live clip/scene launching in the Stage view matrix.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
+pub enum StageLaunchQuantize {
+    #[default]
+    Bar1,        // 4.0 beats (1 measure)
+    BarHalf,     // 2.0 beats (1/2 measure)
+    Beat1,       // 1.0 beat (1/4 note)
+    Instant,     // 0.0 (immediate launch)
+}
+
+impl StageLaunchQuantize {
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::Bar1 => "1 Bar (4b)",
+            Self::BarHalf => "1/2 Bar (2b)",
+            Self::Beat1 => "1 Beat (1b)",
+            Self::Instant => "Instant (0b)",
+        }
+    }
+
+    pub fn step_beats(&self) -> f32 {
+        match self {
+            Self::Bar1 => 4.0,
+            Self::BarHalf => 2.0,
+            Self::Beat1 => 1.0,
+            Self::Instant => 0.0,
+        }
+    }
+
+    pub fn next_boundary(&self, current_beat: f32) -> f32 {
+        let step = self.step_beats();
+        if step <= 0.0 {
+            current_beat
+        } else {
+            (current_beat / step).ceil() * step
         }
     }
 }
@@ -505,6 +546,8 @@ pub struct AwardWinningGuiView {
     pub last_synced_is_playing: bool,
     pub active_scene_idx: Option<usize>,
     pub panic_triggered: bool,
+    pub stage_quantize: StageLaunchQuantize,
+    pub last_tap_time: Option<std::time::Instant>,
     pub last_inspector_gain_db: f32,
     pub last_inspector_pan: f32,
     pub last_inspector_muted: bool,
@@ -574,6 +617,7 @@ impl AwardWinningGuiView {
                 clip_start_beat: 0.0,
                 clip_length_beats: 16.0,
                 clips: Vec::new(),
+                active_clip_idx: None,
             },
             TrackVisualData {
                 id: 2,
@@ -588,6 +632,7 @@ impl AwardWinningGuiView {
                 clip_start_beat: 2.0,
                 clip_length_beats: 14.0,
                 clips: Vec::new(),
+                active_clip_idx: None,
             },
             TrackVisualData {
                 id: 3,
@@ -602,6 +647,7 @@ impl AwardWinningGuiView {
                 clip_start_beat: 2.0,
                 clip_length_beats: 14.0,
                 clips: Vec::new(),
+                active_clip_idx: None,
             },
             TrackVisualData {
                 id: 4,
@@ -616,6 +662,7 @@ impl AwardWinningGuiView {
                 clip_start_beat: 1.0,
                 clip_length_beats: 15.0,
                 clips: Vec::new(),
+                active_clip_idx: None,
             },
             TrackVisualData {
                 id: 5,
@@ -630,6 +677,7 @@ impl AwardWinningGuiView {
                 clip_start_beat: 4.0,
                 clip_length_beats: 12.0,
                 clips: Vec::new(),
+                active_clip_idx: None,
             },
             TrackVisualData {
                 id: 6,
@@ -644,6 +692,7 @@ impl AwardWinningGuiView {
                 clip_start_beat: 2.0,
                 clip_length_beats: 10.0,
                 clips: Vec::new(),
+                active_clip_idx: None,
             },
             TrackVisualData {
                 id: 7,
@@ -658,6 +707,7 @@ impl AwardWinningGuiView {
                 clip_start_beat: 6.0,
                 clip_length_beats: 10.0,
                 clips: Vec::new(),
+                active_clip_idx: None,
             },
             TrackVisualData {
                 id: 8,
@@ -672,6 +722,7 @@ impl AwardWinningGuiView {
                 clip_start_beat: 7.0,
                 clip_length_beats: 9.0,
                 clips: Vec::new(),
+                active_clip_idx: None,
             },
         ];
 
@@ -704,6 +755,8 @@ impl AwardWinningGuiView {
             last_synced_is_playing: false,
             active_scene_idx: None,
             panic_triggered: false,
+            stage_quantize: StageLaunchQuantize::default(),
+            last_tap_time: None,
             last_inspector_gain_db: 0.0,
             last_inspector_pan: 0.0,
             last_inspector_muted: false,
@@ -3402,10 +3455,13 @@ impl AwardWinningGuiView {
         true
     }
 
-    /// Launch a live scene matrix row (0..4) in the Stage view with beat positioning and playback trigger.
+    /// Launch a live scene matrix row (0..4) in the Stage view with beat positioning and playback trigger across all tracks.
     pub fn launch_scene(&mut self, scene_idx: usize) -> bool {
         if scene_idx < 4 {
             self.active_scene_idx = Some(scene_idx);
+            for tr in &mut self.tracks {
+                tr.active_clip_idx = Some(scene_idx);
+            }
             self.top_bar_state.is_playing = true;
             self.last_synced_is_playing = true;
             self.panic_triggered = false;
@@ -3416,19 +3472,85 @@ impl AwardWinningGuiView {
         }
     }
 
-    /// Stop the active scene and pause transport in the Stage view.
+    /// Stop the active scene, reset all track playing clips, and pause transport in the Stage view.
     pub fn stop_scene(&mut self) {
         self.active_scene_idx = None;
+        for tr in &mut self.tracks {
+            tr.active_clip_idx = None;
+        }
         self.top_bar_state.is_playing = false;
         self.last_synced_is_playing = false;
     }
 
-    /// Trigger global panic killswitch: pause playback, disarm all tracks, and flag panic.
+    /// Launch or toggle an individual track clip in the Stage matrix.
+    pub fn launch_track_clip(&mut self, track_idx: usize, clip_idx: usize) -> bool {
+        if track_idx < self.tracks.len() && clip_idx < 4 {
+            self.select_track_for_stage(track_idx);
+            let is_already_active = self.tracks[track_idx].active_clip_idx == Some(clip_idx);
+            if is_already_active {
+                self.tracks[track_idx].active_clip_idx = None;
+            } else {
+                self.tracks[track_idx].active_clip_idx = Some(clip_idx);
+            }
+            self.top_bar_state.is_playing = true;
+            self.last_synced_is_playing = true;
+            self.panic_triggered = false;
+
+            // If all tracks are playing the same clip, reflect as active scene
+            if self.tracks.iter().all(|t| t.active_clip_idx == Some(clip_idx)) {
+                self.active_scene_idx = Some(clip_idx);
+            } else {
+                self.active_scene_idx = None;
+            }
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Stop a specific track's playing clip in the Stage view.
+    pub fn stop_track_clip(&mut self, track_idx: usize) -> bool {
+        if track_idx < self.tracks.len() {
+            self.tracks[track_idx].active_clip_idx = None;
+            self.active_scene_idx = None;
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Stop all active clips across all tracks and reset active scene in the Stage view.
+    pub fn stop_all_clips(&mut self) {
+        self.active_scene_idx = None;
+        for tr in &mut self.tracks {
+            tr.active_clip_idx = None;
+        }
+        self.top_bar_state.is_playing = false;
+        self.last_synced_is_playing = false;
+    }
+
+    /// Tap tempo engine calculating BPM from consecutive taps with bounds clamping [40.0, 280.0].
+    pub fn tap_tempo(&mut self) {
+        let now = std::time::Instant::now();
+        if let Some(prev) = self.last_tap_time {
+            let elapsed_sec = now.duration_since(prev).as_secs_f64();
+            if elapsed_sec > 0.15 && elapsed_sec < 2.5 {
+                let computed_bpm = (60.0 / elapsed_sec).clamp(40.0, 280.0);
+                self.top_bar_state.bpm = (computed_bpm * 10.0).round() / 10.0;
+                self.last_synced_bpm = self.top_bar_state.bpm;
+            }
+        }
+        self.last_tap_time = Some(now);
+    }
+
+    /// Trigger global panic killswitch: pause playback, disarm all tracks, stop clips, and flag panic.
     pub fn trigger_panic(&mut self) {
         self.top_bar_state.is_playing = false;
         self.last_synced_is_playing = false;
+        self.active_scene_idx = None;
         for tr in &mut self.tracks {
             tr.is_armed = false;
+            tr.active_clip_idx = None;
         }
         self.panic_triggered = true;
     }
@@ -3680,6 +3802,7 @@ impl AwardWinningGuiView {
                         clip_start_beat: clip_start,
                         clip_length_beats: clip_len,
                         clips,
+                        active_clip_idx: None,
                     }
                 }).collect();
             } else {
@@ -3987,6 +4110,7 @@ impl AwardWinningGuiView {
                     clip_start_beat: dt.clip_start_beat as f32,
                     clip_length_beats: dt.clip_length_beats as f32,
                     clips: Vec::new(),
+                    active_clip_idx: None,
                 });
 
                 if idx == 0 {
@@ -4155,6 +4279,14 @@ impl AwardWinningGuiView {
                     if t_i == track_idx {
                         self.inspector_state.is_soloed = is_s;
                         self.last_inspector_soloed = is_s;
+                    }
+                }
+                let clip_lane = format!("track_{}_clip", t_id);
+                if let Some(val) = automation_timeline.evaluate(&clip_lane, playhead_beat) {
+                    if val >= 0.0 {
+                        vt.active_clip_idx = Some(val.round() as usize);
+                    } else {
+                        vt.active_clip_idx = None;
                     }
                 }
             }
@@ -4412,6 +4544,27 @@ impl AwardWinningGuiView {
                         Err(idx) => lane.curve.points.insert(idx, point),
                     }
                 }
+            }
+        }
+
+        // 6. Stage Live Scene & Track Clip Cue Dispatch to ParamBus (Milestone 33)
+        let panic_pid = summoner_core::param_bus::ParamId(9996);
+        let panic_val = if self.panic_triggered { 1.0 } else { 0.0 };
+        if param_bus.get(panic_pid).is_some() {
+            param_bus.set(panic_pid, panic_val);
+        }
+
+        let scene_pid = summoner_core::param_bus::ParamId(9997);
+        let scene_val = self.active_scene_idx.map(|s| s as f32).unwrap_or(-1.0);
+        if param_bus.get(scene_pid).is_some() {
+            param_bus.set(scene_pid, scene_val);
+        }
+
+        for tr in &self.tracks {
+            let clip_pid = summoner_core::param_bus::ParamId(tr.id as u32 * 1000 + 204);
+            let clip_val = tr.active_clip_idx.map(|c| c as f32).unwrap_or(-1.0);
+            if param_bus.get(clip_pid).is_some() {
+                param_bus.set(clip_pid, clip_val);
             }
         }
 
@@ -4979,6 +5132,9 @@ impl AwardWinningGuiView {
                     }
                     if ui.button(RichText::new("🎚 Mixer").font(FontId::proportional(10.0)).color(Color32::from_rgb(200, 215, 235))).clicked() {
                         self.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::Mixer;
+                    }
+                    if ui.button(RichText::new("🎭 Stage").font(FontId::proportional(10.0)).color(Color32::from_rgb(200, 215, 235))).clicked() {
+                        self.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::Performance;
                     }
 
                     ui.add_space(4.0);
@@ -6365,6 +6521,137 @@ impl AwardWinningGuiView {
 
     #[cfg(feature = "gui")]
     fn show_stage_canvas(&mut self, ui: &mut egui::Ui) {
+        let cur_track_id = self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1);
+        let cur_track_name = self.tracks.get(self.selected_track_idx).map(|t| t.name.clone()).unwrap_or_else(|| "Track 1".to_string());
+
+        // 0. Stage Pro Top Toolbar (Two-Tier UX: Novice vs Pro)
+        ui.horizontal(|ui| {
+            ui.label(RichText::new("🎭 Stage").font(FontId::proportional(12.0)).strong().color(Color32::from_rgb(56, 189, 248)));
+            ui.add_space(6.0);
+
+            // Track Selector ComboBox
+            let mut track_to_select = None;
+            egui::ComboBox::from_id_source("stage_track_selector")
+                .selected_text(RichText::new(format!("🎚 {}", cur_track_name)).font(FontId::proportional(10.5)).color(Color32::from_rgb(56, 189, 248)))
+                .show_ui(ui, |ui| {
+                    for (t_idx, tr) in self.tracks.iter().enumerate() {
+                        let is_sel = t_idx == self.selected_track_idx;
+                        if ui.selectable_label(is_sel, format!("{}: {}", tr.id, tr.name)).clicked() {
+                            track_to_select = Some(t_idx);
+                        }
+                    }
+                });
+            if let Some(t_idx) = track_to_select {
+                self.select_track_for_stage(t_idx);
+            }
+
+            ui.add_space(4.0);
+
+            // 1-Click Pro View Switchers
+            if ui.button(RichText::new("📋 Arranger").font(FontId::proportional(10.0)).color(Color32::from_rgb(200, 215, 235))).clicked() {
+                self.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::Arranger;
+            }
+            if ui.button(RichText::new("🎹 Piano Roll").font(FontId::proportional(10.0)).color(Color32::from_rgb(200, 215, 235))).clicked() {
+                self.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::PianoRoll;
+            }
+            if ui.button(RichText::new("∿ Modular").font(FontId::proportional(10.0)).color(Color32::from_rgb(200, 215, 235))).clicked() {
+                self.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::Modular;
+            }
+            if ui.button(RichText::new("🎚 Mixer").font(FontId::proportional(10.0)).color(Color32::from_rgb(200, 215, 235))).clicked() {
+                self.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::Mixer;
+            }
+
+            ui.add_space(4.0);
+
+            // 1-Click Live Parameter Automation Launcher
+            egui::ComboBox::from_id_source("stage_auto_selector")
+                .selected_text(RichText::new("📈 Auto ▾").font(FontId::proportional(10.0)).color(Color32::from_rgb(234, 179, 8)))
+                .show_ui(ui, |ui| {
+                    if ui.selectable_label(false, "📈 Gain (Volume)").clicked() {
+                        self.open_track_automation_editor(cur_track_id, "gain");
+                    }
+                    if ui.selectable_label(false, "📈 Stereo Pan").clicked() {
+                        self.open_track_automation_editor(cur_track_id, "pan");
+                    }
+                    if ui.selectable_label(false, "📈 Mute Gate").clicked() {
+                        self.open_track_automation_editor(cur_track_id, "mute");
+                    }
+                    if ui.selectable_label(false, "📈 Solo Audition").clicked() {
+                        self.open_track_automation_editor(cur_track_id, "solo");
+                    }
+                    if ui.selectable_label(false, "📈 Filter Cutoff").clicked() {
+                        self.open_track_automation_editor(cur_track_id, "cutoff");
+                    }
+                    if ui.selectable_label(false, "📈 Resonance").clicked() {
+                        self.open_track_automation_editor(cur_track_id, "resonance");
+                    }
+                    if ui.selectable_label(false, "📈 Decay Time").clicked() {
+                        self.open_track_automation_editor(cur_track_id, "decay");
+                    }
+                    if ui.selectable_label(false, "📈 Drive / Saturator").clicked() {
+                        self.open_track_automation_editor(cur_track_id, "drive");
+                    }
+                });
+
+            ui.add_space(4.0);
+
+            // Launch Quantization Selector
+            egui::ComboBox::from_id_source("stage_quantize_selector")
+                .selected_text(RichText::new(format!("🧲 {}", self.stage_quantize.name())).font(FontId::proportional(10.0)).color(Color32::from_rgb(168, 85, 247)))
+                .show_ui(ui, |ui| {
+                    for q in [
+                        StageLaunchQuantize::Bar1,
+                        StageLaunchQuantize::BarHalf,
+                        StageLaunchQuantize::Beat1,
+                        StageLaunchQuantize::Instant,
+                    ] {
+                        if ui.selectable_label(self.stage_quantize == q, q.name()).clicked() {
+                            self.stage_quantize = q;
+                        }
+                    }
+                });
+
+            ui.add_space(4.0);
+
+            // Tap Tempo Button & BPM Display
+            let tap_btn = egui::Button::new(RichText::new(format!("⏱ TAP ({:.1} BPM)", self.top_bar_state.bpm)).font(FontId::proportional(10.0)).color(Color32::from_rgb(16, 185, 129)))
+                .fill(Color32::from_rgb(16, 40, 32));
+            if ui.add(tap_btn).clicked() {
+                self.tap_tempo();
+            }
+
+            ui.add_space(4.0);
+
+            // Stop All Clips Killswitch
+            let stop_btn = egui::Button::new(RichText::new("⏹ Stop All").font(FontId::proportional(10.0)).color(Color32::from_rgb(251, 146, 60)))
+                .fill(Color32::from_rgb(45, 25, 20));
+            if ui.add(stop_btn).clicked() {
+                self.stop_all_clips();
+            }
+
+            ui.add_space(4.0);
+
+            // Panic Button
+            let panic_bg = if self.panic_triggered {
+                Color32::from_rgb(220, 38, 38)
+            } else {
+                Color32::from_rgb(140, 24, 24)
+            };
+            let panic_btn = egui::Button::new(RichText::new("🚨 PANIC (ESC)").font(FontId::proportional(10.0)).color(Color32::WHITE))
+                .fill(panic_bg);
+            if ui.add(panic_btn).clicked() {
+                self.trigger_panic();
+            }
+        });
+
+        // ESC hotkey for Panic
+        let esc_pressed = ui.input(|i| i.key_pressed(egui::Key::Escape));
+        if esc_pressed {
+            self.trigger_panic();
+        }
+
+        ui.add_space(4.0);
+
         let canvas_height = (self.tracks.len() as f32 * 36.0 + 36.0).max(280.0);
         egui::Frame::none()
             .fill(Color32::from_rgb(10, 14, 24))
@@ -6378,82 +6665,17 @@ impl AwardWinningGuiView {
                 let pointer_pos = resp.interact_pointer_pos().or_else(|| ui.input(|i| i.pointer.latest_pos()));
                 let is_click = resp.clicked() || ui.input(|i| i.pointer.primary_clicked() || (i.pointer.primary_down() && !resp.dragged()));
 
-                // 1. Top Bar inside Stage: TAP Tempo, Panic, Quantize Mode, 1-Click Pro View Switchers
-                let bar_h = 28.0;
-                painter.rect_filled(Rect::from_min_size(rect.min, Vec2::new(rect.width(), bar_h)), 0.0, Color32::from_rgb(14, 20, 32));
-                painter.text(egui::pos2(rect.left() + 12.0, rect.top() + 7.0), egui::Align2::LEFT_TOP, "STAGE VIEW (LIVE PERFORMANCE MATRIX)", FontId::proportional(11.0), Color32::from_rgb(56, 189, 248));
-
-                // 1-Click Pro View Switchers on Stage Header
-                let arr_rect = Rect::from_min_size(egui::pos2(rect.left() + 250.0, rect.top() + 4.0), Vec2::new(75.0, 20.0));
-                let pno_rect = Rect::from_min_size(egui::pos2(arr_rect.right() + 4.0, rect.top() + 4.0), Vec2::new(85.0, 20.0));
-                let mod_rect = Rect::from_min_size(egui::pos2(pno_rect.right() + 4.0, rect.top() + 4.0), Vec2::new(75.0, 20.0));
-                let mix_rect = Rect::from_min_size(egui::pos2(mod_rect.right() + 4.0, rect.top() + 4.0), Vec2::new(65.0, 20.0));
-
-                let arr_hov = pointer_pos.map(|p| arr_rect.contains(p)).unwrap_or(false);
-                let pno_hov = pointer_pos.map(|p| pno_rect.contains(p)).unwrap_or(false);
-                let mod_hov = pointer_pos.map(|p| mod_rect.contains(p)).unwrap_or(false);
-                let mix_hov = pointer_pos.map(|p| mix_rect.contains(p)).unwrap_or(false);
-
-                let draw_nav_btn = |p: &egui::Painter, r: Rect, label: &str, is_hov: bool| {
-                    let bg = if is_hov { Color32::from_rgb(32, 44, 68) } else { Color32::from_rgb(20, 28, 44) };
-                    p.rect_filled(r, 3.0, bg);
-                    p.rect_stroke(r, 3.0, Stroke::new(1.0_f32, Color32::from_rgb(56, 189, 248)));
-                    p.text(r.center(), egui::Align2::CENTER_CENTER, label, FontId::proportional(9.0), Color32::from_rgb(200, 215, 235));
-                };
-
-                draw_nav_btn(&painter, arr_rect, "📋 Arranger", arr_hov);
-                draw_nav_btn(&painter, pno_rect, "🎹 Piano Roll", pno_hov);
-                draw_nav_btn(&painter, mod_rect, "∿ Modular", mod_hov);
-                draw_nav_btn(&painter, mix_rect, "🎚 Mixer", mix_hov);
-
-                if let Some(pos) = pointer_pos {
-                    if is_click {
-                        if arr_rect.contains(pos) {
-                            self.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::Arranger;
-                        } else if pno_rect.contains(pos) {
-                            self.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::PianoRoll;
-                        } else if mod_rect.contains(pos) {
-                            self.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::Modular;
-                        } else if mix_rect.contains(pos) {
-                            self.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::Mixer;
-                        }
-                    }
-                }
-
-                // Panic Button & ESC hotkey
-                let esc_pressed = ui.input(|i| i.key_pressed(egui::Key::Escape));
-                if esc_pressed {
-                    self.trigger_panic();
-                }
-
-                let panic_rect = Rect::from_min_size(egui::pos2(rect.right() - 90.0, rect.top() + 4.0), Vec2::new(80.0, 20.0));
-                let panic_hovered = pointer_pos.map(|p| panic_rect.contains(p)).unwrap_or(false);
-                if let Some(pos) = pointer_pos {
-                    if pos.x > 1000.0 {
-                        eprintln!("[STAGE PANIC DEBUG] rect={:?}, panic_rect={:?}, pointer_pos={:?}, is_click={}", rect, panic_rect, pos, is_click);
-                    }
-                    if panic_rect.contains(pos) && is_click {
-                        self.trigger_panic();
-                    }
-                }
-                let panic_bg = if self.panic_triggered || panic_hovered {
-                    Color32::from_rgb(220, 38, 38)
-                } else {
-                    Color32::from_rgb(185, 28, 28)
-                };
-                painter.rect_filled(panic_rect, 3.0, panic_bg);
-                painter.rect_stroke(panic_rect, 3.0, Stroke::new(1.0_f32, Color32::from_rgb(252, 165, 165)));
-                painter.text(panic_rect.center(), egui::Align2::CENTER_CENTER, "PANIC (ESC)", FontId::proportional(9.0), Color32::WHITE);
-
-                // 2. Matrix Grid: Tracks x 4 Scenes
+                // Matrix Grid: Tracks x 4 Scenes + Stop Row
                 let scene_names = ["1 Intro", "2 Verse", "3 Drop", "4 Outro"];
-                let hdr_h = 16.0;
-                let grid_top = rect.top() + bar_h + hdr_h + 8.0;
+                let hdr_h = 20.0;
+                let stop_h = 18.0;
+                let grid_top = rect.top() + hdr_h + 6.0;
                 let track_count = self.tracks.len();
                 let col_w = (rect.width() - 80.0) / track_count.max(1) as f32;
-                let row_h = (canvas_height - bar_h - hdr_h - 20.0) / scene_names.len() as f32;
+                let row_h = (canvas_height - hdr_h - stop_h - 16.0) / scene_names.len() as f32;
 
                 // Scene Launch Buttons (Leftmost column)
+                let mut scene_action = None;
                 for (s_idx, s_name) in scene_names.iter().enumerate() {
                     let sy = grid_top + s_idx as f32 * row_h;
                     let sc_rect = Rect::from_min_size(egui::pos2(rect.left() + 8.0, sy + 2.0), Vec2::new(64.0, row_h - 4.0));
@@ -6462,9 +6684,9 @@ impl AwardWinningGuiView {
                     if let Some(pos) = pointer_pos {
                         if sc_rect.contains(pos) && is_click {
                             if is_active_scene {
-                                self.stop_scene();
+                                scene_action = Some(None);
                             } else {
-                                self.launch_scene(s_idx);
+                                scene_action = Some(Some(s_idx));
                             }
                         }
                     }
@@ -6486,9 +6708,23 @@ impl AwardWinningGuiView {
                     painter.text(egui::pos2(sc_rect.right() - 8.0, sc_rect.center().y), egui::Align2::RIGHT_CENTER, launch_icon, FontId::proportional(8.0), if is_active_scene { Color32::from_rgb(16, 185, 129) } else { Color32::from_rgb(100, 116, 139) });
                 }
 
-                // Grid Column Track Headers & Pads
+                // Global Stop Row button in left column
+                let left_stop_rect = Rect::from_min_size(egui::pos2(rect.left() + 8.0, grid_top + scene_names.len() as f32 * row_h + 3.0), Vec2::new(64.0, stop_h - 2.0));
+                let mut do_stop_all = false;
+                if let Some(pos) = pointer_pos {
+                    if left_stop_rect.contains(pos) && is_click {
+                        do_stop_all = true;
+                    }
+                }
+                painter.rect_filled(left_stop_rect, 2.0, Color32::from_rgb(32, 20, 20));
+                painter.rect_stroke(left_stop_rect, 2.0, Stroke::new(1.0_f32, Color32::from_rgb(239, 68, 68)));
+                painter.text(left_stop_rect.center(), egui::Align2::CENTER_CENTER, "⏹ Stop All", FontId::proportional(8.5), Color32::from_rgb(252, 165, 165));
+
+                // Grid Column Track Headers, Pads, and per-track Stop buttons
                 let mut pad_track_selected = None;
-                let mut scene_to_launch = None;
+                let mut clip_to_toggle = None;
+                let mut track_to_stop = None;
+
                 for (t_idx, track) in self.tracks.iter().enumerate() {
                     let col_x = rect.left() + 80.0 + t_idx as f32 * col_w;
                     let col = Color32::from_rgb(track.color_rgb[0], track.color_rgb[1], track.color_rgb[2]);
@@ -6500,7 +6736,7 @@ impl AwardWinningGuiView {
                     let border_col = if is_sel { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(28, 38, 56) };
                     painter.rect_filled(hdr_rect, 2.0, hdr_bg);
                     painter.rect_stroke(hdr_rect, 2.0, Stroke::new(1.0_f32, border_col));
-                    painter.text(hdr_rect.center(), egui::Align2::CENTER_CENTER, &track.name, FontId::proportional(8.5), col);
+                    painter.text(hdr_rect.center(), egui::Align2::CENTER_CENTER, &track.name, FontId::proportional(9.0), col);
 
                     if let Some(pos) = pointer_pos {
                         if hdr_rect.contains(pos) && is_click {
@@ -6508,34 +6744,61 @@ impl AwardWinningGuiView {
                         }
                     }
 
+                    // Scene clip pads
                     for (s_idx, _) in scene_names.iter().enumerate() {
                         let row_y = grid_top + s_idx as f32 * row_h;
                         let pad_rect = Rect::from_min_size(egui::pos2(col_x + 2.0, row_y + 2.0), Vec2::new(col_w - 4.0, row_h - 4.0));
-                        let is_playing = self.active_scene_idx == Some(s_idx) || (self.active_scene_idx.is_none() && (t_idx + s_idx) % 2 == 0 && self.top_bar_state.is_playing);
+                        let is_playing = track.active_clip_idx == Some(s_idx) || (self.active_scene_idx == Some(s_idx) && self.top_bar_state.is_playing);
 
                         if let Some(pos) = pointer_pos {
                             if pad_rect.contains(pos) && is_click {
                                 pad_track_selected = Some(t_idx);
-                                scene_to_launch = Some(s_idx);
+                                clip_to_toggle = Some((t_idx, s_idx));
                             }
                         }
 
                         let pad_bg = if is_playing {
-                            Color32::from_rgba_unmultiplied(track.color_rgb[0], track.color_rgb[1], track.color_rgb[2], 65)
+                            Color32::from_rgba_unmultiplied(track.color_rgb[0], track.color_rgb[1], track.color_rgb[2], 75)
                         } else {
                             Color32::from_rgb(14, 18, 28)
                         };
                         painter.rect_filled(pad_rect, 3.0, pad_bg);
-                        painter.rect_stroke(pad_rect, 3.0, Stroke::new(1.0_f32, if is_playing { col } else { Color32::from_rgb(28, 38, 56) }));
+                        painter.rect_stroke(pad_rect, 3.0, Stroke::new(if is_playing { 1.5_f32 } else { 1.0_f32 }, if is_playing { col } else { Color32::from_rgb(28, 38, 56) }));
 
                         let pad_label = if is_playing { "▶ Clip" } else { "⬚" };
                         let label_col = if is_playing { col } else { Color32::from_rgb(100, 116, 139) };
                         painter.text(pad_rect.center(), egui::Align2::CENTER_CENTER, pad_label, FontId::proportional(9.0), label_col);
                     }
+
+                    // Per-Track Stop Button
+                    let tr_stop_rect = Rect::from_min_size(egui::pos2(col_x + 2.0, grid_top + scene_names.len() as f32 * row_h + 3.0), Vec2::new(col_w - 4.0, stop_h - 2.0));
+                    let has_active_clip = track.active_clip_idx.is_some();
+                    if let Some(pos) = pointer_pos {
+                        if tr_stop_rect.contains(pos) && is_click {
+                            track_to_stop = Some(t_idx);
+                        }
+                    }
+                    let tr_stop_bg = if has_active_clip { Color32::from_rgb(45, 25, 20) } else { Color32::from_rgb(16, 20, 30) };
+                    let tr_stop_border = if has_active_clip { Color32::from_rgb(251, 146, 60) } else { Color32::from_rgb(28, 38, 56) };
+                    let tr_stop_label_col = if has_active_clip { Color32::from_rgb(251, 146, 60) } else { Color32::from_rgb(100, 116, 139) };
+                    painter.rect_filled(tr_stop_rect, 2.0, tr_stop_bg);
+                    painter.rect_stroke(tr_stop_rect, 2.0, Stroke::new(1.0_f32, tr_stop_border));
+                    painter.text(tr_stop_rect.center(), egui::Align2::CENTER_CENTER, "■ Stop", FontId::proportional(8.5), tr_stop_label_col);
                 }
 
-                if let Some(s_idx) = scene_to_launch {
-                    self.launch_scene(s_idx);
+                if do_stop_all {
+                    self.stop_all_clips();
+                } else if let Some(action) = scene_action {
+                    match action {
+                        Some(s_idx) => { self.launch_scene(s_idx); }
+                        None => { self.stop_scene(); }
+                    }
+                } else if let Some((t_idx, s_idx)) = clip_to_toggle {
+                    self.launch_track_clip(t_idx, s_idx);
+                }
+
+                if let Some(t_idx) = track_to_stop {
+                    self.stop_track_clip(t_idx);
                 }
 
                 if let Some(s_idx) = pad_track_selected {
