@@ -200,6 +200,20 @@ pub struct ModularPort {
     pub rel_pos: (f32, f32),
 }
 
+/// A tactile parameter on a modular DSP node faceplate.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ModularNodeParam {
+    pub id: String,
+    pub name: String,
+    pub value: f32,
+    pub min: f32,
+    pub max: f32,
+    pub default_value: f32,
+    pub step: Option<f32>,
+    pub unit: String,
+    pub rel_pos: (f32, f32),
+}
+
 /// An instantiated modular DSP node in the modular canvas.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModularNodeInstance {
@@ -210,6 +224,8 @@ pub struct ModularNodeInstance {
     pub pos: (f32, f32),
     pub size: (f32, f32),
     pub ports: Vec<ModularPort>,
+    #[serde(default)]
+    pub params: Vec<ModularNodeParam>,
     #[serde(default)]
     pub graph_node_idx: Option<usize>,
     #[serde(default)]
@@ -1934,6 +1950,30 @@ impl AwardWinningGuiView {
                     ModularPort { id: "sync".into(), name: "Sync".into(), kind: ModularPortKind::GateIn, rel_pos: (45.0, 88.0) },
                     ModularPort { id: "out".into(), name: "Out".into(), kind: ModularPortKind::AudioOut, rel_pos: (126.0, 88.0) },
                 ],
+                params: vec![
+                    ModularNodeParam {
+                        id: "freq".into(),
+                        name: "Freq".into(),
+                        value: 440.0,
+                        min: 20.0,
+                        max: 2000.0,
+                        default_value: 440.0,
+                        step: Some(1.0),
+                        unit: "Hz".into(),
+                        rel_pos: (46.0, 48.0),
+                    },
+                    ModularNodeParam {
+                        id: "shape".into(),
+                        name: "Shape".into(),
+                        value: 0.5,
+                        min: 0.0,
+                        max: 1.0,
+                        default_value: 0.5,
+                        step: Some(0.01),
+                        unit: "".into(),
+                        rel_pos: (96.0, 48.0),
+                    },
+                ],
                 graph_node_idx: Some(osc_idx),
                 bypassed: false,
             },
@@ -1949,6 +1989,30 @@ impl AwardWinningGuiView {
                     ModularPort { id: "cv_cut".into(), name: "CV Cut".into(), kind: ModularPortKind::ModulationIn, rel_pos: (14.0, 75.0) },
                     ModularPort { id: "lp".into(), name: "LP".into(), kind: ModularPortKind::AudioOut, rel_pos: (136.0, 45.0) },
                 ],
+                params: vec![
+                    ModularNodeParam {
+                        id: "cutoff".into(),
+                        name: "Cutoff".into(),
+                        value: 1200.0,
+                        min: 20.0,
+                        max: 20000.0,
+                        default_value: 1200.0,
+                        step: Some(10.0),
+                        unit: "Hz".into(),
+                        rel_pos: (48.0, 50.0),
+                    },
+                    ModularNodeParam {
+                        id: "resonance".into(),
+                        name: "Res".into(),
+                        value: 1.0,
+                        min: 0.1,
+                        max: 10.0,
+                        default_value: 1.0,
+                        step: Some(0.05),
+                        unit: "Q".into(),
+                        rel_pos: (100.0, 50.0),
+                    },
+                ],
                 graph_node_idx: Some(filter_idx),
                 bypassed: false,
             },
@@ -1962,6 +2026,30 @@ impl AwardWinningGuiView {
                 ports: vec![
                     ModularPort { id: "gate".into(), name: "Gate".into(), kind: ModularPortKind::GateIn, rel_pos: (14.0, 88.0) },
                     ModularPort { id: "cv".into(), name: "CV".into(), kind: ModularPortKind::ModulationOut, rel_pos: (126.0, 88.0) },
+                ],
+                params: vec![
+                    ModularNodeParam {
+                        id: "attack".into(),
+                        name: "Atk".into(),
+                        value: 0.01,
+                        min: 0.001,
+                        max: 2.0,
+                        default_value: 0.01,
+                        step: Some(0.005),
+                        unit: "s".into(),
+                        rel_pos: (46.0, 48.0),
+                    },
+                    ModularNodeParam {
+                        id: "decay".into(),
+                        name: "Dec".into(),
+                        value: 0.3,
+                        min: 0.01,
+                        max: 5.0,
+                        default_value: 0.3,
+                        step: Some(0.01),
+                        unit: "s".into(),
+                        rel_pos: (96.0, 48.0),
+                    },
                 ],
                 graph_node_idx: Some(env_idx),
                 bypassed: false,
@@ -1977,6 +2065,30 @@ impl AwardWinningGuiView {
                     ModularPort { id: "audio".into(), name: "Audio".into(), kind: ModularPortKind::AudioIn, rel_pos: (14.0, 45.0) },
                     ModularPort { id: "cv".into(), name: "CV".into(), kind: ModularPortKind::ModulationIn, rel_pos: (14.0, 75.0) },
                     ModularPort { id: "main".into(), name: "Main".into(), kind: ModularPortKind::AudioOut, rel_pos: (126.0, 60.0) },
+                ],
+                params: vec![
+                    ModularNodeParam {
+                        id: "gain".into(),
+                        name: "Gain".into(),
+                        value: 1.0,
+                        min: 0.0,
+                        max: 2.0,
+                        default_value: 1.0,
+                        step: Some(0.01),
+                        unit: "".into(),
+                        rel_pos: (46.0, 50.0),
+                    },
+                    ModularNodeParam {
+                        id: "drive".into(),
+                        name: "Drive".into(),
+                        value: 0.0,
+                        min: 0.0,
+                        max: 2.0,
+                        default_value: 0.0,
+                        step: Some(0.01),
+                        unit: "".into(),
+                        rel_pos: (96.0, 50.0),
+                    },
                 ],
                 graph_node_idx: Some(vca_idx),
                 bypassed: false,
@@ -2072,6 +2184,34 @@ impl AwardWinningGuiView {
             graph_node_idx = Some(g.add_node(node_box));
         }
 
+        let mut params = Vec::new();
+        for (p_i, schema) in desc.params.iter().take(2).enumerate() {
+            let (min, max, def, unit) = match &schema.widget {
+                crate::dsp_node_ui::DspWidgetKind::RotaryKnob { min, max, default, unit, .. } => (*min, *max, *default, unit.clone()),
+                crate::dsp_node_ui::DspWidgetKind::VerticalFader { min, max, default, unit, .. } => (*min, *max, *default, unit.clone()),
+                crate::dsp_node_ui::DspWidgetKind::Toggle { default } => (0.0, 1.0, if *default { 1.0 } else { 0.0 }, "".to_string()),
+                _ => (0.0, 1.0, 0.5, "".to_string()),
+            };
+            let x_pos = if desc.params.len() == 1 {
+                70.0
+            } else if p_i == 0 {
+                46.0
+            } else {
+                98.0
+            };
+            params.push(ModularNodeParam {
+                id: schema.id.clone(),
+                name: schema.name.clone(),
+                value: def,
+                min,
+                max,
+                default_value: def,
+                step: None,
+                unit,
+                rel_pos: (x_pos, 48.0),
+            });
+        }
+
         let instance = ModularNodeInstance {
             id: node_id.clone(),
             kind_id: desc.kind_id.clone(),
@@ -2080,6 +2220,7 @@ impl AwardWinningGuiView {
             pos: (x, y),
             size: (145.0, 105.0),
             ports,
+            params,
             graph_node_idx,
             bypassed: false,
         };
@@ -2176,6 +2317,7 @@ impl AwardWinningGuiView {
             pos: new_pos,
             size: source_node.size,
             ports: source_node.ports.clone(),
+            params: source_node.params.clone(),
             graph_node_idx,
             bypassed: source_node.bypassed,
         };
@@ -2281,6 +2423,122 @@ impl AwardWinningGuiView {
     /// Get mutable reference to currently selected patch cord, if any.
     pub fn selected_patch_cord_mut(&mut self) -> Option<&mut ModularPatchCord> {
         self.selected_patch_cord_idx.and_then(|idx| self.patch_cords.get_mut(idx))
+    }
+
+    /// Set a modular node's parameter value by node_id and param_id.
+    pub fn set_modular_node_param(&mut self, node_id: &str, param_id: &str, value: f32) -> bool {
+        if let Some(node) = self.modular_nodes.iter_mut().find(|n| n.id == node_id) {
+            if let Some(param) = node.params.iter_mut().find(|p| p.id == param_id) {
+                param.value = value.clamp(param.min, param.max);
+                if self.selected_modular_node_id.as_deref() == Some(node_id) {
+                    self.inspector_state.node_param_values.insert(param_id.to_string(), param.value);
+                }
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Get a modular node's parameter value by node_id and param_id.
+    pub fn get_modular_node_param(&self, node_id: &str, param_id: &str) -> Option<f32> {
+        let node = self.modular_nodes.iter().find(|n| n.id == node_id)?;
+        let param = node.params.iter().find(|p| p.id == param_id)?;
+        Some(param.value)
+    }
+
+    /// Reset a modular node's parameter to its default value.
+    pub fn reset_modular_node_param(&mut self, node_id: &str, param_id: &str) -> Option<f32> {
+        let node = self.modular_nodes.iter_mut().find(|n| n.id == node_id)?;
+        let param = node.params.iter_mut().find(|p| p.id == param_id)?;
+        param.value = param.default_value;
+        let def = param.default_value;
+        if self.selected_modular_node_id.as_deref() == Some(node_id) {
+            self.inspector_state.node_param_values.insert(param_id.to_string(), def);
+        }
+        Some(def)
+    }
+
+    /// Synchronize all modular node sockets and active patch cords into the PatchMatrixView.
+    pub fn sync_modular_to_routing_matrix(&mut self) {
+        let mut sources = Vec::new();
+        let mut destinations = Vec::new();
+
+        for node in &self.modular_nodes {
+            let (r, g, b) = node.category.color_rgb();
+            for port in &node.ports {
+                let id = format!("{}:{}", node.id, port.id);
+                let name = format!("{}: {}", node.display_name, port.name);
+                if port.kind.is_output() {
+                    let kind = if port.kind.is_modulation() {
+                        crate::patch_matrix::SourceKind::Envelope
+                    } else {
+                        crate::patch_matrix::SourceKind::Custom("Audio".into())
+                    };
+                    sources.push(crate::patch_matrix::SourceNode::new(id, name, kind).with_rgb(r, g, b));
+                } else {
+                    destinations.push(crate::patch_matrix::DestNode::new(id, name, node.display_name.clone()));
+                }
+            }
+        }
+
+        self.patch_matrix.sources = sources;
+        self.patch_matrix.destinations = destinations;
+        self.patch_matrix.connections.clear();
+
+        for cord in &self.patch_cords {
+            let key = (
+                format!("{}:{}", cord.from_node_id, cord.from_port_id),
+                format!("{}:{}", cord.to_node_id, cord.to_port_id),
+            );
+            self.patch_matrix.connections.insert(key, crate::patch_matrix::PatchConnection {
+                active: true,
+                intensity: cord.intensity.abs(),
+                muted: cord.intensity.abs() < 0.001,
+                inverted: cord.intensity < -0.001,
+            });
+        }
+    }
+
+    /// Synchronize active connections from PatchMatrixView back into modular patch cords and audio graph.
+    pub fn sync_routing_matrix_to_modular(&mut self) {
+        let conns: Vec<((String, String), crate::patch_matrix::PatchConnection)> = self.patch_matrix.connections.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+        for ((src, dst), conn) in conns {
+            let src_parts: Vec<&str> = src.split(':').collect();
+            let dst_parts: Vec<&str> = dst.split(':').collect();
+            if src_parts.len() == 2 && dst_parts.len() == 2 {
+                let (s_node, s_port) = (src_parts[0], src_parts[1]);
+                let (d_node, d_port) = (dst_parts[0], dst_parts[1]);
+                let intensity = if conn.inverted { -conn.intensity } else { conn.intensity };
+
+                if conn.active {
+                    if let Some(cord) = self.patch_cords.iter_mut().find(|c| {
+                        c.from_node_id == s_node && c.from_port_id == s_port && c.to_node_id == d_node && c.to_port_id == d_port
+                    }) {
+                        cord.intensity = intensity;
+                    } else {
+                        let is_audio = self.modular_nodes.iter()
+                            .find(|n| n.id == s_node)
+                            .and_then(|n| n.ports.iter().find(|p| p.id == s_port))
+                            .map(|p| !p.kind.is_modulation())
+                            .unwrap_or(true);
+                        self.patch_cords.push(ModularPatchCord {
+                            from_node_id: s_node.to_string(),
+                            from_port_id: s_port.to_string(),
+                            to_node_id: d_node.to_string(),
+                            to_port_id: d_port.to_string(),
+                            is_audio,
+                            intensity,
+                        });
+                        self.connect_patch_cord_in_graph(s_node, s_port, d_node, d_port);
+                    }
+                } else if let Some(pos) = self.patch_cords.iter().position(|c| {
+                    c.from_node_id == s_node && c.from_port_id == s_port && c.to_node_id == d_node && c.to_port_id == d_port
+                }) {
+                    self.patch_cords.remove(pos);
+                    self.disconnect_patch_cord_in_graph(s_node, s_port, d_node, d_port);
+                }
+            }
+        }
     }
 
     /// Run real-time block processing through the live modular NodeGraph.
@@ -2722,16 +2980,20 @@ impl AwardWinningGuiView {
         playhead_beat: f64,
         is_recording_automation: bool,
     ) {
-        if project.tracks.is_empty() {
-            return;
-        }
-        let track_idx = if self.selected_track_idx < project.tracks.len() {
-            self.selected_track_idx
+        let track_idx = if !project.tracks.is_empty() {
+            if self.selected_track_idx < project.tracks.len() {
+                self.selected_track_idx
+            } else {
+                0
+            }
         } else {
-            0
+            self.selected_track_idx
         };
-        let track = &project.tracks[track_idx];
-        let track_id = track.id;
+        let track_id = if !project.tracks.is_empty() {
+            project.tracks[track_idx].id
+        } else {
+            self.tracks.get(track_idx).map(|t| t.id).unwrap_or(1)
+        };
 
         // Synchronize Novice Macro knobs with Device Rack dials before dispatch/recording
         if !self.top_bar_state.is_pro_mode {
@@ -3107,23 +3369,23 @@ impl AwardWinningGuiView {
             }
         }
 
-        // 7b. Selected Modular Node Parameters Dispatch & Live Recording
-        if let Some(ref mod_node_id) = self.selected_modular_node_id {
-            for (p_idx, (k, &v)) in self.inspector_state.node_param_values.iter().enumerate() {
-                let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 500 + p_idx as u32);
+        // 7b. All Modular Nodes Faceplate Parameters Dispatch & Live Recording (M33)
+        for (n_idx, mod_node) in self.modular_nodes.iter().enumerate() {
+            for (p_idx, param) in mod_node.params.iter().enumerate() {
+                let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 500 + (n_idx as u32 * 16) + p_idx as u32);
                 if param_bus.get(pid).is_some() {
-                    param_bus.set(pid, v);
+                    param_bus.set(pid, param.value);
                 }
-                let auto_key = format!("modular_{}_{}", mod_node_id, k);
+                let auto_key = format!("modular_{}_{}", mod_node.id, param.id);
                 if automation_registry.get_param(&auto_key).is_none() {
-                    automation_registry.register_param(&auto_key, v);
+                    automation_registry.register_param(&auto_key, param.value);
                 }
-                automation_registry.set(&auto_key, v);
+                automation_registry.set(&auto_key, param.value);
 
                 if is_recording_automation {
                     let point = summoner_sequencer::automation_timeline::AutomationPoint {
                         beat: playhead_beat,
-                        value: v,
+                        value: param.value,
                         interp: summoner_sequencer::automation_timeline::Interpolation::Linear,
                     };
                     let lane = automation_timeline.lanes.entry(auto_key.clone()).or_insert_with(|| {
@@ -3137,6 +3399,16 @@ impl AwardWinningGuiView {
                         Err(idx) => lane.curve.points.insert(idx, point),
                     }
                 }
+            }
+        }
+
+        if let Some(ref mod_node_id) = self.selected_modular_node_id {
+            for (k, &v) in &self.inspector_state.node_param_values {
+                let auto_key = format!("modular_{}_{}", mod_node_id, k);
+                if automation_registry.get_param(&auto_key).is_none() {
+                    automation_registry.register_param(&auto_key, v);
+                }
+                automation_registry.set(&auto_key, v);
             }
         }
 
@@ -3272,10 +3544,16 @@ impl AwardWinningGuiView {
                     // Mode Toggle: Patch Cords vs Matrix Grid
                     let cords_active = self.modular_mode == ModularCanvasMode::PatchCords;
                     if ui.selectable_label(cords_active, "∿ Patch Cords").clicked() {
+                        if self.modular_mode == ModularCanvasMode::RoutingMatrix {
+                            self.sync_routing_matrix_to_modular();
+                        }
                         self.modular_mode = ModularCanvasMode::PatchCords;
                     }
                     let matrix_active = self.modular_mode == ModularCanvasMode::RoutingMatrix;
                     if ui.selectable_label(matrix_active, "▦ Routing Matrix").clicked() {
+                        if self.modular_mode == ModularCanvasMode::PatchCords {
+                            self.sync_modular_to_routing_matrix();
+                        }
                         self.modular_mode = ModularCanvasMode::RoutingMatrix;
                     }
 
@@ -3341,6 +3619,7 @@ impl AwardWinningGuiView {
                 match self.modular_mode {
                     ModularCanvasMode::RoutingMatrix => {
                         self.patch_matrix.ui(ui);
+                        self.sync_routing_matrix_to_modular();
                     }
                     ModularCanvasMode::PatchCords => {
                         self.render_patch_cords_canvas(ui, canvas_height - 38.0);
@@ -3600,6 +3879,8 @@ impl AwardWinningGuiView {
         // Check cord attenuverter puck interactions first
         let mut clicked_cord_puck = None;
         let mut dragged_cord_puck = None;
+        let mut clicked_knob = None;
+        let mut dragged_knob = None;
 
         for (c_idx, cord) in self.patch_cords.iter().enumerate() {
             if let (Some(src_pt), Some(dst_pt)) = (
@@ -3660,18 +3941,36 @@ impl AwardWinningGuiView {
                     Vec2::new(node.size.0, node.size.1),
                 );
 
-                // Check socket clicks first
-                for port in &node.ports {
-                    let s_pos = egui::pos2(n_rect.left() + port.rel_pos.0, n_rect.top() + port.rel_pos.1);
+                // Check parameter knob clicks and drags
+                for param in &node.params {
+                    let k_pos = egui::pos2(n_rect.left() + param.rel_pos.0, n_rect.top() + param.rel_pos.1);
                     if let Some(pos) = pointer_pos {
-                        if pos.distance(s_pos) <= 8.0 && clicked {
-                            clicked_socket = Some((node.id.clone(), port.id.clone(), port.kind));
+                        if pos.distance(k_pos) <= 13.0 {
+                            if resp.double_clicked() {
+                                clicked_knob = Some((node.id.clone(), param.id.clone(), true));
+                            } else if clicked {
+                                clicked_knob = Some((node.id.clone(), param.id.clone(), false));
+                            } else if resp.dragged() {
+                                dragged_knob = Some((node.id.clone(), param.id.clone()));
+                            }
+                        }
+                    }
+                }
+
+                // Check socket clicks
+                if clicked_knob.is_none() && dragged_knob.is_none() {
+                    for port in &node.ports {
+                        let s_pos = egui::pos2(n_rect.left() + port.rel_pos.0, n_rect.top() + port.rel_pos.1);
+                        if let Some(pos) = pointer_pos {
+                            if pos.distance(s_pos) <= 8.0 && clicked {
+                                clicked_socket = Some((node.id.clone(), port.id.clone(), port.kind));
+                            }
                         }
                     }
                 }
 
                 // Check header action button clicks
-                if clicked_socket.is_none() && clicked {
+                if clicked_knob.is_none() && dragged_knob.is_none() && clicked_socket.is_none() && clicked {
                     if let Some(pos) = pointer_pos {
                         let del_rect = Rect::from_min_size(egui::pos2(n_rect.right() - 18.0, n_rect.top() + 4.0), Vec2::new(14.0, 14.0));
                         let byp_rect = Rect::from_min_size(egui::pos2(del_rect.left() - 22.0, n_rect.top() + 4.0), Vec2::new(20.0, 14.0));
@@ -3687,7 +3986,7 @@ impl AwardWinningGuiView {
                             node_selected = Some((node.id.clone(), node.kind_id.clone(), node.display_name.clone()));
                         }
                     }
-                } else if clicked_socket.is_none() && resp.dragged() && self.selected_modular_node_id.is_none() {
+                } else if clicked_knob.is_none() && dragged_knob.is_none() && clicked_socket.is_none() && resp.dragged() && self.selected_modular_node_id.is_none() {
                     if let Some(pos) = pointer_pos {
                         if n_rect.contains(pos) {
                             node_selected = Some((node.id.clone(), node.kind_id.clone(), node.display_name.clone()));
@@ -3697,8 +3996,33 @@ impl AwardWinningGuiView {
             }
         }
 
+        let is_dragging_knob = dragged_knob.is_some();
+        if let Some((n_id, p_id)) = dragged_knob {
+            let delta_y = drag_delta.y;
+            if let Some(node) = self.modular_nodes.iter_mut().find(|n| n.id == n_id) {
+                if let Some(param) = node.params.iter_mut().find(|p| p.id == p_id) {
+                    let range = param.max - param.min;
+                    let speed = if ui.input(|i| i.modifiers.shift) { 0.002 } else { 0.01 };
+                    param.value = (param.value - delta_y * range * speed).clamp(param.min, param.max);
+                    if self.selected_modular_node_id.as_deref() == Some(&n_id) {
+                        self.inspector_state.node_param_values.insert(param.id.clone(), param.value);
+                    }
+                }
+            }
+            if let Some(node) = self.modular_nodes.iter().find(|n| n.id == n_id) {
+                node_selected = Some((node.id.clone(), node.kind_id.clone(), node.display_name.clone()));
+            }
+        } else if let Some((n_id, p_id, is_double)) = clicked_knob {
+            if is_double {
+                self.reset_modular_node_param(&n_id, &p_id);
+            }
+            if let Some(node) = self.modular_nodes.iter().find(|n| n.id == n_id) {
+                node_selected = Some((node.id.clone(), node.kind_id.clone(), node.display_name.clone()));
+            }
+        }
+
         // Tactile node drag-to-reposition
-        if resp.dragged() && self.pending_cord_source.is_none() && dragged_cord_puck.is_none() && (drag_delta.x.abs() > 0.0 || drag_delta.y.abs() > 0.0) {
+        if resp.dragged() && self.pending_cord_source.is_none() && dragged_cord_puck.is_none() && !is_dragging_knob && (drag_delta.x.abs() > 0.0 || drag_delta.y.abs() > 0.0) {
             if let Some(ref sel_id) = self.selected_modular_node_id {
                 if let Some(node) = self.modular_nodes.iter_mut().find(|n| &n.id == sel_id) {
                     node.pos.0 = (node.pos.0 + drag_delta.x).clamp(0.0, (rect.width() - node.size.0).max(0.0));
@@ -3856,6 +4180,74 @@ impl AwardWinningGuiView {
             // Delete button
             painter.rect_filled(del_rect, 2.0, if del_hovered { Color32::from_rgb(220, 38, 38) } else { Color32::from_rgb(24, 34, 52) });
             painter.text(del_rect.center(), egui::Align2::CENTER_CENTER, "✕", FontId::proportional(9.0), Color32::from_rgb(241, 245, 249));
+
+            // Tactile parameter knobs on node faceplate
+            for param in &node.params {
+                let k_pos = egui::pos2(n_rect.left() + param.rel_pos.0, n_rect.top() + param.rel_pos.1);
+                let is_hovered = pointer_pos.map(|p| p.distance(k_pos) <= 12.0).unwrap_or(false);
+                let norm = if (param.max - param.min).abs() > 0.0001 {
+                    ((param.value - param.min) / (param.max - param.min)).clamp(0.0, 1.0)
+                } else {
+                    0.5
+                };
+
+                // Outer metallic bezel ring
+                let bezel_stroke = if is_hovered {
+                    Stroke::new(1.4_f32, Color32::from_rgb(148, 163, 184))
+                } else {
+                    Stroke::new(1.0_f32, Color32::from_rgb(51, 65, 85))
+                };
+                painter.circle_stroke(k_pos, 10.5, bezel_stroke);
+
+                // Inner chassis cavity
+                painter.circle_filled(k_pos, 9.5, Color32::from_rgb(15, 23, 42));
+
+                // Colored value arc indicator
+                let start_ang = -std::f32::consts::PI * 0.75;
+                let arc_sweep = std::f32::consts::PI * 1.5 * norm;
+                let steps = (norm * 14.0).ceil() as usize;
+                if steps > 0 {
+                    let mut prev_pt = egui::pos2(k_pos.x + start_ang.sin() * 8.5, k_pos.y - start_ang.cos() * 8.5);
+                    for s in 1..=steps {
+                        let t = s as f32 / 14.0;
+                        let ang = start_ang + std::f32::consts::PI * 1.5 * t.min(norm);
+                        let cur_pt = egui::pos2(k_pos.x + ang.sin() * 8.5, k_pos.y - ang.cos() * 8.5);
+                        painter.line_segment([prev_pt, cur_pt], Stroke::new(1.6_f32, cat_col));
+                        prev_pt = cur_pt;
+                    }
+                }
+
+                // Needle pointer line
+                let needle_ang = start_ang + arc_sweep;
+                let pointer_end = egui::pos2(k_pos.x + needle_ang.sin() * 6.8, k_pos.y - needle_ang.cos() * 6.8);
+                let pointer_start = egui::pos2(k_pos.x + needle_ang.sin() * 2.0, k_pos.y - needle_ang.cos() * 2.0);
+                painter.line_segment([pointer_start, pointer_end], Stroke::new(1.6_f32, Color32::WHITE));
+
+                // Parameter Name Label (above knob)
+                painter.text(
+                    egui::pos2(k_pos.x, k_pos.y - 14.0),
+                    egui::Align2::CENTER_CENTER,
+                    &param.name,
+                    FontId::proportional(8.0),
+                    if node.bypassed { Color32::from_rgb(100, 116, 139) } else { Color32::from_rgb(148, 163, 184) },
+                );
+
+                // Formatted Value Readout (below knob)
+                let val_str = if param.value.abs() >= 1000.0 {
+                    format!("{:.1}k{}", param.value / 1000.0, param.unit)
+                } else if param.value.abs() < 1.0 && param.value.abs() > 0.0 {
+                    format!("{:.2}{}", param.value, param.unit)
+                } else {
+                    format!("{:.1}{}", param.value, param.unit)
+                };
+                painter.text(
+                    egui::pos2(k_pos.x, k_pos.y + 13.0),
+                    egui::Align2::CENTER_CENTER,
+                    val_str,
+                    FontId::proportional(7.5),
+                    if node.bypassed { Color32::from_rgb(71, 85, 105) } else { Color32::from_rgb(203, 213, 225) },
+                );
+            }
 
             // Sockets
             for port in &node.ports {

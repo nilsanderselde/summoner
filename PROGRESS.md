@@ -1,6 +1,6 @@
 # Summoner DAW — Product Readiness & Shippability Tracker
-> **Current Shippability Score:** 9.9 / 10  
-> **Status:** Production Ready Release Candidate (Sprint Review Turn #9, Turn #10 Expansion)  
+> **Current Shippability Score:** 9.95 / 10  
+> **Status:** Production Ready Release Candidate (Sprint Review Turn #21)  
 > **Authoritative Root:** `PROGRESS.md`  
 > **License:** AGPLv3
 
@@ -493,6 +493,43 @@ Product Management has conducted a comprehensive readiness audit:
     - `cargo check -p summoner_gui`: 0 warnings, passes cleanly in 0.24s.
     - `cargo check -p summoner_gui --features gui`: 0 warnings, passes in 3.40s.
     - `cargo test -p summoner_gui`: 302 passed in 0.22s (100% pass rate).
+
+### Turn #21 — Sprint Review: Modular Faceplate Tactile Parameter Knobs, Bidirectional Routing Matrix Bridge & M33 Live Parameter Automation
+- [x] Modular Faceplate Tactile Parameter Reflection (`ModularNodeParam` in `crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Defined `ModularNodeParam` with `id`, `name`, `value`, `min`, `max`, `default_value`, `step`, `unit`, and `rel_pos`.
+  - Added `params: Vec<ModularNodeParam>` to `ModularNodeInstance`.
+  - Initialized tactile faceplate parameters for default synthesizer chain:
+    - `osc_1`: `freq` (20.0..=2000.0 Hz, default 440.0) & `shape` (0.0..=1.0, default 0.5).
+    - `filter_1`: `cutoff` (20.0..=20000.0 Hz, default 1200.0) & `resonance` (0.1..=10.0 Q, default 1.0).
+    - `env_1`: `attack` (0.001..=2.0 s, default 0.01) & `decay` (0.01..=5.0 s, default 0.3).
+    - `vca_1`: `gain` (0.0..=2.0, default 1.0) & `drive` (0.0..=2.0, default 0.0).
+  - Universal Catalog Instantiation Reflection: `add_modular_node_from_descriptor` automatically inspects `desc.params` across all 1,090+ registered DSP modules (`DspNodeRegistry`), pre-populating primary faceplate parameters with correct ranges, defaults, and physical units.
+  - Duplication Integrity: `duplicate_modular_node` clones all faceplate parameters preserving current adjusted values.
+- [x] Tactile Rotary Knob egui Canvas Rendering & Smooth Interaction:
+  - Rendered authentic eurorack-style rotary knobs directly on modular faceplates with metallic bezel ring, inner dark cavity, dynamic value arc indicator colored with category theme (`cat_col`), needle pointer line (-135° to +135°), parameter name, and formatted engineering value string (e.g. `440.0Hz`, `1.2kHz`).
+  - Interaction physics: vertical touch dragging (hit radius 13.0 pt) with Shift-key precision mode (0.2x speed) and double-click reset to `default_value`.
+  - Dragging a knob isolates parameter modification without displacing the node canvas position.
+- [x] Bidirectional Modular Routing Matrix Synchronization:
+  - `sync_modular_to_routing_matrix`: Dynamically populates `PatchMatrixView` sources (all modular node output ports) and destinations (all modular node input ports), mapping active `patch_cords` into matrix pins with matching intensity, polarity, and mute state.
+  - `sync_routing_matrix_to_modular`: Propagates connection toggles, deletions, and attenuation adjustments from the crossbar matrix back into `patch_cords` and the underlying `audio_graph` edges.
+  - 1-click mode toggle in modular toolbar: `[∿ Patch Cords]` / `[▦ Routing Matrix]`.
+- [x] Milestone 33 Lockstep Live Modular Parameter Automation Bridge (`sync_with_param_bus`):
+  - Continuous lockstep dispatch of every modular node's faceplate parameters to `ParamBus` at `track_id * 1000 + 500 + (n_idx * 16) + p_idx` without audio-thread allocations.
+  - Automatic parameter registration in `AutomationRegistry` (`modular_{node.id}_{param.id}`).
+  - Live linear automation recording into `AutomationTimeline` when transport recording is active.
+- [x] Public API Helper Methods:
+  - `set_modular_node_param`, `get_modular_node_param`, `reset_modular_node_param`, `sync_modular_to_routing_matrix`, and `sync_routing_matrix_to_modular`.
+- [x] Unit Tests & Verification:
+  - Added dedicated test suite `crates/summoner_gui/src/tier90_turn21_tests.rs`:
+    - `test_turn21_modular_node_params_lifecycle_and_duplication`
+    - `test_turn21_modular_node_knob_adjustment_and_clamping`
+    - `test_turn21_modular_node_knob_reset_to_default`
+    - `test_turn21_m33_modular_node_param_bus_and_automation_bridge`
+    - `test_turn21_bidirectional_modular_routing_matrix_sync`
+    - `test_turn21_universal_dsp_module_instantiation_params`
+  - Registered in `crates/summoner_gui/src/lib.rs` under `#[cfg(feature = "gui")]`.
+  - Clean compilation and 100% test pass rate across `summoner_gui`.
+
 
 
 
