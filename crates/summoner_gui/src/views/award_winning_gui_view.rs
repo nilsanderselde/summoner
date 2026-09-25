@@ -6631,17 +6631,19 @@ impl AwardWinningGuiView {
 
             ui.add_space(4.0);
 
-            // Panic Button
-            let panic_bg = if self.panic_triggered {
-                Color32::from_rgb(220, 38, 38)
-            } else {
-                Color32::from_rgb(140, 24, 24)
-            };
-            let panic_btn = egui::Button::new(RichText::new("🚨 PANIC (ESC)").font(FontId::proportional(10.0)).color(Color32::WHITE))
-                .fill(panic_bg);
-            if ui.add(panic_btn).clicked() {
-                self.trigger_panic();
-            }
+            // Panic Button (Right-aligned for fast emergency access)
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                let panic_bg = if self.panic_triggered {
+                    Color32::from_rgb(220, 38, 38)
+                } else {
+                    Color32::from_rgb(140, 24, 24)
+                };
+                let panic_btn = egui::Button::new(RichText::new("🚨 PANIC (ESC)").font(FontId::proportional(10.0)).color(Color32::WHITE))
+                    .fill(panic_bg);
+                if ui.add(panic_btn).clicked() {
+                    self.trigger_panic();
+                }
+            });
         });
 
         // ESC hotkey for Panic
@@ -6720,6 +6722,19 @@ impl AwardWinningGuiView {
                 painter.rect_stroke(left_stop_rect, 2.0, Stroke::new(1.0_f32, Color32::from_rgb(239, 68, 68)));
                 painter.text(left_stop_rect.center(), egui::Align2::CENTER_CENTER, "⏹ Stop All", FontId::proportional(8.5), Color32::from_rgb(252, 165, 165));
 
+                // Canvas Panic button in top-right of stage grid header (hotkey: ESC)
+                let canvas_panic_rect = Rect::from_min_size(egui::pos2(rect.right() - 84.0, rect.top() + 2.0), Vec2::new(80.0, 18.0));
+                let mut do_canvas_panic = false;
+                if let Some(pos) = pointer_pos {
+                    if canvas_panic_rect.contains(pos) && is_click {
+                        do_canvas_panic = true;
+                    }
+                }
+                let cp_bg = if self.panic_triggered { Color32::from_rgb(220, 38, 38) } else { Color32::from_rgb(140, 24, 24) };
+                painter.rect_filled(canvas_panic_rect, 2.0, cp_bg);
+                painter.rect_stroke(canvas_panic_rect, 2.0, Stroke::new(1.0_f32, Color32::from_rgb(239, 68, 68)));
+                painter.text(canvas_panic_rect.center(), egui::Align2::CENTER_CENTER, "🚨 PANIC", FontId::proportional(8.5), Color32::WHITE);
+
                 // Grid Column Track Headers, Pads, and per-track Stop buttons
                 let mut pad_track_selected = None;
                 let mut clip_to_toggle = None;
@@ -6786,7 +6801,9 @@ impl AwardWinningGuiView {
                     painter.text(tr_stop_rect.center(), egui::Align2::CENTER_CENTER, "■ Stop", FontId::proportional(8.5), tr_stop_label_col);
                 }
 
-                if do_stop_all {
+                if do_canvas_panic {
+                    self.trigger_panic();
+                } else if do_stop_all {
                     self.stop_all_clips();
                 } else if let Some(action) = scene_action {
                     match action {

@@ -637,7 +637,7 @@ mod tests {
             eframe::egui::Pos2::ZERO,
             eframe::egui::Vec2::new(1200.0, 800.0),
         ));
-        let track_click = eframe::egui::pos2(120.0, 145.0);
+        let track_click = eframe::egui::pos2(120.0, 180.0);
         track_click_input.events.push(eframe::egui::Event::PointerButton {
             pos: track_click,
             button: eframe::egui::PointerButton::Primary,
@@ -708,7 +708,7 @@ mod tests {
             eframe::egui::Pos2::ZERO,
             eframe::egui::Vec2::new(1200.0, 800.0),
         ));
-        let mute_pos = eframe::egui::pos2(110.0, 124.0);
+        let mute_pos = eframe::egui::pos2(110.0, 152.0);
         mute_input.events.push(eframe::egui::Event::PointerButton {
             pos: mute_pos,
             button: eframe::egui::PointerButton::Primary,
@@ -731,13 +731,13 @@ mod tests {
         assert!(view.tracks[0].is_muted, "Track 0 should be muted after clicking M button");
         assert!(view.inspector_state.is_muted, "Inspector mute state should mirror track mute");
 
-        // Click Solo button for channel 0 (approx x: 158px, y: 124px)
+        // Click Solo button for channel 0 (approx x: 158px, y: 152px)
         let mut solo_input = eframe::egui::RawInput::default();
         solo_input.screen_rect = Some(eframe::egui::Rect::from_min_size(
             eframe::egui::Pos2::ZERO,
             eframe::egui::Vec2::new(1200.0, 800.0),
         ));
-        let solo_pos = eframe::egui::pos2(158.0, 124.0);
+        let solo_pos = eframe::egui::pos2(158.0, 152.0);
         solo_input.events.push(eframe::egui::Event::PointerButton {
             pos: solo_pos,
             button: eframe::egui::PointerButton::Primary,
