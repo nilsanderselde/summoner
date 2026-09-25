@@ -24,7 +24,7 @@ pub mod pure_tests {
         let tone_pid = ParamId(track_id * 1000 + 100);
         let space_pid = ParamId(track_id * 1000 + 102);
         let punch_pid = ParamId(track_id * 1000 + 105);
-        let char_pid = ParamId(track_id * 1000 + 106);
+        let char_pid = ParamId(track_id * 1000 + 104);
         let gain_pid = ParamId(track_id * 1000 + 200);
         let pan_pid = ParamId(track_id * 1000 + 201);
         let master_pid = ParamId(9999);

@@ -351,7 +351,7 @@ pub static FACTORY_PRESETS: &[FactoryPreset] = &[
         id: "glass_armonica",
         name: "Benjamin Franklin Glass Armonica",
         category: FactoryPresetCategory::PhysicalModeling,
-        target_node_kind: "ArmonicaChassisResonator",
+        target_node_kind: "GlassArmonicaBus",
         description: "Rotational nested quartz lead-crystal singing bowls with wet-finger friction contact and ethereal shimmering overtones.",
         tags: &["glass_armonica", "crystal", "ethereal", "singing_bowls", "friction", "physical_model"],
         macro_tone: 0.85,

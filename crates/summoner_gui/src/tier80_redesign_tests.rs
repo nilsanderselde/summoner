@@ -940,7 +940,7 @@ mod tests {
 
         // 4. Click PANIC Button (top right of stage canvas: x=1135.0, y=84.0)
         let mut press_panic = raw_input.clone();
-        let panic_pos = eframe::egui::pos2(1135.0, 84.0);
+        let panic_pos = eframe::egui::pos2(1278.0, 84.0);
         press_panic.events.push(eframe::egui::Event::PointerMoved(panic_pos));
         press_panic.events.push(eframe::egui::Event::PointerButton {
             pos: panic_pos,

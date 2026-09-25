@@ -616,6 +616,12 @@ impl AwardWinningGuiView {
             automation_editor: None,
         };
         view.reset_modular_nodes();
+        view.device_rack_state.device_name = "Synth 1".to_string();
+        view.device_rack_state.selected_node_kind = Some("AetherSynth".to_string());
+        view.inspector_state.target_name = "Synth 1".to_string();
+        view.inspector_state.selected_node_kind = Some("AetherSynth".to_string());
+        view.last_device_rack_node_kind = Some("AetherSynth".to_string());
+        view.last_inspector_node_kind = Some("AetherSynth".to_string());
         view
     }
 
@@ -3207,8 +3213,15 @@ impl AwardWinningGuiView {
             self.tracks.get(track_idx).map(|t| t.id).unwrap_or(1)
         };
 
-        // Synchronize Novice Macro knobs with Device Rack dials before dispatch/recording
-        if !self.top_bar_state.is_pro_mode {
+        // Synchronize Novice Macro knobs with Device Rack dials before dispatch/recording if altered
+        if !self.top_bar_state.is_pro_mode && (
+            (self.top_bar_state.macro_tone - self.last_applied_macros[0]).abs() > 1e-5
+            || (self.top_bar_state.macro_space - self.last_applied_macros[1]).abs() > 1e-5
+            || (self.top_bar_state.macro_punch - self.last_applied_macros[2]).abs() > 1e-5
+        ) {
+            self.last_applied_macros[0] = self.top_bar_state.macro_tone;
+            self.last_applied_macros[1] = self.top_bar_state.macro_space;
+            self.last_applied_macros[2] = self.top_bar_state.macro_punch;
             self.device_rack_state.cutoff = self.top_bar_state.macro_tone;
             self.device_rack_state.decay = self.top_bar_state.macro_space;
             self.device_rack_state.drive = self.top_bar_state.macro_punch;
@@ -3249,15 +3262,19 @@ impl AwardWinningGuiView {
                 ("macro_punch", &mut self.top_bar_state.macro_punch),
                 ("macro_character", &mut self.top_bar_state.macro_character),
             ];
+            let mut any_macro_automated = false;
             for (m_key, m_val_ref) in macro_keys {
                 let lane_key = format!("track_{}_{}", track_id, m_key);
                 if let Some(val) = automation_timeline.evaluate(&lane_key, playhead_beat) {
                     *m_val_ref = val;
+                    any_macro_automated = true;
                 }
             }
-            self.device_rack_state.cutoff = self.top_bar_state.macro_tone;
-            self.device_rack_state.decay = self.top_bar_state.macro_space;
-            self.device_rack_state.drive = self.top_bar_state.macro_punch;
+            if any_macro_automated {
+                self.device_rack_state.cutoff = self.top_bar_state.macro_tone;
+                self.device_rack_state.decay = self.top_bar_state.macro_space;
+                self.device_rack_state.drive = self.top_bar_state.macro_punch;
+            }
 
             if let Some(val) = automation_timeline.evaluate("master_gain", playhead_beat) {
                 self.top_bar_state.master_gain = val;
@@ -3398,11 +3415,15 @@ impl AwardWinningGuiView {
         }
 
         // 3. Novice Top Bar Macros Dispatch & Live Recording
+        self.top_bar_state.macro_tone = self.device_rack_state.cutoff;
+        self.top_bar_state.macro_space = self.device_rack_state.decay;
+        self.top_bar_state.macro_punch = self.device_rack_state.drive;
+        self.top_bar_state.macro_character = self.device_rack_state.mod_amt;
         let top_macros = [
-            ("macro_tone", self.top_bar_state.macro_tone, 100),
-            ("macro_space", self.top_bar_state.macro_space, 102),
-            ("macro_punch", self.top_bar_state.macro_punch, 105),
-            ("macro_character", self.top_bar_state.macro_character, 106),
+            ("macro_tone", self.device_rack_state.cutoff, 100),
+            ("macro_space", self.device_rack_state.decay, 102),
+            ("macro_punch", self.device_rack_state.drive, 105),
+            ("macro_character", self.device_rack_state.mod_amt, 104),
         ];
         for (m_name, m_val, offset) in top_macros {
             let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + offset);
