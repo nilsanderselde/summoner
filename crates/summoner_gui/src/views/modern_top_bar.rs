@@ -61,6 +61,21 @@ pub struct ModernTopBarState {
     pub is_pro_mode: bool,
     #[serde(default)]
     pub pending_demo_template: Option<String>,
+    #[serde(default)]
+    pub requested_automation_param: Option<String>,
+}
+
+impl ModernTopBarState {
+    pub fn reset_macros(&mut self) {
+        self.macro_tone = default_macro_tone();
+        self.macro_space = default_macro_space();
+        self.macro_punch = default_macro_punch();
+        self.macro_character = default_macro_character();
+    }
+
+    pub fn request_macro_automation(&mut self, macro_name: &str) {
+        self.requested_automation_param = Some(format!("macro_{}", macro_name.to_lowercase()));
+    }
 }
 
 fn default_master_gain() -> f32 {
@@ -339,6 +354,7 @@ impl Default for ModernTopBarState {
             is_novice_macro_visible: default_true_novice(),
             is_pro_mode: false,
             pending_demo_template: None,
+            requested_automation_param: None,
         }
     }
 }
@@ -565,13 +581,21 @@ pub fn show_modern_top_bar(
                     .inner_margin(egui::Margin::symmetric(6.0, 3.0))
                     .show(ui, |ui| {
                         ui.horizontal(|ui| {
-                            draw_top_bar_macro_dial(ui, "Tone", &mut state.macro_tone, Color32::from_rgb(56, 189, 248), "High-level brightness / frequency tone shaper");
+                            if draw_top_bar_macro_dial(ui, "Tone", &mut state.macro_tone, Color32::from_rgb(56, 189, 248), "High-level brightness / frequency tone shaper") {
+                                state.requested_automation_param = Some("macro_tone".to_string());
+                            }
                             ui.add_space(2.0);
-                            draw_top_bar_macro_dial(ui, "Space", &mut state.macro_space, Color32::from_rgb(99, 102, 241), "High-level spatial depth, reverb & delay diffusion");
+                            if draw_top_bar_macro_dial(ui, "Space", &mut state.macro_space, Color32::from_rgb(99, 102, 241), "High-level spatial depth, reverb & delay diffusion") {
+                                state.requested_automation_param = Some("macro_space".to_string());
+                            }
                             ui.add_space(2.0);
-                            draw_top_bar_macro_dial(ui, "Punch", &mut state.macro_punch, Color32::from_rgb(239, 68, 68), "High-level transient impact, dynamics & attack");
+                            if draw_top_bar_macro_dial(ui, "Punch", &mut state.macro_punch, Color32::from_rgb(239, 68, 68), "High-level transient impact, dynamics & attack") {
+                                state.requested_automation_param = Some("macro_punch".to_string());
+                            }
                             ui.add_space(2.0);
-                            draw_top_bar_macro_dial(ui, "Char", &mut state.macro_character, Color32::from_rgb(245, 158, 11), "High-level harmonic warmth, saturation & color");
+                            if draw_top_bar_macro_dial(ui, "Char", &mut state.macro_character, Color32::from_rgb(245, 158, 11), "High-level harmonic warmth, saturation & color") {
+                                state.requested_automation_param = Some("macro_character".to_string());
+                            }
                         });
                     });
             }
@@ -707,18 +731,37 @@ pub fn draw_top_bar_macro_dial(
     value: &mut f32,
     accent: Color32,
     tooltip: &str,
-) {
+) -> bool {
     let size = Vec2::new(34.0, 40.0);
     let (mut resp, painter) = ui.allocate_painter(size, egui::Sense::click_and_drag());
     let rect = resp.rect;
 
     if resp.hovered() {
-        resp = resp.on_hover_text(format!("{}\nMacro: {:.0}%", tooltip, *value * 100.0));
+        resp = resp.on_hover_text(format!(
+            "{}\nMacro: {:.0}%\n[Double-click to reset | Right-click to automate]",
+            tooltip,
+            *value * 100.0
+        ));
     }
 
     if resp.dragged() {
         let delta_y = ui.input(|i| i.pointer.delta().y);
         *value = (*value - delta_y * 0.015).clamp(0.0, 1.0);
+    }
+
+    if resp.double_clicked() {
+        match label {
+            "Tone" => *value = default_macro_tone(),
+            "Space" => *value = default_macro_space(),
+            "Punch" => *value = default_macro_punch(),
+            "Char" | "Character" => *value = default_macro_character(),
+            _ => *value = 0.5,
+        }
+    }
+
+    let mut auto_requested = false;
+    if resp.secondary_clicked() {
+        auto_requested = true;
     }
 
     let center = egui::pos2(rect.center().x, rect.top() + 14.0);
@@ -755,6 +798,8 @@ pub fn draw_top_bar_macro_dial(
         FontId::proportional(8.5),
         Color32::from_rgb(148, 163, 184),
     );
+
+    auto_requested
 }
 
 #[cfg(test)]
