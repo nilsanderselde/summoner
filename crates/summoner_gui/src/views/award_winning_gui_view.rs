@@ -69,6 +69,48 @@ pub enum ArrangerToolMode {
     Fade,
 }
 
+/// Snap grid resolution for the Arranger timeline canvas.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
+pub enum ArrangerSnapResolution {
+    Bar1,            // 4.0 beats (1 measure)
+    #[default]
+    BeatQuarter,     // 1.0 beat (1/4 note)
+    BeatEighth,      // 0.5 beat (1/8 note)
+    BeatSixteenth,   // 0.25 beat (1/16 note)
+    Free,            // 0.0 (off)
+}
+
+impl ArrangerSnapResolution {
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::Bar1 => "1 Bar (4b)",
+            Self::BeatQuarter => "1/4 Beat (1b)",
+            Self::BeatEighth => "1/8 Beat (0.5b)",
+            Self::BeatSixteenth => "1/16 Beat (0.25b)",
+            Self::Free => "Off (Free)",
+        }
+    }
+
+    pub fn step_beats(&self) -> f32 {
+        match self {
+            Self::Bar1 => 4.0,
+            Self::BeatQuarter => 1.0,
+            Self::BeatEighth => 0.5,
+            Self::BeatSixteenth => 0.25,
+            Self::Free => 0.0,
+        }
+    }
+
+    pub fn snap(&self, beat: f32) -> f32 {
+        let step = self.step_beats();
+        if step <= 0.0 {
+            beat
+        } else {
+            (beat / step).round() * step
+        }
+    }
+}
+
 impl TrackVisualData {
     /// Ensure the track has at least one active Arranger clip based on defaults.
     pub fn ensure_clips(&mut self) {
@@ -120,6 +162,63 @@ impl TrackVisualData {
             }
         }
         false
+    }
+
+    /// Duplicate a clip, placing the copy immediately adjacent along the timeline.
+    pub fn duplicate_clip(&mut self, clip_id: usize) -> Option<usize> {
+        self.ensure_clips();
+        if let Some(pos) = self.clips.iter().position(|c| c.id == clip_id) {
+            let orig = &self.clips[pos];
+            let next_id = self.clips.iter().map(|c| c.id).max().unwrap_or(0) + 1;
+            let dup = ArrangerClipVisual {
+                id: next_id,
+                name: format!("{} (Copy)", orig.name),
+                start_beat: orig.start_beat + orig.length_beats,
+                length_beats: orig.length_beats,
+                fade_in: orig.fade_in,
+                fade_out: orig.fade_out,
+                gain: orig.gain,
+                is_selected: false,
+            };
+            self.clips.insert(pos + 1, dup);
+            Some(next_id)
+        } else {
+            None
+        }
+    }
+
+    /// Delete a clip with the specified id.
+    pub fn delete_clip(&mut self, clip_id: usize) -> bool {
+        let initial_len = self.clips.len();
+        self.clips.retain(|c| c.id != clip_id);
+        let removed = self.clips.len() < initial_len;
+        if self.clips.is_empty() {
+            self.clip_length_beats = 0.0;
+        }
+        removed
+    }
+
+    /// Quantize clip start_beat to the specified snap grid step.
+    pub fn quantize_clip(&mut self, clip_id: usize, snap_step: f32) -> bool {
+        if snap_step <= 0.0 {
+            return false;
+        }
+        if let Some(clip) = self.clips.iter_mut().find(|c| c.id == clip_id) {
+            clip.start_beat = ((clip.start_beat / snap_step).round() * snap_step).max(0.0);
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Move a clip by delta_beats along the timeline.
+    pub fn move_clip(&mut self, clip_id: usize, delta_beats: f32) -> bool {
+        if let Some(clip) = self.clips.iter_mut().find(|c| c.id == clip_id) {
+            clip.start_beat = (clip.start_beat + delta_beats).max(0.0);
+            true
+        } else {
+            false
+        }
     }
 
     /// Detect overlapping regions between clips on this track for crossfading.
@@ -397,6 +496,8 @@ pub struct AwardWinningGuiView {
     pub selected_patch_cord_idx: Option<usize>,
     pub pending_cord_source: Option<(String, String)>,
     pub arranger_tool_mode: ArrangerToolMode,
+    pub arranger_snap_grid: ArrangerSnapResolution,
+    pub selected_clip: Option<(usize, usize)>,
     pub audio_graph: std::sync::Arc<std::sync::Mutex<summoner_core::graph::NodeGraph>>,
     pub last_applied_preset: String,
     pub last_applied_macros: [f32; 4],
@@ -592,6 +693,8 @@ impl AwardWinningGuiView {
             selected_patch_cord_idx: None,
             pending_cord_source: None,
             arranger_tool_mode: ArrangerToolMode::Pointer,
+            arranger_snap_grid: ArrangerSnapResolution::BeatQuarter,
+            selected_clip: None,
             audio_graph: std::sync::Arc::new(std::sync::Mutex::new(
                 summoner_core::graph::NodeGraph::new("ModularCanvasGraph", 512, 2)
             )),
@@ -1161,6 +1264,140 @@ impl AwardWinningGuiView {
 
     #[cfg(feature = "gui")]
     fn show_arranger_canvas(&mut self, ui: &mut egui::Ui) {
+        let cur_track_id = self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1);
+        let cur_track_name = self.tracks.get(self.selected_track_idx).map(|t| t.name.clone()).unwrap_or_else(|| "Track 1".to_string());
+
+        // 0. Arranger Pro Top Toolbar (Two-Tier: Novice vs Pro)
+        ui.horizontal(|ui| {
+            ui.label(RichText::new("📋 Arranger").font(FontId::proportional(12.0)).strong().color(Color32::from_rgb(241, 245, 249)));
+            ui.add_space(6.0);
+
+            // Track Selector ComboBox
+            let mut track_to_select = None;
+            egui::ComboBox::from_id_source("arranger_track_selector")
+                .selected_text(RichText::new(format!("🎚 {}", cur_track_name)).font(FontId::proportional(10.5)).color(Color32::from_rgb(56, 189, 248)))
+                .show_ui(ui, |ui| {
+                    for (t_idx, tr) in self.tracks.iter().enumerate() {
+                        let is_sel = t_idx == self.selected_track_idx;
+                        if ui.selectable_label(is_sel, format!("{}: {}", tr.id, tr.name)).clicked() {
+                            track_to_select = Some(t_idx);
+                        }
+                    }
+                });
+            if let Some(t_idx) = track_to_select {
+                self.select_track_for_arranger(t_idx);
+            }
+
+            ui.add_space(4.0);
+
+            // 1-Click Pro View Switchers
+            if ui.button(RichText::new("🎹 Piano Roll").font(FontId::proportional(10.0)).color(Color32::from_rgb(200, 215, 235))).clicked() {
+                self.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::PianoRoll;
+            }
+            if ui.button(RichText::new("∿ Modular").font(FontId::proportional(10.0)).color(Color32::from_rgb(200, 215, 235))).clicked() {
+                self.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::Modular;
+            }
+            if ui.button(RichText::new("🎚 Mixer").font(FontId::proportional(10.0)).color(Color32::from_rgb(200, 215, 235))).clicked() {
+                self.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::Mixer;
+            }
+            if ui.button(RichText::new("🎭 Stage").font(FontId::proportional(10.0)).color(Color32::from_rgb(200, 215, 235))).clicked() {
+                self.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::Performance;
+            }
+
+            ui.add_space(4.0);
+
+            // 1-Click Live Parameter Automation Launcher
+            egui::ComboBox::from_id_source("arranger_auto_selector")
+                .selected_text(RichText::new("📈 Auto ▾").font(FontId::proportional(10.0)).color(Color32::from_rgb(234, 179, 8)))
+                .show_ui(ui, |ui| {
+                    if ui.selectable_label(false, "📈 Gain (Volume)").clicked() {
+                        self.open_track_automation_editor(cur_track_id, "gain");
+                    }
+                    if ui.selectable_label(false, "📈 Stereo Pan").clicked() {
+                        self.open_track_automation_editor(cur_track_id, "pan");
+                    }
+                    if ui.selectable_label(false, "📈 Mute Gate").clicked() {
+                        self.open_track_automation_editor(cur_track_id, "mute");
+                    }
+                    if ui.selectable_label(false, "📈 Solo Audition").clicked() {
+                        self.open_track_automation_editor(cur_track_id, "solo");
+                    }
+                    if ui.selectable_label(false, "📈 Filter Cutoff").clicked() {
+                        self.open_track_automation_editor(cur_track_id, "cutoff");
+                    }
+                    if ui.selectable_label(false, "📈 Resonance").clicked() {
+                        self.open_track_automation_editor(cur_track_id, "resonance");
+                    }
+                    if ui.selectable_label(false, "📈 Decay Time").clicked() {
+                        self.open_track_automation_editor(cur_track_id, "decay");
+                    }
+                    if ui.selectable_label(false, "📈 Drive / Saturation").clicked() {
+                        self.open_track_automation_editor(cur_track_id, "drive");
+                    }
+                });
+
+            ui.add_space(4.0);
+
+            // Snap Grid Selector
+            egui::ComboBox::from_id_source("arranger_snap_grid_selector")
+                .selected_text(RichText::new(format!("🧲 {}", self.arranger_snap_grid.name())).font(FontId::proportional(10.0)).color(Color32::from_rgb(168, 85, 247)))
+                .show_ui(ui, |ui| {
+                    for res in [
+                        ArrangerSnapResolution::Bar1,
+                        ArrangerSnapResolution::BeatQuarter,
+                        ArrangerSnapResolution::BeatEighth,
+                        ArrangerSnapResolution::BeatSixteenth,
+                        ArrangerSnapResolution::Free,
+                    ] {
+                        if ui.selectable_label(self.arranger_snap_grid == res, res.name()).clicked() {
+                            self.arranger_snap_grid = res;
+                        }
+                    }
+                });
+
+            ui.add_space(4.0);
+
+            // Clip Operations Toolbar
+            let has_clip = self.selected_clip.is_some();
+            let clip_op_col = if has_clip { Color32::from_rgb(241, 245, 249) } else { Color32::from_rgb(100, 116, 139) };
+
+            if ui.add_enabled(has_clip, egui::Button::new(RichText::new("⇥ Quantize").font(FontId::proportional(9.5)).color(clip_op_col)))
+                .on_hover_text("Quantize selected clip to active snap grid (Q)")
+                .clicked()
+            {
+                self.quantize_selected_clip();
+            }
+
+            if ui.add_enabled(has_clip, egui::Button::new(RichText::new("⎘ Duplicate").font(FontId::proportional(9.5)).color(clip_op_col)))
+                .on_hover_text("Duplicate selected clip (Ctrl+D)")
+                .clicked()
+            {
+                self.duplicate_selected_clip();
+            }
+
+            if ui.add_enabled(has_clip, egui::Button::new(RichText::new("✂ Split").font(FontId::proportional(9.5)).color(clip_op_col)))
+                .on_hover_text("Split selected clip at playhead (S)")
+                .clicked()
+            {
+                self.split_selected_clip_at_playhead();
+            }
+
+            if ui.add_enabled(has_clip, egui::Button::new(RichText::new("🔁 Loop").font(FontId::proportional(9.5)).color(clip_op_col)))
+                .on_hover_text("Set loop bracket to selected clip bounds (L)")
+                .clicked()
+            {
+                self.set_loop_to_selected_clip();
+            }
+
+            if ui.add_enabled(has_clip, egui::Button::new(RichText::new("🗑").font(FontId::proportional(9.5)).color(if has_clip { Color32::from_rgb(239, 68, 68) } else { Color32::from_rgb(100, 116, 139) })))
+                .on_hover_text("Delete selected clip (Del)")
+                .clicked()
+            {
+                self.delete_selected_clip();
+            }
+        });
+        ui.add_space(4.0);
+
         let canvas_height = (self.tracks.len() as f32 * 36.0 + 36.0).max(280.0);
         egui::Frame::none()
             .fill(Color32::from_rgb(10, 14, 24))
@@ -1295,17 +1532,7 @@ impl AwardWinningGuiView {
                                 }
                             }
                             if let Some(s_idx) = selected_idx {
-                                self.selected_track_idx = s_idx;
-                                if let Some(tr) = self.tracks.get(s_idx) {
-                                    self.top_bar_state.master_gain = tr.gain;
-                                    self.inspector_state.target_name = tr.name.clone();
-                                    self.inspector_state.gain_db = (tr.gain - 1.0) * 12.0;
-                                    self.inspector_state.pan_val = tr.pan;
-                                    self.inspector_state.is_muted = tr.is_muted;
-                                    self.inspector_state.is_soloed = tr.is_soloed;
-                                    self.inspector_state.is_armed = tr.is_armed;
-                                    self.device_rack_state.device_name = tr.name.clone();
-                                }
+                                self.select_track_for_arranger(s_idx);
                             }
                             if let Some(tid) = track_to_open_auto {
                                 self.open_track_automation_editor(tid, "gain");
@@ -1317,6 +1544,9 @@ impl AwardWinningGuiView {
                 // 2. Track Lanes
                 let row_h = 32.0;
                 let mut split_action: Option<(usize, usize, f32)> = None;
+                let mut clip_to_select: Option<(usize, usize)> = None;
+                let mut clip_double_clicked: Option<(usize, usize, bool)> = None;
+                let mut clip_drag_action: Option<(usize, usize, f32)> = None;
 
                 for (idx, track) in self.tracks.iter_mut().enumerate() {
                     track.ensure_clips();
@@ -1404,7 +1634,9 @@ impl AwardWinningGuiView {
                         let clip_w = (clip.length_beats * ppb).max(18.0);
                         let clip_rect = Rect::from_min_size(egui::pos2(clip_x, lane_rect.top() + 2.0), Vec2::new(clip_w, lane_rect.height() - 4.0));
 
-                        // Slicing interaction on click / shortcut
+                        let is_this_clip_sel = self.selected_clip == Some((idx, clip.id)) || clip.is_selected;
+
+                        // Slicing, selection, double-click, and dragging interactions
                         if let Some(pos) = pointer_pos {
                             if clip_rect.contains(pos) {
                                 if (self.arranger_tool_mode == ArrangerToolMode::Slice || ui.input(|i| i.modifiers.ctrl)) && is_click {
@@ -1412,6 +1644,10 @@ impl AwardWinningGuiView {
                                     split_action = Some((idx, clip.id, click_beat));
                                 } else if s_key_pressed {
                                     split_action = Some((idx, clip.id, self.playhead_beat));
+                                } else if is_double {
+                                    clip_double_clicked = Some((idx, clip.id, track.is_audio));
+                                } else if is_click {
+                                    clip_to_select = Some((idx, clip.id));
                                 }
 
                                 // Draggable Fade handles interaction
@@ -1424,13 +1660,25 @@ impl AwardWinningGuiView {
                                 } else if pos.distance(fade_out_h) < 10.0 && resp.dragged() {
                                     let delta_b = -resp.drag_delta().x / ppb;
                                     clip.fade_out = (clip.fade_out + delta_b).clamp(0.0, clip.length_beats * 0.5);
+                                } else if self.arranger_tool_mode == ArrangerToolMode::Pointer && resp.dragged() {
+                                    let delta_b = resp.drag_delta().x / ppb;
+                                    clip_drag_action = Some((idx, clip.id, delta_b));
                                 }
                             }
                         }
 
-                        // Clip fill with soft color glow
-                        painter.rect_filled(clip_rect, 4.0, Color32::from_rgba_unmultiplied(track.color_rgb[0], track.color_rgb[1], track.color_rgb[2], 40));
-                        painter.rect_stroke(clip_rect, 4.0, Stroke::new(1.2_f32, col));
+                        // Clip fill with soft color glow & selected highlight
+                        let fill_alpha = if is_this_clip_sel { 70 } else { 40 };
+                        painter.rect_filled(clip_rect, 4.0, Color32::from_rgba_unmultiplied(track.color_rgb[0], track.color_rgb[1], track.color_rgb[2], fill_alpha));
+                        let stroke_col = if is_this_clip_sel { Color32::from_rgb(250, 204, 21) } else { col };
+                        let stroke_w = if is_this_clip_sel { 2.0_f32 } else { 1.2_f32 };
+                        painter.rect_stroke(clip_rect, 4.0, Stroke::new(stroke_w, stroke_col));
+
+                        if is_this_clip_sel {
+                            let sel_badge = Rect::from_min_size(egui::pos2(clip_rect.right() - 28.0, clip_rect.top() + 3.0), Vec2::new(24.0, 11.0));
+                            painter.rect_filled(sel_badge, 2.0, Color32::from_rgb(250, 204, 21));
+                            painter.text(sel_badge.center(), egui::Align2::CENTER_CENTER, "SEL", FontId::proportional(8.0), Color32::BLACK);
+                        }
 
                         // Fade In Polygon & Curve
                         if clip.fade_in > 0.0 {
@@ -1520,6 +1768,46 @@ impl AwardWinningGuiView {
                     if let Some(track) = self.tracks.get_mut(t_idx) {
                         track.split_clip_at_beat(c_id, split_beat);
                     }
+                }
+
+                // Apply clip selection, double-click, and drag movement
+                if let Some((t_idx, c_id)) = clip_to_select {
+                    self.select_clip(t_idx, c_id);
+                }
+                if let Some((t_idx, c_id, is_audio)) = clip_double_clicked {
+                    self.select_clip(t_idx, c_id);
+                    if !is_audio {
+                        self.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::PianoRoll;
+                    }
+                }
+                if let Some((t_idx, c_id, delta_b)) = clip_drag_action {
+                    if let Some(track) = self.tracks.get_mut(t_idx) {
+                        track.move_clip(c_id, delta_b);
+                    }
+                }
+                if resp.drag_stopped() {
+                    if let Some((t_idx, c_id)) = self.selected_clip {
+                        let snap = self.arranger_snap_grid;
+                        if let Some(track) = self.tracks.get_mut(t_idx) {
+                            if let Some(c) = track.clips.iter_mut().find(|c| c.id == c_id) {
+                                c.start_beat = snap.snap(c.start_beat);
+                            }
+                        }
+                    }
+                }
+
+                // Keyboard shortcuts for Arranger clip operations
+                if ui.input(|i| i.modifiers.ctrl && i.key_pressed(egui::Key::D)) {
+                    self.duplicate_selected_clip();
+                }
+                if ui.input(|i| (i.key_pressed(egui::Key::Delete) || i.key_pressed(egui::Key::Backspace)) && !i.modifiers.ctrl) {
+                    self.delete_selected_clip();
+                }
+                if ui.input(|i| i.key_pressed(egui::Key::Q) && !i.modifiers.ctrl) {
+                    self.quantize_selected_clip();
+                }
+                if ui.input(|i| i.key_pressed(egui::Key::L) && !i.modifiers.ctrl) {
+                    self.set_loop_to_selected_clip();
                 }
 
                 // 3. Bright Glowing Cyan Playhead Line (Spans entire height)
@@ -4443,6 +4731,151 @@ impl AwardWinningGuiView {
         } else {
             false
         }
+    }
+
+    /// Select active track for Arranger timeline editing and reflect its state across Inspector and Device Rack.
+    pub fn select_track_for_arranger(&mut self, track_idx: usize) -> bool {
+        if track_idx < self.tracks.len() {
+            self.selected_track_idx = track_idx;
+            let tr_name = self.tracks[track_idx].name.clone();
+            self.device_rack_state.device_name = tr_name.clone();
+            self.inspector_state.target_name = tr_name;
+            if let Some(tr) = self.tracks.get(track_idx) {
+                self.inspector_state.gain_db = (tr.gain - 1.0) * 12.0;
+                self.inspector_state.pan_val = tr.pan;
+                self.inspector_state.is_muted = tr.is_muted;
+                self.inspector_state.is_soloed = tr.is_soloed;
+                self.inspector_state.is_armed = tr.is_armed;
+            }
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Select a specific clip in the Arranger and update track selection and clip highlight state.
+    pub fn select_clip(&mut self, track_idx: usize, clip_id: usize) -> bool {
+        if track_idx < self.tracks.len() {
+            self.select_track_for_arranger(track_idx);
+            let mut found = false;
+            for (t_idx, tr) in self.tracks.iter_mut().enumerate() {
+                for c in &mut tr.clips {
+                    if t_idx == track_idx && c.id == clip_id {
+                        c.is_selected = true;
+                        found = true;
+                    } else {
+                        c.is_selected = false;
+                    }
+                }
+            }
+            if found {
+                self.selected_clip = Some((track_idx, clip_id));
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Deselect any currently selected clip in the Arranger.
+    pub fn deselect_clip(&mut self) {
+        self.selected_clip = None;
+        for tr in &mut self.tracks {
+            for c in &mut tr.clips {
+                c.is_selected = false;
+            }
+        }
+    }
+
+    /// Duplicate the currently selected clip, or the first clip of the selected track if none selected.
+    pub fn duplicate_selected_clip(&mut self) -> Option<(usize, usize)> {
+        if let Some((t_idx, c_id)) = self.selected_clip {
+            let new_id_opt = self.tracks.get_mut(t_idx).and_then(|tr| tr.duplicate_clip(c_id));
+            if let Some(new_id) = new_id_opt {
+                self.select_clip(t_idx, new_id);
+                return Some((t_idx, new_id));
+            }
+        } else {
+            let t_idx = self.selected_track_idx;
+            let new_id_opt = self.tracks.get_mut(t_idx).and_then(|tr| {
+                tr.ensure_clips();
+                let first_id = tr.clips.first()?.id;
+                tr.duplicate_clip(first_id)
+            });
+            if let Some(new_id) = new_id_opt {
+                self.select_clip(t_idx, new_id);
+                return Some((t_idx, new_id));
+            }
+        }
+        None
+    }
+
+    /// Delete the currently selected clip from its track.
+    pub fn delete_selected_clip(&mut self) -> bool {
+        if let Some((t_idx, c_id)) = self.selected_clip {
+            if let Some(tr) = self.tracks.get_mut(t_idx) {
+                let res = tr.delete_clip(c_id);
+                self.selected_clip = None;
+                return res;
+            }
+        }
+        false
+    }
+
+    /// Quantize the selected clip (or all clips on active track) to the active Arranger snap grid.
+    pub fn quantize_selected_clip(&mut self) -> bool {
+        let step = self.arranger_snap_grid.step_beats();
+        if step <= 0.0 {
+            return false;
+        }
+        if let Some((t_idx, c_id)) = self.selected_clip {
+            if let Some(tr) = self.tracks.get_mut(t_idx) {
+                return tr.quantize_clip(c_id, step);
+            }
+        } else if let Some(tr) = self.tracks.get_mut(self.selected_track_idx) {
+            let mut any = false;
+            for c in &mut tr.clips {
+                c.start_beat = ((c.start_beat / step).round() * step).max(0.0);
+                any = true;
+            }
+            return any;
+        }
+        false
+    }
+
+    /// Split the selected clip (or the active clip under the playhead) at the current playhead position.
+    pub fn split_selected_clip_at_playhead(&mut self) -> bool {
+        let beat = self.playhead_beat;
+        if let Some((t_idx, c_id)) = self.selected_clip {
+            if let Some(tr) = self.tracks.get_mut(t_idx) {
+                return tr.split_clip_at_beat(c_id, beat);
+            }
+        } else if let Some(tr) = self.tracks.get_mut(self.selected_track_idx) {
+            tr.ensure_clips();
+            if let Some(c_id) = tr.clips.iter().find(|c| beat > c.start_beat && beat < c.start_beat + c.length_beats).map(|c| c.id) {
+                return tr.split_clip_at_beat(c_id, beat);
+            }
+        }
+        false
+    }
+
+    /// Set timeline loop start and end bounds to match the selected clip's boundary.
+    pub fn set_loop_to_selected_clip(&mut self) -> bool {
+        if let Some((t_idx, c_id)) = self.selected_clip {
+            if let Some(tr) = self.tracks.get(t_idx) {
+                if let Some(c) = tr.clips.iter().find(|clip| clip.id == c_id) {
+                    self.loop_start_beat = c.start_beat;
+                    self.loop_end_beat = c.start_beat + c.length_beats;
+                    return true;
+                }
+            }
+        } else if let Some(tr) = self.tracks.get(self.selected_track_idx) {
+            if let Some(c) = tr.clips.first() {
+                self.loop_start_beat = c.start_beat;
+                self.loop_end_beat = c.start_beat + c.length_beats;
+                return true;
+            }
+        }
+        false
     }
 
     /// Set whether note auditioning sound is enabled during Piano Roll editing.

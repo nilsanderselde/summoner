@@ -723,4 +723,44 @@ Product Management has conducted a comprehensive readiness audit:
   - Registered in `crates/summoner_gui/src/lib.rs` under `#[cfg(feature = "gui")]`.
   - Clean `cargo check -p summoner_gui` (0.23s), `cargo check -p summoner_gui --features gui` (3.49s), `cargo clippy -p summoner_gui --features gui -- -D warnings` (0 warnings).
 
+### Turn #32 — Arranger Pro Top Toolbar, Two-Tier Ergonomics, Snap Grid Resolutions, Clip Duplicate/Delete/Quantize/Move/Loop Operations & 1-Click Pro View Switchers
+- [x] Arranger Pro Top Toolbar & Two-Tier UX Alignment (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Integrated dedicated Pro Header Toolbar at the top of `show_arranger_canvas`:
+    * Title: `📋 Arranger`
+    * Track Selector ComboBox `[🎚 Track: <name> ▾]` allowing instant track switching directly from Arranger with automatic synchronization to `selected_track_idx`, `inspector_state`, and `device_rack_state`.
+    * 1-Click Pro View Switchers: `[🎹 Piano Roll]`, `[∿ Modular]`, `[🎚 Mixer]`, and `[🎭 Stage]` providing instantaneous cross-DAW navigation.
+    * 1-Click Live Parameter Automation launcher `[📈 Auto ▾]` for selected track (`gain`, `pan`, `mute`, `solo`, `cutoff`, `resonance`, `decay`, `drive`).
+    * Snap Grid Resolution ComboBox `[🧲 <resolution> ▾]` with tactile choices: `1 Bar (4b)`, `1/4 Beat (1b)`, `1/8 Beat (0.5b)`, `1/16 Beat (0.25b)`, and `Off (Free)`.
+    * Clip Operations Toolbar with enabled state based on clip selection:
+      - `[⇥ Quantize]`: Snaps selected clip (or all track clips) to active snap grid (hotkey: `Q`).
+      - `[⎘ Duplicate]`: Duplicates selected clip immediately adjacent to itself (hotkey: `Ctrl+D`).
+      - `[✂ Split]`: Splits selected clip at playhead position (hotkey: `S`).
+      - `[🔁 Loop]`: Adjusts timeline loop bracket start and end bounds to match selected clip boundary (hotkey: `L`).
+      - `[🗑]`: Deletes selected clip from its track (hotkey: `Del` / `Backspace`).
+- [x] Arranger Timeline Clip Manipulation Engine:
+  - Added `ArrangerSnapResolution` enum with `step_beats()` and `snap(beat: f32)`.
+  - Added `duplicate_clip(clip_id)` on `TrackVisualData`: creates adjacent copy with incremented unique ID.
+  - Added `delete_clip(clip_id)` on `TrackVisualData`: deletes clip and resets length if track is empty.
+  - Added `quantize_clip(clip_id, snap_step)` on `TrackVisualData`: snaps `start_beat` to grid.
+  - Added `move_clip(clip_id, delta_beats)` on `TrackVisualData`: shifts `start_beat` horizontally, clamped at `>= 0.0`.
+  - Added `select_track_for_arranger(track_idx)` on `AwardWinningGuiView`: aligns inspector and device rack without clobbering master bus volume.
+  - Added `select_clip(track_idx, clip_id)` and `deselect_clip()`: sets `is_selected` across visual clips.
+  - Added `duplicate_selected_clip()`, `delete_selected_clip()`, `quantize_selected_clip()`, `split_selected_clip_at_playhead()`, `set_loop_to_selected_clip()`.
+- [x] Tactile Canvas Dragging, Double-Click & Visual Highlight:
+  - Horizontal clip drag-to-move in `ArrangerToolMode::Pointer` with instant visual feedback and grid snap upon drag release (`drag_stopped`).
+  - Double-clicking a clip: automatically selects clip and switches to `PianoRoll` view tab if track is MIDI!
+  - Selected clip styling: glowing golden/cyan border with high-contrast `[SEL]` badge.
+- [x] Unit & Regression Test Suite:
+  - Created `crates/summoner_gui/src/tier97_turn32_tests.rs`:
+    * `test_turn32_arranger_snap_resolution_step_and_snapping`
+    * `test_turn32_arranger_track_visual_data_clip_duplicate`
+    * `test_turn32_arranger_track_visual_data_clip_delete`
+    * `test_turn32_arranger_track_visual_data_clip_quantize_and_move`
+    * `test_turn32_arranger_track_selection_and_device_name`
+    * `test_turn32_arranger_clip_selection_duplicate_quantize_and_loop`
+    * `test_turn32_arranger_canvas_rendering_without_panic`
+  - Registered in `crates/summoner_gui/src/lib.rs` under `#[cfg(feature = "gui")]`.
+  - 100% pass rate: `cargo check -p summoner_gui` (0.26s), `cargo check -p summoner_gui --features gui` (3.42s), `cargo clippy -p summoner_gui --features gui -- -D warnings` (0 warnings), `cargo test -p summoner_gui` (302 passed in 0.24s).
+
+
 
