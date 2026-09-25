@@ -413,6 +413,8 @@ pub struct AwardWinningGuiView {
     pub requested_modular_automation_param: Option<String>,
     pub show_automation_editor_window: bool,
     pub automation_editor: Option<crate::views::bezier_automation_editor::BezierAutomationEditorView>,
+    pub is_master_muted: bool,
+    pub unmuted_master_gain: f32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -614,6 +616,8 @@ impl AwardWinningGuiView {
             requested_modular_automation_param: None,
             show_automation_editor_window: false,
             automation_editor: None,
+            is_master_muted: false,
+            unmuted_master_gain: 1.0,
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2674,6 +2678,135 @@ impl AwardWinningGuiView {
                 }
             }
         }
+    }
+
+    /// Open the live Bézier parameter automation editor for a specific track parameter (e.g. "gain", "pan").
+    pub fn open_track_automation_editor(&mut self, track_id: u64, param_name: &str) -> bool {
+        if let Some(track) = self.tracks.iter().find(|t| t.id == track_id) {
+            let (lane_key, title, min, max, unit, norm) = match param_name {
+                "gain" => (
+                    format!("track_{}_gain", track_id),
+                    format!("{} — Volume Gain", track.name),
+                    0.0_f32,
+                    1.5_f32,
+                    "x",
+                    (track.gain / 1.5).clamp(0.0, 1.0),
+                ),
+                "pan" => (
+                    format!("track_{}_pan", track_id),
+                    format!("{} — Stereo Pan", track.name),
+                    -1.0_f32,
+                    1.0_f32,
+                    "",
+                    ((track.pan + 1.0) * 0.5).clamp(0.0, 1.0),
+                ),
+                _ => return false,
+            };
+            self.requested_modular_automation_param = Some(lane_key);
+            self.show_automation_editor_window = true;
+            let mut editor = crate::views::bezier_automation_editor::BezierAutomationEditorView::new(
+                title,
+                unit,
+                min,
+                max,
+                16.0,
+            );
+            editor.nodes.clear();
+            editor.nodes.push(crate::views::bezier_automation_editor::AutomationNode::new(
+                "start",
+                0.0,
+                norm,
+                crate::views::bezier_automation_editor::AutomationCurveType::Linear,
+            ));
+            editor.nodes.push(crate::views::bezier_automation_editor::AutomationNode::new(
+                "end",
+                16.0,
+                norm,
+                crate::views::bezier_automation_editor::AutomationCurveType::Linear,
+            ));
+            self.automation_editor = Some(editor);
+            return true;
+        }
+        false
+    }
+
+    /// Open the live Bézier parameter automation editor for master bus volume gain.
+    pub fn open_master_automation_editor(&mut self) -> bool {
+        let lane_key = "master_gain".to_string();
+        let title = "Master Bus — Gain".to_string();
+        let norm = (self.top_bar_state.master_gain / 2.0).clamp(0.0, 1.0);
+        self.requested_modular_automation_param = Some(lane_key);
+        self.show_automation_editor_window = true;
+        let mut editor = crate::views::bezier_automation_editor::BezierAutomationEditorView::new(
+            title,
+            "x",
+            0.0,
+            2.0,
+            16.0,
+        );
+        editor.nodes.clear();
+        editor.nodes.push(crate::views::bezier_automation_editor::AutomationNode::new(
+            "start",
+            0.0,
+            norm,
+            crate::views::bezier_automation_editor::AutomationCurveType::Linear,
+        ));
+        editor.nodes.push(crate::views::bezier_automation_editor::AutomationNode::new(
+            "end",
+            16.0,
+            norm,
+            crate::views::bezier_automation_editor::AutomationCurveType::Linear,
+        ));
+        self.automation_editor = Some(editor);
+        true
+    }
+
+    /// Set a track's stereo pan value with bounds clamping [-1.0, 1.0].
+    pub fn set_track_pan(&mut self, track_idx: usize, pan: f32) -> bool {
+        if let Some(track) = self.tracks.get_mut(track_idx) {
+            track.pan = pan.clamp(-1.0, 1.0);
+            if self.selected_track_idx == track_idx {
+                self.inspector_state.pan_val = track.pan;
+            }
+            return true;
+        }
+        false
+    }
+
+    /// Reset a track's stereo pan value to center (0.0).
+    pub fn reset_track_pan(&mut self, track_idx: usize) -> bool {
+        self.set_track_pan(track_idx, 0.0)
+    }
+
+    /// Reset a track's volume gain to unity (1.0 = 0.0 dB).
+    pub fn reset_track_gain(&mut self, track_idx: usize) -> bool {
+        if let Some(track) = self.tracks.get_mut(track_idx) {
+            track.gain = 1.0;
+            if self.selected_track_idx == track_idx {
+                self.inspector_state.gain_db = 0.0;
+            }
+            return true;
+        }
+        false
+    }
+
+    /// Reset master volume gain to unity (1.0 = 0.0 dB).
+    pub fn reset_master_gain(&mut self) {
+        self.top_bar_state.master_gain = 1.0;
+        self.is_master_muted = false;
+    }
+
+    /// Toggle master output mute state, muting to 0.0 and restoring previous gain on unmute.
+    pub fn toggle_master_mute(&mut self) -> bool {
+        if self.is_master_muted {
+            self.top_bar_state.master_gain = self.unmuted_master_gain;
+            self.is_master_muted = false;
+        } else {
+            self.unmuted_master_gain = self.top_bar_state.master_gain.max(0.1);
+            self.top_bar_state.master_gain = 0.0;
+            self.is_master_muted = true;
+        }
+        self.is_master_muted
     }
 
     /// Synchronize all modular node sockets and active patch cords into the PatchMatrixView.
@@ -4813,11 +4946,17 @@ impl AwardWinningGuiView {
                 let master_w = 68.0;
                 let ch_area_w = rect.width() - master_w - 12.0;
                 let strip_w = (ch_area_w / num_ch as f32).max(44.0);
+                let is_pro = self.top_bar_state.is_pro_mode;
 
-                // Mixer interactions: Mute, Solo, Volume Fader, Track Selection
+                // Mixer interactions: Mute, Solo, Volume Fader, Pan Pot, 1-Click Pro View Launchers, Track Selection
                 let pointer_pos = resp.interact_pointer_pos().or_else(|| ui.input(|i| i.pointer.latest_pos()));
                 let is_interacting = resp.clicked() || resp.dragged() || ui.input(|i| i.pointer.primary_down() || i.pointer.primary_clicked());
                 let is_click = resp.clicked() || ui.input(|i| i.pointer.primary_clicked() || (i.pointer.primary_down() && !resp.dragged()));
+                let is_double = resp.double_clicked();
+                let drag_delta = resp.drag_delta();
+
+                let mut track_to_open_auto: Option<u64> = None;
+                let mut master_to_open_auto = false;
 
                 if let Some(pos) = pointer_pos {
                     if is_interacting {
@@ -4827,20 +4966,54 @@ impl AwardWinningGuiView {
                             let strip_rect = Rect::from_min_size(egui::pos2(sx, rect.top() + 4.0), Vec2::new(strip_w - 4.0, canvas_height - 8.0));
                             if strip_rect.contains(pos) {
                                 let pan_y = strip_rect.top() + 32.0;
+                                let pan_center = egui::pos2(strip_rect.center().x, pan_y);
                                 let m_rect = Rect::from_min_size(egui::pos2(strip_rect.left() + 4.0, pan_y + 14.0), Vec2::new((strip_rect.width() - 10.0) / 2.0, 16.0));
                                 let s_rect = Rect::from_min_size(egui::pos2(m_rect.right() + 2.0, pan_y + 14.0), Vec2::new(m_rect.width(), 16.0));
                                 let fader_top = s_rect.bottom() + 10.0;
                                 let fader_bot = strip_rect.bottom() - 20.0;
 
-                                if m_rect.contains(pos) && is_click {
+                                // 1-Click Pro View Launchers hit testing
+                                let pro_nav_y = strip_rect.top() + 20.0;
+                                let p_rect = Rect::from_min_size(egui::pos2(strip_rect.left() + 4.0, pro_nav_y), Vec2::new(10.0, 10.0));
+                                let mod_rect = Rect::from_min_size(egui::pos2(p_rect.right() + 2.0, pro_nav_y), Vec2::new(10.0, 10.0));
+                                let auto_rect = Rect::from_min_size(egui::pos2(mod_rect.right() + 2.0, pro_nav_y), Vec2::new(10.0, 10.0));
+
+                                if is_pro && p_rect.contains(pos) && is_click {
+                                    selected_idx = Some(idx);
+                                    self.selected_track_idx = idx;
+                                    self.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::PianoRoll;
+                                } else if is_pro && mod_rect.contains(pos) && is_click {
+                                    selected_idx = Some(idx);
+                                    self.selected_track_idx = idx;
+                                    self.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::Modular;
+                                } else if is_pro && auto_rect.contains(pos) && is_click {
+                                    selected_idx = Some(idx);
+                                    track_to_open_auto = Some(track.id);
+                                } else if pos.distance(pan_center) <= 10.0 {
+                                    // Interactive Pan Pot Dragging, Clicking & Double-Click Reset
+                                    if is_double {
+                                        track.pan = 0.0;
+                                    } else if resp.dragged() {
+                                        let speed = if ui.input(|i| i.modifiers.shift) { 0.003 } else { 0.015 };
+                                        track.pan = (track.pan + (drag_delta.x - drag_delta.y) * speed).clamp(-1.0, 1.0);
+                                    } else if is_click {
+                                        let offset = ((pos.x - pan_center.x) / 8.0).clamp(-1.0, 1.0);
+                                        track.pan = offset;
+                                    }
+                                    selected_idx = Some(idx);
+                                } else if m_rect.contains(pos) && is_click {
                                     track.is_muted = !track.is_muted;
                                     selected_idx = Some(idx);
                                 } else if s_rect.contains(pos) && is_click {
                                     track.is_soloed = !track.is_soloed;
                                     selected_idx = Some(idx);
                                 } else if pos.y >= fader_top - 6.0 && pos.y <= fader_bot + 6.0 {
-                                    let norm = ((fader_bot - pos.y) / (fader_bot - fader_top)).clamp(0.0, 1.0);
-                                    track.gain = norm * 1.5;
+                                    if is_double {
+                                        track.gain = 1.0; // Double click resets to 0.0 dB unity
+                                    } else {
+                                        let norm = ((fader_bot - pos.y) / (fader_bot - fader_top)).clamp(0.0, 1.0);
+                                        track.gain = norm * 1.5;
+                                    }
                                     selected_idx = Some(idx);
                                 } else if is_click {
                                     selected_idx = Some(idx);
@@ -4875,12 +5048,47 @@ impl AwardWinningGuiView {
                     // Header color pill + Name
                     let col = Color32::from_rgb(track.color_rgb[0], track.color_rgb[1], track.color_rgb[2]);
                     painter.rect_filled(Rect::from_min_size(egui::pos2(strip_rect.left() + 4.0, strip_rect.top() + 4.0), Vec2::new(strip_rect.width() - 8.0, 4.0)), 2.0, col);
-                    painter.text(egui::pos2(strip_rect.center().x, strip_rect.top() + 12.0), egui::Align2::CENTER_TOP, format!("{}. {}", idx + 1, track.name), FontId::proportional(10.0), Color32::from_rgb(241, 245, 249));
+                    painter.text(egui::pos2(strip_rect.center().x, strip_rect.top() + 11.0), egui::Align2::CENTER_TOP, format!("{}. {}", idx + 1, track.name), FontId::proportional(9.5), Color32::from_rgb(241, 245, 249));
 
-                    // Pan Pot
+                    // 1-Click Pro View Launchers [🎹] [∿] [📈] in Pro Mode
+                    if is_pro {
+                        let pro_nav_y = strip_rect.top() + 20.0;
+                        let p_rect = Rect::from_min_size(egui::pos2(strip_rect.left() + 4.0, pro_nav_y), Vec2::new(10.0, 10.0));
+                        let mod_rect = Rect::from_min_size(egui::pos2(p_rect.right() + 2.0, pro_nav_y), Vec2::new(10.0, 10.0));
+                        let auto_rect = Rect::from_min_size(egui::pos2(mod_rect.right() + 2.0, pro_nav_y), Vec2::new(10.0, 10.0));
+
+                        painter.rect_filled(p_rect, 2.0, Color32::from_rgb(22, 30, 46));
+                        painter.text(p_rect.center(), egui::Align2::CENTER_CENTER, "🎹", FontId::proportional(7.0), Color32::from_rgb(168, 85, 247));
+
+                        painter.rect_filled(mod_rect, 2.0, Color32::from_rgb(22, 30, 46));
+                        painter.text(mod_rect.center(), egui::Align2::CENTER_CENTER, "∿", FontId::proportional(7.5), Color32::from_rgb(56, 189, 248));
+
+                        painter.rect_filled(auto_rect, 2.0, Color32::from_rgb(22, 30, 46));
+                        painter.text(auto_rect.center(), egui::Align2::CENTER_CENTER, "📈", FontId::proportional(7.0), Color32::from_rgb(245, 158, 11));
+                    }
+
+                    // Tactile Rotary Pan Pot with 12 o'clock center tick and angle needle
                     let pan_y = strip_rect.top() + 32.0;
-                    painter.circle_filled(egui::pos2(strip_rect.center().x, pan_y), 8.0, Color32::from_rgb(18, 24, 36));
-                    painter.circle_stroke(egui::pos2(strip_rect.center().x, pan_y), 8.0, Stroke::new(1.0_f32, Color32::from_rgb(45, 60, 85)));
+                    let pan_center = egui::pos2(strip_rect.center().x, pan_y);
+                    painter.circle_filled(pan_center, 8.0, Color32::from_rgb(18, 24, 36));
+                    painter.circle_stroke(pan_center, 8.0, Stroke::new(1.0_f32, Color32::from_rgb(45, 60, 85)));
+
+                    // 12 o'clock center tick
+                    painter.line_segment([egui::pos2(pan_center.x, pan_center.y - 8.0), egui::pos2(pan_center.x, pan_center.y - 5.0)], Stroke::new(1.0_f32, Color32::from_rgb(148, 163, 184)));
+
+                    // Dynamic angle needle
+                    let pan_angle = track.pan * 135.0_f32.to_radians() - std::f32::consts::FRAC_PI_2;
+                    let needle_col = if track.pan.abs() < 0.05 {
+                        Color32::from_rgb(200, 215, 235)
+                    } else if track.pan < 0.0 {
+                        Color32::from_rgb(245, 158, 11) // Warm amber for Left
+                    } else {
+                        Color32::from_rgb(56, 189, 248)  // Radiant cyan for Right
+                    };
+                    let nx = pan_center.x + pan_angle.cos() * 6.5;
+                    let ny = pan_center.y + pan_angle.sin() * 6.5;
+                    painter.line_segment([pan_center, egui::pos2(nx, ny)], Stroke::new(1.5_f32, needle_col));
+                    painter.circle_filled(pan_center, 2.0, needle_col);
 
                     // Mute / Solo Buttons
                     let m_rect = Rect::from_min_size(egui::pos2(strip_rect.left() + 4.0, pan_y + 14.0), Vec2::new((strip_rect.width() - 10.0) / 2.0, 16.0));
@@ -4918,16 +5126,35 @@ impl AwardWinningGuiView {
                 let m_strip = Rect::from_min_size(egui::pos2(m_x, rect.top() + 4.0), Vec2::new(master_w, canvas_height - 8.0));
                 painter.rect_filled(m_strip, 4.0, Color32::from_rgb(16, 24, 38));
                 painter.rect_stroke(m_strip, 4.0, Stroke::new(1.5_f32, Color32::from_rgb(56, 189, 248)));
-                painter.text(egui::pos2(m_strip.center().x, m_strip.top() + 8.0), egui::Align2::CENTER_TOP, "MASTER", FontId::proportional(11.0), Color32::from_rgb(56, 189, 248));
+                painter.text(egui::pos2(m_strip.center().x, m_strip.top() + 6.0), egui::Align2::CENTER_TOP, "MASTER", FontId::proportional(11.0), Color32::from_rgb(56, 189, 248));
+
+                // Master Mute Button
+                let m_mute_rect = Rect::from_min_size(egui::pos2(m_strip.left() + 6.0, m_strip.top() + 18.0), Vec2::new(m_strip.width() - 12.0, 11.0));
+                let m_mute_bg = if self.is_master_muted { Color32::from_rgb(239, 68, 68) } else { Color32::from_rgb(24, 34, 52) };
+                painter.rect_filled(m_mute_rect, 2.0, m_mute_bg);
+                painter.text(m_mute_rect.center(), egui::Align2::CENTER_CENTER, if self.is_master_muted { "MUTED" } else { "MUTE" }, FontId::proportional(7.5), Color32::WHITE);
 
                 let m_fader_top = m_strip.top() + 32.0;
                 let m_fader_bot = m_strip.bottom() - 24.0;
                 let m_fader_x = m_strip.left() + m_strip.width() * 0.35;
 
+                let m_auto_rect = Rect::from_min_size(egui::pos2(m_strip.left() + 6.0, m_fader_bot + 1.0), Vec2::new(m_strip.width() - 12.0, 10.0));
+
                 if let Some(pos) = pointer_pos {
-                    if is_interacting && m_strip.contains(pos) && pos.y >= m_fader_top - 6.0 && pos.y <= m_fader_bot + 6.0 {
-                        let norm = ((m_fader_bot - pos.y) / (m_fader_bot - m_fader_top)).clamp(0.0, 1.0);
-                        self.top_bar_state.master_gain = norm * 2.0;
+                    if is_interacting && m_strip.contains(pos) {
+                        if m_mute_rect.contains(pos) && is_click {
+                            self.toggle_master_mute();
+                        } else if m_auto_rect.contains(pos) && is_click {
+                            master_to_open_auto = true;
+                        } else if pos.y >= m_fader_top - 6.0 && pos.y <= m_fader_bot + 6.0 {
+                            if is_double {
+                                self.reset_master_gain();
+                            } else {
+                                let norm = ((m_fader_bot - pos.y) / (m_fader_bot - m_fader_top)).clamp(0.0, 1.0);
+                                self.top_bar_state.master_gain = norm * 2.0;
+                                self.is_master_muted = false;
+                            }
+                        }
                     }
                 }
 
@@ -4939,16 +5166,29 @@ impl AwardWinningGuiView {
                 painter.rect_filled(m_thumb_r, 2.0, Color32::from_rgb(56, 189, 248));
                 painter.rect_stroke(m_thumb_r, 2.0, Stroke::new(1.0_f32, Color32::WHITE));
 
+                // Master Auto Button [📈 Auto]
+                painter.rect_filled(m_auto_rect, 2.0, Color32::from_rgb(22, 30, 46));
+                painter.text(m_auto_rect.center(), egui::Align2::CENTER_CENTER, "📈 Auto", FontId::proportional(7.0), Color32::from_rgb(245, 158, 11));
+
                 // Dual Stereo Master VU Meter
                 let m_meter_x = m_strip.right() - 18.0;
                 let m_meter_rect = Rect::from_min_size(egui::pos2(m_meter_x, m_fader_top), Vec2::new(12.0, m_fader_bot - m_fader_top));
                 painter.rect_filled(m_meter_rect, 1.0, Color32::from_rgb(6, 10, 16));
                 let m_fill_h = (m_meter_rect.height() * m_norm).max(2.0);
                 let m_fill_rect = Rect::from_min_max(egui::pos2(m_meter_rect.left(), m_meter_rect.bottom() - m_fill_h), m_meter_rect.right_bottom());
-                painter.rect_filled(m_fill_rect, 1.0, Color32::from_rgb(16, 185, 129));
+                painter.rect_filled(m_fill_rect, 1.0, if self.is_master_muted { Color32::from_rgb(100, 116, 139) } else { Color32::from_rgb(16, 185, 129) });
 
                 let m_db = if self.top_bar_state.master_gain > 0.001 { (self.top_bar_state.master_gain - 1.0) * 12.0 } else { -96.0 };
-                painter.text(egui::pos2(m_strip.center().x, m_strip.bottom() - 10.0), egui::Align2::CENTER_CENTER, format!("{:.1}dB", m_db), FontId::proportional(8.0), Color32::from_rgb(56, 189, 248));
+                let m_txt = if self.is_master_muted { "-∞ dB".to_string() } else { format!("{:.1}dB", m_db) };
+                painter.text(egui::pos2(m_strip.center().x, m_strip.bottom() - 10.0), egui::Align2::CENTER_CENTER, m_txt, FontId::proportional(8.0), Color32::from_rgb(56, 189, 248));
+
+                // Handle pending automation window requests from mixer strip
+                if let Some(tid) = track_to_open_auto {
+                    self.open_track_automation_editor(tid, "gain");
+                }
+                if master_to_open_auto {
+                    self.open_master_automation_editor();
+                }
             });
     }
 

@@ -14,6 +14,8 @@
 //! GPU-accelerated UI & LOD rendering engine for Summoner DAW.
 
 #![allow(clippy::new_without_default)]
+#![allow(clippy::approx_constant)]
+#![allow(clippy::too_many_arguments)]
 
 pub mod ascii_renderer;
 pub mod docking_layout;
@@ -145,6 +147,8 @@ pub mod tier89_turn20_tests;
 pub mod tier90_turn21_tests;
 #[cfg(feature = "gui")]
 pub mod tier91_turn23_tests;
+#[cfg(feature = "gui")]
+pub mod tier92_turn26_tests;
 #[cfg(feature = "gui")]
 pub mod touch_gestures;
 #[cfg(feature = "gui")]
