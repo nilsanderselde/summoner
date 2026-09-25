@@ -3407,6 +3407,12 @@ impl AwardWinningGuiView {
                 self.device_rack_state.cutoff = self.top_bar_state.macro_tone;
                 self.device_rack_state.decay = self.top_bar_state.macro_space;
                 self.device_rack_state.drive = self.top_bar_state.macro_punch;
+                self.last_applied_macros = [
+                    self.top_bar_state.macro_tone,
+                    self.top_bar_state.macro_space,
+                    self.top_bar_state.macro_punch,
+                    self.top_bar_state.macro_character,
+                ];
             }
 
             if let Some(val) = automation_timeline.evaluate("master_gain", playhead_beat) {
@@ -3552,6 +3558,12 @@ impl AwardWinningGuiView {
         self.top_bar_state.macro_space = self.device_rack_state.decay;
         self.top_bar_state.macro_punch = self.device_rack_state.drive;
         self.top_bar_state.macro_character = self.device_rack_state.mod_amt;
+        self.last_applied_macros = [
+            self.top_bar_state.macro_tone,
+            self.top_bar_state.macro_space,
+            self.top_bar_state.macro_punch,
+            self.top_bar_state.macro_character,
+        ];
         let top_macros = [
             ("macro_tone", self.device_rack_state.cutoff, 100),
             ("macro_space", self.device_rack_state.decay, 102),
@@ -3807,7 +3819,9 @@ impl AwardWinningGuiView {
 
         if let Some(ref mod_node_id) = self.selected_modular_node_id {
             let is_external = self.modular_nodes.iter().all(|n| &n.id != mod_node_id);
-            for (p_idx, (k, &v)) in self.inspector_state.node_param_values.iter().enumerate() {
+            let mut sorted_params: Vec<_> = self.inspector_state.node_param_values.iter().collect();
+            sorted_params.sort_by_key(|(k, _)| (*k).clone());
+            for (p_idx, (k, &v)) in sorted_params.into_iter().enumerate() {
                 let auto_key = format!("modular_{}_{}", mod_node_id, k);
                 if automation_registry.get_param(&auto_key).is_none() {
                     automation_registry.register_param(&auto_key, v);

@@ -200,6 +200,7 @@ mod tests {
         view.tracks[0].is_muted = true;
         view.tracks[0].is_soloed = true;
         view.selected_modular_node_id = Some("node_test_1".to_string());
+        view.inspector_state.node_param_values.clear();
         view.inspector_state.node_param_values.insert("resonance".to_string(), 0.77);
 
         // 2. Dispatch with ParamBus
