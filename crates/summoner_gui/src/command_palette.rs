@@ -347,6 +347,12 @@ impl CommandPalette {
                 action_id: "open_neural_morph_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Advanced Stems Export Modal & Loudness Inspector".into(),
+                category: "Project & Export".into(),
+                action_id: "open_stems_export_modal".into(),
+                shortcut_hint: Some("Ctrl+Shift+E".into()),
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

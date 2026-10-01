@@ -48,6 +48,8 @@ pub struct ModernInspectorState {
     pub requested_open_hoa5_radar_hud: bool,
     #[serde(default)]
     pub requested_open_neural_morph_hud: bool,
+    #[serde(default)]
+    pub requested_open_stems_export_modal: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -78,6 +80,7 @@ impl Default for ModernInspectorState {
             requested_open_trompette_hud: false,
             requested_open_hoa5_radar_hud: false,
             requested_open_neural_morph_hud: false,
+            requested_open_stems_export_modal: false,
         }
     }
 }
@@ -612,6 +615,16 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open interactive 2D latent space timbre morphing orb & spectral trajectory HUD").clicked() {
                     state.requested_open_neural_morph_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Export") || active_kind.contains("Stem") || active_kind.contains("Batch") || active_kind == "ExportPreset" || active_kind == "StemExportFormat" {
+                if ui.add(
+                    egui::Button::new(RichText::new("📦 Open Multi-Track Stems Export Modal").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(14, 165, 233)))
+                        .fill(Color32::from_rgb(14, 28, 48))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(14, 165, 233)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open production multi-track batch stem export modal and loudness compliance inspector").clicked() {
+                    state.requested_open_stems_export_modal = true;
                 }
                 ui.add_space(4.0);
             }

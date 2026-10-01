@@ -1245,5 +1245,42 @@ Product Management has conducted a comprehensive readiness audit:
   - Feature tests: 12 tests passed in `tier116_turn52_tests` (`cargo test -p summoner_gui --features gui -- tier116_turn52_tests`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
 
+### Turn #53 (Turn #19) — Advanced Stems Export Modal & Loudness Compliance Inspector (Milestone 37)
+- [x] Advanced Stems Export Modal & Loudness Compliance Inspector (`crates/summoner_gui/src/views/stems_export_view.rs`):
+  - Multi-format stem export support: Linear PCM WAV, Lossless compressed FLAC, Vorbis OGG.
+  - Multi-resolution bit depth configurations: 16-bit PCM (Red Book CD), 24-bit PCM (Studio Master), 32-bit Float (Mastering High Dynamic Range).
+  - Sample rate selection (44.1 kHz, 48.0 kHz, 88.2 kHz, 96.0 kHz, 192.0 kHz) with TPDF triangular dithering options.
+  - Intelligent tail decay calculation (0.0s ..= 10.0s) for reverberation/delay tails and silence trimming (-80 dB ..= -40 dB).
+  - Multi-track stem selection table: individual track toggle checkboxes, select all, deselect all, invert selection, bus target grouping, and master mix bus inclusion.
+  - Loudness Compliance Engine:
+    * Standard compliance profiles: Spotify/YouTube (-14 LUFS, -1.0 dBTP), Apple Music (-16 LUFS, -1.0 dBTP), EBU R128 (-23 LUFS, -1.0 dBTP), ATSC A/85 (-24 LUFS, -2.0 dBTP), AES TD1004 (-18 LUFS, -1.0 dBTP), Club/DJ (-9 LUFS, -0.3 dBTP), Peak Only (0.0 dBFS), and Raw Bypass.
+    * Real-time true-peak margin warnings and inter-sample clipping detection telemetry with dynamic warning banners.
+  - Token-based dynamic naming template engine with live preview (`{project}`, `{index}`, `{name}`, `{bus}`, `{sr}`, `{bit_depth}`).
+  - Curated export presets: `StudioMasterWav`, `CdQualityWav`, `StreamingReadyNormalized`, `BroadcastEbuR128`, `HiResFlacArchive`, `GameAudioCleanLoops`.
+  - Offline multi-track batch render pipeline bridge via `ExportPresetManager` with progress bar, status message, and file size estimation.
+  - Accessible layout with touch targets $\ge 44 \times 44\text{pt}$ (`STEM_EXPORT_TOUCH_TARGET_SIZE`, `STEM_EXPORT_MIN_HIT_HEIGHT`).
+  - Self-contained deterministic ASCII snapshot renderer (`render_snapshot_ascii`) for headless verification.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_stems_export_modal: bool` and `stems_export_view: StemsExportView`.
+  - Lifecycle management methods: `open_stems_export_modal()`, `close_stems_export_modal()`, `is_stems_export_modal_open()`.
+  - Embedded modal window renderer `show_stems_export_modal_window`.
+- [x] Modern Inspector & Device Rack Integrations:
+  - Added `requested_open_stems_export_modal: bool` flags to `ModernInspectorState` and `ModernDeviceRackState`.
+  - In `ModernInspectorView`, added `[📦 Open Multi-Track Stems Export Modal]` action button on export/batch/render devices.
+  - In `ModernDeviceRackView`, added `[📦 Stems]` tactical trigger button on exporter rack cards.
+- [x] Command Palette, Menu Bar & Global Shortcut Routing:
+  - Registered `open_stems_export_modal` under `"Project & Export"` with shortcut `Ctrl+Shift+E` in `crates/summoner_gui/src/command_palette.rs`.
+  - Added `[📦 Export Multi-Track Stems... (Ctrl+Shift+E)]` entry in Top Menu Bar `File` dropdown.
+  - Added global hotkey `Ctrl+Shift+E` in `crates/summoner_gui/src/app.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_stems_export_modal()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier117_turn53_tests.rs`:
+    * Pure tests: view initialization, presets application, loudness standards and target LUFS / true peak ceilings, true peak margin calculation and warning detection, track selection operations, file size estimation (WAV vs FLAC), token formatting and live preview, `ExportPreset` round-trip conversion, $\ge 44\text{pt}$ touch target hit bounds, deterministic ASCII snapshot rendering.
+    * GUI tests: headless egui render, modal lifecycle, `ProjectConfig` synchronization, command palette action registration, rack & inspector trigger propagation, execution of offline stem export to temporary directory with disk verification.
+  - Unit tests: 329 passed in 0.23s (`cargo test -p summoner_gui`).
+  - Feature tests: 16 tests passed in `tier117_turn53_tests` (`cargo test -p summoner_gui --features gui -- tier117_turn53_tests`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
+
+
 
 

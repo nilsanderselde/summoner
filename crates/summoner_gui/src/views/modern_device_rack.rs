@@ -63,6 +63,8 @@ pub struct ModernDeviceRackState {
     pub requested_open_hoa5_radar_hud: bool,
     #[serde(default)]
     pub requested_open_neural_morph_hud: bool,
+    #[serde(default)]
+    pub requested_open_stems_export_modal: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -83,6 +85,7 @@ impl Default for ModernDeviceRackState {
             requested_open_trompette_hud: false,
             requested_open_hoa5_radar_hud: false,
             requested_open_neural_morph_hud: false,
+            requested_open_stems_export_modal: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -475,6 +478,7 @@ pub fn show_modern_device_rack_with_context(
                     let is_trompette = cur_selection == "TrompetteChienBridge" || cur_selection == "TrompetteBridge" || cur_selection.contains("Trompette") || cur_selection.contains("Chien");
                     let is_hoa = cur_selection == "AmbisonicRadarSpatializer" || cur_selection == "HoaSpatializer" || cur_selection == "Hoa5BinauralSpatializer" || cur_selection == "Hoa5RadarView" || cur_selection.contains("Ambisonic") || cur_selection.contains("Hoa");
                     let is_neural = cur_selection.contains("Neural") || cur_selection.contains("Timbre") || cur_selection.contains("Latent") || cur_selection.contains("Resynthesizer") || cur_selection == "NeuralMorphOrbView" || cur_selection == "NeuralTimbreMorph" || cur_selection == "NeuralWavetable";
+                    let is_export = cur_selection.contains("Export") || cur_selection.contains("Stem") || cur_selection.contains("Batch") || cur_selection == "ExportPreset" || cur_selection == "StemExportFormat";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -495,9 +499,13 @@ pub fn show_modern_device_rack_with_context(
                         if ui.button(RichText::new("🌐 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open 5th-Order Ambisonics (HOA5) 3D Radar HUD").clicked() {
                             state.requested_open_hoa5_radar_hud = true;
                         }
-                    } else if is_neural
-                        && ui.button(RichText::new("🧬 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(244, 63, 94))).on_hover_text("Open 2D Neural Timbre Morphing Orb HUD").clicked() {
-                        state.requested_open_neural_morph_hud = true;
+                    } else if is_neural {
+                        if ui.button(RichText::new("🧬 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(244, 63, 94))).on_hover_text("Open 2D Neural Timbre Morphing Orb HUD").clicked() {
+                            state.requested_open_neural_morph_hud = true;
+                        }
+                    } else if is_export
+                        && ui.button(RichText::new("📦 Stems").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(14, 165, 233))).on_hover_text("Open Multi-Track Stems Batch Exporter").clicked() {
+                        state.requested_open_stems_export_modal = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()

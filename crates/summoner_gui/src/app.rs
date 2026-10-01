@@ -932,6 +932,12 @@ impl eframe::App for SummonerApp {
             }
         }
 
+        // Ctrl+Shift+E Stems Export hotkey
+        if is_ctrl && is_shift && ctx.input(|i| i.key_pressed(egui::Key::E)) {
+            self.current_view = ViewMode::ModernStudio;
+            self.award_winning_view.open_stems_export_modal();
+        }
+
         let wants_kb = ctx.wants_keyboard_input();
 
         // --- Tier 33 Keyboard Shortcuts (Steps 801-819) ---
@@ -1345,6 +1351,10 @@ impl eframe::App for SummonerApp {
                     self.current_view = ViewMode::ModernStudio;
                     self.award_winning_view.open_neural_morph_hud();
                 }
+                "open_stems_export_modal" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_stems_export_modal();
+                }
                 "sfz_convert" | "auto_slice" | "load_preset" | "export_clap" | "toggle_simd" => {
                     println!("Command palette action executed: {}", action);
                 }
@@ -1482,6 +1492,11 @@ impl eframe::App for SummonerApp {
                     ui.separator();
                     if ui.button("🎵 Export WAV...").clicked() {
                         self.export_wav();
+                        ui.close_menu();
+                    }
+                    if ui.button("📦 Export Multi-Track Stems... (Ctrl+Shift+E)").clicked() {
+                        self.current_view = ViewMode::ModernStudio;
+                        self.award_winning_view.open_stems_export_modal();
                         ui.close_menu();
                     }
                     ui.separator();

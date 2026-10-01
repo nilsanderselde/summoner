@@ -654,6 +654,8 @@ pub struct AwardWinningGuiView {
     pub hoa5_radar_view: crate::views::hoa5_radar_view::Hoa5RadarView,
     pub show_neural_morph_modal: bool,
     pub neural_morph_orb_view: crate::views::neural_morph_orb_view::NeuralMorphOrbView,
+    pub show_stems_export_modal: bool,
+    pub stems_export_view: crate::views::stems_export_view::StemsExportView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -924,6 +926,8 @@ impl AwardWinningGuiView {
             hoa5_radar_view: crate::views::hoa5_radar_view::Hoa5RadarView::new(),
             show_neural_morph_modal: false,
             neural_morph_orb_view: crate::views::neural_morph_orb_view::NeuralMorphOrbView::new(),
+            show_stems_export_modal: false,
+            stems_export_view: crate::views::stems_export_view::StemsExportView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -1598,8 +1602,13 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_neural_morph_hud = false;
             self.open_neural_morph_hud();
         }
+        if self.inspector_state.requested_open_stems_export_modal || self.device_rack_state.requested_open_stems_export_modal {
+            self.inspector_state.requested_open_stems_export_modal = false;
+            self.device_rack_state.requested_open_stems_export_modal = false;
+            self.open_stems_export_modal();
+        }
 
-        // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs
+        // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
         self.show_modular_dsp_catalog_window(ui);
         self.show_crystal_resonator_modal_window(ui);
@@ -1608,6 +1617,7 @@ impl AwardWinningGuiView {
         self.show_trompette_bridge_modal_window(ui);
         self.show_hoa5_radar_modal_window(ui);
         self.show_neural_morph_modal_window(ui);
+        self.show_stems_export_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -7781,6 +7791,54 @@ impl AwardWinningGuiView {
 
     pub fn is_neural_morph_hud_open(&self) -> bool {
         self.show_neural_morph_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_stems_export_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_stems_export_modal {
+            return;
+        }
+
+        let mut is_open = self.show_stems_export_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("📦 Advanced Multi-Track Stems Batch Exporter & Loudness Inspector")
+            .id(egui::Id::new("stems_export_modal_window"))
+            .open(&mut is_open)
+            .default_size([760.0, 560.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    if ui.button("✕ Close Modal").clicked() {
+                        close_modal = true;
+                    }
+                    ui.label(
+                        RichText::new("Milestone 37 — Deterministic Multi-Track Offline Render & Loudness Compliance")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(100, 116, 139)),
+                    );
+                });
+                ui.separator();
+                self.stems_export_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_stems_export_modal = is_open;
+    }
+
+    pub fn open_stems_export_modal(&mut self) {
+        self.show_stems_export_modal = true;
+    }
+
+    pub fn close_stems_export_modal(&mut self) {
+        self.show_stems_export_modal = false;
+    }
+
+    pub fn is_stems_export_modal_open(&self) -> bool {
+        self.show_stems_export_modal
     }
 
     #[cfg(feature = "gui")]
