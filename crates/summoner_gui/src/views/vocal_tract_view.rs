@@ -426,7 +426,12 @@ impl VocalTractView {
     }
 
     #[cfg(feature = "gui")]
-    pub fn show(&mut self, ui: &mut egui::Ui, rect: Rect) {
+    pub fn show(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_rect(&mut self, ui: &mut egui::Ui, rect: Rect) {
         ui.allocate_ui_at_rect(
             egui::Rect::from_min_size(
                 egui::pos2(rect.x, rect.y),
@@ -436,6 +441,11 @@ impl VocalTractView {
                 self.ui(ui);
             },
         );
+    }
+
+    /// Render deterministic ASCII snapshot.
+    pub fn render_ascii_snapshot(&self) -> String {
+        self.render_ascii(80, 16).join("\n")
     }
 
     /// Render headless PNG snapshot displaying 44-Cylinder tube profile and tongue articulation puck.

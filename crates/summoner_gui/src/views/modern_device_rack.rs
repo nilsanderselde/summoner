@@ -93,6 +93,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_electric_piano_hud: bool,
     #[serde(default)]
     pub requested_open_tonewheel_organ_hud: bool,
+    #[serde(default)]
+    pub requested_open_waveguide_brass_hud: bool,
+    #[serde(default)]
+    pub requested_open_vocal_tract_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -128,6 +132,8 @@ impl Default for ModernDeviceRackState {
             requested_open_pipe_organ_hud: false,
             requested_open_electric_piano_hud: false,
             requested_open_tonewheel_organ_hud: false,
+            requested_open_waveguide_brass_hud: false,
+            requested_open_vocal_tract_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -330,6 +336,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_tonewheel_organ = cur_selection.contains("Tonewheel") || cur_selection == "TonewheelOrgan" || cur_selection == "TonewheelOrganModel" || cur_selection == "TonewheelOrganNode" || cur_selection == "TonewheelOrganProfile" || cur_selection.contains("Hammond") || cur_selection.contains("Drawbar");
                     let is_piano = !is_electric_piano && (cur_selection.contains("Piano") || cur_selection.contains("GrandPiano") || cur_selection == "GrandPianoModel" || cur_selection == "ConcertGrandPianoNode");
                     let is_pipe_organ = !is_tonewheel_organ && (cur_selection.contains("PipeOrgan") || cur_selection.contains("Organ") || cur_selection.contains("Windchest") || cur_selection == "PipeOrganModel");
+                    let is_waveguide_brass = cur_selection.contains("WaveguideBrass") || cur_selection.contains("BrassInstrument") || cur_selection.contains("AcousticBrass") || cur_selection == "WaveguideBrassModel" || cur_selection == "WaveguideBrassNode" || cur_selection == "BrassInstrumentProfile";
+                    let is_vocal_tract = cur_selection.contains("VocalTract") || cur_selection.contains("VocalTractModel") || cur_selection.contains("VowelSpace") || cur_selection.contains("VocalFormant") || cur_selection == "VocalTractNode" || cur_selection == "VocalTractProfile";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -402,9 +410,18 @@ pub fn show_modern_device_rack_with_context(
                         if ui.button(RichText::new("🎹 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(229, 169, 60))).on_hover_text("Open Concert Grand Piano HUD").clicked() {
                             state.requested_open_grand_piano_hud = true;
                         }
-                    } else if is_pipe_organ
-                        && ui.button(RichText::new("⛪ HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 180, 50))).on_hover_text("Open Pipe Organ Windchest HUD").clicked() {
-                        state.requested_open_pipe_organ_hud = true;
+                    } else if is_pipe_organ {
+                        if ui.button(RichText::new("⛪ HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 180, 50))).on_hover_text("Open Pipe Organ Windchest HUD").clicked() {
+                            state.requested_open_pipe_organ_hud = true;
+                        }
+                    } else if is_waveguide_brass {
+                        if ui.button(RichText::new("🎺 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 215, 0))).on_hover_text("Open Waveguide Brass Acoustic Lip-Reed HUD").clicked() {
+                            state.requested_open_waveguide_brass_hud = true;
+                        }
+                    } else if is_vocal_tract
+                        && ui.button(RichText::new("🗣 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(52, 211, 153))).on_hover_text("Open Vocal Tract 44-Cylinder Area Function HUD").clicked()
+                    {
+                        state.requested_open_vocal_tract_hud = true;
                     }
                     ui.add_space(4.0);
                     let pwr_col = if state.is_enabled { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(100, 116, 139) };
@@ -605,6 +622,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_tonewheel_organ = cur_selection.contains("Tonewheel") || cur_selection == "TonewheelOrgan" || cur_selection == "TonewheelOrganModel" || cur_selection == "TonewheelOrganNode" || cur_selection == "TonewheelOrganProfile" || cur_selection.contains("Hammond") || cur_selection.contains("Drawbar");
                     let is_piano = !is_electric_piano && (cur_selection.contains("Piano") || cur_selection.contains("GrandPiano") || cur_selection == "GrandPianoModel" || cur_selection == "ConcertGrandPianoNode");
                     let is_pipe_organ = !is_tonewheel_organ && (cur_selection.contains("PipeOrgan") || cur_selection.contains("Organ") || cur_selection.contains("Windchest") || cur_selection == "PipeOrganModel");
+                    let is_waveguide_brass = cur_selection.contains("WaveguideBrass") || cur_selection.contains("BrassInstrument") || cur_selection.contains("AcousticBrass") || cur_selection == "WaveguideBrassModel" || cur_selection == "WaveguideBrassNode" || cur_selection == "BrassInstrumentProfile";
+                    let is_vocal_tract = cur_selection.contains("VocalTract") || cur_selection.contains("VocalTractModel") || cur_selection.contains("VowelSpace") || cur_selection.contains("VocalFormant") || cur_selection == "VocalTractNode" || cur_selection == "VocalTractProfile";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -685,9 +704,18 @@ pub fn show_modern_device_rack_with_context(
                         if ui.button(RichText::new("🎹 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(229, 169, 60))).on_hover_text("Open Concert Grand Piano HUD").clicked() {
                             state.requested_open_grand_piano_hud = true;
                         }
-                    } else if is_pipe_organ
-                        && ui.button(RichText::new("⛪ HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 180, 50))).on_hover_text("Open Pipe Organ Windchest HUD").clicked() {
-                        state.requested_open_pipe_organ_hud = true;
+                    } else if is_pipe_organ {
+                        if ui.button(RichText::new("⛪ HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 180, 50))).on_hover_text("Open Pipe Organ Windchest HUD").clicked() {
+                            state.requested_open_pipe_organ_hud = true;
+                        }
+                    } else if is_waveguide_brass {
+                        if ui.button(RichText::new("🎺 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 215, 0))).on_hover_text("Open Waveguide Brass Acoustic Lip-Reed HUD").clicked() {
+                            state.requested_open_waveguide_brass_hud = true;
+                        }
+                    } else if is_vocal_tract
+                        && ui.button(RichText::new("🗣 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(52, 211, 153))).on_hover_text("Open Vocal Tract 44-Cylinder Area Function HUD").clicked()
+                    {
+                        state.requested_open_vocal_tract_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -1474,6 +1502,8 @@ fn show_pro_parameter_drawer(
                     let is_tonewheel_organ = dev_kind.contains("Tonewheel") || dev_kind == "TonewheelOrgan" || dev_kind == "TonewheelOrganModel" || dev_kind == "TonewheelOrganNode" || dev_kind == "TonewheelOrganProfile" || dev_kind.contains("Hammond") || dev_kind.contains("Drawbar");
                     let is_piano = !is_electric_piano && (dev_kind.contains("Piano") || dev_kind.contains("GrandPiano") || dev_kind == "GrandPianoModel" || dev_kind == "ConcertGrandPianoNode");
                     let is_pipe_organ = !is_tonewheel_organ && (dev_kind.contains("PipeOrgan") || dev_kind.contains("Organ") || dev_kind.contains("Windchest") || dev_kind == "PipeOrganModel");
+                    let is_waveguide_brass = dev_kind.contains("WaveguideBrass") || dev_kind.contains("BrassInstrument") || dev_kind.contains("AcousticBrass") || dev_kind == "WaveguideBrassModel" || dev_kind == "WaveguideBrassNode" || dev_kind == "BrassInstrumentProfile";
+                    let is_vocal_tract = dev_kind.contains("VocalTract") || dev_kind.contains("VocalTractModel") || dev_kind.contains("VowelSpace") || dev_kind.contains("VocalFormant") || dev_kind == "VocalTractNode" || dev_kind == "VocalTractProfile";
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -3008,6 +3038,162 @@ fn show_pro_parameter_drawer(
 
                         if organ_resp.hovered() {
                             let _ = organ_resp.on_hover_text("Pipe Organ Windchest Fluid Jet Dynamics\n[Drag horizontally: Wind pressure [40..160 mmH2O] | Drag vertically: Mouth cutup ratio [0.15..0.50]]");
+                        }
+                    } else if is_waveguide_brass {
+                        // Waveguide Brass Acoustic Lip-Reed & Bell Impedance Mini Visualizer
+                        let (brass_resp, brass_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let b_rect = brass_resp.rect;
+                        brass_painter.rect_filled(b_rect, 2.0, Color32::from_rgb(14, 18, 28));
+
+                        let mut tension = state.node_param_values.get("lip_tension_hz").copied().unwrap_or(233.08);
+                        let mut pressure = state.node_param_values.get("blowing_pressure_kpa").copied().unwrap_or(3.85);
+
+                        if brass_resp.dragged() {
+                            if let Some(pos) = brass_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - b_rect.left()) / b_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - b_rect.top()) / b_rect.height())).clamp(0.0, 1.0);
+                                tension = 50.0 + norm_x * 1150.0;
+                                pressure = 0.20 + norm_y * 7.80;
+                                state.node_param_values.insert("lip_tension_hz".to_string(), tension);
+                                state.node_param_values.insert("blowing_pressure_kpa".to_string(), pressure);
+                                state.node_param_values.insert("lip_tension".to_string(), tension);
+                                state.node_param_values.insert("blowing_pressure".to_string(), pressure);
+                                if let Some(bus) = param_bus {
+                                    let pid_ten = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_ten).is_some() { bus.set(pid_ten, tension); }
+                                    let pid_press = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_press).is_some() { bus.set(pid_press, pressure); }
+                                }
+                            }
+                        }
+
+                        // Background harmonic guide lines
+                        for h in 1..=4 {
+                            let hx = b_rect.left() + (h as f32 / 4.5) * b_rect.width();
+                            brass_painter.line_segment([egui::pos2(hx, b_rect.top() + 4.0), egui::pos2(hx, b_rect.bottom() - 4.0)], Stroke::new(0.5_f32, Color32::from_rgba_unmultiplied(255, 215, 0, 40)));
+                        }
+
+                        // Horn flare contour on right side
+                        let flare_start_x = b_rect.left() + b_rect.width() * 0.45;
+                        let cy = b_rect.center().y;
+                        let steps = 16;
+                        let mut prev_t = None;
+                        let mut prev_b = None;
+                        for s in 0..=steps {
+                            let frac = s as f32 / steps as f32;
+                            let px = flare_start_x + frac * (b_rect.right() - flare_start_x - 6.0);
+                            let r_flare = 3.0 + frac.powf(2.0) * 20.0;
+                            let pt_t = egui::pos2(px, cy - r_flare);
+                            let pt_b = egui::pos2(px, cy + r_flare);
+                            if let (Some(pt0), Some(pb0)) = (prev_t, prev_b) {
+                                brass_painter.line_segment([pt0, pt_t], Stroke::new(1.2_f32, Color32::from_rgb(255, 215, 0)));
+                                brass_painter.line_segment([pb0, pt_b], Stroke::new(1.2_f32, Color32::from_rgb(255, 215, 0)));
+                            }
+                            prev_t = Some(pt_t);
+                            prev_b = Some(pt_b);
+                        }
+
+                        // Draggable Embouchure Puck: Tension vs Pressure
+                        let norm_x = ((tension - 50.0) / 1150.0).clamp(0.0, 1.0);
+                        let norm_y = ((pressure - 0.20) / 7.80).clamp(0.0, 1.0);
+                        let puck_x = b_rect.left() + norm_x * b_rect.width();
+                        let puck_y = b_rect.bottom() - norm_y * b_rect.height();
+                        brass_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.5, Color32::from_rgb(255, 215, 0));
+                        brass_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::from_rgb(254, 240, 138)));
+
+                        // Readout
+                        brass_painter.text(
+                            egui::pos2(b_rect.left() + 4.0, b_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("Lip: {:.0}Hz", tension),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(255, 215, 0),
+                        );
+                        brass_painter.text(
+                            egui::pos2(b_rect.right() - 4.0, b_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("P: {:.1}kPa", pressure),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(255, 107, 43),
+                        );
+
+                        if brass_resp.hovered() {
+                            let _ = brass_resp.on_hover_text("Waveguide Brass Acoustic Lip-Reed HUD\n[Drag horizontally: Lip tension [50..1200 Hz] | Drag vertically: Blowing pressure [0.20..8.00 kPa]]");
+                        }
+                    } else if is_vocal_tract {
+                        // Vocal Tract 44-Cylinder Area Function Mini Visualizer
+                        let (vocal_resp, vocal_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let v_rect = vocal_resp.rect;
+                        vocal_painter.rect_filled(v_rect, 2.0, Color32::from_rgb(10, 18, 24));
+
+                        let mut tongue_pos = state.node_param_values.get("tongue_position").copied().unwrap_or(0.75);
+                        let mut tongue_h = state.node_param_values.get("tongue_height").copied().unwrap_or(0.85);
+
+                        if vocal_resp.dragged() {
+                            if let Some(pos) = vocal_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - v_rect.left()) / v_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - v_rect.top()) / v_rect.height())).clamp(0.0, 1.0);
+                                tongue_pos = norm_x;
+                                tongue_h = norm_y;
+                                state.node_param_values.insert("tongue_position".to_string(), tongue_pos);
+                                state.node_param_values.insert("tongue_height".to_string(), tongue_h);
+                                state.node_param_values.insert("tongue_pos".to_string(), tongue_pos);
+                                state.node_param_values.insert("tongue_ht".to_string(), tongue_h);
+                                if let Some(bus) = param_bus {
+                                    let pid_pos = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_pos).is_some() { bus.set(pid_pos, tongue_pos); }
+                                    let pid_h = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_h).is_some() { bus.set(pid_h, tongue_h); }
+                                }
+                            }
+                        }
+
+                        // Background grid
+                        for g in 1..4 {
+                            let gx = v_rect.left() + (g as f32 / 4.0) * v_rect.width();
+                            vocal_painter.line_segment([egui::pos2(gx, v_rect.top() + 4.0), egui::pos2(gx, v_rect.bottom() - 4.0)], Stroke::new(0.5_f32, Color32::from_rgba_unmultiplied(52, 211, 153, 40)));
+                        }
+
+                        // 44-Cylinder acoustic tube area profile contour
+                        let center_idx = 12.0 + tongue_pos * 24.0;
+                        let cy = v_rect.center().y;
+                        let cyl_steps = 22;
+                        for i in 0..cyl_steps {
+                            let frac = i as f32 / (cyl_steps - 1) as f32;
+                            let px = v_rect.left() + 6.0 + frac * (v_rect.width() - 12.0);
+                            let dist = (i as f32 * 2.0 - center_idx).abs();
+                            let constriction = if dist < 7.0 { (1.0 - dist / 7.0).powi(2) } else { 0.0 };
+                            let half_h = 4.0 + (1.0 - constriction * tongue_h * 0.75) * 16.0;
+                            vocal_painter.line_segment(
+                                [egui::pos2(px, cy - half_h), egui::pos2(px, cy + half_h)],
+                                Stroke::new(1.5_f32, Color32::from_rgb(52, 211, 153)),
+                            );
+                        }
+
+                        // Draggable Tongue Puck
+                        let puck_x = v_rect.left() + tongue_pos.clamp(0.0, 1.0) * v_rect.width();
+                        let puck_y = v_rect.bottom() - tongue_h.clamp(0.0, 1.0) * v_rect.height();
+                        vocal_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.5, Color32::from_rgb(52, 211, 153));
+                        vocal_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::from_rgb(167, 243, 208)));
+
+                        // Readout
+                        vocal_painter.text(
+                            egui::pos2(v_rect.left() + 4.0, v_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("Pos: {:.2}", tongue_pos),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(52, 211, 153),
+                        );
+                        vocal_painter.text(
+                            egui::pos2(v_rect.right() - 4.0, v_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("Ht: {:.2}", tongue_h),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+
+                        if vocal_resp.hovered() {
+                            let _ = vocal_resp.on_hover_text("Vocal Tract 44-Cylinder Area Function HUD\n[Drag horizontally: Tongue position [0..1] | Drag vertically: Tongue constriction height [0..1]]");
                         }
                     } else {
                         // Filter Curve Mini View (slot-addressed)

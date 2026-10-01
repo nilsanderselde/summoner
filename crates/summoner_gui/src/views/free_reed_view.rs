@@ -600,9 +600,9 @@ impl FreeReedView {
                 ui.vertical(|ui| {
                     ui.label(RichText::new("Rank Energy Weights:").font(FontId::proportional(11.0)).strong().color(Color32::from_rgb(226, 232, 240)));
                     ui.horizontal(|ui| {
-                        ui.add(egui::DragValue::new(&mut self.rank_energies[0]).speed(0.01).clamp_range(0.0..=1.0).prefix("16': "));
-                        ui.add(egui::DragValue::new(&mut self.rank_energies[1]).speed(0.01).clamp_range(0.0..=1.0).prefix("8': "));
-                        ui.add(egui::DragValue::new(&mut self.rank_energies[2]).speed(0.01).clamp_range(0.0..=1.0).prefix("8'+: "));
+                        ui.add(egui::DragValue::new(&mut self.rank_energies[0]).speed(0.01).range(0.0..=1.0).prefix("16': "));
+                        ui.add(egui::DragValue::new(&mut self.rank_energies[1]).speed(0.01).range(0.0..=1.0).prefix("8': "));
+                        ui.add(egui::DragValue::new(&mut self.rank_energies[2]).speed(0.01).range(0.0..=1.0).prefix("8'+: "));
                     });
                 });
             });

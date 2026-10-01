@@ -684,6 +684,10 @@ pub struct AwardWinningGuiView {
     pub electric_piano_view: crate::views::electric_piano_view::ElectricPianoView,
     pub show_tonewheel_organ_modal: bool,
     pub tonewheel_organ_view: crate::views::tonewheel_organ_view::TonewheelOrganView,
+    pub show_waveguide_brass_modal: bool,
+    pub waveguide_brass_view: crate::views::waveguide_brass_view::WaveguideBrassView,
+    pub show_vocal_tract_modal: bool,
+    pub vocal_tract_view: crate::views::vocal_tract_view::VocalTractView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -984,6 +988,10 @@ impl AwardWinningGuiView {
             electric_piano_view: crate::views::electric_piano_view::ElectricPianoView::new(),
             show_tonewheel_organ_modal: false,
             tonewheel_organ_view: crate::views::tonewheel_organ_view::TonewheelOrganView::new(),
+            show_waveguide_brass_modal: false,
+            waveguide_brass_view: crate::views::waveguide_brass_view::WaveguideBrassView::new(),
+            show_vocal_tract_modal: false,
+            vocal_tract_view: crate::views::vocal_tract_view::VocalTractView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -1733,6 +1741,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_tonewheel_organ_hud = false;
             self.open_tonewheel_organ_hud();
         }
+        if self.inspector_state.requested_open_waveguide_brass_hud || self.device_rack_state.requested_open_waveguide_brass_hud {
+            self.inspector_state.requested_open_waveguide_brass_hud = false;
+            self.device_rack_state.requested_open_waveguide_brass_hud = false;
+            self.open_waveguide_brass_hud();
+        }
+        if self.inspector_state.requested_open_vocal_tract_hud || self.device_rack_state.requested_open_vocal_tract_hud {
+            self.inspector_state.requested_open_vocal_tract_hud = false;
+            self.device_rack_state.requested_open_vocal_tract_hud = false;
+            self.open_vocal_tract_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -1758,6 +1776,8 @@ impl AwardWinningGuiView {
         self.show_pipe_organ_modal_window(ui);
         self.show_electric_piano_modal_window(ui);
         self.show_tonewheel_organ_modal_window(ui);
+        self.show_waveguide_brass_modal_window(ui);
+        self.show_vocal_tract_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -9467,6 +9487,220 @@ impl AwardWinningGuiView {
 
     pub fn is_tonewheel_organ_hud_open(&self) -> bool {
         self.show_tonewheel_organ_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_waveguide_brass_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_waveguide_brass_modal {
+            return;
+        }
+
+        let mut is_open = self.show_waveguide_brass_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎺 Physical Modeling Waveguide Brass Acoustic Lip-Reed & Bell HUD")
+            .id(egui::Id::new("waveguide_brass_hud_modal"))
+            .open(&mut is_open)
+            .default_size([800.0, 560.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Acoustic Lip-Reed Bernoulli Embouchure Space, 3-Valve Acoustic Bore & Bell Radiation Impedance")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.waveguide_brass_view.ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_waveguide_brass_modal = is_open;
+        self.sync_waveguide_brass_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_waveguide_brass_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let tension = self.waveguide_brass_view.lip_tension_hz;
+        let pressure = self.waveguide_brass_view.blowing_pressure_kpa;
+        let length = self.waveguide_brass_view.bore_length_m;
+        let cutoff = self.waveguide_brass_view.bell_cutoff_hz;
+        let aperture = self.waveguide_brass_view.lip_aperture_mm;
+        let impedance = self.waveguide_brass_view.acoustic_impedance_score;
+
+        self.device_rack_state.node_param_values.insert("lip_tension_hz".to_string(), tension);
+        self.device_rack_state.node_param_values.insert("blowing_pressure_kpa".to_string(), pressure);
+        self.device_rack_state.node_param_values.insert("bore_length_m".to_string(), length);
+        self.device_rack_state.node_param_values.insert("bell_cutoff_hz".to_string(), cutoff);
+        self.device_rack_state.node_param_values.insert("lip_aperture_mm".to_string(), aperture);
+        self.device_rack_state.node_param_values.insert("acoustic_impedance_score".to_string(), impedance);
+
+        self.device_rack_state.node_param_values.insert("lip_tension".to_string(), tension);
+        self.device_rack_state.node_param_values.insert("blowing_pressure".to_string(), pressure);
+        self.device_rack_state.node_param_values.insert("bore_length".to_string(), length);
+        self.device_rack_state.node_param_values.insert("bell_cutoff".to_string(), cutoff);
+
+        self.inspector_state.node_param_values.insert("lip_tension_hz".to_string(), tension);
+        self.inspector_state.node_param_values.insert("blowing_pressure_kpa".to_string(), pressure);
+        self.inspector_state.node_param_values.insert("bore_length_m".to_string(), length);
+        self.inspector_state.node_param_values.insert("bell_cutoff_hz".to_string(), cutoff);
+        self.inspector_state.node_param_values.insert("lip_aperture_mm".to_string(), aperture);
+        self.inspector_state.node_param_values.insert("acoustic_impedance_score".to_string(), impedance);
+
+        self.inspector_state.node_param_values.insert("lip_tension".to_string(), tension);
+        self.inspector_state.node_param_values.insert("blowing_pressure".to_string(), pressure);
+        self.inspector_state.node_param_values.insert("bore_length".to_string(), length);
+        self.inspector_state.node_param_values.insert("bell_cutoff".to_string(), cutoff);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_ten   = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_press = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_len   = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_cut   = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_apert = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_imp   = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+
+            if bus.get(pid_ten).is_some()   { bus.set(pid_ten, tension); }
+            if bus.get(pid_press).is_some() { bus.set(pid_press, pressure); }
+            if bus.get(pid_len).is_some()   { bus.set(pid_len, length); }
+            if bus.get(pid_cut).is_some()   { bus.set(pid_cut, cutoff); }
+            if bus.get(pid_apert).is_some() { bus.set(pid_apert, aperture); }
+            if bus.get(pid_imp).is_some()   { bus.set(pid_imp, impedance); }
+        }
+    }
+
+    pub fn open_waveguide_brass_hud(&mut self) {
+        self.show_waveguide_brass_modal = true;
+    }
+
+    pub fn close_waveguide_brass_hud(&mut self) {
+        self.show_waveguide_brass_modal = false;
+    }
+
+    pub fn is_waveguide_brass_hud_open(&self) -> bool {
+        self.show_waveguide_brass_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_vocal_tract_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_vocal_tract_modal {
+            return;
+        }
+
+        let mut is_open = self.show_vocal_tract_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🗣 Physical Modeling Vocal Tract 44-Cylinder Area Function HUD")
+            .id(egui::Id::new("vocal_tract_hud_modal"))
+            .open(&mut is_open)
+            .default_size([800.0, 560.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("1D FDTD 44-Cylinder Vocal Tract Acoustic Profile, 9 Vowel Presets & Articulatory Tongue Space")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.vocal_tract_view.ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_vocal_tract_modal = is_open;
+        self.sync_vocal_tract_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_vocal_tract_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let tongue_pos = self.vocal_tract_view.tongue_position;
+        let tongue_h = self.vocal_tract_view.tongue_height;
+        let lip_op = self.vocal_tract_view.lip_opening;
+        let velum = self.vocal_tract_view.velum_opening;
+        let f0 = self.vocal_tract_view.glottal_f0_hz;
+        let aspir = self.vocal_tract_view.aspiration_level;
+
+        self.device_rack_state.node_param_values.insert("tongue_position".to_string(), tongue_pos);
+        self.device_rack_state.node_param_values.insert("tongue_height".to_string(), tongue_h);
+        self.device_rack_state.node_param_values.insert("lip_opening".to_string(), lip_op);
+        self.device_rack_state.node_param_values.insert("velum_opening".to_string(), velum);
+        self.device_rack_state.node_param_values.insert("glottal_f0_hz".to_string(), f0);
+        self.device_rack_state.node_param_values.insert("aspiration_level".to_string(), aspir);
+
+        self.device_rack_state.node_param_values.insert("tongue_pos".to_string(), tongue_pos);
+        self.device_rack_state.node_param_values.insert("tongue_ht".to_string(), tongue_h);
+        self.device_rack_state.node_param_values.insert("glottal_f0".to_string(), f0);
+
+        self.inspector_state.node_param_values.insert("tongue_position".to_string(), tongue_pos);
+        self.inspector_state.node_param_values.insert("tongue_height".to_string(), tongue_h);
+        self.inspector_state.node_param_values.insert("lip_opening".to_string(), lip_op);
+        self.inspector_state.node_param_values.insert("velum_opening".to_string(), velum);
+        self.inspector_state.node_param_values.insert("glottal_f0_hz".to_string(), f0);
+        self.inspector_state.node_param_values.insert("aspiration_level".to_string(), aspir);
+
+        self.inspector_state.node_param_values.insert("tongue_pos".to_string(), tongue_pos);
+        self.inspector_state.node_param_values.insert("tongue_ht".to_string(), tongue_h);
+        self.inspector_state.node_param_values.insert("glottal_f0".to_string(), f0);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_pos   = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_h     = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_lip   = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_velum = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_f0    = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_aspir = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+
+            if bus.get(pid_pos).is_some()   { bus.set(pid_pos, tongue_pos); }
+            if bus.get(pid_h).is_some()     { bus.set(pid_h, tongue_h); }
+            if bus.get(pid_lip).is_some()   { bus.set(pid_lip, lip_op); }
+            if bus.get(pid_velum).is_some() { bus.set(pid_velum, velum); }
+            if bus.get(pid_f0).is_some()    { bus.set(pid_f0, f0); }
+            if bus.get(pid_aspir).is_some() { bus.set(pid_aspir, aspir); }
+        }
+    }
+
+    pub fn open_vocal_tract_hud(&mut self) {
+        self.show_vocal_tract_modal = true;
+    }
+
+    pub fn close_vocal_tract_hud(&mut self) {
+        self.show_vocal_tract_modal = false;
+    }
+
+    pub fn is_vocal_tract_hud_open(&self) -> bool {
+        self.show_vocal_tract_modal
     }
 
     #[cfg(feature = "gui")]

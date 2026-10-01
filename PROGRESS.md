@@ -1506,6 +1506,38 @@ Product Management has conducted a comprehensive readiness audit:
   - Feature tests: 9 tests passed in `tier124_turn60_tests` (`cargo test -p summoner_gui --features gui -- tier124_turn60_tests`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`).
 
+### Turn #61 (Turn #26 Deliverable) — Physical Modeling Waveguide Brass & Vocal Tract 44-Cylinder Area Function HUDs Convergence (Milestones 15, 33 & 34)
+- [x] Physical Modeling Waveguide Brass (Trumpet, French Horn, Trombone, Tuba, Flugelhorn, Lip-Reed Bernoulli Embouchure Dynamics, 3-Valve Piston Acoustic Bore & Exponential Bell Radiation Flare) and Vocal Tract 44-Cylinder Area Function (9 Vowel Formant Presets [i, e, a, o, u, æ, ʌ, ɚ, ə], Tongue Articulatory Space XY Puck [Position vs Height] & Velum Port Nasalization) HUDs Integration:
+  - Integrated `WaveguideBrassView` and `VocalTractView` performance HUDs into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/waveguide_brass_view.rs` & `vocal_tract_view.rs`):
+  - In `WaveguideBrassView`: implemented unified `show(&mut self, ui: &mut egui::Ui)`, preserved `show_rect`, added `set_instrument(&mut self, inst: BrassInstrument)`, and implemented `render_ascii_snapshot`.
+  - In `VocalTractView`: implemented unified `show(&mut self, ui: &mut egui::Ui)`, preserved `show_rect`, added 9 vowel formant presets with tactile selection tabs, and implemented `render_ascii_snapshot`.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_waveguide_brass_modal: bool`, `waveguide_brass_view: WaveguideBrassView`, `show_vocal_tract_modal: bool`, and `vocal_tract_view: VocalTractView`.
+  - Added dedicated modal windows `show_waveguide_brass_modal_window` and `show_vocal_tract_modal_window` with responsive styling, WCAG AAA contrast, and $\ge 44 \times 44\text{pt}$ touch bounds.
+  - Added public lifecycle methods: `open_waveguide_brass_hud()`, `close_waveguide_brass_hud()`, `is_waveguide_brass_hud_open()`, `open_vocal_tract_hud()`, `close_vocal_tract_hud()`, `is_vocal_tract_hud_open()`.
+  - Real-time parameter sync bridges (`sync_waveguide_brass_hud_state` and `sync_vocal_tract_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_waveguide_brass_hud: bool` and `requested_open_vocal_tract_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🎺 Open Waveguide Brass Acoustic Lip-Reed HUD]` and `[🗣 Open Vocal Tract 44-Cylinder Area Function HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header `[🎺 HUD]` / `[🗣 HUD]` and expanded toolbar buttons in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Waveguide Brass: Bernoulli lip-reed embouchure tension [50..1200 Hz] vs pressure [0.2..8.0 kPa] XY drag puck, 4 harmonic guides, bell flare curve, and live `ParamBus` slot dispatch.
+    * Vocal Tract: 44-cylinder acoustic tube area contour, tongue position [0..1] vs height [0..1] XY drag puck, and live `ParamBus` slot dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_waveguide_brass_hud` and `open_vocal_tract_hud` under `"Physical Modeling"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_waveguide_brass_hud()` and `open_vocal_tract_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier125_turn61_tests.rs`:
+    * Pure tests: view initialization, presets, normalization roundtrips, hit testing, acoustics simulation, formants, slot arithmetic channel isolation, deterministic ASCII snapshots.
+    * GUI tests: modal lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch, rack & inspector trigger propagation, command palette action registration.
+  - Registered `tier125_turn61_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Unit tests: 329 passed in 0.23s (`cargo test -p summoner_gui`).
+  - Feature tests: 9 tests passed in `tier125_turn61_tests` (`cargo test -p summoner_gui --features gui -- tier125`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
+
 
 
 

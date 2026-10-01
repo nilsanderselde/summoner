@@ -437,6 +437,18 @@ impl CommandPalette {
                 action_id: "open_tonewheel_organ_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Waveguide Brass Acoustic Lip-Reed HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_waveguide_brass_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Vocal Tract 44-Cylinder Area Function HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_vocal_tract_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

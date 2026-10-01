@@ -78,6 +78,10 @@ pub struct ModernInspectorState {
     pub requested_open_electric_piano_hud: bool,
     #[serde(default)]
     pub requested_open_tonewheel_organ_hud: bool,
+    #[serde(default)]
+    pub requested_open_waveguide_brass_hud: bool,
+    #[serde(default)]
+    pub requested_open_vocal_tract_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -123,6 +127,8 @@ impl Default for ModernInspectorState {
             requested_open_pipe_organ_hud: false,
             requested_open_electric_piano_hud: false,
             requested_open_tonewheel_organ_hud: false,
+            requested_open_waveguide_brass_hud: false,
+            requested_open_vocal_tract_hud: false,
         }
     }
 }
@@ -807,6 +813,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open interactive Pipe Organ windchest fluid jet dynamics, cutup ratio & 8-harmonic spectrum HUD").clicked() {
                     state.requested_open_pipe_organ_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("WaveguideBrass") || active_kind.contains("BrassInstrument") || active_kind.contains("AcousticBrass") || active_kind == "WaveguideBrassModel" || active_kind == "WaveguideBrassNode" || active_kind == "BrassInstrumentProfile" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🎺 Open Waveguide Brass Acoustic Lip-Reed HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(255, 215, 0)))
+                        .fill(Color32::from_rgb(38, 32, 10))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 215, 0)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Waveguide Brass Bernoulli lip-reed embouchure, 3-valve acoustic bore & bell radiation HUD").clicked() {
+                    state.requested_open_waveguide_brass_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("VocalTract") || active_kind.contains("VocalTractModel") || active_kind.contains("VowelSpace") || active_kind.contains("VocalFormant") || active_kind == "VocalTractNode" || active_kind == "VocalTractProfile" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🗣 Open Vocal Tract 44-Cylinder Area Function HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(52, 211, 153)))
+                        .fill(Color32::from_rgb(12, 38, 28))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(52, 211, 153)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Vocal Tract 44-cylinder area function, 9 vowel formant presets & articulatory tongue space HUD").clicked() {
+                    state.requested_open_vocal_tract_hud = true;
                 }
                 ui.add_space(4.0);
             }
