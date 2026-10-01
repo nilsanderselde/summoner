@@ -353,6 +353,18 @@ impl CommandPalette {
                 action_id: "open_stems_export_modal".into(),
                 shortcut_hint: Some("Ctrl+Shift+E".into()),
             },
+            CommandAction {
+                label: "Open Bowed String Acoustic Friction HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_bowed_string_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Shakuhachi Bamboo Flute HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_shakuhachi_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

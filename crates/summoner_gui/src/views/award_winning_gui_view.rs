@@ -656,6 +656,10 @@ pub struct AwardWinningGuiView {
     pub neural_morph_orb_view: crate::views::neural_morph_orb_view::NeuralMorphOrbView,
     pub show_stems_export_modal: bool,
     pub stems_export_view: crate::views::stems_export_view::StemsExportView,
+    pub show_bowed_string_modal: bool,
+    pub bowed_string_view: crate::views::bowed_string_view::BowedStringView,
+    pub show_shakuhachi_modal: bool,
+    pub shakuhachi_view: crate::views::shakuhachi_view::ShakuhachiView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -928,6 +932,10 @@ impl AwardWinningGuiView {
             neural_morph_orb_view: crate::views::neural_morph_orb_view::NeuralMorphOrbView::new(),
             show_stems_export_modal: false,
             stems_export_view: crate::views::stems_export_view::StemsExportView::new(),
+            show_bowed_string_modal: false,
+            bowed_string_view: crate::views::bowed_string_view::BowedStringView::new(),
+            show_shakuhachi_modal: false,
+            shakuhachi_view: crate::views::shakuhachi_view::ShakuhachiView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -1607,6 +1615,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_stems_export_modal = false;
             self.open_stems_export_modal();
         }
+        if self.inspector_state.requested_open_bowed_string_hud || self.device_rack_state.requested_open_bowed_string_hud {
+            self.inspector_state.requested_open_bowed_string_hud = false;
+            self.device_rack_state.requested_open_bowed_string_hud = false;
+            self.open_bowed_string_hud();
+        }
+        if self.inspector_state.requested_open_shakuhachi_hud || self.device_rack_state.requested_open_shakuhachi_hud {
+            self.inspector_state.requested_open_shakuhachi_hud = false;
+            self.device_rack_state.requested_open_shakuhachi_hud = false;
+            self.open_shakuhachi_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -1618,6 +1636,8 @@ impl AwardWinningGuiView {
         self.show_hoa5_radar_modal_window(ui);
         self.show_neural_morph_modal_window(ui);
         self.show_stems_export_modal_window(ui);
+        self.show_bowed_string_modal_window(ui);
+        self.show_shakuhachi_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -7839,6 +7859,202 @@ impl AwardWinningGuiView {
 
     pub fn is_stems_export_modal_open(&self) -> bool {
         self.show_stems_export_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_bowed_string_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_bowed_string_modal {
+            return;
+        }
+
+        let mut is_open = self.show_bowed_string_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎻 Physical Modeling Bowed String Acoustic Friction HUD")
+            .id(egui::Id::new("bowed_string_hud_modal"))
+            .open(&mut is_open)
+            .default_size([740.0, 540.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Helmholtz Stick-Slip Friction & Schelleng Limit Modeler")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.bowed_string_view.ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_bowed_string_modal = is_open;
+        self.sync_bowed_string_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_bowed_string_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let bow_speed = self.bowed_string_view.bow_speed_mps;
+        let bow_force = self.bowed_string_view.bow_force_n;
+        let bridge_prox = self.bowed_string_view.bridge_proximity_beta;
+        let rosin_adh = self.bowed_string_view.rosin_adhesion_pct;
+        let helmholtz = self.bowed_string_view.helmholtz_stability_score;
+        let str_len = self.bowed_string_view.string_length_m;
+
+        self.device_rack_state.node_param_values.insert("bow_speed_mps".to_string(), bow_speed);
+        self.device_rack_state.node_param_values.insert("bow_force_n".to_string(), bow_force);
+        self.device_rack_state.node_param_values.insert("bridge_proximity_beta".to_string(), bridge_prox);
+        self.device_rack_state.node_param_values.insert("rosin_adhesion_pct".to_string(), rosin_adh);
+        self.device_rack_state.node_param_values.insert("helmholtz_stability".to_string(), helmholtz);
+        self.device_rack_state.node_param_values.insert("string_length_m".to_string(), str_len);
+
+        self.inspector_state.node_param_values.insert("bow_speed_mps".to_string(), bow_speed);
+        self.inspector_state.node_param_values.insert("bow_force_n".to_string(), bow_force);
+        self.inspector_state.node_param_values.insert("bridge_proximity_beta".to_string(), bridge_prox);
+        self.inspector_state.node_param_values.insert("rosin_adhesion_pct".to_string(), rosin_adh);
+        self.inspector_state.node_param_values.insert("helmholtz_stability".to_string(), helmholtz);
+        self.inspector_state.node_param_values.insert("string_length_m".to_string(), str_len);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_speed = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_force = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_prox  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_rosin = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_helm  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_len   = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+
+            if bus.get(pid_speed).is_some() { bus.set(pid_speed, bow_speed); }
+            if bus.get(pid_force).is_some() { bus.set(pid_force, bow_force); }
+            if bus.get(pid_prox).is_some()  { bus.set(pid_prox, bridge_prox); }
+            if bus.get(pid_rosin).is_some() { bus.set(pid_rosin, rosin_adh); }
+            if bus.get(pid_helm).is_some()  { bus.set(pid_helm, helmholtz); }
+            if bus.get(pid_len).is_some()   { bus.set(pid_len, str_len); }
+        }
+    }
+
+    pub fn open_bowed_string_hud(&mut self) {
+        self.show_bowed_string_modal = true;
+    }
+
+    pub fn close_bowed_string_hud(&mut self) {
+        self.show_bowed_string_modal = false;
+    }
+
+    pub fn is_bowed_string_hud_open(&self) -> bool {
+        self.show_bowed_string_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_shakuhachi_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_shakuhachi_modal {
+            return;
+        }
+
+        let mut is_open = self.show_shakuhachi_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎍 Physical Modeling Shakuhachi Bamboo Flute HUD")
+            .id(egui::Id::new("shakuhachi_hud_modal"))
+            .open(&mut is_open)
+            .default_size([720.0, 520.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Utaguchi Blowing Edge, Air Jet Vortex & Meri/Kari Microtone HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.shakuhachi_view.ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_shakuhachi_modal = is_open;
+        self.sync_shakuhachi_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_shakuhachi_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let jet_vel = self.shakuhachi_view.jet_velocity_mps;
+        let utaguchi = self.shakuhachi_view.utaguchi_angle_deg;
+        let meri_kari = self.shakuhachi_view.meri_kari_cents;
+        let chiff = self.shakuhachi_view.chiff_noise_level;
+        let bore_q = self.shakuhachi_view.acoustic_bore_q;
+        let fl_len = self.shakuhachi_view.length_type.nominal_length_cm();
+
+        self.device_rack_state.node_param_values.insert("jet_velocity_mps".to_string(), jet_vel);
+        self.device_rack_state.node_param_values.insert("utaguchi_angle_deg".to_string(), utaguchi);
+        self.device_rack_state.node_param_values.insert("meri_kari_cents".to_string(), meri_kari);
+        self.device_rack_state.node_param_values.insert("chiff_noise_level".to_string(), chiff);
+        self.device_rack_state.node_param_values.insert("bore_resonance_q".to_string(), bore_q);
+        self.device_rack_state.node_param_values.insert("flute_length_cm".to_string(), fl_len);
+
+        self.inspector_state.node_param_values.insert("jet_velocity_mps".to_string(), jet_vel);
+        self.inspector_state.node_param_values.insert("utaguchi_angle_deg".to_string(), utaguchi);
+        self.inspector_state.node_param_values.insert("meri_kari_cents".to_string(), meri_kari);
+        self.inspector_state.node_param_values.insert("chiff_noise_level".to_string(), chiff);
+        self.inspector_state.node_param_values.insert("bore_resonance_q".to_string(), bore_q);
+        self.inspector_state.node_param_values.insert("flute_length_cm".to_string(), fl_len);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_jet   = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_uta   = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_meri  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_chiff = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_bore  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_flen  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+
+            if bus.get(pid_jet).is_some()   { bus.set(pid_jet, jet_vel); }
+            if bus.get(pid_uta).is_some()   { bus.set(pid_uta, utaguchi); }
+            if bus.get(pid_meri).is_some()  { bus.set(pid_meri, meri_kari); }
+            if bus.get(pid_chiff).is_some() { bus.set(pid_chiff, chiff); }
+            if bus.get(pid_bore).is_some()  { bus.set(pid_bore, bore_q); }
+            if bus.get(pid_flen).is_some()  { bus.set(pid_flen, fl_len); }
+        }
+    }
+
+    pub fn open_shakuhachi_hud(&mut self) {
+        self.show_shakuhachi_modal = true;
+    }
+
+    pub fn close_shakuhachi_hud(&mut self) {
+        self.show_shakuhachi_modal = false;
+    }
+
+    pub fn is_shakuhachi_hud_open(&self) -> bool {
+        self.show_shakuhachi_modal
     }
 
     #[cfg(feature = "gui")]

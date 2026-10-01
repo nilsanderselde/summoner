@@ -65,6 +65,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_neural_morph_hud: bool,
     #[serde(default)]
     pub requested_open_stems_export_modal: bool,
+    #[serde(default)]
+    pub requested_open_bowed_string_hud: bool,
+    #[serde(default)]
+    pub requested_open_shakuhachi_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -86,6 +90,8 @@ impl Default for ModernDeviceRackState {
             requested_open_hoa5_radar_hud: false,
             requested_open_neural_morph_hud: false,
             requested_open_stems_export_modal: false,
+            requested_open_bowed_string_hud: false,
+            requested_open_shakuhachi_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -274,6 +280,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_hurdy = cur_selection == "FrenchHurdyGurdy" || cur_selection.contains("HurdyGurdy") || cur_selection.contains("Vielle");
                     let is_trompette = cur_selection == "TrompetteChienBridge" || cur_selection == "TrompetteBridge" || cur_selection.contains("Trompette") || cur_selection.contains("Chien");
                     let is_hoa = cur_selection == "AmbisonicRadarSpatializer" || cur_selection == "HoaSpatializer" || cur_selection == "Hoa5BinauralSpatializer" || cur_selection == "Hoa5RadarView" || cur_selection.contains("Ambisonic") || cur_selection.contains("Hoa");
+                    let is_bowed = cur_selection.contains("Bowed") || cur_selection.contains("Violin") || cur_selection.contains("Cello") || cur_selection == "BowedStringNode" || cur_selection == "BowedString";
+                    let is_shakuhachi = cur_selection.contains("Shakuhachi") || cur_selection.contains("BambooFlute") || cur_selection == "ShakuhachiNode" || cur_selection == "Shakuhachi";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -290,9 +298,17 @@ pub fn show_modern_device_rack_with_context(
                         if ui.button(RichText::new("🐕 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(239, 68, 68))).on_hover_text("Open Trompette Chien Buzzing Bridge HUD").clicked() {
                             state.requested_open_trompette_hud = true;
                         }
-                    } else if is_hoa
-                        && ui.button(RichText::new("🌐 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open 5th-Order Ambisonics (HOA5) 3D Radar HUD").clicked() {
-                        state.requested_open_hoa5_radar_hud = true;
+                    } else if is_hoa {
+                        if ui.button(RichText::new("🌐 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open 5th-Order Ambisonics (HOA5) 3D Radar HUD").clicked() {
+                            state.requested_open_hoa5_radar_hud = true;
+                        }
+                    } else if is_bowed {
+                        if ui.button(RichText::new("🎻 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Bowed String Acoustic Friction HUD").clicked() {
+                            state.requested_open_bowed_string_hud = true;
+                        }
+                    } else if is_shakuhachi
+                        && ui.button(RichText::new("🎍 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(52, 211, 153))).on_hover_text("Open Shakuhachi Bamboo Flute HUD").clicked() {
+                        state.requested_open_shakuhachi_hud = true;
                     }
                     ui.add_space(4.0);
                     let pwr_col = if state.is_enabled { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(100, 116, 139) };
@@ -479,6 +495,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_hoa = cur_selection == "AmbisonicRadarSpatializer" || cur_selection == "HoaSpatializer" || cur_selection == "Hoa5BinauralSpatializer" || cur_selection == "Hoa5RadarView" || cur_selection.contains("Ambisonic") || cur_selection.contains("Hoa");
                     let is_neural = cur_selection.contains("Neural") || cur_selection.contains("Timbre") || cur_selection.contains("Latent") || cur_selection.contains("Resynthesizer") || cur_selection == "NeuralMorphOrbView" || cur_selection == "NeuralTimbreMorph" || cur_selection == "NeuralWavetable";
                     let is_export = cur_selection.contains("Export") || cur_selection.contains("Stem") || cur_selection.contains("Batch") || cur_selection == "ExportPreset" || cur_selection == "StemExportFormat";
+                    let is_bowed = cur_selection.contains("Bowed") || cur_selection.contains("Violin") || cur_selection.contains("Cello") || cur_selection == "BowedStringNode" || cur_selection == "BowedString";
+                    let is_shakuhachi = cur_selection.contains("Shakuhachi") || cur_selection.contains("BambooFlute") || cur_selection == "ShakuhachiNode" || cur_selection == "Shakuhachi";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -503,9 +521,17 @@ pub fn show_modern_device_rack_with_context(
                         if ui.button(RichText::new("🧬 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(244, 63, 94))).on_hover_text("Open 2D Neural Timbre Morphing Orb HUD").clicked() {
                             state.requested_open_neural_morph_hud = true;
                         }
-                    } else if is_export
-                        && ui.button(RichText::new("📦 Stems").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(14, 165, 233))).on_hover_text("Open Multi-Track Stems Batch Exporter").clicked() {
-                        state.requested_open_stems_export_modal = true;
+                    } else if is_export {
+                        if ui.button(RichText::new("📦 Stems").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(14, 165, 233))).on_hover_text("Open Multi-Track Stems Batch Exporter").clicked() {
+                            state.requested_open_stems_export_modal = true;
+                        }
+                    } else if is_bowed {
+                        if ui.button(RichText::new("🎻 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Bowed String Acoustic Friction HUD").clicked() {
+                            state.requested_open_bowed_string_hud = true;
+                        }
+                    } else if is_shakuhachi
+                        && ui.button(RichText::new("🎍 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(52, 211, 153))).on_hover_text("Open Shakuhachi Bamboo Flute HUD").clicked() {
+                        state.requested_open_shakuhachi_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -1278,6 +1304,8 @@ fn show_pro_parameter_drawer(
                     let is_trompette = dev_kind == "TrompetteChienBridge" || dev_kind == "TrompetteBridge" || dev_kind.contains("Trompette") || dev_kind.contains("Chien");
                     let is_hoa = dev_kind == "AmbisonicRadarSpatializer" || dev_kind == "HoaSpatializer" || dev_kind == "Hoa5BinauralSpatializer" || dev_kind == "Hoa5RadarView" || dev_kind.contains("Ambisonic") || dev_kind.contains("Hoa");
                     let is_neural = dev_kind.contains("Neural") || dev_kind.contains("Timbre") || dev_kind.contains("Latent") || dev_kind.contains("Resynthesizer") || dev_kind == "NeuralMorphOrbView" || dev_kind == "NeuralTimbreMorph" || dev_kind == "NeuralWavetable";
+                    let is_bowed = dev_kind.contains("Bowed") || dev_kind.contains("Violin") || dev_kind.contains("Cello") || dev_kind == "BowedStringNode" || dev_kind == "BowedString";
+                    let is_shakuhachi = dev_kind.contains("Shakuhachi") || dev_kind.contains("BambooFlute") || dev_kind == "ShakuhachiNode" || dev_kind == "Shakuhachi";
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -1694,6 +1722,162 @@ fn show_pro_parameter_drawer(
 
                         if n_resp.hovered() {
                             let _ = n_resp.on_hover_text("2D Neural Timbre Morphing Orb\n[Drag horizontally: Latent X [-1.0..+1.0] | Drag vertically: Latent Y [-1.0..+1.0]]");
+                        }
+                    } else if is_bowed {
+                        // Bowed String Acoustic Friction & Helmholtz Displacement Mini Visualizer
+                        let (b_resp, b_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let b_rect = b_resp.rect;
+                        b_painter.rect_filled(b_rect, 2.0, Color32::from_rgb(12, 16, 26));
+
+                        let mut speed = state.node_param_values.get("bow_speed_mps").copied().unwrap_or(0.45);
+                        let mut force = state.node_param_values.get("bow_force_n").copied().unwrap_or(1.25);
+
+                        if b_resp.dragged() {
+                            if let Some(pos) = b_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - b_rect.left()) / b_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - b_rect.top()) / b_rect.height())).clamp(0.0, 1.0);
+                                speed = 0.01 + norm_x * (2.00 - 0.01);
+                                force = 0.05 + norm_y * (5.00 - 0.05);
+                                state.node_param_values.insert("bow_speed_mps".to_string(), speed);
+                                state.node_param_values.insert("bow_force_n".to_string(), force);
+                                if let Some(bus) = param_bus {
+                                    let pid_spd = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_spd).is_some() { bus.set(pid_spd, speed); }
+                                    let pid_frc = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_frc).is_some() { bus.set(pid_frc, force); }
+                                }
+                            }
+                        }
+
+                        // Background Schelleng limit boundary shade
+                        b_painter.rect_filled(
+                            egui::Rect::from_min_max(
+                                egui::pos2(b_rect.left() + 20.0, b_rect.top() + 10.0),
+                                egui::pos2(b_rect.right() - 20.0, b_rect.bottom() - 10.0),
+                            ),
+                            2.0,
+                            Color32::from_rgb(18, 26, 42),
+                        );
+
+                        // Bridge obstacle marker line
+                        let bridge_x = b_rect.right() - 16.0;
+                        b_painter.line_segment(
+                            [egui::pos2(bridge_x, b_rect.top() + 6.0), egui::pos2(bridge_x, b_rect.bottom() - 6.0)],
+                            Stroke::new(2.5_f32, Color32::from_rgb(245, 158, 11)),
+                        );
+
+                        // Vibrating Helmholtz string contour
+                        let center_y = b_rect.center().y;
+                        let steps = 24;
+                        let mut prev_str_pt = None;
+                        for i in 0..steps {
+                            let nx = i as f32 / (steps - 1) as f32;
+                            let sx = b_rect.left() + 10.0 + nx * (bridge_x - b_rect.left() - 10.0);
+                            let disp = (nx * std::f32::consts::PI).sin() * 8.0 * (force / 3.0).clamp(0.2, 1.5);
+                            let sy = center_y - disp;
+                            let pt = egui::pos2(sx, sy);
+                            if let Some(last) = prev_str_pt {
+                                b_painter.line_segment([last, pt], Stroke::new(1.8_f32, Color32::from_rgb(56, 189, 248)));
+                            }
+                            prev_str_pt = Some(pt);
+                        }
+
+                        // Bow contact puck
+                        let norm_spd = ((speed - 0.01) / 1.99).clamp(0.0, 1.0);
+                        let norm_frc = ((force - 0.05) / 4.95).clamp(0.0, 1.0);
+                        let puck_x = b_rect.left() + norm_spd * b_rect.width();
+                        let puck_y = b_rect.bottom() - norm_frc * b_rect.height();
+                        b_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.5, Color32::from_rgb(239, 68, 68));
+                        b_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::from_rgb(254, 202, 202)));
+
+                        // Readout
+                        b_painter.text(
+                            egui::pos2(b_rect.left() + 4.0, b_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("v: {:.2} m/s", speed),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(56, 189, 248),
+                        );
+                        b_painter.text(
+                            egui::pos2(b_rect.right() - 4.0, b_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("Fn: {:.2} N", force),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(239, 68, 68),
+                        );
+
+                        if b_resp.hovered() {
+                            let _ = b_resp.on_hover_text("Bowed String Acoustic Friction & Helmholtz Waveguide\n[Drag horizontally: Bow speed [0.01..2.00 m/s] | Drag vertically: Normal bow force [0.05..5.00 N]]");
+                        }
+                    } else if is_shakuhachi {
+                        // Shakuhachi Bamboo Flute Utaguchi Blowing Edge Mini Visualizer
+                        let (s_resp, s_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let s_rect = s_resp.rect;
+                        s_painter.rect_filled(s_rect, 2.0, Color32::from_rgb(8, 20, 16));
+
+                        let mut jet_vel = state.node_param_values.get("jet_velocity_mps").copied().unwrap_or(19.0);
+                        let mut utaguchi_ang = state.node_param_values.get("utaguchi_angle_deg").copied().unwrap_or(38.0);
+
+                        if s_resp.dragged() {
+                            if let Some(pos) = s_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - s_rect.left()) / s_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - s_rect.top()) / s_rect.height())).clamp(0.0, 1.0);
+                                jet_vel = 4.0 + norm_x * (42.0 - 4.0);
+                                utaguchi_ang = 10.0 + norm_y * (60.0 - 10.0);
+                                state.node_param_values.insert("jet_velocity_mps".to_string(), jet_vel);
+                                state.node_param_values.insert("utaguchi_angle_deg".to_string(), utaguchi_ang);
+                                if let Some(bus) = param_bus {
+                                    let pid_jet = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_jet).is_some() { bus.set(pid_jet, jet_vel); }
+                                    let pid_ang = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_ang).is_some() { bus.set(pid_ang, utaguchi_ang); }
+                                }
+                            }
+                        }
+
+                        // Cylindrical Bamboo Flute Bore
+                        let bore_top = s_rect.top() + 16.0;
+                        let bore_bot = s_rect.bottom() - 16.0;
+                        s_painter.line_segment([egui::pos2(s_rect.left() + 35.0, bore_top), egui::pos2(s_rect.right() - 8.0, bore_top)], Stroke::new(2.0_f32, Color32::from_rgb(180, 83, 9)));
+                        s_painter.line_segment([egui::pos2(s_rect.left() + 35.0, bore_bot), egui::pos2(s_rect.right() - 8.0, bore_bot)], Stroke::new(2.0_f32, Color32::from_rgb(180, 83, 9)));
+
+                        // Sharp Utaguchi Blowing Wedge Edge
+                        let wedge_tip = egui::pos2(s_rect.left() + 35.0, bore_top + 4.0);
+                        let wedge_back = egui::pos2(s_rect.left() + 48.0, bore_top - 6.0);
+                        s_painter.line_segment([wedge_tip, wedge_back], Stroke::new(2.5_f32, Color32::from_rgb(52, 211, 153)));
+
+                        // Air jet stream vortex
+                        let jet_rad = utaguchi_ang.to_radians();
+                        let jet_origin = egui::pos2(s_rect.left() + 12.0, bore_top - 8.0);
+                        let jet_end = egui::pos2(jet_origin.x + jet_rad.cos() * 26.0, jet_origin.y + jet_rad.sin() * 26.0);
+                        s_painter.line_segment([jet_origin, jet_end], Stroke::new(2.0_f32, Color32::from_rgb(56, 189, 248)));
+
+                        // Touch puck
+                        let norm_v = ((jet_vel - 4.0) / 38.0).clamp(0.0, 1.0);
+                        let norm_a = ((utaguchi_ang - 10.0) / 50.0).clamp(0.0, 1.0);
+                        let puck_x = s_rect.left() + norm_v * s_rect.width();
+                        let puck_y = s_rect.bottom() - norm_a * s_rect.height();
+                        s_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.5, Color32::from_rgb(52, 211, 153));
+                        s_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::from_rgb(167, 243, 208)));
+
+                        // Readout
+                        s_painter.text(
+                            egui::pos2(s_rect.left() + 4.0, s_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("Jet: {:.1} m/s", jet_vel),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(56, 189, 248),
+                        );
+                        s_painter.text(
+                            egui::pos2(s_rect.right() - 4.0, s_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("Angle: {:.0}°", utaguchi_ang),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(52, 211, 153),
+                        );
+
+                        if s_resp.hovered() {
+                            let _ = s_resp.on_hover_text("Shakuhachi Bamboo Flute Utaguchi Chiff\n[Drag horizontally: Air jet velocity [4..42 m/s] | Drag vertically: Blowing angle [10..60°]]");
                         }
                     } else {
                         // Filter Curve Mini View (slot-addressed)

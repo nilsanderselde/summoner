@@ -1281,6 +1281,34 @@ Product Management has conducted a comprehensive readiness audit:
   - Feature tests: 16 tests passed in `tier117_turn53_tests` (`cargo test -p summoner_gui --features gui -- tier117_turn53_tests`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
 
+### Turn #54 (Turn #20) — Physical Modeling Bowed String & Shakuhachi Flute HUDs Convergence (Milestones 25 & 33)
+- [x] Physical Modeling Bowed String Acoustic Friction & Japanese Shakuhachi HUDs Integration:
+  - Integrated `BowedStringView` and `ShakuhachiView` performance HUDs into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_bowed_string_modal: bool`, `bowed_string_view: BowedStringView`, `show_shakuhachi_modal: bool`, and `shakuhachi_view: ShakuhachiView`.
+  - Added dedicated modal windows `show_bowed_string_modal_window` and `show_shakuhachi_modal_window` with responsive styling, WCAG AAA contrast, and $\ge 44 \times 44\text{pt}$ touch bounds.
+  - Added public lifecycle methods: `open_bowed_string_hud()`, `close_bowed_string_hud()`, `is_bowed_string_hud_open()`, `open_shakuhachi_hud()`, `close_shakuhachi_hud()`, `is_shakuhachi_hud_open()`.
+  - Real-time parameter sync bridges (`sync_bowed_string_hud_state` and `sync_shakuhachi_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_bowed_string_hud: bool` and `requested_open_shakuhachi_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🎻 Open Bowed String Acoustic Friction HUD]` and `[🎍 Open Shakuhachi Bamboo Flute HUD]` on bowed string and shakuhachi devices in `ModernInspectorView`.
+  - Added collapsed header `[🎻 HUD]` / `[🎍 HUD]` and expanded toolbar buttons in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Bowed String: Helmholtz standing wave vibration curve, bridge boundary, Schelleng limits shading, and interactive touch-drag puck modulating `bow_speed_mps` and `bow_force_n`.
+    * Shakuhachi: Cylindrical bamboo bore contour, sharp Utaguchi blowing edge wedge, air jet stream vortex, and touch-drag puck modulating `jet_velocity_mps` and `utaguchi_angle_deg`.
+- [x] Command Palette & Application Routing:
+  - Registered `open_bowed_string_hud` and `open_shakuhachi_hud` under `"Physical Modeling"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_bowed_string_hud()` and `open_shakuhachi_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier118_turn54_tests.rs`:
+    * Pure tests: view initialization, material linear mass densities and friction coefficients, coordinate normalization roundtrips, Schelleng limits calculations, flute length acoustic presets, slot arithmetic channel isolation, timeline evaluation of physical modeling curves, deterministic ASCII snapshot rendering.
+    * GUI tests: headless egui render without panic, modal lifecycle, live `ParamBus` atomic slot dispatch, rack & inspector trigger propagation, command palette action registration.
+  - Unit tests: 329 passed in 0.23s (`cargo test -p summoner_gui`).
+  - Feature tests: 12 tests passed in `tier118_turn54_tests` (`cargo test -p summoner_gui --features gui -- tier118_turn54_tests`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
+
 
 
 

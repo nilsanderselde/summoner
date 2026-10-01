@@ -50,6 +50,10 @@ pub struct ModernInspectorState {
     pub requested_open_neural_morph_hud: bool,
     #[serde(default)]
     pub requested_open_stems_export_modal: bool,
+    #[serde(default)]
+    pub requested_open_bowed_string_hud: bool,
+    #[serde(default)]
+    pub requested_open_shakuhachi_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -81,6 +85,8 @@ impl Default for ModernInspectorState {
             requested_open_hoa5_radar_hud: false,
             requested_open_neural_morph_hud: false,
             requested_open_stems_export_modal: false,
+            requested_open_bowed_string_hud: false,
+            requested_open_shakuhachi_hud: false,
         }
     }
 }
@@ -625,6 +631,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open production multi-track batch stem export modal and loudness compliance inspector").clicked() {
                     state.requested_open_stems_export_modal = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Bowed") || active_kind.contains("Violin") || active_kind.contains("Cello") || active_kind == "BowedStringNode" || active_kind == "BowedString" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🎻 Open Bowed String Acoustic Friction HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(56, 189, 248)))
+                        .fill(Color32::from_rgb(18, 30, 48))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(56, 189, 248)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive 2D stick-slip friction radar, Helmholtz resonance & Schelleng limits HUD").clicked() {
+                    state.requested_open_bowed_string_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Shakuhachi") || active_kind.contains("BambooFlute") || active_kind == "ShakuhachiNode" || active_kind == "Shakuhachi" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🎍 Open Shakuhachi Bamboo Flute HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(52, 211, 153)))
+                        .fill(Color32::from_rgb(16, 38, 28))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(52, 211, 153)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Utaguchi blowing edge chiff, jet velocity & Meri/Kari pitch-bend HUD").clicked() {
+                    state.requested_open_shakuhachi_hud = true;
                 }
                 ui.add_space(4.0);
             }
