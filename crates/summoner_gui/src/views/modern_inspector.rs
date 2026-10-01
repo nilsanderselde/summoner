@@ -54,6 +54,10 @@ pub struct ModernInspectorState {
     pub requested_open_bowed_string_hud: bool,
     #[serde(default)]
     pub requested_open_shakuhachi_hud: bool,
+    #[serde(default)]
+    pub requested_open_sitar_hud: bool,
+    #[serde(default)]
+    pub requested_open_turkish_ney_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -87,6 +91,8 @@ impl Default for ModernInspectorState {
             requested_open_stems_export_modal: false,
             requested_open_bowed_string_hud: false,
             requested_open_shakuhachi_hud: false,
+            requested_open_sitar_hud: false,
+            requested_open_turkish_ney_hud: false,
         }
     }
 }
@@ -651,6 +657,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open interactive Utaguchi blowing edge chiff, jet velocity & Meri/Kari pitch-bend HUD").clicked() {
                     state.requested_open_shakuhachi_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Sitar") || active_kind == "SitarNode" || active_kind == "SitarModel" || active_kind.contains("Jawari") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🪕 Open Sitar Curved Jawari Bridge HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(245, 158, 11)))
+                        .fill(Color32::from_rgb(38, 28, 14))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(245, 158, 11)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive curved Jawari buzz bridge, sympathetic Tarab bleed & lateral Meend pull HUD").clicked() {
+                    state.requested_open_sitar_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("TurkishNey") || active_kind.contains("Ney") || active_kind.contains("WoodwindJet") || active_kind == "TurkishNeyNode" || active_kind == "WoodwindJetNode" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🪈 Open Turkish Ney Flute Embouchure HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(45, 212, 191)))
+                        .fill(Color32::from_rgb(14, 35, 35))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(45, 212, 191)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Baspare horn lip jet vortex, acoustic bore circulation & octave overblowing HUD").clicked() {
+                    state.requested_open_turkish_ney_hud = true;
                 }
                 ui.add_space(4.0);
             }

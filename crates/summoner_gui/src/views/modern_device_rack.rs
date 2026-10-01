@@ -69,6 +69,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_bowed_string_hud: bool,
     #[serde(default)]
     pub requested_open_shakuhachi_hud: bool,
+    #[serde(default)]
+    pub requested_open_sitar_hud: bool,
+    #[serde(default)]
+    pub requested_open_turkish_ney_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -92,6 +96,8 @@ impl Default for ModernDeviceRackState {
             requested_open_stems_export_modal: false,
             requested_open_bowed_string_hud: false,
             requested_open_shakuhachi_hud: false,
+            requested_open_sitar_hud: false,
+            requested_open_turkish_ney_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -282,6 +288,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_hoa = cur_selection == "AmbisonicRadarSpatializer" || cur_selection == "HoaSpatializer" || cur_selection == "Hoa5BinauralSpatializer" || cur_selection == "Hoa5RadarView" || cur_selection.contains("Ambisonic") || cur_selection.contains("Hoa");
                     let is_bowed = cur_selection.contains("Bowed") || cur_selection.contains("Violin") || cur_selection.contains("Cello") || cur_selection == "BowedStringNode" || cur_selection == "BowedString";
                     let is_shakuhachi = cur_selection.contains("Shakuhachi") || cur_selection.contains("BambooFlute") || cur_selection == "ShakuhachiNode" || cur_selection == "Shakuhachi";
+                    let is_sitar = cur_selection.contains("Sitar") || cur_selection == "SitarNode" || cur_selection == "SitarModel" || cur_selection.contains("Jawari");
+                    let is_turkish_ney = cur_selection.contains("TurkishNey") || cur_selection.contains("Ney") || cur_selection.contains("WoodwindJet") || cur_selection == "TurkishNeyNode" || cur_selection == "WoodwindJetNode";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -306,9 +314,17 @@ pub fn show_modern_device_rack_with_context(
                         if ui.button(RichText::new("🎻 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Bowed String Acoustic Friction HUD").clicked() {
                             state.requested_open_bowed_string_hud = true;
                         }
-                    } else if is_shakuhachi
-                        && ui.button(RichText::new("🎍 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(52, 211, 153))).on_hover_text("Open Shakuhachi Bamboo Flute HUD").clicked() {
-                        state.requested_open_shakuhachi_hud = true;
+                    } else if is_shakuhachi {
+                        if ui.button(RichText::new("🎍 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(52, 211, 153))).on_hover_text("Open Shakuhachi Bamboo Flute HUD").clicked() {
+                            state.requested_open_shakuhachi_hud = true;
+                        }
+                    } else if is_sitar {
+                        if ui.button(RichText::new("🪕 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(245, 158, 11))).on_hover_text("Open Sitar Curved Jawari Bridge HUD").clicked() {
+                            state.requested_open_sitar_hud = true;
+                        }
+                    } else if is_turkish_ney
+                        && ui.button(RichText::new("🪈 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(45, 212, 191))).on_hover_text("Open Turkish Ney Flute Embouchure HUD").clicked() {
+                        state.requested_open_turkish_ney_hud = true;
                     }
                     ui.add_space(4.0);
                     let pwr_col = if state.is_enabled { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(100, 116, 139) };
@@ -497,6 +513,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_export = cur_selection.contains("Export") || cur_selection.contains("Stem") || cur_selection.contains("Batch") || cur_selection == "ExportPreset" || cur_selection == "StemExportFormat";
                     let is_bowed = cur_selection.contains("Bowed") || cur_selection.contains("Violin") || cur_selection.contains("Cello") || cur_selection == "BowedStringNode" || cur_selection == "BowedString";
                     let is_shakuhachi = cur_selection.contains("Shakuhachi") || cur_selection.contains("BambooFlute") || cur_selection == "ShakuhachiNode" || cur_selection == "Shakuhachi";
+                    let is_sitar = cur_selection.contains("Sitar") || cur_selection == "SitarNode" || cur_selection == "SitarModel" || cur_selection.contains("Jawari");
+                    let is_turkish_ney = cur_selection.contains("TurkishNey") || cur_selection.contains("Ney") || cur_selection.contains("WoodwindJet") || cur_selection == "TurkishNeyNode" || cur_selection == "WoodwindJetNode";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -529,9 +547,17 @@ pub fn show_modern_device_rack_with_context(
                         if ui.button(RichText::new("🎻 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Bowed String Acoustic Friction HUD").clicked() {
                             state.requested_open_bowed_string_hud = true;
                         }
-                    } else if is_shakuhachi
-                        && ui.button(RichText::new("🎍 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(52, 211, 153))).on_hover_text("Open Shakuhachi Bamboo Flute HUD").clicked() {
-                        state.requested_open_shakuhachi_hud = true;
+                    } else if is_shakuhachi {
+                        if ui.button(RichText::new("🎍 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(52, 211, 153))).on_hover_text("Open Shakuhachi Bamboo Flute HUD").clicked() {
+                            state.requested_open_shakuhachi_hud = true;
+                        }
+                    } else if is_sitar {
+                        if ui.button(RichText::new("🪕 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(245, 158, 11))).on_hover_text("Open Sitar Curved Jawari Bridge HUD").clicked() {
+                            state.requested_open_sitar_hud = true;
+                        }
+                    } else if is_turkish_ney
+                        && ui.button(RichText::new("🪈 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(45, 212, 191))).on_hover_text("Open Turkish Ney Flute Embouchure HUD").clicked() {
+                        state.requested_open_turkish_ney_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -1306,6 +1332,8 @@ fn show_pro_parameter_drawer(
                     let is_neural = dev_kind.contains("Neural") || dev_kind.contains("Timbre") || dev_kind.contains("Latent") || dev_kind.contains("Resynthesizer") || dev_kind == "NeuralMorphOrbView" || dev_kind == "NeuralTimbreMorph" || dev_kind == "NeuralWavetable";
                     let is_bowed = dev_kind.contains("Bowed") || dev_kind.contains("Violin") || dev_kind.contains("Cello") || dev_kind == "BowedStringNode" || dev_kind == "BowedString";
                     let is_shakuhachi = dev_kind.contains("Shakuhachi") || dev_kind.contains("BambooFlute") || dev_kind == "ShakuhachiNode" || dev_kind == "Shakuhachi";
+                    let is_sitar = dev_kind.contains("Sitar") || dev_kind == "SitarNode" || dev_kind == "SitarModel" || dev_kind.contains("Jawari");
+                    let is_turkish_ney = dev_kind.contains("TurkishNey") || dev_kind.contains("Ney") || dev_kind.contains("WoodwindJet") || dev_kind == "TurkishNeyNode" || dev_kind == "WoodwindJetNode";
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -1878,6 +1906,160 @@ fn show_pro_parameter_drawer(
 
                         if s_resp.hovered() {
                             let _ = s_resp.on_hover_text("Shakuhachi Bamboo Flute Utaguchi Chiff\n[Drag horizontally: Air jet velocity [4..42 m/s] | Drag vertically: Blowing angle [10..60°]]");
+                        }
+                    } else if is_sitar {
+                        // Sitar Curved Jawari Bridge & Meend Deflection Mini Visualizer
+                        let (sit_resp, sit_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let sit_rect = sit_resp.rect;
+                        sit_painter.rect_filled(sit_rect, 2.0, Color32::from_rgb(20, 16, 12));
+
+                        let mut meend = state.node_param_values.get("meend_pull_semitones").copied().unwrap_or(1.5);
+                        let mut strike_vel = state.node_param_values.get("strike_velocity").copied().unwrap_or(0.75);
+                        let jawari_gap = state.node_param_values.get("jawari_gap_mm").copied().unwrap_or(0.18);
+
+                        if sit_resp.dragged() {
+                            if let Some(pos) = sit_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - sit_rect.left()) / sit_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - sit_rect.top()) / sit_rect.height())).clamp(0.0, 1.0);
+                                meend = norm_x * 5.0;
+                                strike_vel = 0.05 + norm_y * 0.95;
+                                state.node_param_values.insert("meend_pull_semitones".to_string(), meend);
+                                state.node_param_values.insert("strike_velocity".to_string(), strike_vel);
+                                if let Some(bus) = param_bus {
+                                    let pid_vel = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_vel).is_some() { bus.set(pid_vel, strike_vel); }
+                                    let pid_meend = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_meend).is_some() { bus.set(pid_meend, meend); }
+                                }
+                            }
+                        }
+
+                        // Parabolic Jawari bridge boundary line
+                        let obstacle_bound = -0.3 + (jawari_gap - 0.18) * 0.5;
+                        let obst_y = sit_rect.bottom() - (obstacle_bound + 1.0) * 0.5 * sit_rect.height();
+                        sit_painter.line_segment(
+                            [egui::pos2(sit_rect.left() + 4.0, obst_y), egui::pos2(sit_rect.right() - 4.0, obst_y)],
+                            Stroke::new(1.2_f32, Color32::from_rgb(239, 68, 68)),
+                        );
+
+                        // Vibrating clipped string waveform
+                        let steps = 24;
+                        let mut prev_pt = None;
+                        for i in 0..=steps {
+                            let col_t = i as f32 / steps as f32;
+                            let fundamental = (col_t * 6.0 * std::f32::consts::PI * (1.0 + meend * 0.15)).sin();
+                            let harmonic2 = 0.5 * (col_t * 12.0 * std::f32::consts::PI).sin();
+                            let raw_wave = (fundamental * 0.7 + harmonic2 * 0.3) * strike_vel;
+                            let clipped_wave = raw_wave.max(obstacle_bound);
+                            let norm_wave = (clipped_wave + 1.0) * 0.5;
+
+                            let px = sit_rect.left() + 4.0 + col_t * (sit_rect.width() - 8.0);
+                            let py = sit_rect.bottom() - 4.0 - norm_wave * (sit_rect.height() - 14.0);
+                            let pt = egui::pos2(px, py);
+                            if let Some(last) = prev_pt {
+                                sit_painter.line_segment([last, pt], Stroke::new(1.8_f32, Color32::from_rgb(6, 182, 212)));
+                            }
+                            prev_pt = Some(pt);
+                        }
+
+                        // Touch puck
+                        let norm_m = (meend / 5.0).clamp(0.0, 1.0);
+                        let norm_v = ((strike_vel - 0.05) / 0.95).clamp(0.0, 1.0);
+                        let puck_x = sit_rect.left() + norm_m * sit_rect.width();
+                        let puck_y = sit_rect.bottom() - norm_v * sit_rect.height();
+                        sit_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.5, Color32::from_rgb(245, 158, 11));
+                        sit_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::from_rgb(254, 240, 138)));
+
+                        // Readout
+                        sit_painter.text(
+                            egui::pos2(sit_rect.left() + 4.0, sit_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("Meend: +{:.1}st", meend),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(6, 182, 212),
+                        );
+                        sit_painter.text(
+                            egui::pos2(sit_rect.right() - 4.0, sit_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("Vel: {:.2}", strike_vel),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(245, 158, 11),
+                        );
+
+                        if sit_resp.hovered() {
+                            let _ = sit_resp.on_hover_text("Sitar Curved Jawari Bridge & Meend Deflection\n[Drag horizontally: Meend bend [0..5 st] | Drag vertically: Mizrab strike [0.05..1.00]]");
+                        }
+                    } else if is_turkish_ney {
+                        // Turkish Ney Reed Flute & Baspare Horn Mini Visualizer
+                        let (ney_resp, ney_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let ney_rect = ney_resp.rect;
+                        ney_painter.rect_filled(ney_rect, 2.0, Color32::from_rgb(10, 22, 24));
+
+                        let mut jet_vel = state.node_param_values.get("jet_velocity_mps").copied().unwrap_or(18.5);
+                        let mut embouchure_ang = state.node_param_values.get("embouchure_angle_deg").copied().unwrap_or(42.0);
+
+                        if ney_resp.dragged() {
+                            if let Some(pos) = ney_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - ney_rect.left()) / ney_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - ney_rect.top()) / ney_rect.height())).clamp(0.0, 1.0);
+                                embouchure_ang = 15.0 + norm_x * 50.0;
+                                jet_vel = 5.0 + norm_y * 40.0;
+                                state.node_param_values.insert("embouchure_angle_deg".to_string(), embouchure_ang);
+                                state.node_param_values.insert("jet_velocity_mps".to_string(), jet_vel);
+                                if let Some(bus) = param_bus {
+                                    let pid_jet = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_jet).is_some() { bus.set(pid_jet, jet_vel); }
+                                    let pid_ang = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_ang).is_some() { bus.set(pid_ang, embouchure_ang); }
+                                }
+                            }
+                        }
+
+                        // Cylindrical Bamboo Flute Bore
+                        let bore_top = ney_rect.top() + 16.0;
+                        let bore_bot = ney_rect.bottom() - 16.0;
+                        ney_painter.line_segment([egui::pos2(ney_rect.left() + 32.0, bore_top), egui::pos2(ney_rect.right() - 8.0, bore_top)], Stroke::new(1.8_f32, Color32::from_rgb(20, 184, 166)));
+                        ney_painter.line_segment([egui::pos2(ney_rect.left() + 32.0, bore_bot), egui::pos2(ney_rect.right() - 8.0, bore_bot)], Stroke::new(1.8_f32, Color32::from_rgb(20, 184, 166)));
+
+                        // Baspare Horn Mouthpiece Head
+                        let horn_top = egui::pos2(ney_rect.left() + 32.0, bore_top - 4.0);
+                        let horn_bot = egui::pos2(ney_rect.left() + 32.0, bore_bot + 4.0);
+                        let horn_rim = egui::pos2(ney_rect.left() + 16.0, ney_rect.center().y);
+                        ney_painter.line_segment([horn_top, horn_rim], Stroke::new(2.2_f32, Color32::from_rgb(251, 191, 36)));
+                        ney_painter.line_segment([horn_bot, horn_rim], Stroke::new(2.2_f32, Color32::from_rgb(251, 191, 36)));
+
+                        // Air jet stream vortex
+                        let jet_rad = embouchure_ang.to_radians();
+                        let jet_origin = egui::pos2(ney_rect.left() + 12.0, bore_top - 6.0);
+                        let jet_end = egui::pos2(jet_origin.x + jet_rad.cos() * 24.0, jet_origin.y + jet_rad.sin() * 24.0);
+                        ney_painter.line_segment([jet_origin, jet_end], Stroke::new(2.0_f32, Color32::from_rgb(45, 212, 191)));
+
+                        // Touch puck
+                        let norm_a = ((embouchure_ang - 15.0) / 50.0).clamp(0.0, 1.0);
+                        let norm_v = ((jet_vel - 5.0) / 40.0).clamp(0.0, 1.0);
+                        let puck_x = ney_rect.left() + norm_a * ney_rect.width();
+                        let puck_y = ney_rect.bottom() - norm_v * ney_rect.height();
+                        ney_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.5, Color32::from_rgb(45, 212, 191));
+                        ney_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::from_rgb(153, 246, 228)));
+
+                        // Readout
+                        ney_painter.text(
+                            egui::pos2(ney_rect.left() + 4.0, ney_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("Jet: {:.1} m/s", jet_vel),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(45, 212, 191),
+                        );
+                        ney_painter.text(
+                            egui::pos2(ney_rect.right() - 4.0, ney_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("Angle: {:.0}°", embouchure_ang),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(251, 191, 36),
+                        );
+
+                        if ney_resp.hovered() {
+                            let _ = ney_resp.on_hover_text("Turkish Ney Reed Flute & Baspare Horn Embouchure\n[Drag horizontally: Embouchure angle [15..65°] | Drag vertically: Airjet velocity [5..45 m/s]]");
                         }
                     } else {
                         // Filter Curve Mini View (slot-addressed)

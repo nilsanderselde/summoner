@@ -1363,6 +1363,14 @@ impl eframe::App for SummonerApp {
                     self.current_view = ViewMode::ModernStudio;
                     self.award_winning_view.open_shakuhachi_hud();
                 }
+                "open_sitar_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_sitar_hud();
+                }
+                "open_turkish_ney_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_turkish_ney_hud();
+                }
                 "sfz_convert" | "auto_slice" | "load_preset" | "export_clap" | "toggle_simd" => {
                     println!("Command palette action executed: {}", action);
                 }

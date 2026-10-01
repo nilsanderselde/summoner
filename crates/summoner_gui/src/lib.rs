@@ -190,6 +190,8 @@ pub mod tier117_turn53_tests;
 #[cfg(feature = "gui")]
 pub mod tier118_turn54_tests;
 #[cfg(feature = "gui")]
+pub mod tier119_turn55_tests;
+#[cfg(feature = "gui")]
 pub mod touch_gestures;
 #[cfg(feature = "gui")]
 pub mod transport_bar;
@@ -481,6 +483,8 @@ pub use views::embouchure_angle_view::EmbouchureAngleView;
 pub use views::grand_piano_view::GrandPianoView;
 #[cfg(feature = "gui")]
 pub use views::shakuhachi_view::ShakuhachiView;
+#[cfg(feature = "gui")]
+pub use views::sitar_view::SitarView;
 #[cfg(feature = "gui")]
 pub use views::soundboard_bridge_view::SoundboardBridgeView;
 #[cfg(feature = "gui")]

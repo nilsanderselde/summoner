@@ -303,6 +303,11 @@ impl TurkishNeyView {
     }
 
     #[cfg(feature = "gui")]
+    pub fn ui(&mut self, ui: &mut egui::Ui) {
+        self.show(ui);
+    }
+
+    #[cfg(feature = "gui")]
     pub fn show(&mut self, ui: &mut egui::Ui) {
         let bg_color = Color32::from_rgb(14, 18, 28);
         let card_bg = Color32::from_rgb(20, 26, 40);

@@ -10,12 +10,13 @@
 //!
 //! Enforces minimum 44x44pt hit targets, 8pt base grid alignment, and headless PNG snapshot rendering.
 
+use crate::layout_math::Rect;
 use crate::touch_controls::ContrastColorPalette;
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "gui")]
 #[allow(unused_imports)]
-use eframe::egui::{self, Color32, Stroke, Vec2};
+use eframe::egui::{self, Color32, FontId, RichText, Stroke, Vec2};
 
 pub const SITAR_PUCK_HIT_RADIUS: f32 = 22.0; // 44x44pt touch bounding target
 pub const MIN_SITAR_STRIKE_VELOCITY: f32 = 0.05;
@@ -111,6 +112,14 @@ impl SitarView {
         self.meend_pull_semitones = MIN_MEEND_SEMITONES + self.puck_pos.0 * (MAX_MEEND_SEMITONES - MIN_MEEND_SEMITONES);
         self.strike_velocity = MIN_SITAR_STRIKE_VELOCITY + self.puck_pos.1 * (MAX_SITAR_STRIKE_VELOCITY - MIN_SITAR_STRIKE_VELOCITY);
         self.update_sitar_acoustics();
+    }
+
+    pub fn hit_test_sitar_puck(&self, point: (f32, f32), canvas: Rect) -> bool {
+        let puck_x = canvas.x + self.puck_pos.0 * canvas.width;
+        let puck_y = canvas.y + (1.0 - self.puck_pos.1) * canvas.height;
+        let dx = point.0 - puck_x;
+        let dy = point.1 - puck_y;
+        (dx * dx + dy * dy).sqrt() <= SITAR_PUCK_HIT_RADIUS
     }
 
     pub fn update_sitar_acoustics(&mut self) {
@@ -392,46 +401,251 @@ impl SitarView {
 
 #[cfg(feature = "gui")]
 impl SitarView {
-    pub fn ui(&mut self, ui: &mut egui::Ui) {
-        ui.vertical(|ui| {
-            ui.heading("Sitar — Curved Jawari Bridge & Meend Pitch Deflection");
-            ui.separator();
+    pub fn show(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
+    }
 
+    pub fn ui(&mut self, ui: &mut egui::Ui) {
+        let bg_color = Color32::from_rgb(14, 18, 28);
+        let card_bg = Color32::from_rgb(20, 26, 40);
+        let border_color = Color32::from_rgb(45, 60, 85);
+        let accent_amber = Color32::from_rgb(245, 158, 11);
+        let accent_cyan = Color32::from_rgb(6, 182, 212);
+        let text_white = Color32::from_rgb(240, 245, 255);
+
+        egui::Frame::none().fill(bg_color).show(ui, |ui| {
+            ui.set_min_size(egui::vec2(760.0, 480.0));
+            ui.add_space(6.0);
+
+            // Title and Header
             ui.horizontal(|ui| {
-                ui.label("Preset:");
-                if ui.selectable_label(self.preset == SitarHudPreset::RagaYamanAlap, "Raga Yaman").clicked() {
-                    self.set_preset(SitarHudPreset::RagaYamanAlap);
-                }
-                if ui.selectable_label(self.preset == SitarHudPreset::VilayatKhanGayaki, "Gayaki Vocal").clicked() {
-                    self.set_preset(SitarHudPreset::VilayatKhanGayaki);
-                }
-                if ui.selectable_label(self.preset == SitarHudPreset::RaviShankarKharaj, "Kharaj Pancham").clicked() {
-                    self.set_preset(SitarHudPreset::RaviShankarKharaj);
-                }
-                if ui.selectable_label(self.preset == SitarHudPreset::SurbaharDeepBass, "Surbahar Bass").clicked() {
-                    self.set_preset(SitarHudPreset::SurbaharDeepBass);
-                }
-                if ui.selectable_label(self.preset == SitarHudPreset::ElectricSitarJhajhar, "Electric Sitar").clicked() {
-                    self.set_preset(SitarHudPreset::ElectricSitarJhajhar);
+                ui.add_space(12.0);
+                ui.heading(
+                    RichText::new("SITAR — CURVED JAWARI BRIDGE & MEEND PITCH DEFLECTION")
+                        .size(16.0)
+                        .color(text_white)
+                        .strong(),
+                );
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    ui.add_space(12.0);
+                    ui.label(
+                        RichText::new(&self.active_raga_name)
+                            .size(12.0)
+                            .color(accent_amber)
+                            .strong(),
+                    );
+                });
+            });
+
+            ui.add_space(6.0);
+
+            // Preset selector tabs (>= 44pt touch hit targets)
+            ui.horizontal(|ui| {
+                ui.add_space(12.0);
+                let presets = [
+                    (SitarHudPreset::RagaYamanAlap, "Raga Yaman"),
+                    (SitarHudPreset::VilayatKhanGayaki, "Gayaki Vocal"),
+                    (SitarHudPreset::RaviShankarKharaj, "Kharaj Pancham"),
+                    (SitarHudPreset::SurbaharDeepBass, "Surbahar Bass"),
+                    (SitarHudPreset::ElectricSitarJhajhar, "Electric Sitar"),
+                ];
+
+                for (pst, label) in presets {
+                    let is_active = self.preset == pst;
+                    let btn_bg = if is_active {
+                        accent_amber
+                    } else {
+                        Color32::from_rgb(32, 44, 66)
+                    };
+                    let btn_fg = if is_active {
+                        Color32::BLACK
+                    } else {
+                        text_white
+                    };
+
+                    let btn = egui::Button::new(
+                        RichText::new(label).size(12.0).color(btn_fg).strong(),
+                    )
+                    .fill(btn_bg)
+                    .min_size(egui::vec2(130.0, 44.0));
+
+                    if ui.add(btn).clicked() {
+                        self.set_preset(pst);
+                    }
+                    ui.add_space(4.0);
                 }
             });
 
             ui.add_space(8.0);
 
+            // Main interactive 2D Canvas split: Left XY Pad (Meend vs Strike), Right Jawari Waveform
+            let (canvas_rect, response) = ui.allocate_exact_size(
+                egui::vec2(740.0, 230.0),
+                egui::Sense::click_and_drag(),
+            );
+
+            let painter = ui.painter_at(canvas_rect);
+            painter.rect_filled(canvas_rect, 6.0, card_bg);
+            painter.rect_stroke(canvas_rect, 6.0, Stroke::new(1.5_f32, border_color));
+
+            let left_w = canvas_rect.width() * 0.52;
+            let left_rect = egui::Rect::from_min_size(
+                canvas_rect.min,
+                egui::vec2(left_w, canvas_rect.height()),
+            );
+            let right_rect = egui::Rect::from_min_size(
+                egui::pos2(canvas_rect.min.x + left_w, canvas_rect.min.y),
+                egui::vec2(canvas_rect.width() - left_w, canvas_rect.height()),
+            );
+
+            // Left pad: Grid & Crosshairs
+            painter.line_segment(
+                [
+                    egui::pos2(left_rect.min.x + 12.0, left_rect.center().y),
+                    egui::pos2(left_rect.max.x - 12.0, left_rect.center().y),
+                ],
+                Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(50, 75, 110, 100)),
+            );
+            painter.line_segment(
+                [
+                    egui::pos2(left_rect.center().x, left_rect.min.y + 12.0),
+                    egui::pos2(left_rect.center().x, left_rect.max.y - 12.0),
+                ],
+                Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(50, 75, 110, 100)),
+            );
+
+            painter.text(
+                egui::pos2(left_rect.min.x + 16.0, left_rect.min.y + 14.0),
+                egui::Align2::LEFT_TOP,
+                "MEEND PULL (0..5 st) vs MIZRAB STRIKE (0.05..1.00)",
+                FontId::proportional(11.0),
+                accent_amber,
+            );
+
+            // Handle Dragging Puck
+            let layout_rect = Rect::new(
+                left_rect.min.x + 16.0,
+                left_rect.min.y + 36.0,
+                left_rect.width() - 32.0,
+                left_rect.height() - 52.0,
+            );
+
+            if response.drag_started() {
+                if let Some(pos) = response.interact_pointer_pos() {
+                    if self.hit_test_sitar_puck((pos.x, pos.y), layout_rect) {
+                        self.is_dragging_puck = true;
+                    }
+                }
+            }
+
+            if response.drag_stopped() {
+                self.is_dragging_puck = false;
+            }
+
+            if self.is_dragging_puck {
+                if let Some(pos) = response.interact_pointer_pos() {
+                    let norm_x = ((pos.x - layout_rect.x) / layout_rect.width).clamp(0.0, 1.0);
+                    let norm_y = (1.0 - ((pos.y - layout_rect.y) / layout_rect.height)).clamp(0.0, 1.0);
+                    self.update_physics_from_puck(norm_x, norm_y);
+                }
+            }
+
+            // Draw Draggable Puck (44x44pt bounding touch hit target)
+            let puck_x = layout_rect.x + self.puck_pos.0 * layout_rect.width;
+            let puck_y = layout_rect.y + (1.0 - self.puck_pos.1) * layout_rect.height;
+            let puck_center = egui::pos2(puck_x, puck_y);
+
+            painter.circle_stroke(
+                puck_center,
+                SITAR_PUCK_HIT_RADIUS,
+                Stroke::new(2.0_f32, Color32::from_rgba_unmultiplied(245, 158, 11, 140)),
+            );
+            painter.circle_filled(puck_center, 12.0, accent_amber);
+            painter.circle_filled(puck_center, 4.0, Color32::WHITE);
+
+            // Right side: Curved Jawari obstacle contact & string wave display
+            painter.line_segment(
+                [
+                    egui::pos2(right_rect.min.x, right_rect.min.y + 8.0),
+                    egui::pos2(right_rect.min.x, right_rect.max.y - 8.0),
+                ],
+                Stroke::new(1.0_f32, border_color),
+            );
+
+            painter.text(
+                egui::pos2(right_rect.min.x + 16.0, right_rect.min.y + 14.0),
+                egui::Align2::LEFT_TOP,
+                "JAWARI BUZZ BRIDGE BOUNDARY & CONTACT CLIPPING",
+                FontId::proportional(11.0),
+                accent_cyan,
+            );
+
+            // Plot Curved Jawari wave
+            let plot_w = right_rect.width() - 32.0;
+            let plot_h = right_rect.height() - 56.0;
+            let plot_x0 = right_rect.min.x + 16.0;
+            let plot_y0 = right_rect.min.y + 38.0;
+
+            // Obstacle line (parabolic profile)
+            let obstacle_bound = -0.3 + (self.jawari_gap_mm - 0.18) * 0.5;
+            let obst_y = plot_y0 + (1.0 - (obstacle_bound + 1.0) * 0.5) * plot_h;
+            painter.line_segment(
+                [egui::pos2(plot_x0, obst_y), egui::pos2(plot_x0 + plot_w, obst_y)],
+                Stroke::new(1.5_f32, Color32::from_rgb(239, 68, 68)),
+            );
+            painter.text(
+                egui::pos2(plot_x0 + plot_w - 4.0, obst_y - 2.0),
+                egui::Align2::RIGHT_BOTTOM,
+                format!("Jawari gap: {:.2}mm", self.jawari_gap_mm),
+                FontId::proportional(9.0),
+                Color32::from_rgb(239, 68, 68),
+            );
+
+            let steps = 48;
+            let mut prev_pt = None;
+            for s in 0..=steps {
+                let col_t = s as f32 / steps as f32;
+                let fundamental = (col_t * 6.0 * std::f32::consts::PI * (1.0 + self.meend_pull_semitones * 0.15)).sin();
+                let harmonic2 = 0.5 * (col_t * 12.0 * std::f32::consts::PI).sin();
+                let raw_wave = (fundamental * 0.7 + harmonic2 * 0.3) * self.strike_velocity;
+                let clipped_wave = raw_wave.max(obstacle_bound);
+                let norm_wave = (clipped_wave + 1.0) * 0.5;
+
+                let wx = plot_x0 + col_t * plot_w;
+                let wy = plot_y0 + (1.0 - norm_wave) * plot_h;
+                let pt = egui::pos2(wx, wy);
+
+                if let Some(prev) = prev_pt {
+                    painter.line_segment([prev, pt], Stroke::new(2.0_f32, accent_cyan));
+                }
+                prev_pt = Some(pt);
+            }
+
+            ui.add_space(8.0);
+
+            // Bottom controls: Sliders and Toggles
             ui.horizontal(|ui| {
+                ui.add_space(12.0);
                 ui.vertical(|ui| {
-                    ui.label("Mizrab Strike & Meend Pull:");
-                    ui.add(egui::Slider::new(&mut self.strike_velocity, MIN_SITAR_STRIKE_VELOCITY..=MAX_SITAR_STRIKE_VELOCITY).text("Strike Velocity"));
-                    ui.add(egui::Slider::new(&mut self.meend_pull_semitones, MIN_MEEND_SEMITONES..=MAX_MEEND_SEMITONES).text("Meend Pull (st)"));
+                    ui.label(RichText::new("Acoustic Bridge Parameters:").strong());
+                    ui.add(egui::Slider::new(&mut self.jawari_gap_mm, 0.01..=1.5).text("Jawari Gap (mm)"));
+                    ui.add(egui::Slider::new(&mut self.jiva_thread_pos, 0.0..=1.0).text("Jiva Cotton Pos"));
                 });
 
                 ui.separator();
 
                 ui.vertical(|ui| {
-                    ui.label("Bridge & Drone Controls:");
-                    ui.add(egui::Slider::new(&mut self.jawari_gap_mm, 0.01..=1.5).text("Jawari Gap (mm)"));
+                    ui.label(RichText::new("Sympathetic & Drone:").strong());
                     ui.add(egui::Slider::new(&mut self.tarab_bleed, 0.0..=1.0).text("Tarab Bleed"));
                     ui.checkbox(&mut self.chikari_active, "Chikari Drone Active");
+                });
+
+                ui.separator();
+
+                ui.vertical(|ui| {
+                    ui.label(RichText::new("Live Readouts:").strong());
+                    ui.label(format!("Meend Pull: +{:.2} semitones", self.meend_pull_semitones));
+                    ui.label(format!("Strike Velocity: {:.2}", self.strike_velocity));
                 });
             });
         });

@@ -365,6 +365,18 @@ impl CommandPalette {
                 action_id: "open_shakuhachi_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Sitar Curved Jawari Bridge HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_sitar_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Turkish Ney Flute Embouchure HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_turkish_ney_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

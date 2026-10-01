@@ -660,6 +660,10 @@ pub struct AwardWinningGuiView {
     pub bowed_string_view: crate::views::bowed_string_view::BowedStringView,
     pub show_shakuhachi_modal: bool,
     pub shakuhachi_view: crate::views::shakuhachi_view::ShakuhachiView,
+    pub show_sitar_modal: bool,
+    pub sitar_view: crate::views::sitar_view::SitarView,
+    pub show_turkish_ney_modal: bool,
+    pub turkish_ney_view: crate::views::turkish_ney_view::TurkishNeyView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -936,6 +940,10 @@ impl AwardWinningGuiView {
             bowed_string_view: crate::views::bowed_string_view::BowedStringView::new(),
             show_shakuhachi_modal: false,
             shakuhachi_view: crate::views::shakuhachi_view::ShakuhachiView::new(),
+            show_sitar_modal: false,
+            sitar_view: crate::views::sitar_view::SitarView::new(),
+            show_turkish_ney_modal: false,
+            turkish_ney_view: crate::views::turkish_ney_view::TurkishNeyView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -1625,6 +1633,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_shakuhachi_hud = false;
             self.open_shakuhachi_hud();
         }
+        if self.inspector_state.requested_open_sitar_hud || self.device_rack_state.requested_open_sitar_hud {
+            self.inspector_state.requested_open_sitar_hud = false;
+            self.device_rack_state.requested_open_sitar_hud = false;
+            self.open_sitar_hud();
+        }
+        if self.inspector_state.requested_open_turkish_ney_hud || self.device_rack_state.requested_open_turkish_ney_hud {
+            self.inspector_state.requested_open_turkish_ney_hud = false;
+            self.device_rack_state.requested_open_turkish_ney_hud = false;
+            self.open_turkish_ney_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -1638,6 +1656,8 @@ impl AwardWinningGuiView {
         self.show_stems_export_modal_window(ui);
         self.show_bowed_string_modal_window(ui);
         self.show_shakuhachi_modal_window(ui);
+        self.show_sitar_modal_window(ui);
+        self.show_turkish_ney_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -8055,6 +8075,202 @@ impl AwardWinningGuiView {
 
     pub fn is_shakuhachi_hud_open(&self) -> bool {
         self.show_shakuhachi_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_sitar_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_sitar_modal {
+            return;
+        }
+
+        let mut is_open = self.show_sitar_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🪕 Physical Modeling Sitar Curved Jawari Bridge HUD")
+            .id(egui::Id::new("sitar_hud_modal"))
+            .open(&mut is_open)
+            .default_size([760.0, 560.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Curved Jawari Buzz Bridge, Sympathetic Tarab Resonators & Meend Deflection")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.sitar_view.ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_sitar_modal = is_open;
+        self.sync_sitar_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_sitar_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let strike_vel = self.sitar_view.strike_velocity;
+        let meend = self.sitar_view.meend_pull_semitones;
+        let jawari_gap = self.sitar_view.jawari_gap_mm;
+        let jiva_pos = self.sitar_view.jiva_thread_pos;
+        let tarab = self.sitar_view.tarab_bleed;
+        let chikari = if self.sitar_view.chikari_active { 1.0 } else { 0.0 };
+
+        self.device_rack_state.node_param_values.insert("strike_velocity".to_string(), strike_vel);
+        self.device_rack_state.node_param_values.insert("meend_pull_semitones".to_string(), meend);
+        self.device_rack_state.node_param_values.insert("jawari_gap_mm".to_string(), jawari_gap);
+        self.device_rack_state.node_param_values.insert("jiva_thread_pos".to_string(), jiva_pos);
+        self.device_rack_state.node_param_values.insert("tarab_bleed".to_string(), tarab);
+        self.device_rack_state.node_param_values.insert("chikari_active".to_string(), chikari);
+
+        self.inspector_state.node_param_values.insert("strike_velocity".to_string(), strike_vel);
+        self.inspector_state.node_param_values.insert("meend_pull_semitones".to_string(), meend);
+        self.inspector_state.node_param_values.insert("jawari_gap_mm".to_string(), jawari_gap);
+        self.inspector_state.node_param_values.insert("jiva_thread_pos".to_string(), jiva_pos);
+        self.inspector_state.node_param_values.insert("tarab_bleed".to_string(), tarab);
+        self.inspector_state.node_param_values.insert("chikari_active".to_string(), chikari);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_vel     = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_meend   = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_gap     = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_jiva    = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_tarab   = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_chikari = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+
+            if bus.get(pid_vel).is_some()     { bus.set(pid_vel, strike_vel); }
+            if bus.get(pid_meend).is_some()   { bus.set(pid_meend, meend); }
+            if bus.get(pid_gap).is_some()     { bus.set(pid_gap, jawari_gap); }
+            if bus.get(pid_jiva).is_some()    { bus.set(pid_jiva, jiva_pos); }
+            if bus.get(pid_tarab).is_some()   { bus.set(pid_tarab, tarab); }
+            if bus.get(pid_chikari).is_some() { bus.set(pid_chikari, chikari); }
+        }
+    }
+
+    pub fn open_sitar_hud(&mut self) {
+        self.show_sitar_modal = true;
+    }
+
+    pub fn close_sitar_hud(&mut self) {
+        self.show_sitar_modal = false;
+    }
+
+    pub fn is_sitar_hud_open(&self) -> bool {
+        self.show_sitar_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_turkish_ney_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_turkish_ney_modal {
+            return;
+        }
+
+        let mut is_open = self.show_turkish_ney_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🪈 Physical Modeling Turkish Ney Reed Flute HUD")
+            .id(egui::Id::new("turkish_ney_hud_modal"))
+            .open(&mut is_open)
+            .default_size([780.0, 540.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Baspare Horn Lip Jet Vortex, Acoustic Bore Circulation & Octave Overblowing")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.turkish_ney_view.ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_turkish_ney_modal = is_open;
+        self.sync_turkish_ney_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_turkish_ney_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let jet_vel = self.turkish_ney_view.jet_velocity_mps;
+        let angle = self.turkish_ney_view.embouchure_angle_deg;
+        let bore_len = self.turkish_ney_view.bore_length_cm;
+        let turb = self.turkish_ney_view.airjet_turbulence_noise;
+        let loss = self.turkish_ney_view.bore_loss_factor;
+        let q = self.turkish_ney_view.acoustic_q;
+
+        self.device_rack_state.node_param_values.insert("jet_velocity_mps".to_string(), jet_vel);
+        self.device_rack_state.node_param_values.insert("embouchure_angle_deg".to_string(), angle);
+        self.device_rack_state.node_param_values.insert("bore_length_cm".to_string(), bore_len);
+        self.device_rack_state.node_param_values.insert("airjet_turbulence_noise".to_string(), turb);
+        self.device_rack_state.node_param_values.insert("bore_loss_factor".to_string(), loss);
+        self.device_rack_state.node_param_values.insert("acoustic_q".to_string(), q);
+
+        self.inspector_state.node_param_values.insert("jet_velocity_mps".to_string(), jet_vel);
+        self.inspector_state.node_param_values.insert("embouchure_angle_deg".to_string(), angle);
+        self.inspector_state.node_param_values.insert("bore_length_cm".to_string(), bore_len);
+        self.inspector_state.node_param_values.insert("airjet_turbulence_noise".to_string(), turb);
+        self.inspector_state.node_param_values.insert("bore_loss_factor".to_string(), loss);
+        self.inspector_state.node_param_values.insert("acoustic_q".to_string(), q);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_jet  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_ang  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_len  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_turb = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_loss = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_q    = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+
+            if bus.get(pid_jet).is_some()  { bus.set(pid_jet, jet_vel); }
+            if bus.get(pid_ang).is_some()  { bus.set(pid_ang, angle); }
+            if bus.get(pid_len).is_some()  { bus.set(pid_len, bore_len); }
+            if bus.get(pid_turb).is_some() { bus.set(pid_turb, turb); }
+            if bus.get(pid_loss).is_some() { bus.set(pid_loss, loss); }
+            if bus.get(pid_q).is_some()    { bus.set(pid_q, q); }
+        }
+    }
+
+    pub fn open_turkish_ney_hud(&mut self) {
+        self.show_turkish_ney_modal = true;
+    }
+
+    pub fn close_turkish_ney_hud(&mut self) {
+        self.show_turkish_ney_modal = false;
+    }
+
+    pub fn is_turkish_ney_hud_open(&self) -> bool {
+        self.show_turkish_ney_modal
     }
 
     #[cfg(feature = "gui")]

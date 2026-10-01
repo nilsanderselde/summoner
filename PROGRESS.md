@@ -1309,6 +1309,40 @@ Product Management has conducted a comprehensive readiness audit:
   - Feature tests: 12 tests passed in `tier118_turn54_tests` (`cargo test -p summoner_gui --features gui -- tier118_turn54_tests`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
 
+### Turn #55 (Turn #20 Deliverable) — Physical Modeling Sitar & Turkish Ney Flute HUDs Convergence (Milestones 27 & 33)
+- [x] Physical Modeling Indian Sitar (Curved Jawari Bridge & Meend Pitch Deflection) & Turkish Ney (Baspare Buffalo Horn Lip Jet Vortex & Flute Embouchure) HUDs Integration:
+  - Integrated `SitarView` and `TurkishNeyView` performance HUDs into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] Interactive 2D Performance Canvas in SitarView (`crates/summoner_gui/src/views/sitar_view.rs`):
+  - Added Raga & Sitar sound preset buttons (`Raga Yaman`, `Gayaki Vocal`, `Kharaj Pancham`, `Surbahar Bass`, `Electric Sitar`) with $\ge 44\text{pt}$ touch bounds.
+  - Interactive 2D Canvas with XY Pad for Lateral Meend Pull (0..5 semitones) vs Mizrab Strike Velocity (0.05..1.0) and draggable puck (>= 44x44pt touch hit target).
+  - Parabolic curved Jawari obstacle boundary with dynamic unilateral string wave clipping display in vibrant Cyan (`#06B6D4`).
+  - Added `hit_test_sitar_puck(point, canvas)` and unified `show(ui)` / `ui(ui)` API methods.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_sitar_modal: bool`, `sitar_view: SitarView`, `show_turkish_ney_modal: bool`, and `turkish_ney_view: TurkishNeyView`.
+  - Added dedicated modal windows `show_sitar_modal_window` and `show_turkish_ney_modal_window` with responsive styling, WCAG AAA contrast, and $\ge 44 \times 44\text{pt}$ touch bounds.
+  - Added public lifecycle methods: `open_sitar_hud()`, `close_sitar_hud()`, `is_sitar_hud_open()`, `open_turkish_ney_hud()`, `close_turkish_ney_hud()`, `is_turkish_ney_hud_open()`.
+  - Real-time parameter sync bridges (`sync_sitar_hud_state` and `sync_turkish_ney_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_sitar_hud: bool` and `requested_open_turkish_ney_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🪕 Open Sitar Curved Jawari Bridge HUD]` and `[🪈 Open Turkish Ney Flute Embouchure HUD]` on sitar and ney/woodwind devices in `ModernInspectorView`.
+  - Added collapsed header `[🪕 HUD]` / `[🪈 HUD]` and expanded toolbar buttons in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Sitar: Parabolic curved Jawari bridge obstacle boundary, buzzing string waveform contour with contact clipping, and touch-drag puck modulating `meend_pull_semitones` and `strike_velocity`.
+    * Turkish Ney: Cylindrical bamboo flute bore, Baspare buffalo horn mouthpiece contour, air jet stream vortex vector at embouchure angle, and touch-drag puck modulating `jet_velocity_mps` and `embouchure_angle_deg`.
+- [x] Command Palette & Application Routing:
+  - Registered `open_sitar_hud` and `open_turkish_ney_hud` under `"Physical Modeling"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_sitar_hud()` and `open_turkish_ney_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier119_turn55_tests.rs`:
+    * Pure tests: view initialization, presets, meend bend semitones, strike velocity, jawari obstacle collision, hit test, normalization roundtrips, modal amplitude simulation, slot arithmetic channel isolation, deterministic ASCII snapshot rendering.
+    * GUI tests: headless egui render without panic, modal lifecycle, live `ParamBus` atomic slot dispatch, rack & inspector trigger propagation, command palette action registration.
+  - Unit tests: 329 passed in 0.24s (`cargo test -p summoner_gui`).
+  - Feature tests: 10 tests passed in `tier119_turn55_tests` (`cargo test -p summoner_gui --features gui -- tier119_turn55_tests`).
+  - Full GUI test suite: 1108 passed in 1.61s (`cargo test -p summoner_gui --features gui`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
+
 
 
 
