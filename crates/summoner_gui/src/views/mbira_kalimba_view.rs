@@ -254,6 +254,11 @@ impl MbiraKalimbaView {
     }
 
     #[cfg(feature = "gui")]
+    pub fn show(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
+    }
+
+    #[cfg(feature = "gui")]
     #[allow(clippy::needless_range_loop)]
     pub fn ui(&mut self, ui: &mut egui::Ui) {
         let (rect, response) = ui.allocate_exact_size(

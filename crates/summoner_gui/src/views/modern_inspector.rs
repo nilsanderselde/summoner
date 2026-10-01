@@ -58,6 +58,10 @@ pub struct ModernInspectorState {
     pub requested_open_sitar_hud: bool,
     #[serde(default)]
     pub requested_open_turkish_ney_hud: bool,
+    #[serde(default)]
+    pub requested_open_steelpan_hud: bool,
+    #[serde(default)]
+    pub requested_open_mbira_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -93,6 +97,8 @@ impl Default for ModernInspectorState {
             requested_open_shakuhachi_hud: false,
             requested_open_sitar_hud: false,
             requested_open_turkish_ney_hud: false,
+            requested_open_steelpan_hud: false,
+            requested_open_mbira_hud: false,
         }
     }
 }
@@ -677,6 +683,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open interactive Baspare horn lip jet vortex, acoustic bore circulation & octave overblowing HUD").clicked() {
                     state.requested_open_turkish_ney_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Steelpan") || active_kind.contains("SteelDrum") || active_kind == "SteelpanNode" || active_kind == "SteelpanModel" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🛢 Open Caribbean Steelpan Annular Resonance HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 229, 255)))
+                        .fill(Color32::from_rgb(12, 28, 38))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 229, 255)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Caribbean steelpan concave oil barrel bowl, annular ring resonance & modal strike HUD").clicked() {
+                    state.requested_open_steelpan_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Mbira") || active_kind.contains("Kalimba") || active_kind == "MbiraNode" || active_kind == "KalimbaNode" || active_kind == "MbiraKalimbaModel" || active_kind == "MbiraModel" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🎵 Open Lamellophone Mbira & Kalimba Tine HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(255, 107, 43)))
+                        .fill(Color32::from_rgb(38, 20, 12))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 107, 43)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive lamellophone mbira & kalimba tine modal dispersion, acoustic buzz & pluck force HUD").clicked() {
+                    state.requested_open_mbira_hud = true;
                 }
                 ui.add_space(4.0);
             }

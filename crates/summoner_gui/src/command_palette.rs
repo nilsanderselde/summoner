@@ -377,6 +377,18 @@ impl CommandPalette {
                 action_id: "open_turkish_ney_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Caribbean Steelpan Annular Ring Resonance HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_steelpan_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Lamellophone Mbira & Kalimba Tine Resonance HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_mbira_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

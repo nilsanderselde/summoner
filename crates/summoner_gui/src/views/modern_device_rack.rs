@@ -73,6 +73,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_sitar_hud: bool,
     #[serde(default)]
     pub requested_open_turkish_ney_hud: bool,
+    #[serde(default)]
+    pub requested_open_steelpan_hud: bool,
+    #[serde(default)]
+    pub requested_open_mbira_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -98,6 +102,8 @@ impl Default for ModernDeviceRackState {
             requested_open_shakuhachi_hud: false,
             requested_open_sitar_hud: false,
             requested_open_turkish_ney_hud: false,
+            requested_open_steelpan_hud: false,
+            requested_open_mbira_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -290,6 +296,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_shakuhachi = cur_selection.contains("Shakuhachi") || cur_selection.contains("BambooFlute") || cur_selection == "ShakuhachiNode" || cur_selection == "Shakuhachi";
                     let is_sitar = cur_selection.contains("Sitar") || cur_selection == "SitarNode" || cur_selection == "SitarModel" || cur_selection.contains("Jawari");
                     let is_turkish_ney = cur_selection.contains("TurkishNey") || cur_selection.contains("Ney") || cur_selection.contains("WoodwindJet") || cur_selection == "TurkishNeyNode" || cur_selection == "WoodwindJetNode";
+                    let is_steelpan = cur_selection.contains("Steelpan") || cur_selection.contains("SteelDrum") || cur_selection == "SteelpanNode" || cur_selection == "SteelpanModel";
+                    let is_mbira = cur_selection.contains("Mbira") || cur_selection.contains("Kalimba") || cur_selection == "MbiraNode" || cur_selection == "KalimbaNode" || cur_selection == "MbiraKalimbaModel" || cur_selection == "MbiraModel";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -322,9 +330,17 @@ pub fn show_modern_device_rack_with_context(
                         if ui.button(RichText::new("🪕 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(245, 158, 11))).on_hover_text("Open Sitar Curved Jawari Bridge HUD").clicked() {
                             state.requested_open_sitar_hud = true;
                         }
-                    } else if is_turkish_ney
-                        && ui.button(RichText::new("🪈 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(45, 212, 191))).on_hover_text("Open Turkish Ney Flute Embouchure HUD").clicked() {
-                        state.requested_open_turkish_ney_hud = true;
+                    } else if is_turkish_ney {
+                        if ui.button(RichText::new("🪈 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(45, 212, 191))).on_hover_text("Open Turkish Ney Flute Embouchure HUD").clicked() {
+                            state.requested_open_turkish_ney_hud = true;
+                        }
+                    } else if is_steelpan {
+                        if ui.button(RichText::new("🛢 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Caribbean Steelpan Annular Resonance HUD").clicked() {
+                            state.requested_open_steelpan_hud = true;
+                        }
+                    } else if is_mbira
+                        && ui.button(RichText::new("🎵 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 107, 43))).on_hover_text("Open Lamellophone Mbira & Kalimba Tine HUD").clicked() {
+                        state.requested_open_mbira_hud = true;
                     }
                     ui.add_space(4.0);
                     let pwr_col = if state.is_enabled { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(100, 116, 139) };
@@ -515,6 +531,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_shakuhachi = cur_selection.contains("Shakuhachi") || cur_selection.contains("BambooFlute") || cur_selection == "ShakuhachiNode" || cur_selection == "Shakuhachi";
                     let is_sitar = cur_selection.contains("Sitar") || cur_selection == "SitarNode" || cur_selection == "SitarModel" || cur_selection.contains("Jawari");
                     let is_turkish_ney = cur_selection.contains("TurkishNey") || cur_selection.contains("Ney") || cur_selection.contains("WoodwindJet") || cur_selection == "TurkishNeyNode" || cur_selection == "WoodwindJetNode";
+                    let is_steelpan = cur_selection.contains("Steelpan") || cur_selection.contains("SteelDrum") || cur_selection == "SteelpanNode" || cur_selection == "SteelpanModel";
+                    let is_mbira = cur_selection.contains("Mbira") || cur_selection.contains("Kalimba") || cur_selection == "MbiraNode" || cur_selection == "KalimbaNode" || cur_selection == "MbiraKalimbaModel" || cur_selection == "MbiraModel";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -555,9 +573,17 @@ pub fn show_modern_device_rack_with_context(
                         if ui.button(RichText::new("🪕 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(245, 158, 11))).on_hover_text("Open Sitar Curved Jawari Bridge HUD").clicked() {
                             state.requested_open_sitar_hud = true;
                         }
-                    } else if is_turkish_ney
-                        && ui.button(RichText::new("🪈 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(45, 212, 191))).on_hover_text("Open Turkish Ney Flute Embouchure HUD").clicked() {
-                        state.requested_open_turkish_ney_hud = true;
+                    } else if is_turkish_ney {
+                        if ui.button(RichText::new("🪈 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(45, 212, 191))).on_hover_text("Open Turkish Ney Flute Embouchure HUD").clicked() {
+                            state.requested_open_turkish_ney_hud = true;
+                        }
+                    } else if is_steelpan {
+                        if ui.button(RichText::new("🛢 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Caribbean Steelpan Annular Resonance HUD").clicked() {
+                            state.requested_open_steelpan_hud = true;
+                        }
+                    } else if is_mbira
+                        && ui.button(RichText::new("🎵 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 107, 43))).on_hover_text("Open Lamellophone Mbira & Kalimba Tine HUD").clicked() {
+                        state.requested_open_mbira_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -1334,6 +1360,8 @@ fn show_pro_parameter_drawer(
                     let is_shakuhachi = dev_kind.contains("Shakuhachi") || dev_kind.contains("BambooFlute") || dev_kind == "ShakuhachiNode" || dev_kind == "Shakuhachi";
                     let is_sitar = dev_kind.contains("Sitar") || dev_kind == "SitarNode" || dev_kind == "SitarModel" || dev_kind.contains("Jawari");
                     let is_turkish_ney = dev_kind.contains("TurkishNey") || dev_kind.contains("Ney") || dev_kind.contains("WoodwindJet") || dev_kind == "TurkishNeyNode" || dev_kind == "WoodwindJetNode";
+                    let is_steelpan = dev_kind.contains("Steelpan") || dev_kind.contains("SteelDrum") || dev_kind == "SteelpanNode" || dev_kind == "SteelpanModel";
+                    let is_mbira = dev_kind.contains("Mbira") || dev_kind.contains("Kalimba") || dev_kind == "MbiraNode" || dev_kind == "KalimbaNode" || dev_kind == "MbiraKalimbaModel" || dev_kind == "MbiraModel";
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -2060,6 +2088,195 @@ fn show_pro_parameter_drawer(
 
                         if ney_resp.hovered() {
                             let _ = ney_resp.on_hover_text("Turkish Ney Reed Flute & Baspare Horn Embouchure\n[Drag horizontally: Embouchure angle [15..65°] | Drag vertically: Airjet velocity [5..45 m/s]]");
+                        }
+                    } else if is_steelpan {
+                        // Caribbean Steelpan Annular Ring Resonance & Modal Strike Mini Visualizer
+                        let (pan_resp, pan_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let pan_rect = pan_resp.rect;
+                        pan_painter.rect_filled(pan_rect, 2.0, Color32::from_rgb(12, 18, 28));
+
+                        let mut strike_rad = state.node_param_values.get("strike_radial_pos").copied().unwrap_or(0.45);
+                        let mut strike_vel = state.node_param_values.get("strike_velocity").copied().unwrap_or(0.75);
+
+                        if pan_resp.dragged() {
+                            if let Some(pos) = pan_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - pan_rect.left()) / pan_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - pan_rect.top()) / pan_rect.height())).clamp(0.0, 1.0);
+                                strike_rad = 0.05 + norm_x * 0.90;
+                                strike_vel = 0.10 + norm_y * 0.90;
+                                state.node_param_values.insert("strike_radial_pos".to_string(), strike_rad);
+                                state.node_param_values.insert("strike_velocity".to_string(), strike_vel);
+                                state.node_param_values.insert("strike_vel".to_string(), strike_vel);
+                                if let Some(bus) = param_bus {
+                                    let pid_rad = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_rad).is_some() { bus.set(pid_rad, strike_rad); }
+                                    let pid_vel = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_vel).is_some() { bus.set(pid_vel, strike_vel); }
+                                }
+                            }
+                        }
+
+                        // Left 45%: Concave Oil Barrel Bowl & Concentric Annular Rings
+                        let bowl_center = egui::pos2(pan_rect.left() + 36.0, pan_rect.center().y);
+                        let bowl_radius = 26.0;
+                        pan_painter.circle_filled(bowl_center, bowl_radius, Color32::from_rgb(18, 26, 40));
+                        pan_painter.circle_stroke(bowl_center, bowl_radius, Stroke::new(1.2_f32, Color32::from_rgb(0, 229, 255)));
+
+                        // Annular concentric rings
+                        for r_idx in 1..=3 {
+                            let ring_r = bowl_radius * (r_idx as f32 / 3.5);
+                            pan_painter.circle_stroke(bowl_center, ring_r, Stroke::new(0.8_f32, Color32::from_rgb(38, 56, 82)));
+                        }
+
+                        // Strike puck on the annular bowl
+                        let puck_dist = (strike_rad / 0.95).clamp(0.0, 1.0) * (bowl_radius - 4.0);
+                        let puck_pos = egui::pos2(bowl_center.x + puck_dist * 0.707, bowl_center.y - puck_dist * 0.707);
+                        pan_painter.circle_filled(puck_pos, 4.0, Color32::from_rgb(255, 107, 43));
+                        pan_painter.circle_stroke(puck_pos, 6.0, Stroke::new(1.0_f32, Color32::from_rgb(254, 215, 170)));
+
+                        // Right 55%: Modal Harmonic Resonance Spectrum Bars
+                        let bars_start_x = pan_rect.left() + 76.0;
+                        let bars_w = pan_rect.right() - bars_start_x - 8.0;
+                        let num_bars = 6;
+                        let bar_slot = bars_w / num_bars as f32;
+                        let fund_w = (1.0 - strike_rad * 0.7).clamp(0.2, 1.0);
+                        let oct_w = (std::f32::consts::PI * strike_rad).sin().abs().clamp(0.1, 1.0);
+                        let harm_weights = [
+                            fund_w * 0.9,
+                            oct_w * strike_vel,
+                            strike_rad * strike_vel * 0.8,
+                            (1.0 - strike_rad * 0.5) * 0.6,
+                            strike_rad * 0.7,
+                            strike_vel * 0.5,
+                        ];
+
+                        for (b_i, &w) in harm_weights.iter().enumerate() {
+                            let bx = bars_start_x + b_i as f32 * bar_slot + 2.0;
+                            let bar_h = (w.clamp(0.05, 1.0) * (pan_rect.height() - 24.0)).max(2.0);
+                            let bar_rect = egui::Rect::from_min_size(
+                                egui::pos2(bx, pan_rect.bottom() - 6.0 - bar_h),
+                                egui::vec2(bar_slot - 4.0, bar_h),
+                            );
+                            let col = if b_i == 0 {
+                                Color32::from_rgb(0, 229, 255)
+                            } else if b_i == 1 {
+                                Color32::from_rgb(56, 189, 248)
+                            } else {
+                                Color32::from_rgb(14, 165, 233)
+                            };
+                            pan_painter.rect_filled(bar_rect, 1.0, col);
+                        }
+
+                        // Readout
+                        pan_painter.text(
+                            egui::pos2(pan_rect.left() + 4.0, pan_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("Rad: {:.2}R", strike_rad),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+                        pan_painter.text(
+                            egui::pos2(pan_rect.right() - 4.0, pan_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("Vel: {:.0}%", strike_vel * 100.0),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(255, 107, 43),
+                        );
+
+                        if pan_resp.hovered() {
+                            let _ = pan_resp.on_hover_text("Caribbean Steelpan Annular Ring Resonance\n[Drag horizontally: Radial strike position [0.05..0.95 R] | Drag vertically: Mallet velocity [10..100%]]");
+                        }
+                    } else if is_mbira {
+                        // Lamellophone Mbira & Kalimba Tine Dispersion Mini Visualizer
+                        let (mbi_resp, mbi_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let mbi_rect = mbi_resp.rect;
+                        mbi_painter.rect_filled(mbi_rect, 2.0, Color32::from_rgb(22, 14, 10));
+
+                        let mut pluck_force = state.node_param_values.get("pluck_force_n").copied().unwrap_or(2.4);
+                        let mut buzz_intensity = state.node_param_values.get("buzz_intensity_pct").copied().unwrap_or(0.85);
+
+                        if mbi_resp.dragged() {
+                            if let Some(pos) = mbi_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - mbi_rect.left()) / mbi_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - mbi_rect.top()) / mbi_rect.height())).clamp(0.0, 1.0);
+                                pluck_force = 0.1 + norm_x * 4.9;
+                                buzz_intensity = norm_y;
+                                state.node_param_values.insert("pluck_force_n".to_string(), pluck_force);
+                                state.node_param_values.insert("buzz_intensity_pct".to_string(), buzz_intensity);
+                                state.node_param_values.insert("pluck_velocity".to_string(), (pluck_force / 5.0).clamp(0.1, 1.0));
+                                state.node_param_values.insert("bottlecap_buzz".to_string(), buzz_intensity);
+                                if let Some(bus) = param_bus {
+                                    let pid_force = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_force).is_some() { bus.set(pid_force, pluck_force); }
+                                    let pid_buzz = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_buzz).is_some() { bus.set(pid_buzz, buzz_intensity); }
+                                }
+                            }
+                        }
+
+                        // Wooden soundboard bridge bar
+                        let bridge_y = mbi_rect.top() + 24.0;
+                        mbi_painter.line_segment(
+                            [egui::pos2(mbi_rect.left() + 6.0, bridge_y), egui::pos2(mbi_rect.right() - 6.0, bridge_y)],
+                            Stroke::new(3.0_f32, Color32::from_rgb(146, 64, 14)),
+                        );
+
+                        // 11 staggered steel tines descending in V-formation
+                        let tine_count: i32 = 11;
+                        let tine_step = (mbi_rect.width() - 20.0) / (tine_count - 1) as f32;
+                        let center_tine = tine_count / 2;
+                        for t_idx in 0..tine_count {
+                            let dist_from_center = (t_idx - center_tine).abs() as f32;
+                            let tine_len = 36.0 - dist_from_center * 3.0;
+                            let tx = mbi_rect.left() + 10.0 + t_idx as f32 * tine_step;
+                            let tine_bot = bridge_y + tine_len;
+                            let tine_col = if t_idx == center_tine {
+                                Color32::from_rgb(245, 158, 11)
+                            } else {
+                                Color32::from_rgb(217, 119, 6)
+                            };
+                            mbi_painter.line_segment(
+                                [egui::pos2(tx, bridge_y), egui::pos2(tx, tine_bot)],
+                                Stroke::new(1.8_f32, tine_col),
+                            );
+
+                            // Buzz jingler rings / bottlecap beads rattling at the bridge
+                            if buzz_intensity > 0.05 && t_idx % 2 == 0 {
+                                let bead_y = bridge_y - 4.0 - (buzz_intensity * 3.0);
+                                mbi_painter.circle_stroke(
+                                    egui::pos2(tx, bead_y),
+                                    2.0 + buzz_intensity * 1.5,
+                                    Stroke::new(0.8_f32, Color32::from_rgb(255, 107, 43)),
+                                );
+                            }
+                        }
+
+                        // Touch puck indicating pluck force and buzz intensity
+                        let norm_fx = ((pluck_force - 0.1) / 4.9).clamp(0.0, 1.0);
+                        let norm_by = buzz_intensity.clamp(0.0, 1.0);
+                        let puck_x = mbi_rect.left() + norm_fx * mbi_rect.width();
+                        let puck_y = mbi_rect.bottom() - norm_by * mbi_rect.height();
+                        mbi_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.5, Color32::from_rgb(255, 107, 43));
+                        mbi_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::from_rgb(254, 215, 170)));
+
+                        // Readout
+                        mbi_painter.text(
+                            egui::pos2(mbi_rect.left() + 4.0, mbi_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("Force: {:.1} N", pluck_force),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(245, 158, 11),
+                        );
+                        mbi_painter.text(
+                            egui::pos2(mbi_rect.right() - 4.0, mbi_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("Buzz: {:.0}%", buzz_intensity * 100.0),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(255, 107, 43),
+                        );
+
+                        if mbi_resp.hovered() {
+                            let _ = mbi_resp.on_hover_text("Lamellophone Mbira & Kalimba Tines\n[Drag horizontally: Thumb pluck force [0.1..5.0 N] | Drag vertically: Bottlecap buzz intensity [0..100%]]");
                         }
                     } else {
                         // Filter Curve Mini View (slot-addressed)

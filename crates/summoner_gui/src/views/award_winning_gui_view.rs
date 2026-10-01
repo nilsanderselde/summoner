@@ -664,6 +664,10 @@ pub struct AwardWinningGuiView {
     pub sitar_view: crate::views::sitar_view::SitarView,
     pub show_turkish_ney_modal: bool,
     pub turkish_ney_view: crate::views::turkish_ney_view::TurkishNeyView,
+    pub show_steelpan_modal: bool,
+    pub steelpan_view: crate::views::steelpan_drum_view::SteelpanDrumView,
+    pub show_mbira_modal: bool,
+    pub mbira_view: crate::views::mbira_kalimba_view::MbiraKalimbaView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -944,6 +948,10 @@ impl AwardWinningGuiView {
             sitar_view: crate::views::sitar_view::SitarView::new(),
             show_turkish_ney_modal: false,
             turkish_ney_view: crate::views::turkish_ney_view::TurkishNeyView::new(),
+            show_steelpan_modal: false,
+            steelpan_view: crate::views::steelpan_drum_view::SteelpanDrumView::new(),
+            show_mbira_modal: false,
+            mbira_view: crate::views::mbira_kalimba_view::MbiraKalimbaView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -1643,6 +1651,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_turkish_ney_hud = false;
             self.open_turkish_ney_hud();
         }
+        if self.inspector_state.requested_open_steelpan_hud || self.device_rack_state.requested_open_steelpan_hud {
+            self.inspector_state.requested_open_steelpan_hud = false;
+            self.device_rack_state.requested_open_steelpan_hud = false;
+            self.open_steelpan_hud();
+        }
+        if self.inspector_state.requested_open_mbira_hud || self.device_rack_state.requested_open_mbira_hud {
+            self.inspector_state.requested_open_mbira_hud = false;
+            self.device_rack_state.requested_open_mbira_hud = false;
+            self.open_mbira_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -1658,6 +1676,8 @@ impl AwardWinningGuiView {
         self.show_shakuhachi_modal_window(ui);
         self.show_sitar_modal_window(ui);
         self.show_turkish_ney_modal_window(ui);
+        self.show_steelpan_modal_window(ui);
+        self.show_mbira_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -8271,6 +8291,222 @@ impl AwardWinningGuiView {
 
     pub fn is_turkish_ney_hud_open(&self) -> bool {
         self.show_turkish_ney_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_steelpan_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_steelpan_modal {
+            return;
+        }
+
+        let mut is_open = self.show_steelpan_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🛢 Physical Modeling Caribbean Steelpan Annular Resonance HUD")
+            .id(egui::Id::new("steelpan_hud_modal"))
+            .open(&mut is_open)
+            .default_size([780.0, 540.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Concave Stamped Oil Drum Bowl, Annular Ring Coupling & Modal Mallet Strike Dynamics")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.steelpan_view.ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_steelpan_modal = is_open;
+        self.sync_steelpan_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_steelpan_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let strike_rad = self.steelpan_view.strike_radial_pos;
+        let strike_vel = self.steelpan_view.strike_velocity;
+        let gauge = self.steelpan_view.steel_gauge_mm;
+        let damp = self.steelpan_view.damping_s;
+        let coupling = self.steelpan_view.coupling_resonance;
+        let rings = self.steelpan_view.annular_ring_count as f32;
+
+        self.device_rack_state.node_param_values.insert("strike_radial_pos".to_string(), strike_rad);
+        self.device_rack_state.node_param_values.insert("strike_velocity".to_string(), strike_vel);
+        self.device_rack_state.node_param_values.insert("steel_gauge_mm".to_string(), gauge);
+        self.device_rack_state.node_param_values.insert("damping_s".to_string(), damp);
+        self.device_rack_state.node_param_values.insert("coupling_resonance".to_string(), coupling);
+        self.device_rack_state.node_param_values.insert("annular_ring_count".to_string(), rings);
+
+        self.device_rack_state.node_param_values.insert("strike_vel".to_string(), strike_vel);
+        self.device_rack_state.node_param_values.insert("shell_depth".to_string(), gauge * 15.0);
+        self.device_rack_state.node_param_values.insert("ring_res".to_string(), coupling);
+        self.device_rack_state.node_param_values.insert("damping".to_string(), (damp / 5.0).clamp(0.0, 1.0));
+
+        self.inspector_state.node_param_values.insert("strike_radial_pos".to_string(), strike_rad);
+        self.inspector_state.node_param_values.insert("strike_velocity".to_string(), strike_vel);
+        self.inspector_state.node_param_values.insert("steel_gauge_mm".to_string(), gauge);
+        self.inspector_state.node_param_values.insert("damping_s".to_string(), damp);
+        self.inspector_state.node_param_values.insert("coupling_resonance".to_string(), coupling);
+        self.inspector_state.node_param_values.insert("annular_ring_count".to_string(), rings);
+
+        self.inspector_state.node_param_values.insert("strike_vel".to_string(), strike_vel);
+        self.inspector_state.node_param_values.insert("shell_depth".to_string(), gauge * 15.0);
+        self.inspector_state.node_param_values.insert("ring_res".to_string(), coupling);
+        self.inspector_state.node_param_values.insert("damping".to_string(), (damp / 5.0).clamp(0.0, 1.0));
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_rad   = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_vel   = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_gauge = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_damp  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_ring  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_rings = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+
+            if bus.get(pid_rad).is_some()   { bus.set(pid_rad, strike_rad); }
+            if bus.get(pid_vel).is_some()   { bus.set(pid_vel, strike_vel); }
+            if bus.get(pid_gauge).is_some() { bus.set(pid_gauge, gauge); }
+            if bus.get(pid_damp).is_some()  { bus.set(pid_damp, damp); }
+            if bus.get(pid_ring).is_some()  { bus.set(pid_ring, coupling); }
+            if bus.get(pid_rings).is_some() { bus.set(pid_rings, rings); }
+        }
+    }
+
+    pub fn open_steelpan_hud(&mut self) {
+        self.show_steelpan_modal = true;
+    }
+
+    pub fn close_steelpan_hud(&mut self) {
+        self.show_steelpan_modal = false;
+    }
+
+    pub fn is_steelpan_hud_open(&self) -> bool {
+        self.show_steelpan_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_mbira_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_mbira_modal {
+            return;
+        }
+
+        let mut is_open = self.show_mbira_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎵 Physical Modeling Lamellophone Mbira & Kalimba Tine HUD")
+            .id(egui::Id::new("mbira_hud_modal"))
+            .open(&mut is_open)
+            .default_size([780.0, 540.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Forged Spring Steel Tine Dispersion, Calabash Gourd Resonator & Jingler Bottlecap Buzz")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.mbira_view.ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_mbira_modal = is_open;
+        self.sync_mbira_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_mbira_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let force = self.mbira_view.pluck_force_n;
+        let buzz = self.mbira_view.buzz_intensity_pct;
+        let disp = self.mbira_view.modal_dispersion_coeff;
+        let decay = self.mbira_view.tine_decay_s;
+        let q = self.mbira_view.cavity_q_factor;
+        let tines = self.mbira_view.tine_count as f32;
+
+        self.device_rack_state.node_param_values.insert("pluck_force_n".to_string(), force);
+        self.device_rack_state.node_param_values.insert("buzz_intensity_pct".to_string(), buzz);
+        self.device_rack_state.node_param_values.insert("modal_dispersion_coeff".to_string(), disp);
+        self.device_rack_state.node_param_values.insert("tine_decay_s".to_string(), decay);
+        self.device_rack_state.node_param_values.insert("cavity_q_factor".to_string(), q);
+        self.device_rack_state.node_param_values.insert("tine_count".to_string(), tines);
+
+        self.device_rack_state.node_param_values.insert("pluck_velocity".to_string(), (force / 5.0).clamp(0.1, 1.0));
+        self.device_rack_state.node_param_values.insert("bottlecap_buzz".to_string(), buzz);
+        self.device_rack_state.node_param_values.insert("gourd_resonator_q".to_string(), q);
+        self.device_rack_state.node_param_values.insert("tongue_length_mm".to_string(), (1.0 - disp) * 90.0 + 30.0);
+
+        self.inspector_state.node_param_values.insert("pluck_force_n".to_string(), force);
+        self.inspector_state.node_param_values.insert("buzz_intensity_pct".to_string(), buzz);
+        self.inspector_state.node_param_values.insert("modal_dispersion_coeff".to_string(), disp);
+        self.inspector_state.node_param_values.insert("tine_decay_s".to_string(), decay);
+        self.inspector_state.node_param_values.insert("cavity_q_factor".to_string(), q);
+        self.inspector_state.node_param_values.insert("tine_count".to_string(), tines);
+
+        self.inspector_state.node_param_values.insert("pluck_velocity".to_string(), (force / 5.0).clamp(0.1, 1.0));
+        self.inspector_state.node_param_values.insert("bottlecap_buzz".to_string(), buzz);
+        self.inspector_state.node_param_values.insert("gourd_resonator_q".to_string(), q);
+        self.inspector_state.node_param_values.insert("tongue_length_mm".to_string(), (1.0 - disp) * 90.0 + 30.0);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_force = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_buzz  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_disp  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_decay = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_q     = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_tines = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+
+            if bus.get(pid_force).is_some() { bus.set(pid_force, force); }
+            if bus.get(pid_buzz).is_some()  { bus.set(pid_buzz, buzz); }
+            if bus.get(pid_disp).is_some()  { bus.set(pid_disp, disp); }
+            if bus.get(pid_decay).is_some() { bus.set(pid_decay, decay); }
+            if bus.get(pid_q).is_some()     { bus.set(pid_q, q); }
+            if bus.get(pid_tines).is_some() { bus.set(pid_tines, tines); }
+        }
+    }
+
+    pub fn open_mbira_hud(&mut self) {
+        self.show_mbira_modal = true;
+    }
+
+    pub fn close_mbira_hud(&mut self) {
+        self.show_mbira_modal = false;
+    }
+
+    pub fn is_mbira_hud_open(&self) -> bool {
+        self.show_mbira_modal
     }
 
     #[cfg(feature = "gui")]

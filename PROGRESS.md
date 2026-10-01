@@ -1343,6 +1343,35 @@ Product Management has conducted a comprehensive readiness audit:
   - Full GUI test suite: 1108 passed in 1.61s (`cargo test -p summoner_gui --features gui`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
 
+### Turn #56 (Turn #21 — Sprint Review) — Physical Modeling Caribbean Steelpan & Lamellophone Mbira HUDs Convergence (Milestones 28 & 33)
+- [x] Physical Modeling Caribbean Steelpan (Annular Ring Resonance & Modal Strike) & Lamellophone Mbira / Kalimba (Forged Spring Steel Tine Dispersion, Calabash Gourd Resonator & Jingler Bottlecap Buzz) HUDs Integration:
+  - Integrated `SteelpanDrumView` and `MbiraKalimbaView` performance HUDs into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_steelpan_modal: bool`, `steelpan_view: SteelpanDrumView`, `show_mbira_modal: bool`, and `mbira_view: MbiraKalimbaView`.
+  - Added dedicated modal windows `show_steelpan_modal_window` and `show_mbira_modal_window` with responsive styling, WCAG AAA contrast, and $\ge 44 \times 44\text{pt}$ touch bounds.
+  - Added public lifecycle methods: `open_steelpan_hud()`, `close_steelpan_hud()`, `is_steelpan_hud_open()`, `open_mbira_hud()`, `close_mbira_hud()`, `is_mbira_hud_open()`.
+  - Real-time parameter sync bridges (`sync_steelpan_hud_state` and `sync_mbira_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_steelpan_hud: bool` and `requested_open_mbira_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🛢 Open Caribbean Steelpan Annular Resonance HUD]` and `[🎵 Open Lamellophone Mbira & Kalimba Tine HUD]` on steelpan and mbira/kalimba/idiophone devices in `ModernInspectorView`.
+  - Added collapsed header `[🛢 HUD]` / `[🎵 HUD]` and expanded toolbar buttons in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Steelpan: Concave oil barrel bowl contour, concentric annular rings, strike mallet puck, modal overtone spectrum bars, and touch-drag puck modulating `strike_radial_pos` and `strike_velocity`.
+    * Mbira / Kalimba: Wooden soundboard bridge bar, 11 staggered steel tines in descending V-formation, oscillating bottlecap jingler buzz beads, and touch-drag puck modulating `pluck_force_n` and `buzz_intensity_pct`.
+- [x] Command Palette & Application Routing:
+  - Registered `open_steelpan_hud` and `open_mbira_hud` under `"Physical Modeling"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_steelpan_hud()` and `open_mbira_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier120_turn56_tests.rs`:
+    * Pure tests: view initialization, presets, radial position and strike velocity normalization, tine count and pluck force acoustics, annular ring modal amplitude simulation, slot arithmetic channel isolation, deterministic ASCII snapshot rendering.
+    * GUI tests: headless egui render without panic, modal lifecycle, live `ParamBus` atomic slot dispatch, rack & inspector trigger propagation, command palette action registration.
+  - Unit tests: 329 passed in 0.22s (`cargo test -p summoner_gui`).
+  - Feature tests: 9 tests passed in `tier120_turn56_tests` (`cargo test -p summoner_gui --features gui -- tier120_turn56_tests`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
+
+
 
 
 
