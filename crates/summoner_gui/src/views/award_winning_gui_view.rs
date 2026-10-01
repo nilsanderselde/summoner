@@ -1370,34 +1370,53 @@ impl AwardWinningGuiView {
             ui.add_space(4.0);
 
             // 1-Click Live Parameter Automation Launcher
+            let mut auto_param_req: Option<String> = None;
             egui::ComboBox::from_id_source("arranger_auto_selector")
                 .selected_text(RichText::new("📈 Auto ▾").font(FontId::proportional(10.0)).color(Color32::from_rgb(234, 179, 8)))
                 .show_ui(ui, |ui| {
                     if ui.selectable_label(false, "📈 Gain (Volume)").clicked() {
-                        self.open_track_automation_editor(cur_track_id, "gain");
+                        auto_param_req = Some("gain".to_string());
                     }
                     if ui.selectable_label(false, "📈 Stereo Pan").clicked() {
-                        self.open_track_automation_editor(cur_track_id, "pan");
+                        auto_param_req = Some("pan".to_string());
                     }
                     if ui.selectable_label(false, "📈 Mute Gate").clicked() {
-                        self.open_track_automation_editor(cur_track_id, "mute");
+                        auto_param_req = Some("mute".to_string());
                     }
                     if ui.selectable_label(false, "📈 Solo Audition").clicked() {
-                        self.open_track_automation_editor(cur_track_id, "solo");
+                        auto_param_req = Some("solo".to_string());
                     }
                     if ui.selectable_label(false, "📈 Filter Cutoff").clicked() {
-                        self.open_track_automation_editor(cur_track_id, "cutoff");
+                        auto_param_req = Some("cutoff".to_string());
                     }
                     if ui.selectable_label(false, "📈 Resonance").clicked() {
-                        self.open_track_automation_editor(cur_track_id, "resonance");
+                        auto_param_req = Some("resonance".to_string());
                     }
                     if ui.selectable_label(false, "📈 Decay Time").clicked() {
-                        self.open_track_automation_editor(cur_track_id, "decay");
+                        auto_param_req = Some("decay".to_string());
                     }
                     if ui.selectable_label(false, "📈 Drive / Saturation").clicked() {
-                        self.open_track_automation_editor(cur_track_id, "drive");
+                        auto_param_req = Some("drive".to_string());
+                    }
+                    let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+                    let cur_kind = self.device_rack_state.selected_node_kind.as_deref()
+                        .or(self.inspector_state.selected_node_kind.as_deref())
+                        .unwrap_or("AetherSynth");
+                    if let Some(desc) = registry.get(cur_kind) {
+                        if !desc.params.is_empty() {
+                            ui.separator();
+                            ui.label(RichText::new(format!("{} {}", desc.category.icon(), desc.display_name)).font(FontId::proportional(9.0)).color(Color32::from_rgb(56, 189, 248)));
+                            for p in &desc.params {
+                                if ui.selectable_label(false, format!("📈 {}", p.name)).clicked() {
+                                    auto_param_req = Some(p.id.clone());
+                                }
+                            }
+                        }
                     }
                 });
+            if let Some(param) = auto_param_req {
+                self.open_track_automation_editor(cur_track_id, &param);
+            }
 
             ui.add_space(4.0);
 
@@ -1917,7 +1936,7 @@ impl AwardWinningGuiView {
 
             ui.add_space(4.0);
 
-            // 1-Click Pro View Launchers
+            // 1-Click Pro View Launchers (Full 4-Way Pro Parity)
             if ui.button(RichText::new("📋 Arranger").font(FontId::proportional(10.0)).color(Color32::from_rgb(200, 215, 235))).clicked() {
                 self.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::Arranger;
             }
@@ -1927,32 +1946,54 @@ impl AwardWinningGuiView {
             if ui.button(RichText::new("🎚 Mixer").font(FontId::proportional(10.0)).color(Color32::from_rgb(200, 215, 235))).clicked() {
                 self.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::Mixer;
             }
+            if ui.button(RichText::new("🎭 Stage").font(FontId::proportional(10.0)).color(Color32::from_rgb(200, 215, 235))).clicked() {
+                self.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::Performance;
+            }
 
             ui.add_space(4.0);
 
             // 1-Click Live Parameter Automation Launcher
+            let mut pr_auto_param_req: Option<String> = None;
             egui::ComboBox::from_id_source("piano_roll_auto_selector")
                 .selected_text(RichText::new("📈 Auto ▾").font(FontId::proportional(10.0)).color(Color32::from_rgb(234, 179, 8)))
                 .show_ui(ui, |ui| {
                     if ui.selectable_label(false, "📈 Cutoff (Filter)").clicked() {
-                        self.open_track_automation_editor(cur_track_id, "cutoff");
+                        pr_auto_param_req = Some("cutoff".to_string());
                     }
                     if ui.selectable_label(false, "📈 Pitch Bend").clicked() {
-                        self.open_track_automation_editor(cur_track_id, "pitch");
+                        pr_auto_param_req = Some("pitch".to_string());
                     }
                     if ui.selectable_label(false, "📈 Modulation Wheel").clicked() {
-                        self.open_track_automation_editor(cur_track_id, "mod");
+                        pr_auto_param_req = Some("mod".to_string());
                     }
                     if ui.selectable_label(false, "📈 Note Velocity").clicked() {
-                        self.open_track_automation_editor(cur_track_id, "velocity");
+                        pr_auto_param_req = Some("velocity".to_string());
                     }
                     if ui.selectable_label(false, "📈 Volume Gain").clicked() {
-                        self.open_track_automation_editor(cur_track_id, "gain");
+                        pr_auto_param_req = Some("gain".to_string());
                     }
                     if ui.selectable_label(false, "📈 Stereo Pan").clicked() {
-                        self.open_track_automation_editor(cur_track_id, "pan");
+                        pr_auto_param_req = Some("pan".to_string());
+                    }
+                    let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+                    let cur_kind = self.device_rack_state.selected_node_kind.as_deref()
+                        .or(self.inspector_state.selected_node_kind.as_deref())
+                        .unwrap_or("AetherSynth");
+                    if let Some(desc) = registry.get(cur_kind) {
+                        if !desc.params.is_empty() {
+                            ui.separator();
+                            ui.label(RichText::new(format!("{} {}", desc.category.icon(), desc.display_name)).font(FontId::proportional(9.0)).color(Color32::from_rgb(56, 189, 248)));
+                            for p in &desc.params {
+                                if ui.selectable_label(false, format!("📈 {}", p.name)).clicked() {
+                                    pr_auto_param_req = Some(p.id.clone());
+                                }
+                            }
+                        }
                     }
                 });
+            if let Some(param) = pr_auto_param_req {
+                self.open_track_automation_editor(cur_track_id, &param);
+            }
 
             ui.add_space(4.0);
 
@@ -6710,34 +6751,53 @@ impl AwardWinningGuiView {
             ui.add_space(4.0);
 
             // 1-Click Live Parameter Automation Launcher
+            let mut stg_auto_param_req: Option<String> = None;
             egui::ComboBox::from_id_source("stage_auto_selector")
                 .selected_text(RichText::new("📈 Auto ▾").font(FontId::proportional(10.0)).color(Color32::from_rgb(234, 179, 8)))
                 .show_ui(ui, |ui| {
                     if ui.selectable_label(false, "📈 Gain (Volume)").clicked() {
-                        self.open_track_automation_editor(cur_track_id, "gain");
+                        stg_auto_param_req = Some("gain".to_string());
                     }
                     if ui.selectable_label(false, "📈 Stereo Pan").clicked() {
-                        self.open_track_automation_editor(cur_track_id, "pan");
+                        stg_auto_param_req = Some("pan".to_string());
                     }
                     if ui.selectable_label(false, "📈 Mute Gate").clicked() {
-                        self.open_track_automation_editor(cur_track_id, "mute");
+                        stg_auto_param_req = Some("mute".to_string());
                     }
                     if ui.selectable_label(false, "📈 Solo Audition").clicked() {
-                        self.open_track_automation_editor(cur_track_id, "solo");
+                        stg_auto_param_req = Some("solo".to_string());
                     }
                     if ui.selectable_label(false, "📈 Filter Cutoff").clicked() {
-                        self.open_track_automation_editor(cur_track_id, "cutoff");
+                        stg_auto_param_req = Some("cutoff".to_string());
                     }
                     if ui.selectable_label(false, "📈 Resonance").clicked() {
-                        self.open_track_automation_editor(cur_track_id, "resonance");
+                        stg_auto_param_req = Some("resonance".to_string());
                     }
                     if ui.selectable_label(false, "📈 Decay Time").clicked() {
-                        self.open_track_automation_editor(cur_track_id, "decay");
+                        stg_auto_param_req = Some("decay".to_string());
                     }
                     if ui.selectable_label(false, "📈 Drive / Saturator").clicked() {
-                        self.open_track_automation_editor(cur_track_id, "drive");
+                        stg_auto_param_req = Some("drive".to_string());
+                    }
+                    let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+                    let cur_kind = self.device_rack_state.selected_node_kind.as_deref()
+                        .or(self.inspector_state.selected_node_kind.as_deref())
+                        .unwrap_or("AetherSynth");
+                    if let Some(desc) = registry.get(cur_kind) {
+                        if !desc.params.is_empty() {
+                            ui.separator();
+                            ui.label(RichText::new(format!("{} {}", desc.category.icon(), desc.display_name)).font(FontId::proportional(9.0)).color(Color32::from_rgb(56, 189, 248)));
+                            for p in &desc.params {
+                                if ui.selectable_label(false, format!("📈 {}", p.name)).clicked() {
+                                    stg_auto_param_req = Some(p.id.clone());
+                                }
+                            }
+                        }
                     }
                 });
+            if let Some(param) = stg_auto_param_req {
+                self.open_track_automation_editor(cur_track_id, &param);
+            }
 
             ui.add_space(4.0);
 
