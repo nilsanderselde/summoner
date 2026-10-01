@@ -34,6 +34,10 @@ pub struct TrackVisualData {
     pub clips: Vec<ArrangerClipVisual>,
     #[serde(default)]
     pub active_clip_idx: Option<usize>,
+    #[serde(default)]
+    pub device_names: Vec<String>,
+    #[serde(default)]
+    pub device_kinds: Vec<String>,
 }
 
 /// Interactive Arranger Clip visual data representation supporting slicing, trimming, and crossfading.
@@ -155,6 +159,24 @@ impl StageLaunchQuantize {
 }
 
 impl TrackVisualData {
+    /// Ensure the track has at least one active DSP device in its inventory.
+    pub fn ensure_devices(&mut self) {
+        if self.device_names.is_empty() {
+            self.device_names.push("AetherSynth".to_string());
+            self.device_kinds.push("AetherSynth".to_string());
+        }
+    }
+
+    /// Return the primary/first DSP device display name for this track.
+    pub fn primary_device_name(&self) -> &str {
+        self.device_names.first().map(|s| s.as_str()).unwrap_or("Synth")
+    }
+
+    /// Return the primary/first DSP device kind identifier for this track.
+    pub fn primary_device_kind(&self) -> &str {
+        self.device_kinds.first().map(|s| s.as_str()).unwrap_or("AetherSynth")
+    }
+
     /// Ensure the track has at least one active Arranger clip based on defaults.
     pub fn ensure_clips(&mut self) {
         if self.clips.is_empty() && self.clip_length_beats > 0.0 {
@@ -623,6 +645,8 @@ impl AwardWinningGuiView {
                 clip_length_beats: 16.0,
                 clips: Vec::new(),
                 active_clip_idx: None,
+                device_names: vec!["KickDrumNode".to_string()],
+                device_kinds: vec!["KickDrumNode".to_string()],
             },
             TrackVisualData {
                 id: 2,
@@ -638,6 +662,8 @@ impl AwardWinningGuiView {
                 clip_length_beats: 14.0,
                 clips: Vec::new(),
                 active_clip_idx: None,
+                device_names: vec!["SnareDrumNode".to_string()],
+                device_kinds: vec!["SnareDrumNode".to_string()],
             },
             TrackVisualData {
                 id: 3,
@@ -653,6 +679,8 @@ impl AwardWinningGuiView {
                 clip_length_beats: 14.0,
                 clips: Vec::new(),
                 active_clip_idx: None,
+                device_names: vec!["HiHatNode".to_string()],
+                device_kinds: vec!["HiHatNode".to_string()],
             },
             TrackVisualData {
                 id: 4,
@@ -668,6 +696,8 @@ impl AwardWinningGuiView {
                 clip_length_beats: 15.0,
                 clips: Vec::new(),
                 active_clip_idx: None,
+                device_names: vec!["SubharmonicBass".to_string()],
+                device_kinds: vec!["SubharmonicBass".to_string()],
             },
             TrackVisualData {
                 id: 5,
@@ -683,6 +713,8 @@ impl AwardWinningGuiView {
                 clip_length_beats: 12.0,
                 clips: Vec::new(),
                 active_clip_idx: None,
+                device_names: vec!["AetherSynth".to_string()],
+                device_kinds: vec!["AetherSynth".to_string()],
             },
             TrackVisualData {
                 id: 6,
@@ -698,6 +730,8 @@ impl AwardWinningGuiView {
                 clip_length_beats: 10.0,
                 clips: Vec::new(),
                 active_clip_idx: None,
+                device_names: vec!["VocoderNode".to_string()],
+                device_kinds: vec!["VocoderNode".to_string()],
             },
             TrackVisualData {
                 id: 7,
@@ -713,6 +747,8 @@ impl AwardWinningGuiView {
                 clip_length_beats: 10.0,
                 clips: Vec::new(),
                 active_clip_idx: None,
+                device_names: vec!["ArpeggiatorSynth".to_string()],
+                device_kinds: vec!["ArpeggiatorSynth".to_string()],
             },
             TrackVisualData {
                 id: 8,
@@ -728,6 +764,8 @@ impl AwardWinningGuiView {
                 clip_length_beats: 9.0,
                 clips: Vec::new(),
                 active_clip_idx: None,
+                device_names: vec!["PlateReverbNode".to_string()],
+                device_kinds: vec!["PlateReverbNode".to_string()],
             },
         ];
 
@@ -1418,16 +1456,32 @@ impl AwardWinningGuiView {
                         auto_param_req = Some("drive".to_string());
                     }
                     let registry = crate::dsp_node_ui::DspNodeRegistry::new();
-                    let cur_kind = self.device_rack_state.selected_node_kind.as_deref()
-                        .or(self.inspector_state.selected_node_kind.as_deref())
-                        .unwrap_or("AetherSynth");
-                    if let Some(desc) = registry.get(cur_kind) {
-                        if !desc.params.is_empty() {
-                            ui.separator();
-                            ui.label(RichText::new(format!("{} {}", desc.category.icon(), desc.display_name)).font(FontId::proportional(9.0)).color(Color32::from_rgb(56, 189, 248)));
-                            for p in &desc.params {
-                                if ui.selectable_label(false, format!("📈 {}", p.name)).clicked() {
-                                    auto_param_req = Some(p.id.clone());
+                    if !self.device_rack_state.chain_devices.is_empty() {
+                        for (slot_idx, dev) in self.device_rack_state.chain_devices.iter().enumerate() {
+                            if let Some(desc) = registry.get(&dev.kind) {
+                                if !desc.params.is_empty() {
+                                    ui.separator();
+                                    ui.label(RichText::new(format!("{} {}. {}", desc.category.icon(), slot_idx + 1, dev.display_name)).font(FontId::proportional(9.0)).color(Color32::from_rgb(56, 189, 248)));
+                                    for p in &desc.params {
+                                        if ui.selectable_label(false, format!("📈 {}", p.name)).clicked() {
+                                            auto_param_req = Some(format!("node_{}_{}", slot_idx, p.id));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        let cur_kind = self.device_rack_state.selected_node_kind.as_deref()
+                            .or(self.inspector_state.selected_node_kind.as_deref())
+                            .unwrap_or("AetherSynth");
+                        if let Some(desc) = registry.get(cur_kind) {
+                            if !desc.params.is_empty() {
+                                ui.separator();
+                                ui.label(RichText::new(format!("{} {}", desc.category.icon(), desc.display_name)).font(FontId::proportional(9.0)).color(Color32::from_rgb(56, 189, 248)));
+                                for p in &desc.params {
+                                    if ui.selectable_label(false, format!("📈 {}", p.name)).clicked() {
+                                        auto_param_req = Some(p.id.clone());
+                                    }
                                 }
                             }
                         }
@@ -1625,6 +1679,10 @@ impl AwardWinningGuiView {
                                     selected_idx = Some(idx);
                                     self.selected_track_idx = idx;
                                     track_to_open_auto = Some(track.id);
+                                } else if is_pro && Rect::from_min_size(egui::pos2(head_rect.left() + 18.0, head_rect.top() + 18.0), Vec2::new(48.0, 10.0)).contains(pos) && is_click {
+                                    selected_idx = Some(idx);
+                                    self.selected_track_idx = idx;
+                                    self.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::Modular;
                                 } else if pill_rect.expand(4.0).contains(pos) {
                                     if is_double {
                                         track.gain = 1.0;
@@ -1680,9 +1738,21 @@ impl AwardWinningGuiView {
                     } else {
                         track.name.clone()
                     };
-                    painter.text(egui::pos2(head_rect.left() + 18.0, head_rect.center().y), egui::Align2::LEFT_CENTER, &name_str, FontId::proportional(10.5), Color32::from_rgb(241, 245, 249));
+                    let name_pos = if is_pro {
+                        egui::pos2(head_rect.left() + 18.0, head_rect.top() + 6.0)
+                    } else {
+                        egui::pos2(head_rect.left() + 18.0, head_rect.center().y)
+                    };
+                    painter.text(name_pos, if is_pro { egui::Align2::LEFT_TOP } else { egui::Align2::LEFT_CENTER }, &name_str, FontId::proportional(10.0), Color32::from_rgb(241, 245, 249));
 
                     if is_pro {
+                        let dev_chip_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 18.0, head_rect.top() + 18.0), Vec2::new(48.0, 10.0));
+                        let d_name = track.primary_device_name();
+                        let d_short = if d_name.len() > 6 { format!("{}..", &d_name[..5]) } else { d_name.to_string() };
+                        painter.rect_filled(dev_chip_rect, 2.0, Color32::from_rgb(18, 24, 38));
+                        painter.rect_stroke(dev_chip_rect, 2.0, Stroke::new(0.8_f32, Color32::from_rgb(56, 189, 248)));
+                        painter.text(dev_chip_rect.center(), egui::Align2::CENTER_CENTER, format!("🎛 {}", d_short), FontId::proportional(6.5), Color32::from_rgb(186, 230, 253));
+
                         let m_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 70.0, head_rect.center().y - 8.0), Vec2::new(16.0, 16.0));
                         let s_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 88.0, head_rect.center().y - 8.0), Vec2::new(16.0, 16.0));
                         let a_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 106.0, head_rect.center().y - 8.0), Vec2::new(16.0, 16.0));
@@ -2014,16 +2084,32 @@ impl AwardWinningGuiView {
                         pr_auto_param_req = Some("pan".to_string());
                     }
                     let registry = crate::dsp_node_ui::DspNodeRegistry::new();
-                    let cur_kind = self.device_rack_state.selected_node_kind.as_deref()
-                        .or(self.inspector_state.selected_node_kind.as_deref())
-                        .unwrap_or("AetherSynth");
-                    if let Some(desc) = registry.get(cur_kind) {
-                        if !desc.params.is_empty() {
-                            ui.separator();
-                            ui.label(RichText::new(format!("{} {}", desc.category.icon(), desc.display_name)).font(FontId::proportional(9.0)).color(Color32::from_rgb(56, 189, 248)));
-                            for p in &desc.params {
-                                if ui.selectable_label(false, format!("📈 {}", p.name)).clicked() {
-                                    pr_auto_param_req = Some(p.id.clone());
+                    if !self.device_rack_state.chain_devices.is_empty() {
+                        for (slot_idx, dev) in self.device_rack_state.chain_devices.iter().enumerate() {
+                            if let Some(desc) = registry.get(&dev.kind) {
+                                if !desc.params.is_empty() {
+                                    ui.separator();
+                                    ui.label(RichText::new(format!("{} {}. {}", desc.category.icon(), slot_idx + 1, dev.display_name)).font(FontId::proportional(9.0)).color(Color32::from_rgb(56, 189, 248)));
+                                    for p in &desc.params {
+                                        if ui.selectable_label(false, format!("📈 {}", p.name)).clicked() {
+                                            pr_auto_param_req = Some(format!("node_{}_{}", slot_idx, p.id));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        let cur_kind = self.device_rack_state.selected_node_kind.as_deref()
+                            .or(self.inspector_state.selected_node_kind.as_deref())
+                            .unwrap_or("AetherSynth");
+                        if let Some(desc) = registry.get(cur_kind) {
+                            if !desc.params.is_empty() {
+                                ui.separator();
+                                ui.label(RichText::new(format!("{} {}", desc.category.icon(), desc.display_name)).font(FontId::proportional(9.0)).color(Color32::from_rgb(56, 189, 248)));
+                                for p in &desc.params {
+                                    if ui.selectable_label(false, format!("📈 {}", p.name)).clicked() {
+                                        pr_auto_param_req = Some(p.id.clone());
+                                    }
                                 }
                             }
                         }
@@ -3517,17 +3603,48 @@ impl AwardWinningGuiView {
                 ),
                 other_name => {
                     let registry = crate::dsp_node_ui::DspNodeRegistry::new();
-                    let cur_kind = self.device_rack_state.selected_node_kind.as_deref().unwrap_or("AetherSynth");
+                    let (slot_opt, raw_param_id) = if let Some(rest) = other_name.strip_prefix("node_") {
+                        if let Some((slot_str, p_id)) = rest.split_once('_') {
+                            if let Ok(slot) = slot_str.parse::<usize>() {
+                                (Some(slot), p_id)
+                            } else {
+                                (None, other_name)
+                            }
+                        } else {
+                            (None, other_name)
+                        }
+                    } else {
+                        (None, other_name)
+                    };
+
                     let mut found_desc_and_param = None;
-                    if let Some(desc) = registry.get(cur_kind) {
-                        if let Some(param) = desc.params.iter().find(|p| p.id == other_name) {
-                            found_desc_and_param = Some((desc, param));
+                    let mut custom_title = None;
+                    let mut custom_lane_key = None;
+
+                    if let Some(slot) = slot_opt {
+                        if let Some(dev) = self.device_rack_state.chain_devices.get(slot) {
+                            if let Some(desc) = registry.get(&dev.kind) {
+                                if let Some(param) = desc.params.iter().find(|p| p.id == raw_param_id) {
+                                    custom_title = Some(format!("{} — [{}] {}", track.name, dev.display_name, param.name));
+                                    custom_lane_key = Some(format!("track_{}_node_{}_{}", track_id, slot, param.id));
+                                    found_desc_and_param = Some((desc, param));
+                                }
+                            }
+                        }
+                    }
+
+                    if found_desc_and_param.is_none() {
+                        let cur_kind = self.device_rack_state.selected_node_kind.as_deref().unwrap_or("AetherSynth");
+                        if let Some(desc) = registry.get(cur_kind) {
+                            if let Some(param) = desc.params.iter().find(|p| p.id == raw_param_id) {
+                                found_desc_and_param = Some((desc, param));
+                            }
                         }
                     }
                     if found_desc_and_param.is_none() {
                         if let Some(ref insp_kind) = self.inspector_state.selected_node_kind {
                             if let Some(desc) = registry.get(insp_kind) {
-                                if let Some(param) = desc.params.iter().find(|p| p.id == other_name) {
+                                if let Some(param) = desc.params.iter().find(|p| p.id == raw_param_id) {
                                     found_desc_and_param = Some((desc, param));
                                 }
                             }
@@ -3536,7 +3653,7 @@ impl AwardWinningGuiView {
                     if found_desc_and_param.is_none() {
                         for mod_node in &self.modular_nodes {
                             if let Some(desc) = registry.get(&mod_node.kind_id) {
-                                if let Some(param) = desc.params.iter().find(|p| p.id == other_name) {
+                                if let Some(param) = desc.params.iter().find(|p| p.id == raw_param_id) {
                                     found_desc_and_param = Some((desc, param));
                                     break;
                                 }
@@ -3545,7 +3662,7 @@ impl AwardWinningGuiView {
                     }
                     if found_desc_and_param.is_none() {
                         for desc in registry.list_all() {
-                            if let Some(param) = desc.params.iter().find(|p| p.id == other_name) {
+                            if let Some(param) = desc.params.iter().find(|p| p.id == raw_param_id) {
                                 found_desc_and_param = Some((desc, param));
                                 break;
                             }
@@ -3560,22 +3677,22 @@ impl AwardWinningGuiView {
                             crate::dsp_node_ui::DspWidgetKind::EnumChoice { .. } => (0.0, 1.0, "enum".to_string()),
                             _ => (0.0, 1.0, String::new()),
                         };
-                        let norm_v = self.device_rack_state.node_param_values.get(other_name).copied()
-                            .or_else(|| self.inspector_state.node_param_values.get(other_name).copied())
+                        let norm_v = self.device_rack_state.node_param_values.get(raw_param_id).copied()
+                            .or_else(|| self.inspector_state.node_param_values.get(raw_param_id).copied())
                             .map(|v| ((v - min_v) / (max_v - min_v).max(1e-5)).clamp(0.0, 1.0))
                             .unwrap_or(0.5);
                         (
-                            format!("track_{}_{}", track_id, param.id),
-                            format!("{} — {}", track.name, param.name),
+                            custom_lane_key.unwrap_or_else(|| format!("track_{}_{}", track_id, param.id)),
+                            custom_title.unwrap_or_else(|| format!("{} — {}", track.name, param.name)),
                             min_v,
                             max_v,
                             unit_s,
                             norm_v,
                         )
-                    } else if let Some(&active_val) = self.device_rack_state.node_param_values.get(other_name).or_else(|| self.inspector_state.node_param_values.get(other_name)) {
+                    } else if let Some(&active_val) = self.device_rack_state.node_param_values.get(raw_param_id).or_else(|| self.inspector_state.node_param_values.get(raw_param_id)) {
                         (
-                            format!("track_{}_{}", track_id, other_name),
-                            format!("{} — {}", track.name, other_name),
+                            custom_lane_key.unwrap_or_else(|| format!("track_{}_{}", track_id, raw_param_id)),
+                            custom_title.unwrap_or_else(|| format!("{} — {}", track.name, raw_param_id)),
                             0.0_f32,
                             1.0_f32,
                             "%".to_string(),
@@ -3992,6 +4109,7 @@ impl AwardWinningGuiView {
                     [239, 68, 68],    // Red
                     [14, 165, 233],   // Sky
                 ];
+                let registry = crate::dsp_node_ui::DspNodeRegistry::new();
                 self.tracks = project.tracks.iter().enumerate().map(|(i, t)| {
                     let color = t.color.unwrap_or_else(|| default_colors[i % default_colors.len()]);
                     let (clip_start, clip_len) = if let Some(ref seq) = t.sequence {
@@ -4005,6 +4123,10 @@ impl AwardWinningGuiView {
                         let k = n.kind.to_lowercase();
                         k.contains("audio") || k.contains("sample") || k.contains("wav")
                     });
+                    let (device_names, device_kinds): (Vec<String>, Vec<String>) = t.nodes.iter().map(|n| {
+                        let disp = registry.get(&n.kind).map(|d| d.display_name.clone()).unwrap_or_else(|| n.kind.clone());
+                        (disp, n.kind.clone())
+                    }).unzip();
                     let mut clips = Vec::new();
                     for (c_i, c) in t.clips.iter().enumerate() {
                         clips.push(ArrangerClipVisual {
@@ -4044,19 +4166,28 @@ impl AwardWinningGuiView {
                         clip_length_beats: clip_len,
                         clips,
                         active_clip_idx: None,
+                        device_names,
+                        device_kinds,
                     }
                 }).collect();
                 self.last_selected_track_idx = usize::MAX;
                 self.last_synced_track_notes_idx = usize::MAX;
             } else {
                 // Bi-directional parameter sync: push view track mutations to project tracks
+                let registry = crate::dsp_node_ui::DspNodeRegistry::new();
                 for t in &mut project.tracks {
-                    if let Some(vt) = self.tracks.iter().find(|v| v.id == t.id) {
+                    if let Some(vt) = self.tracks.iter_mut().find(|v| v.id == t.id) {
                         t.gain = vt.gain;
                         t.pan = vt.pan;
                         t.muted = vt.is_muted;
                         t.soloed = vt.is_soloed;
                         t.record_armed = vt.is_armed;
+                        let (d_names, d_kinds): (Vec<String>, Vec<String>) = t.nodes.iter().map(|n| {
+                            let disp = registry.get(&n.kind).map(|d| d.display_name.clone()).unwrap_or_else(|| n.kind.clone());
+                            (disp, n.kind.clone())
+                        }).unzip();
+                        vt.device_names = d_names;
+                        vt.device_kinds = d_kinds;
                     }
                 }
             }
@@ -4526,6 +4657,8 @@ impl AwardWinningGuiView {
                     clip_length_beats: dt.clip_length_beats as f32,
                     clips: Vec::new(),
                     active_clip_idx: None,
+                    device_names: vec!["AetherSynth".to_string()],
+                    device_kinds: vec!["AetherSynth".to_string()],
                 });
 
                 if idx == 0 {
@@ -4621,7 +4754,8 @@ impl AwardWinningGuiView {
             ];
             for (key, val_ref) in standard_keys {
                 let lane_key = format!("track_{}_{}", track_id, key);
-                if let Some(val) = automation_timeline.evaluate(&lane_key, playhead_beat) {
+                let slot_lane_key = format!("track_{}_node_{}_{}", track_id, self.device_rack_state.selected_chain_idx, key);
+                if let Some(val) = automation_timeline.evaluate(&slot_lane_key, playhead_beat).or_else(|| automation_timeline.evaluate(&lane_key, playhead_beat)) {
                     *val_ref = val;
                     self.device_rack_state.node_param_values.insert(key.to_string(), val);
                 }
@@ -4629,7 +4763,8 @@ impl AwardWinningGuiView {
 
             for (k, v) in &mut self.device_rack_state.node_param_values {
                 let lane_key = format!("track_{}_{}", track_id, k);
-                if let Some(val) = automation_timeline.evaluate(&lane_key, playhead_beat) {
+                let slot_lane_key = format!("track_{}_node_{}_{}", track_id, self.device_rack_state.selected_chain_idx, k);
+                if let Some(val) = automation_timeline.evaluate(&slot_lane_key, playhead_beat).or_else(|| automation_timeline.evaluate(&lane_key, playhead_beat)) {
                     *v = val;
                 }
             }
@@ -4743,12 +4878,21 @@ impl AwardWinningGuiView {
                 if param_bus.get(pid).is_some() {
                     param_bus.set(pid, val);
                 }
+                let slot_pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + (self.device_rack_state.selected_chain_idx as u32 * 20) + p_i as u32);
+                if param_bus.get(slot_pid).is_some() {
+                    param_bus.set(slot_pid, val);
+                }
 
                 let auto_key = format!("track_{}_{}", track_id, schema.id);
+                let slot_auto_key = format!("track_{}_node_{}_{}", track_id, self.device_rack_state.selected_chain_idx, schema.id);
                 if automation_registry.get_param(&auto_key).is_none() {
                     automation_registry.register_param(&auto_key, val);
                 }
                 automation_registry.set(&auto_key, val);
+                if automation_registry.get_param(&slot_auto_key).is_none() {
+                    automation_registry.register_param(&slot_auto_key, val);
+                }
+                automation_registry.set(&slot_auto_key, val);
 
                 if is_recording_automation {
                     let point = summoner_sequencer::automation_timeline::AutomationPoint {
@@ -4756,15 +4900,17 @@ impl AwardWinningGuiView {
                         value: val,
                         interp: summoner_sequencer::automation_timeline::Interpolation::Linear,
                     };
-                    let lane = automation_timeline.lanes.entry(auto_key.clone()).or_insert_with(|| {
-                        summoner_sequencer::automation_timeline::AutomationLane {
-                            param_id: auto_key.clone(),
-                            curve: summoner_sequencer::automation_timeline::AutomationCurve { points: Vec::new() },
+                    for key in [&auto_key, &slot_auto_key] {
+                        let lane = automation_timeline.lanes.entry(key.clone()).or_insert_with(|| {
+                            summoner_sequencer::automation_timeline::AutomationLane {
+                                param_id: key.clone(),
+                                curve: summoner_sequencer::automation_timeline::AutomationCurve { points: Vec::new() },
+                            }
+                        });
+                        match lane.curve.points.binary_search_by(|p| p.beat.partial_cmp(&playhead_beat).unwrap()) {
+                            Ok(idx) => lane.curve.points[idx] = point,
+                            Err(idx) => lane.curve.points.insert(idx, point),
                         }
-                    });
-                    match lane.curve.points.binary_search_by(|p| p.beat.partial_cmp(&playhead_beat).unwrap()) {
-                        Ok(idx) => lane.curve.points[idx] = point,
-                        Err(idx) => lane.curve.points.insert(idx, point),
                     }
                 }
             }
@@ -5603,16 +5749,32 @@ impl AwardWinningGuiView {
                                 }
                             }
                             let registry = crate::dsp_node_ui::DspNodeRegistry::new();
-                            let cur_kind = self.device_rack_state.selected_node_kind.as_deref()
-                                .or(self.inspector_state.selected_node_kind.as_deref())
-                                .unwrap_or("AetherSynth");
-                            if let Some(desc) = registry.get(cur_kind) {
-                                if !desc.params.is_empty() {
-                                    ui.separator();
-                                    ui.label(RichText::new(format!("{} {}", desc.category.icon(), desc.display_name)).font(FontId::proportional(9.0)).color(Color32::from_rgb(56, 189, 248)));
-                                    for p in &desc.params {
-                                        if ui.selectable_label(false, format!("📈 {}", p.name)).clicked() {
-                                            auto_req = Some((cur_tid, p.id.clone()));
+                            if !self.device_rack_state.chain_devices.is_empty() {
+                                for (slot_idx, dev) in self.device_rack_state.chain_devices.iter().enumerate() {
+                                    if let Some(desc) = registry.get(&dev.kind) {
+                                        if !desc.params.is_empty() {
+                                            ui.separator();
+                                            ui.label(RichText::new(format!("{} {}. {}", desc.category.icon(), slot_idx + 1, dev.display_name)).font(FontId::proportional(9.0)).color(Color32::from_rgb(56, 189, 248)));
+                                            for p in &desc.params {
+                                                if ui.selectable_label(false, format!("📈 {}", p.name)).clicked() {
+                                                    auto_req = Some((cur_tid, format!("node_{}_{}", slot_idx, p.id)));
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            } else {
+                                let cur_kind = self.device_rack_state.selected_node_kind.as_deref()
+                                    .or(self.inspector_state.selected_node_kind.as_deref())
+                                    .unwrap_or("AetherSynth");
+                                if let Some(desc) = registry.get(cur_kind) {
+                                    if !desc.params.is_empty() {
+                                        ui.separator();
+                                        ui.label(RichText::new(format!("{} {}", desc.category.icon(), desc.display_name)).font(FontId::proportional(9.0)).color(Color32::from_rgb(56, 189, 248)));
+                                        for p in &desc.params {
+                                            if ui.selectable_label(false, format!("📈 {}", p.name)).clicked() {
+                                                auto_req = Some((cur_tid, p.id.clone()));
+                                            }
                                         }
                                     }
                                 }
@@ -6752,6 +6914,11 @@ impl AwardWinningGuiView {
                                 } else if s_rect.contains(pos) && is_click {
                                     track.is_soloed = !track.is_soloed;
                                     selected_idx = Some(idx);
+                                } else if is_pro && Rect::from_min_size(egui::pos2(strip_rect.left() + 4.0, s_rect.bottom() + 3.0), Vec2::new(strip_rect.width() - 8.0, 14.0)).contains(pos) && is_click {
+                                    selected_idx = Some(idx);
+                                    if is_double {
+                                        track_to_open_auto = Some(track.id);
+                                    }
                                 } else if pos.y >= fader_top - 6.0 && pos.y <= fader_bot + 6.0 {
                                     if is_double {
                                         track.gain = 1.0; // Double click resets to 0.0 dB unity
@@ -6845,8 +7012,20 @@ impl AwardWinningGuiView {
                     painter.rect_filled(s_rect, 2.0, if track.is_soloed { Color32::from_rgb(234, 179, 8) } else { Color32::from_rgb(24, 34, 50) });
                     painter.text(s_rect.center(), egui::Align2::CENTER_CENTER, "S", FontId::proportional(8.0), Color32::WHITE);
 
-                    // Fader Slot & Thumb
-                    let fader_top = s_rect.bottom() + 10.0;
+                    // DSP Insert Chip in Pro Mode
+                    let fader_top = if is_pro {
+                        let inserts_top = s_rect.bottom() + 3.0;
+                        let inserts_h = 14.0;
+                        let chip_rect = Rect::from_min_size(egui::pos2(strip_rect.left() + 4.0, inserts_top), Vec2::new(strip_rect.width() - 8.0, inserts_h));
+                        let dev_disp = track.primary_device_name();
+                        let dev_short = if dev_disp.len() > 6 { format!("{}..", &dev_disp[..5]) } else { dev_disp.to_string() };
+                        painter.rect_filled(chip_rect, 2.0, if is_sel { Color32::from_rgb(28, 40, 64) } else { Color32::from_rgb(18, 24, 38) });
+                        painter.rect_stroke(chip_rect, 2.0, Stroke::new(1.0_f32, if is_sel { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(40, 56, 80) }));
+                        painter.text(chip_rect.center(), egui::Align2::CENTER_CENTER, format!("🎛 {}", dev_short), FontId::proportional(7.5), Color32::from_rgb(220, 230, 245));
+                        inserts_top + inserts_h + 5.0
+                    } else {
+                        s_rect.bottom() + 10.0
+                    };
                     let fader_bot = strip_rect.bottom() - 20.0;
                     let fader_x = strip_rect.left() + strip_rect.width() * 0.35;
                     painter.line_segment([egui::pos2(fader_x, fader_top), egui::pos2(fader_x, fader_bot)], Stroke::new(2.0_f32, Color32::from_rgb(8, 12, 18)));
@@ -7036,16 +7215,32 @@ impl AwardWinningGuiView {
                         stg_auto_param_req = Some("drive".to_string());
                     }
                     let registry = crate::dsp_node_ui::DspNodeRegistry::new();
-                    let cur_kind = self.device_rack_state.selected_node_kind.as_deref()
-                        .or(self.inspector_state.selected_node_kind.as_deref())
-                        .unwrap_or("AetherSynth");
-                    if let Some(desc) = registry.get(cur_kind) {
-                        if !desc.params.is_empty() {
-                            ui.separator();
-                            ui.label(RichText::new(format!("{} {}", desc.category.icon(), desc.display_name)).font(FontId::proportional(9.0)).color(Color32::from_rgb(56, 189, 248)));
-                            for p in &desc.params {
-                                if ui.selectable_label(false, format!("📈 {}", p.name)).clicked() {
-                                    stg_auto_param_req = Some(p.id.clone());
+                    if !self.device_rack_state.chain_devices.is_empty() {
+                        for (slot_idx, dev) in self.device_rack_state.chain_devices.iter().enumerate() {
+                            if let Some(desc) = registry.get(&dev.kind) {
+                                if !desc.params.is_empty() {
+                                    ui.separator();
+                                    ui.label(RichText::new(format!("{} {}. {}", desc.category.icon(), slot_idx + 1, dev.display_name)).font(FontId::proportional(9.0)).color(Color32::from_rgb(56, 189, 248)));
+                                    for p in &desc.params {
+                                        if ui.selectable_label(false, format!("📈 {}", p.name)).clicked() {
+                                            stg_auto_param_req = Some(format!("node_{}_{}", slot_idx, p.id));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        let cur_kind = self.device_rack_state.selected_node_kind.as_deref()
+                            .or(self.inspector_state.selected_node_kind.as_deref())
+                            .unwrap_or("AetherSynth");
+                        if let Some(desc) = registry.get(cur_kind) {
+                            if !desc.params.is_empty() {
+                                ui.separator();
+                                ui.label(RichText::new(format!("{} {}", desc.category.icon(), desc.display_name)).font(FontId::proportional(9.0)).color(Color32::from_rgb(56, 189, 248)));
+                                for p in &desc.params {
+                                    if ui.selectable_label(false, format!("📈 {}", p.name)).clicked() {
+                                        stg_auto_param_req = Some(p.id.clone());
+                                    }
                                 }
                             }
                         }

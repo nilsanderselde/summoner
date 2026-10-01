@@ -1,6 +1,6 @@
 # Summoner DAW — Product Readiness & Shippability Tracker
 > **Current Shippability Score:** 10.0 / 10  
-> **Status:** Production Ready Release Candidate (Sprint Review Turn #36)  
+> **Status:** Production Ready Release Candidate (Sprint Review Turn #42 / Turn #9)  
 > **Authoritative Root:** `PROGRESS.md`  
 > **License:** AGPLv3
 
@@ -958,6 +958,40 @@ Product Management has conducted a comprehensive readiness audit:
   - Incremental compilation: 0.23s (`cargo check -p summoner_gui`).
   - Unit tests: 309 pure tests passed in 0.23s (`cargo test -p summoner_gui`), and 9 passed in `tier106_turn41_tests`.
   - Clippy: 0 warnings (`cargo clippy -p summoner_gui -- -D warnings`).
+
+### Turn #42 (Turn #9 — Sprint Review) — Multi-Node Device Chain Automation Bridge, Arranger/Mixer Insert Chips & Shippability Audit
+- [x] Multi-Node Track DSP Device Chain Automation Bridge (Milestone 33):
+  - In `AwardWinningGuiView`, upgraded `open_track_automation_editor`:
+    * Parses `node_{slot}_{param}` prefix and maps to `track_{track_id}_node_{slot}_{param_id}`.
+    * Queries the specific device at `chain_devices[slot]` and matches against `DspNodeRegistry`.
+    * Creates custom title format: `{track_name} — [{device_display_name}] {param_name}`.
+    * Sets up custom value bounds, unit display, and normalized values matching the node's schema.
+  - Exposes every device's parameters in all 4 operational view auto-selectors (`arranger_auto_selector`, `piano_roll_auto_selector`, `modular_auto_selector`, `stage_auto_selector`):
+    * Iterates over `device_rack_state.chain_devices`, categorizing parameters by slot: `{icon} {slot + 1}. {device_name}`.
+    * Clicking any parameter dispatches `node_{slot}_{param_id}` directly into the live Bézier automation modal editor.
+- [x] Multi-Device Visual Model in TrackVisualData:
+  - Added `device_names: Vec<String>` and `device_kinds: Vec<String>` with `#[serde(default)]` to `TrackVisualData`.
+  - Added helper methods `ensure_devices()`, `primary_device_name()`, and `primary_device_kind()`.
+  - Populates realistic multi-device chains in default templates (`AwardWinningGuiView::new()` and `load_factory_demo_template`).
+  - Upgraded `sync_with_project` to populate and synchronize `(device_names, device_kinds)` dynamically from `t.nodes`.
+- [x] Arranger Track Header & Mixer Channel Strip DSP Device Insert Chips (Pro Mode):
+  - Arranger: Added compact primary DSP device chip (`[🎛 {device_name}]`) with 1-click jump to Modular/Inspector DAG view and right-click to open automation.
+  - Mixer: Added compact DSP insert chip (`[🎛 {device_name}]`) between Solo button and Volume Fader with click-to-select and double-click to open live parameter automation.
+- [x] Lockstep ParamBus Multi-Node Playback Evaluation & Live Recording:
+  - In `sync_with_param_bus`, added `slot_lane_key` (`track_{track_id}_node_{slot}_{param}`) playback evaluation for standard dials and node parameters, falling back gracefully to `lane_key`.
+  - Dispatches atomic parameter values directly to slot channel `ParamId(track_id * 1000 + slot * 20 + p_i)` without heap allocation on the audio thread.
+  - Records real-time automation points into both `auto_key` and `slot_auto_key` lanes simultaneously during live performance.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier107_turn42_tests.rs`:
+    * Pure test: `test_turn42_pure_parambus_multi_node_slot_offsets` (ParamBus register/set/get on slot channels).
+    * Pure test: `test_turn42_pure_multi_node_automation_lane_key_parsing` (parsing `node_{slot}_{param}` and formatting lane keys).
+    * Pure test: `test_turn42_pure_timeline_evaluation_with_slot_keys` (slot automation curves evaluation and fallback).
+    * Pure test: `test_turn42_pure_project_track_nodes_multi_device_reconciliation` (track nodes extraction).
+    * GUI tests: `test_turn42_track_visual_data_devices_and_helpers` and `test_turn42_award_winning_gui_view_multi_node_automation_editor_open`.
+  - Registered `tier107_turn42_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Unit tests: 313 pure tests passed in 0.23s (`cargo test -p summoner_gui`).
+  - Incremental compilation: 0.21s (`cargo check -p summoner_gui`).
+
 
 
 
