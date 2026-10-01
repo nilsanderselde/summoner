@@ -244,7 +244,7 @@ mod gui_tests {
         track.ensure_devices();
         assert_eq!(track.device_names.len(), 1);
         assert_eq!(track.device_kinds.len(), 1);
-        assert_eq!(track.primary_device_name(), "Synth");
+        assert_eq!(track.primary_device_name(), "AetherSynth");
         assert_eq!(track.primary_device_kind(), "AetherSynth");
 
         // Mutate with multi-device chain

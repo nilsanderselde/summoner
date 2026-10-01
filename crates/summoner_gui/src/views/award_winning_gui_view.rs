@@ -622,6 +622,7 @@ pub struct AwardWinningGuiView {
     pub modular_add_modal_open: bool,
     pub modular_search_query: String,
     pub modular_selected_category: Option<crate::dsp_node_ui::DspCategory>,
+    pub device_catalog: crate::views::device_catalog::DeviceCatalogView,
     pub piano_roll_tuning: PianoRollTuningSystem,
     pub piano_roll_snap: PianoRollSnapResolution,
     pub piano_roll_resizing_note_id: Option<usize>,
@@ -887,6 +888,7 @@ impl AwardWinningGuiView {
             modular_add_modal_open: false,
             modular_search_query: String::new(),
             modular_selected_category: None,
+            device_catalog: crate::views::device_catalog::DeviceCatalogView::new(),
             piano_roll_tuning: PianoRollTuningSystem::Edo12,
             piano_roll_snap: PianoRollSnapResolution::BeatEighth,
             piano_roll_resizing_note_id: None,
@@ -918,8 +920,16 @@ impl AwardWinningGuiView {
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
         view.device_rack_state.selected_node_kind = Some("AetherSynth".to_string());
+        view.device_rack_state.chain_devices = vec![
+            crate::views::modern_device_rack::RackChainDeviceVisual {
+                kind: "AetherSynth".to_string(),
+                display_name: "Synth".to_string(),
+                is_bypassed: false,
+            },
+        ];
         view.inspector_state.target_name = "Synth 1".to_string();
         view.inspector_state.selected_node_kind = Some("AetherSynth".to_string());
+        view.inspector_state.chain_devices = view.device_rack_state.chain_devices.clone();
         view.last_device_rack_node_kind = Some("AetherSynth".to_string());
         view.last_inspector_node_kind = Some("AetherSynth".to_string());
         view
@@ -5228,7 +5238,9 @@ impl AwardWinningGuiView {
         self.track_phase_inverted.insert(track_id, next);
         if let Some(ref bus) = self.live_param_bus {
             let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 204);
-            bus.set(pid, if next { 1.0 } else { 0.0 });
+            if bus.get(pid).is_some() {
+                bus.set(pid, if next { 1.0 } else { 0.0 });
+            }
         }
         next
     }
@@ -5238,7 +5250,9 @@ impl AwardWinningGuiView {
         self.track_phase_inverted.insert(track_id, inverted);
         if let Some(ref bus) = self.live_param_bus {
             let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 204);
-            bus.set(pid, if inverted { 1.0 } else { 0.0 });
+            if bus.get(pid).is_some() {
+                bus.set(pid, if inverted { 1.0 } else { 0.0 });
+            }
         }
     }
 
@@ -5253,7 +5267,9 @@ impl AwardWinningGuiView {
         self.track_input_trim_db.insert(track_id, clamped);
         if let Some(ref bus) = self.live_param_bus {
             let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 205);
-            bus.set(pid, clamped);
+            if bus.get(pid).is_some() {
+                bus.set(pid, clamped);
+            }
         }
     }
 
@@ -5262,7 +5278,9 @@ impl AwardWinningGuiView {
         self.master_trim_db = trim_db.clamp(-12.0, 12.0);
         if let Some(ref bus) = self.live_param_bus {
             let pid = summoner_core::param_bus::ParamId(9997);
-            bus.set(pid, self.master_trim_db);
+            if bus.get(pid).is_some() {
+                bus.set(pid, self.master_trim_db);
+            }
         }
     }
 
@@ -5423,7 +5441,7 @@ impl AwardWinningGuiView {
             let node_id = format!("node_{}", idx);
             let opt_desc = registry.get(&dev.kind);
             let cat = opt_desc.map(|d| d.category).unwrap_or(crate::dsp_node_ui::DspNodeCategory::Utility);
-            let disp = opt_desc.map(|d| d.display_name.clone()).unwrap_or_else(|| dev.display_name.clone());
+            let disp = format!("{}. {}", idx + 1, dev.display_name);
 
             let mut ports = Vec::new();
             if idx > 0 || cat != crate::dsp_node_ui::DspNodeCategory::Oscillator {
@@ -5860,6 +5878,20 @@ impl AwardWinningGuiView {
         if let Some(desc) = opt_desc {
             for (p_i, schema) in desc.params.iter().enumerate() {
                 let val = self.device_rack_state.node_param_values.get(&schema.id).copied()
+                    .or_else(|| match schema.id.as_str() {
+                        "cutoff" => Some(self.device_rack_state.cutoff),
+                        "resonance" => Some(self.device_rack_state.resonance),
+                        "decay" => Some(self.device_rack_state.decay),
+                        "env_decay" => Some(self.device_rack_state.env_decay),
+                        "mod_amt" => Some(self.device_rack_state.mod_amt),
+                        "drive" => Some(self.device_rack_state.drive),
+                        "volume" => Some(self.device_rack_state.volume),
+                        "osc_mix" => Some(self.device_rack_state.osc_mix),
+                        "shape" => Some(self.device_rack_state.shape),
+                        "lfo_speed" => Some(self.device_rack_state.lfo_speed),
+                        "lfo_depth" => Some(self.device_rack_state.lfo_depth),
+                        _ => None,
+                    })
                     .unwrap_or(match &schema.widget {
                         crate::dsp_node_ui::DspWidgetKind::RotaryKnob { default, .. }
                         | crate::dsp_node_ui::DspWidgetKind::VerticalFader { default, .. } => *default,
@@ -7109,207 +7141,34 @@ impl AwardWinningGuiView {
             return;
         }
 
+        self.device_catalog.is_open = self.modular_add_modal_open;
         let mut is_open = self.modular_add_modal_open;
-        let mut node_to_add_kind: Option<String> = None;
         let mut close_modal = false;
 
-        egui::Window::new("Modular DSP Module Catalog (2,012+ Nodes Registered)")
+        egui::Window::new("🎛 Unified Modular DSP Catalog (1,090+ Registered Modules)")
             .id(egui::Id::new("modular_dsp_catalog_modal"))
             .open(&mut is_open)
-            .default_size([540.0, 420.0])
+            .default_size([720.0, 520.0])
+            .min_size([540.0, 380.0])
             .collapsible(false)
             .resizable(true)
             .show(ui.ctx(), |ui| {
-                ui.horizontal(|ui| {
-                    ui.label(RichText::new("🔍").font(FontId::proportional(12.0)));
-                    ui.add(
-                        egui::TextEdit::singleline(&mut self.modular_search_query)
-                            .hint_text("Search 2,012+ DSP modules by name, kind, or category...")
-                            .desired_width(ui.available_width() - 60.0),
-                    );
-                    if ui.button("Clear").clicked() {
-                        self.modular_search_query.clear();
-                        self.modular_selected_category = None;
-                    }
-                });
-
-                ui.add_space(6.0);
-
-                // Category Filter Bar (Horizontal scroll with category pills)
-                egui::ScrollArea::horizontal()
-                    .id_source("modular_dsp_cat_scroll")
-                    .show(ui, |ui| {
-                        ui.horizontal(|ui| {
-                            let is_all = self.modular_selected_category.is_none();
-                            if ui.selectable_label(is_all, "All Categories").clicked() {
-                                self.modular_selected_category = None;
-                            }
-
-                            let categories = [
-                                crate::dsp_node_ui::DspCategory::Oscillator,
-                                crate::dsp_node_ui::DspCategory::CompositeSynth,
-                                crate::dsp_node_ui::DspCategory::AcousticPhysicalModel,
-                                crate::dsp_node_ui::DspCategory::SamplerSlicer,
-                                crate::dsp_node_ui::DspCategory::FilterEq,
-                                crate::dsp_node_ui::DspCategory::DynamicsMaster,
-                                crate::dsp_node_ui::DspCategory::DistortionSaturation,
-                                crate::dsp_node_ui::DspCategory::Modulation,
-                                crate::dsp_node_ui::DspCategory::TimeSpace,
-                                crate::dsp_node_ui::DspCategory::SpatialSurround,
-                                crate::dsp_node_ui::DspCategory::SpectralResynthesis,
-                                crate::dsp_node_ui::DspCategory::NeuralAi,
-                                crate::dsp_node_ui::DspCategory::Utility,
-                            ];
-
-                            for cat in categories {
-                                let is_sel = self.modular_selected_category == Some(cat);
-                                let label = format!("{} {}", cat.icon(), cat.display_label());
-                                if ui.selectable_label(is_sel, label).clicked() {
-                                    self.modular_selected_category = if is_sel { None } else { Some(cat) };
-                                }
-                            }
-                        });
-                    });
-
-                ui.add_space(6.0);
-                ui.separator();
-                ui.add_space(4.0);
-
-                let registry = crate::dsp_node_ui::DspNodeRegistry::new();
-                let all_nodes = registry.list_all();
-                let q = self.modular_search_query.trim().to_lowercase();
-                let sel_cat = self.modular_selected_category;
-
-                let filtered_nodes: Vec<_> = all_nodes
-                    .into_iter()
-                    .filter(|desc| {
-                        if let Some(cat) = sel_cat {
-                            if desc.category != cat {
-                                return false;
-                            }
-                        }
-                        if !q.is_empty() {
-                            let name_match = desc.display_name.to_lowercase().contains(&q);
-                            let kind_match = desc.kind_id.to_lowercase().contains(&q);
-                            let desc_match = desc.description.to_lowercase().contains(&q);
-                            if !name_match && !kind_match && !desc_match {
-                                return false;
-                            }
-                        }
-                        true
-                    })
-                    .collect();
-
-                ui.label(
-                    RichText::new(format!(
-                        "Showing {} of 2,012+ registered DSP modules:",
-                        filtered_nodes.len()
-                    ))
-                    .font(FontId::proportional(10.0))
-                    .color(Color32::from_rgb(148, 163, 184)),
-                );
-
-                ui.add_space(4.0);
-
-                egui::ScrollArea::vertical()
-                    .id_source("modular_dsp_node_list_scroll")
-                    .max_height(280.0)
-                    .show(ui, |ui| {
-                        for desc in &filtered_nodes {
-                            let (r, g, b) = desc.category.theme_color_rgb();
-                            let cat_col = Color32::from_rgb(r, g, b);
-
-                            egui::Frame::none()
-                                .fill(Color32::from_rgb(16, 22, 34))
-                                .stroke(Stroke::new(1.0_f32, Color32::from_rgb(28, 40, 60)))
-                                .rounding(Rounding::same(4.0))
-                                .inner_margin(egui::Margin::symmetric(8.0, 6.0))
-                                .show(ui, |ui| {
-                                    ui.horizontal(|ui| {
-                                        ui.label(
-                                            RichText::new(desc.category.icon())
-                                                .font(FontId::proportional(14.0)),
-                                        );
-                                        ui.vertical(|ui| {
-                                            ui.horizontal(|ui| {
-                                                ui.label(
-                                                    RichText::new(&desc.display_name)
-                                                        .font(FontId::proportional(11.0))
-                                                        .strong()
-                                                        .color(cat_col),
-                                                );
-                                                ui.label(
-                                                    RichText::new(format!(
-                                                        "({})",
-                                                        desc.category.display_label()
-                                                    ))
-                                                    .font(FontId::proportional(9.0))
-                                                    .color(Color32::from_rgb(100, 116, 139)),
-                                                );
-                                            });
-                                            if !desc.description.is_empty() {
-                                                ui.label(
-                                                    RichText::new(&desc.description)
-                                                        .font(FontId::proportional(9.0))
-                                                        .color(Color32::from_rgb(148, 163, 184)),
-                                                );
-                                            }
-                                        });
-
-                                        ui.with_layout(
-                                            egui::Layout::right_to_left(egui::Align::Center),
-                                            |ui| {
-                                                let btn = ui.add(
-                                                    egui::Button::new(
-                                                        RichText::new("➕ Insert")
-                                                            .font(FontId::proportional(10.0))
-                                                            .strong()
-                                                            .color(cat_col),
-                                                    )
-                                                    .fill(Color32::from_rgba_unmultiplied(
-                                                        r, g, b, 30,
-                                                    ))
-                                                    .stroke(Stroke::new(1.0_f32, cat_col))
-                                                    .rounding(Rounding::same(3.0)),
-                                                );
-                                                if btn.clicked() {
-                                                    node_to_add_kind = Some(desc.kind_id.clone());
-                                                }
-                                                ui.label(
-                                                    RichText::new(format!(
-                                                        "{} params",
-                                                        desc.params.len()
-                                                    ))
-                                                    .font(FontId::proportional(9.0))
-                                                    .color(Color32::from_rgb(100, 116, 139)),
-                                                );
-                                            },
-                                        );
-                                    });
-                                });
-                            ui.add_space(2.0);
-                        }
-                    });
-
-                if let Some(ref kind) = node_to_add_kind {
-                    if let Some(desc) = registry.get(kind) {
-                        self.add_modular_node_from_descriptor(desc);
-                        close_modal = true;
-                    }
-                }
-
-                ui.separator();
-                ui.horizontal(|ui| {
-                    if ui.button("Close").clicked() {
-                        close_modal = true;
-                    }
-                });
+                self.device_catalog.show_content(ui);
             });
 
-        if close_modal {
+        if let Some(kind) = self.device_catalog.take_requested_insert() {
+            let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+            if let Some(desc) = registry.get(&kind) {
+                self.add_modular_node_from_descriptor(desc);
+                close_modal = true;
+            }
+        }
+
+        if !self.device_catalog.is_open || close_modal {
             is_open = false;
         }
         self.modular_add_modal_open = is_open;
+        self.device_catalog.is_open = is_open;
     }
 
     #[cfg(feature = "gui")]

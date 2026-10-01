@@ -150,7 +150,7 @@ pub mod pure_tests {
 
         // Register ParamIds in ParamBus
         let panic_pid = ParamId(9996);
-        let scene_pid = ParamId(9997);
+        let scene_pid = ParamId(9994);
         param_bus.register(panic_pid, 0.0);
         param_bus.register(scene_pid, -1.0);
 

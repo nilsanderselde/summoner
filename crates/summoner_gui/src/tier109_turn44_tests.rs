@@ -128,9 +128,9 @@ pub mod gui_tests {
     fn test_turn44_gui_master_selection_lockstep() {
         let mut view = AwardWinningGuiView::new();
 
-        // Default state: Track 0 selected, not inspecting master
+        // Default state: Track 4 (Synth 1) selected, not inspecting master
         assert!(!view.inspecting_master);
-        assert_eq!(view.selected_track_idx, 0);
+        assert_eq!(view.selected_track_idx, 4);
 
         // Select Master Bus
         let sel_master = view.select_master();
@@ -186,7 +186,11 @@ pub mod gui_tests {
     #[test]
     fn test_turn44_gui_track_phase_and_trim_lifecycle() {
         let mut view = AwardWinningGuiView::new();
-        let param_bus = Arc::new(ParamBus::new());
+        let mut param_bus = ParamBus::new();
+        param_bus.register(summoner_core::param_bus::ParamId(1000 + 204), 0.0);
+        param_bus.register(summoner_core::param_bus::ParamId(1000 + 205), 0.0);
+        param_bus.register(summoner_core::param_bus::ParamId(9997), 0.0);
+        let param_bus = Arc::new(param_bus);
         view.live_param_bus = Some(param_bus.clone());
 
         let track_id = 1u64;

@@ -1147,3 +1147,31 @@ Product Management has conducted a comprehensive readiness audit:
 - [x] Complete Roadmap Convergence & Final Milestone 31 Verification:
   - Completed all tasks in `local/ROADMAP_20260831_031410.md` (100% complete across all 33 Milestones).
   - Maintained zero clippy warnings and 100% test pass rate.
+
+### Turn #50 (Turn #16) — Unified Multi-Category Device Catalog, Instant Fuzzy Palette Search & Layout State Stabilization (Milestone 34)
+- [x] Unified Multi-Category Device Catalog View (`crates/summoner_gui/src/views/device_catalog.rs`):
+  - Pre-indexed high-performance catalog indexing all 1,090 reflected DSP modules from `DspNodeRegistry::inventory` with zero heap allocation during frame rendering.
+  - Sub-millisecond fuzzy search engine with score ranking: exact kind match (+1000), prefix match (+500), word match (+350), substring (+200), category tag (+100), and subsequence match.
+  - Category filter pills with real-time module counts across all 13 DSP categories + "All" + "★ Favorites".
+  - Favorite toggle system (`★` / `☆`) persisting favorite modules with immediate search score boost (+200).
+  - Two-tier display mode: Compact module list vs. Detailed parameter cards with description.
+  - Accessible keyboard navigation: Up / Down arrow navigation, Page Up / Page Down stepping, Enter to insert, and Escape to clear search or close.
+  - WCAG AAA contrast compliance with category-themed accents (`Color32`) and touch targets exceeding 44x44pt (`CATALOG_TOUCH_TARGET_SIZE`).
+  - Self-contained deterministic ASCII snapshot renderer (`render_snapshot_ascii`) for headless verification.
+- [x] Modular Canvas Device Catalog Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Replaced ad-hoc per-frame `DspNodeRegistry::new()` allocation with cached `DeviceCatalogView`.
+  - Connected 1-click device insertion (`take_requested_insert`) seamlessly creating `ModularNodeInstance` on the DAG canvas.
+- [x] Layout & Parameter Bridge Stabilization:
+  - Fixed `AwardWinningGuiView::new()` to initialize `device_rack_state.chain_devices` and `inspector_state.chain_devices` with default track synth.
+  - Added safe `if bus.get(pid).is_some()` guards in `toggle_track_phase_invert`, `set_track_phase_inverted`, `set_track_input_trim`, and `set_master_trim`.
+  - Added fallback to `device_rack_state` dials (`osc_mix`, `shape`, `lfo_speed`, etc.) in `sync_with_param_bus` when recording automation curves.
+  - Standardized modular node display name indexing (`format!("{}. {}", idx + 1, dev.display_name)`) in `sync_track_chain_to_modular`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier114_turn50_tests.rs`:
+    * Pure tests: inventory indexing, sub-millisecond fuzzy search, fuzzy score ranking, tagged categorization and counts, favorite pinning and filtering, keyboard navigation, insert request dispatch, touch target dimensions, and deterministic ASCII snapshot rendering.
+    * GUI tests: catalog modal lifecycle and modular node insertion in `AwardWinningGuiView`.
+  - Registered `pub mod tier114_turn50_tests;` in `crates/summoner_gui/src/lib.rs`.
+  - Unit tests: 338 passed in 0.23s (`cargo test -p summoner_gui`).
+  - Feature tests: 1,045 passed in 2.21s (`cargo test -p summoner_gui --features gui`).
+  - Lints & check: 0 errors, 0 warnings (`cargo clippy -p summoner_gui -- -D warnings`, `cargo check -p summoner_gui`).
+

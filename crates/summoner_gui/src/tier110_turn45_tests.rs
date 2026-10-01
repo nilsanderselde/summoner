@@ -269,6 +269,7 @@ pub mod gui_tests {
     #[test]
     fn test_turn45_gui_sync_with_param_bus_dispatch_and_recording() {
         let mut view = AwardWinningGuiView::new();
+        view.selected_track_idx = 0;
         let project = ProjectConfig::default();
         let mut param_bus = ParamBus::new();
         let mut registry = AutomationRegistry::new();
