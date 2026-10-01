@@ -1078,6 +1078,31 @@ Product Management has conducted a comprehensive readiness audit:
   - Full feature tests: 11 tests passed in `tier111_turn46_tests` (`cargo test -p summoner_gui --features gui`).
   - Fast compilation: incremental `cargo check` in 1.1s.
 
+### Turn #47 (Turn #14) — Physical Modeling HUDs, Device Rack Specialized Visualizers & Command Palette Actions
+- [x] Physical Modeling HUD Modal Windows & Live Synchronization:
+  - Integrated `CrystalResonatorView` and `GlassArmonicaView` as interactive modal HUD windows in `AwardWinningGuiView`.
+  - Added lifecycle methods: `open_crystal_resonator_hud()`, `close_crystal_resonator_hud()`, `is_crystal_resonator_hud_open()`, `open_glass_armonica_hud()`, `close_glass_armonica_hud()`, `is_glass_armonica_hud_open()`.
+  - Implemented decoupled zero-allocation live parameter synchronization (`sync_crystal_resonator_hud_state` and `sync_glass_armonica_hud_state`) updating both local parameter maps and real-time audio thread `ParamBus` on slot channels `ParamId(cur_track_id * 1000 + cur_slot * 20 + p_i)`.
+- [x] Pro View Device Rack & Inspector HUD Trigger Integration:
+  - Added `requested_open_crystal_hud: bool` and `requested_open_armonica_hud: bool` to both `ModernInspectorState` and `ModernDeviceRackState`.
+  - In `ModernInspectorView`, added prominent tactile action buttons `[🔮 Open Crystal Resonator HUD]` and `[🍷 Open Glass Armonica HUD]` when inspecting physical modeling nodes.
+  - In `ModernDeviceRackView`, added `[🔮 HUD]` and `[🍷 HUD]` trigger buttons to both collapsed device cards and expanded rack toolbar.
+  - Built specialized inline 2D visualizers in the Pro Parameter Drawer (`show_pro_parameter_drawer`):
+    * **Crystal Resonator**: 2D singing bowl rim, water meniscus line, and rotating stick-slip friction wand puck with touch-drag binding to `water_fill_level` and `friction_velocity`.
+    * **Glass Armonica**: Horizontal spindle axis, 5 concentric nested cup profiles, and wet finger contact indicator with touch-drag binding to `rotation_speed_rad_s` and `normal_force_n`.
+  - Fixed filter curve channel addressing bug in pro parameter drawer: indexed filter curves cleanly to `ParamId(track_id * 1000 + selected_chain_idx * 20 + p_i)` across any selected slot.
+- [x] Command Palette Quick Actions:
+  - Registered `open_crystal_resonator_hud` and `open_glass_armonica_hud` actions under the `"Physical Modeling"` category in `crates/summoner_gui/src/command_palette.rs`.
+  - Connected action dispatch in `crates/summoner_gui/src/app.rs` routing directly to `AwardWinningGuiView`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier112_turn47_tests.rs`:
+    * Pure tests: ParamBus slot arithmetic across tracks and slots, timeline evaluation for physical modeling automation curves.
+    * GUI tests: HUD modal lifecycle open/close, inspector HUD trigger propagation, device rack HUD triggers, pro drawer specialized 2D visualizers, live `ParamBus` sync, and command palette search and action dispatch.
+  - Unit tests: 327 passed in 0.23s (`cargo test -p summoner_gui`).
+  - Feature tests: 7 tests passed in `tier112_turn47_tests` (`cargo test -p summoner_gui --features gui -- tier112_turn47_tests`).
+  - Lints & check: 0 errors, 0 warnings (`cargo clippy -p summoner_gui -- -D warnings`, `cargo check -p summoner_gui`).
+
+
 
 
 

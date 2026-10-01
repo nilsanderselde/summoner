@@ -311,6 +311,18 @@ impl CommandPalette {
                 action_id: "open_dpi_scale_panel".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Quartz Crystal Singing Bowl & Glass Chalice HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_crystal_resonator_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Franklin Glass Armonica & Spindle HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_glass_armonica_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

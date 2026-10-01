@@ -36,6 +36,10 @@ pub struct ModernInspectorState {
     pub phase_inverted: bool,
     #[serde(default)]
     pub input_trim_db: f32,
+    #[serde(default)]
+    pub requested_open_crystal_hud: bool,
+    #[serde(default)]
+    pub requested_open_armonica_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -60,6 +64,8 @@ impl Default for ModernInspectorState {
             requested_automation_param: None,
             chain_devices: Vec::new(),
             selected_chain_idx: 0,
+            requested_open_crystal_hud: false,
+            requested_open_armonica_hud: false,
         }
     }
 }
@@ -533,6 +539,30 @@ pub fn show_modern_inspector_with_context(
                 });
             });
             ui.add_space(6.0);
+
+            // Specialized Physical Modeling Instrument HUD Launchers
+            let active_kind = state.selected_device_kind().unwrap_or_default();
+            if active_kind == "CrystalResonator" || active_kind.contains("Crystal") || active_kind.contains("Bowl") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🔮 Open Crystal Resonator HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(56, 189, 248)))
+                        .fill(Color32::from_rgb(18, 30, 48))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(56, 189, 248)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive 2D stick-slip friction radar, hydro-acoustic water level & modal resonance doublets HUD").clicked() {
+                    state.requested_open_crystal_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind == "GlassArmonica" || active_kind == "FranklinGlassArmonica" || active_kind == "ArmonicaChassisResonator" || active_kind.contains("Armonica") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🍷 Open Glass Armonica HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(245, 158, 11)))
+                        .fill(Color32::from_rgb(38, 28, 16))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(245, 158, 11)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive 2D spindle speed, wet finger friction & circular modal ring HUD").clicked() {
+                    state.requested_open_armonica_hud = true;
+                }
+                ui.add_space(4.0);
+            }
 
             // Track Multi-Node Device Chain Strip
             ui.horizontal(|ui| {

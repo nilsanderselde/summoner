@@ -1321,6 +1321,14 @@ impl eframe::App for SummonerApp {
                 "open_keybinding_editor" => self.show_keybinding_editor_modal = true,
                 "open_meter_bridge" => self.show_meter_bridge_modal = true,
                 "open_dpi_scale_panel" => self.show_dpi_scale_panel_modal = true,
+                "open_crystal_resonator_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_crystal_resonator_hud();
+                }
+                "open_glass_armonica_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_glass_armonica_hud();
+                }
                 "sfz_convert" | "auto_slice" | "load_preset" | "export_clap" | "toggle_simd" => {
                     println!("Command palette action executed: {}", action);
                 }

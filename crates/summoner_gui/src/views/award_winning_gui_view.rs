@@ -641,6 +641,10 @@ pub struct AwardWinningGuiView {
     pub track_phase_inverted: std::collections::HashMap<u64, bool>,
     pub track_input_trim_db: std::collections::HashMap<u64, f32>,
     pub live_param_bus: Option<std::sync::Arc<summoner_core::param_bus::ParamBus>>,
+    pub show_crystal_resonator_modal: bool,
+    pub crystal_resonator_view: crate::views::crystal_resonator_view::CrystalResonatorView,
+    pub show_glass_armonica_modal: bool,
+    pub glass_armonica_view: crate::views::glass_armonica_view::GlassArmonicaView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -898,6 +902,10 @@ impl AwardWinningGuiView {
             track_phase_inverted: std::collections::HashMap::new(),
             track_input_trim_db: std::collections::HashMap::new(),
             live_param_bus: None,
+            show_crystal_resonator_modal: false,
+            crystal_resonator_view: crate::views::crystal_resonator_view::CrystalResonatorView::new(),
+            show_glass_armonica_modal: false,
+            glass_armonica_view: crate::views::glass_armonica_view::GlassArmonicaView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -1533,9 +1541,23 @@ impl AwardWinningGuiView {
             }
         }
 
-        // Global Modal Windows: Live Parameter Automation Editor & Modular DSP Catalog
+        // Handle Physical Modeling HUD requests from Inspector or Device Rack
+        if self.inspector_state.requested_open_crystal_hud || self.device_rack_state.requested_open_crystal_hud {
+            self.inspector_state.requested_open_crystal_hud = false;
+            self.device_rack_state.requested_open_crystal_hud = false;
+            self.open_crystal_resonator_hud();
+        }
+        if self.inspector_state.requested_open_armonica_hud || self.device_rack_state.requested_open_armonica_hud {
+            self.inspector_state.requested_open_armonica_hud = false;
+            self.device_rack_state.requested_open_armonica_hud = false;
+            self.open_glass_armonica_hud();
+        }
+
+        // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog & Physical Modeling HUDs
         self.show_modular_automation_editor_window(ui);
         self.show_modular_dsp_catalog_window(ui);
+        self.show_crystal_resonator_modal_window(ui);
+        self.show_glass_armonica_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -7331,6 +7353,174 @@ impl AwardWinningGuiView {
             is_open = false;
         }
         self.show_automation_editor_window = is_open;
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_crystal_resonator_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_crystal_resonator_modal {
+            return;
+        }
+
+        let mut is_open = self.show_crystal_resonator_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🔮 Physical Modeling Crystal Singing Bowl & Glass Chalice HUD")
+            .id(egui::Id::new("crystal_resonator_hud_modal"))
+            .open(&mut is_open)
+            .default_size([720.0, 520.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(RichText::new("🔮 Physical Modeling Crystal Singing Bowl & Chalice Resonator").font(FontId::proportional(12.0)).strong().color(Color32::from_rgb(56, 189, 248)));
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.crystal_resonator_view.ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_crystal_resonator_modal = is_open;
+        self.sync_crystal_resonator_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_crystal_resonator_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let root_freq = self.crystal_resonator_view.root_freq_hz;
+        let water_fill = self.crystal_resonator_view.water_fill_pct;
+        let q_scale = self.crystal_resonator_view.q_scale;
+        let friction = self.crystal_resonator_view.friction_speed_mps;
+
+        self.device_rack_state.node_param_values.insert("root_freq_hz".to_string(), root_freq);
+        self.device_rack_state.node_param_values.insert("water_fill_level".to_string(), water_fill);
+        self.device_rack_state.node_param_values.insert("q_scale".to_string(), q_scale);
+        self.device_rack_state.node_param_values.insert("friction_velocity".to_string(), friction);
+
+        self.inspector_state.node_param_values.insert("root_freq_hz".to_string(), root_freq);
+        self.inspector_state.node_param_values.insert("water_fill_level".to_string(), water_fill);
+        self.inspector_state.node_param_values.insert("q_scale".to_string(), q_scale);
+        self.inspector_state.node_param_values.insert("friction_velocity".to_string(), friction);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_root = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 0);
+            let pid_water = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_q = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_fric = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_root).is_some() { bus.set(pid_root, root_freq); }
+            if bus.get(pid_water).is_some() { bus.set(pid_water, water_fill); }
+            if bus.get(pid_q).is_some() { bus.set(pid_q, q_scale); }
+            if bus.get(pid_fric).is_some() { bus.set(pid_fric, friction); }
+        }
+    }
+
+    pub fn open_crystal_resonator_hud(&mut self) {
+        self.show_crystal_resonator_modal = true;
+    }
+
+    pub fn close_crystal_resonator_hud(&mut self) {
+        self.show_crystal_resonator_modal = false;
+    }
+
+    pub fn is_crystal_resonator_hud_open(&self) -> bool {
+        self.show_crystal_resonator_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_glass_armonica_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_glass_armonica_modal {
+            return;
+        }
+
+        let mut is_open = self.show_glass_armonica_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🍷 Physical Modeling Glass Armonica & Spindle Resonance HUD")
+            .id(egui::Id::new("glass_armonica_hud_modal"))
+            .open(&mut is_open)
+            .default_size([720.0, 520.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(RichText::new("🍷 Physical Modeling Franklin Glass Armonica Resonance HUD").font(FontId::proportional(12.0)).strong().color(Color32::from_rgb(245, 158, 11)));
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.glass_armonica_view.ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_glass_armonica_modal = is_open;
+        self.sync_glass_armonica_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_glass_armonica_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let speed = self.glass_armonica_view.rotation_speed_rad_s;
+        let force = self.glass_armonica_view.normal_force_n;
+        let water = self.glass_armonica_view.water_level_pct;
+        let fund = self.glass_armonica_view.modal_fundamental_hz;
+
+        self.device_rack_state.node_param_values.insert("rotation_speed_rad_s".to_string(), speed);
+        self.device_rack_state.node_param_values.insert("normal_force_n".to_string(), force);
+        self.device_rack_state.node_param_values.insert("water_level_pct".to_string(), water);
+        self.device_rack_state.node_param_values.insert("modal_fundamental_hz".to_string(), fund);
+
+        self.inspector_state.node_param_values.insert("rotation_speed_rad_s".to_string(), speed);
+        self.inspector_state.node_param_values.insert("normal_force_n".to_string(), force);
+        self.inspector_state.node_param_values.insert("water_level_pct".to_string(), water);
+        self.inspector_state.node_param_values.insert("modal_fundamental_hz".to_string(), fund);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_speed = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 0);
+            let pid_force = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_water = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_fund = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_speed).is_some() { bus.set(pid_speed, speed); }
+            if bus.get(pid_force).is_some() { bus.set(pid_force, force); }
+            if bus.get(pid_water).is_some() { bus.set(pid_water, water); }
+            if bus.get(pid_fund).is_some() { bus.set(pid_fund, fund); }
+        }
+    }
+
+    pub fn open_glass_armonica_hud(&mut self) {
+        self.show_glass_armonica_modal = true;
+    }
+
+    pub fn close_glass_armonica_hud(&mut self) {
+        self.show_glass_armonica_modal = false;
+    }
+
+    pub fn is_glass_armonica_hud_open(&self) -> bool {
+        self.show_glass_armonica_modal
     }
 
     #[cfg(feature = "gui")]

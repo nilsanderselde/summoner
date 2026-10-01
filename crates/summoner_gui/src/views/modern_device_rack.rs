@@ -51,6 +51,10 @@ pub struct ModernDeviceRackState {
     pub chain_devices: Vec<RackChainDeviceVisual>,
     #[serde(default)]
     pub selected_chain_idx: usize,
+    #[serde(default)]
+    pub requested_open_crystal_hud: bool,
+    #[serde(default)]
+    pub requested_open_armonica_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -65,6 +69,8 @@ impl Default for ModernDeviceRackState {
             requested_automation_param: None,
             chain_devices: Vec::new(),
             selected_chain_idx: 0,
+            requested_open_crystal_hud: false,
+            requested_open_armonica_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -248,6 +254,17 @@ pub fn show_modern_device_rack_with_context(
                         let primary = opt_desc.and_then(|d| d.params.first()).map(|p| p.id.clone()).unwrap_or_else(|| "cutoff".to_string());
                         state.requested_automation_param = Some(primary);
                     }
+                    let is_crystal = cur_selection == "CrystalResonator" || cur_selection.contains("Crystal") || cur_selection.contains("Bowl");
+                    let is_armonica = cur_selection == "GlassArmonica" || cur_selection == "FranklinGlassArmonica" || cur_selection == "ArmonicaChassisResonator" || cur_selection.contains("Armonica");
+                    if is_crystal {
+                        if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
+                            state.requested_open_crystal_hud = true;
+                        }
+                    } else if is_armonica {
+                        if ui.button(RichText::new("🍷 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(245, 158, 11))).on_hover_text("Open Physical Modeling Glass Armonica HUD").clicked() {
+                            state.requested_open_armonica_hud = true;
+                        }
+                    }
                     ui.add_space(4.0);
                     let pwr_col = if state.is_enabled { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(100, 116, 139) };
                     if ui.button(RichText::new("⏻").font(FontId::proportional(12.0)).color(pwr_col)).clicked() {
@@ -425,6 +442,17 @@ pub fn show_modern_device_rack_with_context(
                     if ui.button(RichText::new("📈 Auto").font(FontId::proportional(10.0)).color(Color32::from_rgb(234, 179, 8))).on_hover_text("Open Live Bézier Automation Lane for primary parameter").clicked() {
                         let primary = opt_desc.and_then(|d| d.params.first()).map(|p| p.id.clone()).unwrap_or_else(|| "cutoff".to_string());
                         state.requested_automation_param = Some(primary);
+                    }
+                    let is_crystal = cur_selection == "CrystalResonator" || cur_selection.contains("Crystal") || cur_selection.contains("Bowl");
+                    let is_armonica = cur_selection == "GlassArmonica" || cur_selection == "FranklinGlassArmonica" || cur_selection == "ArmonicaChassisResonator" || cur_selection.contains("Armonica");
+                    if is_crystal {
+                        if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
+                            state.requested_open_crystal_hud = true;
+                        }
+                    } else if is_armonica {
+                        if ui.button(RichText::new("🍷 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(245, 158, 11))).on_hover_text("Open Physical Modeling Glass Armonica HUD").clicked() {
+                            state.requested_open_armonica_hud = true;
+                        }
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -1188,50 +1216,183 @@ fn show_pro_parameter_drawer(
 
                     ui.add_space(4.0);
 
-                    // Filter Curve Mini View
-                    let (filt_resp, filt_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
-                    let filt_rect = filt_resp.rect;
-                    filt_painter.rect_filled(filt_rect, 2.0, Color32::from_rgb(8, 12, 20));
-                    if filt_resp.dragged() {
-                        if let Some(pos) = filt_resp.interact_pointer_pos() {
-                            let nx = ((pos.x - filt_rect.left()) / filt_rect.width()).clamp(0.05, 0.95);
-                            let ny = (1.0 - ((pos.y - filt_rect.top()) / filt_rect.height())).clamp(0.05, 0.95);
-                            state.filter_nodes[1] = (nx, ny);
-                            state.cutoff = nx;
-                            state.resonance = ny;
-                            state.node_param_values.insert("cutoff".to_string(), nx);
-                            state.node_param_values.insert("resonance".to_string(), ny);
-                            if let Some(bus) = param_bus {
-                                let pid_cut = summoner_core::param_bus::ParamId(track_id as u32 * 1000);
-                                if bus.get(pid_cut).is_some() { bus.set(pid_cut, nx); }
-                                let pid_res = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 1);
-                                if bus.get(pid_res).is_some() { bus.set(pid_res, ny); }
+                    let dev_kind = state.chain_devices.get(state.selected_chain_idx).map(|d| d.kind.as_str())
+                        .or(state.selected_node_kind.as_deref())
+                        .unwrap_or("AetherSynth");
+                    let is_crystal = dev_kind == "CrystalResonator" || dev_kind.contains("Crystal") || dev_kind.contains("Bowl");
+                    let is_armonica = dev_kind == "GlassArmonica" || dev_kind == "FranklinGlassArmonica" || dev_kind == "ArmonicaChassisResonator" || dev_kind.contains("Armonica");
+
+                    if is_crystal {
+                        // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
+                        let (c_resp, c_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let c_rect = c_resp.rect;
+                        c_painter.rect_filled(c_rect, 2.0, Color32::from_rgb(6, 12, 22));
+
+                        let mut water_fill = state.node_param_values.get("water_fill_level").copied().unwrap_or(0.25);
+                        let mut friction = state.node_param_values.get("friction_velocity").copied().unwrap_or(0.50);
+
+                        if c_resp.dragged() {
+                            if let Some(pos) = c_resp.interact_pointer_pos() {
+                                friction = ((pos.x - c_rect.left()) / c_rect.width()).clamp(0.0, 1.0);
+                                water_fill = (1.0 - ((pos.y - c_rect.top()) / c_rect.height())).clamp(0.0, 1.0);
+                                state.node_param_values.insert("water_fill_level".to_string(), water_fill);
+                                state.node_param_values.insert("friction_velocity".to_string(), friction);
+                                if let Some(bus) = param_bus {
+                                    let pid_water = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_water).is_some() { bus.set(pid_water, water_fill); }
+                                    let pid_fric = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 3);
+                                    if bus.get(pid_fric).is_some() { bus.set(pid_fric, friction); }
+                                }
                             }
                         }
-                    }
-                    let steps = 30;
-                    let mut curve_pts = Vec::with_capacity(steps);
-                    for i in 0..steps {
-                        let t = i as f32 / (steps - 1) as f32;
-                        let px = filt_rect.left() + t * filt_rect.width();
-                        let cutoff_norm = state.filter_nodes[1].0;
-                        let q = state.filter_nodes[1].1;
-                        let gain = if t <= cutoff_norm {
-                            1.0 + (t / cutoff_norm) * (q - 0.5) * 0.6
-                        } else {
-                            let roll = (t - cutoff_norm) / (1.0 - cutoff_norm).max(0.01);
-                            (1.0 + (q - 0.5) * 0.6) * (-roll * 3.5).exp()
-                        };
-                        let py = filt_rect.bottom() - (gain * filt_rect.height() * 0.70).clamp(2.0, filt_rect.height() - 2.0);
-                        curve_pts.push(egui::pos2(px, py));
-                    }
-                    for w in curve_pts.windows(2) {
-                        filt_painter.line_segment([w[0], w[1]], Stroke::new(1.5_f32, Color32::from_rgb(56, 189, 248)));
-                    }
-                    for &(nx, ny) in &state.filter_nodes {
-                        let px = filt_rect.left() + nx * filt_rect.width();
-                        let py = filt_rect.top() + (1.0 - ny) * filt_rect.height();
-                        filt_painter.circle_filled(egui::pos2(px, py), 3.5, Color32::from_rgb(56, 189, 248));
+
+                        // Draw singing bowl outer rim & inner cavity
+                        let center = c_rect.center();
+                        let radius = 26.0_f32;
+                        c_painter.circle_stroke(center, radius, Stroke::new(1.5_f32, Color32::from_rgb(56, 189, 248)));
+                        c_painter.circle_filled(center, radius * 0.88, Color32::from_rgb(10, 20, 36));
+
+                        // Hydro-acoustic water fill meniscus line
+                        let water_y = center.y + (1.0 - 2.0 * water_fill) * radius * 0.75;
+                        let half_w = (radius * radius - (water_y - center.y).powi(2)).max(0.0).sqrt() * 0.85;
+                        c_painter.line_segment(
+                            [egui::pos2(center.x - half_w, water_y), egui::pos2(center.x + half_w, water_y)],
+                            Stroke::new(1.5_f32, Color32::from_rgb(34, 211, 238)),
+                        );
+
+                        // Rotating wand friction puck on rim
+                        let angle = friction * std::f32::consts::TAU - std::f32::consts::FRAC_PI_2;
+                        let puck_pos = egui::pos2(center.x + angle.cos() * radius, center.y + angle.sin() * radius);
+                        c_painter.circle_filled(puck_pos, 3.5, Color32::from_rgb(245, 158, 11));
+
+                        // Text labels: Water fill & Friction
+                        c_painter.text(
+                            egui::pos2(c_rect.left() + 4.0, c_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("💧 {:.0}%", water_fill * 100.0),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(34, 211, 238),
+                        );
+                        c_painter.text(
+                            egui::pos2(c_rect.right() - 4.0, c_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("⚡ {:.0}%", friction * 100.0),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(245, 158, 11),
+                        );
+
+                        if c_resp.hovered() {
+                            let _ = c_resp.on_hover_text("Crystal Singing Bowl Rim & Hydro-Acoustic Loading\n[Drag horizontally: Stick-slip friction | Drag vertically: Water fill level]");
+                        }
+                    } else if is_armonica {
+                        // Glass Armonica Spindle Axis & Concentric Bowl Visualizer
+                        let (a_resp, a_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let a_rect = a_resp.rect;
+                        a_painter.rect_filled(a_rect, 2.0, Color32::from_rgb(18, 12, 8));
+
+                        let mut speed = state.node_param_values.get("rotation_speed_rad_s").copied().unwrap_or(2.5);
+                        let mut force = state.node_param_values.get("normal_force_n").copied().unwrap_or(0.45);
+
+                        if a_resp.dragged() {
+                            if let Some(pos) = a_resp.interact_pointer_pos() {
+                                speed = 0.1 + ((pos.x - a_rect.left()) / a_rect.width()).clamp(0.0, 1.0) * 9.9;
+                                force = 0.05 + (1.0 - ((pos.y - a_rect.top()) / a_rect.height())).clamp(0.0, 1.0) * 0.95;
+                                state.node_param_values.insert("rotation_speed_rad_s".to_string(), speed);
+                                state.node_param_values.insert("normal_force_n".to_string(), force);
+                                if let Some(bus) = param_bus {
+                                    let pid_spd = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 0);
+                                    if bus.get(pid_spd).is_some() { bus.set(pid_spd, speed); }
+                                    let pid_frc = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_frc).is_some() { bus.set(pid_frc, force); }
+                                }
+                            }
+                        }
+
+                        // Central horizontal spindle axis
+                        let cy = a_rect.center().y;
+                        a_painter.line_segment(
+                            [egui::pos2(a_rect.left() + 10.0, cy), egui::pos2(a_rect.right() - 10.0, cy)],
+                            Stroke::new(2.0_f32, Color32::from_rgb(148, 163, 184)),
+                        );
+
+                        // 5 Nested concentric glass cup profiles
+                        for (i, cup_r) in [12.0_f32, 16.0, 20.0, 24.0, 28.0].iter().enumerate() {
+                            let cx = a_rect.left() + 25.0 + i as f32 * 26.0;
+                            a_painter.line_segment(
+                                [egui::pos2(cx, cy - cup_r), egui::pos2(cx, cy + cup_r)],
+                                Stroke::new(1.5_f32, Color32::from_rgb(245, 158, 11)),
+                            );
+                        }
+
+                        // Wet finger contact indicator
+                        let contact_x = a_rect.left() + 25.0 + 3.0 * 26.0;
+                        a_painter.circle_filled(egui::pos2(contact_x, cy - 24.0), 3.5, Color32::from_rgb(56, 189, 248));
+
+                        // Readout
+                        a_painter.text(
+                            egui::pos2(a_rect.left() + 4.0, a_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("ω: {:.1} rad/s", speed),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(245, 158, 11),
+                        );
+                        a_painter.text(
+                            egui::pos2(a_rect.right() - 4.0, a_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("F: {:.2} N", force),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(56, 189, 248),
+                        );
+
+                        if a_resp.hovered() {
+                            let _ = a_resp.on_hover_text("Glass Armonica Spindle & Wet Friction Contact\n[Drag horizontally: Spindle angular velocity | Drag vertically: Normal force]");
+                        }
+                    } else {
+                        // Filter Curve Mini View (slot-addressed)
+                        let (filt_resp, filt_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let filt_rect = filt_resp.rect;
+                        filt_painter.rect_filled(filt_rect, 2.0, Color32::from_rgb(8, 12, 20));
+                        if filt_resp.dragged() {
+                            if let Some(pos) = filt_resp.interact_pointer_pos() {
+                                let nx = ((pos.x - filt_rect.left()) / filt_rect.width()).clamp(0.05, 0.95);
+                                let ny = (1.0 - ((pos.y - filt_rect.top()) / filt_rect.height())).clamp(0.05, 0.95);
+                                state.filter_nodes[1] = (nx, ny);
+                                state.cutoff = nx;
+                                state.resonance = ny;
+                                state.node_param_values.insert("cutoff".to_string(), nx);
+                                state.node_param_values.insert("resonance".to_string(), ny);
+                                if let Some(bus) = param_bus {
+                                    let pid_cut = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 0);
+                                    if bus.get(pid_cut).is_some() { bus.set(pid_cut, nx); }
+                                    let pid_res = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_res).is_some() { bus.set(pid_res, ny); }
+                                }
+                            }
+                        }
+                        let steps = 30;
+                        let mut curve_pts = Vec::with_capacity(steps);
+                        for i in 0..steps {
+                            let t = i as f32 / (steps - 1) as f32;
+                            let px = filt_rect.left() + t * filt_rect.width();
+                            let cutoff_norm = state.filter_nodes[1].0;
+                            let q = state.filter_nodes[1].1;
+                            let gain = if t <= cutoff_norm {
+                                1.0 + (t / cutoff_norm) * (q - 0.5) * 0.6
+                            } else {
+                                let roll = (t - cutoff_norm) / (1.0 - cutoff_norm).max(0.01);
+                                (1.0 + (q - 0.5) * 0.6) * (-roll * 3.5).exp()
+                            };
+                            let py = filt_rect.bottom() - (gain * filt_rect.height() * 0.70).clamp(2.0, filt_rect.height() - 2.0);
+                            curve_pts.push(egui::pos2(px, py));
+                        }
+                        for w in curve_pts.windows(2) {
+                            filt_painter.line_segment([w[0], w[1]], Stroke::new(1.5_f32, Color32::from_rgb(56, 189, 248)));
+                        }
+                        for &(nx, ny) in &state.filter_nodes {
+                            let px = filt_rect.left() + nx * filt_rect.width();
+                            let py = filt_rect.top() + (1.0 - ny) * filt_rect.height();
+                            filt_painter.circle_filled(egui::pos2(px, py), 3.5, Color32::from_rgb(56, 189, 248));
+                        }
                     }
                 });
             });
