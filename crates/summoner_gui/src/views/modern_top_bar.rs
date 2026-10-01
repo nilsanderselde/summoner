@@ -76,6 +76,26 @@ impl ModernTopBarState {
     pub fn request_macro_automation(&mut self, macro_name: &str) {
         self.requested_automation_param = Some(format!("macro_{}", macro_name.to_lowercase()));
     }
+
+    /// Request live parameter automation for master bus volume gain.
+    pub fn request_master_automation(&mut self) {
+        self.requested_automation_param = Some("master_gain".to_string());
+    }
+
+    /// Request live parameter automation for master bus gain trim.
+    pub fn request_master_trim_automation(&mut self) {
+        self.requested_automation_param = Some("master_trim".to_string());
+    }
+
+    /// Request live parameter automation for master bus mono audition.
+    pub fn request_master_mono_automation(&mut self) {
+        self.requested_automation_param = Some("master_mono".to_string());
+    }
+
+    /// Request live parameter automation for master bus mute state.
+    pub fn request_master_mute_automation(&mut self) {
+        self.requested_automation_param = Some("master_mute".to_string());
+    }
 }
 
 fn default_master_gain() -> f32 {

@@ -601,6 +601,8 @@ pub struct AwardWinningGuiView {
     pub last_inspector_muted: bool,
     pub last_inspector_soloed: bool,
     pub last_inspector_armed: bool,
+    pub last_inspector_phase: bool,
+    pub last_inspector_trim_db: f32,
     pub last_selected_track_idx: usize,
     pub selected_node_idx: usize,
     pub last_selected_node_idx: usize,
@@ -836,6 +838,8 @@ impl AwardWinningGuiView {
             last_inspector_muted: false,
             last_inspector_soloed: false,
             last_inspector_armed: false,
+            last_inspector_phase: false,
+            last_inspector_trim_db: 0.0,
             last_selected_track_idx: 4,
             selected_node_idx: 0,
             last_selected_node_idx: usize::MAX,
@@ -1245,13 +1249,20 @@ impl AwardWinningGuiView {
                 self.inspector_state.is_muted = track.is_muted;
                 self.inspector_state.is_soloed = track.is_soloed;
                 self.inspector_state.is_armed = track.is_armed;
+                let tr_phase = self.is_track_phase_inverted(track.id);
+                let tr_trim = self.get_track_input_trim(track.id);
+                self.inspector_state.phase_inverted = tr_phase;
+                self.inspector_state.input_trim_db = tr_trim;
                 self.last_inspector_gain_db = self.inspector_state.gain_db;
                 self.last_inspector_pan = self.inspector_state.pan_val;
                 self.last_inspector_muted = self.inspector_state.is_muted;
                 self.last_inspector_soloed = self.inspector_state.is_soloed;
                 self.last_inspector_armed = self.inspector_state.is_armed;
+                self.last_inspector_phase = tr_phase;
+                self.last_inspector_trim_db = tr_trim;
             }
         } else if let Some(track) = self.tracks.get_mut(self.selected_track_idx) {
+            let tid = track.id;
             if (self.inspector_state.gain_db - self.last_inspector_gain_db).abs() > 0.01 {
                 track.gain = ((self.inspector_state.gain_db / 12.0) + 1.0).clamp(0.0, 2.0);
                 self.last_inspector_gain_db = self.inspector_state.gain_db;
@@ -1290,6 +1301,36 @@ impl AwardWinningGuiView {
             } else if track.is_armed != self.last_inspector_armed {
                 self.inspector_state.is_armed = track.is_armed;
                 self.last_inspector_armed = track.is_armed;
+            }
+
+            if self.inspector_state.phase_inverted != self.last_inspector_phase {
+                self.track_phase_inverted.insert(tid, self.inspector_state.phase_inverted);
+                self.last_inspector_phase = self.inspector_state.phase_inverted;
+                if let Some(ref bus) = self.live_param_bus {
+                    let pid = summoner_core::param_bus::ParamId(tid as u32 * 1000 + 204);
+                    bus.set(pid, if self.inspector_state.phase_inverted { 1.0 } else { 0.0 });
+                }
+            } else {
+                let actual_phase = self.track_phase_inverted.get(&tid).copied().unwrap_or(false);
+                if actual_phase != self.last_inspector_phase {
+                    self.inspector_state.phase_inverted = actual_phase;
+                    self.last_inspector_phase = actual_phase;
+                }
+            }
+
+            if (self.inspector_state.input_trim_db - self.last_inspector_trim_db).abs() > 0.01 {
+                self.track_input_trim_db.insert(tid, self.inspector_state.input_trim_db);
+                self.last_inspector_trim_db = self.inspector_state.input_trim_db;
+                if let Some(ref bus) = self.live_param_bus {
+                    let pid = summoner_core::param_bus::ParamId(tid as u32 * 1000 + 205);
+                    bus.set(pid, self.inspector_state.input_trim_db);
+                }
+            } else {
+                let actual_trim = self.track_input_trim_db.get(&tid).copied().unwrap_or(0.0);
+                if (actual_trim - self.last_inspector_trim_db).abs() > 0.01 {
+                    self.inspector_state.input_trim_db = actual_trim;
+                    self.last_inspector_trim_db = actual_trim;
+                }
             }
         }
 
@@ -1422,6 +1463,10 @@ impl AwardWinningGuiView {
                 self.open_master_automation_editor();
             } else if param == "master_trim" {
                 self.open_master_trim_automation_editor();
+            } else if param == "master_mono" || param == "mono" {
+                self.open_master_mono_automation_editor();
+            } else if param == "master_mute" {
+                self.open_master_mute_automation_editor();
             } else if !self.open_macro_automation_editor(&param) {
                 let cur_track_id = if self.inspecting_master {
                     9
@@ -1433,7 +1478,15 @@ impl AwardWinningGuiView {
         }
         if let Some(param) = self.inspector_state.requested_automation_param.take() {
             if self.inspecting_master {
-                if let Some(rest) = param.strip_prefix("node_") {
+                if param == "master_gain" || param == "gain" {
+                    self.open_master_automation_editor();
+                } else if param == "master_trim" || param == "trim" {
+                    self.open_master_trim_automation_editor();
+                } else if param == "master_mono" || param == "mono" {
+                    self.open_master_mono_automation_editor();
+                } else if param == "master_mute" || param == "mute" {
+                    self.open_master_mute_automation_editor();
+                } else if let Some(rest) = param.strip_prefix("node_") {
                     if let Some((slot_str, p_id)) = rest.split_once('_') {
                         if let Ok(slot) = slot_str.parse::<usize>() {
                             self.open_master_device_automation_editor(slot, p_id);
@@ -1453,7 +1506,15 @@ impl AwardWinningGuiView {
         }
         if let Some(param) = self.device_rack_state.requested_automation_param.take() {
             if self.inspecting_master {
-                if let Some(rest) = param.strip_prefix("node_") {
+                if param == "master_gain" || param == "gain" {
+                    self.open_master_automation_editor();
+                } else if param == "master_trim" || param == "trim" {
+                    self.open_master_trim_automation_editor();
+                } else if param == "master_mono" || param == "mono" {
+                    self.open_master_mono_automation_editor();
+                } else if param == "master_mute" || param == "mute" {
+                    self.open_master_mute_automation_editor();
+                } else if let Some(rest) = param.strip_prefix("node_") {
                     if let Some((slot_str, p_id)) = rest.split_once('_') {
                         if let Ok(slot) = slot_str.parse::<usize>() {
                             self.open_master_device_automation_editor(slot, p_id);
@@ -1538,6 +1599,12 @@ impl AwardWinningGuiView {
                     if ui.selectable_label(false, "📈 Solo Audition").clicked() {
                         auto_param_req = Some("solo".to_string());
                     }
+                    if ui.selectable_label(false, "📈 Phase Invert (Ø)").clicked() {
+                        auto_param_req = Some("phase".to_string());
+                    }
+                    if ui.selectable_label(false, "📈 Input Trim (dB)").clicked() {
+                        auto_param_req = Some("trim".to_string());
+                    }
                     if ui.selectable_label(false, "📈 Filter Cutoff").clicked() {
                         auto_param_req = Some("cutoff".to_string());
                     }
@@ -1576,6 +1643,36 @@ impl AwardWinningGuiView {
                                 for p in &desc.params {
                                     if ui.selectable_label(false, format!("📈 {}", p.name)).clicked() {
                                         auto_param_req = Some(p.id.clone());
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Master Bus Automation Options
+                    ui.separator();
+                    ui.label(RichText::new("👑 Master Bus").font(FontId::proportional(9.0)).color(Color32::from_rgb(245, 158, 11)));
+                    if ui.selectable_label(false, "👑 Master Volume Gain").clicked() {
+                        auto_param_req = Some("master_gain".to_string());
+                    }
+                    if ui.selectable_label(false, "👑 Master Trim (dB)").clicked() {
+                        auto_param_req = Some("master_trim".to_string());
+                    }
+                    if ui.selectable_label(false, "👑 Master Mono Audition").clicked() {
+                        auto_param_req = Some("master_mono".to_string());
+                    }
+                    if ui.selectable_label(false, "👑 Master Mute").clicked() {
+                        auto_param_req = Some("master_mute".to_string());
+                    }
+                    if !self.master_chain_devices.is_empty() {
+                        for (m_slot, dev) in self.master_chain_devices.iter().enumerate() {
+                            if let Some(desc) = registry.get(&dev.kind) {
+                                if !desc.params.is_empty() {
+                                    ui.label(RichText::new(format!("👑 {}. {}", m_slot + 1, dev.display_name)).font(FontId::proportional(8.5)).color(Color32::from_rgb(251, 191, 36)));
+                                    for p in &desc.params {
+                                        if ui.selectable_label(false, format!("📈 {}", p.name)).clicked() {
+                                            auto_param_req = Some(format!("master_node_{}_{}", m_slot, p.id));
+                                        }
                                     }
                                 }
                             }
@@ -2239,6 +2336,12 @@ impl AwardWinningGuiView {
                     if ui.selectable_label(false, "📈 Stereo Pan").clicked() {
                         pr_auto_param_req = Some("pan".to_string());
                     }
+                    if ui.selectable_label(false, "📈 Phase Invert (Ø)").clicked() {
+                        pr_auto_param_req = Some("phase".to_string());
+                    }
+                    if ui.selectable_label(false, "📈 Input Trim (dB)").clicked() {
+                        pr_auto_param_req = Some("trim".to_string());
+                    }
                     let registry = crate::dsp_node_ui::DspNodeRegistry::new();
                     if !self.device_rack_state.chain_devices.is_empty() {
                         for (slot_idx, dev) in self.device_rack_state.chain_devices.iter().enumerate() {
@@ -2265,6 +2368,36 @@ impl AwardWinningGuiView {
                                 for p in &desc.params {
                                     if ui.selectable_label(false, format!("📈 {}", p.name)).clicked() {
                                         pr_auto_param_req = Some(p.id.clone());
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Master Bus Automation Options
+                    ui.separator();
+                    ui.label(RichText::new("👑 Master Bus").font(FontId::proportional(9.0)).color(Color32::from_rgb(245, 158, 11)));
+                    if ui.selectable_label(false, "👑 Master Volume Gain").clicked() {
+                        pr_auto_param_req = Some("master_gain".to_string());
+                    }
+                    if ui.selectable_label(false, "👑 Master Trim (dB)").clicked() {
+                        pr_auto_param_req = Some("master_trim".to_string());
+                    }
+                    if ui.selectable_label(false, "👑 Master Mono Audition").clicked() {
+                        pr_auto_param_req = Some("master_mono".to_string());
+                    }
+                    if ui.selectable_label(false, "👑 Master Mute").clicked() {
+                        pr_auto_param_req = Some("master_mute".to_string());
+                    }
+                    if !self.master_chain_devices.is_empty() {
+                        for (m_slot, dev) in self.master_chain_devices.iter().enumerate() {
+                            if let Some(desc) = registry.get(&dev.kind) {
+                                if !desc.params.is_empty() {
+                                    ui.label(RichText::new(format!("👑 {}. {}", m_slot + 1, dev.display_name)).font(FontId::proportional(8.5)).color(Color32::from_rgb(251, 191, 36)));
+                                    for p in &desc.params {
+                                        if ui.selectable_label(false, format!("📈 {}", p.name)).clicked() {
+                                            pr_auto_param_req = Some(format!("master_node_{}_{}", m_slot, p.id));
+                                        }
                                     }
                                 }
                             }
@@ -3595,6 +3728,12 @@ impl AwardWinningGuiView {
         if param_name == "master_trim" {
             return self.open_master_trim_automation_editor();
         }
+        if param_name == "master_mono" || (param_name == "mono" && self.inspecting_master) {
+            return self.open_master_mono_automation_editor();
+        }
+        if param_name == "master_mute" || (param_name == "mute" && self.inspecting_master) {
+            return self.open_master_mute_automation_editor();
+        }
         if let Some(rest) = param_name.strip_prefix("master_node_") {
             if let Some((slot_str, p_id)) = rest.split_once('_') {
                 if let Ok(slot) = slot_str.parse::<usize>() {
@@ -4131,6 +4270,12 @@ impl AwardWinningGuiView {
     pub fn reset_master_gain(&mut self) {
         self.top_bar_state.master_gain = 1.0;
         self.is_master_muted = false;
+        if let Some(ref bus) = self.live_param_bus {
+            let pid = summoner_core::param_bus::ParamId(9999);
+            bus.set(pid, 1.0);
+            let m_pid = summoner_core::param_bus::ParamId(9995);
+            bus.set(m_pid, 0.0);
+        }
     }
 
     /// Toggle master output mute state, muting to 0.0 and restoring previous gain on unmute.
@@ -4143,12 +4288,22 @@ impl AwardWinningGuiView {
             self.top_bar_state.master_gain = 0.0;
             self.is_master_muted = true;
         }
+        if let Some(ref bus) = self.live_param_bus {
+            let pid = summoner_core::param_bus::ParamId(9995);
+            bus.set(pid, if self.is_master_muted { 1.0 } else { 0.0 });
+            let g_pid = summoner_core::param_bus::ParamId(9999);
+            bus.set(g_pid, self.top_bar_state.master_gain);
+        }
         self.is_master_muted
     }
 
     /// Toggle master output mono summing audition mode.
     pub fn toggle_master_mono(&mut self) -> bool {
         self.is_master_mono = !self.is_master_mono;
+        if let Some(ref bus) = self.live_param_bus {
+            let pid = summoner_core::param_bus::ParamId(9998);
+            bus.set(pid, if self.is_master_mono { 1.0 } else { 0.0 });
+        }
         self.is_master_mono
     }
 
@@ -4784,6 +4939,20 @@ impl AwardWinningGuiView {
         self.device_rack_state.chain_devices = self.master_chain_devices.clone();
         self.inspector_state.chain_devices = self.master_chain_devices.clone();
         self.inspector_state.selected_chain_idx = chain_idx;
+        self.inspector_state.gain_db = if self.top_bar_state.master_gain < 1e-4 { -60.0 } else { (self.top_bar_state.master_gain - 1.0) * 12.0 };
+        self.inspector_state.pan_val = 0.0;
+        self.inspector_state.is_muted = self.is_master_muted;
+        self.inspector_state.is_soloed = false;
+        self.inspector_state.is_armed = false;
+        self.inspector_state.phase_inverted = false;
+        self.inspector_state.input_trim_db = self.master_trim_db;
+        self.last_inspector_gain_db = self.inspector_state.gain_db;
+        self.last_inspector_pan = self.inspector_state.pan_val;
+        self.last_inspector_muted = self.inspector_state.is_muted;
+        self.last_inspector_soloed = false;
+        self.last_inspector_armed = false;
+        self.last_inspector_phase = false;
+        self.last_inspector_trim_db = self.master_trim_db;
         if let Some(dev) = self.master_chain_devices.get(chain_idx) {
             self.device_rack_state.selected_node_kind = Some(dev.kind.clone());
             self.inspector_state.selected_node_kind = Some(dev.kind.clone());
@@ -4812,6 +4981,20 @@ impl AwardWinningGuiView {
             self.inspector_state.selected_chain_idx = slot_idx;
             self.device_rack_state.chain_devices = self.master_chain_devices.clone();
             self.inspector_state.chain_devices = self.master_chain_devices.clone();
+            self.inspector_state.gain_db = if self.top_bar_state.master_gain < 1e-4 { -60.0 } else { (self.top_bar_state.master_gain - 1.0) * 12.0 };
+            self.inspector_state.pan_val = 0.0;
+            self.inspector_state.is_muted = self.is_master_muted;
+            self.inspector_state.is_soloed = false;
+            self.inspector_state.is_armed = false;
+            self.inspector_state.phase_inverted = false;
+            self.inspector_state.input_trim_db = self.master_trim_db;
+            self.last_inspector_gain_db = self.inspector_state.gain_db;
+            self.last_inspector_pan = self.inspector_state.pan_val;
+            self.last_inspector_muted = self.inspector_state.is_muted;
+            self.last_inspector_soloed = false;
+            self.last_inspector_armed = false;
+            self.last_inspector_phase = false;
+            self.last_inspector_trim_db = self.master_trim_db;
             let dev = &self.master_chain_devices[slot_idx];
             self.device_rack_state.device_name = dev.display_name.clone();
             self.inspector_state.target_name = format!("Master — {}", dev.display_name);
@@ -4924,6 +5107,66 @@ impl AwardWinningGuiView {
         true
     }
 
+    /// Open live Bézier parameter automation editor for Master Bus Mono Audition (0.0 = Stereo, 1.0 = Mono).
+    pub fn open_master_mono_automation_editor(&mut self) -> bool {
+        let custom_title = "Master Bus — Mono Audition".to_string();
+        let mut ed = crate::views::bezier_automation_editor::BezierAutomationEditorView::new(
+            custom_title,
+            "bool".to_string(),
+            0.0,
+            1.0,
+            16.0,
+        );
+        let norm_val = if self.is_master_mono { 1.0 } else { 0.0 };
+        ed.nodes.clear();
+        ed.nodes.push(crate::views::bezier_automation_editor::AutomationNode::new(
+            "start",
+            0.0,
+            norm_val,
+            crate::views::bezier_automation_editor::AutomationCurveType::Linear,
+        ));
+        ed.nodes.push(crate::views::bezier_automation_editor::AutomationNode::new(
+            "end",
+            16.0,
+            norm_val,
+            crate::views::bezier_automation_editor::AutomationCurveType::Linear,
+        ));
+        self.requested_modular_automation_param = Some("master_mono".to_string());
+        self.automation_editor = Some(ed);
+        self.show_automation_editor_window = true;
+        true
+    }
+
+    /// Open live Bézier parameter automation editor for Master Bus Mute State (0.0 = Active, 1.0 = Muted).
+    pub fn open_master_mute_automation_editor(&mut self) -> bool {
+        let custom_title = "Master Bus — Mute State".to_string();
+        let mut ed = crate::views::bezier_automation_editor::BezierAutomationEditorView::new(
+            custom_title,
+            "bool".to_string(),
+            0.0,
+            1.0,
+            16.0,
+        );
+        let norm_val = if self.is_master_muted { 1.0 } else { 0.0 };
+        ed.nodes.clear();
+        ed.nodes.push(crate::views::bezier_automation_editor::AutomationNode::new(
+            "start",
+            0.0,
+            norm_val,
+            crate::views::bezier_automation_editor::AutomationCurveType::Linear,
+        ));
+        ed.nodes.push(crate::views::bezier_automation_editor::AutomationNode::new(
+            "end",
+            16.0,
+            norm_val,
+            crate::views::bezier_automation_editor::AutomationCurveType::Linear,
+        ));
+        self.requested_modular_automation_param = Some("master_mute".to_string());
+        self.automation_editor = Some(ed);
+        self.show_automation_editor_window = true;
+        true
+    }
+
     /// Check whether a track has its audio phase inverted (polarity flipped).
     pub fn is_track_phase_inverted(&self, track_id: u64) -> bool {
         self.track_phase_inverted.get(&track_id).copied().unwrap_or(false)
@@ -4939,6 +5182,15 @@ impl AwardWinningGuiView {
             bus.set(pid, if next { 1.0 } else { 0.0 });
         }
         next
+    }
+
+    /// Set audio phase inversion (polarity flip) for a track directly.
+    pub fn set_track_phase_inverted(&mut self, track_id: u64, inverted: bool) {
+        self.track_phase_inverted.insert(track_id, inverted);
+        if let Some(ref bus) = self.live_param_bus {
+            let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 204);
+            bus.set(pid, if inverted { 1.0 } else { 0.0 });
+        }
     }
 
     /// Get input trim gain (in dB) for a track.
@@ -5464,6 +5716,15 @@ impl AwardWinningGuiView {
 
             if let Some(val) = automation_timeline.evaluate("master_gain", playhead_beat) {
                 self.top_bar_state.master_gain = val;
+                if val > 0.0 {
+                    self.is_master_muted = false;
+                }
+            }
+            if let Some(val) = automation_timeline.evaluate("master_mono", playhead_beat) {
+                self.is_master_mono = val >= 0.5;
+            }
+            if let Some(val) = automation_timeline.evaluate("master_mute", playhead_beat) {
+                self.is_master_muted = val >= 0.5;
             }
 
             for (t_i, vt) in self.tracks.iter_mut().enumerate() {
@@ -5500,6 +5761,23 @@ impl AwardWinningGuiView {
                     if t_i == track_idx {
                         self.inspector_state.is_soloed = is_s;
                         self.last_inspector_soloed = is_s;
+                    }
+                }
+                let phase_lane = format!("track_{}_phase", t_id);
+                if let Some(val) = automation_timeline.evaluate(&phase_lane, playhead_beat) {
+                    let is_p = val >= 0.5;
+                    self.track_phase_inverted.insert(t_id, is_p);
+                    if t_i == track_idx {
+                        self.inspector_state.phase_inverted = is_p;
+                        self.last_inspector_phase = is_p;
+                    }
+                }
+                let trim_lane = format!("track_{}_trim", t_id);
+                if let Some(val) = automation_timeline.evaluate(&trim_lane, playhead_beat) {
+                    self.track_input_trim_db.insert(t_id, val);
+                    if t_i == track_idx {
+                        self.inspector_state.input_trim_db = val;
+                        self.last_inspector_trim_db = val;
                     }
                 }
                 let clip_lane = format!("track_{}_clip", t_id);
@@ -5689,11 +5967,29 @@ impl AwardWinningGuiView {
         if param_bus.get(m_trim_pid).is_some() {
             param_bus.set(m_trim_pid, self.master_trim_db);
         }
+        let mute_pid = summoner_core::param_bus::ParamId(9995);
+        if param_bus.get(mute_pid).is_some() {
+            param_bus.set(mute_pid, if self.is_master_muted { 1.0 } else { 0.0 });
+        }
         let master_auto_key = "master_gain".to_string();
         if automation_registry.get_param(&master_auto_key).is_none() {
             automation_registry.register_param(&master_auto_key, self.top_bar_state.master_gain);
         }
         automation_registry.set(&master_auto_key, self.top_bar_state.master_gain);
+
+        let master_mono_key = "master_mono".to_string();
+        let mono_val = if self.is_master_mono { 1.0 } else { 0.0 };
+        if automation_registry.get_param(&master_mono_key).is_none() {
+            automation_registry.register_param(&master_mono_key, mono_val);
+        }
+        automation_registry.set(&master_mono_key, mono_val);
+
+        let master_mute_key = "master_mute".to_string();
+        let mute_val = if self.is_master_muted { 1.0 } else { 0.0 };
+        if automation_registry.get_param(&master_mute_key).is_none() {
+            automation_registry.register_param(&master_mute_key, mute_val);
+        }
+        automation_registry.set(&master_mute_key, mute_val);
 
         let master_trim_key = "master_trim".to_string();
         if automation_registry.get_param(&master_trim_key).is_none() {
@@ -5708,20 +6004,27 @@ impl AwardWinningGuiView {
         }
 
         if is_recording_automation {
-            let point = summoner_sequencer::automation_timeline::AutomationPoint {
-                beat: playhead_beat,
-                value: self.top_bar_state.master_gain,
-                interp: summoner_sequencer::automation_timeline::Interpolation::Linear,
-            };
-            let lane = automation_timeline.lanes.entry(master_auto_key.clone()).or_insert_with(|| {
-                summoner_sequencer::automation_timeline::AutomationLane {
-                    param_id: master_auto_key.clone(),
-                    curve: summoner_sequencer::automation_timeline::AutomationCurve { points: Vec::new() },
+            for (key, val, interp) in [
+                (&master_auto_key, self.top_bar_state.master_gain, summoner_sequencer::automation_timeline::Interpolation::Linear),
+                (&master_mono_key, mono_val, summoner_sequencer::automation_timeline::Interpolation::Step),
+                (&master_mute_key, mute_val, summoner_sequencer::automation_timeline::Interpolation::Step),
+                (&master_trim_key, self.master_trim_db, summoner_sequencer::automation_timeline::Interpolation::Linear),
+            ] {
+                let point = summoner_sequencer::automation_timeline::AutomationPoint {
+                    beat: playhead_beat,
+                    value: val,
+                    interp,
+                };
+                let lane = automation_timeline.lanes.entry(key.clone()).or_insert_with(|| {
+                    summoner_sequencer::automation_timeline::AutomationLane {
+                        param_id: key.clone(),
+                        curve: summoner_sequencer::automation_timeline::AutomationCurve { points: Vec::new() },
+                    }
+                });
+                match lane.curve.points.binary_search_by(|p| p.beat.partial_cmp(&playhead_beat).unwrap()) {
+                    Ok(idx) => lane.curve.points[idx] = point,
+                    Err(idx) => lane.curve.points.insert(idx, point),
                 }
-            });
-            match lane.curve.points.binary_search_by(|p| p.beat.partial_cmp(&playhead_beat).unwrap()) {
-                Ok(idx) => lane.curve.points[idx] = point,
-                Err(idx) => lane.curve.points.insert(idx, point),
             }
         }
 
@@ -5786,12 +6089,27 @@ impl AwardWinningGuiView {
             }
             automation_registry.set(&solo_auto_key, s_val);
 
+            let phase_auto_key = format!("track_{}_phase", t_id);
+            let phase_val = if phase_inverted { 1.0 } else { 0.0 };
+            if automation_registry.get_param(&phase_auto_key).is_none() {
+                automation_registry.register_param(&phase_auto_key, phase_val);
+            }
+            automation_registry.set(&phase_auto_key, phase_val);
+
+            let trim_auto_key = format!("track_{}_trim", t_id);
+            if automation_registry.get_param(&trim_auto_key).is_none() {
+                automation_registry.register_param(&trim_auto_key, input_trim);
+            }
+            automation_registry.set(&trim_auto_key, input_trim);
+
             if is_recording_automation && t_i == track_idx {
                 for (key, val, interp) in [
                     (&gain_auto_key, t_gain, summoner_sequencer::automation_timeline::Interpolation::Linear),
                     (&pan_auto_key, t_pan, summoner_sequencer::automation_timeline::Interpolation::Linear),
                     (&mute_auto_key, m_val, summoner_sequencer::automation_timeline::Interpolation::Step),
                     (&solo_auto_key, s_val, summoner_sequencer::automation_timeline::Interpolation::Step),
+                    (&phase_auto_key, phase_val, summoner_sequencer::automation_timeline::Interpolation::Step),
+                    (&trim_auto_key, input_trim, summoner_sequencer::automation_timeline::Interpolation::Linear),
                 ] {
                     let point = summoner_sequencer::automation_timeline::AutomationPoint {
                         beat: playhead_beat,
@@ -6161,12 +6479,18 @@ impl AwardWinningGuiView {
             self.inspector_state.is_muted = tr_muted;
             self.inspector_state.is_soloed = tr_soloed;
             self.inspector_state.is_armed = tr_armed;
+            let tr_phase = self.is_track_phase_inverted(tr_id);
+            let tr_trim = self.get_track_input_trim(tr_id);
+            self.inspector_state.phase_inverted = tr_phase;
+            self.inspector_state.input_trim_db = tr_trim;
 
             self.last_inspector_gain_db = self.inspector_state.gain_db;
             self.last_inspector_pan = self.inspector_state.pan_val;
             self.last_inspector_muted = self.inspector_state.is_muted;
             self.last_inspector_soloed = self.inspector_state.is_soloed;
             self.last_inspector_armed = self.inspector_state.is_armed;
+            self.last_inspector_phase = tr_phase;
+            self.last_inspector_trim_db = tr_trim;
 
             // Live ParamBus zero-allocation synchronization
             if let Some(ref bus) = self.live_param_bus {
@@ -6185,6 +6509,14 @@ impl AwardWinningGuiView {
                 let solo_pid = summoner_core::param_bus::ParamId(tr_id as u32 * 1000 + 203);
                 if bus.get(solo_pid).is_some() {
                     bus.set(solo_pid, if tr_soloed { 1.0 } else { 0.0 });
+                }
+                let phase_pid = summoner_core::param_bus::ParamId(tr_id as u32 * 1000 + 204);
+                if bus.get(phase_pid).is_some() {
+                    bus.set(phase_pid, if tr_phase { 1.0 } else { 0.0 });
+                }
+                let trim_pid = summoner_core::param_bus::ParamId(tr_id as u32 * 1000 + 205);
+                if bus.get(trim_pid).is_some() {
+                    bus.set(trim_pid, tr_trim);
                 }
             }
 
@@ -6495,6 +6827,18 @@ impl AwardWinningGuiView {
                             if ui.button("Pan").clicked() {
                                 auto_req = Some((cur_tid, "pan".to_string()));
                             }
+                            if ui.button("Mute").clicked() {
+                                auto_req = Some((cur_tid, "mute".to_string()));
+                            }
+                            if ui.button("Solo").clicked() {
+                                auto_req = Some((cur_tid, "solo".to_string()));
+                            }
+                            if ui.button("Phase (Ø)").clicked() {
+                                auto_req = Some((cur_tid, "phase".to_string()));
+                            }
+                            if ui.button("Trim (dB)").clicked() {
+                                auto_req = Some((cur_tid, "trim".to_string()));
+                            }
                             if ui.button("Cutoff").clicked() {
                                 auto_req = Some((cur_tid, "cutoff".to_string()));
                             }
@@ -6541,6 +6885,36 @@ impl AwardWinningGuiView {
                                         for p in &desc.params {
                                             if ui.selectable_label(false, format!("📈 {}", p.name)).clicked() {
                                                 auto_req = Some((cur_tid, p.id.clone()));
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Master Bus Automation Options
+                            ui.separator();
+                            ui.label(RichText::new("👑 Master Bus").font(FontId::proportional(9.0)).color(Color32::from_rgb(245, 158, 11)));
+                            if ui.selectable_label(false, "👑 Master Volume Gain").clicked() {
+                                auto_req = Some((cur_tid, "master_gain".to_string()));
+                            }
+                            if ui.selectable_label(false, "👑 Master Trim (dB)").clicked() {
+                                auto_req = Some((cur_tid, "master_trim".to_string()));
+                            }
+                            if ui.selectable_label(false, "👑 Master Mono Audition").clicked() {
+                                auto_req = Some((cur_tid, "master_mono".to_string()));
+                            }
+                            if ui.selectable_label(false, "👑 Master Mute").clicked() {
+                                auto_req = Some((cur_tid, "master_mute".to_string()));
+                            }
+                            if !self.master_chain_devices.is_empty() {
+                                for (m_slot, dev) in self.master_chain_devices.iter().enumerate() {
+                                    if let Some(desc) = registry.get(&dev.kind) {
+                                        if !desc.params.is_empty() {
+                                            ui.label(RichText::new(format!("👑 {}. {}", m_slot + 1, dev.display_name)).font(FontId::proportional(8.5)).color(Color32::from_rgb(251, 191, 36)));
+                                            for p in &desc.params {
+                                                if ui.selectable_label(false, format!("📈 {}", p.name)).clicked() {
+                                                    auto_req = Some((cur_tid, format!("master_node_{}_{}", m_slot, p.id)));
+                                                }
                                             }
                                         }
                                     }
@@ -7577,9 +7951,9 @@ impl AwardWinningGuiView {
 
                 // Mixer interactions: Mute, Solo, Volume Fader, Pan Pot, 1-Click Pro View Launchers, Track Selection
                 let pointer_pos = resp.interact_pointer_pos().or_else(|| ui.input(|i| i.pointer.latest_pos()));
-                let is_interacting = resp.clicked() || resp.dragged() || ui.input(|i| i.pointer.primary_down() || i.pointer.primary_clicked());
-                let is_click = resp.clicked() || ui.input(|i| i.pointer.primary_clicked() || (i.pointer.primary_down() && !resp.dragged()));
                 let is_sec_click = resp.secondary_clicked() || ui.input(|i| i.pointer.secondary_clicked());
+                let is_interacting = resp.clicked() || resp.dragged() || is_sec_click || ui.input(|i| i.pointer.primary_down() || i.pointer.primary_clicked());
+                let is_click = resp.clicked() || ui.input(|i| i.pointer.primary_clicked() || (i.pointer.primary_down() && !resp.dragged()));
                 let is_double = resp.double_clicked();
                 let drag_delta = resp.drag_delta();
 
@@ -7702,7 +8076,9 @@ impl AwardWinningGuiView {
                                     track_to_open_auto = Some(track.id);
                                 } else if pos.distance(pan_center) <= 10.0 {
                                     // Interactive Pan Pot Dragging, Clicking & Double-Click Reset
-                                    if is_double {
+                                    if is_sec_click {
+                                        track_to_open_auto_param = Some((track.id, "pan".to_string()));
+                                    } else if is_double {
                                         track.pan = 0.0;
                                     } else if resp.dragged() {
                                         let speed = if ui.input(|i| i.modifiers.shift) { 0.003 } else { 0.015 };
@@ -7712,14 +8088,26 @@ impl AwardWinningGuiView {
                                         track.pan = offset;
                                     }
                                     selected_idx = Some(idx);
-                                } else if m_rect.contains(pos) && is_click {
-                                    track.is_muted = !track.is_muted;
+                                } else if m_rect.contains(pos) {
+                                    if is_sec_click {
+                                        track_to_open_auto_param = Some((track.id, "mute".to_string()));
+                                    } else if is_click {
+                                        track.is_muted = !track.is_muted;
+                                    }
                                     selected_idx = Some(idx);
-                                } else if s_rect.contains(pos) && is_click {
-                                    track.is_soloed = !track.is_soloed;
+                                } else if s_rect.contains(pos) {
+                                    if is_sec_click {
+                                        track_to_open_auto_param = Some((track.id, "solo".to_string()));
+                                    } else if is_click {
+                                        track.is_soloed = !track.is_soloed;
+                                    }
                                     selected_idx = Some(idx);
-                                } else if is_pro && phase_rect.map(|pr| pr.contains(pos)).unwrap_or(false) && is_click {
-                                    phase_to_toggle = Some(track.id);
+                                } else if is_pro && phase_rect.map(|pr| pr.contains(pos)).unwrap_or(false) {
+                                    if is_sec_click {
+                                        track_to_open_auto_param = Some((track.id, "phase".to_string()));
+                                    } else if is_click {
+                                        phase_to_toggle = Some(track.id);
+                                    }
                                     selected_idx = Some(idx);
                                 } else if is_pro && Rect::from_min_size(egui::pos2(strip_rect.left() + 4.0, s_rect.bottom() + 3.0), Vec2::new(strip_rect.width() - 8.0, 12.0)).contains(pos) && (is_click || is_sec_click) {
                                     selected_idx = Some(idx);
@@ -7738,7 +8126,9 @@ impl AwardWinningGuiView {
                                         self.modular_add_modal_open = true;
                                     }
                                 } else if pos.y >= fader_top - 6.0 && pos.y <= fader_bot + 6.0 {
-                                    if is_double {
+                                    if is_sec_click {
+                                        track_to_open_auto_param = Some((track.id, "gain".to_string()));
+                                    } else if is_double {
                                         track.gain = 1.0; // Double click resets to 0.0 dB unity
                                     } else {
                                         let norm = ((fader_bot - pos.y) / (fader_bot - fader_top)).clamp(0.0, 1.0);
@@ -7945,13 +8335,25 @@ impl AwardWinningGuiView {
 
                 if let Some(pos) = pointer_pos {
                     if is_interacting && m_strip.contains(pos) {
-                        if m_mute_rect.contains(pos) && is_click {
-                            self.toggle_master_mute();
-                        } else if m_mono_rect.contains(pos) && is_click {
-                            self.toggle_master_mono();
-                        } else if m_unity_rect.contains(pos) && is_click {
-                            self.reset_master_gain();
-                        } else if m_auto_rect.contains(pos) && is_click {
+                        if m_mute_rect.contains(pos) {
+                            if is_sec_click {
+                                self.open_master_mute_automation_editor();
+                            } else if is_click {
+                                self.toggle_master_mute();
+                            }
+                        } else if m_mono_rect.contains(pos) {
+                            if is_sec_click {
+                                self.open_master_mono_automation_editor();
+                            } else if is_click {
+                                self.toggle_master_mono();
+                            }
+                        } else if m_unity_rect.contains(pos) {
+                            if is_sec_click {
+                                self.open_master_trim_automation_editor();
+                            } else if is_click {
+                                self.reset_master_gain();
+                            }
+                        } else if m_auto_rect.contains(pos) && (is_click || is_sec_click) {
                             master_to_open_auto = true;
                         } else if is_pro && m_chip0.contains(pos) && (is_click || is_sec_click) {
                             self.select_master_node(0);
@@ -7968,7 +8370,9 @@ impl AwardWinningGuiView {
                                 self.modular_add_modal_open = true;
                             }
                         } else if pos.y >= m_fader_top - 6.0 && pos.y <= m_fader_bot + 6.0 {
-                            if is_double {
+                            if is_sec_click {
+                                self.open_master_automation_editor();
+                            } else if is_double {
                                 self.reset_master_gain();
                             } else {
                                 let norm = ((m_fader_bot - pos.y) / (m_fader_bot - m_fader_top)).clamp(0.0, 1.0);
@@ -8115,6 +8519,12 @@ impl AwardWinningGuiView {
                     if ui.selectable_label(false, "📈 Solo Audition").clicked() {
                         stg_auto_param_req = Some("solo".to_string());
                     }
+                    if ui.selectable_label(false, "📈 Phase Invert (Ø)").clicked() {
+                        stg_auto_param_req = Some("phase".to_string());
+                    }
+                    if ui.selectable_label(false, "📈 Input Trim (dB)").clicked() {
+                        stg_auto_param_req = Some("trim".to_string());
+                    }
                     if ui.selectable_label(false, "📈 Filter Cutoff").clicked() {
                         stg_auto_param_req = Some("cutoff".to_string());
                     }
@@ -8153,6 +8563,36 @@ impl AwardWinningGuiView {
                                 for p in &desc.params {
                                     if ui.selectable_label(false, format!("📈 {}", p.name)).clicked() {
                                         stg_auto_param_req = Some(p.id.clone());
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Master Bus Automation Options
+                    ui.separator();
+                    ui.label(RichText::new("👑 Master Bus").font(FontId::proportional(9.0)).color(Color32::from_rgb(245, 158, 11)));
+                    if ui.selectable_label(false, "👑 Master Volume Gain").clicked() {
+                        stg_auto_param_req = Some("master_gain".to_string());
+                    }
+                    if ui.selectable_label(false, "👑 Master Trim (dB)").clicked() {
+                        stg_auto_param_req = Some("master_trim".to_string());
+                    }
+                    if ui.selectable_label(false, "👑 Master Mono Audition").clicked() {
+                        stg_auto_param_req = Some("master_mono".to_string());
+                    }
+                    if ui.selectable_label(false, "👑 Master Mute").clicked() {
+                        stg_auto_param_req = Some("master_mute".to_string());
+                    }
+                    if !self.master_chain_devices.is_empty() {
+                        for (m_slot, dev) in self.master_chain_devices.iter().enumerate() {
+                            if let Some(desc) = registry.get(&dev.kind) {
+                                if !desc.params.is_empty() {
+                                    ui.label(RichText::new(format!("👑 {}. {}", m_slot + 1, dev.display_name)).font(FontId::proportional(8.5)).color(Color32::from_rgb(251, 191, 36)));
+                                    for p in &desc.params {
+                                        if ui.selectable_label(false, format!("📈 {}", p.name)).clicked() {
+                                            stg_auto_param_req = Some(format!("master_node_{}_{}", m_slot, p.id));
+                                        }
                                     }
                                 }
                             }

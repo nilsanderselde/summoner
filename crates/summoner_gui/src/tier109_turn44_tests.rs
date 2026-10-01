@@ -234,25 +234,25 @@ pub mod gui_tests {
         assert!(view.show_automation_editor_window);
         assert_eq!(view.requested_modular_automation_param, Some("master_trim".to_string()));
         let ed = view.automation_editor.as_ref().unwrap();
-        assert_eq!(ed.param_name, "Master Bus — Gain Trim");
-        assert_eq!(ed.unit, "dB");
-        assert_eq!(ed.min_val, -12.0);
-        assert_eq!(ed.max_val, 12.0);
+        assert_eq!(ed.parameter_name, "Master Bus — Gain Trim");
+        assert_eq!(ed.unit_name, "dB");
+        assert_eq!(ed.min_display, -12.0);
+        assert_eq!(ed.max_display, 12.0);
 
         // Track phase automation editor
         let res_phase = view.open_track_automation_editor(1, "phase");
         assert!(res_phase);
         let ed_p = view.automation_editor.as_ref().unwrap();
-        assert_eq!(ed_p.unit, "bool");
-        assert_eq!(ed_p.min_val, 0.0);
-        assert_eq!(ed_p.max_val, 1.0);
+        assert_eq!(ed_p.unit_name, "bool");
+        assert_eq!(ed_p.min_display, 0.0);
+        assert_eq!(ed_p.max_display, 1.0);
 
         // Track input trim automation editor
         let res_tr_trim = view.open_track_automation_editor(1, "trim");
         assert!(res_tr_trim);
         let ed_t = view.automation_editor.as_ref().unwrap();
-        assert_eq!(ed_t.unit, "dB");
-        assert_eq!(ed_t.min_val, -18.0);
-        assert_eq!(ed_t.max_val, 18.0);
+        assert_eq!(ed_t.unit_name, "dB");
+        assert_eq!(ed_t.min_display, -18.0);
+        assert_eq!(ed_t.max_display, 18.0);
     }
 }

@@ -32,6 +32,10 @@ pub struct ModernInspectorState {
     pub chain_devices: Vec<crate::views::modern_device_rack::RackChainDeviceVisual>,
     #[serde(default)]
     pub selected_chain_idx: usize,
+    #[serde(default)]
+    pub phase_inverted: bool,
+    #[serde(default)]
+    pub input_trim_db: f32,
 }
 
 impl Default for ModernInspectorState {
@@ -45,6 +49,8 @@ impl Default for ModernInspectorState {
             is_muted: false,
             is_soloed: false,
             is_armed: true,
+            phase_inverted: false,
+            input_trim_db: 0.0,
             scale_name: "A Minor Pentatonic".to_string(),
             scale_ratio_num: 1,
             scale_ratio_den: 1,
@@ -162,12 +168,14 @@ impl ModernInspectorState {
         self.requested_automation_param = Some(param_id.to_string());
     }
 
-    /// Reset track gain, pan, mute, and solo controls to unity / centered defaults.
+    /// Reset track gain, pan, mute, solo, phase, and trim controls to unity / centered defaults.
     pub fn reset_mix_controls(&mut self) {
         self.gain_db = 0.0;
         self.pan_val = 0.0;
         self.is_muted = false;
         self.is_soloed = false;
+        self.phase_inverted = false;
+        self.input_trim_db = 0.0;
     }
 }
 
@@ -364,6 +372,66 @@ pub fn show_modern_inspector_with_context(
                 if arm_btn.clicked() {
                     state.is_armed = !state.is_armed;
                 }
+            });
+
+            ui.add_space(8.0);
+
+            // Phase Invert ([Ø]) & Input Trim (-18.0 .. +18.0 dB)
+            ui.horizontal(|ui| {
+                ui.label(RichText::new("Input Trim").font(FontId::proportional(10.0)).color(Color32::from_rgb(148, 163, 184)));
+                if ui.small_button(RichText::new("📈").font(FontId::proportional(9.0))).on_hover_text("Open Live Bézier Automation Lane for Input Trim").clicked() {
+                    state.requested_automation_param = Some("trim".to_string());
+                }
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    ui.label(RichText::new(format!("{:.1}dB", state.input_trim_db)).font(FontId::proportional(10.0)).color(Color32::from_rgb(56, 189, 248)));
+                });
+            });
+            let trim_resp = ui.add(egui::Slider::new(&mut state.input_trim_db, -18.0..=18.0).show_value(false));
+            if trim_resp.double_clicked() {
+                state.input_trim_db = 0.0;
+            }
+            if trim_resp.secondary_clicked() {
+                state.requested_automation_param = Some("trim".to_string());
+            }
+            if trim_resp.changed() || trim_resp.double_clicked() {
+                if let Some(bus) = param_bus {
+                    let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 205);
+                    if bus.get(pid).is_some() {
+                        bus.set(pid, state.input_trim_db);
+                    }
+                }
+            }
+            if trim_resp.hovered() {
+                let _ = trim_resp.on_hover_text(format!(
+                    "Input Trim: {:.1} dB\n[Drag to adjust | Double-click for 0.0dB | Right-click to automate]",
+                    state.input_trim_db
+                ));
+            }
+
+            ui.add_space(6.0);
+
+            ui.horizontal(|ui| {
+                let phase_col = if state.phase_inverted { Color32::from_rgb(245, 158, 11) } else { Color32::from_rgb(148, 163, 184) };
+                let phase_bg = if state.phase_inverted { Color32::from_rgba_unmultiplied(245, 158, 11, 40) } else { Color32::from_rgb(24, 34, 52) };
+                let phase_btn = ui.add(
+                    egui::Button::new(RichText::new(if state.phase_inverted { "Ø Phase Inverted" } else { "Ø Phase Normal" }).font(FontId::proportional(10.0)).color(phase_col))
+                        .fill(phase_bg)
+                        .stroke(Stroke::new(1.0_f32, if state.phase_inverted { Color32::from_rgb(245, 158, 11) } else { Color32::from_rgb(36, 50, 74) }))
+                        .rounding(Rounding::same(4.0))
+                );
+                if phase_btn.clicked() {
+                    state.phase_inverted = !state.phase_inverted;
+                    if let Some(bus) = param_bus {
+                        let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 204);
+                        if bus.get(pid).is_some() {
+                            bus.set(pid, if state.phase_inverted { 1.0 } else { 0.0 });
+                        }
+                    }
+                }
+                if phase_btn.secondary_clicked() {
+                    state.requested_automation_param = Some("phase".to_string());
+                }
+                let _ = phase_btn.on_hover_text("Toggle Audio Polarity Inversion (180° phase flip)\n[Click to toggle | Right-click to automate]");
             });
 
             ui.add_space(14.0);
