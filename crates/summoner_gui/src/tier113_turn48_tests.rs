@@ -99,7 +99,7 @@ pub mod gui_tests {
     use summoner_core::param_bus::ParamBus;
     use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use crate::views::modern_device_rack::{show_modern_device_rack_with_context, ModernDeviceRackState};
-    use crate::views::modern_inspector::{show_modern_inspector_with_context, ModernInspectorState};
+    use crate::views::modern_inspector::ModernInspectorState;
     use crate::command_palette::CommandPalette;
 
     #[test]

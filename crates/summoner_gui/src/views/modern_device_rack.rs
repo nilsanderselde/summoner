@@ -1404,7 +1404,7 @@ fn show_pro_parameter_drawer(
                         // Background grid
                         for gx in 1..4 {
                             let px = h_rect.left() + h_rect.width() * (gx as f32 / 4.0);
-                            h_painter.line_segment([egui::pos2(px, h_rect.top()), egui::pos2(px, h_rect.bottom())], Stroke::new(0.5, Color32::from_rgb(26, 36, 48)));
+                            h_painter.line_segment([egui::pos2(px, h_rect.top()), egui::pos2(px, h_rect.bottom())], Stroke::new(0.5_f32, Color32::from_rgb(26, 36, 48)));
                         }
 
                         // Wooden Rosined Wheel Circle Arc
