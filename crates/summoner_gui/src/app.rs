@@ -1459,6 +1459,14 @@ impl eframe::App for SummonerApp {
                     self.current_view = ViewMode::ModernStudio;
                     self.award_winning_view.open_sympathetic_hud();
                 }
+                "open_woodwind_jet_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_woodwind_jet_hud();
+                }
+                "open_tonehole_matrix_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_tonehole_matrix_hud();
+                }
                 "sfz_convert" | "auto_slice" | "load_preset" | "export_clap" | "toggle_simd" => {
                     println!("Command palette action executed: {}", action);
                 }

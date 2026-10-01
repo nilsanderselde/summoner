@@ -102,6 +102,10 @@ pub struct ModernInspectorState {
     pub requested_open_soundboard_hud: bool,
     #[serde(default)]
     pub requested_open_sympathetic_hud: bool,
+    #[serde(default)]
+    pub requested_open_woodwind_jet_hud: bool,
+    #[serde(default)]
+    pub requested_open_tonehole_matrix_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -159,6 +163,8 @@ impl Default for ModernInspectorState {
             requested_open_jawari_bridge_hud: false,
             requested_open_soundboard_hud: false,
             requested_open_sympathetic_hud: false,
+            requested_open_woodwind_jet_hud: false,
+            requested_open_tonehole_matrix_hud: false,
         }
     }
 }
@@ -963,6 +969,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open interactive Multi-String Sympathetic Resonance Energy Transfer Matrix (Cij) & open string excitation HUD").clicked() {
                     state.requested_open_sympathetic_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("WoodwindJet") || active_kind.contains("FluteJet") || active_kind.contains("AirJet") || active_kind.contains("WoodwindModel") || active_kind == "WoodwindJetView" || active_kind == "AeroacousticFluteJetExciter" || active_kind == "AcousticConcertFluteAirJetModel" || active_kind == "WoodwindJetNode" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🌬 Open Woodwind Air-Jet Embouchure HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 229, 255)))
+                        .fill(Color32::from_rgb(12, 34, 48))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 229, 255)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Physical Modeling Woodwind Air-Jet Embouchure & Tonehole Radiation Impedance HUD").clicked() {
+                    state.requested_open_woodwind_jet_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Tonehole") || active_kind.contains("BoreModel") || active_kind == "ToneholeMatrixView" || active_kind == "ToneholeMatrix" || active_kind == "ToneholeGrid" || active_kind == "WoodwindToneholeGrid" || active_kind == "ToneholeLattice" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🕳 Open Woodwind 6-Tonehole Radiation HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(255, 107, 43)))
+                        .fill(Color32::from_rgb(38, 20, 12))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 107, 43)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Woodwind 6-Tonehole Acoustic Radiation Matrix & Bore Standing Wave HUD").clicked() {
+                    state.requested_open_tonehole_matrix_hud = true;
                 }
                 ui.add_space(4.0);
             }

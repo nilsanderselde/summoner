@@ -708,6 +708,10 @@ pub struct AwardWinningGuiView {
     pub soundboard_view: crate::views::soundboard_bridge_view::SoundboardBridgeView,
     pub show_sympathetic_modal: bool,
     pub sympathetic_view: crate::views::sympathetic_coupling_view::SympatheticCouplingView,
+    pub show_woodwind_jet_modal: bool,
+    pub woodwind_jet_view: crate::views::woodwind_jet_view::WoodwindJetView,
+    pub show_tonehole_matrix_modal: bool,
+    pub tonehole_matrix_view: crate::views::tonehole_matrix_view::ToneholeMatrixView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1032,6 +1036,10 @@ impl AwardWinningGuiView {
             soundboard_view: crate::views::soundboard_bridge_view::SoundboardBridgeView::new(),
             show_sympathetic_modal: false,
             sympathetic_view: crate::views::sympathetic_coupling_view::SympatheticCouplingView::new(),
+            show_woodwind_jet_modal: false,
+            woodwind_jet_view: crate::views::woodwind_jet_view::WoodwindJetView::new(),
+            show_tonehole_matrix_modal: false,
+            tonehole_matrix_view: crate::views::tonehole_matrix_view::ToneholeMatrixView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -1841,6 +1849,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_sympathetic_hud = false;
             self.open_sympathetic_hud();
         }
+        if self.inspector_state.requested_open_woodwind_jet_hud || self.device_rack_state.requested_open_woodwind_jet_hud {
+            self.inspector_state.requested_open_woodwind_jet_hud = false;
+            self.device_rack_state.requested_open_woodwind_jet_hud = false;
+            self.open_woodwind_jet_hud();
+        }
+        if self.inspector_state.requested_open_tonehole_matrix_hud || self.device_rack_state.requested_open_tonehole_matrix_hud {
+            self.inspector_state.requested_open_tonehole_matrix_hud = false;
+            self.device_rack_state.requested_open_tonehole_matrix_hud = false;
+            self.open_tonehole_matrix_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -1878,6 +1896,8 @@ impl AwardWinningGuiView {
         self.show_jawari_bridge_modal_window(ui);
         self.show_soundboard_modal_window(ui);
         self.show_sympathetic_modal_window(ui);
+        self.show_woodwind_jet_modal_window(ui);
+        self.show_tonehole_matrix_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -10768,6 +10788,182 @@ impl AwardWinningGuiView {
 
     pub fn is_sympathetic_hud_open(&self) -> bool {
         self.show_sympathetic_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_woodwind_jet_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_woodwind_jet_modal {
+            return;
+        }
+
+        let mut is_open = self.show_woodwind_jet_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🌬 Physical Modeling Woodwind Air-Jet Embouchure HUD")
+            .id(egui::Id::new("woodwind_jet_hud_modal"))
+            .open(&mut is_open)
+            .default_size([880.0, 580.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Woodwind Air-Jet Embouchure Dynamics, Phase Space & Tonehole Radiation Impedance HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.woodwind_jet_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_woodwind_jet_modal = is_open;
+        self.sync_woodwind_jet_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_woodwind_jet_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let pressure = self.woodwind_jet_view.jet_pressure_kpa;
+        let offset   = self.woodwind_jet_view.jet_offset_mm;
+        let vel      = self.woodwind_jet_view.jet_velocity_ms;
+        let score    = self.woodwind_jet_view.acoustic_coupling_score;
+
+        self.device_rack_state.node_param_values.insert("jet_pressure_kpa".to_string(), pressure);
+        self.device_rack_state.node_param_values.insert("jet_offset_mm".to_string(), offset);
+        self.device_rack_state.node_param_values.insert("jet_velocity_ms".to_string(), vel);
+        self.device_rack_state.node_param_values.insert("acoustic_coupling_score".to_string(), score);
+
+        self.inspector_state.node_param_values.insert("jet_pressure_kpa".to_string(), pressure);
+        self.inspector_state.node_param_values.insert("jet_offset_mm".to_string(), offset);
+        self.inspector_state.node_param_values.insert("jet_velocity_ms".to_string(), vel);
+        self.inspector_state.node_param_values.insert("acoustic_coupling_score".to_string(), score);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_p = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_o = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_v = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_s = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_p).is_some() { bus.set(pid_p, pressure); }
+            if bus.get(pid_o).is_some() { bus.set(pid_o, offset); }
+            if bus.get(pid_v).is_some() { bus.set(pid_v, vel); }
+            if bus.get(pid_s).is_some() { bus.set(pid_s, score); }
+        }
+    }
+
+    pub fn open_woodwind_jet_hud(&mut self) {
+        self.show_woodwind_jet_modal = true;
+    }
+
+    pub fn close_woodwind_jet_hud(&mut self) {
+        self.show_woodwind_jet_modal = false;
+    }
+
+    pub fn is_woodwind_jet_hud_open(&self) -> bool {
+        self.show_woodwind_jet_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_tonehole_matrix_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_tonehole_matrix_modal {
+            return;
+        }
+
+        let mut is_open = self.show_tonehole_matrix_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🕳 Woodwind 6-Tonehole Acoustic Radiation Matrix & Standing Wave HUD")
+            .id(egui::Id::new("tonehole_matrix_hud_modal"))
+            .open(&mut is_open)
+            .default_size([880.0, 580.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Woodwind 6-Tonehole Radiation Impedance Spectrum, 3-Port Scattering & Standing Wave HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.tonehole_matrix_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_tonehole_matrix_modal = is_open;
+        self.sync_tonehole_matrix_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_tonehole_matrix_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let bore_len = self.tonehole_matrix_view.bore_length_m;
+        let cutoff   = self.tonehole_matrix_view.lattice_cutoff_hz;
+        let fund     = self.tonehole_matrix_view.fundamental_hz;
+        let power    = self.tonehole_matrix_view.radiated_power_mw;
+
+        self.device_rack_state.node_param_values.insert("bore_length_m".to_string(), bore_len);
+        self.device_rack_state.node_param_values.insert("lattice_cutoff_hz".to_string(), cutoff);
+        self.device_rack_state.node_param_values.insert("fundamental_hz".to_string(), fund);
+        self.device_rack_state.node_param_values.insert("radiated_power_mw".to_string(), power);
+
+        self.inspector_state.node_param_values.insert("bore_length_m".to_string(), bore_len);
+        self.inspector_state.node_param_values.insert("lattice_cutoff_hz".to_string(), cutoff);
+        self.inspector_state.node_param_values.insert("fundamental_hz".to_string(), fund);
+        self.inspector_state.node_param_values.insert("radiated_power_mw".to_string(), power);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_l = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_c = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_f = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_p = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_l).is_some() { bus.set(pid_l, bore_len); }
+            if bus.get(pid_c).is_some() { bus.set(pid_c, cutoff); }
+            if bus.get(pid_f).is_some() { bus.set(pid_f, fund); }
+            if bus.get(pid_p).is_some() { bus.set(pid_p, power); }
+        }
+    }
+
+    pub fn open_tonehole_matrix_hud(&mut self) {
+        self.show_tonehole_matrix_modal = true;
+    }
+
+    pub fn close_tonehole_matrix_hud(&mut self) {
+        self.show_tonehole_matrix_modal = false;
+    }
+
+    pub fn is_tonehole_matrix_hud_open(&self) -> bool {
+        self.show_tonehole_matrix_modal
     }
 
     #[cfg(feature = "gui")]

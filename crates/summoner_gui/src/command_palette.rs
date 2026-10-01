@@ -509,6 +509,18 @@ impl CommandPalette {
                 action_id: "open_sympathetic_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Woodwind Air-Jet Embouchure HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_woodwind_jet_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Woodwind 6-Tonehole Radiation HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_tonehole_matrix_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

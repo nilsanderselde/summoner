@@ -117,6 +117,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_soundboard_hud: bool,
     #[serde(default)]
     pub requested_open_sympathetic_hud: bool,
+    #[serde(default)]
+    pub requested_open_woodwind_jet_hud: bool,
+    #[serde(default)]
+    pub requested_open_tonehole_matrix_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -164,6 +168,8 @@ impl Default for ModernDeviceRackState {
             requested_open_jawari_bridge_hud: false,
             requested_open_soundboard_hud: false,
             requested_open_sympathetic_hud: false,
+            requested_open_woodwind_jet_hud: false,
+            requested_open_tonehole_matrix_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -355,7 +361,7 @@ pub fn show_modern_device_rack_with_context(
                     let is_bowed = cur_selection.contains("Bowed") || cur_selection.contains("Violin") || cur_selection.contains("Cello") || cur_selection == "BowedStringNode" || cur_selection == "BowedString";
                     let is_shakuhachi = cur_selection.contains("Shakuhachi") || cur_selection.contains("BambooFlute") || cur_selection == "ShakuhachiNode" || cur_selection == "Shakuhachi";
                     let is_sitar = cur_selection.contains("Sitar") || cur_selection == "SitarNode" || cur_selection == "SitarModel" || cur_selection.contains("Jawari");
-                    let is_turkish_ney = cur_selection.contains("TurkishNey") || cur_selection.contains("Ney") || cur_selection.contains("WoodwindJet") || cur_selection == "TurkishNeyNode" || cur_selection == "WoodwindJetNode";
+                    let is_turkish_ney = cur_selection.contains("TurkishNey") || cur_selection.contains("Ney") || cur_selection == "TurkishNeyNode";
                     let is_steelpan = cur_selection.contains("Steelpan") || cur_selection.contains("SteelDrum") || cur_selection == "SteelpanNode" || cur_selection == "SteelpanModel";
                     let is_mbira = cur_selection.contains("Mbira") || cur_selection.contains("Kalimba") || cur_selection == "MbiraNode" || cur_selection == "KalimbaNode" || cur_selection == "MbiraKalimbaModel" || cur_selection == "MbiraModel";
                     let is_koto = cur_selection.contains("Koto") || cur_selection.contains("Guzheng") || cur_selection == "KotoNode" || cur_selection == "KotoSynthesizer" || cur_selection == "KotoStringVoice" || cur_selection == "KotoSoundboard";
@@ -378,6 +384,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_jawari_bridge = cur_selection.contains("Jawari") || cur_selection.contains("Tarab") || cur_selection == "JawariBridge" || cur_selection == "TarabResonatorBank" || cur_selection == "TarabStringResonator" || cur_selection == "SitarGourdBody" || cur_selection == "SitarBridge";
                     let is_soundboard = cur_selection.contains("Soundboard") || cur_selection.contains("SoundboardBridge") || cur_selection == "SoundboardBridgeModel" || cur_selection == "PianoSoundboard" || cur_selection == "SpruceSoundboard";
                     let is_sympathetic = cur_selection.contains("Sympathetic") || cur_selection.contains("SympatheticCoupling") || cur_selection == "SympatheticCouplingModel" || cur_selection == "SympatheticStringMatrix" || cur_selection == "DroneStrings";
+                    let is_woodwind_jet = cur_selection.contains("WoodwindJet") || cur_selection.contains("FluteJet") || cur_selection.contains("AirJet") || cur_selection.contains("WoodwindModel") || cur_selection == "WoodwindJetView" || cur_selection == "AeroacousticFluteJetExciter" || cur_selection == "AcousticConcertFluteAirJetModel" || cur_selection == "WoodwindJetNode";
+                    let is_tonehole_matrix = cur_selection.contains("Tonehole") || cur_selection.contains("BoreModel") || cur_selection == "ToneholeMatrixView" || cur_selection == "ToneholeMatrix" || cur_selection == "ToneholeGrid" || cur_selection == "WoodwindToneholeGrid" || cur_selection == "ToneholeLattice";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -498,10 +506,18 @@ pub fn show_modern_device_rack_with_context(
                         if ui.button(RichText::new("🪵 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(16, 185, 129))).on_hover_text("Open Spruce Soundboard & Bridge HUD").clicked() {
                             state.requested_open_soundboard_hud = true;
                         }
-                    } else if is_sympathetic
-                        && ui.button(RichText::new("✨ HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Sympathetic Resonance Coupling HUD").clicked()
+                    } else if is_sympathetic {
+                        if ui.button(RichText::new("✨ HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Sympathetic Resonance Coupling HUD").clicked() {
+                            state.requested_open_sympathetic_hud = true;
+                        }
+                    } else if is_woodwind_jet {
+                        if ui.button(RichText::new("🌬 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Woodwind Air-Jet Embouchure HUD").clicked() {
+                            state.requested_open_woodwind_jet_hud = true;
+                        }
+                    } else if is_tonehole_matrix
+                        && ui.button(RichText::new("🕳 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 107, 43))).on_hover_text("Open Woodwind 6-Tonehole Radiation HUD").clicked()
                     {
-                        state.requested_open_sympathetic_hud = true;
+                        state.requested_open_tonehole_matrix_hud = true;
                     }
                     ui.add_space(4.0);
                     let pwr_col = if state.is_enabled { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(100, 116, 139) };
@@ -691,7 +707,7 @@ pub fn show_modern_device_rack_with_context(
                     let is_bowed = cur_selection.contains("Bowed") || cur_selection.contains("Violin") || cur_selection.contains("Cello") || cur_selection == "BowedStringNode" || cur_selection == "BowedString";
                     let is_shakuhachi = cur_selection.contains("Shakuhachi") || cur_selection.contains("BambooFlute") || cur_selection == "ShakuhachiNode" || cur_selection == "Shakuhachi";
                     let is_sitar = cur_selection.contains("Sitar") || cur_selection == "SitarNode" || cur_selection == "SitarModel" || cur_selection.contains("Jawari");
-                    let is_turkish_ney = cur_selection.contains("TurkishNey") || cur_selection.contains("Ney") || cur_selection.contains("WoodwindJet") || cur_selection == "TurkishNeyNode" || cur_selection == "WoodwindJetNode";
+                    let is_turkish_ney = cur_selection.contains("TurkishNey") || cur_selection.contains("Ney") || cur_selection == "TurkishNeyNode";
                     let is_steelpan = cur_selection.contains("Steelpan") || cur_selection.contains("SteelDrum") || cur_selection == "SteelpanNode" || cur_selection == "SteelpanModel";
                     let is_mbira = cur_selection.contains("Mbira") || cur_selection.contains("Kalimba") || cur_selection == "MbiraNode" || cur_selection == "KalimbaNode" || cur_selection == "MbiraKalimbaModel" || cur_selection == "MbiraModel";
                     let is_koto = cur_selection.contains("Koto") || cur_selection.contains("Guzheng") || cur_selection == "KotoNode" || cur_selection == "KotoSynthesizer" || cur_selection == "KotoStringVoice" || cur_selection == "KotoSoundboard";
@@ -714,6 +730,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_jawari_bridge = cur_selection.contains("Jawari") || cur_selection.contains("Tarab") || cur_selection == "JawariBridge" || cur_selection == "TarabResonatorBank" || cur_selection == "TarabStringResonator" || cur_selection == "SitarGourdBody" || cur_selection == "SitarBridge";
                     let is_soundboard = cur_selection.contains("Soundboard") || cur_selection.contains("SoundboardBridge") || cur_selection == "SoundboardBridgeModel" || cur_selection == "PianoSoundboard" || cur_selection == "SpruceSoundboard";
                     let is_sympathetic = cur_selection.contains("Sympathetic") || cur_selection.contains("SympatheticCoupling") || cur_selection == "SympatheticCouplingModel" || cur_selection == "SympatheticStringMatrix" || cur_selection == "DroneStrings";
+                    let is_woodwind_jet = cur_selection.contains("WoodwindJet") || cur_selection.contains("FluteJet") || cur_selection.contains("AirJet") || cur_selection.contains("WoodwindModel") || cur_selection == "WoodwindJetView" || cur_selection == "AeroacousticFluteJetExciter" || cur_selection == "AcousticConcertFluteAirJetModel" || cur_selection == "WoodwindJetNode";
+                    let is_tonehole_matrix = cur_selection.contains("Tonehole") || cur_selection.contains("BoreModel") || cur_selection == "ToneholeMatrixView" || cur_selection == "ToneholeMatrix" || cur_selection == "ToneholeGrid" || cur_selection == "WoodwindToneholeGrid" || cur_selection == "ToneholeLattice";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -842,10 +860,18 @@ pub fn show_modern_device_rack_with_context(
                         if ui.button(RichText::new("🪵 Soundboard HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(16, 185, 129))).on_hover_text("Open Spruce Soundboard & Bridge HUD").clicked() {
                             state.requested_open_soundboard_hud = true;
                         }
-                    } else if is_sympathetic
-                        && ui.button(RichText::new("✨ Sympathetic HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Sympathetic Resonance Coupling HUD").clicked()
+                    } else if is_sympathetic {
+                        if ui.button(RichText::new("✨ Sympathetic HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Sympathetic Resonance Coupling HUD").clicked() {
+                            state.requested_open_sympathetic_hud = true;
+                        }
+                    } else if is_woodwind_jet {
+                        if ui.button(RichText::new("🌬 Woodwind Jet HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Woodwind Air-Jet Embouchure HUD").clicked() {
+                            state.requested_open_woodwind_jet_hud = true;
+                        }
+                    } else if is_tonehole_matrix
+                        && ui.button(RichText::new("🕳 Tonehole HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 107, 43))).on_hover_text("Open Woodwind 6-Tonehole Radiation HUD").clicked()
                     {
-                        state.requested_open_sympathetic_hud = true;
+                        state.requested_open_tonehole_matrix_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -1621,7 +1647,7 @@ fn show_pro_parameter_drawer(
                     let is_bowed = dev_kind.contains("Bowed") || dev_kind.contains("Violin") || dev_kind.contains("Cello") || dev_kind == "BowedStringNode" || dev_kind == "BowedString";
                     let is_shakuhachi = dev_kind.contains("Shakuhachi") || dev_kind.contains("BambooFlute") || dev_kind == "ShakuhachiNode" || dev_kind == "Shakuhachi";
                     let is_sitar = dev_kind.contains("Sitar") || dev_kind == "SitarNode" || dev_kind == "SitarModel" || dev_kind.contains("Jawari");
-                    let is_turkish_ney = dev_kind.contains("TurkishNey") || dev_kind.contains("Ney") || dev_kind.contains("WoodwindJet") || dev_kind == "TurkishNeyNode" || dev_kind == "WoodwindJetNode";
+                    let is_turkish_ney = dev_kind.contains("TurkishNey") || dev_kind.contains("Ney") || dev_kind == "TurkishNeyNode";
                     let is_steelpan = dev_kind.contains("Steelpan") || dev_kind.contains("SteelDrum") || dev_kind == "SteelpanNode" || dev_kind == "SteelpanModel";
                     let is_mbira = dev_kind.contains("Mbira") || dev_kind.contains("Kalimba") || dev_kind == "MbiraNode" || dev_kind == "KalimbaNode" || dev_kind == "MbiraKalimbaModel" || dev_kind == "MbiraModel";
                     let is_koto = dev_kind.contains("Koto") || dev_kind.contains("Guzheng") || dev_kind == "KotoNode" || dev_kind == "KotoSynthesizer" || dev_kind == "KotoStringVoice" || dev_kind == "KotoSoundboard";
@@ -1644,6 +1670,8 @@ fn show_pro_parameter_drawer(
                     let is_jawari_bridge = dev_kind.contains("Jawari") || dev_kind.contains("Tarab") || dev_kind == "JawariBridge" || dev_kind == "TarabResonatorBank" || dev_kind == "TarabStringResonator" || dev_kind == "SitarGourdBody" || dev_kind == "SitarBridge";
                     let is_soundboard = dev_kind.contains("Soundboard") || dev_kind.contains("SoundboardBridge") || dev_kind == "SoundboardBridgeModel" || dev_kind == "PianoSoundboard" || dev_kind == "SpruceSoundboard";
                     let is_sympathetic = dev_kind.contains("Sympathetic") || dev_kind.contains("SympatheticCoupling") || dev_kind == "SympatheticCouplingModel" || dev_kind == "SympatheticStringMatrix" || dev_kind == "DroneStrings";
+                    let is_woodwind_jet = dev_kind.contains("WoodwindJet") || dev_kind.contains("FluteJet") || dev_kind.contains("AirJet") || dev_kind.contains("WoodwindModel") || dev_kind == "WoodwindJetView" || dev_kind == "AeroacousticFluteJetExciter" || dev_kind == "AcousticConcertFluteAirJetModel" || dev_kind == "WoodwindJetNode";
+                    let is_tonehole_matrix = dev_kind.contains("Tonehole") || dev_kind.contains("BoreModel") || dev_kind == "ToneholeMatrixView" || dev_kind == "ToneholeMatrix" || dev_kind == "ToneholeGrid" || dev_kind == "WoodwindToneholeGrid" || dev_kind == "ToneholeLattice";
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -4082,6 +4110,201 @@ fn show_pro_parameter_drawer(
 
                         if sym_resp.hovered() {
                             let _ = sym_resp.on_hover_text(format!("Sympathetic Resonance Coupling HUD\nCoupling Bleed: {:.1}% | Bridge Loss: {:.4}\n[Drag horizontally: Coupling bleed | Drag vertically: Loss factor]", coupling * 100.0, loss));
+                        }
+                    } else if is_woodwind_jet {
+                        // Woodwind Air-Jet Embouchure Mini Visualizer
+                        let (jet_resp, jet_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let jet_rect = jet_resp.rect;
+                        jet_painter.rect_filled(jet_rect, 2.0, Color32::from_rgb(10, 20, 32));
+
+                        let mut pressure = state.node_param_values.get("jet_pressure_kpa").copied().unwrap_or(1.25);
+                        let mut offset = state.node_param_values.get("jet_offset_mm").copied().unwrap_or(7.0);
+
+                        if jet_resp.dragged() {
+                            if let Some(pos) = jet_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - jet_rect.left()) / jet_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - jet_rect.top()) / jet_rect.height())).clamp(0.0, 1.0);
+                                pressure = 0.10 + norm_x * 3.90;
+                                offset = 2.0 + norm_y * 13.0;
+
+                                let p_pa = pressure * 1000.0;
+                                let vel = (2.0 * p_pa / 1.204).sqrt().clamp(5.0, 120.0);
+                                let d_m = offset * 1e-3;
+                                let v_profile = (0.4 * vel).max(1.0);
+                                let delay = (d_m / v_profile) * 1000.0;
+                                let score = (1.0 / (1.0 + (delay * 0.1).powi(2))).clamp(0.1, 1.0);
+
+                                state.node_param_values.insert("jet_pressure_kpa".to_string(), pressure);
+                                state.node_param_values.insert("jet_offset_mm".to_string(), offset);
+                                state.node_param_values.insert("jet_velocity_ms".to_string(), vel);
+                                state.node_param_values.insert("acoustic_coupling_score".to_string(), score);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_p = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_o = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    let pid_v = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 2);
+                                    let pid_s = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 3);
+                                    if bus.get(pid_p).is_some() { bus.set(pid_p, pressure); }
+                                    if bus.get(pid_o).is_some() { bus.set(pid_o, offset); }
+                                    if bus.get(pid_v).is_some() { bus.set(pid_v, vel); }
+                                    if bus.get(pid_s).is_some() { bus.set(pid_s, score); }
+                                }
+                            }
+                        }
+
+                        // Air-Jet stream curve and labium splitting wedge
+                        let lip_x = jet_rect.left() + 10.0;
+                        let lip_y = jet_rect.top() + jet_rect.height() * 0.45;
+                        let wedge_x = jet_rect.right() - 20.0;
+                        let wedge_y = jet_rect.top() + jet_rect.height() * 0.45;
+
+                        // Labium splitting wedge triangle
+                        jet_painter.line_segment(
+                            [egui::pos2(wedge_x, wedge_y - 12.0), egui::pos2(wedge_x, wedge_y + 12.0)],
+                            Stroke::new(2.0_f32, Color32::from_rgb(255, 107, 43)),
+                        );
+                        jet_painter.line_segment(
+                            [egui::pos2(wedge_x, wedge_y), egui::pos2(jet_rect.right() - 6.0, wedge_y - 8.0)],
+                            Stroke::new(1.5_f32, Color32::from_rgb(255, 107, 43)),
+                        );
+
+                        // Modulated air jet streamline
+                        let steps = 16;
+                        for s in 0..steps {
+                            let frac1 = s as f32 / steps as f32;
+                            let frac2 = (s + 1) as f32 / steps as f32;
+                            let x1 = lip_x + frac1 * (wedge_x - lip_x);
+                            let x2 = lip_x + frac2 * (wedge_x - lip_x);
+                            let wave1 = (frac1 * std::f32::consts::PI * 3.0).sin() * (offset / 15.0) * 8.0;
+                            let wave2 = (frac2 * std::f32::consts::PI * 3.0).sin() * (offset / 15.0) * 8.0;
+                            jet_painter.line_segment(
+                                [egui::pos2(x1, lip_y + wave1), egui::pos2(x2, lip_y + wave2)],
+                                Stroke::new(1.5_f32, Color32::from_rgb(0, 229, 255)),
+                            );
+                        }
+
+                        // Draggable puck
+                        let px = jet_rect.left() + 4.0 + ((pressure - 0.10) / 3.90).clamp(0.0, 1.0) * (jet_rect.width() - 8.0);
+                        let py = jet_rect.top() + 4.0 + (1.0 - ((offset - 2.0) / 13.0).clamp(0.0, 1.0)) * (jet_rect.height() - 8.0);
+                        jet_painter.circle_stroke(egui::pos2(px, py), 5.0, Stroke::new(1.2_f32, Color32::from_rgb(0, 229, 255)));
+                        jet_painter.circle_filled(egui::pos2(px, py), 2.5, Color32::from_rgb(255, 255, 255));
+
+                        // Readout
+                        jet_painter.text(
+                            egui::pos2(jet_rect.left() + 4.0, jet_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("{:.2} kPa", pressure),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+                        jet_painter.text(
+                            egui::pos2(jet_rect.right() - 4.0, jet_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("{:.1} mm", offset),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(255, 215, 0),
+                        );
+
+                        if jet_resp.hovered() {
+                            let _ = jet_resp.on_hover_text(format!("Woodwind Air-Jet Embouchure HUD\nPressure: {:.2} kPa | Offset: {:.1} mm\n[Drag horizontally: Blow pressure | Drag vertically: Jet offset]", pressure, offset));
+                        }
+                    } else if is_tonehole_matrix {
+                        // Woodwind 6-Tonehole Radiation Mini Visualizer
+                        let (th_resp, th_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let th_rect = th_resp.rect;
+                        th_painter.rect_filled(th_rect, 2.0, Color32::from_rgb(18, 14, 28));
+
+                        let mut bore_len = state.node_param_values.get("bore_length_m").copied().unwrap_or(0.60);
+                        let mut cutoff = state.node_param_values.get("lattice_cutoff_hz").copied().unwrap_or(2200.0);
+
+                        if th_resp.dragged() {
+                            if let Some(pos) = th_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - th_rect.left()) / th_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - th_rect.top()) / th_rect.height())).clamp(0.0, 1.0);
+                                bore_len = 0.20 + norm_x * 1.00;
+                                cutoff = 500.0 + norm_y * 5500.0;
+
+                                let fund = (343.2 / (2.0 * bore_len)).clamp(40.0, 4000.0);
+                                let power = 14.5 + (fund / 100.0);
+
+                                state.node_param_values.insert("bore_length_m".to_string(), bore_len);
+                                state.node_param_values.insert("lattice_cutoff_hz".to_string(), cutoff);
+                                state.node_param_values.insert("fundamental_hz".to_string(), fund);
+                                state.node_param_values.insert("radiated_power_mw".to_string(), power);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_l = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_c = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    let pid_f = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 2);
+                                    let pid_p = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 3);
+                                    if bus.get(pid_l).is_some() { bus.set(pid_l, bore_len); }
+                                    if bus.get(pid_c).is_some() { bus.set(pid_c, cutoff); }
+                                    if bus.get(pid_f).is_some() { bus.set(pid_f, fund); }
+                                    if bus.get(pid_p).is_some() { bus.set(pid_p, power); }
+                                }
+                            }
+                        }
+
+                        // Cylindrical bore tube contour & standing wave
+                        let bore_y = th_rect.top() + th_rect.height() * 0.50;
+                        th_painter.line_segment(
+                            [egui::pos2(th_rect.left() + 6.0, bore_y - 10.0), egui::pos2(th_rect.right() - 6.0, bore_y - 10.0)],
+                            Stroke::new(1.0_f32, Color32::from_rgb(60, 45, 80)),
+                        );
+                        th_painter.line_segment(
+                            [egui::pos2(th_rect.left() + 6.0, bore_y + 10.0), egui::pos2(th_rect.right() - 6.0, bore_y + 10.0)],
+                            Stroke::new(1.0_f32, Color32::from_rgb(60, 45, 80)),
+                        );
+
+                        // 6 Tonehole indicator dots
+                        let num_holes = 6;
+                        let hole_spacing = (th_rect.width() - 32.0) / (num_holes - 1) as f32;
+                        for h in 0..num_holes {
+                            let hx = th_rect.left() + 16.0 + h as f32 * hole_spacing;
+                            let h_col = if h < 3 { Color32::from_rgb(0, 229, 255) } else { Color32::from_rgb(255, 107, 43) };
+                            th_painter.circle_filled(egui::pos2(hx, bore_y - 10.0), 3.0, h_col);
+                            th_painter.circle_filled(egui::pos2(hx, bore_y + 10.0), 3.0, h_col);
+                        }
+
+                        // Standing wave sinusoidal profile
+                        let wave_steps = 20;
+                        for s in 0..wave_steps {
+                            let f1 = s as f32 / wave_steps as f32;
+                            let f2 = (s + 1) as f32 / wave_steps as f32;
+                            let x1 = th_rect.left() + 8.0 + f1 * (th_rect.width() - 16.0);
+                            let x2 = th_rect.left() + 8.0 + f2 * (th_rect.width() - 16.0);
+                            let y1 = bore_y - (f1 * std::f32::consts::PI).sin() * 8.0;
+                            let y2 = bore_y - (f2 * std::f32::consts::PI).sin() * 8.0;
+                            th_painter.line_segment(
+                                [egui::pos2(x1, y1), egui::pos2(x2, y2)],
+                                Stroke::new(1.5_f32, Color32::from_rgb(255, 107, 43)),
+                            );
+                        }
+
+                        // Draggable puck
+                        let px = th_rect.left() + 4.0 + ((bore_len - 0.20) / 1.00).clamp(0.0, 1.0) * (th_rect.width() - 8.0);
+                        let py = th_rect.top() + 4.0 + (1.0 - ((cutoff - 500.0) / 5500.0).clamp(0.0, 1.0)) * (th_rect.height() - 8.0);
+                        th_painter.circle_stroke(egui::pos2(px, py), 5.0, Stroke::new(1.2_f32, Color32::from_rgb(255, 107, 43)));
+                        th_painter.circle_filled(egui::pos2(px, py), 2.5, Color32::from_rgb(255, 255, 255));
+
+                        // Readout
+                        th_painter.text(
+                            egui::pos2(th_rect.left() + 4.0, th_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("{:.2} m", bore_len),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(255, 107, 43),
+                        );
+                        th_painter.text(
+                            egui::pos2(th_rect.right() - 4.0, th_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("{:.0} Hz", cutoff),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+
+                        if th_resp.hovered() {
+                            let _ = th_resp.on_hover_text(format!("Woodwind 6-Tonehole Radiation HUD\nBore Length: {:.2} m | Cutoff: {:.0} Hz\n[Drag horizontally: Bore length | Drag vertically: Radiation cutoff]", bore_len, cutoff));
                         }
                     } else {
                         // Filter Curve Mini View (slot-addressed)

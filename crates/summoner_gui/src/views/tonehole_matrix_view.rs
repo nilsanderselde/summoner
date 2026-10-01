@@ -197,6 +197,22 @@ impl ToneholeMatrixView {
             .collect()
     }
 
+    /// Sets the Tonehole Matrix Display Mode.
+    pub fn set_display_mode(&mut self, mode: ToneholeDisplayMode) {
+        self.display_mode = mode;
+    }
+
+    /// Render deterministic ASCII snapshot string for headless terminal testing.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        self.render_ascii(60, 16).join("\n")
+    }
+
+    #[cfg(feature = "gui")]
+    #[allow(clippy::needless_range_loop)]
+    pub fn show(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
+    }
+
     #[cfg(feature = "gui")]
     #[allow(clippy::needless_range_loop)]
     pub fn ui(&mut self, ui: &mut egui::Ui) {

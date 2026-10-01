@@ -1702,3 +1702,37 @@ Product Management has conducted a comprehensive readiness audit:
   - Feature tests: 8 passed in 0.06s (`cargo test -p summoner_gui --features gui -- test_turn66`).
   - Unit tests: 10 passed in `cargo test -p summoner_gui --features gui -- tier130`.
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
+
+### Turn #67 (Turn #30 Deliverable — Sprint Review) — Physical Modeling Woodwind Air-Jet Embouchure & 6-Tonehole Acoustic Radiation Matrix HUDs Convergence (Milestones 17, 33 & 34)
+- [x] Sprint Review Turn #30 Reconciled with `PROGRESS.md`:
+  - Verified 100% pass across all unit and GUI feature test suites (329 pure tests passed in 0.23s, 8 Turn #67 tests passed in 0.05s) and zero compiler/clippy warnings under `-D warnings` with `--features gui`.
+  - Integrated `WoodwindJetView` (Physical Modeling Woodwind Air-Jet Embouchure & Tonehole Radiation Impedance HUD: 5 Woodwind Instrument Profiles [Concert Flute C, Piccolo C, Alto Recorder, Shakuhachi, Pan Flute], Bernoulli Air-Jet Velocity $V_{jet} = \sqrt{2 P / \rho}$, Transit Delay $\tau = d / (0.4 V)$, Acoustic Coupling Score $[0.0..1.0]$, 6 Tonehole Indicators, Labium Splitting Wedge, and Touch-Draggable Jet Pressure vs Offset Puck with $\ge 44 \times 44\text{pt}$ Hit Target) and `ToneholeMatrixView` (Physical Modeling Woodwind 6-Tonehole Acoustic Radiation Matrix & Standing Wave HUD: 3 Display Modes [Standing Wave Pressure Profile $P(x)$, Radiation Impedance Spectrum $R(f)$, 3-Port Acoustic Scattering Matrix], 6 Tonehole State Fractions, Bore Length $[0.20..1.20\text{ m}]$, Fundamental Frequency Readout, Keefe Lattice Cutoff $f_c$ $[500..6000\text{ Hz}]$, Radiated Acoustic Power Meter, and Touch-Draggable Bore Length vs Cutoff Puck with $\ge 44 \times 44\text{pt}$ Hit Target) into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/woodwind_jet_view.rs` & `tonehole_matrix_view.rs`):
+  - In `WoodwindJetView`: added `set_instrument(&mut self, inst: WoodwindInstrument)`, `render_ascii_snapshot_str() -> String`, and `show(&mut self, ui: &mut egui::Ui)` forwarder.
+  - In `ToneholeMatrixView`: added `set_display_mode(&mut self, mode: ToneholeDisplayMode)`, `render_ascii_snapshot_str() -> String`, and `show(&mut self, ui: &mut egui::Ui)` forwarder.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_woodwind_jet_modal: bool`, `woodwind_jet_view: WoodwindJetView`, `show_tonehole_matrix_modal: bool`, and `tonehole_matrix_view: ToneholeMatrixView`.
+  - Added dedicated modal windows `show_woodwind_jet_modal_window` and `show_tonehole_matrix_modal_window` with responsive styling, WCAG AAA contrast, and $\ge 44 \times 44\text{pt}$ touch bounds.
+  - Added public lifecycle methods: `open_woodwind_jet_hud()`, `close_woodwind_jet_hud()`, `is_woodwind_jet_hud_open()`, `open_tonehole_matrix_hud()`, `close_tonehole_matrix_hud()`, `is_tonehole_matrix_hud_open()`.
+  - Real-time parameter sync bridges (`sync_woodwind_jet_hud_state` and `sync_tonehole_matrix_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_woodwind_jet_hud: bool` and `requested_open_tonehole_matrix_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🌬 Open Woodwind Air-Jet Embouchure HUD]` and `[🕳 Open Woodwind 6-Tonehole Radiation HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header `[🌬 HUD]` / `[🕳 HUD]` and expanded toolbar buttons in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Woodwind Jet: Air-jet modulated streamline, labium splitting wedge, drag-puck modulating `jet_pressure_kpa` and `jet_offset_mm`, velocity and delay readouts, and live `ParamBus` slot dispatch.
+    * Tonehole Matrix: Cylindrical bore tube contour, 6 tonehole indicator dots, standing wave sine profile, drag-puck modulating `bore_length_m` and `lattice_cutoff_hz`, and live `ParamBus` slot dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_woodwind_jet_hud` and `open_tonehole_matrix_hud` under `"Physical Modeling"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_woodwind_jet_hud()` and `open_tonehole_matrix_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier131_turn67_tests.rs`:
+    * Pure tests: view initialization, instrument profiles, display modes, normalized coordinate conversions, physics updates from puck, hit testing, acoustics updates, standing wave pressure and reflection evaluations, slot arithmetic channel isolation, deterministic ASCII snapshots.
+    * GUI tests: modal lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch, rack & inspector trigger propagation, command palette action registration.
+  - Registered `tier131_turn67_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Feature tests: 8 passed in 0.05s (`cargo test -p summoner_gui --features gui -- tier131_turn67`).
+  - Unit tests: 329 passed in 0.23s (`cargo test -p summoner_gui --lib`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`).
+

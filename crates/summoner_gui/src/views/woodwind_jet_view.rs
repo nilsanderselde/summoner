@@ -264,6 +264,25 @@ impl WoodwindJetView {
             .collect()
     }
 
+    /// Sets the Woodwind Instrument Profile and updates geometry & physics.
+    pub fn set_instrument(&mut self, inst: WoodwindInstrument) {
+        self.instrument = inst;
+        self.jet_offset_mm = inst.nominal_jet_distance_mm();
+        self.jet_puck_pos.1 = Self::offset_to_normalized(self.jet_offset_mm);
+        self.update_physics_simulation();
+    }
+
+    /// Render deterministic ASCII snapshot string for headless terminal testing.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        self.render_ascii(60, 16).join("\n")
+    }
+
+    #[cfg(feature = "gui")]
+    #[allow(clippy::needless_range_loop)]
+    pub fn show(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
+    }
+
     #[cfg(feature = "gui")]
     #[allow(clippy::needless_range_loop)]
     pub fn ui(&mut self, ui: &mut egui::Ui) {
