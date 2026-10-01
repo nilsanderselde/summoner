@@ -645,6 +645,10 @@ pub struct AwardWinningGuiView {
     pub crystal_resonator_view: crate::views::crystal_resonator_view::CrystalResonatorView,
     pub show_glass_armonica_modal: bool,
     pub glass_armonica_view: crate::views::glass_armonica_view::GlassArmonicaView,
+    pub show_hurdy_gurdy_modal: bool,
+    pub hurdy_gurdy_view: crate::views::hurdy_gurdy_view::HurdyGurdyView,
+    pub show_trompette_bridge_modal: bool,
+    pub trompette_bridge_view: crate::views::trompette_bridge_view::TrompetteBridgeView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -906,6 +910,10 @@ impl AwardWinningGuiView {
             crystal_resonator_view: crate::views::crystal_resonator_view::CrystalResonatorView::new(),
             show_glass_armonica_modal: false,
             glass_armonica_view: crate::views::glass_armonica_view::GlassArmonicaView::new(),
+            show_hurdy_gurdy_modal: false,
+            hurdy_gurdy_view: crate::views::hurdy_gurdy_view::HurdyGurdyView::new(),
+            show_trompette_bridge_modal: false,
+            trompette_bridge_view: crate::views::trompette_bridge_view::TrompetteBridgeView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -1552,12 +1560,24 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_armonica_hud = false;
             self.open_glass_armonica_hud();
         }
+        if self.inspector_state.requested_open_hurdy_gurdy_hud || self.device_rack_state.requested_open_hurdy_gurdy_hud {
+            self.inspector_state.requested_open_hurdy_gurdy_hud = false;
+            self.device_rack_state.requested_open_hurdy_gurdy_hud = false;
+            self.open_hurdy_gurdy_hud();
+        }
+        if self.inspector_state.requested_open_trompette_hud || self.device_rack_state.requested_open_trompette_hud {
+            self.inspector_state.requested_open_trompette_hud = false;
+            self.device_rack_state.requested_open_trompette_hud = false;
+            self.open_trompette_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog & Physical Modeling HUDs
         self.show_modular_automation_editor_window(ui);
         self.show_modular_dsp_catalog_window(ui);
         self.show_crystal_resonator_modal_window(ui);
         self.show_glass_armonica_modal_window(ui);
+        self.show_hurdy_gurdy_modal_window(ui);
+        self.show_trompette_bridge_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -7521,6 +7541,179 @@ impl AwardWinningGuiView {
 
     pub fn is_glass_armonica_hud_open(&self) -> bool {
         self.show_glass_armonica_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_hurdy_gurdy_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_hurdy_gurdy_modal {
+            return;
+        }
+
+        let mut is_open = self.show_hurdy_gurdy_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎻 Physical Modeling Hurdy-Gurdy (Vielle à roue) Performance HUD")
+            .id(egui::Id::new("hurdy_gurdy_hud_modal"))
+            .open(&mut is_open)
+            .default_size([720.0, 520.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(RichText::new("🎻 Physical Modeling Hurdy-Gurdy (Vielle à roue)").font(FontId::proportional(12.0)).strong().color(Color32::from_rgb(16, 185, 129)));
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.hurdy_gurdy_view.ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_hurdy_gurdy_modal = is_open;
+        self.sync_hurdy_gurdy_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_hurdy_gurdy_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let crank_speed = self.hurdy_gurdy_view.crank_speed_rad_s;
+        let wrist_accel = self.hurdy_gurdy_view.wrist_acceleration_pulse;
+        let wheel_press = self.hurdy_gurdy_view.wheel_pressure;
+        let chien_clear = self.hurdy_gurdy_view.chien_clearance_mm;
+        let drone_mix = self.hurdy_gurdy_view.drone_melody_mix;
+        let trompette_buzz = self.hurdy_gurdy_view.trompette_buzz_level;
+
+        self.device_rack_state.node_param_values.insert("crank_speed_rad_s".to_string(), crank_speed);
+        self.device_rack_state.node_param_values.insert("wrist_acceleration_pulse".to_string(), wrist_accel);
+        self.device_rack_state.node_param_values.insert("wheel_pressure".to_string(), wheel_press);
+        self.device_rack_state.node_param_values.insert("chien_gap_clearance_mm".to_string(), chien_clear);
+        self.device_rack_state.node_param_values.insert("drone_melody_mix".to_string(), drone_mix);
+        self.device_rack_state.node_param_values.insert("trompette_buzz_harmonic_gain".to_string(), trompette_buzz);
+
+        self.inspector_state.node_param_values.insert("crank_speed_rad_s".to_string(), crank_speed);
+        self.inspector_state.node_param_values.insert("wrist_acceleration_pulse".to_string(), wrist_accel);
+        self.inspector_state.node_param_values.insert("wheel_pressure".to_string(), wheel_press);
+        self.inspector_state.node_param_values.insert("chien_gap_clearance_mm".to_string(), chien_clear);
+        self.inspector_state.node_param_values.insert("drone_melody_mix".to_string(), drone_mix);
+        self.inspector_state.node_param_values.insert("trompette_buzz_harmonic_gain".to_string(), trompette_buzz);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_speed = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 0);
+            let pid_accel = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_press = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_clear = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_drone = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_buzz = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+
+            if bus.get(pid_speed).is_some() { bus.set(pid_speed, crank_speed); }
+            if bus.get(pid_accel).is_some() { bus.set(pid_accel, wrist_accel); }
+            if bus.get(pid_press).is_some() { bus.set(pid_press, wheel_press); }
+            if bus.get(pid_clear).is_some() { bus.set(pid_clear, chien_clear); }
+            if bus.get(pid_drone).is_some() { bus.set(pid_drone, drone_mix); }
+            if bus.get(pid_buzz).is_some() { bus.set(pid_buzz, trompette_buzz); }
+        }
+    }
+
+    pub fn open_hurdy_gurdy_hud(&mut self) {
+        self.show_hurdy_gurdy_modal = true;
+    }
+
+    pub fn close_hurdy_gurdy_hud(&mut self) {
+        self.show_hurdy_gurdy_modal = false;
+    }
+
+    pub fn is_hurdy_gurdy_hud_open(&self) -> bool {
+        self.show_hurdy_gurdy_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_trompette_bridge_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_trompette_bridge_modal {
+            return;
+        }
+
+        let mut is_open = self.show_trompette_bridge_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🐕 Trompette Chien (Buzzing Dog Bridge) Collision HUD")
+            .id(egui::Id::new("trompette_bridge_hud_modal"))
+            .open(&mut is_open)
+            .default_size([700.0, 500.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(RichText::new("🐕 Trompette Chien (Buzzing Dog Bridge) Obstacle Collision Canvas").font(FontId::proportional(12.0)).strong().color(Color32::from_rgb(239, 68, 68)));
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.trompette_bridge_view.ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_trompette_bridge_modal = is_open;
+        self.sync_trompette_bridge_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_trompette_bridge_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let clearance = self.trompette_bridge_view.clearance_gap_mm;
+        let strike_force = self.trompette_bridge_view.strike_force;
+        let buzz_gain = self.trompette_bridge_view.soundbox_modal_energy[0];
+
+        self.device_rack_state.node_param_values.insert("chien_gap_clearance_mm".to_string(), clearance);
+        self.device_rack_state.node_param_values.insert("strike_force".to_string(), strike_force);
+        self.device_rack_state.node_param_values.insert("trompette_buzz_dog_level".to_string(), buzz_gain);
+
+        self.inspector_state.node_param_values.insert("chien_gap_clearance_mm".to_string(), clearance);
+        self.inspector_state.node_param_values.insert("strike_force".to_string(), strike_force);
+        self.inspector_state.node_param_values.insert("trompette_buzz_dog_level".to_string(), buzz_gain);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_gap = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 0);
+            let pid_force = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_buzz = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+
+            if bus.get(pid_gap).is_some() { bus.set(pid_gap, clearance); }
+            if bus.get(pid_force).is_some() { bus.set(pid_force, strike_force); }
+            if bus.get(pid_buzz).is_some() { bus.set(pid_buzz, buzz_gain); }
+        }
+    }
+
+    pub fn open_trompette_hud(&mut self) {
+        self.show_trompette_bridge_modal = true;
+    }
+
+    pub fn close_trompette_hud(&mut self) {
+        self.show_trompette_bridge_modal = false;
+    }
+
+    pub fn is_trompette_hud_open(&self) -> bool {
+        self.show_trompette_bridge_modal
     }
 
     #[cfg(feature = "gui")]

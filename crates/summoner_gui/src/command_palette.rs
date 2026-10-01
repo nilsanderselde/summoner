@@ -323,6 +323,18 @@ impl CommandPalette {
                 action_id: "open_glass_armonica_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Hurdy-Gurdy (Vielle à roue) Performance HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_hurdy_gurdy_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Trompette Chien Buzzing Bridge HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_trompette_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

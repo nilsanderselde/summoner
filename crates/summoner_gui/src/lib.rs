@@ -178,6 +178,7 @@ pub mod tier109_turn44_tests;
 pub mod tier110_turn45_tests;
 pub mod tier111_turn46_tests;
 pub mod tier112_turn47_tests;
+pub mod tier113_turn48_tests;
 #[cfg(feature = "gui")]
 pub mod touch_gestures;
 #[cfg(feature = "gui")]
@@ -292,6 +293,8 @@ pub use views::hoa4_spatializer_view::Hoa4SpatializerView;
 pub use views::hoa5_binaural_view::Hoa5BinauralView;
 #[cfg(feature = "gui")]
 pub use views::hoa_spatializer_view::HoaSpatializerView;
+#[cfg(feature = "gui")]
+pub use views::hurdy_gurdy_view::*;
 #[cfg(feature = "gui")]
 pub use views::idiophone_spectrum_view::IdiophoneSpectrumView;
 #[cfg(feature = "gui")]
@@ -514,6 +517,8 @@ pub use views::transient_shaper_view::TransientShaperView;
 pub use views::transient_unwrapper_view::TransientUnwrapperView;
 #[cfg(feature = "gui")]
 pub use views::transient_warp_editor::TransientWarpEditorView;
+#[cfg(feature = "gui")]
+pub use views::trompette_bridge_view::*;
 #[cfg(feature = "gui")]
 pub use views::tube_bias_view::TubeBiasView;
 #[cfg(feature = "gui")]

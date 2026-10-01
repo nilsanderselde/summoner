@@ -40,6 +40,10 @@ pub struct ModernInspectorState {
     pub requested_open_crystal_hud: bool,
     #[serde(default)]
     pub requested_open_armonica_hud: bool,
+    #[serde(default)]
+    pub requested_open_hurdy_gurdy_hud: bool,
+    #[serde(default)]
+    pub requested_open_trompette_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -66,6 +70,8 @@ impl Default for ModernInspectorState {
             selected_chain_idx: 0,
             requested_open_crystal_hud: false,
             requested_open_armonica_hud: false,
+            requested_open_hurdy_gurdy_hud: false,
+            requested_open_trompette_hud: false,
         }
     }
 }
@@ -560,6 +566,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open interactive 2D spindle speed, wet finger friction & circular modal ring HUD").clicked() {
                     state.requested_open_armonica_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind == "FrenchHurdyGurdy" || active_kind.contains("HurdyGurdy") || active_kind.contains("Vielle") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🎻 Open Hurdy-Gurdy HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(16, 185, 129)))
+                        .fill(Color32::from_rgb(16, 36, 28))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(16, 185, 129)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive rosined crank wheel speed, coup de poignet pulse & bourdon drone HUD").clicked() {
+                    state.requested_open_hurdy_gurdy_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind == "TrompetteChienBridge" || active_kind == "TrompetteBridge" || active_kind.contains("Trompette") || active_kind.contains("Chien") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🐕 Open Trompette Chien Bridge HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(239, 68, 68)))
+                        .fill(Color32::from_rgb(42, 18, 20))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(239, 68, 68)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive chattering chien buzzing dog bridge obstacle collision phase canvas").clicked() {
+                    state.requested_open_trompette_hud = true;
                 }
                 ui.add_space(4.0);
             }

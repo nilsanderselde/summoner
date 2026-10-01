@@ -55,6 +55,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_crystal_hud: bool,
     #[serde(default)]
     pub requested_open_armonica_hud: bool,
+    #[serde(default)]
+    pub requested_open_hurdy_gurdy_hud: bool,
+    #[serde(default)]
+    pub requested_open_trompette_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -71,6 +75,8 @@ impl Default for ModernDeviceRackState {
             selected_chain_idx: 0,
             requested_open_crystal_hud: false,
             requested_open_armonica_hud: false,
+            requested_open_hurdy_gurdy_hud: false,
+            requested_open_trompette_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -256,6 +262,8 @@ pub fn show_modern_device_rack_with_context(
                     }
                     let is_crystal = cur_selection == "CrystalResonator" || cur_selection.contains("Crystal") || cur_selection.contains("Bowl");
                     let is_armonica = cur_selection == "GlassArmonica" || cur_selection == "FranklinGlassArmonica" || cur_selection == "ArmonicaChassisResonator" || cur_selection.contains("Armonica");
+                    let is_hurdy = cur_selection == "FrenchHurdyGurdy" || cur_selection.contains("HurdyGurdy") || cur_selection.contains("Vielle");
+                    let is_trompette = cur_selection == "TrompetteChienBridge" || cur_selection == "TrompetteBridge" || cur_selection.contains("Trompette") || cur_selection.contains("Chien");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -263,6 +271,14 @@ pub fn show_modern_device_rack_with_context(
                     } else if is_armonica {
                         if ui.button(RichText::new("🍷 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(245, 158, 11))).on_hover_text("Open Physical Modeling Glass Armonica HUD").clicked() {
                             state.requested_open_armonica_hud = true;
+                        }
+                    } else if is_hurdy {
+                        if ui.button(RichText::new("🎻 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(16, 185, 129))).on_hover_text("Open Physical Modeling Hurdy-Gurdy HUD").clicked() {
+                            state.requested_open_hurdy_gurdy_hud = true;
+                        }
+                    } else if is_trompette {
+                        if ui.button(RichText::new("🐕 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(239, 68, 68))).on_hover_text("Open Trompette Chien Buzzing Bridge HUD").clicked() {
+                            state.requested_open_trompette_hud = true;
                         }
                     }
                     ui.add_space(4.0);
@@ -445,6 +461,8 @@ pub fn show_modern_device_rack_with_context(
                     }
                     let is_crystal = cur_selection == "CrystalResonator" || cur_selection.contains("Crystal") || cur_selection.contains("Bowl");
                     let is_armonica = cur_selection == "GlassArmonica" || cur_selection == "FranklinGlassArmonica" || cur_selection == "ArmonicaChassisResonator" || cur_selection.contains("Armonica");
+                    let is_hurdy = cur_selection == "FrenchHurdyGurdy" || cur_selection.contains("HurdyGurdy") || cur_selection.contains("Vielle");
+                    let is_trompette = cur_selection == "TrompetteChienBridge" || cur_selection == "TrompetteBridge" || cur_selection.contains("Trompette") || cur_selection.contains("Chien");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -452,6 +470,14 @@ pub fn show_modern_device_rack_with_context(
                     } else if is_armonica {
                         if ui.button(RichText::new("🍷 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(245, 158, 11))).on_hover_text("Open Physical Modeling Glass Armonica HUD").clicked() {
                             state.requested_open_armonica_hud = true;
+                        }
+                    } else if is_hurdy {
+                        if ui.button(RichText::new("🎻 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(16, 185, 129))).on_hover_text("Open Physical Modeling Hurdy-Gurdy HUD").clicked() {
+                            state.requested_open_hurdy_gurdy_hud = true;
+                        }
+                    } else if is_trompette {
+                        if ui.button(RichText::new("🐕 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(239, 68, 68))).on_hover_text("Open Trompette Chien Buzzing Bridge HUD").clicked() {
+                            state.requested_open_trompette_hud = true;
                         }
                     }
                     let _ = ui.small_button("✕");
@@ -1221,6 +1247,8 @@ fn show_pro_parameter_drawer(
                         .unwrap_or("AetherSynth");
                     let is_crystal = dev_kind == "CrystalResonator" || dev_kind.contains("Crystal") || dev_kind.contains("Bowl");
                     let is_armonica = dev_kind == "GlassArmonica" || dev_kind == "FranklinGlassArmonica" || dev_kind == "ArmonicaChassisResonator" || dev_kind.contains("Armonica");
+                    let is_hurdy = dev_kind == "FrenchHurdyGurdy" || dev_kind.contains("HurdyGurdy") || dev_kind.contains("Vielle");
+                    let is_trompette = dev_kind == "TrompetteChienBridge" || dev_kind == "TrompetteBridge" || dev_kind.contains("Trompette") || dev_kind.contains("Chien");
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -1346,6 +1374,153 @@ fn show_pro_parameter_drawer(
 
                         if a_resp.hovered() {
                             let _ = a_resp.on_hover_text("Glass Armonica Spindle & Wet Friction Contact\n[Drag horizontally: Spindle angular velocity | Drag vertically: Normal force]");
+                        }
+                    } else if is_hurdy {
+                        // Hurdy-Gurdy 2D Rosined Crank Wheel & Coup de Poignet Acceleration Visualizer
+                        let (h_resp, h_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let h_rect = h_resp.rect;
+                        h_painter.rect_filled(h_rect, 2.0, Color32::from_rgb(14, 18, 26));
+
+                        let mut crank_speed = state.node_param_values.get("crank_speed_rad_s").copied().unwrap_or(2.0 * std::f32::consts::PI);
+                        let mut wrist_accel = state.node_param_values.get("wrist_acceleration_pulse").copied().unwrap_or(1.2);
+
+                        if h_resp.dragged() {
+                            if let Some(pos) = h_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - h_rect.left()) / h_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - h_rect.top()) / h_rect.height())).clamp(0.0, 1.0);
+                                wrist_accel = norm_x * 5.0;
+                                crank_speed = norm_y * 4.0 * std::f32::consts::PI;
+                                state.node_param_values.insert("crank_speed_rad_s".to_string(), crank_speed);
+                                state.node_param_values.insert("wrist_acceleration_pulse".to_string(), wrist_accel);
+                                if let Some(bus) = param_bus {
+                                    let pid_speed = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 0);
+                                    if bus.get(pid_speed).is_some() { bus.set(pid_speed, crank_speed); }
+                                    let pid_accel = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_accel).is_some() { bus.set(pid_accel, wrist_accel); }
+                                }
+                            }
+                        }
+
+                        // Background grid
+                        for gx in 1..4 {
+                            let px = h_rect.left() + h_rect.width() * (gx as f32 / 4.0);
+                            h_painter.line_segment([egui::pos2(px, h_rect.top()), egui::pos2(px, h_rect.bottom())], Stroke::new(0.5, Color32::from_rgb(26, 36, 48)));
+                        }
+
+                        // Wooden Rosined Wheel Circle Arc
+                        let wheel_center = egui::pos2(h_rect.left() + 45.0, h_rect.center().y);
+                        let wheel_r = 24.0;
+                        h_painter.circle_stroke(wheel_center, wheel_r, Stroke::new(2.5_f32, Color32::from_rgb(180, 83, 9)));
+                        h_painter.circle_stroke(wheel_center, wheel_r - 3.0, Stroke::new(1.0_f32, Color32::from_rgb(245, 158, 11)));
+
+                        // Rotating crank indicator angle based on crank_speed
+                        let crank_angle = (crank_speed * 1.5) % (2.0 * std::f32::consts::PI);
+                        let crank_handle = egui::pos2(wheel_center.x + crank_angle.cos() * (wheel_r - 6.0), wheel_center.y + crank_angle.sin() * (wheel_r - 6.0));
+                        h_painter.line_segment([wheel_center, crank_handle], Stroke::new(2.0_f32, Color32::from_rgb(251, 191, 36)));
+                        h_painter.circle_filled(crank_handle, 3.5, Color32::from_rgb(234, 88, 12));
+
+                        // Strings across wheel: Chanterelles & Bourdon Drone
+                        let str_y1 = h_rect.center().y - 10.0;
+                        let str_y2 = h_rect.center().y;
+                        let str_y3 = h_rect.center().y + 10.0;
+                        h_painter.line_segment([egui::pos2(h_rect.left() + 10.0, str_y1), egui::pos2(h_rect.right() - 10.0, str_y1)], Stroke::new(1.2_f32, Color32::from_rgb(56, 189, 248)));
+                        h_painter.line_segment([egui::pos2(h_rect.left() + 10.0, str_y2), egui::pos2(h_rect.right() - 10.0, str_y2)], Stroke::new(1.2_f32, Color32::from_rgb(56, 189, 248)));
+                        h_painter.line_segment([egui::pos2(h_rect.left() + 10.0, str_y3), egui::pos2(h_rect.right() - 10.0, str_y3)], Stroke::new(1.5_f32, Color32::from_rgb(16, 185, 129)));
+
+                        // Coup de Poignet Wrist Impulse Puck
+                        let puck_x = h_rect.left() + (wrist_accel / 5.0).clamp(0.0, 1.0) * h_rect.width();
+                        let puck_y = h_rect.bottom() - (crank_speed / (4.0 * std::f32::consts::PI)).clamp(0.0, 1.0) * h_rect.height();
+                        h_painter.circle_filled(egui::pos2(puck_x, puck_y), 5.0, Color32::from_rgb(239, 68, 68));
+                        h_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::from_rgb(254, 202, 202)));
+
+                        // Readout
+                        h_painter.text(
+                            egui::pos2(h_rect.left() + 4.0, h_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("ω: {:.1} rad/s", crank_speed),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(251, 191, 36),
+                        );
+                        h_painter.text(
+                            egui::pos2(h_rect.right() - 4.0, h_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("Coup: {:.1}", wrist_accel),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(239, 68, 68),
+                        );
+
+                        if h_resp.hovered() {
+                            let _ = h_resp.on_hover_text("Hurdy-Gurdy Rosined Crank Wheel & Coup de Poignet\n[Drag horizontally: Wrist impulse | Drag vertically: Crank speed]");
+                        }
+                    } else if is_trompette {
+                        // Trompette Chien Buzzing Bridge 2D Collision Gap Visualizer
+                        let (t_resp, t_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let t_rect = t_resp.rect;
+                        t_painter.rect_filled(t_rect, 2.0, Color32::from_rgb(24, 12, 14));
+
+                        let mut clearance_gap = state.node_param_values.get("chien_gap_clearance_mm").copied().unwrap_or(0.35);
+                        let mut strike_force = state.node_param_values.get("strike_force").copied().unwrap_or(4.0);
+
+                        if t_resp.dragged() {
+                            if let Some(pos) = t_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - t_rect.left()) / t_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - t_rect.top()) / t_rect.height())).clamp(0.0, 1.0);
+                                clearance_gap = 0.05 + norm_x * (1.20 - 0.05);
+                                strike_force = norm_y * 10.0;
+                                state.node_param_values.insert("chien_gap_clearance_mm".to_string(), clearance_gap);
+                                state.node_param_values.insert("strike_force".to_string(), strike_force);
+                                if let Some(bus) = param_bus {
+                                    let pid_gap = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 0);
+                                    if bus.get(pid_gap).is_some() { bus.set(pid_gap, clearance_gap); }
+                                    let pid_force = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_force).is_some() { bus.set(pid_force, strike_force); }
+                                }
+                            }
+                        }
+
+                        // Soundboard Bone Striking Plate (rigid obstacle barrier)
+                        let plate_y = t_rect.bottom() - 14.0;
+                        t_painter.line_segment([egui::pos2(t_rect.left() + 8.0, plate_y), egui::pos2(t_rect.right() - 8.0, plate_y)], Stroke::new(3.0_f32, Color32::from_rgb(226, 232, 240)));
+
+                        // Resting Dog Foot Footprint with clearance gap
+                        let gap_px = (clearance_gap / 1.20) * 16.0;
+                        let dog_foot_y = plate_y - gap_px - 2.0;
+
+                        // Rocking Chien (dog bridge) contour (asymmetric triangular bridge)
+                        let pivot_pt = egui::pos2(t_rect.left() + 30.0, plate_y - 2.0);
+                        let dog_foot_pt = egui::pos2(t_rect.right() - 40.0, dog_foot_y);
+                        let string_notch_pt = egui::pos2(t_rect.right() - 48.0, dog_foot_y - 22.0);
+
+                        t_painter.line_segment([pivot_pt, dog_foot_pt], Stroke::new(2.5_f32, Color32::from_rgb(239, 68, 68)));
+                        t_painter.line_segment([dog_foot_pt, string_notch_pt], Stroke::new(2.5_f32, Color32::from_rgb(245, 158, 11)));
+                        t_painter.line_segment([string_notch_pt, pivot_pt], Stroke::new(2.0_f32, Color32::from_rgb(239, 68, 68)));
+
+                        // Trompette vibrating buzzing string passing over notch
+                        t_painter.line_segment([egui::pos2(t_rect.left() + 5.0, string_notch_pt.y - 2.0), egui::pos2(t_rect.right() - 5.0, string_notch_pt.y + 4.0)], Stroke::new(1.8_f32, Color32::from_rgb(251, 191, 36)));
+
+                        // Collision Impact Sparkles if striking force is high
+                        if strike_force > 2.0 {
+                            t_painter.circle_filled(egui::pos2(dog_foot_pt.x, plate_y), 2.5, Color32::from_rgb(254, 240, 138));
+                        }
+
+                        // Readout
+                        t_painter.text(
+                            egui::pos2(t_rect.left() + 4.0, t_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("Gap: {:.2} mm", clearance_gap),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(239, 68, 68),
+                        );
+                        t_painter.text(
+                            egui::pos2(t_rect.right() - 4.0, t_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("Force: {:.1} N", strike_force),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(245, 158, 11),
+                        );
+
+                        if t_resp.hovered() {
+                            let _ = t_resp.on_hover_text("Trompette Chien Buzzing Bridge Collision Gap\n[Drag horizontally: Clearance gap | Drag vertically: Coup strike force]");
                         }
                     } else {
                         // Filter Curve Mini View (slot-addressed)
