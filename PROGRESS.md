@@ -914,4 +914,27 @@ Product Management has conducted a comprehensive readiness audit:
   - Clippy: 0 warnings (`cargo clippy -p summoner_gui -- -D warnings` and `cargo clippy -p summoner_gui --features gui -- -D warnings`).
   - Unit tests: 307 pure tests passed in 0.23s (`cargo test -p summoner_gui`), plus 7 feature tests in `tier104_turn39_tests`.
 
+### Turn #40 (Turn #7) — Multi-Node Track DSP Device Chain, Rack Chain Strip & Pro Channel Offset Bridge (M33)
+- [x] Multi-Node Track DSP Device Chain Model (`crates/summoner_gui/src/views/modern_device_rack.rs`):
+  - Created `RackChainDeviceVisual` tracking `kind`, `display_name`, and `is_bypassed` per device slot in the track.
+  - Extended `ModernDeviceRackState` with `chain_devices: Vec<RackChainDeviceVisual>` and `selected_chain_idx: usize`.
+  - Built chain management lifecycle methods: `ensure_chain()`, `select_device(idx)`, `add_device(kind, display_name)`, `remove_device(idx)`, `move_device(from, to)`, and `toggle_device_bypass(idx)`.
+- [x] Interactive Device Chain Strip & Category Insertion Menu:
+  - Rendered horizontal chain strip above device rack controls with:
+    * High-contrast bypass toggles (`⏻`) with color-coded active/bypassed status.
+    * Category glyphs & indices (`{icon} {i+1}. {name}`).
+    * Reordering arrows (`◀`, `▶`) and removal button (`✕`).
+    * Universal `[➕ Add Device ▾]` dropdown categorized across all 11 `DspCategory` sections with automatic parameter initialization from `DspNodeRegistry`.
+- [x] Bidirectional Multi-Node Synchronization & Pro Channel Offset Dispatch (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `select_track_node(node_idx)`, `add_dsp_node_to_track(kind_id)`, `remove_dsp_node_from_track(node_idx)`, and `move_dsp_node(from_idx, to_idx)` in `AwardWinningGuiView`.
+  - Upgraded `sync_with_project` to synchronize the multi-node device chain between `project.tracks[selected_track].nodes` and `device_rack_state.chain_devices`.
+  - Dispatches Pro node parameters via `ParamId(track_id * 1000 + 500 + p_i)` and compatibility channels `ParamId(track_id * 1000 + p_i)` directly to `ParamBus` with zero heap allocation on the audio thread.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier105_turn40_tests.rs` verifying pure ParamBus offsets, device chain lifecycle, and GUI rendering with multi-node chains.
+  - Registered `tier105_turn40_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Incremental compilation: 0.28s (`cargo check -p summoner_gui`).
+  - Unit tests: 308 pure tests passed in 0.23s (`cargo test -p summoner_gui`), and 964 GUI tests passed in 1.59s (`cargo test -p summoner_gui --features gui`).
+  - Clippy: 0 warnings (`cargo clippy -p summoner_gui --features gui -- -D warnings`).
+
+
 

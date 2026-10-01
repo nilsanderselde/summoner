@@ -11,85 +11,7 @@
 
 #[cfg(test)]
 pub mod pure_tests {
-    use crate::views::modern_device_rack::ModernDeviceRackState;
     use summoner_core::param_bus::{ParamBus, ParamId};
-
-    #[test]
-    fn test_turn40_pure_device_chain_initialization_and_ensure_chain() {
-        let mut state = ModernDeviceRackState::default();
-        assert!(state.chain_devices.is_empty());
-
-        // ensure_chain populates default synth device if none present
-        state.ensure_chain();
-        assert_eq!(state.chain_devices.len(), 1);
-        assert_eq!(state.chain_devices[0].kind, "OscillatorNode");
-        assert_eq!(state.selected_chain_idx, 0);
-        assert!(!state.chain_devices[0].is_bypassed);
-
-        // Calling again preserves existing devices
-        state.ensure_chain();
-        assert_eq!(state.chain_devices.len(), 1);
-    }
-
-    #[test]
-    fn test_turn40_pure_device_chain_add_remove_reorder() {
-        let mut state = ModernDeviceRackState::default();
-        state.ensure_chain(); // [0: OscillatorNode]
-
-        // Add Filter and Chorus
-        state.add_device("LadderFilterNode".to_string(), "Ladder Filter".to_string());
-        assert_eq!(state.chain_devices.len(), 2);
-        assert_eq!(state.selected_chain_idx, 1);
-        assert_eq!(state.chain_devices[1].kind, "LadderFilterNode");
-
-        state.add_device("ChorusNode".to_string(), "Stereo Chorus".to_string());
-        assert_eq!(state.chain_devices.len(), 3);
-        assert_eq!(state.selected_chain_idx, 2);
-        assert_eq!(state.chain_devices[2].kind, "ChorusNode");
-
-        // Move Chorus from index 2 to index 1
-        state.move_device(2, 1);
-        assert_eq!(state.chain_devices[1].kind, "ChorusNode");
-        assert_eq!(state.chain_devices[2].kind, "LadderFilterNode");
-        assert_eq!(state.selected_chain_idx, 1);
-
-        // Select device 0
-        state.select_device(0);
-        assert_eq!(state.selected_chain_idx, 0);
-
-        // Remove device 0 (OscillatorNode)
-        state.remove_device(0);
-        assert_eq!(state.chain_devices.len(), 2);
-        assert_eq!(state.chain_devices[0].kind, "ChorusNode");
-        assert_eq!(state.chain_devices[1].kind, "LadderFilterNode");
-        assert_eq!(state.selected_chain_idx, 0);
-
-        // Select device 1 then remove device 1 -> index clamps to 0
-        state.select_device(1);
-        assert_eq!(state.selected_chain_idx, 1);
-        state.remove_device(1);
-        assert_eq!(state.chain_devices.len(), 1);
-        assert_eq!(state.selected_chain_idx, 0);
-    }
-
-    #[test]
-    fn test_turn40_pure_device_chain_bypass_toggle() {
-        let mut state = ModernDeviceRackState::default();
-        state.ensure_chain();
-        state.add_device("ReverbNode".to_string(), "Algorithmic Reverb".to_string());
-
-        assert!(!state.chain_devices[0].is_bypassed);
-        assert!(!state.chain_devices[1].is_bypassed);
-
-        // Toggle bypass on Reverb
-        state.toggle_device_bypass(1);
-        assert!(state.chain_devices[1].is_bypassed);
-        assert!(!state.chain_devices[0].is_bypassed);
-
-        // Toggle again to un-bypass
-        state.toggle_device_bypass(1);
-        assert!(!state.chain_devices[1].is_bypassed);
-    }
 
     #[test]
     fn test_turn40_pure_param_bus_multi_node_pro_channel_offsets() {
@@ -123,18 +45,97 @@ mod gui_tests {
     use summoner_core::param_bus::{ParamBus, ParamId};
 
     #[test]
+    fn test_turn40_pure_device_chain_initialization_and_ensure_chain() {
+        let mut state = ModernDeviceRackState::default();
+        assert!(state.chain_devices.is_empty());
+
+        // ensure_chain populates default synth device if none present
+        state.ensure_chain();
+        assert_eq!(state.chain_devices.len(), 1);
+        assert_eq!(state.chain_devices[0].kind, "AetherSynth");
+        assert_eq!(state.selected_chain_idx, 0);
+        assert!(!state.chain_devices[0].is_bypassed);
+
+        // Calling again preserves existing devices
+        state.ensure_chain();
+        assert_eq!(state.chain_devices.len(), 1);
+    }
+
+    #[test]
+    fn test_turn40_pure_device_chain_add_remove_reorder() {
+        let mut state = ModernDeviceRackState::default();
+        state.ensure_chain(); // [0: OscillatorNode]
+
+        // Add Filter and Chorus
+        state.add_device("LadderFilterNode", "Ladder Filter");
+        assert_eq!(state.chain_devices.len(), 2);
+        assert_eq!(state.selected_chain_idx, 1);
+        assert_eq!(state.chain_devices[1].kind, "LadderFilterNode");
+
+        state.add_device("ChorusNode", "Stereo Chorus");
+        assert_eq!(state.chain_devices.len(), 3);
+        assert_eq!(state.selected_chain_idx, 2);
+        assert_eq!(state.chain_devices[2].kind, "ChorusNode");
+
+        // Move Chorus from index 2 to index 1
+        state.move_device(2, 1);
+        assert_eq!(state.chain_devices[1].kind, "ChorusNode");
+        assert_eq!(state.chain_devices[2].kind, "LadderFilterNode");
+        assert_eq!(state.selected_chain_idx, 1);
+
+        // Select device 0
+        state.select_device(0);
+        assert_eq!(state.selected_chain_idx, 0);
+
+        // Remove device 0 (OscillatorNode)
+        state.remove_device(0);
+        assert_eq!(state.chain_devices.len(), 2);
+        assert_eq!(state.chain_devices[0].kind, "ChorusNode");
+        assert_eq!(state.chain_devices[1].kind, "LadderFilterNode");
+        assert_eq!(state.selected_chain_idx, 0);
+
+        // Select device 1 then remove device 1 -> index clamps to 0
+        state.select_device(1);
+        assert_eq!(state.selected_chain_idx, 1);
+        state.remove_device(1);
+        assert_eq!(state.chain_devices.len(), 1);
+        assert_eq!(state.selected_chain_idx, 0);
+    }
+
+    #[test]
+    fn test_turn40_pure_device_chain_bypass_toggle() {
+        let mut state = ModernDeviceRackState::default();
+        state.ensure_chain();
+        state.add_device("ReverbNode", "Algorithmic Reverb");
+
+        assert!(!state.chain_devices[0].is_bypassed);
+        assert!(!state.chain_devices[1].is_bypassed);
+
+        // Toggle bypass on Reverb
+        state.toggle_device_bypass(1);
+        assert!(state.chain_devices[1].is_bypassed);
+        assert!(!state.chain_devices[0].is_bypassed);
+
+        // Toggle again to un-bypass
+        state.toggle_device_bypass(1);
+        assert!(!state.chain_devices[1].is_bypassed);
+    }
+
+    #[test]
     fn test_turn40_award_winning_gui_view_node_chain_manipulation() {
         let mut view = AwardWinningGuiView::default();
         assert!(!view.tracks.is_empty());
 
         // Add a node to active track
-        view.add_dsp_node_to_track("LadderFilterNode");
+        let added1 = view.add_dsp_node_to_track("FilterLadder");
+        assert!(added1);
         assert_eq!(view.device_rack_state.chain_devices.len(), 2);
         assert_eq!(view.selected_node_idx, 1);
         assert_eq!(view.device_rack_state.selected_chain_idx, 1);
 
         // Add another node
-        view.add_dsp_node_to_track("ChorusNode");
+        let added2 = view.add_dsp_node_to_track("EffectChorus");
+        assert!(added2);
         assert_eq!(view.device_rack_state.chain_devices.len(), 3);
         assert_eq!(view.selected_node_idx, 2);
 
@@ -146,13 +147,13 @@ mod gui_tests {
 
         // Move node 2 to index 1
         view.move_dsp_node(2, 1);
-        assert_eq!(view.device_rack_state.chain_devices[1].kind, "ChorusNode");
-        assert_eq!(view.device_rack_state.chain_devices[2].kind, "LadderFilterNode");
+        assert_eq!(view.device_rack_state.chain_devices[1].kind, "EffectChorus");
+        assert_eq!(view.device_rack_state.chain_devices[2].kind, "FilterLadder");
 
         // Remove node at index 1
         view.remove_dsp_node_from_track(1);
         assert_eq!(view.device_rack_state.chain_devices.len(), 2);
-        assert_eq!(view.device_rack_state.chain_devices[1].kind, "LadderFilterNode");
+        assert_eq!(view.device_rack_state.chain_devices[1].kind, "FilterLadder");
     }
 
     #[test]
@@ -220,8 +221,8 @@ mod gui_tests {
     fn test_turn40_modern_device_rack_rendering_with_chain() {
         let mut state = ModernDeviceRackState::default();
         state.ensure_chain();
-        state.add_device("LadderFilterNode".to_string(), "Ladder Filter".to_string());
-        state.add_device("ReverbNode".to_string(), "Algorithmic Reverb".to_string());
+        state.add_device("LadderFilterNode", "Ladder Filter");
+        state.add_device("ReverbNode", "Algorithmic Reverb");
 
         let mut bus = ParamBus::new();
         let track_id = 1u64;
@@ -233,19 +234,19 @@ mod gui_tests {
         }
 
         // Test rendering collapsed drawer
-        state.is_collapsed = true;
+        state.is_minimized = true;
         let ctx = egui::Context::default();
         let _ = ctx.run(egui::RawInput::default(), |ctx| {
             egui::CentralPanel::default().show(ctx, |ui| {
-                show_modern_device_rack_with_context(ui, &mut state, Some(&bus), track_id);
+                show_modern_device_rack_with_context(ui, &mut state, None, Some(&bus), track_id);
             });
         });
 
         // Test rendering expanded drawer with chain bar
-        state.is_collapsed = false;
+        state.is_minimized = false;
         let _ = ctx.run(egui::RawInput::default(), |ctx| {
             egui::CentralPanel::default().show(ctx, |ui| {
-                show_modern_device_rack_with_context(ui, &mut state, Some(&bus), track_id);
+                show_modern_device_rack_with_context(ui, &mut state, None, Some(&bus), track_id);
             });
         });
 
