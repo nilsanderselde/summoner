@@ -182,6 +182,8 @@ pub mod tier113_turn48_tests;
 #[cfg(feature = "gui")]
 pub mod tier114_turn50_tests;
 #[cfg(feature = "gui")]
+pub mod tier115_turn51_tests;
+#[cfg(feature = "gui")]
 pub mod touch_gestures;
 #[cfg(feature = "gui")]
 pub mod transport_bar;
@@ -295,6 +297,8 @@ pub use views::harmonic_tension_map::HarmonicTensionMapView;
 pub use views::hoa4_spatializer_view::Hoa4SpatializerView;
 #[cfg(feature = "gui")]
 pub use views::hoa5_binaural_view::Hoa5BinauralView;
+#[cfg(feature = "gui")]
+pub use views::hoa5_radar_view::*;
 #[cfg(feature = "gui")]
 pub use views::hoa_spatializer_view::HoaSpatializerView;
 #[cfg(feature = "gui")]

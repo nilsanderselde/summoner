@@ -44,6 +44,8 @@ pub struct ModernInspectorState {
     pub requested_open_hurdy_gurdy_hud: bool,
     #[serde(default)]
     pub requested_open_trompette_hud: bool,
+    #[serde(default)]
+    pub requested_open_hoa5_radar_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -72,6 +74,7 @@ impl Default for ModernInspectorState {
             requested_open_armonica_hud: false,
             requested_open_hurdy_gurdy_hud: false,
             requested_open_trompette_hud: false,
+            requested_open_hoa5_radar_hud: false,
         }
     }
 }
@@ -586,6 +589,16 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open interactive chattering chien buzzing dog bridge obstacle collision phase canvas").clicked() {
                     state.requested_open_trompette_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind == "AmbisonicRadarSpatializer" || active_kind == "HoaSpatializer" || active_kind == "Hoa5BinauralSpatializer" || active_kind == "Hoa5RadarView" || active_kind.contains("Ambisonic") || active_kind.contains("Hoa") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🌐 Open 5th-Order Ambisonic Radar HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(56, 189, 248)))
+                        .fill(Color32::from_rgb(14, 28, 48))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(56, 189, 248)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive 3D spherical elevation/azimuth polar projection radar canvas & wavefront ripples HUD").clicked() {
+                    state.requested_open_hoa5_radar_hud = true;
                 }
                 ui.add_space(4.0);
             }

@@ -650,6 +650,8 @@ pub struct AwardWinningGuiView {
     pub hurdy_gurdy_view: crate::views::hurdy_gurdy_view::HurdyGurdyView,
     pub show_trompette_bridge_modal: bool,
     pub trompette_bridge_view: crate::views::trompette_bridge_view::TrompetteBridgeView,
+    pub show_hoa5_radar_modal: bool,
+    pub hoa5_radar_view: crate::views::hoa5_radar_view::Hoa5RadarView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -916,6 +918,8 @@ impl AwardWinningGuiView {
             hurdy_gurdy_view: crate::views::hurdy_gurdy_view::HurdyGurdyView::new(),
             show_trompette_bridge_modal: false,
             trompette_bridge_view: crate::views::trompette_bridge_view::TrompetteBridgeView::new(),
+            show_hoa5_radar_modal: false,
+            hoa5_radar_view: crate::views::hoa5_radar_view::Hoa5RadarView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -1580,14 +1584,20 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_trompette_hud = false;
             self.open_trompette_hud();
         }
+        if self.inspector_state.requested_open_hoa5_radar_hud || self.device_rack_state.requested_open_hoa5_radar_hud {
+            self.inspector_state.requested_open_hoa5_radar_hud = false;
+            self.device_rack_state.requested_open_hoa5_radar_hud = false;
+            self.open_hoa5_radar_hud();
+        }
 
-        // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog & Physical Modeling HUDs
+        // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling & Ambisonic HUDs
         self.show_modular_automation_editor_window(ui);
         self.show_modular_dsp_catalog_window(ui);
         self.show_crystal_resonator_modal_window(ui);
         self.show_glass_armonica_modal_window(ui);
         self.show_hurdy_gurdy_modal_window(ui);
         self.show_trompette_bridge_modal_window(ui);
+        self.show_hoa5_radar_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -7573,6 +7583,99 @@ impl AwardWinningGuiView {
 
     pub fn is_trompette_hud_open(&self) -> bool {
         self.show_trompette_bridge_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_hoa5_radar_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_hoa5_radar_modal {
+            return;
+        }
+
+        let mut is_open = self.show_hoa5_radar_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🌐 5th-Order Ambisonics (HOA5) 3D Radar HUD")
+            .id(egui::Id::new("hoa5_radar_hud_modal"))
+            .open(&mut is_open)
+            .default_size([720.0, 520.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    if ui.button("✕ Close HUD").clicked() {
+                        close_modal = true;
+                    }
+                    ui.label(
+                        RichText::new("Milestone 35 — 36-Channel Spherical Harmonic Holographic Projection")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(100, 116, 139)),
+                    );
+                });
+                ui.separator();
+                self.hoa5_radar_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_hoa5_radar_modal = is_open;
+        self.sync_hoa5_radar_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_hoa5_radar_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        // Dispatches to local parameter maps
+        self.device_rack_state.node_param_values.insert("azimuth_deg".to_string(), self.hoa5_radar_view.azimuth_deg);
+        self.device_rack_state.node_param_values.insert("elevation_deg".to_string(), self.hoa5_radar_view.elevation_deg);
+        self.device_rack_state.node_param_values.insert("distance_m".to_string(), self.hoa5_radar_view.distance_m);
+        self.device_rack_state.node_param_values.insert("energy_focus".to_string(), self.hoa5_radar_view.energy_focus);
+        self.device_rack_state.node_param_values.insert("spatial_spread_deg".to_string(), self.hoa5_radar_view.spatial_spread_deg);
+        self.device_rack_state.node_param_values.insert("ambisonic_order".to_string(), self.hoa5_radar_view.ambisonic_order as f32);
+
+        self.inspector_state.node_param_values.insert("azimuth_deg".to_string(), self.hoa5_radar_view.azimuth_deg);
+        self.inspector_state.node_param_values.insert("elevation_deg".to_string(), self.hoa5_radar_view.elevation_deg);
+        self.inspector_state.node_param_values.insert("distance_m".to_string(), self.hoa5_radar_view.distance_m);
+        self.inspector_state.node_param_values.insert("energy_focus".to_string(), self.hoa5_radar_view.energy_focus);
+        self.inspector_state.node_param_values.insert("spatial_spread_deg".to_string(), self.hoa5_radar_view.spatial_spread_deg);
+        self.inspector_state.node_param_values.insert("ambisonic_order".to_string(), self.hoa5_radar_view.ambisonic_order as f32);
+
+        // Atomic live dispatch to ParamBus without audio thread allocations
+        if let Some(bus) = self.live_param_bus.as_deref() {
+            let pid_base = if self.inspecting_master {
+                9000 + cur_slot as u32 * 20
+            } else {
+                cur_track_id as u32 * 1000 + cur_slot as u32 * 20
+            };
+            let pid_az = summoner_core::param_bus::ParamId(pid_base);
+            if bus.get(pid_az).is_some() { bus.set(pid_az, self.hoa5_radar_view.azimuth_deg); }
+            let pid_el = summoner_core::param_bus::ParamId(pid_base + 1);
+            if bus.get(pid_el).is_some() { bus.set(pid_el, self.hoa5_radar_view.elevation_deg); }
+            let pid_dist = summoner_core::param_bus::ParamId(pid_base + 2);
+            if bus.get(pid_dist).is_some() { bus.set(pid_dist, self.hoa5_radar_view.distance_m); }
+            let pid_ord = summoner_core::param_bus::ParamId(pid_base + 3);
+            if bus.get(pid_ord).is_some() { bus.set(pid_ord, self.hoa5_radar_view.ambisonic_order as f32); }
+            let pid_foc = summoner_core::param_bus::ParamId(pid_base + 4);
+            if bus.get(pid_foc).is_some() { bus.set(pid_foc, self.hoa5_radar_view.energy_focus); }
+        }
+    }
+
+    pub fn open_hoa5_radar_hud(&mut self) {
+        self.show_hoa5_radar_modal = true;
+    }
+
+    pub fn close_hoa5_radar_hud(&mut self) {
+        self.show_hoa5_radar_modal = false;
+    }
+
+    pub fn is_hoa5_radar_hud_open(&self) -> bool {
+        self.show_hoa5_radar_modal
     }
 
     #[cfg(feature = "gui")]

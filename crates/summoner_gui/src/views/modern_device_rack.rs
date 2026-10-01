@@ -59,6 +59,8 @@ pub struct ModernDeviceRackState {
     pub requested_open_hurdy_gurdy_hud: bool,
     #[serde(default)]
     pub requested_open_trompette_hud: bool,
+    #[serde(default)]
+    pub requested_open_hoa5_radar_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -77,6 +79,7 @@ impl Default for ModernDeviceRackState {
             requested_open_armonica_hud: false,
             requested_open_hurdy_gurdy_hud: false,
             requested_open_trompette_hud: false,
+            requested_open_hoa5_radar_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -264,6 +267,7 @@ pub fn show_modern_device_rack_with_context(
                     let is_armonica = cur_selection == "GlassArmonica" || cur_selection == "FranklinGlassArmonica" || cur_selection == "ArmonicaChassisResonator" || cur_selection.contains("Armonica");
                     let is_hurdy = cur_selection == "FrenchHurdyGurdy" || cur_selection.contains("HurdyGurdy") || cur_selection.contains("Vielle");
                     let is_trompette = cur_selection == "TrompetteChienBridge" || cur_selection == "TrompetteBridge" || cur_selection.contains("Trompette") || cur_selection.contains("Chien");
+                    let is_hoa = cur_selection == "AmbisonicRadarSpatializer" || cur_selection == "HoaSpatializer" || cur_selection == "Hoa5BinauralSpatializer" || cur_selection == "Hoa5RadarView" || cur_selection.contains("Ambisonic") || cur_selection.contains("Hoa");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -276,9 +280,13 @@ pub fn show_modern_device_rack_with_context(
                         if ui.button(RichText::new("🎻 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(16, 185, 129))).on_hover_text("Open Physical Modeling Hurdy-Gurdy HUD").clicked() {
                             state.requested_open_hurdy_gurdy_hud = true;
                         }
-                    } else if is_trompette
-                        && ui.button(RichText::new("🐕 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(239, 68, 68))).on_hover_text("Open Trompette Chien Buzzing Bridge HUD").clicked() {
-                        state.requested_open_trompette_hud = true;
+                    } else if is_trompette {
+                        if ui.button(RichText::new("🐕 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(239, 68, 68))).on_hover_text("Open Trompette Chien Buzzing Bridge HUD").clicked() {
+                            state.requested_open_trompette_hud = true;
+                        }
+                    } else if is_hoa
+                        && ui.button(RichText::new("🌐 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open 5th-Order Ambisonics (HOA5) 3D Radar HUD").clicked() {
+                        state.requested_open_hoa5_radar_hud = true;
                     }
                     ui.add_space(4.0);
                     let pwr_col = if state.is_enabled { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(100, 116, 139) };
@@ -462,6 +470,7 @@ pub fn show_modern_device_rack_with_context(
                     let is_armonica = cur_selection == "GlassArmonica" || cur_selection == "FranklinGlassArmonica" || cur_selection == "ArmonicaChassisResonator" || cur_selection.contains("Armonica");
                     let is_hurdy = cur_selection == "FrenchHurdyGurdy" || cur_selection.contains("HurdyGurdy") || cur_selection.contains("Vielle");
                     let is_trompette = cur_selection == "TrompetteChienBridge" || cur_selection == "TrompetteBridge" || cur_selection.contains("Trompette") || cur_selection.contains("Chien");
+                    let is_hoa = cur_selection == "AmbisonicRadarSpatializer" || cur_selection == "HoaSpatializer" || cur_selection == "Hoa5BinauralSpatializer" || cur_selection == "Hoa5RadarView" || cur_selection.contains("Ambisonic") || cur_selection.contains("Hoa");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -474,9 +483,13 @@ pub fn show_modern_device_rack_with_context(
                         if ui.button(RichText::new("🎻 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(16, 185, 129))).on_hover_text("Open Physical Modeling Hurdy-Gurdy HUD").clicked() {
                             state.requested_open_hurdy_gurdy_hud = true;
                         }
-                    } else if is_trompette
-                        && ui.button(RichText::new("🐕 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(239, 68, 68))).on_hover_text("Open Trompette Chien Buzzing Bridge HUD").clicked() {
-                        state.requested_open_trompette_hud = true;
+                    } else if is_trompette {
+                        if ui.button(RichText::new("🐕 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(239, 68, 68))).on_hover_text("Open Trompette Chien Buzzing Bridge HUD").clicked() {
+                            state.requested_open_trompette_hud = true;
+                        }
+                    } else if is_hoa
+                        && ui.button(RichText::new("🌐 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open 5th-Order Ambisonics (HOA5) 3D Radar HUD").clicked() {
+                        state.requested_open_hoa5_radar_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -1247,6 +1260,7 @@ fn show_pro_parameter_drawer(
                     let is_armonica = dev_kind == "GlassArmonica" || dev_kind == "FranklinGlassArmonica" || dev_kind == "ArmonicaChassisResonator" || dev_kind.contains("Armonica");
                     let is_hurdy = dev_kind == "FrenchHurdyGurdy" || dev_kind.contains("HurdyGurdy") || dev_kind.contains("Vielle");
                     let is_trompette = dev_kind == "TrompetteChienBridge" || dev_kind == "TrompetteBridge" || dev_kind.contains("Trompette") || dev_kind.contains("Chien");
+                    let is_hoa = dev_kind == "AmbisonicRadarSpatializer" || dev_kind == "HoaSpatializer" || dev_kind == "Hoa5BinauralSpatializer" || dev_kind == "Hoa5RadarView" || dev_kind.contains("Ambisonic") || dev_kind.contains("Hoa");
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -1519,6 +1533,76 @@ fn show_pro_parameter_drawer(
 
                         if t_resp.hovered() {
                             let _ = t_resp.on_hover_text("Trompette Chien Buzzing Bridge Collision Gap\n[Drag horizontally: Clearance gap | Drag vertically: Coup strike force]");
+                        }
+                    } else if is_hoa {
+                        // 5th-Order Ambisonics 2D Polar Radar Disk Visualizer
+                        let (h_resp, h_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let h_rect = h_resp.rect;
+                        h_painter.rect_filled(h_rect, 2.0, Color32::from_rgb(6, 10, 18));
+
+                        let mut azimuth = state.node_param_values.get("azimuth_deg").or_else(|| state.node_param_values.get("yaw")).or_else(|| state.node_param_values.get("spherical_yaw")).copied().unwrap_or(45.0);
+                        let mut elevation = state.node_param_values.get("elevation_deg").or_else(|| state.node_param_values.get("pitch")).or_else(|| state.node_param_values.get("spherical_pitch")).copied().unwrap_or(20.0);
+
+                        if h_resp.dragged() {
+                            if let Some(pos) = h_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - h_rect.left()) / h_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - h_rect.top()) / h_rect.height())).clamp(0.0, 1.0);
+                                azimuth = -180.0 + norm_x * 360.0;
+                                elevation = -90.0 + norm_y * 180.0;
+                                state.node_param_values.insert("azimuth_deg".to_string(), azimuth);
+                                state.node_param_values.insert("elevation_deg".to_string(), elevation);
+                                state.node_param_values.insert("yaw".to_string(), azimuth);
+                                state.node_param_values.insert("pitch".to_string(), elevation);
+                                state.node_param_values.insert("spherical_yaw".to_string(), azimuth);
+                                state.node_param_values.insert("spherical_pitch".to_string(), elevation);
+                                if let Some(bus) = param_bus {
+                                    let pid_az = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_az).is_some() { bus.set(pid_az, azimuth); }
+                                    let pid_el = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_el).is_some() { bus.set(pid_el, elevation); }
+                                }
+                            }
+                        }
+
+                        // Draw Radar Circle & Concentric Rings
+                        let center = h_rect.center();
+                        let radius = 28.0_f32;
+                        h_painter.circle_filled(center, radius, Color32::from_rgb(8, 14, 26));
+                        h_painter.circle_stroke(center, radius, Stroke::new(1.0_f32, Color32::from_rgb(14, 165, 233)));
+                        h_painter.circle_stroke(center, radius * 0.6, Stroke::new(0.5_f32, Color32::from_rgb(30, 48, 75)));
+
+                        // Compass crosshairs
+                        h_painter.line_segment([egui::pos2(center.x - radius, center.y), egui::pos2(center.x + radius, center.y)], Stroke::new(0.5_f32, Color32::from_rgb(30, 48, 75)));
+                        h_painter.line_segment([egui::pos2(center.x, center.y - radius), egui::pos2(center.x, center.y + radius)], Stroke::new(0.5_f32, Color32::from_rgb(30, 48, 75)));
+
+                        // Puck position on radar disk
+                        let az_rad = azimuth.to_radians();
+                        let el_rad = elevation.to_radians();
+                        let r_norm = (el_rad.cos() * 0.85).clamp(0.1, 1.0);
+                        let puck_pos = egui::pos2(center.x + az_rad.sin() * radius * r_norm, center.y - az_rad.cos() * radius * r_norm);
+
+                        // Wavefront ripple ring
+                        h_painter.circle_stroke(puck_pos, 7.0, Stroke::new(1.0_f32, Color32::from_rgb(34, 211, 238)));
+                        h_painter.circle_filled(puck_pos, 3.5, Color32::from_rgb(244, 63, 94));
+
+                        // Readout
+                        h_painter.text(
+                            egui::pos2(h_rect.left() + 4.0, h_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("Az: {:+.0}°", azimuth),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(56, 189, 248),
+                        );
+                        h_painter.text(
+                            egui::pos2(h_rect.right() - 4.0, h_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("El: {:+.0}°", elevation),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(34, 211, 238),
+                        );
+
+                        if h_resp.hovered() {
+                            let _ = h_resp.on_hover_text("5th-Order Ambisonics (HOA5) 3D Radar Disk\n[Drag horizontally: Azimuth [-180°..+180°] | Drag vertically: Elevation [-90°..+90°]]");
                         }
                     } else {
                         // Filter Curve Mini View (slot-addressed)

@@ -57,6 +57,7 @@ pub mod harmonic_exciter_view;
 pub mod harmonic_tension_map;
 pub mod hoa4_spatializer_view;
 pub mod hoa5_binaural_view;
+pub mod hoa5_radar_view;
 pub mod hoa_spatializer_view;
 pub mod hurdy_gurdy_view;
 pub mod idiophone_spectrum_view;

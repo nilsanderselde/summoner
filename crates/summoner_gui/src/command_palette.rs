@@ -335,6 +335,12 @@ impl CommandPalette {
                 action_id: "open_trompette_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open 5th-Order Ambisonics (HOA5) 3D Radar HUD".into(),
+                category: "Spatial & Ambisonics".into(),
+                action_id: "open_hoa5_radar_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

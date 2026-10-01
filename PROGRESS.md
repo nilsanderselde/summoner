@@ -1176,3 +1176,33 @@ Product Management has conducted a comprehensive readiness audit:
   - Verification: 100% test pass rate across unit tests and feature tests (`cargo test -p summoner_gui`, `cargo test -p summoner_gui --features gui`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo check -p summoner_gui --features gui`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
 
+### Turn #51 (Turn #17) — 5th-Order Ambisonics (HOA5) 3D Radar HUD & Polar Trajectory Canvas Convergence (Milestone 35)
+- [x] Interactive 3D Holographic Ambisonic Radar HUD (`crates/summoner_gui/src/views/hoa5_radar_view.rs`):
+  - 3D spherical elevation/azimuth polar projection radar canvas with 12 azimuth radials ($30^\circ$ increments), concentric distance range rings (1m, 3m, 5m, 10m, 15m), and cardinal directions.
+  - Draggable sound object puck with $\ge 44 \times 44\text{ pt}$ hit bounding targets (`HOA5_RADAR_PUCK_HIT_RADIUS = 22.0pt`) for WCAG AAA touch target compliance.
+  - Real-time acoustic wavefront propagation ripples with Doppler velocity compression.
+  - Complete 36-channel spherical harmonic ACN decomposition (Order 0..5: Monopole, Dipoles, Quadrupoles, Octupoles, Hexadecapoles, Triacontadipoles) with energy bars and order energy summation.
+  - 3D motion trajectory generator (Manual Static, Horizontal Orbit, Figure-8 Lissajous, Spherical Spiral, Doppler Flyby Sweep).
+  - 6 Presets: `Hoa5_36ChannelSphere`, `MaxReAcousticFocus`, `BinauralHoa5Hrir`, `Surround22_2Broadcast`, `Dome9_1_6Master`, `DopplerOrbitalFlyby`.
+  - Self-contained deterministic ASCII snapshot renderer (`render_snapshot_ascii`) for headless verification.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_hoa5_radar_modal: bool` and `hoa5_radar_view: Hoa5RadarView`.
+  - Lifecycle management methods: `open_hoa5_radar_hud()`, `close_hoa5_radar_hud()`, `is_hoa5_radar_hud_open()`.
+  - Real-time parameter sync (`sync_hoa5_radar_hud_state`): synchronizes local reflection map and live `ParamBus` atomic channels on slot base PIDs `cur_track_id * 1000 + cur_slot * 20` (`azimuth_deg`, `elevation_deg`, `distance_m`, `ambisonic_order`, `energy_focus`) with zero audio thread allocation.
+- [x] Modern Inspector & Device Rack Integrations:
+  - Added `requested_open_hoa5_radar_hud: bool` flags to `ModernInspectorState` and `ModernDeviceRackState`.
+  - In `ModernInspectorView`, added prominent action button `[🌐 Open 5th-Order Ambisonic Radar HUD]` on Ambisonic/HOA spatializer devices.
+  - In `ModernDeviceRackView`, added `[🌐 HUD]` tactical trigger buttons in collapsed/expanded device headers.
+  - In `ModernDeviceRackView`, embedded tactile 2D Ambisonic Polar Radar disk mini visualizer with concentric range rings, compass crosshairs, wavefront ripple ring, touch-drag coordinate updates, and live `ParamBus` atomic channel dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_hoa5_radar_hud` under `"Spatial & Ambisonics"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_hoa5_radar_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier115_turn51_tests.rs`:
+    * Pure tests: view initialization, presets, spherical-to-Cartesian coordinate mapping, 36-ch spherical harmonics decomposition, Doppler trajectory simulation, $\ge 44\text{pt}$ touch target hit bounds, deterministic ASCII snapshot rendering.
+    * GUI tests: headless egui render, modal lifecycle, live `ParamBus` atomic slot dispatch, rack & inspector trigger propagation, command palette action registration.
+  - Unit tests: 329 passed in 0.23s (`cargo test -p summoner_gui`).
+  - Feature tests: 12 tests passed in `tier115_turn51_tests` (`cargo test -p summoner_gui --features gui -- tier115_turn51_tests`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
+
+
