@@ -859,3 +859,19 @@ Product Management has conducted a comprehensive readiness audit:
   - Incremental compilation: 0.30s (`cargo check -p summoner_gui`).
   - Unit tests: 302 passed in 0.27s (`cargo test -p summoner_gui`).
   - Clippy: 0 warnings (`cargo clippy -p summoner_gui`).
+
+### Turn #37 (Turn #4) — Stage Column Pro Launchers, Mixer Channel Strip Stage Navigation & Universal DSP Parameter Reflection Parity
+- [x] Symmetrical 4-Way 1-Click Pro View Launchers on All Track Headers (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `[🎭]` Stage launcher into Arranger track headers (`header_w = 214.0 pt`), giving every arranger track 1-click direct jumping to `[🎹]` Piano Roll, `[∿]` Modular DAG, `[🎚]` Console Mixer, `[🎭]` Stage Matrix, and `[📈]` Live Automation.
+  - Added `[🎭]` Stage launcher into Console Mixer channel strips, providing each channel strip with full 1-click direct jumping to `[📋]` Arranger, `[🎹]` Piano Roll, `[∿]` Modular DAG, `[🎭]` Stage Matrix, and `[📈]` Live Automation.
+  - Added 1-click Pro view launchers `[📋]` Arranger, `[🎹]` Piano Roll, `[∿]` Modular DAG, `[🎚]` Console Mixer, and `[📈]` Live Automation directly into Stage matrix column track headers when `is_pro && col_w >= 82.0`.
+- [x] Universal Dynamic DSP Node Parameter Reflection Parity:
+  - Upgraded `modular_auto_selector` in `show_modular_canvas` to query `DspNodeRegistry` for the active track's DSP module and expose every parameter with 1-click live Bézier automation opening.
+  - Upgraded Mixer channel strip `auto_btn` and Arranger track header `auto_rect` to dynamically query `DspNodeRegistry` and open the active DSP node's primary parameter directly into the Live Automation Editor.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier102_turn37_tests.rs` covering 4-way cross-navigation, Stage column launchers, Mixer channel strip Stage navigation, and dynamic DSP parameter auto-opening.
+  - Registered `tier102_turn37_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Compilation: 0.28s (`cargo check -p summoner_gui`).
+  - Unit tests: 303 passed in 0.26s (`cargo test -p summoner_gui`).
+  - Clippy: 0 warnings (`cargo clippy -p summoner_gui`).
+

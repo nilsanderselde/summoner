@@ -1491,7 +1491,7 @@ impl AwardWinningGuiView {
                 let rect = resp.rect;
 
                 let is_pro = self.top_bar_state.is_pro_mode;
-                let header_w = if is_pro { 202.0 } else { 140.0 };
+                let header_w = if is_pro { 214.0 } else { 140.0 };
                 let track_area_w = (rect.width() - header_w).max(200.0);
                 let ppb = track_area_w / 18.0; // 18 measures visible
 
@@ -1571,10 +1571,11 @@ impl AwardWinningGuiView {
                                 let m_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 70.0, head_rect.center().y - 8.0), Vec2::new(16.0, 16.0));
                                 let s_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 88.0, head_rect.center().y - 8.0), Vec2::new(16.0, 16.0));
                                 let a_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 106.0, head_rect.center().y - 8.0), Vec2::new(16.0, 16.0));
-                                let p_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 152.0, head_rect.center().y - 7.0), Vec2::new(10.0, 14.0));
-                                let mod_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 164.0, head_rect.center().y - 7.0), Vec2::new(10.0, 14.0));
-                                let mix_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 176.0, head_rect.center().y - 7.0), Vec2::new(10.0, 14.0));
-                                let auto_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 188.0, head_rect.center().y - 7.0), Vec2::new(10.0, 14.0));
+                                let p_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 150.0, head_rect.center().y - 7.0), Vec2::new(10.0, 14.0));
+                                let mod_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 162.0, head_rect.center().y - 7.0), Vec2::new(10.0, 14.0));
+                                let mix_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 174.0, head_rect.center().y - 7.0), Vec2::new(10.0, 14.0));
+                                let stg_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 186.0, head_rect.center().y - 7.0), Vec2::new(10.0, 14.0));
+                                let auto_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 198.0, head_rect.center().y - 7.0), Vec2::new(10.0, 14.0));
 
                                 if is_pro && m_rect.contains(pos) && is_click {
                                     track.is_muted = !track.is_muted;
@@ -1597,6 +1598,10 @@ impl AwardWinningGuiView {
                                     selected_idx = Some(idx);
                                     self.selected_track_idx = idx;
                                     self.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::Mixer;
+                                } else if is_pro && stg_rect.contains(pos) && is_click {
+                                    selected_idx = Some(idx);
+                                    self.selected_track_idx = idx;
+                                    self.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::Performance;
                                 } else if is_pro && auto_rect.contains(pos) && is_click {
                                     selected_idx = Some(idx);
                                     self.selected_track_idx = idx;
@@ -1617,7 +1622,14 @@ impl AwardWinningGuiView {
                                 self.select_track_for_arranger(s_idx);
                             }
                             if let Some(tid) = track_to_open_auto {
-                                self.open_track_automation_editor(tid, "gain");
+                                let cur_kind = self.device_rack_state.selected_node_kind.as_deref()
+                                    .or(self.inspector_state.selected_node_kind.as_deref())
+                                    .unwrap_or("AetherSynth");
+                                let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+                                let param_to_open = registry.get(cur_kind)
+                                    .and_then(|desc| desc.params.first().map(|p| p.id.clone()))
+                                    .unwrap_or_else(|| "gain".to_string());
+                                self.open_track_automation_editor(tid, &param_to_open);
                             }
                         }
                     }
@@ -1655,10 +1667,11 @@ impl AwardWinningGuiView {
                         let m_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 70.0, head_rect.center().y - 8.0), Vec2::new(16.0, 16.0));
                         let s_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 88.0, head_rect.center().y - 8.0), Vec2::new(16.0, 16.0));
                         let a_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 106.0, head_rect.center().y - 8.0), Vec2::new(16.0, 16.0));
-                        let p_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 152.0, head_rect.center().y - 7.0), Vec2::new(10.0, 14.0));
-                        let mod_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 164.0, head_rect.center().y - 7.0), Vec2::new(10.0, 14.0));
-                        let mix_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 176.0, head_rect.center().y - 7.0), Vec2::new(10.0, 14.0));
-                        let auto_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 188.0, head_rect.center().y - 7.0), Vec2::new(10.0, 14.0));
+                        let p_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 150.0, head_rect.center().y - 7.0), Vec2::new(10.0, 14.0));
+                        let mod_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 162.0, head_rect.center().y - 7.0), Vec2::new(10.0, 14.0));
+                        let mix_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 174.0, head_rect.center().y - 7.0), Vec2::new(10.0, 14.0));
+                        let stg_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 186.0, head_rect.center().y - 7.0), Vec2::new(10.0, 14.0));
+                        let auto_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 198.0, head_rect.center().y - 7.0), Vec2::new(10.0, 14.0));
 
                         // Mute button
                         let m_bg = if track.is_muted { Color32::from_rgb(239, 68, 68) } else { Color32::from_rgb(24, 34, 52) };
@@ -1675,7 +1688,7 @@ impl AwardWinningGuiView {
                         painter.rect_filled(a_rect, 2.0, a_bg);
                         painter.text(a_rect.center(), egui::Align2::CENTER_CENTER, "●", FontId::proportional(8.5), if track.is_armed { Color32::WHITE } else { Color32::from_rgb(148, 163, 184) });
 
-                        // 1-Click Pro View Launchers [🎹] [∿] [🎚] [📈]
+                        // 1-Click Pro View Launchers [🎹] [∿] [🎚] [🎭] [📈]
                         painter.rect_filled(p_rect, 2.0, Color32::from_rgb(18, 26, 42));
                         painter.text(p_rect.center(), egui::Align2::CENTER_CENTER, "🎹", FontId::proportional(7.5), Color32::from_rgb(168, 85, 247));
 
@@ -1684,6 +1697,9 @@ impl AwardWinningGuiView {
 
                         painter.rect_filled(mix_rect, 2.0, Color32::from_rgb(18, 26, 42));
                         painter.text(mix_rect.center(), egui::Align2::CENTER_CENTER, "🎚", FontId::proportional(7.5), Color32::from_rgb(34, 197, 94));
+
+                        painter.rect_filled(stg_rect, 2.0, Color32::from_rgb(18, 26, 42));
+                        painter.text(stg_rect.center(), egui::Align2::CENTER_CENTER, "🎭", FontId::proportional(7.0), Color32::from_rgb(234, 179, 8));
 
                         painter.rect_filled(auto_rect, 2.0, Color32::from_rgb(18, 26, 42));
                         painter.text(auto_rect.center(), egui::Align2::CENTER_CENTER, "📈", FontId::proportional(7.0), Color32::from_rgb(245, 158, 11));
@@ -5378,6 +5394,21 @@ impl AwardWinningGuiView {
                                     }
                                 }
                             }
+                            let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+                            let cur_kind = self.device_rack_state.selected_node_kind.as_deref()
+                                .or(self.inspector_state.selected_node_kind.as_deref())
+                                .unwrap_or("AetherSynth");
+                            if let Some(desc) = registry.get(cur_kind) {
+                                if !desc.params.is_empty() {
+                                    ui.separator();
+                                    ui.label(RichText::new(format!("{} {}", desc.category.icon(), desc.display_name)).font(FontId::proportional(9.0)).color(Color32::from_rgb(56, 189, 248)));
+                                    for p in &desc.params {
+                                        if ui.selectable_label(false, format!("📈 {}", p.name)).clicked() {
+                                            auto_req = Some((cur_tid, p.id.clone()));
+                                        }
+                                    }
+                                }
+                            }
                         });
                     if let Some((tid, param)) = auto_req {
                         self.open_track_automation_editor(tid, &param);
@@ -6473,10 +6504,12 @@ impl AwardWinningGuiView {
 
                                 // 1-Click Pro View Launchers hit testing
                                 let pro_nav_y = strip_rect.top() + 20.0;
-                                let arr_btn = Rect::from_min_size(egui::pos2(strip_rect.left() + 3.0, pro_nav_y), Vec2::new(10.0, 10.0));
-                                let p_btn = Rect::from_min_size(egui::pos2(arr_btn.right() + 2.0, pro_nav_y), Vec2::new(10.0, 10.0));
-                                let mod_btn = Rect::from_min_size(egui::pos2(p_btn.right() + 2.0, pro_nav_y), Vec2::new(10.0, 10.0));
-                                let auto_btn = Rect::from_min_size(egui::pos2(mod_btn.right() + 2.0, pro_nav_y), Vec2::new(10.0, 10.0));
+                                let btn_sz = Vec2::new(8.0, 10.0);
+                                let arr_btn = Rect::from_min_size(egui::pos2(strip_rect.left() + 2.0, pro_nav_y), btn_sz);
+                                let p_btn = Rect::from_min_size(egui::pos2(arr_btn.right() + 1.0, pro_nav_y), btn_sz);
+                                let mod_btn = Rect::from_min_size(egui::pos2(p_btn.right() + 1.0, pro_nav_y), btn_sz);
+                                let stg_btn = Rect::from_min_size(egui::pos2(mod_btn.right() + 1.0, pro_nav_y), btn_sz);
+                                let auto_btn = Rect::from_min_size(egui::pos2(stg_btn.right() + 1.0, pro_nav_y), btn_sz);
 
                                 if is_pro && arr_btn.contains(pos) && is_click {
                                     selected_idx = Some(idx);
@@ -6487,6 +6520,9 @@ impl AwardWinningGuiView {
                                 } else if is_pro && mod_btn.contains(pos) && is_click {
                                     selected_idx = Some(idx);
                                     nav_to_tab = Some(crate::views::modern_top_bar::ModernViewTab::Modular);
+                                } else if is_pro && stg_btn.contains(pos) && is_click {
+                                    selected_idx = Some(idx);
+                                    nav_to_tab = Some(crate::views::modern_top_bar::ModernViewTab::Performance);
                                 } else if is_pro && auto_btn.contains(pos) && is_click {
                                     selected_idx = Some(idx);
                                     track_to_open_auto = Some(track.id);
@@ -6544,25 +6580,30 @@ impl AwardWinningGuiView {
                     painter.rect_filled(Rect::from_min_size(egui::pos2(strip_rect.left() + 4.0, strip_rect.top() + 4.0), Vec2::new(strip_rect.width() - 8.0, 4.0)), 2.0, col);
                     painter.text(egui::pos2(strip_rect.center().x, strip_rect.top() + 11.0), egui::Align2::CENTER_TOP, format!("{}. {}", idx + 1, track.name), FontId::proportional(9.5), Color32::from_rgb(241, 245, 249));
 
-                    // 1-Click Pro View Launchers [📋] [🎹] [∿] [📈] in Pro Mode
+                    // 1-Click Pro View Launchers [📋] [🎹] [∿] [🎭] [📈] in Pro Mode
                     if is_pro {
                         let pro_nav_y = strip_rect.top() + 20.0;
-                        let arr_btn = Rect::from_min_size(egui::pos2(strip_rect.left() + 3.0, pro_nav_y), Vec2::new(10.0, 10.0));
-                        let p_btn = Rect::from_min_size(egui::pos2(arr_btn.right() + 2.0, pro_nav_y), Vec2::new(10.0, 10.0));
-                        let mod_btn = Rect::from_min_size(egui::pos2(p_btn.right() + 2.0, pro_nav_y), Vec2::new(10.0, 10.0));
-                        let auto_btn = Rect::from_min_size(egui::pos2(mod_btn.right() + 2.0, pro_nav_y), Vec2::new(10.0, 10.0));
+                        let btn_sz = Vec2::new(8.0, 10.0);
+                        let arr_btn = Rect::from_min_size(egui::pos2(strip_rect.left() + 2.0, pro_nav_y), btn_sz);
+                        let p_btn = Rect::from_min_size(egui::pos2(arr_btn.right() + 1.0, pro_nav_y), btn_sz);
+                        let mod_btn = Rect::from_min_size(egui::pos2(p_btn.right() + 1.0, pro_nav_y), btn_sz);
+                        let stg_btn = Rect::from_min_size(egui::pos2(mod_btn.right() + 1.0, pro_nav_y), btn_sz);
+                        let auto_btn = Rect::from_min_size(egui::pos2(stg_btn.right() + 1.0, pro_nav_y), btn_sz);
 
                         painter.rect_filled(arr_btn, 2.0, Color32::from_rgb(22, 30, 46));
-                        painter.text(arr_btn.center(), egui::Align2::CENTER_CENTER, "📋", FontId::proportional(7.0), Color32::from_rgb(200, 215, 235));
+                        painter.text(arr_btn.center(), egui::Align2::CENTER_CENTER, "📋", FontId::proportional(6.5), Color32::from_rgb(200, 215, 235));
 
                         painter.rect_filled(p_btn, 2.0, Color32::from_rgb(22, 30, 46));
-                        painter.text(p_btn.center(), egui::Align2::CENTER_CENTER, "🎹", FontId::proportional(7.0), Color32::from_rgb(168, 85, 247));
+                        painter.text(p_btn.center(), egui::Align2::CENTER_CENTER, "🎹", FontId::proportional(6.5), Color32::from_rgb(168, 85, 247));
 
                         painter.rect_filled(mod_btn, 2.0, Color32::from_rgb(22, 30, 46));
-                        painter.text(mod_btn.center(), egui::Align2::CENTER_CENTER, "∿", FontId::proportional(7.5), Color32::from_rgb(56, 189, 248));
+                        painter.text(mod_btn.center(), egui::Align2::CENTER_CENTER, "∿", FontId::proportional(7.0), Color32::from_rgb(56, 189, 248));
+
+                        painter.rect_filled(stg_btn, 2.0, Color32::from_rgb(22, 30, 46));
+                        painter.text(stg_btn.center(), egui::Align2::CENTER_CENTER, "🎭", FontId::proportional(6.5), Color32::from_rgb(234, 179, 8));
 
                         painter.rect_filled(auto_btn, 2.0, Color32::from_rgb(22, 30, 46));
-                        painter.text(auto_btn.center(), egui::Align2::CENTER_CENTER, "📈", FontId::proportional(7.0), Color32::from_rgb(245, 158, 11));
+                        painter.text(auto_btn.center(), egui::Align2::CENTER_CENTER, "📈", FontId::proportional(6.5), Color32::from_rgb(245, 158, 11));
                     }
 
                     // Tactile Rotary Pan Pot with 12 o'clock center tick and angle needle
@@ -6698,7 +6739,14 @@ impl AwardWinningGuiView {
 
                 // Handle pending automation window requests from mixer strip
                 if let Some(tid) = track_to_open_auto {
-                    self.open_track_automation_editor(tid, "gain");
+                    let cur_kind = self.device_rack_state.selected_node_kind.as_deref()
+                        .or(self.inspector_state.selected_node_kind.as_deref())
+                        .unwrap_or("AetherSynth");
+                    let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+                    let param_to_open = registry.get(cur_kind)
+                        .and_then(|desc| desc.params.first().map(|p| p.id.clone()))
+                        .unwrap_or_else(|| "gain".to_string());
+                    self.open_track_automation_editor(tid, &param_to_open);
                 }
                 if master_to_open_auto {
                     self.open_master_automation_editor();
@@ -6945,6 +6993,9 @@ impl AwardWinningGuiView {
                 let mut pad_track_selected = None;
                 let mut clip_to_toggle = None;
                 let mut track_to_stop = None;
+                let is_pro = self.top_bar_state.is_pro_mode;
+                let mut stg_nav_tab = None;
+                let mut stg_open_auto_track: Option<u64> = None;
 
                 for (t_idx, track) in self.tracks.iter().enumerate() {
                     let col_x = rect.left() + 80.0 + t_idx as f32 * col_w;
@@ -6957,11 +7008,61 @@ impl AwardWinningGuiView {
                     let border_col = if is_sel { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(28, 38, 56) };
                     painter.rect_filled(hdr_rect, 2.0, hdr_bg);
                     painter.rect_stroke(hdr_rect, 2.0, Stroke::new(1.0_f32, border_col));
-                    painter.text(hdr_rect.center(), egui::Align2::CENTER_CENTER, &track.name, FontId::proportional(9.0), col);
 
-                    if let Some(pos) = pointer_pos {
-                        if hdr_rect.contains(pos) && is_click {
-                            pad_track_selected = Some(t_idx);
+                    if is_pro && col_w >= 82.0 {
+                        painter.text(egui::pos2(hdr_rect.left() + 4.0, hdr_rect.center().y), egui::Align2::LEFT_CENTER, &track.name, FontId::proportional(8.5), col);
+
+                        let btn_sz = Vec2::new(9.0, 11.0);
+                        let auto_rect = Rect::from_min_size(egui::pos2(hdr_rect.right() - 11.0, hdr_rect.center().y - 5.5), btn_sz);
+                        let mix_rect = Rect::from_min_size(egui::pos2(auto_rect.left() - 10.0, hdr_rect.center().y - 5.5), btn_sz);
+                        let mod_rect = Rect::from_min_size(egui::pos2(mix_rect.left() - 10.0, hdr_rect.center().y - 5.5), btn_sz);
+                        let p_rect = Rect::from_min_size(egui::pos2(mod_rect.left() - 10.0, hdr_rect.center().y - 5.5), btn_sz);
+                        let arr_rect = Rect::from_min_size(egui::pos2(p_rect.left() - 10.0, hdr_rect.center().y - 5.5), btn_sz);
+
+                        painter.rect_filled(arr_rect, 2.0, Color32::from_rgb(22, 30, 46));
+                        painter.text(arr_rect.center(), egui::Align2::CENTER_CENTER, "📋", FontId::proportional(6.5), Color32::from_rgb(200, 215, 235));
+
+                        painter.rect_filled(p_rect, 2.0, Color32::from_rgb(22, 30, 46));
+                        painter.text(p_rect.center(), egui::Align2::CENTER_CENTER, "🎹", FontId::proportional(6.5), Color32::from_rgb(168, 85, 247));
+
+                        painter.rect_filled(mod_rect, 2.0, Color32::from_rgb(22, 30, 46));
+                        painter.text(mod_rect.center(), egui::Align2::CENTER_CENTER, "∿", FontId::proportional(7.0), Color32::from_rgb(56, 189, 248));
+
+                        painter.rect_filled(mix_rect, 2.0, Color32::from_rgb(22, 30, 46));
+                        painter.text(mix_rect.center(), egui::Align2::CENTER_CENTER, "🎚", FontId::proportional(6.5), Color32::from_rgb(34, 197, 94));
+
+                        painter.rect_filled(auto_rect, 2.0, Color32::from_rgb(22, 30, 46));
+                        painter.text(auto_rect.center(), egui::Align2::CENTER_CENTER, "📈", FontId::proportional(6.5), Color32::from_rgb(245, 158, 11));
+
+                        if let Some(pos) = pointer_pos {
+                            if is_click {
+                                if arr_rect.contains(pos) {
+                                    pad_track_selected = Some(t_idx);
+                                    stg_nav_tab = Some(crate::views::modern_top_bar::ModernViewTab::Arranger);
+                                } else if p_rect.contains(pos) {
+                                    pad_track_selected = Some(t_idx);
+                                    stg_nav_tab = Some(crate::views::modern_top_bar::ModernViewTab::PianoRoll);
+                                } else if mod_rect.contains(pos) {
+                                    pad_track_selected = Some(t_idx);
+                                    stg_nav_tab = Some(crate::views::modern_top_bar::ModernViewTab::Modular);
+                                } else if mix_rect.contains(pos) {
+                                    pad_track_selected = Some(t_idx);
+                                    stg_nav_tab = Some(crate::views::modern_top_bar::ModernViewTab::Mixer);
+                                } else if auto_rect.contains(pos) {
+                                    pad_track_selected = Some(t_idx);
+                                    stg_open_auto_track = Some(track.id);
+                                } else if hdr_rect.contains(pos) {
+                                    pad_track_selected = Some(t_idx);
+                                }
+                            }
+                        }
+                    } else {
+                        painter.text(hdr_rect.center(), egui::Align2::CENTER_CENTER, &track.name, FontId::proportional(9.0), col);
+
+                        if let Some(pos) = pointer_pos {
+                            if hdr_rect.contains(pos) && is_click {
+                                pad_track_selected = Some(t_idx);
+                            }
                         }
                     }
 
@@ -7026,6 +7127,19 @@ impl AwardWinningGuiView {
 
                 if let Some(s_idx) = pad_track_selected {
                     self.select_track_for_stage(s_idx);
+                }
+                if let Some(tab) = stg_nav_tab {
+                    self.top_bar_state.active_tab = tab;
+                }
+                if let Some(tid) = stg_open_auto_track {
+                    let cur_kind = self.device_rack_state.selected_node_kind.as_deref()
+                        .or(self.inspector_state.selected_node_kind.as_deref())
+                        .unwrap_or("AetherSynth");
+                    let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+                    let param_to_open = registry.get(cur_kind)
+                        .and_then(|desc| desc.params.first().map(|p| p.id.clone()))
+                        .unwrap_or_else(|| "gain".to_string());
+                    self.open_track_automation_editor(tid, &param_to_open);
                 }
             });
     }
