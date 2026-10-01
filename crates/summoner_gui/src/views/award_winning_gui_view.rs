@@ -556,6 +556,8 @@ pub struct AwardWinningGuiView {
     pub last_inspector_soloed: bool,
     pub last_inspector_armed: bool,
     pub last_selected_track_idx: usize,
+    pub selected_node_idx: usize,
+    pub last_selected_node_idx: usize,
     pub last_applied_master_gain: f32,
     pub piano_roll_notes: Vec<PianoRollNote>,
     pub selected_note_id: Option<usize>,
@@ -766,6 +768,8 @@ impl AwardWinningGuiView {
             last_inspector_soloed: false,
             last_inspector_armed: false,
             last_selected_track_idx: 4,
+            selected_node_idx: 0,
+            last_selected_node_idx: usize::MAX,
             last_applied_master_gain: 1.0,
             piano_roll_notes: vec![
                 PianoRollNote { id: 1, pitch_idx: 3, start_beat: 0.0, length_beats: 1.5, velocity: 0.90 },
@@ -4125,110 +4129,194 @@ impl AwardWinningGuiView {
                 });
             }
 
-            let first_node = &mut track.nodes[0];
+            let registry = crate::dsp_node_ui::DspNodeRegistry::new();
 
             if track_changed {
-                // Newly selected track: load node kind and parameters into GUI
-                self.device_rack_state.selected_node_kind = Some(first_node.kind.clone());
-                self.inspector_state.selected_node_kind = Some(first_node.kind.clone());
-                if first_node.params.is_empty() {
-                    first_node.params.insert("cutoff".to_string(), self.device_rack_state.cutoff);
-                    first_node.params.insert("resonance".to_string(), self.device_rack_state.resonance);
-                    first_node.params.insert("decay".to_string(), self.device_rack_state.decay);
-                    first_node.params.insert("drive".to_string(), self.device_rack_state.drive);
-                    first_node.params.insert("volume".to_string(), self.device_rack_state.volume);
+                self.selected_node_idx = 0;
+                self.device_rack_state.chain_devices.clear();
+                for n in &track.nodes {
+                    let disp = registry.get(&n.kind).map(|d| d.display_name.clone()).unwrap_or_else(|| n.kind.clone());
+                    let bypassed = n.plugin_state.as_ref().map(|ps| ps.is_bypassed).unwrap_or(false);
+                    self.device_rack_state.chain_devices.push(crate::views::modern_device_rack::RackChainDeviceVisual {
+                        kind: n.kind.clone(),
+                        display_name: disp,
+                        is_bypassed: bypassed,
+                    });
                 }
-                for (k, v) in &first_node.params {
+                self.device_rack_state.selected_chain_idx = 0;
+            } else {
+                // If GUI added/removed/reordered devices in device_rack_state:
+                if self.device_rack_state.chain_devices.is_empty() {
+                    self.device_rack_state.ensure_chain();
+                }
+                while track.nodes.len() < self.device_rack_state.chain_devices.len() {
+                    let next_i = track.nodes.len();
+                    let dev = &self.device_rack_state.chain_devices[next_i];
+                    let mut new_params = std::collections::HashMap::new();
+                    if let Some(desc) = registry.get(&dev.kind) {
+                        for schema in &desc.params {
+                            let def = match &schema.widget {
+                                crate::dsp_node_ui::DspWidgetKind::RotaryKnob { default, .. }
+                                | crate::dsp_node_ui::DspWidgetKind::VerticalFader { default, .. } => *default,
+                                _ => 0.5,
+                            };
+                            new_params.insert(schema.id.clone(), def);
+                        }
+                    }
+                    track.nodes.push(summoner_project::schema::NodeConfig {
+                        kind: dev.kind.clone(),
+                        params: new_params,
+                        plugin_state: if dev.is_bypassed {
+                            Some(summoner_project::schema::PluginStateConfig {
+                                is_bypassed: true,
+                                ..Default::default()
+                            })
+                        } else {
+                            None
+                        },
+                    });
+                }
+                while track.nodes.len() > self.device_rack_state.chain_devices.len() && track.nodes.len() > 1 {
+                    track.nodes.pop();
+                }
+
+                for (i, dev) in self.device_rack_state.chain_devices.iter().enumerate() {
+                    if i < track.nodes.len() {
+                        if track.nodes[i].kind != dev.kind {
+                            track.nodes[i].kind = dev.kind.clone();
+                        }
+                        if dev.is_bypassed {
+                            let ps = track.nodes[i].plugin_state.get_or_insert_with(Default::default);
+                            ps.is_bypassed = true;
+                        } else if let Some(ref mut ps) = track.nodes[i].plugin_state {
+                            ps.is_bypassed = false;
+                        }
+                    }
+                }
+            }
+
+            if self.device_rack_state.selected_chain_idx < track.nodes.len() {
+                self.selected_node_idx = self.device_rack_state.selected_chain_idx;
+            } else {
+                self.selected_node_idx = self.selected_node_idx.min(track.nodes.len().saturating_sub(1));
+                self.device_rack_state.selected_chain_idx = self.selected_node_idx;
+            }
+
+            let node_idx = self.selected_node_idx;
+            let node_changed = track_changed || (node_idx != self.last_selected_node_idx);
+            self.last_selected_node_idx = node_idx;
+
+            let active_node = &mut track.nodes[node_idx];
+
+            if node_changed {
+                // Newly selected node: load node kind and parameters into GUI
+                self.device_rack_state.selected_node_kind = Some(active_node.kind.clone());
+                self.inspector_state.selected_node_kind = Some(active_node.kind.clone());
+                let disp = registry.get(&active_node.kind).map(|d| d.display_name.clone()).unwrap_or_else(|| active_node.kind.clone());
+                self.device_rack_state.device_name = disp.clone();
+                self.inspector_state.target_name = disp;
+
+                let is_bypassed = active_node.plugin_state.as_ref().map(|ps| ps.is_bypassed).unwrap_or(false);
+                self.device_rack_state.is_enabled = !is_bypassed;
+
+                if active_node.params.is_empty() {
+                    active_node.params.insert("cutoff".to_string(), self.device_rack_state.cutoff);
+                    active_node.params.insert("resonance".to_string(), self.device_rack_state.resonance);
+                    active_node.params.insert("decay".to_string(), self.device_rack_state.decay);
+                    active_node.params.insert("drive".to_string(), self.device_rack_state.drive);
+                    active_node.params.insert("volume".to_string(), self.device_rack_state.volume);
+                }
+                for (k, v) in &active_node.params {
                     self.device_rack_state.node_param_values.insert(k.clone(), *v);
                     self.inspector_state.node_param_values.insert(k.clone(), *v);
                 }
-                if let Some(&c) = first_node.params.get("cutoff") {
+                if let Some(&c) = active_node.params.get("cutoff") {
                     self.device_rack_state.cutoff = c;
                 }
-                if let Some(&r) = first_node.params.get("resonance") {
+                if let Some(&r) = active_node.params.get("resonance") {
                     self.device_rack_state.resonance = r;
                 }
-                if let Some(&d) = first_node.params.get("decay") {
+                if let Some(&d) = active_node.params.get("decay") {
                     self.device_rack_state.decay = d;
                 }
-                if let Some(&ed) = first_node.params.get("env_decay") {
+                if let Some(&ed) = active_node.params.get("env_decay") {
                     self.device_rack_state.env_decay = ed;
                 }
-                if let Some(&ma) = first_node.params.get("mod_amt") {
+                if let Some(&ma) = active_node.params.get("mod_amt") {
                     self.device_rack_state.mod_amt = ma;
                 }
-                if let Some(&dr) = first_node.params.get("drive") {
+                if let Some(&dr) = active_node.params.get("drive") {
                     self.device_rack_state.drive = dr;
                 }
-                if let Some(&om) = first_node.params.get("osc_mix") {
+                if let Some(&om) = active_node.params.get("osc_mix") {
                     self.device_rack_state.osc_mix = om;
                 }
-                if let Some(&sh) = first_node.params.get("shape") {
+                if let Some(&sh) = active_node.params.get("shape") {
                     self.device_rack_state.shape = sh;
                 }
-                if let Some(&v) = first_node.params.get("volume") {
+                if let Some(&v) = active_node.params.get("volume") {
                     self.device_rack_state.volume = v;
                 }
-                if let Some(&ls) = first_node.params.get("lfo_speed") {
+                if let Some(&ls) = active_node.params.get("lfo_speed") {
                     self.device_rack_state.lfo_speed = ls;
                 }
-                if let Some(&ld) = first_node.params.get("lfo_depth") {
+                if let Some(&ld) = active_node.params.get("lfo_depth") {
                     self.device_rack_state.lfo_depth = ld;
                 }
             } else {
-                // Same track: GUI edits propagate to project
+                // Same node: GUI edits propagate to project
                 if let Some(ref gui_kind) = self.device_rack_state.selected_node_kind {
-                    if &first_node.kind != gui_kind {
-                        first_node.kind = gui_kind.clone();
+                    if &active_node.kind != gui_kind {
+                        active_node.kind = gui_kind.clone();
                         self.inspector_state.selected_node_kind = Some(gui_kind.clone());
                     }
                 } else if let Some(ref insp_kind) = self.inspector_state.selected_node_kind {
-                    if &first_node.kind != insp_kind {
-                        first_node.kind = insp_kind.clone();
+                    if &active_node.kind != insp_kind {
+                        active_node.kind = insp_kind.clone();
                         self.device_rack_state.selected_node_kind = Some(insp_kind.clone());
                     }
                 } else {
-                    self.device_rack_state.selected_node_kind = Some(first_node.kind.clone());
-                    self.inspector_state.selected_node_kind = Some(first_node.kind.clone());
+                    self.device_rack_state.selected_node_kind = Some(active_node.kind.clone());
+                    self.inspector_state.selected_node_kind = Some(active_node.kind.clone());
                 }
 
                 // If node_param_values has newly updated values for standard dials, update them
                 if let Some(&c) = self.device_rack_state.node_param_values.get("cutoff") {
-                    if first_node.params.get("cutoff") != Some(&c) {
+                    if active_node.params.get("cutoff") != Some(&c) {
                         self.device_rack_state.cutoff = c;
                     }
                 }
                 if let Some(&r) = self.device_rack_state.node_param_values.get("resonance") {
-                    if first_node.params.get("resonance") != Some(&r) {
+                    if active_node.params.get("resonance") != Some(&r) {
                         self.device_rack_state.resonance = r;
                     }
                 }
                 if let Some(&dr) = self.device_rack_state.node_param_values.get("drive") {
-                    if first_node.params.get("drive") != Some(&dr) {
+                    if active_node.params.get("drive") != Some(&dr) {
                         self.device_rack_state.drive = dr;
                     }
                 }
 
                 // Sync GUI node_param_values to project
                 for (k, v) in &self.device_rack_state.node_param_values {
-                    first_node.params.insert(k.clone(), *v);
+                    active_node.params.insert(k.clone(), *v);
                 }
                 for (k, v) in &self.inspector_state.node_param_values {
-                    first_node.params.insert(k.clone(), *v);
+                    active_node.params.insert(k.clone(), *v);
                 }
 
                 // Standard dials reflect into project
-                first_node.params.insert("cutoff".to_string(), self.device_rack_state.cutoff);
-                first_node.params.insert("resonance".to_string(), self.device_rack_state.resonance);
-                first_node.params.insert("decay".to_string(), self.device_rack_state.decay);
-                first_node.params.insert("env_decay".to_string(), self.device_rack_state.env_decay);
-                first_node.params.insert("mod_amt".to_string(), self.device_rack_state.mod_amt);
-                first_node.params.insert("drive".to_string(), self.device_rack_state.drive);
-                first_node.params.insert("osc_mix".to_string(), self.device_rack_state.osc_mix);
-                first_node.params.insert("shape".to_string(), self.device_rack_state.shape);
-                first_node.params.insert("volume".to_string(), self.device_rack_state.volume);
-                first_node.params.insert("lfo_speed".to_string(), self.device_rack_state.lfo_speed);
-                first_node.params.insert("lfo_depth".to_string(), self.device_rack_state.lfo_depth);
+                active_node.params.insert("cutoff".to_string(), self.device_rack_state.cutoff);
+                active_node.params.insert("resonance".to_string(), self.device_rack_state.resonance);
+                active_node.params.insert("decay".to_string(), self.device_rack_state.decay);
+                active_node.params.insert("env_decay".to_string(), self.device_rack_state.env_decay);
+                active_node.params.insert("mod_amt".to_string(), self.device_rack_state.mod_amt);
+                active_node.params.insert("drive".to_string(), self.device_rack_state.drive);
+                active_node.params.insert("osc_mix".to_string(), self.device_rack_state.osc_mix);
+                active_node.params.insert("shape".to_string(), self.device_rack_state.shape);
+                active_node.params.insert("volume".to_string(), self.device_rack_state.volume);
+                active_node.params.insert("lfo_speed".to_string(), self.device_rack_state.lfo_speed);
+                active_node.params.insert("lfo_depth".to_string(), self.device_rack_state.lfo_depth);
 
                 // Ensure node_param_values has dials updated
                 self.device_rack_state.node_param_values.insert("cutoff".to_string(), self.device_rack_state.cutoff);
@@ -4243,6 +4331,52 @@ impl AwardWinningGuiView {
                 self.device_rack_state.node_param_values.insert("lfo_speed".to_string(), self.device_rack_state.lfo_speed);
                 self.device_rack_state.node_param_values.insert("lfo_depth".to_string(), self.device_rack_state.lfo_depth);
             }
+        }
+    }
+
+    /// Select which DSP node in the active track's chain is inspected.
+    pub fn select_track_node(&mut self, node_idx: usize) -> bool {
+        if self.device_rack_state.select_device(node_idx) {
+            self.selected_node_idx = self.device_rack_state.selected_chain_idx;
+            self.last_selected_node_idx = usize::MAX;
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Add a new DSP node from DspNodeRegistry to the active track's chain.
+    pub fn add_dsp_node_to_track(&mut self, kind_id: &str) -> bool {
+        let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+        if let Some(desc) = registry.get(kind_id) {
+            self.device_rack_state.add_device(&desc.kind_id, &desc.display_name);
+            self.selected_node_idx = self.device_rack_state.selected_chain_idx;
+            self.last_selected_node_idx = usize::MAX;
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Remove a DSP node from the active track's chain by index.
+    pub fn remove_dsp_node_from_track(&mut self, node_idx: usize) -> bool {
+        if self.device_rack_state.remove_device(node_idx) {
+            self.selected_node_idx = self.device_rack_state.selected_chain_idx;
+            self.last_selected_node_idx = usize::MAX;
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Move a DSP node within the active track's chain from `from_idx` to `to_idx`.
+    pub fn move_dsp_node(&mut self, from_idx: usize, to_idx: usize) -> bool {
+        if self.device_rack_state.move_device(from_idx, to_idx) {
+            self.selected_node_idx = self.device_rack_state.selected_chain_idx;
+            self.last_selected_node_idx = usize::MAX;
+            true
+        } else {
+            false
         }
     }
 
@@ -5078,6 +5212,9 @@ impl AwardWinningGuiView {
     pub fn select_track(&mut self, track_idx: usize) -> bool {
         if track_idx < self.tracks.len() {
             self.selected_track_idx = track_idx;
+            self.selected_node_idx = 0;
+            self.device_rack_state.selected_chain_idx = 0;
+            self.last_selected_node_idx = usize::MAX;
             let tr = &self.tracks[track_idx];
             let tr_name = tr.name.clone();
             let tr_id = tr.id;

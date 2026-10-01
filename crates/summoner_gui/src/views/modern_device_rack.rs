@@ -10,6 +10,14 @@ use serde::{Deserialize, Serialize};
 
 pub const MIN_KNOB_HIT_RADIUS: f32 = 22.0; // 44x44pt touch bounding target
 
+/// A visual representation of a single DSP device slot in a track's processing chain.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RackChainDeviceVisual {
+    pub kind: String,
+    pub display_name: String,
+    pub is_bypassed: bool,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModernDeviceRackState {
     pub device_name: String,
@@ -39,6 +47,10 @@ pub struct ModernDeviceRackState {
     pub is_expanded_params: bool,
     #[serde(default)]
     pub requested_automation_param: Option<String>,
+    #[serde(default)]
+    pub chain_devices: Vec<RackChainDeviceVisual>,
+    #[serde(default)]
+    pub selected_chain_idx: usize,
 }
 
 impl Default for ModernDeviceRackState {
@@ -51,6 +63,8 @@ impl Default for ModernDeviceRackState {
             is_minimized: false,
             is_expanded_params: false,
             requested_automation_param: None,
+            chain_devices: Vec::new(),
+            selected_chain_idx: 0,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -73,6 +87,91 @@ impl Default for ModernDeviceRackState {
 }
 
 impl ModernDeviceRackState {
+    /// Ensure the chain has at least one device matching the currently selected node kind.
+    pub fn ensure_chain(&mut self) {
+        if self.chain_devices.is_empty() {
+            let kind = self.selected_node_kind.clone().unwrap_or_else(|| "AetherSynth".to_string());
+            let name = self.device_name.clone();
+            self.chain_devices.push(RackChainDeviceVisual {
+                kind,
+                display_name: name,
+                is_bypassed: !self.is_enabled,
+            });
+            self.selected_chain_idx = 0;
+        }
+    }
+
+    /// Select a device slot in the track chain.
+    pub fn select_device(&mut self, idx: usize) -> bool {
+        self.ensure_chain();
+        if idx < self.chain_devices.len() {
+            self.selected_chain_idx = idx;
+            let dev = &self.chain_devices[idx];
+            self.selected_node_kind = Some(dev.kind.clone());
+            self.device_name = dev.display_name.clone();
+            self.is_enabled = !dev.is_bypassed;
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Add a new DSP device module to the end of the track chain and select it.
+    pub fn add_device(&mut self, kind: &str, display_name: &str) -> usize {
+        self.ensure_chain();
+        self.chain_devices.push(RackChainDeviceVisual {
+            kind: kind.to_string(),
+            display_name: display_name.to_string(),
+            is_bypassed: false,
+        });
+        let new_idx = self.chain_devices.len() - 1;
+        self.select_device(new_idx);
+        new_idx
+    }
+
+    /// Remove a DSP device from the chain (keeping at least 1 device).
+    pub fn remove_device(&mut self, idx: usize) -> bool {
+        self.ensure_chain();
+        if self.chain_devices.len() > 1 && idx < self.chain_devices.len() {
+            self.chain_devices.remove(idx);
+            if self.selected_chain_idx >= self.chain_devices.len() {
+                self.selected_chain_idx = self.chain_devices.len() - 1;
+            }
+            let sel = self.selected_chain_idx;
+            self.select_device(sel);
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Move a device within the chain from `from` to `to`.
+    pub fn move_device(&mut self, from: usize, to: usize) -> bool {
+        self.ensure_chain();
+        if from < self.chain_devices.len() && to < self.chain_devices.len() && from != to {
+            let dev = self.chain_devices.remove(from);
+            self.chain_devices.insert(to, dev);
+            self.selected_chain_idx = to;
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Toggle bypass state for a device in the chain.
+    pub fn toggle_device_bypass(&mut self, idx: usize) -> bool {
+        self.ensure_chain();
+        if let Some(dev) = self.chain_devices.get_mut(idx) {
+            dev.is_bypassed = !dev.is_bypassed;
+            if idx == self.selected_chain_idx {
+                self.is_enabled = !dev.is_bypassed;
+            }
+            true
+        } else {
+            false
+        }
+    }
+
     /// Request live parameter automation for a given parameter ID (e.g. from right-click or auto button).
     pub fn request_automation(&mut self, param_id: &str) {
         self.requested_automation_param = Some(param_id.to_string());
@@ -111,6 +210,7 @@ pub fn show_modern_device_rack_with_context(
     param_bus: Option<&summoner_core::param_bus::ParamBus>,
     track_id: u64,
 ) {
+    state.ensure_chain();
     state.node_param_values.entry("cutoff".to_string()).or_insert(state.cutoff);
     state.node_param_values.entry("resonance".to_string()).or_insert(state.resonance);
     state.node_param_values.entry("decay".to_string()).or_insert(state.decay);
@@ -147,9 +247,33 @@ pub fn show_modern_device_rack_with_context(
                     ui.add_space(4.0);
                     let pwr_col = if state.is_enabled { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(100, 116, 139) };
                     if ui.button(RichText::new("⏻").font(FontId::proportional(12.0)).color(pwr_col)).clicked() {
-                        state.is_enabled = !state.is_enabled;
+                        state.toggle_device_bypass(state.selected_chain_idx);
                     }
-                    ui.add_space(6.0);
+                    ui.add_space(4.0);
+
+                    // Compact Device Chain Pills in Collapsed Header
+                    let mut pill_to_select = None;
+                    for (d_i, dev) in state.chain_devices.iter().enumerate() {
+                        let is_d_sel = d_i == state.selected_chain_idx;
+                        let card_col = if is_d_sel { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(148, 163, 184) };
+                        let bg_col = if is_d_sel { Color32::from_rgb(24, 38, 58) } else { Color32::from_rgb(18, 24, 36) };
+                        egui::Frame::none()
+                            .fill(bg_col)
+                            .stroke(Stroke::new(1.0_f32, if is_d_sel { card_col } else { Color32::from_rgb(36, 50, 74) }))
+                            .rounding(Rounding::same(3.0))
+                            .inner_margin(egui::Margin::symmetric(4.0, 2.0))
+                            .show(ui, |ui| {
+                                if ui.selectable_label(is_d_sel, RichText::new(format!("{}. {}", d_i + 1, dev.display_name)).font(FontId::proportional(9.0)).color(card_col)).clicked() {
+                                    pill_to_select = Some(d_i);
+                                }
+                            });
+                        ui.add_space(2.0);
+                    }
+                    if let Some(idx) = pill_to_select {
+                        state.select_device(idx);
+                    }
+
+                    ui.add_space(4.0);
 
                     let cur_display = opt_desc.map(|d| format!("{} {}", d.category.icon(), d.display_name)).unwrap_or_else(|| state.device_name.clone());
                     egui::ComboBox::from_id_source("minimized_device_rack_module_selector")
@@ -161,6 +285,25 @@ pub fn show_modern_device_rack_with_context(
                                 if ui.selectable_label(is_sel, label).clicked() {
                                     state.selected_node_kind = Some(desc.kind_id.clone());
                                     state.device_name = desc.display_name.clone();
+                                    if let Some(dev) = state.chain_devices.get_mut(state.selected_chain_idx) {
+                                        dev.kind = desc.kind_id.clone();
+                                        dev.display_name = desc.display_name.clone();
+                                    }
+                                    state.node_param_values.clear();
+                                    for (p_i, schema) in desc.params.iter().enumerate() {
+                                        let def = match &schema.widget {
+                                            crate::dsp_node_ui::DspWidgetKind::RotaryKnob { default, .. }
+                                            | crate::dsp_node_ui::DspWidgetKind::VerticalFader { default, .. } => *default,
+                                            _ => 0.5,
+                                        };
+                                        state.node_param_values.insert(schema.id.clone(), def);
+                                        if let Some(bus) = param_bus {
+                                            let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 500 + p_i as u32);
+                                            if bus.get(pid).is_some() {
+                                                bus.set(pid, def);
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         });
@@ -202,7 +345,7 @@ pub fn show_modern_device_rack_with_context(
         return;
     }
 
-    let rack_height = if state.is_expanded_params { 250.0 } else { 190.0 };
+    let rack_height = if state.is_expanded_params { 260.0 } else { 210.0 };
     egui::Frame::none()
         .fill(Color32::from_rgb(14, 20, 32))
         .stroke(Stroke::new(1.0_f32, Color32::from_rgb(28, 40, 60)))
@@ -216,8 +359,8 @@ pub fn show_modern_device_rack_with_context(
                 ui.label(RichText::new("Device Rack").font(FontId::proportional(12.0)).strong().color(Color32::from_rgb(241, 245, 249)));
                 ui.add_space(8.0);
                 let pwr_col = if state.is_enabled { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(100, 116, 139) };
-                if ui.button(RichText::new("⏻").font(FontId::proportional(12.0)).color(pwr_col)).clicked() {
-                    state.is_enabled = !state.is_enabled;
+                if ui.button(RichText::new("⏻").font(FontId::proportional(12.0)).color(pwr_col)).on_hover_text("Bypass / Enable Active Device").clicked() {
+                    state.toggle_device_bypass(state.selected_chain_idx);
                 }
 
                 // DSP Module Selection Dropdown
@@ -232,6 +375,25 @@ pub fn show_modern_device_rack_with_context(
                             if ui.selectable_label(is_sel, label).clicked() {
                                 state.selected_node_kind = Some(desc.kind_id.clone());
                                 state.device_name = desc.display_name.clone();
+                                if let Some(dev) = state.chain_devices.get_mut(state.selected_chain_idx) {
+                                    dev.kind = desc.kind_id.clone();
+                                    dev.display_name = desc.display_name.clone();
+                                }
+                                state.node_param_values.clear();
+                                for (p_i, schema) in desc.params.iter().enumerate() {
+                                    let def = match &schema.widget {
+                                        crate::dsp_node_ui::DspWidgetKind::RotaryKnob { default, .. }
+                                        | crate::dsp_node_ui::DspWidgetKind::VerticalFader { default, .. } => *default,
+                                        _ => 0.5,
+                                    };
+                                    state.node_param_values.insert(schema.id.clone(), def);
+                                    if let Some(bus) = param_bus {
+                                        let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 500 + p_i as u32);
+                                        if bus.get(pid).is_some() {
+                                            bus.set(pid, def);
+                                        }
+                                    }
+                                }
                             }
                         }
                     });
@@ -271,13 +433,146 @@ pub fn show_modern_device_rack_with_context(
                 });
             });
 
-            ui.add_space(6.0);
+            ui.add_space(4.0);
+
+            // 1b. Track DSP Device Chain Bar (Multi-node processing chain)
+            ui.horizontal(|ui| {
+                ui.label(RichText::new("CHAIN:").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(148, 163, 184)));
+                ui.add_space(2.0);
+
+                let mut dev_to_select = None;
+                let mut dev_to_toggle_bypass = None;
+                let mut dev_to_remove = None;
+                let mut dev_move_left = None;
+                let mut dev_move_right = None;
+
+                for (d_i, dev) in state.chain_devices.iter().enumerate() {
+                    let is_sel = d_i == state.selected_chain_idx;
+                    let d_desc = registry.get(&dev.kind);
+                    let (dr, dg, db) = d_desc.map(|d| d.category.color_rgb()).unwrap_or((56, 189, 248));
+                    let d_accent = Color32::from_rgb(dr, dg, db);
+                    let d_icon = d_desc.map(|d| d.category.icon()).unwrap_or("🎛️");
+
+                    let border_col = if is_sel { d_accent } else { Color32::from_rgb(36, 50, 74) };
+                    let bg_col = if is_sel { Color32::from_rgba_unmultiplied(dr, dg, db, 35) } else { Color32::from_rgb(18, 24, 36) };
+
+                    egui::Frame::none()
+                        .fill(bg_col)
+                        .stroke(Stroke::new(if is_sel { 1.5_f32 } else { 1.0_f32 }, border_col))
+                        .rounding(Rounding::same(4.0))
+                        .inner_margin(egui::Margin::symmetric(5.0, 2.0))
+                        .show(ui, |ui| {
+                            ui.horizontal(|ui| {
+                                let byp_col = if !dev.is_bypassed { Color32::from_rgb(34, 197, 94) } else { Color32::from_rgb(100, 116, 139) };
+                                if ui.button(RichText::new("⏻").font(FontId::proportional(9.5)).color(byp_col)).on_hover_text(if dev.is_bypassed { "Device Bypassed (Click to Enable)" } else { "Device Active (Click to Bypass)" }).clicked() {
+                                    dev_to_toggle_bypass = Some(d_i);
+                                }
+                                let badge_text = format!("{} {}. {}", d_icon, d_i + 1, dev.display_name);
+                                let badge_resp = ui.selectable_label(is_sel, RichText::new(badge_text).font(FontId::proportional(9.5)).strong().color(if is_sel { Color32::WHITE } else { Color32::from_rgb(200, 215, 235) }));
+                                if badge_resp.clicked() {
+                                    dev_to_select = Some(d_i);
+                                }
+                            });
+                        });
+                    ui.add_space(2.0);
+                }
+
+                if let Some(idx) = dev_to_select {
+                    state.select_device(idx);
+                }
+                if let Some(idx) = dev_to_toggle_bypass {
+                    state.toggle_device_bypass(idx);
+                }
+
+                // Move / Remove controls for active device
+                if state.chain_devices.len() > 1 {
+                    if state.selected_chain_idx > 0
+                        && ui.small_button(RichText::new("◀").font(FontId::proportional(9.0)).color(Color32::from_rgb(148, 163, 184))).on_hover_text("Move device earlier in processing chain").clicked()
+                    {
+                        dev_move_left = Some(state.selected_chain_idx);
+                    }
+                    if state.selected_chain_idx + 1 < state.chain_devices.len()
+                        && ui.small_button(RichText::new("▶").font(FontId::proportional(9.0)).color(Color32::from_rgb(148, 163, 184))).on_hover_text("Move device later in processing chain").clicked()
+                    {
+                        dev_move_right = Some(state.selected_chain_idx);
+                    }
+                    if ui.small_button(RichText::new("✕").font(FontId::proportional(9.0)).color(Color32::from_rgb(239, 68, 68))).on_hover_text("Remove selected device from chain").clicked() {
+                        dev_to_remove = Some(state.selected_chain_idx);
+                    }
+                }
+
+                if let Some(idx) = dev_move_left {
+                    state.move_device(idx, idx - 1);
+                }
+                if let Some(idx) = dev_move_right {
+                    state.move_device(idx, idx + 1);
+                }
+                if let Some(idx) = dev_to_remove {
+                    state.remove_device(idx);
+                }
+
+                ui.add_space(4.0);
+
+                // [➕ Add Device] dropdown menu across all DSP categories
+                let mut module_to_add: Option<String> = None;
+                egui::ComboBox::from_id_source("add_device_to_chain_combo")
+                    .selected_text(RichText::new("➕ Add Device ▾").font(FontId::proportional(9.5)).color(Color32::from_rgb(56, 189, 248)))
+                    .show_ui(ui, |ui| {
+                        for cat in [
+                            crate::dsp_node_ui::DspCategory::Oscillator,
+                            crate::dsp_node_ui::DspCategory::FilterEq,
+                            crate::dsp_node_ui::DspCategory::Modulation,
+                            crate::dsp_node_ui::DspCategory::DynamicsMaster,
+                            crate::dsp_node_ui::DspCategory::DistortionSaturation,
+                            crate::dsp_node_ui::DspCategory::TimeSpace,
+                            crate::dsp_node_ui::DspCategory::SpatialSurround,
+                            crate::dsp_node_ui::DspCategory::AcousticPhysicalModel,
+                            crate::dsp_node_ui::DspCategory::SpectralResynthesis,
+                            crate::dsp_node_ui::DspCategory::NeuralAi,
+                            crate::dsp_node_ui::DspCategory::SamplerSlicer,
+                        ] {
+                            let cat_nodes = registry.list_by_category(cat);
+                            if !cat_nodes.is_empty() {
+                                ui.label(RichText::new(format!("{} {}", cat.icon(), cat.name())).font(FontId::proportional(9.0)).strong().color(Color32::from_rgb(148, 163, 184)));
+                                for desc in cat_nodes.iter().take(8) {
+                                    if ui.selectable_label(false, format!("  {} {}", desc.category.icon(), desc.display_name)).clicked() {
+                                        module_to_add = Some(desc.kind_id.clone());
+                                    }
+                                }
+                                ui.separator();
+                            }
+                        }
+                    });
+
+                if let Some(kind_id) = module_to_add {
+                    if let Some(desc) = registry.get(&kind_id) {
+                        state.add_device(&desc.kind_id, &desc.display_name);
+                        state.node_param_values.clear();
+                        for (p_i, schema) in desc.params.iter().enumerate() {
+                            let def = match &schema.widget {
+                                crate::dsp_node_ui::DspWidgetKind::RotaryKnob { default, .. }
+                                | crate::dsp_node_ui::DspWidgetKind::VerticalFader { default, .. } => *default,
+                                _ => 0.5,
+                            };
+                            state.node_param_values.insert(schema.id.clone(), def);
+                            if let Some(bus) = param_bus {
+                                let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 500 + p_i as u32);
+                                if bus.get(pid).is_some() {
+                                    bus.set(pid, def);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            ui.add_space(4.0);
             ui.separator();
-            ui.add_space(6.0);
+            ui.add_space(4.0);
 
             if !state.is_enabled {
                 ui.centered_and_justified(|ui| {
-                    ui.label(RichText::new("DEVICE BYPASSED").font(FontId::proportional(14.0)).color(Color32::from_rgb(100, 116, 139)));
+                    ui.label(RichText::new("DEVICE BYPASSED — Click ⏻ to Enable").font(FontId::proportional(13.0)).color(Color32::from_rgb(148, 163, 184)));
                 });
                 return;
             }
@@ -1052,9 +1347,13 @@ fn show_pro_parameter_drawer(
                                         }
 
                                         if let Some(bus) = param_bus {
-                                            let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + p_i as u32);
-                                            if bus.get(pid).is_some() {
-                                                bus.set(pid, *val);
+                                            let pid_pro = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 500 + p_i as u32);
+                                            if bus.get(pid_pro).is_some() {
+                                                bus.set(pid_pro, *val);
+                                            }
+                                            let pid_compat = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + p_i as u32);
+                                            if bus.get(pid_compat).is_some() {
+                                                bus.set(pid_compat, *val);
                                             }
                                         }
 
