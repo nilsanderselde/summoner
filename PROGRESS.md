@@ -992,6 +992,55 @@ Product Management has conducted a comprehensive readiness audit:
   - Unit tests: 313 pure tests passed in 0.23s (`cargo test -p summoner_gui`).
   - Incremental compilation: 0.21s (`cargo check -p summoner_gui`).
 
+### Turn #43 (Turn #10) — Master Bus DSP Device Insert Processing Chain & Lifecycle (Milestone 33)
+- [x] Master Bus DSP Device Insert Processing Chain & Lifecycle:
+  - Initialized `master_chain_devices: Vec<RackChainDeviceVisual>` with `Master EQ` (`ParametricEqNode`) and `Limiter` (`TruePeakLimiter`).
+  - Implemented master chain management lifecycle: `add_dsp_node_to_master(kind)`, `remove_dsp_node_from_master(slot)`, `move_dsp_node_in_master(from, to)`, `toggle_master_node_bypass(slot)`, and `select_master_node(slot)`.
+- [x] Console Mixer Multi-Slot Insert Chips & Master Channel Inserts:
+  - Added multi-slot insert chips (Slots 0, 1 / `+ FX`) in Mixer track channel strips in Pro mode with click-to-select and secondary-click to open live parameter automation.
+  - Added Master Bus mixer insert chips (`Master EQ`, `Limiter` / `+ FX`) with click-to-select and secondary-click live automation.
+- [x] Lock-free ParamBus Atomic Channel Addressing for Master DSP:
+  - Standardized Master DSP device slot channels on `ParamId(9000 + slot * 20 + p_i)` with zero audio-thread allocation.
+  - Added timeline evaluation and live parameter dispatch for master device automation keys `master_node_{slot}_{param}`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier108_turn43_tests.rs`:
+    * Pure test: `test_turn43_pure_parambus_master_dsp_slot_offsets` (ParamBus register/set/get on master slot channels).
+    * Pure test: `test_turn43_pure_master_node_automation_lane_key_parsing` (parsing `master_node_{slot}_{param}` vs `node_{slot}_{param}`).
+    * Pure test: `test_turn43_pure_master_device_timeline_evaluation` (master curve interpolation and isolation).
+    * GUI tests: `test_turn43_gui_track_visual_data_multi_device_helpers` and `test_turn43_award_winning_gui_view_master_chain_lifecycle`.
+  - Registered `tier108_turn43_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Unit tests: 316 passed in 0.28s (`cargo test -p summoner_gui`).
+  - Clippy: 0 warnings (`cargo clippy -p summoner_gui`).
+
+### Turn #44 (Turn #11) — Master Bus Two-Tier Inspection, Phase Invert & Trim Bridge (Milestone 33)
+- [x] Master Bus Two-Tier Inspection & Device Rack Integration:
+  - Implemented `inspecting_master: bool` state with unified `select_master()` and `select_master_node(slot_idx)`.
+  - Routed bottom dock Device Rack and Right Inspector dynamically: `cur_track_id = 9` when `inspecting_master` is active, seamlessly mapping parameter reflection to `ParamId(9000 + slot * 20 + p_i)` and Pro parameters `ParamId(9500 + p_i)`.
+  - Synchronized `inspector_state` and `device_rack_state` in strict lockstep with `master_chain_devices`.
+  - Calling `select_track(idx)` automatically clears `inspecting_master` and returns to track inspection.
+- [x] Master Bus Modular Canvas "🎛 Master Chain ➔ Modular" DAG Synchronization:
+  - Implemented `sync_master_chain_to_modular()` creating sequential modular nodes for all master devices (Master EQ, Limiter) connected with audio cables terminating into a dedicated `Master Out DAC` node.
+  - Added `[🎛 Master Chain ➔ Modular]` 1-click button to the modular canvas toolbar.
+  - Added Master Bus direct selection to `modular_track_selector` ComboBox.
+- [x] Console Mixer Master Strip Selection & Phase Invert ([Ø]) / Trim Pro Controls:
+  - Clicking Master channel strip body or title highlights the strip with a radiant amber outline and switches inspection to Master Bus.
+  - Implemented `[Ø]` Phase Invert button on mixer channel strips (Pro mode) dispatching polarity inversion to `ParamId(track_id * 1000 + 204)`.
+  - Integrated `track_dsp.rs` input trim and phase inversion with zero-allocation live dispatch.
+  - Added Master Gain Trim control (-12.0 dB .. +12.0 dB) dispatching to `ParamId(9997)`.
+- [x] Master Bus Trim Live Parameter Automation Bridge:
+  - Implemented `open_master_trim_automation_editor()` with -12.0..+12.0 dB bounds and unit display.
+  - Extended `sync_with_param_bus` to evaluate and dispatch `master_trim` live curves.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier109_turn44_tests.rs`:
+    * Pure test: `test_turn44_pure_master_inspection_state_and_offsets` (Master DSP slot offsets, gain, mono, trim, and track phase/trim channels).
+    * Pure test: `test_turn44_pure_master_trim_timeline_evaluation` (linear interpolation between trim keyframes).
+    * Pure test: `test_turn44_pure_track_dsp_phase_and_trim_invariants` (phase inversion, input trim, and master trim mathematics).
+    * GUI tests: `test_turn44_gui_master_selection_lockstep`, `test_turn44_gui_master_chain_to_modular_sync`, `test_turn44_gui_track_phase_and_trim_lifecycle`, and `test_turn44_gui_open_master_trim_and_phase_automation`.
+  - Registered `tier109_turn44_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Unit tests: passed cleanly with sub-second execution.
+  - Clippy: 0 warnings (`cargo clippy -p summoner_gui`).
+
+
 
 
 

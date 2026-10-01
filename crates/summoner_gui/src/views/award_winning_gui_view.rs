@@ -633,6 +633,11 @@ pub struct AwardWinningGuiView {
     pub piano_roll_lane_mode: PianoRollLaneMode,
     pub is_piano_roll_audition_enabled: bool,
     pub is_master_mono: bool,
+    pub inspecting_master: bool,
+    pub master_trim_db: f32,
+    pub last_applied_master_trim_db: f32,
+    pub track_phase_inverted: std::collections::HashMap<u64, bool>,
+    pub track_input_trim_db: std::collections::HashMap<u64, f32>,
     pub live_param_bus: Option<std::sync::Arc<summoner_core::param_bus::ParamBus>>,
 }
 
@@ -883,6 +888,11 @@ impl AwardWinningGuiView {
             piano_roll_lane_mode: PianoRollLaneMode::Velocity,
             is_piano_roll_audition_enabled: true,
             is_master_mono: false,
+            inspecting_master: false,
+            master_trim_db: 0.0,
+            last_applied_master_trim_db: 0.0,
+            track_phase_inverted: std::collections::HashMap::new(),
+            track_input_trim_db: std::collections::HashMap::new(),
             live_param_bus: None,
         };
         view.reset_modular_nodes();
@@ -1379,7 +1389,11 @@ impl AwardWinningGuiView {
 
                     // Zone 5: Bottom Dock (Reusable Device Rack)
                     if self.top_bar_state.active_tab != crate::views::modern_top_bar::ModernViewTab::Performance {
-                        let cur_track_id = self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1);
+                        let cur_track_id = if self.inspecting_master {
+                            9
+                        } else {
+                            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+                        };
                         show_modern_device_rack_with_context(
                             ui,
                             &mut self.device_rack_state,
@@ -1392,7 +1406,11 @@ impl AwardWinningGuiView {
 
                 // Zone 4: Right Collapsible Inspector
                 if self.top_bar_state.active_tab != crate::views::modern_top_bar::ModernViewTab::Performance {
-                    let cur_track_id = self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1);
+                    let cur_track_id = if self.inspecting_master {
+                        9
+                    } else {
+                        self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+                    };
                     show_modern_inspector_with_context(ui, &mut self.inspector_state, self.live_param_bus.as_deref(), cur_track_id);
                 }
             });
@@ -1402,18 +1420,56 @@ impl AwardWinningGuiView {
         if let Some(param) = self.top_bar_state.requested_automation_param.take() {
             if param == "master_gain" {
                 self.open_master_automation_editor();
+            } else if param == "master_trim" {
+                self.open_master_trim_automation_editor();
             } else if !self.open_macro_automation_editor(&param) {
-                let cur_track_id = self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1);
+                let cur_track_id = if self.inspecting_master {
+                    9
+                } else {
+                    self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+                };
                 self.open_track_automation_editor(cur_track_id, &param);
             }
         }
         if let Some(param) = self.inspector_state.requested_automation_param.take() {
-            let cur_track_id = self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1);
-            self.open_track_automation_editor(cur_track_id, &param);
+            if self.inspecting_master {
+                if let Some(rest) = param.strip_prefix("node_") {
+                    if let Some((slot_str, p_id)) = rest.split_once('_') {
+                        if let Ok(slot) = slot_str.parse::<usize>() {
+                            self.open_master_device_automation_editor(slot, p_id);
+                        } else {
+                            self.open_master_device_automation_editor(self.selected_master_chain_idx, &param);
+                        }
+                    } else {
+                        self.open_master_device_automation_editor(self.selected_master_chain_idx, &param);
+                    }
+                } else {
+                    self.open_master_device_automation_editor(self.selected_master_chain_idx, &param);
+                }
+            } else {
+                let cur_track_id = self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1);
+                self.open_track_automation_editor(cur_track_id, &param);
+            }
         }
         if let Some(param) = self.device_rack_state.requested_automation_param.take() {
-            let cur_track_id = self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1);
-            self.open_track_automation_editor(cur_track_id, &param);
+            if self.inspecting_master {
+                if let Some(rest) = param.strip_prefix("node_") {
+                    if let Some((slot_str, p_id)) = rest.split_once('_') {
+                        if let Ok(slot) = slot_str.parse::<usize>() {
+                            self.open_master_device_automation_editor(slot, p_id);
+                        } else {
+                            self.open_master_device_automation_editor(self.selected_master_chain_idx, &param);
+                        }
+                    } else {
+                        self.open_master_device_automation_editor(self.selected_master_chain_idx, &param);
+                    }
+                } else {
+                    self.open_master_device_automation_editor(self.selected_master_chain_idx, &param);
+                }
+            } else {
+                let cur_track_id = self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1);
+                self.open_track_automation_editor(cur_track_id, &param);
+            }
         }
 
         // Global Modal Windows: Live Parameter Automation Editor & Modular DSP Catalog
@@ -3536,6 +3592,9 @@ impl AwardWinningGuiView {
         if param_name == "master_gain" {
             return self.open_master_automation_editor();
         }
+        if param_name == "master_trim" {
+            return self.open_master_trim_automation_editor();
+        }
         if let Some(rest) = param_name.strip_prefix("master_node_") {
             if let Some((slot_str, p_id)) = rest.split_once('_') {
                 if let Ok(slot) = slot_str.parse::<usize>() {
@@ -3576,6 +3635,22 @@ impl AwardWinningGuiView {
                     1.0_f32,
                     "".to_string(),
                     if track.is_soloed { 1.0 } else { 0.0 },
+                ),
+                "phase" | "phase_invert" => (
+                    format!("track_{}_phase", track_id),
+                    format!("{} — Phase Invert", track.name),
+                    0.0_f32,
+                    1.0_f32,
+                    "bool".to_string(),
+                    if self.is_track_phase_inverted(track_id) { 1.0 } else { 0.0 },
+                ),
+                "trim" | "input_trim" => (
+                    format!("track_{}_trim", track_id),
+                    format!("{} — Input Trim", track.name),
+                    -18.0_f32,
+                    18.0_f32,
+                    "dB".to_string(),
+                    ((self.get_track_input_trim(track_id) - (-18.0)) / (18.0 - (-18.0))).clamp(0.0, 1.0),
                 ),
                 "cutoff" => (
                     format!("track_{}_cutoff", track_id),
@@ -4698,10 +4773,62 @@ impl AwardWinningGuiView {
         }
     }
 
+    /// Unified helper to select and inspect the Master Bus across all views.
+    pub fn select_master(&mut self) -> bool {
+        self.inspecting_master = true;
+        self.selected_node_idx = 0;
+        let chain_idx = self.selected_master_chain_idx.min(self.master_chain_devices.len().saturating_sub(1));
+        self.device_rack_state.selected_chain_idx = chain_idx;
+        self.device_rack_state.device_name = "Master Bus".to_string();
+        self.inspector_state.target_name = "Master Bus".to_string();
+        self.device_rack_state.chain_devices = self.master_chain_devices.clone();
+        self.inspector_state.chain_devices = self.master_chain_devices.clone();
+        self.inspector_state.selected_chain_idx = chain_idx;
+        if let Some(dev) = self.master_chain_devices.get(chain_idx) {
+            self.device_rack_state.selected_node_kind = Some(dev.kind.clone());
+            self.inspector_state.selected_node_kind = Some(dev.kind.clone());
+            let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+            if let Some(desc) = registry.get(&dev.kind) {
+                self.inspector_state.node_param_values.clear();
+                for schema in &desc.params {
+                    let val = match &schema.widget {
+                        crate::dsp_node_ui::DspWidgetKind::RotaryKnob { default, .. }
+                        | crate::dsp_node_ui::DspWidgetKind::VerticalFader { default, .. } => *default,
+                        _ => 0.5,
+                    };
+                    self.inspector_state.node_param_values.insert(schema.id.clone(), val);
+                }
+            }
+        }
+        true
+    }
+
     /// Select a Master Bus device slot.
     pub fn select_master_node(&mut self, slot_idx: usize) -> bool {
         if slot_idx < self.master_chain_devices.len() {
+            self.inspecting_master = true;
             self.selected_master_chain_idx = slot_idx;
+            self.device_rack_state.selected_chain_idx = slot_idx;
+            self.inspector_state.selected_chain_idx = slot_idx;
+            self.device_rack_state.chain_devices = self.master_chain_devices.clone();
+            self.inspector_state.chain_devices = self.master_chain_devices.clone();
+            let dev = &self.master_chain_devices[slot_idx];
+            self.device_rack_state.device_name = dev.display_name.clone();
+            self.inspector_state.target_name = format!("Master — {}", dev.display_name);
+            self.device_rack_state.selected_node_kind = Some(dev.kind.clone());
+            self.inspector_state.selected_node_kind = Some(dev.kind.clone());
+            let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+            if let Some(desc) = registry.get(&dev.kind) {
+                self.inspector_state.node_param_values.clear();
+                for schema in &desc.params {
+                    let val = match &schema.widget {
+                        crate::dsp_node_ui::DspWidgetKind::RotaryKnob { default, .. }
+                        | crate::dsp_node_ui::DspWidgetKind::VerticalFader { default, .. } => *default,
+                        _ => 0.5,
+                    };
+                    self.inspector_state.node_param_values.insert(schema.id.clone(), val);
+                }
+            }
             true
         } else {
             false
@@ -4765,6 +4892,217 @@ impl AwardWinningGuiView {
         } else {
             false
         }
+    }
+
+    /// Open live Bézier parameter automation editor for Master Bus Trim (-12 dB to +12 dB).
+    pub fn open_master_trim_automation_editor(&mut self) -> bool {
+        let custom_title = "Master Bus — Gain Trim".to_string();
+        let mut ed = crate::views::bezier_automation_editor::BezierAutomationEditorView::new(
+            custom_title,
+            "dB".to_string(),
+            -12.0,
+            12.0,
+            16.0,
+        );
+        let norm_val = ((self.master_trim_db - (-12.0)) / (12.0 - (-12.0))).clamp(0.0, 1.0);
+        ed.nodes.clear();
+        ed.nodes.push(crate::views::bezier_automation_editor::AutomationNode::new(
+            "start",
+            0.0,
+            norm_val,
+            crate::views::bezier_automation_editor::AutomationCurveType::Linear,
+        ));
+        ed.nodes.push(crate::views::bezier_automation_editor::AutomationNode::new(
+            "end",
+            16.0,
+            norm_val,
+            crate::views::bezier_automation_editor::AutomationCurveType::Linear,
+        ));
+        self.requested_modular_automation_param = Some("master_trim".to_string());
+        self.automation_editor = Some(ed);
+        self.show_automation_editor_window = true;
+        true
+    }
+
+    /// Check whether a track has its audio phase inverted (polarity flipped).
+    pub fn is_track_phase_inverted(&self, track_id: u64) -> bool {
+        self.track_phase_inverted.get(&track_id).copied().unwrap_or(false)
+    }
+
+    /// Toggle audio phase inversion (polarity flip) for a track.
+    pub fn toggle_track_phase_invert(&mut self, track_id: u64) -> bool {
+        let current = self.is_track_phase_inverted(track_id);
+        let next = !current;
+        self.track_phase_inverted.insert(track_id, next);
+        if let Some(ref bus) = self.live_param_bus {
+            let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 204);
+            bus.set(pid, if next { 1.0 } else { 0.0 });
+        }
+        next
+    }
+
+    /// Get input trim gain (in dB) for a track.
+    pub fn get_track_input_trim(&self, track_id: u64) -> f32 {
+        self.track_input_trim_db.get(&track_id).copied().unwrap_or(0.0)
+    }
+
+    /// Set input trim gain (in dB) for a track (-18.0 dB .. +18.0 dB).
+    pub fn set_track_input_trim(&mut self, track_id: u64, trim_db: f32) {
+        let clamped = trim_db.clamp(-18.0, 18.0);
+        self.track_input_trim_db.insert(track_id, clamped);
+        if let Some(ref bus) = self.live_param_bus {
+            let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 205);
+            bus.set(pid, clamped);
+        }
+    }
+
+    /// Set master bus trim gain (in dB) (-12.0 dB .. +12.0 dB).
+    pub fn set_master_trim(&mut self, trim_db: f32) {
+        self.master_trim_db = trim_db.clamp(-12.0, 12.0);
+        if let Some(ref bus) = self.live_param_bus {
+            let pid = summoner_core::param_bus::ParamId(9997);
+            bus.set(pid, self.master_trim_db);
+        }
+    }
+
+    /// Convert the Master Bus linear DSP device chain into modular canvas nodes
+    /// positioned horizontally and connected sequentially with audio patch cords,
+    /// terminating into a dedicated Master Output DAC node.
+    pub fn sync_master_chain_to_modular(&mut self) -> usize {
+        if self.master_chain_devices.is_empty() {
+            self.master_chain_devices.push(crate::views::modern_device_rack::RackChainDeviceVisual {
+                kind: "ParametricEqNode".to_string(),
+                display_name: "Master EQ".to_string(),
+                is_bypassed: false,
+            });
+            self.master_chain_devices.push(crate::views::modern_device_rack::RackChainDeviceVisual {
+                kind: "TruePeakLimiter".to_string(),
+                display_name: "Limiter".to_string(),
+                is_bypassed: false,
+            });
+        }
+
+        self.modular_nodes.clear();
+        self.patch_cords.clear();
+        let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+
+        for (idx, dev) in self.master_chain_devices.iter().enumerate() {
+            let node_id = format!("master_node_{}", idx);
+            let opt_desc = registry.get(&dev.kind);
+            let cat = opt_desc.map(|d| d.category).unwrap_or(crate::dsp_node_ui::DspNodeCategory::DynamicsMaster);
+            let disp = opt_desc.map(|d| d.display_name.clone()).unwrap_or_else(|| dev.display_name.clone());
+
+            let ports = vec![
+                ModularPort {
+                    id: "in".into(),
+                    name: "In".into(),
+                    kind: ModularPortKind::AudioIn,
+                    rel_pos: (14.0, 48.0),
+                },
+                ModularPort {
+                    id: "cv".into(),
+                    name: "CV".into(),
+                    kind: ModularPortKind::ModulationIn,
+                    rel_pos: (14.0, 78.0),
+                },
+                ModularPort {
+                    id: "out".into(),
+                    name: "Out".into(),
+                    kind: ModularPortKind::AudioOut,
+                    rel_pos: (126.0, 48.0),
+                },
+            ];
+
+            let mut params = Vec::new();
+            if let Some(desc) = opt_desc {
+                for (p_idx, schema) in desc.params.iter().take(3).enumerate() {
+                    let (min, max, def, unit) = match &schema.widget {
+                        crate::dsp_node_ui::DspWidgetKind::RotaryKnob { min, max, default, unit, .. } => (*min, *max, *default, unit.clone()),
+                        crate::dsp_node_ui::DspWidgetKind::VerticalFader { min, max, default, unit, .. } => (*min, *max, *default, unit.clone()),
+                        _ => (0.0, 1.0, 0.5, String::new()),
+                    };
+                    params.push(ModularNodeParam {
+                        id: schema.id.clone(),
+                        name: schema.name.clone(),
+                        value: def,
+                        min,
+                        max,
+                        default_value: def,
+                        step: Some((max - min) * 0.01),
+                        unit,
+                        rel_pos: (44.0 + p_idx as f32 * 38.0, 48.0),
+                    });
+                }
+            }
+
+            let node_w = (params.len() as f32 * 40.0 + 70.0).max(135.0);
+            self.modular_nodes.push(ModularNodeInstance {
+                id: node_id,
+                kind_id: dev.kind.clone(),
+                display_name: format!("Master — {}", disp),
+                category: cat,
+                pos: (24.0 + idx as f32 * (node_w + 30.0), 30.0),
+                size: (node_w, 105.0),
+                ports,
+                params,
+                graph_node_idx: None,
+                bypassed: dev.is_bypassed,
+            });
+        }
+
+        // Add Master Out DAC sink node
+        let dac_x = 24.0 + self.master_chain_devices.len() as f32 * 170.0;
+        self.modular_nodes.push(ModularNodeInstance {
+            id: "master_out_dac".into(),
+            kind_id: "OutputDAC".into(),
+            display_name: "Master Out DAC".into(),
+            category: crate::dsp_node_ui::DspNodeCategory::Utility,
+            pos: (dac_x, 30.0),
+            size: (120.0, 105.0),
+            ports: vec![
+                ModularPort {
+                    id: "in".into(),
+                    name: "L/R In".into(),
+                    kind: ModularPortKind::AudioIn,
+                    rel_pos: (14.0, 48.0),
+                },
+            ],
+            params: vec![],
+            graph_node_idx: None,
+            bypassed: false,
+        });
+
+        // Patch cords sequentially connecting master devices
+        for idx in 0..self.master_chain_devices.len().saturating_sub(1) {
+            let from_id = format!("master_node_{}", idx);
+            let to_id = format!("master_node_{}", idx + 1);
+            self.patch_cords.push(ModularPatchCord {
+                from_node_id: from_id,
+                from_port_id: "out".into(),
+                to_node_id: to_id,
+                to_port_id: "in".into(),
+                intensity: 1.0,
+                is_audio: true,
+            });
+        }
+        // Patch cord from last master device to Master Out DAC
+        if !self.master_chain_devices.is_empty() {
+            let last_from = format!("master_node_{}", self.master_chain_devices.len() - 1);
+            self.patch_cords.push(ModularPatchCord {
+                from_node_id: last_from,
+                from_port_id: "out".into(),
+                to_node_id: "master_out_dac".into(),
+                to_port_id: "in".into(),
+                intensity: 1.0,
+                is_audio: true,
+            });
+        }
+
+        if !self.modular_nodes.is_empty() {
+            self.selected_modular_node_id = Some(self.modular_nodes[0].id.clone());
+        }
+
+        self.modular_nodes.len()
     }
 
     /// Convert the active track's linear DSP device chain into modular canvas nodes
@@ -5338,7 +5676,7 @@ impl AwardWinningGuiView {
             }
         }
 
-        // 4. Master Gain & Mono Dispatch & Live Recording
+        // 4. Master Gain, Mono & Trim Dispatch & Live Recording
         let m_pid = summoner_core::param_bus::ParamId(9999);
         if param_bus.get(m_pid).is_some() {
             param_bus.set(m_pid, self.top_bar_state.master_gain);
@@ -5347,11 +5685,27 @@ impl AwardWinningGuiView {
         if param_bus.get(mono_pid).is_some() {
             param_bus.set(mono_pid, if self.is_master_mono { 1.0 } else { 0.0 });
         }
+        let m_trim_pid = summoner_core::param_bus::ParamId(9997);
+        if param_bus.get(m_trim_pid).is_some() {
+            param_bus.set(m_trim_pid, self.master_trim_db);
+        }
         let master_auto_key = "master_gain".to_string();
         if automation_registry.get_param(&master_auto_key).is_none() {
             automation_registry.register_param(&master_auto_key, self.top_bar_state.master_gain);
         }
         automation_registry.set(&master_auto_key, self.top_bar_state.master_gain);
+
+        let master_trim_key = "master_trim".to_string();
+        if automation_registry.get_param(&master_trim_key).is_none() {
+            automation_registry.register_param(&master_trim_key, self.master_trim_db);
+        }
+        automation_registry.set(&master_trim_key, self.master_trim_db);
+        if let Some(trim_val) = automation_timeline.evaluate(&master_trim_key, playhead_beat) {
+            if param_bus.get(m_trim_pid).is_some() {
+                param_bus.set(m_trim_pid, trim_val);
+            }
+            self.master_trim_db = trim_val;
+        }
 
         if is_recording_automation {
             let point = summoner_sequencer::automation_timeline::AutomationPoint {
@@ -5371,7 +5725,7 @@ impl AwardWinningGuiView {
             }
         }
 
-        // 5. Track Gain, Pan, Mute, Solo Dispatch & Live Recording across All Tracks
+        // 5. Track Gain, Pan, Mute, Solo, Phase, Trim Dispatch & Live Recording across All Tracks
         for (t_i, tr) in self.tracks.iter().enumerate() {
             let t_id = tr.id;
             let t_gain = tr.gain;
@@ -5380,6 +5734,8 @@ impl AwardWinningGuiView {
             let t_soloed = tr.is_soloed;
             let m_val = if t_muted { 1.0 } else { 0.0 };
             let s_val = if t_soloed { 1.0 } else { 0.0 };
+            let phase_inverted = self.track_phase_inverted.get(&t_id).copied().unwrap_or(false);
+            let input_trim = self.track_input_trim_db.get(&t_id).copied().unwrap_or(0.0);
 
             let g_pid = summoner_core::param_bus::ParamId(t_id as u32 * 1000 + 200);
             if param_bus.get(g_pid).is_some() {
@@ -5396,6 +5752,14 @@ impl AwardWinningGuiView {
             let solo_pid = summoner_core::param_bus::ParamId(t_id as u32 * 1000 + 203);
             if param_bus.get(solo_pid).is_some() {
                 param_bus.set(solo_pid, s_val);
+            }
+            let phase_pid = summoner_core::param_bus::ParamId(t_id as u32 * 1000 + 204);
+            if param_bus.get(phase_pid).is_some() {
+                param_bus.set(phase_pid, if phase_inverted { 1.0 } else { 0.0 });
+            }
+            let trim_pid = summoner_core::param_bus::ParamId(t_id as u32 * 1000 + 205);
+            if param_bus.get(trim_pid).is_some() {
+                param_bus.set(trim_pid, input_trim);
             }
 
             let gain_auto_key = format!("track_{}_gain", t_id);
@@ -5754,6 +6118,7 @@ impl AwardWinningGuiView {
     /// mix controls (gain, pan, mute, solo, arm), and live ParamBus channels.
     pub fn select_track(&mut self, track_idx: usize) -> bool {
         if track_idx < self.tracks.len() {
+            self.inspecting_master = false;
             self.selected_track_idx = track_idx;
             self.selected_node_idx = 0;
             self.device_rack_state.selected_chain_idx = 0;
@@ -6088,19 +6453,30 @@ impl AwardWinningGuiView {
                     ui.add_space(4.0);
 
                     // Track Selector ComboBox
-                    let cur_tname = self.tracks.get(self.selected_track_idx).map(|t| t.name.as_str()).unwrap_or("Master");
+                    let cur_tname = if self.inspecting_master {
+                        "Master Bus".to_string()
+                    } else {
+                        self.tracks.get(self.selected_track_idx).map(|t| t.name.clone()).unwrap_or_else(|| "Master".to_string())
+                    };
                     let mut switch_track = None;
+                    let mut switch_to_master = false;
                     egui::ComboBox::from_id_source("modular_track_selector")
-                        .selected_text(RichText::new(format!("🎚 Track: {}", cur_tname)).font(FontId::proportional(10.0)).color(Color32::from_rgb(56, 189, 248)))
+                        .selected_text(RichText::new(format!("🎚 {}", cur_tname)).font(FontId::proportional(10.0)).color(if self.inspecting_master { Color32::from_rgb(251, 191, 36) } else { Color32::from_rgb(56, 189, 248) }))
                         .show_ui(ui, |ui| {
+                            if ui.selectable_label(self.inspecting_master, "🎛 Master Bus").clicked() {
+                                switch_to_master = true;
+                            }
+                            ui.separator();
                             for (t_idx, t) in self.tracks.iter().enumerate() {
-                                let is_sel = t_idx == self.selected_track_idx;
+                                let is_sel = !self.inspecting_master && t_idx == self.selected_track_idx;
                                 if ui.selectable_label(is_sel, &t.name).clicked() {
                                     switch_track = Some(t_idx);
                                 }
                             }
                         });
-                    if let Some(idx) = switch_track {
+                    if switch_to_master {
+                        self.select_master();
+                    } else if let Some(idx) = switch_track {
                         self.select_track_for_modular(idx);
                     }
 
@@ -6218,6 +6594,17 @@ impl AwardWinningGuiView {
                     );
                     if sync_btn.clicked() {
                         self.sync_track_chain_to_modular();
+                    }
+
+                    // "🎛 Master Chain ➔ Modular" One-Click Syncer
+                    let master_sync_btn = ui.add(
+                        egui::Button::new(RichText::new("🎛 Master Chain ➔ Modular").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(251, 191, 36)))
+                            .fill(Color32::from_rgb(44, 34, 16))
+                            .stroke(Stroke::new(1.0_f32, Color32::from_rgb(251, 191, 36)))
+                            .rounding(Rounding::same(4.0))
+                    );
+                    if master_sync_btn.clicked() {
+                        self.sync_master_chain_to_modular();
                     }
 
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -7267,14 +7654,25 @@ impl AwardWinningGuiView {
                         let mut selected_idx = None;
                         let mut node_to_select: Option<usize> = None;
                         let mut nav_to_tab: Option<crate::views::modern_top_bar::ModernViewTab> = None;
+                        let mut phase_to_toggle: Option<u64> = None;
                         for (idx, track) in self.tracks.iter_mut().enumerate() {
                             let sx = rect.left() + idx as f32 * strip_w;
                             let strip_rect = Rect::from_min_size(egui::pos2(sx, top_offset), Vec2::new(strip_w - 4.0, strip_h));
                             if strip_rect.contains(pos) {
                                 let pan_y = strip_rect.top() + 32.0;
                                 let pan_center = egui::pos2(strip_rect.center().x, pan_y);
-                                let m_rect = Rect::from_min_size(egui::pos2(strip_rect.left() + 4.0, pan_y + 14.0), Vec2::new((strip_rect.width() - 10.0) / 2.0, 16.0));
-                                let s_rect = Rect::from_min_size(egui::pos2(m_rect.right() + 2.0, pan_y + 14.0), Vec2::new(m_rect.width(), 16.0));
+                                let (m_rect, s_rect, phase_rect) = if is_pro {
+                                    let btn_w = (strip_rect.width() - 14.0) / 3.0;
+                                    let m = Rect::from_min_size(egui::pos2(strip_rect.left() + 4.0, pan_y + 14.0), Vec2::new(btn_w, 16.0));
+                                    let s = Rect::from_min_size(egui::pos2(m.right() + 2.0, pan_y + 14.0), Vec2::new(btn_w, 16.0));
+                                    let p = Rect::from_min_size(egui::pos2(s.right() + 2.0, pan_y + 14.0), Vec2::new(btn_w, 16.0));
+                                    (m, s, Some(p))
+                                } else {
+                                    let btn_w = (strip_rect.width() - 10.0) / 2.0;
+                                    let m = Rect::from_min_size(egui::pos2(strip_rect.left() + 4.0, pan_y + 14.0), Vec2::new(btn_w, 16.0));
+                                    let s = Rect::from_min_size(egui::pos2(m.right() + 2.0, pan_y + 14.0), Vec2::new(btn_w, 16.0));
+                                    (m, s, None)
+                                };
                                 let fader_top = s_rect.bottom() + 10.0;
                                 let fader_bot = strip_rect.bottom() - 20.0;
 
@@ -7320,6 +7718,9 @@ impl AwardWinningGuiView {
                                 } else if s_rect.contains(pos) && is_click {
                                     track.is_soloed = !track.is_soloed;
                                     selected_idx = Some(idx);
+                                } else if is_pro && phase_rect.map(|pr| pr.contains(pos)).unwrap_or(false) && is_click {
+                                    phase_to_toggle = Some(track.id);
+                                    selected_idx = Some(idx);
                                 } else if is_pro && Rect::from_min_size(egui::pos2(strip_rect.left() + 4.0, s_rect.bottom() + 3.0), Vec2::new(strip_rect.width() - 8.0, 12.0)).contains(pos) && (is_click || is_sec_click) {
                                     selected_idx = Some(idx);
                                     node_to_select = Some(0);
@@ -7351,6 +7752,9 @@ impl AwardWinningGuiView {
                         }
                         if let Some(tab) = nav_to_tab {
                             self.top_bar_state.active_tab = tab;
+                        }
+                        if let Some(t_id) = phase_to_toggle {
+                            self.toggle_track_phase_invert(t_id);
                         }
                         if let Some(s_idx) = selected_idx {
                             self.select_track_for_mixer(s_idx);
@@ -7424,13 +7828,28 @@ impl AwardWinningGuiView {
                     painter.line_segment([pan_center, egui::pos2(nx, ny)], Stroke::new(1.5_f32, needle_col));
                     painter.circle_filled(pan_center, 2.0, needle_col);
 
-                    // Mute / Solo Buttons
-                    let m_rect = Rect::from_min_size(egui::pos2(strip_rect.left() + 4.0, pan_y + 14.0), Vec2::new((strip_rect.width() - 10.0) / 2.0, 16.0));
-                    let s_rect = Rect::from_min_size(egui::pos2(m_rect.right() + 2.0, pan_y + 14.0), Vec2::new(m_rect.width(), 16.0));
+                    // Mute / Solo / Phase Invert Buttons
+                    let (m_rect, s_rect, phase_rect) = if is_pro {
+                        let btn_w = (strip_rect.width() - 14.0) / 3.0;
+                        let m = Rect::from_min_size(egui::pos2(strip_rect.left() + 4.0, pan_y + 14.0), Vec2::new(btn_w, 16.0));
+                        let s = Rect::from_min_size(egui::pos2(m.right() + 2.0, pan_y + 14.0), Vec2::new(btn_w, 16.0));
+                        let p = Rect::from_min_size(egui::pos2(s.right() + 2.0, pan_y + 14.0), Vec2::new(btn_w, 16.0));
+                        (m, s, Some(p))
+                    } else {
+                        let btn_w = (strip_rect.width() - 10.0) / 2.0;
+                        let m = Rect::from_min_size(egui::pos2(strip_rect.left() + 4.0, pan_y + 14.0), Vec2::new(btn_w, 16.0));
+                        let s = Rect::from_min_size(egui::pos2(m.right() + 2.0, pan_y + 14.0), Vec2::new(btn_w, 16.0));
+                        (m, s, None)
+                    };
                     painter.rect_filled(m_rect, 2.0, if track.is_muted { Color32::from_rgb(239, 68, 68) } else { Color32::from_rgb(24, 34, 50) });
                     painter.text(m_rect.center(), egui::Align2::CENTER_CENTER, "M", FontId::proportional(8.0), Color32::WHITE);
                     painter.rect_filled(s_rect, 2.0, if track.is_soloed { Color32::from_rgb(234, 179, 8) } else { Color32::from_rgb(24, 34, 50) });
                     painter.text(s_rect.center(), egui::Align2::CENTER_CENTER, "S", FontId::proportional(8.0), Color32::WHITE);
+                    if let Some(p_r) = phase_rect {
+                        let is_inv = self.is_track_phase_inverted(track.id);
+                        painter.rect_filled(p_r, 2.0, if is_inv { Color32::from_rgb(245, 158, 11) } else { Color32::from_rgb(24, 34, 50) });
+                        painter.text(p_r.center(), egui::Align2::CENTER_CENTER, "Ø", FontId::proportional(8.5), if is_inv { Color32::from_rgb(10, 14, 24) } else { Color32::WHITE });
+                    }
 
                     // DSP Multi-Slot Insert Chips in Pro Mode
                     let fader_top = if is_pro {
@@ -7487,8 +7906,14 @@ impl AwardWinningGuiView {
                 let m_x = rect.right() - master_w - 4.0;
                 let m_strip = Rect::from_min_size(egui::pos2(m_x, top_offset), Vec2::new(master_w, strip_h));
                 painter.rect_filled(m_strip, 4.0, Color32::from_rgb(16, 24, 38));
-                painter.rect_stroke(m_strip, 4.0, Stroke::new(1.5_f32, Color32::from_rgb(56, 189, 248)));
-                painter.text(egui::pos2(m_strip.center().x, m_strip.top() + 6.0), egui::Align2::CENTER_TOP, "MASTER", FontId::proportional(11.0), Color32::from_rgb(56, 189, 248));
+                let m_stroke_col = if self.inspecting_master {
+                    Color32::from_rgb(251, 191, 36)
+                } else {
+                    Color32::from_rgb(56, 189, 248)
+                };
+                let m_stroke_w = if self.inspecting_master { 2.0_f32 } else { 1.5_f32 };
+                painter.rect_stroke(m_strip, 4.0, Stroke::new(m_stroke_w, m_stroke_col));
+                painter.text(egui::pos2(m_strip.center().x, m_strip.top() + 6.0), egui::Align2::CENTER_TOP, "MASTER", FontId::proportional(11.0), m_stroke_col);
 
                 // Master Mute & Mono Audition Buttons Side-by-Side
                 let btn_w = (m_strip.width() - 15.0) / 2.0;
@@ -7550,13 +7975,15 @@ impl AwardWinningGuiView {
                                 self.top_bar_state.master_gain = norm * 2.0;
                                 self.is_master_muted = false;
                             }
+                        } else if is_click {
+                            self.select_master();
                         }
                     }
                 }
 
                 // Draw Master Inserts in Pro Mode
                 if is_pro {
-                    let m_dev0_name = self.master_chain_devices.get(0).map(|d| d.display_name.as_str()).unwrap_or("Master EQ");
+                    let m_dev0_name = self.master_chain_devices.first().map(|d| d.display_name.as_str()).unwrap_or("Master EQ");
                     let m_dev0_short = if m_dev0_name.len() > 6 { format!("{}..", &m_dev0_name[..5]) } else { m_dev0_name.to_string() };
                     let is_m0_sel = self.selected_master_chain_idx == 0;
                     painter.rect_filled(m_chip0, 2.0, if is_m0_sel { Color32::from_rgb(28, 44, 72) } else { Color32::from_rgb(18, 24, 38) });
