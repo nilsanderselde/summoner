@@ -615,6 +615,20 @@ pub fn show_modern_top_bar(
                     norm_gain = (norm_gain + d_x * 0.015).clamp(0.0, 1.0);
                     state.master_gain = norm_gain * 2.0;
                 }
+                if gain_resp.double_clicked() {
+                    state.master_gain = 1.0;
+                }
+                if gain_resp.secondary_clicked() {
+                    state.requested_automation_param = Some("master_gain".to_string());
+                }
+                if gain_resp.hovered() {
+                    let db = if state.master_gain < 1e-4 { -60.0 } else { state.master_gain.log10() * 20.0 };
+                    let _ = gain_resp.on_hover_text(format!(
+                        "Master Volume: {:.1} dB ({:.0}%)\n[Drag to adjust | Double-click for 0dB unity | Right-click to automate]",
+                        db,
+                        norm_gain * 100.0
+                    ));
+                }
                 gain_painter.rect_filled(gain_rect, 2.0, Color32::from_rgb(14, 20, 32));
                 gain_painter.rect_stroke(gain_rect, 2.0, Stroke::new(1.0_f32, Color32::from_rgb(28, 40, 60)));
                 let fill_w = gain_rect.width() * norm_gain;

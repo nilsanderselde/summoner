@@ -1300,7 +1300,15 @@ impl AwardWinningGuiView {
             });
         });
 
-        // Handle 1-click live automation requests from Inspector & Device Rack
+        // Handle 1-click live automation requests from Top Bar, Inspector & Device Rack
+        if let Some(param) = self.top_bar_state.requested_automation_param.take() {
+            if param == "master_gain" {
+                self.open_master_automation_editor();
+            } else if !self.open_macro_automation_editor(&param) {
+                let cur_track_id = self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1);
+                self.open_track_automation_editor(cur_track_id, &param);
+            }
+        }
         if let Some(param) = self.inspector_state.requested_automation_param.take() {
             let cur_track_id = self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1);
             self.open_track_automation_editor(cur_track_id, &param);
@@ -3365,6 +3373,38 @@ impl AwardWinningGuiView {
                     "%".to_string(),
                     1.0_f32,
                 ),
+                "macro_tone" | "tone" => (
+                    "macro_tone".to_string(),
+                    format!("{} — Macro Tone", track.name),
+                    0.0_f32,
+                    1.0_f32,
+                    "%".to_string(),
+                    self.top_bar_state.macro_tone.clamp(0.0, 1.0),
+                ),
+                "macro_space" | "space" => (
+                    "macro_space".to_string(),
+                    format!("{} — Macro Space", track.name),
+                    0.0_f32,
+                    1.0_f32,
+                    "%".to_string(),
+                    self.top_bar_state.macro_space.clamp(0.0, 1.0),
+                ),
+                "macro_punch" | "punch" => (
+                    "macro_punch".to_string(),
+                    format!("{} — Macro Punch", track.name),
+                    0.0_f32,
+                    1.0_f32,
+                    "%".to_string(),
+                    self.top_bar_state.macro_punch.clamp(0.0, 1.0),
+                ),
+                "macro_character" | "character" | "macro_char" | "char" => (
+                    "macro_character".to_string(),
+                    format!("{} — Macro Character", track.name),
+                    0.0_f32,
+                    1.0_f32,
+                    "%".to_string(),
+                    self.top_bar_state.macro_character.clamp(0.0, 1.0),
+                ),
                 other_name => {
                     let registry = crate::dsp_node_ui::DspNodeRegistry::new();
                     let cur_kind = self.device_rack_state.selected_node_kind.as_deref().unwrap_or("AetherSynth");
@@ -3449,6 +3489,57 @@ impl AwardWinningGuiView {
             "end",
             16.0,
             norm,
+            crate::views::bezier_automation_editor::AutomationCurveType::Linear,
+        ));
+        self.automation_editor = Some(editor);
+        true
+    }
+
+    /// Open the live Bézier parameter automation editor for a Novice top-level macro (Tone, Space, Punch, Character).
+    pub fn open_macro_automation_editor(&mut self, macro_name: &str) -> bool {
+        let (lane_key, title, norm) = match macro_name {
+            "macro_tone" | "tone" => (
+                "macro_tone".to_string(),
+                "Novice Macro — Tone (Cutoff / Brightness)".to_string(),
+                self.top_bar_state.macro_tone,
+            ),
+            "macro_space" | "space" => (
+                "macro_space".to_string(),
+                "Novice Macro — Space (Decay / Reverb Diffusion)".to_string(),
+                self.top_bar_state.macro_space,
+            ),
+            "macro_punch" | "punch" => (
+                "macro_punch".to_string(),
+                "Novice Macro — Punch (Drive / Transient Impact)".to_string(),
+                self.top_bar_state.macro_punch,
+            ),
+            "macro_character" | "character" | "macro_char" | "char" => (
+                "macro_character".to_string(),
+                "Novice Macro — Character (Saturation / Color)".to_string(),
+                self.top_bar_state.macro_character,
+            ),
+            _ => return false,
+        };
+        self.requested_modular_automation_param = Some(lane_key);
+        self.show_automation_editor_window = true;
+        let mut editor = crate::views::bezier_automation_editor::BezierAutomationEditorView::new(
+            title,
+            "%".to_string(),
+            0.0,
+            1.0,
+            16.0,
+        );
+        editor.nodes.clear();
+        editor.nodes.push(crate::views::bezier_automation_editor::AutomationNode::new(
+            "start",
+            0.0,
+            norm.clamp(0.0, 1.0),
+            crate::views::bezier_automation_editor::AutomationCurveType::Linear,
+        ));
+        editor.nodes.push(crate::views::bezier_automation_editor::AutomationNode::new(
+            "end",
+            16.0,
+            norm.clamp(0.0, 1.0),
             crate::views::bezier_automation_editor::AutomationCurveType::Linear,
         ));
         self.automation_editor = Some(editor);
@@ -4177,13 +4268,16 @@ impl AwardWinningGuiView {
             (self.top_bar_state.macro_tone - self.last_applied_macros[0]).abs() > 1e-5
             || (self.top_bar_state.macro_space - self.last_applied_macros[1]).abs() > 1e-5
             || (self.top_bar_state.macro_punch - self.last_applied_macros[2]).abs() > 1e-5
+            || (self.top_bar_state.macro_character - self.last_applied_macros[3]).abs() > 1e-5
         ) {
             self.last_applied_macros[0] = self.top_bar_state.macro_tone;
             self.last_applied_macros[1] = self.top_bar_state.macro_space;
             self.last_applied_macros[2] = self.top_bar_state.macro_punch;
+            self.last_applied_macros[3] = self.top_bar_state.macro_character;
             self.device_rack_state.cutoff = self.top_bar_state.macro_tone;
             self.device_rack_state.decay = self.top_bar_state.macro_space;
             self.device_rack_state.drive = self.top_bar_state.macro_punch;
+            self.device_rack_state.mod_amt = self.top_bar_state.macro_character;
         }
 
         // 1. If playing and NOT recording, evaluate automated curves to drive GUI knobs
@@ -4224,7 +4318,8 @@ impl AwardWinningGuiView {
             let mut any_macro_automated = false;
             for (m_key, m_val_ref) in macro_keys {
                 let lane_key = format!("track_{}_{}", track_id, m_key);
-                if let Some(val) = automation_timeline.evaluate(&lane_key, playhead_beat) {
+                if let Some(val) = automation_timeline.evaluate(&lane_key, playhead_beat)
+                    .or_else(|| automation_timeline.evaluate(m_key, playhead_beat)) {
                     *m_val_ref = val;
                     any_macro_automated = true;
                 }
@@ -4424,15 +4519,18 @@ impl AwardWinningGuiView {
                     value: m_val,
                     interp: summoner_sequencer::automation_timeline::Interpolation::Linear,
                 };
-                let lane = automation_timeline.lanes.entry(auto_key.clone()).or_insert_with(|| {
-                    summoner_sequencer::automation_timeline::AutomationLane {
-                        param_id: auto_key.clone(),
-                        curve: summoner_sequencer::automation_timeline::AutomationCurve { points: Vec::new() },
+                let global_key = m_name.to_string();
+                for lane_name in [&auto_key, &global_key] {
+                    let lane = automation_timeline.lanes.entry(lane_name.clone()).or_insert_with(|| {
+                        summoner_sequencer::automation_timeline::AutomationLane {
+                            param_id: lane_name.clone(),
+                            curve: summoner_sequencer::automation_timeline::AutomationCurve { points: Vec::new() },
+                        }
+                    });
+                    match lane.curve.points.binary_search_by(|p| p.beat.partial_cmp(&playhead_beat).unwrap()) {
+                        Ok(idx) => lane.curve.points[idx] = point,
+                        Err(idx) => lane.curve.points.insert(idx, point),
                     }
-                });
-                match lane.curve.points.binary_search_by(|p| p.beat.partial_cmp(&playhead_beat).unwrap()) {
-                    Ok(idx) => lane.curve.points[idx] = point,
-                    Err(idx) => lane.curve.points.insert(idx, point),
                 }
             }
         }
