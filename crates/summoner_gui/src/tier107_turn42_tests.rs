@@ -263,13 +263,13 @@ mod gui_tests {
         // Open automation editor for standard track parameter
         let res_gain = view.open_track_automation_editor(view.tracks[0].id, "gain");
         assert!(res_gain);
-        assert!(view.automation_editor_open);
-        assert_eq!(view.automation_editor_lane_key, format!("track_{}_gain", view.tracks[0].id));
+        assert!(view.show_automation_editor_window);
+        assert_eq!(view.requested_modular_automation_param.as_deref(), Some(&format!("track_{}_gain", view.tracks[0].id)[..]));
 
         // Open automation editor for multi-node slot parameter (e.g. node_0_cutoff)
         let res_slot = view.open_track_automation_editor(view.tracks[0].id, "node_0_cutoff");
         assert!(res_slot);
-        assert!(view.automation_editor_open);
-        assert_eq!(view.automation_editor_lane_key, format!("track_{}_node_0_cutoff", view.tracks[0].id));
+        assert!(view.show_automation_editor_window);
+        assert_eq!(view.requested_modular_automation_param.as_deref(), Some(&format!("track_{}_node_0_cutoff", view.tracks[0].id)[..]));
     }
 }

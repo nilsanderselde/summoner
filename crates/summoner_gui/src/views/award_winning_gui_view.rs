@@ -177,6 +177,30 @@ impl TrackVisualData {
         self.device_kinds.first().map(|s| s.as_str()).unwrap_or("AetherSynth")
     }
 
+    /// Return total number of DSP devices in the track chain.
+    pub fn device_count(&self) -> usize {
+        self.device_names.len()
+    }
+
+    /// Return (kind, name) for device at specific slot index.
+    pub fn device_at(&self, idx: usize) -> Option<(&str, &str)> {
+        if idx < self.device_names.len() && idx < self.device_kinds.len() {
+            Some((&self.device_kinds[idx], &self.device_names[idx]))
+        } else {
+            None
+        }
+    }
+
+    /// Return display name of device at specific slot index.
+    pub fn device_name_at(&self, idx: usize) -> Option<&str> {
+        self.device_names.get(idx).map(|s| s.as_str())
+    }
+
+    /// Return kind identifier of device at specific slot index.
+    pub fn device_kind_at(&self, idx: usize) -> Option<&str> {
+        self.device_kinds.get(idx).map(|s| s.as_str())
+    }
+
     /// Ensure the track has at least one active Arranger clip based on defaults.
     pub fn ensure_clips(&mut self) {
         if self.clips.is_empty() && self.clip_length_beats > 0.0 {
@@ -581,6 +605,8 @@ pub struct AwardWinningGuiView {
     pub selected_node_idx: usize,
     pub last_selected_node_idx: usize,
     pub last_applied_master_gain: f32,
+    pub master_chain_devices: Vec<crate::views::modern_device_rack::RackChainDeviceVisual>,
+    pub selected_master_chain_idx: usize,
     pub piano_roll_notes: Vec<PianoRollNote>,
     pub selected_note_id: Option<usize>,
     pub auditioned_pitch_idx: Option<usize>,
@@ -809,6 +835,19 @@ impl AwardWinningGuiView {
             selected_node_idx: 0,
             last_selected_node_idx: usize::MAX,
             last_applied_master_gain: 1.0,
+            master_chain_devices: vec![
+                crate::views::modern_device_rack::RackChainDeviceVisual {
+                    kind: "ParametricEq".to_string(),
+                    display_name: "Master EQ".to_string(),
+                    is_bypassed: false,
+                },
+                crate::views::modern_device_rack::RackChainDeviceVisual {
+                    kind: "TruePeakLimiter".to_string(),
+                    display_name: "True Peak Limiter".to_string(),
+                    is_bypassed: false,
+                },
+            ],
+            selected_master_chain_idx: 0,
             piano_roll_notes: vec![
                 PianoRollNote { id: 1, pitch_idx: 3, start_beat: 0.0, length_beats: 1.5, velocity: 0.90 },
                 PianoRollNote { id: 2, pitch_idx: 5, start_beat: 2.0, length_beats: 1.5, velocity: 0.80 },
@@ -1614,6 +1653,7 @@ impl AwardWinningGuiView {
                 let pointer_pos = resp.interact_pointer_pos().or_else(|| ui.input(|i| i.pointer.latest_pos()));
                 let is_interacting = resp.clicked() || resp.dragged() || ui.input(|i| i.pointer.primary_down() || i.pointer.primary_clicked());
                 let is_click = resp.clicked() || ui.input(|i| i.pointer.primary_clicked() || (i.pointer.primary_down() && !resp.dragged()));
+                let is_sec_click = resp.secondary_clicked() || ui.input(|i| i.pointer.secondary_clicked());
                 let is_double = resp.double_clicked() || ui.input(|i| i.pointer.button_double_clicked(egui::PointerButton::Primary));
 
                 if let Some(pos) = pointer_pos {
@@ -1623,18 +1663,21 @@ impl AwardWinningGuiView {
                         else if t_fade.contains(pos) { self.arranger_tool_mode = ArrangerToolMode::Fade; }
                     }
 
-                    if is_interacting {
+                    if is_interacting || is_sec_click {
                         if pos.y <= rect.top() + ruler_h && pos.x >= rect.left() + header_w {
                             let beat = ((pos.x - (rect.left() + header_w)) / ppb).max(0.0);
                             self.playhead_beat = beat;
                         } else if pos.y > rect.top() + ruler_h {
                             let mut selected_idx = None;
+                            let mut node_to_select: Option<usize> = None;
                             let mut track_to_open_auto = None;
+                            let mut track_to_open_auto_param: Option<(u64, String)> = None;
                             let row_h = 32.0;
                             for (idx, track) in self.tracks.iter_mut().enumerate() {
                                 let row_top = rect.top() + ruler_h + (idx as f32 * (row_h + 2.0));
                                 let head_rect = Rect::from_min_size(egui::pos2(rect.left(), row_top), Vec2::new(header_w, row_h));
                                 let lane_rect = Rect::from_min_size(egui::pos2(rect.left() + header_w, row_top), Vec2::new(track_area_w, row_h));
+
                                 let pill_rect = if is_pro {
                                     Rect::from_min_size(egui::pos2(head_rect.left() + 124.0, head_rect.center().y - 4.0), Vec2::new(24.0, 8.0))
                                 } else {
@@ -1679,10 +1722,34 @@ impl AwardWinningGuiView {
                                     selected_idx = Some(idx);
                                     self.selected_track_idx = idx;
                                     track_to_open_auto = Some(track.id);
-                                } else if is_pro && Rect::from_min_size(egui::pos2(head_rect.left() + 18.0, head_rect.top() + 18.0), Vec2::new(48.0, 10.0)).contains(pos) && is_click {
+                                } else if is_pro && Rect::from_min_size(egui::pos2(head_rect.left() + 18.0, head_rect.top() + 18.0), Vec2::new(52.0, 10.0)).contains(pos) && (is_click || is_sec_click) {
                                     selected_idx = Some(idx);
-                                    self.selected_track_idx = idx;
-                                    self.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::Modular;
+                                    let rel_x = pos.x - (head_rect.left() + 18.0);
+                                    let d_count = track.device_count().max(1);
+                                    if d_count == 1 {
+                                        if rel_x <= 38.0 {
+                                            node_to_select = Some(0);
+                                            if is_sec_click {
+                                                track_to_open_auto = Some(track.id);
+                                            }
+                                        } else {
+                                            self.modular_add_modal_open = true;
+                                        }
+                                    } else {
+                                        if rel_x <= 22.0 {
+                                            node_to_select = Some(0);
+                                            if is_sec_click {
+                                                track_to_open_auto_param = Some((track.id, "node_0_cutoff".to_string()));
+                                            }
+                                        } else if rel_x <= 44.0 {
+                                            node_to_select = Some(1);
+                                            if is_sec_click {
+                                                track_to_open_auto_param = Some((track.id, "node_1_cutoff".to_string()));
+                                            }
+                                        } else {
+                                            self.modular_add_modal_open = true;
+                                        }
+                                    }
                                 } else if pill_rect.expand(4.0).contains(pos) {
                                     if is_double {
                                         track.gain = 1.0;
@@ -1698,7 +1765,12 @@ impl AwardWinningGuiView {
                             if let Some(s_idx) = selected_idx {
                                 self.select_track_for_arranger(s_idx);
                             }
-                            if let Some(tid) = track_to_open_auto {
+                            if let Some(slot) = node_to_select {
+                                self.select_track_node(slot);
+                            }
+                            if let Some((tid, param)) = track_to_open_auto_param {
+                                self.open_track_automation_editor(tid, &param);
+                            } else if let Some(tid) = track_to_open_auto {
                                 let cur_kind = self.device_rack_state.selected_node_kind.as_deref()
                                     .or(self.inspector_state.selected_node_kind.as_deref())
                                     .unwrap_or("AetherSynth");
@@ -1746,12 +1818,40 @@ impl AwardWinningGuiView {
                     painter.text(name_pos, if is_pro { egui::Align2::LEFT_TOP } else { egui::Align2::LEFT_CENTER }, &name_str, FontId::proportional(10.0), Color32::from_rgb(241, 245, 249));
 
                     if is_pro {
-                        let dev_chip_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 18.0, head_rect.top() + 18.0), Vec2::new(48.0, 10.0));
-                        let d_name = track.primary_device_name();
-                        let d_short = if d_name.len() > 6 { format!("{}..", &d_name[..5]) } else { d_name.to_string() };
-                        painter.rect_filled(dev_chip_rect, 2.0, Color32::from_rgb(18, 24, 38));
-                        painter.rect_stroke(dev_chip_rect, 2.0, Stroke::new(0.8_f32, Color32::from_rgb(56, 189, 248)));
-                        painter.text(dev_chip_rect.center(), egui::Align2::CENTER_CENTER, format!("🎛 {}", d_short), FontId::proportional(6.5), Color32::from_rgb(186, 230, 253));
+                        let d_count = track.device_count().max(1);
+                        if d_count == 1 {
+                            let dev_chip_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 18.0, head_rect.top() + 18.0), Vec2::new(38.0, 10.0));
+                            let d_name = track.primary_device_name();
+                            let d_short = if d_name.len() > 5 { format!("{}..", &d_name[..4]) } else { d_name.to_string() };
+                            let is_dev_sel = is_sel && self.selected_node_idx == 0;
+                            let chip_bg = if is_dev_sel { Color32::from_rgb(28, 44, 68) } else { Color32::from_rgb(18, 24, 38) };
+                            let chip_stroke = if is_dev_sel { Color32::from_rgb(0, 229, 255) } else { Color32::from_rgb(56, 189, 248) };
+                            painter.rect_filled(dev_chip_rect, 2.0, chip_bg);
+                            painter.rect_stroke(dev_chip_rect, 2.0, Stroke::new(0.8_f32, chip_stroke));
+                            painter.text(dev_chip_rect.center(), egui::Align2::CENTER_CENTER, format!("🎛 {}", d_short), FontId::proportional(6.5), if is_dev_sel { Color32::from_rgb(0, 229, 255) } else { Color32::from_rgb(186, 230, 253) });
+
+                            let add_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 58.0, head_rect.top() + 18.0), Vec2::new(10.0, 10.0));
+                            painter.rect_filled(add_rect, 2.0, Color32::from_rgb(20, 28, 44));
+                            painter.rect_stroke(add_rect, 2.0, Stroke::new(0.8_f32, Color32::from_rgb(70, 90, 120)));
+                            painter.text(add_rect.center(), egui::Align2::CENTER_CENTER, "+", FontId::proportional(7.0), Color32::from_rgb(148, 163, 184));
+                        } else {
+                            for d_i in 0..2 {
+                                let dev_name = track.device_name_at(d_i).unwrap_or("FX");
+                                let d_short = if dev_name.len() > 3 { format!("{}..", &dev_name[..2]) } else { dev_name.to_string() };
+                                let chip_x = head_rect.left() + 18.0 + d_i as f32 * 23.0;
+                                let dev_chip_rect = Rect::from_min_size(egui::pos2(chip_x, head_rect.top() + 18.0), Vec2::new(21.0, 10.0));
+                                let is_dev_sel = is_sel && self.selected_node_idx == d_i;
+                                let chip_bg = if is_dev_sel { Color32::from_rgb(28, 44, 68) } else { Color32::from_rgb(18, 24, 38) };
+                                let chip_stroke = if is_dev_sel { Color32::from_rgb(0, 229, 255) } else { Color32::from_rgb(56, 189, 248) };
+                                painter.rect_filled(dev_chip_rect, 2.0, chip_bg);
+                                painter.rect_stroke(dev_chip_rect, 2.0, Stroke::new(0.8_f32, chip_stroke));
+                                painter.text(dev_chip_rect.center(), egui::Align2::CENTER_CENTER, d_short, FontId::proportional(6.0), if is_dev_sel { Color32::from_rgb(0, 229, 255) } else { Color32::from_rgb(186, 230, 253) });
+                            }
+                            let add_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 64.0, head_rect.top() + 18.0), Vec2::new(8.0, 10.0));
+                            painter.rect_filled(add_rect, 2.0, Color32::from_rgb(20, 28, 44));
+                            painter.rect_stroke(add_rect, 2.0, Stroke::new(0.8_f32, Color32::from_rgb(70, 90, 120)));
+                            painter.text(add_rect.center(), egui::Align2::CENTER_CENTER, "+", FontId::proportional(6.5), Color32::from_rgb(148, 163, 184));
+                        }
 
                         let m_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 70.0, head_rect.center().y - 8.0), Vec2::new(16.0, 16.0));
                         let s_rect = Rect::from_min_size(egui::pos2(head_rect.left() + 88.0, head_rect.center().y - 8.0), Vec2::new(16.0, 16.0));
@@ -3433,6 +3533,16 @@ impl AwardWinningGuiView {
 
     /// Open the live Bézier parameter automation editor for a specific track parameter (e.g. "gain", "pan", "mute", "solo", "cutoff").
     pub fn open_track_automation_editor(&mut self, track_id: u64, param_name: &str) -> bool {
+        if param_name == "master_gain" {
+            return self.open_master_automation_editor();
+        }
+        if let Some(rest) = param_name.strip_prefix("master_node_") {
+            if let Some((slot_str, p_id)) = rest.split_once('_') {
+                if let Ok(slot) = slot_str.parse::<usize>() {
+                    return self.open_master_device_automation_editor(slot, p_id);
+                }
+            }
+        }
         if let Some(track) = self.tracks.iter().find(|t| t.id == track_id) {
             let (lane_key, title, min, max, unit, norm) = match param_name {
                 "gain" => (
@@ -4538,6 +4648,223 @@ impl AwardWinningGuiView {
         }
     }
 
+    /// Add a DSP node to the Master Bus device chain.
+    pub fn add_dsp_node_to_master(&mut self, kind_id: &str) -> usize {
+        let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+        let disp = registry.get(kind_id).map(|d| d.display_name.clone()).unwrap_or_else(|| kind_id.to_string());
+        self.master_chain_devices.push(crate::views::modern_device_rack::RackChainDeviceVisual {
+            kind: kind_id.to_string(),
+            display_name: disp,
+            is_bypassed: false,
+        });
+        let new_idx = self.master_chain_devices.len() - 1;
+        self.selected_master_chain_idx = new_idx;
+        new_idx
+    }
+
+    /// Remove a DSP node from the Master Bus device chain by slot index.
+    pub fn remove_dsp_node_from_master(&mut self, slot_idx: usize) -> bool {
+        if self.master_chain_devices.len() > 1 && slot_idx < self.master_chain_devices.len() {
+            self.master_chain_devices.remove(slot_idx);
+            if self.selected_master_chain_idx >= self.master_chain_devices.len() {
+                self.selected_master_chain_idx = self.master_chain_devices.len().saturating_sub(1);
+            }
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Move a DSP node within the Master Bus device chain.
+    pub fn move_dsp_node_in_master(&mut self, from_idx: usize, to_idx: usize) -> bool {
+        let len = self.master_chain_devices.len();
+        if from_idx < len && to_idx < len && from_idx != to_idx {
+            let item = self.master_chain_devices.remove(from_idx);
+            self.master_chain_devices.insert(to_idx, item);
+            self.selected_master_chain_idx = to_idx;
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Toggle bypass on a Master Bus device.
+    pub fn toggle_master_node_bypass(&mut self, slot_idx: usize) -> bool {
+        if let Some(dev) = self.master_chain_devices.get_mut(slot_idx) {
+            dev.is_bypassed = !dev.is_bypassed;
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Select a Master Bus device slot.
+    pub fn select_master_node(&mut self, slot_idx: usize) -> bool {
+        if slot_idx < self.master_chain_devices.len() {
+            self.selected_master_chain_idx = slot_idx;
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Open live Bézier parameter automation editor for a specific Master Bus device parameter.
+    pub fn open_master_device_automation_editor(&mut self, slot_idx: usize, param_id: &str) -> bool {
+        if slot_idx < self.master_chain_devices.len() {
+            self.selected_master_chain_idx = slot_idx;
+            let dev = &self.master_chain_devices[slot_idx];
+            let lane_key = format!("master_node_{}_{}", slot_idx, param_id);
+            let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+            let opt_desc = registry.get(&dev.kind);
+            let opt_schema = opt_desc.and_then(|desc| {
+                desc.params.iter().find(|p| p.id == param_id)
+                    .or_else(|| desc.params.iter().find(|p| p.name.to_lowercase().contains(&param_id.to_lowercase())))
+                    .or_else(|| desc.params.first())
+            });
+            let (min_val, max_val, unit, def_val) = if let Some(schema) = opt_schema {
+                match &schema.widget {
+                    crate::dsp_node_ui::DspWidgetKind::RotaryKnob { min, max, default, unit, .. }
+                    | crate::dsp_node_ui::DspWidgetKind::VerticalFader { min, max, default, unit, .. } => {
+                        (*min, *max, unit.as_str(), *default)
+                    }
+                    _ => (0.0, 1.0, "", 0.5),
+                }
+            } else {
+                (0.0, 1.0, "", 0.5)
+            };
+            let custom_title = format!("Master Bus — [{}] {}", dev.display_name, opt_schema.map(|s| s.name.as_str()).unwrap_or(param_id));
+            let norm_val = if (max_val - min_val).abs() > 0.0001 {
+                ((def_val - min_val) / (max_val - min_val)).clamp(0.0, 1.0)
+            } else {
+                0.5
+            };
+            let mut ed = crate::views::bezier_automation_editor::BezierAutomationEditorView::new(
+                custom_title,
+                unit.to_string(),
+                min_val,
+                max_val,
+                16.0,
+            );
+            ed.nodes.clear();
+            ed.nodes.push(crate::views::bezier_automation_editor::AutomationNode::new(
+                "start",
+                0.0,
+                norm_val,
+                crate::views::bezier_automation_editor::AutomationCurveType::Linear,
+            ));
+            ed.nodes.push(crate::views::bezier_automation_editor::AutomationNode::new(
+                "end",
+                16.0,
+                norm_val,
+                crate::views::bezier_automation_editor::AutomationCurveType::Linear,
+            ));
+            self.requested_modular_automation_param = Some(lane_key);
+            self.automation_editor = Some(ed);
+            self.show_automation_editor_window = true;
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Convert the active track's linear DSP device chain into modular canvas nodes
+    /// positioned horizontally and connected sequentially with audio patch cords.
+    pub fn sync_track_chain_to_modular(&mut self) -> usize {
+        self.device_rack_state.ensure_chain();
+        let chain = self.device_rack_state.chain_devices.clone();
+        if chain.is_empty() {
+            return 0;
+        }
+
+        self.modular_nodes.clear();
+        self.patch_cords.clear();
+        let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+
+        for (idx, dev) in chain.iter().enumerate() {
+            let node_id = format!("node_{}", idx);
+            let opt_desc = registry.get(&dev.kind);
+            let cat = opt_desc.map(|d| d.category).unwrap_or(crate::dsp_node_ui::DspNodeCategory::Utility);
+            let disp = opt_desc.map(|d| d.display_name.clone()).unwrap_or_else(|| dev.display_name.clone());
+
+            let mut ports = Vec::new();
+            if idx > 0 || cat != crate::dsp_node_ui::DspNodeCategory::Oscillator {
+                ports.push(ModularPort {
+                    id: "in".into(),
+                    name: "In".into(),
+                    kind: ModularPortKind::AudioIn,
+                    rel_pos: (14.0, 48.0),
+                });
+            }
+            ports.push(ModularPort {
+                id: "cv".into(),
+                name: "CV".into(),
+                kind: ModularPortKind::ModulationIn,
+                rel_pos: (14.0, 78.0),
+            });
+            ports.push(ModularPort {
+                id: "out".into(),
+                name: "Out".into(),
+                kind: ModularPortKind::AudioOut,
+                rel_pos: (126.0, 48.0),
+            });
+
+            let mut params = Vec::new();
+            if let Some(desc) = opt_desc {
+                for (p_idx, schema) in desc.params.iter().take(3).enumerate() {
+                    let (min, max, def, unit) = match &schema.widget {
+                        crate::dsp_node_ui::DspWidgetKind::RotaryKnob { min, max, default, unit, .. } => (*min, *max, *default, unit.clone()),
+                        crate::dsp_node_ui::DspWidgetKind::VerticalFader { min, max, default, unit, .. } => (*min, *max, *default, unit.clone()),
+                        _ => (0.0, 1.0, 0.5, String::new()),
+                    };
+                    params.push(ModularNodeParam {
+                        id: schema.id.clone(),
+                        name: schema.name.clone(),
+                        value: def,
+                        min,
+                        max,
+                        default_value: def,
+                        step: Some((max - min) * 0.01),
+                        unit,
+                        rel_pos: (44.0 + p_idx as f32 * 38.0, 48.0),
+                    });
+                }
+            }
+
+            let node_w = (params.len() as f32 * 40.0 + 70.0).max(135.0);
+            self.modular_nodes.push(ModularNodeInstance {
+                id: node_id,
+                kind_id: dev.kind.clone(),
+                display_name: disp,
+                category: cat,
+                pos: (24.0 + idx as f32 * (node_w + 30.0), 30.0),
+                size: (node_w, 105.0),
+                ports,
+                params,
+                graph_node_idx: None,
+                bypassed: dev.is_bypassed,
+            });
+        }
+
+        for idx in 0..self.modular_nodes.len().saturating_sub(1) {
+            let from_id = format!("node_{}", idx);
+            let to_id = format!("node_{}", idx + 1);
+            self.patch_cords.push(ModularPatchCord {
+                from_node_id: from_id,
+                from_port_id: "out".into(),
+                to_node_id: to_id,
+                to_port_id: "in".into(),
+                intensity: 1.0,
+                is_audio: true,
+            });
+        }
+
+        if !self.modular_nodes.is_empty() {
+            self.selected_modular_node_id = Some(self.modular_nodes[0].id.clone());
+        }
+
+        self.modular_nodes.len()
+    }
+
     /// Loads a factory preset into the device rack, inspector, macros, and active track.
     /// If param_bus is provided, parameters are dispatched to the real-time audio thread without allocations.
     pub fn apply_factory_preset(
@@ -5121,7 +5448,50 @@ impl AwardWinningGuiView {
             }
         }
 
-        // 6. Stage Live Scene & Track Clip Cue Dispatch to ParamBus (Milestone 33)
+        // 6. Master Bus Multi-Node DSP Device Chain Live Evaluation & ParamBus Dispatch (Milestone 33)
+        for (m_slot, dev) in self.master_chain_devices.iter().enumerate() {
+            let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+            if let Some(desc) = registry.get(&dev.kind) {
+                for (p_i, schema) in desc.params.iter().enumerate() {
+                    let m_lane_key = format!("master_node_{}_{}", m_slot, schema.id);
+                    let pid = summoner_core::param_bus::ParamId(9000 + m_slot as u32 * 20 + p_i as u32);
+                    let val_opt = automation_timeline.evaluate(&m_lane_key, playhead_beat)
+                        .or_else(|| {
+                            if p_i == 0 {
+                                automation_timeline.evaluate(&format!("master_node_{}_cutoff", m_slot), playhead_beat)
+                                    .or_else(|| automation_timeline.evaluate(&format!("master_node_{}_threshold", m_slot), playhead_beat))
+                            } else {
+                                None
+                            }
+                        });
+                    if let Some(val) = val_opt {
+                        if param_bus.get(pid).is_some() {
+                            param_bus.set(pid, val);
+                        }
+                    }
+                    if is_recording_automation {
+                        let active_val = param_bus.get(pid).unwrap_or(0.5);
+                        let point = summoner_sequencer::automation_timeline::AutomationPoint {
+                            beat: playhead_beat,
+                            value: active_val,
+                            interp: summoner_sequencer::automation_timeline::Interpolation::Linear,
+                        };
+                        let lane = automation_timeline.lanes.entry(m_lane_key.clone()).or_insert_with(|| {
+                            summoner_sequencer::automation_timeline::AutomationLane {
+                                param_id: m_lane_key.clone(),
+                                curve: summoner_sequencer::automation_timeline::AutomationCurve { points: Vec::new() },
+                            }
+                        });
+                        match lane.curve.points.binary_search_by(|p| p.beat.partial_cmp(&playhead_beat).unwrap()) {
+                            Ok(idx) => lane.curve.points[idx] = point,
+                            Err(idx) => lane.curve.points.insert(idx, point),
+                        }
+                    }
+                }
+            }
+        }
+
+        // 7. Stage Live Scene & Track Clip Cue Dispatch to ParamBus (Milestone 33)
         let panic_pid = summoner_core::param_bus::ParamId(9996);
         let panic_val = if self.panic_triggered { 1.0 } else { 0.0 };
         if param_bus.get(panic_pid).is_some() {
@@ -5399,6 +5769,27 @@ impl AwardWinningGuiView {
 
             self.device_rack_state.device_name = tr_name.clone();
             self.inspector_state.target_name = tr_name;
+
+            if !tr.device_names.is_empty() {
+                self.device_rack_state.chain_devices.clear();
+                let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+                for (i, dev_name) in tr.device_names.iter().enumerate() {
+                    let kind = tr.device_kinds.get(i).cloned().unwrap_or_else(|| dev_name.clone());
+                    let disp = registry.get(&kind).map(|d| d.display_name.clone()).unwrap_or_else(|| dev_name.clone());
+                    self.device_rack_state.chain_devices.push(crate::views::modern_device_rack::RackChainDeviceVisual {
+                        kind: kind.clone(),
+                        display_name: disp,
+                        is_bypassed: false,
+                    });
+                }
+                self.device_rack_state.selected_chain_idx = 0;
+                self.inspector_state.chain_devices = self.device_rack_state.chain_devices.clone();
+                self.inspector_state.selected_chain_idx = 0;
+                if let Some(first_kind) = tr.device_kinds.first() {
+                    self.device_rack_state.selected_node_kind = Some(first_kind.clone());
+                    self.inspector_state.selected_node_kind = Some(first_kind.clone());
+                }
+            }
 
             self.inspector_state.gain_db = (tr_gain - 1.0) * 12.0;
             self.inspector_state.pan_val = tr_pan;
@@ -5816,6 +6207,17 @@ impl AwardWinningGuiView {
                     );
                     if add_btn.clicked() {
                         self.modular_add_modal_open = !self.modular_add_modal_open;
+                    }
+
+                    // "🔗 Track Chain ➔ Modular" One-Click Syncer
+                    let sync_btn = ui.add(
+                        egui::Button::new(RichText::new("🔗 Track Chain ➔ Modular").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(168, 85, 247)))
+                            .fill(Color32::from_rgb(28, 20, 44))
+                            .stroke(Stroke::new(1.0_f32, Color32::from_rgb(168, 85, 247)))
+                            .rounding(Rounding::same(4.0))
+                    );
+                    if sync_btn.clicked() {
+                        self.sync_track_chain_to_modular();
                     }
 
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -6790,11 +7192,14 @@ impl AwardWinningGuiView {
                 let pointer_pos = resp.interact_pointer_pos().or_else(|| ui.input(|i| i.pointer.latest_pos()));
                 let is_interacting = resp.clicked() || resp.dragged() || ui.input(|i| i.pointer.primary_down() || i.pointer.primary_clicked());
                 let is_click = resp.clicked() || ui.input(|i| i.pointer.primary_clicked() || (i.pointer.primary_down() && !resp.dragged()));
+                let is_sec_click = resp.secondary_clicked() || ui.input(|i| i.pointer.secondary_clicked());
                 let is_double = resp.double_clicked();
                 let drag_delta = resp.drag_delta();
 
                 let mut track_to_open_auto: Option<u64> = None;
+                let mut track_to_open_auto_param: Option<(u64, String)> = None;
                 let mut master_to_open_auto = false;
+                let mut master_device_to_open_auto: Option<(usize, String)> = None;
 
                 // 1. Top Bar inside Mixer: Title, 1-Click Pro View Switchers, Quick Utilities
                 painter.rect_filled(Rect::from_min_size(rect.min, Vec2::new(rect.width(), bar_h)), 0.0, Color32::from_rgb(14, 20, 32));
@@ -6860,6 +7265,7 @@ impl AwardWinningGuiView {
                 if let Some(pos) = pointer_pos {
                     if is_interacting {
                         let mut selected_idx = None;
+                        let mut node_to_select: Option<usize> = None;
                         let mut nav_to_tab: Option<crate::views::modern_top_bar::ModernViewTab> = None;
                         for (idx, track) in self.tracks.iter_mut().enumerate() {
                             let sx = rect.left() + idx as f32 * strip_w;
@@ -6914,10 +7320,21 @@ impl AwardWinningGuiView {
                                 } else if s_rect.contains(pos) && is_click {
                                     track.is_soloed = !track.is_soloed;
                                     selected_idx = Some(idx);
-                                } else if is_pro && Rect::from_min_size(egui::pos2(strip_rect.left() + 4.0, s_rect.bottom() + 3.0), Vec2::new(strip_rect.width() - 8.0, 14.0)).contains(pos) && is_click {
+                                } else if is_pro && Rect::from_min_size(egui::pos2(strip_rect.left() + 4.0, s_rect.bottom() + 3.0), Vec2::new(strip_rect.width() - 8.0, 12.0)).contains(pos) && (is_click || is_sec_click) {
                                     selected_idx = Some(idx);
-                                    if is_double {
-                                        track_to_open_auto = Some(track.id);
+                                    node_to_select = Some(0);
+                                    if is_sec_click || is_double {
+                                        track_to_open_auto_param = Some((track.id, "node_0_cutoff".to_string()));
+                                    }
+                                } else if is_pro && Rect::from_min_size(egui::pos2(strip_rect.left() + 4.0, s_rect.bottom() + 16.0), Vec2::new(strip_rect.width() - 8.0, 12.0)).contains(pos) && (is_click || is_sec_click) {
+                                    selected_idx = Some(idx);
+                                    if track.device_count() >= 2 {
+                                        node_to_select = Some(1);
+                                        if is_sec_click || is_double {
+                                            track_to_open_auto_param = Some((track.id, "node_1_cutoff".to_string()));
+                                        }
+                                    } else if is_click {
+                                        self.modular_add_modal_open = true;
                                     }
                                 } else if pos.y >= fader_top - 6.0 && pos.y <= fader_bot + 6.0 {
                                     if is_double {
@@ -6937,6 +7354,9 @@ impl AwardWinningGuiView {
                         }
                         if let Some(s_idx) = selected_idx {
                             self.select_track_for_mixer(s_idx);
+                        }
+                        if let Some(slot) = node_to_select {
+                            self.select_track_node(slot);
                         }
                     }
                 }
@@ -7012,17 +7432,33 @@ impl AwardWinningGuiView {
                     painter.rect_filled(s_rect, 2.0, if track.is_soloed { Color32::from_rgb(234, 179, 8) } else { Color32::from_rgb(24, 34, 50) });
                     painter.text(s_rect.center(), egui::Align2::CENTER_CENTER, "S", FontId::proportional(8.0), Color32::WHITE);
 
-                    // DSP Insert Chip in Pro Mode
+                    // DSP Multi-Slot Insert Chips in Pro Mode
                     let fader_top = if is_pro {
                         let inserts_top = s_rect.bottom() + 3.0;
-                        let inserts_h = 14.0;
-                        let chip_rect = Rect::from_min_size(egui::pos2(strip_rect.left() + 4.0, inserts_top), Vec2::new(strip_rect.width() - 8.0, inserts_h));
-                        let dev_disp = track.primary_device_name();
-                        let dev_short = if dev_disp.len() > 6 { format!("{}..", &dev_disp[..5]) } else { dev_disp.to_string() };
-                        painter.rect_filled(chip_rect, 2.0, if is_sel { Color32::from_rgb(28, 40, 64) } else { Color32::from_rgb(18, 24, 38) });
-                        painter.rect_stroke(chip_rect, 2.0, Stroke::new(1.0_f32, if is_sel { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(40, 56, 80) }));
-                        painter.text(chip_rect.center(), egui::Align2::CENTER_CENTER, format!("🎛 {}", dev_short), FontId::proportional(7.5), Color32::from_rgb(220, 230, 245));
-                        inserts_top + inserts_h + 5.0
+                        let chip0_rect = Rect::from_min_size(egui::pos2(strip_rect.left() + 4.0, inserts_top), Vec2::new(strip_rect.width() - 8.0, 12.0));
+                        let chip1_rect = Rect::from_min_size(egui::pos2(strip_rect.left() + 4.0, inserts_top + 13.0), Vec2::new(strip_rect.width() - 8.0, 12.0));
+
+                        let d0_disp = track.device_name_at(0).unwrap_or_else(|| track.primary_device_name());
+                        let d0_short = if d0_disp.len() > 6 { format!("{}..", &d0_disp[..5]) } else { d0_disp.to_string() };
+                        let is_d0_sel = is_sel && self.selected_node_idx == 0;
+                        painter.rect_filled(chip0_rect, 2.0, if is_d0_sel { Color32::from_rgb(28, 44, 72) } else { Color32::from_rgb(18, 24, 38) });
+                        painter.rect_stroke(chip0_rect, 2.0, Stroke::new(1.0_f32, if is_d0_sel { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(38, 52, 75) }));
+                        painter.text(chip0_rect.center(), egui::Align2::CENTER_CENTER, format!("🎛 {}", d0_short), FontId::proportional(7.5), Color32::from_rgb(220, 230, 245));
+
+                        if track.device_count() >= 2 {
+                            let d1_disp = track.device_name_at(1).unwrap_or("Effect");
+                            let d1_short = if d1_disp.len() > 6 { format!("{}..", &d1_disp[..5]) } else { d1_disp.to_string() };
+                            let is_d1_sel = is_sel && self.selected_node_idx == 1;
+                            painter.rect_filled(chip1_rect, 2.0, if is_d1_sel { Color32::from_rgb(28, 44, 72) } else { Color32::from_rgb(18, 24, 38) });
+                            painter.rect_stroke(chip1_rect, 2.0, Stroke::new(1.0_f32, if is_d1_sel { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(38, 52, 75) }));
+                            painter.text(chip1_rect.center(), egui::Align2::CENTER_CENTER, format!("🎛 {}", d1_short), FontId::proportional(7.5), Color32::from_rgb(220, 230, 245));
+                        } else {
+                            painter.rect_filled(chip1_rect, 2.0, Color32::from_rgb(14, 18, 28));
+                            painter.rect_stroke(chip1_rect, 2.0, Stroke::new(1.0_f32, Color32::from_rgb(32, 42, 60)));
+                            painter.text(chip1_rect.center(), egui::Align2::CENTER_CENTER, "+ FX", FontId::proportional(7.5), Color32::from_rgb(100, 116, 139));
+                        }
+
+                        inserts_top + 26.0 + 4.0
                     } else {
                         s_rect.bottom() + 10.0
                     };
@@ -7068,9 +7504,16 @@ impl AwardWinningGuiView {
                 painter.rect_filled(m_mono_rect, 2.0, m_mono_bg);
                 painter.text(m_mono_rect.center(), egui::Align2::CENTER_CENTER, if self.is_master_mono { "MONO" } else { "ST" }, FontId::proportional(7.0), m_mono_fg);
 
-                let m_fader_top = m_strip.top() + 32.0;
+                let m_fader_top = if is_pro {
+                    m_strip.top() + 61.0
+                } else {
+                    m_strip.top() + 32.0
+                };
                 let m_fader_bot = m_strip.bottom() - 24.0;
                 let m_fader_x = m_strip.left() + m_strip.width() * 0.35;
+
+                let m_chip0 = Rect::from_min_size(egui::pos2(m_strip.left() + 4.0, m_strip.top() + 32.0), Vec2::new(m_strip.width() - 8.0, 12.0));
+                let m_chip1 = Rect::from_min_size(egui::pos2(m_strip.left() + 4.0, m_strip.top() + 45.0), Vec2::new(m_strip.width() - 8.0, 12.0));
 
                 let m_unity_rect = Rect::from_min_size(egui::pos2(m_strip.left() + 5.0, m_fader_bot + 1.0), Vec2::new(btn_w, 10.0));
                 let m_auto_rect = Rect::from_min_size(egui::pos2(m_unity_rect.right() + 4.0, m_fader_bot + 1.0), Vec2::new(btn_w, 10.0));
@@ -7085,6 +7528,20 @@ impl AwardWinningGuiView {
                             self.reset_master_gain();
                         } else if m_auto_rect.contains(pos) && is_click {
                             master_to_open_auto = true;
+                        } else if is_pro && m_chip0.contains(pos) && (is_click || is_sec_click) {
+                            self.select_master_node(0);
+                            if is_sec_click || is_double {
+                                master_device_to_open_auto = Some((0, "cutoff".to_string()));
+                            }
+                        } else if is_pro && m_chip1.contains(pos) && (is_click || is_sec_click) {
+                            if self.master_chain_devices.len() >= 2 {
+                                self.select_master_node(1);
+                                if is_sec_click || is_double {
+                                    master_device_to_open_auto = Some((1, "threshold".to_string()));
+                                }
+                            } else if is_click {
+                                self.modular_add_modal_open = true;
+                            }
                         } else if pos.y >= m_fader_top - 6.0 && pos.y <= m_fader_bot + 6.0 {
                             if is_double {
                                 self.reset_master_gain();
@@ -7094,6 +7551,29 @@ impl AwardWinningGuiView {
                                 self.is_master_muted = false;
                             }
                         }
+                    }
+                }
+
+                // Draw Master Inserts in Pro Mode
+                if is_pro {
+                    let m_dev0_name = self.master_chain_devices.get(0).map(|d| d.display_name.as_str()).unwrap_or("Master EQ");
+                    let m_dev0_short = if m_dev0_name.len() > 6 { format!("{}..", &m_dev0_name[..5]) } else { m_dev0_name.to_string() };
+                    let is_m0_sel = self.selected_master_chain_idx == 0;
+                    painter.rect_filled(m_chip0, 2.0, if is_m0_sel { Color32::from_rgb(28, 44, 72) } else { Color32::from_rgb(18, 24, 38) });
+                    painter.rect_stroke(m_chip0, 2.0, Stroke::new(1.0_f32, if is_m0_sel { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(38, 52, 75) }));
+                    painter.text(m_chip0.center(), egui::Align2::CENTER_CENTER, format!("🎛 {}", m_dev0_short), FontId::proportional(7.5), Color32::from_rgb(220, 230, 245));
+
+                    if self.master_chain_devices.len() >= 2 {
+                        let m_dev1_name = self.master_chain_devices.get(1).map(|d| d.display_name.as_str()).unwrap_or("Limiter");
+                        let m_dev1_short = if m_dev1_name.len() > 6 { format!("{}..", &m_dev1_name[..5]) } else { m_dev1_name.to_string() };
+                        let is_m1_sel = self.selected_master_chain_idx == 1;
+                        painter.rect_filled(m_chip1, 2.0, if is_m1_sel { Color32::from_rgb(28, 44, 72) } else { Color32::from_rgb(18, 24, 38) });
+                        painter.rect_stroke(m_chip1, 2.0, Stroke::new(1.0_f32, if is_m1_sel { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(38, 52, 75) }));
+                        painter.text(m_chip1.center(), egui::Align2::CENTER_CENTER, format!("🎛 {}", m_dev1_short), FontId::proportional(7.5), Color32::from_rgb(220, 230, 245));
+                    } else {
+                        painter.rect_filled(m_chip1, 2.0, Color32::from_rgb(14, 18, 28));
+                        painter.rect_stroke(m_chip1, 2.0, Stroke::new(1.0_f32, Color32::from_rgb(32, 42, 60)));
+                        painter.text(m_chip1.center(), egui::Align2::CENTER_CENTER, "+ FX", FontId::proportional(7.5), Color32::from_rgb(100, 116, 139));
                     }
                 }
 
@@ -7135,8 +7615,14 @@ impl AwardWinningGuiView {
                         .unwrap_or_else(|| "gain".to_string());
                     self.open_track_automation_editor(tid, &param_to_open);
                 }
+                if let Some((tid, p)) = track_to_open_auto_param {
+                    self.open_track_automation_editor(tid, &p);
+                }
                 if master_to_open_auto {
                     self.open_master_automation_editor();
+                }
+                if let Some((m_slot, p)) = master_device_to_open_auto {
+                    self.open_master_device_automation_editor(m_slot, &p);
                 }
             });
     }
@@ -7323,6 +7809,7 @@ impl AwardWinningGuiView {
 
                 let pointer_pos = resp.interact_pointer_pos().or_else(|| ui.input(|i| i.pointer.latest_pos()));
                 let is_click = resp.clicked() || ui.input(|i| i.pointer.primary_clicked() || (i.pointer.primary_down() && !resp.dragged()));
+                let is_sec_click = resp.secondary_clicked() || ui.input(|i| i.pointer.secondary_clicked());
 
                 // Matrix Grid: Tracks x 4 Scenes + Stop Row
                 let scene_names = ["1 Intro", "2 Verse", "3 Drop", "4 Outro"];
@@ -7398,7 +7885,9 @@ impl AwardWinningGuiView {
                 let mut track_to_stop = None;
                 let is_pro = self.top_bar_state.is_pro_mode;
                 let mut stg_nav_tab = None;
+                let mut stg_node_to_select: Option<usize> = None;
                 let mut stg_open_auto_track: Option<u64> = None;
+                let mut stg_open_auto_track_param: Option<(u64, String)> = None;
 
                 for (t_idx, track) in self.tracks.iter().enumerate() {
                     let col_x = rect.left() + 80.0 + t_idx as f32 * col_w;
@@ -7413,7 +7902,8 @@ impl AwardWinningGuiView {
                     painter.rect_stroke(hdr_rect, 2.0, Stroke::new(1.0_f32, border_col));
 
                     if is_pro && col_w >= 82.0 {
-                        painter.text(egui::pos2(hdr_rect.left() + 4.0, hdr_rect.center().y), egui::Align2::LEFT_CENTER, &track.name, FontId::proportional(8.5), col);
+                        let dev_disp = track.primary_device_name();
+                        let dev_short = if dev_disp.len() > 5 { format!("{}..", &dev_disp[..4]) } else { dev_disp.to_string() };
 
                         let btn_sz = Vec2::new(9.0, 11.0);
                         let auto_rect = Rect::from_min_size(egui::pos2(hdr_rect.right() - 11.0, hdr_rect.center().y - 5.5), btn_sz);
@@ -7421,6 +7911,24 @@ impl AwardWinningGuiView {
                         let mod_rect = Rect::from_min_size(egui::pos2(mix_rect.left() - 10.0, hdr_rect.center().y - 5.5), btn_sz);
                         let p_rect = Rect::from_min_size(egui::pos2(mod_rect.left() - 10.0, hdr_rect.center().y - 5.5), btn_sz);
                         let arr_rect = Rect::from_min_size(egui::pos2(p_rect.left() - 10.0, hdr_rect.center().y - 5.5), btn_sz);
+
+                        let chip_w = 26.0_f32;
+                        let chip_rect = Rect::from_min_size(egui::pos2(arr_rect.left() - chip_w - 2.0, hdr_rect.center().y - 5.5), Vec2::new(chip_w, 11.0));
+                        let has_chip = col_w >= 98.0;
+
+                        if has_chip {
+                            painter.rect_filled(chip_rect, 2.0, Color32::from_rgb(20, 28, 44));
+                            painter.rect_stroke(chip_rect, 2.0, Stroke::new(1.0_f32, Color32::from_rgb(56, 189, 248)));
+                            painter.text(chip_rect.center(), egui::Align2::CENTER_CENTER, format!("🎛{}", dev_short), FontId::proportional(6.0), Color32::from_rgb(220, 230, 245));
+                        }
+
+                        let text_right = if has_chip { chip_rect.left() - 2.0 } else { arr_rect.left() - 2.0 };
+                        let name_disp = if text_right - (hdr_rect.left() + 4.0) < 20.0 {
+                            if track.name.len() > 3 { format!("{}..", &track.name[..2]) } else { track.name.clone() }
+                        } else {
+                            track.name.clone()
+                        };
+                        painter.text(egui::pos2(hdr_rect.left() + 4.0, hdr_rect.center().y), egui::Align2::LEFT_CENTER, &name_disp, FontId::proportional(8.5), col);
 
                         painter.rect_filled(arr_rect, 2.0, Color32::from_rgb(22, 30, 46));
                         painter.text(arr_rect.center(), egui::Align2::CENTER_CENTER, "📋", FontId::proportional(6.5), Color32::from_rgb(200, 215, 235));
@@ -7438,22 +7946,28 @@ impl AwardWinningGuiView {
                         painter.text(auto_rect.center(), egui::Align2::CENTER_CENTER, "📈", FontId::proportional(6.5), Color32::from_rgb(245, 158, 11));
 
                         if let Some(pos) = pointer_pos {
-                            if is_click {
-                                if arr_rect.contains(pos) {
+                            if is_click || is_sec_click {
+                                if arr_rect.contains(pos) && is_click {
                                     pad_track_selected = Some(t_idx);
                                     stg_nav_tab = Some(crate::views::modern_top_bar::ModernViewTab::Arranger);
-                                } else if p_rect.contains(pos) {
+                                } else if p_rect.contains(pos) && is_click {
                                     pad_track_selected = Some(t_idx);
                                     stg_nav_tab = Some(crate::views::modern_top_bar::ModernViewTab::PianoRoll);
-                                } else if mod_rect.contains(pos) {
+                                } else if mod_rect.contains(pos) && is_click {
                                     pad_track_selected = Some(t_idx);
                                     stg_nav_tab = Some(crate::views::modern_top_bar::ModernViewTab::Modular);
-                                } else if mix_rect.contains(pos) {
+                                } else if mix_rect.contains(pos) && is_click {
                                     pad_track_selected = Some(t_idx);
                                     stg_nav_tab = Some(crate::views::modern_top_bar::ModernViewTab::Mixer);
-                                } else if auto_rect.contains(pos) {
+                                } else if auto_rect.contains(pos) && is_click {
                                     pad_track_selected = Some(t_idx);
                                     stg_open_auto_track = Some(track.id);
+                                } else if has_chip && chip_rect.contains(pos) {
+                                    pad_track_selected = Some(t_idx);
+                                    stg_node_to_select = Some(0);
+                                    if is_sec_click {
+                                        stg_open_auto_track_param = Some((track.id, "node_0_cutoff".to_string()));
+                                    }
                                 } else if hdr_rect.contains(pos) {
                                     pad_track_selected = Some(t_idx);
                                 }
@@ -7531,6 +8045,9 @@ impl AwardWinningGuiView {
                 if let Some(s_idx) = pad_track_selected {
                     self.select_track_for_stage(s_idx);
                 }
+                if let Some(slot) = stg_node_to_select {
+                    self.select_track_node(slot);
+                }
                 if let Some(tab) = stg_nav_tab {
                     self.top_bar_state.active_tab = tab;
                 }
@@ -7543,6 +8060,9 @@ impl AwardWinningGuiView {
                         .and_then(|desc| desc.params.first().map(|p| p.id.clone()))
                         .unwrap_or_else(|| "gain".to_string());
                     self.open_track_automation_editor(tid, &param_to_open);
+                }
+                if let Some((tid, p)) = stg_open_auto_track_param {
+                    self.open_track_automation_editor(tid, &p);
                 }
             });
     }

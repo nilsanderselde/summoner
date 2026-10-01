@@ -18103,7 +18103,7 @@ descriptors.insert("BellowsGesturePattern".to_string(), DspNodeDescriptor::new("
             "dcblockfilter" => Some("DcBlockFilter"),
             "lowcutfilter" => Some("LowCutFilter"),
             "highcutfilter" => Some("HighCutFilter"),
-            "parametriceqnode" => Some("ParametricEqNode"),
+            "parametriceq" | "parametriceqnode" => Some("ParametricEqNode"),
             "multichannelspectralequalizernode" => Some("MultiChannelSpectralEqualizerNode"),
             "formantfilternode" => Some("FormantFilterNode"),
             "modalfilternode" => Some("ModalFilterNode"),

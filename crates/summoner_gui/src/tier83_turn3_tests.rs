@@ -151,6 +151,8 @@ pub mod gui_tests {
             clip_length_beats: 16.0,
             clips: Vec::new(),
             active_clip_idx: None,
+            device_names: Vec::new(),
+            device_kinds: Vec::new(),
         };
 
         // Split at beat 6.0
@@ -207,6 +209,8 @@ pub mod gui_tests {
                 },
             ],
             active_clip_idx: None,
+            device_names: Vec::new(),
+            device_kinds: Vec::new(),
         };
 
         let xfades = track.detect_crossfades();

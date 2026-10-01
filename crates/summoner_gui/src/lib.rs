@@ -173,6 +173,7 @@ pub mod tier104_turn39_tests;
 pub mod tier105_turn40_tests;
 pub mod tier106_turn41_tests;
 pub mod tier107_turn42_tests;
+pub mod tier108_turn43_tests;
 #[cfg(feature = "gui")]
 pub mod touch_gestures;
 #[cfg(feature = "gui")]

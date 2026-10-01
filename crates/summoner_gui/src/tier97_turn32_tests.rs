@@ -61,6 +61,8 @@ pub mod pure_tests {
                 is_selected: false,
             }],
             active_clip_idx: None,
+            device_names: Vec::new(),
+            device_kinds: Vec::new(),
         };
 
         let new_id = track.duplicate_clip(1);
@@ -112,6 +114,8 @@ pub mod pure_tests {
                 },
             ],
             active_clip_idx: None,
+            device_names: Vec::new(),
+            device_kinds: Vec::new(),
         };
 
         assert!(track.delete_clip(1));
@@ -152,6 +156,8 @@ pub mod pure_tests {
                 is_selected: false,
             }],
             active_clip_idx: None,
+            device_names: Vec::new(),
+            device_kinds: Vec::new(),
         };
 
         // Move clip by 1.5 beats
