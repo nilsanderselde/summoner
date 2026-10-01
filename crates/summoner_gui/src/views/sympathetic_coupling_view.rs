@@ -182,6 +182,16 @@ impl SympatheticCouplingView {
         grid.into_iter().map(|row| row.into_iter().collect()).collect()
     }
 
+    /// Render ASCII snapshot representation of the view as a single multiline string.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        self.render_ascii(80, 20).join("\n")
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
+    }
+
     #[cfg(feature = "gui")]
     #[allow(clippy::needless_range_loop)]
     pub fn ui(&mut self, ui: &mut egui::Ui) {

@@ -98,6 +98,10 @@ pub struct ModernInspectorState {
     pub requested_open_bellows_hud: bool,
     #[serde(default)]
     pub requested_open_jawari_bridge_hud: bool,
+    #[serde(default)]
+    pub requested_open_soundboard_hud: bool,
+    #[serde(default)]
+    pub requested_open_sympathetic_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -153,6 +157,8 @@ impl Default for ModernInspectorState {
             requested_open_plucked_string_hud: false,
             requested_open_bellows_hud: false,
             requested_open_jawari_bridge_hud: false,
+            requested_open_soundboard_hud: false,
+            requested_open_sympathetic_hud: false,
         }
     }
 }
@@ -937,6 +943,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open interactive curved Jawari buzz bridge clearance gap, cotton Jiva thread & 13-string Tarab sympathetic spectrum HUD").clicked() {
                     state.requested_open_jawari_bridge_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Soundboard") || active_kind.contains("SoundboardBridge") || active_kind == "SoundboardBridgeModel" || active_kind == "PianoSoundboard" || active_kind == "SpruceSoundboard" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🪵 Open Spruce Soundboard & Bridge HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(16, 185, 129)))
+                        .fill(Color32::from_rgb(16, 40, 28))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(16, 185, 129)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Spruce Soundboard modal vibration heatmap, bridge mechanical impedance & decay scale HUD").clicked() {
+                    state.requested_open_soundboard_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Sympathetic") || active_kind.contains("SympatheticCoupling") || active_kind == "SympatheticCouplingModel" || active_kind == "SympatheticStringMatrix" || active_kind == "DroneStrings" {
+                if ui.add(
+                    egui::Button::new(RichText::new("✨ Open Sympathetic Resonance Coupling HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 229, 255)))
+                        .fill(Color32::from_rgb(14, 34, 48))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 229, 255)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Multi-String Sympathetic Resonance Energy Transfer Matrix (Cij) & open string excitation HUD").clicked() {
+                    state.requested_open_sympathetic_hud = true;
                 }
                 ui.add_space(4.0);
             }

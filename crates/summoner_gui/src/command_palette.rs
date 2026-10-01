@@ -497,6 +497,18 @@ impl CommandPalette {
                 action_id: "open_jawari_bridge_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Spruce Soundboard & Bridge HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_soundboard_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Sympathetic Resonance Coupling HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_sympathetic_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

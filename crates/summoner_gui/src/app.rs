@@ -1451,6 +1451,14 @@ impl eframe::App for SummonerApp {
                     self.current_view = ViewMode::ModernStudio;
                     self.award_winning_view.open_jawari_bridge_hud();
                 }
+                "open_soundboard_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_soundboard_hud();
+                }
+                "open_sympathetic_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_sympathetic_hud();
+                }
                 "sfz_convert" | "auto_slice" | "load_preset" | "export_clap" | "toggle_simd" => {
                     println!("Command palette action executed: {}", action);
                 }

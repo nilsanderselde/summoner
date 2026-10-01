@@ -704,6 +704,10 @@ pub struct AwardWinningGuiView {
     pub bellows_view: crate::views::bellows_view::BellowsView,
     pub show_jawari_bridge_modal: bool,
     pub jawari_bridge_view: crate::views::jawari_bridge_view::JawariBridgeView,
+    pub show_soundboard_modal: bool,
+    pub soundboard_view: crate::views::soundboard_bridge_view::SoundboardBridgeView,
+    pub show_sympathetic_modal: bool,
+    pub sympathetic_view: crate::views::sympathetic_coupling_view::SympatheticCouplingView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1024,6 +1028,10 @@ impl AwardWinningGuiView {
             bellows_view: crate::views::bellows_view::BellowsView::new(),
             show_jawari_bridge_modal: false,
             jawari_bridge_view: crate::views::jawari_bridge_view::JawariBridgeView::new(),
+            show_soundboard_modal: false,
+            soundboard_view: crate::views::soundboard_bridge_view::SoundboardBridgeView::new(),
+            show_sympathetic_modal: false,
+            sympathetic_view: crate::views::sympathetic_coupling_view::SympatheticCouplingView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -1823,6 +1831,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_jawari_bridge_hud = false;
             self.open_jawari_bridge_hud();
         }
+        if self.inspector_state.requested_open_soundboard_hud || self.device_rack_state.requested_open_soundboard_hud {
+            self.inspector_state.requested_open_soundboard_hud = false;
+            self.device_rack_state.requested_open_soundboard_hud = false;
+            self.open_soundboard_hud();
+        }
+        if self.inspector_state.requested_open_sympathetic_hud || self.device_rack_state.requested_open_sympathetic_hud {
+            self.inspector_state.requested_open_sympathetic_hud = false;
+            self.device_rack_state.requested_open_sympathetic_hud = false;
+            self.open_sympathetic_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -1858,6 +1876,8 @@ impl AwardWinningGuiView {
         self.show_plucked_string_modal_window(ui);
         self.show_bellows_modal_window(ui);
         self.show_jawari_bridge_modal_window(ui);
+        self.show_soundboard_modal_window(ui);
+        self.show_sympathetic_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -10572,6 +10592,182 @@ impl AwardWinningGuiView {
 
     pub fn is_jawari_bridge_hud_open(&self) -> bool {
         self.show_jawari_bridge_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_soundboard_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_soundboard_modal {
+            return;
+        }
+
+        let mut is_open = self.show_soundboard_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🪵 Spruce Soundboard & Bridge Wave Scattering HUD")
+            .id(egui::Id::new("soundboard_bridge_hud_modal"))
+            .open(&mut is_open)
+            .default_size([880.0, 580.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Spruce Soundboard Modal Vibration Heatmap, Maple Bridge Impedance & Decay Scaling HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.soundboard_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_soundboard_modal = is_open;
+        self.sync_soundboard_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_soundboard_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let bleed = self.soundboard_view.bridge_bleed;
+        let decay = self.soundboard_view.soundboard_decay_scale;
+        let imp   = self.soundboard_view.bridge_impedance;
+        let b     = self.soundboard_view.inharmonicity_b;
+
+        self.device_rack_state.node_param_values.insert("bridge_bleed".to_string(), bleed);
+        self.device_rack_state.node_param_values.insert("soundboard_decay_scale".to_string(), decay);
+        self.device_rack_state.node_param_values.insert("bridge_impedance".to_string(), imp);
+        self.device_rack_state.node_param_values.insert("inharmonicity_b".to_string(), b);
+
+        self.inspector_state.node_param_values.insert("bridge_bleed".to_string(), bleed);
+        self.inspector_state.node_param_values.insert("soundboard_decay_scale".to_string(), decay);
+        self.inspector_state.node_param_values.insert("bridge_impedance".to_string(), imp);
+        self.inspector_state.node_param_values.insert("inharmonicity_b".to_string(), b);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_bleed = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_decay = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_imp   = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_b     = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_bleed).is_some() { bus.set(pid_bleed, bleed); }
+            if bus.get(pid_decay).is_some() { bus.set(pid_decay, decay); }
+            if bus.get(pid_imp).is_some()   { bus.set(pid_imp, imp); }
+            if bus.get(pid_b).is_some()     { bus.set(pid_b, b); }
+        }
+    }
+
+    pub fn open_soundboard_hud(&mut self) {
+        self.show_soundboard_modal = true;
+    }
+
+    pub fn close_soundboard_hud(&mut self) {
+        self.show_soundboard_modal = false;
+    }
+
+    pub fn is_soundboard_hud_open(&self) -> bool {
+        self.show_soundboard_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_sympathetic_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_sympathetic_modal {
+            return;
+        }
+
+        let mut is_open = self.show_sympathetic_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("✨ Plucked String Sympathetic Resonance Coupling HUD")
+            .id(egui::Id::new("sympathetic_coupling_hud_modal"))
+            .open(&mut is_open)
+            .default_size([880.0, 580.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Multi-String Sympathetic Energy Transfer Matrix (Cij) & Acoustic Excitation HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.sympathetic_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_sympathetic_modal = is_open;
+        self.sync_sympathetic_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_sympathetic_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let strength = self.sympathetic_view.coupling_strength;
+        let loss     = self.sympathetic_view.bridge_loss;
+        let z        = self.sympathetic_view.bridge_impedance_z;
+        let rad      = self.sympathetic_view.total_radiated_energy;
+
+        self.device_rack_state.node_param_values.insert("coupling_strength".to_string(), strength);
+        self.device_rack_state.node_param_values.insert("bridge_loss".to_string(), loss);
+        self.device_rack_state.node_param_values.insert("bridge_impedance_z".to_string(), z);
+        self.device_rack_state.node_param_values.insert("total_radiated_energy".to_string(), rad);
+
+        self.inspector_state.node_param_values.insert("coupling_strength".to_string(), strength);
+        self.inspector_state.node_param_values.insert("bridge_loss".to_string(), loss);
+        self.inspector_state.node_param_values.insert("bridge_impedance_z".to_string(), z);
+        self.inspector_state.node_param_values.insert("total_radiated_energy".to_string(), rad);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_str  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_loss = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_z    = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_rad  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_str).is_some()  { bus.set(pid_str, strength); }
+            if bus.get(pid_loss).is_some() { bus.set(pid_loss, loss); }
+            if bus.get(pid_z).is_some()    { bus.set(pid_z, z); }
+            if bus.get(pid_rad).is_some()  { bus.set(pid_rad, rad); }
+        }
+    }
+
+    pub fn open_sympathetic_hud(&mut self) {
+        self.show_sympathetic_modal = true;
+    }
+
+    pub fn close_sympathetic_hud(&mut self) {
+        self.show_sympathetic_modal = false;
+    }
+
+    pub fn is_sympathetic_hud_open(&self) -> bool {
+        self.show_sympathetic_modal
     }
 
     #[cfg(feature = "gui")]

@@ -113,6 +113,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_bellows_hud: bool,
     #[serde(default)]
     pub requested_open_jawari_bridge_hud: bool,
+    #[serde(default)]
+    pub requested_open_soundboard_hud: bool,
+    #[serde(default)]
+    pub requested_open_sympathetic_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -158,6 +162,8 @@ impl Default for ModernDeviceRackState {
             requested_open_plucked_string_hud: false,
             requested_open_bellows_hud: false,
             requested_open_jawari_bridge_hud: false,
+            requested_open_soundboard_hud: false,
+            requested_open_sympathetic_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -370,6 +376,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_plucked_string = cur_selection.contains("PluckedString") || cur_selection.contains("CommutedPlucked") || cur_selection == "PluckedStringNode" || cur_selection == "CommutedPluckedStringNode" || cur_selection == "CommutedPluckedString" || cur_selection == "PluckedStringWaveguide" || cur_selection == "KarplusStrong";
                     let is_bellows = cur_selection.contains("Bellows") || cur_selection.contains("Cassotto") || cur_selection == "PneumaticBellows" || cur_selection == "CassottoChamber" || cur_selection == "AccordionBellows" || cur_selection == "BellowsDynamics";
                     let is_jawari_bridge = cur_selection.contains("Jawari") || cur_selection.contains("Tarab") || cur_selection == "JawariBridge" || cur_selection == "TarabResonatorBank" || cur_selection == "TarabStringResonator" || cur_selection == "SitarGourdBody" || cur_selection == "SitarBridge";
+                    let is_soundboard = cur_selection.contains("Soundboard") || cur_selection.contains("SoundboardBridge") || cur_selection == "SoundboardBridgeModel" || cur_selection == "PianoSoundboard" || cur_selection == "SpruceSoundboard";
+                    let is_sympathetic = cur_selection.contains("Sympathetic") || cur_selection.contains("SympatheticCoupling") || cur_selection == "SympatheticCouplingModel" || cur_selection == "SympatheticStringMatrix" || cur_selection == "DroneStrings";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -482,10 +490,18 @@ pub fn show_modern_device_rack_with_context(
                         if ui.button(RichText::new("🪗 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(217, 119, 6))).on_hover_text("Open Pneumatic Bellows Dynamics HUD").clicked() {
                             state.requested_open_bellows_hud = true;
                         }
-                    } else if is_jawari_bridge
-                        && ui.button(RichText::new("🪕 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(245, 158, 11))).on_hover_text("Open Sitar Curved Jawari Bridge HUD").clicked()
+                    } else if is_jawari_bridge {
+                        if ui.button(RichText::new("🪕 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(245, 158, 11))).on_hover_text("Open Sitar Curved Jawari Bridge HUD").clicked() {
+                            state.requested_open_jawari_bridge_hud = true;
+                        }
+                    } else if is_soundboard {
+                        if ui.button(RichText::new("🪵 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(16, 185, 129))).on_hover_text("Open Spruce Soundboard & Bridge HUD").clicked() {
+                            state.requested_open_soundboard_hud = true;
+                        }
+                    } else if is_sympathetic
+                        && ui.button(RichText::new("✨ HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Sympathetic Resonance Coupling HUD").clicked()
                     {
-                        state.requested_open_jawari_bridge_hud = true;
+                        state.requested_open_sympathetic_hud = true;
                     }
                     ui.add_space(4.0);
                     let pwr_col = if state.is_enabled { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(100, 116, 139) };
@@ -696,6 +712,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_plucked_string = cur_selection.contains("PluckedString") || cur_selection.contains("CommutedPlucked") || cur_selection == "PluckedStringNode" || cur_selection == "CommutedPluckedStringNode" || cur_selection == "CommutedPluckedString" || cur_selection == "PluckedStringWaveguide" || cur_selection == "KarplusStrong";
                     let is_bellows = cur_selection.contains("Bellows") || cur_selection.contains("Cassotto") || cur_selection == "PneumaticBellows" || cur_selection == "CassottoChamber" || cur_selection == "AccordionBellows" || cur_selection == "BellowsDynamics";
                     let is_jawari_bridge = cur_selection.contains("Jawari") || cur_selection.contains("Tarab") || cur_selection == "JawariBridge" || cur_selection == "TarabResonatorBank" || cur_selection == "TarabStringResonator" || cur_selection == "SitarGourdBody" || cur_selection == "SitarBridge";
+                    let is_soundboard = cur_selection.contains("Soundboard") || cur_selection.contains("SoundboardBridge") || cur_selection == "SoundboardBridgeModel" || cur_selection == "PianoSoundboard" || cur_selection == "SpruceSoundboard";
+                    let is_sympathetic = cur_selection.contains("Sympathetic") || cur_selection.contains("SympatheticCoupling") || cur_selection == "SympatheticCouplingModel" || cur_selection == "SympatheticStringMatrix" || cur_selection == "DroneStrings";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -816,10 +834,18 @@ pub fn show_modern_device_rack_with_context(
                         if ui.button(RichText::new("🪗 Bellows HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(217, 119, 6))).on_hover_text("Open Pneumatic Bellows Dynamics HUD").clicked() {
                             state.requested_open_bellows_hud = true;
                         }
-                    } else if is_jawari_bridge
-                        && ui.button(RichText::new("🪕 Jawari HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(245, 158, 11))).on_hover_text("Open Sitar Curved Jawari Bridge HUD").clicked()
+                    } else if is_jawari_bridge {
+                        if ui.button(RichText::new("🪕 Jawari HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(245, 158, 11))).on_hover_text("Open Sitar Curved Jawari Bridge HUD").clicked() {
+                            state.requested_open_jawari_bridge_hud = true;
+                        }
+                    } else if is_soundboard {
+                        if ui.button(RichText::new("🪵 Soundboard HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(16, 185, 129))).on_hover_text("Open Spruce Soundboard & Bridge HUD").clicked() {
+                            state.requested_open_soundboard_hud = true;
+                        }
+                    } else if is_sympathetic
+                        && ui.button(RichText::new("✨ Sympathetic HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Sympathetic Resonance Coupling HUD").clicked()
                     {
-                        state.requested_open_jawari_bridge_hud = true;
+                        state.requested_open_sympathetic_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -1616,6 +1642,8 @@ fn show_pro_parameter_drawer(
                     let is_plucked_string = dev_kind.contains("PluckedString") || dev_kind.contains("CommutedPlucked") || dev_kind == "PluckedStringNode" || dev_kind == "CommutedPluckedStringNode" || dev_kind == "CommutedPluckedString" || dev_kind == "PluckedStringWaveguide" || dev_kind == "KarplusStrong";
                     let is_bellows = dev_kind.contains("Bellows") || dev_kind.contains("Cassotto") || dev_kind == "PneumaticBellows" || dev_kind == "CassottoChamber" || dev_kind == "AccordionBellows" || dev_kind == "BellowsDynamics";
                     let is_jawari_bridge = dev_kind.contains("Jawari") || dev_kind.contains("Tarab") || dev_kind == "JawariBridge" || dev_kind == "TarabResonatorBank" || dev_kind == "TarabStringResonator" || dev_kind == "SitarGourdBody" || dev_kind == "SitarBridge";
+                    let is_soundboard = dev_kind.contains("Soundboard") || dev_kind.contains("SoundboardBridge") || dev_kind == "SoundboardBridgeModel" || dev_kind == "PianoSoundboard" || dev_kind == "SpruceSoundboard";
+                    let is_sympathetic = dev_kind.contains("Sympathetic") || dev_kind.contains("SympatheticCoupling") || dev_kind == "SympatheticCouplingModel" || dev_kind == "SympatheticStringMatrix" || dev_kind == "DroneStrings";
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -3888,6 +3916,172 @@ fn show_pro_parameter_drawer(
 
                         if j_resp.hovered() {
                             let _ = j_resp.on_hover_text("Sitar Curved Jawari Bridge & Tarab HUD\n[Drag horizontally: Jiva position [0..1] | Drag vertically: Clearance gap h₀ [0.01..1.5 mm]]");
+                        }
+                    } else if is_soundboard {
+                        // Spruce Soundboard & Bridge Mini Visualizer
+                        let (sb_resp, sb_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let sb_rect = sb_resp.rect;
+                        sb_painter.rect_filled(sb_rect, 2.0, Color32::from_rgb(12, 22, 18));
+
+                        let mut bleed = state.node_param_values.get("bridge_bleed").copied().unwrap_or(0.35);
+                        let mut decay = state.node_param_values.get("soundboard_decay_scale").copied().unwrap_or(1.0);
+
+                        if sb_resp.dragged() {
+                            if let Some(pos) = sb_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - sb_rect.left()) / sb_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - sb_rect.top()) / sb_rect.height())).clamp(0.0, 1.0);
+                                bleed = 0.05 + norm_x * 0.90;
+                                decay = 0.2 + norm_y * 2.8;
+
+                                state.node_param_values.insert("bridge_bleed".to_string(), bleed);
+                                state.node_param_values.insert("soundboard_decay_scale".to_string(), decay);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_b = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_d = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_b).is_some() { bus.set(pid_b, bleed); }
+                                    if bus.get(pid_d).is_some() { bus.set(pid_d, decay); }
+                                }
+                            }
+                        }
+
+                        // 2D Spruce plate standing wave simulation cells
+                        let grid_cols = 8;
+                        let grid_rows = 4;
+                        let cell_w = (sb_rect.width() - 8.0) / grid_cols as f32;
+                        let cell_h = (sb_rect.height() - 8.0) / grid_rows as f32;
+                        for gy in 0..grid_rows {
+                            let ny = (gy as f32 + 0.5) / grid_rows as f32;
+                            for gx in 0..grid_cols {
+                                let nx = (gx as f32 + 0.5) / grid_cols as f32;
+                                let m11 = (nx * std::f32::consts::PI).sin() * (ny * std::f32::consts::PI).sin();
+                                let m12 = (nx * std::f32::consts::PI).sin() * (2.0 * ny * std::f32::consts::PI).sin();
+                                let disp = (m11 * 0.6 + m12 * 0.4).abs() * (decay / 1.5).clamp(0.4, 2.0);
+                                let alpha = (disp * 180.0 * (bleed / 0.5)).clamp(15.0, 220.0) as u8;
+                                let col = Color32::from_rgba_premultiplied(16, 185, 129, alpha);
+                                let c_rect = egui::Rect::from_min_size(
+                                    egui::pos2(sb_rect.left() + 4.0 + gx as f32 * cell_w, sb_rect.top() + 4.0 + gy as f32 * cell_h),
+                                    Vec2::new(cell_w - 1.0, cell_h - 1.0),
+                                );
+                                sb_painter.rect_filled(c_rect, 1.0, col);
+                            }
+                        }
+
+                        // Maple bridge line
+                        let by = sb_rect.top() + 4.0 + (1.0 - (bleed - 0.05) / 0.90) * (sb_rect.height() - 8.0);
+                        sb_painter.line_segment(
+                            [egui::pos2(sb_rect.left() + 4.0, by), egui::pos2(sb_rect.right() - 4.0, by)],
+                            Stroke::new(1.5_f32, Color32::from_rgb(245, 158, 11)),
+                        );
+
+                        // Draggable puck
+                        let px = sb_rect.left() + 4.0 + ((bleed - 0.05) / 0.90).clamp(0.0, 1.0) * (sb_rect.width() - 8.0);
+                        let py = sb_rect.top() + 4.0 + (1.0 - ((decay - 0.2) / 2.8).clamp(0.0, 1.0)) * (sb_rect.height() - 8.0);
+                        sb_painter.circle_stroke(egui::pos2(px, py), 5.0, Stroke::new(1.2_f32, Color32::from_rgb(16, 185, 129)));
+                        sb_painter.circle_filled(egui::pos2(px, py), 2.5, Color32::from_rgb(255, 255, 255));
+
+                        // Readout
+                        sb_painter.text(
+                            egui::pos2(sb_rect.left() + 4.0, sb_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("{:.0}% Bleed", bleed * 100.0),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(16, 185, 129),
+                        );
+                        sb_painter.text(
+                            egui::pos2(sb_rect.right() - 4.0, sb_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("{:.2}x T60", decay),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(245, 158, 11),
+                        );
+
+                        if sb_resp.hovered() {
+                            let _ = sb_resp.on_hover_text(format!("Spruce Soundboard & Bridge HUD\nBridge Bleed: {:.1}% | Decay Scale: {:.2}x\n[Drag horizontally: Bleed | Drag vertically: Decay scale]", bleed * 100.0, decay));
+                        }
+                    } else if is_sympathetic {
+                        // Sympathetic String Matrix Energy Coupling Mini Visualizer
+                        let (sym_resp, sym_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let sym_rect = sym_resp.rect;
+                        sym_painter.rect_filled(sym_rect, 2.0, Color32::from_rgb(14, 20, 32));
+
+                        let mut coupling = state.node_param_values.get("coupling_strength").copied().unwrap_or(0.15);
+                        let mut loss = state.node_param_values.get("bridge_loss").copied().unwrap_or(0.995);
+
+                        if sym_resp.dragged() {
+                            if let Some(pos) = sym_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - sym_rect.left()) / sym_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - sym_rect.top()) / sym_rect.height())).clamp(0.0, 1.0);
+                                coupling = norm_x * 0.50;
+                                loss = 0.90 + norm_y * 0.099;
+
+                                state.node_param_values.insert("coupling_strength".to_string(), coupling);
+                                state.node_param_values.insert("bridge_loss".to_string(), loss);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_c = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_l = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_c).is_some() { bus.set(pid_c, coupling); }
+                                    if bus.get(pid_l).is_some() { bus.set(pid_l, loss); }
+                                }
+                            }
+                        }
+
+                        // 6-String sympathetic energy bars
+                        let num_bars = 6;
+                        let bar_h = (sym_rect.height() - 8.0) / num_bars as f32;
+                        for i in 0..num_bars {
+                            let by = sym_rect.top() + 4.0 + i as f32 * bar_h;
+                            let frac = if i == 0 {
+                                0.85
+                            } else {
+                                (0.85 * coupling * 2.0 / (1.0 + i as f32 * 0.6)).clamp(0.05, 0.95)
+                            };
+                            let bar_w = (sym_rect.width() * 0.55 * frac).clamp(2.0, sym_rect.width() * 0.55);
+                            let b_color = if i == 0 {
+                                Color32::from_rgb(0, 229, 255)
+                            } else {
+                                Color32::from_rgb(255, 215, 0)
+                            };
+                            sym_painter.rect_filled(
+                                egui::Rect::from_min_size(egui::pos2(sym_rect.left() + 4.0, by + 1.0), Vec2::new(bar_w, bar_h - 2.0)),
+                                1.0,
+                                b_color,
+                            );
+                        }
+
+                        // Right side: coupling matrix puck
+                        let matrix_x0 = sym_rect.left() + sym_rect.width() * 0.62;
+                        let matrix_w = sym_rect.width() * 0.34;
+                        let px = matrix_x0 + (coupling / 0.50).clamp(0.0, 1.0) * matrix_w;
+                        let py = sym_rect.bottom() - 6.0 - ((loss - 0.90) / 0.099).clamp(0.0, 1.0) * (sym_rect.height() - 12.0);
+
+                        sym_painter.rect_stroke(
+                            egui::Rect::from_min_size(egui::pos2(matrix_x0, sym_rect.top() + 4.0), Vec2::new(matrix_w, sym_rect.height() - 8.0)),
+                            2.0,
+                            Stroke::new(1.0_f32, Color32::from_rgb(40, 55, 80)),
+                        );
+                        sym_painter.circle_stroke(egui::pos2(px, py), 5.0, Stroke::new(1.2_f32, Color32::from_rgb(0, 229, 255)));
+                        sym_painter.circle_filled(egui::pos2(px, py), 2.5, Color32::from_rgb(255, 255, 255));
+
+                        // Readout
+                        sym_painter.text(
+                            egui::pos2(sym_rect.left() + 4.0, sym_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("C: {:.1}%", coupling * 100.0),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+                        sym_painter.text(
+                            egui::pos2(sym_rect.right() - 4.0, sym_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("L: {:.3}", loss),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(255, 215, 0),
+                        );
+
+                        if sym_resp.hovered() {
+                            let _ = sym_resp.on_hover_text(format!("Sympathetic Resonance Coupling HUD\nCoupling Bleed: {:.1}% | Bridge Loss: {:.4}\n[Drag horizontally: Coupling bleed | Drag vertically: Loss factor]", coupling * 100.0, loss));
                         }
                     } else {
                         // Filter Curve Mini View (slot-addressed)

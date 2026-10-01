@@ -1665,3 +1665,40 @@ Product Management has conducted a comprehensive readiness audit:
   - Feature tests: 10 passed in 0.11s (`cargo test -p summoner_gui --features gui -- tier129`).
   - Unit tests: 329 passed in 0.23s (`cargo test -p summoner_gui --lib`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
+
+### Turn #66 (Turn #29 Deliverable) — Spruce Soundboard & Bridge Wave Scattering & Sympathetic Resonance Coupling HUDs Convergence (Milestones 18, 26 & 33)
+- [x] Spruce Soundboard & Bridge Wave Scattering & Sympathetic Resonance Coupling Performance HUDs Integration:
+  - Integrated `SoundboardBridgeView` (Spruce Soundboard & Bridge Wave Scattering HUD: 2D Spruce Soundboard plate standing wave modal vibration heatmap, longitudinal wood grain fibers, curved maple bridge line with bridge pins, bridge mechanical impedance $Z_b$ [300..650 kg/s], inharmonicity dispersion factor $B$, modal decay scaling $[0.2..3.0\times]$, and bridge coupling bleed $[0.05..0.95]$ with $\ge 44 \times 44\text{pt}$ draggable touch puck) and `SympatheticCouplingView` (Plucked String Sympathetic Resonance Coupling HUD: multi-string sympathetic resonance energy transfer matrix $C_{ij} \in [0.0..1.0]$, 6-string acoustic excitation energy level meters, bridge loss factor $[0.90..0.999]$, coupling strength puck with $\ge 44 \times 44\text{pt}$ touch target, and total radiated acoustic power readout) into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/soundboard_bridge_view.rs` & `sympathetic_coupling_view.rs`):
+  - In `SoundboardBridgeView`: upgraded `ui(&mut self, ui: &mut egui::Ui)` with full interactive dual-panel canvas:
+    * 6 soundboard profile preset tabs (`Steinway D`, `Bösendorfer`, `Yamaha CFX`, `Studio`, `Una Corda`, `Prepared`) with $\ge 44\text{pt}$ touch bounds.
+    * Left panel: Bridge Mechanical Impedance & Modal Decay Puck canvas with $\ge 44 \times 44\text{pt}$ hit bounding target (`SOUNDBOARD_PUCK_HIT_RADIUS`), interactive coordinate grid, and live parameter update.
+    * Right panel: 2D Sitka Spruce Soundboard modal vibration heatmap (16 cols x 8 rows cell grid with dark navy -> teal -> golden amber color ramp), longitudinal wood grain fibers, and curved maple bridge line.
+    * Bottom metrics dock: Bridge Coupling Bleed %, Modal Decay Scale, Bridge Impedance ($Z_b$), and Inharmonicity ($B$).
+    * Added `show(&mut self, ui: &mut egui::Ui)` forwarder, `hit_test_soundboard_puck`, and `render_ascii_snapshot_str()`.
+  - In `SympatheticCouplingView`: added `show(&mut self, ui: &mut egui::Ui)` forwarder and `render_ascii_snapshot_str()`.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_soundboard_modal: bool`, `soundboard_view: SoundboardBridgeView`, `show_sympathetic_modal: bool`, and `sympathetic_view: SympatheticCouplingView`.
+  - Added dedicated modal windows `show_soundboard_modal_window` and `show_sympathetic_modal_window` with responsive styling, WCAG AAA contrast, and $\ge 44 \times 44\text{pt}$ touch bounds.
+  - Added public lifecycle methods: `open_soundboard_hud()`, `close_soundboard_hud()`, `is_soundboard_hud_open()`, `open_sympathetic_hud()`, `close_sympathetic_hud()`, `is_sympathetic_hud_open()`.
+  - Real-time parameter sync bridges (`sync_soundboard_hud_state` and `sync_sympathetic_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_soundboard_hud: bool` and `requested_open_sympathetic_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🪵 Open Spruce Soundboard & Bridge HUD]` and `[✨ Open Sympathetic Resonance Coupling HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header `[🪵 HUD]` / `[✨ HUD]` and expanded toolbar buttons in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Soundboard: 2D spruce standing wave simulation cells, maple bridge line, drag-puck modulating `bridge_bleed` and `soundboard_decay_scale`, and live `ParamBus` slot dispatch.
+    * Sympathetic: 6-string acoustic energy bars, transfer matrix coupling puck modulating `coupling_strength` and `bridge_loss`, and live `ParamBus` slot dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_soundboard_hud` and `open_sympathetic_hud` under `"Physical Modeling"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_soundboard_hud()` and `open_sympathetic_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier130_turn66_tests.rs`:
+    * Pure tests: view initialization, preset selections, normalization conversions, physics updates from puck, hit testing, acoustics updates, matrix cell evaluations, slot arithmetic channel isolation, deterministic ASCII snapshots.
+    * GUI tests: modal lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch, rack & inspector trigger propagation, command palette action registration.
+  - Registered `tier130_turn66_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Feature tests: 8 passed in 0.06s (`cargo test -p summoner_gui --features gui -- test_turn66`).
+  - Unit tests: 10 passed in `cargo test -p summoner_gui --features gui -- tier130`.
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).

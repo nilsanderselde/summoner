@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "gui")]
 #[allow(unused_imports)]
-use eframe::egui::{self, Color32, Stroke, Vec2};
+use eframe::egui::{self, Align2, Color32, FontId, Pos2, Rect, RichText, Rounding, Stroke, Vec2};
 
 pub const SOUNDBOARD_PUCK_HIT_RADIUS: f32 = 22.0; // 44x44pt touch bounding target
 pub const MIN_BRIDGE_BLEED: f32 = 0.05;
@@ -180,6 +180,20 @@ impl SoundboardBridgeView {
         }
         self.update_puck_from_physics();
         self.update_soundboard_acoustics();
+    }
+
+    /// Hit-tests touch coordinate on the soundboard bridge puck.
+    pub fn hit_test_soundboard_puck(&self, point: (f32, f32), canvas_x: f32, canvas_y: f32, canvas_w: f32, canvas_h: f32) -> bool {
+        let puck_x = canvas_x + self.puck_pos.0 * canvas_w;
+        let puck_y = canvas_y + (1.0 - self.puck_pos.1) * canvas_h;
+        let dx = point.0 - puck_x;
+        let dy = point.1 - puck_y;
+        (dx * dx + dy * dy).sqrt() <= SOUNDBOARD_PUCK_HIT_RADIUS
+    }
+
+    /// Render ASCII snapshot representation of the view as a single multiline string.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        self.render_ascii(80, 20).join("\n")
     }
 
     /// Render ASCII diagnostics representation of the view.
@@ -360,45 +374,320 @@ impl SoundboardBridgeView {
 
 #[cfg(feature = "gui")]
 impl SoundboardBridgeView {
+    pub fn show(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
+    }
+
+    #[allow(clippy::needless_range_loop)]
     pub fn ui(&mut self, ui: &mut egui::Ui) {
-        ui.vertical(|ui| {
-            ui.heading("Spruce Soundboard & Bridge Wave Scattering HUD");
-            ui.separator();
+        let (rect, response) = ui.allocate_exact_size(
+            egui::vec2(ui.available_width(), 480.0),
+            egui::Sense::click_and_drag(),
+        );
 
-            ui.horizontal(|ui| {
-                ui.label("Profile:");
-                if ui.selectable_label(self.preset == SoundboardHudPreset::SteinwayD9Foot, "Steinway D 9ft").clicked() {
-                    self.set_preset(SoundboardHudPreset::SteinwayD9Foot);
+        let painter = ui.painter_at(rect);
+
+        // Background
+        painter.rect_filled(rect, 6.0, Color32::from_rgb(14, 18, 28));
+
+        // Header Title
+        painter.text(
+            egui::pos2(rect.min.x + 20.0, rect.min.y + 18.0),
+            Align2::LEFT_TOP,
+            "SPRUCE SOUNDBOARD & BRIDGE WAVE SCATTERING HUD",
+            FontId::proportional(16.0),
+            Color32::from_rgb(240, 245, 255),
+        );
+
+        // Preset Tabs (y: 48..92) - Each tab >= 44pt height
+        let presets = [
+            SoundboardHudPreset::SteinwayD9Foot,
+            SoundboardHudPreset::BösendorferImperial,
+            SoundboardHudPreset::YamahaCFX,
+            SoundboardHudPreset::IntimateStudio,
+            SoundboardHudPreset::ImpressionistUnaCorda,
+            SoundboardHudPreset::PreparedAvantGarde,
+        ];
+
+        let tab_w = (rect.width() - 40.0 - 5.0 * 8.0) / 6.0;
+        for (i, p) in presets.iter().enumerate() {
+            let bx = rect.min.x + 20.0 + i as f32 * (tab_w + 8.0);
+            let tab_rect = Rect::from_min_size(
+                egui::pos2(bx, rect.min.y + 48.0),
+                egui::vec2(tab_w, 44.0),
+            );
+            let is_selected = self.preset == *p;
+            let bg_color = if is_selected {
+                Color32::from_rgb(16, 185, 129)
+            } else {
+                Color32::from_rgb(25, 35, 50)
+            };
+            let text_color = if is_selected {
+                Color32::from_rgb(10, 14, 24)
+            } else {
+                Color32::from_rgb(200, 215, 235)
+            };
+
+            painter.rect_filled(tab_rect, 4.0, bg_color);
+            let label = match p {
+                SoundboardHudPreset::SteinwayD9Foot => "Steinway D",
+                SoundboardHudPreset::BösendorferImperial => "Bösendorfer",
+                SoundboardHudPreset::YamahaCFX => "Yamaha CFX",
+                SoundboardHudPreset::IntimateStudio => "Studio",
+                SoundboardHudPreset::ImpressionistUnaCorda => "Una Corda",
+                SoundboardHudPreset::PreparedAvantGarde => "Prepared",
+            };
+            painter.text(
+                tab_rect.center(),
+                Align2::CENTER_CENTER,
+                label,
+                FontId::proportional(11.0),
+                text_color,
+            );
+
+            if response.clicked() {
+                if let Some(pos) = response.interact_pointer_pos() {
+                    if tab_rect.contains(pos) {
+                        self.set_preset(*p);
+                    }
                 }
-                if ui.selectable_label(self.preset == SoundboardHudPreset::BösendorferImperial, "Bösendorfer 290").clicked() {
-                    self.set_preset(SoundboardHudPreset::BösendorferImperial);
+            }
+        }
+
+        // Main Display Canvas (y: 104..340)
+        let main_canvas = Rect::from_min_max(
+            egui::pos2(rect.min.x + 20.0, rect.min.y + 104.0),
+            egui::pos2(rect.max.x - 20.0, rect.min.y + 340.0),
+        );
+        painter.rect_filled(main_canvas, 6.0, Color32::from_rgb(10, 14, 24));
+        painter.rect_stroke(
+            main_canvas,
+            6.0,
+            Stroke::new(1.5_f32, Color32::from_rgb(30, 45, 65)),
+        );
+
+        let half_w = main_canvas.width() * 0.50;
+
+        // Left 50%: Bridge Mechanical Impedance & Decay Scale XY Canvas
+        let left_rect = Rect::from_min_size(
+            egui::pos2(main_canvas.min.x + 10.0, main_canvas.min.y + 10.0),
+            egui::vec2(half_w - 15.0, main_canvas.height() - 20.0),
+        );
+        painter.rect_filled(left_rect, 4.0, Color32::from_rgb(14, 20, 32));
+        painter.rect_stroke(
+            left_rect,
+            4.0,
+            Stroke::new(1.0_f32, Color32::from_rgb(40, 55, 80)),
+        );
+
+        painter.text(
+            egui::pos2(left_rect.min.x + 10.0, left_rect.min.y + 10.0),
+            Align2::LEFT_TOP,
+            "BRIDGE IMPEDANCE & MODAL DECAY PUCK",
+            FontId::proportional(11.0),
+            Color32::from_rgb(160, 180, 205),
+        );
+
+        // Coordinate Grid inside left canvas
+        let grid_w = left_rect.width() - 40.0;
+        let grid_h = left_rect.height() - 60.0;
+        let grid_origin = egui::pos2(left_rect.min.x + 20.0, left_rect.min.y + 35.0);
+        let grid_rect = Rect::from_min_size(grid_origin, egui::vec2(grid_w, grid_h));
+        painter.rect_filled(grid_rect, 2.0, Color32::from_rgb(8, 12, 20));
+        painter.rect_stroke(grid_rect, 2.0, Stroke::new(1.0_f32, Color32::from_rgb(25, 38, 55)));
+
+        // Grid lines
+        for step in 1..4 {
+            let gx = grid_rect.min.x + (step as f32 / 4.0) * grid_w;
+            let gy = grid_rect.min.y + (step as f32 / 4.0) * grid_h;
+            painter.line_segment([egui::pos2(gx, grid_rect.min.y), egui::pos2(gx, grid_rect.max.y)], Stroke::new(0.8_f32, Color32::from_rgb(20, 30, 45)));
+            painter.line_segment([egui::pos2(grid_rect.min.x, gy), egui::pos2(grid_rect.max.x, gy)], Stroke::new(0.8_f32, Color32::from_rgb(20, 30, 45)));
+        }
+
+        // Left Drag Interaction
+        if response.dragged() || response.clicked() {
+            if let Some(mouse_pos) = response.interact_pointer_pos() {
+                if grid_rect.contains(mouse_pos) {
+                    let nx = ((mouse_pos.x - grid_rect.min.x) / grid_w).clamp(0.0, 1.0);
+                    let ny = ((grid_rect.max.y - mouse_pos.y) / grid_h).clamp(0.0, 1.0);
+                    self.update_physics_from_puck(nx, ny);
                 }
-                if ui.selectable_label(self.preset == SoundboardHudPreset::YamahaCFX, "Yamaha CFX").clicked() {
-                    self.set_preset(SoundboardHudPreset::YamahaCFX);
-                }
-                if ui.selectable_label(self.preset == SoundboardHudPreset::ImpressionistUnaCorda, "Impressionist").clicked() {
-                    self.set_preset(SoundboardHudPreset::ImpressionistUnaCorda);
-                }
-            });
+            }
+        }
 
-            ui.add_space(8.0);
+        // Puck Position
+        let puck_x = grid_rect.min.x + self.puck_pos.0 * grid_w;
+        let puck_y = grid_rect.max.y - self.puck_pos.1 * grid_h;
+        let puck_pos = egui::pos2(puck_x, puck_y);
 
-            ui.horizontal(|ui| {
-                ui.vertical(|ui| {
-                    ui.label("Bridge & Modal Physics:");
-                    ui.add(egui::Slider::new(&mut self.bridge_bleed, MIN_BRIDGE_BLEED..=MAX_BRIDGE_BLEED).text("Bridge Bleed"));
-                    ui.add(egui::Slider::new(&mut self.soundboard_decay_scale, MIN_DECAY_SCALE..=MAX_DECAY_SCALE).text("Decay Scale"));
-                });
+        // Touch hit target (>= 44x44pt)
+        painter.circle_stroke(
+            puck_pos,
+            SOUNDBOARD_PUCK_HIT_RADIUS,
+            Stroke::new(1.5_f32, Color32::from_rgba_premultiplied(16, 185, 129, 140)),
+        );
+        painter.circle_filled(puck_pos, 14.0, Color32::from_rgb(16, 185, 129));
+        painter.circle_filled(puck_pos, 4.0, Color32::from_rgb(255, 255, 255));
 
-                ui.separator();
+        // Right 50%: 2D Spruce Soundboard Modal Heatmap
+        let right_rect = Rect::from_min_size(
+            egui::pos2(main_canvas.min.x + half_w + 5.0, main_canvas.min.y + 10.0),
+            egui::vec2(half_w - 15.0, main_canvas.height() - 20.0),
+        );
+        painter.rect_filled(right_rect, 4.0, Color32::from_rgb(14, 20, 32));
+        painter.rect_stroke(
+            right_rect,
+            4.0,
+            Stroke::new(1.0_f32, Color32::from_rgb(40, 55, 80)),
+        );
 
-                ui.vertical(|ui| {
-                    ui.label(format!("Bridge Impedance Zb: {:.0} kg/s", self.bridge_impedance));
-                    ui.label(format!("Inharmonicity B: {:.5}", self.inharmonicity_b));
-                    ui.label(format!("Fundamental (1,1): {:.1} Hz", self.modal_frequencies[0]));
-                });
-            });
-        });
+        painter.text(
+            egui::pos2(right_rect.min.x + 10.0, right_rect.min.y + 10.0),
+            Align2::LEFT_TOP,
+            "SPRUCE SOUNDBOARD MODAL HEATMAP",
+            FontId::proportional(11.0),
+            Color32::from_rgb(160, 180, 205),
+        );
+
+        let heat_origin = egui::pos2(right_rect.min.x + 20.0, right_rect.min.y + 35.0);
+        let heat_w = right_rect.width() - 40.0;
+        let heat_h = right_rect.height() - 60.0;
+        let heat_rect = Rect::from_min_size(heat_origin, egui::vec2(heat_w, heat_h));
+        painter.rect_filled(heat_rect, 2.0, Color32::from_rgb(8, 14, 24));
+        painter.rect_stroke(heat_rect, 2.0, Stroke::new(1.0_f32, Color32::from_rgb(25, 40, 60)));
+
+        // Anisotropic Sitka Spruce standing wave cell grid (16 cols x 8 rows)
+        let cols = 16;
+        let rows = 8;
+        let cw = heat_w / cols as f32;
+        let ch = heat_h / rows as f32;
+
+        for ry in 0..rows {
+            let y_norm = (ry as f32 + 0.5) / rows as f32;
+            for cx in 0..cols {
+                let x_norm = (cx as f32 + 0.5) / cols as f32;
+
+                let m11 = (x_norm * std::f32::consts::PI).sin() * (y_norm * std::f32::consts::PI).sin();
+                let m12 = (x_norm * std::f32::consts::PI).sin() * (2.0 * y_norm * std::f32::consts::PI).sin();
+                let m21 = (2.0 * x_norm * std::f32::consts::PI).sin() * (y_norm * std::f32::consts::PI).sin();
+                let disp = (m11 * 0.55 + m12 * 0.30 + m21 * 0.15).abs() * (self.soundboard_decay_scale / 1.5).clamp(0.4, 2.0);
+
+                let cell_rect = Rect::from_min_size(
+                    egui::pos2(heat_rect.min.x + cx as f32 * cw, heat_rect.min.y + ry as f32 * ch),
+                    egui::vec2(cw - 1.0, ch - 1.0),
+                );
+
+                let (r, g, b, alpha) = if disp > 0.6 {
+                    (245, 158, 11, 230) // Amber peak
+                } else if disp > 0.3 {
+                    (6, 182, 212, 170) // Cyan mid
+                } else if disp > 0.1 {
+                    (30, 58, 138, 120) // Navy base
+                } else {
+                    (12, 20, 36, 60)
+                };
+
+                painter.rect_filled(cell_rect, 1.0, Color32::from_rgba_premultiplied(r, g, b, alpha));
+            }
+        }
+
+        // Sitka Spruce wood grain longitudinal fibers
+        for g_idx in 1..8 {
+            let gx = heat_rect.min.x + (g_idx as f32 / 8.0) * heat_w;
+            painter.line_segment(
+                [egui::pos2(gx, heat_rect.min.y + 2.0), egui::pos2(gx, heat_rect.max.y - 2.0)],
+                Stroke::new(0.6_f32, Color32::from_rgba_premultiplied(200, 220, 240, 25)),
+            );
+        }
+
+        // Curved Maple Bridge Line traversing soundboard
+        let bridge_y_offset = (1.0 - (self.bridge_bleed - MIN_BRIDGE_BLEED) / (MAX_BRIDGE_BLEED - MIN_BRIDGE_BLEED)) * (heat_h - 20.0);
+        let by_base = heat_rect.min.y + 10.0 + bridge_y_offset;
+        let mut prev_bp: Option<Pos2> = None;
+        for bi in 0..=20 {
+            let bt = bi as f32 / 20.0;
+            let bx = heat_rect.min.x + bt * heat_w;
+            let curve = (bt - 0.5) * (bt - 0.5) * 12.0;
+            let by = (by_base + curve).clamp(heat_rect.min.y + 4.0, heat_rect.max.y - 4.0);
+            let bp = egui::pos2(bx, by);
+            if let Some(prev) = prev_bp {
+                painter.line_segment([prev, bp], Stroke::new(2.5_f32, Color32::from_rgb(245, 158, 11)));
+            }
+            prev_bp = Some(bp);
+
+            // Bridge pins every 4 steps
+            if bi % 4 == 0 {
+                painter.circle_filled(bp, 2.0, Color32::from_rgb(255, 255, 255));
+            }
+        }
+
+        // Bottom Metrics Dock (y: 350..465)
+        let dock_rect = Rect::from_min_max(
+            egui::pos2(rect.min.x + 20.0, rect.min.y + 350.0),
+            egui::pos2(rect.max.x - 20.0, rect.min.y + 465.0),
+        );
+        painter.rect_filled(dock_rect, 6.0, Color32::from_rgb(18, 25, 38));
+        painter.rect_stroke(
+            dock_rect,
+            6.0,
+            Stroke::new(1.0_f32, Color32::from_rgb(45, 60, 85)),
+        );
+
+        let params = [
+            (
+                "BRIDGE COUPLING BLEED",
+                format!("{:.1}% Bleed", self.bridge_bleed * 100.0),
+                Color32::from_rgb(16, 185, 129),
+            ),
+            (
+                "MODAL DECAY SCALE",
+                format!("{:.2}x T60", self.soundboard_decay_scale),
+                Color32::from_rgb(245, 158, 11),
+            ),
+            (
+                "BRIDGE IMPEDANCE (Zb)",
+                format!("{:.0} kg/s", self.bridge_impedance),
+                Color32::from_rgb(6, 182, 212),
+            ),
+            (
+                "INHARMONICITY (B)",
+                format!("{:.5}", self.inharmonicity_b),
+                Color32::from_rgb(167, 139, 250),
+            ),
+        ];
+
+        let col_w = (dock_rect.width() - 40.0) / 4.0;
+        for (i, (label, val, col)) in params.iter().enumerate() {
+            let px_pos = dock_rect.min.x + 20.0 + i as f32 * col_w;
+            painter.text(
+                egui::pos2(px_pos, dock_rect.min.y + 12.0),
+                Align2::LEFT_TOP,
+                *label,
+                FontId::proportional(11.0),
+                Color32::from_rgb(160, 180, 205),
+            );
+            painter.text(
+                egui::pos2(px_pos, dock_rect.min.y + 30.0),
+                Align2::LEFT_TOP,
+                val,
+                FontId::proportional(14.0),
+                *col,
+            );
+            let sub = match i {
+                0 => "Impulse energy transfer",
+                1 => "Spruce decay multiplier",
+                2 => "Driving point resistance",
+                3 => "Partial dispersion coeff",
+                _ => "",
+            };
+            painter.text(
+                egui::pos2(px_pos, dock_rect.min.y + 48.0),
+                Align2::LEFT_TOP,
+                sub,
+                FontId::proportional(10.0),
+                Color32::from_rgb(110, 130, 155),
+            );
+        }
     }
 }
 
