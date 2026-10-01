@@ -122,7 +122,7 @@ pub fn compute_fuzzy_score(query: &str, entry: &DeviceCatalogEntry) -> Option<i3
             }
         }
         if q_chars.peek().is_none() && matched > 0 {
-            score += (matched as i32) * 8;
+            score += matched * 8;
         } else {
             return None;
         }
@@ -202,11 +202,11 @@ impl DeviceCatalogView {
         self.favorites_set.contains(kind_id)
     }
 
-    /// Filter and sort catalog entries based on search query, category, and favorite filter.
-    pub fn filtered_entries(&self) -> Vec<&DeviceCatalogEntry> {
-        let mut scored: Vec<(&DeviceCatalogEntry, i32)> = Vec::new();
+    /// Filter and sort catalog entry indices based on search query, category, and favorite filter.
+    pub fn filtered_indices(&self) -> Vec<usize> {
+        let mut scored: Vec<(usize, i32)> = Vec::new();
 
-        for entry in &self.entries {
+        for (idx, entry) in self.entries.iter().enumerate() {
             if self.favorites_only && !entry.is_favorite {
                 continue;
             }
@@ -217,16 +217,21 @@ impl DeviceCatalogView {
             }
 
             if let Some(score) = compute_fuzzy_score(&self.search_query, entry) {
-                scored.push((entry, score));
+                scored.push((idx, score));
             }
         }
 
         // Sort descending by score, then ascending by display name
-        scored.sort_by(|(entry_a, score_a), (entry_b, score_b)| {
-            score_b.cmp(score_a).then_with(|| entry_a.display_name.cmp(&entry_b.display_name))
+        scored.sort_by(|(idx_a, score_a), (idx_b, score_b)| {
+            score_b.cmp(score_a).then_with(|| self.entries[*idx_a].display_name.cmp(&self.entries[*idx_b].display_name))
         });
 
-        scored.into_iter().map(|(entry, _)| entry).collect()
+        scored.into_iter().map(|(idx, _)| idx).collect()
+    }
+
+    /// Filter and sort catalog entries based on search query, category, and favorite filter.
+    pub fn filtered_entries(&self) -> Vec<&DeviceCatalogEntry> {
+        self.filtered_indices().into_iter().map(|idx| &self.entries[idx]).collect()
     }
 
     /// Return the count of modules in a specific category.
@@ -337,43 +342,21 @@ impl DeviceCatalogView {
     #[cfg(feature = "gui")]
     /// Render the interior controls of the catalog within an existing egui `Ui`.
     pub fn show_content(&mut self, ui: &mut Ui) {
-        let filtered = self.filtered_entries();
-        let total_filtered = filtered.len();
-
         // 1. Keyboard Navigation handling
+        let mut key_down = false;
+        let mut key_up = false;
+        let mut key_pgdn = false;
+        let mut key_pgup = false;
+        let mut key_enter = false;
+        let mut key_esc = false;
+
         ui.input(|i| {
-            if i.key_pressed(egui::Key::ArrowDown) {
-                if total_filtered > 0 {
-                    self.selected_index = (self.selected_index + 1) % total_filtered;
-                }
-            } else if i.key_pressed(egui::Key::ArrowUp) {
-                if total_filtered > 0 {
-                    if self.selected_index == 0 {
-                        self.selected_index = total_filtered - 1;
-                    } else {
-                        self.selected_index -= 1;
-                    }
-                }
-            } else if i.key_pressed(egui::Key::PageDown) {
-                if total_filtered > 0 {
-                    self.selected_index = (self.selected_index + 10).min(total_filtered - 1);
-                }
-            } else if i.key_pressed(egui::Key::PageUp) {
-                if total_filtered > 0 {
-                    self.selected_index = self.selected_index.saturating_sub(10);
-                }
-            } else if i.key_pressed(egui::Key::Enter) {
-                if let Some(entry) = filtered.get(self.selected_index) {
-                    self.requested_insert_kind = Some(entry.kind_id.clone());
-                    self.is_open = false;
-                }
-            } else if i.key_pressed(egui::Key::Escape) {
-                if !self.search_query.is_empty() {
-                    self.search_query.clear();
-                } else {
-                    self.is_open = false;
-                }
-            }
+            key_down = i.key_pressed(egui::Key::ArrowDown);
+            key_up = i.key_pressed(egui::Key::ArrowUp);
+            key_pgdn = i.key_pressed(egui::Key::PageDown);
+            key_pgup = i.key_pressed(egui::Key::PageUp);
+            key_enter = i.key_pressed(egui::Key::Enter);
+            key_esc = i.key_pressed(egui::Key::Escape);
         });
 
         // 2. Search Bar & View Mode Controls
@@ -404,6 +387,22 @@ impl DeviceCatalogView {
         ui.add_space(6.0);
 
         // 3. Category Filter Bar (Pills & Counts)
+        let all_categories = [
+            DspNodeCategory::Oscillator,
+            DspNodeCategory::CompositeSynth,
+            DspNodeCategory::AcousticPhysicalModel,
+            DspNodeCategory::SamplerSlicer,
+            DspNodeCategory::FilterEq,
+            DspNodeCategory::DynamicsMaster,
+            DspNodeCategory::DistortionSaturation,
+            DspNodeCategory::Modulation,
+            DspNodeCategory::TimeSpace,
+            DspNodeCategory::SpatialSurround,
+            DspNodeCategory::SpectralResynthesis,
+            DspNodeCategory::NeuralAi,
+            DspNodeCategory::Utility,
+        ];
+
         egui::ScrollArea::horizontal()
             .id_source("catalog_category_pills_scroll")
             .show(ui, |ui| {
@@ -428,22 +427,6 @@ impl DeviceCatalogView {
 
                     ui.separator();
 
-                    let all_categories = [
-                        DspNodeCategory::Oscillator,
-                        DspNodeCategory::CompositeSynth,
-                        DspNodeCategory::AcousticPhysicalModel,
-                        DspNodeCategory::SamplerSlicer,
-                        DspNodeCategory::FilterEq,
-                        DspNodeCategory::DynamicsMaster,
-                        DspNodeCategory::DistortionSaturation,
-                        DspNodeCategory::Modulation,
-                        DspNodeCategory::TimeSpace,
-                        DspNodeCategory::SpatialSurround,
-                        DspNodeCategory::SpectralResynthesis,
-                        DspNodeCategory::NeuralAi,
-                        DspNodeCategory::Utility,
-                    ];
-
                     for cat in all_categories {
                         let is_sel = self.selected_category == Some(cat) && !self.favorites_only;
                         let count = self.category_count(cat);
@@ -456,6 +439,43 @@ impl DeviceCatalogView {
                     }
                 });
             });
+
+        // Filter indices now that search / category / favorites query is updated
+        let filtered_indices = self.filtered_indices();
+        let total_filtered = filtered_indices.len();
+
+        // Process keyboard navigation using the active filtered set
+        if key_down && total_filtered > 0 {
+            self.selected_index = (self.selected_index + 1) % total_filtered;
+        }
+        if key_up && total_filtered > 0 {
+            if self.selected_index == 0 {
+                self.selected_index = total_filtered - 1;
+            } else {
+                self.selected_index -= 1;
+            }
+        }
+        if key_pgdn && total_filtered > 0 {
+            self.selected_index = (self.selected_index + 10).min(total_filtered - 1);
+        }
+        if key_pgup && total_filtered > 0 {
+            self.selected_index = self.selected_index.saturating_sub(10);
+        }
+        if key_enter {
+            if let Some(&entry_idx) = filtered_indices.get(self.selected_index) {
+                if let Some(entry) = self.entries.get(entry_idx) {
+                    self.requested_insert_kind = Some(entry.kind_id.clone());
+                    self.is_open = false;
+                }
+            }
+        }
+        if key_esc {
+            if !self.search_query.is_empty() {
+                self.search_query.clear();
+            } else {
+                self.is_open = false;
+            }
+        }
 
         ui.add_space(4.0);
         ui.separator();
@@ -502,7 +522,8 @@ impl DeviceCatalogView {
                     return;
                 }
 
-                for (idx, entry) in filtered.iter().enumerate() {
+                for (idx, &entry_idx) in filtered_indices.iter().enumerate() {
+                    let entry = &self.entries[entry_idx];
                     let is_active = idx == self.selected_index;
                     let (r, g, b) = entry.category.theme_color_rgb();
                     let cat_col = Color32::from_rgb(r, g, b);
@@ -520,7 +541,7 @@ impl DeviceCatalogView {
 
                     egui::Frame::none()
                         .fill(card_bg)
-                        .stroke(Stroke::new(if is_active { 1.5 } else { 1.0 }, border_col))
+                        .stroke(Stroke::new(if is_active { 1.5_f32 } else { 1.0_f32 }, border_col))
                         .rounding(Rounding::same(4.0))
                         .inner_margin(egui::Margin::symmetric(8.0, 6.0))
                         .show(ui, |ui| {
@@ -585,7 +606,7 @@ impl DeviceCatalogView {
                                         )
                                         .min_size(Vec2::new(64.0, 26.0))
                                         .fill(Color32::from_rgba_unmultiplied(r, g, b, if is_active { 50 } else { 25 }))
-                                        .stroke(Stroke::new(1.0, cat_col))
+                                        .stroke(Stroke::new(1.0_f32, cat_col))
                                         .rounding(Rounding::same(3.0)),
                                     );
                                     if insert_btn.clicked() {

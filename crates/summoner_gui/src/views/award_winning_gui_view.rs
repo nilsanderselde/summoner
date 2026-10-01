@@ -3995,7 +3995,7 @@ impl AwardWinningGuiView {
 
                     let mut found_desc_and_param = None;
                     let mut custom_title = None;
-                    let mut custom_lane_key = None;
+                    let mut custom_lane_key = slot_opt.map(|s| format!("track_{}_node_{}_{}", track_id, s, raw_param_id));
 
                     if let Some(slot) = slot_opt {
                         if let Some(dev) = self.device_rack_state.chain_devices.get(slot) {
@@ -5441,7 +5441,7 @@ impl AwardWinningGuiView {
             let node_id = format!("node_{}", idx);
             let opt_desc = registry.get(&dev.kind);
             let cat = opt_desc.map(|d| d.category).unwrap_or(crate::dsp_node_ui::DspNodeCategory::Utility);
-            let disp = format!("{}. {}", idx + 1, dev.display_name);
+            let disp = format!("{}. {}", idx + 1, dev.kind);
 
             let mut ports = Vec::new();
             if idx > 0 || cat != crate::dsp_node_ui::DspNodeCategory::Oscillator {
@@ -5878,7 +5878,7 @@ impl AwardWinningGuiView {
         if let Some(desc) = opt_desc {
             for (p_i, schema) in desc.params.iter().enumerate() {
                 let val = self.device_rack_state.node_param_values.get(&schema.id).copied()
-                    .or_else(|| match schema.id.as_str() {
+                    .or(match schema.id.as_str() {
                         "cutoff" => Some(self.device_rack_state.cutoff),
                         "resonance" => Some(self.device_rack_state.resonance),
                         "decay" => Some(self.device_rack_state.decay),
@@ -7294,7 +7294,7 @@ impl AwardWinningGuiView {
         self.inspector_state.node_param_values.insert("friction_velocity".to_string(), friction);
 
         if let Some(ref bus) = self.live_param_bus {
-            let pid_root = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 0);
+            let pid_root = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
             let pid_water = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
             let pid_q = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
             let pid_fric = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
@@ -7378,7 +7378,7 @@ impl AwardWinningGuiView {
         self.inspector_state.node_param_values.insert("modal_fundamental_hz".to_string(), fund);
 
         if let Some(ref bus) = self.live_param_bus {
-            let pid_speed = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 0);
+            let pid_speed = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
             let pid_force = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
             let pid_water = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
             let pid_fund = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
@@ -7468,7 +7468,7 @@ impl AwardWinningGuiView {
         self.inspector_state.node_param_values.insert("trompette_buzz_harmonic_gain".to_string(), trompette_buzz);
 
         if let Some(ref bus) = self.live_param_bus {
-            let pid_speed = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 0);
+            let pid_speed = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
             let pid_accel = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
             let pid_press = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
             let pid_clear = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
@@ -7553,7 +7553,7 @@ impl AwardWinningGuiView {
         self.inspector_state.node_param_values.insert("trompette_buzz_dog_level".to_string(), buzz_gain);
 
         if let Some(ref bus) = self.live_param_bus {
-            let pid_gap = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 0);
+            let pid_gap = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
             let pid_force = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
             let pid_buzz = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
 

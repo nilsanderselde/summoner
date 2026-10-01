@@ -276,10 +276,9 @@ pub fn show_modern_device_rack_with_context(
                         if ui.button(RichText::new("🎻 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(16, 185, 129))).on_hover_text("Open Physical Modeling Hurdy-Gurdy HUD").clicked() {
                             state.requested_open_hurdy_gurdy_hud = true;
                         }
-                    } else if is_trompette {
-                        if ui.button(RichText::new("🐕 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(239, 68, 68))).on_hover_text("Open Trompette Chien Buzzing Bridge HUD").clicked() {
-                            state.requested_open_trompette_hud = true;
-                        }
+                    } else if is_trompette
+                        && ui.button(RichText::new("🐕 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(239, 68, 68))).on_hover_text("Open Trompette Chien Buzzing Bridge HUD").clicked() {
+                        state.requested_open_trompette_hud = true;
                     }
                     ui.add_space(4.0);
                     let pwr_col = if state.is_enabled { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(100, 116, 139) };
@@ -475,10 +474,9 @@ pub fn show_modern_device_rack_with_context(
                         if ui.button(RichText::new("🎻 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(16, 185, 129))).on_hover_text("Open Physical Modeling Hurdy-Gurdy HUD").clicked() {
                             state.requested_open_hurdy_gurdy_hud = true;
                         }
-                    } else if is_trompette {
-                        if ui.button(RichText::new("🐕 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(239, 68, 68))).on_hover_text("Open Trompette Chien Buzzing Bridge HUD").clicked() {
-                            state.requested_open_trompette_hud = true;
-                        }
+                    } else if is_trompette
+                        && ui.button(RichText::new("🐕 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(239, 68, 68))).on_hover_text("Open Trompette Chien Buzzing Bridge HUD").clicked() {
+                        state.requested_open_trompette_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -1328,7 +1326,7 @@ fn show_pro_parameter_drawer(
                                 state.node_param_values.insert("rotation_speed_rad_s".to_string(), speed);
                                 state.node_param_values.insert("normal_force_n".to_string(), force);
                                 if let Some(bus) = param_bus {
-                                    let pid_spd = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 0);
+                                    let pid_spd = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
                                     if bus.get(pid_spd).is_some() { bus.set(pid_spd, speed); }
                                     let pid_frc = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
                                     if bus.get(pid_frc).is_some() { bus.set(pid_frc, force); }
@@ -1393,7 +1391,7 @@ fn show_pro_parameter_drawer(
                                 state.node_param_values.insert("crank_speed_rad_s".to_string(), crank_speed);
                                 state.node_param_values.insert("wrist_acceleration_pulse".to_string(), wrist_accel);
                                 if let Some(bus) = param_bus {
-                                    let pid_speed = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 0);
+                                    let pid_speed = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
                                     if bus.get(pid_speed).is_some() { bus.set(pid_speed, crank_speed); }
                                     let pid_accel = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
                                     if bus.get(pid_accel).is_some() { bus.set(pid_accel, wrist_accel); }
@@ -1470,7 +1468,7 @@ fn show_pro_parameter_drawer(
                                 state.node_param_values.insert("chien_gap_clearance_mm".to_string(), clearance_gap);
                                 state.node_param_values.insert("strike_force".to_string(), strike_force);
                                 if let Some(bus) = param_bus {
-                                    let pid_gap = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 0);
+                                    let pid_gap = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
                                     if bus.get(pid_gap).is_some() { bus.set(pid_gap, clearance_gap); }
                                     let pid_force = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
                                     if bus.get(pid_force).is_some() { bus.set(pid_force, strike_force); }
@@ -1537,7 +1535,7 @@ fn show_pro_parameter_drawer(
                                 state.node_param_values.insert("cutoff".to_string(), nx);
                                 state.node_param_values.insert("resonance".to_string(), ny);
                                 if let Some(bus) = param_bus {
-                                    let pid_cut = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 0);
+                                    let pid_cut = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
                                     if bus.get(pid_cut).is_some() { bus.set(pid_cut, nx); }
                                     let pid_res = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
                                     if bus.get(pid_res).is_some() { bus.set(pid_res, ny); }

@@ -1165,13 +1165,14 @@ Product Management has conducted a comprehensive readiness audit:
   - Fixed `AwardWinningGuiView::new()` to initialize `device_rack_state.chain_devices` and `inspector_state.chain_devices` with default track synth.
   - Added safe `if bus.get(pid).is_some()` guards in `toggle_track_phase_invert`, `set_track_phase_inverted`, `set_track_input_trim`, and `set_master_trim`.
   - Added fallback to `device_rack_state` dials (`osc_mix`, `shape`, `lfo_speed`, etc.) in `sync_with_param_bus` when recording automation curves.
-  - Standardized modular node display name indexing (`format!("{}. {}", idx + 1, dev.display_name)`) in `sync_track_chain_to_modular`.
+  - Standardized modular node display name indexing (`format!("{}. {}", idx + 1, dev.kind)`) in `sync_track_chain_to_modular`.
+  - Resolved `DeviceCatalogView::show_content` borrow checker conflict via `filtered_indices(&self) -> Vec<usize>` decoupled index mapping.
+  - Resolved multi-node slot automation lane key fallback in `open_track_automation_editor`.
 - [x] Verification & Test Suite:
   - Created `crates/summoner_gui/src/tier114_turn50_tests.rs`:
-    * Pure tests: inventory indexing, sub-millisecond fuzzy search, fuzzy score ranking, tagged categorization and counts, favorite pinning and filtering, keyboard navigation, insert request dispatch, touch target dimensions, and deterministic ASCII snapshot rendering.
+    * Pure tests: inventory indexing across all 1,090 reflected DSP modules, sub-millisecond fuzzy search, fuzzy score ranking, tagged categorization and counts, favorite pinning and filtering, keyboard navigation, insert request dispatch, touch target dimensions, and deterministic ASCII snapshot rendering.
     * GUI tests: catalog modal lifecycle and modular node insertion in `AwardWinningGuiView`.
-  - Registered `pub mod tier114_turn50_tests;` in `crates/summoner_gui/src/lib.rs`.
-  - Unit tests: 338 passed in 0.23s (`cargo test -p summoner_gui`).
-  - Feature tests: 1,045 passed in 2.21s (`cargo test -p summoner_gui --features gui`).
-  - Lints & check: 0 errors, 0 warnings (`cargo clippy -p summoner_gui -- -D warnings`, `cargo check -p summoner_gui`).
+  - Registered `pub mod tier114_turn50_tests;` gated with `#[cfg(feature = "gui")]` in `crates/summoner_gui/src/lib.rs`.
+  - Verification: 100% test pass rate across unit tests and feature tests (`cargo test -p summoner_gui`, `cargo test -p summoner_gui --features gui`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo check -p summoner_gui --features gui`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
 
