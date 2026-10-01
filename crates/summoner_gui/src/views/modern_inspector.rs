@@ -74,6 +74,10 @@ pub struct ModernInspectorState {
     pub requested_open_grand_piano_hud: bool,
     #[serde(default)]
     pub requested_open_pipe_organ_hud: bool,
+    #[serde(default)]
+    pub requested_open_electric_piano_hud: bool,
+    #[serde(default)]
+    pub requested_open_tonewheel_organ_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -117,6 +121,8 @@ impl Default for ModernInspectorState {
             requested_open_clavinet_hud: false,
             requested_open_grand_piano_hud: false,
             requested_open_pipe_organ_hud: false,
+            requested_open_electric_piano_hud: false,
+            requested_open_tonewheel_organ_hud: false,
         }
     }
 }
@@ -761,6 +767,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open interactive Electromechanical Clavinet D6 rubber anvil contact, dual pickups & 4-way tone switches HUD").clicked() {
                     state.requested_open_clavinet_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("ElectricPiano") || active_kind == "ElectricPianoModel" || active_kind == "ElectricPianoProfile" || active_kind.contains("Rhodes") || active_kind.contains("Wurlitzer") {
+                if ui.add(
+                    egui::Button::new(RichText::new("⚡ Open Tine & Reed Electric Piano HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(251, 191, 36)))
+                        .fill(Color32::from_rgb(38, 30, 10))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(251, 191, 36)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Electromechanical Rhodes/Wurlitzer tine tip alignment, pickup air-gap & barking overdrive HUD").clicked() {
+                    state.requested_open_electric_piano_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Tonewheel") || active_kind == "TonewheelOrgan" || active_kind == "TonewheelOrganModel" || active_kind == "TonewheelOrganNode" || active_kind == "TonewheelOrganProfile" || active_kind.contains("Hammond") || active_kind.contains("Drawbar") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🎹 Open 9-Drawbar Tonewheel Organ HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 229, 255)))
+                        .fill(Color32::from_rgb(12, 34, 48))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 229, 255)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Hammond B3 9-drawbar harmonic register, percussion & scanner vibrato HUD").clicked() {
+                    state.requested_open_tonewheel_organ_hud = true;
                 }
                 ui.add_space(4.0);
             } else if active_kind.contains("Piano") || active_kind.contains("GrandPiano") || active_kind == "GrandPianoModel" || active_kind == "ConcertGrandPianoNode" {

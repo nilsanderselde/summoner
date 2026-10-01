@@ -132,6 +132,66 @@ impl TonewheelOrganView {
         }
     }
 
+    pub fn drawbar_to_normalized(val: f32) -> f32 {
+        (val / 8.0).clamp(0.0, 1.0)
+    }
+
+    pub fn normalized_to_drawbar(norm: f32) -> f32 {
+        norm.clamp(0.0, 1.0) * 8.0
+    }
+
+    pub fn set_preset(&mut self, preset_name: &str) {
+        match preset_name {
+            "Gospel Rock" | "gospel_rock" => {
+                self.drawbars = [8.0, 8.0, 8.0, 0.0, 0.0, 0.0, 0.0, 0.0, 8.0];
+                self.percussion.enabled = true;
+                self.percussion.third_harmonic = true;
+                self.percussion.fast_decay = true;
+                self.percussion.soft_volume = false;
+                self.vibrato_mode = GuiVibratoMode::C3;
+            }
+            "Jimmy Smith Jazz" | "jazz_trio" => {
+                self.drawbars = [8.0, 8.0, 8.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+                self.percussion.enabled = true;
+                self.percussion.third_harmonic = true;
+                self.percussion.fast_decay = true;
+                self.percussion.soft_volume = true;
+                self.vibrato_mode = GuiVibratoMode::C3;
+            }
+            "Full Organ" | "screaming_full" => {
+                self.drawbars = [8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0];
+                self.percussion.enabled = false;
+                self.vibrato_mode = GuiVibratoMode::C3;
+            }
+            "Mellow Flutes" | "mellow_flutes" => {
+                self.drawbars = [0.0, 0.0, 8.0, 0.0, 2.0, 0.0, 0.0, 0.0, 0.0];
+                self.percussion.enabled = false;
+                self.vibrato_mode = GuiVibratoMode::Off;
+            }
+            "Brother Jack" | "brother_jack" => {
+                self.drawbars = [8.0, 0.0, 0.0, 0.0, 0.0, 8.0, 8.0, 8.0, 8.0];
+                self.percussion.enabled = true;
+                self.percussion.third_harmonic = false;
+                self.vibrato_mode = GuiVibratoMode::V2;
+            }
+            "Whiter Shade" | "whiter_shade" => {
+                self.drawbars = [6.0, 8.0, 8.0, 6.0, 0.0, 0.0, 0.0, 0.0, 4.0];
+                self.percussion.enabled = false;
+                self.vibrato_mode = GuiVibratoMode::C2;
+            }
+            _ => {}
+        }
+    }
+
+    pub fn render_ascii_snapshot(&self, width: usize, height: usize) -> Vec<String> {
+        self.render_ascii(width, height)
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn ui(&mut self, ui: &mut egui::Ui) {
+        self.show(ui);
+    }
+
     /// Tests if a screen coordinate hits a drawbar handle.
     pub fn hit_test_drawbar_handle(&self, pos: (f32, f32), handle_pos: (f32, f32)) -> bool {
         let dx = pos.0 - handle_pos.0;
@@ -222,6 +282,32 @@ impl TonewheelOrganView {
 
                     if ui.add(btn).clicked() {
                         self.vibrato_mode = m;
+                    }
+                }
+            });
+
+            ui.add_space(6.0);
+
+            // Preset Registrations
+            ui.horizontal(|ui| {
+                ui.label(egui::RichText::new("Registrations:").color(Color32::from_rgb(255, 215, 0)).strong());
+                let presets = [
+                    ("Gospel Rock", "88 8000 008"),
+                    ("Jimmy Smith Jazz", "88 8000 000"),
+                    ("Full Organ", "88 8888 888"),
+                    ("Mellow Flutes", "00 8020 000"),
+                    ("Brother Jack", "80 0008 888"),
+                    ("Whiter Shade", "68 8600 004"),
+                ];
+                for (p_name, p_foot) in presets {
+                    let btn = egui::Button::new(
+                        egui::RichText::new(format!("{} [{}]", p_name, p_foot))
+                            .size(10.0)
+                            .color(Color32::from_rgb(220, 235, 255)),
+                    )
+                    .fill(Color32::from_rgb(24, 34, 50));
+                    if ui.add(btn).clicked() {
+                        self.set_preset(p_name);
                     }
                 }
             });

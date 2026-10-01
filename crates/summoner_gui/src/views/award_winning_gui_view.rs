@@ -680,6 +680,10 @@ pub struct AwardWinningGuiView {
     pub grand_piano_view: crate::views::grand_piano_view::GrandPianoView,
     pub show_pipe_organ_modal: bool,
     pub pipe_organ_view: crate::views::pipe_organ_view::PipeOrganView,
+    pub show_electric_piano_modal: bool,
+    pub electric_piano_view: crate::views::electric_piano_view::ElectricPianoView,
+    pub show_tonewheel_organ_modal: bool,
+    pub tonewheel_organ_view: crate::views::tonewheel_organ_view::TonewheelOrganView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -976,6 +980,10 @@ impl AwardWinningGuiView {
             grand_piano_view: crate::views::grand_piano_view::GrandPianoView::new(),
             show_pipe_organ_modal: false,
             pipe_organ_view: crate::views::pipe_organ_view::PipeOrganView::new(),
+            show_electric_piano_modal: false,
+            electric_piano_view: crate::views::electric_piano_view::ElectricPianoView::new(),
+            show_tonewheel_organ_modal: false,
+            tonewheel_organ_view: crate::views::tonewheel_organ_view::TonewheelOrganView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -1715,6 +1723,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_pipe_organ_hud = false;
             self.open_pipe_organ_hud();
         }
+        if self.inspector_state.requested_open_electric_piano_hud || self.device_rack_state.requested_open_electric_piano_hud {
+            self.inspector_state.requested_open_electric_piano_hud = false;
+            self.device_rack_state.requested_open_electric_piano_hud = false;
+            self.open_electric_piano_hud();
+        }
+        if self.inspector_state.requested_open_tonewheel_organ_hud || self.device_rack_state.requested_open_tonewheel_organ_hud {
+            self.inspector_state.requested_open_tonewheel_organ_hud = false;
+            self.device_rack_state.requested_open_tonewheel_organ_hud = false;
+            self.open_tonewheel_organ_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -1738,6 +1756,8 @@ impl AwardWinningGuiView {
         self.show_clavinet_modal_window(ui);
         self.show_grand_piano_modal_window(ui);
         self.show_pipe_organ_modal_window(ui);
+        self.show_electric_piano_modal_window(ui);
+        self.show_tonewheel_organ_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -9215,6 +9235,238 @@ impl AwardWinningGuiView {
 
     pub fn is_pipe_organ_hud_open(&self) -> bool {
         self.show_pipe_organ_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_electric_piano_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_electric_piano_modal {
+            return;
+        }
+
+        let mut is_open = self.show_electric_piano_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("⚡ Physical Modeling Electromechanical Tine & Reed Electric Piano HUD")
+            .id(egui::Id::new("electric_piano_hud_modal"))
+            .open(&mut is_open)
+            .default_size([780.0, 540.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Tine Tip Alignment, Inductive Pickup Air-Gap & Barking Non-Linear Transfer HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.electric_piano_view.ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_electric_piano_modal = is_open;
+        self.sync_electric_piano_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_electric_piano_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let air_gap = self.electric_piano_view.air_gap_mm;
+        let offset = self.electric_piano_view.alignment_offset_mm;
+        let hardness = self.electric_piano_view.hammer_hardness;
+        let bark = self.electric_piano_view.bark_drive;
+        let tonebar = self.electric_piano_view.tonebar_coupling;
+        let clunk = self.electric_piano_view.damper_clunk_volume;
+        let trem_rate = self.electric_piano_view.tremolo_rate_hz;
+        let trem_depth = self.electric_piano_view.tremolo_depth;
+        let drive = self.electric_piano_view.tube_drive_db;
+
+        self.device_rack_state.node_param_values.insert("air_gap_mm".to_string(), air_gap);
+        self.device_rack_state.node_param_values.insert("alignment_offset_mm".to_string(), offset);
+        self.device_rack_state.node_param_values.insert("hammer_hardness".to_string(), hardness);
+        self.device_rack_state.node_param_values.insert("bark_drive".to_string(), bark);
+        self.device_rack_state.node_param_values.insert("tonebar_coupling".to_string(), tonebar);
+        self.device_rack_state.node_param_values.insert("damper_clunk_volume".to_string(), clunk);
+        self.device_rack_state.node_param_values.insert("tremolo_rate_hz".to_string(), trem_rate);
+        self.device_rack_state.node_param_values.insert("tremolo_depth".to_string(), trem_depth);
+        self.device_rack_state.node_param_values.insert("tube_drive_db".to_string(), drive);
+
+        self.device_rack_state.node_param_values.insert("air_gap".to_string(), air_gap);
+        self.device_rack_state.node_param_values.insert("offset".to_string(), offset);
+        self.device_rack_state.node_param_values.insert("hardness".to_string(), hardness);
+        self.device_rack_state.node_param_values.insert("bark".to_string(), bark);
+        self.device_rack_state.node_param_values.insert("drive".to_string(), drive);
+
+        self.inspector_state.node_param_values.insert("air_gap_mm".to_string(), air_gap);
+        self.inspector_state.node_param_values.insert("alignment_offset_mm".to_string(), offset);
+        self.inspector_state.node_param_values.insert("hammer_hardness".to_string(), hardness);
+        self.inspector_state.node_param_values.insert("bark_drive".to_string(), bark);
+        self.inspector_state.node_param_values.insert("tonebar_coupling".to_string(), tonebar);
+        self.inspector_state.node_param_values.insert("damper_clunk_volume".to_string(), clunk);
+        self.inspector_state.node_param_values.insert("tremolo_rate_hz".to_string(), trem_rate);
+        self.inspector_state.node_param_values.insert("tremolo_depth".to_string(), trem_depth);
+        self.inspector_state.node_param_values.insert("tube_drive_db".to_string(), drive);
+
+        self.inspector_state.node_param_values.insert("air_gap".to_string(), air_gap);
+        self.inspector_state.node_param_values.insert("offset".to_string(), offset);
+        self.inspector_state.node_param_values.insert("hardness".to_string(), hardness);
+        self.inspector_state.node_param_values.insert("bark".to_string(), bark);
+        self.inspector_state.node_param_values.insert("drive".to_string(), drive);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_gap   = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_off   = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_hard  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_bark  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_tone  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_clunk = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+
+            if bus.get(pid_gap).is_some()   { bus.set(pid_gap, air_gap); }
+            if bus.get(pid_off).is_some()   { bus.set(pid_off, offset); }
+            if bus.get(pid_hard).is_some()  { bus.set(pid_hard, hardness); }
+            if bus.get(pid_bark).is_some()  { bus.set(pid_bark, bark); }
+            if bus.get(pid_tone).is_some()  { bus.set(pid_tone, tonebar); }
+            if bus.get(pid_clunk).is_some() { bus.set(pid_clunk, clunk); }
+        }
+    }
+
+    pub fn open_electric_piano_hud(&mut self) {
+        self.show_electric_piano_modal = true;
+    }
+
+    pub fn close_electric_piano_hud(&mut self) {
+        self.show_electric_piano_modal = false;
+    }
+
+    pub fn is_electric_piano_hud_open(&self) -> bool {
+        self.show_electric_piano_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_tonewheel_organ_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_tonewheel_organ_modal {
+            return;
+        }
+
+        let mut is_open = self.show_tonewheel_organ_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎹 9-Drawbar Harmonic Register & Tonewheel Organ Console HUD")
+            .id(egui::Id::new("tonewheel_organ_hud_modal"))
+            .open(&mut is_open)
+            .default_size([820.0, 560.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Electromechanical 91-Wheel Magnetic Induction, Scanner Vibrato/Chorus & Harmonic Percussion HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.tonewheel_organ_view.ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_tonewheel_organ_modal = is_open;
+        self.sync_tonewheel_organ_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_tonewheel_organ_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let d0 = self.tonewheel_organ_view.drawbars[0];
+        let d1 = self.tonewheel_organ_view.drawbars[1];
+        let d2 = self.tonewheel_organ_view.drawbars[2];
+        let d3 = self.tonewheel_organ_view.drawbars[3];
+        let d4 = self.tonewheel_organ_view.drawbars[4];
+        let d5 = self.tonewheel_organ_view.drawbars[5];
+        let d6 = self.tonewheel_organ_view.drawbars[6];
+        let d7 = self.tonewheel_organ_view.drawbars[7];
+        let d8 = self.tonewheel_organ_view.drawbars[8];
+        let click = self.tonewheel_organ_view.key_click_amount;
+        let crosstalk = self.tonewheel_organ_view.crosstalk_amount;
+
+        self.device_rack_state.node_param_values.insert("drawbar_16".to_string(), d0);
+        self.device_rack_state.node_param_values.insert("drawbar_5_1_3".to_string(), d1);
+        self.device_rack_state.node_param_values.insert("drawbar_8".to_string(), d2);
+        self.device_rack_state.node_param_values.insert("drawbar_4".to_string(), d3);
+        self.device_rack_state.node_param_values.insert("drawbar_2_2_3".to_string(), d4);
+        self.device_rack_state.node_param_values.insert("drawbar_2".to_string(), d5);
+        self.device_rack_state.node_param_values.insert("drawbar_1_3_5".to_string(), d6);
+        self.device_rack_state.node_param_values.insert("drawbar_1_1_3".to_string(), d7);
+        self.device_rack_state.node_param_values.insert("drawbar_1".to_string(), d8);
+        self.device_rack_state.node_param_values.insert("key_click".to_string(), click);
+        self.device_rack_state.node_param_values.insert("crosstalk".to_string(), crosstalk);
+
+        self.inspector_state.node_param_values.insert("drawbar_16".to_string(), d0);
+        self.inspector_state.node_param_values.insert("drawbar_5_1_3".to_string(), d1);
+        self.inspector_state.node_param_values.insert("drawbar_8".to_string(), d2);
+        self.inspector_state.node_param_values.insert("drawbar_4".to_string(), d3);
+        self.inspector_state.node_param_values.insert("drawbar_2_2_3".to_string(), d4);
+        self.inspector_state.node_param_values.insert("drawbar_2".to_string(), d5);
+        self.inspector_state.node_param_values.insert("drawbar_1_3_5".to_string(), d6);
+        self.inspector_state.node_param_values.insert("drawbar_1_1_3".to_string(), d7);
+        self.inspector_state.node_param_values.insert("drawbar_1".to_string(), d8);
+        self.inspector_state.node_param_values.insert("key_click".to_string(), click);
+        self.inspector_state.node_param_values.insert("crosstalk".to_string(), crosstalk);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_d0    = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_d2    = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_d3    = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_d8    = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_click = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_cross = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+
+            if bus.get(pid_d0).is_some()    { bus.set(pid_d0, d0); }
+            if bus.get(pid_d2).is_some()    { bus.set(pid_d2, d2); }
+            if bus.get(pid_d3).is_some()    { bus.set(pid_d3, d3); }
+            if bus.get(pid_d8).is_some()    { bus.set(pid_d8, d8); }
+            if bus.get(pid_click).is_some() { bus.set(pid_click, click); }
+            if bus.get(pid_cross).is_some() { bus.set(pid_cross, crosstalk); }
+        }
+    }
+
+    pub fn open_tonewheel_organ_hud(&mut self) {
+        self.show_tonewheel_organ_modal = true;
+    }
+
+    pub fn close_tonewheel_organ_hud(&mut self) {
+        self.show_tonewheel_organ_modal = false;
+    }
+
+    pub fn is_tonewheel_organ_hud_open(&self) -> bool {
+        self.show_tonewheel_organ_modal
     }
 
     #[cfg(feature = "gui")]

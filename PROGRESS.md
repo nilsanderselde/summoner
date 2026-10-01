@@ -1469,7 +1469,43 @@ Product Management has conducted a comprehensive readiness audit:
   - Registered `tier123_turn59_tests` in `crates/summoner_gui/src/lib.rs`.
   - Unit tests: 329 passed in 0.24s (`cargo test -p summoner_gui`).
   - Feature tests: 9 tests passed in `tier123_turn59_tests` (`cargo test -p summoner_gui --features gui -- tier123_turn59_tests`).
+### Turn #60 (Turn #25 Deliverable) — Physical Modeling Electromechanical Tine & Reed Electric Piano & 9-Drawbar Tonewheel Organ HUDs Convergence (Milestones 21, 22 & 33)
+- [x] Electromechanical Tine & Reed Electric Piano (Rhodes / Wurlitzer Pickup Air-Gap Alignment, Non-Linear Inductive Clipping Waveform, Hammer Hardness, Bark Overdrive, Tonebar Coupling, Damper Clunk & Optical Stereo Tremolo) and 9-Drawbar Tonewheel Organ Console (Hammond B3 9 Harmonic Drawbars with authentic Mahogany/Ivory/Slate Color Grouping, Harmonic Percussion 2nd/3rd Fast/Slow/Soft, Scanner Vibrato/Chorus C3/V3, Key Click Noise & Crosstalk Leakage) HUDs Integration:
+  - Integrated `ElectricPianoView` and `TonewheelOrganView` performance HUDs into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/electric_piano_view.rs` & `tonewheel_organ_view.rs`):
+  - In `ElectricPianoView`: implemented interactive egui `show(&mut self, ui: &mut egui::Ui)` and `ui(&mut self, ui: &mut egui::Ui)` rendering:
+    * 6 sound profile preset tabs (`Classic Rhodes Suitcase`, `Barking Dyno Rhodes`, `Mellow Rhodes Stage`, `Classic Wurlitzer 200A`, `Soul Overdriven Wurli`, `Belled Ambient Rhodes`) with $\ge 44\text{pt}$ touch bounds (`MIN_HIT_TARGET_PT`).
+    * Interactive 2D Canvas with left XY pad for Tine Tip Air-Gap (0.5..5.0 mm) vs Vertical Alignment Offset (-2.0..2.0 mm) with draggable puck (>= 44x44pt hit target, `EP_PUCK_HIT_RADIUS`).
+    * Right visualizer pad rendering non-linear inductive pickup transfer function clipping wave display (`evaluate_pickup_wave`).
+    * Physical tine/hammer dynamics sliders (`hammer_hardness`, `bark_drive`, `tonebar_coupling`, `damper_clunk_volume`), preamp/tone controls (`tube_drive_db`, `bass_db`, `treble_db`, `master_level`), and optical stereo tremolo panel (`tremolo_rate_hz`, `tremolo_depth`, `tremolo_stereo`).
+    * Touch normalization helpers (`air_gap_to_normalized`, `normalized_to_air_gap`, `alignment_to_normalized`, `normalized_to_alignment`), `hit_test_ep_puck`, and `render_ascii_snapshot`.
+  - In `TonewheelOrganView`: implemented `pub fn ui(&mut self, ui: &mut egui::Ui)` forwarder, `set_preset(&mut self, preset_name: &str)` (supporting `Gospel Rock`, `Jimmy Smith Jazz`, `Full Organ`, `Mellow Flutes`, `Brother Jack`, `Whiter Shade`), interactive registration preset buttons in `show`, drawbar normalization helpers (`drawbar_to_normalized`, `normalized_to_drawbar`), and `render_ascii_snapshot`.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_electric_piano_modal: bool`, `electric_piano_view: ElectricPianoView`, `show_tonewheel_organ_modal: bool`, and `tonewheel_organ_view: TonewheelOrganView`.
+  - Added dedicated modal windows `show_electric_piano_modal_window` and `show_tonewheel_organ_modal_window` with responsive styling, WCAG AAA contrast, and $\ge 44 \times 44\text{pt}$ touch bounds.
+  - Added public lifecycle methods: `open_electric_piano_hud()`, `close_electric_piano_hud()`, `is_electric_piano_hud_open()`, `open_tonewheel_organ_hud()`, `close_tonewheel_organ_hud()`, `is_tonewheel_organ_hud_open()`.
+  - Real-time parameter sync bridges (`sync_electric_piano_hud_state` and `sync_tonewheel_organ_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_electric_piano_hud: bool` and `requested_open_tonewheel_organ_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[⚡ Open Tine & Reed Electric Piano HUD]` and `[🎹 Open 9-Drawbar Tonewheel Organ HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header `[⚡ HUD]` / `[🎹 HUD]` and expanded toolbar buttons in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Electric Piano: Tine bar horizontal line, pickup coil pole piece, non-linear pickup saturation waveform, and touch-drag puck modulating `air_gap_mm` [0.5..5.0 mm] and `alignment_offset_mm` [-2.0..2.0 mm].
+    * Tonewheel Organ: 9 authentic color-coded drawbar sliders (mahogany brown, ivory white, slate black) with drag adjustment modulating drawbar registers [0..8] and real-time level readout.
+- [x] Command Palette & Application Routing:
+  - Registered `open_electric_piano_hud` and `open_tonewheel_organ_hud` under `"Physical Modeling"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_electric_piano_hud()` and `open_tonewheel_organ_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier124_turn60_tests.rs`:
+    * Pure tests: view initialization, profiles, presets, normalization roundtrips, hit testing, non-linear transfer waves, slot arithmetic channel isolation, deterministic ASCII snapshots.
+    * GUI tests: modal lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch, rack & inspector trigger propagation, command palette action registration.
+  - Registered `tier124_turn60_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Unit tests: 329 passed in 0.23s (`cargo test -p summoner_gui`).
+  - Feature tests: 9 tests passed in `tier124_turn60_tests` (`cargo test -p summoner_gui --features gui -- tier124_turn60_tests`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`).
+
 
 
 

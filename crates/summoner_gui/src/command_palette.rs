@@ -425,6 +425,18 @@ impl CommandPalette {
                 action_id: "open_pipe_organ_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Electromechanical Tine & Reed Electric Piano HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_electric_piano_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open 9-Drawbar Tonewheel Organ Console HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_tonewheel_organ_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

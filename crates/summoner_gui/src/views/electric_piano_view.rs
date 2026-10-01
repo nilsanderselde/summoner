@@ -11,6 +11,8 @@
 
 use crate::layout_math::Rect;
 use crate::touch_controls::ContrastColorPalette;
+#[cfg(feature = "gui")]
+use crate::touch_controls::MIN_HIT_TARGET_PT;
 use serde::{Deserialize, Serialize};
 use std::f32::consts::PI;
 
@@ -266,6 +268,30 @@ impl ElectricPianoView {
         wave
     }
 
+    pub fn air_gap_to_normalized(air_gap: f32) -> f32 {
+        ((air_gap - 0.5) / 4.5).clamp(0.0, 1.0)
+    }
+
+    pub fn normalized_to_air_gap(norm: f32) -> f32 {
+        0.5 + norm.clamp(0.0, 1.0) * 4.5
+    }
+
+    pub fn alignment_to_normalized(offset: f32) -> f32 {
+        ((offset + 2.0) / 4.0).clamp(0.0, 1.0)
+    }
+
+    pub fn normalized_to_alignment(norm: f32) -> f32 {
+        -2.0 + norm.clamp(0.0, 1.0) * 4.0
+    }
+
+    pub fn hit_test_ep_puck(&self, screen_pos: (f32, f32), canvas_rect: Rect) -> bool {
+        self.hit_test_puck(screen_pos, canvas_rect)
+    }
+
+    pub fn render_ascii_snapshot(&self, width: usize, height: usize) -> Vec<String> {
+        self.render_ascii(width, height)
+    }
+
     /// Hit tests the 2D alignment puck.
     pub fn hit_test_puck(&self, screen_pos: (f32, f32), canvas_rect: Rect) -> bool {
         let puck_screen_x = canvas_rect.x + self.puck_pos.0 * canvas_rect.width;
@@ -401,6 +427,278 @@ impl ElectricPianoView {
         }
 
         save_png_file(path, width, height, &pixels)
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn ui(&mut self, ui: &mut egui::Ui) {
+        self.show(ui);
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show(&mut self, ui: &mut egui::Ui) {
+        ui.vertical(|ui| {
+            // 1. Header Bar: Title, Profile Badge & Preamp Drive
+            ui.horizontal(|ui| {
+                ui.label(
+                    egui::RichText::new("⚡ ELECTROMECHANICAL TINE & REED ELECTRIC PIANO")
+                        .size(15.0)
+                        .color(Color32::from_rgb(251, 191, 36))
+                        .strong(),
+                );
+                ui.separator();
+                ui.label(
+                    egui::RichText::new(match self.model {
+                        GuiEpModel::RhodesTine => "MODEL: RHODES TINE",
+                        GuiEpModel::WurlitzerReed => "MODEL: WURLITZER REED",
+                    })
+                    .size(11.0)
+                    .color(Color32::from_rgb(148, 163, 184))
+                    .strong(),
+                );
+                ui.separator();
+                ui.label(
+                    egui::RichText::new(format!("DRIVE: {:+.1} dB", self.tube_drive_db))
+                        .size(11.0)
+                        .color(Color32::from_rgb(251, 191, 36))
+                        .strong(),
+                );
+            });
+
+            ui.add_space(6.0);
+
+            // 2. Sound Profile Selector Tabs (min 44pt touch targets)
+            let profiles = [
+                (GuiEpProfile::ClassicRhodesSuitcase, "CLASSIC SUITCASE"),
+                (GuiEpProfile::BarkingDynoRhodes, "BARKING DYNO"),
+                (GuiEpProfile::MellowRhodesStage, "MELLOW STAGE"),
+                (GuiEpProfile::ClassicWurlitzer200A, "WURLI 200A"),
+                (GuiEpProfile::SoulOverdrivenWurli, "SOUL OVERDRIVE"),
+                (GuiEpProfile::BelledAmbientRhodes, "AMBIENT SWELL"),
+            ];
+
+            ui.horizontal(|ui| {
+                for (prof, name) in profiles {
+                    let is_active = self.profile == prof;
+                    let btn = egui::Button::new(
+                        egui::RichText::new(name)
+                            .size(10.5)
+                            .color(if is_active {
+                                Color32::from_rgb(16, 20, 30)
+                            } else {
+                                Color32::from_rgb(226, 232, 240)
+                            })
+                            .strong(),
+                    )
+                    .min_size(Vec2::new(95.0, MIN_HIT_TARGET_PT))
+                    .fill(if is_active {
+                        Color32::from_rgb(251, 191, 36)
+                    } else {
+                        Color32::from_rgb(24, 32, 48)
+                    });
+
+                    if ui.add(btn).clicked() {
+                        self.set_profile(prof);
+                    }
+                }
+            });
+
+            ui.add_space(8.0);
+
+            // 3. Interactive Display Canvas (Left: Tine Air-Gap vs Offset Pad; Right: Inductive Pickup Bark Waveform)
+            let canvas_w = ui.available_width().max(420.0);
+            let (canvas_resp, painter) = ui.allocate_painter(Vec2::new(canvas_w, 190.0), egui::Sense::click_and_drag());
+            let c_rect = canvas_resp.rect;
+
+            painter.rect_filled(c_rect, 6.0, Color32::from_rgb(10, 14, 24));
+            painter.rect_stroke(c_rect, 6.0, Stroke::new(1.0_f32, Color32::from_rgb(45, 60, 85)));
+
+            let pad_w = (c_rect.width() - 32.0) * 0.48;
+            let pad_rect = egui::Rect::from_min_size(
+                egui::pos2(c_rect.min.x + 12.0, c_rect.min.y + 12.0),
+                Vec2::new(pad_w, c_rect.height() - 24.0),
+            );
+            painter.rect_filled(pad_rect, 4.0, Color32::from_rgb(16, 22, 34));
+            painter.rect_stroke(pad_rect, 4.0, Stroke::new(1.0_f32, Color32::from_rgb(38, 50, 72)));
+
+            // Left Pad Grid Lines
+            for gy in 1..4 {
+                let y = pad_rect.min.y + gy as f32 * (pad_rect.height() / 4.0);
+                painter.line_segment(
+                    [egui::pos2(pad_rect.min.x, y), egui::pos2(pad_rect.max.x, y)],
+                    Stroke::new(0.5_f32, Color32::from_rgb(30, 42, 60)),
+                );
+            }
+            for gx in 1..4 {
+                let x = pad_rect.min.x + gx as f32 * (pad_rect.width() / 4.0);
+                painter.line_segment(
+                    [egui::pos2(x, pad_rect.min.y), egui::pos2(x, pad_rect.max.y)],
+                    Stroke::new(0.5_f32, Color32::from_rgb(30, 42, 60)),
+                );
+            }
+
+            // Left Pad Interaction: Air Gap vs Alignment Offset
+            if canvas_resp.dragged() || canvas_resp.clicked() {
+                if let Some(pos) = canvas_resp.interact_pointer_pos() {
+                    if pad_rect.contains(pos) {
+                        let norm_x = ((pos.x - pad_rect.min.x) / pad_rect.width()).clamp(0.0, 1.0);
+                        let norm_y = (1.0 - ((pos.y - pad_rect.min.y) / pad_rect.height())).clamp(0.0, 1.0);
+                        self.update_physics_from_puck(norm_x, norm_y);
+                    }
+                }
+            }
+
+            // Draggable Puck on Pad (Radius 22pt => 44x44pt bounding box)
+            let puck_x = pad_rect.min.x + self.puck_pos.0 * pad_rect.width();
+            let puck_y = pad_rect.max.y - self.puck_pos.1 * pad_rect.height();
+            painter.circle_filled(
+                egui::pos2(puck_x, puck_y),
+                9.0,
+                Color32::from_rgb(251, 191, 36),
+            );
+            painter.circle_stroke(
+                egui::pos2(puck_x, puck_y),
+                EP_PUCK_HIT_RADIUS,
+                Stroke::new(1.5_f32, Color32::from_rgb(254, 240, 138)),
+            );
+
+            // Left Pad Labels
+            painter.text(
+                egui::pos2(pad_rect.min.x + 8.0, pad_rect.min.y + 6.0),
+                egui::Align2::LEFT_TOP,
+                "TINE AIR-GAP vs VERTICAL OFFSET (44x44pt Puck)",
+                egui::FontId::proportional(9.0),
+                Color32::from_rgb(251, 191, 36),
+            );
+            painter.text(
+                egui::pos2(pad_rect.min.x + 8.0, pad_rect.max.y - 14.0),
+                egui::Align2::LEFT_BOTTOM,
+                format!("Gap: {:.2} mm | Offset: {:+.2} mm", self.air_gap_mm, self.alignment_offset_mm),
+                egui::FontId::proportional(8.5),
+                Color32::from_rgb(203, 213, 225),
+            );
+
+            // Right Pad: Inductive Pickup Bark Waveform
+            let wave_w = c_rect.width() - pad_w - 36.0;
+            let wave_rect = egui::Rect::from_min_size(
+                egui::pos2(pad_rect.max.x + 12.0, c_rect.min.y + 12.0),
+                Vec2::new(wave_w, c_rect.height() - 24.0),
+            );
+            painter.rect_filled(wave_rect, 4.0, Color32::from_rgb(14, 18, 28));
+            painter.rect_stroke(wave_rect, 4.0, Stroke::new(1.0_f32, Color32::from_rgb(38, 50, 72)));
+
+            let mid_y = wave_rect.center().y;
+            painter.line_segment(
+                [egui::pos2(wave_rect.min.x, mid_y), egui::pos2(wave_rect.max.x, mid_y)],
+                Stroke::new(0.5_f32, Color32::from_rgb(45, 60, 85)),
+            );
+
+            let wave = self.evaluate_pickup_wave();
+            let wave_pts = 32;
+            let mut prev_pt = None;
+            for (i, &val) in wave.iter().enumerate() {
+                let t = i as f32 / (wave_pts - 1) as f32;
+                let px = wave_rect.min.x + 8.0 + t * (wave_rect.width() - 16.0);
+                let py = mid_y - val * (wave_rect.height() * 0.40);
+                let pt = egui::pos2(px, py);
+                if let Some(prev) = prev_pt {
+                    painter.line_segment([prev, pt], Stroke::new(1.8_f32, Color32::from_rgb(0, 229, 255)));
+                }
+                prev_pt = Some(pt);
+            }
+
+            painter.text(
+                egui::pos2(wave_rect.min.x + 8.0, wave_rect.min.y + 6.0),
+                egui::Align2::LEFT_TOP,
+                "NON-LINEAR INDUCTIVE PICKUP TRANSFER FUNCTION",
+                egui::FontId::proportional(9.0),
+                Color32::from_rgb(0, 229, 255),
+            );
+            painter.text(
+                egui::pos2(wave_rect.min.x + 8.0, wave_rect.max.y - 14.0),
+                egui::Align2::LEFT_BOTTOM,
+                format!("Bark Drive: {:.0}% | Tonebar Coupling: {:.0}%", self.bark_drive * 100.0, self.tonebar_coupling * 100.0),
+                egui::FontId::proportional(8.5),
+                Color32::from_rgb(148, 163, 184),
+            );
+
+            ui.add_space(8.0);
+
+            // 4. Physical Tine / Hammer Dynamics Sliders
+            ui.horizontal(|ui| {
+                ui.group(|ui| {
+                    ui.vertical(|ui| {
+                        ui.label(egui::RichText::new("TINE & HAMMER DYNAMICS").size(10.0).color(Color32::from_rgb(251, 191, 36)).strong());
+                        ui.horizontal(|ui| {
+                            ui.label("Hammer Hardness:");
+                            ui.add(egui::Slider::new(&mut self.hammer_hardness, 0.0..=1.0).text(""));
+                            ui.label("Bark Overdrive:");
+                            ui.add(egui::Slider::new(&mut self.bark_drive, 0.0..=1.0).text(""));
+                        });
+                        ui.horizontal(|ui| {
+                            ui.label("Tonebar Coupling:");
+                            ui.add(egui::Slider::new(&mut self.tonebar_coupling, 0.0..=1.0).text(""));
+                            ui.label("Damper Clunk:");
+                            ui.add(egui::Slider::new(&mut self.damper_clunk_volume, 0.0..=1.0).text(""));
+                        });
+                    });
+                });
+
+                ui.group(|ui| {
+                    ui.vertical(|ui| {
+                        ui.label(egui::RichText::new("PREAMP & 2-BAND TONE EQ").size(10.0).color(Color32::from_rgb(56, 189, 248)).strong());
+                        ui.horizontal(|ui| {
+                            ui.label("Tube Drive:");
+                            ui.add(egui::Slider::new(&mut self.tube_drive_db, 0.0..=24.0).suffix(" dB").text(""));
+                            ui.label("Bass EQ:");
+                            ui.add(egui::Slider::new(&mut self.bass_db, -12.0..=12.0).suffix(" dB").text(""));
+                        });
+                        ui.horizontal(|ui| {
+                            ui.label("Treble EQ:");
+                            ui.add(egui::Slider::new(&mut self.treble_db, -12.0..=12.0).suffix(" dB").text(""));
+                            ui.label("Master Out:");
+                            ui.add(egui::Slider::new(&mut self.master_level, 0.0..=2.0).text(""));
+                        });
+                    });
+                });
+            });
+
+            ui.add_space(4.0);
+
+            // 5. Optical Stereo Tremolo Panel
+            ui.group(|ui| {
+                ui.horizontal(|ui| {
+                    ui.label(egui::RichText::new("OPTICAL TREMOLO:").size(10.0).color(Color32::from_rgb(52, 211, 153)).strong());
+                    let trem_btn = egui::Button::new(
+                        egui::RichText::new(if self.tremolo_enabled { "ON" } else { "BYPASS" })
+                            .color(if self.tremolo_enabled { Color32::from_rgb(16, 24, 34) } else { Color32::from_rgb(200, 210, 225) })
+                            .strong(),
+                    )
+                    .min_size(Vec2::new(70.0, 28.0))
+                    .fill(if self.tremolo_enabled { Color32::from_rgb(52, 211, 153) } else { Color32::from_rgb(32, 45, 66) });
+                    if ui.add(trem_btn).clicked() {
+                        self.tremolo_enabled = !self.tremolo_enabled;
+                    }
+
+                    ui.separator();
+                    ui.label("Rate:");
+                    ui.add(egui::Slider::new(&mut self.tremolo_rate_hz, 0.2..=20.0).suffix(" Hz"));
+                    ui.label("Depth:");
+                    ui.add(egui::Slider::new(&mut self.tremolo_depth, 0.0..=1.0));
+
+                    ui.separator();
+                    let mode_btn = egui::Button::new(
+                        egui::RichText::new(if self.tremolo_stereo { "Stereo Ping-Pong" } else { "Mono Optical" })
+                            .color(Color32::from_rgb(226, 232, 240))
+                            .strong(),
+                    )
+                    .min_size(Vec2::new(120.0, 28.0))
+                    .fill(Color32::from_rgb(24, 36, 52));
+                    if ui.add(mode_btn).clicked() {
+                        self.tremolo_stereo = !self.tremolo_stereo;
+                    }
+                });
+            });
+        });
     }
 }
 

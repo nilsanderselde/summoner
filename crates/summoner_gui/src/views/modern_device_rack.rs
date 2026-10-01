@@ -89,6 +89,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_grand_piano_hud: bool,
     #[serde(default)]
     pub requested_open_pipe_organ_hud: bool,
+    #[serde(default)]
+    pub requested_open_electric_piano_hud: bool,
+    #[serde(default)]
+    pub requested_open_tonewheel_organ_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -122,6 +126,8 @@ impl Default for ModernDeviceRackState {
             requested_open_clavinet_hud: false,
             requested_open_grand_piano_hud: false,
             requested_open_pipe_organ_hud: false,
+            requested_open_electric_piano_hud: false,
+            requested_open_tonewheel_organ_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -320,8 +326,10 @@ pub fn show_modern_device_rack_with_context(
                     let is_gamelan = cur_selection.contains("Gamelan") || cur_selection.contains("Gender") || cur_selection.contains("Jegogan") || cur_selection.contains("Metallophone") || cur_selection == "GamelanGender" || cur_selection == "AcousticBalineseGamelanJegoganBronzeBar";
                     let is_dulcimer = cur_selection.contains("Dulcimer") || cur_selection.contains("Cimbalom") || cur_selection.contains("Santur") || cur_selection.contains("Yangqin") || cur_selection.contains("Psaltery") || cur_selection == "DulcimerCimbalomModel";
                     let is_clavinet = cur_selection.contains("Clavinet") || cur_selection.contains("Clav") || cur_selection == "ClavinetNode" || cur_selection == "ClavinetD6";
-                    let is_piano = cur_selection.contains("Piano") || cur_selection.contains("GrandPiano") || cur_selection == "GrandPianoModel" || cur_selection == "ConcertGrandPianoNode";
-                    let is_pipe_organ = cur_selection.contains("PipeOrgan") || cur_selection.contains("Organ") || cur_selection.contains("Windchest") || cur_selection == "PipeOrganModel";
+                    let is_electric_piano = cur_selection.contains("ElectricPiano") || cur_selection == "ElectricPianoModel" || cur_selection == "ElectricPianoProfile" || cur_selection.contains("Rhodes") || cur_selection.contains("Wurlitzer");
+                    let is_tonewheel_organ = cur_selection.contains("Tonewheel") || cur_selection == "TonewheelOrgan" || cur_selection == "TonewheelOrganModel" || cur_selection == "TonewheelOrganNode" || cur_selection == "TonewheelOrganProfile" || cur_selection.contains("Hammond") || cur_selection.contains("Drawbar");
+                    let is_piano = !is_electric_piano && (cur_selection.contains("Piano") || cur_selection.contains("GrandPiano") || cur_selection == "GrandPianoModel" || cur_selection == "ConcertGrandPianoNode");
+                    let is_pipe_organ = !is_tonewheel_organ && (cur_selection.contains("PipeOrgan") || cur_selection.contains("Organ") || cur_selection.contains("Windchest") || cur_selection == "PipeOrganModel");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -381,6 +389,14 @@ pub fn show_modern_device_rack_with_context(
                     } else if is_clavinet {
                         if ui.button(RichText::new("⚡ HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(249, 115, 22))).on_hover_text("Open Electromechanical Clavinet D6 HUD").clicked() {
                             state.requested_open_clavinet_hud = true;
+                        }
+                    } else if is_electric_piano {
+                        if ui.button(RichText::new("⚡ HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(251, 191, 36))).on_hover_text("Open Electromechanical Tine & Reed Electric Piano HUD").clicked() {
+                            state.requested_open_electric_piano_hud = true;
+                        }
+                    } else if is_tonewheel_organ {
+                        if ui.button(RichText::new("🎹 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open 9-Drawbar Tonewheel Organ HUD").clicked() {
+                            state.requested_open_tonewheel_organ_hud = true;
                         }
                     } else if is_piano {
                         if ui.button(RichText::new("🎹 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(229, 169, 60))).on_hover_text("Open Concert Grand Piano HUD").clicked() {
@@ -585,8 +601,10 @@ pub fn show_modern_device_rack_with_context(
                     let is_gamelan = cur_selection.contains("Gamelan") || cur_selection.contains("Gender") || cur_selection.contains("Jegogan") || cur_selection.contains("Metallophone") || cur_selection == "GamelanGender" || cur_selection == "AcousticBalineseGamelanJegoganBronzeBar";
                     let is_dulcimer = cur_selection.contains("Dulcimer") || cur_selection.contains("Cimbalom") || cur_selection.contains("Santur") || cur_selection.contains("Yangqin") || cur_selection.contains("Psaltery") || cur_selection == "DulcimerCimbalomModel";
                     let is_clavinet = cur_selection.contains("Clavinet") || cur_selection.contains("Clav") || cur_selection == "ClavinetNode" || cur_selection == "ClavinetD6";
-                    let is_piano = cur_selection.contains("Piano") || cur_selection.contains("GrandPiano") || cur_selection == "GrandPianoModel" || cur_selection == "ConcertGrandPianoNode";
-                    let is_pipe_organ = cur_selection.contains("PipeOrgan") || cur_selection.contains("Organ") || cur_selection.contains("Windchest") || cur_selection == "PipeOrganModel";
+                    let is_electric_piano = cur_selection.contains("ElectricPiano") || cur_selection == "ElectricPianoModel" || cur_selection == "ElectricPianoProfile" || cur_selection.contains("Rhodes") || cur_selection.contains("Wurlitzer");
+                    let is_tonewheel_organ = cur_selection.contains("Tonewheel") || cur_selection == "TonewheelOrgan" || cur_selection == "TonewheelOrganModel" || cur_selection == "TonewheelOrganNode" || cur_selection == "TonewheelOrganProfile" || cur_selection.contains("Hammond") || cur_selection.contains("Drawbar");
+                    let is_piano = !is_electric_piano && (cur_selection.contains("Piano") || cur_selection.contains("GrandPiano") || cur_selection == "GrandPianoModel" || cur_selection == "ConcertGrandPianoNode");
+                    let is_pipe_organ = !is_tonewheel_organ && (cur_selection.contains("PipeOrgan") || cur_selection.contains("Organ") || cur_selection.contains("Windchest") || cur_selection == "PipeOrganModel");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -654,6 +672,14 @@ pub fn show_modern_device_rack_with_context(
                     } else if is_clavinet {
                         if ui.button(RichText::new("⚡ HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(249, 115, 22))).on_hover_text("Open Electromechanical Clavinet D6 HUD").clicked() {
                             state.requested_open_clavinet_hud = true;
+                        }
+                    } else if is_electric_piano {
+                        if ui.button(RichText::new("⚡ HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(251, 191, 36))).on_hover_text("Open Electromechanical Tine & Reed Electric Piano HUD").clicked() {
+                            state.requested_open_electric_piano_hud = true;
+                        }
+                    } else if is_tonewheel_organ {
+                        if ui.button(RichText::new("🎹 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open 9-Drawbar Tonewheel Organ HUD").clicked() {
+                            state.requested_open_tonewheel_organ_hud = true;
                         }
                     } else if is_piano {
                         if ui.button(RichText::new("🎹 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(229, 169, 60))).on_hover_text("Open Concert Grand Piano HUD").clicked() {
@@ -1444,8 +1470,10 @@ fn show_pro_parameter_drawer(
                     let is_gamelan = dev_kind.contains("Gamelan") || dev_kind.contains("Gender") || dev_kind.contains("Jegogan") || dev_kind.contains("Metallophone") || dev_kind == "GamelanGender" || dev_kind == "AcousticBalineseGamelanJegoganBronzeBar";
                     let is_dulcimer = dev_kind.contains("Dulcimer") || dev_kind.contains("Cimbalom") || dev_kind.contains("Santur") || dev_kind.contains("Yangqin") || dev_kind.contains("Psaltery") || dev_kind == "DulcimerCimbalomModel";
                     let is_clavinet = dev_kind.contains("Clavinet") || dev_kind.contains("Clav") || dev_kind == "ClavinetNode" || dev_kind == "ClavinetD6";
-                    let is_piano = dev_kind.contains("Piano") || dev_kind.contains("GrandPiano") || dev_kind == "GrandPianoModel" || dev_kind == "ConcertGrandPianoNode";
-                    let is_pipe_organ = dev_kind.contains("PipeOrgan") || dev_kind.contains("Organ") || dev_kind.contains("Windchest") || dev_kind == "PipeOrganModel";
+                    let is_electric_piano = dev_kind.contains("ElectricPiano") || dev_kind == "ElectricPianoModel" || dev_kind == "ElectricPianoProfile" || dev_kind.contains("Rhodes") || dev_kind.contains("Wurlitzer");
+                    let is_tonewheel_organ = dev_kind.contains("Tonewheel") || dev_kind == "TonewheelOrgan" || dev_kind == "TonewheelOrganModel" || dev_kind == "TonewheelOrganNode" || dev_kind == "TonewheelOrganProfile" || dev_kind.contains("Hammond") || dev_kind.contains("Drawbar");
+                    let is_piano = !is_electric_piano && (dev_kind.contains("Piano") || dev_kind.contains("GrandPiano") || dev_kind == "GrandPianoModel" || dev_kind == "ConcertGrandPianoNode");
+                    let is_pipe_organ = !is_tonewheel_organ && (dev_kind.contains("PipeOrgan") || dev_kind.contains("Organ") || dev_kind.contains("Windchest") || dev_kind == "PipeOrganModel");
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -2687,6 +2715,152 @@ fn show_pro_parameter_drawer(
 
                         if clav_resp.hovered() {
                             let _ = clav_resp.on_hover_text("Electromechanical Clavinet D6 String-Anvil Collision\n[Drag horizontally: Anvil strike hardness [0..100%] | Drag vertically: Pickup phase angle [0..180°]]");
+                        }
+                    } else if is_electric_piano {
+                        // Electromechanical Tine & Reed Electric Piano Mini Visualizer
+                        let (ep_resp, ep_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let ep_rect = ep_resp.rect;
+                        ep_painter.rect_filled(ep_rect, 2.0, Color32::from_rgb(10, 14, 24));
+
+                        let mut air_gap = state.node_param_values.get("air_gap_mm").copied().unwrap_or(1.8);
+                        let mut offset = state.node_param_values.get("alignment_offset_mm").copied().unwrap_or(0.45);
+
+                        if ep_resp.dragged() {
+                            if let Some(pos) = ep_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - ep_rect.left()) / ep_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - ep_rect.top()) / ep_rect.height())).clamp(0.0, 1.0);
+                                air_gap = 0.5 + norm_x * 4.5;
+                                offset = -2.0 + norm_y * 4.0;
+                                state.node_param_values.insert("air_gap_mm".to_string(), air_gap);
+                                state.node_param_values.insert("alignment_offset_mm".to_string(), offset);
+                                state.node_param_values.insert("air_gap".to_string(), air_gap);
+                                state.node_param_values.insert("offset".to_string(), offset);
+                                if let Some(bus) = param_bus {
+                                    let pid_gap = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_gap).is_some() { bus.set(pid_gap, air_gap); }
+                                    let pid_off = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_off).is_some() { bus.set(pid_off, offset); }
+                                }
+                            }
+                        }
+
+                        // Draw Tine bar and pickup coil schematic
+                        let tine_y = ep_rect.center().y;
+                        ep_painter.line_segment([egui::pos2(ep_rect.left() + 6.0, tine_y), egui::pos2(ep_rect.right() - 24.0, tine_y)], Stroke::new(2.0_f32, Color32::from_rgb(148, 163, 184)));
+                        // Pickup coil pole piece on right
+                        ep_painter.rect_filled(
+                            egui::Rect::from_min_size(egui::pos2(ep_rect.right() - 20.0, tine_y - 8.0), Vec2::new(12.0, 16.0)),
+                            2.0,
+                            Color32::from_rgb(251, 191, 36),
+                        );
+
+                        // Draw non-linear pickup waveform
+                        let steps = 24;
+                        let mut prev_pt = None;
+                        for i in 0..steps {
+                            let t = (i as f32 / (steps - 1) as f32) * std::f32::consts::TAU;
+                            let px = ep_rect.left() + 8.0 + (i as f32 / (steps - 1) as f32) * (ep_rect.width() - 36.0);
+                            let v = t.sin();
+                            let sat = (v * (1.0 + (5.0 - air_gap) * 0.4)).tanh();
+                            let py = tine_y - sat * (ep_rect.height() * 0.32);
+                            let pt = egui::pos2(px, py);
+                            if let Some(prev) = prev_pt {
+                                ep_painter.line_segment([prev, pt], Stroke::new(1.4_f32, Color32::from_rgb(0, 229, 255)));
+                            }
+                            prev_pt = Some(pt);
+                        }
+
+                        // Draggable Puck: Air-Gap vs Offset
+                        let norm_x = ((air_gap - 0.5) / 4.5).clamp(0.0, 1.0);
+                        let norm_y = ((offset + 2.0) / 4.0).clamp(0.0, 1.0);
+                        let puck_x = ep_rect.left() + norm_x * ep_rect.width();
+                        let puck_y = ep_rect.bottom() - norm_y * ep_rect.height();
+                        ep_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.5, Color32::from_rgb(251, 191, 36));
+                        ep_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::from_rgb(254, 240, 138)));
+
+                        // Readout
+                        ep_painter.text(
+                            egui::pos2(ep_rect.left() + 4.0, ep_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("Gap: {:.2}mm", air_gap),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(251, 191, 36),
+                        );
+                        ep_painter.text(
+                            egui::pos2(ep_rect.right() - 4.0, ep_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("Off: {:+.2}mm", offset),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+
+                        if ep_resp.hovered() {
+                            let _ = ep_resp.on_hover_text("Electromechanical Tine & Reed Electric Piano\n[Drag horizontally: Pickup air-gap [0.5..5.0 mm] | Drag vertically: Vertical alignment offset [-2.0..2.0 mm]]");
+                        }
+                    } else if is_tonewheel_organ {
+                        // 9-Drawbar Tonewheel Organ Registration Mini Visualizer
+                        let (organ_resp, organ_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let o_rect = organ_resp.rect;
+                        organ_painter.rect_filled(o_rect, 2.0, Color32::from_rgb(12, 16, 26));
+
+                        let col_step = (o_rect.width() - 8.0) / 9.0;
+                        let bar_top = o_rect.top() + 18.0;
+                        let bar_h = o_rect.height() - 24.0;
+
+                        if organ_resp.dragged() || organ_resp.clicked() {
+                            if let Some(pos) = organ_resp.interact_pointer_pos() {
+                                let col_idx = (((pos.x - o_rect.left() - 4.0) / col_step).floor() as usize).min(8);
+                                let norm_y = ((pos.y - bar_top) / bar_h).clamp(0.0, 1.0);
+                                let val = norm_y * 8.0;
+                                let param_keys = ["drawbar_16", "drawbar_5_1_3", "drawbar_8", "drawbar_4", "drawbar_2_2_3", "drawbar_2", "drawbar_1_3_5", "drawbar_1_1_3", "drawbar_1"];
+                                state.node_param_values.insert(param_keys[col_idx].to_string(), val);
+                                if let Some(bus) = param_bus {
+                                    let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + col_idx as u32);
+                                    if bus.get(pid).is_some() { bus.set(pid, val); }
+                                }
+                            }
+                        }
+
+                        let drawbar_colors = [
+                            Color32::from_rgb(145, 65, 30),  // 16' Brown
+                            Color32::from_rgb(145, 65, 30),  // 5 1/3' Brown
+                            Color32::from_rgb(235, 240, 250), // 8' White
+                            Color32::from_rgb(235, 240, 250), // 4' White
+                            Color32::from_rgb(50, 60, 80),    // 2 2/3' Black
+                            Color32::from_rgb(235, 240, 250), // 2' White
+                            Color32::from_rgb(50, 60, 80),    // 1 3/5' Black
+                            Color32::from_rgb(50, 60, 80),    // 1 1/3' Black
+                            Color32::from_rgb(235, 240, 250), // 1' White
+                        ];
+
+                        let param_keys = ["drawbar_16", "drawbar_5_1_3", "drawbar_8", "drawbar_4", "drawbar_2_2_3", "drawbar_2", "drawbar_1_3_5", "drawbar_1_1_3", "drawbar_1"];
+                        for d in 0..9 {
+                            let cx = o_rect.left() + 4.0 + (d as f32 + 0.5) * col_step;
+                            let val = state.node_param_values.get(param_keys[d]).copied().unwrap_or(if d < 3 || d == 8 { 8.0 } else { 0.0 });
+                            let norm = (val / 8.0).clamp(0.0, 1.0);
+                            let hy = bar_top + norm * bar_h;
+
+                            // Shaft
+                            organ_painter.line_segment([egui::pos2(cx, bar_top), egui::pos2(cx, bar_top + bar_h)], Stroke::new(1.5_f32, Color32::from_rgb(30, 42, 60)));
+                            // Handle
+                            organ_painter.rect_filled(
+                                egui::Rect::from_center_size(egui::pos2(cx, hy), Vec2::new(col_step - 2.0, 7.0)),
+                                1.5,
+                                drawbar_colors[d],
+                            );
+                        }
+
+                        // Readout
+                        organ_painter.text(
+                            egui::pos2(o_rect.left() + 4.0, o_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            "9-Drawbar Registration",
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+
+                        if organ_resp.hovered() {
+                            let _ = organ_resp.on_hover_text("9-Drawbar Tonewheel Organ Registration\n[Click/Drag: Adjust drawbar pull level [0..8] | Authentic B3 Brown/White/Black color grouping]");
                         }
                     } else if is_piano {
                         // Concert Grand Piano 3-String Unison & Hammer Dynamics Mini Visualizer
