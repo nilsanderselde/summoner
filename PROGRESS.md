@@ -1634,7 +1634,34 @@ Product Management has conducted a comprehensive readiness audit:
   - Feature tests: 10 passed in 0.08s (`cargo test -p summoner_gui --features gui -- tier128_turn64`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
 
-
-
-
-
+### Turn #65 (Turn #28 Deliverable) — Pneumatic Bellows Compression Dynamics & Sitar Curved Jawari Bridge HUDs Convergence (Milestones 27, 28 & 33)
+- [x] Pneumatic Bellows & Sitar Curved Jawari Bridge Performance HUDs Integration:
+  - Integrated `BellowsView` (Pneumatic Bellows Dynamics & Free-Reed Articulation HUD: chamber pressure force $[-1200..+1200\text{ Pa}]$, pallet valve velocity $[0.05..1.0]$, push/pull airflow gauge, cassotto aperture shutter, musette detune, and register mask) and `JawariBridgeView` (Sitar Curved Jawari Buzz Bridge & Tarab Sympathetic Resonator HUD: parabolic horn obstacle boundary profile, grazing vibrating string, vertical cotton Jiva thread position line, 13-string Tarab sympathetic spectrum bars, and clearance gap $h_0$ vs Jiva position puck) into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/jawari_bridge_view.rs` & `bellows_view.rs`):
+  - In `JawariBridgeView`: added `show(&mut self, ui: &mut egui::Ui)` forwarder, `hit_test_jawari_puck(&self, screen_pos, canvas_rect)`, `render_ascii_snapshot_str()`, full responsive 2D canvas with interactive gold puck drag ($\ge 44 \times 44\text{pt}$ touch bounds), and 13-string Tarab sympathetic resonance spectrum visualizer with shimmering amber gradients.
+  - In `BellowsView`: added `render_ascii_snapshot_str()` for headless terminal verification.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_bellows_modal: bool`, `bellows_view: BellowsView`, `show_jawari_bridge_modal: bool`, and `jawari_bridge_view: JawariBridgeView`.
+  - Added dedicated modal windows `show_bellows_modal_window` and `show_jawari_bridge_modal_window` with responsive styling, WCAG AAA contrast, and $\ge 44 \times 44\text{pt}$ touch bounds.
+  - Added public lifecycle methods: `open_bellows_hud()`, `close_bellows_hud()`, `is_bellows_hud_open()`, `open_jawari_bridge_hud()`, `close_jawari_bridge_hud()`, `is_jawari_bridge_hud_open()`.
+  - Real-time parameter sync bridges (`sync_bellows_hud_state` and `sync_jawari_bridge_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_bellows_hud: bool` and `requested_open_jawari_bridge_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🪗 Open Bellows Compression Dynamics HUD]` and `[🪕 Open Sitar Curved Jawari Bridge HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header `[🪗 HUD]` / `[🪕 HUD]` and expanded toolbar buttons in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Bellows: Zero-pressure center line, directional push/pull pressure bar, valve velocity needle, and live `ParamBus` slot dispatch.
+    * Jawari Bridge: Curved horn obstacle profile, cotton Jiva thread line, clearance gap puck, 13-string Tarab bars, and live `ParamBus` slot dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_bellows_hud` and `open_jawari_bridge_hud` under `"Physical Modeling"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_bellows_hud()` and `open_jawari_bridge_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier129_turn65_tests.rs`:
+    * Pure tests: view initialization, preset selections, pressure and velocity normalization conversions, physics updates from puck, hit testing, acoustics updates, 13-string Tarab dissipation, slot arithmetic channel isolation, deterministic ASCII snapshots.
+    * GUI tests: modal lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch, rack & inspector trigger propagation, command palette action registration.
+  - Registered `tier129_turn65_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Feature tests: 10 passed in 0.11s (`cargo test -p summoner_gui --features gui -- tier129`).
+  - Unit tests: 329 passed in 0.23s (`cargo test -p summoner_gui --lib`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).

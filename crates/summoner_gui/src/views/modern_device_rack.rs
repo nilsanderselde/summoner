@@ -109,6 +109,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_waveguide_mesh_hud: bool,
     #[serde(default)]
     pub requested_open_plucked_string_hud: bool,
+    #[serde(default)]
+    pub requested_open_bellows_hud: bool,
+    #[serde(default)]
+    pub requested_open_jawari_bridge_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -152,6 +156,8 @@ impl Default for ModernDeviceRackState {
             requested_open_spring_lattice_hud: false,
             requested_open_waveguide_mesh_hud: false,
             requested_open_plucked_string_hud: false,
+            requested_open_bellows_hud: false,
+            requested_open_jawari_bridge_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -362,6 +368,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_spring_lattice = cur_selection.contains("Spring") || cur_selection.contains("Lattice") || cur_selection == "SpringLatticeNode" || cur_selection == "SpringReverb" || cur_selection == "SpringTankModel" || cur_selection == "SpringMassLattice";
                     let is_waveguide_mesh = cur_selection.contains("WaveguideMesh") || cur_selection.contains("MeshPlate") || cur_selection.contains("MeshMembrane") || cur_selection == "WaveguideMeshNode" || cur_selection == "WaveguideMesh2D" || cur_selection == "RectilinearWaveguideMesh" || cur_selection == "WaveguideMeshBoundary" || cur_selection == "WaveguideMesh";
                     let is_plucked_string = cur_selection.contains("PluckedString") || cur_selection.contains("CommutedPlucked") || cur_selection == "PluckedStringNode" || cur_selection == "CommutedPluckedStringNode" || cur_selection == "CommutedPluckedString" || cur_selection == "PluckedStringWaveguide" || cur_selection == "KarplusStrong";
+                    let is_bellows = cur_selection.contains("Bellows") || cur_selection.contains("Cassotto") || cur_selection == "PneumaticBellows" || cur_selection == "CassottoChamber" || cur_selection == "AccordionBellows" || cur_selection == "BellowsDynamics";
+                    let is_jawari_bridge = cur_selection.contains("Jawari") || cur_selection.contains("Tarab") || cur_selection == "JawariBridge" || cur_selection == "TarabResonatorBank" || cur_selection == "TarabStringResonator" || cur_selection == "SitarGourdBody" || cur_selection == "SitarBridge";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -466,10 +474,18 @@ pub fn show_modern_device_rack_with_context(
                         if ui.button(RichText::new("🌐 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open 2D Physical Waveguide Resonator Mesh HUD").clicked() {
                             state.requested_open_waveguide_mesh_hud = true;
                         }
-                    } else if is_plucked_string
-                        && ui.button(RichText::new("🎸 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 215, 0))).on_hover_text("Open Plucked & Struck Waveguide String HUD").clicked()
+                    } else if is_plucked_string {
+                        if ui.button(RichText::new("🎸 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 215, 0))).on_hover_text("Open Plucked & Struck Waveguide String HUD").clicked() {
+                            state.requested_open_plucked_string_hud = true;
+                        }
+                    } else if is_bellows {
+                        if ui.button(RichText::new("🪗 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(217, 119, 6))).on_hover_text("Open Pneumatic Bellows Dynamics HUD").clicked() {
+                            state.requested_open_bellows_hud = true;
+                        }
+                    } else if is_jawari_bridge
+                        && ui.button(RichText::new("🪕 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(245, 158, 11))).on_hover_text("Open Sitar Curved Jawari Bridge HUD").clicked()
                     {
-                        state.requested_open_plucked_string_hud = true;
+                        state.requested_open_jawari_bridge_hud = true;
                     }
                     ui.add_space(4.0);
                     let pwr_col = if state.is_enabled { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(100, 116, 139) };
@@ -678,6 +694,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_spring_lattice = cur_selection.contains("Spring") || cur_selection.contains("Lattice") || cur_selection == "SpringLatticeNode" || cur_selection == "SpringReverb" || cur_selection == "SpringTankModel" || cur_selection == "SpringMassLattice";
                     let is_waveguide_mesh = cur_selection.contains("WaveguideMesh") || cur_selection.contains("MeshPlate") || cur_selection.contains("MeshMembrane") || cur_selection == "WaveguideMeshNode" || cur_selection == "WaveguideMesh2D" || cur_selection == "RectilinearWaveguideMesh" || cur_selection == "WaveguideMeshBoundary" || cur_selection == "WaveguideMesh";
                     let is_plucked_string = cur_selection.contains("PluckedString") || cur_selection.contains("CommutedPlucked") || cur_selection == "PluckedStringNode" || cur_selection == "CommutedPluckedStringNode" || cur_selection == "CommutedPluckedString" || cur_selection == "PluckedStringWaveguide" || cur_selection == "KarplusStrong";
+                    let is_bellows = cur_selection.contains("Bellows") || cur_selection.contains("Cassotto") || cur_selection == "PneumaticBellows" || cur_selection == "CassottoChamber" || cur_selection == "AccordionBellows" || cur_selection == "BellowsDynamics";
+                    let is_jawari_bridge = cur_selection.contains("Jawari") || cur_selection.contains("Tarab") || cur_selection == "JawariBridge" || cur_selection == "TarabResonatorBank" || cur_selection == "TarabStringResonator" || cur_selection == "SitarGourdBody" || cur_selection == "SitarBridge";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -790,10 +808,18 @@ pub fn show_modern_device_rack_with_context(
                         if ui.button(RichText::new("🌐 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open 2D Physical Waveguide Resonator Mesh HUD").clicked() {
                             state.requested_open_waveguide_mesh_hud = true;
                         }
-                    } else if is_plucked_string
-                        && ui.button(RichText::new("🎸 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 215, 0))).on_hover_text("Open Plucked & Struck Waveguide String HUD").clicked()
+                    } else if is_plucked_string {
+                        if ui.button(RichText::new("🎸 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 215, 0))).on_hover_text("Open Plucked & Struck Waveguide String HUD").clicked() {
+                            state.requested_open_plucked_string_hud = true;
+                        }
+                    } else if is_bellows {
+                        if ui.button(RichText::new("🪗 Bellows HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(217, 119, 6))).on_hover_text("Open Pneumatic Bellows Dynamics HUD").clicked() {
+                            state.requested_open_bellows_hud = true;
+                        }
+                    } else if is_jawari_bridge
+                        && ui.button(RichText::new("🪕 Jawari HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(245, 158, 11))).on_hover_text("Open Sitar Curved Jawari Bridge HUD").clicked()
                     {
-                        state.requested_open_plucked_string_hud = true;
+                        state.requested_open_jawari_bridge_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -1588,6 +1614,8 @@ fn show_pro_parameter_drawer(
                     let is_spring_lattice = dev_kind.contains("Spring") || dev_kind.contains("Lattice") || dev_kind == "SpringLatticeNode" || dev_kind == "SpringReverb" || dev_kind == "SpringTankModel" || dev_kind == "SpringMassLattice";
                     let is_waveguide_mesh = dev_kind.contains("WaveguideMesh") || dev_kind.contains("MeshPlate") || dev_kind.contains("MeshMembrane") || dev_kind == "WaveguideMeshNode" || dev_kind == "WaveguideMesh2D" || dev_kind == "RectilinearWaveguideMesh" || dev_kind == "WaveguideMeshBoundary" || dev_kind == "WaveguideMesh";
                     let is_plucked_string = dev_kind.contains("PluckedString") || dev_kind.contains("CommutedPlucked") || dev_kind == "PluckedStringNode" || dev_kind == "CommutedPluckedStringNode" || dev_kind == "CommutedPluckedString" || dev_kind == "PluckedStringWaveguide" || dev_kind == "KarplusStrong";
+                    let is_bellows = dev_kind.contains("Bellows") || dev_kind.contains("Cassotto") || dev_kind == "PneumaticBellows" || dev_kind == "CassottoChamber" || dev_kind == "AccordionBellows" || dev_kind == "BellowsDynamics";
+                    let is_jawari_bridge = dev_kind.contains("Jawari") || dev_kind.contains("Tarab") || dev_kind == "JawariBridge" || dev_kind == "TarabResonatorBank" || dev_kind == "TarabStringResonator" || dev_kind == "SitarGourdBody" || dev_kind == "SitarBridge";
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -3708,6 +3736,158 @@ fn show_pro_parameter_drawer(
 
                         if pluck_resp.hovered() {
                             let _ = pluck_resp.on_hover_text("Plucked String Karplus-Strong Waveguide HUD\n[Drag horizontally: Pluck position β [0.05..0.95] | Drag vertically: Strike velocity [0.05..1.0]]");
+                        }
+                    } else if is_bellows {
+                        // Pneumatic Bellows Pressure & Pallet Valve Velocity Mini Visualizer
+                        let (b_resp, b_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let b_rect = b_resp.rect;
+                        b_painter.rect_filled(b_rect, 2.0, Color32::from_rgb(12, 18, 28));
+
+                        let mut pres = state.node_param_values.get("bellows_pressure_pa").copied().unwrap_or(420.0);
+                        let mut vel = state.node_param_values.get("valve_velocity").copied().unwrap_or(0.80);
+
+                        if b_resp.dragged() {
+                            if let Some(pos) = b_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - b_rect.left()) / b_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - b_rect.top()) / b_rect.height())).clamp(0.0, 1.0);
+                                pres = -1200.0 + norm_x * 2400.0;
+                                vel = 0.05 + norm_y * 0.95;
+
+                                state.node_param_values.insert("bellows_pressure_pa".to_string(), pres);
+                                state.node_param_values.insert("valve_velocity".to_string(), vel);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_p = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_v = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_p).is_some() { bus.set(pid_p, pres); }
+                                    if bus.get(pid_v).is_some() { bus.set(pid_v, vel); }
+                                }
+                            }
+                        }
+
+                        // Zero-pressure dividing line
+                        let mid_x = b_rect.center().x;
+                        b_painter.line_segment([egui::pos2(mid_x, b_rect.top() + 14.0), egui::pos2(mid_x, b_rect.bottom() - 6.0)], Stroke::new(1.0_f32, Color32::from_rgb(51, 65, 85)));
+
+                        // Pressure bar indicator
+                        let is_push = pres >= 0.0;
+                        let bar_color = if is_push { Color32::from_rgb(217, 119, 6) } else { Color32::from_rgb(56, 189, 248) };
+                        let norm_p = (pres / 1200.0).clamp(-1.0, 1.0);
+                        let bar_w = (norm_p.abs() * (b_rect.width() * 0.45)).max(2.0);
+                        let bar_rect = if is_push {
+                            egui::Rect::from_min_size(egui::pos2(mid_x, b_rect.top() + 24.0), Vec2::new(bar_w, 14.0))
+                        } else {
+                            egui::Rect::from_min_size(egui::pos2(mid_x - bar_w, b_rect.top() + 24.0), Vec2::new(bar_w, 14.0))
+                        };
+                        b_painter.rect_filled(bar_rect, 2.0, bar_color);
+
+                        // Valve velocity vertical needle on right side
+                        let vy = b_rect.bottom() - 8.0 - (vel / 1.0).clamp(0.0, 1.0) * 36.0;
+                        let vx = b_rect.right() - 14.0;
+                        b_painter.circle_filled(egui::pos2(vx, vy), 3.0, Color32::from_rgb(250, 204, 21));
+
+                        // Readout
+                        b_painter.text(
+                            egui::pos2(b_rect.left() + 4.0, b_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("P: {:+.0} Pa", pres),
+                            FontId::proportional(8.5),
+                            bar_color,
+                        );
+                        b_painter.text(
+                            egui::pos2(b_rect.right() - 4.0, b_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("Vel: {:.2}", vel),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(250, 204, 21),
+                        );
+
+                        if b_resp.hovered() {
+                            let _ = b_resp.on_hover_text("Pneumatic Bellows Compression Dynamics HUD\n[Drag horizontally: Bellows pressure [-1200..+1200 Pa] | Drag vertically: Valve velocity [0.05..1.0]]");
+                        }
+                    } else if is_jawari_bridge {
+                        // Sitar Curved Jawari Buzz Bridge & 13-String Tarab Mini Visualizer
+                        let (j_resp, j_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let j_rect = j_resp.rect;
+                        j_painter.rect_filled(j_rect, 2.0, Color32::from_rgb(18, 16, 26));
+
+                        let mut gap = state.node_param_values.get("clearance_gap_mm").copied().unwrap_or(0.18);
+                        let mut jiva = state.node_param_values.get("jiva_thread_pos").copied().unwrap_or(0.45);
+
+                        if j_resp.dragged() {
+                            if let Some(pos) = j_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - j_rect.left()) / j_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - j_rect.top()) / j_rect.height())).clamp(0.0, 1.0);
+                                jiva = norm_x;
+                                gap = 0.01 + norm_y * 1.49;
+
+                                state.node_param_values.insert("clearance_gap_mm".to_string(), gap);
+                                state.node_param_values.insert("jiva_thread_pos".to_string(), jiva);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_g = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_j = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_g).is_some() { bus.set(pid_g, gap); }
+                                    if bus.get(pid_j).is_some() { bus.set(pid_j, jiva); }
+                                }
+                            }
+                        }
+
+                        // Curved Jawari Bridge Profile (Left 65% area)
+                        let bw = j_rect.width() * 0.65;
+                        let bx0 = j_rect.left() + 4.0;
+                        let mut prev_pt: Option<egui::Pos2> = None;
+                        for i in 0..=16 {
+                            let t = i as f32 / 16.0;
+                            let x = bx0 + t * bw;
+                            let offset = (t - 0.5) * (t - 0.5) * 4.0;
+                            let y = j_rect.bottom() - 10.0 - (1.0 - offset * 0.35) * 24.0;
+                            let pt = egui::pos2(x, y);
+                            if let Some(prev) = prev_pt {
+                                j_painter.line_segment([prev, pt], Stroke::new(1.5_f32, Color32::from_rgb(180, 130, 70)));
+                            }
+                            prev_pt = Some(pt);
+                        }
+
+                        // Jiva thread line
+                        let jx = bx0 + jiva * bw;
+                        j_painter.line_segment([egui::pos2(jx, j_rect.top() + 16.0), egui::pos2(jx, j_rect.bottom() - 8.0)], Stroke::new(1.2_f32, Color32::from_rgb(250, 250, 240)));
+
+                        // Clearance gap puck
+                        let gy = j_rect.bottom() - 10.0 - (gap / 1.5).clamp(0.0, 1.0) * 36.0;
+                        j_painter.circle_stroke(egui::pos2(jx, gy), 5.0, Stroke::new(1.2_f32, Color32::from_rgb(245, 158, 11)));
+                        j_painter.circle_filled(egui::pos2(jx, gy), 2.5, Color32::from_rgb(255, 215, 0));
+
+                        // Mini 13 Tarab bars (Right 30% area)
+                        let tx0 = j_rect.left() + bw + 8.0;
+                        let tw = j_rect.right() - tx0 - 4.0;
+                        for ti in 0..13 {
+                            let tx = tx0 + (ti as f32 / 12.0) * tw;
+                            let th = 6.0 + (ti as f32 * 1.7).sin().abs() * 22.0;
+                            j_painter.line_segment(
+                                [egui::pos2(tx, j_rect.bottom() - 8.0), egui::pos2(tx, j_rect.bottom() - 8.0 - th)],
+                                Stroke::new(1.0_f32, Color32::from_rgb(245, 158, 11)),
+                            );
+                        }
+
+                        // Readout
+                        j_painter.text(
+                            egui::pos2(j_rect.left() + 4.0, j_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("h₀: {:.2}mm", gap),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(245, 158, 11),
+                        );
+                        j_painter.text(
+                            egui::pos2(j_rect.right() - 4.0, j_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("Jiva: {:.2}", jiva),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(250, 250, 240),
+                        );
+
+                        if j_resp.hovered() {
+                            let _ = j_resp.on_hover_text("Sitar Curved Jawari Bridge & Tarab HUD\n[Drag horizontally: Jiva position [0..1] | Drag vertically: Clearance gap h₀ [0.01..1.5 mm]]");
                         }
                     } else {
                         // Filter Curve Mini View (slot-addressed)

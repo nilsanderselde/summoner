@@ -485,6 +485,18 @@ impl CommandPalette {
                 action_id: "open_plucked_string_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Pneumatic Bellows Dynamics HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_bellows_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Sitar Curved Jawari Bridge HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_jawari_bridge_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

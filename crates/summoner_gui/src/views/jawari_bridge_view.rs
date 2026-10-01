@@ -9,12 +9,13 @@
 //!
 //! Enforces minimum 44x44pt hit targets, 8pt base grid alignment, and headless PNG snapshot rendering.
 
+use crate::layout_math::Rect;
 use crate::touch_controls::ContrastColorPalette;
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "gui")]
 #[allow(unused_imports)]
-use eframe::egui::{self, Color32, Stroke, Vec2};
+use eframe::egui::{self, Color32, FontId, RichText, Rounding, Stroke, Vec2};
 
 pub const JAWARI_PUCK_HIT_RADIUS: f32 = 22.0; // 44x44pt touch bounding target
 pub const MIN_JAWARI_CLEARANCE_GAP: f32 = 0.01;
@@ -171,6 +172,19 @@ impl JawariBridgeView {
         }
         self.update_puck_from_physics();
         self.update_jawari_acoustics();
+    }
+
+    pub fn hit_test_jawari_puck(&self, screen_pos: (f32, f32), canvas_rect: Rect) -> bool {
+        let puck_screen_x = canvas_rect.x + self.puck_pos.0 * canvas_rect.width;
+        let puck_screen_y = canvas_rect.y + (1.0 - self.puck_pos.1) * canvas_rect.height;
+        let dx = screen_pos.0 - puck_screen_x;
+        let dy = screen_pos.1 - puck_screen_y;
+        (dx * dx + dy * dy).sqrt() <= JAWARI_PUCK_HIT_RADIUS
+    }
+
+    /// Render deterministic ASCII snapshot as string for headless verification.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        self.render_ascii(80, 16).join("\n")
     }
 
     /// Render ASCII diagnostics representation of the view.
@@ -334,46 +348,233 @@ impl JawariBridgeView {
 
 #[cfg(feature = "gui")]
 impl JawariBridgeView {
+    pub fn show(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
+    }
+
     pub fn ui(&mut self, ui: &mut egui::Ui) {
         ui.vertical(|ui| {
-            ui.heading("Jawari Bridge & Tarab Sympathetic Resonator HUD");
-            ui.separator();
-
+            // Header Bar
             ui.horizontal(|ui| {
-                ui.label("Profile:");
-                if ui.selectable_label(self.preset == JawariBridgeHudPreset::DeerHornRaviShankar, "Deer Horn (Ravi)").clicked() {
-                    self.set_preset(JawariBridgeHudPreset::DeerHornRaviShankar);
-                }
-                if ui.selectable_label(self.preset == JawariBridgeHudPreset::CamelBoneVilayatKhan, "Camel Bone (Vilayat)").clicked() {
-                    self.set_preset(JawariBridgeHudPreset::CamelBoneVilayatKhan);
-                }
-                if ui.selectable_label(self.preset == JawariBridgeHudPreset::EbonySurbaharMellow, "Ebony Surbahar").clicked() {
-                    self.set_preset(JawariBridgeHudPreset::EbonySurbaharMellow);
-                }
-                if ui.selectable_label(self.preset == JawariBridgeHudPreset::SyntheticDelrinPrecision, "Delrin Precision").clicked() {
-                    self.set_preset(JawariBridgeHudPreset::SyntheticDelrinPrecision);
+                ui.label(
+                    RichText::new("CURVED JAWARI BUZZ BRIDGE & TARAB SYMPATHETIC RESONATOR HUD")
+                        .font(FontId::proportional(13.0))
+                        .strong()
+                        .color(Color32::from_rgb(245, 158, 11)),
+                );
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    ui.label(
+                        RichText::new(format!("c = {:.0} m⁻¹ | Bleed = {:.0}%", self.curvature_c, self.tarab_bleed * 100.0))
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                });
+            });
+
+            ui.add_space(4.0);
+
+            // Preset Selection Bar (>=44pt touch buttons)
+            let presets = [
+                (JawariBridgeHudPreset::DeerHornRaviShankar, "Deer Horn (Ravi)"),
+                (JawariBridgeHudPreset::CamelBoneVilayatKhan, "Camel Bone (Vilayat)"),
+                (JawariBridgeHudPreset::EbonySurbaharMellow, "Ebony Surbahar"),
+                (JawariBridgeHudPreset::SyntheticDelrinPrecision, "Delrin Precision"),
+                (JawariBridgeHudPreset::ElectricMetalSizzle, "Electric Sizzle"),
+                (JawariBridgeHudPreset::OpenAcousticGourd, "Open Gourd"),
+            ];
+
+            ui.horizontal_wrapped(|ui| {
+                for (preset, label) in presets {
+                    let is_sel = self.preset == preset;
+                    let btn = egui::Button::new(
+                        RichText::new(label)
+                            .font(FontId::proportional(11.0))
+                            .color(if is_sel { Color32::from_rgb(15, 23, 42) } else { Color32::from_rgb(226, 232, 240) })
+                    )
+                    .min_size(Vec2::new(120.0, 32.0))
+                    .fill(if is_sel { Color32::from_rgb(245, 158, 11) } else { Color32::from_rgb(30, 41, 59) })
+                    .rounding(Rounding::same(4.0));
+
+                    if ui.add(btn).clicked() {
+                        self.set_preset(preset);
+                    }
                 }
             });
 
             ui.add_space(8.0);
 
+            // Main Interactive Display (Canvas + Tarab Spectrum)
+            let (canvas_rect, response) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 240.0), egui::Sense::click_and_drag());
+            let painter = ui.painter_at(canvas_rect);
+
+            // Dark Charcoal background
+            painter.rect_filled(canvas_rect, 6.0, Color32::from_rgb(15, 23, 42));
+            painter.rect_stroke(canvas_rect, 6.0, Stroke::new(1.0_f32, Color32::from_rgb(51, 65, 85)));
+
+            // Left interactive pad: 62% width for Jawari geometry & puck
+            let pad_w = (canvas_rect.width() - 24.0) * 0.62;
+            let pad_rect = egui::Rect::from_min_size(
+                egui::pos2(canvas_rect.min.x + 8.0, canvas_rect.min.y + 8.0),
+                Vec2::new(pad_w, canvas_rect.height() - 16.0),
+            );
+            painter.rect_filled(pad_rect, 4.0, Color32::from_rgb(20, 28, 44));
+            painter.rect_stroke(pad_rect, 4.0, Stroke::new(1.0_f32, Color32::from_rgb(71, 85, 105)));
+
+            // Right Tarab resonator pad: 38% width
+            let tarab_x0 = pad_rect.max.x + 8.0;
+            let tarab_w = canvas_rect.max.x - tarab_x0 - 8.0;
+            let tarab_rect = egui::Rect::from_min_size(
+                egui::pos2(tarab_x0, canvas_rect.min.y + 8.0),
+                Vec2::new(tarab_w, canvas_rect.height() - 16.0),
+            );
+            painter.rect_filled(tarab_rect, 4.0, Color32::from_rgb(18, 24, 38));
+            painter.rect_stroke(tarab_rect, 4.0, Stroke::new(1.0_f32, Color32::from_rgb(71, 85, 105)));
+
+            // Draw Curved Jawari Bridge Profile on pad
+            let curve_pts = 32;
+            let mut prev_pt: Option<egui::Pos2> = None;
+            for i in 0..=curve_pts {
+                let t = i as f32 / curve_pts as f32;
+                let x = pad_rect.min.x + t * pad_rect.width();
+                // Curved parabolic profile representing horn/bone obstacle:
+                let curve_offset = (t - 0.5) * (t - 0.5) * 4.0;
+                let y = pad_rect.max.y - 20.0 - (1.0 - curve_offset * 0.4) * 50.0;
+                let pt = egui::pos2(x, y);
+                if let Some(prev) = prev_pt {
+                    painter.line_segment([prev, pt], Stroke::new(2.5_f32, Color32::from_rgb(180, 130, 70)));
+                }
+                prev_pt = Some(pt);
+            }
+
+            // Draw Jiva Cotton Thread Line
+            let jiva_screen_x = pad_rect.min.x + self.puck_pos.0 * pad_rect.width();
+            painter.line_segment(
+                [egui::pos2(jiva_screen_x, pad_rect.min.y + 10.0), egui::pos2(jiva_screen_x, pad_rect.max.y - 10.0)],
+                Stroke::new(1.8_f32, Color32::from_rgb(250, 250, 240)),
+            );
+            painter.text(
+                egui::pos2(jiva_screen_x + 4.0, pad_rect.min.y + 12.0),
+                egui::Align2::LEFT_TOP,
+                "JIVA THREAD",
+                FontId::proportional(9.0),
+                Color32::from_rgb(250, 250, 240),
+            );
+
+            // Handle Puck Dragging on Pad
+            let puck_screen_x = pad_rect.min.x + self.puck_pos.0 * pad_rect.width();
+            let puck_screen_y = pad_rect.max.y - self.puck_pos.1 * pad_rect.height();
+            let puck_center = egui::pos2(puck_screen_x, puck_screen_y);
+
+            if response.dragged() || response.clicked() {
+                if let Some(pos) = response.interact_pointer_pos() {
+                    if pad_rect.contains(pos) || self.is_dragging_puck {
+                        self.is_dragging_puck = true;
+                        let norm_x = ((pos.x - pad_rect.min.x) / pad_rect.width()).clamp(0.0, 1.0);
+                        let norm_y = ((pad_rect.max.y - pos.y) / pad_rect.height()).clamp(0.0, 1.0);
+                        self.update_physics_from_puck(norm_x, norm_y);
+                    }
+                }
+            } else {
+                self.is_dragging_puck = false;
+            }
+
+            // Draw Interactive Puck (44x44pt touch bounding target)
+            painter.circle_filled(puck_center, JAWARI_PUCK_HIT_RADIUS, Color32::from_rgb(245, 158, 11));
+            painter.circle_stroke(puck_center, JAWARI_PUCK_HIT_RADIUS, Stroke::new(2.5_f32, Color32::from_rgb(254, 240, 138)));
+            painter.circle_filled(puck_center, 4.0, Color32::from_rgb(15, 23, 42));
+
+            // Axis labels inside pad
+            painter.text(
+                egui::pos2(pad_rect.min.x + 8.0, pad_rect.max.y - 18.0),
+                egui::Align2::LEFT_BOTTOM,
+                format!("Gap h₀: {:.2} mm", self.clearance_gap_mm),
+                FontId::proportional(11.0),
+                Color32::from_rgb(245, 158, 11),
+            );
+            painter.text(
+                egui::pos2(pad_rect.max.x - 8.0, pad_rect.max.y - 18.0),
+                egui::Align2::RIGHT_BOTTOM,
+                format!("Jiva Pos: {:.2}", self.jiva_thread_pos),
+                FontId::proportional(11.0),
+                Color32::from_rgb(241, 245, 249),
+            );
+
+            // Right Tarab 13-String Sympathetic Spectrum
+            painter.text(
+                egui::pos2(tarab_rect.center().x, tarab_rect.min.y + 10.0),
+                egui::Align2::CENTER_TOP,
+                "13-STRING TARAB SYMPATHETIC SPECTRUM",
+                FontId::proportional(10.5),
+                Color32::from_rgb(245, 158, 11),
+            );
+
+            let bar_margin = 6.0;
+            let bar_area_w = tarab_rect.width() - 2.0 * bar_margin;
+            let bar_w = (bar_area_w / 13.0).max(4.0);
+            let bar_base_y = tarab_rect.max.y - 24.0;
+            let max_bar_h = tarab_rect.height() - 56.0;
+
+            for (idx, &energy) in self.tarab_energy.iter().enumerate() {
+                let bx = tarab_rect.min.x + bar_margin + idx as f32 * (bar_area_w / 13.0);
+                let bar_h = (energy * max_bar_h).clamp(2.0, max_bar_h);
+                let bar_rect = egui::Rect::from_min_max(
+                    egui::pos2(bx + 1.0, bar_base_y - bar_h),
+                    egui::pos2(bx + bar_w - 1.0, bar_base_y),
+                );
+
+                // Shimmering amber gradient
+                let col = if energy > 0.8 {
+                    Color32::from_rgb(255, 215, 0)
+                } else if energy > 0.5 {
+                    Color32::from_rgb(245, 158, 11)
+                } else {
+                    Color32::from_rgb(180, 83, 9)
+                };
+
+                painter.rect_filled(bar_rect, 2.0, col);
+                painter.text(
+                    egui::pos2(bx + bar_w * 0.5, bar_base_y + 4.0),
+                    egui::Align2::CENTER_TOP,
+                    format!("T{}", idx + 1),
+                    FontId::proportional(7.5),
+                    Color32::from_rgb(148, 163, 184),
+                );
+            }
+
+            ui.add_space(8.0);
+
+            // Surgical Parameter Sliders
             ui.horizontal(|ui| {
                 ui.vertical(|ui| {
-                    ui.label("Bridge Geometry & Cotton Thread:");
-                    ui.add(egui::Slider::new(&mut self.clearance_gap_mm, MIN_JAWARI_CLEARANCE_GAP..=MAX_JAWARI_CLEARANCE_GAP).text("Clearance Gap (mm)"));
-                    ui.add(egui::Slider::new(&mut self.jiva_thread_pos, MIN_JIVA_THREAD_POS..=MAX_JIVA_THREAD_POS).text("Jiva Position"));
+                    let mut gap = self.clearance_gap_mm;
+                    if ui.add(egui::Slider::new(&mut gap, MIN_JAWARI_CLEARANCE_GAP..=MAX_JAWARI_CLEARANCE_GAP).text("Clearance Gap h₀ (mm)")).changed() {
+                        self.clearance_gap_mm = gap;
+                        self.update_puck_from_physics();
+                    }
+                    let mut jiva = self.jiva_thread_pos;
+                    if ui.add(egui::Slider::new(&mut jiva, MIN_JIVA_THREAD_POS..=MAX_JIVA_THREAD_POS).text("Cotton Jiva Position")).changed() {
+                        self.jiva_thread_pos = jiva;
+                        self.update_puck_from_physics();
+                    }
                 });
 
                 ui.separator();
 
                 ui.vertical(|ui| {
-                    ui.label(format!("Curvature c: {:.0} m^-1", self.curvature_c));
-                    ui.add(egui::Slider::new(&mut self.tarab_bleed, 0.0..=1.0).text("Tarab Bleed"));
+                    let mut curv = self.curvature_c;
+                    if ui.add(egui::Slider::new(&mut curv, 40.0..=400.0).text("Bridge Curvature c (m⁻¹)")).changed() {
+                        self.curvature_c = curv;
+                    }
+                    let mut bleed = self.tarab_bleed;
+                    if ui.add(egui::Slider::new(&mut bleed, 0.0..=1.0).text("Tarab Sympathetic Bleed")).changed() {
+                        self.tarab_bleed = bleed;
+                    }
                 });
             });
         });
     }
 }
+
 
 fn save_png_file(path: &str, width: usize, height: usize, rgba_pixels: &[u8]) -> Result<(), String> {
     let mut out = Vec::with_capacity(width * height * 4 + 1024);

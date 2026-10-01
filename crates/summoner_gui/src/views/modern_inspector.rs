@@ -94,6 +94,10 @@ pub struct ModernInspectorState {
     pub requested_open_waveguide_mesh_hud: bool,
     #[serde(default)]
     pub requested_open_plucked_string_hud: bool,
+    #[serde(default)]
+    pub requested_open_bellows_hud: bool,
+    #[serde(default)]
+    pub requested_open_jawari_bridge_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -147,6 +151,8 @@ impl Default for ModernInspectorState {
             requested_open_spring_lattice_hud: false,
             requested_open_waveguide_mesh_hud: false,
             requested_open_plucked_string_hud: false,
+            requested_open_bellows_hud: false,
+            requested_open_jawari_bridge_hud: false,
         }
     }
 }
@@ -911,6 +917,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open interactive Karplus-Strong Plucked String hammer/plectrum contact force, triangular deflection & dual polarization HUD").clicked() {
                     state.requested_open_plucked_string_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Bellows") || active_kind.contains("Cassotto") || active_kind == "PneumaticBellows" || active_kind == "CassottoChamber" || active_kind == "AccordionBellows" || active_kind == "BellowsDynamics" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🪗 Open Bellows Compression Dynamics HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(217, 119, 6)))
+                        .fill(Color32::from_rgb(38, 28, 14))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(217, 119, 6)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Pneumatic Bellows chamber pressure force, pallet valve velocity & push/pull airflow HUD").clicked() {
+                    state.requested_open_bellows_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Jawari") || active_kind.contains("Tarab") || active_kind == "JawariBridge" || active_kind == "TarabResonatorBank" || active_kind == "TarabStringResonator" || active_kind == "SitarGourdBody" || active_kind == "SitarBridge" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🪕 Open Sitar Curved Jawari Bridge HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(245, 158, 11)))
+                        .fill(Color32::from_rgb(38, 28, 14))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(245, 158, 11)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive curved Jawari buzz bridge clearance gap, cotton Jiva thread & 13-string Tarab sympathetic spectrum HUD").clicked() {
+                    state.requested_open_jawari_bridge_hud = true;
                 }
                 ui.add_space(4.0);
             }

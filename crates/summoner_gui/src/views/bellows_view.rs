@@ -183,6 +183,11 @@ impl BellowsView {
         self.render_ascii(width, height)
     }
 
+    /// Render deterministic ASCII snapshot as string for headless verification.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        self.render_ascii(80, 16).join("\n")
+    }
+
     /// Render ASCII art overview for terminal and headless verification.
     pub fn render_ascii(&self, width: usize, height: usize) -> Vec<String> {
         let mut lines = Vec::with_capacity(height);

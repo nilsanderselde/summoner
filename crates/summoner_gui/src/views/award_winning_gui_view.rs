@@ -700,6 +700,10 @@ pub struct AwardWinningGuiView {
     pub waveguide_mesh_view: crate::views::waveguide_mesh_view::WaveguideMeshView,
     pub show_plucked_string_modal: bool,
     pub plucked_string_view: crate::views::plucked_string_view::PluckedStringView,
+    pub show_bellows_modal: bool,
+    pub bellows_view: crate::views::bellows_view::BellowsView,
+    pub show_jawari_bridge_modal: bool,
+    pub jawari_bridge_view: crate::views::jawari_bridge_view::JawariBridgeView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1016,6 +1020,10 @@ impl AwardWinningGuiView {
             waveguide_mesh_view: crate::views::waveguide_mesh_view::WaveguideMeshView::new(),
             show_plucked_string_modal: false,
             plucked_string_view: crate::views::plucked_string_view::PluckedStringView::new(),
+            show_bellows_modal: false,
+            bellows_view: crate::views::bellows_view::BellowsView::new(),
+            show_jawari_bridge_modal: false,
+            jawari_bridge_view: crate::views::jawari_bridge_view::JawariBridgeView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -1805,6 +1813,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_plucked_string_hud = false;
             self.open_plucked_string_hud();
         }
+        if self.inspector_state.requested_open_bellows_hud || self.device_rack_state.requested_open_bellows_hud {
+            self.inspector_state.requested_open_bellows_hud = false;
+            self.device_rack_state.requested_open_bellows_hud = false;
+            self.open_bellows_hud();
+        }
+        if self.inspector_state.requested_open_jawari_bridge_hud || self.device_rack_state.requested_open_jawari_bridge_hud {
+            self.inspector_state.requested_open_jawari_bridge_hud = false;
+            self.device_rack_state.requested_open_jawari_bridge_hud = false;
+            self.open_jawari_bridge_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -1838,6 +1856,8 @@ impl AwardWinningGuiView {
         self.show_spring_lattice_modal_window(ui);
         self.show_waveguide_mesh_modal_window(ui);
         self.show_plucked_string_modal_window(ui);
+        self.show_bellows_modal_window(ui);
+        self.show_jawari_bridge_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -10371,6 +10391,187 @@ impl AwardWinningGuiView {
 
     pub fn is_plucked_string_hud_open(&self) -> bool {
         self.show_plucked_string_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_bellows_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_bellows_modal {
+            return;
+        }
+
+        let mut is_open = self.show_bellows_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🪗 Pneumatic Bellows Dynamics & Free-Reed Articulation HUD")
+            .id(egui::Id::new("bellows_hud_modal"))
+            .open(&mut is_open)
+            .default_size([860.0, 580.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Bellows Compression Dynamics [-1200..+1200 Pa], Airflow Push/Pull & Pallet Valve Velocity HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.bellows_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_bellows_modal = is_open;
+        self.sync_bellows_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_bellows_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let pres = self.bellows_view.bellows_pressure_pa;
+        let vel = self.bellows_view.valve_velocity;
+        let cass = self.bellows_view.cassotto_aperture;
+        let mus = self.bellows_view.musette_detune_cents;
+        let stiff = self.bellows_view.reed_stiffness;
+
+        self.device_rack_state.node_param_values.insert("bellows_pressure_pa".to_string(), pres);
+        self.device_rack_state.node_param_values.insert("valve_velocity".to_string(), vel);
+        self.device_rack_state.node_param_values.insert("cassotto_aperture".to_string(), cass);
+        self.device_rack_state.node_param_values.insert("musette_detune_cents".to_string(), mus);
+        self.device_rack_state.node_param_values.insert("reed_stiffness".to_string(), stiff);
+
+        self.inspector_state.node_param_values.insert("bellows_pressure_pa".to_string(), pres);
+        self.inspector_state.node_param_values.insert("valve_velocity".to_string(), vel);
+        self.inspector_state.node_param_values.insert("cassotto_aperture".to_string(), cass);
+        self.inspector_state.node_param_values.insert("musette_detune_cents".to_string(), mus);
+        self.inspector_state.node_param_values.insert("reed_stiffness".to_string(), stiff);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_pres = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_vel  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_cass = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_mus  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_st   = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+
+            if bus.get(pid_pres).is_some() { bus.set(pid_pres, pres); }
+            if bus.get(pid_vel).is_some()  { bus.set(pid_vel, vel); }
+            if bus.get(pid_cass).is_some() { bus.set(pid_cass, cass); }
+            if bus.get(pid_mus).is_some()  { bus.set(pid_mus, mus); }
+            if bus.get(pid_st).is_some()   { bus.set(pid_st, stiff); }
+        }
+    }
+
+    pub fn open_bellows_hud(&mut self) {
+        self.show_bellows_modal = true;
+    }
+
+    pub fn close_bellows_hud(&mut self) {
+        self.show_bellows_modal = false;
+    }
+
+    pub fn is_bellows_hud_open(&self) -> bool {
+        self.show_bellows_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_jawari_bridge_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_jawari_bridge_modal {
+            return;
+        }
+
+        let mut is_open = self.show_jawari_bridge_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🪕 Sitar Curved Jawari Bridge & Tarab Sympathetic Resonator HUD")
+            .id(egui::Id::new("jawari_bridge_hud_modal"))
+            .open(&mut is_open)
+            .default_size([860.0, 580.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Curved Jawari Obstacle Boundary, Jiva Cotton Thread Grazing & 13-String Tarab Spectrum HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.jawari_bridge_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_jawari_bridge_modal = is_open;
+        self.sync_jawari_bridge_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_jawari_bridge_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let gap = self.jawari_bridge_view.clearance_gap_mm;
+        let jiva = self.jawari_bridge_view.jiva_thread_pos;
+        let curv = self.jawari_bridge_view.curvature_c;
+        let bleed = self.jawari_bridge_view.tarab_bleed;
+
+        self.device_rack_state.node_param_values.insert("clearance_gap_mm".to_string(), gap);
+        self.device_rack_state.node_param_values.insert("jiva_thread_pos".to_string(), jiva);
+        self.device_rack_state.node_param_values.insert("curvature_c".to_string(), curv);
+        self.device_rack_state.node_param_values.insert("tarab_bleed".to_string(), bleed);
+
+        self.inspector_state.node_param_values.insert("clearance_gap_mm".to_string(), gap);
+        self.inspector_state.node_param_values.insert("jiva_thread_pos".to_string(), jiva);
+        self.inspector_state.node_param_values.insert("curvature_c".to_string(), curv);
+        self.inspector_state.node_param_values.insert("tarab_bleed".to_string(), bleed);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_gap   = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_jiva  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_curv  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_bleed = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_gap).is_some()   { bus.set(pid_gap, gap); }
+            if bus.get(pid_jiva).is_some()  { bus.set(pid_jiva, jiva); }
+            if bus.get(pid_curv).is_some()  { bus.set(pid_curv, curv); }
+            if bus.get(pid_bleed).is_some() { bus.set(pid_bleed, bleed); }
+        }
+    }
+
+    pub fn open_jawari_bridge_hud(&mut self) {
+        self.show_jawari_bridge_modal = true;
+    }
+
+    pub fn close_jawari_bridge_hud(&mut self) {
+        self.show_jawari_bridge_modal = false;
+    }
+
+    pub fn is_jawari_bridge_hud_open(&self) -> bool {
+        self.show_jawari_bridge_modal
     }
 
     #[cfg(feature = "gui")]

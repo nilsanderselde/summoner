@@ -210,6 +210,8 @@ pub mod tier127_turn63_tests;
 #[cfg(feature = "gui")]
 pub mod tier128_turn64_tests;
 #[cfg(feature = "gui")]
+pub mod tier129_turn65_tests;
+#[cfg(feature = "gui")]
 pub mod touch_gestures;
 #[cfg(feature = "gui")]
 pub mod transport_bar;
@@ -335,6 +337,8 @@ pub use views::idiophone_spectrum_view::IdiophoneSpectrumView;
 pub use views::isomorphic_lattice_view::IsomorphicLatticeView;
 #[cfg(feature = "gui")]
 pub use views::isomorphic_tuning_keyboard::IsomorphicTuningKeyboardView;
+#[cfg(feature = "gui")]
+pub use views::jawari_bridge_view::*;
 #[cfg(feature = "gui")]
 pub use views::ji_bridge_view::*;
 #[cfg(feature = "gui")]
