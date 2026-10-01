@@ -224,6 +224,7 @@ pub mod gui_tests {
     #[test]
     fn test_turn48_gui_hud_live_param_bus_sync() {
         let mut view = AwardWinningGuiView::new();
+        view.selected_track_idx = 0;
         let mut bus = ParamBus::new();
 
         let t1_s0_speed = summoner_core::param_bus::ParamId(1 * 1000 + 0 * 20 + 0);
