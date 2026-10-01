@@ -1403,3 +1403,40 @@ Product Management has conducted a comprehensive readiness audit:
   - Feature tests: 9 tests passed in `tier121_turn57_tests` (`cargo test -p summoner_gui --features gui -- tier121_turn57_tests`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`).
 
+### Turn #58 (Turn #23 Deliverable) — Physical Modeling Hammered Dulcimer / Cimbalom & Electromechanical Clavinet D6 HUDs Convergence (Milestones 30 & 33)
+- [x] Physical Modeling Hammered Dulcimer & Cimbalom (Trapezoidal Multi-Course Soundboard, Dual Treble/Bass Bridges & Hammer Strike Dynamics) and Electromechanical Clavinet D6 (Rubber Anvil String Impact Contact, Dual Electromagnetic Pickups, Phase Cancellation & 4-Way Rocker Tone Switch Bank) HUDs Integration:
+  - Integrated `DulcimerCimbalomView` and `ClavinetView` performance HUDs into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/dulcimer_cimbalom_view.rs` & `clavinet_view.rs`):
+  - In `DulcimerCimbalomView`: added `pub fn show(&mut self, ui: &mut egui::Ui)` forwarder and `render_ascii_snapshot` method.
+  - In `ClavinetView`: implemented full interactive egui `ui(&mut self, ui: &mut egui::Ui)` and `show(&mut self, ui: &mut egui::Ui)` rendering:
+    * 6 sound profile preset tabs (`Stevie Superstition`, `Funk Quack`, `D6 Clean`, `Mellow`, `Auto-Wah`, `Bridge Lead`) with $\ge 44\text{pt}$ touch bounds.
+    * Interactive 2D Canvas with left XY pad for Anvil Hardness vs Pickup Phase (0..180°) and draggable puck (>= 44x44pt hit target).
+    * Dual pickup cancellation waveform display (`evaluate_pickup_waveform`) and rubber anvil contact impact pulse curve (`evaluate_anvil_impact_curve`).
+    * 4 toggleable rocker tone switches (`Brilliant`, `Treble`, `Medium`, `Soft`) with tactile feedback.
+    * Added touch normalization helpers (`hardness_to_normalized`, `normalized_to_hardness`, `phase_to_normalized`, `normalized_to_phase`), `hit_test_clavinet_puck`, and `render_ascii_snapshot`.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_dulcimer_modal: bool`, `dulcimer_view: DulcimerCimbalomView`, `show_clavinet_modal: bool`, and `clavinet_view: ClavinetView`.
+  - Added dedicated modal windows `show_dulcimer_modal_window` and `show_clavinet_modal_window` with responsive styling, WCAG AAA contrast, and $\ge 44 \times 44\text{pt}$ touch bounds.
+  - Added public lifecycle methods: `open_dulcimer_hud()`, `close_dulcimer_hud()`, `is_dulcimer_hud_open()`, `open_clavinet_hud()`, `close_clavinet_hud()`, `is_clavinet_hud_open()`.
+  - Real-time parameter sync bridges (`sync_dulcimer_hud_state` and `sync_clavinet_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_dulcimer_hud: bool` and `requested_open_clavinet_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🎼 Open Hammered Dulcimer & Cimbalom String Dispersion HUD]` and `[⚡ Open Electromechanical Clavinet D6 String-Anvil HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header `[🎼 HUD]` / `[⚡ HUD]` and expanded toolbar buttons in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Dulcimer: Trapezoidal soundboard frame, dual treble and bass bridge lines, 5 string courses, strike mallet puck modulating `strike_pos_ratio` [0.05..0.50 L] and `hammer_hardness` [10..100%].
+    * Clavinet: Clavinet string line, tangent rubber anvil strike block, dual magnetic neck/bridge pickups, and touch puck modulating `anvil_hardness` [0..100%] and `pickup_phase_deg` [0..180°].
+- [x] Command Palette & Application Routing:
+  - Registered `open_dulcimer_hud` and `open_clavinet_hud` under `"Physical Modeling"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_dulcimer_hud()` and `open_clavinet_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier122_turn58_tests.rs`:
+    * Pure tests: view initialization, presets, normalization roundtrips, hit testing, physics simulation, impact curves, cancellation waveforms, slot arithmetic channel isolation, deterministic ASCII snapshots.
+    * GUI tests: modal lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch, rack & inspector trigger propagation, command palette action registration.
+  - Unit tests: 329 passed in 0.23s (`cargo test -p summoner_gui`).
+  - Feature tests: 9 tests passed in `tier122_turn58_tests` (`cargo test -p summoner_gui --features gui -- tier122_turn58_tests`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`).
+
+

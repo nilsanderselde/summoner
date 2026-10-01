@@ -672,6 +672,10 @@ pub struct AwardWinningGuiView {
     pub koto_view: crate::views::koto_view::KotoView,
     pub show_gamelan_modal: bool,
     pub gamelan_view: crate::views::gamelan_gender_view::GamelanGenderView,
+    pub show_dulcimer_modal: bool,
+    pub dulcimer_view: crate::views::dulcimer_cimbalom_view::DulcimerCimbalomView,
+    pub show_clavinet_modal: bool,
+    pub clavinet_view: crate::views::clavinet_view::ClavinetView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -960,6 +964,10 @@ impl AwardWinningGuiView {
             koto_view: crate::views::koto_view::KotoView::new(),
             show_gamelan_modal: false,
             gamelan_view: crate::views::gamelan_gender_view::GamelanGenderView::new(),
+            show_dulcimer_modal: false,
+            dulcimer_view: crate::views::dulcimer_cimbalom_view::DulcimerCimbalomView::new(),
+            show_clavinet_modal: false,
+            clavinet_view: crate::views::clavinet_view::ClavinetView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -1679,6 +1687,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_gamelan_hud = false;
             self.open_gamelan_hud();
         }
+        if self.inspector_state.requested_open_dulcimer_hud || self.device_rack_state.requested_open_dulcimer_hud {
+            self.inspector_state.requested_open_dulcimer_hud = false;
+            self.device_rack_state.requested_open_dulcimer_hud = false;
+            self.open_dulcimer_hud();
+        }
+        if self.inspector_state.requested_open_clavinet_hud || self.device_rack_state.requested_open_clavinet_hud {
+            self.inspector_state.requested_open_clavinet_hud = false;
+            self.device_rack_state.requested_open_clavinet_hud = false;
+            self.open_clavinet_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -1698,6 +1716,8 @@ impl AwardWinningGuiView {
         self.show_mbira_modal_window(ui);
         self.show_koto_modal_window(ui);
         self.show_gamelan_modal_window(ui);
+        self.show_dulcimer_modal_window(ui);
+        self.show_clavinet_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -8743,6 +8763,222 @@ impl AwardWinningGuiView {
 
     pub fn is_gamelan_hud_open(&self) -> bool {
         self.show_gamelan_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_dulcimer_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_dulcimer_modal {
+            return;
+        }
+
+        let mut is_open = self.show_dulcimer_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎼 Physical Modeling Hammered Dulcimer & Cimbalom String Dispersion HUD")
+            .id(egui::Id::new("dulcimer_hud_modal"))
+            .open(&mut is_open)
+            .default_size([780.0, 540.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Trapezoidal Multi-Course Soundboard, Dual Treble/Bass Bridges & Hammer Strike HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.dulcimer_view.ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_dulcimer_modal = is_open;
+        self.sync_dulcimer_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_dulcimer_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let strike_pos = self.dulcimer_view.strike_pos_ratio;
+        let hardness = self.dulcimer_view.hammer_hardness;
+        let inharm = self.dulcimer_view.inharmonicity_coeff;
+        let decay = self.dulcimer_view.decay_s;
+        let coupling = self.dulcimer_view.bridge_coupling;
+        let damper = if self.dulcimer_view.damper_pedal { 1.0 } else { 0.0 };
+
+        self.device_rack_state.node_param_values.insert("strike_pos_ratio".to_string(), strike_pos);
+        self.device_rack_state.node_param_values.insert("hammer_hardness".to_string(), hardness);
+        self.device_rack_state.node_param_values.insert("inharmonicity_coeff".to_string(), inharm);
+        self.device_rack_state.node_param_values.insert("decay_s".to_string(), decay);
+        self.device_rack_state.node_param_values.insert("bridge_coupling".to_string(), coupling);
+        self.device_rack_state.node_param_values.insert("damper_pedal".to_string(), damper);
+
+        self.device_rack_state.node_param_values.insert("strike_pos".to_string(), strike_pos);
+        self.device_rack_state.node_param_values.insert("hammer_hard".to_string(), hardness);
+        self.device_rack_state.node_param_values.insert("inharm".to_string(), inharm);
+        self.device_rack_state.node_param_values.insert("decay".to_string(), decay);
+
+        self.inspector_state.node_param_values.insert("strike_pos_ratio".to_string(), strike_pos);
+        self.inspector_state.node_param_values.insert("hammer_hardness".to_string(), hardness);
+        self.inspector_state.node_param_values.insert("inharmonicity_coeff".to_string(), inharm);
+        self.inspector_state.node_param_values.insert("decay_s".to_string(), decay);
+        self.inspector_state.node_param_values.insert("bridge_coupling".to_string(), coupling);
+        self.inspector_state.node_param_values.insert("damper_pedal".to_string(), damper);
+
+        self.inspector_state.node_param_values.insert("strike_pos".to_string(), strike_pos);
+        self.inspector_state.node_param_values.insert("hammer_hard".to_string(), hardness);
+        self.inspector_state.node_param_values.insert("inharm".to_string(), inharm);
+        self.inspector_state.node_param_values.insert("decay".to_string(), decay);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_strike = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_hard   = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_inharm = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_decay  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_coup   = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_damp   = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+
+            if bus.get(pid_strike).is_some() { bus.set(pid_strike, strike_pos); }
+            if bus.get(pid_hard).is_some()   { bus.set(pid_hard, hardness); }
+            if bus.get(pid_inharm).is_some() { bus.set(pid_inharm, inharm); }
+            if bus.get(pid_decay).is_some()  { bus.set(pid_decay, decay); }
+            if bus.get(pid_coup).is_some()   { bus.set(pid_coup, coupling); }
+            if bus.get(pid_damp).is_some()   { bus.set(pid_damp, damper); }
+        }
+    }
+
+    pub fn open_dulcimer_hud(&mut self) {
+        self.show_dulcimer_modal = true;
+    }
+
+    pub fn close_dulcimer_hud(&mut self) {
+        self.show_dulcimer_modal = false;
+    }
+
+    pub fn is_dulcimer_hud_open(&self) -> bool {
+        self.show_dulcimer_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_clavinet_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_clavinet_modal {
+            return;
+        }
+
+        let mut is_open = self.show_clavinet_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("⚡ Electromechanical Clavinet D6 String-Anvil Collision HUD")
+            .id(egui::Id::new("clavinet_hud_modal"))
+            .open(&mut is_open)
+            .default_size([780.0, 540.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Rubber Anvil Impact Force, Dual Pickup Cancellation & 4-Way Rocker Tone Switch Bank HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.clavinet_view.ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_clavinet_modal = is_open;
+        self.sync_clavinet_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_clavinet_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let hardness = self.clavinet_view.anvil_hardness;
+        let damping = self.clavinet_view.yarn_damping;
+        let blend = self.clavinet_view.pickup_blend;
+        let phase = self.clavinet_view.pickup_phase_deg;
+        let auto_wah = self.clavinet_view.auto_wah_mix;
+        let level = self.clavinet_view.master_level;
+
+        self.device_rack_state.node_param_values.insert("anvil_hardness".to_string(), hardness);
+        self.device_rack_state.node_param_values.insert("yarn_damping".to_string(), damping);
+        self.device_rack_state.node_param_values.insert("pickup_blend".to_string(), blend);
+        self.device_rack_state.node_param_values.insert("pickup_phase_deg".to_string(), phase);
+        self.device_rack_state.node_param_values.insert("auto_wah_mix".to_string(), auto_wah);
+        self.device_rack_state.node_param_values.insert("master_level".to_string(), level);
+
+        self.device_rack_state.node_param_values.insert("anvil_hard".to_string(), hardness);
+        self.device_rack_state.node_param_values.insert("damping".to_string(), damping);
+        self.device_rack_state.node_param_values.insert("blend".to_string(), blend);
+        self.device_rack_state.node_param_values.insert("phase_deg".to_string(), phase);
+
+        self.inspector_state.node_param_values.insert("anvil_hardness".to_string(), hardness);
+        self.inspector_state.node_param_values.insert("yarn_damping".to_string(), damping);
+        self.inspector_state.node_param_values.insert("pickup_blend".to_string(), blend);
+        self.inspector_state.node_param_values.insert("pickup_phase_deg".to_string(), phase);
+        self.inspector_state.node_param_values.insert("auto_wah_mix".to_string(), auto_wah);
+        self.inspector_state.node_param_values.insert("master_level".to_string(), level);
+
+        self.inspector_state.node_param_values.insert("anvil_hard".to_string(), hardness);
+        self.inspector_state.node_param_values.insert("damping".to_string(), damping);
+        self.inspector_state.node_param_values.insert("blend".to_string(), blend);
+        self.inspector_state.node_param_values.insert("phase_deg".to_string(), phase);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_anvil  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_damp   = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_blend  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_phase  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_wah    = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_level  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+
+            if bus.get(pid_anvil).is_some() { bus.set(pid_anvil, hardness); }
+            if bus.get(pid_damp).is_some()  { bus.set(pid_damp, damping); }
+            if bus.get(pid_blend).is_some() { bus.set(pid_blend, blend); }
+            if bus.get(pid_phase).is_some() { bus.set(pid_phase, phase); }
+            if bus.get(pid_wah).is_some()   { bus.set(pid_wah, auto_wah); }
+            if bus.get(pid_level).is_some() { bus.set(pid_level, level); }
+        }
+    }
+
+    pub fn open_clavinet_hud(&mut self) {
+        self.show_clavinet_modal = true;
+    }
+
+    pub fn close_clavinet_hud(&mut self) {
+        self.show_clavinet_modal = false;
+    }
+
+    pub fn is_clavinet_hud_open(&self) -> bool {
+        self.show_clavinet_modal
     }
 
     #[cfg(feature = "gui")]

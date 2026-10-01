@@ -401,6 +401,18 @@ impl CommandPalette {
                 action_id: "open_gamelan_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Hammered Dulcimer & Cimbalom String Dispersion HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_dulcimer_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Electromechanical Clavinet D6 String-Anvil HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_clavinet_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

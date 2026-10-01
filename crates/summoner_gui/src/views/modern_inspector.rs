@@ -66,6 +66,10 @@ pub struct ModernInspectorState {
     pub requested_open_koto_hud: bool,
     #[serde(default)]
     pub requested_open_gamelan_hud: bool,
+    #[serde(default)]
+    pub requested_open_dulcimer_hud: bool,
+    #[serde(default)]
+    pub requested_open_clavinet_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -105,6 +109,8 @@ impl Default for ModernInspectorState {
             requested_open_mbira_hud: false,
             requested_open_koto_hud: false,
             requested_open_gamelan_hud: false,
+            requested_open_dulcimer_hud: false,
+            requested_open_clavinet_hud: false,
         }
     }
 }
@@ -729,6 +735,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open interactive Balinese Gamelan Gender bronze bar modal inharmonicity, bamboo resonator & ombak beating HUD").clicked() {
                     state.requested_open_gamelan_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Dulcimer") || active_kind.contains("Cimbalom") || active_kind.contains("Santur") || active_kind.contains("Yangqin") || active_kind.contains("Psaltery") || active_kind == "DulcimerCimbalomModel" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🎼 Open Hammered Dulcimer & Cimbalom String Dispersion HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(255, 107, 43)))
+                        .fill(Color32::from_rgb(38, 20, 12))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 107, 43)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Hammered Dulcimer & Cimbalom trapezoidal soundboard, dual bridges & hammer strike HUD").clicked() {
+                    state.requested_open_dulcimer_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Clavinet") || active_kind.contains("Clav") || active_kind == "ClavinetNode" || active_kind == "ClavinetD6" {
+                if ui.add(
+                    egui::Button::new(RichText::new("⚡ Open Electromechanical Clavinet D6 String-Anvil HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(249, 115, 22)))
+                        .fill(Color32::from_rgb(38, 22, 10))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(249, 115, 22)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Electromechanical Clavinet D6 rubber anvil contact, dual pickups & 4-way tone switches HUD").clicked() {
+                    state.requested_open_clavinet_hud = true;
                 }
                 ui.add_space(4.0);
             }

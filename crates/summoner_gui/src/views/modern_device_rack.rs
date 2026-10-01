@@ -81,6 +81,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_koto_hud: bool,
     #[serde(default)]
     pub requested_open_gamelan_hud: bool,
+    #[serde(default)]
+    pub requested_open_dulcimer_hud: bool,
+    #[serde(default)]
+    pub requested_open_clavinet_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -110,6 +114,8 @@ impl Default for ModernDeviceRackState {
             requested_open_mbira_hud: false,
             requested_open_koto_hud: false,
             requested_open_gamelan_hud: false,
+            requested_open_dulcimer_hud: false,
+            requested_open_clavinet_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -306,6 +312,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_mbira = cur_selection.contains("Mbira") || cur_selection.contains("Kalimba") || cur_selection == "MbiraNode" || cur_selection == "KalimbaNode" || cur_selection == "MbiraKalimbaModel" || cur_selection == "MbiraModel";
                     let is_koto = cur_selection.contains("Koto") || cur_selection.contains("Guzheng") || cur_selection == "KotoNode" || cur_selection == "KotoSynthesizer" || cur_selection == "KotoStringVoice" || cur_selection == "KotoSoundboard";
                     let is_gamelan = cur_selection.contains("Gamelan") || cur_selection.contains("Gender") || cur_selection.contains("Jegogan") || cur_selection.contains("Metallophone") || cur_selection == "GamelanGender" || cur_selection == "AcousticBalineseGamelanJegoganBronzeBar";
+                    let is_dulcimer = cur_selection.contains("Dulcimer") || cur_selection.contains("Cimbalom") || cur_selection.contains("Santur") || cur_selection.contains("Yangqin") || cur_selection.contains("Psaltery") || cur_selection == "DulcimerCimbalomModel";
+                    let is_clavinet = cur_selection.contains("Clavinet") || cur_selection.contains("Clav") || cur_selection == "ClavinetNode" || cur_selection == "ClavinetD6";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -354,9 +362,17 @@ pub fn show_modern_device_rack_with_context(
                         if ui.button(RichText::new("箏 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(245, 158, 11))).on_hover_text("Open Japanese 13-String Koto Zither HUD").clicked() {
                             state.requested_open_koto_hud = true;
                         }
-                    } else if is_gamelan
-                        && ui.button(RichText::new("🔔 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(52, 211, 153))).on_hover_text("Open Balinese Gamelan Gender Metallophone HUD").clicked() {
-                        state.requested_open_gamelan_hud = true;
+                    } else if is_gamelan {
+                        if ui.button(RichText::new("🔔 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(52, 211, 153))).on_hover_text("Open Balinese Gamelan Gender Metallophone HUD").clicked() {
+                            state.requested_open_gamelan_hud = true;
+                        }
+                    } else if is_dulcimer {
+                        if ui.button(RichText::new("🎼 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 107, 43))).on_hover_text("Open Hammered Dulcimer & Cimbalom HUD").clicked() {
+                            state.requested_open_dulcimer_hud = true;
+                        }
+                    } else if is_clavinet
+                        && ui.button(RichText::new("⚡ HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(249, 115, 22))).on_hover_text("Open Electromechanical Clavinet D6 HUD").clicked() {
+                        state.requested_open_clavinet_hud = true;
                     }
                     ui.add_space(4.0);
                     let pwr_col = if state.is_enabled { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(100, 116, 139) };
@@ -551,6 +567,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_mbira = cur_selection.contains("Mbira") || cur_selection.contains("Kalimba") || cur_selection == "MbiraNode" || cur_selection == "KalimbaNode" || cur_selection == "MbiraKalimbaModel" || cur_selection == "MbiraModel";
                     let is_koto = cur_selection.contains("Koto") || cur_selection.contains("Guzheng") || cur_selection == "KotoNode" || cur_selection == "KotoSynthesizer" || cur_selection == "KotoStringVoice" || cur_selection == "KotoSoundboard";
                     let is_gamelan = cur_selection.contains("Gamelan") || cur_selection.contains("Gender") || cur_selection.contains("Jegogan") || cur_selection.contains("Metallophone") || cur_selection == "GamelanGender" || cur_selection == "AcousticBalineseGamelanJegoganBronzeBar";
+                    let is_dulcimer = cur_selection.contains("Dulcimer") || cur_selection.contains("Cimbalom") || cur_selection.contains("Santur") || cur_selection.contains("Yangqin") || cur_selection.contains("Psaltery") || cur_selection == "DulcimerCimbalomModel";
+                    let is_clavinet = cur_selection.contains("Clavinet") || cur_selection.contains("Clav") || cur_selection == "ClavinetNode" || cur_selection == "ClavinetD6";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -607,9 +625,17 @@ pub fn show_modern_device_rack_with_context(
                         if ui.button(RichText::new("箏 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(245, 158, 11))).on_hover_text("Open Japanese 13-String Koto Zither HUD").clicked() {
                             state.requested_open_koto_hud = true;
                         }
-                    } else if is_gamelan
-                        && ui.button(RichText::new("🔔 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(52, 211, 153))).on_hover_text("Open Balinese Gamelan Gender Metallophone HUD").clicked() {
-                        state.requested_open_gamelan_hud = true;
+                    } else if is_gamelan {
+                        if ui.button(RichText::new("🔔 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(52, 211, 153))).on_hover_text("Open Balinese Gamelan Gender Metallophone HUD").clicked() {
+                            state.requested_open_gamelan_hud = true;
+                        }
+                    } else if is_dulcimer {
+                        if ui.button(RichText::new("🎼 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 107, 43))).on_hover_text("Open Hammered Dulcimer & Cimbalom HUD").clicked() {
+                            state.requested_open_dulcimer_hud = true;
+                        }
+                    } else if is_clavinet
+                        && ui.button(RichText::new("⚡ HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(249, 115, 22))).on_hover_text("Open Electromechanical Clavinet D6 HUD").clicked() {
+                        state.requested_open_clavinet_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -1390,6 +1416,8 @@ fn show_pro_parameter_drawer(
                     let is_mbira = dev_kind.contains("Mbira") || dev_kind.contains("Kalimba") || dev_kind == "MbiraNode" || dev_kind == "KalimbaNode" || dev_kind == "MbiraKalimbaModel" || dev_kind == "MbiraModel";
                     let is_koto = dev_kind.contains("Koto") || dev_kind.contains("Guzheng") || dev_kind == "KotoNode" || dev_kind == "KotoSynthesizer" || dev_kind == "KotoStringVoice" || dev_kind == "KotoSoundboard";
                     let is_gamelan = dev_kind.contains("Gamelan") || dev_kind.contains("Gender") || dev_kind.contains("Jegogan") || dev_kind.contains("Metallophone") || dev_kind == "GamelanGender" || dev_kind == "AcousticBalineseGamelanJegoganBronzeBar";
+                    let is_dulcimer = dev_kind.contains("Dulcimer") || dev_kind.contains("Cimbalom") || dev_kind.contains("Santur") || dev_kind.contains("Yangqin") || dev_kind.contains("Psaltery") || dev_kind == "DulcimerCimbalomModel";
+                    let is_clavinet = dev_kind.contains("Clavinet") || dev_kind.contains("Clav") || dev_kind == "ClavinetNode" || dev_kind == "ClavinetD6";
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -2474,6 +2502,163 @@ fn show_pro_parameter_drawer(
 
                         if gam_resp.hovered() {
                             let _ = gam_resp.on_hover_text("Balinese Gamelan Metallophone & Gender\n[Drag horizontally: Mallet hardness [soft..hard] | Drag vertically: Ombak acoustic beating rate [2..12 Hz]]");
+                        }
+                    } else if is_dulcimer {
+                        // Hammered Dulcimer / Cimbalom Multi-Bridge & Course Strike Mini Visualizer
+                        let (dulc_resp, dulc_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let dulc_rect = dulc_resp.rect;
+                        dulc_painter.rect_filled(dulc_rect, 2.0, Color32::from_rgb(18, 12, 8));
+
+                        let mut strike_pos = state.node_param_values.get("strike_pos_ratio").copied().unwrap_or(0.14);
+                        let mut hardness = state.node_param_values.get("hammer_hardness").copied().unwrap_or(0.65);
+
+                        if dulc_resp.dragged() {
+                            if let Some(pos) = dulc_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - dulc_rect.left()) / dulc_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - dulc_rect.top()) / dulc_rect.height())).clamp(0.0, 1.0);
+                                strike_pos = 0.05 + norm_x * 0.45;
+                                hardness = 0.10 + norm_y * 0.90;
+                                state.node_param_values.insert("strike_pos_ratio".to_string(), strike_pos);
+                                state.node_param_values.insert("hammer_hardness".to_string(), hardness);
+                                state.node_param_values.insert("strike_pos".to_string(), strike_pos);
+                                state.node_param_values.insert("hammer_hard".to_string(), hardness);
+                                if let Some(bus) = param_bus {
+                                    let pid_pos = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_pos).is_some() { bus.set(pid_pos, strike_pos); }
+                                    let pid_hard = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_hard).is_some() { bus.set(pid_hard, hardness); }
+                                }
+                            }
+                        }
+
+                        // Trapezoidal Dulcimer Soundboard outline
+                        let top_w = dulc_rect.width() * 0.60;
+                        let bot_w = dulc_rect.width() * 0.92;
+                        let top_x0 = dulc_rect.center().x - top_w * 0.5;
+                        let top_x1 = dulc_rect.center().x + top_w * 0.5;
+                        let bot_x0 = dulc_rect.center().x - bot_w * 0.5;
+                        let bot_x1 = dulc_rect.center().x + bot_w * 0.5;
+                        let t_y = dulc_rect.top() + 6.0;
+                        let b_y = dulc_rect.bottom() - 6.0;
+
+                        dulc_painter.line_segment([egui::pos2(top_x0, t_y), egui::pos2(top_x1, t_y)], Stroke::new(1.0_f32, Color32::from_rgb(180, 83, 9)));
+                        dulc_painter.line_segment([egui::pos2(top_x1, t_y), egui::pos2(bot_x1, b_y)], Stroke::new(1.0_f32, Color32::from_rgb(180, 83, 9)));
+                        dulc_painter.line_segment([egui::pos2(bot_x1, b_y), egui::pos2(bot_x0, b_y)], Stroke::new(1.0_f32, Color32::from_rgb(180, 83, 9)));
+                        dulc_painter.line_segment([egui::pos2(bot_x0, b_y), egui::pos2(top_x0, t_y)], Stroke::new(1.0_f32, Color32::from_rgb(180, 83, 9)));
+
+                        // Dual bridge vertical lines (Treble & Bass)
+                        let bridge_t_x = dulc_rect.left() + dulc_rect.width() * 0.40;
+                        let bridge_b_x = dulc_rect.left() + dulc_rect.width() * 0.65;
+                        dulc_painter.line_segment([egui::pos2(bridge_t_x, t_y + 2.0), egui::pos2(bridge_t_x, b_y - 2.0)], Stroke::new(1.2_f32, Color32::from_rgb(255, 107, 43)));
+                        dulc_painter.line_segment([egui::pos2(bridge_b_x, t_y + 2.0), egui::pos2(bridge_b_x, b_y - 2.0)], Stroke::new(1.2_f32, Color32::from_rgb(255, 215, 0)));
+
+                        // String courses
+                        for c_idx in 0..5 {
+                            let cy = t_y + 8.0 + c_idx as f32 * 8.5;
+                            dulc_painter.line_segment([egui::pos2(bot_x0 + 4.0, cy), egui::pos2(bot_x1 - 4.0, cy)], Stroke::new(0.6_f32, Color32::from_rgb(254, 243, 199)));
+                        }
+
+                        // Draggable Puck indicating Strike Pos vs Hammer Hardness
+                        let norm_px = ((strike_pos - 0.05) / 0.45).clamp(0.0, 1.0);
+                        let norm_hy = ((hardness - 0.10) / 0.90).clamp(0.0, 1.0);
+                        let puck_x = dulc_rect.left() + norm_px * dulc_rect.width();
+                        let puck_y = dulc_rect.bottom() - norm_hy * dulc_rect.height();
+                        dulc_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.5, Color32::from_rgb(255, 107, 43));
+                        dulc_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::from_rgb(255, 237, 213)));
+
+                        // Readout
+                        dulc_painter.text(
+                            egui::pos2(dulc_rect.left() + 4.0, dulc_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("Pos: {:.2}L", strike_pos),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(255, 107, 43),
+                        );
+                        dulc_painter.text(
+                            egui::pos2(dulc_rect.right() - 4.0, dulc_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("Hard: {:.0}%", hardness * 100.0),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(255, 215, 0),
+                        );
+
+                        if dulc_resp.hovered() {
+                            let _ = dulc_resp.on_hover_text("Hammered Dulcimer & Cimbalom String Dispersion\n[Drag horizontally: Strike node position [0.05..0.50 L] | Drag vertically: Mallet hammer hardness [10..100%]]");
+                        }
+                    } else if is_clavinet {
+                        // Electromechanical Clavinet D6 String-Anvil Collision Mini Visualizer
+                        let (clav_resp, clav_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let clav_rect = clav_resp.rect;
+                        clav_painter.rect_filled(clav_rect, 2.0, Color32::from_rgb(18, 14, 8));
+
+                        let mut anvil_hard = state.node_param_values.get("anvil_hardness").copied().unwrap_or(0.85);
+                        let mut phase_deg = state.node_param_values.get("pickup_phase_deg").copied().unwrap_or(0.0);
+
+                        if clav_resp.dragged() {
+                            if let Some(pos) = clav_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - clav_rect.left()) / clav_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - clav_rect.top()) / clav_rect.height())).clamp(0.0, 1.0);
+                                anvil_hard = norm_x;
+                                phase_deg = norm_y * 180.0;
+                                state.node_param_values.insert("anvil_hardness".to_string(), anvil_hard);
+                                state.node_param_values.insert("pickup_phase_deg".to_string(), phase_deg);
+                                state.node_param_values.insert("anvil_hard".to_string(), anvil_hard);
+                                state.node_param_values.insert("phase_deg".to_string(), phase_deg);
+                                if let Some(bus) = param_bus {
+                                    let pid_anvil = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_anvil).is_some() { bus.set(pid_anvil, anvil_hard); }
+                                    let pid_phase = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 3);
+                                    if bus.get(pid_phase).is_some() { bus.set(pid_phase, phase_deg); }
+                                }
+                            }
+                        }
+
+                        // Clavinet string line
+                        let str_y = clav_rect.center().y;
+                        clav_painter.line_segment([egui::pos2(clav_rect.left() + 6.0, str_y), egui::pos2(clav_rect.right() - 6.0, str_y)], Stroke::new(1.0_f32, Color32::from_rgb(254, 240, 138)));
+
+                        // Rubber anvil tangent contact block
+                        let anvil_x = clav_rect.left() + 45.0;
+                        let anvil_rect = egui::Rect::from_min_max(egui::pos2(anvil_x - 8.0, str_y - 12.0), egui::pos2(anvil_x + 8.0, str_y));
+                        clav_painter.rect_filled(anvil_rect, 2.0, Color32::from_rgb(249, 115, 22));
+                        clav_painter.rect_stroke(anvil_rect, 2.0, Stroke::new(0.8_f32, Color32::from_rgb(254, 215, 170)));
+
+                        // Dual magnetic pickups (Neck & Bridge)
+                        let neck_x = clav_rect.left() + 85.0;
+                        let bridge_x = clav_rect.left() + 125.0;
+                        let p_h = 10.0;
+                        clav_painter.rect_filled(egui::Rect::from_min_max(egui::pos2(neck_x - 6.0, str_y + 2.0), egui::pos2(neck_x + 6.0, str_y + 2.0 + p_h)), 1.5, Color32::from_rgb(30, 41, 59));
+                        clav_painter.rect_stroke(egui::Rect::from_min_max(egui::pos2(neck_x - 6.0, str_y + 2.0), egui::pos2(neck_x + 6.0, str_y + 2.0 + p_h)), 1.5, Stroke::new(0.8_f32, Color32::from_rgb(148, 163, 184)));
+
+                        clav_painter.rect_filled(egui::Rect::from_min_max(egui::pos2(bridge_x - 6.0, str_y + 2.0), egui::pos2(bridge_x + 6.0, str_y + 2.0 + p_h)), 1.5, Color32::from_rgb(30, 41, 59));
+                        clav_painter.rect_stroke(egui::Rect::from_min_max(egui::pos2(bridge_x - 6.0, str_y + 2.0), egui::pos2(bridge_x + 6.0, str_y + 2.0 + p_h)), 1.5, Stroke::new(0.8_f32, Color32::from_rgb(148, 163, 184)));
+
+                        // Draggable Puck indicating Anvil Hardness vs Pickup Phase
+                        let norm_ax = anvil_hard.clamp(0.0, 1.0);
+                        let norm_py = (phase_deg / 180.0).clamp(0.0, 1.0);
+                        let puck_x = clav_rect.left() + norm_ax * clav_rect.width();
+                        let puck_y = clav_rect.bottom() - norm_py * clav_rect.height();
+                        clav_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.5, Color32::from_rgb(249, 115, 22));
+                        clav_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::from_rgb(254, 215, 170)));
+
+                        // Readout
+                        clav_painter.text(
+                            egui::pos2(clav_rect.left() + 4.0, clav_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("Anvil: {:.0}%", anvil_hard * 100.0),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(249, 115, 22),
+                        );
+                        clav_painter.text(
+                            egui::pos2(clav_rect.right() - 4.0, clav_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("Phase: {:.0}°", phase_deg),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(255, 209, 102),
+                        );
+
+                        if clav_resp.hovered() {
+                            let _ = clav_resp.on_hover_text("Electromechanical Clavinet D6 String-Anvil Collision\n[Drag horizontally: Anvil strike hardness [0..100%] | Drag vertically: Pickup phase angle [0..180°]]");
                         }
                     } else {
                         // Filter Curve Mini View (slot-addressed)
