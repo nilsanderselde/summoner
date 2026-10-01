@@ -302,7 +302,7 @@ impl SummonerApp {
         let mut app = Self {
             project,
             project_path: None,
-            param_bus,
+            param_bus: param_bus.clone(),
             transport_running: false,
             playhead_beat: 0.0,
             current_beat: 0.0,
@@ -439,6 +439,7 @@ impl SummonerApp {
             show_dpi_scale_panel_modal: false,
             award_winning_view: crate::views::award_winning_gui_view::AwardWinningGuiView::new(),
         };
+        app.award_winning_view.live_param_bus = Some(param_bus.clone());
 
         if let Some(state) = GuiState::load() {
             app.current_view = state.current_view;
@@ -2600,6 +2601,7 @@ impl eframe::App for SummonerApp {
                         &mut self.transport_running,
                         &mut self.selected_track_id,
                     );
+                    self.award_winning_view.live_param_bus = Some(self.param_bus.clone());
                     self.award_winning_view.sync_with_param_bus(
                         &self.project,
                         &self.param_bus,

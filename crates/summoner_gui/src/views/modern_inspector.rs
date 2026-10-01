@@ -52,6 +52,21 @@ impl Default for ModernInspectorState {
     }
 }
 
+impl ModernInspectorState {
+    /// Request live parameter automation for a given parameter ID.
+    pub fn request_automation(&mut self, param_id: &str) {
+        self.requested_automation_param = Some(param_id.to_string());
+    }
+
+    /// Reset track gain, pan, mute, and solo controls to unity / centered defaults.
+    pub fn reset_mix_controls(&mut self) {
+        self.gain_db = 0.0;
+        self.pan_val = 0.0;
+        self.is_muted = false;
+        self.is_soloed = false;
+    }
+}
+
 #[cfg(feature = "gui")]
 pub fn show_modern_inspector(ui: &mut egui::Ui, state: &mut ModernInspectorState) {
     show_modern_inspector_with_context(ui, state, None, 1);
@@ -123,7 +138,19 @@ pub fn show_modern_inspector_with_context(
                     ui.label(RichText::new(format!("{:.1}dB", state.gain_db)).font(FontId::proportional(10.0)).color(Color32::from_rgb(56, 189, 248)));
                 });
             });
-            ui.add(egui::Slider::new(&mut state.gain_db, -36.0..=12.0).show_value(false));
+            let gain_resp = ui.add(egui::Slider::new(&mut state.gain_db, -36.0..=12.0).show_value(false));
+            if gain_resp.double_clicked() {
+                state.gain_db = 0.0;
+            }
+            if gain_resp.secondary_clicked() {
+                state.requested_automation_param = Some("gain".to_string());
+            }
+            if gain_resp.hovered() {
+                let _ = gain_resp.on_hover_text(format!(
+                    "Gain Fader: {:.1} dB\n[Drag to adjust | Double-click for 0dB unity | Right-click to automate]",
+                    state.gain_db
+                ));
+            }
 
             ui.add_space(6.0);
 
@@ -144,7 +171,26 @@ pub fn show_modern_inspector_with_context(
                     ui.label(RichText::new(pan_text).font(FontId::proportional(10.0)).color(Color32::from_rgb(56, 189, 248)));
                 });
             });
-            ui.add(egui::Slider::new(&mut state.pan_val, -1.0..=1.0).show_value(false));
+            let pan_resp = ui.add(egui::Slider::new(&mut state.pan_val, -1.0..=1.0).show_value(false));
+            if pan_resp.double_clicked() {
+                state.pan_val = 0.0;
+            }
+            if pan_resp.secondary_clicked() {
+                state.requested_automation_param = Some("pan".to_string());
+            }
+            if pan_resp.hovered() {
+                let pan_display = if state.pan_val.abs() < 0.05 {
+                    "C".to_string()
+                } else if state.pan_val < 0.0 {
+                    format!("L {:.0}%", state.pan_val.abs() * 100.0)
+                } else {
+                    format!("R {:.0}%", state.pan_val * 100.0)
+                };
+                let _ = pan_resp.on_hover_text(format!(
+                    "Stereo Pan: {}\n[Drag to adjust | Double-click to center | Right-click to automate]",
+                    pan_display
+                ));
+            }
 
             ui.add_space(8.0);
 
@@ -159,6 +205,9 @@ pub fn show_modern_inspector_with_context(
                 if mute_btn.clicked() {
                     state.is_muted = !state.is_muted;
                 }
+                if mute_btn.secondary_clicked() {
+                    state.requested_automation_param = Some("mute".to_string());
+                }
 
                 let solo_btn = ui.add(
                     egui::Button::new(RichText::new("Solo").font(FontId::proportional(11.0)).color(if state.is_soloed { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(148, 163, 184) }))
@@ -168,6 +217,9 @@ pub fn show_modern_inspector_with_context(
                 );
                 if solo_btn.clicked() {
                     state.is_soloed = !state.is_soloed;
+                }
+                if solo_btn.secondary_clicked() {
+                    state.requested_automation_param = Some("solo".to_string());
                 }
 
                 let arm_btn = ui.add(
@@ -244,7 +296,22 @@ pub fn show_modern_inspector_with_context(
             ui.add_space(10.0);
             ui.separator();
             ui.add_space(6.0);
-            ui.label(RichText::new("DSP Parameter Inspector").font(FontId::proportional(11.0)).strong().color(Color32::from_rgb(200, 215, 235)));
+            ui.horizontal(|ui| {
+                ui.label(RichText::new("DSP Parameter Inspector").font(FontId::proportional(11.0)).strong().color(Color32::from_rgb(200, 215, 235)));
+                let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+                if ui.button(RichText::new("📈 Auto").font(FontId::proportional(9.0)).color(Color32::from_rgb(234, 179, 8)))
+                    .on_hover_text("Open Live Bézier Automation Lane for current DSP module primary parameter")
+                    .clicked()
+                {
+                    if let Some(ref node_kind) = state.selected_node_kind {
+                        if let Some(desc) = registry.get(node_kind) {
+                            if let Some(primary) = desc.params.first() {
+                                state.requested_automation_param = Some(primary.id.clone());
+                            }
+                        }
+                    }
+                }
+            });
             ui.add_space(6.0);
 
             let registry = crate::dsp_node_ui::DspNodeRegistry::new();

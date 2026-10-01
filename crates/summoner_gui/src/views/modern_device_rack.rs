@@ -72,6 +72,28 @@ impl Default for ModernDeviceRackState {
     }
 }
 
+impl ModernDeviceRackState {
+    /// Request live parameter automation for a given parameter ID (e.g. from right-click or auto button).
+    pub fn request_automation(&mut self, param_id: &str) {
+        self.requested_automation_param = Some(param_id.to_string());
+    }
+
+    /// Reset standard device rack knobs to factory default values.
+    pub fn reset_knob_defaults(&mut self) {
+        self.cutoff = 0.65;
+        self.resonance = 0.45;
+        self.decay = 0.50;
+        self.env_decay = 0.35;
+        self.mod_amt = 0.60;
+        self.drive = 0.40;
+        self.osc_mix = 0.75;
+        self.shape = 0.50;
+        self.volume = 0.85;
+        self.lfo_speed = 0.40;
+        self.lfo_depth = 0.60;
+    }
+}
+
 #[cfg(feature = "gui")]
 pub fn show_modern_device_rack(
     ui: &mut egui::Ui,
@@ -287,11 +309,14 @@ pub fn show_modern_device_rack(
                                             };
                                             let val = state.node_param_values.entry(p.id.clone()).or_insert(default_norm);
                                             let color = if i == 0 { Color32::from_rgb(56, 189, 248) } else { cat_accent };
-                                            draw_rotary_dial(ui, &p.name, val, color);
+                                            let resp = draw_rotary_dial(ui, &p.name, val, color, default_norm);
+                                            if resp.secondary_clicked() {
+                                                state.requested_automation_param = Some(p.id.clone());
+                                            }
                                         } else {
                                             // Blank indicator for unoccupied slot
                                             let mut dummy = 0.5;
-                                            draw_rotary_dial(ui, "---", &mut dummy, Color32::from_rgb(45, 55, 75));
+                                            draw_rotary_dial(ui, "---", &mut dummy, Color32::from_rgb(45, 55, 75), 0.5);
                                         }
                                         if i < 2 {
                                             ui.add_space(4.0);
@@ -314,10 +339,13 @@ pub fn show_modern_device_rack(
                                             };
                                             let val = state.node_param_values.entry(p.id.clone()).or_insert(default_norm);
                                             let color = if i == 3 { Color32::from_rgb(56, 189, 248) } else { cat_accent };
-                                            draw_rotary_dial(ui, &p.name, val, color);
+                                            let resp = draw_rotary_dial(ui, &p.name, val, color, default_norm);
+                                            if resp.secondary_clicked() {
+                                                state.requested_automation_param = Some(p.id.clone());
+                                            }
                                         } else {
                                             let mut dummy = 0.5;
-                                            draw_rotary_dial(ui, "---", &mut dummy, Color32::from_rgb(45, 55, 75));
+                                            draw_rotary_dial(ui, "---", &mut dummy, Color32::from_rgb(45, 55, 75), 0.5);
                                         }
                                         if i < 5 {
                                             ui.add_space(4.0);
@@ -327,19 +355,25 @@ pub fn show_modern_device_rack(
                             } else {
                                 // Default / Fallback knobs
                                 ui.horizontal(|ui| {
-                                    draw_rotary_dial(ui, "Cutoff", &mut state.cutoff, Color32::from_rgb(56, 189, 248));
+                                    let r1 = draw_rotary_dial(ui, "Cutoff", &mut state.cutoff, Color32::from_rgb(56, 189, 248), 0.65);
+                                    if r1.secondary_clicked() { state.requested_automation_param = Some("cutoff".to_string()); }
                                     ui.add_space(4.0);
-                                    draw_rotary_dial(ui, "Reso", &mut state.resonance, Color32::from_rgb(245, 158, 11));
+                                    let r2 = draw_rotary_dial(ui, "Reso", &mut state.resonance, Color32::from_rgb(245, 158, 11), 0.45);
+                                    if r2.secondary_clicked() { state.requested_automation_param = Some("resonance".to_string()); }
                                     ui.add_space(4.0);
-                                    draw_rotary_dial(ui, "Decay", &mut state.decay, Color32::from_rgb(245, 158, 11));
+                                    let r3 = draw_rotary_dial(ui, "Decay", &mut state.decay, Color32::from_rgb(245, 158, 11), 0.50);
+                                    if r3.secondary_clicked() { state.requested_automation_param = Some("decay".to_string()); }
                                 });
                                 ui.add_space(4.0);
                                 ui.horizontal(|ui| {
-                                    draw_rotary_dial(ui, "Amt", &mut state.env_decay, Color32::from_rgb(56, 189, 248));
+                                    let r4 = draw_rotary_dial(ui, "Amt", &mut state.env_decay, Color32::from_rgb(56, 189, 248), 0.35);
+                                    if r4.secondary_clicked() { state.requested_automation_param = Some("env_decay".to_string()); }
                                     ui.add_space(4.0);
-                                    draw_rotary_dial(ui, "Amt", &mut state.mod_amt, Color32::from_rgb(245, 158, 11));
+                                    let r5 = draw_rotary_dial(ui, "Mod", &mut state.mod_amt, Color32::from_rgb(245, 158, 11), 0.60);
+                                    if r5.secondary_clicked() { state.requested_automation_param = Some("mod_amt".to_string()); }
                                     ui.add_space(4.0);
-                                    draw_rotary_dial(ui, "Drive", &mut state.drive, Color32::from_rgb(245, 158, 11));
+                                    let r6 = draw_rotary_dial(ui, "Drive", &mut state.drive, Color32::from_rgb(245, 158, 11), 0.40);
+                                    if r6.secondary_clicked() { state.requested_automation_param = Some("drive".to_string()); }
                                 });
                             }
                         });
@@ -375,7 +409,10 @@ pub fn show_modern_device_rack(
                                         _ => 0.5,
                                     };
                                     let val = state.node_param_values.entry(p.id.clone()).or_insert(default_norm);
-                                    draw_vertical_fader(ui, &p.name, val);
+                                    let resp = draw_vertical_fader(ui, &p.name, val, default_norm);
+                                    if resp.secondary_clicked() {
+                                        state.requested_automation_param = Some(p.id.clone());
+                                    }
                                     if i + 1 < fader_params.len() {
                                         ui.add_space(4.0);
                                     }
@@ -383,19 +420,24 @@ pub fn show_modern_device_rack(
                                 for i in fader_params.len()..3 {
                                     ui.add_space(4.0);
                                     if i == 1 {
-                                        draw_vertical_fader(ui, "Shape", &mut state.shape);
+                                        let resp = draw_vertical_fader(ui, "Shape", &mut state.shape, 0.50);
+                                        if resp.secondary_clicked() { state.requested_automation_param = Some("shape".to_string()); }
                                     } else {
-                                        draw_vertical_fader(ui, "Vol", &mut state.volume);
+                                        let resp = draw_vertical_fader(ui, "Vol", &mut state.volume, 0.85);
+                                        if resp.secondary_clicked() { state.requested_automation_param = Some("volume".to_string()); }
                                     }
                                 }
                             });
                         } else {
                             ui.horizontal(|ui| {
-                                draw_vertical_fader(ui, "Osc Mix", &mut state.osc_mix);
+                                let r1 = draw_vertical_fader(ui, "Osc Mix", &mut state.osc_mix, 0.75);
+                                if r1.secondary_clicked() { state.requested_automation_param = Some("osc_mix".to_string()); }
                                 ui.add_space(4.0);
-                                draw_vertical_fader(ui, "Shape", &mut state.shape);
+                                let r2 = draw_vertical_fader(ui, "Shape", &mut state.shape, 0.50);
+                                if r2.secondary_clicked() { state.requested_automation_param = Some("shape".to_string()); }
                                 ui.add_space(4.0);
-                                draw_vertical_fader(ui, "Vol", &mut state.volume);
+                                let r3 = draw_vertical_fader(ui, "Vol", &mut state.volume, 0.85);
+                                if r3.secondary_clicked() { state.requested_automation_param = Some("volume".to_string()); }
                             });
                         }
                     });
@@ -559,7 +601,10 @@ pub fn show_modern_device_rack(
                                             _ => 0.5,
                                         };
                                         let val = state.node_param_values.entry(p.id.clone()).or_insert(default_norm);
-                                        draw_rotary_dial(ui, &p.name, val, cat_accent);
+                                        let resp = draw_rotary_dial(ui, &p.name, val, cat_accent, default_norm);
+                                        if resp.secondary_clicked() {
+                                            state.requested_automation_param = Some(p.id.clone());
+                                        }
                                         if i == 0 && mod_params.len() > 1 {
                                             ui.add_space(2.0);
                                         }
@@ -576,7 +621,10 @@ pub fn show_modern_device_rack(
                                             _ => 0.5,
                                         };
                                         let val = state.node_param_values.entry(p.id.clone()).or_insert(default_norm);
-                                        draw_rotary_dial(ui, &p.name, val, cat_accent);
+                                        let resp = draw_rotary_dial(ui, &p.name, val, cat_accent, default_norm);
+                                        if resp.secondary_clicked() {
+                                            state.requested_automation_param = Some(p.id.clone());
+                                        }
                                         if i == 0 {
                                             ui.add_space(2.0);
                                         }
@@ -591,13 +639,17 @@ pub fn show_modern_device_rack(
                                 });
                                 ui.add_space(2.0);
                                 ui.horizontal(|ui| {
-                                    draw_rotary_dial(ui, "Rate", &mut state.lfo_speed, Color32::from_rgb(56, 189, 248));
-                                    draw_rotary_dial(ui, "Depth", &mut state.lfo_depth, Color32::from_rgb(148, 163, 184));
+                                    let r1 = draw_rotary_dial(ui, "Rate", &mut state.lfo_speed, Color32::from_rgb(56, 189, 248), 0.40);
+                                    if r1.secondary_clicked() { state.requested_automation_param = Some("lfo_speed".to_string()); }
+                                    let r2 = draw_rotary_dial(ui, "Depth", &mut state.lfo_depth, Color32::from_rgb(148, 163, 184), 0.60);
+                                    if r2.secondary_clicked() { state.requested_automation_param = Some("lfo_depth".to_string()); }
                                 });
                                 ui.add_space(2.0);
                                 ui.horizontal(|ui| {
-                                    draw_rotary_dial(ui, "Shape", &mut state.shape, Color32::from_rgb(56, 189, 248));
-                                    draw_rotary_dial(ui, "Mod", &mut state.mod_amt, Color32::from_rgb(148, 163, 184));
+                                    let r3 = draw_rotary_dial(ui, "Shape", &mut state.shape, Color32::from_rgb(56, 189, 248), 0.50);
+                                    if r3.secondary_clicked() { state.requested_automation_param = Some("shape".to_string()); }
+                                    let r4 = draw_rotary_dial(ui, "Mod", &mut state.mod_amt, Color32::from_rgb(148, 163, 184), 0.60);
+                                    if r4.secondary_clicked() { state.requested_automation_param = Some("mod_amt".to_string()); }
                                 });
                             });
                         }
@@ -723,7 +775,16 @@ fn show_pro_parameter_drawer(
                                     .inner_margin(egui::Margin::symmetric(6.0, 5.0))
                                     .show(ui, |ui| {
                                         ui.horizontal(|ui| {
-                                            ui.label(RichText::new(&p.name).font(FontId::proportional(9.5)).strong().color(Color32::from_rgb(226, 232, 240)));
+                                            let name_lbl = ui.label(RichText::new(&p.name).font(FontId::proportional(9.5)).strong().color(Color32::from_rgb(226, 232, 240)));
+                                            if name_lbl.secondary_clicked() {
+                                                state.requested_automation_param = Some(p.id.clone());
+                                            }
+                                            if ui.button(RichText::new("📈").font(FontId::proportional(8.5)).color(Color32::from_rgb(234, 179, 8)))
+                                                .on_hover_text(format!("Open Live Bézier Automation Lane for {}", p.name))
+                                                .clicked()
+                                            {
+                                                state.requested_automation_param = Some(p.id.clone());
+                                            }
                                             if p.macro_role != crate::dsp_node_ui::MacroRole::None {
                                                 let (role_label, role_col) = match p.macro_role {
                                                     crate::dsp_node_ui::MacroRole::Tone => ("T", Color32::from_rgb(56, 189, 248)),
@@ -763,7 +824,10 @@ fn show_pro_parameter_drawer(
                                             crate::dsp_node_ui::DspWidgetKind::RotaryKnob { min, max, unit, is_logarithmic, .. } => {
                                                 let actual_val = *min + *val * (*max - *min);
                                                 ui.horizontal(|ui| {
-                                                    draw_rotary_dial(ui, "", val, cat_accent);
+                                                    let dial_resp = draw_rotary_dial(ui, "", val, cat_accent, default_norm);
+                                                    if dial_resp.secondary_clicked() {
+                                                        state.requested_automation_param = Some(p.id.clone());
+                                                    }
                                                     ui.vertical(|ui| {
                                                         ui.label(RichText::new(format!("{:.1} {}", actual_val, unit)).font(FontId::proportional(8.5)).color(Color32::from_rgb(56, 189, 248)));
                                                         let slider = if *is_logarithmic {
@@ -771,7 +835,13 @@ fn show_pro_parameter_drawer(
                                                         } else {
                                                             egui::Slider::new(val, 0.0..=1.0).show_value(false)
                                                         };
-                                                        ui.add(slider);
+                                                        let slider_resp = ui.add(slider);
+                                                        if slider_resp.secondary_clicked() {
+                                                            state.requested_automation_param = Some(p.id.clone());
+                                                        }
+                                                        if slider_resp.double_clicked() {
+                                                            *val = default_norm;
+                                                        }
                                                     });
                                                 });
                                             }
@@ -779,16 +849,26 @@ fn show_pro_parameter_drawer(
                                                 let actual_val = *min + *val * (*max - *min);
                                                 ui.horizontal(|ui| {
                                                     ui.label(RichText::new(format!("{:.1} {}", actual_val, unit)).font(FontId::proportional(8.5)).color(Color32::from_rgb(56, 189, 248)));
-                                                    ui.add(egui::Slider::new(val, 0.0..=1.0).show_value(false));
+                                                    let slider_resp = ui.add(egui::Slider::new(val, 0.0..=1.0).show_value(false));
+                                                    if slider_resp.secondary_clicked() {
+                                                        state.requested_automation_param = Some(p.id.clone());
+                                                    }
+                                                    if slider_resp.double_clicked() {
+                                                        *val = default_norm;
+                                                    }
                                                 });
                                             }
                                             crate::dsp_node_ui::DspWidgetKind::Toggle { .. } => {
                                                 let mut b = *val >= 0.5;
                                                 let tog_text = if b { "ON" } else { "OFF" };
                                                 let tog_col = if b { Color32::from_rgb(34, 197, 94) } else { Color32::from_rgb(148, 163, 184) };
-                                                if ui.button(RichText::new(tog_text).font(FontId::proportional(9.0)).color(tog_col)).clicked() {
+                                                let tog_btn = ui.button(RichText::new(tog_text).font(FontId::proportional(9.0)).color(tog_col));
+                                                if tog_btn.clicked() {
                                                     b = !b;
                                                     *val = if b { 1.0 } else { 0.0 };
+                                                }
+                                                if tog_btn.secondary_clicked() {
+                                                    state.requested_automation_param = Some(p.id.clone());
                                                 }
                                             }
                                             crate::dsp_node_ui::DspWidgetKind::EnumChoice { choices, .. } => {
@@ -803,7 +883,13 @@ fn show_pro_parameter_drawer(
                                                     });
                                             }
                                             _ => {
-                                                ui.add(egui::Slider::new(val, 0.0..=1.0).show_value(false));
+                                                let slider_resp = ui.add(egui::Slider::new(val, 0.0..=1.0).show_value(false));
+                                                if slider_resp.secondary_clicked() {
+                                                    state.requested_automation_param = Some(p.id.clone());
+                                                }
+                                                if slider_resp.double_clicked() {
+                                                    *val = default_norm;
+                                                }
                                             }
                                         }
 
@@ -836,14 +922,30 @@ fn show_pro_parameter_drawer(
 }
 
 #[cfg(feature = "gui")]
-fn draw_rotary_dial(ui: &mut egui::Ui, label: &str, value: &mut f32, ring_color: Color32) {
+fn draw_rotary_dial(
+    ui: &mut egui::Ui,
+    label: &str,
+    value: &mut f32,
+    ring_color: Color32,
+    default_val: f32,
+) -> egui::Response {
     let size = Vec2::new(38.0, 52.0);
-    let (resp, painter) = ui.allocate_painter(size, egui::Sense::click_and_drag());
+    let (mut resp, painter) = ui.allocate_painter(size, egui::Sense::click_and_drag());
     let rect = resp.rect;
 
     if resp.dragged() {
         let delta_y = ui.input(|i| i.pointer.delta().y);
         *value = (*value - delta_y * 0.01).clamp(0.0, 1.0);
+    }
+    if resp.double_clicked() {
+        *value = default_val.clamp(0.0, 1.0);
+    }
+    if resp.hovered() && !label.is_empty() && label != "---" {
+        resp = resp.on_hover_text(format!(
+            "{}: {:.0}%\n[Drag to adjust | Double-click to reset | Right-click to automate]",
+            label,
+            *value * 100.0
+        ));
     }
 
     let center = egui::pos2(rect.center().x, rect.top() + 18.0);
@@ -880,17 +982,34 @@ fn draw_rotary_dial(ui: &mut egui::Ui, label: &str, value: &mut f32, ring_color:
         FontId::proportional(9.0),
         Color32::from_rgb(148, 163, 184),
     );
+
+    resp
 }
 
 #[cfg(feature = "gui")]
-fn draw_vertical_fader(ui: &mut egui::Ui, label: &str, value: &mut f32) {
+fn draw_vertical_fader(
+    ui: &mut egui::Ui,
+    label: &str,
+    value: &mut f32,
+    default_val: f32,
+) -> egui::Response {
     let size = Vec2::new(28.0, 110.0);
-    let (resp, painter) = ui.allocate_painter(size, egui::Sense::click_and_drag());
+    let (mut resp, painter) = ui.allocate_painter(size, egui::Sense::click_and_drag());
     let rect = resp.rect;
 
     if resp.dragged() {
         let delta_y = ui.input(|i| i.pointer.delta().y);
         *value = (*value - delta_y * 0.01).clamp(0.0, 1.0);
+    }
+    if resp.double_clicked() {
+        *value = default_val.clamp(0.0, 1.0);
+    }
+    if resp.hovered() && !label.is_empty() {
+        resp = resp.on_hover_text(format!(
+            "{}: {:.1}\n[Drag to adjust | Double-click to reset | Right-click to automate]",
+            label,
+            *value * 10.0
+        ));
     }
 
     let track_x = rect.center().x;
@@ -926,6 +1045,8 @@ fn draw_vertical_fader(ui: &mut egui::Ui, label: &str, value: &mut f32) {
         FontId::proportional(8.0),
         Color32::from_rgb(200, 215, 235),
     );
+
+    resp
 }
 
 #[cfg(test)]

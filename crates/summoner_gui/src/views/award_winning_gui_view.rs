@@ -581,6 +581,7 @@ pub struct AwardWinningGuiView {
     pub piano_roll_lane_mode: PianoRollLaneMode,
     pub is_piano_roll_audition_enabled: bool,
     pub is_master_mono: bool,
+    pub live_param_bus: Option<std::sync::Arc<summoner_core::param_bus::ParamBus>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -799,6 +800,7 @@ impl AwardWinningGuiView {
             piano_roll_lane_mode: PianoRollLaneMode::Velocity,
             is_piano_roll_audition_enabled: true,
             is_master_mono: false,
+            live_param_bus: None,
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -1295,7 +1297,7 @@ impl AwardWinningGuiView {
                 // Zone 4: Right Collapsible Inspector
                 if self.top_bar_state.active_tab != crate::views::modern_top_bar::ModernViewTab::Performance {
                     let cur_track_id = self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1);
-                    show_modern_inspector_with_context(ui, &mut self.inspector_state, None, cur_track_id);
+                    show_modern_inspector_with_context(ui, &mut self.inspector_state, self.live_param_bus.as_deref(), cur_track_id);
                 }
             });
         });
@@ -3408,29 +3410,69 @@ impl AwardWinningGuiView {
                 other_name => {
                     let registry = crate::dsp_node_ui::DspNodeRegistry::new();
                     let cur_kind = self.device_rack_state.selected_node_kind.as_deref().unwrap_or("AetherSynth");
+                    let mut found_desc_and_param = None;
                     if let Some(desc) = registry.get(cur_kind) {
                         if let Some(param) = desc.params.iter().find(|p| p.id == other_name) {
-                            let (min_v, max_v, unit_s) = match &param.widget {
-                                crate::dsp_node_ui::DspWidgetKind::RotaryKnob { min, max, unit, .. } => (*min, *max, unit.clone()),
-                                crate::dsp_node_ui::DspWidgetKind::VerticalFader { min, max, unit, .. } => (*min, *max, unit.clone()),
-                                crate::dsp_node_ui::DspWidgetKind::Toggle { .. } => (0.0, 1.0, "state".to_string()),
-                                crate::dsp_node_ui::DspWidgetKind::EnumChoice { .. } => (0.0, 1.0, "enum".to_string()),
-                                _ => (0.0, 1.0, String::new()),
-                            };
-                            let norm_v = self.device_rack_state.node_param_values.get(other_name).copied()
-                                .map(|v| ((v - min_v) / (max_v - min_v).max(1e-5)).clamp(0.0, 1.0))
-                                .unwrap_or(0.5);
-                            (
-                                format!("track_{}_{}", track_id, param.id),
-                                format!("{} — {}", track.name, param.name),
-                                min_v,
-                                max_v,
-                                unit_s,
-                                norm_v,
-                            )
-                        } else {
-                            return false;
+                            found_desc_and_param = Some((desc, param));
                         }
+                    }
+                    if found_desc_and_param.is_none() {
+                        if let Some(ref insp_kind) = self.inspector_state.selected_node_kind {
+                            if let Some(desc) = registry.get(insp_kind) {
+                                if let Some(param) = desc.params.iter().find(|p| p.id == other_name) {
+                                    found_desc_and_param = Some((desc, param));
+                                }
+                            }
+                        }
+                    }
+                    if found_desc_and_param.is_none() {
+                        for mod_node in &self.modular_nodes {
+                            if let Some(desc) = registry.get(&mod_node.kind_id) {
+                                if let Some(param) = desc.params.iter().find(|p| p.id == other_name) {
+                                    found_desc_and_param = Some((desc, param));
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if found_desc_and_param.is_none() {
+                        for desc in registry.list_all() {
+                            if let Some(param) = desc.params.iter().find(|p| p.id == other_name) {
+                                found_desc_and_param = Some((desc, param));
+                                break;
+                            }
+                        }
+                    }
+
+                    if let Some((_desc, param)) = found_desc_and_param {
+                        let (min_v, max_v, unit_s) = match &param.widget {
+                            crate::dsp_node_ui::DspWidgetKind::RotaryKnob { min, max, unit, .. } => (*min, *max, unit.clone()),
+                            crate::dsp_node_ui::DspWidgetKind::VerticalFader { min, max, unit, .. } => (*min, *max, unit.clone()),
+                            crate::dsp_node_ui::DspWidgetKind::Toggle { .. } => (0.0, 1.0, "state".to_string()),
+                            crate::dsp_node_ui::DspWidgetKind::EnumChoice { .. } => (0.0, 1.0, "enum".to_string()),
+                            _ => (0.0, 1.0, String::new()),
+                        };
+                        let norm_v = self.device_rack_state.node_param_values.get(other_name).copied()
+                            .or_else(|| self.inspector_state.node_param_values.get(other_name).copied())
+                            .map(|v| ((v - min_v) / (max_v - min_v).max(1e-5)).clamp(0.0, 1.0))
+                            .unwrap_or(0.5);
+                        (
+                            format!("track_{}_{}", track_id, param.id),
+                            format!("{} — {}", track.name, param.name),
+                            min_v,
+                            max_v,
+                            unit_s,
+                            norm_v,
+                        )
+                    } else if let Some(&active_val) = self.device_rack_state.node_param_values.get(other_name).or_else(|| self.inspector_state.node_param_values.get(other_name)) {
+                        (
+                            format!("track_{}_{}", track_id, other_name),
+                            format!("{} — {}", track.name, other_name),
+                            0.0_f32,
+                            1.0_f32,
+                            "%".to_string(),
+                            active_val.clamp(0.0, 1.0),
+                        )
                     } else {
                         return false;
                     }
@@ -4292,6 +4334,8 @@ impl AwardWinningGuiView {
                 ("osc_mix", &mut self.device_rack_state.osc_mix),
                 ("shape", &mut self.device_rack_state.shape),
                 ("volume", &mut self.device_rack_state.volume),
+                ("lfo_speed", &mut self.device_rack_state.lfo_speed),
+                ("lfo_depth", &mut self.device_rack_state.lfo_depth),
             ];
             for (key, val_ref) in standard_keys {
                 let lane_key = format!("track_{}_{}", track_id, key);
@@ -4453,6 +4497,10 @@ impl AwardWinningGuiView {
             ("mod_amt", self.device_rack_state.mod_amt, 4),
             ("drive", self.device_rack_state.drive, 5),
             ("volume", self.device_rack_state.volume, 6),
+            ("osc_mix", self.device_rack_state.osc_mix, 7),
+            ("shape", self.device_rack_state.shape, 8),
+            ("lfo_speed", self.device_rack_state.lfo_speed, 9),
+            ("lfo_depth", self.device_rack_state.lfo_depth, 10),
         ];
         for (name, val, offset) in standard_dials {
             let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 100 + offset);
