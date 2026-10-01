@@ -668,6 +668,10 @@ pub struct AwardWinningGuiView {
     pub steelpan_view: crate::views::steelpan_drum_view::SteelpanDrumView,
     pub show_mbira_modal: bool,
     pub mbira_view: crate::views::mbira_kalimba_view::MbiraKalimbaView,
+    pub show_koto_modal: bool,
+    pub koto_view: crate::views::koto_view::KotoView,
+    pub show_gamelan_modal: bool,
+    pub gamelan_view: crate::views::gamelan_gender_view::GamelanGenderView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -952,6 +956,10 @@ impl AwardWinningGuiView {
             steelpan_view: crate::views::steelpan_drum_view::SteelpanDrumView::new(),
             show_mbira_modal: false,
             mbira_view: crate::views::mbira_kalimba_view::MbiraKalimbaView::new(),
+            show_koto_modal: false,
+            koto_view: crate::views::koto_view::KotoView::new(),
+            show_gamelan_modal: false,
+            gamelan_view: crate::views::gamelan_gender_view::GamelanGenderView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -1661,6 +1669,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_mbira_hud = false;
             self.open_mbira_hud();
         }
+        if self.inspector_state.requested_open_koto_hud || self.device_rack_state.requested_open_koto_hud {
+            self.inspector_state.requested_open_koto_hud = false;
+            self.device_rack_state.requested_open_koto_hud = false;
+            self.open_koto_hud();
+        }
+        if self.inspector_state.requested_open_gamelan_hud || self.device_rack_state.requested_open_gamelan_hud {
+            self.inspector_state.requested_open_gamelan_hud = false;
+            self.device_rack_state.requested_open_gamelan_hud = false;
+            self.open_gamelan_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -1678,6 +1696,8 @@ impl AwardWinningGuiView {
         self.show_turkish_ney_modal_window(ui);
         self.show_steelpan_modal_window(ui);
         self.show_mbira_modal_window(ui);
+        self.show_koto_modal_window(ui);
+        self.show_gamelan_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -8507,6 +8527,222 @@ impl AwardWinningGuiView {
 
     pub fn is_mbira_hud_open(&self) -> bool {
         self.show_mbira_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_koto_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_koto_modal {
+            return;
+        }
+
+        let mut is_open = self.show_koto_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("箏 Physical Modeling Japanese 13-String Koto Zither HUD")
+            .id(egui::Id::new("koto_hud_modal"))
+            .open(&mut is_open)
+            .default_size([780.0, 540.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("13-String Paulownia Zither Body, Movable Ji Bridges & Oshi-Ite String Tension HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.koto_view.ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_koto_modal = is_open;
+        self.sync_koto_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_koto_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let tsume = self.koto_view.tsume_velocity;
+        let oshi_ite = self.koto_view.oshi_ite_force_n;
+        let release = self.koto_view.hiki_iro_release;
+        let bridge = self.koto_view.ji_bridge_offset;
+        let bleed = self.koto_view.behind_bridge_bleed;
+        let wood = self.koto_view.body_wood_resonance;
+
+        self.device_rack_state.node_param_values.insert("tsume_velocity".to_string(), tsume);
+        self.device_rack_state.node_param_values.insert("oshi_ite_force_n".to_string(), oshi_ite);
+        self.device_rack_state.node_param_values.insert("hiki_iro_release".to_string(), release);
+        self.device_rack_state.node_param_values.insert("ji_bridge_offset".to_string(), bridge);
+        self.device_rack_state.node_param_values.insert("behind_bridge_bleed".to_string(), bleed);
+        self.device_rack_state.node_param_values.insert("body_wood_resonance".to_string(), wood);
+
+        self.device_rack_state.node_param_values.insert("pluck_vel".to_string(), tsume);
+        self.device_rack_state.node_param_values.insert("string_tension".to_string(), oshi_ite);
+        self.device_rack_state.node_param_values.insert("bridge_offset".to_string(), bridge);
+        self.device_rack_state.node_param_values.insert("body_res".to_string(), wood);
+
+        self.inspector_state.node_param_values.insert("tsume_velocity".to_string(), tsume);
+        self.inspector_state.node_param_values.insert("oshi_ite_force_n".to_string(), oshi_ite);
+        self.inspector_state.node_param_values.insert("hiki_iro_release".to_string(), release);
+        self.inspector_state.node_param_values.insert("ji_bridge_offset".to_string(), bridge);
+        self.inspector_state.node_param_values.insert("behind_bridge_bleed".to_string(), bleed);
+        self.inspector_state.node_param_values.insert("body_wood_resonance".to_string(), wood);
+
+        self.inspector_state.node_param_values.insert("pluck_vel".to_string(), tsume);
+        self.inspector_state.node_param_values.insert("string_tension".to_string(), oshi_ite);
+        self.inspector_state.node_param_values.insert("bridge_offset".to_string(), bridge);
+        self.inspector_state.node_param_values.insert("body_res".to_string(), wood);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_tsume    = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_oshi_ite = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_release  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_bridge   = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_bleed    = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_wood     = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+
+            if bus.get(pid_tsume).is_some()    { bus.set(pid_tsume, tsume); }
+            if bus.get(pid_oshi_ite).is_some() { bus.set(pid_oshi_ite, oshi_ite); }
+            if bus.get(pid_release).is_some()  { bus.set(pid_release, release); }
+            if bus.get(pid_bridge).is_some()   { bus.set(pid_bridge, bridge); }
+            if bus.get(pid_bleed).is_some()    { bus.set(pid_bleed, bleed); }
+            if bus.get(pid_wood).is_some()     { bus.set(pid_wood, wood); }
+        }
+    }
+
+    pub fn open_koto_hud(&mut self) {
+        self.show_koto_modal = true;
+    }
+
+    pub fn close_koto_hud(&mut self) {
+        self.show_koto_modal = false;
+    }
+
+    pub fn is_koto_hud_open(&self) -> bool {
+        self.show_koto_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_gamelan_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_gamelan_modal {
+            return;
+        }
+
+        let mut is_open = self.show_gamelan_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🔔 Physical Modeling Balinese Gamelan Gender Metallophone HUD")
+            .id(egui::Id::new("gamelan_hud_modal"))
+            .open(&mut is_open)
+            .default_size([780.0, 540.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Suspended Bronze Bar Inharmonicity, Tuned Bamboo Resonator Cavity & Ombak Beating HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.gamelan_view.ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_gamelan_modal = is_open;
+        self.sync_gamelan_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_gamelan_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let hardness = self.gamelan_view.mallet_hardness;
+        let ombak = self.gamelan_view.ombak_rate_hz;
+        let bar_count = self.gamelan_view.bar_count as f32;
+        let thickness = self.gamelan_view.bronze_thickness_mm;
+        let damping = self.gamelan_view.damping_factor;
+        let res_q = self.gamelan_view.resonator_coupling_q;
+
+        self.device_rack_state.node_param_values.insert("mallet_hardness".to_string(), hardness);
+        self.device_rack_state.node_param_values.insert("ombak_rate_hz".to_string(), ombak);
+        self.device_rack_state.node_param_values.insert("bar_count".to_string(), bar_count);
+        self.device_rack_state.node_param_values.insert("bronze_thickness_mm".to_string(), thickness);
+        self.device_rack_state.node_param_values.insert("damping_factor".to_string(), damping);
+        self.device_rack_state.node_param_values.insert("resonator_coupling_q".to_string(), res_q);
+
+        self.device_rack_state.node_param_values.insert("mallet_hard".to_string(), hardness);
+        self.device_rack_state.node_param_values.insert("ombak_rate".to_string(), ombak);
+        self.device_rack_state.node_param_values.insert("thickness_mm".to_string(), thickness);
+        self.device_rack_state.node_param_values.insert("resonator_q".to_string(), res_q);
+
+        self.inspector_state.node_param_values.insert("mallet_hardness".to_string(), hardness);
+        self.inspector_state.node_param_values.insert("ombak_rate_hz".to_string(), ombak);
+        self.inspector_state.node_param_values.insert("bar_count".to_string(), bar_count);
+        self.inspector_state.node_param_values.insert("bronze_thickness_mm".to_string(), thickness);
+        self.inspector_state.node_param_values.insert("damping_factor".to_string(), damping);
+        self.inspector_state.node_param_values.insert("resonator_coupling_q".to_string(), res_q);
+
+        self.inspector_state.node_param_values.insert("mallet_hard".to_string(), hardness);
+        self.inspector_state.node_param_values.insert("ombak_rate".to_string(), ombak);
+        self.inspector_state.node_param_values.insert("thickness_mm".to_string(), thickness);
+        self.inspector_state.node_param_values.insert("resonator_q".to_string(), res_q);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_hard  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_ombak = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_count = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_thick = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_damp  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_res_q = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+
+            if bus.get(pid_hard).is_some()  { bus.set(pid_hard, hardness); }
+            if bus.get(pid_ombak).is_some() { bus.set(pid_ombak, ombak); }
+            if bus.get(pid_count).is_some() { bus.set(pid_count, bar_count); }
+            if bus.get(pid_thick).is_some() { bus.set(pid_thick, thickness); }
+            if bus.get(pid_damp).is_some()  { bus.set(pid_damp, damping); }
+            if bus.get(pid_res_q).is_some() { bus.set(pid_res_q, res_q); }
+        }
+    }
+
+    pub fn open_gamelan_hud(&mut self) {
+        self.show_gamelan_modal = true;
+    }
+
+    pub fn close_gamelan_hud(&mut self) {
+        self.show_gamelan_modal = false;
+    }
+
+    pub fn is_gamelan_hud_open(&self) -> bool {
+        self.show_gamelan_modal
     }
 
     #[cfg(feature = "gui")]

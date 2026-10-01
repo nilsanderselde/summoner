@@ -221,6 +221,10 @@ impl GamelanGenderView {
         (dx * dx + dy * dy).sqrt() <= GAMELAN_PUCK_HIT_RADIUS
     }
 
+    pub fn render_ascii_snapshot(&self, width: usize, height: usize) -> Vec<String> {
+        self.render_ascii(width, height)
+    }
+
     #[allow(clippy::needless_range_loop)]
     pub fn render_ascii(&self, width: usize, height: usize) -> Vec<String> {
         let mut grid = vec![vec![' '; width]; height];
@@ -264,6 +268,11 @@ impl GamelanGenderView {
         grid.into_iter()
             .map(|row| row.into_iter().collect())
             .collect()
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
     }
 
     #[cfg(feature = "gui")]

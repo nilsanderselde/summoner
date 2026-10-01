@@ -99,16 +99,42 @@ impl KotoView {
         view
     }
 
+    pub fn oshi_ite_to_normalized(force: f32) -> f32 {
+        let val = force.clamp(MIN_OSHI_ITE_FORCE_N, MAX_OSHI_ITE_FORCE_N);
+        ((val - MIN_OSHI_ITE_FORCE_N) / (MAX_OSHI_ITE_FORCE_N - MIN_OSHI_ITE_FORCE_N)).clamp(0.0, 1.0)
+    }
+
+    pub fn normalized_to_oshi_ite(norm: f32) -> f32 {
+        MIN_OSHI_ITE_FORCE_N + norm.clamp(0.0, 1.0) * (MAX_OSHI_ITE_FORCE_N - MIN_OSHI_ITE_FORCE_N)
+    }
+
+    pub fn tsume_to_normalized(vel: f32) -> f32 {
+        let val = vel.clamp(MIN_KOTO_TSUME_VELOCITY, MAX_KOTO_TSUME_VELOCITY);
+        ((val - MIN_KOTO_TSUME_VELOCITY) / (MAX_KOTO_TSUME_VELOCITY - MIN_KOTO_TSUME_VELOCITY)).clamp(0.0, 1.0)
+    }
+
+    pub fn normalized_to_tsume(norm: f32) -> f32 {
+        MIN_KOTO_TSUME_VELOCITY + norm.clamp(0.0, 1.0) * (MAX_KOTO_TSUME_VELOCITY - MIN_KOTO_TSUME_VELOCITY)
+    }
+
+    pub fn hit_test_koto_puck(&self, point: (f32, f32), canvas: crate::layout_math::Rect) -> bool {
+        let px = canvas.x + self.puck_pos.0 * canvas.width;
+        let py = canvas.y + (1.0 - self.puck_pos.1) * canvas.height;
+        let dx = point.0 - px;
+        let dy = point.1 - py;
+        (dx * dx + dy * dy).sqrt() <= KOTO_PUCK_HIT_RADIUS
+    }
+
     pub fn update_puck_from_physics(&mut self) {
-        let norm_x = ((self.oshi_ite_force_n - MIN_OSHI_ITE_FORCE_N) / (MAX_OSHI_ITE_FORCE_N - MIN_OSHI_ITE_FORCE_N)).clamp(0.0, 1.0);
-        let norm_y = ((self.tsume_velocity - MIN_KOTO_TSUME_VELOCITY) / (MAX_KOTO_TSUME_VELOCITY - MIN_KOTO_TSUME_VELOCITY)).clamp(0.0, 1.0);
+        let norm_x = Self::oshi_ite_to_normalized(self.oshi_ite_force_n);
+        let norm_y = Self::tsume_to_normalized(self.tsume_velocity);
         self.puck_pos = (norm_x, norm_y);
     }
 
     pub fn update_physics_from_puck(&mut self, norm_x: f32, norm_y: f32) {
         self.puck_pos = (norm_x.clamp(0.0, 1.0), norm_y.clamp(0.0, 1.0));
-        self.oshi_ite_force_n = MIN_OSHI_ITE_FORCE_N + self.puck_pos.0 * (MAX_OSHI_ITE_FORCE_N - MIN_OSHI_ITE_FORCE_N);
-        self.tsume_velocity = MIN_KOTO_TSUME_VELOCITY + self.puck_pos.1 * (MAX_KOTO_TSUME_VELOCITY - MIN_KOTO_TSUME_VELOCITY);
+        self.oshi_ite_force_n = Self::normalized_to_oshi_ite(self.puck_pos.0);
+        self.tsume_velocity = Self::normalized_to_tsume(self.puck_pos.1);
         self.update_koto_acoustics();
     }
 
@@ -183,6 +209,10 @@ impl KotoView {
     pub fn current_pitch_cents(&self) -> f32 {
         let norm = (self.oshi_ite_force_n / 30.0).clamp(0.0, 1.0);
         400.0 * (1.0 - (-1.8 * norm).exp()) / (1.0 - (-1.8f32).exp())
+    }
+
+    pub fn render_ascii_snapshot(&self, width: usize, height: usize) -> Vec<String> {
+        self.render_ascii(width, height)
     }
 
     /// Render ASCII diagnostics representation of the view.
@@ -393,6 +423,10 @@ impl KotoView {
 
 #[cfg(feature = "gui")]
 impl KotoView {
+    pub fn show(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
+    }
+
     pub fn ui(&mut self, ui: &mut egui::Ui) {
         ui.vertical(|ui| {
             ui.heading("Koto & Guzheng — Asian Zither Physical Modeling HUD");

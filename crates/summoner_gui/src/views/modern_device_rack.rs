@@ -77,6 +77,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_steelpan_hud: bool,
     #[serde(default)]
     pub requested_open_mbira_hud: bool,
+    #[serde(default)]
+    pub requested_open_koto_hud: bool,
+    #[serde(default)]
+    pub requested_open_gamelan_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -104,6 +108,8 @@ impl Default for ModernDeviceRackState {
             requested_open_turkish_ney_hud: false,
             requested_open_steelpan_hud: false,
             requested_open_mbira_hud: false,
+            requested_open_koto_hud: false,
+            requested_open_gamelan_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -298,6 +304,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_turkish_ney = cur_selection.contains("TurkishNey") || cur_selection.contains("Ney") || cur_selection.contains("WoodwindJet") || cur_selection == "TurkishNeyNode" || cur_selection == "WoodwindJetNode";
                     let is_steelpan = cur_selection.contains("Steelpan") || cur_selection.contains("SteelDrum") || cur_selection == "SteelpanNode" || cur_selection == "SteelpanModel";
                     let is_mbira = cur_selection.contains("Mbira") || cur_selection.contains("Kalimba") || cur_selection == "MbiraNode" || cur_selection == "KalimbaNode" || cur_selection == "MbiraKalimbaModel" || cur_selection == "MbiraModel";
+                    let is_koto = cur_selection.contains("Koto") || cur_selection.contains("Guzheng") || cur_selection == "KotoNode" || cur_selection == "KotoSynthesizer" || cur_selection == "KotoStringVoice" || cur_selection == "KotoSoundboard";
+                    let is_gamelan = cur_selection.contains("Gamelan") || cur_selection.contains("Gender") || cur_selection.contains("Jegogan") || cur_selection.contains("Metallophone") || cur_selection == "GamelanGender" || cur_selection == "AcousticBalineseGamelanJegoganBronzeBar";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -338,9 +346,17 @@ pub fn show_modern_device_rack_with_context(
                         if ui.button(RichText::new("🛢 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Caribbean Steelpan Annular Resonance HUD").clicked() {
                             state.requested_open_steelpan_hud = true;
                         }
-                    } else if is_mbira
-                        && ui.button(RichText::new("🎵 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 107, 43))).on_hover_text("Open Lamellophone Mbira & Kalimba Tine HUD").clicked() {
-                        state.requested_open_mbira_hud = true;
+                    } else if is_mbira {
+                        if ui.button(RichText::new("🎵 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 107, 43))).on_hover_text("Open Lamellophone Mbira & Kalimba Tine HUD").clicked() {
+                            state.requested_open_mbira_hud = true;
+                        }
+                    } else if is_koto {
+                        if ui.button(RichText::new("箏 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(245, 158, 11))).on_hover_text("Open Japanese 13-String Koto Zither HUD").clicked() {
+                            state.requested_open_koto_hud = true;
+                        }
+                    } else if is_gamelan
+                        && ui.button(RichText::new("🔔 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(52, 211, 153))).on_hover_text("Open Balinese Gamelan Gender Metallophone HUD").clicked() {
+                        state.requested_open_gamelan_hud = true;
                     }
                     ui.add_space(4.0);
                     let pwr_col = if state.is_enabled { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(100, 116, 139) };
@@ -533,6 +549,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_turkish_ney = cur_selection.contains("TurkishNey") || cur_selection.contains("Ney") || cur_selection.contains("WoodwindJet") || cur_selection == "TurkishNeyNode" || cur_selection == "WoodwindJetNode";
                     let is_steelpan = cur_selection.contains("Steelpan") || cur_selection.contains("SteelDrum") || cur_selection == "SteelpanNode" || cur_selection == "SteelpanModel";
                     let is_mbira = cur_selection.contains("Mbira") || cur_selection.contains("Kalimba") || cur_selection == "MbiraNode" || cur_selection == "KalimbaNode" || cur_selection == "MbiraKalimbaModel" || cur_selection == "MbiraModel";
+                    let is_koto = cur_selection.contains("Koto") || cur_selection.contains("Guzheng") || cur_selection == "KotoNode" || cur_selection == "KotoSynthesizer" || cur_selection == "KotoStringVoice" || cur_selection == "KotoSoundboard";
+                    let is_gamelan = cur_selection.contains("Gamelan") || cur_selection.contains("Gender") || cur_selection.contains("Jegogan") || cur_selection.contains("Metallophone") || cur_selection == "GamelanGender" || cur_selection == "AcousticBalineseGamelanJegoganBronzeBar";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -581,9 +599,17 @@ pub fn show_modern_device_rack_with_context(
                         if ui.button(RichText::new("🛢 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Caribbean Steelpan Annular Resonance HUD").clicked() {
                             state.requested_open_steelpan_hud = true;
                         }
-                    } else if is_mbira
-                        && ui.button(RichText::new("🎵 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 107, 43))).on_hover_text("Open Lamellophone Mbira & Kalimba Tine HUD").clicked() {
-                        state.requested_open_mbira_hud = true;
+                    } else if is_mbira {
+                        if ui.button(RichText::new("🎵 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 107, 43))).on_hover_text("Open Lamellophone Mbira & Kalimba Tine HUD").clicked() {
+                            state.requested_open_mbira_hud = true;
+                        }
+                    } else if is_koto {
+                        if ui.button(RichText::new("箏 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(245, 158, 11))).on_hover_text("Open Japanese 13-String Koto Zither HUD").clicked() {
+                            state.requested_open_koto_hud = true;
+                        }
+                    } else if is_gamelan
+                        && ui.button(RichText::new("🔔 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(52, 211, 153))).on_hover_text("Open Balinese Gamelan Gender Metallophone HUD").clicked() {
+                        state.requested_open_gamelan_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -1362,6 +1388,8 @@ fn show_pro_parameter_drawer(
                     let is_turkish_ney = dev_kind.contains("TurkishNey") || dev_kind.contains("Ney") || dev_kind.contains("WoodwindJet") || dev_kind == "TurkishNeyNode" || dev_kind == "WoodwindJetNode";
                     let is_steelpan = dev_kind.contains("Steelpan") || dev_kind.contains("SteelDrum") || dev_kind == "SteelpanNode" || dev_kind == "SteelpanModel";
                     let is_mbira = dev_kind.contains("Mbira") || dev_kind.contains("Kalimba") || dev_kind == "MbiraNode" || dev_kind == "KalimbaNode" || dev_kind == "MbiraKalimbaModel" || dev_kind == "MbiraModel";
+                    let is_koto = dev_kind.contains("Koto") || dev_kind.contains("Guzheng") || dev_kind == "KotoNode" || dev_kind == "KotoSynthesizer" || dev_kind == "KotoStringVoice" || dev_kind == "KotoSoundboard";
+                    let is_gamelan = dev_kind.contains("Gamelan") || dev_kind.contains("Gender") || dev_kind.contains("Jegogan") || dev_kind.contains("Metallophone") || dev_kind == "GamelanGender" || dev_kind == "AcousticBalineseGamelanJegoganBronzeBar";
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -2277,6 +2305,175 @@ fn show_pro_parameter_drawer(
 
                         if mbi_resp.hovered() {
                             let _ = mbi_resp.on_hover_text("Lamellophone Mbira & Kalimba Tines\n[Drag horizontally: Thumb pluck force [0.1..5.0 N] | Drag vertically: Bottlecap buzz intensity [0..100%]]");
+                        }
+                    } else if is_koto {
+                        // Japanese 13-String Koto Paulownia Zither & Oshi-Ite Tension Mini Visualizer
+                        let (koto_resp, koto_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let koto_rect = koto_resp.rect;
+                        koto_painter.rect_filled(koto_rect, 2.0, Color32::from_rgb(18, 12, 8));
+
+                        let mut oshi_ite_force = state.node_param_values.get("oshi_ite_force_n").copied().unwrap_or(2.0);
+                        let mut tsume_vel = state.node_param_values.get("tsume_velocity").copied().unwrap_or(0.75);
+
+                        if koto_resp.dragged() {
+                            if let Some(pos) = koto_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - koto_rect.left()) / koto_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - koto_rect.top()) / koto_rect.height())).clamp(0.0, 1.0);
+                                oshi_ite_force = norm_x * 30.0;
+                                tsume_vel = 0.05 + norm_y * 0.95;
+                                state.node_param_values.insert("oshi_ite_force_n".to_string(), oshi_ite_force);
+                                state.node_param_values.insert("tsume_velocity".to_string(), tsume_vel);
+                                state.node_param_values.insert("string_tension".to_string(), oshi_ite_force);
+                                state.node_param_values.insert("pluck_vel".to_string(), tsume_vel);
+                                if let Some(bus) = param_bus {
+                                    let pid_tsume = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_tsume).is_some() { bus.set(pid_tsume, tsume_vel); }
+                                    let pid_force = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_force).is_some() { bus.set(pid_force, oshi_ite_force); }
+                                }
+                            }
+                        }
+
+                        // Paulownia wooden body arch
+                        let body_top = koto_rect.top() + 6.0;
+                        let body_bot = koto_rect.bottom() - 6.0;
+                        koto_painter.rect_stroke(
+                            egui::Rect::from_min_max(egui::pos2(koto_rect.left() + 4.0, body_top), egui::pos2(koto_rect.right() - 4.0, body_bot)),
+                            4.0,
+                            Stroke::new(1.0_f32, Color32::from_rgb(120, 53, 15)),
+                        );
+
+                        // 13 horizontal strings with movable Ji bridge triangular wedges
+                        let num_strings = 7; // simplified for compact mini preview
+                        let string_step = (body_bot - body_top - 8.0) / (num_strings - 1) as f32;
+                        for s_idx in 0..num_strings {
+                            let sy = body_top + 4.0 + s_idx as f32 * string_step;
+                            koto_painter.line_segment(
+                                [egui::pos2(koto_rect.left() + 8.0, sy), egui::pos2(koto_rect.right() - 8.0, sy)],
+                                Stroke::new(0.8_f32, Color32::from_rgb(217, 119, 6)),
+                            );
+
+                            // Movable Ji bridge marker (triangular ivory bridge)
+                            let bridge_x = koto_rect.left() + 24.0 + (s_idx as f32 * 14.0) % (koto_rect.width() - 50.0);
+                            koto_painter.line_segment(
+                                [egui::pos2(bridge_x - 2.5, sy + 3.0), egui::pos2(bridge_x, sy - 3.0)],
+                                Stroke::new(1.2_f32, Color32::from_rgb(254, 243, 199)),
+                            );
+                            koto_painter.line_segment(
+                                [egui::pos2(bridge_x, sy - 3.0), egui::pos2(bridge_x + 2.5, sy + 3.0)],
+                                Stroke::new(1.2_f32, Color32::from_rgb(254, 243, 199)),
+                            );
+                        }
+
+                        // Touch puck indicating Oshi-Ite press force & Tsume strike velocity
+                        let norm_fx = (oshi_ite_force / 30.0).clamp(0.0, 1.0);
+                        let norm_vy = ((tsume_vel - 0.05) / 0.95).clamp(0.0, 1.0);
+                        let puck_x = koto_rect.left() + norm_fx * koto_rect.width();
+                        let puck_y = koto_rect.bottom() - norm_vy * koto_rect.height();
+                        koto_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.5, Color32::from_rgb(245, 158, 11));
+                        koto_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::from_rgb(254, 240, 138)));
+
+                        // Readout
+                        let cents_bend = (oshi_ite_force / 30.0) * 400.0;
+                        koto_painter.text(
+                            egui::pos2(koto_rect.left() + 4.0, koto_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("+{:3.0}¢", cents_bend),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(245, 158, 11),
+                        );
+                        koto_painter.text(
+                            egui::pos2(koto_rect.right() - 4.0, koto_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("Tsume: {:.0}%", tsume_vel * 100.0),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(217, 119, 6),
+                        );
+
+                        if koto_resp.hovered() {
+                            let _ = koto_resp.on_hover_text("Japanese 13-String Koto Paulownia Zither\n[Drag horizontally: Oshi-Ite string press force [0..30 N] | Drag vertically: Tsume pluck velocity [5..100%]]");
+                        }
+                    } else if is_gamelan {
+                        // Balinese Gamelan Gender Bronze Bar & Bamboo Resonator Mini Visualizer
+                        let (gam_resp, gam_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let gam_rect = gam_resp.rect;
+                        gam_painter.rect_filled(gam_rect, 2.0, Color32::from_rgb(8, 18, 14));
+
+                        let mut hardness = state.node_param_values.get("mallet_hardness").copied().unwrap_or(0.45);
+                        let mut ombak = state.node_param_values.get("ombak_rate_hz").copied().unwrap_or(7.2);
+
+                        if gam_resp.dragged() {
+                            if let Some(pos) = gam_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - gam_rect.left()) / gam_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - gam_rect.top()) / gam_rect.height())).clamp(0.0, 1.0);
+                                hardness = 0.05 + norm_x * 0.95;
+                                ombak = 2.0 + norm_y * 10.0;
+                                state.node_param_values.insert("mallet_hardness".to_string(), hardness);
+                                state.node_param_values.insert("ombak_rate_hz".to_string(), ombak);
+                                state.node_param_values.insert("mallet_hard".to_string(), hardness);
+                                state.node_param_values.insert("ombak_rate".to_string(), ombak);
+                                if let Some(bus) = param_bus {
+                                    let pid_hard = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_hard).is_some() { bus.set(pid_hard, hardness); }
+                                    let pid_ombak = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_ombak).is_some() { bus.set(pid_ombak, ombak); }
+                                }
+                            }
+                        }
+
+                        // Suspended bronze metallophone keys
+                        let num_keys: i32 = 8;
+                        let key_w = (gam_rect.width() - 24.0) / num_keys as f32;
+                        let bar_top = gam_rect.top() + 18.0;
+                        for k_idx in 0..num_keys {
+                            let kx = gam_rect.left() + 12.0 + k_idx as f32 * key_w;
+                            let key_h = 16.0 + (num_keys - 1 - k_idx) as f32 * 2.2;
+                            // Tuned bamboo resonator cylinder underneath
+                            let tube_bot = gam_rect.bottom() - 6.0;
+                            gam_painter.rect_filled(
+                                egui::Rect::from_min_max(egui::pos2(kx + 2.0, bar_top + key_h), egui::pos2(kx + key_w - 2.0, tube_bot)),
+                                1.0,
+                                Color32::from_rgb(20, 83, 45),
+                            );
+                            // Bronze bar key
+                            gam_painter.rect_filled(
+                                egui::Rect::from_min_max(egui::pos2(kx + 1.0, bar_top), egui::pos2(kx + key_w - 1.0, bar_top + key_h)),
+                                2.0,
+                                Color32::from_rgb(217, 119, 6),
+                            );
+                            gam_painter.rect_stroke(
+                                egui::Rect::from_min_max(egui::pos2(kx + 1.0, bar_top), egui::pos2(kx + key_w - 1.0, bar_top + key_h)),
+                                2.0,
+                                Stroke::new(0.8_f32, Color32::from_rgb(254, 240, 138)),
+                            );
+                        }
+
+                        // Touch puck indicating Mallet Hardness vs Ombak Rate
+                        let norm_hx = ((hardness - 0.05) / 0.95).clamp(0.0, 1.0);
+                        let norm_oy = ((ombak - 2.0) / 10.0).clamp(0.0, 1.0);
+                        let puck_x = gam_rect.left() + norm_hx * gam_rect.width();
+                        let puck_y = gam_rect.bottom() - norm_oy * gam_rect.height();
+                        gam_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.5, Color32::from_rgb(52, 211, 153));
+                        gam_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::from_rgb(167, 243, 208)));
+
+                        // Readout
+                        gam_painter.text(
+                            egui::pos2(gam_rect.left() + 4.0, gam_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("Hard: {:.2}", hardness),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(52, 211, 153),
+                        );
+                        gam_painter.text(
+                            egui::pos2(gam_rect.right() - 4.0, gam_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("Ombak: {:.1} Hz", ombak),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(16, 185, 129),
+                        );
+
+                        if gam_resp.hovered() {
+                            let _ = gam_resp.on_hover_text("Balinese Gamelan Metallophone & Gender\n[Drag horizontally: Mallet hardness [soft..hard] | Drag vertically: Ombak acoustic beating rate [2..12 Hz]]");
                         }
                     } else {
                         // Filter Curve Mini View (slot-addressed)

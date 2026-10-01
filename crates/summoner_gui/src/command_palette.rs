@@ -389,6 +389,18 @@ impl CommandPalette {
                 action_id: "open_mbira_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Japanese 13-String Koto Paulownia Zither HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_koto_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Balinese Gamelan Gender Metallophone HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_gamelan_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

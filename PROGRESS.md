@@ -1371,7 +1371,35 @@ Product Management has conducted a comprehensive readiness audit:
   - Feature tests: 9 tests passed in `tier120_turn56_tests` (`cargo test -p summoner_gui --features gui -- tier120_turn56_tests`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
 
-
-
-
+### Turn #57 (Turn #22 Deliverable) — Physical Modeling Japanese Koto & Balinese Gamelan Gender HUDs Convergence (Milestones 29 & 33)
+- [x] Physical Modeling Japanese Koto (13-String Paulownia Zither, Movable Ji Bridges, Oshi-Ite Left-Hand String Tension & Tsume Pluck Dynamics) & Balinese Gamelan Gender / Metallophone (Bronze Bar Inharmonicity, Tuned Bamboo Cavity Resonators, Ombak Beating & Expressive Mallet Damping) HUDs Integration:
+  - Integrated `KotoView` and `GamelanGenderView` performance HUDs into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] Japanese Koto & Balinese Gamelan View Upgrades (`crates/summoner_gui/src/views/koto_view.rs` & `gamelan_gender_view.rs`):
+  - Added public `show(&mut self, ui: &mut egui::Ui)` forwarder for unified ergonomics across all views.
+  - Added touch normalization helpers (`oshi_ite_to_normalized`, `normalized_to_oshi_ite`, `tsume_to_normalized`, `normalized_to_tsume`) and `hit_test_koto_puck` with $\ge 44 \times 44\text{pt}$ touch hit targets.
+  - Added `render_ascii_snapshot` aliases for deterministic headless diagnostics and snapshot verification.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_koto_modal: bool`, `koto_view: KotoView`, `show_gamelan_modal: bool`, and `gamelan_view: GamelanGenderView`.
+  - Added dedicated modal windows `show_koto_modal_window` and `show_gamelan_modal_window` with responsive styling, WCAG AAA contrast, and $\ge 44 \times 44\text{pt}$ touch bounds.
+  - Added public lifecycle methods: `open_koto_hud()`, `close_koto_hud()`, `is_koto_hud_open()`, `open_gamelan_hud()`, `close_gamelan_hud()`, `is_gamelan_hud_open()`.
+  - Real-time parameter sync bridges (`sync_koto_hud_state` and `sync_gamelan_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_koto_hud: bool` and `requested_open_gamelan_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[箏 Open Japanese Koto 13-String Zither HUD]` and `[🔔 Open Balinese Gamelan Gender Metallophone HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header `[箏 HUD]` / `[🔔 HUD]` and expanded toolbar buttons in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Koto: Paulownia wooden arch, 13 horizontal strings with ivory Ji bridge markers, Oshi-Ite press deflection puck modulating `oshi_ite_force_n` (0..30 N) and `tsume_velocity` (0.05..1.0), and real-time cents bend readout.
+    * Gamelan: Suspended bronze keys, tuned bamboo resonator cylinders, touch puck modulating mallet hardness vs Ombak acoustic beating rate [2..12 Hz].
+- [x] Command Palette & Application Routing:
+  - Registered `open_koto_hud` and `open_gamelan_hud` under `"Physical Modeling"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_koto_hud()` and `open_gamelan_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier121_turn57_tests.rs`:
+    * Pure tests: view initialization, presets, normalization roundtrips, hit testing, pitch bend cents, modal amplitudes, slot arithmetic channel isolation, deterministic ASCII snapshots.
+    * GUI tests: modal lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch, rack & inspector trigger propagation, command palette action registration.
+  - Unit tests: 329 passed in 0.23s (`cargo test -p summoner_gui`).
+  - Feature tests: 9 tests passed in `tier121_turn57_tests` (`cargo test -p summoner_gui --features gui -- tier121_turn57_tests`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`).
 

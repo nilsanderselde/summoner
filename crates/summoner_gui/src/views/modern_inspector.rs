@@ -62,6 +62,10 @@ pub struct ModernInspectorState {
     pub requested_open_steelpan_hud: bool,
     #[serde(default)]
     pub requested_open_mbira_hud: bool,
+    #[serde(default)]
+    pub requested_open_koto_hud: bool,
+    #[serde(default)]
+    pub requested_open_gamelan_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -99,6 +103,8 @@ impl Default for ModernInspectorState {
             requested_open_turkish_ney_hud: false,
             requested_open_steelpan_hud: false,
             requested_open_mbira_hud: false,
+            requested_open_koto_hud: false,
+            requested_open_gamelan_hud: false,
         }
     }
 }
@@ -703,6 +709,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open interactive lamellophone mbira & kalimba tine modal dispersion, acoustic buzz & pluck force HUD").clicked() {
                     state.requested_open_mbira_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Koto") || active_kind.contains("Guzheng") || active_kind == "KotoNode" || active_kind == "KotoSynthesizer" || active_kind == "KotoStringVoice" || active_kind == "KotoSoundboard" {
+                if ui.add(
+                    egui::Button::new(RichText::new("箏 Open Japanese Koto 13-String Zither HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(245, 158, 11)))
+                        .fill(Color32::from_rgb(38, 28, 12))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(245, 158, 11)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Japanese 13-string Koto Paulownia zither, movable Ji bridges & Oshi-Ite string tension HUD").clicked() {
+                    state.requested_open_koto_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Gamelan") || active_kind.contains("Gender") || active_kind.contains("Jegogan") || active_kind.contains("Metallophone") || active_kind == "GamelanGender" || active_kind == "AcousticBalineseGamelanJegoganBronzeBar" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🔔 Open Balinese Gamelan Gender Metallophone HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(52, 211, 153)))
+                        .fill(Color32::from_rgb(12, 38, 28))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(52, 211, 153)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Balinese Gamelan Gender bronze bar modal inharmonicity, bamboo resonator & ombak beating HUD").clicked() {
+                    state.requested_open_gamelan_hud = true;
                 }
                 ui.add_space(4.0);
             }
