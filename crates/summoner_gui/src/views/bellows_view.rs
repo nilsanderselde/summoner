@@ -11,12 +11,13 @@
 //!
 //! Enforces minimum 44x44pt hit targets, 8pt base grid alignment, and headless PNG snapshot rendering.
 
+use crate::layout_math::Rect;
 use crate::touch_controls::ContrastColorPalette;
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "gui")]
 #[allow(unused_imports)]
-use eframe::egui::{self, Color32, Stroke, Vec2};
+use eframe::egui::{self, Color32, FontId, RichText, Rounding, Stroke, Vec2};
 
 pub const BELLOWS_PUCK_HIT_RADIUS: f32 = 22.0; // 44x44pt touch bounding target
 pub const MIN_BELLOWS_PRESSURE_PA: f32 = -1200.0;
@@ -152,6 +153,34 @@ impl BellowsView {
             }
         }
         self.update_puck_from_physics();
+    }
+
+    pub fn pressure_to_normalized(pressure: f32) -> f32 {
+        ((pressure - MIN_BELLOWS_PRESSURE_PA) / (MAX_BELLOWS_PRESSURE_PA - MIN_BELLOWS_PRESSURE_PA)).clamp(0.0, 1.0)
+    }
+
+    pub fn normalized_to_pressure(norm: f32) -> f32 {
+        MIN_BELLOWS_PRESSURE_PA + norm.clamp(0.0, 1.0) * (MAX_BELLOWS_PRESSURE_PA - MIN_BELLOWS_PRESSURE_PA)
+    }
+
+    pub fn velocity_to_normalized(vel: f32) -> f32 {
+        ((vel - MIN_VALVE_VELOCITY) / (MAX_VALVE_VELOCITY - MIN_VALVE_VELOCITY)).clamp(0.0, 1.0)
+    }
+
+    pub fn normalized_to_velocity(norm: f32) -> f32 {
+        MIN_VALVE_VELOCITY + norm.clamp(0.0, 1.0) * (MAX_VALVE_VELOCITY - MIN_VALVE_VELOCITY)
+    }
+
+    pub fn hit_test_bellows_puck(&self, screen_pos: (f32, f32), canvas_rect: Rect) -> bool {
+        let puck_screen_x = canvas_rect.x + self.puck_pos.0 * canvas_rect.width;
+        let puck_screen_y = canvas_rect.y + (1.0 - self.puck_pos.1) * canvas_rect.height;
+        let dx = screen_pos.0 - puck_screen_x;
+        let dy = screen_pos.1 - puck_screen_y;
+        (dx * dx + dy * dy).sqrt() <= BELLOWS_PUCK_HIT_RADIUS
+    }
+
+    pub fn render_ascii_snapshot(&self, width: usize, height: usize) -> Vec<String> {
+        self.render_ascii(width, height)
     }
 
     /// Render ASCII art overview for terminal and headless verification.
@@ -303,35 +332,269 @@ impl BellowsView {
 
 #[cfg(feature = "gui")]
 impl BellowsView {
+    pub fn show(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
+    }
+
+    #[allow(clippy::needless_range_loop)]
     pub fn ui(&mut self, ui: &mut egui::Ui) {
-        ui.vertical(|ui| {
-            ui.heading("Bellows — Dynamic Chamber Aerodynamics & Free-Reed Articulation");
-            ui.separator();
+        let (rect, response) = ui.allocate_exact_size(
+            egui::vec2(ui.available_width(), 480.0),
+            egui::Sense::click_and_drag(),
+        );
 
-            ui.horizontal(|ui| {
-                ui.label("Preset:");
-                if ui.selectable_label(self.preset == BellowsHudPreset::TangoBandoneonAccented, "Bandoneon Marcato").clicked() {
-                    self.set_preset(BellowsHudPreset::TangoBandoneonAccented);
-                }
-                if ui.selectable_label(self.preset == BellowsHudPreset::FrenchMusetteAccordion, "Musette Waltz").clicked() {
-                    self.set_preset(BellowsHudPreset::FrenchMusetteAccordion);
-                }
-                if ui.selectable_label(self.preset == BellowsHudPreset::RussianBayanTutti, "Bayan Tutti").clicked() {
-                    self.set_preset(BellowsHudPreset::RussianBayanTutti);
-                }
-                if ui.selectable_label(self.preset == BellowsHudPreset::VintageHarmoniumDrone, "Harmonium Drone").clicked() {
-                    self.set_preset(BellowsHudPreset::VintageHarmoniumDrone);
-                }
-                if ui.selectable_label(self.preset == BellowsHudPreset::EnglishConcertinaFast, "Concertina Staccato").clicked() {
-                    self.set_preset(BellowsHudPreset::EnglishConcertinaFast);
-                }
-            });
+        let painter = ui.painter_at(rect);
 
-            ui.add_space(8.0);
+        // Background: Deep Slate Charcoal (#0F172A)
+        painter.rect_filled(rect, 6.0, Color32::from_rgb(15, 23, 42));
 
+        // Header Title
+        painter.text(
+            egui::pos2(rect.min.x + 20.0, rect.min.y + 16.0),
+            egui::Align2::LEFT_TOP,
+            "PNEUMATIC BELLOWS CHAMBER DYNAMICS & FREE-REED ARTICULATION HUD",
+            FontId::proportional(13.5),
+            Color32::from_rgb(240, 245, 255),
+        );
+
+        // Preset Tabs (y: 44..88) - 44pt touch targets
+        let tabs = [
+            (BellowsHudPreset::TangoBandoneonAccented, "BANDONEON"),
+            (BellowsHudPreset::FrenchMusetteAccordion, "MUSETTE"),
+            (BellowsHudPreset::RussianBayanTutti, "BAYAN TUTTI"),
+            (BellowsHudPreset::VintageHarmoniumDrone, "HARMONIUM"),
+            (BellowsHudPreset::EnglishConcertinaFast, "CONCERTINA"),
+        ];
+
+        let tab_w = (rect.width() - 40.0 - 4.0 * 8.0) / 5.0;
+        for (i, (preset, name)) in tabs.iter().enumerate() {
+            let bx = rect.min.x + 20.0 + i as f32 * (tab_w + 8.0);
+            let tab_rect = egui::Rect::from_min_size(
+                egui::pos2(bx, rect.min.y + 44.0),
+                egui::vec2(tab_w, 44.0),
+            );
+            let is_sel = self.preset == *preset;
+            let bg_col = if is_sel {
+                Color32::from_rgb(217, 119, 6) // Amber #D97706
+            } else {
+                Color32::from_rgb(30, 41, 59) // Slate #1E293B
+            };
+            let text_col = if is_sel {
+                Color32::from_rgb(15, 23, 42)
+            } else {
+                Color32::from_rgb(226, 232, 240)
+            };
+
+            painter.rect_filled(tab_rect, 4.0, bg_col);
+            painter.text(
+                tab_rect.center(),
+                egui::Align2::CENTER_CENTER,
+                *name,
+                FontId::proportional(11.0),
+                text_col,
+            );
+
+            if response.clicked() {
+                if let Some(pos) = response.interact_pointer_pos() {
+                    if tab_rect.contains(pos) {
+                        self.set_preset(*preset);
+                    }
+                }
+            }
+        }
+
+        // Main Display Canvas (y: 98..330)
+        let main_canvas = egui::Rect::from_min_max(
+            egui::pos2(rect.min.x + 20.0, rect.min.y + 98.0),
+            egui::pos2(rect.max.x - 20.0, rect.min.y + 330.0),
+        );
+        painter.rect_filled(main_canvas, 6.0, Color32::from_rgb(10, 15, 30));
+        painter.rect_stroke(
+            main_canvas,
+            6.0,
+            Stroke::new(1.0_f32, Color32::from_rgb(51, 65, 85)),
+        );
+
+        // Split canvas into Left Pad (Pressure vs Valve Velocity) and Right Visualizer (Chamber & Flow)
+        let pad_w = (main_canvas.width() - 30.0) * 0.52;
+        let pad_rect = egui::Rect::from_min_size(
+            egui::pos2(main_canvas.min.x + 12.0, main_canvas.min.y + 12.0),
+            egui::vec2(pad_w, main_canvas.height() - 24.0),
+        );
+        painter.rect_filled(pad_rect, 4.0, Color32::from_rgb(24, 34, 52));
+        painter.rect_stroke(
+            pad_rect,
+            4.0,
+            Stroke::new(1.0_f32, Color32::from_rgb(71, 85, 105)),
+        );
+
+        // Zero-pressure center line (Divider between PULL < 0 and PUSH > 0)
+        let mid_x = pad_rect.center().x;
+        painter.line_segment(
+            [egui::pos2(mid_x, pad_rect.min.y), egui::pos2(mid_x, pad_rect.max.y)],
+            Stroke::new(1.5_f32, Color32::from_rgb(59, 130, 246)),
+        );
+
+        // Grid lines
+        for gy in 1..4 {
+            let y = pad_rect.min.y + gy as f32 * (pad_rect.height() / 4.0);
+            painter.line_segment(
+                [egui::pos2(pad_rect.min.x, y), egui::pos2(pad_rect.max.x, y)],
+                Stroke::new(0.5_f32, Color32::from_rgb(40, 52, 75)),
+            );
+        }
+
+        // Zone labels inside pad
+        painter.text(
+            egui::pos2(pad_rect.min.x + 12.0, pad_rect.min.y + 10.0),
+            egui::Align2::LEFT_TOP,
+            "◀ PULL (Expanding)",
+            FontId::proportional(10.0),
+            Color32::from_rgb(148, 163, 184),
+        );
+        painter.text(
+            egui::pos2(pad_rect.max.x - 12.0, pad_rect.min.y + 10.0),
+            egui::Align2::RIGHT_TOP,
+            "PUSH (Compressing) ▶",
+            FontId::proportional(10.0),
+            Color32::from_rgb(148, 163, 184),
+        );
+
+        // Handle Touch/Mouse Dragging for Puck
+        let puck_screen_x = pad_rect.min.x + self.puck_pos.0 * pad_rect.width();
+        let puck_screen_y = pad_rect.max.y - self.puck_pos.1 * pad_rect.height();
+        let puck_center = egui::pos2(puck_screen_x, puck_screen_y);
+
+        if response.dragged() || response.clicked() {
+            if let Some(pos) = response.interact_pointer_pos() {
+                if pad_rect.contains(pos) || self.is_dragging_puck {
+                    self.is_dragging_puck = true;
+                    let norm_x = ((pos.x - pad_rect.min.x) / pad_rect.width()).clamp(0.0, 1.0);
+                    let norm_y = ((pad_rect.max.y - pos.y) / pad_rect.height()).clamp(0.0, 1.0);
+                    self.update_physics_from_puck(norm_x, norm_y);
+                }
+            }
+        } else {
+            self.is_dragging_puck = false;
+        }
+
+        // Draw Interactive Puck
+        painter.circle_filled(puck_center, BELLOWS_PUCK_HIT_RADIUS, Color32::from_rgb(245, 158, 11));
+        painter.circle_stroke(
+            puck_center,
+            BELLOWS_PUCK_HIT_RADIUS,
+            Stroke::new(2.5_f32, Color32::from_rgb(254, 240, 138)),
+        );
+        painter.circle_filled(puck_center, 4.0, Color32::from_rgb(15, 23, 42));
+
+        // Right Visualizer Pad (Chamber & Flow Dynamics)
+        let viz_left = pad_rect.max.x + 12.0;
+        let viz_rect = egui::Rect::from_min_max(
+            egui::pos2(viz_left, main_canvas.min.y + 12.0),
+            egui::pos2(main_canvas.max.x - 12.0, main_canvas.max.y - 12.0),
+        );
+        painter.rect_filled(viz_rect, 4.0, Color32::from_rgb(20, 28, 44));
+        painter.rect_stroke(
+            viz_rect,
+            4.0,
+            Stroke::new(1.0_f32, Color32::from_rgb(71, 85, 105)),
+        );
+
+        // Visualizer Titles and Gauges
+        let is_push = self.bellows_pressure_pa >= 0.0;
+        let dir_str = if is_push { "AIRFLOW: >>> PUSH >>>" } else { "AIRFLOW: <<< PULL <<<" };
+        let dir_color = if is_push {
+            Color32::from_rgb(245, 158, 11) // Amber
+        } else {
+            Color32::from_rgb(56, 189, 248) // Sky blue
+        };
+
+        painter.text(
+            egui::pos2(viz_rect.center().x, viz_rect.min.y + 16.0),
+            egui::Align2::CENTER_TOP,
+            dir_str,
+            FontId::proportional(12.0),
+            dir_color,
+        );
+
+        // Pressure Gauge Readout
+        let pres_str = format!("Pressure: {:+.0} Pa  ({:+.2} kPa)", self.bellows_pressure_pa, self.bellows_pressure_pa / 1000.0);
+        painter.text(
+            egui::pos2(viz_rect.center().x, viz_rect.min.y + 44.0),
+            egui::Align2::CENTER_TOP,
+            pres_str,
+            FontId::proportional(11.5),
+            Color32::from_rgb(241, 245, 249),
+        );
+
+        // Pressure Magnitude Bar
+        let bar_bg = egui::Rect::from_center_size(
+            egui::pos2(viz_rect.center().x, viz_rect.min.y + 80.0),
+            egui::vec2(viz_rect.width() - 32.0, 18.0),
+        );
+        painter.rect_filled(bar_bg, 4.0, Color32::from_rgb(15, 23, 42));
+        let half_w = bar_bg.width() * 0.5;
+        let frac = (self.bellows_pressure_pa / MAX_BELLOWS_PRESSURE_PA).clamp(-1.0, 1.0);
+        let bar_fill = if frac >= 0.0 {
+            egui::Rect::from_min_max(
+                egui::pos2(bar_bg.center().x, bar_bg.min.y),
+                egui::pos2(bar_bg.center().x + frac * half_w, bar_bg.max.y),
+            )
+        } else {
+            egui::Rect::from_min_max(
+                egui::pos2(bar_bg.center().x + frac * half_w, bar_bg.min.y),
+                egui::pos2(bar_bg.center().x, bar_bg.max.y),
+            )
+        };
+        painter.rect_filled(bar_fill, 2.0, dir_color);
+
+        // Cassotto Aperture Shutter Gauge
+        let cass_label = format!("Cassotto Tone Chamber: {:.0}% Open", self.cassotto_aperture * 100.0);
+        painter.text(
+            egui::pos2(viz_rect.center().x, viz_rect.min.y + 115.0),
+            egui::Align2::CENTER_TOP,
+            cass_label,
+            FontId::proportional(11.0),
+            Color32::from_rgb(203, 213, 225),
+        );
+
+        // Animated shutter slats (4 horizontal bars)
+        let slat_top = viz_rect.min.y + 140.0;
+        let slat_h = 44.0;
+        let slat_rect = egui::Rect::from_min_size(
+            egui::pos2(viz_rect.min.x + 20.0, slat_top),
+            egui::vec2(viz_rect.width() - 40.0, slat_h),
+        );
+        painter.rect_filled(slat_rect, 3.0, Color32::from_rgb(15, 23, 42));
+        for s in 0..4 {
+            let sy = slat_rect.min.y + s as f32 * (slat_h / 4.0);
+            let open_offset = (1.0 - self.cassotto_aperture) * (slat_h / 5.0);
+            painter.line_segment(
+                [egui::pos2(slat_rect.min.x + 4.0, sy + open_offset), egui::pos2(slat_rect.max.x - 4.0, sy + open_offset)],
+                Stroke::new(2.0_f32, Color32::from_rgb(148, 163, 184)),
+            );
+        }
+
+        // Musette Detune Readout
+        let musette_str = format!("Musette Detune: {:.1} cents", self.musette_detune_cents);
+        painter.text(
+            egui::pos2(viz_rect.center().x, viz_rect.min.y + 192.0),
+            egui::Align2::CENTER_TOP,
+            musette_str,
+            FontId::proportional(10.5),
+            Color32::from_rgb(167, 139, 250), // Lavender #A78BFA
+        );
+
+        // Bottom Controls Strip (y: 342..470)
+        let controls_rect = egui::Rect::from_min_max(
+            egui::pos2(rect.min.x + 20.0, rect.min.y + 342.0),
+            egui::pos2(rect.max.x - 20.0, rect.max.y - 10.0),
+        );
+
+        ui.allocate_ui_at_rect(controls_rect, |ui| {
             ui.horizontal(|ui| {
                 ui.vertical(|ui| {
-                    ui.label("Bellows & Valve Dynamics:");
+                    ui.label(RichText::new("Bellows Chamber Dynamics:").font(FontId::proportional(11.0)).strong().color(Color32::from_rgb(226, 232, 240)));
                     ui.add(egui::Slider::new(&mut self.bellows_pressure_pa, MIN_BELLOWS_PRESSURE_PA..=MAX_BELLOWS_PRESSURE_PA).text("Pressure (Pa)"));
                     ui.add(egui::Slider::new(&mut self.valve_velocity, MIN_VALVE_VELOCITY..=MAX_VALVE_VELOCITY).text("Valve Velocity"));
                 });
@@ -339,12 +602,20 @@ impl BellowsView {
                 ui.separator();
 
                 ui.vertical(|ui| {
-                    ui.label("Cassotto & Musette Tuning:");
+                    ui.label(RichText::new("Cassotto & Musette Tuning:").font(FontId::proportional(11.0)).strong().color(Color32::from_rgb(226, 232, 240)));
                     ui.add(egui::Slider::new(&mut self.cassotto_aperture, 0.0..=1.0).text("Cassotto Aperture"));
-                    ui.add(egui::Slider::new(&mut self.musette_detune_cents, 0.0..=35.0).text("Musette Detune (cents)"));
+                    ui.add(egui::Slider::new(&mut self.musette_detune_cents, 0.0..=35.0).text("Musette (cents)"));
+                });
+
+                ui.separator();
+
+                ui.vertical(|ui| {
+                    ui.label(RichText::new("Reed Aeroacoustics:").font(FontId::proportional(11.0)).strong().color(Color32::from_rgb(226, 232, 240)));
+                    ui.add(egui::Slider::new(&mut self.reed_stiffness, 0.5..=2.0).text("Reed Stiffness"));
                 });
             });
         });
+        self.update_puck_from_physics();
     }
 }
 

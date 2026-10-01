@@ -10,12 +10,13 @@
 //!
 //! Enforces minimum 44x44pt hit targets, 8pt base grid alignment, and headless PNG snapshot rendering.
 
+use crate::layout_math::Rect;
 use crate::touch_controls::ContrastColorPalette;
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "gui")]
 #[allow(unused_imports)]
-use eframe::egui::{self, Color32, Stroke, Vec2};
+use eframe::egui::{self, Color32, FontId, RichText, Rounding, Stroke, Vec2};
 
 pub const FREE_REED_PUCK_HIT_RADIUS: f32 = 22.0; // 44x44pt touch bounding target
 pub const MIN_REED_STIFFNESS: f32 = 0.5;
@@ -135,6 +136,48 @@ impl FreeReedView {
             }
         }
         self.update_puck_from_physics();
+    }
+
+    pub fn stiffness_to_normalized(stiffness: f32) -> f32 {
+        ((stiffness - MIN_REED_STIFFNESS) / (MAX_REED_STIFFNESS - MIN_REED_STIFFNESS)).clamp(0.0, 1.0)
+    }
+
+    pub fn normalized_to_stiffness(norm: f32) -> f32 {
+        MIN_REED_STIFFNESS + norm.clamp(0.0, 1.0) * (MAX_REED_STIFFNESS - MIN_REED_STIFFNESS)
+    }
+
+    pub fn aperture_to_normalized(aperture: f32) -> f32 {
+        ((aperture - MIN_CASSOTTO_APERTURE) / (MAX_CASSOTTO_APERTURE - MIN_CASSOTTO_APERTURE)).clamp(0.0, 1.0)
+    }
+
+    pub fn normalized_to_aperture(norm: f32) -> f32 {
+        MIN_CASSOTTO_APERTURE + norm.clamp(0.0, 1.0) * (MAX_CASSOTTO_APERTURE - MIN_CASSOTTO_APERTURE)
+    }
+
+    pub fn hit_test_free_reed_puck(&self, screen_pos: (f32, f32), canvas_rect: Rect) -> bool {
+        let puck_screen_x = canvas_rect.x + self.puck_pos.0 * canvas_rect.width;
+        let puck_screen_y = canvas_rect.y + (1.0 - self.puck_pos.1) * canvas_rect.height;
+        let dx = screen_pos.0 - puck_screen_x;
+        let dy = screen_pos.1 - puck_screen_y;
+        (dx * dx + dy * dy).sqrt() <= FREE_REED_PUCK_HIT_RADIUS
+    }
+
+    pub fn render_ascii_snapshot(&self, width: usize, height: usize) -> Vec<String> {
+        self.render_ascii(width, height)
+    }
+
+    /// Evaluates 32 points along the aeroelastic non-linear limit cycle trajectory (displacement, velocity).
+    pub fn evaluate_phase_portrait(&self) -> [(f32, f32); 32] {
+        let mut points = [(0.0f32, 0.0f32); 32];
+        for (i, p) in points.iter_mut().enumerate() {
+            let theta = (i as f32 / 32.0) * 2.0 * std::f32::consts::PI;
+            // Distorted limit cycle from non-linear Duffing stiffness
+            let r = 1.0 + 0.15 * (theta * 2.0).sin();
+            let x = theta.cos() * r;
+            let y = theta.sin() * r;
+            *p = (x, y);
+        }
+        points
     }
 
     /// Render ASCII art overview for terminal and headless verification.
@@ -308,35 +351,239 @@ impl FreeReedView {
 
 #[cfg(feature = "gui")]
 impl FreeReedView {
+    pub fn show(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
+    }
+
+    #[allow(clippy::needless_range_loop)]
     pub fn ui(&mut self, ui: &mut egui::Ui) {
-        ui.vertical(|ui| {
-            ui.heading("Free-Reed — Aeroelastic Limit Cycle & Musette Beating Spectrum");
-            ui.separator();
+        let (rect, response) = ui.allocate_exact_size(
+            egui::vec2(ui.available_width(), 480.0),
+            egui::Sense::click_and_drag(),
+        );
 
-            ui.horizontal(|ui| {
-                ui.label("Preset:");
-                if ui.selectable_label(self.preset == FreeReedHudPreset::TangoBandoneonZinc, "Tango Bandoneon").clicked() {
-                    self.set_preset(FreeReedHudPreset::TangoBandoneonZinc);
-                }
-                if ui.selectable_label(self.preset == FreeReedHudPreset::FrenchMusetteMaple, "French Musette").clicked() {
-                    self.set_preset(FreeReedHudPreset::FrenchMusetteMaple);
-                }
-                if ui.selectable_label(self.preset == FreeReedHudPreset::RussianBayanDuralumin, "Russian Bayan").clicked() {
-                    self.set_preset(FreeReedHudPreset::RussianBayanDuralumin);
-                }
-                if ui.selectable_label(self.preset == FreeReedHudPreset::VintageHarmoniumBrass, "Harmonium Brass").clicked() {
-                    self.set_preset(FreeReedHudPreset::VintageHarmoniumBrass);
-                }
-                if ui.selectable_label(self.preset == FreeReedHudPreset::EnglishConcertinaSteel, "Concertina Steel").clicked() {
-                    self.set_preset(FreeReedHudPreset::EnglishConcertinaSteel);
-                }
-            });
+        let painter = ui.painter_at(rect);
 
-            ui.add_space(8.0);
+        // Background: Deep Slate Charcoal (#0B1120)
+        painter.rect_filled(rect, 6.0, Color32::from_rgb(11, 17, 32));
 
+        // Header Title
+        painter.text(
+            egui::pos2(rect.min.x + 20.0, rect.min.y + 16.0),
+            egui::Align2::LEFT_TOP,
+            "AEROELASTIC FREE-REED PHASE PORTRAIT & 5-RANK MUSETTE SPECTRUM HUD",
+            FontId::proportional(13.5),
+            Color32::from_rgb(240, 245, 255),
+        );
+
+        // Preset Tabs (y: 44..88) - 44pt touch targets
+        let tabs = [
+            (FreeReedHudPreset::TangoBandoneonZinc, "BANDONEON (ZINC)"),
+            (FreeReedHudPreset::FrenchMusetteMaple, "MUSETTE (MAPLE)"),
+            (FreeReedHudPreset::RussianBayanDuralumin, "BAYAN (DURAL)"),
+            (FreeReedHudPreset::VintageHarmoniumBrass, "HARMONIUM (BRASS)"),
+            (FreeReedHudPreset::EnglishConcertinaSteel, "CONCERTINA (STEEL)"),
+        ];
+
+        let tab_w = (rect.width() - 40.0 - 4.0 * 8.0) / 5.0;
+        for (i, (preset, name)) in tabs.iter().enumerate() {
+            let bx = rect.min.x + 20.0 + i as f32 * (tab_w + 8.0);
+            let tab_rect = egui::Rect::from_min_size(
+                egui::pos2(bx, rect.min.y + 44.0),
+                egui::vec2(tab_w, 44.0),
+            );
+            let is_sel = self.preset == *preset;
+            let bg_col = if is_sel {
+                Color32::from_rgb(16, 185, 129) // Emerald #10B981
+            } else {
+                Color32::from_rgb(30, 41, 59) // Slate #1E293B
+            };
+            let text_col = if is_sel {
+                Color32::from_rgb(11, 17, 32)
+            } else {
+                Color32::from_rgb(226, 232, 240)
+            };
+
+            painter.rect_filled(tab_rect, 4.0, bg_col);
+            painter.text(
+                tab_rect.center(),
+                egui::Align2::CENTER_CENTER,
+                *name,
+                FontId::proportional(10.5),
+                text_col,
+            );
+
+            if response.clicked() {
+                if let Some(pos) = response.interact_pointer_pos() {
+                    if tab_rect.contains(pos) {
+                        self.set_preset(*preset);
+                    }
+                }
+            }
+        }
+
+        // Main Display Canvas (y: 98..330)
+        let main_canvas = egui::Rect::from_min_max(
+            egui::pos2(rect.min.x + 20.0, rect.min.y + 98.0),
+            egui::pos2(rect.max.x - 20.0, rect.min.y + 330.0),
+        );
+        painter.rect_filled(main_canvas, 6.0, Color32::from_rgb(10, 15, 28));
+        painter.rect_stroke(
+            main_canvas,
+            6.0,
+            Stroke::new(1.0_f32, Color32::from_rgb(51, 65, 85)),
+        );
+
+        // Split canvas into Left Pad (Limit Cycle Phase Portrait) and Right Pad (5-Rank Spectrum)
+        let pad_w = (main_canvas.width() - 30.0) * 0.50;
+        let pad_rect = egui::Rect::from_min_size(
+            egui::pos2(main_canvas.min.x + 12.0, main_canvas.min.y + 12.0),
+            egui::vec2(pad_w, main_canvas.height() - 24.0),
+        );
+        painter.rect_filled(pad_rect, 4.0, Color32::from_rgb(22, 32, 48));
+        painter.rect_stroke(
+            pad_rect,
+            4.0,
+            Stroke::new(1.0_f32, Color32::from_rgb(71, 85, 105)),
+        );
+
+        // Grid lines on Left Pad
+        let center_pad = pad_rect.center();
+        painter.line_segment(
+            [egui::pos2(pad_rect.min.x, center_pad.y), egui::pos2(pad_rect.max.x, center_pad.y)],
+            Stroke::new(0.8_f32, Color32::from_rgb(45, 60, 85)),
+        );
+        painter.line_segment(
+            [egui::pos2(center_pad.x, pad_rect.min.y), egui::pos2(center_pad.x, pad_rect.max.y)],
+            Stroke::new(0.8_f32, Color32::from_rgb(45, 60, 85)),
+        );
+
+        // Draw Aeroelastic Limit Cycle Orbit in Left Pad
+        let rad_x = pad_rect.width() * 0.35;
+        let rad_y = pad_rect.height() * 0.35;
+        let mut loop_points = Vec::with_capacity(33);
+        for step in 0..=32 {
+            let theta = (step as f32 / 32.0) * 2.0 * std::f32::consts::PI;
+            let r = 1.0 + 0.15 * (theta * 2.0).sin();
+            let px = center_pad.x + theta.cos() * rad_x * r;
+            let py = center_pad.y + theta.sin() * rad_y * r;
+            loop_points.push(egui::pos2(px, py));
+        }
+        for w in loop_points.windows(2) {
+            painter.line_segment([w[0], w[1]], Stroke::new(1.8_f32, Color32::from_rgb(56, 189, 248)));
+        }
+
+        // Zone labels inside pad
+        painter.text(
+            egui::pos2(pad_rect.min.x + 10.0, pad_rect.min.y + 8.0),
+            egui::Align2::LEFT_TOP,
+            "AEROELASTIC LIMIT CYCLE (dy/dt vs y)",
+            FontId::proportional(10.0),
+            Color32::from_rgb(148, 163, 184),
+        );
+
+        // Handle Touch/Mouse Dragging for Puck (X: Cassotto Aperture, Y: Reed Stiffness)
+        let puck_screen_x = pad_rect.min.x + self.puck_pos.0 * pad_rect.width();
+        let puck_screen_y = pad_rect.max.y - self.puck_pos.1 * pad_rect.height();
+        let puck_center = egui::pos2(puck_screen_x, puck_screen_y);
+
+        if response.dragged() || response.clicked() {
+            if let Some(pos) = response.interact_pointer_pos() {
+                if pad_rect.contains(pos) || self.is_dragging_puck {
+                    self.is_dragging_puck = true;
+                    let norm_x = ((pos.x - pad_rect.min.x) / pad_rect.width()).clamp(0.0, 1.0);
+                    let norm_y = ((pad_rect.max.y - pos.y) / pad_rect.height()).clamp(0.0, 1.0);
+                    self.update_physics_from_puck(norm_x, norm_y);
+                }
+            }
+        } else {
+            self.is_dragging_puck = false;
+        }
+
+        // Draw Interactive Puck
+        painter.circle_filled(puck_center, FREE_REED_PUCK_HIT_RADIUS, Color32::from_rgb(236, 72, 153)); // Pink #EC4899
+        painter.circle_stroke(
+            puck_center,
+            FREE_REED_PUCK_HIT_RADIUS,
+            Stroke::new(2.5_f32, Color32::from_rgb(16, 185, 129)), // Emerald #10B981
+        );
+        painter.circle_filled(puck_center, 4.0, Color32::from_rgb(11, 17, 32));
+
+        // Right Visualizer Pad (5-Rank Musette Spectrum)
+        let viz_left = pad_rect.max.x + 12.0;
+        let viz_rect = egui::Rect::from_min_max(
+            egui::pos2(viz_left, main_canvas.min.y + 12.0),
+            egui::pos2(main_canvas.max.x - 12.0, main_canvas.max.y - 12.0),
+        );
+        painter.rect_filled(viz_rect, 4.0, Color32::from_rgb(18, 26, 42));
+        painter.rect_stroke(
+            viz_rect,
+            4.0,
+            Stroke::new(1.0_f32, Color32::from_rgb(71, 85, 105)),
+        );
+
+        painter.text(
+            egui::pos2(viz_rect.center().x, viz_rect.min.y + 12.0),
+            egui::Align2::CENTER_TOP,
+            "5-RANK ACOUSTIC HARMONIC ENERGY",
+            FontId::proportional(11.5),
+            Color32::from_rgb(226, 232, 240),
+        );
+
+        // Draw 5 Spectrum Bars
+        let rank_names = ["16' Bassoon", "8' Clarinet", "8'+ Musette", "8'- Musette", "4' Piccolo"];
+        let rank_colors = [
+            Color32::from_rgb(239, 68, 68),   // Red
+            Color32::from_rgb(245, 158, 11),  // Amber
+            Color32::from_rgb(16, 185, 129),  // Emerald
+            Color32::from_rgb(56, 189, 248),  // Sky Blue
+            Color32::from_rgb(168, 85, 247),  // Purple
+        ];
+
+        let num_bars = 5;
+        let bar_margin = 16.0;
+        let total_bar_space = viz_rect.width() - bar_margin * 2.0;
+        let bar_slot = total_bar_space / num_bars as f32;
+        let bar_w = bar_slot * 0.65;
+        let bar_base_y = viz_rect.max.y - 32.0;
+        let bar_max_h = bar_base_y - (viz_rect.min.y + 40.0);
+
+        for (i, (&energy, (&name, &color))) in self.rank_energies.iter().zip(rank_names.iter().zip(rank_colors.iter())).enumerate() {
+            let cx = viz_rect.min.x + bar_margin + (i as f32 + 0.5) * bar_slot;
+            let bar_h = (energy.clamp(0.0, 1.0) * bar_max_h).max(3.0);
+            let bar_box = egui::Rect::from_min_max(
+                egui::pos2(cx - bar_w * 0.5, bar_base_y - bar_h),
+                egui::pos2(cx + bar_w * 0.5, bar_base_y),
+            );
+
+            // Background slot
+            let bg_box = egui::Rect::from_min_max(
+                egui::pos2(cx - bar_w * 0.5, bar_base_y - bar_max_h),
+                egui::pos2(cx + bar_w * 0.5, bar_base_y),
+            );
+            painter.rect_filled(bg_box, 3.0, Color32::from_rgb(11, 17, 32));
+            painter.rect_filled(bar_box, 3.0, color);
+
+            // Label
+            painter.text(
+                egui::pos2(cx, bar_base_y + 6.0),
+                egui::Align2::CENTER_TOP,
+                name,
+                FontId::proportional(9.5),
+                Color32::from_rgb(203, 213, 225),
+            );
+        }
+
+        // Bottom Controls Strip (y: 342..470)
+        let controls_rect = egui::Rect::from_min_max(
+            egui::pos2(rect.min.x + 20.0, rect.min.y + 342.0),
+            egui::pos2(rect.max.x - 20.0, rect.max.y - 10.0),
+        );
+
+        ui.allocate_ui_at_rect(controls_rect, |ui| {
             ui.horizontal(|ui| {
                 ui.vertical(|ui| {
-                    ui.label("Aeroelastic & Chamber Controls:");
+                    ui.label(RichText::new("Aeroelastic & Chamber:").font(FontId::proportional(11.0)).strong().color(Color32::from_rgb(226, 232, 240)));
                     ui.add(egui::Slider::new(&mut self.reed_stiffness, MIN_REED_STIFFNESS..=MAX_REED_STIFFNESS).text("Reed Stiffness"));
                     ui.add(egui::Slider::new(&mut self.cassotto_aperture, MIN_CASSOTTO_APERTURE..=MAX_CASSOTTO_APERTURE).text("Cassotto Aperture"));
                 });
@@ -344,11 +591,23 @@ impl FreeReedView {
                 ui.separator();
 
                 ui.vertical(|ui| {
-                    ui.label("Musette Detune & Ranks:");
-                    ui.add(egui::Slider::new(&mut self.musette_detune_cents, 0.0..=35.0).text("Detune Spread (cents)"));
+                    ui.label(RichText::new("Musette Detuning:").font(FontId::proportional(11.0)).strong().color(Color32::from_rgb(226, 232, 240)));
+                    ui.add(egui::Slider::new(&mut self.musette_detune_cents, 0.0..=35.0).text("Detune (cents)"));
+                });
+
+                ui.separator();
+
+                ui.vertical(|ui| {
+                    ui.label(RichText::new("Rank Energy Weights:").font(FontId::proportional(11.0)).strong().color(Color32::from_rgb(226, 232, 240)));
+                    ui.horizontal(|ui| {
+                        ui.add(egui::DragValue::new(&mut self.rank_energies[0]).speed(0.01).clamp_range(0.0..=1.0).prefix("16': "));
+                        ui.add(egui::DragValue::new(&mut self.rank_energies[1]).speed(0.01).clamp_range(0.0..=1.0).prefix("8': "));
+                        ui.add(egui::DragValue::new(&mut self.rank_energies[2]).speed(0.01).clamp_range(0.0..=1.0).prefix("8'+: "));
+                    });
                 });
             });
         });
+        self.update_puck_from_physics();
     }
 }
 
