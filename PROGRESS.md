@@ -894,4 +894,24 @@ Product Management has conducted a comprehensive readiness audit:
   - Unit tests: 305 passed in 0.23s (`cargo test -p summoner_gui`).
   - Clippy: 0 warnings (`cargo clippy -p summoner_gui -- -D warnings`).
 
+### Turn #39 (Turn #6 — Sprint Review) — Modern Inspector Live ParamBus Bridge, Unified Track Selection & Bidirectional Project Sync
+- [x] Modern Inspector Live ParamBus Zero-Allocation Bridge (`crates/summoner_gui/src/views/modern_inspector.rs`):
+  - Created `show_modern_inspector_with_context(ui, state, param_bus, track_id)` with zero-allocation atomic dispatch for Gain (`track_id * 1000 + 200`), Pan (`+ 201`), Mute (`+ 202`), Solo (`+ 203`), and DSP node parameters (`+ 500..516`).
+  - Added double-click resets (unity gain 0.0 dB, centered pan C).
+  - Upgraded module selector dropdown to query `DspNodeRegistry` defaults and dispatch newly initialized parameters directly to `ParamBus`.
+  - Maintained backward-compatible `show_modern_inspector(ui, state)` wrapper.
+  - Updated Bottom Dock inspector view call in `award_winning_gui_view.rs` to pass `self.live_param_bus.as_deref()` and `cur_track_id`.
+- [x] Unified Track Selection Across All Operational Views (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Implemented unified `pub fn select_track(&mut self, track_idx: usize) -> bool` with live `ParamBus` dispatch for gain, pan, mute, and solo.
+  - Delegated `select_track_for_piano_roll`, `select_track_for_modular`, `select_track_for_stage`, `select_track_for_mixer`, and `select_track_for_arranger` to this unified method.
+  - Clamped `selected_track_idx` safely when reconciling project tracks.
+- [x] Bidirectional Track DSP Node & Parameter Synchronization:
+  - Synchronized `selected_node_kind` and `node_param_values` bidirectionally between `inspector_state`, `device_rack_state`, and `project.tracks` in `sync_with_project`.
+  - Maintained master fader synchronization to active track and `ParamId(9999)` master bus live dispatch.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier104_turn39_tests.rs` verifying Modern Inspector ParamBus live dispatch, master fader invariants, unified `select_track`, and bidirectional project sync.
+  - Registered `tier104_turn39_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Clippy: 0 warnings (`cargo clippy -p summoner_gui -- -D warnings` and `cargo clippy -p summoner_gui --features gui -- -D warnings`).
+  - Unit tests: 307 pure tests passed in 0.23s (`cargo test -p summoner_gui`), plus 7 feature tests in `tier104_turn39_tests`.
+
 

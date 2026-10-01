@@ -145,6 +145,15 @@ pub fn show_modern_inspector_with_context(
             if gain_resp.secondary_clicked() {
                 state.requested_automation_param = Some("gain".to_string());
             }
+            if gain_resp.changed() || gain_resp.double_clicked() {
+                if let Some(bus) = param_bus {
+                    let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 200);
+                    let gain_lin = ((state.gain_db / 12.0) + 1.0).clamp(0.0, 2.0);
+                    if bus.get(pid).is_some() {
+                        bus.set(pid, gain_lin);
+                    }
+                }
+            }
             if gain_resp.hovered() {
                 let _ = gain_resp.on_hover_text(format!(
                     "Gain Fader: {:.1} dB\n[Drag to adjust | Double-click for 0dB unity | Right-click to automate]",
@@ -178,6 +187,14 @@ pub fn show_modern_inspector_with_context(
             if pan_resp.secondary_clicked() {
                 state.requested_automation_param = Some("pan".to_string());
             }
+            if pan_resp.changed() || pan_resp.double_clicked() {
+                if let Some(bus) = param_bus {
+                    let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 201);
+                    if bus.get(pid).is_some() {
+                        bus.set(pid, state.pan_val);
+                    }
+                }
+            }
             if pan_resp.hovered() {
                 let pan_display = if state.pan_val.abs() < 0.05 {
                     "C".to_string()
@@ -204,6 +221,12 @@ pub fn show_modern_inspector_with_context(
                 );
                 if mute_btn.clicked() {
                     state.is_muted = !state.is_muted;
+                    if let Some(bus) = param_bus {
+                        let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 202);
+                        if bus.get(pid).is_some() {
+                            bus.set(pid, if state.is_muted { 1.0 } else { 0.0 });
+                        }
+                    }
                 }
                 if mute_btn.secondary_clicked() {
                     state.requested_automation_param = Some("mute".to_string());
@@ -217,6 +240,12 @@ pub fn show_modern_inspector_with_context(
                 );
                 if solo_btn.clicked() {
                     state.is_soloed = !state.is_soloed;
+                    if let Some(bus) = param_bus {
+                        let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 203);
+                        if bus.get(pid).is_some() {
+                            bus.set(pid, if state.is_soloed { 1.0 } else { 0.0 });
+                        }
+                    }
                 }
                 if solo_btn.secondary_clicked() {
                     state.requested_automation_param = Some("solo".to_string());
@@ -331,6 +360,20 @@ pub fn show_modern_inspector_with_context(
                             if ui.selectable_label(is_sel, label).clicked() {
                                 state.selected_node_kind = Some(desc.kind_id.clone());
                                 state.target_name = desc.display_name.clone();
+                                for (p_i, schema) in desc.params.iter().enumerate() {
+                                    let def = match &schema.widget {
+                                        crate::dsp_node_ui::DspWidgetKind::RotaryKnob { default, .. }
+                                        | crate::dsp_node_ui::DspWidgetKind::VerticalFader { default, .. } => *default,
+                                        _ => 0.5,
+                                    };
+                                    state.node_param_values.insert(schema.id.clone(), def);
+                                    if let Some(bus) = param_bus {
+                                        let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + p_i as u32);
+                                        if bus.get(pid).is_some() {
+                                            bus.set(pid, def);
+                                        }
+                                    }
+                                }
                             }
                         }
                     });

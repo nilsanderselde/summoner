@@ -7,7 +7,7 @@
 
 use crate::views::modern_asset_browser::{show_modern_asset_browser, ModernAssetBrowserState};
 use crate::views::modern_device_rack::{
-    show_modern_device_rack, show_modern_device_rack_with_context, ModernDeviceRackState,
+    show_modern_device_rack_with_context, ModernDeviceRackState,
 };
 use crate::views::modern_inspector::{show_modern_inspector_with_context, ModernInspectorState};
 use crate::views::modern_top_bar::{show_modern_top_bar, ModernTopBarState};
@@ -1135,6 +1135,12 @@ impl AwardWinningGuiView {
                 track.gain = self.top_bar_state.master_gain;
                 self.inspector_state.gain_db = (track.gain - 1.0) * 12.0;
                 self.last_inspector_gain_db = self.inspector_state.gain_db;
+            }
+            if let Some(ref bus) = self.live_param_bus {
+                let m_pid = summoner_core::param_bus::ParamId(9999);
+                if bus.get(m_pid).is_some() {
+                    bus.set(m_pid, self.top_bar_state.master_gain);
+                }
             }
         }
 
@@ -4036,6 +4042,8 @@ impl AwardWinningGuiView {
                         active_clip_idx: None,
                     }
                 }).collect();
+                self.last_selected_track_idx = usize::MAX;
+                self.last_synced_track_notes_idx = usize::MAX;
             } else {
                 // Bi-directional parameter sync: push view track mutations to project tracks
                 for t in &mut project.tracks {
@@ -4051,6 +4059,9 @@ impl AwardWinningGuiView {
         }
 
         // 2. Track selection sync
+        if self.selected_track_idx >= self.tracks.len() && !self.tracks.is_empty() {
+            self.selected_track_idx = 0;
+        }
         if let Some(sel_id) = *selected_track_id {
             if let Some(pos) = self.tracks.iter().position(|t| t.id == sel_id) {
                 self.selected_track_idx = pos;
@@ -4119,6 +4130,7 @@ impl AwardWinningGuiView {
             if track_changed {
                 // Newly selected track: load node kind and parameters into GUI
                 self.device_rack_state.selected_node_kind = Some(first_node.kind.clone());
+                self.inspector_state.selected_node_kind = Some(first_node.kind.clone());
                 if first_node.params.is_empty() {
                     first_node.params.insert("cutoff".to_string(), self.device_rack_state.cutoff);
                     first_node.params.insert("resonance".to_string(), self.device_rack_state.resonance);
@@ -4128,6 +4140,7 @@ impl AwardWinningGuiView {
                 }
                 for (k, v) in &first_node.params {
                     self.device_rack_state.node_param_values.insert(k.clone(), *v);
+                    self.inspector_state.node_param_values.insert(k.clone(), *v);
                 }
                 if let Some(&c) = first_node.params.get("cutoff") {
                     self.device_rack_state.cutoff = c;
@@ -4167,9 +4180,16 @@ impl AwardWinningGuiView {
                 if let Some(ref gui_kind) = self.device_rack_state.selected_node_kind {
                     if &first_node.kind != gui_kind {
                         first_node.kind = gui_kind.clone();
+                        self.inspector_state.selected_node_kind = Some(gui_kind.clone());
+                    }
+                } else if let Some(ref insp_kind) = self.inspector_state.selected_node_kind {
+                    if &first_node.kind != insp_kind {
+                        first_node.kind = insp_kind.clone();
+                        self.device_rack_state.selected_node_kind = Some(insp_kind.clone());
                     }
                 } else {
                     self.device_rack_state.selected_node_kind = Some(first_node.kind.clone());
+                    self.inspector_state.selected_node_kind = Some(first_node.kind.clone());
                 }
 
                 // If node_param_values has newly updated values for standard dials, update them
@@ -4191,6 +4211,9 @@ impl AwardWinningGuiView {
 
                 // Sync GUI node_param_values to project
                 for (k, v) in &self.device_rack_state.node_param_values {
+                    first_node.params.insert(k.clone(), *v);
+                }
+                for (k, v) in &self.inspector_state.node_param_values {
                     first_node.params.insert(k.clone(), *v);
                 }
 
@@ -5050,104 +5073,84 @@ impl AwardWinningGuiView {
         }
     }
 
-    /// Select active track for Piano Roll editing and reflect its device name.
-    pub fn select_track_for_piano_roll(&mut self, track_idx: usize) -> bool {
+    /// Unified track selection helper that synchronizes active track index, device names,
+    /// mix controls (gain, pan, mute, solo, arm), and live ParamBus channels.
+    pub fn select_track(&mut self, track_idx: usize) -> bool {
         if track_idx < self.tracks.len() {
             self.selected_track_idx = track_idx;
-            let tr_name = self.tracks[track_idx].name.clone();
+            let tr = &self.tracks[track_idx];
+            let tr_name = tr.name.clone();
+            let tr_id = tr.id;
+            let tr_gain = tr.gain;
+            let tr_pan = tr.pan;
+            let tr_muted = tr.is_muted;
+            let tr_soloed = tr.is_soloed;
+            let tr_armed = tr.is_armed;
+
             self.device_rack_state.device_name = tr_name.clone();
             self.inspector_state.target_name = tr_name;
-            if let Some(tr) = self.tracks.get(track_idx) {
-                self.inspector_state.gain_db = (tr.gain - 1.0) * 12.0;
-                self.inspector_state.pan_val = tr.pan;
-                self.inspector_state.is_muted = tr.is_muted;
-                self.inspector_state.is_soloed = tr.is_soloed;
-                self.inspector_state.is_armed = tr.is_armed;
+
+            self.inspector_state.gain_db = (tr_gain - 1.0) * 12.0;
+            self.inspector_state.pan_val = tr_pan;
+            self.inspector_state.is_muted = tr_muted;
+            self.inspector_state.is_soloed = tr_soloed;
+            self.inspector_state.is_armed = tr_armed;
+
+            self.last_inspector_gain_db = self.inspector_state.gain_db;
+            self.last_inspector_pan = self.inspector_state.pan_val;
+            self.last_inspector_muted = self.inspector_state.is_muted;
+            self.last_inspector_soloed = self.inspector_state.is_soloed;
+            self.last_inspector_armed = self.inspector_state.is_armed;
+
+            // Live ParamBus zero-allocation synchronization
+            if let Some(ref bus) = self.live_param_bus {
+                let g_pid = summoner_core::param_bus::ParamId(tr_id as u32 * 1000 + 200);
+                if bus.get(g_pid).is_some() {
+                    bus.set(g_pid, tr_gain);
+                }
+                let p_pid = summoner_core::param_bus::ParamId(tr_id as u32 * 1000 + 201);
+                if bus.get(p_pid).is_some() {
+                    bus.set(p_pid, tr_pan);
+                }
+                let mute_pid = summoner_core::param_bus::ParamId(tr_id as u32 * 1000 + 202);
+                if bus.get(mute_pid).is_some() {
+                    bus.set(mute_pid, if tr_muted { 1.0 } else { 0.0 });
+                }
+                let solo_pid = summoner_core::param_bus::ParamId(tr_id as u32 * 1000 + 203);
+                if bus.get(solo_pid).is_some() {
+                    bus.set(solo_pid, if tr_soloed { 1.0 } else { 0.0 });
+                }
             }
+
             true
         } else {
             false
         }
+    }
+
+    /// Select active track for Piano Roll editing and reflect its device name.
+    pub fn select_track_for_piano_roll(&mut self, track_idx: usize) -> bool {
+        self.select_track(track_idx)
     }
 
     /// Select active track for Modular canvas routing and reflect its state across Inspector and Device Rack.
     pub fn select_track_for_modular(&mut self, track_idx: usize) -> bool {
-        if track_idx < self.tracks.len() {
-            self.selected_track_idx = track_idx;
-            let tr_name = self.tracks[track_idx].name.clone();
-            self.device_rack_state.device_name = tr_name.clone();
-            self.inspector_state.target_name = tr_name;
-            if let Some(tr) = self.tracks.get(track_idx) {
-                self.inspector_state.gain_db = (tr.gain - 1.0) * 12.0;
-                self.inspector_state.pan_val = tr.pan;
-                self.inspector_state.is_muted = tr.is_muted;
-                self.inspector_state.is_soloed = tr.is_soloed;
-                self.inspector_state.is_armed = tr.is_armed;
-            }
-            true
-        } else {
-            false
-        }
+        self.select_track(track_idx)
     }
 
     /// Select active track for Stage / Live Performance Matrix and reflect its state across Inspector and Device Rack.
     pub fn select_track_for_stage(&mut self, track_idx: usize) -> bool {
-        if track_idx < self.tracks.len() {
-            self.selected_track_idx = track_idx;
-            let tr_name = self.tracks[track_idx].name.clone();
-            self.device_rack_state.device_name = tr_name.clone();
-            self.inspector_state.target_name = tr_name;
-            if let Some(tr) = self.tracks.get(track_idx) {
-                self.inspector_state.gain_db = (tr.gain - 1.0) * 12.0;
-                self.inspector_state.pan_val = tr.pan;
-                self.inspector_state.is_muted = tr.is_muted;
-                self.inspector_state.is_soloed = tr.is_soloed;
-                self.inspector_state.is_armed = tr.is_armed;
-            }
-            true
-        } else {
-            false
-        }
+        self.select_track(track_idx)
     }
 
     /// Select active track for Console Mixer and reflect its state across Inspector and Device Rack.
     pub fn select_track_for_mixer(&mut self, track_idx: usize) -> bool {
-        if track_idx < self.tracks.len() {
-            self.selected_track_idx = track_idx;
-            let tr_name = self.tracks[track_idx].name.clone();
-            self.device_rack_state.device_name = tr_name.clone();
-            self.inspector_state.target_name = tr_name;
-            if let Some(tr) = self.tracks.get(track_idx) {
-                self.inspector_state.gain_db = (tr.gain - 1.0) * 12.0;
-                self.inspector_state.pan_val = tr.pan;
-                self.inspector_state.is_muted = tr.is_muted;
-                self.inspector_state.is_soloed = tr.is_soloed;
-                self.inspector_state.is_armed = tr.is_armed;
-            }
-            true
-        } else {
-            false
-        }
+        self.select_track(track_idx)
     }
 
     /// Select active track for Arranger timeline editing and reflect its state across Inspector and Device Rack.
     pub fn select_track_for_arranger(&mut self, track_idx: usize) -> bool {
-        if track_idx < self.tracks.len() {
-            self.selected_track_idx = track_idx;
-            let tr_name = self.tracks[track_idx].name.clone();
-            self.device_rack_state.device_name = tr_name.clone();
-            self.inspector_state.target_name = tr_name;
-            if let Some(tr) = self.tracks.get(track_idx) {
-                self.inspector_state.gain_db = (tr.gain - 1.0) * 12.0;
-                self.inspector_state.pan_val = tr.pan;
-                self.inspector_state.is_muted = tr.is_muted;
-                self.inspector_state.is_soloed = tr.is_soloed;
-                self.inspector_state.is_armed = tr.is_armed;
-            }
-            true
-        } else {
-            false
-        }
+        self.select_track(track_idx)
     }
 
     /// Select a specific clip in the Arranger and update track selection and clip highlight state.

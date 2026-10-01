@@ -386,7 +386,7 @@ pub fn show_modern_device_rack_with_context(
                                     if r1.secondary_clicked() { state.requested_automation_param = Some("cutoff".to_string()); }
                                     if let Some(bus) = param_bus {
                                         if r1.changed() || r1.dragged() || r1.double_clicked() {
-                                            let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 0);
+                                            let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000);
                                             if bus.get(pid).is_some() { bus.set(pid, state.cutoff); }
                                         }
                                     }
@@ -631,7 +631,7 @@ pub fn show_modern_device_rack_with_context(
                                     state.node_param_values.insert("cutoff".to_string(), nx);
                                     state.node_param_values.insert("resonance".to_string(), ny);
                                     if let Some(bus) = param_bus {
-                                        let pid_cut = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 0);
+                                        let pid_cut = summoner_core::param_bus::ParamId(track_id as u32 * 1000);
                                         if bus.get(pid_cut).is_some() { bus.set(pid_cut, nx); }
                                         let pid_res = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 1);
                                         if bus.get(pid_res).is_some() { bus.set(pid_res, ny); }
@@ -878,7 +878,7 @@ fn show_pro_parameter_drawer(
                             state.node_param_values.insert("cutoff".to_string(), nx);
                             state.node_param_values.insert("resonance".to_string(), ny);
                             if let Some(bus) = param_bus {
-                                let pid_cut = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 0);
+                                let pid_cut = summoner_core::param_bus::ParamId(track_id as u32 * 1000);
                                 if bus.get(pid_cut).is_some() { bus.set(pid_cut, nx); }
                                 let pid_res = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 1);
                                 if bus.get(pid_res).is_some() { bus.set(pid_res, ny); }
@@ -1063,7 +1063,7 @@ fn show_pro_parameter_drawer(
                                             "cutoff" => {
                                                 state.cutoff = *val;
                                                 if let Some(bus) = param_bus {
-                                                    let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 0);
+                                                    let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000);
                                                     if bus.get(pid).is_some() { bus.set(pid, *val); }
                                                 }
                                             }
