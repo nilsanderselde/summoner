@@ -90,6 +90,10 @@ pub struct ModernInspectorState {
     pub requested_open_granular_cloud_hud: bool,
     #[serde(default)]
     pub requested_open_spring_lattice_hud: bool,
+    #[serde(default)]
+    pub requested_open_waveguide_mesh_hud: bool,
+    #[serde(default)]
+    pub requested_open_plucked_string_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -141,6 +145,8 @@ impl Default for ModernInspectorState {
             requested_open_free_reed_hud: false,
             requested_open_granular_cloud_hud: false,
             requested_open_spring_lattice_hud: false,
+            requested_open_waveguide_mesh_hud: false,
+            requested_open_plucked_string_hud: false,
         }
     }
 }
@@ -885,6 +891,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open interactive Spring-Mass Lattice 6x6 wireframe displacement, Duffing non-linearity & dispersion HUD").clicked() {
                     state.requested_open_spring_lattice_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("WaveguideMesh") || active_kind.contains("MeshPlate") || active_kind.contains("MeshMembrane") || active_kind == "WaveguideMeshNode" || active_kind == "WaveguideMesh2D" || active_kind == "RectilinearWaveguideMesh" || active_kind == "WaveguideMeshBoundary" || active_kind == "WaveguideMesh" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🌐 Open 2D Physical Waveguide Resonator Mesh HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 229, 255)))
+                        .fill(Color32::from_rgb(10, 30, 44))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 229, 255)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive 2D Physical Waveguide Mesh 3D wireframe displacement, strike puck & boundary reflection HUD").clicked() {
+                    state.requested_open_waveguide_mesh_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("PluckedString") || active_kind.contains("CommutedPlucked") || active_kind == "PluckedStringNode" || active_kind == "CommutedPluckedStringNode" || active_kind == "CommutedPluckedString" || active_kind == "PluckedStringWaveguide" || active_kind == "KarplusStrong" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🎸 Open Plucked & Struck Waveguide String HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(255, 215, 0)))
+                        .fill(Color32::from_rgb(44, 36, 12))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 215, 0)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Karplus-Strong Plucked String hammer/plectrum contact force, triangular deflection & dual polarization HUD").clicked() {
+                    state.requested_open_plucked_string_hud = true;
                 }
                 ui.add_space(4.0);
             }

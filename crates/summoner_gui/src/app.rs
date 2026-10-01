@@ -1435,6 +1435,14 @@ impl eframe::App for SummonerApp {
                     self.current_view = ViewMode::ModernStudio;
                     self.award_winning_view.open_spring_lattice_hud();
                 }
+                "open_waveguide_mesh_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_waveguide_mesh_hud();
+                }
+                "open_plucked_string_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_plucked_string_hud();
+                }
                 "sfz_convert" | "auto_slice" | "load_preset" | "export_clap" | "toggle_simd" => {
                     println!("Command palette action executed: {}", action);
                 }

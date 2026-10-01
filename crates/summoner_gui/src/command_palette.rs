@@ -473,6 +473,18 @@ impl CommandPalette {
                 action_id: "open_spring_lattice_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open 2D Physical Waveguide Resonator Mesh HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_waveguide_mesh_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Plucked & Struck Waveguide String HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_plucked_string_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

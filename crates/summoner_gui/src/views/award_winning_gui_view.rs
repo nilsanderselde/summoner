@@ -696,6 +696,10 @@ pub struct AwardWinningGuiView {
     pub granular_cloud_view: crate::views::granular_cloud_view::GranularCloudView,
     pub show_spring_lattice_modal: bool,
     pub spring_lattice_view: crate::views::spring_lattice_view::SpringLatticeView,
+    pub show_waveguide_mesh_modal: bool,
+    pub waveguide_mesh_view: crate::views::waveguide_mesh_view::WaveguideMeshView,
+    pub show_plucked_string_modal: bool,
+    pub plucked_string_view: crate::views::plucked_string_view::PluckedStringView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1008,6 +1012,10 @@ impl AwardWinningGuiView {
             granular_cloud_view: crate::views::granular_cloud_view::GranularCloudView::new(),
             show_spring_lattice_modal: false,
             spring_lattice_view: crate::views::spring_lattice_view::SpringLatticeView::new(),
+            show_waveguide_mesh_modal: false,
+            waveguide_mesh_view: crate::views::waveguide_mesh_view::WaveguideMeshView::new(),
+            show_plucked_string_modal: false,
+            plucked_string_view: crate::views::plucked_string_view::PluckedStringView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -1787,6 +1795,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_spring_lattice_hud = false;
             self.open_spring_lattice_hud();
         }
+        if self.inspector_state.requested_open_waveguide_mesh_hud || self.device_rack_state.requested_open_waveguide_mesh_hud {
+            self.inspector_state.requested_open_waveguide_mesh_hud = false;
+            self.device_rack_state.requested_open_waveguide_mesh_hud = false;
+            self.open_waveguide_mesh_hud();
+        }
+        if self.inspector_state.requested_open_plucked_string_hud || self.device_rack_state.requested_open_plucked_string_hud {
+            self.inspector_state.requested_open_plucked_string_hud = false;
+            self.device_rack_state.requested_open_plucked_string_hud = false;
+            self.open_plucked_string_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -1818,6 +1836,8 @@ impl AwardWinningGuiView {
         self.show_free_reed_modal_window(ui);
         self.show_granular_cloud_modal_window(ui);
         self.show_spring_lattice_modal_window(ui);
+        self.show_waveguide_mesh_modal_window(ui);
+        self.show_plucked_string_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -10145,6 +10165,212 @@ impl AwardWinningGuiView {
 
     pub fn is_spring_lattice_hud_open(&self) -> bool {
         self.show_spring_lattice_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_waveguide_mesh_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_waveguide_mesh_modal {
+            return;
+        }
+
+        let mut is_open = self.show_waveguide_mesh_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🌐 2D Physical Waveguide Resonator Mesh HUD")
+            .id(egui::Id::new("waveguide_mesh_hud_modal"))
+            .open(&mut is_open)
+            .default_size([840.0, 580.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("2D Triangular/Rectilinear Digital Waveguide Mesh Scattering Lattice & Boundary HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.waveguide_mesh_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_waveguide_mesh_modal = is_open;
+        self.sync_waveguide_mesh_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_waveguide_mesh_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let strike_x = self.waveguide_mesh_view.strike_puck_pos.0;
+        let strike_y = self.waveguide_mesh_view.strike_puck_pos.1;
+        let elevation = self.waveguide_mesh_view.view_elevation_deg;
+        let azimuth = self.waveguide_mesh_view.view_azimuth_deg;
+        let density = self.waveguide_mesh_view.wireframe_density as f32;
+        let energy = self.waveguide_mesh_view.mesh.calculate_total_energy();
+
+        self.device_rack_state.node_param_values.insert("strike_pos_x".to_string(), strike_x);
+        self.device_rack_state.node_param_values.insert("strike_pos_y".to_string(), strike_y);
+        self.device_rack_state.node_param_values.insert("view_elevation".to_string(), elevation);
+        self.device_rack_state.node_param_values.insert("view_azimuth".to_string(), azimuth);
+        self.device_rack_state.node_param_values.insert("wireframe_density".to_string(), density);
+        self.device_rack_state.node_param_values.insert("total_energy".to_string(), energy);
+
+        self.inspector_state.node_param_values.insert("strike_pos_x".to_string(), strike_x);
+        self.inspector_state.node_param_values.insert("strike_pos_y".to_string(), strike_y);
+        self.inspector_state.node_param_values.insert("view_elevation".to_string(), elevation);
+        self.inspector_state.node_param_values.insert("view_azimuth".to_string(), azimuth);
+        self.inspector_state.node_param_values.insert("wireframe_density".to_string(), density);
+        self.inspector_state.node_param_values.insert("total_energy".to_string(), energy);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_x  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_y  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_el = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_az = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_dn = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_en = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+
+            if bus.get(pid_x).is_some()  { bus.set(pid_x, strike_x); }
+            if bus.get(pid_y).is_some()  { bus.set(pid_y, strike_y); }
+            if bus.get(pid_el).is_some() { bus.set(pid_el, elevation); }
+            if bus.get(pid_az).is_some() { bus.set(pid_az, azimuth); }
+            if bus.get(pid_dn).is_some() { bus.set(pid_dn, density); }
+            if bus.get(pid_en).is_some() { bus.set(pid_en, energy); }
+        }
+    }
+
+    pub fn open_waveguide_mesh_hud(&mut self) {
+        self.show_waveguide_mesh_modal = true;
+    }
+
+    pub fn close_waveguide_mesh_hud(&mut self) {
+        self.show_waveguide_mesh_modal = false;
+    }
+
+    pub fn is_waveguide_mesh_hud_open(&self) -> bool {
+        self.show_waveguide_mesh_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_plucked_string_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_plucked_string_modal {
+            return;
+        }
+
+        let mut is_open = self.show_plucked_string_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎸 Karplus-Strong Plucked & Struck Waveguide String HUD")
+            .id(egui::Id::new("plucked_string_hud_modal"))
+            .open(&mut is_open)
+            .default_size([860.0, 580.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Hammer/Plectrum Non-Linear Contact Force, Triangular String Deflection & Dual Polarization HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.plucked_string_view.ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_plucked_string_modal = is_open;
+        self.sync_plucked_string_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_plucked_string_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let beta = self.plucked_string_view.pluck_position_beta;
+        let vel = self.plucked_string_view.strike_velocity;
+        let stiff = self.plucked_string_view.string_stiffness;
+        let hardness = self.plucked_string_view.hammer_hardness;
+        let palm = self.plucked_string_view.palm_mute_damping;
+        let coupling = self.plucked_string_view.polarization_coupling;
+        let force = self.plucked_string_view.peak_contact_force_n;
+        let dur = self.plucked_string_view.contact_duration_ms;
+
+        self.device_rack_state.node_param_values.insert("pluck_position_beta".to_string(), beta);
+        self.device_rack_state.node_param_values.insert("strike_velocity".to_string(), vel);
+        self.device_rack_state.node_param_values.insert("string_stiffness".to_string(), stiff);
+        self.device_rack_state.node_param_values.insert("hammer_hardness".to_string(), hardness);
+        self.device_rack_state.node_param_values.insert("palm_mute_damping".to_string(), palm);
+        self.device_rack_state.node_param_values.insert("polarization_coupling".to_string(), coupling);
+        self.device_rack_state.node_param_values.insert("peak_contact_force_n".to_string(), force);
+        self.device_rack_state.node_param_values.insert("contact_duration_ms".to_string(), dur);
+
+        self.inspector_state.node_param_values.insert("pluck_position_beta".to_string(), beta);
+        self.inspector_state.node_param_values.insert("strike_velocity".to_string(), vel);
+        self.inspector_state.node_param_values.insert("string_stiffness".to_string(), stiff);
+        self.inspector_state.node_param_values.insert("hammer_hardness".to_string(), hardness);
+        self.inspector_state.node_param_values.insert("palm_mute_damping".to_string(), palm);
+        self.inspector_state.node_param_values.insert("polarization_coupling".to_string(), coupling);
+        self.inspector_state.node_param_values.insert("peak_contact_force_n".to_string(), force);
+        self.inspector_state.node_param_values.insert("contact_duration_ms".to_string(), dur);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_beta = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_vel  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_st   = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_hd   = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_pl   = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_cp   = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+            let pid_fc   = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 6);
+            let pid_dr   = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 7);
+
+            if bus.get(pid_beta).is_some() { bus.set(pid_beta, beta); }
+            if bus.get(pid_vel).is_some()  { bus.set(pid_vel, vel); }
+            if bus.get(pid_st).is_some()   { bus.set(pid_st, stiff); }
+            if bus.get(pid_hd).is_some()   { bus.set(pid_hd, hardness); }
+            if bus.get(pid_pl).is_some()   { bus.set(pid_pl, palm); }
+            if bus.get(pid_cp).is_some()   { bus.set(pid_cp, coupling); }
+            if bus.get(pid_fc).is_some()   { bus.set(pid_fc, force); }
+            if bus.get(pid_dr).is_some()   { bus.set(pid_dr, dur); }
+        }
+    }
+
+    pub fn open_plucked_string_hud(&mut self) {
+        self.show_plucked_string_modal = true;
+    }
+
+    pub fn close_plucked_string_hud(&mut self) {
+        self.show_plucked_string_modal = false;
+    }
+
+    pub fn is_plucked_string_hud_open(&self) -> bool {
+        self.show_plucked_string_modal
     }
 
     #[cfg(feature = "gui")]

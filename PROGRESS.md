@@ -1603,6 +1603,37 @@ Product Management has conducted a comprehensive readiness audit:
   - Feature tests: 13 tests passed in `tier127_turn63_tests` (`cargo test -p summoner_gui --features gui -- tier127`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
 
+### Turn #64 (Turn #27 Deliverable) — 2D Physical Waveguide Resonator Mesh & Karplus-Strong Plucked String HUDs Convergence (Milestones 13, 18 & 33)
+- [x] 2D Physical Waveguide Resonator Mesh & Karplus-Strong Plucked String Performance HUDs Integration:
+  - Integrated `WaveguideMeshView` (2D Physical Waveguide Resonator Mesh HUD: 3D wireframe mesh projection, membrane/plate/acoustic bar materials, boundary impedance, 1-click impulse strike, and touch strike puck) and `PluckedStringView` (Karplus-Strong Plucked & Struck String HUD: non-linear felt contact force $F \propto \delta^p$, spatial triangular string pluck deflection, dual polarization orbits, 6 instrument profiles, and pluck position $\beta$ vs velocity puck) into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/waveguide_mesh_view.rs` & `plucked_string_view.rs`):
+  - In `WaveguideMeshView`: added `render_ascii_snapshot_str()`, full `show(&mut self, ui: &mut egui::Ui)` forwarder, 3D wireframe mesh canvas with touch strike puck drag, 1-click strike impulse, reset, materials selector, boundary condition buttons, elevation/azimuth rotation sliders, and total energy meter.
+  - In `PluckedStringView`: added `set_instrument(&mut self, inst: PluckedInstrumentViewProfile)`, `render_ascii_snapshot_str()`, `show(&mut self, ui: &mut egui::Ui)` forwarder.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_waveguide_mesh_modal: bool`, `waveguide_mesh_view: WaveguideMeshView`, `show_plucked_string_modal: bool`, and `plucked_string_view: PluckedStringView`.
+  - Added dedicated modal windows `show_waveguide_mesh_modal_window` and `show_plucked_string_modal_window` with responsive styling, WCAG AAA contrast, and $\ge 44 \times 44\text{pt}$ touch bounds.
+  - Added public lifecycle methods: `open_waveguide_mesh_hud()`, `close_waveguide_mesh_hud()`, `is_waveguide_mesh_hud_open()`, `open_plucked_string_hud()`, `close_plucked_string_hud()`, `is_plucked_string_hud_open()`.
+  - Real-time parameter sync bridges (`sync_waveguide_mesh_hud_state` and `sync_plucked_string_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_waveguide_mesh_hud: bool` and `requested_open_plucked_string_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🌐 Open 2D Physical Waveguide Resonator Mesh HUD]` and `[🎸 Open Plucked & Struck Waveguide String HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header `[🌐 HUD]` / `[🎸 HUD]` and expanded toolbar buttons in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Waveguide Mesh: 4x4 wireframe mesh projection, touch strike puck modulating surface coordinates $(x, y)$, and live `ParamBus` slot dispatch.
+    * Plucked String: triangular string pluck deflection line with golden peak point $\beta$, dual-polarization vibration orbit ellipse, touch-drag puck modulating pluck position $\beta$ and strike velocity, and live `ParamBus` slot dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_waveguide_mesh_hud` and `open_plucked_string_hud` under `"Physical Modeling"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_waveguide_mesh_hud()` and `open_plucked_string_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier128_turn64_tests.rs`:
+    * Pure tests: view initialization, materials and boundaries, Courant factors, simulation stepping and strike excitation, 3D canvas projection, strike puck hit testing, instrument profiles and nominal physics, beta and velocity normalization conversions, spatial triangular deflection, dual-polarization vibration orbits, pluck puck hit testing, deterministic ASCII snapshots.
+    * GUI tests: modal lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch, rack & inspector trigger propagation, command palette action registration.
+  - Registered `tier128_turn64_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Feature tests: 10 passed in 0.08s (`cargo test -p summoner_gui --features gui -- tier128_turn64`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
+
 
 
 

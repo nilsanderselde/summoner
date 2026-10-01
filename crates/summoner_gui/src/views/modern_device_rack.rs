@@ -105,6 +105,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_granular_cloud_hud: bool,
     #[serde(default)]
     pub requested_open_spring_lattice_hud: bool,
+    #[serde(default)]
+    pub requested_open_waveguide_mesh_hud: bool,
+    #[serde(default)]
+    pub requested_open_plucked_string_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -146,6 +150,8 @@ impl Default for ModernDeviceRackState {
             requested_open_free_reed_hud: false,
             requested_open_granular_cloud_hud: false,
             requested_open_spring_lattice_hud: false,
+            requested_open_waveguide_mesh_hud: false,
+            requested_open_plucked_string_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -354,6 +360,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_free_reed = cur_selection.contains("FreeReed") || cur_selection.contains("Harmonium") || cur_selection.contains("Accordion") || cur_selection.contains("Bandoneon") || cur_selection.contains("Bayan") || cur_selection.contains("Cassotto") || cur_selection == "FreeReedNode" || cur_selection == "FreeReedVoice" || cur_selection == "FreeReedOscillator";
                     let is_granular = cur_selection.contains("Granular") || cur_selection.contains("Grain") || cur_selection == "GranularSynthNode" || cur_selection == "GranularFreezeNode" || cur_selection == "GranularPitchShifter";
                     let is_spring_lattice = cur_selection.contains("Spring") || cur_selection.contains("Lattice") || cur_selection == "SpringLatticeNode" || cur_selection == "SpringReverb" || cur_selection == "SpringTankModel" || cur_selection == "SpringMassLattice";
+                    let is_waveguide_mesh = cur_selection.contains("WaveguideMesh") || cur_selection.contains("MeshPlate") || cur_selection.contains("MeshMembrane") || cur_selection == "WaveguideMeshNode" || cur_selection == "WaveguideMesh2D" || cur_selection == "RectilinearWaveguideMesh" || cur_selection == "WaveguideMeshBoundary" || cur_selection == "WaveguideMesh";
+                    let is_plucked_string = cur_selection.contains("PluckedString") || cur_selection.contains("CommutedPlucked") || cur_selection == "PluckedStringNode" || cur_selection == "CommutedPluckedStringNode" || cur_selection == "CommutedPluckedString" || cur_selection == "PluckedStringWaveguide" || cur_selection == "KarplusStrong";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -450,10 +458,18 @@ pub fn show_modern_device_rack_with_context(
                         if ui.button(RichText::new("☁ HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Granular Cloud Synthesis HUD").clicked() {
                             state.requested_open_granular_cloud_hud = true;
                         }
-                    } else if is_spring_lattice
-                        && ui.button(RichText::new("🌀 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 170, 0))).on_hover_text("Open Spring-Mass Lattice Deformation HUD").clicked()
+                    } else if is_spring_lattice {
+                        if ui.button(RichText::new("🌀 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 170, 0))).on_hover_text("Open Spring-Mass Lattice Deformation HUD").clicked() {
+                            state.requested_open_spring_lattice_hud = true;
+                        }
+                    } else if is_waveguide_mesh {
+                        if ui.button(RichText::new("🌐 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open 2D Physical Waveguide Resonator Mesh HUD").clicked() {
+                            state.requested_open_waveguide_mesh_hud = true;
+                        }
+                    } else if is_plucked_string
+                        && ui.button(RichText::new("🎸 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 215, 0))).on_hover_text("Open Plucked & Struck Waveguide String HUD").clicked()
                     {
-                        state.requested_open_spring_lattice_hud = true;
+                        state.requested_open_plucked_string_hud = true;
                     }
                     ui.add_space(4.0);
                     let pwr_col = if state.is_enabled { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(100, 116, 139) };
@@ -660,6 +676,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_free_reed = cur_selection.contains("FreeReed") || cur_selection.contains("Harmonium") || cur_selection.contains("Accordion") || cur_selection.contains("Bandoneon") || cur_selection.contains("Bayan") || cur_selection.contains("Cassotto") || cur_selection == "FreeReedNode" || cur_selection == "FreeReedVoice" || cur_selection == "FreeReedOscillator";
                     let is_granular = cur_selection.contains("Granular") || cur_selection.contains("Grain") || cur_selection == "GranularSynthNode" || cur_selection == "GranularFreezeNode" || cur_selection == "GranularPitchShifter";
                     let is_spring_lattice = cur_selection.contains("Spring") || cur_selection.contains("Lattice") || cur_selection == "SpringLatticeNode" || cur_selection == "SpringReverb" || cur_selection == "SpringTankModel" || cur_selection == "SpringMassLattice";
+                    let is_waveguide_mesh = cur_selection.contains("WaveguideMesh") || cur_selection.contains("MeshPlate") || cur_selection.contains("MeshMembrane") || cur_selection == "WaveguideMeshNode" || cur_selection == "WaveguideMesh2D" || cur_selection == "RectilinearWaveguideMesh" || cur_selection == "WaveguideMeshBoundary" || cur_selection == "WaveguideMesh";
+                    let is_plucked_string = cur_selection.contains("PluckedString") || cur_selection.contains("CommutedPlucked") || cur_selection == "PluckedStringNode" || cur_selection == "CommutedPluckedStringNode" || cur_selection == "CommutedPluckedString" || cur_selection == "PluckedStringWaveguide" || cur_selection == "KarplusStrong";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -764,10 +782,18 @@ pub fn show_modern_device_rack_with_context(
                         if ui.button(RichText::new("☁ HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Granular Cloud Synthesis HUD").clicked() {
                             state.requested_open_granular_cloud_hud = true;
                         }
-                    } else if is_spring_lattice
-                        && ui.button(RichText::new("🌀 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 170, 0))).on_hover_text("Open Spring-Mass Lattice Deformation HUD").clicked()
+                    } else if is_spring_lattice {
+                        if ui.button(RichText::new("🌀 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 170, 0))).on_hover_text("Open Spring-Mass Lattice Deformation HUD").clicked() {
+                            state.requested_open_spring_lattice_hud = true;
+                        }
+                    } else if is_waveguide_mesh {
+                        if ui.button(RichText::new("🌐 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open 2D Physical Waveguide Resonator Mesh HUD").clicked() {
+                            state.requested_open_waveguide_mesh_hud = true;
+                        }
+                    } else if is_plucked_string
+                        && ui.button(RichText::new("🎸 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 215, 0))).on_hover_text("Open Plucked & Struck Waveguide String HUD").clicked()
                     {
-                        state.requested_open_spring_lattice_hud = true;
+                        state.requested_open_plucked_string_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -1560,6 +1586,8 @@ fn show_pro_parameter_drawer(
                     let is_free_reed = dev_kind.contains("FreeReed") || dev_kind.contains("Harmonium") || dev_kind.contains("Accordion") || dev_kind.contains("Bandoneon") || dev_kind.contains("Bayan") || dev_kind.contains("Cassotto") || dev_kind == "FreeReedNode" || dev_kind == "FreeReedVoice" || dev_kind == "FreeReedOscillator";
                     let is_granular = dev_kind.contains("Granular") || dev_kind.contains("Grain") || dev_kind == "GranularSynthNode" || dev_kind == "GranularFreezeNode" || dev_kind == "GranularPitchShifter";
                     let is_spring_lattice = dev_kind.contains("Spring") || dev_kind.contains("Lattice") || dev_kind == "SpringLatticeNode" || dev_kind == "SpringReverb" || dev_kind == "SpringTankModel" || dev_kind == "SpringMassLattice";
+                    let is_waveguide_mesh = dev_kind.contains("WaveguideMesh") || dev_kind.contains("MeshPlate") || dev_kind.contains("MeshMembrane") || dev_kind == "WaveguideMeshNode" || dev_kind == "WaveguideMesh2D" || dev_kind == "RectilinearWaveguideMesh" || dev_kind == "WaveguideMeshBoundary" || dev_kind == "WaveguideMesh";
+                    let is_plucked_string = dev_kind.contains("PluckedString") || dev_kind.contains("CommutedPlucked") || dev_kind == "PluckedStringNode" || dev_kind == "CommutedPluckedStringNode" || dev_kind == "CommutedPluckedString" || dev_kind == "PluckedStringWaveguide" || dev_kind == "KarplusStrong";
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -3550,6 +3578,136 @@ fn show_pro_parameter_drawer(
 
                         if spring_resp.hovered() {
                             let _ = spring_resp.on_hover_text("Spring-Mass Lattice Deformation HUD\n[Drag horizontally: Duffing non-linearity [0..1] | Drag vertically: Drive force [0.05..1.0]]");
+                        }
+                    } else if is_waveguide_mesh {
+                        // 2D Physical Waveguide Resonator Mesh Mini Visualizer
+                        let (mesh_resp, mesh_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let m_rect = mesh_resp.rect;
+                        mesh_painter.rect_filled(m_rect, 2.0, Color32::from_rgb(10, 14, 24));
+
+                        let mut strike_x = state.node_param_values.get("strike_pos_x").copied().unwrap_or(0.50);
+                        let mut strike_y = state.node_param_values.get("strike_pos_y").copied().unwrap_or(0.50);
+
+                        if mesh_resp.dragged() {
+                            if let Some(pos) = mesh_resp.interact_pointer_pos() {
+                                strike_x = ((pos.x - m_rect.left()) / m_rect.width()).clamp(0.05, 0.95);
+                                strike_y = ((pos.y - m_rect.top()) / m_rect.height()).clamp(0.05, 0.95);
+
+                                state.node_param_values.insert("strike_pos_x".to_string(), strike_x);
+                                state.node_param_values.insert("strike_pos_y".to_string(), strike_y);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_x = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_y = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_x).is_some() { bus.set(pid_x, strike_x); }
+                                    if bus.get(pid_y).is_some() { bus.set(pid_y, strike_y); }
+                                }
+                            }
+                        }
+
+                        // Mini 4x4 Wireframe Mesh Projection
+                        let mw = 72.0;
+                        let mh = 42.0;
+                        let mx0 = m_rect.left() + 8.0;
+                        let my0 = m_rect.top() + 18.0;
+                        let dim = 4;
+                        for r in 0..dim {
+                            let y = my0 + (r as f32 / (dim - 1) as f32) * mh;
+                            mesh_painter.line_segment([egui::pos2(mx0, y), egui::pos2(mx0 + mw, y)], Stroke::new(1.0_f32, Color32::from_rgb(0, 229, 255)));
+                        }
+                        for c in 0..dim {
+                            let x = mx0 + (c as f32 / (dim - 1) as f32) * mw;
+                            mesh_painter.line_segment([egui::pos2(x, my0), egui::pos2(x, my0 + mh)], Stroke::new(1.0_f32, Color32::from_rgb(0, 255, 180)));
+                        }
+
+                        // Strike puck on mini mesh (Right half)
+                        let px = m_rect.left() + 90.0 + strike_x * 55.0;
+                        let py = m_rect.top() + 14.0 + strike_y * 42.0;
+                        mesh_painter.circle_stroke(egui::pos2(px, py), 6.5, Stroke::new(1.2_f32, Color32::from_rgb(255, 215, 0)));
+                        mesh_painter.circle_filled(egui::pos2(px, py), 3.5, Color32::from_rgb(255, 215, 0));
+
+                        // Readout
+                        mesh_painter.text(
+                            egui::pos2(m_rect.left() + 4.0, m_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("X: {:.2}", strike_x),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+                        mesh_painter.text(
+                            egui::pos2(m_rect.right() - 4.0, m_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("Y: {:.2}", strike_y),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(0, 255, 180),
+                        );
+
+                        if mesh_resp.hovered() {
+                            let _ = mesh_resp.on_hover_text("2D Physical Waveguide Resonator Mesh HUD\n[Drag: Surface strike coordinates (X/Y) | Modulates 2D wave propagation & boundary reflection]");
+                        }
+                    } else if is_plucked_string {
+                        // Karplus-Strong Plucked & Struck String Mini Visualizer
+                        let (pluck_resp, pluck_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let p_rect = pluck_resp.rect;
+                        pluck_painter.rect_filled(p_rect, 2.0, Color32::from_rgb(14, 18, 28));
+
+                        let mut beta = state.node_param_values.get("pluck_position_beta").copied().unwrap_or(0.15);
+                        let mut vel = state.node_param_values.get("strike_velocity").copied().unwrap_or(0.80);
+
+                        if pluck_resp.dragged() {
+                            if let Some(pos) = pluck_resp.interact_pointer_pos() {
+                                beta = 0.05 + ((pos.x - p_rect.left()) / p_rect.width()).clamp(0.0, 1.0) * 0.90;
+                                vel = 0.05 + (1.0 - ((pos.y - p_rect.top()) / p_rect.height())).clamp(0.0, 1.0) * 0.95;
+
+                                state.node_param_values.insert("pluck_position_beta".to_string(), beta);
+                                state.node_param_values.insert("strike_velocity".to_string(), vel);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_beta = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_vel = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_beta).is_some() { bus.set(pid_beta, beta); }
+                                    if bus.get(pid_vel).is_some() { bus.set(pid_vel, vel); }
+                                }
+                            }
+                        }
+
+                        // Triangular string pluck deflection line (Left half)
+                        let s_y0 = p_rect.top() + 38.0;
+                        let s_x0 = p_rect.left() + 8.0;
+                        let s_x1 = p_rect.left() + 76.0;
+                        let peak_x = s_x0 + beta * (s_x1 - s_x0);
+                        let peak_y = s_y0 - vel * 18.0;
+
+                        pluck_painter.line_segment([egui::pos2(s_x0, s_y0), egui::pos2(peak_x, peak_y)], Stroke::new(1.5_f32, Color32::from_rgb(255, 215, 0)));
+                        pluck_painter.line_segment([egui::pos2(peak_x, peak_y), egui::pos2(s_x1, s_y0)], Stroke::new(1.5_f32, Color32::from_rgb(255, 215, 0)));
+                        pluck_painter.circle_filled(egui::pos2(peak_x, peak_y), 3.5, Color32::from_rgb(255, 215, 0));
+
+                        // Dual-polarization vibration ellipse (Right half)
+                        let ec = egui::pos2(p_rect.left() + 118.0, p_rect.top() + 38.0);
+                        let rx = 18.0 * (vel * 0.8 + 0.2);
+                        let ry = 10.0 * (vel * 0.6 + 0.2);
+                        pluck_painter.circle_stroke(ec, rx.max(ry), Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(0, 229, 255, 100)));
+                        pluck_painter.line_segment([egui::pos2(ec.x - rx, ec.y), egui::pos2(ec.x + rx, ec.y)], Stroke::new(1.2_f32, Color32::from_rgb(0, 229, 255)));
+                        pluck_painter.line_segment([egui::pos2(ec.x, ec.y - ry), egui::pos2(ec.x, ec.y + ry)], Stroke::new(1.2_f32, Color32::from_rgb(255, 170, 40)));
+
+                        // Readout
+                        pluck_painter.text(
+                            egui::pos2(p_rect.left() + 4.0, p_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("β: {:.2}", beta),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(255, 215, 0),
+                        );
+                        pluck_painter.text(
+                            egui::pos2(p_rect.right() - 4.0, p_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("Vel: {:.2}", vel),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+
+                        if pluck_resp.hovered() {
+                            let _ = pluck_resp.on_hover_text("Plucked String Karplus-Strong Waveguide HUD\n[Drag horizontally: Pluck position β [0.05..0.95] | Drag vertically: Strike velocity [0.05..1.0]]");
                         }
                     } else {
                         // Filter Curve Mini View (slot-addressed)

@@ -176,6 +176,11 @@ impl WaveguideMeshView {
         lines
     }
 
+    /// Render deterministic ASCII snapshot as string for headless verification.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        self.render_ascii(80, 16).join("\n")
+    }
+
     /// Render headless PNG snapshot displaying 3D mesh surface, puck handle, and metrics.
     pub fn render_snapshot_png(&self, path: &str, width: u32, height: u32) -> Result<(), String> {
         if let Some(parent) = std::path::Path::new(path).parent() {
@@ -254,7 +259,7 @@ impl WaveguideMeshView {
     }
 
     #[cfg(feature = "gui")]
-    pub fn show(&mut self, ui: &mut egui::Ui, rect: Rect) {
+    pub fn show_rect(&mut self, ui: &mut egui::Ui, rect: Rect) {
         let painter = ui.painter_at(egui::Rect::from_min_size(
             egui::pos2(rect.x, rect.y),
             egui::vec2(rect.width, rect.height),
@@ -328,6 +333,204 @@ impl WaveguideMeshView {
         );
         painter.circle_filled(puck_pt, WAVEGUIDE_PUCK_VISUAL_RADIUS, Color32::from_rgb(255, 215, 0));
         painter.circle_filled(puck_pt, 4.0, Color32::WHITE);
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show(&mut self, ui: &mut egui::Ui) {
+        use crate::touch_controls::MIN_HIT_TARGET_PT;
+        use eframe::egui::{FontId, RichText, Rounding, Vec2};
+
+        // Top Toolbar
+        ui.horizontal_wrapped(|ui| {
+            ui.label(
+                RichText::new("MATERIAL:")
+                    .font(FontId::proportional(11.0))
+                    .strong()
+                    .color(Color32::from_rgb(148, 163, 184)),
+            );
+
+            let materials = [
+                (MeshMaterialProfile::Membrane, "🥁 Membrane (Drum)"),
+                (MeshMaterialProfile::Plate, "🔔 Plate (Metal)"),
+                (MeshMaterialProfile::AcousticBar, "🪵 Acoustic Bar (Wood)"),
+            ];
+
+            for (mat, label) in materials {
+                let is_sel = self.mesh.material == mat;
+                let bg_col = if is_sel { Color32::from_rgb(12, 44, 60) } else { Color32::from_rgb(18, 24, 38) };
+                let txt_col = if is_sel { Color32::from_rgb(0, 229, 255) } else { Color32::from_rgb(148, 163, 184) };
+                let stroke_col = if is_sel { Color32::from_rgb(0, 229, 255) } else { Color32::from_rgb(36, 50, 74) };
+
+                let btn = egui::Button::new(RichText::new(label).font(FontId::proportional(10.5)).color(txt_col))
+                    .min_size(Vec2::new(90.0, MIN_HIT_TARGET_PT))
+                    .fill(bg_col)
+                    .stroke(Stroke::new(1.0_f32, stroke_col))
+                    .rounding(Rounding::same(4.0));
+
+                if ui.add(btn).clicked() {
+                    self.set_material(mat);
+                }
+            }
+
+            ui.add_space(8.0);
+            ui.separator();
+            ui.add_space(8.0);
+
+            ui.label(
+                RichText::new("BOUNDARY:")
+                    .font(FontId::proportional(11.0))
+                    .strong()
+                    .color(Color32::from_rgb(148, 163, 184)),
+            );
+
+            let boundaries = [
+                (MeshBoundaryType::Clamped, "🔒 Clamped"),
+                (MeshBoundaryType::Free, "〰 Free"),
+                (MeshBoundaryType::DampedAbsorption, "🧽 Absorbing"),
+            ];
+
+            for (bnd, label) in boundaries {
+                let is_sel = self.mesh.boundary == bnd;
+                let bg_col = if is_sel { Color32::from_rgb(36, 44, 20) } else { Color32::from_rgb(18, 24, 38) };
+                let txt_col = if is_sel { Color32::from_rgb(0, 255, 180) } else { Color32::from_rgb(148, 163, 184) };
+                let stroke_col = if is_sel { Color32::from_rgb(0, 255, 180) } else { Color32::from_rgb(36, 50, 74) };
+
+                let btn = egui::Button::new(RichText::new(label).font(FontId::proportional(10.5)).color(txt_col))
+                    .min_size(Vec2::new(80.0, MIN_HIT_TARGET_PT))
+                    .fill(bg_col)
+                    .stroke(Stroke::new(1.0_f32, stroke_col))
+                    .rounding(Rounding::same(4.0));
+
+                if ui.add(btn).clicked() {
+                    self.set_boundary(bnd);
+                }
+            }
+
+            ui.add_space(8.0);
+            ui.separator();
+            ui.add_space(8.0);
+
+            let strike_btn = egui::Button::new(
+                RichText::new("💥 Strike").font(FontId::proportional(11.0)).strong().color(Color32::from_rgb(255, 215, 0))
+            )
+            .min_size(Vec2::new(75.0, MIN_HIT_TARGET_PT))
+            .fill(Color32::from_rgb(44, 36, 12))
+            .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 215, 0)))
+            .rounding(Rounding::same(4.0));
+
+            if ui.add(strike_btn).clicked() {
+                self.trigger_strike(0.85);
+            }
+
+            let reset_btn = egui::Button::new(
+                RichText::new("🔄 Reset").font(FontId::proportional(11.0)).color(Color32::from_rgb(244, 63, 94))
+            )
+            .min_size(Vec2::new(65.0, MIN_HIT_TARGET_PT))
+            .fill(Color32::from_rgb(36, 16, 22))
+            .stroke(Stroke::new(1.0_f32, Color32::from_rgb(244, 63, 94)))
+            .rounding(Rounding::same(4.0));
+
+            if ui.add(reset_btn).clicked() {
+                self.mesh.reset();
+            }
+        });
+
+        ui.add_space(6.0);
+
+        // Control Sliders
+        ui.horizontal(|ui| {
+            ui.label(RichText::new("Elevation:").font(FontId::proportional(10.0)).color(Color32::from_rgb(148, 163, 184)));
+            ui.add(egui::Slider::new(&mut self.view_elevation_deg, 10.0..=80.0).suffix("°"));
+            ui.add_space(6.0);
+            ui.label(RichText::new("Azimuth:").font(FontId::proportional(10.0)).color(Color32::from_rgb(148, 163, 184)));
+            ui.add(egui::Slider::new(&mut self.view_azimuth_deg, 0.0..=360.0).suffix("°"));
+            ui.add_space(6.0);
+            let energy = self.mesh.calculate_total_energy();
+            ui.label(
+                RichText::new(format!("Energy: {:.3}", energy))
+                    .font(FontId::proportional(10.0))
+                    .strong()
+                    .color(if energy > 0.01 { Color32::from_rgb(0, 255, 180) } else { Color32::from_rgb(100, 116, 139) })
+            );
+        });
+
+        ui.add_space(6.0);
+
+        // Main 3D Waveguide Mesh Canvas
+        let avail_w = ui.available_width().max(320.0);
+        let avail_h = (ui.available_height() - 10.0).clamp(240.0, 520.0);
+        let (canvas_rect, canvas_resp) = ui.allocate_exact_size(Vec2::new(avail_w, avail_h), egui::Sense::click_and_drag());
+
+        let center_x = canvas_rect.center().x;
+        let center_y = canvas_rect.min.y + canvas_rect.height() * 0.52;
+        let scale = canvas_rect.height() * 0.38;
+
+        if canvas_resp.dragged() || canvas_resp.clicked() {
+            if let Some(pos) = canvas_resp.interact_pointer_pos() {
+                let norm_x = ((pos.x - (center_x - scale * 0.9)) / (scale * 1.8)).clamp(0.05, 0.95);
+                let norm_y = ((pos.y - (center_y - scale * 0.7)) / (scale * 1.4)).clamp(0.05, 0.95);
+                self.strike_puck_pos = (norm_x, norm_y);
+                if canvas_resp.clicked() {
+                    self.trigger_strike(0.80);
+                }
+            }
+        }
+
+        // Draw 3D Mesh
+        let painter = ui.painter_at(canvas_rect);
+        painter.rect_filled(canvas_rect, 6.0, Color32::from_rgb(10, 14, 24));
+        painter.rect_stroke(canvas_rect, 6.0, Stroke::new(1.0_f32, Color32::from_rgb(30, 41, 59)));
+
+        let grid = self.mesh.displacement_grid();
+        for y in 0..MESH_DIM {
+            for x in 0..MESH_DIM {
+                let disp = grid[y][x];
+                let (px, py) = self.project_3d_to_canvas(x as f32, y as f32, disp, (center_x, center_y), scale);
+                let pt = egui::pos2(px, py);
+
+                if x + 1 < MESH_DIM {
+                    let disp_r = grid[y][x + 1];
+                    let (rx, ry) = self.project_3d_to_canvas((x + 1) as f32, y as f32, disp_r, (center_x, center_y), scale);
+                    painter.line_segment([pt, egui::pos2(rx, ry)], Stroke::new(1.5_f32, Color32::from_rgb(0, 229, 255)));
+                }
+
+                if y + 1 < MESH_DIM {
+                    let disp_b = grid[y + 1][x];
+                    let (bx, by) = self.project_3d_to_canvas(x as f32, (y + 1) as f32, disp_b, (center_x, center_y), scale);
+                    painter.line_segment([pt, egui::pos2(bx, by)], Stroke::new(1.5_f32, Color32::from_rgb(0, 255, 180)));
+                }
+            }
+        }
+
+        // Draw Strike Puck (Gold, >= 22pt radius -> 44x44pt touch bounding target)
+        let (puck_x, puck_y) = self.project_3d_to_canvas(
+            self.strike_puck_pos.0 * (MESH_DIM - 1) as f32,
+            self.strike_puck_pos.1 * (MESH_DIM - 1) as f32,
+            0.0,
+            (center_x, center_y),
+            scale,
+        );
+
+        let puck_pt = egui::pos2(puck_x, puck_y);
+        painter.circle_stroke(
+            puck_pt,
+            WAVEGUIDE_PUCK_HIT_RADIUS,
+            Stroke::new(2.0_f32, Color32::from_rgba_unmultiplied(255, 215, 0, 140)),
+        );
+        painter.circle_filled(puck_pt, WAVEGUIDE_PUCK_VISUAL_RADIUS, Color32::from_rgb(255, 215, 0));
+        painter.circle_filled(puck_pt, 4.0, Color32::WHITE);
+
+        // Readout text on canvas
+        painter.text(
+            egui::pos2(canvas_rect.left() + 12.0, canvas_rect.top() + 10.0),
+            egui::Align2::LEFT_TOP,
+            format!("Strike Position: ({:.2}, {:.2})", self.strike_puck_pos.0, self.strike_puck_pos.1),
+            FontId::proportional(10.5),
+            Color32::from_rgb(255, 215, 0),
+        );
+
+        // Step simulation for animation
+        self.step_simulation();
     }
 }
 
