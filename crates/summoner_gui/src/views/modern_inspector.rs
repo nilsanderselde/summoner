@@ -70,6 +70,10 @@ pub struct ModernInspectorState {
     pub requested_open_dulcimer_hud: bool,
     #[serde(default)]
     pub requested_open_clavinet_hud: bool,
+    #[serde(default)]
+    pub requested_open_grand_piano_hud: bool,
+    #[serde(default)]
+    pub requested_open_pipe_organ_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -111,6 +115,8 @@ impl Default for ModernInspectorState {
             requested_open_gamelan_hud: false,
             requested_open_dulcimer_hud: false,
             requested_open_clavinet_hud: false,
+            requested_open_grand_piano_hud: false,
+            requested_open_pipe_organ_hud: false,
         }
     }
 }
@@ -755,6 +761,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open interactive Electromechanical Clavinet D6 rubber anvil contact, dual pickups & 4-way tone switches HUD").clicked() {
                     state.requested_open_clavinet_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Piano") || active_kind.contains("GrandPiano") || active_kind == "GrandPianoModel" || active_kind == "ConcertGrandPianoNode" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🎹 Open Concert Grand Piano HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(229, 169, 60)))
+                        .fill(Color32::from_rgb(38, 28, 12))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(229, 169, 60)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Concert Grand Piano 3-string unison prompt/aftersound phase portrait & felt dynamics HUD").clicked() {
+                    state.requested_open_grand_piano_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("PipeOrgan") || active_kind.contains("Organ") || active_kind.contains("Windchest") || active_kind == "PipeOrganModel" {
+                if ui.add(
+                    egui::Button::new(RichText::new("⛪ Open Pipe Organ Windchest HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(255, 180, 50)))
+                        .fill(Color32::from_rgb(38, 26, 12))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 180, 50)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Pipe Organ windchest fluid jet dynamics, cutup ratio & 8-harmonic spectrum HUD").clicked() {
+                    state.requested_open_pipe_organ_hud = true;
                 }
                 ui.add_space(4.0);
             }

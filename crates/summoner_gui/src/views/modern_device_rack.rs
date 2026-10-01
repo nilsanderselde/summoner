@@ -85,6 +85,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_dulcimer_hud: bool,
     #[serde(default)]
     pub requested_open_clavinet_hud: bool,
+    #[serde(default)]
+    pub requested_open_grand_piano_hud: bool,
+    #[serde(default)]
+    pub requested_open_pipe_organ_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -116,6 +120,8 @@ impl Default for ModernDeviceRackState {
             requested_open_gamelan_hud: false,
             requested_open_dulcimer_hud: false,
             requested_open_clavinet_hud: false,
+            requested_open_grand_piano_hud: false,
+            requested_open_pipe_organ_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -314,6 +320,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_gamelan = cur_selection.contains("Gamelan") || cur_selection.contains("Gender") || cur_selection.contains("Jegogan") || cur_selection.contains("Metallophone") || cur_selection == "GamelanGender" || cur_selection == "AcousticBalineseGamelanJegoganBronzeBar";
                     let is_dulcimer = cur_selection.contains("Dulcimer") || cur_selection.contains("Cimbalom") || cur_selection.contains("Santur") || cur_selection.contains("Yangqin") || cur_selection.contains("Psaltery") || cur_selection == "DulcimerCimbalomModel";
                     let is_clavinet = cur_selection.contains("Clavinet") || cur_selection.contains("Clav") || cur_selection == "ClavinetNode" || cur_selection == "ClavinetD6";
+                    let is_piano = cur_selection.contains("Piano") || cur_selection.contains("GrandPiano") || cur_selection == "GrandPianoModel" || cur_selection == "ConcertGrandPianoNode";
+                    let is_pipe_organ = cur_selection.contains("PipeOrgan") || cur_selection.contains("Organ") || cur_selection.contains("Windchest") || cur_selection == "PipeOrganModel";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -370,9 +378,17 @@ pub fn show_modern_device_rack_with_context(
                         if ui.button(RichText::new("🎼 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 107, 43))).on_hover_text("Open Hammered Dulcimer & Cimbalom HUD").clicked() {
                             state.requested_open_dulcimer_hud = true;
                         }
-                    } else if is_clavinet
-                        && ui.button(RichText::new("⚡ HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(249, 115, 22))).on_hover_text("Open Electromechanical Clavinet D6 HUD").clicked() {
-                        state.requested_open_clavinet_hud = true;
+                    } else if is_clavinet {
+                        if ui.button(RichText::new("⚡ HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(249, 115, 22))).on_hover_text("Open Electromechanical Clavinet D6 HUD").clicked() {
+                            state.requested_open_clavinet_hud = true;
+                        }
+                    } else if is_piano {
+                        if ui.button(RichText::new("🎹 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(229, 169, 60))).on_hover_text("Open Concert Grand Piano HUD").clicked() {
+                            state.requested_open_grand_piano_hud = true;
+                        }
+                    } else if is_pipe_organ
+                        && ui.button(RichText::new("⛪ HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 180, 50))).on_hover_text("Open Pipe Organ Windchest HUD").clicked() {
+                        state.requested_open_pipe_organ_hud = true;
                     }
                     ui.add_space(4.0);
                     let pwr_col = if state.is_enabled { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(100, 116, 139) };
@@ -569,6 +585,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_gamelan = cur_selection.contains("Gamelan") || cur_selection.contains("Gender") || cur_selection.contains("Jegogan") || cur_selection.contains("Metallophone") || cur_selection == "GamelanGender" || cur_selection == "AcousticBalineseGamelanJegoganBronzeBar";
                     let is_dulcimer = cur_selection.contains("Dulcimer") || cur_selection.contains("Cimbalom") || cur_selection.contains("Santur") || cur_selection.contains("Yangqin") || cur_selection.contains("Psaltery") || cur_selection == "DulcimerCimbalomModel";
                     let is_clavinet = cur_selection.contains("Clavinet") || cur_selection.contains("Clav") || cur_selection == "ClavinetNode" || cur_selection == "ClavinetD6";
+                    let is_piano = cur_selection.contains("Piano") || cur_selection.contains("GrandPiano") || cur_selection == "GrandPianoModel" || cur_selection == "ConcertGrandPianoNode";
+                    let is_pipe_organ = cur_selection.contains("PipeOrgan") || cur_selection.contains("Organ") || cur_selection.contains("Windchest") || cur_selection == "PipeOrganModel";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -633,9 +651,17 @@ pub fn show_modern_device_rack_with_context(
                         if ui.button(RichText::new("🎼 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 107, 43))).on_hover_text("Open Hammered Dulcimer & Cimbalom HUD").clicked() {
                             state.requested_open_dulcimer_hud = true;
                         }
-                    } else if is_clavinet
-                        && ui.button(RichText::new("⚡ HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(249, 115, 22))).on_hover_text("Open Electromechanical Clavinet D6 HUD").clicked() {
-                        state.requested_open_clavinet_hud = true;
+                    } else if is_clavinet {
+                        if ui.button(RichText::new("⚡ HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(249, 115, 22))).on_hover_text("Open Electromechanical Clavinet D6 HUD").clicked() {
+                            state.requested_open_clavinet_hud = true;
+                        }
+                    } else if is_piano {
+                        if ui.button(RichText::new("🎹 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(229, 169, 60))).on_hover_text("Open Concert Grand Piano HUD").clicked() {
+                            state.requested_open_grand_piano_hud = true;
+                        }
+                    } else if is_pipe_organ
+                        && ui.button(RichText::new("⛪ HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 180, 50))).on_hover_text("Open Pipe Organ Windchest HUD").clicked() {
+                        state.requested_open_pipe_organ_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -1418,6 +1444,8 @@ fn show_pro_parameter_drawer(
                     let is_gamelan = dev_kind.contains("Gamelan") || dev_kind.contains("Gender") || dev_kind.contains("Jegogan") || dev_kind.contains("Metallophone") || dev_kind == "GamelanGender" || dev_kind == "AcousticBalineseGamelanJegoganBronzeBar";
                     let is_dulcimer = dev_kind.contains("Dulcimer") || dev_kind.contains("Cimbalom") || dev_kind.contains("Santur") || dev_kind.contains("Yangqin") || dev_kind.contains("Psaltery") || dev_kind == "DulcimerCimbalomModel";
                     let is_clavinet = dev_kind.contains("Clavinet") || dev_kind.contains("Clav") || dev_kind == "ClavinetNode" || dev_kind == "ClavinetD6";
+                    let is_piano = dev_kind.contains("Piano") || dev_kind.contains("GrandPiano") || dev_kind == "GrandPianoModel" || dev_kind == "ConcertGrandPianoNode";
+                    let is_pipe_organ = dev_kind.contains("PipeOrgan") || dev_kind.contains("Organ") || dev_kind.contains("Windchest") || dev_kind == "PipeOrganModel";
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -2659,6 +2687,153 @@ fn show_pro_parameter_drawer(
 
                         if clav_resp.hovered() {
                             let _ = clav_resp.on_hover_text("Electromechanical Clavinet D6 String-Anvil Collision\n[Drag horizontally: Anvil strike hardness [0..100%] | Drag vertically: Pickup phase angle [0..180°]]");
+                        }
+                    } else if is_piano {
+                        // Concert Grand Piano 3-String Unison & Hammer Dynamics Mini Visualizer
+                        let (piano_resp, piano_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let p_rect = piano_resp.rect;
+                        piano_painter.rect_filled(p_rect, 2.0, Color32::from_rgb(10, 14, 24));
+
+                        let mut strike_vel = state.node_param_values.get("strike_velocity").copied().unwrap_or(0.75);
+                        let mut hardness = state.node_param_values.get("hammer_hardness").copied().unwrap_or(0.65);
+
+                        if piano_resp.dragged() {
+                            if let Some(pos) = piano_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - p_rect.left()) / p_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - p_rect.top()) / p_rect.height())).clamp(0.0, 1.0);
+                                hardness = 0.10 + norm_x * 0.90;
+                                strike_vel = 0.05 + norm_y * 0.95;
+                                state.node_param_values.insert("hammer_hardness".to_string(), hardness);
+                                state.node_param_values.insert("strike_velocity".to_string(), strike_vel);
+                                state.node_param_values.insert("hardness".to_string(), hardness);
+                                state.node_param_values.insert("velocity".to_string(), strike_vel);
+                                if let Some(bus) = param_bus {
+                                    let pid_vel = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_vel).is_some() { bus.set(pid_vel, strike_vel); }
+                                    let pid_hard = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_hard).is_some() { bus.set(pid_hard, hardness); }
+                                }
+                            }
+                        }
+
+                        // Draw 3 unison strings
+                        for s_idx in 0..3 {
+                            let sy = p_rect.top() + 18.0 + s_idx as f32 * 6.0;
+                            piano_painter.line_segment([egui::pos2(p_rect.left() + 6.0, sy), egui::pos2(p_rect.right() - 6.0, sy)], Stroke::new(1.0_f32, Color32::from_rgb(148, 163, 184)));
+                        }
+
+                        // Draw prompt/aftersound decay envelope
+                        let steps = 24;
+                        let mut prev_pt = None;
+                        for i in 0..steps {
+                            let t = i as f32 / (steps - 1) as f32;
+                            let px = p_rect.left() + 8.0 + t * (p_rect.width() - 16.0);
+                            let env = (-t * 4.0).exp() * 0.7 + 0.3 * (-t * 0.8).exp() * (1.0 + 0.3 * (t * 8.0 * std::f32::consts::PI).cos());
+                            let py = p_rect.bottom() - 6.0 - env.clamp(0.0, 1.0) * (p_rect.height() - 28.0);
+                            let pt = egui::pos2(px, py);
+                            if let Some(prev) = prev_pt {
+                                piano_painter.line_segment([prev, pt], Stroke::new(1.5_f32, Color32::from_rgb(68, 217, 232)));
+                            }
+                            prev_pt = Some(pt);
+                        }
+
+                        // Draggable Puck: Hardness vs Velocity
+                        let norm_x = ((hardness - 0.10) / 0.90).clamp(0.0, 1.0);
+                        let norm_y = ((strike_vel - 0.05) / 0.95).clamp(0.0, 1.0);
+                        let puck_x = p_rect.left() + norm_x * p_rect.width();
+                        let puck_y = p_rect.bottom() - norm_y * p_rect.height();
+                        piano_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.5, Color32::from_rgb(229, 169, 60));
+                        piano_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::from_rgb(254, 240, 138)));
+
+                        // Readout
+                        piano_painter.text(
+                            egui::pos2(p_rect.left() + 4.0, p_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("Vel: {:.2}", strike_vel),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(229, 169, 60),
+                        );
+                        piano_painter.text(
+                            egui::pos2(p_rect.right() - 4.0, p_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("Hard: {:.2}", hardness),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(68, 217, 232),
+                        );
+
+                        if piano_resp.hovered() {
+                            let _ = piano_resp.on_hover_text("Concert Grand Piano 3-String Unison & Felt Dynamics\n[Drag horizontally: Felt hardness [0.1..1.0] | Drag vertically: Strike velocity [0.05..1.0]]");
+                        }
+                    } else if is_pipe_organ {
+                        // Pipe Organ Windchest Fluid Dynamics & Flue Turbulence Mini Visualizer
+                        let (organ_resp, organ_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let o_rect = organ_resp.rect;
+                        organ_painter.rect_filled(o_rect, 2.0, Color32::from_rgb(12, 16, 26));
+
+                        let mut pressure = state.node_param_values.get("wind_pressure_mmh2o").copied().unwrap_or(75.0);
+                        let mut cutup = state.node_param_values.get("cutup_ratio").copied().unwrap_or(0.25);
+
+                        if organ_resp.dragged() {
+                            if let Some(pos) = organ_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - o_rect.left()) / o_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - o_rect.top()) / o_rect.height())).clamp(0.0, 1.0);
+                                pressure = 40.0 + norm_x * 120.0;
+                                cutup = 0.15 + norm_y * 0.35;
+                                state.node_param_values.insert("wind_pressure_mmh2o".to_string(), pressure);
+                                state.node_param_values.insert("cutup_ratio".to_string(), cutup);
+                                state.node_param_values.insert("wind_pressure".to_string(), pressure);
+                                state.node_param_values.insert("cutup".to_string(), cutup);
+                                if let Some(bus) = param_bus {
+                                    let pid_press = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_press).is_some() { bus.set(pid_press, pressure); }
+                                    let pid_cut = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_cut).is_some() { bus.set(pid_cut, cutup); }
+                                }
+                            }
+                        }
+
+                        // Air jet stream vector
+                        let jet_w = (pressure / 160.0) * (o_rect.width() * 0.45);
+                        let flue_y = o_rect.center().y;
+                        organ_painter.rect_filled(egui::Rect::from_min_size(egui::pos2(o_rect.left() + 8.0, flue_y - 3.0), Vec2::new(12.0, 6.0)), 1.0, Color32::from_rgb(255, 180, 50));
+                        organ_painter.line_segment([egui::pos2(o_rect.left() + 20.0, flue_y), egui::pos2(o_rect.left() + 20.0 + jet_w, flue_y)], Stroke::new(2.0_f32, Color32::from_rgb(0, 229, 255)));
+
+                        // 8 Harmonic Overtones Spectrum Bars
+                        let bar_w = (o_rect.width() * 0.45) / 8.0;
+                        let bar_x_start = o_rect.center().x + 8.0;
+                        for h in 0..8 {
+                            let bx = bar_x_start + h as f32 * bar_w;
+                            let harm_h = ((1.0 / (h + 1) as f32).powf(0.85)) * (o_rect.height() - 24.0);
+                            let col = if h == 0 { Color32::from_rgb(255, 180, 50) } else { Color32::from_rgb(0, 229, 255) };
+                            organ_painter.rect_filled(egui::Rect::from_min_size(egui::pos2(bx, o_rect.bottom() - 6.0 - harm_h), Vec2::new(bar_w - 2.0, harm_h)), 1.0, col);
+                        }
+
+                        // Draggable Puck: Pressure vs Cutup
+                        let norm_x = ((pressure - 40.0) / 120.0).clamp(0.0, 1.0);
+                        let norm_y = ((cutup - 0.15) / 0.35).clamp(0.0, 1.0);
+                        let puck_x = o_rect.left() + norm_x * o_rect.width();
+                        let puck_y = o_rect.bottom() - norm_y * o_rect.height();
+                        organ_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.5, Color32::from_rgb(255, 180, 50));
+                        organ_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::from_rgb(254, 240, 138)));
+
+                        // Readout
+                        organ_painter.text(
+                            egui::pos2(o_rect.left() + 4.0, o_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("P: {:.0}mm", pressure),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(255, 180, 50),
+                        );
+                        organ_painter.text(
+                            egui::pos2(o_rect.right() - 4.0, o_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("Cut: {:.2}", cutup),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+
+                        if organ_resp.hovered() {
+                            let _ = organ_resp.on_hover_text("Pipe Organ Windchest Fluid Jet Dynamics\n[Drag horizontally: Wind pressure [40..160 mmH2O] | Drag vertically: Mouth cutup ratio [0.15..0.50]]");
                         }
                     } else {
                         // Filter Curve Mini View (slot-addressed)

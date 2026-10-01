@@ -10,6 +10,7 @@
 //!
 //! Enforces minimum 44x44pt hit targets, 8pt base grid alignment, and headless PNG snapshot rendering.
 
+use crate::layout_math::Rect;
 use crate::touch_controls::ContrastColorPalette;
 use serde::{Deserialize, Serialize};
 
@@ -104,6 +105,36 @@ impl GrandPianoView {
         view.update_puck_from_physics();
         view.update_piano_acoustics();
         view
+    }
+
+    pub fn hardness_to_normalized(hard: f32) -> f32 {
+        let h = hard.clamp(MIN_HAMMER_HARDNESS, MAX_HAMMER_HARDNESS);
+        ((h - MIN_HAMMER_HARDNESS) / (MAX_HAMMER_HARDNESS - MIN_HAMMER_HARDNESS)).clamp(0.0, 1.0)
+    }
+
+    pub fn normalized_to_hardness(norm: f32) -> f32 {
+        MIN_HAMMER_HARDNESS + norm.clamp(0.0, 1.0) * (MAX_HAMMER_HARDNESS - MIN_HAMMER_HARDNESS)
+    }
+
+    pub fn velocity_to_normalized(vel: f32) -> f32 {
+        let v = vel.clamp(MIN_GRAND_PIANO_STRIKE_VELOCITY, MAX_GRAND_PIANO_STRIKE_VELOCITY);
+        ((v - MIN_GRAND_PIANO_STRIKE_VELOCITY) / (MAX_GRAND_PIANO_STRIKE_VELOCITY - MIN_GRAND_PIANO_STRIKE_VELOCITY)).clamp(0.0, 1.0)
+    }
+
+    pub fn normalized_to_velocity(norm: f32) -> f32 {
+        MIN_GRAND_PIANO_STRIKE_VELOCITY + norm.clamp(0.0, 1.0) * (MAX_GRAND_PIANO_STRIKE_VELOCITY - MIN_GRAND_PIANO_STRIKE_VELOCITY)
+    }
+
+    pub fn hit_test_piano_puck(&self, point: (f32, f32), canvas: Rect) -> bool {
+        let puck_x = canvas.x + self.puck_pos.0 * canvas.width;
+        let puck_y = canvas.y + (1.0 - self.puck_pos.1) * canvas.height;
+        let dx = point.0 - puck_x;
+        let dy = point.1 - puck_y;
+        (dx * dx + dy * dy).sqrt() <= GRAND_PIANO_PUCK_HIT_RADIUS
+    }
+
+    pub fn render_ascii_snapshot(&self, width: usize, height: usize) -> Vec<String> {
+        self.render_ascii(width, height)
     }
 
     pub fn update_puck_from_physics(&mut self) {
@@ -410,6 +441,10 @@ impl GrandPianoView {
 
 #[cfg(feature = "gui")]
 impl GrandPianoView {
+    pub fn show(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
+    }
+
     pub fn ui(&mut self, ui: &mut egui::Ui) {
         ui.vertical(|ui| {
             ui.heading("Concert Grand Piano — 3-String Unison & Felt Dynamics");

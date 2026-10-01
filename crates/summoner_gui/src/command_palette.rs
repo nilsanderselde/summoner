@@ -413,6 +413,18 @@ impl CommandPalette {
                 action_id: "open_clavinet_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Concert Grand Piano 3-String Unison & Felt Dynamics HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_grand_piano_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Pipe Organ Windchest & Flue Turbulence HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_pipe_organ_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

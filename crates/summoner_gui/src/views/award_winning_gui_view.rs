@@ -676,6 +676,10 @@ pub struct AwardWinningGuiView {
     pub dulcimer_view: crate::views::dulcimer_cimbalom_view::DulcimerCimbalomView,
     pub show_clavinet_modal: bool,
     pub clavinet_view: crate::views::clavinet_view::ClavinetView,
+    pub show_grand_piano_modal: bool,
+    pub grand_piano_view: crate::views::grand_piano_view::GrandPianoView,
+    pub show_pipe_organ_modal: bool,
+    pub pipe_organ_view: crate::views::pipe_organ_view::PipeOrganView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -968,6 +972,10 @@ impl AwardWinningGuiView {
             dulcimer_view: crate::views::dulcimer_cimbalom_view::DulcimerCimbalomView::new(),
             show_clavinet_modal: false,
             clavinet_view: crate::views::clavinet_view::ClavinetView::new(),
+            show_grand_piano_modal: false,
+            grand_piano_view: crate::views::grand_piano_view::GrandPianoView::new(),
+            show_pipe_organ_modal: false,
+            pipe_organ_view: crate::views::pipe_organ_view::PipeOrganView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -1697,6 +1705,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_clavinet_hud = false;
             self.open_clavinet_hud();
         }
+        if self.inspector_state.requested_open_grand_piano_hud || self.device_rack_state.requested_open_grand_piano_hud {
+            self.inspector_state.requested_open_grand_piano_hud = false;
+            self.device_rack_state.requested_open_grand_piano_hud = false;
+            self.open_grand_piano_hud();
+        }
+        if self.inspector_state.requested_open_pipe_organ_hud || self.device_rack_state.requested_open_pipe_organ_hud {
+            self.inspector_state.requested_open_pipe_organ_hud = false;
+            self.device_rack_state.requested_open_pipe_organ_hud = false;
+            self.open_pipe_organ_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -1718,6 +1736,8 @@ impl AwardWinningGuiView {
         self.show_gamelan_modal_window(ui);
         self.show_dulcimer_modal_window(ui);
         self.show_clavinet_modal_window(ui);
+        self.show_grand_piano_modal_window(ui);
+        self.show_pipe_organ_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -8979,6 +8999,222 @@ impl AwardWinningGuiView {
 
     pub fn is_clavinet_hud_open(&self) -> bool {
         self.show_clavinet_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_grand_piano_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_grand_piano_modal {
+            return;
+        }
+
+        let mut is_open = self.show_grand_piano_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎹 Physical Modeling Concert Grand Piano HUD & 3-String Unison Phase Portrait")
+            .id(egui::Id::new("grand_piano_hud_modal"))
+            .open(&mut is_open)
+            .default_size([780.0, 540.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("3-String Unison Prompt/Aftersound Dual Decay, Felt Hardness & 3-Pedal HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.grand_piano_view.ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_grand_piano_modal = is_open;
+        self.sync_grand_piano_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_grand_piano_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let strike_vel = self.grand_piano_view.strike_velocity;
+        let hardness = self.grand_piano_view.hammer_hardness;
+        let damper = self.grand_piano_view.damper_lift_pos;
+        let una_corda = self.grand_piano_view.una_corda_shift;
+        let sostenuto = if self.grand_piano_view.sostenuto_engaged { 1.0 } else { 0.0 };
+        let detune = self.grand_piano_view.unison_detune_cents;
+
+        self.device_rack_state.node_param_values.insert("strike_velocity".to_string(), strike_vel);
+        self.device_rack_state.node_param_values.insert("hammer_hardness".to_string(), hardness);
+        self.device_rack_state.node_param_values.insert("damper_lift_pos".to_string(), damper);
+        self.device_rack_state.node_param_values.insert("una_corda_shift".to_string(), una_corda);
+        self.device_rack_state.node_param_values.insert("sostenuto_engaged".to_string(), sostenuto);
+        self.device_rack_state.node_param_values.insert("unison_detune_cents".to_string(), detune);
+
+        self.device_rack_state.node_param_values.insert("velocity".to_string(), strike_vel);
+        self.device_rack_state.node_param_values.insert("hardness".to_string(), hardness);
+        self.device_rack_state.node_param_values.insert("sustain".to_string(), damper);
+        self.device_rack_state.node_param_values.insert("detune".to_string(), detune);
+
+        self.inspector_state.node_param_values.insert("strike_velocity".to_string(), strike_vel);
+        self.inspector_state.node_param_values.insert("hammer_hardness".to_string(), hardness);
+        self.inspector_state.node_param_values.insert("damper_lift_pos".to_string(), damper);
+        self.inspector_state.node_param_values.insert("una_corda_shift".to_string(), una_corda);
+        self.inspector_state.node_param_values.insert("sostenuto_engaged".to_string(), sostenuto);
+        self.inspector_state.node_param_values.insert("unison_detune_cents".to_string(), detune);
+
+        self.inspector_state.node_param_values.insert("velocity".to_string(), strike_vel);
+        self.inspector_state.node_param_values.insert("hardness".to_string(), hardness);
+        self.inspector_state.node_param_values.insert("sustain".to_string(), damper);
+        self.inspector_state.node_param_values.insert("detune".to_string(), detune);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_vel     = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_hard    = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_damper  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_una     = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_sost    = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_detune  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+
+            if bus.get(pid_vel).is_some()    { bus.set(pid_vel, strike_vel); }
+            if bus.get(pid_hard).is_some()   { bus.set(pid_hard, hardness); }
+            if bus.get(pid_damper).is_some() { bus.set(pid_damper, damper); }
+            if bus.get(pid_una).is_some()    { bus.set(pid_una, una_corda); }
+            if bus.get(pid_sost).is_some()   { bus.set(pid_sost, sostenuto); }
+            if bus.get(pid_detune).is_some() { bus.set(pid_detune, detune); }
+        }
+    }
+
+    pub fn open_grand_piano_hud(&mut self) {
+        self.show_grand_piano_modal = true;
+    }
+
+    pub fn close_grand_piano_hud(&mut self) {
+        self.show_grand_piano_modal = false;
+    }
+
+    pub fn is_grand_piano_hud_open(&self) -> bool {
+        self.show_grand_piano_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_pipe_organ_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_pipe_organ_modal {
+            return;
+        }
+
+        let mut is_open = self.show_pipe_organ_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("⛪ Physical Modeling Pipe Organ Windchest & Flue Acoustic Turbulence HUD")
+            .id(egui::Id::new("pipe_organ_hud_modal"))
+            .open(&mut is_open)
+            .default_size([800.0, 560.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Pipe Organ Windchest Fluid Jet Dynamics, Cutup Ratio, Chiff Transient & 8-Harmonic Spectrum HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.pipe_organ_view.ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_pipe_organ_modal = is_open;
+        self.sync_pipe_organ_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_pipe_organ_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let pressure = self.pipe_organ_view.wind_pressure_mmh2o;
+        let cutup = self.pipe_organ_view.cutup_ratio;
+        let length = self.pipe_organ_view.pipe_length_ft;
+        let chiff = self.pipe_organ_view.chiff_duration_ms;
+        let turb = self.pipe_organ_view.turbulence_noise_level;
+        let velocity = self.pipe_organ_view.flue_air_velocity_mps;
+
+        self.device_rack_state.node_param_values.insert("wind_pressure_mmh2o".to_string(), pressure);
+        self.device_rack_state.node_param_values.insert("cutup_ratio".to_string(), cutup);
+        self.device_rack_state.node_param_values.insert("pipe_length_ft".to_string(), length);
+        self.device_rack_state.node_param_values.insert("chiff_duration_ms".to_string(), chiff);
+        self.device_rack_state.node_param_values.insert("turbulence_noise_level".to_string(), turb);
+        self.device_rack_state.node_param_values.insert("flue_air_velocity_mps".to_string(), velocity);
+
+        self.device_rack_state.node_param_values.insert("wind_pressure".to_string(), pressure);
+        self.device_rack_state.node_param_values.insert("cutup".to_string(), cutup);
+        self.device_rack_state.node_param_values.insert("pipe_length".to_string(), length);
+        self.device_rack_state.node_param_values.insert("chiff".to_string(), chiff);
+
+        self.inspector_state.node_param_values.insert("wind_pressure_mmh2o".to_string(), pressure);
+        self.inspector_state.node_param_values.insert("cutup_ratio".to_string(), cutup);
+        self.inspector_state.node_param_values.insert("pipe_length_ft".to_string(), length);
+        self.inspector_state.node_param_values.insert("chiff_duration_ms".to_string(), chiff);
+        self.inspector_state.node_param_values.insert("turbulence_noise_level".to_string(), turb);
+        self.inspector_state.node_param_values.insert("flue_air_velocity_mps".to_string(), velocity);
+
+        self.inspector_state.node_param_values.insert("wind_pressure".to_string(), pressure);
+        self.inspector_state.node_param_values.insert("cutup".to_string(), cutup);
+        self.inspector_state.node_param_values.insert("pipe_length".to_string(), length);
+        self.inspector_state.node_param_values.insert("chiff".to_string(), chiff);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_press = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_cut   = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_len   = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_chiff = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_turb  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_vel   = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+
+            if bus.get(pid_press).is_some() { bus.set(pid_press, pressure); }
+            if bus.get(pid_cut).is_some()   { bus.set(pid_cut, cutup); }
+            if bus.get(pid_len).is_some()   { bus.set(pid_len, length); }
+            if bus.get(pid_chiff).is_some() { bus.set(pid_chiff, chiff); }
+            if bus.get(pid_turb).is_some()  { bus.set(pid_turb, turb); }
+            if bus.get(pid_vel).is_some()   { bus.set(pid_vel, velocity); }
+        }
+    }
+
+    pub fn open_pipe_organ_hud(&mut self) {
+        self.show_pipe_organ_modal = true;
+    }
+
+    pub fn close_pipe_organ_hud(&mut self) {
+        self.show_pipe_organ_modal = false;
+    }
+
+    pub fn is_pipe_organ_hud_open(&self) -> bool {
+        self.show_pipe_organ_modal
     }
 
     #[cfg(feature = "gui")]

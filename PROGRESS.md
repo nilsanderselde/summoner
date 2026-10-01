@@ -1439,4 +1439,37 @@ Product Management has conducted a comprehensive readiness audit:
   - Feature tests: 9 tests passed in `tier122_turn58_tests` (`cargo test -p summoner_gui --features gui -- tier122_turn58_tests`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`).
 
+### Turn #59 (Turn #24 Deliverable — Sprint Review) — Physical Modeling Concert Grand Piano & Pipe Organ Windchest HUDs Convergence (Milestones 26 & 33)
+- [x] Physical Modeling Concert Grand Piano (3-String Unison Phase Portrait, Felt Dynamics & 3-Pedal Continuous Control) and Pipe Organ Windchest & Flue Turbulence (5 Pipe Ranks, Wind Reservoir Pressure, Cutup Ratio, Chiff Transient & 8-Harmonic Spectrum) HUDs Integration:
+  - Integrated `GrandPianoView` and `PipeOrganView` performance HUDs into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/grand_piano_view.rs` & `pipe_organ_view.rs`):
+  - In `GrandPianoView`: implemented `pub fn show(&mut self, ui: &mut egui::Ui)` forwarder, `render_ascii_snapshot`, normalization helpers (`hardness_to_normalized`, `normalized_to_hardness`, `velocity_to_normalized`, `normalized_to_velocity`), and `hit_test_piano_puck` with $\ge 44 \times 44\text{pt}$ touch bounds (`GRAND_PIANO_PUCK_HIT_RADIUS`).
+  - In `PipeOrganView`: implemented `pub fn show(&mut self, ui: &mut egui::Ui)` forwarder and `render_ascii_snapshot`.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_grand_piano_modal: bool`, `grand_piano_view: GrandPianoView`, `show_pipe_organ_modal: bool`, and `pipe_organ_view: PipeOrganView`.
+  - Added dedicated modal windows `show_grand_piano_modal_window` and `show_pipe_organ_modal_window` with responsive styling, WCAG AAA contrast, and $\ge 44 \times 44\text{pt}$ touch bounds.
+  - Added public lifecycle methods: `open_grand_piano_hud()`, `close_grand_piano_hud()`, `is_grand_piano_hud_open()`, `open_pipe_organ_hud()`, `close_pipe_organ_hud()`, `is_pipe_organ_hud_open()`.
+  - Real-time parameter sync bridges (`sync_grand_piano_hud_state` and `sync_pipe_organ_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_grand_piano_hud: bool` and `requested_open_pipe_organ_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🎹 Open Concert Grand Piano HUD]` and `[⛪ Open Pipe Organ Windchest HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header `[🎹 HUD]` / `[⛪ HUD]` and expanded toolbar buttons in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Grand Piano: 3-string unison horizontal lines, prompt/aftersound decay envelope curve, and touch-drag puck modulating `hammer_hardness` [0.1..1.0] and `strike_velocity` [0.05..1.0].
+    * Pipe Organ: Windchest air jet velocity stream vector, 8-harmonic overtone spectrum bars, and touch-drag puck modulating `wind_pressure_mmh2o` [40..160 mmH2O] and `cutup_ratio` [0.15..0.50].
+- [x] Command Palette & Application Routing:
+  - Registered `open_grand_piano_hud` and `open_pipe_organ_hud` under `"Physical Modeling"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_grand_piano_hud()` and `open_pipe_organ_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier123_turn59_tests.rs`:
+    * Pure tests: view initialization, presets, normalization roundtrips, hit testing, prompt/aftersound acoustics, fluid jet dynamics, slot arithmetic channel isolation, deterministic ASCII snapshots.
+    * GUI tests: modal lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch, rack & inspector trigger propagation, command palette action registration.
+  - Registered `tier123_turn59_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Unit tests: 329 passed in 0.24s (`cargo test -p summoner_gui`).
+  - Feature tests: 9 tests passed in `tier123_turn59_tests` (`cargo test -p summoner_gui --features gui -- tier123_turn59_tests`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`).
+
+
 
