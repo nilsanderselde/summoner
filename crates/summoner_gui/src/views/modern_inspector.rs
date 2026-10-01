@@ -28,6 +28,10 @@ pub struct ModernInspectorState {
     pub is_collapsed: bool,
     #[serde(default)]
     pub requested_automation_param: Option<String>,
+    #[serde(default)]
+    pub chain_devices: Vec<crate::views::modern_device_rack::RackChainDeviceVisual>,
+    #[serde(default)]
+    pub selected_chain_idx: usize,
 }
 
 impl Default for ModernInspectorState {
@@ -48,11 +52,111 @@ impl Default for ModernInspectorState {
             octave_offset: -1,
             is_collapsed: false,
             requested_automation_param: None,
+            chain_devices: Vec::new(),
+            selected_chain_idx: 0,
         }
     }
 }
 
 impl ModernInspectorState {
+    /// Ensure the chain has at least one device matching the currently selected node kind.
+    pub fn ensure_chain(&mut self) {
+        if self.chain_devices.is_empty() {
+            let kind = self.selected_node_kind.clone().unwrap_or_else(|| "AetherSynth".to_string());
+            let name = self.target_name.clone();
+            self.chain_devices.push(crate::views::modern_device_rack::RackChainDeviceVisual {
+                kind,
+                display_name: name,
+                is_bypassed: false,
+            });
+            self.selected_chain_idx = 0;
+        }
+    }
+
+    /// Select a device slot in the track chain.
+    pub fn select_device(&mut self, idx: usize) -> bool {
+        self.ensure_chain();
+        if idx < self.chain_devices.len() {
+            self.selected_chain_idx = idx;
+            let dev = &self.chain_devices[idx];
+            self.selected_node_kind = Some(dev.kind.clone());
+            self.target_name = dev.display_name.clone();
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Add a new DSP device module to the end of the track chain and select it.
+    pub fn add_device(&mut self, kind: &str, display_name: &str) -> usize {
+        self.ensure_chain();
+        self.chain_devices.push(crate::views::modern_device_rack::RackChainDeviceVisual {
+            kind: kind.to_string(),
+            display_name: display_name.to_string(),
+            is_bypassed: false,
+        });
+        let new_idx = self.chain_devices.len() - 1;
+        self.select_device(new_idx);
+        new_idx
+    }
+
+    /// Remove a DSP device from the chain (keeping at least 1 device).
+    pub fn remove_device(&mut self, idx: usize) -> bool {
+        self.ensure_chain();
+        if self.chain_devices.len() > 1 && idx < self.chain_devices.len() {
+            self.chain_devices.remove(idx);
+            if self.selected_chain_idx >= self.chain_devices.len() {
+                self.selected_chain_idx = self.chain_devices.len() - 1;
+            }
+            let sel = self.selected_chain_idx;
+            self.select_device(sel);
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Move a device within the chain from `from` to `to`.
+    pub fn move_device(&mut self, from: usize, to: usize) -> bool {
+        self.ensure_chain();
+        if from < self.chain_devices.len() && to < self.chain_devices.len() && from != to {
+            let dev = self.chain_devices.remove(from);
+            self.chain_devices.insert(to, dev);
+            self.selected_chain_idx = to;
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Toggle bypass state for a device in the chain.
+    pub fn toggle_device_bypass(&mut self, idx: usize) -> bool {
+        self.ensure_chain();
+        if let Some(dev) = self.chain_devices.get_mut(idx) {
+            dev.is_bypassed = !dev.is_bypassed;
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Get kind of active device.
+    pub fn selected_device_kind(&self) -> Option<&str> {
+        self.chain_devices.get(self.selected_chain_idx).map(|d| d.kind.as_str())
+            .or(self.selected_node_kind.as_deref())
+    }
+
+    /// Get name of active device.
+    pub fn selected_device_name(&self) -> Option<&str> {
+        self.chain_devices.get(self.selected_chain_idx).map(|d| d.display_name.as_str())
+            .or(Some(&self.target_name))
+    }
+
+    /// Check if active device is bypassed.
+    pub fn is_selected_bypassed(&self) -> bool {
+        self.chain_devices.get(self.selected_chain_idx).map(|d| d.is_bypassed).unwrap_or(false)
+    }
+
     /// Request live parameter automation for a given parameter ID.
     pub fn request_automation(&mut self, param_id: &str) {
         self.requested_automation_param = Some(param_id.to_string());
@@ -325,27 +429,166 @@ pub fn show_modern_inspector_with_context(
             ui.add_space(10.0);
             ui.separator();
             ui.add_space(6.0);
+
+            state.ensure_chain();
+            let registry = crate::dsp_node_ui::DspNodeRegistry::new();
+
             ui.horizontal(|ui| {
                 ui.label(RichText::new("DSP Parameter Inspector").font(FontId::proportional(11.0)).strong().color(Color32::from_rgb(200, 215, 235)));
-                let registry = crate::dsp_node_ui::DspNodeRegistry::new();
-                if ui.button(RichText::new("📈 Auto").font(FontId::proportional(9.0)).color(Color32::from_rgb(234, 179, 8)))
-                    .on_hover_text("Open Live Bézier Automation Lane for current DSP module primary parameter")
-                    .clicked()
-                {
-                    if let Some(ref node_kind) = state.selected_node_kind {
-                        if let Some(desc) = registry.get(node_kind) {
-                            if let Some(primary) = desc.params.first() {
-                                state.requested_automation_param = Some(primary.id.clone());
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if ui.button(RichText::new("📈 Auto").font(FontId::proportional(9.0)).color(Color32::from_rgb(234, 179, 8)))
+                        .on_hover_text("Open Live Bézier Automation Lane for current DSP module primary parameter")
+                        .clicked()
+                    {
+                        if let Some(ref node_kind) = state.selected_node_kind {
+                            if let Some(desc) = registry.get(node_kind) {
+                                if let Some(primary) = desc.params.first() {
+                                    state.requested_automation_param = Some(primary.id.clone());
+                                }
+                            }
+                        }
+                    }
+
+                    let is_bypassed = state.is_selected_bypassed();
+                    let byp_text = if is_bypassed { "BYPASS" } else { "ACTIVE" };
+                    let byp_col = if is_bypassed { Color32::from_rgb(239, 68, 68) } else { Color32::from_rgb(34, 197, 94) };
+                    if ui.small_button(RichText::new(byp_text).font(FontId::proportional(8.5)).color(byp_col))
+                        .on_hover_text("Toggle bypass state of inspected DSP device")
+                        .clicked()
+                    {
+                        state.toggle_device_bypass(state.selected_chain_idx);
+                    }
+                });
+            });
+            ui.add_space(6.0);
+
+            // Track Multi-Node Device Chain Strip
+            ui.horizontal(|ui| {
+                ui.label(RichText::new(format!("Chain ({}):", state.chain_devices.len())).font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(148, 163, 184)));
+                if state.chain_devices.len() > 1 {
+                    if state.selected_chain_idx > 0 && ui.small_button(RichText::new("◀").font(FontId::proportional(8.5))).on_hover_text("Move device earlier in chain").clicked() {
+                        let cur = state.selected_chain_idx;
+                        state.move_device(cur, cur - 1);
+                    }
+                    if state.selected_chain_idx + 1 < state.chain_devices.len() && ui.small_button(RichText::new("▶").font(FontId::proportional(8.5))).on_hover_text("Move device later in chain").clicked() {
+                        let cur = state.selected_chain_idx;
+                        state.move_device(cur, cur + 1);
+                    }
+                    if ui.small_button(RichText::new("✕").font(FontId::proportional(8.5)).color(Color32::from_rgb(239, 68, 68))).on_hover_text("Remove selected device from chain").clicked() {
+                        let cur = state.selected_chain_idx;
+                        state.remove_device(cur);
+                    }
+                }
+            });
+            ui.add_space(3.0);
+
+            // Horizontal Device Chain Pills
+            let mut dev_to_select = None;
+            let mut dev_to_toggle_bypass = None;
+            ui.horizontal_wrapped(|ui| {
+                for (d_i, dev) in state.chain_devices.iter().enumerate() {
+                    let is_sel = d_i == state.selected_chain_idx;
+                    let d_desc = registry.get(&dev.kind);
+                    let (dr, dg, db) = d_desc.map(|d| d.category.color_rgb()).unwrap_or((56, 189, 248));
+                    let d_accent = Color32::from_rgb(dr, dg, db);
+                    let d_icon = d_desc.map(|d| d.category.icon()).unwrap_or("🎛️");
+
+                    let border_col = if is_sel { d_accent } else { Color32::from_rgb(36, 50, 74) };
+                    let bg_col = if is_sel { Color32::from_rgba_unmultiplied(dr, dg, db, 35) } else { Color32::from_rgb(18, 24, 36) };
+
+                    egui::Frame::none()
+                        .fill(bg_col)
+                        .stroke(Stroke::new(if is_sel { 1.5_f32 } else { 1.0_f32 }, border_col))
+                        .rounding(Rounding::same(4.0))
+                        .inner_margin(egui::Margin::symmetric(4.0, 2.0))
+                        .show(ui, |ui| {
+                            ui.horizontal(|ui| {
+                                let byp_col = if !dev.is_bypassed { Color32::from_rgb(34, 197, 94) } else { Color32::from_rgb(100, 116, 139) };
+                                if ui.small_button(RichText::new("⏻").font(FontId::proportional(8.5)).color(byp_col)).on_hover_text(if dev.is_bypassed { "Device Bypassed" } else { "Device Active" }).clicked() {
+                                    dev_to_toggle_bypass = Some(d_i);
+                                }
+                                let badge_text = format!("{} {}. {}", d_icon, d_i + 1, dev.display_name);
+                                let badge_resp = ui.selectable_label(is_sel, RichText::new(badge_text).font(FontId::proportional(9.0)).strong().color(if is_sel { Color32::WHITE } else { Color32::from_rgb(200, 215, 235) }));
+                                if badge_resp.clicked() {
+                                    dev_to_select = Some(d_i);
+                                }
+                            });
+                        });
+                    ui.add_space(2.0);
+                }
+            });
+
+            if let Some(idx) = dev_to_select {
+                state.select_device(idx);
+            }
+            if let Some(idx) = dev_to_toggle_bypass {
+                state.toggle_device_bypass(idx);
+            }
+
+            ui.add_space(4.0);
+
+            // [➕ Add Device ▾] Dropdown Menu across DSP categories
+            let mut module_to_add: Option<String> = None;
+            ui.horizontal(|ui| {
+                ui.label(RichText::new("Add:").font(FontId::proportional(10.0)).color(Color32::from_rgb(148, 163, 184)));
+                egui::ComboBox::from_id_source("inspector_add_device_combo")
+                    .selected_text(RichText::new("➕ Add Device ▾").font(FontId::proportional(9.5)).color(Color32::from_rgb(56, 189, 248)))
+                    .show_ui(ui, |ui| {
+                        for cat in [
+                            crate::dsp_node_ui::DspCategory::Oscillator,
+                            crate::dsp_node_ui::DspCategory::FilterEq,
+                            crate::dsp_node_ui::DspCategory::Modulation,
+                            crate::dsp_node_ui::DspCategory::DynamicsMaster,
+                            crate::dsp_node_ui::DspCategory::DistortionSaturation,
+                            crate::dsp_node_ui::DspCategory::TimeSpace,
+                            crate::dsp_node_ui::DspCategory::SpatialSurround,
+                            crate::dsp_node_ui::DspCategory::AcousticPhysicalModel,
+                            crate::dsp_node_ui::DspCategory::SpectralResynthesis,
+                            crate::dsp_node_ui::DspCategory::NeuralAi,
+                            crate::dsp_node_ui::DspCategory::SamplerSlicer,
+                        ] {
+                            let cat_nodes = registry.list_by_category(cat);
+                            if !cat_nodes.is_empty() {
+                                ui.label(RichText::new(format!("{} {}", cat.icon(), cat.name())).font(FontId::proportional(9.0)).strong().color(Color32::from_rgb(148, 163, 184)));
+                                for desc in cat_nodes.iter().take(8) {
+                                    if ui.selectable_label(false, format!("  {} {}", desc.category.icon(), desc.display_name)).clicked() {
+                                        module_to_add = Some(desc.kind_id.clone());
+                                    }
+                                }
+                                ui.separator();
+                            }
+                        }
+                    });
+            });
+
+            if let Some(kind_id) = module_to_add {
+                if let Some(desc) = registry.get(&kind_id) {
+                    state.add_device(&desc.kind_id, &desc.display_name);
+                    state.node_param_values.clear();
+                    for (p_i, schema) in desc.params.iter().enumerate() {
+                        let def = match &schema.widget {
+                            crate::dsp_node_ui::DspWidgetKind::RotaryKnob { default, .. }
+                            | crate::dsp_node_ui::DspWidgetKind::VerticalFader { default, .. } => *default,
+                            _ => 0.5,
+                        };
+                        state.node_param_values.insert(schema.id.clone(), def);
+                        if let Some(bus) = param_bus {
+                            let pid_pro = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 500 + p_i as u32);
+                            if bus.get(pid_pro).is_some() {
+                                bus.set(pid_pro, def);
+                            }
+                            let pid_multi = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + p_i as u32);
+                            if bus.get(pid_multi).is_some() {
+                                bus.set(pid_multi, def);
                             }
                         }
                     }
                 }
-            });
+            }
+
             ui.add_space(6.0);
 
-            let registry = crate::dsp_node_ui::DspNodeRegistry::new();
-
-            // Module Selector Dropdown
+            // Module Type Swap Selector Dropdown
             let cur_selection = state.selected_node_kind.clone().unwrap_or_else(|| "AetherSynth".to_string());
             let cur_display = registry.get(&cur_selection).map(|d| format!("{} {}", d.category.icon(), d.display_name)).unwrap_or_else(|| cur_selection.clone());
 
@@ -360,6 +603,10 @@ pub fn show_modern_inspector_with_context(
                             if ui.selectable_label(is_sel, label).clicked() {
                                 state.selected_node_kind = Some(desc.kind_id.clone());
                                 state.target_name = desc.display_name.clone();
+                                if let Some(dev) = state.chain_devices.get_mut(state.selected_chain_idx) {
+                                    dev.kind = desc.kind_id.clone();
+                                    dev.display_name = desc.display_name.clone();
+                                }
                                 for (p_i, schema) in desc.params.iter().enumerate() {
                                     let def = match &schema.widget {
                                         crate::dsp_node_ui::DspWidgetKind::RotaryKnob { default, .. }
@@ -368,7 +615,7 @@ pub fn show_modern_inspector_with_context(
                                     };
                                     state.node_param_values.insert(schema.id.clone(), def);
                                     if let Some(bus) = param_bus {
-                                        let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + p_i as u32);
+                                        let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 500 + p_i as u32);
                                         if bus.get(pid).is_some() {
                                             bus.set(pid, def);
                                         }
@@ -383,7 +630,7 @@ pub fn show_modern_inspector_with_context(
 
             if let Some(ref node_kind) = state.selected_node_kind {
                 if let Some(descriptor) = registry.get(node_kind) {
-                    descriptor.render_pro_inspector(ui, &mut state.node_param_values, param_bus, track_id, 0);
+                    descriptor.render_pro_inspector(ui, &mut state.node_param_values, param_bus, track_id, state.selected_chain_idx);
                 }
             }
                 });

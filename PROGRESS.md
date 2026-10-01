@@ -936,5 +936,29 @@ Product Management has conducted a comprehensive readiness audit:
   - Unit tests: 308 pure tests passed in 0.23s (`cargo test -p summoner_gui`), and 964 GUI tests passed in 1.59s (`cargo test -p summoner_gui --features gui`).
   - Clippy: 0 warnings (`cargo clippy -p summoner_gui --features gui -- -D warnings`).
 
+### Turn #41 (Turn #8) — Modern Inspector Multi-Node Device Chain, Rack-Inspector Lockstep & Universal Parameter Reflection
+- [x] Multi-Node Track DSP Device Chain Model in Modern Inspector (`crates/summoner_gui/src/views/modern_inspector.rs`):
+  - Extended `ModernInspectorState` with `chain_devices: Vec<RackChainDeviceVisual>` and `selected_chain_idx: usize`.
+  - Built chain management lifecycle methods: `ensure_chain()`, `select_device(idx)`, `add_device(kind, display_name)`, `remove_device(idx)`, `move_device(from, to)`, `toggle_device_bypass(idx)`, `selected_device_kind()`, `selected_device_name()`, and `is_selected_bypassed()`.
+- [x] Interactive Device Chain Strip & Category Insertion Menu in Inspector:
+  - Rendered horizontal chain strip above DSP Parameter Inspector controls:
+    * High-contrast bypass toggles (`⏻`) with color-coded active/bypassed status.
+    * Category glyphs & indices (`{icon} {i+1}. {name}`) with radiant cyan selection highlighting.
+    * Reordering arrows (`◀`, `▶`) and removal button (`✕`).
+    * Universal `[➕ Add Device ▾]` dropdown categorized across all 11 `DspCategory` sections with automatic parameter initialization from `DspNodeRegistry` and live `ParamBus` registration.
+  - Active device details header with Category icon, Category pill, Display name, Description, and `📈 Auto` live Bézier automation launcher.
+  - Reflects active device slot parameter grid via `descriptor.render_pro_inspector(ui, &mut state.node_param_values, param_bus, track_id, state.selected_chain_idx)` passing the actual `selected_chain_idx`.
+  - Dispatches Pro node parameters via `ParamId(track_id * 1000 + 500 + p_i)` and multi-node slot channels `ParamId(track_id * 1000 + selected_chain_idx * 20 + p_i)`.
+- [x] Bidirectional Multi-Node Synchronization across GUI & Project (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Upgraded `sync_with_project` to synchronize `inspector_state.chain_devices` and `inspector_state.selected_chain_idx` bidirectionally with `device_rack_state` and `project.tracks[selected_track].nodes`.
+  - Upgraded `select_track_node(node_idx)`, `add_dsp_node_to_track(kind_id)`, `remove_dsp_node_from_track(node_idx)`, and `move_dsp_node(from_idx, to_idx)` to maintain `inspector_state` and `device_rack_state` in strict lockstep.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier106_turn41_tests.rs` covering pure ParamBus multi-node offsets, inspector device chain lifecycle, headless egui rendering, and award-winning GUI sync.
+  - Registered `tier106_turn41_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Incremental compilation: 0.23s (`cargo check -p summoner_gui`).
+  - Unit tests: 309 pure tests passed in 0.23s (`cargo test -p summoner_gui`), and 9 passed in `tier106_turn41_tests`.
+  - Clippy: 0 warnings (`cargo clippy -p summoner_gui -- -D warnings`).
+
+
 
 

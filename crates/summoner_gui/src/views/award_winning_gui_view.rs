@@ -4144,7 +4144,21 @@ impl AwardWinningGuiView {
                     });
                 }
                 self.device_rack_state.selected_chain_idx = 0;
+                self.inspector_state.chain_devices = self.device_rack_state.chain_devices.clone();
+                self.inspector_state.selected_chain_idx = 0;
             } else {
+                // Synchronize if user interacted with chain in inspector
+                if !self.inspector_state.chain_devices.is_empty()
+                    && self.inspector_state.chain_devices != self.device_rack_state.chain_devices
+                {
+                    self.device_rack_state.chain_devices = self.inspector_state.chain_devices.clone();
+                    self.device_rack_state.selected_chain_idx = self.inspector_state.selected_chain_idx;
+                } else if self.inspector_state.selected_chain_idx != self.device_rack_state.selected_chain_idx
+                    && self.inspector_state.selected_chain_idx < self.device_rack_state.chain_devices.len()
+                {
+                    self.device_rack_state.selected_chain_idx = self.inspector_state.selected_chain_idx;
+                }
+
                 // If GUI added/removed/reordered devices in device_rack_state:
                 if self.device_rack_state.chain_devices.is_empty() {
                     self.device_rack_state.ensure_chain();
@@ -4201,6 +4215,8 @@ impl AwardWinningGuiView {
                 self.selected_node_idx = self.selected_node_idx.min(track.nodes.len().saturating_sub(1));
                 self.device_rack_state.selected_chain_idx = self.selected_node_idx;
             }
+            self.inspector_state.chain_devices = self.device_rack_state.chain_devices.clone();
+            self.inspector_state.selected_chain_idx = self.selected_node_idx;
 
             let node_idx = self.selected_node_idx;
             let node_changed = track_changed || (node_idx != self.last_selected_node_idx);
@@ -4338,6 +4354,7 @@ impl AwardWinningGuiView {
     pub fn select_track_node(&mut self, node_idx: usize) -> bool {
         if self.device_rack_state.select_device(node_idx) {
             self.selected_node_idx = self.device_rack_state.selected_chain_idx;
+            self.inspector_state.select_device(self.selected_node_idx);
             self.last_selected_node_idx = usize::MAX;
             true
         } else {
@@ -4351,6 +4368,10 @@ impl AwardWinningGuiView {
         if let Some(desc) = registry.get(kind_id) {
             self.device_rack_state.add_device(&desc.kind_id, &desc.display_name);
             self.selected_node_idx = self.device_rack_state.selected_chain_idx;
+            self.inspector_state.chain_devices = self.device_rack_state.chain_devices.clone();
+            self.inspector_state.selected_chain_idx = self.selected_node_idx;
+            self.inspector_state.selected_node_kind = Some(desc.kind_id.clone());
+            self.inspector_state.target_name = desc.display_name.clone();
             self.last_selected_node_idx = usize::MAX;
             true
         } else {
@@ -4362,6 +4383,10 @@ impl AwardWinningGuiView {
     pub fn remove_dsp_node_from_track(&mut self, node_idx: usize) -> bool {
         if self.device_rack_state.remove_device(node_idx) {
             self.selected_node_idx = self.device_rack_state.selected_chain_idx;
+            self.inspector_state.chain_devices = self.device_rack_state.chain_devices.clone();
+            self.inspector_state.selected_chain_idx = self.selected_node_idx;
+            self.inspector_state.selected_node_kind = self.device_rack_state.selected_node_kind.clone();
+            self.inspector_state.target_name = self.device_rack_state.device_name.clone();
             self.last_selected_node_idx = usize::MAX;
             true
         } else {
@@ -4373,6 +4398,8 @@ impl AwardWinningGuiView {
     pub fn move_dsp_node(&mut self, from_idx: usize, to_idx: usize) -> bool {
         if self.device_rack_state.move_device(from_idx, to_idx) {
             self.selected_node_idx = self.device_rack_state.selected_chain_idx;
+            self.inspector_state.chain_devices = self.device_rack_state.chain_devices.clone();
+            self.inspector_state.selected_chain_idx = self.selected_node_idx;
             self.last_selected_node_idx = usize::MAX;
             true
         } else {
