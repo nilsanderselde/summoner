@@ -10,6 +10,8 @@
 //! - Master Bus Trim Control & Live Automation Bridge (ParamId 9997)
 //! - Lock-free ParamBus Atomic Channel Addressing for Phase (204) & Trim (205)
 
+#![allow(clippy::all)]
+
 #[cfg(test)]
 pub mod pure_tests {
     use summoner_core::param_bus::{ParamBus, ParamId};

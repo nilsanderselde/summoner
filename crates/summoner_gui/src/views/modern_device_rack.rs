@@ -174,7 +174,11 @@ impl ModernDeviceRackState {
 
     /// Request live parameter automation for a given parameter ID (e.g. from right-click or auto button).
     pub fn request_automation(&mut self, param_id: &str) {
-        self.requested_automation_param = Some(param_id.to_string());
+        if self.selected_chain_idx > 0 && !param_id.starts_with("node_") && !param_id.starts_with("master_node_") {
+            self.requested_automation_param = Some(format!("node_{}_{}", self.selected_chain_idx, param_id));
+        } else {
+            self.requested_automation_param = Some(param_id.to_string());
+        }
     }
 
     /// Reset standard device rack knobs to factory default values.
@@ -613,19 +617,24 @@ pub fn show_modern_device_rack_with_context(
                                                 }
                                                 _ => 0.5,
                                             };
-                                            let val = state.node_param_values.entry(p.id.clone()).or_insert(default_norm);
+                                            let mut val = *state.node_param_values.entry(p.id.clone()).or_insert(default_norm);
                                             let color = if i == 0 { Color32::from_rgb(56, 189, 248) } else { cat_accent };
-                                            let resp = draw_rotary_dial(ui, &p.name, val, color, default_norm);
-                                            if resp.secondary_clicked() {
-                                                state.requested_automation_param = Some(p.id.clone());
-                                            }
-                                            if let Some(bus) = param_bus {
-                                                if resp.changed() || resp.dragged() || resp.double_clicked() {
+                                            let resp = draw_rotary_dial(ui, &p.name, &mut val, color, default_norm);
+                                            if resp.changed() || resp.dragged() || resp.double_clicked() {
+                                                state.node_param_values.insert(p.id.clone(), val);
+                                                if let Some(bus) = param_bus {
                                                     let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + i as u32);
                                                     if bus.get(pid).is_some() {
-                                                        bus.set(pid, *val);
+                                                        bus.set(pid, val);
+                                                    }
+                                                    let slot_pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + (state.selected_chain_idx as u32 * 20) + i as u32);
+                                                    if bus.get(slot_pid).is_some() {
+                                                        bus.set(slot_pid, val);
                                                     }
                                                 }
+                                            }
+                                            if resp.secondary_clicked() {
+                                                state.request_automation(&p.id);
                                             }
                                         } else {
                                             // Blank indicator for unoccupied slot
@@ -651,19 +660,24 @@ pub fn show_modern_device_rack_with_context(
                                                 }
                                                 _ => 0.5,
                                             };
-                                            let val = state.node_param_values.entry(p.id.clone()).or_insert(default_norm);
+                                            let mut val = *state.node_param_values.entry(p.id.clone()).or_insert(default_norm);
                                             let color = if i == 3 { Color32::from_rgb(56, 189, 248) } else { cat_accent };
-                                            let resp = draw_rotary_dial(ui, &p.name, val, color, default_norm);
-                                            if resp.secondary_clicked() {
-                                                state.requested_automation_param = Some(p.id.clone());
-                                            }
-                                            if let Some(bus) = param_bus {
-                                                if resp.changed() || resp.dragged() || resp.double_clicked() {
+                                            let resp = draw_rotary_dial(ui, &p.name, &mut val, color, default_norm);
+                                            if resp.changed() || resp.dragged() || resp.double_clicked() {
+                                                state.node_param_values.insert(p.id.clone(), val);
+                                                if let Some(bus) = param_bus {
                                                     let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + i as u32);
                                                     if bus.get(pid).is_some() {
-                                                        bus.set(pid, *val);
+                                                        bus.set(pid, val);
+                                                    }
+                                                    let slot_pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + (state.selected_chain_idx as u32 * 20) + i as u32);
+                                                    if bus.get(slot_pid).is_some() {
+                                                        bus.set(slot_pid, val);
                                                     }
                                                 }
+                                            }
+                                            if resp.secondary_clicked() {
+                                                state.request_automation(&p.id);
                                             }
                                         } else {
                                             let mut dummy = 0.5;
@@ -766,18 +780,23 @@ pub fn show_modern_device_rack_with_context(
                                         }
                                         _ => 0.5,
                                     };
-                                    let val = state.node_param_values.entry(p.id.clone()).or_insert(default_norm);
-                                    let resp = draw_vertical_fader(ui, &p.name, val, default_norm);
-                                    if resp.secondary_clicked() {
-                                        state.requested_automation_param = Some(p.id.clone());
-                                    }
-                                    if let Some(bus) = param_bus {
-                                        if resp.changed() || resp.dragged() || resp.double_clicked() {
+                                    let mut val = *state.node_param_values.entry(p.id.clone()).or_insert(default_norm);
+                                    let resp = draw_vertical_fader(ui, &p.name, &mut val, default_norm);
+                                    if resp.changed() || resp.dragged() || resp.double_clicked() {
+                                        state.node_param_values.insert(p.id.clone(), val);
+                                        if let Some(bus) = param_bus {
                                             let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + (6 + i) as u32);
                                             if bus.get(pid).is_some() {
-                                                bus.set(pid, *val);
+                                                bus.set(pid, val);
+                                            }
+                                            let slot_pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + (state.selected_chain_idx as u32 * 20) + (6 + i) as u32);
+                                            if bus.get(slot_pid).is_some() {
+                                                bus.set(slot_pid, val);
                                             }
                                         }
+                                    }
+                                    if resp.secondary_clicked() {
+                                        state.request_automation(&p.id);
                                     }
                                     if i + 1 < fader_params.len() {
                                         ui.add_space(4.0);
@@ -1004,18 +1023,23 @@ pub fn show_modern_device_rack_with_context(
                                             }
                                             _ => 0.5,
                                         };
-                                        let val = state.node_param_values.entry(p.id.clone()).or_insert(default_norm);
-                                        let resp = draw_rotary_dial(ui, &p.name, val, cat_accent, default_norm);
-                                        if resp.secondary_clicked() {
-                                            state.requested_automation_param = Some(p.id.clone());
-                                        }
-                                        if let Some(bus) = param_bus {
-                                            if resp.changed() || resp.dragged() || resp.double_clicked() {
+                                        let mut val = *state.node_param_values.entry(p.id.clone()).or_insert(default_norm);
+                                        let resp = draw_rotary_dial(ui, &p.name, &mut val, cat_accent, default_norm);
+                                        if resp.changed() || resp.dragged() || resp.double_clicked() {
+                                            state.node_param_values.insert(p.id.clone(), val);
+                                            if let Some(bus) = param_bus {
                                                 let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + (9 + i) as u32);
                                                 if bus.get(pid).is_some() {
-                                                    bus.set(pid, *val);
+                                                    bus.set(pid, val);
+                                                }
+                                                let slot_pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + (state.selected_chain_idx as u32 * 20) + (9 + i) as u32);
+                                                if bus.get(slot_pid).is_some() {
+                                                    bus.set(slot_pid, val);
                                                 }
                                             }
+                                        }
+                                        if resp.secondary_clicked() {
+                                            state.request_automation(&p.id);
                                         }
                                         if i == 0 && mod_params.len() > 1 {
                                             ui.add_space(2.0);
@@ -1032,18 +1056,23 @@ pub fn show_modern_device_rack_with_context(
                                             }
                                             _ => 0.5,
                                         };
-                                        let val = state.node_param_values.entry(p.id.clone()).or_insert(default_norm);
-                                        let resp = draw_rotary_dial(ui, &p.name, val, cat_accent, default_norm);
-                                        if resp.secondary_clicked() {
-                                            state.requested_automation_param = Some(p.id.clone());
-                                        }
-                                        if let Some(bus) = param_bus {
-                                            if resp.changed() || resp.dragged() || resp.double_clicked() {
+                                        let mut val = *state.node_param_values.entry(p.id.clone()).or_insert(default_norm);
+                                        let resp = draw_rotary_dial(ui, &p.name, &mut val, cat_accent, default_norm);
+                                        if resp.changed() || resp.dragged() || resp.double_clicked() {
+                                            state.node_param_values.insert(p.id.clone(), val);
+                                            if let Some(bus) = param_bus {
                                                 let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + (11 + i) as u32);
                                                 if bus.get(pid).is_some() {
-                                                    bus.set(pid, *val);
+                                                    bus.set(pid, val);
+                                                }
+                                                let slot_pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + (state.selected_chain_idx as u32 * 20) + (11 + i) as u32);
+                                                if bus.get(slot_pid).is_some() {
+                                                    bus.set(slot_pid, val);
                                                 }
                                             }
+                                        }
+                                        if resp.secondary_clicked() {
+                                            state.request_automation(&p.id);
                                         }
                                         if i == 0 {
                                             ui.add_space(2.0);
@@ -1271,169 +1300,179 @@ fn show_pro_parameter_drawer(
                                             }
                                             _ => 0.5,
                                         };
-                                        let val = state.node_param_values.entry(p.id.clone()).or_insert(default_norm);
+                                        let mut val = *state.node_param_values.entry(p.id.clone()).or_insert(default_norm);
+                                        let mut req_automation = false;
 
                                         match &p.widget {
                                             crate::dsp_node_ui::DspWidgetKind::RotaryKnob { min, max, unit, is_logarithmic, .. } => {
-                                                let actual_val = *min + *val * (*max - *min);
+                                                let actual_val = *min + val * (*max - *min);
                                                 ui.horizontal(|ui| {
-                                                    let dial_resp = draw_rotary_dial(ui, "", val, cat_accent, default_norm);
+                                                    let dial_resp = draw_rotary_dial(ui, "", &mut val, cat_accent, default_norm);
                                                     if dial_resp.secondary_clicked() {
-                                                        state.requested_automation_param = Some(p.id.clone());
+                                                        req_automation = true;
                                                     }
                                                     ui.vertical(|ui| {
                                                         ui.label(RichText::new(format!("{:.1} {}", actual_val, unit)).font(FontId::proportional(8.5)).color(Color32::from_rgb(56, 189, 248)));
                                                         let slider = if *is_logarithmic {
-                                                            egui::Slider::new(val, 0.0..=1.0).logarithmic(true).show_value(false)
+                                                            egui::Slider::new(&mut val, 0.0..=1.0).logarithmic(true).show_value(false)
                                                         } else {
-                                                            egui::Slider::new(val, 0.0..=1.0).show_value(false)
+                                                            egui::Slider::new(&mut val, 0.0..=1.0).show_value(false)
                                                         };
                                                         let slider_resp = ui.add(slider);
                                                         if slider_resp.secondary_clicked() {
-                                                            state.requested_automation_param = Some(p.id.clone());
+                                                            req_automation = true;
                                                         }
                                                         if slider_resp.double_clicked() {
-                                                            *val = default_norm;
+                                                            val = default_norm;
                                                         }
                                                     });
                                                 });
                                             }
                                             crate::dsp_node_ui::DspWidgetKind::VerticalFader { min, max, unit, .. } => {
-                                                let actual_val = *min + *val * (*max - *min);
+                                                let actual_val = *min + val * (*max - *min);
                                                 ui.horizontal(|ui| {
                                                     ui.label(RichText::new(format!("{:.1} {}", actual_val, unit)).font(FontId::proportional(8.5)).color(Color32::from_rgb(56, 189, 248)));
-                                                    let slider_resp = ui.add(egui::Slider::new(val, 0.0..=1.0).show_value(false));
+                                                    let slider_resp = ui.add(egui::Slider::new(&mut val, 0.0..=1.0).show_value(false));
                                                     if slider_resp.secondary_clicked() {
-                                                        state.requested_automation_param = Some(p.id.clone());
+                                                        req_automation = true;
                                                     }
                                                     if slider_resp.double_clicked() {
-                                                        *val = default_norm;
+                                                        val = default_norm;
                                                     }
                                                 });
                                             }
                                             crate::dsp_node_ui::DspWidgetKind::Toggle { .. } => {
-                                                let mut b = *val >= 0.5;
+                                                let mut b = val >= 0.5;
                                                 let tog_text = if b { "ON" } else { "OFF" };
                                                 let tog_col = if b { Color32::from_rgb(34, 197, 94) } else { Color32::from_rgb(148, 163, 184) };
                                                 let tog_btn = ui.button(RichText::new(tog_text).font(FontId::proportional(9.0)).color(tog_col));
                                                 if tog_btn.clicked() {
                                                     b = !b;
-                                                    *val = if b { 1.0 } else { 0.0 };
+                                                    val = if b { 1.0 } else { 0.0 };
                                                 }
                                                 if tog_btn.secondary_clicked() {
-                                                    state.requested_automation_param = Some(p.id.clone());
+                                                    req_automation = true;
                                                 }
                                             }
                                             crate::dsp_node_ui::DspWidgetKind::EnumChoice { choices, .. } => {
-                                                let idx = (*val as usize).min(choices.len().saturating_sub(1));
+                                                let idx = (val as usize).min(choices.len().saturating_sub(1));
                                                 let cur_choice = choices.get(idx).cloned().unwrap_or_default();
                                                 egui::ComboBox::from_id_source(format!("pro_rack_combo_{}_{}", desc.kind_id, p.id))
                                                     .selected_text(RichText::new(&cur_choice).font(FontId::proportional(9.0)).color(cat_accent))
                                                     .show_ui(ui, |ui| {
                                                         for (c_i, choice) in choices.iter().enumerate() {
-                                                            ui.selectable_value(val, c_i as f32, choice);
+                                                            ui.selectable_value(&mut val, c_i as f32, choice);
                                                         }
                                                     });
                                             }
                                             _ => {
-                                                let slider_resp = ui.add(egui::Slider::new(val, 0.0..=1.0).show_value(false));
+                                                let slider_resp = ui.add(egui::Slider::new(&mut val, 0.0..=1.0).show_value(false));
                                                 if slider_resp.secondary_clicked() {
-                                                    state.requested_automation_param = Some(p.id.clone());
+                                                    req_automation = true;
                                                 }
                                                 if slider_resp.double_clicked() {
-                                                    *val = default_norm;
+                                                    val = default_norm;
                                                 }
                                             }
+                                        }
+
+                                        state.node_param_values.insert(p.id.clone(), val);
+                                        if req_automation {
+                                            state.request_automation(&p.id);
                                         }
 
                                         if let Some(bus) = param_bus {
                                             let pid_pro = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 500 + p_i as u32);
                                             if bus.get(pid_pro).is_some() {
-                                                bus.set(pid_pro, *val);
+                                                bus.set(pid_pro, val);
+                                            }
+                                            let pid_multi = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + (state.selected_chain_idx as u32 * 20) + p_i as u32);
+                                            if bus.get(pid_multi).is_some() {
+                                                bus.set(pid_multi, val);
                                             }
                                             let pid_compat = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + p_i as u32);
                                             if bus.get(pid_compat).is_some() {
-                                                bus.set(pid_compat, *val);
+                                                bus.set(pid_compat, val);
                                             }
                                         }
 
                                         // Synchronize standard dial values if modified
                                         match p.id.as_str() {
                                             "cutoff" => {
-                                                state.cutoff = *val;
+                                                state.cutoff = val;
                                                 if let Some(bus) = param_bus {
                                                     let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000);
-                                                    if bus.get(pid).is_some() { bus.set(pid, *val); }
+                                                    if bus.get(pid).is_some() { bus.set(pid, val); }
                                                 }
                                             }
                                             "resonance" => {
-                                                state.resonance = *val;
+                                                state.resonance = val;
                                                 if let Some(bus) = param_bus {
                                                     let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 1);
-                                                    if bus.get(pid).is_some() { bus.set(pid, *val); }
+                                                    if bus.get(pid).is_some() { bus.set(pid, val); }
                                                 }
                                             }
                                             "decay" => {
-                                                state.decay = *val;
+                                                state.decay = val;
                                                 if let Some(bus) = param_bus {
                                                     let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 2);
-                                                    if bus.get(pid).is_some() { bus.set(pid, *val); }
+                                                    if bus.get(pid).is_some() { bus.set(pid, val); }
                                                 }
                                             }
                                             "env_decay" => {
-                                                state.env_decay = *val;
+                                                state.env_decay = val;
                                                 if let Some(bus) = param_bus {
                                                     let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 3);
-                                                    if bus.get(pid).is_some() { bus.set(pid, *val); }
+                                                    if bus.get(pid).is_some() { bus.set(pid, val); }
                                                 }
                                             }
                                             "mod_amt" => {
-                                                state.mod_amt = *val;
+                                                state.mod_amt = val;
                                                 if let Some(bus) = param_bus {
                                                     let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 4);
-                                                    if bus.get(pid).is_some() { bus.set(pid, *val); }
+                                                    if bus.get(pid).is_some() { bus.set(pid, val); }
                                                 }
                                             }
                                             "drive" => {
-                                                state.drive = *val;
+                                                state.drive = val;
                                                 if let Some(bus) = param_bus {
                                                     let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 5);
-                                                    if bus.get(pid).is_some() { bus.set(pid, *val); }
+                                                    if bus.get(pid).is_some() { bus.set(pid, val); }
                                                 }
                                             }
                                             "osc_mix" => {
-                                                state.osc_mix = *val;
+                                                state.osc_mix = val;
                                                 if let Some(bus) = param_bus {
                                                     let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 6);
-                                                    if bus.get(pid).is_some() { bus.set(pid, *val); }
+                                                    if bus.get(pid).is_some() { bus.set(pid, val); }
                                                 }
                                             }
                                             "shape" => {
-                                                state.shape = *val;
+                                                state.shape = val;
                                                 if let Some(bus) = param_bus {
                                                     let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 7);
-                                                    if bus.get(pid).is_some() { bus.set(pid, *val); }
+                                                    if bus.get(pid).is_some() { bus.set(pid, val); }
                                                 }
                                             }
                                             "volume" => {
-                                                state.volume = *val;
+                                                state.volume = val;
                                                 if let Some(bus) = param_bus {
                                                     let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 200);
-                                                    if bus.get(pid).is_some() { bus.set(pid, *val); }
+                                                    if bus.get(pid).is_some() { bus.set(pid, val); }
                                                 }
                                             }
                                             "lfo_speed" => {
-                                                state.lfo_speed = *val;
+                                                state.lfo_speed = val;
                                                 if let Some(bus) = param_bus {
                                                     let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 8);
-                                                    if bus.get(pid).is_some() { bus.set(pid, *val); }
+                                                    if bus.get(pid).is_some() { bus.set(pid, val); }
                                                 }
                                             }
                                             "lfo_depth" => {
-                                                state.lfo_depth = *val;
+                                                state.lfo_depth = val;
                                                 if let Some(bus) = param_bus {
                                                     let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 9);
-                                                    if bus.get(pid).is_some() { bus.set(pid, *val); }
+                                                    if bus.get(pid).is_some() { bus.set(pid, val); }
                                                 }
                                             }
                                             _ => {}

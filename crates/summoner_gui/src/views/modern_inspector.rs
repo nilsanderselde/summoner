@@ -165,7 +165,11 @@ impl ModernInspectorState {
 
     /// Request live parameter automation for a given parameter ID.
     pub fn request_automation(&mut self, param_id: &str) {
-        self.requested_automation_param = Some(param_id.to_string());
+        if self.selected_chain_idx > 0 && !param_id.starts_with("node_") && !param_id.starts_with("master_node_") {
+            self.requested_automation_param = Some(format!("node_{}_{}", self.selected_chain_idx, param_id));
+        } else {
+            self.requested_automation_param = Some(param_id.to_string());
+        }
     }
 
     /// Reset track gain, pan, mute, solo, phase, and trim controls to unity / centered defaults.
@@ -511,7 +515,7 @@ pub fn show_modern_inspector_with_context(
                         if let Some(ref node_kind) = state.selected_node_kind {
                             if let Some(desc) = registry.get(node_kind) {
                                 if let Some(primary) = desc.params.first() {
-                                    state.requested_automation_param = Some(primary.id.clone());
+                                    state.request_automation(&primary.id);
                                 }
                             }
                         }

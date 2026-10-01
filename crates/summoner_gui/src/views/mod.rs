@@ -23,6 +23,7 @@ pub mod comb_resonator_view;
 pub mod concordance_lattice_view;
 pub mod convolution_impulse_view;
 pub mod convolution_morph_view;
+pub mod crystal_resonator_view;
 pub mod modern_asset_browser;
 pub mod modern_device_rack;
 pub mod modern_inspector;

@@ -176,6 +176,7 @@ pub mod tier107_turn42_tests;
 pub mod tier108_turn43_tests;
 pub mod tier109_turn44_tests;
 pub mod tier110_turn45_tests;
+pub mod tier111_turn46_tests;
 #[cfg(feature = "gui")]
 pub mod touch_gestures;
 #[cfg(feature = "gui")]
@@ -235,6 +236,8 @@ pub use views::concordance_lattice_view::ConcordanceLatticeView;
 pub use views::convolution_impulse_view::ConvolutionImpulseView;
 #[cfg(feature = "gui")]
 pub use views::convolution_morph_view::ConvolutionMorphView;
+#[cfg(feature = "gui")]
+pub use views::crystal_resonator_view::{CrystalMaterialProfile, CrystalResonatorView};
 #[cfg(feature = "gui")]
 pub use views::detachable_window_manager::DetachableWindowManagerView;
 #[cfg(feature = "gui")]

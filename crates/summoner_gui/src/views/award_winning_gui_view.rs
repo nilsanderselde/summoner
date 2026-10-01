@@ -3961,6 +3961,13 @@ impl AwardWinningGuiView {
                         let cur_kind = self.device_rack_state.selected_node_kind.as_deref().unwrap_or("AetherSynth");
                         if let Some(desc) = registry.get(cur_kind) {
                             if let Some(param) = desc.params.iter().find(|p| p.id == raw_param_id) {
+                                let cur_slot = self.device_rack_state.selected_chain_idx;
+                                if cur_slot > 0 {
+                                    if let Some(dev) = self.device_rack_state.chain_devices.get(cur_slot) {
+                                        custom_title = Some(format!("{} — [{}] {}", track.name, dev.display_name, param.name));
+                                        custom_lane_key = Some(format!("track_{}_node_{}_{}", track_id, cur_slot, param.id));
+                                    }
+                                }
                                 found_desc_and_param = Some((desc, param));
                             }
                         }
@@ -6180,17 +6187,25 @@ impl AwardWinningGuiView {
             param_bus.set(panic_pid, panic_val);
         }
 
-        let scene_pid = summoner_core::param_bus::ParamId(9997);
+        let scene_pid = summoner_core::param_bus::ParamId(9994);
         let scene_val = self.active_scene_idx.map(|s| s as f32).unwrap_or(-1.0);
         if param_bus.get(scene_pid).is_some() {
             param_bus.set(scene_pid, scene_val);
         }
+        let legacy_scene_pid = summoner_core::param_bus::ParamId(9997);
+        if self.active_scene_idx.is_some() && param_bus.get(legacy_scene_pid).is_some() {
+            param_bus.set(legacy_scene_pid, scene_val);
+        }
 
         for tr in &self.tracks {
-            let clip_pid = summoner_core::param_bus::ParamId(tr.id as u32 * 1000 + 204);
+            let clip_pid = summoner_core::param_bus::ParamId(tr.id as u32 * 1000 + 206);
             let clip_val = tr.active_clip_idx.map(|c| c as f32).unwrap_or(-1.0);
             if param_bus.get(clip_pid).is_some() {
                 param_bus.set(clip_pid, clip_val);
+            }
+            let legacy_clip_pid = summoner_core::param_bus::ParamId(tr.id as u32 * 1000 + 204);
+            if !self.track_phase_inverted.contains_key(&tr.id) && param_bus.get(legacy_clip_pid).is_some() {
+                param_bus.set(legacy_clip_pid, clip_val);
             }
         }
 

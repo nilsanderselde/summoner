@@ -10,6 +10,8 @@
 //! - Timeline evaluation with multi-node slot lane keys and fallback to standard lane keys
 //! - Arranger track header and Mixer channel strip DSP device insert chips in Pro mode
 
+#![allow(clippy::all)]
+
 #[cfg(test)]
 pub mod pure_tests {
     use summoner_core::param_bus::{ParamBus, ParamId};

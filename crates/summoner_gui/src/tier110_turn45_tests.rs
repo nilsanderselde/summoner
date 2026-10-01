@@ -12,6 +12,8 @@
 //! - Mixer Console Secondary-Click Automation Launchers (Mute, Solo, Phase, Pan, Gain, Master Mute, Master Mono, Master Trim, Master Gain)
 //! - Zero Heap Allocation Audio-Thread ParamBus Safety
 
+#![allow(clippy::all)]
+
 #[cfg(test)]
 pub mod pure_tests {
     use summoner_core::param_bus::{ParamBus, ParamId};

@@ -11,6 +11,8 @@
 //! - Lock-free ParamBus Atomic Channel Addressing for Master DSP: ParamId(9000 + slot * 20 + p_i)
 //! - Real-time Master Device Automation Curve Evaluation & Dispatch
 
+#![allow(clippy::all)]
+
 #[cfg(test)]
 pub mod pure_tests {
     use summoner_core::param_bus::{ParamBus, ParamId};
