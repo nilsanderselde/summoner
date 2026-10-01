@@ -6,7 +6,9 @@
 //! Features fixed operational zones, tactile controls, and high-fidelity deterministic PNG rendering.
 
 use crate::views::modern_asset_browser::{show_modern_asset_browser, ModernAssetBrowserState};
-use crate::views::modern_device_rack::{show_modern_device_rack, ModernDeviceRackState};
+use crate::views::modern_device_rack::{
+    show_modern_device_rack, show_modern_device_rack_with_context, ModernDeviceRackState,
+};
 use crate::views::modern_inspector::{show_modern_inspector_with_context, ModernInspectorState};
 use crate::views::modern_top_bar::{show_modern_top_bar, ModernTopBarState};
 use summoner_core::node::AudioNode;
@@ -1290,7 +1292,14 @@ impl AwardWinningGuiView {
 
                     // Zone 5: Bottom Dock (Reusable Device Rack)
                     if self.top_bar_state.active_tab != crate::views::modern_top_bar::ModernViewTab::Performance {
-                        show_modern_device_rack(ui, &mut self.device_rack_state, self.current_oscilloscope_samples.as_deref());
+                        let cur_track_id = self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1);
+                        show_modern_device_rack_with_context(
+                            ui,
+                            &mut self.device_rack_state,
+                            self.current_oscilloscope_samples.as_deref(),
+                            self.live_param_bus.as_deref(),
+                            cur_track_id,
+                        );
                     }
                 });
 
@@ -1938,17 +1947,20 @@ impl AwardWinningGuiView {
             ui.add_space(6.0);
 
             // Track Selector ComboBox
+            let mut track_to_select = None;
             egui::ComboBox::from_id_source("piano_roll_track_selector")
                 .selected_text(RichText::new(format!("🎚 {}", cur_track_name)).font(FontId::proportional(10.5)).color(Color32::from_rgb(56, 189, 248)))
                 .show_ui(ui, |ui| {
                     for (t_idx, tr) in self.tracks.iter().enumerate() {
                         let is_sel = t_idx == self.selected_track_idx;
                         if ui.selectable_label(is_sel, format!("{}: {}", tr.id, tr.name)).clicked() {
-                            self.selected_track_idx = t_idx;
-                            self.device_rack_state.device_name = tr.name.clone();
+                            track_to_select = Some(t_idx);
                         }
                     }
                 });
+            if let Some(t_idx) = track_to_select {
+                self.select_track_for_piano_roll(t_idx);
+            }
 
             ui.add_space(4.0);
 
@@ -2036,6 +2048,17 @@ impl AwardWinningGuiView {
             }
             if ui.selectable_label(self.piano_roll_lane_mode == PianoRollLaneMode::PitchBend, RichText::new("Pitch").font(FontId::proportional(10.0)).color(p_col)).clicked() {
                 self.piano_roll_lane_mode = PianoRollLaneMode::PitchBend;
+            }
+            if ui.button(RichText::new("📈 Auto").font(FontId::proportional(10.0)).color(Color32::from_rgb(234, 179, 8)))
+                .on_hover_text("Open live parameter automation lane for the active lower lane parameter (Velocity, Gate, or Pitch)")
+                .clicked()
+            {
+                let lane_param = match self.piano_roll_lane_mode {
+                    PianoRollLaneMode::Velocity => "velocity",
+                    PianoRollLaneMode::Gate => "gate",
+                    PianoRollLaneMode::PitchBend => "pitch",
+                };
+                self.open_track_automation_editor(cur_track_id, lane_param);
             }
 
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -2215,8 +2238,15 @@ impl AwardWinningGuiView {
                             self.inspector_state.octave_offset = if p_idx < 1 { 5 } else { 4 };
                         }
                     } else if pos.x <= rect.left() + key_w && pos.y >= rect.bottom() - vel_lane_h {
-                        // 2D. Interactive Lane Mode Badge Cycling
-                        if is_click {
+                        // 2D. Interactive Lane Mode Badge Cycling & Secondary Click Automation
+                        if resp.secondary_clicked() {
+                            let lane_param = match self.piano_roll_lane_mode {
+                                PianoRollLaneMode::Velocity => "velocity",
+                                PianoRollLaneMode::Gate => "gate",
+                                PianoRollLaneMode::PitchBend => "pitch",
+                            };
+                            self.open_track_automation_editor(cur_track_id, lane_param);
+                        } else if is_click {
                             self.piano_roll_lane_mode = match self.piano_roll_lane_mode {
                                 PianoRollLaneMode::Velocity => PianoRollLaneMode::Gate,
                                 PianoRollLaneMode::Gate => PianoRollLaneMode::PitchBend,
@@ -3423,6 +3453,17 @@ impl AwardWinningGuiView {
                         .and_then(|sid| self.piano_roll_notes.iter().find(|n| n.id == sid))
                         .map(|n| n.velocity)
                         .unwrap_or(0.85),
+                ),
+                "gate" | "gate_len" => (
+                    format!("track_{}_gate", track_id),
+                    format!("{} — Gate Length", track.name),
+                    0.0_f32,
+                    4.0_f32,
+                    "beats".to_string(),
+                    self.selected_note_id
+                        .and_then(|sid| self.piano_roll_notes.iter().find(|n| n.id == sid))
+                        .map(|n| (n.length_beats / 4.0).clamp(0.0, 1.0))
+                        .unwrap_or(0.25),
                 ),
                 "expression" => (
                     format!("track_{}_expression", track_id),

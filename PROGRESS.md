@@ -875,3 +875,23 @@ Product Management has conducted a comprehensive readiness audit:
   - Unit tests: 303 passed in 0.26s (`cargo test -p summoner_gui`).
   - Clippy: 0 warnings (`cargo clippy -p summoner_gui`).
 
+### Turn #38 (Turn #5) — Modern Device Rack Live ParamBus Connection, Piano Roll Track Sync & Automation Bridge
+- [x] Modern Device Rack Live ParamBus Integration (`crates/summoner_gui/src/views/modern_device_rack.rs`):
+  - Created `show_modern_device_rack_with_context(ui, state, oscilloscope_data, param_bus, track_id)`.
+  - Wired Section 1 rotary dials (`cutoff`, `resonance`, `decay`, `env_decay`), Section 2 faders (`volume`), Section 4 interactive filter puck (`cutoff`, `resonance`), Section 5 LFO dials (`lfo_speed`, `lfo_depth`), and Pro Drawer surgical parameters (`500..516`) directly into `ParamBus` with zero-allocation atomic dispatch.
+  - Maintained backward-compatible `show_modern_device_rack` wrapper.
+  - Updated Bottom Dock in `crates/summoner_gui/src/views/award_winning_gui_view.rs` to pass `self.live_param_bus.as_deref()` and `cur_track_id`.
+- [x] Bi-directional Piano Roll Track Synchronization:
+  - Upgraded `piano_roll_track_selector` in `show_piano_roll_canvas` to call `self.select_track_for_piano_roll(t_idx)`, ensuring track index, device rack name, and inspector state (target name, gain dB, pan, mute, solo, arm) synchronize seamlessly.
+- [x] Piano Roll Lower Lane 1-Click Live Parameter Automation Bridge:
+  - Added `[📈 Auto]` 1-click launcher button to Piano Roll lower lane mode selector (`[Vel]`, `[Gate]`, `[Pitch]`).
+  - Added secondary click (`resp.secondary_clicked()`) on bottom-left interactive lane mode badge to instantly launch `open_track_automation_editor`.
+  - Enhanced `open_track_automation_editor` to handle `"gate"` / `"gate_len"` alongside `"velocity"` and `"pitch"`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier103_turn38_tests.rs` verifying standard dial and pro param `ParamBus` offsets, lane mode cycling, track offset invariants, and automation launching.
+  - Registered `tier103_turn38_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Compilation: 0.25s (`cargo check -p summoner_gui`).
+  - Unit tests: 305 passed in 0.23s (`cargo test -p summoner_gui`).
+  - Clippy: 0 warnings (`cargo clippy -p summoner_gui -- -D warnings`).
+
+
