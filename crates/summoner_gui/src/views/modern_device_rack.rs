@@ -101,6 +101,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_rotary_speaker_hud: bool,
     #[serde(default)]
     pub requested_open_free_reed_hud: bool,
+    #[serde(default)]
+    pub requested_open_granular_cloud_hud: bool,
+    #[serde(default)]
+    pub requested_open_spring_lattice_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -140,6 +144,8 @@ impl Default for ModernDeviceRackState {
             requested_open_vocal_tract_hud: false,
             requested_open_rotary_speaker_hud: false,
             requested_open_free_reed_hud: false,
+            requested_open_granular_cloud_hud: false,
+            requested_open_spring_lattice_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -346,6 +352,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_vocal_tract = cur_selection.contains("VocalTract") || cur_selection.contains("VocalTractModel") || cur_selection.contains("VowelSpace") || cur_selection.contains("VocalFormant") || cur_selection == "VocalTractNode" || cur_selection == "VocalTractProfile";
                     let is_rotary_speaker = cur_selection.contains("Rotary") || cur_selection.contains("Leslie") || cur_selection.contains("DopplerSpeaker") || cur_selection == "RotarySpeakerNode" || cur_selection == "DualRotorLeslieDopplerSpeaker" || cur_selection == "RotaryCabinetModel";
                     let is_free_reed = cur_selection.contains("FreeReed") || cur_selection.contains("Harmonium") || cur_selection.contains("Accordion") || cur_selection.contains("Bandoneon") || cur_selection.contains("Bayan") || cur_selection.contains("Cassotto") || cur_selection == "FreeReedNode" || cur_selection == "FreeReedVoice" || cur_selection == "FreeReedOscillator";
+                    let is_granular = cur_selection.contains("Granular") || cur_selection.contains("Grain") || cur_selection == "GranularSynthNode" || cur_selection == "GranularFreezeNode" || cur_selection == "GranularPitchShifter";
+                    let is_spring_lattice = cur_selection.contains("Spring") || cur_selection.contains("Lattice") || cur_selection == "SpringLatticeNode" || cur_selection == "SpringReverb" || cur_selection == "SpringTankModel" || cur_selection == "SpringMassLattice";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -434,10 +442,18 @@ pub fn show_modern_device_rack_with_context(
                         if ui.button(RichText::new("🌪 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Vintage Rotary Speaker Cabinet & Doppler HUD").clicked() {
                             state.requested_open_rotary_speaker_hud = true;
                         }
-                    } else if is_free_reed
-                        && ui.button(RichText::new("🪗 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(16, 185, 129))).on_hover_text("Open Free-Reed Aeroelastic Phase Portrait HUD").clicked()
+                    } else if is_free_reed {
+                        if ui.button(RichText::new("🪗 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(16, 185, 129))).on_hover_text("Open Free-Reed Aeroelastic Phase Portrait HUD").clicked() {
+                            state.requested_open_free_reed_hud = true;
+                        }
+                    } else if is_granular {
+                        if ui.button(RichText::new("☁ HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Granular Cloud Synthesis HUD").clicked() {
+                            state.requested_open_granular_cloud_hud = true;
+                        }
+                    } else if is_spring_lattice
+                        && ui.button(RichText::new("🌀 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 170, 0))).on_hover_text("Open Spring-Mass Lattice Deformation HUD").clicked()
                     {
-                        state.requested_open_free_reed_hud = true;
+                        state.requested_open_spring_lattice_hud = true;
                     }
                     ui.add_space(4.0);
                     let pwr_col = if state.is_enabled { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(100, 116, 139) };
@@ -642,6 +658,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_vocal_tract = cur_selection.contains("VocalTract") || cur_selection.contains("VocalTractModel") || cur_selection.contains("VowelSpace") || cur_selection.contains("VocalFormant") || cur_selection == "VocalTractNode" || cur_selection == "VocalTractProfile";
                     let is_rotary_speaker = cur_selection.contains("Rotary") || cur_selection.contains("Leslie") || cur_selection.contains("DopplerSpeaker") || cur_selection == "RotarySpeakerNode" || cur_selection == "DualRotorLeslieDopplerSpeaker" || cur_selection == "RotaryCabinetModel";
                     let is_free_reed = cur_selection.contains("FreeReed") || cur_selection.contains("Harmonium") || cur_selection.contains("Accordion") || cur_selection.contains("Bandoneon") || cur_selection.contains("Bayan") || cur_selection.contains("Cassotto") || cur_selection == "FreeReedNode" || cur_selection == "FreeReedVoice" || cur_selection == "FreeReedOscillator";
+                    let is_granular = cur_selection.contains("Granular") || cur_selection.contains("Grain") || cur_selection == "GranularSynthNode" || cur_selection == "GranularFreezeNode" || cur_selection == "GranularPitchShifter";
+                    let is_spring_lattice = cur_selection.contains("Spring") || cur_selection.contains("Lattice") || cur_selection == "SpringLatticeNode" || cur_selection == "SpringReverb" || cur_selection == "SpringTankModel" || cur_selection == "SpringMassLattice";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -738,10 +756,18 @@ pub fn show_modern_device_rack_with_context(
                         if ui.button(RichText::new("🌪 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Vintage Rotary Speaker Cabinet & Doppler HUD").clicked() {
                             state.requested_open_rotary_speaker_hud = true;
                         }
-                    } else if is_free_reed
-                        && ui.button(RichText::new("🪗 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(16, 185, 129))).on_hover_text("Open Free-Reed Aeroelastic Phase Portrait HUD").clicked()
+                    } else if is_free_reed {
+                        if ui.button(RichText::new("🪗 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(16, 185, 129))).on_hover_text("Open Free-Reed Aeroelastic Phase Portrait HUD").clicked() {
+                            state.requested_open_free_reed_hud = true;
+                        }
+                    } else if is_granular {
+                        if ui.button(RichText::new("☁ HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Granular Cloud Synthesis HUD").clicked() {
+                            state.requested_open_granular_cloud_hud = true;
+                        }
+                    } else if is_spring_lattice
+                        && ui.button(RichText::new("🌀 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 170, 0))).on_hover_text("Open Spring-Mass Lattice Deformation HUD").clicked()
                     {
-                        state.requested_open_free_reed_hud = true;
+                        state.requested_open_spring_lattice_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -1532,6 +1558,8 @@ fn show_pro_parameter_drawer(
                     let is_vocal_tract = dev_kind.contains("VocalTract") || dev_kind.contains("VocalTractModel") || dev_kind.contains("VowelSpace") || dev_kind.contains("VocalFormant") || dev_kind == "VocalTractNode" || dev_kind == "VocalTractProfile";
                     let is_rotary_speaker = dev_kind.contains("Rotary") || dev_kind.contains("Leslie") || dev_kind.contains("DopplerSpeaker") || dev_kind == "RotarySpeakerNode" || dev_kind == "DualRotorLeslieDopplerSpeaker" || dev_kind == "RotaryCabinetModel";
                     let is_free_reed = dev_kind.contains("FreeReed") || dev_kind.contains("Harmonium") || dev_kind.contains("Accordion") || dev_kind.contains("Bandoneon") || dev_kind.contains("Bayan") || dev_kind.contains("Cassotto") || dev_kind == "FreeReedNode" || dev_kind == "FreeReedVoice" || dev_kind == "FreeReedOscillator";
+                    let is_granular = dev_kind.contains("Granular") || dev_kind.contains("Grain") || dev_kind == "GranularSynthNode" || dev_kind == "GranularFreezeNode" || dev_kind == "GranularPitchShifter";
+                    let is_spring_lattice = dev_kind.contains("Spring") || dev_kind.contains("Lattice") || dev_kind == "SpringLatticeNode" || dev_kind == "SpringReverb" || dev_kind == "SpringTankModel" || dev_kind == "SpringMassLattice";
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -3379,6 +3407,149 @@ fn show_pro_parameter_drawer(
 
                         if reed_resp.hovered() {
                             let _ = reed_resp.on_hover_text("Free-Reed Aeroelastic Phase Portrait & Musette Spectrum HUD\n[Drag horizontally: Cassotto aperture [0..1] | Drag vertically: Reed stiffness [0.5..2.0]]");
+                        }
+                    } else if is_granular {
+                        // Granular Cloud Synthesis Dispersion Mini Visualizer
+                        let (gran_resp, gran_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let g_rect = gran_resp.rect;
+                        gran_painter.rect_filled(g_rect, 2.0, Color32::from_rgb(8, 14, 24));
+
+                        let mut pos_norm = state.node_param_values.get("emitter_pos").copied().unwrap_or(0.45);
+                        let mut pitch_st = state.node_param_values.get("emitter_pitch").copied().unwrap_or(0.0);
+
+                        if gran_resp.dragged() {
+                            if let Some(mouse_pos) = gran_resp.interact_pointer_pos() {
+                                pos_norm = ((mouse_pos.x - g_rect.left()) / g_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - (mouse_pos.y - g_rect.top()) / g_rect.height()).clamp(0.0, 1.0);
+                                pitch_st = -24.0 + norm_y * 48.0;
+
+                                state.node_param_values.insert("emitter_pos".to_string(), pos_norm);
+                                state.node_param_values.insert("emitter_pitch".to_string(), pitch_st);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_pos = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_pch = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_pos).is_some() { bus.set(pid_pos, pos_norm); }
+                                    if bus.get(pid_pch).is_some() { bus.set(pid_pch, pitch_st); }
+                                }
+                            }
+                        }
+
+                        // Spray ellipse
+                        let cx = g_rect.left() + pos_norm * g_rect.width();
+                        let cy = g_rect.bottom() - ((pitch_st + 24.0) / 48.0).clamp(0.0, 1.0) * g_rect.height();
+                        gran_painter.rect_filled(
+                            egui::Rect::from_center_size(egui::pos2(cx, cy), Vec2::new(36.0, 18.0)),
+                            6.0,
+                            Color32::from_rgba_unmultiplied(0, 229, 255, 30),
+                        );
+
+                        // Simulated grain particles
+                        for i in 0..6 {
+                            let gx = cx + ((i as f32 * 1.7).sin() * 14.0).clamp(-16.0, 16.0);
+                            let gy = cy + ((i as f32 * 2.3).cos() * 7.0).clamp(-8.0, 8.0);
+                            let col = if i % 2 == 0 { Color32::from_rgb(0, 255, 180) } else { Color32::from_rgb(255, 170, 40) };
+                            gran_painter.circle_filled(egui::pos2(gx, gy), 2.0, col);
+                        }
+
+                        // Emitter puck
+                        gran_painter.circle_filled(egui::pos2(cx, cy), 4.5, Color32::from_rgb(255, 255, 255));
+                        gran_painter.circle_stroke(egui::pos2(cx, cy), 6.5, Stroke::new(1.2_f32, Color32::from_rgb(0, 229, 255)));
+
+                        // Readout
+                        gran_painter.text(
+                            egui::pos2(g_rect.left() + 4.0, g_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("Pos: {:.0}%", pos_norm * 100.0),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+                        gran_painter.text(
+                            egui::pos2(g_rect.right() - 4.0, g_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("{:+.1}st", pitch_st),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(255, 170, 40),
+                        );
+
+                        if gran_resp.hovered() {
+                            let _ = gran_resp.on_hover_text("Granular Cloud Synthesis HUD\n[Drag horizontally: Emitter position [0..1] | Drag vertically: Pitch [-24..+24 st]]");
+                        }
+                    } else if is_spring_lattice {
+                        // Spring-Mass Lattice Deformation & Dispersion Mini Visualizer
+                        let (spring_resp, spring_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let s_rect = spring_resp.rect;
+                        spring_painter.rect_filled(s_rect, 2.0, Color32::from_rgb(12, 10, 20));
+
+                        let mut nonlin = state.node_param_values.get("spring_nonlinearity").copied().unwrap_or(0.45);
+                        let mut drive = state.node_param_values.get("drive_force").copied().unwrap_or(0.80);
+
+                        if spring_resp.dragged() {
+                            if let Some(mouse_pos) = spring_resp.interact_pointer_pos() {
+                                nonlin = ((mouse_pos.x - s_rect.left()) / s_rect.width()).clamp(0.0, 1.0);
+                                drive = (1.0 - (mouse_pos.y - s_rect.top()) / s_rect.height()).clamp(0.05, 1.0);
+
+                                state.node_param_values.insert("spring_nonlinearity".to_string(), nonlin);
+                                state.node_param_values.insert("drive_force".to_string(), drive);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_nl = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_dr = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_nl).is_some() { bus.set(pid_nl, nonlin); }
+                                    if bus.get(pid_dr).is_some() { bus.set(pid_dr, drive); }
+                                }
+                            }
+                        }
+
+                        // Wireframe spring grid lines (Left half)
+                        let grid_x = s_rect.left() + 6.0;
+                        let grid_y = s_rect.top() + 16.0;
+                        let grid_w = 64.0;
+                        let grid_h = 44.0;
+                        let cols = 4;
+                        let rows = 4;
+                        for r in 0..rows {
+                            let y0 = grid_y + (r as f32 / (rows - 1) as f32) * grid_h;
+                            spring_painter.line_segment(
+                                [egui::pos2(grid_x, y0), egui::pos2(grid_x + grid_w, y0)],
+                                Stroke::new(1.0_f32, Color32::from_rgb(255, 170, 0)),
+                            );
+                        }
+                        for c in 0..cols {
+                            let x0 = grid_x + (c as f32 / (cols - 1) as f32) * grid_w;
+                            spring_painter.line_segment(
+                                [egui::pos2(x0, grid_y), egui::pos2(x0, grid_y + grid_h)],
+                                Stroke::new(1.0_f32, Color32::from_rgb(255, 170, 0)),
+                            );
+                        }
+                        // Driver and pickup nodes
+                        spring_painter.circle_filled(egui::pos2(grid_x + grid_w * 0.33, grid_y + grid_h * 0.33), 3.0, Color32::from_rgb(0, 229, 255));
+                        spring_painter.circle_filled(egui::pos2(grid_x + grid_w * 0.66, grid_y + grid_h * 0.66), 3.0, Color32::from_rgb(255, 230, 80));
+
+                        // Duffing non-linear puck (Right half)
+                        let puck_x = s_rect.left() + 85.0 + nonlin * 60.0;
+                        let puck_y = s_rect.bottom() - drive * 50.0;
+                        spring_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(255, 170, 0));
+                        spring_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.0, Stroke::new(1.0_f32, Color32::from_rgb(255, 215, 80)));
+
+                        // Readout
+                        spring_painter.text(
+                            egui::pos2(s_rect.left() + 4.0, s_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("Drive: {:.2}", drive),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(255, 170, 0),
+                        );
+                        spring_painter.text(
+                            egui::pos2(s_rect.right() - 4.0, s_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("Duffing: {:.2}", nonlin),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+
+                        if spring_resp.hovered() {
+                            let _ = spring_resp.on_hover_text("Spring-Mass Lattice Deformation HUD\n[Drag horizontally: Duffing non-linearity [0..1] | Drag vertically: Drive force [0.05..1.0]]");
                         }
                     } else {
                         // Filter Curve Mini View (slot-addressed)

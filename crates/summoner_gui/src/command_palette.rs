@@ -461,6 +461,18 @@ impl CommandPalette {
                 action_id: "open_free_reed_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Granular Synthesis Cloud Grain Dispersion HUD".into(),
+                category: "Synthesis & Granular".into(),
+                action_id: "open_granular_cloud_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Spring-Mass Lattice Deformation & Dispersion HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_spring_lattice_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

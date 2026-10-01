@@ -86,6 +86,10 @@ pub struct ModernInspectorState {
     pub requested_open_rotary_speaker_hud: bool,
     #[serde(default)]
     pub requested_open_free_reed_hud: bool,
+    #[serde(default)]
+    pub requested_open_granular_cloud_hud: bool,
+    #[serde(default)]
+    pub requested_open_spring_lattice_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -135,6 +139,8 @@ impl Default for ModernInspectorState {
             requested_open_vocal_tract_hud: false,
             requested_open_rotary_speaker_hud: false,
             requested_open_free_reed_hud: false,
+            requested_open_granular_cloud_hud: false,
+            requested_open_spring_lattice_hud: false,
         }
     }
 }
@@ -859,6 +865,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open interactive Aeroelastic Free-Reed phase portrait, cassotto aperture vs stiffness & 5-rank musette beating HUD").clicked() {
                     state.requested_open_free_reed_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Granular") || active_kind.contains("Grain") || active_kind == "GranularSynthNode" || active_kind == "GranularFreezeNode" || active_kind == "GranularPitchShifter" {
+                if ui.add(
+                    egui::Button::new(RichText::new("☁ Open Granular Cloud Synthesis HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 229, 255)))
+                        .fill(Color32::from_rgb(12, 34, 48))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 229, 255)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Granular Cloud Synthesis grain dispersion, pitch jitter & spray envelope HUD").clicked() {
+                    state.requested_open_granular_cloud_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Spring") || active_kind.contains("Lattice") || active_kind == "SpringLatticeNode" || active_kind == "SpringReverb" || active_kind == "SpringTankModel" || active_kind == "SpringMassLattice" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🌀 Open Spring-Mass Lattice Deformation HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(255, 170, 0)))
+                        .fill(Color32::from_rgb(38, 26, 12))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 170, 0)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Spring-Mass Lattice 6x6 wireframe displacement, Duffing non-linearity & dispersion HUD").clicked() {
+                    state.requested_open_spring_lattice_hud = true;
                 }
                 ui.add_space(4.0);
             }

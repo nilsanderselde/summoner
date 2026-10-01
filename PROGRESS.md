@@ -1571,6 +1571,39 @@ Product Management has conducted a comprehensive readiness audit:
   - Feature tests: 9 tests passed in `tier126_turn62_tests` (`cargo test -p summoner_gui --features gui -- tier126`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
 
+### Turn #63 (Turn #28 Deliverable) — Granular Synthesis Cloud Dispersion & Spring-Mass Lattice Deformation HUDs Convergence (Milestones 12, 20 & 33)
+- [x] Granular Synthesis Cloud Dispersion & Spring-Mass Lattice Deformation Performance HUDs Integration:
+  - Integrated `GranularCloudView` (Granular Synthesis Cloud Grain Dispersion, Emitter Position [0..1] vs Pitch [-24..+24 semitones] XY Touch Puck, Spray Width [0..0.5] & Height [0..12 st] Jitter Ellipse, 5 Window Shapes [Hanning, Blackman, Gaussian, Trapezoid, Exp Decay], Grain Rate [1..200 Hz], Grain Size [5..500 ms], Density [1..64 grains], Pan Spread, Reverse Probability & Buffer Freeze) and `SpringLatticeView` (Spring-Mass Deformation Phase Canvas & Lattice HUD, $6 \times 6$ Wireframe Spring Grid Bessel/Fourier Displacement Simulation, Duffing Cubic Non-Linear Restoring Force Phase Portrait, Drive Force [0.05..1.00] vs Spring Non-Linearity [0..1] XY Drag Puck with $\ge 44 \times 44\text{pt}$ Hit Target, 6 Physical Profiles [Accutronics Spring Tank, Studio Plate, Dual Helical Spring, Resonant Helical Coil, Nonlinear Shaker Table, Multi-Axis Lattice], Boundary Tension, Linear Stiffness, and Fundamental Hz) performance HUDs into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/granular_cloud_view.rs` & `spring_lattice_view.rs`):
+  - In `GranularCloudView`: added `render_ascii_snapshot(width, height) -> Vec<String>` and `render_ascii_snapshot_str() -> String` for headless testing.
+  - In `SpringLatticeView`: added `render_ascii_snapshot(width, height) -> Vec<String>` and `render_ascii_snapshot_str() -> String` for headless testing.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_granular_cloud_modal: bool`, `granular_cloud_view: GranularCloudView`, `show_spring_lattice_modal: bool`, and `spring_lattice_view: SpringLatticeView`.
+  - Added dedicated modal windows `show_granular_cloud_modal_window` and `show_spring_lattice_modal_window` with responsive styling, WCAG AAA contrast, and $\ge 44 \times 44\text{pt}$ touch bounds.
+  - Added public lifecycle methods: `open_granular_cloud_hud()`, `close_granular_cloud_hud()`, `is_granular_cloud_hud_open()`, `open_spring_lattice_hud()`, `close_spring_lattice_hud()`, `is_spring_lattice_hud_open()`.
+  - Real-time parameter sync bridges (`sync_granular_cloud_hud_state` and `sync_spring_lattice_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_granular_cloud_hud: bool` and `requested_open_spring_lattice_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[☁ Open Granular Cloud Synthesis HUD]` and `[🌀 Open Spring-Mass Lattice Deformation HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header `[☁ HUD]` / `[🌀 HUD]` and expanded toolbar buttons in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Granular Cloud: Spray ellipse, grain particles, emitter puck, and live `ParamBus` slot dispatch.
+    * Spring Lattice: 6x6 spring grid wireframe, Duffing non-linear puck, driver/pickup nodes, and live `ParamBus` slot dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_granular_cloud_hud` under `"Synthesis & Granular"` and `open_spring_lattice_hud` under `"Physical Modeling"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_granular_cloud_hud()` and `open_spring_lattice_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier127_turn63_tests.rs`:
+    * Pure tests: view initialization, puck coordinates, screen conversions, hit testing, grain stepping, window shapes evaluation, spring profiles, Duffing physics, node displacement, slot arithmetic channel isolation, deterministic ASCII snapshots.
+    * GUI tests: modal lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch, rack & inspector trigger propagation, command palette action registration.
+  - Registered `tier127_turn63_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Unit tests: 329 passed in 0.22s (`cargo test -p summoner_gui --lib`).
+  - Feature tests: 13 tests passed in `tier127_turn63_tests` (`cargo test -p summoner_gui --features gui -- tier127`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
+
+
 
 
 

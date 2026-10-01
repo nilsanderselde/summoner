@@ -219,6 +219,19 @@ impl GranularCloudView {
         }
         lines.join("\n")
     }
+
+    /// Return snapshot lines as Vec<String> for headless testing.
+    pub fn render_ascii_snapshot(&self, width: usize, height: usize) -> Vec<String> {
+        self.render_ascii(width, height)
+            .lines()
+            .map(|s| s.to_string())
+            .collect()
+    }
+
+    /// Return snapshot as String.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        self.render_ascii(80, 24)
+    }
 }
 
 #[cfg(feature = "gui")]

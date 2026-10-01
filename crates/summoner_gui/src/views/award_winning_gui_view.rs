@@ -692,6 +692,10 @@ pub struct AwardWinningGuiView {
     pub rotary_speaker_view: crate::views::rotary_speaker_view::RotarySpeakerView,
     pub show_free_reed_modal: bool,
     pub free_reed_view: crate::views::free_reed_view::FreeReedView,
+    pub show_granular_cloud_modal: bool,
+    pub granular_cloud_view: crate::views::granular_cloud_view::GranularCloudView,
+    pub show_spring_lattice_modal: bool,
+    pub spring_lattice_view: crate::views::spring_lattice_view::SpringLatticeView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1000,6 +1004,10 @@ impl AwardWinningGuiView {
             rotary_speaker_view: crate::views::rotary_speaker_view::RotarySpeakerView::new(),
             show_free_reed_modal: false,
             free_reed_view: crate::views::free_reed_view::FreeReedView::new(),
+            show_granular_cloud_modal: false,
+            granular_cloud_view: crate::views::granular_cloud_view::GranularCloudView::new(),
+            show_spring_lattice_modal: false,
+            spring_lattice_view: crate::views::spring_lattice_view::SpringLatticeView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -1769,6 +1777,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_free_reed_hud = false;
             self.open_free_reed_hud();
         }
+        if self.inspector_state.requested_open_granular_cloud_hud || self.device_rack_state.requested_open_granular_cloud_hud {
+            self.inspector_state.requested_open_granular_cloud_hud = false;
+            self.device_rack_state.requested_open_granular_cloud_hud = false;
+            self.open_granular_cloud_hud();
+        }
+        if self.inspector_state.requested_open_spring_lattice_hud || self.device_rack_state.requested_open_spring_lattice_hud {
+            self.inspector_state.requested_open_spring_lattice_hud = false;
+            self.device_rack_state.requested_open_spring_lattice_hud = false;
+            self.open_spring_lattice_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -1798,6 +1816,8 @@ impl AwardWinningGuiView {
         self.show_vocal_tract_modal_window(ui);
         self.show_rotary_speaker_modal_window(ui);
         self.show_free_reed_modal_window(ui);
+        self.show_granular_cloud_modal_window(ui);
+        self.show_spring_lattice_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -9924,6 +9944,207 @@ impl AwardWinningGuiView {
 
     pub fn is_free_reed_hud_open(&self) -> bool {
         self.show_free_reed_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_granular_cloud_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_granular_cloud_modal {
+            return;
+        }
+
+        let mut is_open = self.show_granular_cloud_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("☁ Granular Synthesis Cloud Grain Dispersion HUD")
+            .id(egui::Id::new("granular_cloud_hud_modal"))
+            .open(&mut is_open)
+            .default_size([840.0, 580.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Real-Time Grain Dispersion, Emitter Position & Pitch Transposition Matrix")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.granular_cloud_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_granular_cloud_modal = is_open;
+        self.sync_granular_cloud_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_granular_cloud_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let pos = self.granular_cloud_view.emitter_pos_norm;
+        let pitch = self.granular_cloud_view.emitter_pitch_semitones;
+        let spray_w = self.granular_cloud_view.spray_width_norm;
+        let spray_h = self.granular_cloud_view.spray_height_semitones;
+        let rate = self.granular_cloud_view.grain_rate_hz;
+        let size = self.granular_cloud_view.grain_size_ms;
+        let density = self.granular_cloud_view.density as f32;
+
+        self.device_rack_state.node_param_values.insert("emitter_pos".to_string(), pos);
+        self.device_rack_state.node_param_values.insert("emitter_pitch".to_string(), pitch);
+        self.device_rack_state.node_param_values.insert("spray_width".to_string(), spray_w);
+        self.device_rack_state.node_param_values.insert("spray_height".to_string(), spray_h);
+        self.device_rack_state.node_param_values.insert("grain_rate".to_string(), rate);
+        self.device_rack_state.node_param_values.insert("grain_size".to_string(), size);
+        self.device_rack_state.node_param_values.insert("density".to_string(), density);
+
+        self.inspector_state.node_param_values.insert("emitter_pos".to_string(), pos);
+        self.inspector_state.node_param_values.insert("emitter_pitch".to_string(), pitch);
+        self.inspector_state.node_param_values.insert("spray_width".to_string(), spray_w);
+        self.inspector_state.node_param_values.insert("spray_height".to_string(), spray_h);
+        self.inspector_state.node_param_values.insert("grain_rate".to_string(), rate);
+        self.inspector_state.node_param_values.insert("grain_size".to_string(), size);
+        self.inspector_state.node_param_values.insert("density".to_string(), density);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_pos = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_pch = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_sw  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_sh  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_rt  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_sz  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+            let pid_dn  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 6);
+
+            if bus.get(pid_pos).is_some() { bus.set(pid_pos, pos); }
+            if bus.get(pid_pch).is_some() { bus.set(pid_pch, pitch); }
+            if bus.get(pid_sw).is_some()  { bus.set(pid_sw, spray_w); }
+            if bus.get(pid_sh).is_some()  { bus.set(pid_sh, spray_h); }
+            if bus.get(pid_rt).is_some()  { bus.set(pid_rt, rate); }
+            if bus.get(pid_sz).is_some()  { bus.set(pid_sz, size); }
+            if bus.get(pid_dn).is_some()  { bus.set(pid_dn, density); }
+        }
+    }
+
+    pub fn open_granular_cloud_hud(&mut self) {
+        self.show_granular_cloud_modal = true;
+    }
+
+    pub fn close_granular_cloud_hud(&mut self) {
+        self.show_granular_cloud_modal = false;
+    }
+
+    pub fn is_granular_cloud_hud_open(&self) -> bool {
+        self.show_granular_cloud_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_spring_lattice_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_spring_lattice_modal {
+            return;
+        }
+
+        let mut is_open = self.show_spring_lattice_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🌀 Spring-Mass Lattice Deformation & Dispersion HUD")
+            .id(egui::Id::new("spring_lattice_hud_modal"))
+            .open(&mut is_open)
+            .default_size([820.0, 560.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Interactive 6x6 Wireframe Spring-Mass Grid, Duffing Non-Linear Restoring Force & Dispersion")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.spring_lattice_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_spring_lattice_modal = is_open;
+        self.sync_spring_lattice_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_spring_lattice_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let drive = self.spring_lattice_view.drive_force;
+        let nonlin = self.spring_lattice_view.spring_nonlinearity;
+        let tension = self.spring_lattice_view.boundary_tension;
+        let stiffness = self.spring_lattice_view.linear_stiffness;
+        let fund = self.spring_lattice_view.fundamental_hz;
+        let peak = self.spring_lattice_view.peak_displacement_mm;
+
+        self.device_rack_state.node_param_values.insert("drive_force".to_string(), drive);
+        self.device_rack_state.node_param_values.insert("spring_nonlinearity".to_string(), nonlin);
+        self.device_rack_state.node_param_values.insert("boundary_tension".to_string(), tension);
+        self.device_rack_state.node_param_values.insert("linear_stiffness".to_string(), stiffness);
+        self.device_rack_state.node_param_values.insert("fundamental_hz".to_string(), fund);
+        self.device_rack_state.node_param_values.insert("peak_displacement_mm".to_string(), peak);
+
+        self.inspector_state.node_param_values.insert("drive_force".to_string(), drive);
+        self.inspector_state.node_param_values.insert("spring_nonlinearity".to_string(), nonlin);
+        self.inspector_state.node_param_values.insert("boundary_tension".to_string(), tension);
+        self.inspector_state.node_param_values.insert("linear_stiffness".to_string(), stiffness);
+        self.inspector_state.node_param_values.insert("fundamental_hz".to_string(), fund);
+        self.inspector_state.node_param_values.insert("peak_displacement_mm".to_string(), peak);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_dr  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_nl  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_tn  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_st  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_fn  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_pk  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+
+            if bus.get(pid_dr).is_some() { bus.set(pid_dr, drive); }
+            if bus.get(pid_nl).is_some() { bus.set(pid_nl, nonlin); }
+            if bus.get(pid_tn).is_some() { bus.set(pid_tn, tension); }
+            if bus.get(pid_st).is_some() { bus.set(pid_st, stiffness); }
+            if bus.get(pid_fn).is_some() { bus.set(pid_fn, fund); }
+            if bus.get(pid_pk).is_some() { bus.set(pid_pk, peak); }
+        }
+    }
+
+    pub fn open_spring_lattice_hud(&mut self) {
+        self.show_spring_lattice_modal = true;
+    }
+
+    pub fn close_spring_lattice_hud(&mut self) {
+        self.show_spring_lattice_modal = false;
+    }
+
+    pub fn is_spring_lattice_hud_open(&self) -> bool {
+        self.show_spring_lattice_modal
     }
 
     #[cfg(feature = "gui")]

@@ -347,6 +347,16 @@ impl SpringLatticeView {
         lines
     }
 
+    /// Return snapshot lines as Vec<String> for headless testing.
+    pub fn render_ascii_snapshot(&self, width: usize, height: usize) -> Vec<String> {
+        self.render_ascii(width, height)
+    }
+
+    /// Return snapshot as String.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        self.render_ascii(80, 24).join("\n")
+    }
+
     /// Renders snapshot PNG to `path`.
     pub fn render_snapshot_png(&self, path: &str, width: u32, height: u32) -> Result<(), String> {
         let mut pixels = vec![0u8; (width * height * 4) as usize];
