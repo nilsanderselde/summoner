@@ -341,6 +341,12 @@ impl CommandPalette {
                 action_id: "open_hoa5_radar_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open 2D Neural Timbre Morphing Orb HUD".into(),
+                category: "Neural AI & Resynthesis".into(),
+                action_id: "open_neural_morph_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

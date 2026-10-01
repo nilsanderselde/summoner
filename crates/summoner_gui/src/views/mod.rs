@@ -100,6 +100,7 @@ pub mod multitap_delay_view;
 pub mod neural_choir_formant_view;
 pub mod neural_dereverb_view;
 pub mod neural_inpaint_view;
+pub mod neural_morph_orb_view;
 pub mod neural_phoneme_view;
 pub mod neural_radiance_view;
 pub mod neural_speech_to_singing_view;

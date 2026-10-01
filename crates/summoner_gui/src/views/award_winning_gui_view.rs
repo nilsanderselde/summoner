@@ -652,6 +652,8 @@ pub struct AwardWinningGuiView {
     pub trompette_bridge_view: crate::views::trompette_bridge_view::TrompetteBridgeView,
     pub show_hoa5_radar_modal: bool,
     pub hoa5_radar_view: crate::views::hoa5_radar_view::Hoa5RadarView,
+    pub show_neural_morph_modal: bool,
+    pub neural_morph_orb_view: crate::views::neural_morph_orb_view::NeuralMorphOrbView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -920,6 +922,8 @@ impl AwardWinningGuiView {
             trompette_bridge_view: crate::views::trompette_bridge_view::TrompetteBridgeView::new(),
             show_hoa5_radar_modal: false,
             hoa5_radar_view: crate::views::hoa5_radar_view::Hoa5RadarView::new(),
+            show_neural_morph_modal: false,
+            neural_morph_orb_view: crate::views::neural_morph_orb_view::NeuralMorphOrbView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -1589,8 +1593,13 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_hoa5_radar_hud = false;
             self.open_hoa5_radar_hud();
         }
+        if self.inspector_state.requested_open_neural_morph_hud || self.device_rack_state.requested_open_neural_morph_hud {
+            self.inspector_state.requested_open_neural_morph_hud = false;
+            self.device_rack_state.requested_open_neural_morph_hud = false;
+            self.open_neural_morph_hud();
+        }
 
-        // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling & Ambisonic HUDs
+        // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs
         self.show_modular_automation_editor_window(ui);
         self.show_modular_dsp_catalog_window(ui);
         self.show_crystal_resonator_modal_window(ui);
@@ -1598,6 +1607,7 @@ impl AwardWinningGuiView {
         self.show_hurdy_gurdy_modal_window(ui);
         self.show_trompette_bridge_modal_window(ui);
         self.show_hoa5_radar_modal_window(ui);
+        self.show_neural_morph_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -7676,6 +7686,101 @@ impl AwardWinningGuiView {
 
     pub fn is_hoa5_radar_hud_open(&self) -> bool {
         self.show_hoa5_radar_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_neural_morph_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_neural_morph_modal {
+            return;
+        }
+
+        let mut is_open = self.show_neural_morph_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🧬 2D Latent Timbre Morphing Orb & Spectral Trajectory HUD")
+            .id(egui::Id::new("neural_morph_hud_modal"))
+            .open(&mut is_open)
+            .default_size([720.0, 520.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    if ui.button("✕ Close HUD").clicked() {
+                        close_modal = true;
+                    }
+                    ui.label(
+                        RichText::new("Milestone 36 — Real-Time Latent Space Navigation & RBF Timbre Resynthesis")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(100, 116, 139)),
+                    );
+                });
+                ui.separator();
+                self.neural_morph_orb_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_neural_morph_modal = is_open;
+        self.sync_neural_morph_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_neural_morph_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        // Dispatches to local parameter maps
+        self.device_rack_state.node_param_values.insert("morph_x".to_string(), self.neural_morph_orb_view.morph_x);
+        self.device_rack_state.node_param_values.insert("morph_y".to_string(), self.neural_morph_orb_view.morph_y);
+        self.device_rack_state.node_param_values.insert("spectral_tilt".to_string(), self.neural_morph_orb_view.spectral_tilt_db);
+        self.device_rack_state.node_param_values.insert("spectral_centroid".to_string(), self.neural_morph_orb_view.spectral_centroid_hz);
+        self.device_rack_state.node_param_values.insert("harmonic_warmth".to_string(), self.neural_morph_orb_view.harmonic_warmth);
+        self.device_rack_state.node_param_values.insert("flux_entropy".to_string(), self.neural_morph_orb_view.flux_entropy);
+
+        self.inspector_state.node_param_values.insert("morph_x".to_string(), self.neural_morph_orb_view.morph_x);
+        self.inspector_state.node_param_values.insert("morph_y".to_string(), self.neural_morph_orb_view.morph_y);
+        self.inspector_state.node_param_values.insert("spectral_tilt".to_string(), self.neural_morph_orb_view.spectral_tilt_db);
+        self.inspector_state.node_param_values.insert("spectral_centroid".to_string(), self.neural_morph_orb_view.spectral_centroid_hz);
+        self.inspector_state.node_param_values.insert("harmonic_warmth".to_string(), self.neural_morph_orb_view.harmonic_warmth);
+        self.inspector_state.node_param_values.insert("flux_entropy".to_string(), self.neural_morph_orb_view.flux_entropy);
+
+        // Atomic live dispatch to ParamBus without audio thread allocations
+        if let Some(bus) = self.live_param_bus.as_deref() {
+            let pid_base = if self.inspecting_master {
+                9000 + cur_slot as u32 * 20
+            } else {
+                cur_track_id as u32 * 1000 + cur_slot as u32 * 20
+            };
+            let pid_x = summoner_core::param_bus::ParamId(pid_base);
+            if bus.get(pid_x).is_some() { bus.set(pid_x, self.neural_morph_orb_view.morph_x); }
+            let pid_y = summoner_core::param_bus::ParamId(pid_base + 1);
+            if bus.get(pid_y).is_some() { bus.set(pid_y, self.neural_morph_orb_view.morph_y); }
+            let pid_tilt = summoner_core::param_bus::ParamId(pid_base + 2);
+            if bus.get(pid_tilt).is_some() { bus.set(pid_tilt, self.neural_morph_orb_view.spectral_tilt_db); }
+            let pid_cent = summoner_core::param_bus::ParamId(pid_base + 3);
+            if bus.get(pid_cent).is_some() { bus.set(pid_cent, self.neural_morph_orb_view.spectral_centroid_hz); }
+            let pid_warmth = summoner_core::param_bus::ParamId(pid_base + 4);
+            if bus.get(pid_warmth).is_some() { bus.set(pid_warmth, self.neural_morph_orb_view.harmonic_warmth); }
+            let pid_flux = summoner_core::param_bus::ParamId(pid_base + 5);
+            if bus.get(pid_flux).is_some() { bus.set(pid_flux, self.neural_morph_orb_view.flux_entropy); }
+        }
+    }
+
+    pub fn open_neural_morph_hud(&mut self) {
+        self.show_neural_morph_modal = true;
+    }
+
+    pub fn close_neural_morph_hud(&mut self) {
+        self.show_neural_morph_modal = false;
+    }
+
+    pub fn is_neural_morph_hud_open(&self) -> bool {
+        self.show_neural_morph_modal
     }
 
     #[cfg(feature = "gui")]

@@ -61,6 +61,8 @@ pub struct ModernDeviceRackState {
     pub requested_open_trompette_hud: bool,
     #[serde(default)]
     pub requested_open_hoa5_radar_hud: bool,
+    #[serde(default)]
+    pub requested_open_neural_morph_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -80,6 +82,7 @@ impl Default for ModernDeviceRackState {
             requested_open_hurdy_gurdy_hud: false,
             requested_open_trompette_hud: false,
             requested_open_hoa5_radar_hud: false,
+            requested_open_neural_morph_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -471,6 +474,7 @@ pub fn show_modern_device_rack_with_context(
                     let is_hurdy = cur_selection == "FrenchHurdyGurdy" || cur_selection.contains("HurdyGurdy") || cur_selection.contains("Vielle");
                     let is_trompette = cur_selection == "TrompetteChienBridge" || cur_selection == "TrompetteBridge" || cur_selection.contains("Trompette") || cur_selection.contains("Chien");
                     let is_hoa = cur_selection == "AmbisonicRadarSpatializer" || cur_selection == "HoaSpatializer" || cur_selection == "Hoa5BinauralSpatializer" || cur_selection == "Hoa5RadarView" || cur_selection.contains("Ambisonic") || cur_selection.contains("Hoa");
+                    let is_neural = cur_selection.contains("Neural") || cur_selection.contains("Timbre") || cur_selection.contains("Latent") || cur_selection.contains("Resynthesizer") || cur_selection == "NeuralMorphOrbView" || cur_selection == "NeuralTimbreMorph" || cur_selection == "NeuralWavetable";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -487,9 +491,13 @@ pub fn show_modern_device_rack_with_context(
                         if ui.button(RichText::new("🐕 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(239, 68, 68))).on_hover_text("Open Trompette Chien Buzzing Bridge HUD").clicked() {
                             state.requested_open_trompette_hud = true;
                         }
-                    } else if is_hoa
-                        && ui.button(RichText::new("🌐 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open 5th-Order Ambisonics (HOA5) 3D Radar HUD").clicked() {
-                        state.requested_open_hoa5_radar_hud = true;
+                    } else if is_hoa {
+                        if ui.button(RichText::new("🌐 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open 5th-Order Ambisonics (HOA5) 3D Radar HUD").clicked() {
+                            state.requested_open_hoa5_radar_hud = true;
+                        }
+                    } else if is_neural
+                        && ui.button(RichText::new("🧬 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(244, 63, 94))).on_hover_text("Open 2D Neural Timbre Morphing Orb HUD").clicked() {
+                        state.requested_open_neural_morph_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -1261,6 +1269,7 @@ fn show_pro_parameter_drawer(
                     let is_hurdy = dev_kind == "FrenchHurdyGurdy" || dev_kind.contains("HurdyGurdy") || dev_kind.contains("Vielle");
                     let is_trompette = dev_kind == "TrompetteChienBridge" || dev_kind == "TrompetteBridge" || dev_kind.contains("Trompette") || dev_kind.contains("Chien");
                     let is_hoa = dev_kind == "AmbisonicRadarSpatializer" || dev_kind == "HoaSpatializer" || dev_kind == "Hoa5BinauralSpatializer" || dev_kind == "Hoa5RadarView" || dev_kind.contains("Ambisonic") || dev_kind.contains("Hoa");
+                    let is_neural = dev_kind.contains("Neural") || dev_kind.contains("Timbre") || dev_kind.contains("Latent") || dev_kind.contains("Resynthesizer") || dev_kind == "NeuralMorphOrbView" || dev_kind == "NeuralTimbreMorph" || dev_kind == "NeuralWavetable";
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -1603,6 +1612,80 @@ fn show_pro_parameter_drawer(
 
                         if h_resp.hovered() {
                             let _ = h_resp.on_hover_text("5th-Order Ambisonics (HOA5) 3D Radar Disk\n[Drag horizontally: Azimuth [-180°..+180°] | Drag vertically: Elevation [-90°..+90°]]");
+                        }
+                    } else if is_neural {
+                        // 2D Neural Timbre Morphing Orb Mini Visualizer
+                        let (n_resp, n_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let n_rect = n_resp.rect;
+                        n_painter.rect_filled(n_rect, 2.0, Color32::from_rgb(8, 12, 22));
+
+                        let mut morph_x = state.node_param_values.get("morph_x").or_else(|| state.node_param_values.get("timbre_x")).copied().unwrap_or(-0.35);
+                        let mut morph_y = state.node_param_values.get("morph_y").or_else(|| state.node_param_values.get("timbre_y")).copied().unwrap_or(0.70);
+
+                        if n_resp.dragged() {
+                            if let Some(pos) = n_resp.interact_pointer_pos() {
+                                let nx = ((pos.x - n_rect.left()) / n_rect.width()).clamp(0.0, 1.0);
+                                let ny = (1.0 - ((pos.y - n_rect.top()) / n_rect.height())).clamp(0.0, 1.0);
+                                morph_x = -1.0 + nx * 2.0;
+                                morph_y = -1.0 + ny * 2.0;
+                                state.node_param_values.insert("morph_x".to_string(), morph_x);
+                                state.node_param_values.insert("morph_y".to_string(), morph_y);
+                                state.node_param_values.insert("timbre_x".to_string(), morph_x);
+                                state.node_param_values.insert("timbre_y".to_string(), morph_y);
+                                if let Some(bus) = param_bus {
+                                    let pid_x = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_x).is_some() { bus.set(pid_x, morph_x); }
+                                    let pid_y = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_y).is_some() { bus.set(pid_y, morph_y); }
+                                }
+                            }
+                        }
+
+                        // Background Crosshairs
+                        let center = n_rect.center();
+                        n_painter.line_segment([egui::pos2(n_rect.left() + 10.0, center.y), egui::pos2(n_rect.right() - 10.0, center.y)], Stroke::new(0.5_f32, Color32::from_rgb(30, 48, 75)));
+                        n_painter.line_segment([egui::pos2(center.x, n_rect.top() + 6.0), egui::pos2(center.x, n_rect.bottom() - 6.0)], Stroke::new(0.5_f32, Color32::from_rgb(30, 48, 75)));
+
+                        // Corner Anchors
+                        let anchors = [
+                            (n_rect.left() + 18.0, n_rect.top() + 14.0, Color32::from_rgb(245, 158, 11)), // Acoustic (Amber)
+                            (n_rect.right() - 18.0, n_rect.top() + 14.0, Color32::from_rgb(34, 211, 238)), // Metallic (Cyan)
+                            (n_rect.right() - 18.0, n_rect.bottom() - 14.0, Color32::from_rgb(244, 63, 94)), // Cyber (Rose)
+                            (n_rect.left() + 18.0, n_rect.bottom() - 14.0, Color32::from_rgb(168, 85, 247)), // Sub (Purple)
+                        ];
+                        for (ax, ay, col) in anchors {
+                            n_painter.circle_filled(egui::pos2(ax, ay), 3.0, col);
+                        }
+
+                        // Puck Position
+                        let half_w = n_rect.width() * 0.42;
+                        let half_h = n_rect.height() * 0.38;
+                        let puck_pos = egui::pos2(center.x + morph_x * half_w, center.y - morph_y * half_h);
+
+                        // Lines from center to puck
+                        n_painter.line_segment([center, puck_pos], Stroke::new(1.0_f32, Color32::from_rgb(244, 63, 94).gamma_multiply(0.5)));
+                        n_painter.circle_stroke(puck_pos, 6.0, Stroke::new(1.0_f32, Color32::from_rgb(244, 63, 94).gamma_multiply(0.6)));
+                        n_painter.circle_filled(puck_pos, 3.5, Color32::from_rgb(244, 63, 94));
+                        n_painter.circle_filled(puck_pos, 1.5, Color32::WHITE);
+
+                        // Readout
+                        n_painter.text(
+                            egui::pos2(n_rect.left() + 4.0, n_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("X: {:+.2}", morph_x),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(244, 63, 94),
+                        );
+                        n_painter.text(
+                            egui::pos2(n_rect.right() - 4.0, n_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("Y: {:+.2}", morph_y),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(168, 85, 247),
+                        );
+
+                        if n_resp.hovered() {
+                            let _ = n_resp.on_hover_text("2D Neural Timbre Morphing Orb\n[Drag horizontally: Latent X [-1.0..+1.0] | Drag vertically: Latent Y [-1.0..+1.0]]");
                         }
                     } else {
                         // Filter Curve Mini View (slot-addressed)

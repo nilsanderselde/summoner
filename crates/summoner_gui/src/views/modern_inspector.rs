@@ -46,6 +46,8 @@ pub struct ModernInspectorState {
     pub requested_open_trompette_hud: bool,
     #[serde(default)]
     pub requested_open_hoa5_radar_hud: bool,
+    #[serde(default)]
+    pub requested_open_neural_morph_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -75,6 +77,7 @@ impl Default for ModernInspectorState {
             requested_open_hurdy_gurdy_hud: false,
             requested_open_trompette_hud: false,
             requested_open_hoa5_radar_hud: false,
+            requested_open_neural_morph_hud: false,
         }
     }
 }
@@ -599,6 +602,16 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open interactive 3D spherical elevation/azimuth polar projection radar canvas & wavefront ripples HUD").clicked() {
                     state.requested_open_hoa5_radar_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Neural") || active_kind.contains("Timbre") || active_kind.contains("Latent") || active_kind.contains("Resynthesizer") || active_kind == "NeuralMorphOrbView" || active_kind == "NeuralTimbreMorph" || active_kind == "NeuralWavetable" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🧬 Open 2D Neural Timbre Morph HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(244, 63, 94)))
+                        .fill(Color32::from_rgb(38, 16, 28))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(244, 63, 94)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive 2D latent space timbre morphing orb & spectral trajectory HUD").clicked() {
+                    state.requested_open_neural_morph_hud = true;
                 }
                 ui.add_space(4.0);
             }
