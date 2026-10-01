@@ -449,6 +449,18 @@ impl CommandPalette {
                 action_id: "open_vocal_tract_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Vintage Rotary Speaker Cabinet & Doppler HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_rotary_speaker_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Free-Reed Aeroelastic Phase Portrait HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_free_reed_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

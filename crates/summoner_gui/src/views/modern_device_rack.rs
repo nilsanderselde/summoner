@@ -97,6 +97,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_waveguide_brass_hud: bool,
     #[serde(default)]
     pub requested_open_vocal_tract_hud: bool,
+    #[serde(default)]
+    pub requested_open_rotary_speaker_hud: bool,
+    #[serde(default)]
+    pub requested_open_free_reed_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -134,6 +138,8 @@ impl Default for ModernDeviceRackState {
             requested_open_tonewheel_organ_hud: false,
             requested_open_waveguide_brass_hud: false,
             requested_open_vocal_tract_hud: false,
+            requested_open_rotary_speaker_hud: false,
+            requested_open_free_reed_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -338,6 +344,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_pipe_organ = !is_tonewheel_organ && (cur_selection.contains("PipeOrgan") || cur_selection.contains("Organ") || cur_selection.contains("Windchest") || cur_selection == "PipeOrganModel");
                     let is_waveguide_brass = cur_selection.contains("WaveguideBrass") || cur_selection.contains("BrassInstrument") || cur_selection.contains("AcousticBrass") || cur_selection == "WaveguideBrassModel" || cur_selection == "WaveguideBrassNode" || cur_selection == "BrassInstrumentProfile";
                     let is_vocal_tract = cur_selection.contains("VocalTract") || cur_selection.contains("VocalTractModel") || cur_selection.contains("VowelSpace") || cur_selection.contains("VocalFormant") || cur_selection == "VocalTractNode" || cur_selection == "VocalTractProfile";
+                    let is_rotary_speaker = cur_selection.contains("Rotary") || cur_selection.contains("Leslie") || cur_selection.contains("DopplerSpeaker") || cur_selection == "RotarySpeakerNode" || cur_selection == "DualRotorLeslieDopplerSpeaker" || cur_selection == "RotaryCabinetModel";
+                    let is_free_reed = cur_selection.contains("FreeReed") || cur_selection.contains("Harmonium") || cur_selection.contains("Accordion") || cur_selection.contains("Bandoneon") || cur_selection.contains("Bayan") || cur_selection.contains("Cassotto") || cur_selection == "FreeReedNode" || cur_selection == "FreeReedVoice" || cur_selection == "FreeReedOscillator";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -418,10 +426,18 @@ pub fn show_modern_device_rack_with_context(
                         if ui.button(RichText::new("🎺 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 215, 0))).on_hover_text("Open Waveguide Brass Acoustic Lip-Reed HUD").clicked() {
                             state.requested_open_waveguide_brass_hud = true;
                         }
-                    } else if is_vocal_tract
-                        && ui.button(RichText::new("🗣 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(52, 211, 153))).on_hover_text("Open Vocal Tract 44-Cylinder Area Function HUD").clicked()
+                    } else if is_vocal_tract {
+                        if ui.button(RichText::new("🗣 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(52, 211, 153))).on_hover_text("Open Vocal Tract 44-Cylinder Area Function HUD").clicked() {
+                            state.requested_open_vocal_tract_hud = true;
+                        }
+                    } else if is_rotary_speaker {
+                        if ui.button(RichText::new("🌪 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Vintage Rotary Speaker Cabinet & Doppler HUD").clicked() {
+                            state.requested_open_rotary_speaker_hud = true;
+                        }
+                    } else if is_free_reed
+                        && ui.button(RichText::new("🪗 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(16, 185, 129))).on_hover_text("Open Free-Reed Aeroelastic Phase Portrait HUD").clicked()
                     {
-                        state.requested_open_vocal_tract_hud = true;
+                        state.requested_open_free_reed_hud = true;
                     }
                     ui.add_space(4.0);
                     let pwr_col = if state.is_enabled { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(100, 116, 139) };
@@ -624,6 +640,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_pipe_organ = !is_tonewheel_organ && (cur_selection.contains("PipeOrgan") || cur_selection.contains("Organ") || cur_selection.contains("Windchest") || cur_selection == "PipeOrganModel");
                     let is_waveguide_brass = cur_selection.contains("WaveguideBrass") || cur_selection.contains("BrassInstrument") || cur_selection.contains("AcousticBrass") || cur_selection == "WaveguideBrassModel" || cur_selection == "WaveguideBrassNode" || cur_selection == "BrassInstrumentProfile";
                     let is_vocal_tract = cur_selection.contains("VocalTract") || cur_selection.contains("VocalTractModel") || cur_selection.contains("VowelSpace") || cur_selection.contains("VocalFormant") || cur_selection == "VocalTractNode" || cur_selection == "VocalTractProfile";
+                    let is_rotary_speaker = cur_selection.contains("Rotary") || cur_selection.contains("Leslie") || cur_selection.contains("DopplerSpeaker") || cur_selection == "RotarySpeakerNode" || cur_selection == "DualRotorLeslieDopplerSpeaker" || cur_selection == "RotaryCabinetModel";
+                    let is_free_reed = cur_selection.contains("FreeReed") || cur_selection.contains("Harmonium") || cur_selection.contains("Accordion") || cur_selection.contains("Bandoneon") || cur_selection.contains("Bayan") || cur_selection.contains("Cassotto") || cur_selection == "FreeReedNode" || cur_selection == "FreeReedVoice" || cur_selection == "FreeReedOscillator";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -712,10 +730,18 @@ pub fn show_modern_device_rack_with_context(
                         if ui.button(RichText::new("🎺 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 215, 0))).on_hover_text("Open Waveguide Brass Acoustic Lip-Reed HUD").clicked() {
                             state.requested_open_waveguide_brass_hud = true;
                         }
-                    } else if is_vocal_tract
-                        && ui.button(RichText::new("🗣 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(52, 211, 153))).on_hover_text("Open Vocal Tract 44-Cylinder Area Function HUD").clicked()
+                    } else if is_vocal_tract {
+                        if ui.button(RichText::new("🗣 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(52, 211, 153))).on_hover_text("Open Vocal Tract 44-Cylinder Area Function HUD").clicked() {
+                            state.requested_open_vocal_tract_hud = true;
+                        }
+                    } else if is_rotary_speaker {
+                        if ui.button(RichText::new("🌪 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Vintage Rotary Speaker Cabinet & Doppler HUD").clicked() {
+                            state.requested_open_rotary_speaker_hud = true;
+                        }
+                    } else if is_free_reed
+                        && ui.button(RichText::new("🪗 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(16, 185, 129))).on_hover_text("Open Free-Reed Aeroelastic Phase Portrait HUD").clicked()
                     {
-                        state.requested_open_vocal_tract_hud = true;
+                        state.requested_open_free_reed_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -1504,6 +1530,8 @@ fn show_pro_parameter_drawer(
                     let is_pipe_organ = !is_tonewheel_organ && (dev_kind.contains("PipeOrgan") || dev_kind.contains("Organ") || dev_kind.contains("Windchest") || dev_kind == "PipeOrganModel");
                     let is_waveguide_brass = dev_kind.contains("WaveguideBrass") || dev_kind.contains("BrassInstrument") || dev_kind.contains("AcousticBrass") || dev_kind == "WaveguideBrassModel" || dev_kind == "WaveguideBrassNode" || dev_kind == "BrassInstrumentProfile";
                     let is_vocal_tract = dev_kind.contains("VocalTract") || dev_kind.contains("VocalTractModel") || dev_kind.contains("VowelSpace") || dev_kind.contains("VocalFormant") || dev_kind == "VocalTractNode" || dev_kind == "VocalTractProfile";
+                    let is_rotary_speaker = dev_kind.contains("Rotary") || dev_kind.contains("Leslie") || dev_kind.contains("DopplerSpeaker") || dev_kind == "RotarySpeakerNode" || dev_kind == "DualRotorLeslieDopplerSpeaker" || dev_kind == "RotaryCabinetModel";
+                    let is_free_reed = dev_kind.contains("FreeReed") || dev_kind.contains("Harmonium") || dev_kind.contains("Accordion") || dev_kind.contains("Bandoneon") || dev_kind.contains("Bayan") || dev_kind.contains("Cassotto") || dev_kind == "FreeReedNode" || dev_kind == "FreeReedVoice" || dev_kind == "FreeReedOscillator";
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -3194,6 +3222,163 @@ fn show_pro_parameter_drawer(
 
                         if vocal_resp.hovered() {
                             let _ = vocal_resp.on_hover_text("Vocal Tract 44-Cylinder Area Function HUD\n[Drag horizontally: Tongue position [0..1] | Drag vertically: Tongue constriction height [0..1]]");
+                        }
+                    } else if is_rotary_speaker {
+                        // Rotary Speaker Dual-Rotor Leslie Cabinet & Doppler Mini Visualizer
+                        let (rot_resp, rot_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let r_rect = rot_resp.rect;
+                        rot_painter.rect_filled(r_rect, 2.0, Color32::from_rgb(10, 14, 22));
+
+                        let mut speed_mode = state.node_param_values.get("rotary_speed").copied().unwrap_or(2.0); // 0=Stop, 1=Chorale, 2=Tremolo, 3=Brake
+                        let mut horn_rpm = state.node_param_values.get("horn_rpm").copied().unwrap_or(395.0);
+
+                        if rot_resp.clicked() {
+                            speed_mode = (speed_mode + 1.0) % 4.0;
+                            horn_rpm = match speed_mode as i32 {
+                                1 => 40.0,
+                                2 => 400.0,
+                                _ => 0.0,
+                            };
+                            state.node_param_values.insert("rotary_speed".to_string(), speed_mode);
+                            state.node_param_values.insert("speed_state".to_string(), speed_mode);
+                            state.node_param_values.insert("horn_rpm".to_string(), horn_rpm);
+                            if let Some(bus) = param_bus {
+                                let pid_spd = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                if bus.get(pid_spd).is_some() { bus.set(pid_spd, speed_mode); }
+                                let pid_rpm = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                if bus.get(pid_rpm).is_some() { bus.set(pid_rpm, horn_rpm); }
+                            }
+                        }
+
+                        let cx = r_rect.center().x;
+                        let cy = r_rect.center().y;
+
+                        // Outer cabinet circle
+                        rot_painter.circle_stroke(egui::pos2(cx, cy), 24.0, Stroke::new(1.0_f32, Color32::from_rgb(45, 60, 85)));
+
+                        // Rotating drum rotor (Blue-cyan)
+                        let drum_angle = horn_rpm * 0.02;
+                        let d_p1 = egui::pos2(cx + drum_angle.cos() * 20.0, cy + drum_angle.sin() * 20.0);
+                        let d_p2 = egui::pos2(cx - drum_angle.cos() * 20.0, cy - drum_angle.sin() * 20.0);
+                        rot_painter.line_segment([d_p1, d_p2], Stroke::new(4.0_f32, Color32::from_rgba_unmultiplied(0, 150, 255, 140)));
+
+                        // Rotating treble horn rotor (Orange)
+                        let horn_angle = -horn_rpm * 0.035;
+                        let h_tip = egui::pos2(cx + horn_angle.cos() * 16.0, cy + horn_angle.sin() * 16.0);
+                        let h_tail = egui::pos2(cx - horn_angle.cos() * 16.0, cy - horn_angle.sin() * 16.0);
+                        rot_painter.line_segment([h_tip, h_tail], Stroke::new(2.5_f32, Color32::from_rgb(255, 107, 43)));
+                        rot_painter.circle_filled(h_tip, 3.5, Color32::from_rgb(255, 107, 43));
+                        rot_painter.circle_filled(egui::pos2(cx, cy), 2.5, Color32::from_rgb(255, 255, 255));
+
+                        // Readout
+                        let (speed_lbl, speed_col) = match speed_mode as i32 {
+                            0 => ("STOP", Color32::from_rgb(255, 75, 75)),
+                            1 => ("CHORALE", Color32::from_rgb(0, 229, 255)),
+                            2 => ("TREMOLO", Color32::from_rgb(0, 255, 180)),
+                            _ => ("BRAKE", Color32::from_rgb(255, 215, 0)),
+                        };
+                        rot_painter.text(
+                            egui::pos2(r_rect.left() + 4.0, r_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("Leslie: {}", speed_lbl),
+                            FontId::proportional(8.5),
+                            speed_col,
+                        );
+                        rot_painter.text(
+                            egui::pos2(r_rect.right() - 4.0, r_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("{:.0}RPM", horn_rpm),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(255, 107, 43),
+                        );
+
+                        if rot_resp.hovered() {
+                            let _ = rot_resp.on_hover_text("Vintage Rotary Speaker Dual-Rotor Leslie Cabinet HUD\n[Click to cycle motor speed: STOP -> CHORALE -> TREMOLO -> BRAKE]");
+                        }
+                    } else if is_free_reed {
+                        // Free-Reed Aeroelastic Phase Portrait & Musette Spectrum Mini Visualizer
+                        let (reed_resp, reed_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let r_rect = reed_resp.rect;
+                        reed_painter.rect_filled(r_rect, 2.0, Color32::from_rgb(11, 17, 32));
+
+                        let mut stiffness = state.node_param_values.get("reed_stiffness").copied().unwrap_or(1.25);
+                        let mut aperture = state.node_param_values.get("cassotto_aperture").copied().unwrap_or(0.70);
+
+                        if reed_resp.dragged() {
+                            if let Some(pos) = reed_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - r_rect.left()) / r_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - r_rect.top()) / r_rect.height())).clamp(0.0, 1.0);
+                                aperture = norm_x;
+                                stiffness = 0.5 + norm_y * 1.5;
+                                state.node_param_values.insert("cassotto_aperture".to_string(), aperture);
+                                state.node_param_values.insert("reed_stiffness".to_string(), stiffness);
+                                if let Some(bus) = param_bus {
+                                    let pid_stiff = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_stiff).is_some() { bus.set(pid_stiff, stiffness); }
+                                    let pid_apert = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_apert).is_some() { bus.set(pid_apert, aperture); }
+                                }
+                            }
+                        }
+
+                        // Aeroelastic limit cycle orbit on the left
+                        let orbit_cx = r_rect.left() + 38.0;
+                        let orbit_cy = r_rect.center().y + 4.0;
+                        let rx = 24.0_f32;
+                        let ry = 16.0_f32;
+                        for step in 0..16 {
+                            let th1 = (step as f32 / 16.0) * std::f32::consts::TAU;
+                            let th2 = ((step + 1) as f32 / 16.0) * std::f32::consts::TAU;
+                            let p1 = egui::pos2(orbit_cx + th1.cos() * rx, orbit_cy + th1.sin() * ry);
+                            let p2 = egui::pos2(orbit_cx + th2.cos() * rx, orbit_cy + th2.sin() * ry);
+                            reed_painter.line_segment([p1, p2], Stroke::new(1.0_f32, Color32::from_rgb(56, 189, 248)));
+                        }
+
+                        // 5-rank musette bars on the right
+                        let bar_base_x = r_rect.left() + 82.0;
+                        let bar_w = 9.0;
+                        let bar_gap = 4.0;
+                        let bottom_y = r_rect.bottom() - 8.0;
+                        let energies = [0.85, 0.90, 0.65, 0.40, 0.70];
+                        let bar_cols = [
+                            Color32::from_rgb(59, 130, 246), // 16'
+                            Color32::from_rgb(16, 185, 129), // 8'
+                            Color32::from_rgb(245, 158, 11), // 8'+
+                            Color32::from_rgb(236, 72, 153), // 8'-
+                            Color32::from_rgb(139, 92, 246), // 4'
+                        ];
+                        for (idx, &eng) in energies.iter().enumerate() {
+                            let bx = bar_base_x + idx as f32 * (bar_w + bar_gap);
+                            let bh = eng * 28.0;
+                            let b_rect = egui::Rect::from_min_max(egui::pos2(bx, bottom_y - bh), egui::pos2(bx + bar_w, bottom_y));
+                            reed_painter.rect_filled(b_rect, 1.0, bar_cols[idx]);
+                        }
+
+                        // Interactive drag puck
+                        let norm_stiff = ((stiffness - 0.5) / 1.5).clamp(0.0, 1.0);
+                        let puck_x = r_rect.left() + aperture.clamp(0.0, 1.0) * r_rect.width();
+                        let puck_y = r_rect.bottom() - norm_stiff * r_rect.height();
+                        reed_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(16, 185, 129));
+                        reed_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.0, Stroke::new(1.0_f32, Color32::from_rgb(110, 231, 183)));
+
+                        // Readout
+                        reed_painter.text(
+                            egui::pos2(r_rect.left() + 4.0, r_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("Reed k: {:.2}", stiffness),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(16, 185, 129),
+                        );
+                        reed_painter.text(
+                            egui::pos2(r_rect.right() - 4.0, r_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("Cassotto: {:.2}", aperture),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(56, 189, 248),
+                        );
+
+                        if reed_resp.hovered() {
+                            let _ = reed_resp.on_hover_text("Free-Reed Aeroelastic Phase Portrait & Musette Spectrum HUD\n[Drag horizontally: Cassotto aperture [0..1] | Drag vertically: Reed stiffness [0.5..2.0]]");
                         }
                     } else {
                         // Filter Curve Mini View (slot-addressed)

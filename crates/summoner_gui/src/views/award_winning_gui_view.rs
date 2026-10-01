@@ -688,6 +688,10 @@ pub struct AwardWinningGuiView {
     pub waveguide_brass_view: crate::views::waveguide_brass_view::WaveguideBrassView,
     pub show_vocal_tract_modal: bool,
     pub vocal_tract_view: crate::views::vocal_tract_view::VocalTractView,
+    pub show_rotary_speaker_modal: bool,
+    pub rotary_speaker_view: crate::views::rotary_speaker_view::RotarySpeakerView,
+    pub show_free_reed_modal: bool,
+    pub free_reed_view: crate::views::free_reed_view::FreeReedView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -992,6 +996,10 @@ impl AwardWinningGuiView {
             waveguide_brass_view: crate::views::waveguide_brass_view::WaveguideBrassView::new(),
             show_vocal_tract_modal: false,
             vocal_tract_view: crate::views::vocal_tract_view::VocalTractView::new(),
+            show_rotary_speaker_modal: false,
+            rotary_speaker_view: crate::views::rotary_speaker_view::RotarySpeakerView::new(),
+            show_free_reed_modal: false,
+            free_reed_view: crate::views::free_reed_view::FreeReedView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -1751,6 +1759,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_vocal_tract_hud = false;
             self.open_vocal_tract_hud();
         }
+        if self.inspector_state.requested_open_rotary_speaker_hud || self.device_rack_state.requested_open_rotary_speaker_hud {
+            self.inspector_state.requested_open_rotary_speaker_hud = false;
+            self.device_rack_state.requested_open_rotary_speaker_hud = false;
+            self.open_rotary_speaker_hud();
+        }
+        if self.inspector_state.requested_open_free_reed_hud || self.device_rack_state.requested_open_free_reed_hud {
+            self.inspector_state.requested_open_free_reed_hud = false;
+            self.device_rack_state.requested_open_free_reed_hud = false;
+            self.open_free_reed_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -1778,6 +1796,8 @@ impl AwardWinningGuiView {
         self.show_tonewheel_organ_modal_window(ui);
         self.show_waveguide_brass_modal_window(ui);
         self.show_vocal_tract_modal_window(ui);
+        self.show_rotary_speaker_modal_window(ui);
+        self.show_free_reed_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -9701,6 +9721,209 @@ impl AwardWinningGuiView {
 
     pub fn is_vocal_tract_hud_open(&self) -> bool {
         self.show_vocal_tract_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_rotary_speaker_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_rotary_speaker_modal {
+            return;
+        }
+
+        let mut is_open = self.show_rotary_speaker_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🌪 Vintage Rotary Speaker Cabinet & Doppler Acceleration HUD")
+            .id(egui::Id::new("rotary_speaker_hud_modal"))
+            .open(&mut is_open)
+            .default_size([820.0, 560.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Dual-Rotor Leslie Doppler Horn & Wooden Baffle Physics with Dual-Speed Motor Control & Stereo Mic Spread")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.rotary_speaker_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_rotary_speaker_modal = is_open;
+        self.sync_rotary_speaker_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_rotary_speaker_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let speed_val = match self.rotary_speaker_view.speed_state {
+            crate::views::rotary_speaker_view::RotarySpeedState::Stop => 0.0,
+            crate::views::rotary_speaker_view::RotarySpeedState::Chorale => 1.0,
+            crate::views::rotary_speaker_view::RotarySpeedState::Tremolo => 2.0,
+            crate::views::rotary_speaker_view::RotarySpeedState::Brake => 3.0,
+        };
+        let horn_rpm = self.rotary_speaker_view.horn_rpm;
+        let drum_rpm = self.rotary_speaker_view.drum_rpm;
+        let mic_spread = self.rotary_speaker_view.mic_spread_deg;
+        let mic_dist = self.rotary_speaker_view.mic_distance_m;
+        let drive = self.rotary_speaker_view.drive_saturation_db;
+
+        self.device_rack_state.node_param_values.insert("rotary_speed".to_string(), speed_val);
+        self.device_rack_state.node_param_values.insert("speed_state".to_string(), speed_val);
+        self.device_rack_state.node_param_values.insert("horn_rpm".to_string(), horn_rpm);
+        self.device_rack_state.node_param_values.insert("drum_rpm".to_string(), drum_rpm);
+        self.device_rack_state.node_param_values.insert("mic_spread_deg".to_string(), mic_spread);
+        self.device_rack_state.node_param_values.insert("mic_distance_m".to_string(), mic_dist);
+        self.device_rack_state.node_param_values.insert("drive_saturation_db".to_string(), drive);
+
+        self.inspector_state.node_param_values.insert("rotary_speed".to_string(), speed_val);
+        self.inspector_state.node_param_values.insert("speed_state".to_string(), speed_val);
+        self.inspector_state.node_param_values.insert("horn_rpm".to_string(), horn_rpm);
+        self.inspector_state.node_param_values.insert("drum_rpm".to_string(), drum_rpm);
+        self.inspector_state.node_param_values.insert("mic_spread_deg".to_string(), mic_spread);
+        self.inspector_state.node_param_values.insert("mic_distance_m".to_string(), mic_dist);
+        self.inspector_state.node_param_values.insert("drive_saturation_db".to_string(), drive);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_spd   = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_hrpm  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_drpm  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_sprd  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_dist  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_drive = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+
+            if bus.get(pid_spd).is_some()   { bus.set(pid_spd, speed_val); }
+            if bus.get(pid_hrpm).is_some()  { bus.set(pid_hrpm, horn_rpm); }
+            if bus.get(pid_drpm).is_some()  { bus.set(pid_drpm, drum_rpm); }
+            if bus.get(pid_sprd).is_some()  { bus.set(pid_sprd, mic_spread); }
+            if bus.get(pid_dist).is_some()  { bus.set(pid_dist, mic_dist); }
+            if bus.get(pid_drive).is_some() { bus.set(pid_drive, drive); }
+        }
+    }
+
+    pub fn open_rotary_speaker_hud(&mut self) {
+        self.show_rotary_speaker_modal = true;
+    }
+
+    pub fn close_rotary_speaker_hud(&mut self) {
+        self.show_rotary_speaker_modal = false;
+    }
+
+    pub fn is_rotary_speaker_hud_open(&self) -> bool {
+        self.show_rotary_speaker_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_free_reed_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_free_reed_modal {
+            return;
+        }
+
+        let mut is_open = self.show_free_reed_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🪗 Aeroelastic Free-Reed Phase Portrait & Musette Spectrum HUD")
+            .id(egui::Id::new("free_reed_hud_modal"))
+            .open(&mut is_open)
+            .default_size([820.0, 560.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Non-Linear Aeroelastic Limit Cycle Trajectory, Cassotto Tone Chamber & 5-Rank Musette Detuning")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.free_reed_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_free_reed_modal = is_open;
+        self.sync_free_reed_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_free_reed_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let stiffness = self.free_reed_view.reed_stiffness;
+        let aperture = self.free_reed_view.cassotto_aperture;
+        let detune = self.free_reed_view.musette_detune_cents;
+        let r16 = self.free_reed_view.rank_energies[0];
+        let r8 = self.free_reed_view.rank_energies[1];
+        let r8p = self.free_reed_view.rank_energies[2];
+
+        self.device_rack_state.node_param_values.insert("reed_stiffness".to_string(), stiffness);
+        self.device_rack_state.node_param_values.insert("cassotto_aperture".to_string(), aperture);
+        self.device_rack_state.node_param_values.insert("musette_detune_cents".to_string(), detune);
+        self.device_rack_state.node_param_values.insert("rank_16".to_string(), r16);
+        self.device_rack_state.node_param_values.insert("rank_8".to_string(), r8);
+        self.device_rack_state.node_param_values.insert("rank_8_plus".to_string(), r8p);
+
+        self.inspector_state.node_param_values.insert("reed_stiffness".to_string(), stiffness);
+        self.inspector_state.node_param_values.insert("cassotto_aperture".to_string(), aperture);
+        self.inspector_state.node_param_values.insert("musette_detune_cents".to_string(), detune);
+        self.inspector_state.node_param_values.insert("rank_16".to_string(), r16);
+        self.inspector_state.node_param_values.insert("rank_8".to_string(), r8);
+        self.inspector_state.node_param_values.insert("rank_8_plus".to_string(), r8p);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_stiff  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_apert  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_detune = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_r16    = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_r8     = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_r8p    = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+
+            if bus.get(pid_stiff).is_some()  { bus.set(pid_stiff, stiffness); }
+            if bus.get(pid_apert).is_some()  { bus.set(pid_apert, aperture); }
+            if bus.get(pid_detune).is_some() { bus.set(pid_detune, detune); }
+            if bus.get(pid_r16).is_some()    { bus.set(pid_r16, r16); }
+            if bus.get(pid_r8).is_some()     { bus.set(pid_r8, r8); }
+            if bus.get(pid_r8p).is_some()    { bus.set(pid_r8p, r8p); }
+        }
+    }
+
+    pub fn open_free_reed_hud(&mut self) {
+        self.show_free_reed_modal = true;
+    }
+
+    pub fn close_free_reed_hud(&mut self) {
+        self.show_free_reed_modal = false;
+    }
+
+    pub fn is_free_reed_hud_open(&self) -> bool {
+        self.show_free_reed_modal
     }
 
     #[cfg(feature = "gui")]

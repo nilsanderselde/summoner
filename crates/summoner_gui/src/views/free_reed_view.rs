@@ -166,6 +166,11 @@ impl FreeReedView {
         self.render_ascii(width, height)
     }
 
+    /// Render deterministic ASCII snapshot as a single newline-delimited String.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        self.render_ascii(64, 16).join("\n")
+    }
+
     /// Evaluates 32 points along the aeroelastic non-linear limit cycle trajectory (displacement, velocity).
     pub fn evaluate_phase_portrait(&self) -> [(f32, f32); 32] {
         let mut points = [(0.0f32, 0.0f32); 32];

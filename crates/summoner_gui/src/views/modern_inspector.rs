@@ -82,6 +82,10 @@ pub struct ModernInspectorState {
     pub requested_open_waveguide_brass_hud: bool,
     #[serde(default)]
     pub requested_open_vocal_tract_hud: bool,
+    #[serde(default)]
+    pub requested_open_rotary_speaker_hud: bool,
+    #[serde(default)]
+    pub requested_open_free_reed_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -129,6 +133,8 @@ impl Default for ModernInspectorState {
             requested_open_tonewheel_organ_hud: false,
             requested_open_waveguide_brass_hud: false,
             requested_open_vocal_tract_hud: false,
+            requested_open_rotary_speaker_hud: false,
+            requested_open_free_reed_hud: false,
         }
     }
 }
@@ -833,6 +839,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open interactive Vocal Tract 44-cylinder area function, 9 vowel formant presets & articulatory tongue space HUD").clicked() {
                     state.requested_open_vocal_tract_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Rotary") || active_kind.contains("Leslie") || active_kind.contains("DopplerSpeaker") || active_kind == "RotarySpeakerNode" || active_kind == "DualRotorLeslieDopplerSpeaker" || active_kind == "RotaryCabinetModel" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🌪 Open Vintage Rotary Speaker Cabinet & Doppler HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 229, 255)))
+                        .fill(Color32::from_rgb(12, 34, 48))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 229, 255)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Vintage Rotary Speaker dual horn/drum Doppler acceleration, rotor braking & stereo mic HUD").clicked() {
+                    state.requested_open_rotary_speaker_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("FreeReed") || active_kind.contains("Harmonium") || active_kind.contains("Accordion") || active_kind.contains("Bandoneon") || active_kind.contains("Bayan") || active_kind.contains("Cassotto") || active_kind == "FreeReedNode" || active_kind == "FreeReedVoice" || active_kind == "FreeReedOscillator" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🪗 Open Free-Reed Aeroelastic Phase Portrait HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(16, 185, 129)))
+                        .fill(Color32::from_rgb(12, 38, 28))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(16, 185, 129)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Aeroelastic Free-Reed phase portrait, cassotto aperture vs stiffness & 5-rank musette beating HUD").clicked() {
+                    state.requested_open_free_reed_hud = true;
                 }
                 ui.add_space(4.0);
             }

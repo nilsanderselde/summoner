@@ -1538,6 +1538,39 @@ Product Management has conducted a comprehensive readiness audit:
   - Feature tests: 9 tests passed in `tier125_turn61_tests` (`cargo test -p summoner_gui --features gui -- tier125`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
 
+### Turn #62 (Turn #27 Deliverable — Sprint Review) — Physical Modeling Vintage Rotary Speaker Horn/Drum Doppler Acceleration & Aeroelastic Free-Reed Phase Portrait HUDs Convergence (Milestones 28, 33 & 34)
+- [x] Sprint Review Turn #27 Reconciled with `PROGRESS.md`:
+  - Verified 100% pass across all unit tests (329 tests passed in 0.23s) and zero compiler/clippy warnings under `-D warnings` with `--features gui`.
+  - Integrated `RotarySpeakerView` (Vintage Rotary Speaker Cabinet, Horn / Drum Dual-Rotor Doppler Acceleration, 4-Way Speed Switch [Stop, Chorale, Tremolo, Brake], Acoustic Spindle Geometry, Microphone Stereo Spread 60°..180° & Distance 0.2..2.0m, Preamp Drive Saturation 0..24 dB) and `FreeReedView` (Aeroelastic Free-Reed Phase Portrait, Non-Linear Reed Stiffness Factor 0.5..2.0 vs Cassotto Tone Chamber Aperture 0..1 XY Drag Puck, Musette Detune 0..35 cents, 5-Rank Acoustic Energy Visualizer Bars 16' / 8' / 8'+ / 8'- / 4', and 5 Chamber Sound Presets [Tango Bandoneon, French Musette, Russian Bayan, Vintage Harmonium, English Concertina]) performance HUDs into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/rotary_speaker_view.rs` & `free_reed_view.rs`):
+  - In `RotarySpeakerView`: added `render_ascii_snapshot(width, height) -> Vec<String>`, `render_ascii_snapshot_str() -> String`, and `set_speed(&mut self, speed: RotarySpeedState)`.
+  - In `FreeReedView`: resolved deprecated `DragValue::clamp_range` to `range`, and added `render_ascii_snapshot_str() -> String`.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_rotary_speaker_modal: bool`, `rotary_speaker_view: RotarySpeakerView`, `show_free_reed_modal: bool`, and `free_reed_view: FreeReedView`.
+  - Added dedicated modal windows `show_rotary_speaker_modal_window` and `show_free_reed_modal_window` with responsive styling, WCAG AAA contrast, and $\ge 44 \times 44\text{pt}$ touch bounds.
+  - Added public lifecycle methods: `open_rotary_speaker_hud()`, `close_rotary_speaker_hud()`, `is_rotary_speaker_hud_open()`, `open_free_reed_hud()`, `close_free_reed_hud()`, `is_free_reed_hud_open()`.
+  - Real-time parameter sync bridges (`sync_rotary_speaker_hud_state` and `sync_free_reed_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_rotary_speaker_hud: bool` and `requested_open_free_reed_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🌪 Open Vintage Rotary Speaker Cabinet & Doppler HUD]` and `[🪗 Open Free-Reed Aeroelastic Phase Portrait HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header `[🌪 HUD]` / `[🪗 HUD]` and expanded toolbar buttons in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Rotary Speaker: 2D circular cabinet perimeter, rotating treble horn vector, rotating drum vector, 4-way speed toggle buttons (Stop, Chorale, Tremolo, Brake), live RPM readout, and live `ParamBus` slot dispatch.
+    * Free Reed: 2D aeroelastic limit cycle orbit, reed stiffness vs cassotto aperture XY touch-drag puck, 5 musette energy bars, and live `ParamBus` slot dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_rotary_speaker_hud` and `open_free_reed_hud` under `"Physical Modeling"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_rotary_speaker_hud()` and `open_free_reed_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier126_turn62_tests.rs`:
+    * Pure tests: view initialization, speed states, presets, normalization roundtrips, hit testing, acoustics simulation, Doppler shift calculations, limit cycle phase portraits, slot arithmetic channel isolation, deterministic ASCII snapshots.
+    * GUI tests: modal lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch, rack & inspector trigger propagation, command palette action registration.
+  - Registered `tier126_turn62_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Unit tests: 329 passed in 0.23s (`cargo test -p summoner_gui`).
+  - Feature tests: 9 tests passed in `tier126_turn62_tests` (`cargo test -p summoner_gui --features gui -- tier126`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
+
 
 
 

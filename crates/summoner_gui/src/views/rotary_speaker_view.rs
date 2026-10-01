@@ -171,6 +171,21 @@ impl RotarySpeakerView {
         lines
     }
 
+    /// Render deterministic ASCII representation matching DAW view standards.
+    pub fn render_ascii_snapshot(&self, width: usize, height: usize) -> Vec<String> {
+        self.render_ascii(width, height)
+    }
+
+    /// Render deterministic ASCII snapshot as a single newline-delimited String.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        self.render_ascii(64, 16).join("\n")
+    }
+
+    /// Update motor operational speed mode.
+    pub fn set_speed(&mut self, speed: RotarySpeedState) {
+        self.speed_state = speed;
+    }
+
     #[cfg(feature = "gui")]
     pub fn show(&mut self, ui: &mut egui::Ui) {
         ui.vertical(|ui| {
