@@ -114,6 +114,10 @@ pub struct ModernInspectorState {
     pub requested_open_embouchure_angle_hud: bool,
     #[serde(default)]
     pub requested_open_friction_orbit_hud: bool,
+    #[serde(default)]
+    pub requested_open_rank_voicing_hud: bool,
+    #[serde(default)]
+    pub requested_open_tine_resonator_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -177,6 +181,8 @@ impl Default for ModernInspectorState {
             requested_open_membrane_cavity_hud: false,
             requested_open_embouchure_angle_hud: false,
             requested_open_friction_orbit_hud: false,
+            requested_open_rank_voicing_hud: false,
+            requested_open_tine_resonator_hud: false,
         }
     }
 }
@@ -1041,6 +1047,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open interactive Bowed String stick-slip friction characteristic, Helmholtz phase orbit & Rosin hysteresis HUD").clicked() {
                     state.requested_open_friction_orbit_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("RankVoicing") || active_kind.contains("PipeOrganFlute") || active_kind.contains("OrganRank") || active_kind == "RankVoicingView" || active_kind == "RankVoicing" || active_kind.contains("FlueCutup") || active_kind.contains("PneumaticPipeOrganFluteRank") {
+                if ui.add(
+                    egui::Button::new(RichText::new("⛪ Open Pipe Organ Rank Voicing & Flue Cutup HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(255, 180, 50)))
+                        .fill(Color32::from_rgb(38, 28, 12))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 180, 50)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Pipe Organ Rank Voicing mouth cutup, toe hole regulation aperture & acoustic radiation HUD").clicked() {
+                    state.requested_open_rank_voicing_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("TineResonator") || active_kind.contains("TinePickup") || active_kind.contains("TineResonatorPickup") || active_kind == "TineResonatorView" || active_kind == "TineResonator" || active_kind.contains("EpArticulation") || active_kind.contains("ElectricPiano") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🎹 Open Electric Piano Tine & Tremolo Orbit HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(255, 183, 3)))
+                        .fill(Color32::from_rgb(36, 26, 8))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 183, 3)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Electric Piano Tine Resonator cantilever deflection, tonebar coupling & optical tremolo orbit HUD").clicked() {
+                    state.requested_open_tine_resonator_hud = true;
                 }
                 ui.add_space(4.0);
             }

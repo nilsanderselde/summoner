@@ -545,6 +545,18 @@ impl CommandPalette {
                 action_id: "open_friction_orbit_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Pipe Organ Rank Voicing & Flue Cutup HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_rank_voicing_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Electric Piano Tine Resonator & Tremolo Orbit HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_tine_resonator_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

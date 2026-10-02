@@ -129,6 +129,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_embouchure_angle_hud: bool,
     #[serde(default)]
     pub requested_open_friction_orbit_hud: bool,
+    #[serde(default)]
+    pub requested_open_rank_voicing_hud: bool,
+    #[serde(default)]
+    pub requested_open_tine_resonator_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -182,6 +186,8 @@ impl Default for ModernDeviceRackState {
             requested_open_membrane_cavity_hud: false,
             requested_open_embouchure_angle_hud: false,
             requested_open_friction_orbit_hud: false,
+            requested_open_rank_voicing_hud: false,
+            requested_open_tine_resonator_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -402,6 +408,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_membrane_cavity = cur_selection.contains("PercussionMembrane") || cur_selection.contains("MembranePercussion") || cur_selection.contains("MembraneCavity") || cur_selection.contains("MembraneResonator") || cur_selection == "PercussionMembrane" || cur_selection == "MembraneCavityView" || cur_selection == "MembranePercussionModel";
                     let is_embouchure_angle = cur_selection.contains("EmbouchureAngle") || cur_selection.contains("ShakuhachiEmbouchure") || cur_selection.contains("FluteEmbouchure") || cur_selection == "EmbouchureAngleView" || cur_selection == "EmbouchureAngle" || cur_selection.contains("MeriKari") || cur_selection.contains("Utaguchi");
                     let is_friction_orbit = cur_selection.contains("FrictionOrbit") || cur_selection.contains("StickSlip") || cur_selection.contains("BowedFriction") || cur_selection == "FrictionOrbitView" || cur_selection == "FrictionOrbit" || cur_selection.contains("RosinHysteresis") || cur_selection.contains("HelmholtzOrbit");
+                    let is_rank_voicing = cur_selection.contains("RankVoicing") || cur_selection.contains("PipeOrganFlute") || cur_selection.contains("OrganRank") || cur_selection == "RankVoicingView" || cur_selection == "RankVoicing" || cur_selection.contains("FlueCutup") || cur_selection.contains("PneumaticPipeOrganFluteRank");
+                    let is_tine_resonator = cur_selection.contains("TineResonator") || cur_selection.contains("TinePickup") || cur_selection.contains("TineResonatorPickup") || cur_selection == "TineResonatorView" || cur_selection == "TineResonator" || cur_selection.contains("EpArticulation") || cur_selection.contains("ElectricPiano");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -546,10 +554,18 @@ pub fn show_modern_device_rack_with_context(
                         if ui.button(RichText::new("🎋 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Shakuhachi Embouchure & Meri/Kari HUD").clicked() {
                             state.requested_open_embouchure_angle_hud = true;
                         }
-                    } else if is_friction_orbit
-                        && ui.button(RichText::new("🎻 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 107, 43))).on_hover_text("Open Bowed String Stick-Slip Friction & Orbit HUD").clicked()
+                    } else if is_friction_orbit {
+                        if ui.button(RichText::new("🎻 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 107, 43))).on_hover_text("Open Bowed String Stick-Slip Friction & Orbit HUD").clicked() {
+                            state.requested_open_friction_orbit_hud = true;
+                        }
+                    } else if is_rank_voicing {
+                        if ui.button(RichText::new("⛪ HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 180, 50))).on_hover_text("Open Pipe Organ Rank Voicing HUD").clicked() {
+                            state.requested_open_rank_voicing_hud = true;
+                        }
+                    } else if is_tine_resonator
+                        && ui.button(RichText::new("🎹 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 183, 3))).on_hover_text("Open Electric Piano Tine Resonator HUD").clicked()
                     {
-                        state.requested_open_friction_orbit_hud = true;
+                        state.requested_open_tine_resonator_hud = true;
                     }
                     ui.add_space(4.0);
                     let pwr_col = if state.is_enabled { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(100, 116, 139) };
@@ -768,6 +784,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_membrane_cavity = cur_selection.contains("PercussionMembrane") || cur_selection.contains("MembranePercussion") || cur_selection.contains("MembraneCavity") || cur_selection.contains("MembraneResonator") || cur_selection == "PercussionMembrane" || cur_selection == "MembraneCavityView" || cur_selection == "MembranePercussionModel";
                     let is_embouchure_angle = cur_selection.contains("EmbouchureAngle") || cur_selection.contains("ShakuhachiEmbouchure") || cur_selection.contains("FluteEmbouchure") || cur_selection == "EmbouchureAngleView" || cur_selection == "EmbouchureAngle" || cur_selection.contains("MeriKari") || cur_selection.contains("Utaguchi");
                     let is_friction_orbit = cur_selection.contains("FrictionOrbit") || cur_selection.contains("StickSlip") || cur_selection.contains("BowedFriction") || cur_selection == "FrictionOrbitView" || cur_selection == "FrictionOrbit" || cur_selection.contains("RosinHysteresis") || cur_selection.contains("HelmholtzOrbit");
+                    let is_rank_voicing = cur_selection.contains("RankVoicing") || cur_selection.contains("PipeOrganFlute") || cur_selection.contains("OrganRank") || cur_selection == "RankVoicingView" || cur_selection == "RankVoicing" || cur_selection.contains("FlueCutup") || cur_selection.contains("PneumaticPipeOrganFluteRank");
+                    let is_tine_resonator = cur_selection.contains("TineResonator") || cur_selection.contains("TinePickup") || cur_selection.contains("TineResonatorPickup") || cur_selection == "TineResonatorView" || cur_selection == "TineResonator" || cur_selection.contains("EpArticulation") || cur_selection.contains("ElectricPiano");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -920,10 +938,18 @@ pub fn show_modern_device_rack_with_context(
                         if ui.button(RichText::new("🎋 Embouchure HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Shakuhachi Embouchure & Meri/Kari HUD").clicked() {
                             state.requested_open_embouchure_angle_hud = true;
                         }
-                    } else if is_friction_orbit
-                        && ui.button(RichText::new("🎻 Friction HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 107, 43))).on_hover_text("Open Bowed String Stick-Slip Friction & Orbit HUD").clicked()
+                    } else if is_friction_orbit {
+                        if ui.button(RichText::new("🎻 Friction HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 107, 43))).on_hover_text("Open Bowed String Stick-Slip Friction & Orbit HUD").clicked() {
+                            state.requested_open_friction_orbit_hud = true;
+                        }
+                    } else if is_rank_voicing {
+                        if ui.button(RichText::new("⛪ Voicing HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 180, 50))).on_hover_text("Open Pipe Organ Rank Voicing HUD").clicked() {
+                            state.requested_open_rank_voicing_hud = true;
+                        }
+                    } else if is_tine_resonator
+                        && ui.button(RichText::new("🎹 Tine HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 183, 3))).on_hover_text("Open Electric Piano Tine Resonator HUD").clicked()
                     {
-                        state.requested_open_friction_orbit_hud = true;
+                        state.requested_open_tine_resonator_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -1728,6 +1754,8 @@ fn show_pro_parameter_drawer(
                     let is_membrane_cavity = dev_kind.contains("PercussionMembrane") || dev_kind.contains("MembranePercussion") || dev_kind.contains("MembraneCavity") || dev_kind.contains("MembraneResonator") || dev_kind == "PercussionMembrane" || dev_kind == "MembraneCavityView" || dev_kind == "MembranePercussionModel";
                     let is_embouchure_angle = dev_kind.contains("EmbouchureAngle") || dev_kind.contains("ShakuhachiEmbouchure") || dev_kind.contains("FluteEmbouchure") || dev_kind == "EmbouchureAngleView" || dev_kind == "EmbouchureAngle" || dev_kind.contains("MeriKari") || dev_kind.contains("Utaguchi");
                     let is_friction_orbit = dev_kind.contains("FrictionOrbit") || dev_kind.contains("StickSlip") || dev_kind.contains("BowedFriction") || dev_kind == "FrictionOrbitView" || dev_kind == "FrictionOrbit" || dev_kind.contains("RosinHysteresis") || dev_kind.contains("HelmholtzOrbit");
+                    let is_rank_voicing = dev_kind.contains("RankVoicing") || dev_kind.contains("PipeOrganFlute") || dev_kind.contains("OrganRank") || dev_kind == "RankVoicingView" || dev_kind == "RankVoicing" || dev_kind.contains("FlueCutup") || dev_kind.contains("PneumaticPipeOrganFluteRank");
+                    let is_tine_resonator = dev_kind.contains("TineResonator") || dev_kind.contains("TinePickup") || dev_kind.contains("TineResonatorPickup") || dev_kind == "TineResonatorView" || dev_kind == "TineResonator" || dev_kind.contains("EpArticulation") || dev_kind.contains("ElectricPiano");
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -4717,6 +4745,196 @@ fn show_pro_parameter_drawer(
 
                         if fric_resp.hovered() {
                             let _ = fric_resp.on_hover_text(format!("Bowed String Stick-Slip Friction & Orbit HUD\nVelocity: {:.2} m/s | Force: {:.2} N\n[Drag horizontally: Bow velocity | Drag vertically: Bow normal force]", bow_v, bow_f));
+                        }
+                    } else if is_rank_voicing {
+                        // Pipe Organ Rank Voicing & Flue Cutup Mini Visualizer
+                        let (rank_resp, rank_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let rank_rect = rank_resp.rect;
+                        rank_painter.rect_filled(rank_rect, 2.0, Color32::from_rgb(14, 18, 28));
+
+                        let mut cutup = state.node_param_values.get("cutup_ratio").copied().unwrap_or(0.25);
+                        let mut toe = state.node_param_values.get("toe_hole_aperture").copied().unwrap_or(0.85);
+
+                        if rank_resp.dragged() {
+                            if let Some(pos) = rank_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - rank_rect.left()) / rank_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - rank_rect.top()) / rank_rect.height())).clamp(0.0, 1.0);
+                                cutup = 0.15 + norm_x * 0.35;
+                                toe = 0.20 + norm_y * 0.80;
+                                let air_v = (2.0 * (80.0 * 9.80665) / 1.204f32).sqrt() * toe;
+
+                                state.node_param_values.insert("cutup_ratio".to_string(), cutup);
+                                state.node_param_values.insert("toe_hole_aperture".to_string(), toe);
+                                state.node_param_values.insert("air_velocity_mps".to_string(), air_v);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_cut = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_toe = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_cut).is_some() { bus.set(pid_cut, cutup); }
+                                    if bus.get(pid_toe).is_some() { bus.set(pid_toe, toe); }
+                                }
+                            }
+                        }
+
+                        // Pipe body and flue mouth outline
+                        let pipe_x0 = rank_rect.left() + 20.0;
+                        let pipe_w = 40.0;
+                        let pipe_bot = rank_rect.bottom() - 6.0;
+                        let pipe_top = rank_rect.top() + 6.0;
+                        rank_painter.rect_stroke(
+                            egui::Rect::from_min_max(egui::pos2(pipe_x0, pipe_top), egui::pos2(pipe_x0 + pipe_w, pipe_bot)),
+                            2.0,
+                            Stroke::new(1.2_f32, Color32::from_rgb(120, 140, 180)),
+                        );
+
+                        // Flue mouth opening cutup
+                        let mouth_h = (cutup * 50.0).clamp(6.0, 30.0);
+                        let mouth_y = pipe_bot - 14.0 - mouth_h;
+                        rank_painter.rect_filled(
+                            egui::Rect::from_min_max(egui::pos2(pipe_x0 + 4.0, mouth_y), egui::pos2(pipe_x0 + pipe_w - 4.0, mouth_y + mouth_h)),
+                            1.0,
+                            Color32::from_rgb(255, 180, 50),
+                        );
+
+                        // Air jet stream line
+                        let jet_x = pipe_x0 + pipe_w * 0.5;
+                        rank_painter.line_segment(
+                            [egui::pos2(jet_x, pipe_bot), egui::pos2(jet_x, mouth_y)],
+                            Stroke::new(1.8_f32 * toe, Color32::from_rgb(56, 189, 248)),
+                        );
+
+                        // Radiation bars on right
+                        let bars_x0 = rank_rect.left() + 75.0;
+                        let bars_w = rank_rect.right() - bars_x0 - 8.0;
+                        for b in 0..6 {
+                            let bx = bars_x0 + (b as f32 / 5.0) * (bars_w - 8.0);
+                            let bh = (28.0 / (b as f32 + 1.0).sqrt() * toe).clamp(4.0, 38.0);
+                            let by = rank_rect.bottom() - 10.0 - bh;
+                            rank_painter.rect_filled(
+                                egui::Rect::from_min_max(egui::pos2(bx, by), egui::pos2(bx + 6.0, rank_rect.bottom() - 10.0)),
+                                1.0,
+                                Color32::from_rgb(255, 200, 80),
+                            );
+                        }
+
+                        // Readouts
+                        rank_painter.text(
+                            egui::pos2(rank_rect.left() + 4.0, rank_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("Cutup: {:.2}", cutup),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(255, 180, 50),
+                        );
+                        rank_painter.text(
+                            egui::pos2(rank_rect.right() - 4.0, rank_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("Toe: {:.2}", toe),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(56, 189, 248),
+                        );
+
+                        if rank_resp.hovered() {
+                            let _ = rank_resp.on_hover_text(format!("Pipe Organ Rank Voicing HUD\nCutup: {:.2} | Toe Hole: {:.2}\n[Drag horizontally: Mouth cutup ratio | Drag vertically: Toe hole aperture]", cutup, toe));
+                        }
+                    } else if is_tine_resonator {
+                        // Electromechanical Tine Resonator & Tremolo Mini Visualizer
+                        let (tine_resp, tine_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let tine_rect = tine_resp.rect;
+                        tine_painter.rect_filled(tine_rect, 2.0, Color32::from_rgb(18, 16, 26));
+
+                        let mut coupling = state.node_param_values.get("tonebar_coupling").copied().unwrap_or(0.70);
+                        let mut stiff = state.node_param_values.get("beam_stiffness").copied().unwrap_or(0.42);
+
+                        if tine_resp.dragged() {
+                            if let Some(pos) = tine_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - tine_rect.left()) / tine_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - tine_rect.top()) / tine_rect.height())).clamp(0.0, 1.0);
+                                coupling = norm_x;
+                                stiff = norm_y;
+
+                                state.node_param_values.insert("tonebar_coupling".to_string(), coupling);
+                                state.node_param_values.insert("beam_stiffness".to_string(), stiff);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_cpl = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_stf = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_cpl).is_some() { bus.set(pid_cpl, coupling); }
+                                    if bus.get(pid_stf).is_some() { bus.set(pid_stf, stiff); }
+                                }
+                            }
+                        }
+
+                        // Cantilever tine clamped beam curve
+                        let beam_x0 = tine_rect.left() + 8.0;
+                        let beam_w = 60.0;
+                        let beam_y = tine_rect.center().y;
+                        // Clamping block
+                        tine_painter.rect_filled(
+                            egui::Rect::from_min_max(egui::pos2(beam_x0, beam_y - 8.0), egui::pos2(beam_x0 + 6.0, beam_y + 8.0)),
+                            1.0,
+                            Color32::from_rgb(100, 116, 139),
+                        );
+                        let mut prev_beam = None;
+                        for s in 0..=12 {
+                            let frac = s as f32 / 12.0;
+                            let px = beam_x0 + 6.0 + frac * beam_w;
+                            let deflect = (frac * frac * frac) * 16.0 * (1.0 - 0.4 * stiff);
+                            let py = beam_y - deflect;
+                            let pt = egui::pos2(px, py);
+                            if let Some(prev) = prev_beam {
+                                tine_painter.line_segment([prev, pt], Stroke::new(2.0_f32, Color32::from_rgb(255, 183, 3)));
+                            }
+                            prev_beam = Some(pt);
+                        }
+
+                        // Tonebar mass
+                        tine_painter.rect_filled(
+                            egui::Rect::from_min_max(egui::pos2(beam_x0 + 10.0, beam_y + 4.0), egui::pos2(beam_x0 + 50.0, beam_y + 12.0)),
+                            2.0,
+                            Color32::from_rgb(217, 119, 6),
+                        );
+
+                        // Tremolo Lissajous mini ellipse on right
+                        let cx = tine_rect.left() + 118.0;
+                        let cy = tine_rect.top() + 34.0;
+                        let rx = 24.0 * coupling.clamp(0.2, 1.0);
+                        let ry = 18.0;
+                        let mut prev_ell = None;
+                        for s in 0..=16 {
+                            let ph = s as f32 / 16.0 * std::f32::consts::TAU;
+                            let lx = cx + rx * ph.cos();
+                            let ly = cy + ry * ph.sin();
+                            let pt = egui::pos2(lx, ly);
+                            if let Some(prev) = prev_ell {
+                                tine_painter.line_segment([prev, pt], Stroke::new(1.4_f32, Color32::from_rgb(0, 245, 212)));
+                            }
+                            prev_ell = Some(pt);
+                        }
+
+                        // Drag Puck
+                        let puck_px = beam_x0 + 6.0 + coupling * beam_w;
+                        let puck_py = beam_y - (coupling * coupling * coupling) * 16.0 * (1.0 - 0.4 * stiff);
+                        tine_painter.circle_stroke(egui::pos2(puck_px, puck_py), 4.5, Stroke::new(1.2_f32, Color32::from_rgb(255, 183, 3)));
+                        tine_painter.circle_filled(egui::pos2(puck_px, puck_py), 2.0, Color32::from_rgb(255, 255, 255));
+
+                        // Readouts
+                        tine_painter.text(
+                            egui::pos2(tine_rect.left() + 4.0, tine_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("Cpl: {:.0}%", coupling * 100.0),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(255, 183, 3),
+                        );
+                        tine_painter.text(
+                            egui::pos2(tine_rect.right() - 4.0, tine_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("Stiff: {:.2}", stiff),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(0, 245, 212),
+                        );
+
+                        if tine_resp.hovered() {
+                            let _ = tine_resp.on_hover_text(format!("Electric Piano Tine Resonator HUD\nCoupling: {:.0}% | Stiffness: {:.2}\n[Drag horizontally: Tonebar coupling | Drag vertically: Beam stiffness]", coupling * 100.0, stiff));
                         }
                     } else {
                         // Filter Curve Mini View (slot-addressed)

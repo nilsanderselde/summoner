@@ -118,6 +118,21 @@ impl RankVoicingView {
         self.update_voicing_acoustics();
     }
 
+    pub fn set_rank(&mut self, rank: VoicingRankType) {
+        self.rank_type = rank;
+        self.update_voicing_acoustics();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
+    }
+
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        self.render_ascii(80, 16).join("\n")
+    }
+
+
     /// Calculate jet velocity, chiff transient, and overtone distribution based on voicing parameters.
     pub fn update_voicing_acoustics(&mut self) {
         let effective_p_pascals = self.wind_pressure_mmh2o * 9.80665 * self.toe_hole_aperture;

@@ -16,13 +16,38 @@ use std::f32::consts::PI;
 
 #[cfg(feature = "gui")]
 #[allow(unused_imports)]
-use eframe::egui::{self, Color32, Stroke, Vec2};
+use eframe::egui::{self, Color32, FontId, RichText, Rounding, Stroke, Vec2};
 
 pub const TINE_PUCK_HIT_RADIUS: f32 = 22.0; // 44x44pt touch bounding target
+
+/// Electromechanical Tine Resonator Preset Profiles.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum TineResonatorProfile {
+    #[default]
+    RhodesStage73,
+    RhodesSuitcase88,
+    Wurlitzer200A,
+    YamahaCP70,
+    CustomHybrid,
+}
+
+impl TineResonatorProfile {
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::RhodesStage73 => "Rhodes Stage 73 (Bark & Bell)",
+            Self::RhodesSuitcase88 => "Rhodes Suitcase 88 (Silky Warm)",
+            Self::Wurlitzer200A => "Wurlitzer 200A (Reed Bite)",
+            Self::YamahaCP70 => "Electric Grand CP-70 (Percussive)",
+            Self::CustomHybrid => "Custom Tine-Tonebar Hybrid",
+        }
+    }
+}
 
 /// Electromechanical Tine Resonator & Stereo Tremolo Phase View.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TineResonatorView {
+    /// Active profile preset.
+    pub profile: TineResonatorProfile,
     /// Resonator tonebar coupling $[0.0 ..= 1.0]$.
     pub tonebar_coupling: f32,
     /// Cantilever beam inharmonic dispersion stiffness $[0.0 ..= 1.0]$.
@@ -51,6 +76,7 @@ impl Default for TineResonatorView {
 impl TineResonatorView {
     pub fn new() -> Self {
         let mut view = Self {
+            profile: TineResonatorProfile::RhodesStage73,
             tonebar_coupling: 0.70,
             beam_stiffness: 0.42,
             fundamental_hz: 261.63, // C4
@@ -63,6 +89,49 @@ impl TineResonatorView {
         };
         view.update_puck_from_physics();
         view
+    }
+
+    pub fn set_profile(&mut self, profile: TineResonatorProfile) {
+        self.profile = profile;
+        match profile {
+            TineResonatorProfile::RhodesStage73 => {
+                self.tonebar_coupling = 0.70;
+                self.beam_stiffness = 0.42;
+                self.fundamental_hz = 261.63;
+                self.tremolo_rate_hz = 5.2;
+                self.tremolo_depth = 0.65;
+                self.tremolo_phase_offset = PI;
+            }
+            TineResonatorProfile::RhodesSuitcase88 => {
+                self.tonebar_coupling = 0.85;
+                self.beam_stiffness = 0.32;
+                self.fundamental_hz = 220.0;
+                self.tremolo_rate_hz = 4.8;
+                self.tremolo_depth = 0.80;
+                self.tremolo_phase_offset = PI;
+            }
+            TineResonatorProfile::Wurlitzer200A => {
+                self.tonebar_coupling = 0.45;
+                self.beam_stiffness = 0.68;
+                self.fundamental_hz = 261.63;
+                self.tremolo_rate_hz = 6.0;
+                self.tremolo_depth = 0.75;
+                self.tremolo_phase_offset = 0.0;
+            }
+            TineResonatorProfile::YamahaCP70 => {
+                self.tonebar_coupling = 0.30;
+                self.beam_stiffness = 0.85;
+                self.fundamental_hz = 261.63;
+                self.tremolo_rate_hz = 4.0;
+                self.tremolo_depth = 0.40;
+                self.tremolo_phase_offset = PI / 2.0;
+            }
+            TineResonatorProfile::CustomHybrid => {
+                self.tonebar_coupling = 0.60;
+                self.beam_stiffness = 0.50;
+            }
+        }
+        self.update_puck_from_physics();
     }
 
     pub fn update_puck_from_physics(&mut self) {
@@ -161,6 +230,301 @@ impl TineResonatorView {
         }
 
         lines
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
+    }
+
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        self.render_ascii(80, 16).join("\n")
+    }
+
+    #[cfg(feature = "gui")]
+    #[allow(clippy::needless_range_loop)]
+    pub fn ui(&mut self, ui: &mut egui::Ui) {
+        let (rect, response) = ui.allocate_exact_size(
+            egui::vec2(ui.available_width(), 480.0),
+            egui::Sense::click_and_drag(),
+        );
+
+        let painter = ui.painter_at(rect);
+
+        // Background: Deep Navy (#0C101A)
+        painter.rect_filled(rect, 6.0, Color32::from_rgb(12, 16, 26));
+
+        // Header Title
+        painter.text(
+            egui::pos2(rect.min.x + 20.0, rect.min.y + 18.0),
+            egui::Align2::LEFT_TOP,
+            "ELECTROMECHANICAL TINE RESONATOR & STEREO TREMOLO PHASE HUD",
+            FontId::proportional(14.5),
+            Color32::from_rgb(240, 245, 255),
+        );
+
+        // Profile Selector Tabs (y: 48..92) - Each tab >= 44pt touch target
+        let profiles = [
+            (TineResonatorProfile::RhodesStage73, "RHODES 73"),
+            (TineResonatorProfile::RhodesSuitcase88, "SUITCASE 88"),
+            (TineResonatorProfile::Wurlitzer200A, "WURLITZER 200A"),
+            (TineResonatorProfile::YamahaCP70, "ELECTRIC GRAND"),
+            (TineResonatorProfile::CustomHybrid, "CUSTOM HYBRID"),
+        ];
+
+        let tab_w = (rect.width() - 40.0 - 4.0 * 6.0) / 5.0;
+        for (i, (prof, name)) in profiles.iter().enumerate() {
+            let bx = rect.min.x + 20.0 + i as f32 * (tab_w + 6.0);
+            let tab_rect = egui::Rect::from_min_size(
+                egui::pos2(bx, rect.min.y + 48.0),
+                egui::vec2(tab_w, 44.0),
+            );
+            let is_sel = self.profile == *prof;
+            let bg_col = if is_sel {
+                Color32::from_rgb(255, 183, 3)
+            } else {
+                Color32::from_rgb(24, 32, 48)
+            };
+            let text_col = if is_sel {
+                Color32::from_rgb(12, 14, 18)
+            } else {
+                Color32::from_rgb(210, 225, 245)
+            };
+
+            painter.rect_filled(tab_rect, 4.0, bg_col);
+            painter.text(
+                tab_rect.center(),
+                egui::Align2::CENTER_CENTER,
+                *name,
+                FontId::proportional(10.5),
+                text_col,
+            );
+
+            if response.clicked() {
+                if let Some(pos) = response.interact_pointer_pos() {
+                    if tab_rect.contains(pos) {
+                        self.set_profile(*prof);
+                    }
+                }
+            }
+        }
+
+        // Main Display Canvas (y: 104..350)
+        let main_canvas = egui::Rect::from_min_max(
+            egui::pos2(rect.min.x + 20.0, rect.min.y + 104.0),
+            egui::pos2(rect.max.x - 20.0, rect.min.y + 350.0),
+        );
+        painter.rect_filled(main_canvas, 6.0, Color32::from_rgb(8, 12, 22));
+        painter.rect_stroke(
+            main_canvas,
+            6.0,
+            Stroke::new(1.5_f32, Color32::from_rgb(45, 65, 95)),
+        );
+
+        // Left 55%: Tine Resonator & Tonebar Canvas
+        let left_w = main_canvas.width() * 0.55;
+        let left_rect = egui::Rect::from_min_size(
+            egui::pos2(main_canvas.min.x + 10.0, main_canvas.min.y + 10.0),
+            egui::vec2(left_w - 20.0, main_canvas.height() - 20.0),
+        );
+        painter.rect_filled(left_rect, 4.0, Color32::from_rgb(14, 18, 30));
+        painter.rect_stroke(
+            left_rect,
+            4.0,
+            Stroke::new(1.0_f32, Color32::from_rgb(32, 45, 70)),
+        );
+
+        // Drag Puck on Left Canvas
+        if response.dragged() {
+            if let Some(pos) = response.interact_pointer_pos() {
+                if left_rect.contains(pos) {
+                    let norm_x = ((pos.x - left_rect.min.x) / left_rect.width()).clamp(0.0, 1.0);
+                    let norm_y = (1.0 - ((pos.y - left_rect.min.y) / left_rect.height())).clamp(0.0, 1.0);
+                    self.update_physics_from_puck(norm_x, norm_y);
+                    self.profile = TineResonatorProfile::CustomHybrid;
+                }
+            }
+        }
+
+        // Cantilever Tine Clamped Base Mount
+        let mount_x = left_rect.min.x + 16.0;
+        let mount_y = left_rect.center().y;
+        painter.rect_filled(
+            egui::Rect::from_min_max(
+                egui::pos2(mount_x - 12.0, mount_y - 24.0),
+                egui::pos2(mount_x, mount_y + 24.0),
+            ),
+            2.0,
+            Color32::from_rgb(100, 116, 139),
+        );
+
+        // Vibrating Tine Beam Mode Shape (32 points)
+        let beam = self.evaluate_beam_deflection();
+        let beam_len = left_rect.width() - 50.0;
+        let mut prev_pt = None;
+        for (i, val) in beam.iter().enumerate() {
+            let frac = i as f32 / 31.0;
+            let px = mount_x + frac * beam_len;
+            let py = mount_y - val * (left_rect.height() * 0.35);
+            let pt = egui::pos2(px, py);
+            if let Some(prev) = prev_pt {
+                painter.line_segment([prev, pt], Stroke::new(2.5_f32, Color32::from_rgb(255, 183, 3)));
+            }
+            prev_pt = Some(pt);
+        }
+
+        // Tonebar Resonator Mass Bar
+        painter.rect_filled(
+            egui::Rect::from_min_max(
+                egui::pos2(mount_x + 10.0, mount_y + 12.0),
+                egui::pos2(mount_x + beam_len * 0.70, mount_y + 26.0),
+            ),
+            3.0,
+            Color32::from_rgb(217, 119, 6),
+        );
+        painter.text(
+            egui::pos2(mount_x + 16.0, mount_y + 15.0),
+            egui::Align2::LEFT_TOP,
+            "TONEBAR RESONATOR COUPLING",
+            FontId::proportional(9.0),
+            Color32::from_rgb(255, 235, 180),
+        );
+
+        // Puck Position on Left Canvas (Radius = 22.0pt -> 44x44pt bounding box)
+        let puck_x = left_rect.min.x + self.puck_pos.0 * left_rect.width();
+        let puck_y = left_rect.min.y + (1.0 - self.puck_pos.1) * left_rect.height();
+        let puck_center = egui::pos2(puck_x, puck_y);
+        painter.circle_filled(puck_center, TINE_PUCK_HIT_RADIUS, Color32::from_rgba_premultiplied(255, 183, 3, 40));
+        painter.circle_stroke(puck_center, TINE_PUCK_HIT_RADIUS, Stroke::new(1.5_f32, Color32::from_rgb(255, 183, 3)));
+        painter.circle_filled(puck_center, 4.0, Color32::from_rgb(255, 255, 255));
+
+        // Readout Labels on Left Canvas
+        painter.text(
+            egui::pos2(left_rect.min.x + 8.0, left_rect.min.y + 8.0),
+            egui::Align2::LEFT_TOP,
+            format!("Tonebar Coupling: {:.0}%", self.tonebar_coupling * 100.0),
+            FontId::proportional(11.0),
+            Color32::from_rgb(255, 183, 3),
+        );
+        painter.text(
+            egui::pos2(left_rect.max.x - 8.0, left_rect.min.y + 8.0),
+            egui::Align2::RIGHT_TOP,
+            format!("Beam Stiffness: {:.2}", self.beam_stiffness),
+            FontId::proportional(11.0),
+            Color32::from_rgb(56, 189, 248),
+        );
+
+        // Right 45%: Stereo Optical Tremolo Lissajous Pan Orbit Canvas
+        let right_x = main_canvas.min.x + left_w + 10.0;
+        let right_rect = egui::Rect::from_min_max(
+            egui::pos2(right_x, main_canvas.min.y + 10.0),
+            egui::pos2(main_canvas.max.x - 10.0, main_canvas.max.y - 10.0),
+        );
+        painter.rect_filled(right_rect, 4.0, Color32::from_rgb(14, 18, 30));
+        painter.rect_stroke(
+            right_rect,
+            4.0,
+            Stroke::new(1.0_f32, Color32::from_rgb(32, 45, 70)),
+        );
+
+        // Center crosshairs
+        let r_cx = right_rect.center().x;
+        let r_cy = right_rect.center().y;
+        painter.line_segment(
+            [egui::pos2(right_rect.min.x + 10.0, r_cy), egui::pos2(right_rect.max.x - 10.0, r_cy)],
+            Stroke::new(1.0_f32, Color32::from_rgb(30, 42, 60)),
+        );
+        painter.line_segment(
+            [egui::pos2(r_cx, right_rect.min.y + 10.0), egui::pos2(r_cx, right_rect.max.y - 10.0)],
+            Stroke::new(1.0_f32, Color32::from_rgb(30, 42, 60)),
+        );
+
+        // Lissajous Orbit Loop
+        let orbit = self.evaluate_tremolo_lissajous();
+        let orb_w = right_rect.width() * 0.40;
+        let orb_h = right_rect.height() * 0.40;
+        let mut prev_orb = None;
+        for &(l, r_val) in orbit.iter() {
+            let px = r_cx + (l - 0.5) * 2.0 * orb_w;
+            let py = r_cy - (r_val - 0.5) * 2.0 * orb_h;
+            let pt = egui::pos2(px, py);
+            if let Some(prev) = prev_orb {
+                painter.line_segment([prev, pt], Stroke::new(2.0_f32, Color32::from_rgb(0, 245, 212)));
+            }
+            prev_orb = Some(pt);
+        }
+
+        // Active Panning Marker
+        let active_pan = orbit[0];
+        let p_pt = egui::pos2(r_cx + (active_pan.0 - 0.5) * 2.0 * orb_w, r_cy - (active_pan.1 - 0.5) * 2.0 * orb_h);
+        painter.circle_filled(p_pt, 5.0, Color32::from_rgb(255, 255, 255));
+        painter.circle_stroke(p_pt, 7.0, Stroke::new(1.5_f32, Color32::from_rgb(0, 245, 212)));
+
+        // Readout Labels on Right Canvas
+        painter.text(
+            egui::pos2(right_rect.min.x + 8.0, right_rect.min.y + 8.0),
+            egui::Align2::LEFT_TOP,
+            format!("Optical Tremolo: {:.1} Hz ({:.0}%)", self.tremolo_rate_hz, self.tremolo_depth * 100.0),
+            FontId::proportional(11.0),
+            Color32::from_rgb(0, 245, 212),
+        );
+        painter.text(
+            egui::pos2(right_rect.max.x - 8.0, right_rect.min.y + 8.0),
+            egui::Align2::RIGHT_TOP,
+            format!("Phase: {:.0}°", self.tremolo_phase_offset.to_degrees()),
+            FontId::proportional(11.0),
+            Color32::from_rgb(148, 163, 184),
+        );
+
+        // Bottom Controls Dock (y: 360..460)
+        let dock_rect = egui::Rect::from_min_max(
+            egui::pos2(rect.min.x + 20.0, rect.min.y + 360.0),
+            egui::pos2(rect.max.x - 20.0, rect.min.y + 460.0),
+        );
+        painter.rect_filled(dock_rect, 4.0, Color32::from_rgb(10, 14, 24));
+        painter.rect_stroke(
+            dock_rect,
+            4.0,
+            Stroke::new(1.0_f32, Color32::from_rgb(24, 32, 50)),
+        );
+
+        let col_w = (dock_rect.width() - 40.0 - 3.0 * 12.0) / 4.0;
+        ui.allocate_ui_at_rect(dock_rect, |dock_ui| {
+            dock_ui.horizontal(|ui| {
+                ui.add_space(20.0);
+
+                // 1. Fundamental F0
+                ui.vertical(|ui| {
+                    ui.set_width(col_w);
+                    ui.label(RichText::new("FUNDAMENTAL F0").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(148, 163, 184)));
+                    ui.add(egui::Slider::new(&mut self.fundamental_hz, 50.0..=1000.0).suffix(" Hz").logarithmic(true));
+                });
+                ui.add_space(12.0);
+
+                // 2. Tremolo Rate
+                ui.vertical(|ui| {
+                    ui.set_width(col_w);
+                    ui.label(RichText::new("TREMOLO RATE").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(148, 163, 184)));
+                    ui.add(egui::Slider::new(&mut self.tremolo_rate_hz, 0.2..=15.0).suffix(" Hz"));
+                });
+                ui.add_space(12.0);
+
+                // 3. Tremolo Depth
+                ui.vertical(|ui| {
+                    ui.set_width(col_w);
+                    ui.label(RichText::new("TREMOLO DEPTH").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(148, 163, 184)));
+                    ui.add(egui::Slider::new(&mut self.tremolo_depth, 0.0..=1.0));
+                });
+                ui.add_space(12.0);
+
+                // 4. Tremolo Phase Offset
+                ui.vertical(|ui| {
+                    ui.set_width(col_w);
+                    ui.label(RichText::new("PHASE OFFSET").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(148, 163, 184)));
+                    ui.add(egui::Slider::new(&mut self.tremolo_phase_offset, 0.0..=PI).custom_formatter(|n, _| format!("{:.0}°", n.to_degrees())));
+                });
+            });
+        });
     }
 
     /// Renders a headless PNG snapshot to the specified path.

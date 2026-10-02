@@ -1796,4 +1796,38 @@ Product Management has conducted a comprehensive readiness audit:
   - Unit tests: 329 passed in 0.23s (`cargo test -p summoner_gui --lib`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
 
+### Turn #70 (Turn #33 Deliverable — Sprint Review) — Pipe Organ Rank Voicing & Electric Piano Tine Resonator HUDs Convergence (Milestones 22, 24 & 33)
+- [x] Sprint Review Turn #33 Reconciled with `PROGRESS.md`:
+  - Verified 100% pass across all unit and GUI feature test suites (329 pure tests passed in 0.22s, 7 Turn #70 tests passed in 0.07s) and zero compiler/clippy warnings under `-D warnings` with `--features gui`.
+  - Integrated `RankVoicingView` (Physical Modeling Pipe Organ Rank Voicing & Flue Cutup HUD: 8 Voicing Pipe Rank Types [Principal 8' Diapason, Bourdon 16' Stopped Wood, Octave 4' Open Metal, Flute 4' Stopped Flute, Super Octave 2' Shimmer, Mixture IV Chorus, Trompette 8' Conical Reed, Vox Humana 8' Formant Reed], Cutup mouth height-to-width ratio $[0.15..0.50]$, Toe hole regulation aperture $[0.20..1.00]$, Languid vertical displacement $[-0.5..1.5\text{ mm}]$, Windchest pressure $[40.0..160.0\text{ mmH2O}]$, Flue slit air velocity $v = \sqrt{2P/\rho}$, Chiff attack transient duration $[5.0..80.0\text{ ms}]$, 8-harmonic overtone radiation spectrum bars, and Touch-Draggable Cutup vs Toe Hole Puck with $\ge 44 \times 44\text{pt}$ Hit Target) and `TineResonatorView` (Electromechanical Tine Resonator & Stereo Tremolo Phase HUD: 5 Sound Presets [Rhodes Stage 73 Bark & Bell, Rhodes Suitcase 88 Silky Warm, Wurlitzer 200A Reed Bite, Yamaha CP-70 Percussive, Custom Hybrid], Cantilever clamped beam mode shapes with stiffness scaling, tonebar energy coupling transfer bar, stereo optical tremolo Lissajous pan phase orbit visualizer, touch-draggable tonebar coupling vs beam stiffness puck with $\ge 44 \times 44\text{pt}$ hit target, and dock parameter sliders for fundamental F0, tremolo rate, tremolo depth, and phase offset) into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/rank_voicing_view.rs` & `tine_resonator_view.rs`):
+  - In `RankVoicingView`: added `set_rank(&mut self, rank: VoicingRankType)`, `show(&mut self, ui: &mut egui::Ui)`, and `render_ascii_snapshot_str() -> String`.
+  - In `TineResonatorView`: added `TineResonatorProfile` enum, `profile` field, `set_profile(&mut self, profile: TineResonatorProfile)`, `ui(&mut self, ui: &mut egui::Ui)` interactive 2D canvas with profile tabs, beam mode shape display, tonebar coupling bar, optical tremolo Lissajous orbit, drag puck with $\ge 44 \times 44\text{pt}$ hit target, dock sliders, `show(&mut self, ui: &mut egui::Ui)`, and `render_ascii_snapshot_str() -> String`.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_rank_voicing_modal: bool`, `rank_voicing_view: RankVoicingView`, `show_tine_resonator_modal: bool`, and `tine_resonator_view: TineResonatorView`.
+  - Added dedicated modal windows `show_rank_voicing_modal_window` and `show_tine_resonator_modal_window` with responsive styling, WCAG AAA contrast, and $\ge 44 \times 44\text{pt}$ touch bounds.
+  - Added public lifecycle methods: `open_rank_voicing_hud()`, `close_rank_voicing_hud()`, `is_rank_voicing_hud_open()`, `open_tine_resonator_hud()`, `close_tine_resonator_hud()`, `is_tine_resonator_hud_open()`.
+  - Real-time parameter sync bridges (`sync_rank_voicing_hud_state` and `sync_tine_resonator_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_rank_voicing_hud: bool` and `requested_open_tine_resonator_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[⛪ Open Pipe Organ Rank Voicing & Flue Cutup HUD]` and `[🎹 Open Electric Piano Tine & Tremolo Orbit HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header `[⛪ HUD]` / `[🎹 HUD]` and expanded toolbar buttons in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Pipe Organ Voicing: 2D pipe body and flue mouth contour, air jet stream line, harmonic radiation bars, drag-puck modulating `cutup_ratio` and `toe_hole_aperture`, velocity readout, and live `ParamBus` slot dispatch.
+    * Tine Resonator: 2D clamped base mount, cantilever tine deflection curve, tonebar mass bar, tremolo Lissajous mini-ellipse, drag-puck modulating `tonebar_coupling` and `beam_stiffness`, and live `ParamBus` slot dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_rank_voicing_hud` and `open_tine_resonator_hud` under `"Physical Modeling"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_rank_voicing_hud()` and `open_tine_resonator_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier134_turn70_tests.rs`:
+    * Pure tests: view initialization, rank/profile selections, puck physics updates, normalized coordinate conversions, cantilever beam deflection and tremolo Lissajous evaluations, slot arithmetic channel isolation, deterministic ASCII snapshots.
+    * GUI tests: modal lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch, rack & inspector trigger propagation, command palette action registration.
+  - Registered `tier134_turn70_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Feature tests: 7 passed in 0.07s (`cargo test -p summoner_gui --features gui -- tier134_turn70`).
+  - Unit tests: 329 passed in 0.22s (`cargo test -p summoner_gui --lib`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
+
+
 

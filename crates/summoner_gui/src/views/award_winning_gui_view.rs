@@ -720,6 +720,10 @@ pub struct AwardWinningGuiView {
     pub embouchure_angle_view: crate::views::embouchure_angle_view::EmbouchureAngleView,
     pub show_friction_orbit_modal: bool,
     pub friction_orbit_view: crate::views::friction_orbit_view::FrictionOrbitView,
+    pub show_rank_voicing_modal: bool,
+    pub rank_voicing_view: crate::views::rank_voicing_view::RankVoicingView,
+    pub show_tine_resonator_modal: bool,
+    pub tine_resonator_view: crate::views::tine_resonator_view::TineResonatorView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1056,6 +1060,10 @@ impl AwardWinningGuiView {
             embouchure_angle_view: crate::views::embouchure_angle_view::EmbouchureAngleView::new(),
             show_friction_orbit_modal: false,
             friction_orbit_view: crate::views::friction_orbit_view::FrictionOrbitView::new(),
+            show_rank_voicing_modal: false,
+            rank_voicing_view: crate::views::rank_voicing_view::RankVoicingView::new(),
+            show_tine_resonator_modal: false,
+            tine_resonator_view: crate::views::tine_resonator_view::TineResonatorView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -1895,6 +1903,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_friction_orbit_hud = false;
             self.open_friction_orbit_hud();
         }
+        if self.inspector_state.requested_open_rank_voicing_hud || self.device_rack_state.requested_open_rank_voicing_hud {
+            self.inspector_state.requested_open_rank_voicing_hud = false;
+            self.device_rack_state.requested_open_rank_voicing_hud = false;
+            self.open_rank_voicing_hud();
+        }
+        if self.inspector_state.requested_open_tine_resonator_hud || self.device_rack_state.requested_open_tine_resonator_hud {
+            self.inspector_state.requested_open_tine_resonator_hud = false;
+            self.device_rack_state.requested_open_tine_resonator_hud = false;
+            self.open_tine_resonator_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -1938,6 +1956,8 @@ impl AwardWinningGuiView {
         self.show_membrane_cavity_modal_window(ui);
         self.show_embouchure_angle_modal_window(ui);
         self.show_friction_orbit_modal_window(ui);
+        self.show_rank_voicing_modal_window(ui);
+        self.show_tine_resonator_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -11356,6 +11376,182 @@ impl AwardWinningGuiView {
 
     pub fn is_friction_orbit_hud_open(&self) -> bool {
         self.show_friction_orbit_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_rank_voicing_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_rank_voicing_modal {
+            return;
+        }
+
+        let mut is_open = self.show_rank_voicing_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("⛪ Physical Modeling Pipe Organ Rank Voicing & Flue Cutup HUD")
+            .id(egui::Id::new("rank_voicing_hud_modal"))
+            .open(&mut is_open)
+            .default_size([920.0, 600.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Pipe Organ Rank Voicing, Flue Mouth Cutup Ratio, Toe Hole Regulation & 8-Rank Acoustic Radiation HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.rank_voicing_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_rank_voicing_modal = is_open;
+        self.sync_rank_voicing_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_rank_voicing_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let cutup = self.rank_voicing_view.cutup_ratio;
+        let toe = self.rank_voicing_view.toe_hole_aperture;
+        let lang = self.rank_voicing_view.languid_height_mm;
+        let press = self.rank_voicing_view.wind_pressure_mmh2o;
+
+        self.device_rack_state.node_param_values.insert("cutup_ratio".to_string(), cutup);
+        self.device_rack_state.node_param_values.insert("toe_hole_aperture".to_string(), toe);
+        self.device_rack_state.node_param_values.insert("languid_height_mm".to_string(), lang);
+        self.device_rack_state.node_param_values.insert("wind_pressure_mmh2o".to_string(), press);
+
+        self.inspector_state.node_param_values.insert("cutup_ratio".to_string(), cutup);
+        self.inspector_state.node_param_values.insert("toe_hole_aperture".to_string(), toe);
+        self.inspector_state.node_param_values.insert("languid_height_mm".to_string(), lang);
+        self.inspector_state.node_param_values.insert("wind_pressure_mmh2o".to_string(), press);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_cut = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_toe = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_lan = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_prs = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_cut).is_some() { bus.set(pid_cut, cutup); }
+            if bus.get(pid_toe).is_some() { bus.set(pid_toe, toe); }
+            if bus.get(pid_lan).is_some() { bus.set(pid_lan, lang); }
+            if bus.get(pid_prs).is_some() { bus.set(pid_prs, press); }
+        }
+    }
+
+    pub fn open_rank_voicing_hud(&mut self) {
+        self.show_rank_voicing_modal = true;
+    }
+
+    pub fn close_rank_voicing_hud(&mut self) {
+        self.show_rank_voicing_modal = false;
+    }
+
+    pub fn is_rank_voicing_hud_open(&self) -> bool {
+        self.show_rank_voicing_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_tine_resonator_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_tine_resonator_modal {
+            return;
+        }
+
+        let mut is_open = self.show_tine_resonator_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎹 Electromechanical Tine Resonator & Stereo Tremolo Phase HUD")
+            .id(egui::Id::new("tine_resonator_hud_modal"))
+            .open(&mut is_open)
+            .default_size([900.0, 580.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Tine Cantilever Beam Deflection, Tonebar Energy Transfer & Stereo Optical Tremolo Lissajous Orbit HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.tine_resonator_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_tine_resonator_modal = is_open;
+        self.sync_tine_resonator_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_tine_resonator_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let coupling = self.tine_resonator_view.tonebar_coupling;
+        let stiff = self.tine_resonator_view.beam_stiffness;
+        let trem_rate = self.tine_resonator_view.tremolo_rate_hz;
+        let trem_depth = self.tine_resonator_view.tremolo_depth;
+
+        self.device_rack_state.node_param_values.insert("tonebar_coupling".to_string(), coupling);
+        self.device_rack_state.node_param_values.insert("beam_stiffness".to_string(), stiff);
+        self.device_rack_state.node_param_values.insert("tremolo_rate_hz".to_string(), trem_rate);
+        self.device_rack_state.node_param_values.insert("tremolo_depth".to_string(), trem_depth);
+
+        self.inspector_state.node_param_values.insert("tonebar_coupling".to_string(), coupling);
+        self.inspector_state.node_param_values.insert("beam_stiffness".to_string(), stiff);
+        self.inspector_state.node_param_values.insert("tremolo_rate_hz".to_string(), trem_rate);
+        self.inspector_state.node_param_values.insert("tremolo_depth".to_string(), trem_depth);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_cpl = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_stf = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_rat = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_dpt = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_cpl).is_some() { bus.set(pid_cpl, coupling); }
+            if bus.get(pid_stf).is_some() { bus.set(pid_stf, stiff); }
+            if bus.get(pid_rat).is_some() { bus.set(pid_rat, trem_rate); }
+            if bus.get(pid_dpt).is_some() { bus.set(pid_dpt, trem_depth); }
+        }
+    }
+
+    pub fn open_tine_resonator_hud(&mut self) {
+        self.show_tine_resonator_modal = true;
+    }
+
+    pub fn close_tine_resonator_hud(&mut self) {
+        self.show_tine_resonator_modal = false;
+    }
+
+    pub fn is_tine_resonator_hud_open(&self) -> bool {
+        self.show_tine_resonator_modal
     }
 
     #[cfg(feature = "gui")]
