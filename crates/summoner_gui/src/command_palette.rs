@@ -581,6 +581,18 @@ impl CommandPalette {
                 action_id: "open_diffractive_propagation_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Elastic Drumhead Membrane Resonator HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_membrane_resonator_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Coupled 2D Membrane & Plate Resonator HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_membrane_plate_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

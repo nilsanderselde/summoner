@@ -1892,3 +1892,35 @@ Product Management has conducted a comprehensive readiness audit:
   - Feature tests: 7 passed in 0.07s (`cargo test -p summoner_gui --features gui -- tier136_turn72`).
   - Unit tests: 329 passed in 0.22s (`cargo test -p summoner_gui --lib`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`).
+
+### Turn #73 (Turn #36 Deliverable) — Physical Modeling Acoustic Membrane Percussion & Coupled 2D Membrane/Plate Resonator HUDs Convergence (Milestones 33 & 34)
+- [x] Physical Modeling Acoustic Membrane Percussion & Coupled 2D Membrane/Plate Resonator Performance HUDs Integration:
+  - Integrated `MembraneResonatorView` (Physical Modeling Acoustic Membrane Percussion & Strike Velocity Resonance HUD: 5 Material Profiles [Mylar Synthetic, Calfskin Vintage, Titanium Foil, Silicone Elastic, Carbon Composite], Bessel $J_0/J_1/J_2$ circular membrane displacement modes, wave propagation speed $c = \sqrt{T/\sigma}$, fundamental frequency $f_{01} = \frac{2.4048 c}{2 \pi a}$, touch-draggable strike puck with $\ge 44 \times 44\text{pt}$ bounding target, and dock parameter metrics for Tension [500..8000 N/m], Surface Density, Strike Velocity, and Internal Damping) and `MembranePlateView` (Physical Modeling Acoustic Membrane/Plate Percussion & Boundary Strike Impedance HUD: 5 Geometry Profiles [Circular Tympanum, Rectangular Steel Plate, Gong Tam-Tam, Snare Bottom Mylar, Marimba Rosewood Bar], 3 Boundary Clamping Impedance Modes [Free Edge (0.15), Simply Supported (0.65), Clamped Rigid (1.00)], 6-mode resonant overtone frequency & amplitude spectrum bars, contact duration time $t_c = \frac{3.5}{k_m}$, touch-draggable strike puck with $\ge 44 \times 44\text{pt}$ bounding target, and dock parameter metrics for Thickness [0.5..25.0 mm], Tension [100..10000 N/m], Aspect Ratio [0.5..2.0], and Mallet Hardness) into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/membrane_resonator_view.rs` & `membrane_plate_view.rs`):
+  - In `MembraneResonatorView`: added `set_material(&mut self, material: MembraneMaterial)`, `show(&mut self, ui: &mut egui::Ui)`, and `render_ascii_snapshot_str() -> String`.
+  - In `MembranePlateView`: added `set_boundary(&mut self, boundary: BoundaryClamping)`, `show(&mut self, ui: &mut egui::Ui)`, and `render_ascii_snapshot_str() -> String`.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_membrane_resonator_modal: bool`, `membrane_resonator_view: MembraneResonatorView`, `show_membrane_plate_modal: bool`, and `membrane_plate_view: MembranePlateView`.
+  - Added dedicated modal windows `show_membrane_resonator_modal_window` and `show_membrane_plate_modal_window` with responsive styling, WCAG AAA contrast, and $\ge 44 \times 44\text{pt}$ touch bounds.
+  - Added public lifecycle methods: `open_membrane_resonator_hud()`, `close_membrane_resonator_hud()`, `is_membrane_resonator_hud_open()`, `open_membrane_plate_hud()`, `close_membrane_plate_hud()`, `is_membrane_plate_hud_open()`.
+  - Real-time parameter sync bridges (`sync_membrane_resonator_hud_state` and `sync_membrane_plate_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_membrane_resonator_hud: bool` and `requested_open_membrane_plate_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🥁 Open Elastic Drumhead Membrane Resonator HUD]` and `[🍽 Open Coupled 2D Membrane & Plate Resonator HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header `[🥁 HUD]` / `[🍽 HUD]` and expanded toolbar buttons `[🥁 Drum HUD]` / `[🍽 Plate HUD]` in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Membrane Resonator: Circular drumhead rim and concentric modal rings, draggable strike puck modulating `radial_strike_pos` and `membrane_tension_n`, tension gauge, frequency readout, and live `ParamBus` slot dispatch.
+    * Membrane Plate: 2D rectangular/circular plate boundary, modal nodal lines, 5-mode resonance spectrum bars, draggable strike puck modulating `plate_elastic_modulus` and `membrane_tension`, readouts, and live `ParamBus` slot dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_membrane_resonator_hud` and `open_membrane_plate_hud` under `"Physical Modeling"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_membrane_resonator_hud()` and `open_membrane_plate_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier137_turn73_tests.rs`:
+    * Pure tests: view initialization, material profiles, boundary conditions, tension/thickness/aspect conversions, puck hit testing, displacement evaluations, modal frequencies/amplitudes, slot arithmetic channel isolation, deterministic ASCII snapshots.
+    * GUI tests: modal lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch, rack & inspector trigger propagation, command palette action registration.
+  - Registered `tier137_turn73_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Feature tests: 7 passed in 0.07s (`cargo test -p summoner_gui --features gui -- tier137_turn73`).
+  - Unit tests: 329 passed in 0.23s (`cargo test -p summoner_gui --lib`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).

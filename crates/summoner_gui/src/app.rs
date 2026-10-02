@@ -1507,6 +1507,14 @@ impl eframe::App for SummonerApp {
                     self.current_view = ViewMode::ModernStudio;
                     self.award_winning_view.open_diffractive_propagation_hud();
                 }
+                "open_membrane_resonator_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_membrane_resonator_hud();
+                }
+                "open_membrane_plate_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_membrane_plate_hud();
+                }
                 "sfz_convert" | "auto_slice" | "load_preset" | "export_clap" | "toggle_simd" => {
                     println!("Command palette action executed: {}", action);
                 }

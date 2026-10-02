@@ -732,6 +732,10 @@ pub struct AwardWinningGuiView {
     pub wavefront_reflection_view: crate::views::wavefront_reflection_view::WavefrontReflectionView,
     pub show_diffractive_propagation_modal: bool,
     pub diffractive_propagation_view: crate::views::diffractive_propagation_view::DiffractivePropagationView,
+    pub show_membrane_resonator_modal: bool,
+    pub membrane_resonator_view: crate::views::membrane_resonator_view::MembraneResonatorView,
+    pub show_membrane_plate_modal: bool,
+    pub membrane_plate_view: crate::views::membrane_plate_view::MembranePlateView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1080,6 +1084,10 @@ impl AwardWinningGuiView {
             wavefront_reflection_view: crate::views::wavefront_reflection_view::WavefrontReflectionView::new(),
             show_diffractive_propagation_modal: false,
             diffractive_propagation_view: crate::views::diffractive_propagation_view::DiffractivePropagationView::new(),
+            show_membrane_resonator_modal: false,
+            membrane_resonator_view: crate::views::membrane_resonator_view::MembraneResonatorView::new(),
+            show_membrane_plate_modal: false,
+            membrane_plate_view: crate::views::membrane_plate_view::MembranePlateView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -1949,6 +1957,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_diffractive_propagation_hud = false;
             self.open_diffractive_propagation_hud();
         }
+        if self.inspector_state.requested_open_membrane_resonator_hud || self.device_rack_state.requested_open_membrane_resonator_hud {
+            self.inspector_state.requested_open_membrane_resonator_hud = false;
+            self.device_rack_state.requested_open_membrane_resonator_hud = false;
+            self.open_membrane_resonator_hud();
+        }
+        if self.inspector_state.requested_open_membrane_plate_hud || self.device_rack_state.requested_open_membrane_plate_hud {
+            self.inspector_state.requested_open_membrane_plate_hud = false;
+            self.device_rack_state.requested_open_membrane_plate_hud = false;
+            self.open_membrane_plate_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -1998,6 +2016,8 @@ impl AwardWinningGuiView {
         self.show_comb_resonator_modal_window(ui);
         self.show_wavefront_reflection_modal_window(ui);
         self.show_diffractive_propagation_modal_window(ui);
+        self.show_membrane_resonator_modal_window(ui);
+        self.show_membrane_plate_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -11945,6 +11965,183 @@ impl AwardWinningGuiView {
     pub fn is_diffractive_propagation_hud_open(&self) -> bool {
         self.show_diffractive_propagation_modal
     }
+
+    #[cfg(feature = "gui")]
+    fn show_membrane_resonator_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_membrane_resonator_modal {
+            return;
+        }
+
+        let mut is_open = self.show_membrane_resonator_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🥁 Physical Modeling Acoustic Membrane Resonator HUD")
+            .id(egui::Id::new("membrane_resonator_hud_modal"))
+            .open(&mut is_open)
+            .default_size([920.0, 600.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Physical Modeling Acoustic Membrane Percussion & Strike Velocity Resonance HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.membrane_resonator_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_membrane_resonator_modal = is_open;
+        self.sync_membrane_resonator_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_membrane_resonator_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let strike_pos = (self.membrane_resonator_view.strike_pos_norm.0.powi(2) + self.membrane_resonator_view.strike_pos_norm.1.powi(2)).sqrt().min(1.0);
+        let tension = self.membrane_resonator_view.membrane_tension_nm;
+        let vel = self.membrane_resonator_view.strike_velocity;
+        let rim = self.membrane_resonator_view.rim_shot_coupling;
+
+        self.device_rack_state.node_param_values.insert("radial_strike_pos".to_string(), strike_pos);
+        self.device_rack_state.node_param_values.insert("membrane_tension_n".to_string(), tension);
+        self.device_rack_state.node_param_values.insert("strike_velocity".to_string(), vel);
+        self.device_rack_state.node_param_values.insert("rim_shot_mix".to_string(), rim);
+
+        self.inspector_state.node_param_values.insert("radial_strike_pos".to_string(), strike_pos);
+        self.inspector_state.node_param_values.insert("membrane_tension_n".to_string(), tension);
+        self.inspector_state.node_param_values.insert("strike_velocity".to_string(), vel);
+        self.inspector_state.node_param_values.insert("rim_shot_mix".to_string(), rim);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_pos = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_ten = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_vel = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_rim = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_pos).is_some() { bus.set(pid_pos, strike_pos); }
+            if bus.get(pid_ten).is_some() { bus.set(pid_ten, tension); }
+            if bus.get(pid_vel).is_some() { bus.set(pid_vel, vel); }
+            if bus.get(pid_rim).is_some() { bus.set(pid_rim, rim); }
+        }
+    }
+
+    pub fn open_membrane_resonator_hud(&mut self) {
+        self.show_membrane_resonator_modal = true;
+    }
+
+    pub fn close_membrane_resonator_hud(&mut self) {
+        self.show_membrane_resonator_modal = false;
+    }
+
+    pub fn is_membrane_resonator_hud_open(&self) -> bool {
+        self.show_membrane_resonator_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_membrane_plate_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_membrane_plate_modal {
+            return;
+        }
+
+        let mut is_open = self.show_membrane_plate_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🍽 Physical Modeling Coupled Membrane & Plate Resonator HUD")
+            .id(egui::Id::new("membrane_plate_hud_modal"))
+            .open(&mut is_open)
+            .default_size([920.0, 600.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Physical Modeling Acoustic Membrane/Plate Percussion & Boundary Strike Impedance HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.membrane_plate_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_membrane_plate_modal = is_open;
+        self.sync_membrane_plate_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_membrane_plate_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let thick = self.membrane_plate_view.thickness_mm;
+        let tension = self.membrane_plate_view.tension_nm;
+        let hardness = self.membrane_plate_view.mallet_hardness;
+        let aspect = self.membrane_plate_view.aspect_ratio;
+
+        self.device_rack_state.node_param_values.insert("thickness_mm".to_string(), thick);
+        self.device_rack_state.node_param_values.insert("tension_nm".to_string(), tension);
+        self.device_rack_state.node_param_values.insert("mallet_hardness".to_string(), hardness);
+        self.device_rack_state.node_param_values.insert("aspect_ratio".to_string(), aspect);
+
+        self.inspector_state.node_param_values.insert("thickness_mm".to_string(), thick);
+        self.inspector_state.node_param_values.insert("tension_nm".to_string(), tension);
+        self.inspector_state.node_param_values.insert("mallet_hardness".to_string(), hardness);
+        self.inspector_state.node_param_values.insert("aspect_ratio".to_string(), aspect);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_thk = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_ten = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_hrd = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_asp = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_thk).is_some() { bus.set(pid_thk, thick); }
+            if bus.get(pid_ten).is_some() { bus.set(pid_ten, tension); }
+            if bus.get(pid_hrd).is_some() { bus.set(pid_hrd, hardness); }
+            if bus.get(pid_asp).is_some() { bus.set(pid_asp, aspect); }
+        }
+    }
+
+    pub fn open_membrane_plate_hud(&mut self) {
+        self.show_membrane_plate_modal = true;
+    }
+
+    pub fn close_membrane_plate_hud(&mut self) {
+        self.show_membrane_plate_modal = false;
+    }
+
+    pub fn is_membrane_plate_hud_open(&self) -> bool {
+        self.show_membrane_plate_modal
+    }
+
 
     #[cfg(feature = "gui")]
     fn render_patch_cords_canvas(&mut self, ui: &mut egui::Ui, available_h: f32) {

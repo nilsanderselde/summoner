@@ -604,4 +604,19 @@ impl MembranePlateView {
             Color32::from_rgb(0, 255, 180),
         );
     }
+
+    pub fn set_boundary(&mut self, boundary: BoundaryClamping) {
+        self.boundary = boundary;
+        self.update_physics_simulation();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
+    }
+
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        self.render_ascii(40, 20).join("\n")
+    }
 }
+

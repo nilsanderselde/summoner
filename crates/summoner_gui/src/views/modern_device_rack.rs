@@ -141,6 +141,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_wavefront_reflection_hud: bool,
     #[serde(default)]
     pub requested_open_diffractive_propagation_hud: bool,
+    #[serde(default)]
+    pub requested_open_membrane_resonator_hud: bool,
+    #[serde(default)]
+    pub requested_open_membrane_plate_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -200,6 +204,8 @@ impl Default for ModernDeviceRackState {
             requested_open_comb_resonator_hud: false,
             requested_open_wavefront_reflection_hud: false,
             requested_open_diffractive_propagation_hud: false,
+            requested_open_membrane_resonator_hud: false,
+            requested_open_membrane_plate_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -417,7 +423,9 @@ pub fn show_modern_device_rack_with_context(
                     let is_woodwind_jet = cur_selection.contains("WoodwindJet") || cur_selection.contains("FluteJet") || cur_selection.contains("AirJet") || cur_selection.contains("WoodwindModel") || cur_selection == "WoodwindJetView" || cur_selection == "AeroacousticFluteJetExciter" || cur_selection == "AcousticConcertFluteAirJetModel" || cur_selection == "WoodwindJetNode";
                     let is_tonehole_matrix = cur_selection.contains("Tonehole") || cur_selection.contains("BoreModel") || cur_selection == "ToneholeMatrixView" || cur_selection == "ToneholeMatrix" || cur_selection == "ToneholeGrid" || cur_selection == "WoodwindToneholeGrid" || cur_selection == "ToneholeLattice";
                     let is_plate_dispersion = cur_selection.contains("PlateTank") || cur_selection.contains("PlateReverb") || cur_selection.contains("PlateDispersion") || cur_selection == "PlateTankNode" || cur_selection == "PlateDispersionView" || cur_selection == "PlateReverbNode" || cur_selection.contains("EMT140");
-                    let is_membrane_cavity = cur_selection.contains("PercussionMembrane") || cur_selection.contains("MembranePercussion") || cur_selection.contains("MembraneCavity") || cur_selection.contains("MembraneResonator") || cur_selection == "PercussionMembrane" || cur_selection == "MembraneCavityView" || cur_selection == "MembranePercussionModel";
+                    let is_membrane_resonator = cur_selection.contains("MembraneResonator") || cur_selection == "MembraneResonatorView" || cur_selection == "MembraneResonatorNode";
+                    let is_membrane_plate = cur_selection.contains("MembranePlate") || cur_selection == "MembranePlateView" || cur_selection == "MembranePlateModel";
+                    let is_membrane_cavity = (cur_selection.contains("PercussionMembrane") || cur_selection.contains("MembranePercussion") || cur_selection.contains("MembraneCavity") || cur_selection == "PercussionMembrane" || cur_selection == "MembraneCavityView" || cur_selection == "MembranePercussionModel") && !is_membrane_resonator && !is_membrane_plate;
                     let is_embouchure_angle = cur_selection.contains("EmbouchureAngle") || cur_selection.contains("ShakuhachiEmbouchure") || cur_selection.contains("FluteEmbouchure") || cur_selection == "EmbouchureAngleView" || cur_selection == "EmbouchureAngle" || cur_selection.contains("MeriKari") || cur_selection.contains("Utaguchi");
                     let is_friction_orbit = cur_selection.contains("FrictionOrbit") || cur_selection.contains("StickSlip") || cur_selection.contains("BowedFriction") || cur_selection == "FrictionOrbitView" || cur_selection == "FrictionOrbit" || cur_selection.contains("RosinHysteresis") || cur_selection.contains("HelmholtzOrbit");
                     let is_rank_voicing = cur_selection.contains("RankVoicing") || cur_selection.contains("PipeOrganFlute") || cur_selection.contains("OrganRank") || cur_selection == "RankVoicingView" || cur_selection == "RankVoicing" || cur_selection.contains("FlueCutup") || cur_selection.contains("PneumaticPipeOrganFluteRank");
@@ -598,6 +606,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("📐 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 180, 0))).on_hover_text("Open Diffractive Wave Propagation HUD").clicked()
                     {
                         state.requested_open_diffractive_propagation_hud = true;
+                    } else if is_membrane_resonator
+                        && ui.button(RichText::new("🥁 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 170, 0))).on_hover_text("Open Elastic Drumhead Membrane Resonator HUD").clicked()
+                    {
+                        state.requested_open_membrane_resonator_hud = true;
+                    } else if is_membrane_plate
+                        && ui.button(RichText::new("🍽 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Coupled 2D Membrane & Plate Resonator HUD").clicked()
+                    {
+                        state.requested_open_membrane_plate_hud = true;
                     }
                     ui.add_space(4.0);
                     let pwr_col = if state.is_enabled { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(100, 116, 139) };
@@ -813,7 +829,9 @@ pub fn show_modern_device_rack_with_context(
                     let is_woodwind_jet = cur_selection.contains("WoodwindJet") || cur_selection.contains("FluteJet") || cur_selection.contains("AirJet") || cur_selection.contains("WoodwindModel") || cur_selection == "WoodwindJetView" || cur_selection == "AeroacousticFluteJetExciter" || cur_selection == "AcousticConcertFluteAirJetModel" || cur_selection == "WoodwindJetNode";
                     let is_tonehole_matrix = cur_selection.contains("Tonehole") || cur_selection.contains("BoreModel") || cur_selection == "ToneholeMatrixView" || cur_selection == "ToneholeMatrix" || cur_selection == "ToneholeGrid" || cur_selection == "WoodwindToneholeGrid" || cur_selection == "ToneholeLattice";
                     let is_plate_dispersion = cur_selection.contains("PlateTank") || cur_selection.contains("PlateReverb") || cur_selection.contains("PlateDispersion") || cur_selection == "PlateTankNode" || cur_selection == "PlateDispersionView" || cur_selection == "PlateReverbNode" || cur_selection.contains("EMT140");
-                    let is_membrane_cavity = cur_selection.contains("PercussionMembrane") || cur_selection.contains("MembranePercussion") || cur_selection.contains("MembraneCavity") || cur_selection.contains("MembraneResonator") || cur_selection == "PercussionMembrane" || cur_selection == "MembraneCavityView" || cur_selection == "MembranePercussionModel";
+                    let is_membrane_resonator = cur_selection.contains("MembraneResonator") || cur_selection == "MembraneResonatorView" || cur_selection == "MembraneResonatorNode";
+                    let is_membrane_plate = cur_selection.contains("MembranePlate") || cur_selection == "MembranePlateView" || cur_selection == "MembranePlateModel";
+                    let is_membrane_cavity = (cur_selection.contains("PercussionMembrane") || cur_selection.contains("MembranePercussion") || cur_selection.contains("MembraneCavity") || cur_selection == "PercussionMembrane" || cur_selection == "MembraneCavityView" || cur_selection == "MembranePercussionModel") && !is_membrane_resonator && !is_membrane_plate;
                     let is_embouchure_angle = cur_selection.contains("EmbouchureAngle") || cur_selection.contains("ShakuhachiEmbouchure") || cur_selection.contains("FluteEmbouchure") || cur_selection == "EmbouchureAngleView" || cur_selection == "EmbouchureAngle" || cur_selection.contains("MeriKari") || cur_selection.contains("Utaguchi");
                     let is_friction_orbit = cur_selection.contains("FrictionOrbit") || cur_selection.contains("StickSlip") || cur_selection.contains("BowedFriction") || cur_selection == "FrictionOrbitView" || cur_selection == "FrictionOrbit" || cur_selection.contains("RosinHysteresis") || cur_selection.contains("HelmholtzOrbit");
                     let is_rank_voicing = cur_selection.contains("RankVoicing") || cur_selection.contains("PipeOrganFlute") || cur_selection.contains("OrganRank") || cur_selection == "RankVoicingView" || cur_selection == "RankVoicing" || cur_selection.contains("FlueCutup") || cur_selection.contains("PneumaticPipeOrganFluteRank");
@@ -1002,6 +1020,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("📐 Diffract HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 180, 0))).on_hover_text("Open Diffractive Wave Propagation HUD").clicked()
                     {
                         state.requested_open_diffractive_propagation_hud = true;
+                    } else if is_membrane_resonator
+                        && ui.button(RichText::new("🥁 Drum HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 170, 0))).on_hover_text("Open Elastic Drumhead Membrane Resonator HUD").clicked()
+                    {
+                        state.requested_open_membrane_resonator_hud = true;
+                    } else if is_membrane_plate
+                        && ui.button(RichText::new("🍽 Plate HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Coupled 2D Membrane & Plate Resonator HUD").clicked()
+                    {
+                        state.requested_open_membrane_plate_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -1803,7 +1829,9 @@ fn show_pro_parameter_drawer(
                     let is_woodwind_jet = dev_kind.contains("WoodwindJet") || dev_kind.contains("FluteJet") || dev_kind.contains("AirJet") || dev_kind.contains("WoodwindModel") || dev_kind == "WoodwindJetView" || dev_kind == "AeroacousticFluteJetExciter" || dev_kind == "AcousticConcertFluteAirJetModel" || dev_kind == "WoodwindJetNode";
                     let is_tonehole_matrix = dev_kind.contains("Tonehole") || dev_kind.contains("BoreModel") || dev_kind == "ToneholeMatrixView" || dev_kind == "ToneholeMatrix" || dev_kind == "ToneholeGrid" || dev_kind == "WoodwindToneholeGrid" || dev_kind == "ToneholeLattice";
                     let is_plate_dispersion = dev_kind.contains("PlateTank") || dev_kind.contains("PlateReverb") || dev_kind.contains("PlateDispersion") || dev_kind == "PlateTankNode" || dev_kind == "PlateDispersionView" || dev_kind == "PlateReverbNode" || dev_kind.contains("EMT140");
-                    let is_membrane_cavity = dev_kind.contains("PercussionMembrane") || dev_kind.contains("MembranePercussion") || dev_kind.contains("MembraneCavity") || dev_kind.contains("MembraneResonator") || dev_kind == "PercussionMembrane" || dev_kind == "MembraneCavityView" || dev_kind == "MembranePercussionModel";
+                    let is_membrane_resonator = dev_kind.contains("MembraneResonator") || dev_kind == "MembraneResonatorView" || dev_kind == "MembraneResonatorNode";
+                    let is_membrane_plate = dev_kind.contains("MembranePlate") || dev_kind == "MembranePlateView" || dev_kind == "MembranePlateModel";
+                    let is_membrane_cavity = (dev_kind.contains("PercussionMembrane") || dev_kind.contains("MembranePercussion") || dev_kind.contains("MembraneCavity") || dev_kind == "PercussionMembrane" || dev_kind == "MembraneCavityView" || dev_kind == "MembranePercussionModel") && !is_membrane_resonator && !is_membrane_plate;
                     let is_embouchure_angle = dev_kind.contains("EmbouchureAngle") || dev_kind.contains("ShakuhachiEmbouchure") || dev_kind.contains("FluteEmbouchure") || dev_kind == "EmbouchureAngleView" || dev_kind == "EmbouchureAngle" || dev_kind.contains("MeriKari") || dev_kind.contains("Utaguchi");
                     let is_friction_orbit = dev_kind.contains("FrictionOrbit") || dev_kind.contains("StickSlip") || dev_kind.contains("BowedFriction") || dev_kind == "FrictionOrbitView" || dev_kind == "FrictionOrbit" || dev_kind.contains("RosinHysteresis") || dev_kind.contains("HelmholtzOrbit");
                     let is_rank_voicing = dev_kind.contains("RankVoicing") || dev_kind.contains("PipeOrganFlute") || dev_kind.contains("OrganRank") || dev_kind == "RankVoicingView" || dev_kind == "RankVoicing" || dev_kind.contains("FlueCutup") || dev_kind.contains("PneumaticPipeOrganFluteRank");
@@ -5328,6 +5356,172 @@ fn show_pro_parameter_drawer(
                             let _ = df_resp.on_hover_text(format!(
                                 "Diffractive Wave Propagation HUD\nAngle: {:.1}° | Distance: {:.1}m\n[Drag horizontally: Diffraction angle | Drag vertically: Distance]",
                                 angle, dist
+                            ));
+                        }
+                    } else if is_membrane_resonator {
+                        // Physical Modeling Acoustic Membrane Resonator Mini Visualizer
+                        let (mr_resp, mr_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let mr_rect = mr_resp.rect;
+                        mr_painter.rect_filled(mr_rect, 2.0, Color32::from_rgb(14, 18, 28));
+
+                        let mut strike_pos = state.node_param_values.get("radial_strike_pos").copied().unwrap_or(0.35);
+                        let mut tension = state.node_param_values.get("membrane_tension_n").copied().unwrap_or(450.0);
+
+                        if mr_resp.dragged() {
+                            if let Some(pos) = mr_resp.interact_pointer_pos() {
+                                let nx = ((pos.x - mr_rect.left()) / mr_rect.width()).clamp(0.0, 1.0);
+                                let ny = (1.0 - ((pos.y - mr_rect.top()) / mr_rect.height())).clamp(0.0, 1.0);
+                                strike_pos = nx;
+                                tension = 50.0 + ny * (2000.0 - 50.0);
+                                state.node_param_values.insert("radial_strike_pos".to_string(), strike_pos);
+                                state.node_param_values.insert("membrane_tension_n".to_string(), tension);
+                                if let Some(bus) = param_bus {
+                                    let pid_pos = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_pos).is_some() { bus.set(pid_pos, strike_pos); }
+                                    let pid_ten = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_ten).is_some() { bus.set(pid_ten, tension); }
+                                }
+                            }
+                        }
+
+                        // Circular Drumhead Rim & Concentric Modal Rings
+                        let center = egui::pos2(mr_rect.left() + 45.0, mr_rect.center().y);
+                        mr_painter.circle_stroke(center, 26.0, Stroke::new(2.0_f32, Color32::from_rgb(180, 140, 80)));
+                        mr_painter.circle_stroke(center, 18.0, Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(255, 170, 0, 70)));
+                        mr_painter.circle_stroke(center, 10.0, Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(255, 170, 0, 120)));
+
+                        // Strike Puck
+                        let puck_x = center.x + strike_pos * 24.0 * 0.707;
+                        let puck_y = center.y + strike_pos * 24.0 * 0.707;
+                        mr_painter.circle_stroke(egui::pos2(puck_x, puck_y), 4.5, Stroke::new(1.2_f32, Color32::from_rgb(255, 170, 0)));
+                        mr_painter.circle_filled(egui::pos2(puck_x, puck_y), 2.0, Color32::WHITE);
+
+                        // Right side: Tension meter & frequency readout
+                        let meter_x = mr_rect.left() + 85.0;
+                        let meter_w = mr_rect.right() - meter_x - 6.0;
+                        let norm_t = ((tension - 50.0) / 1950.0).clamp(0.0, 1.0);
+                        mr_painter.rect_filled(
+                            egui::Rect::from_min_max(egui::pos2(meter_x, mr_rect.top() + 24.0), egui::pos2(meter_x + meter_w, mr_rect.top() + 32.0)),
+                            2.0,
+                            Color32::from_rgb(24, 30, 44),
+                        );
+                        mr_painter.rect_filled(
+                            egui::Rect::from_min_max(egui::pos2(meter_x, mr_rect.top() + 24.0), egui::pos2(meter_x + meter_w * norm_t, mr_rect.top() + 32.0)),
+                            2.0,
+                            Color32::from_rgb(255, 170, 0),
+                        );
+
+                        // Readouts
+                        mr_painter.text(
+                            egui::pos2(mr_rect.left() + 4.0, mr_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("r: {:.2}", strike_pos),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(255, 170, 0),
+                        );
+                        mr_painter.text(
+                            egui::pos2(mr_rect.right() - 4.0, mr_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("{:.0} N/m", tension),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(255, 215, 0),
+                        );
+                        let approx_f0 = (tension / 0.26).sqrt() * 2.4048 / (2.0 * std::f32::consts::PI * 0.178);
+                        mr_painter.text(
+                            egui::pos2(meter_x, mr_rect.bottom() - 14.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("f0: {:.0} Hz", approx_f0),
+                            FontId::proportional(9.0),
+                            Color32::from_rgb(0, 255, 180),
+                        );
+
+                        if mr_resp.hovered() {
+                            let _ = mr_resp.on_hover_text(format!(
+                                "Membrane Resonator HUD\nStrike Radius: {:.2} r/R | Tension: {:.0} N/m (f0: {:.0} Hz)\n[Drag horizontally: Strike radius | Drag vertically: Skin tension]",
+                                strike_pos, tension, approx_f0
+                            ));
+                        }
+                    } else if is_membrane_plate {
+                        // Physical Modeling Coupled Membrane & Plate Resonator Mini Visualizer
+                        let (mp_resp, mp_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let mp_rect = mp_resp.rect;
+                        mp_painter.rect_filled(mp_rect, 2.0, Color32::from_rgb(14, 20, 30));
+
+                        let mut thickness = state.node_param_values.get("plate_elastic_modulus").copied().unwrap_or(1.8);
+                        let mut membrane_tension = state.node_param_values.get("membrane_tension").copied().unwrap_or(0.75);
+
+                        if mp_resp.dragged() {
+                            if let Some(pos) = mp_resp.interact_pointer_pos() {
+                                let nx = ((pos.x - mp_rect.left()) / mp_rect.width()).clamp(0.0, 1.0);
+                                let ny = (1.0 - ((pos.y - mp_rect.top()) / mp_rect.height())).clamp(0.0, 1.0);
+                                thickness = 0.1 + nx * (5.0 - 0.1);
+                                membrane_tension = 0.1 + ny * (1.0 - 0.1);
+                                state.node_param_values.insert("plate_elastic_modulus".to_string(), thickness);
+                                state.node_param_values.insert("membrane_tension".to_string(), membrane_tension);
+                                if let Some(bus) = param_bus {
+                                    let pid_mod = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_mod).is_some() { bus.set(pid_mod, thickness); }
+                                    let pid_ten = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_ten).is_some() { bus.set(pid_ten, membrane_tension); }
+                                }
+                            }
+                        }
+
+                        // Plate & Membrane 2D Graphic
+                        let plate_box = egui::Rect::from_min_max(
+                            egui::pos2(mp_rect.left() + 10.0, mp_rect.top() + 16.0),
+                            egui::pos2(mp_rect.left() + 70.0, mp_rect.bottom() - 10.0),
+                        );
+                        mp_painter.rect_filled(plate_box, 2.0, Color32::from_rgb(28, 38, 54));
+                        mp_painter.rect_stroke(plate_box, 2.0, Stroke::new(1.5_f32, Color32::from_rgb(0, 229, 255)));
+
+                        // Modal nodal lines
+                        mp_painter.line_segment(
+                            [egui::pos2(plate_box.center().x, plate_box.top()), egui::pos2(plate_box.center().x, plate_box.bottom())],
+                            Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(255, 215, 0, 100)),
+                        );
+                        mp_painter.line_segment(
+                            [egui::pos2(plate_box.left(), plate_box.center().y), egui::pos2(plate_box.right(), plate_box.center().y)],
+                            Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(255, 215, 0, 100)),
+                        );
+
+                        // 5 Modal Energy Bars on right
+                        let spec_left = mp_rect.left() + 82.0;
+                        let spec_w = mp_rect.right() - spec_left - 6.0;
+                        let bar_w = spec_w / 5.0;
+                        let ratios: [f32; 5] = [1.0, 1.6, 2.4, 3.1, 3.9];
+                        for (i, &r) in ratios.iter().enumerate() {
+                            let h = ((1.0 / r.sqrt()) * (thickness / 5.0 * 24.0 + membrane_tension * 12.0)).clamp(4.0, 36.0);
+                            let bx = spec_left + i as f32 * bar_w + 1.0;
+                            let by = mp_rect.bottom() - 8.0 - h;
+                            let col = if i == 0 { Color32::from_rgb(0, 255, 180) } else if i < 3 { Color32::from_rgb(0, 229, 255) } else { Color32::from_rgb(255, 180, 0) };
+                            mp_painter.rect_filled(
+                                egui::Rect::from_min_size(egui::pos2(bx, by), egui::vec2((bar_w - 2.0).max(2.0), h)),
+                                1.0,
+                                col,
+                            );
+                        }
+
+                        // Readouts
+                        mp_painter.text(
+                            egui::pos2(mp_rect.left() + 4.0, mp_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("E: {:.1} GPa", thickness),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+                        mp_painter.text(
+                            egui::pos2(mp_rect.right() - 4.0, mp_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("T: {:.0}%", membrane_tension * 100.0),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(255, 180, 0),
+                        );
+
+                        if mp_resp.hovered() {
+                            let _ = mp_resp.on_hover_text(format!(
+                                "Membrane & Plate Resonator HUD\nPlate Stiffness: {:.1} GPa | Tension: {:.0}%\n[Drag horizontally: Plate stiffness | Drag vertically: Membrane tension]",
+                                thickness, membrane_tension * 100.0
                             ));
                         }
                     } else {

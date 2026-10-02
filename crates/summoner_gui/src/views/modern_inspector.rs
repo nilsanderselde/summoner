@@ -126,6 +126,10 @@ pub struct ModernInspectorState {
     pub requested_open_wavefront_reflection_hud: bool,
     #[serde(default)]
     pub requested_open_diffractive_propagation_hud: bool,
+    #[serde(default)]
+    pub requested_open_membrane_resonator_hud: bool,
+    #[serde(default)]
+    pub requested_open_membrane_plate_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -195,6 +199,8 @@ impl Default for ModernInspectorState {
             requested_open_comb_resonator_hud: false,
             requested_open_wavefront_reflection_hud: false,
             requested_open_diffractive_propagation_hud: false,
+            requested_open_membrane_resonator_hud: false,
+            requested_open_membrane_plate_hud: false,
         }
     }
 }
@@ -1119,6 +1125,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open interactive Neural Acoustic Continuous Latent Diffractive Wave Propagation HUD").clicked() {
                     state.requested_open_diffractive_propagation_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("MembraneResonator") || active_kind.contains("MembranePercussion") || active_kind == "MembraneResonatorView" || active_kind == "MembraneResonatorNode" || active_kind == "MembranePercussionModel" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🥁 Open Elastic Drumhead Membrane Resonator HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(255, 170, 0)))
+                        .fill(Color32::from_rgb(38, 26, 12))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 170, 0)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Physical Modeling Acoustic Membrane Percussion & Strike Velocity Resonance HUD").clicked() {
+                    state.requested_open_membrane_resonator_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("MembranePlate") || active_kind.contains("PlateResonator") || active_kind == "MembranePlateView" || active_kind == "MembranePlateModel" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🍽 Open Coupled 2D Membrane & Plate Resonator HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 229, 255)))
+                        .fill(Color32::from_rgb(14, 28, 44))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 229, 255)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Physical Modeling Acoustic Membrane/Plate Percussion & Boundary Strike Impedance HUD").clicked() {
+                    state.requested_open_membrane_plate_hud = true;
                 }
                 ui.add_space(4.0);
             }
