@@ -1861,6 +1861,34 @@ Product Management has conducted a comprehensive readiness audit:
   - Unit tests: 329 passed in 0.22s (`cargo test -p summoner_gui --lib`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`).
 
-
-
-
+### Turn #72 (Turn #35 Deliverable) — Neural Acoustic Wavefront Boundary Reflection & Continuous Latent Diffractive Spherical Wave Propagation HUDs Convergence (Milestones 33, 34 & 35)
+- [x] Neural Acoustic Wavefront Boundary Reflection & Continuous Latent Diffractive Spherical Wave Propagation Performance HUDs Integration:
+  - Integrated `WavefrontReflectionView` (Neural Acoustic Wavefront Boundary Reflection Raytracing & Diffraction Kernel Neural Network HUD: 5 Room Architecture Profiles [Concert Hall Horseshoe, Shoebox Studio Control (LEDE), Cathedral Stone Vault, Modular Vocal Booth, Asymmetrical Gallery], 16-Tap early reflection impulse decay profile histogram, 2D Scattering vs Absorption XY touch puck with $\ge 44 \times 44\text{pt}$ bounding target, Wall boundary line & specular/diffuse reflection rays, and dock parameter sliders for Scattering [0..100%], Absorption [0..100%], and Neural Kernel Depth [0..100%]) and `DiffractivePropagationView` (Neural Acoustic Continuous Latent Diffractive Spherical Wave Propagation & Room Boundary Diffraction HUD: 5 Diffraction Models [Spherical Helmholtz-Kirchhoff Integral, Biot-Tolstoy-Medwin (BTM) Edge Wave, Neural Continuous Wavefield, Thin Wedge Shadow Diffraction, Curved Pillar Scattering], 8-Octave frequency-dependent shadow zone attenuation spectrum [63 Hz .. 8 kHz], Obstacle wedge boundary with spherical wavefront propagation arcs, 2D Diffraction Angle vs Source Distance touch puck with $\ge 44 \times 44\text{pt}$ bounding target, and dock parameter readouts for Diffraction Angle [0.0..180.0°], Source Distance [0.5..25.0 m], Shadow Attenuation [-48.0..0.0 dB], and Edge Wave Delay [0.1..80.0 ms]) into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/wavefront_reflection_view.rs` & `diffractive_propagation_view.rs`):
+  - In `WavefrontReflectionView`: added `render_ascii_snapshot_str() -> String`.
+  - In `DiffractivePropagationView`: added `render_ascii_snapshot_str() -> String`.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_wavefront_reflection_modal: bool`, `wavefront_reflection_view: WavefrontReflectionView`, `show_diffractive_propagation_modal: bool`, and `diffractive_propagation_view: DiffractivePropagationView`.
+  - Added dedicated modal windows `show_wavefront_reflection_modal_window` and `show_diffractive_propagation_modal_window` with responsive styling, WCAG AAA contrast, and $\ge 44 \times 44\text{pt}$ touch bounds.
+  - Added public lifecycle methods: `open_wavefront_reflection_hud()`, `close_wavefront_reflection_hud()`, `is_wavefront_reflection_hud_open()`, `open_diffractive_propagation_hud()`, `close_diffractive_propagation_hud()`, `is_diffractive_propagation_hud_open()`.
+  - Real-time parameter sync bridges (`sync_wavefront_reflection_hud_state` and `sync_diffractive_propagation_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_wavefront_reflection_hud: bool` and `requested_open_diffractive_propagation_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🌊 Open Wavefront Reflection Raytracing HUD]` and `[📐 Open Diffractive Wave Propagation HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header `[🌊 HUD]` / `[📐 HUD]` and expanded toolbar buttons in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Wavefront Reflection: Wall boundary line, specular and diffuse ray segments, 6-tap impulse histogram bars, drag-puck modulating `surface_scattering_coeff` and `boundary_absorption_alpha`, readouts, and live `ParamBus` slot dispatch.
+    * Diffractive Propagation: 2D obstacle wedge boundary, wavefront propagation concentric arcs, 6-band shadow attenuation spectrum bars, drag-puck modulating `diffraction_angle_deg` and `source_distance_m`, readouts, and live `ParamBus` slot dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_wavefront_reflection_hud` and `open_diffractive_propagation_hud` under `"Physical Modeling"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_wavefront_reflection_hud()` and `open_diffractive_propagation_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier136_turn72_tests.rs`:
+    * Pure tests: view initialization, profile/architecture/model selections, reflection decay and diffraction shadow attenuation evaluations, coordinate conversions, puck hit testing, slot arithmetic channel isolation, deterministic ASCII snapshots.
+    * GUI tests: modal lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch, rack & inspector trigger propagation, command palette action registration.
+  - Registered `tier136_turn72_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Feature tests: 7 passed in 0.07s (`cargo test -p summoner_gui --features gui -- tier136_turn72`).
+  - Unit tests: 329 passed in 0.22s (`cargo test -p summoner_gui --lib`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`).

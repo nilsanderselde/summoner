@@ -728,6 +728,10 @@ pub struct AwardWinningGuiView {
     pub spring_reverb_view: crate::views::spring_reverb_view::SpringReverbView,
     pub show_comb_resonator_modal: bool,
     pub comb_resonator_view: crate::views::comb_resonator_view::CombResonatorView,
+    pub show_wavefront_reflection_modal: bool,
+    pub wavefront_reflection_view: crate::views::wavefront_reflection_view::WavefrontReflectionView,
+    pub show_diffractive_propagation_modal: bool,
+    pub diffractive_propagation_view: crate::views::diffractive_propagation_view::DiffractivePropagationView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1072,6 +1076,10 @@ impl AwardWinningGuiView {
             spring_reverb_view: crate::views::spring_reverb_view::SpringReverbView::new(),
             show_comb_resonator_modal: false,
             comb_resonator_view: crate::views::comb_resonator_view::CombResonatorView::new(),
+            show_wavefront_reflection_modal: false,
+            wavefront_reflection_view: crate::views::wavefront_reflection_view::WavefrontReflectionView::new(),
+            show_diffractive_propagation_modal: false,
+            diffractive_propagation_view: crate::views::diffractive_propagation_view::DiffractivePropagationView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -1931,6 +1939,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_comb_resonator_hud = false;
             self.open_comb_resonator_hud();
         }
+        if self.inspector_state.requested_open_wavefront_reflection_hud || self.device_rack_state.requested_open_wavefront_reflection_hud {
+            self.inspector_state.requested_open_wavefront_reflection_hud = false;
+            self.device_rack_state.requested_open_wavefront_reflection_hud = false;
+            self.open_wavefront_reflection_hud();
+        }
+        if self.inspector_state.requested_open_diffractive_propagation_hud || self.device_rack_state.requested_open_diffractive_propagation_hud {
+            self.inspector_state.requested_open_diffractive_propagation_hud = false;
+            self.device_rack_state.requested_open_diffractive_propagation_hud = false;
+            self.open_diffractive_propagation_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -1978,6 +1996,8 @@ impl AwardWinningGuiView {
         self.show_tine_resonator_modal_window(ui);
         self.show_spring_reverb_modal_window(ui);
         self.show_comb_resonator_modal_window(ui);
+        self.show_wavefront_reflection_modal_window(ui);
+        self.show_diffractive_propagation_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -11748,6 +11768,182 @@ impl AwardWinningGuiView {
 
     pub fn is_comb_resonator_hud_open(&self) -> bool {
         self.show_comb_resonator_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_wavefront_reflection_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_wavefront_reflection_modal {
+            return;
+        }
+
+        let mut is_open = self.show_wavefront_reflection_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🌊 Neural Acoustic Wavefront Boundary Reflection Raytracing HUD")
+            .id(egui::Id::new("wavefront_reflection_hud_modal"))
+            .open(&mut is_open)
+            .default_size([920.0, 600.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Neural Acoustic Wavefront Boundary Reflection Raytracing & Early Reflection Impulse Decay HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.wavefront_reflection_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_wavefront_reflection_modal = is_open;
+        self.sync_wavefront_reflection_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_wavefront_reflection_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let scattering = self.wavefront_reflection_view.surface_scattering_coeff;
+        let absorption = self.wavefront_reflection_view.boundary_absorption_alpha;
+        let neural_depth = self.wavefront_reflection_view.neural_kernel_depth;
+        let ray_count = self.wavefront_reflection_view.ray_count as f32;
+
+        self.device_rack_state.node_param_values.insert("surface_scattering_coeff".to_string(), scattering);
+        self.device_rack_state.node_param_values.insert("boundary_absorption_alpha".to_string(), absorption);
+        self.device_rack_state.node_param_values.insert("neural_kernel_depth".to_string(), neural_depth);
+        self.device_rack_state.node_param_values.insert("ray_count".to_string(), ray_count);
+
+        self.inspector_state.node_param_values.insert("surface_scattering_coeff".to_string(), scattering);
+        self.inspector_state.node_param_values.insert("boundary_absorption_alpha".to_string(), absorption);
+        self.inspector_state.node_param_values.insert("neural_kernel_depth".to_string(), neural_depth);
+        self.inspector_state.node_param_values.insert("ray_count".to_string(), ray_count);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_scat = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_abs = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_depth = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_rays = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_scat).is_some() { bus.set(pid_scat, scattering); }
+            if bus.get(pid_abs).is_some() { bus.set(pid_abs, absorption); }
+            if bus.get(pid_depth).is_some() { bus.set(pid_depth, neural_depth); }
+            if bus.get(pid_rays).is_some() { bus.set(pid_rays, ray_count); }
+        }
+    }
+
+    pub fn open_wavefront_reflection_hud(&mut self) {
+        self.show_wavefront_reflection_modal = true;
+    }
+
+    pub fn close_wavefront_reflection_hud(&mut self) {
+        self.show_wavefront_reflection_modal = false;
+    }
+
+    pub fn is_wavefront_reflection_hud_open(&self) -> bool {
+        self.show_wavefront_reflection_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_diffractive_propagation_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_diffractive_propagation_modal {
+            return;
+        }
+
+        let mut is_open = self.show_diffractive_propagation_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("📐 Neural Acoustic Diffractive Spherical Wave Propagation HUD")
+            .id(egui::Id::new("diffractive_propagation_hud_modal"))
+            .open(&mut is_open)
+            .default_size([920.0, 600.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Neural Acoustic Continuous Latent Diffractive Spherical Wave Propagation & Shadow Zone Spectrum HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.diffractive_propagation_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_diffractive_propagation_modal = is_open;
+        self.sync_diffractive_propagation_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_diffractive_propagation_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let angle = self.diffractive_propagation_view.diffraction_angle_deg;
+        let dist = self.diffractive_propagation_view.source_distance_m;
+        let absorption = self.diffractive_propagation_view.boundary_absorption_alpha;
+        let wedge = self.diffractive_propagation_view.edge_wedge_angle_deg;
+
+        self.device_rack_state.node_param_values.insert("diffraction_angle_deg".to_string(), angle);
+        self.device_rack_state.node_param_values.insert("source_distance_m".to_string(), dist);
+        self.device_rack_state.node_param_values.insert("boundary_absorption_alpha".to_string(), absorption);
+        self.device_rack_state.node_param_values.insert("edge_wedge_angle_deg".to_string(), wedge);
+
+        self.inspector_state.node_param_values.insert("diffraction_angle_deg".to_string(), angle);
+        self.inspector_state.node_param_values.insert("source_distance_m".to_string(), dist);
+        self.inspector_state.node_param_values.insert("boundary_absorption_alpha".to_string(), absorption);
+        self.inspector_state.node_param_values.insert("edge_wedge_angle_deg".to_string(), wedge);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_ang = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_dst = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_abs = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_wdg = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_ang).is_some() { bus.set(pid_ang, angle); }
+            if bus.get(pid_dst).is_some() { bus.set(pid_dst, dist); }
+            if bus.get(pid_abs).is_some() { bus.set(pid_abs, absorption); }
+            if bus.get(pid_wdg).is_some() { bus.set(pid_wdg, wedge); }
+        }
+    }
+
+    pub fn open_diffractive_propagation_hud(&mut self) {
+        self.show_diffractive_propagation_modal = true;
+    }
+
+    pub fn close_diffractive_propagation_hud(&mut self) {
+        self.show_diffractive_propagation_modal = false;
+    }
+
+    pub fn is_diffractive_propagation_hud_open(&self) -> bool {
+        self.show_diffractive_propagation_modal
     }
 
     #[cfg(feature = "gui")]

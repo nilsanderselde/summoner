@@ -569,6 +569,18 @@ impl CommandPalette {
                 action_id: "open_comb_resonator_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Wavefront Reflection Raytracing HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_wavefront_reflection_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Diffractive Wave Propagation HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_diffractive_propagation_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

@@ -137,6 +137,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_spring_reverb_hud: bool,
     #[serde(default)]
     pub requested_open_comb_resonator_hud: bool,
+    #[serde(default)]
+    pub requested_open_wavefront_reflection_hud: bool,
+    #[serde(default)]
+    pub requested_open_diffractive_propagation_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -194,6 +198,8 @@ impl Default for ModernDeviceRackState {
             requested_open_tine_resonator_hud: false,
             requested_open_spring_reverb_hud: false,
             requested_open_comb_resonator_hud: false,
+            requested_open_wavefront_reflection_hud: false,
+            requested_open_diffractive_propagation_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -418,6 +424,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_tine_resonator = cur_selection.contains("TineResonator") || cur_selection.contains("TinePickup") || cur_selection.contains("TineResonatorPickup") || cur_selection == "TineResonatorView" || cur_selection == "TineResonator" || cur_selection.contains("EpArticulation") || cur_selection.contains("ElectricPiano");
                     let is_spring_reverb = cur_selection.contains("SpringReverb") || cur_selection.contains("SpringTank") || cur_selection.contains("AnalogSpring") || cur_selection.contains("SpringMass") || cur_selection == "SpringReverbView" || cur_selection == "AnalogSpringReverbTank" || cur_selection == "NonlinearSpringReverbTank";
                     let is_comb_resonator = cur_selection.contains("CombResonator") || cur_selection.contains("CombFilter") || cur_selection.contains("ResonantComb") || cur_selection == "CombResonatorView" || cur_selection == "CombResonatorNode" || cur_selection == "ResonantPhasedCombArray";
+                    let is_wavefront_reflection = cur_selection.contains("WavefrontReflection") || cur_selection.contains("Wavefront") || cur_selection.contains("RaytracedEarlyReflection") || cur_selection == "WavefrontReflectionView" || cur_selection == "WavefrontReflectionNode";
+                    let is_diffractive_propagation = cur_selection.contains("DiffractivePropagation") || cur_selection.contains("Diffraction") || cur_selection == "DiffractivePropagationView" || cur_selection == "DiffractivePropagationNode";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -582,6 +590,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("🪮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 215, 0))).on_hover_text("Open Spectral Comb Resonator & Matrix HUD").clicked()
                     {
                         state.requested_open_comb_resonator_hud = true;
+                    } else if is_wavefront_reflection
+                        && ui.button(RichText::new("🌊 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Wavefront Reflection Raytracing HUD").clicked()
+                    {
+                        state.requested_open_wavefront_reflection_hud = true;
+                    } else if is_diffractive_propagation
+                        && ui.button(RichText::new("📐 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 180, 0))).on_hover_text("Open Diffractive Wave Propagation HUD").clicked()
+                    {
+                        state.requested_open_diffractive_propagation_hud = true;
                     }
                     ui.add_space(4.0);
                     let pwr_col = if state.is_enabled { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(100, 116, 139) };
@@ -804,6 +820,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_tine_resonator = cur_selection.contains("TineResonator") || cur_selection.contains("TinePickup") || cur_selection.contains("TineResonatorPickup") || cur_selection == "TineResonatorView" || cur_selection == "TineResonator" || cur_selection.contains("EpArticulation") || cur_selection.contains("ElectricPiano");
                     let is_spring_reverb = cur_selection.contains("SpringReverb") || cur_selection.contains("SpringTank") || cur_selection.contains("AnalogSpring") || cur_selection.contains("SpringMass") || cur_selection == "SpringReverbView" || cur_selection == "AnalogSpringReverbTank" || cur_selection == "NonlinearSpringReverbTank";
                     let is_comb_resonator = cur_selection.contains("CombResonator") || cur_selection.contains("CombFilter") || cur_selection.contains("ResonantComb") || cur_selection == "CombResonatorView" || cur_selection == "CombResonatorNode" || cur_selection == "ResonantPhasedCombArray";
+                    let is_wavefront_reflection = cur_selection.contains("WavefrontReflection") || cur_selection.contains("Wavefront") || cur_selection.contains("RaytracedEarlyReflection") || cur_selection == "WavefrontReflectionView" || cur_selection == "WavefrontReflectionNode";
+                    let is_diffractive_propagation = cur_selection.contains("DiffractivePropagation") || cur_selection.contains("Diffraction") || cur_selection == "DiffractivePropagationView" || cur_selection == "DiffractivePropagationNode";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -976,6 +994,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("🪮 Comb HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 215, 0))).on_hover_text("Open Spectral Comb Resonator & Matrix HUD").clicked()
                     {
                         state.requested_open_comb_resonator_hud = true;
+                    } else if is_wavefront_reflection
+                        && ui.button(RichText::new("🌊 Wavefront HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Wavefront Reflection Raytracing HUD").clicked()
+                    {
+                        state.requested_open_wavefront_reflection_hud = true;
+                    } else if is_diffractive_propagation
+                        && ui.button(RichText::new("📐 Diffract HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 180, 0))).on_hover_text("Open Diffractive Wave Propagation HUD").clicked()
+                    {
+                        state.requested_open_diffractive_propagation_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -1784,6 +1810,8 @@ fn show_pro_parameter_drawer(
                     let is_tine_resonator = dev_kind.contains("TineResonator") || dev_kind.contains("TinePickup") || dev_kind.contains("TineResonatorPickup") || dev_kind == "TineResonatorView" || dev_kind == "TineResonator" || dev_kind.contains("EpArticulation") || dev_kind.contains("ElectricPiano");
                     let is_spring_reverb = dev_kind.contains("SpringReverb") || dev_kind.contains("SpringTank") || dev_kind.contains("AnalogSpring") || dev_kind.contains("SpringMass") || dev_kind == "SpringReverbView" || dev_kind == "AnalogSpringReverbTank" || dev_kind == "NonlinearSpringReverbTank";
                     let is_comb_resonator = dev_kind.contains("CombResonator") || dev_kind.contains("CombFilter") || dev_kind.contains("ResonantComb") || dev_kind == "CombResonatorView" || dev_kind == "CombResonatorNode" || dev_kind == "ResonantPhasedCombArray";
+                    let is_wavefront_reflection = dev_kind.contains("WavefrontReflection") || dev_kind.contains("Wavefront") || dev_kind.contains("RaytracedEarlyReflection") || dev_kind == "WavefrontReflectionView" || dev_kind == "WavefrontReflectionNode";
+                    let is_diffractive_propagation = dev_kind.contains("DiffractivePropagation") || dev_kind.contains("Diffraction") || dev_kind == "DiffractivePropagationView" || dev_kind == "DiffractivePropagationNode";
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -5100,6 +5128,207 @@ fn show_pro_parameter_drawer(
 
                         if cb_resp.hovered() {
                             let _ = cb_resp.on_hover_text(format!("Spectral Comb Resonator HUD\nBase: {:.1} Hz | FB: {:.0}%\n[Drag horizontally: F0 pitch | Drag vertically: Feedback resonance]", base_f, feedback));
+                        }
+                    } else if is_wavefront_reflection {
+                        // Neural Acoustic Wavefront Boundary Reflection & Impulse Decay Mini Visualizer
+                        let (wf_resp, wf_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let wf_rect = wf_resp.rect;
+                        wf_painter.rect_filled(wf_rect, 2.0, Color32::from_rgb(10, 14, 24));
+
+                        let mut scattering = state.node_param_values.get("surface_scattering_coeff").copied().unwrap_or(0.45);
+                        let mut absorption = state.node_param_values.get("boundary_absorption_alpha").copied().unwrap_or(0.20);
+
+                        if wf_resp.dragged() {
+                            if let Some(pos) = wf_resp.interact_pointer_pos() {
+                                scattering = ((pos.x - wf_rect.left()) / wf_rect.width()).clamp(0.0, 1.0);
+                                absorption = (1.0 - ((pos.y - wf_rect.top()) / wf_rect.height())).clamp(0.0, 1.0);
+                                state.node_param_values.insert("surface_scattering_coeff".to_string(), scattering);
+                                state.node_param_values.insert("boundary_absorption_alpha".to_string(), absorption);
+                                if let Some(bus) = param_bus {
+                                    let pid_scat = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_scat).is_some() { bus.set(pid_scat, scattering); }
+                                    let pid_abs = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_abs).is_some() { bus.set(pid_abs, absorption); }
+                                }
+                            }
+                        }
+
+                        // Boundary Line & Ray Reflection Display
+                        let origin_x = wf_rect.left() + 12.0;
+                        let origin_y = wf_rect.bottom() - 10.0;
+                        let boundary_x = wf_rect.left() + 70.0;
+
+                        // Wall boundary line
+                        wf_painter.line_segment(
+                            [egui::pos2(boundary_x, wf_rect.top() + 6.0), egui::pos2(boundary_x, wf_rect.bottom() - 6.0)],
+                            Stroke::new(1.5_f32, Color32::from_rgb(100, 130, 170)),
+                        );
+
+                        // Incident ray
+                        wf_painter.line_segment(
+                            [egui::pos2(origin_x, origin_y), egui::pos2(boundary_x, wf_rect.center().y)],
+                            Stroke::new(1.2_f32, Color32::from_rgb(0, 229, 255)),
+                        );
+
+                        // Reflected rays (specular + diffuse)
+                        let spec_alpha = ((1.0 - absorption) * 200.0).clamp(30.0, 255.0) as u8;
+                        wf_painter.line_segment(
+                            [egui::pos2(boundary_x, wf_rect.center().y), egui::pos2(origin_x + 10.0, wf_rect.top() + 10.0)],
+                            Stroke::new(1.2_f32, Color32::from_rgba_unmultiplied(0, 255, 180, spec_alpha)),
+                        );
+
+                        // Mini 6-tap impulse histogram on right side
+                        let hist_left = wf_rect.left() + 82.0;
+                        let hist_w = wf_rect.right() - hist_left - 6.0;
+                        let tap_w = hist_w / 6.0;
+                        for i in 0..6 {
+                            let t = i as f32;
+                            let decay = ((-0.25 * t * (1.0 + absorption)).exp() * (1.0 - absorption * 0.5)).clamp(0.05, 1.0);
+                            let bar_h = decay * 36.0;
+                            let bx = hist_left + i as f32 * tap_w + 1.0;
+                            let by = wf_rect.bottom() - 8.0 - bar_h;
+                            let col = if i < 2 {
+                                Color32::from_rgb(0, 229, 255)
+                            } else if i < 4 {
+                                Color32::from_rgb(0, 255, 180)
+                            } else {
+                                Color32::from_rgb(255, 180, 0)
+                            };
+                            wf_painter.rect_filled(
+                                egui::Rect::from_min_size(egui::pos2(bx, by), egui::vec2((tap_w - 2.0).max(2.0), bar_h)),
+                                1.0,
+                                col,
+                            );
+                        }
+
+                        // Drag Puck
+                        let puck_px = wf_rect.left() + scattering * (boundary_x - wf_rect.left() - 8.0) + 4.0;
+                        let puck_py = wf_rect.top() + (1.0 - absorption) * (wf_rect.height() - 16.0) + 8.0;
+                        wf_painter.circle_stroke(egui::pos2(puck_px, puck_py), 4.5, Stroke::new(1.2_f32, Color32::from_rgb(0, 229, 255)));
+                        wf_painter.circle_filled(egui::pos2(puck_px, puck_py), 2.0, Color32::WHITE);
+
+                        // Readouts
+                        wf_painter.text(
+                            egui::pos2(wf_rect.left() + 4.0, wf_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("Scat: {:.0}%", scattering * 100.0),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+                        wf_painter.text(
+                            egui::pos2(wf_rect.right() - 4.0, wf_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("Abs: {:.0}%", absorption * 100.0),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(0, 255, 180),
+                        );
+
+                        if wf_resp.hovered() {
+                            let _ = wf_resp.on_hover_text(format!(
+                                "Wavefront Reflection HUD\nScattering: {:.0}% | Absorption: {:.0}%\n[Drag horizontally: Surface scattering | Drag vertically: Absorption alpha]",
+                                scattering * 100.0, absorption * 100.0
+                            ));
+                        }
+                    } else if is_diffractive_propagation {
+                        // Neural Acoustic Continuous Latent Diffractive Wave Propagation Mini Visualizer
+                        let (df_resp, df_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let df_rect = df_resp.rect;
+                        df_painter.rect_filled(df_rect, 2.0, Color32::from_rgb(12, 16, 26));
+
+                        let mut angle = state.node_param_values.get("diffraction_angle_deg").copied().unwrap_or(75.0);
+                        let mut dist = state.node_param_values.get("source_distance_m").copied().unwrap_or(4.5);
+
+                        if df_resp.dragged() {
+                            if let Some(pos) = df_resp.interact_pointer_pos() {
+                                let nx = ((pos.x - df_rect.left()) / df_rect.width()).clamp(0.0, 1.0);
+                                let ny = (1.0 - ((pos.y - df_rect.top()) / df_rect.height())).clamp(0.0, 1.0);
+                                angle = nx * 180.0;
+                                dist = 0.5 + ny * (25.0 - 0.5);
+                                state.node_param_values.insert("diffraction_angle_deg".to_string(), angle);
+                                state.node_param_values.insert("source_distance_m".to_string(), dist);
+                                if let Some(bus) = param_bus {
+                                    let pid_ang = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_ang).is_some() { bus.set(pid_ang, angle); }
+                                    let pid_dst = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_dst).is_some() { bus.set(pid_dst, dist); }
+                                }
+                            }
+                        }
+
+                        // Obstacle Wedge & Diffracted Wavefront Arcs
+                        let wedge_tip = egui::pos2(df_rect.left() + 50.0, df_rect.center().y);
+                        df_painter.line_segment(
+                            [wedge_tip, egui::pos2(df_rect.left() + 75.0, df_rect.bottom() - 4.0)],
+                            Stroke::new(2.5_f32, Color32::from_rgb(120, 140, 170)),
+                        );
+                        df_painter.line_segment(
+                            [wedge_tip, egui::pos2(df_rect.left() + 25.0, df_rect.bottom() - 4.0)],
+                            Stroke::new(2.5_f32, Color32::from_rgb(120, 140, 170)),
+                        );
+
+                        // Arcs around wedge
+                        for r in [12.0, 24.0, 36.0] {
+                            df_painter.circle_stroke(
+                                wedge_tip,
+                                r,
+                                Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(0, 229, 255, 70)),
+                            );
+                        }
+
+                        // Right side: 6-band attenuation spectrum bars
+                        let spec_left = df_rect.left() + 85.0;
+                        let spec_w = df_rect.right() - spec_left - 6.0;
+                        let bar_w = spec_w / 6.0;
+                        let bend = (angle / 180.0).clamp(0.0, 1.0);
+                        for i in 0..6 {
+                            let f_norm = i as f32 / 5.0;
+                            let att = (bend * (1.0 + f_norm * 2.0) * 0.7).clamp(0.05, 0.95);
+                            let bar_h = (1.0 - att) * 36.0;
+                            let bx = spec_left + i as f32 * bar_w + 1.0;
+                            let by = df_rect.bottom() - 8.0 - bar_h;
+                            let col = if i < 2 {
+                                Color32::from_rgb(0, 255, 180)
+                            } else if i < 4 {
+                                Color32::from_rgb(0, 229, 255)
+                            } else {
+                                Color32::from_rgb(255, 180, 0)
+                            };
+                            df_painter.rect_filled(
+                                egui::Rect::from_min_size(egui::pos2(bx, by), egui::vec2((bar_w - 2.0).max(2.0), bar_h)),
+                                1.0,
+                                col,
+                            );
+                        }
+
+                        // Source Puck
+                        let norm_ang = (angle / 180.0).clamp(0.0, 1.0);
+                        let norm_dist = ((dist - 0.5) / 24.5).clamp(0.0, 1.0);
+                        let puck_px = df_rect.left() + norm_ang * 45.0 + 6.0;
+                        let puck_py = df_rect.top() + (1.0 - norm_dist) * (df_rect.height() - 16.0) + 8.0;
+                        df_painter.circle_stroke(egui::pos2(puck_px, puck_py), 4.5, Stroke::new(1.2_f32, Color32::from_rgb(255, 180, 0)));
+                        df_painter.circle_filled(egui::pos2(puck_px, puck_py), 2.0, Color32::WHITE);
+
+                        // Readouts
+                        df_painter.text(
+                            egui::pos2(df_rect.left() + 4.0, df_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("{:.0}°", angle),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(255, 180, 0),
+                        );
+                        df_painter.text(
+                            egui::pos2(df_rect.right() - 4.0, df_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("{:.1}m", dist),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+
+                        if df_resp.hovered() {
+                            let _ = df_resp.on_hover_text(format!(
+                                "Diffractive Wave Propagation HUD\nAngle: {:.1}° | Distance: {:.1}m\n[Drag horizontally: Diffraction angle | Drag vertically: Distance]",
+                                angle, dist
+                            ));
                         }
                     } else {
                         // Filter Curve Mini View (slot-addressed)

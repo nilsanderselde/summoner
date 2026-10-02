@@ -122,6 +122,10 @@ pub struct ModernInspectorState {
     pub requested_open_spring_reverb_hud: bool,
     #[serde(default)]
     pub requested_open_comb_resonator_hud: bool,
+    #[serde(default)]
+    pub requested_open_wavefront_reflection_hud: bool,
+    #[serde(default)]
+    pub requested_open_diffractive_propagation_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -189,6 +193,8 @@ impl Default for ModernInspectorState {
             requested_open_tine_resonator_hud: false,
             requested_open_spring_reverb_hud: false,
             requested_open_comb_resonator_hud: false,
+            requested_open_wavefront_reflection_hud: false,
+            requested_open_diffractive_propagation_hud: false,
         }
     }
 }
@@ -1093,6 +1099,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open interactive Dynamic Spectral Comb Resonator harmonic teeth transfer curve & polarity matrix HUD").clicked() {
                     state.requested_open_comb_resonator_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("WavefrontReflection") || active_kind.contains("Wavefront") || active_kind.contains("RaytracedEarlyReflection") || active_kind == "WavefrontReflectionView" || active_kind == "WavefrontReflectionNode" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🌊 Open Wavefront Reflection Raytracing HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 229, 255)))
+                        .fill(Color32::from_rgb(14, 28, 44))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 229, 255)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Neural Acoustic Wavefront Boundary Reflection Raytracing & Impulse Decay HUD").clicked() {
+                    state.requested_open_wavefront_reflection_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("DiffractivePropagation") || active_kind.contains("Diffraction") || active_kind == "DiffractivePropagationView" || active_kind == "DiffractivePropagationNode" {
+                if ui.add(
+                    egui::Button::new(RichText::new("📐 Open Diffractive Wave Propagation HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(255, 180, 0)))
+                        .fill(Color32::from_rgb(38, 28, 12))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 180, 0)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Neural Acoustic Continuous Latent Diffractive Wave Propagation HUD").clicked() {
+                    state.requested_open_diffractive_propagation_hud = true;
                 }
                 ui.add_space(4.0);
             }
