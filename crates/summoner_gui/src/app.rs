@@ -1515,6 +1515,14 @@ impl eframe::App for SummonerApp {
                     self.current_view = ViewMode::ModernStudio;
                     self.award_winning_view.open_membrane_plate_hud();
                 }
+                "open_idiophone_spectrum_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_idiophone_spectrum_hud();
+                }
+                "open_sonar_hydrophone_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_sonar_hydrophone_hud();
+                }
                 "sfz_convert" | "auto_slice" | "load_preset" | "export_clap" | "toggle_simd" => {
                     println!("Command palette action executed: {}", action);
                 }

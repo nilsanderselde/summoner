@@ -228,6 +228,8 @@ pub mod tier136_turn72_tests;
 #[cfg(feature = "gui")]
 pub mod tier137_turn73_tests;
 #[cfg(feature = "gui")]
+pub mod tier138_turn74_tests;
+#[cfg(feature = "gui")]
 pub mod touch_gestures;
 #[cfg(feature = "gui")]
 pub mod transport_bar;

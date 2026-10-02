@@ -139,6 +139,23 @@ impl IdiophoneSpectrumView {
         self.tremolo_depth = if trem > 0.0 { 0.70 } else { 0.0 };
     }
 
+    pub fn set_profile(&mut self, profile: IdiophoneViewProfile) {
+        self.instrument = profile;
+        self.update_physics();
+        self.puck_pos = (
+            Self::hardness_to_normalized(self.mallet_hardness),
+            Self::velocity_to_normalized(self.strike_velocity),
+        );
+    }
+
+    pub fn profile(&self) -> IdiophoneViewProfile {
+        self.instrument
+    }
+
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        self.render_ascii(80, 24).join("\n")
+    }
+
     /// Evaluates modal amplitude bar heights $[A_0, \dots, A_7]$ for the spectrum display.
     pub fn evaluate_modal_spectrum(&self) -> [f32; NUM_VIEW_MODES] {
         let ratios = self.instrument.modal_ratios();

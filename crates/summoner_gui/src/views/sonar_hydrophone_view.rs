@@ -275,6 +275,15 @@ impl SonarHydrophoneView {
             .collect()
     }
 
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        self.render_ascii(80, 24).join("\n")
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
+    }
+
     #[cfg(feature = "gui")]
     #[allow(clippy::needless_range_loop)]
     pub fn ui(&mut self, ui: &mut egui::Ui) {
@@ -578,5 +587,49 @@ impl SonarHydrophoneView {
             egui::FontId::proportional(12.0),
             Color32::from_rgb(0, 255, 180),
         );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::touch_controls::MIN_HIT_TARGET_PT;
+
+    #[test]
+    fn test_sonar_hydrophone_view_ascii_render() {
+        let view = SonarHydrophoneView::new();
+        let ascii = view.render_ascii(80, 16);
+        assert!(!ascii.is_empty());
+        assert_eq!(ascii.len(), 16);
+    }
+
+    #[test]
+    fn test_sonar_hydrophone_view_hit_target_dimensions() {
+        const {
+            assert!(
+                SONAR_HYDROPHONE_PUCK_HIT_RADIUS * 2.0 >= MIN_HIT_TARGET_PT,
+                "Sonar Hydrophone puck hit target bounding box must be >= 44pt"
+            );
+        }
+    }
+
+    #[test]
+    fn test_sonar_hydrophone_view_physics_simulation() {
+        let mut view = SonarHydrophoneView::new();
+        assert_eq!(view.mode, SonarMode::ActiveSonarPing);
+        assert!(view.sound_speed_mps > 1400.0 && view.sound_speed_mps < 1600.0);
+
+        view.set_mode(SonarMode::ThermoclineWaveguide);
+        assert_eq!(view.mode, SonarMode::ThermoclineWaveguide);
+        assert_eq!(view.mode.nominal_ping_freq_hz(), 180.0);
+
+        // Conversions
+        let norm_d = SonarHydrophoneView::depth_to_normalized(100.0);
+        assert!(norm_d > 0.0 && norm_d < 1.0);
+        let d_back = SonarHydrophoneView::normalized_to_depth(norm_d);
+        assert!((d_back - 100.0).abs() < 1e-1);
+
+        let snap = view.render_ascii_snapshot_str();
+        assert!(snap.contains('+'));
     }
 }

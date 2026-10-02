@@ -130,6 +130,10 @@ pub struct ModernInspectorState {
     pub requested_open_membrane_resonator_hud: bool,
     #[serde(default)]
     pub requested_open_membrane_plate_hud: bool,
+    #[serde(default)]
+    pub requested_open_idiophone_spectrum_hud: bool,
+    #[serde(default)]
+    pub requested_open_sonar_hydrophone_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -201,6 +205,8 @@ impl Default for ModernInspectorState {
             requested_open_diffractive_propagation_hud: false,
             requested_open_membrane_resonator_hud: false,
             requested_open_membrane_plate_hud: false,
+            requested_open_idiophone_spectrum_hud: false,
+            requested_open_sonar_hydrophone_hud: false,
         }
     }
 }
@@ -1145,6 +1151,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open interactive Physical Modeling Acoustic Membrane/Plate Percussion & Boundary Strike Impedance HUD").clicked() {
                     state.requested_open_membrane_plate_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Idiophone") || active_kind.contains("Marimba") || active_kind.contains("Xylophone") || active_kind.contains("Vibraphone") || active_kind == "IdiophoneSpectrum" || active_kind == "StruckIdiophoneResonatorNode" || active_kind == "IdiophoneResonator" || active_kind == "ModalIdiophoneResonator" || active_kind == "ModalIdiophoneChimeBank" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🎵 Open Struck Idiophone Modal Resonator HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(255, 190, 40)))
+                        .fill(Color32::from_rgb(38, 28, 12))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 190, 40)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Physical Modeling Struck Idiophone Resonator Bank & Mallet Dynamics HUD").clicked() {
+                    state.requested_open_idiophone_spectrum_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Sonar") || active_kind.contains("Hydrophone") || active_kind == "SonarHydrophoneNode" || active_kind == "SonarHydrophoneView" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🌊 Open Underwater Acoustic Sonar & Hydrophone HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 210, 255)))
+                        .fill(Color32::from_rgb(10, 28, 44))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 210, 255)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Physical Modeling Underwater Acoustic Sonar & Ocean Hydrophone Cavitation HUD").clicked() {
+                    state.requested_open_sonar_hydrophone_hud = true;
                 }
                 ui.add_space(4.0);
             }

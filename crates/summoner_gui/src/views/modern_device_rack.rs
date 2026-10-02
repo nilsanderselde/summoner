@@ -145,6 +145,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_membrane_resonator_hud: bool,
     #[serde(default)]
     pub requested_open_membrane_plate_hud: bool,
+    #[serde(default)]
+    pub requested_open_idiophone_spectrum_hud: bool,
+    #[serde(default)]
+    pub requested_open_sonar_hydrophone_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -206,6 +210,8 @@ impl Default for ModernDeviceRackState {
             requested_open_diffractive_propagation_hud: false,
             requested_open_membrane_resonator_hud: false,
             requested_open_membrane_plate_hud: false,
+            requested_open_idiophone_spectrum_hud: false,
+            requested_open_sonar_hydrophone_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -434,6 +440,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_comb_resonator = cur_selection.contains("CombResonator") || cur_selection.contains("CombFilter") || cur_selection.contains("ResonantComb") || cur_selection == "CombResonatorView" || cur_selection == "CombResonatorNode" || cur_selection == "ResonantPhasedCombArray";
                     let is_wavefront_reflection = cur_selection.contains("WavefrontReflection") || cur_selection.contains("Wavefront") || cur_selection.contains("RaytracedEarlyReflection") || cur_selection == "WavefrontReflectionView" || cur_selection == "WavefrontReflectionNode";
                     let is_diffractive_propagation = cur_selection.contains("DiffractivePropagation") || cur_selection.contains("Diffraction") || cur_selection == "DiffractivePropagationView" || cur_selection == "DiffractivePropagationNode";
+                    let is_idiophone = cur_selection.contains("Idiophone") || cur_selection.contains("Marimba") || cur_selection.contains("Xylophone") || cur_selection.contains("Vibraphone") || cur_selection == "IdiophoneSpectrum" || cur_selection == "StruckIdiophoneResonatorNode" || cur_selection == "IdiophoneResonator" || cur_selection == "ModalIdiophoneResonator" || cur_selection == "ModalIdiophoneChimeBank";
+                    let is_sonar_hydrophone = cur_selection.contains("Sonar") || cur_selection.contains("Hydrophone") || cur_selection == "SonarHydrophoneNode" || cur_selection == "SonarHydrophoneView";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -614,6 +622,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("🍽 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Coupled 2D Membrane & Plate Resonator HUD").clicked()
                     {
                         state.requested_open_membrane_plate_hud = true;
+                    } else if is_idiophone
+                        && ui.button(RichText::new("🎵 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 190, 40))).on_hover_text("Open Struck Idiophone Modal Resonator HUD").clicked()
+                    {
+                        state.requested_open_idiophone_spectrum_hud = true;
+                    } else if is_sonar_hydrophone
+                        && ui.button(RichText::new("🌊 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 210, 255))).on_hover_text("Open Underwater Sonar & Hydrophone Cavitation HUD").clicked()
+                    {
+                        state.requested_open_sonar_hydrophone_hud = true;
                     }
                     ui.add_space(4.0);
                     let pwr_col = if state.is_enabled { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(100, 116, 139) };
@@ -840,6 +856,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_comb_resonator = cur_selection.contains("CombResonator") || cur_selection.contains("CombFilter") || cur_selection.contains("ResonantComb") || cur_selection == "CombResonatorView" || cur_selection == "CombResonatorNode" || cur_selection == "ResonantPhasedCombArray";
                     let is_wavefront_reflection = cur_selection.contains("WavefrontReflection") || cur_selection.contains("Wavefront") || cur_selection.contains("RaytracedEarlyReflection") || cur_selection == "WavefrontReflectionView" || cur_selection == "WavefrontReflectionNode";
                     let is_diffractive_propagation = cur_selection.contains("DiffractivePropagation") || cur_selection.contains("Diffraction") || cur_selection == "DiffractivePropagationView" || cur_selection == "DiffractivePropagationNode";
+                    let is_idiophone = cur_selection.contains("Idiophone") || cur_selection.contains("Marimba") || cur_selection.contains("Xylophone") || cur_selection.contains("Vibraphone") || cur_selection == "IdiophoneSpectrum" || cur_selection == "StruckIdiophoneResonatorNode" || cur_selection == "IdiophoneResonator" || cur_selection == "ModalIdiophoneResonator" || cur_selection == "ModalIdiophoneChimeBank";
+                    let is_sonar_hydrophone = cur_selection.contains("Sonar") || cur_selection.contains("Hydrophone") || cur_selection == "SonarHydrophoneNode" || cur_selection == "SonarHydrophoneView";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1028,6 +1046,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("🍽 Plate HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Coupled 2D Membrane & Plate Resonator HUD").clicked()
                     {
                         state.requested_open_membrane_plate_hud = true;
+                    } else if is_idiophone
+                        && ui.button(RichText::new("🎵 Idiophone HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 190, 40))).on_hover_text("Open Struck Idiophone Modal Resonator HUD").clicked()
+                    {
+                        state.requested_open_idiophone_spectrum_hud = true;
+                    } else if is_sonar_hydrophone
+                        && ui.button(RichText::new("🌊 Sonar HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 210, 255))).on_hover_text("Open Underwater Sonar & Hydrophone Cavitation HUD").clicked()
+                    {
+                        state.requested_open_sonar_hydrophone_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -1840,6 +1866,8 @@ fn show_pro_parameter_drawer(
                     let is_comb_resonator = dev_kind.contains("CombResonator") || dev_kind.contains("CombFilter") || dev_kind.contains("ResonantComb") || dev_kind == "CombResonatorView" || dev_kind == "CombResonatorNode" || dev_kind == "ResonantPhasedCombArray";
                     let is_wavefront_reflection = dev_kind.contains("WavefrontReflection") || dev_kind.contains("Wavefront") || dev_kind.contains("RaytracedEarlyReflection") || dev_kind == "WavefrontReflectionView" || dev_kind == "WavefrontReflectionNode";
                     let is_diffractive_propagation = dev_kind.contains("DiffractivePropagation") || dev_kind.contains("Diffraction") || dev_kind == "DiffractivePropagationView" || dev_kind == "DiffractivePropagationNode";
+                    let is_idiophone = dev_kind.contains("Idiophone") || dev_kind.contains("Marimba") || dev_kind.contains("Xylophone") || dev_kind.contains("Vibraphone") || dev_kind == "IdiophoneSpectrum" || dev_kind == "StruckIdiophoneResonatorNode" || dev_kind == "IdiophoneResonator" || dev_kind == "ModalIdiophoneResonator" || dev_kind == "ModalIdiophoneChimeBank";
+                    let is_sonar_hydrophone = dev_kind.contains("Sonar") || dev_kind.contains("Hydrophone") || dev_kind == "SonarHydrophoneNode" || dev_kind == "SonarHydrophoneView";
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -5522,6 +5550,142 @@ fn show_pro_parameter_drawer(
                             let _ = mp_resp.on_hover_text(format!(
                                 "Membrane & Plate Resonator HUD\nPlate Stiffness: {:.1} GPa | Tension: {:.0}%\n[Drag horizontally: Plate stiffness | Drag vertically: Membrane tension]",
                                 thickness, membrane_tension * 100.0
+                            ));
+                        }
+                    } else if is_idiophone {
+                        // Physical Modeling Struck Idiophone Resonator Bank Mini Visualizer
+                        let (id_resp, id_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let id_rect = id_resp.rect;
+                        id_painter.rect_filled(id_rect, 2.0, Color32::from_rgb(18, 16, 26));
+
+                        let mut hardness = state.node_param_values.get("mallet_hardness").copied().unwrap_or(0.35);
+                        let mut velocity = state.node_param_values.get("strike_velocity").copied().unwrap_or(0.80);
+
+                        if id_resp.dragged() {
+                            if let Some(pos) = id_resp.interact_pointer_pos() {
+                                let nx = ((pos.x - id_rect.left()) / id_rect.width()).clamp(0.0, 1.0);
+                                let ny = (1.0 - ((pos.y - id_rect.top()) / id_rect.height())).clamp(0.0, 1.0);
+                                hardness = nx;
+                                velocity = 0.05 + ny * 0.95;
+                                state.node_param_values.insert("mallet_hardness".to_string(), hardness);
+                                state.node_param_values.insert("strike_velocity".to_string(), velocity);
+                                if let Some(bus) = param_bus {
+                                    let pid_hard = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_hard).is_some() { bus.set(pid_hard, hardness); }
+                                    let pid_vel = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_vel).is_some() { bus.set(pid_vel, velocity); }
+                                }
+                            }
+                        }
+
+                        // Modal Spectrum Bars (8 modes)
+                        let bar_w = 8.0;
+                        let base_y = id_rect.bottom() - 14.0;
+                        for i in 0..8 {
+                            let bx = id_rect.left() + 6.0 + i as f32 * 11.0;
+                            let mode_mult = 1.0 / (1.0 + 0.45 * (i as f32) * (1.0 - 0.75 * hardness));
+                            let bar_h = (32.0 * mode_mult * velocity).clamp(3.0, 38.0);
+                            let bar_col = if i == 0 {
+                                Color32::from_rgb(255, 190, 40)
+                            } else if i == 1 || i == 2 {
+                                Color32::from_rgb(245, 158, 11)
+                            } else {
+                                Color32::from_rgb(180, 110, 30)
+                            };
+                            id_painter.rect_filled(
+                                egui::Rect::from_min_max(egui::pos2(bx, base_y - bar_h), egui::pos2(bx + bar_w, base_y)),
+                                1.5,
+                                bar_col,
+                            );
+                        }
+
+                        // Strike Mallet Puck Indicator on right side
+                        let puck_box = egui::Rect::from_min_max(
+                            egui::pos2(id_rect.left() + 100.0, id_rect.top() + 18.0),
+                            egui::pos2(id_rect.right() - 8.0, id_rect.bottom() - 14.0),
+                        );
+                        id_painter.rect_filled(puck_box, 2.0, Color32::from_rgb(26, 22, 38));
+                        id_painter.rect_stroke(puck_box, 2.0, Stroke::new(1.0_f32, Color32::from_rgb(60, 50, 80)));
+                        let px = puck_box.left() + hardness * puck_box.width();
+                        let py = puck_box.bottom() - ((velocity - 0.05) / 0.95) * puck_box.height();
+                        id_painter.circle_stroke(egui::pos2(px, py), 4.5, Stroke::new(1.2_f32, Color32::from_rgb(255, 190, 40)));
+                        id_painter.circle_filled(egui::pos2(px, py), 2.0, Color32::WHITE);
+
+                        // Readout
+                        id_painter.text(
+                            egui::pos2(id_rect.left() + 4.0, id_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("Hard: {:.2} | Vel: {:.2}", hardness, velocity),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(255, 190, 40),
+                        );
+
+                        if id_resp.hovered() {
+                            let _ = id_resp.on_hover_text(format!(
+                                "Idiophone Spectrum HUD\nMallet Hardness: {:.2} | Velocity: {:.2}\n[Drag: Hardness (X) vs Strike Velocity (Y)]",
+                                hardness, velocity
+                            ));
+                        }
+                    } else if is_sonar_hydrophone {
+                        // Physical Modeling Underwater Sonar & Ocean Hydrophone Mini Visualizer
+                        let (so_resp, so_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let so_rect = so_resp.rect;
+                        so_painter.rect_filled(so_rect, 2.0, Color32::from_rgb(10, 22, 32));
+
+                        let mut depth = state.node_param_values.get("depth_m").copied().unwrap_or(250.0);
+                        let mut cav = state.node_param_values.get("cavitation_index").copied().unwrap_or(0.85);
+
+                        if so_resp.dragged() {
+                            if let Some(pos) = so_resp.interact_pointer_pos() {
+                                let nx = ((pos.x - so_rect.left()) / so_rect.width()).clamp(0.0, 1.0);
+                                let ny = (1.0 - ((pos.y - so_rect.top()) / so_rect.height())).clamp(0.0, 1.0);
+                                cav = 0.05 + nx * (5.0 - 0.05);
+                                depth = 1.0 + ny * (5000.0 - 1.0);
+                                state.node_param_values.insert("cavitation_index".to_string(), cav);
+                                state.node_param_values.insert("depth_m".to_string(), depth);
+                                if let Some(bus) = param_bus {
+                                    let pid_depth = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_depth).is_some() { bus.set(pid_depth, depth); }
+                                    let pid_cav = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 3);
+                                    if bus.get(pid_cav).is_some() { bus.set(pid_cav, cav); }
+                                }
+                            }
+                        }
+
+                        // Concentric Sonar Ping Waves & Thermocline Layer
+                        let ping_center = egui::pos2(so_rect.left() + 30.0, so_rect.center().y);
+                        so_painter.circle_stroke(ping_center, 8.0, Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(0, 210, 255, 120)));
+                        so_painter.circle_stroke(ping_center, 16.0, Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(0, 210, 255, 70)));
+                        so_painter.circle_stroke(ping_center, 24.0, Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(0, 210, 255, 30)));
+
+                        // Thermocline depth line
+                        let thermocline_y = so_rect.top() + 20.0 + (depth / 5000.0) * 36.0;
+                        so_painter.line_segment(
+                            [egui::pos2(so_rect.left() + 60.0, thermocline_y), egui::pos2(so_rect.right() - 8.0, thermocline_y)],
+                            Stroke::new(1.2_f32, Color32::from_rgb(0, 255, 180)),
+                        );
+
+                        // Readout
+                        let sound_speed = 1448.96 + 4.591 * 12.5 + 0.0163 * depth;
+                        so_painter.text(
+                            egui::pos2(so_rect.left() + 4.0, so_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("z: {:.0}m | c: {:.0}m/s", depth, sound_speed),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(0, 210, 255),
+                        );
+                        so_painter.text(
+                            egui::pos2(so_rect.right() - 4.0, so_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("σ: {:.2}", cav),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(255, 107, 43),
+                        );
+
+                        if so_resp.hovered() {
+                            let _ = so_resp.on_hover_text(format!(
+                                "Underwater Sonar & Hydrophone HUD\nDepth: {:.0} m | Sound Speed: {:.0} m/s | Cavitation σ: {:.2}\n[Drag: Cavitation index (X) vs Depth (Y)]",
+                                depth, sound_speed, cav
                             ));
                         }
                     } else {

@@ -736,6 +736,10 @@ pub struct AwardWinningGuiView {
     pub membrane_resonator_view: crate::views::membrane_resonator_view::MembraneResonatorView,
     pub show_membrane_plate_modal: bool,
     pub membrane_plate_view: crate::views::membrane_plate_view::MembranePlateView,
+    pub show_idiophone_spectrum_modal: bool,
+    pub idiophone_spectrum_view: crate::views::idiophone_spectrum_view::IdiophoneSpectrumView,
+    pub show_sonar_hydrophone_modal: bool,
+    pub sonar_hydrophone_view: crate::views::sonar_hydrophone_view::SonarHydrophoneView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1088,6 +1092,10 @@ impl AwardWinningGuiView {
             membrane_resonator_view: crate::views::membrane_resonator_view::MembraneResonatorView::new(),
             show_membrane_plate_modal: false,
             membrane_plate_view: crate::views::membrane_plate_view::MembranePlateView::new(),
+            show_idiophone_spectrum_modal: false,
+            idiophone_spectrum_view: crate::views::idiophone_spectrum_view::IdiophoneSpectrumView::new(),
+            show_sonar_hydrophone_modal: false,
+            sonar_hydrophone_view: crate::views::sonar_hydrophone_view::SonarHydrophoneView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -1967,6 +1975,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_membrane_plate_hud = false;
             self.open_membrane_plate_hud();
         }
+        if self.inspector_state.requested_open_idiophone_spectrum_hud || self.device_rack_state.requested_open_idiophone_spectrum_hud {
+            self.inspector_state.requested_open_idiophone_spectrum_hud = false;
+            self.device_rack_state.requested_open_idiophone_spectrum_hud = false;
+            self.open_idiophone_spectrum_hud();
+        }
+        if self.inspector_state.requested_open_sonar_hydrophone_hud || self.device_rack_state.requested_open_sonar_hydrophone_hud {
+            self.inspector_state.requested_open_sonar_hydrophone_hud = false;
+            self.device_rack_state.requested_open_sonar_hydrophone_hud = false;
+            self.open_sonar_hydrophone_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2018,6 +2036,8 @@ impl AwardWinningGuiView {
         self.show_diffractive_propagation_modal_window(ui);
         self.show_membrane_resonator_modal_window(ui);
         self.show_membrane_plate_modal_window(ui);
+        self.show_idiophone_spectrum_modal_window(ui);
+        self.show_sonar_hydrophone_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -12140,6 +12160,182 @@ impl AwardWinningGuiView {
 
     pub fn is_membrane_plate_hud_open(&self) -> bool {
         self.show_membrane_plate_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_idiophone_spectrum_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_idiophone_spectrum_modal {
+            return;
+        }
+
+        let mut is_open = self.show_idiophone_spectrum_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎵 Physical Modeling Idiophone Resonator Bank & Spectrum HUD")
+            .id(egui::Id::new("idiophone_spectrum_hud_modal"))
+            .open(&mut is_open)
+            .default_size([880.0, 560.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Physical Modeling Struck Idiophone Resonator Bank & Mallet Dynamics HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.idiophone_spectrum_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_idiophone_spectrum_modal = is_open;
+        self.sync_idiophone_spectrum_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_idiophone_spectrum_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let hardness = self.idiophone_spectrum_view.mallet_hardness;
+        let velocity = self.idiophone_spectrum_view.strike_velocity;
+        let position = self.idiophone_spectrum_view.strike_position;
+        let tube_mix = self.idiophone_spectrum_view.resonator_tube_mix;
+
+        self.device_rack_state.node_param_values.insert("mallet_hardness".to_string(), hardness);
+        self.device_rack_state.node_param_values.insert("strike_velocity".to_string(), velocity);
+        self.device_rack_state.node_param_values.insert("strike_position".to_string(), position);
+        self.device_rack_state.node_param_values.insert("resonator_tube_mix".to_string(), tube_mix);
+
+        self.inspector_state.node_param_values.insert("mallet_hardness".to_string(), hardness);
+        self.inspector_state.node_param_values.insert("strike_velocity".to_string(), velocity);
+        self.inspector_state.node_param_values.insert("strike_position".to_string(), position);
+        self.inspector_state.node_param_values.insert("resonator_tube_mix".to_string(), tube_mix);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_hrd = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_vel = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_pos = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_tub = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_hrd).is_some() { bus.set(pid_hrd, hardness); }
+            if bus.get(pid_vel).is_some() { bus.set(pid_vel, velocity); }
+            if bus.get(pid_pos).is_some() { bus.set(pid_pos, position); }
+            if bus.get(pid_tub).is_some() { bus.set(pid_tub, tube_mix); }
+        }
+    }
+
+    pub fn open_idiophone_spectrum_hud(&mut self) {
+        self.show_idiophone_spectrum_modal = true;
+    }
+
+    pub fn close_idiophone_spectrum_hud(&mut self) {
+        self.show_idiophone_spectrum_modal = false;
+    }
+
+    pub fn is_idiophone_spectrum_hud_open(&self) -> bool {
+        self.show_idiophone_spectrum_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_sonar_hydrophone_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_sonar_hydrophone_modal {
+            return;
+        }
+
+        let mut is_open = self.show_sonar_hydrophone_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🌊 Physical Modeling Underwater Sonar & Hydrophone Cavitation HUD")
+            .id(egui::Id::new("sonar_hydrophone_hud_modal"))
+            .open(&mut is_open)
+            .default_size([920.0, 600.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Physical Modeling Underwater Acoustic Sonar & Ocean Hydrophone Cavitation HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.sonar_hydrophone_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_sonar_hydrophone_modal = is_open;
+        self.sync_sonar_hydrophone_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_sonar_hydrophone_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let depth = self.sonar_hydrophone_view.depth_m;
+        let temp = self.sonar_hydrophone_view.water_temp_c;
+        let salinity = self.sonar_hydrophone_view.salinity_ppt;
+        let cavitation = self.sonar_hydrophone_view.cavitation_index;
+
+        self.device_rack_state.node_param_values.insert("depth_m".to_string(), depth);
+        self.device_rack_state.node_param_values.insert("water_temp_c".to_string(), temp);
+        self.device_rack_state.node_param_values.insert("salinity_ppt".to_string(), salinity);
+        self.device_rack_state.node_param_values.insert("cavitation_index".to_string(), cavitation);
+
+        self.inspector_state.node_param_values.insert("depth_m".to_string(), depth);
+        self.inspector_state.node_param_values.insert("water_temp_c".to_string(), temp);
+        self.inspector_state.node_param_values.insert("salinity_ppt".to_string(), salinity);
+        self.inspector_state.node_param_values.insert("cavitation_index".to_string(), cavitation);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_dep = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_tmp = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_sal = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_cav = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_dep).is_some() { bus.set(pid_dep, depth); }
+            if bus.get(pid_tmp).is_some() { bus.set(pid_tmp, temp); }
+            if bus.get(pid_sal).is_some() { bus.set(pid_sal, salinity); }
+            if bus.get(pid_cav).is_some() { bus.set(pid_cav, cavitation); }
+        }
+    }
+
+    pub fn open_sonar_hydrophone_hud(&mut self) {
+        self.show_sonar_hydrophone_modal = true;
+    }
+
+    pub fn close_sonar_hydrophone_hud(&mut self) {
+        self.show_sonar_hydrophone_modal = false;
+    }
+
+    pub fn is_sonar_hydrophone_hud_open(&self) -> bool {
+        self.show_sonar_hydrophone_modal
     }
 
 

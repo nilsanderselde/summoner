@@ -593,6 +593,18 @@ impl CommandPalette {
                 action_id: "open_membrane_plate_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Struck Idiophone Modal Resonator HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_idiophone_spectrum_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Underwater Acoustic Sonar & Hydrophone HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_sonar_hydrophone_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES
