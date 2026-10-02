@@ -557,6 +557,18 @@ impl CommandPalette {
                 action_id: "open_tine_resonator_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Spring Reverb Tank & Mechanical Dispersion HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_spring_reverb_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Spectral Comb Resonator & Matrix HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_comb_resonator_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

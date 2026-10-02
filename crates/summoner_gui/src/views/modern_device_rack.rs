@@ -133,6 +133,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_rank_voicing_hud: bool,
     #[serde(default)]
     pub requested_open_tine_resonator_hud: bool,
+    #[serde(default)]
+    pub requested_open_spring_reverb_hud: bool,
+    #[serde(default)]
+    pub requested_open_comb_resonator_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -188,6 +192,8 @@ impl Default for ModernDeviceRackState {
             requested_open_friction_orbit_hud: false,
             requested_open_rank_voicing_hud: false,
             requested_open_tine_resonator_hud: false,
+            requested_open_spring_reverb_hud: false,
+            requested_open_comb_resonator_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -410,6 +416,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_friction_orbit = cur_selection.contains("FrictionOrbit") || cur_selection.contains("StickSlip") || cur_selection.contains("BowedFriction") || cur_selection == "FrictionOrbitView" || cur_selection == "FrictionOrbit" || cur_selection.contains("RosinHysteresis") || cur_selection.contains("HelmholtzOrbit");
                     let is_rank_voicing = cur_selection.contains("RankVoicing") || cur_selection.contains("PipeOrganFlute") || cur_selection.contains("OrganRank") || cur_selection == "RankVoicingView" || cur_selection == "RankVoicing" || cur_selection.contains("FlueCutup") || cur_selection.contains("PneumaticPipeOrganFluteRank");
                     let is_tine_resonator = cur_selection.contains("TineResonator") || cur_selection.contains("TinePickup") || cur_selection.contains("TineResonatorPickup") || cur_selection == "TineResonatorView" || cur_selection == "TineResonator" || cur_selection.contains("EpArticulation") || cur_selection.contains("ElectricPiano");
+                    let is_spring_reverb = cur_selection.contains("SpringReverb") || cur_selection.contains("SpringTank") || cur_selection.contains("AnalogSpring") || cur_selection.contains("SpringMass") || cur_selection == "SpringReverbView" || cur_selection == "AnalogSpringReverbTank" || cur_selection == "NonlinearSpringReverbTank";
+                    let is_comb_resonator = cur_selection.contains("CombResonator") || cur_selection.contains("CombFilter") || cur_selection.contains("ResonantComb") || cur_selection == "CombResonatorView" || cur_selection == "CombResonatorNode" || cur_selection == "ResonantPhasedCombArray";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -566,6 +574,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("🎹 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 183, 3))).on_hover_text("Open Electric Piano Tine Resonator HUD").clicked()
                     {
                         state.requested_open_tine_resonator_hud = true;
+                    } else if is_spring_reverb
+                        && ui.button(RichText::new("🌀 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Spring Reverb Tank Simulator & Dispersion HUD").clicked()
+                    {
+                        state.requested_open_spring_reverb_hud = true;
+                    } else if is_comb_resonator
+                        && ui.button(RichText::new("🪮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 215, 0))).on_hover_text("Open Spectral Comb Resonator & Matrix HUD").clicked()
+                    {
+                        state.requested_open_comb_resonator_hud = true;
                     }
                     ui.add_space(4.0);
                     let pwr_col = if state.is_enabled { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(100, 116, 139) };
@@ -786,6 +802,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_friction_orbit = cur_selection.contains("FrictionOrbit") || cur_selection.contains("StickSlip") || cur_selection.contains("BowedFriction") || cur_selection == "FrictionOrbitView" || cur_selection == "FrictionOrbit" || cur_selection.contains("RosinHysteresis") || cur_selection.contains("HelmholtzOrbit");
                     let is_rank_voicing = cur_selection.contains("RankVoicing") || cur_selection.contains("PipeOrganFlute") || cur_selection.contains("OrganRank") || cur_selection == "RankVoicingView" || cur_selection == "RankVoicing" || cur_selection.contains("FlueCutup") || cur_selection.contains("PneumaticPipeOrganFluteRank");
                     let is_tine_resonator = cur_selection.contains("TineResonator") || cur_selection.contains("TinePickup") || cur_selection.contains("TineResonatorPickup") || cur_selection == "TineResonatorView" || cur_selection == "TineResonator" || cur_selection.contains("EpArticulation") || cur_selection.contains("ElectricPiano");
+                    let is_spring_reverb = cur_selection.contains("SpringReverb") || cur_selection.contains("SpringTank") || cur_selection.contains("AnalogSpring") || cur_selection.contains("SpringMass") || cur_selection == "SpringReverbView" || cur_selection == "AnalogSpringReverbTank" || cur_selection == "NonlinearSpringReverbTank";
+                    let is_comb_resonator = cur_selection.contains("CombResonator") || cur_selection.contains("CombFilter") || cur_selection.contains("ResonantComb") || cur_selection == "CombResonatorView" || cur_selection == "CombResonatorNode" || cur_selection == "ResonantPhasedCombArray";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -950,6 +968,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("🎹 Tine HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 183, 3))).on_hover_text("Open Electric Piano Tine Resonator HUD").clicked()
                     {
                         state.requested_open_tine_resonator_hud = true;
+                    } else if is_spring_reverb
+                        && ui.button(RichText::new("🌀 Spring HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Spring Reverb Tank Simulator & Dispersion HUD").clicked()
+                    {
+                        state.requested_open_spring_reverb_hud = true;
+                    } else if is_comb_resonator
+                        && ui.button(RichText::new("🪮 Comb HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 215, 0))).on_hover_text("Open Spectral Comb Resonator & Matrix HUD").clicked()
+                    {
+                        state.requested_open_comb_resonator_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -1756,6 +1782,8 @@ fn show_pro_parameter_drawer(
                     let is_friction_orbit = dev_kind.contains("FrictionOrbit") || dev_kind.contains("StickSlip") || dev_kind.contains("BowedFriction") || dev_kind == "FrictionOrbitView" || dev_kind == "FrictionOrbit" || dev_kind.contains("RosinHysteresis") || dev_kind.contains("HelmholtzOrbit");
                     let is_rank_voicing = dev_kind.contains("RankVoicing") || dev_kind.contains("PipeOrganFlute") || dev_kind.contains("OrganRank") || dev_kind == "RankVoicingView" || dev_kind == "RankVoicing" || dev_kind.contains("FlueCutup") || dev_kind.contains("PneumaticPipeOrganFluteRank");
                     let is_tine_resonator = dev_kind.contains("TineResonator") || dev_kind.contains("TinePickup") || dev_kind.contains("TineResonatorPickup") || dev_kind == "TineResonatorView" || dev_kind == "TineResonator" || dev_kind.contains("EpArticulation") || dev_kind.contains("ElectricPiano");
+                    let is_spring_reverb = dev_kind.contains("SpringReverb") || dev_kind.contains("SpringTank") || dev_kind.contains("AnalogSpring") || dev_kind.contains("SpringMass") || dev_kind == "SpringReverbView" || dev_kind == "AnalogSpringReverbTank" || dev_kind == "NonlinearSpringReverbTank";
+                    let is_comb_resonator = dev_kind.contains("CombResonator") || dev_kind.contains("CombFilter") || dev_kind.contains("ResonantComb") || dev_kind == "CombResonatorView" || dev_kind == "CombResonatorNode" || dev_kind == "ResonantPhasedCombArray";
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -4935,6 +4963,143 @@ fn show_pro_parameter_drawer(
 
                         if tine_resp.hovered() {
                             let _ = tine_resp.on_hover_text(format!("Electric Piano Tine Resonator HUD\nCoupling: {:.0}% | Stiffness: {:.2}\n[Drag horizontally: Tonebar coupling | Drag vertically: Beam stiffness]", coupling * 100.0, stiff));
+                        }
+                    } else if is_spring_reverb {
+                        // Spring Reverb Tank Coils & Boing Dispersion Mini Visualizer
+                        let (sp_resp, sp_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let sp_rect = sp_resp.rect;
+                        sp_painter.rect_filled(sp_rect, 2.0, Color32::from_rgb(10, 14, 24));
+
+                        let mut tension = state.node_param_values.get("tension_pct").copied().unwrap_or(60.0);
+                        let mut chirp = state.node_param_values.get("dispersion_chirp_pct").copied().unwrap_or(65.0);
+
+                        if sp_resp.dragged() {
+                            if let Some(pos) = sp_resp.interact_pointer_pos() {
+                                let nx = ((pos.x - sp_rect.left()) / sp_rect.width()).clamp(0.05, 0.95);
+                                let ny = (1.0 - ((pos.y - sp_rect.top()) / sp_rect.height())).clamp(0.05, 0.95);
+                                tension = nx * 100.0;
+                                chirp = ny * 100.0;
+                                state.node_param_values.insert("tension_pct".to_string(), tension);
+                                state.node_param_values.insert("dispersion_chirp_pct".to_string(), chirp);
+                                if let Some(bus) = param_bus {
+                                    let pid_tns = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_tns).is_some() { bus.set(pid_tns, tension); }
+                                    let pid_chp = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_chp).is_some() { bus.set(pid_chp, chirp); }
+                                }
+                            }
+                        }
+
+                        // Draw mini spring coils
+                        let num_coils = 2;
+                        let coil_colors = [Color32::from_rgb(0, 229, 255), Color32::from_rgb(255, 107, 43)];
+                        for c in 0..num_coils {
+                            let y_base = sp_rect.top() + 18.0 + c as f32 * 24.0;
+                            let mut prev_pt = None;
+                            for s in 0..24 {
+                                let t = s as f32 / 23.0;
+                                let px = sp_rect.left() + 8.0 + t * (sp_rect.width() - 16.0);
+                                let py = y_base + (t * std::f32::consts::PI * 8.0 * (0.5 + tension * 0.005)).sin() * 5.0;
+                                let pt = egui::pos2(px, py);
+                                if let Some(prev) = prev_pt {
+                                    sp_painter.line_segment([prev, pt], Stroke::new(1.4_f32, coil_colors[c % 2]));
+                                }
+                                prev_pt = Some(pt);
+                            }
+                        }
+
+                        // Drag Puck
+                        let puck_px = sp_rect.left() + (tension / 100.0) * sp_rect.width();
+                        let puck_py = sp_rect.top() + (1.0 - chirp / 100.0) * sp_rect.height();
+                        sp_painter.circle_stroke(egui::pos2(puck_px, puck_py), 4.5, Stroke::new(1.2_f32, Color32::from_rgb(0, 229, 255)));
+                        sp_painter.circle_filled(egui::pos2(puck_px, puck_py), 2.0, Color32::from_rgb(255, 255, 255));
+
+                        // Readouts
+                        sp_painter.text(
+                            egui::pos2(sp_rect.left() + 4.0, sp_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("Tens: {:.0}%", tension),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+                        sp_painter.text(
+                            egui::pos2(sp_rect.right() - 4.0, sp_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("Boing: {:.0}%", chirp),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(255, 107, 43),
+                        );
+
+                        if sp_resp.hovered() {
+                            let _ = sp_resp.on_hover_text(format!("Spring Reverb Tank HUD\nTension: {:.0}% | Boing: {:.0}%\n[Drag horizontally: Tension | Drag vertically: Dispersion Chirp]", tension, chirp));
+                        }
+                    } else if is_comb_resonator {
+                        // Spectral Comb Resonator Harmonic Teeth Mini Visualizer
+                        let (cb_resp, cb_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let cb_rect = cb_resp.rect;
+                        cb_painter.rect_filled(cb_rect, 2.0, Color32::from_rgb(12, 16, 26));
+
+                        let mut base_f = state.node_param_values.get("base_frequency_hz").copied().unwrap_or(440.0);
+                        let mut feedback = state.node_param_values.get("feedback_pct").copied().unwrap_or(85.0);
+
+                        if cb_resp.dragged() {
+                            if let Some(pos) = cb_resp.interact_pointer_pos() {
+                                let nx = ((pos.x - cb_rect.left()) / cb_rect.width()).clamp(0.02, 0.98);
+                                let ny = (1.0 - ((pos.y - cb_rect.top()) / cb_rect.height())).clamp(0.05, 0.98);
+                                base_f = 20.0 * 10.0_f32.powf(nx * (20000.0_f32 / 20.0).log10());
+                                feedback = ny * 99.0;
+                                state.node_param_values.insert("base_frequency_hz".to_string(), base_f);
+                                state.node_param_values.insert("feedback_pct".to_string(), feedback);
+                                if let Some(bus) = param_bus {
+                                    let pid_f = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_f).is_some() { bus.set(pid_f, base_f); }
+                                    let pid_fb = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_fb).is_some() { bus.set(pid_fb, feedback); }
+                                }
+                            }
+                        }
+
+                        // Draw mini comb response teeth curve
+                        let norm_fx = ((base_f / 20.0).log10() / (20000.0_f32 / 20.0).log10()).clamp(0.0, 1.0);
+                        let steps = 30;
+                        let mut prev_curve = None;
+                        for s in 0..=steps {
+                            let t = s as f32 / steps as f32;
+                            let px = cb_rect.left() + 6.0 + t * (cb_rect.width() - 12.0);
+                            let tooth = (t * std::f32::consts::PI * 8.0 * (1.0 + norm_fx * 2.0)).sin().abs();
+                            let py = cb_rect.bottom() - 8.0 - tooth * (feedback / 100.0) * 36.0;
+                            let pt = egui::pos2(px, py);
+                            if let Some(prev) = prev_curve {
+                                cb_painter.line_segment([prev, pt], Stroke::new(1.4_f32, Color32::from_rgb(255, 215, 0)));
+                            }
+                            prev_curve = Some(pt);
+                        }
+
+                        // Drag Puck
+                        let puck_px = cb_rect.left() + norm_fx * cb_rect.width();
+                        let puck_py = cb_rect.top() + (1.0 - feedback / 100.0) * cb_rect.height();
+                        cb_painter.circle_stroke(egui::pos2(puck_px, puck_py), 4.5, Stroke::new(1.2_f32, Color32::from_rgb(255, 215, 0)));
+                        cb_painter.circle_filled(egui::pos2(puck_px, puck_py), 2.0, Color32::from_rgb(255, 255, 255));
+
+                        // Readouts
+                        let f_label = if base_f >= 1000.0 { format!("{:.1}k", base_f / 1000.0) } else { format!("{:.0}Hz", base_f) };
+                        cb_painter.text(
+                            egui::pos2(cb_rect.left() + 4.0, cb_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("F0: {}", f_label),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(255, 215, 0),
+                        );
+                        cb_painter.text(
+                            egui::pos2(cb_rect.right() - 4.0, cb_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("FB: {:.0}%", feedback),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+
+                        if cb_resp.hovered() {
+                            let _ = cb_resp.on_hover_text(format!("Spectral Comb Resonator HUD\nBase: {:.1} Hz | FB: {:.0}%\n[Drag horizontally: F0 pitch | Drag vertically: Feedback resonance]", base_f, feedback));
                         }
                     } else {
                         // Filter Curve Mini View (slot-addressed)

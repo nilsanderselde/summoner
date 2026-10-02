@@ -724,6 +724,10 @@ pub struct AwardWinningGuiView {
     pub rank_voicing_view: crate::views::rank_voicing_view::RankVoicingView,
     pub show_tine_resonator_modal: bool,
     pub tine_resonator_view: crate::views::tine_resonator_view::TineResonatorView,
+    pub show_spring_reverb_modal: bool,
+    pub spring_reverb_view: crate::views::spring_reverb_view::SpringReverbView,
+    pub show_comb_resonator_modal: bool,
+    pub comb_resonator_view: crate::views::comb_resonator_view::CombResonatorView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1064,6 +1068,10 @@ impl AwardWinningGuiView {
             rank_voicing_view: crate::views::rank_voicing_view::RankVoicingView::new(),
             show_tine_resonator_modal: false,
             tine_resonator_view: crate::views::tine_resonator_view::TineResonatorView::new(),
+            show_spring_reverb_modal: false,
+            spring_reverb_view: crate::views::spring_reverb_view::SpringReverbView::new(),
+            show_comb_resonator_modal: false,
+            comb_resonator_view: crate::views::comb_resonator_view::CombResonatorView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -1913,6 +1921,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_tine_resonator_hud = false;
             self.open_tine_resonator_hud();
         }
+        if self.inspector_state.requested_open_spring_reverb_hud || self.device_rack_state.requested_open_spring_reverb_hud {
+            self.inspector_state.requested_open_spring_reverb_hud = false;
+            self.device_rack_state.requested_open_spring_reverb_hud = false;
+            self.open_spring_reverb_hud();
+        }
+        if self.inspector_state.requested_open_comb_resonator_hud || self.device_rack_state.requested_open_comb_resonator_hud {
+            self.inspector_state.requested_open_comb_resonator_hud = false;
+            self.device_rack_state.requested_open_comb_resonator_hud = false;
+            self.open_comb_resonator_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -1958,6 +1976,8 @@ impl AwardWinningGuiView {
         self.show_friction_orbit_modal_window(ui);
         self.show_rank_voicing_modal_window(ui);
         self.show_tine_resonator_modal_window(ui);
+        self.show_spring_reverb_modal_window(ui);
+        self.show_comb_resonator_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -11552,6 +11572,182 @@ impl AwardWinningGuiView {
 
     pub fn is_tine_resonator_hud_open(&self) -> bool {
         self.show_tine_resonator_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_spring_reverb_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_spring_reverb_modal {
+            return;
+        }
+
+        let mut is_open = self.show_spring_reverb_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🌀 Physical Modeling Spring Reverb Tank & Dispersion HUD")
+            .id(egui::Id::new("spring_reverb_hud_modal"))
+            .open(&mut is_open)
+            .default_size([920.0, 600.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Electromechanical Helical Spring Coil Transmission Lines, Boing Chirp Dispersion & Pluck Excitation HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.spring_reverb_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_spring_reverb_modal = is_open;
+        self.sync_spring_reverb_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_spring_reverb_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let tension = self.spring_reverb_view.tension_pct;
+        let chirp = self.spring_reverb_view.dispersion_chirp_pct;
+        let decay = self.spring_reverb_view.decay_seconds;
+        let drive = self.spring_reverb_view.drive_saturation_db;
+
+        self.device_rack_state.node_param_values.insert("tension_pct".to_string(), tension);
+        self.device_rack_state.node_param_values.insert("dispersion_chirp_pct".to_string(), chirp);
+        self.device_rack_state.node_param_values.insert("decay_seconds".to_string(), decay);
+        self.device_rack_state.node_param_values.insert("drive_saturation_db".to_string(), drive);
+
+        self.inspector_state.node_param_values.insert("tension_pct".to_string(), tension);
+        self.inspector_state.node_param_values.insert("dispersion_chirp_pct".to_string(), chirp);
+        self.inspector_state.node_param_values.insert("decay_seconds".to_string(), decay);
+        self.inspector_state.node_param_values.insert("drive_saturation_db".to_string(), drive);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_tns = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_chp = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_dcy = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_drv = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_tns).is_some() { bus.set(pid_tns, tension); }
+            if bus.get(pid_chp).is_some() { bus.set(pid_chp, chirp); }
+            if bus.get(pid_dcy).is_some() { bus.set(pid_dcy, decay); }
+            if bus.get(pid_drv).is_some() { bus.set(pid_drv, drive); }
+        }
+    }
+
+    pub fn open_spring_reverb_hud(&mut self) {
+        self.show_spring_reverb_modal = true;
+    }
+
+    pub fn close_spring_reverb_hud(&mut self) {
+        self.show_spring_reverb_modal = false;
+    }
+
+    pub fn is_spring_reverb_hud_open(&self) -> bool {
+        self.show_spring_reverb_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_comb_resonator_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_comb_resonator_modal {
+            return;
+        }
+
+        let mut is_open = self.show_comb_resonator_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🪮 Spectral Comb Resonator & Harmonic Matrix HUD")
+            .id(egui::Id::new("comb_resonator_hud_modal"))
+            .open(&mut is_open)
+            .default_size([920.0, 600.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Dynamic Spectral Resonant Feedback Comb Teeth Transfer Curve, Harmonic Matrix & Quadrature Spread HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.comb_resonator_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_comb_resonator_modal = is_open;
+        self.sync_comb_resonator_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_comb_resonator_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let base_f = self.comb_resonator_view.base_frequency_hz;
+        let fb = self.comb_resonator_view.feedback_pct;
+        let damp = self.comb_resonator_view.dampening_hz;
+        let spread = self.comb_resonator_view.stereo_spread_pct;
+
+        self.device_rack_state.node_param_values.insert("base_frequency_hz".to_string(), base_f);
+        self.device_rack_state.node_param_values.insert("feedback_pct".to_string(), fb);
+        self.device_rack_state.node_param_values.insert("dampening_hz".to_string(), damp);
+        self.device_rack_state.node_param_values.insert("stereo_spread_pct".to_string(), spread);
+
+        self.inspector_state.node_param_values.insert("base_frequency_hz".to_string(), base_f);
+        self.inspector_state.node_param_values.insert("feedback_pct".to_string(), fb);
+        self.inspector_state.node_param_values.insert("dampening_hz".to_string(), damp);
+        self.inspector_state.node_param_values.insert("stereo_spread_pct".to_string(), spread);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_f = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_fb = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_dmp = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_spd = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_f).is_some() { bus.set(pid_f, base_f); }
+            if bus.get(pid_fb).is_some() { bus.set(pid_fb, fb); }
+            if bus.get(pid_dmp).is_some() { bus.set(pid_dmp, damp); }
+            if bus.get(pid_spd).is_some() { bus.set(pid_spd, spread); }
+        }
+    }
+
+    pub fn open_comb_resonator_hud(&mut self) {
+        self.show_comb_resonator_modal = true;
+    }
+
+    pub fn close_comb_resonator_hud(&mut self) {
+        self.show_comb_resonator_modal = false;
+    }
+
+    pub fn is_comb_resonator_hud_open(&self) -> bool {
+        self.show_comb_resonator_modal
     }
 
     #[cfg(feature = "gui")]

@@ -118,6 +118,10 @@ pub struct ModernInspectorState {
     pub requested_open_rank_voicing_hud: bool,
     #[serde(default)]
     pub requested_open_tine_resonator_hud: bool,
+    #[serde(default)]
+    pub requested_open_spring_reverb_hud: bool,
+    #[serde(default)]
+    pub requested_open_comb_resonator_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -183,6 +187,8 @@ impl Default for ModernInspectorState {
             requested_open_friction_orbit_hud: false,
             requested_open_rank_voicing_hud: false,
             requested_open_tine_resonator_hud: false,
+            requested_open_spring_reverb_hud: false,
+            requested_open_comb_resonator_hud: false,
         }
     }
 }
@@ -1067,6 +1073,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open interactive Electric Piano Tine Resonator cantilever deflection, tonebar coupling & optical tremolo orbit HUD").clicked() {
                     state.requested_open_tine_resonator_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("SpringReverb") || active_kind.contains("SpringTank") || active_kind.contains("AnalogSpring") || active_kind.contains("SpringMass") || active_kind == "SpringReverbView" || active_kind == "AnalogSpringReverbTank" || active_kind == "NonlinearSpringReverbTank" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🌀 Open Spring Reverb Tank & Mechanical Dispersion HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 229, 255)))
+                        .fill(Color32::from_rgb(12, 28, 44))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 229, 255)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Spring Reverb Tank helical coil simulation & mechanical boing chirp dispersion HUD").clicked() {
+                    state.requested_open_spring_reverb_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("CombResonator") || active_kind.contains("CombFilter") || active_kind.contains("ResonantComb") || active_kind == "CombResonatorView" || active_kind == "CombResonatorNode" || active_kind == "ResonantPhasedCombArray" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🪮 Open Spectral Comb Resonator & Matrix HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(255, 215, 0)))
+                        .fill(Color32::from_rgb(40, 32, 10))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 215, 0)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Dynamic Spectral Comb Resonator harmonic teeth transfer curve & polarity matrix HUD").clicked() {
+                    state.requested_open_comb_resonator_hud = true;
                 }
                 ui.add_space(4.0);
             }

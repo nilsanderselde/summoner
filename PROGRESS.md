@@ -1829,5 +1829,38 @@ Product Management has conducted a comprehensive readiness audit:
   - Unit tests: 329 passed in 0.22s (`cargo test -p summoner_gui --lib`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
 
+### Turn #71 (Turn #34 Deliverable) — Physical Spring Reverb Tank & Spectral Comb Resonator HUDs Convergence (Milestones 28, 30 & 33)
+- [x] Physical Spring Reverb Tank & Spectral Comb Resonator Performance HUDs Integration:
+  - Integrated `SpringReverbView` (Physical Modeling Electromechanical Helical Spring Reverb Tank & Non-Linear Mechanical Dispersion HUD: 5 Sound Presets [Accutronics Type 4 Vintage 2-Spring, Studio Master Type 9 Lush 3-Spring, Dub Space Drip & Saturation, Surf Rock Spring Kick, Lo-Fi Trash Reverb Chamber], Helical coil wave oscillation visualizer, Boing chirp non-linear dispersion group delay curve scope, 2D Pluck excitation touch puck with $\ge 44 \times 44\text{pt}$ bounding target, and dock parameter sliders for Springs [2..3], Tension [0..100%], Boing Chirp [0..100%], Decay [0.5..8.0s], Drive Saturation [+0..+18dB], and Dry/Wet [%]) and `CombResonatorView` (Interactive Dynamic Spectral Resonator & Comb Filter Matrix HUD: 5 Sound Presets [Tuned Chime A4 440 Hz, Sub-Bass Hollow Notch 55 Hz, Formant Vocal Flanger 1.2 kHz, Stereo Quadrature Spread 880 Hz, Metallic High-Q Resonator 3.2 kHz], 3 Polarity Modes [Positive (+), Negative (-), ComplexRing (~)], 2D Resonant Harmonic Teeth Transfer Curve with logarithmic grid lines [100 Hz, 1 kHz, 10 kHz], 2D Frequency vs. Feedback Q touch puck with $\ge 44 \times 44\text{pt}$ bounding target, HF Dampening cutoff bar [500..20000 Hz], and dock parameter sliders for Base Frequency, Feedback %, Stereo Spread, and Dry/Wet Mix) into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/spring_reverb_view.rs` & `comb_resonator_view.rs`):
+  - In `SpringReverbView`: added `SpringReverbProfile` enum, `profile` field, `set_profile(&mut self, profile: SpringReverbProfile)`, `ui(&mut self, ui: &mut egui::Ui)` interactive 2D canvas with profile tabs, animated helical coil wave renderer, boing chirp dispersion scope, drag puck with $\ge 44 \times 44\text{pt}$ hit target, dock sliders, `show(&mut self, ui: &mut egui::Ui)`, and `render_ascii_snapshot_str() -> String`.
+  - In `CombResonatorView`: added `CombResonatorProfile` enum, `profile` field, `set_profile(&mut self, profile: CombResonatorProfile)`, `set_polarity(&mut self, polarity: CombPolarity)`, `ui(&mut self, ui: &mut egui::Ui)` interactive 2D canvas with profile tabs, harmonic teeth curve display, polarity buttons, HF dampening bar, drag puck with $\ge 44 \times 44\text{pt}$ hit target, dock sliders, `show(&mut self, ui: &mut egui::Ui)`, and `render_ascii_snapshot_str() -> String`.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_spring_reverb_modal: bool`, `spring_reverb_view: SpringReverbView`, `show_comb_resonator_modal: bool`, and `comb_resonator_view: CombResonatorView`.
+  - Added dedicated modal windows `show_spring_reverb_modal_window` and `show_comb_resonator_modal_window` with responsive styling, WCAG AAA contrast, and $\ge 44 \times 44\text{pt}$ touch bounds.
+  - Added public lifecycle methods: `open_spring_reverb_hud()`, `close_spring_reverb_hud()`, `is_spring_reverb_hud_open()`, `open_comb_resonator_hud()`, `close_comb_resonator_hud()`, `is_comb_resonator_hud_open()`.
+  - Real-time parameter sync bridges (`sync_spring_reverb_hud_state` and `sync_comb_resonator_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_spring_reverb_hud: bool` and `requested_open_comb_resonator_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🌀 Open Spring Reverb Tank & Mechanical Dispersion HUD]` and `[🪮 Open Spectral Comb Resonator & Matrix HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header `[🌀 HUD]` / `[🪮 HUD]` and expanded toolbar buttons in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Spring Reverb: 2D mechanical spring coils, dispersion chirp curve, drag-puck modulating `tension_pct` and `dispersion_chirp_pct`, and live `ParamBus` slot dispatch.
+    * Comb Resonator: 2D resonant teeth frequency transfer curve, harmonic peak bars, drag-puck modulating `base_frequency_hz` and `feedback_pct`, and live `ParamBus` slot dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_spring_reverb_hud` and `open_comb_resonator_hud` under `"Physical Modeling"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_spring_reverb_hud()` and `open_comb_resonator_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier135_turn71_tests.rs`:
+    * Pure tests: view initialization, profile/polarity selections, dispersion delay and comb transfer magnitude calculations, coil vertex generation, puck physics updates, normalized coordinate conversions, slot arithmetic channel isolation, deterministic ASCII snapshots.
+    * GUI tests: modal lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch, rack & inspector trigger propagation, command palette action registration.
+  - Registered `tier135_turn71_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Feature tests: 7 passed in 0.07s (`cargo test -p summoner_gui --features gui -- tier135_turn71`).
+  - Unit tests: 329 passed in 0.22s (`cargo test -p summoner_gui --lib`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`).
+
+
 
 
