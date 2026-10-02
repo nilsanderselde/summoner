@@ -121,6 +121,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_woodwind_jet_hud: bool,
     #[serde(default)]
     pub requested_open_tonehole_matrix_hud: bool,
+    #[serde(default)]
+    pub requested_open_plate_dispersion_hud: bool,
+    #[serde(default)]
+    pub requested_open_membrane_cavity_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -170,6 +174,8 @@ impl Default for ModernDeviceRackState {
             requested_open_sympathetic_hud: false,
             requested_open_woodwind_jet_hud: false,
             requested_open_tonehole_matrix_hud: false,
+            requested_open_plate_dispersion_hud: false,
+            requested_open_membrane_cavity_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -386,6 +392,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_sympathetic = cur_selection.contains("Sympathetic") || cur_selection.contains("SympatheticCoupling") || cur_selection == "SympatheticCouplingModel" || cur_selection == "SympatheticStringMatrix" || cur_selection == "DroneStrings";
                     let is_woodwind_jet = cur_selection.contains("WoodwindJet") || cur_selection.contains("FluteJet") || cur_selection.contains("AirJet") || cur_selection.contains("WoodwindModel") || cur_selection == "WoodwindJetView" || cur_selection == "AeroacousticFluteJetExciter" || cur_selection == "AcousticConcertFluteAirJetModel" || cur_selection == "WoodwindJetNode";
                     let is_tonehole_matrix = cur_selection.contains("Tonehole") || cur_selection.contains("BoreModel") || cur_selection == "ToneholeMatrixView" || cur_selection == "ToneholeMatrix" || cur_selection == "ToneholeGrid" || cur_selection == "WoodwindToneholeGrid" || cur_selection == "ToneholeLattice";
+                    let is_plate_dispersion = cur_selection.contains("PlateTank") || cur_selection.contains("PlateReverb") || cur_selection.contains("PlateDispersion") || cur_selection == "PlateTankNode" || cur_selection == "PlateDispersionView" || cur_selection == "PlateReverbNode" || cur_selection.contains("EMT140");
+                    let is_membrane_cavity = cur_selection.contains("PercussionMembrane") || cur_selection.contains("MembranePercussion") || cur_selection.contains("MembraneCavity") || cur_selection.contains("MembraneResonator") || cur_selection == "PercussionMembrane" || cur_selection == "MembraneCavityView" || cur_selection == "MembranePercussionModel";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -514,10 +522,18 @@ pub fn show_modern_device_rack_with_context(
                         if ui.button(RichText::new("🌬 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Woodwind Air-Jet Embouchure HUD").clicked() {
                             state.requested_open_woodwind_jet_hud = true;
                         }
-                    } else if is_tonehole_matrix
-                        && ui.button(RichText::new("🕳 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 107, 43))).on_hover_text("Open Woodwind 6-Tonehole Radiation HUD").clicked()
+                    } else if is_tonehole_matrix {
+                        if ui.button(RichText::new("🕳 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 107, 43))).on_hover_text("Open Woodwind 6-Tonehole Radiation HUD").clicked() {
+                            state.requested_open_tonehole_matrix_hud = true;
+                        }
+                    } else if is_plate_dispersion {
+                        if ui.button(RichText::new("🛸 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Plate Dispersion & APDN Reverb HUD").clicked() {
+                            state.requested_open_plate_dispersion_hud = true;
+                        }
+                    } else if is_membrane_cavity
+                        && ui.button(RichText::new("🥁 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 170, 0))).on_hover_text("Open Membrane Cavity & Drum Displacement HUD").clicked()
                     {
-                        state.requested_open_tonehole_matrix_hud = true;
+                        state.requested_open_membrane_cavity_hud = true;
                     }
                     ui.add_space(4.0);
                     let pwr_col = if state.is_enabled { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(100, 116, 139) };
@@ -732,6 +748,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_sympathetic = cur_selection.contains("Sympathetic") || cur_selection.contains("SympatheticCoupling") || cur_selection == "SympatheticCouplingModel" || cur_selection == "SympatheticStringMatrix" || cur_selection == "DroneStrings";
                     let is_woodwind_jet = cur_selection.contains("WoodwindJet") || cur_selection.contains("FluteJet") || cur_selection.contains("AirJet") || cur_selection.contains("WoodwindModel") || cur_selection == "WoodwindJetView" || cur_selection == "AeroacousticFluteJetExciter" || cur_selection == "AcousticConcertFluteAirJetModel" || cur_selection == "WoodwindJetNode";
                     let is_tonehole_matrix = cur_selection.contains("Tonehole") || cur_selection.contains("BoreModel") || cur_selection == "ToneholeMatrixView" || cur_selection == "ToneholeMatrix" || cur_selection == "ToneholeGrid" || cur_selection == "WoodwindToneholeGrid" || cur_selection == "ToneholeLattice";
+                    let is_plate_dispersion = cur_selection.contains("PlateTank") || cur_selection.contains("PlateReverb") || cur_selection.contains("PlateDispersion") || cur_selection == "PlateTankNode" || cur_selection == "PlateDispersionView" || cur_selection == "PlateReverbNode" || cur_selection.contains("EMT140");
+                    let is_membrane_cavity = cur_selection.contains("PercussionMembrane") || cur_selection.contains("MembranePercussion") || cur_selection.contains("MembraneCavity") || cur_selection.contains("MembraneResonator") || cur_selection == "PercussionMembrane" || cur_selection == "MembraneCavityView" || cur_selection == "MembranePercussionModel";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -868,10 +886,18 @@ pub fn show_modern_device_rack_with_context(
                         if ui.button(RichText::new("🌬 Woodwind Jet HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Woodwind Air-Jet Embouchure HUD").clicked() {
                             state.requested_open_woodwind_jet_hud = true;
                         }
-                    } else if is_tonehole_matrix
-                        && ui.button(RichText::new("🕳 Tonehole HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 107, 43))).on_hover_text("Open Woodwind 6-Tonehole Radiation HUD").clicked()
+                    } else if is_tonehole_matrix {
+                        if ui.button(RichText::new("🕳 Tonehole HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 107, 43))).on_hover_text("Open Woodwind 6-Tonehole Radiation HUD").clicked() {
+                            state.requested_open_tonehole_matrix_hud = true;
+                        }
+                    } else if is_plate_dispersion {
+                        if ui.button(RichText::new("🛸 Plate HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Plate Dispersion & APDN Reverb HUD").clicked() {
+                            state.requested_open_plate_dispersion_hud = true;
+                        }
+                    } else if is_membrane_cavity
+                        && ui.button(RichText::new("🥁 Membrane HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 170, 0))).on_hover_text("Open Membrane Cavity & Drum Displacement HUD").clicked()
                     {
-                        state.requested_open_tonehole_matrix_hud = true;
+                        state.requested_open_membrane_cavity_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -1672,6 +1698,8 @@ fn show_pro_parameter_drawer(
                     let is_sympathetic = dev_kind.contains("Sympathetic") || dev_kind.contains("SympatheticCoupling") || dev_kind == "SympatheticCouplingModel" || dev_kind == "SympatheticStringMatrix" || dev_kind == "DroneStrings";
                     let is_woodwind_jet = dev_kind.contains("WoodwindJet") || dev_kind.contains("FluteJet") || dev_kind.contains("AirJet") || dev_kind.contains("WoodwindModel") || dev_kind == "WoodwindJetView" || dev_kind == "AeroacousticFluteJetExciter" || dev_kind == "AcousticConcertFluteAirJetModel" || dev_kind == "WoodwindJetNode";
                     let is_tonehole_matrix = dev_kind.contains("Tonehole") || dev_kind.contains("BoreModel") || dev_kind == "ToneholeMatrixView" || dev_kind == "ToneholeMatrix" || dev_kind == "ToneholeGrid" || dev_kind == "WoodwindToneholeGrid" || dev_kind == "ToneholeLattice";
+                    let is_plate_dispersion = dev_kind.contains("PlateTank") || dev_kind.contains("PlateReverb") || dev_kind.contains("PlateDispersion") || dev_kind == "PlateTankNode" || dev_kind == "PlateDispersionView" || dev_kind == "PlateReverbNode" || dev_kind.contains("EMT140");
+                    let is_membrane_cavity = dev_kind.contains("PercussionMembrane") || dev_kind.contains("MembranePercussion") || dev_kind.contains("MembraneCavity") || dev_kind.contains("MembraneResonator") || dev_kind == "PercussionMembrane" || dev_kind == "MembraneCavityView" || dev_kind == "MembranePercussionModel";
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -4305,6 +4333,174 @@ fn show_pro_parameter_drawer(
 
                         if th_resp.hovered() {
                             let _ = th_resp.on_hover_text(format!("Woodwind 6-Tonehole Radiation HUD\nBore Length: {:.2} m | Cutoff: {:.0} Hz\n[Drag horizontally: Bore length | Drag vertically: Radiation cutoff]", bore_len, cutoff));
+                        }
+                    } else if is_plate_dispersion {
+                        // Plate Dispersion & APDN Reverb Mini Visualizer
+                        let (pl_resp, pl_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let pl_rect = pl_resp.rect;
+                        pl_painter.rect_filled(pl_rect, 2.0, Color32::from_rgb(14, 20, 32));
+
+                        let mut disp = state.node_param_values.get("dispersion_factor").copied().unwrap_or(0.65);
+                        let mut damper = state.node_param_values.get("damper_position").copied().unwrap_or(0.30);
+
+                        if pl_resp.dragged() {
+                            if let Some(pos) = pl_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - pl_rect.left()) / pl_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - pl_rect.top()) / pl_rect.height())).clamp(0.0, 1.0);
+                                disp = norm_x;
+                                damper = (1.0 - norm_y).clamp(0.0, 1.0);
+                                let t60 = (3.5 * (1.0 - 0.85 * damper)).clamp(0.4, 8.0);
+                                let high_damp = 0.45;
+
+                                state.node_param_values.insert("dispersion_factor".to_string(), disp);
+                                state.node_param_values.insert("damper_position".to_string(), damper);
+                                state.node_param_values.insert("decay_t60_sec".to_string(), t60);
+                                state.node_param_values.insert("high_damping".to_string(), high_damp);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_d = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_p = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    let pid_t = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 2);
+                                    let pid_h = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 3);
+                                    if bus.get(pid_d).is_some() { bus.set(pid_d, disp); }
+                                    if bus.get(pid_p).is_some() { bus.set(pid_p, damper); }
+                                    if bus.get(pid_t).is_some() { bus.set(pid_t, t60); }
+                                    if bus.get(pid_h).is_some() { bus.set(pid_h, high_damp); }
+                                }
+                            }
+                        }
+
+                        // Flexural dispersion curve v_p ~ f^(0.25 + 0.35 * disp)
+                        let curve_steps = 16;
+                        for s in 0..curve_steps {
+                            let f1 = (s + 1) as f32 / (curve_steps + 1) as f32;
+                            let f2 = (s + 2) as f32 / (curve_steps + 1) as f32;
+                            let exp = 0.25 + 0.35 * disp;
+                            let v1 = f1.powf(exp).clamp(0.05, 1.0);
+                            let v2 = f2.powf(exp).clamp(0.05, 1.0);
+
+                            let x1 = pl_rect.left() + 8.0 + (s as f32 / curve_steps as f32) * (pl_rect.width() * 0.50);
+                            let x2 = pl_rect.left() + 8.0 + ((s + 1) as f32 / curve_steps as f32) * (pl_rect.width() * 0.50);
+                            let y1 = pl_rect.bottom() - 10.0 - v1 * 36.0;
+                            let y2 = pl_rect.bottom() - 10.0 - v2 * 36.0;
+                            pl_painter.line_segment([egui::pos2(x1, y1), egui::pos2(x2, y2)], Stroke::new(1.8_f32, Color32::from_rgb(255, 170, 0)));
+                        }
+
+                        // Damper absorption pad line (right side)
+                        let pad_x = pl_rect.left() + pl_rect.width() * 0.65;
+                        let pad_w = pl_rect.width() * 0.30;
+                        let pad_h = 40.0;
+                        let pad_y = pl_rect.top() + 14.0;
+                        pl_painter.rect_stroke(
+                            egui::Rect::from_min_size(egui::pos2(pad_x, pad_y), egui::vec2(pad_w, pad_h)),
+                            2.0_f32,
+                            Stroke::new(1.0_f32, Color32::from_rgb(60, 75, 100)),
+                        );
+
+                        // Draggable puck
+                        let px = pad_x + disp * pad_w;
+                        let py = pad_y + damper * pad_h;
+                        pl_painter.circle_stroke(egui::pos2(px, py), 5.0, Stroke::new(1.2_f32, Color32::from_rgb(0, 229, 255)));
+                        pl_painter.circle_filled(egui::pos2(px, py), 2.5, Color32::from_rgb(255, 255, 255));
+
+                        // Readouts
+                        let t60_val = (3.5 * (1.0 - 0.85 * damper)).clamp(0.4, 8.0);
+                        pl_painter.text(
+                            egui::pos2(pl_rect.left() + 4.0, pl_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("{:.0}% disp", disp * 100.0),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(255, 170, 0),
+                        );
+                        pl_painter.text(
+                            egui::pos2(pl_rect.right() - 4.0, pl_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("{:.1}s T60", t60_val),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+
+                        if pl_resp.hovered() {
+                            let _ = pl_resp.on_hover_text(format!("Plate Dispersion & APDN Reverb HUD\nDispersion: {:.1}% | Damper Pad: {:.1}%\n[Drag horizontally: Dispersion factor | Drag vertically: Damper position]", disp * 100.0, damper * 100.0));
+                        }
+                    } else if is_membrane_cavity {
+                        // Membrane Cavity Phase & Drum Displacement Mini Visualizer
+                        let (mem_resp, mem_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let mem_rect = mem_resp.rect;
+                        mem_painter.rect_filled(mem_rect, 2.0, Color32::from_rgb(24, 12, 18));
+
+                        let mut strike_r = state.node_param_values.get("radial_strike_pos").copied().unwrap_or(0.70);
+                        let mut strike_v = state.node_param_values.get("strike_velocity").copied().unwrap_or(0.80);
+
+                        if mem_resp.dragged() {
+                            if let Some(pos) = mem_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - mem_rect.left()) / mem_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - mem_rect.top()) / mem_rect.height())).clamp(0.0, 1.0);
+                                strike_r = norm_x;
+                                strike_v = 0.05 + norm_y * 0.95;
+                                let air = 0.85;
+                                let rim = 0.05;
+
+                                state.node_param_values.insert("radial_strike_pos".to_string(), strike_r);
+                                state.node_param_values.insert("strike_velocity".to_string(), strike_v);
+                                state.node_param_values.insert("air_cavity_depth".to_string(), air);
+                                state.node_param_values.insert("rimshot_damping".to_string(), rim);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_r = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_v = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    let pid_a = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 2);
+                                    let pid_m = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 3);
+                                    if bus.get(pid_r).is_some() { bus.set(pid_r, strike_r); }
+                                    if bus.get(pid_v).is_some() { bus.set(pid_v, strike_v); }
+                                    if bus.get(pid_a).is_some() { bus.set(pid_a, air); }
+                                    if bus.get(pid_m).is_some() { bus.set(pid_m, rim); }
+                                }
+                            }
+                        }
+
+                        // Circular drumhead rim hoop & concentric Bessel nodal rings
+                        let cx = mem_rect.left() + 38.0;
+                        let cy = mem_rect.top() + 34.0;
+                        let drum_radius = 24.0;
+                        mem_painter.circle_stroke(egui::pos2(cx, cy), drum_radius, Stroke::new(2.5_f32, Color32::from_rgb(255, 170, 0)));
+                        mem_painter.circle_stroke(egui::pos2(cx, cy), drum_radius * 0.50, Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(100, 70, 90, 100)));
+
+                        // Radial strike puck
+                        let puck_dist = drum_radius * strike_r.clamp(0.0, 1.0);
+                        let px = cx + puck_dist;
+                        let py = cy;
+                        mem_painter.circle_stroke(egui::pos2(px, py), 5.0, Stroke::new(1.2_f32, Color32::from_rgb(0, 229, 255)));
+                        mem_painter.circle_filled(egui::pos2(px, py), 2.5, Color32::from_rgb(255, 255, 255));
+
+                        // Strike velocity & air cavity bar (right side)
+                        let bar_x = mem_rect.left() + 82.0;
+                        let bar_w = 66.0;
+                        let bar_h = 10.0;
+                        let bar_y1 = mem_rect.top() + 20.0;
+                        let bar_y2 = mem_rect.top() + 38.0;
+                        mem_painter.rect_filled(
+                            egui::Rect::from_min_size(egui::pos2(bar_x, bar_y1), egui::vec2(bar_w * strike_v, bar_h)),
+                            2.0_f32,
+                            Color32::from_rgb(255, 107, 43),
+                        );
+                        mem_painter.rect_stroke(
+                            egui::Rect::from_min_size(egui::pos2(bar_x, bar_y1), egui::vec2(bar_w, bar_h)),
+                            2.0_f32,
+                            Stroke::new(1.0_f32, Color32::from_rgb(80, 50, 60)),
+                        );
+
+                        // Readouts
+                        mem_painter.text(
+                            egui::pos2(bar_x, bar_y2),
+                            egui::Align2::LEFT_TOP,
+                            format!("r: {:.2}  vel: {:.2}", strike_r, strike_v),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(255, 190, 120),
+                        );
+
+                        if mem_resp.hovered() {
+                            let _ = mem_resp.on_hover_text(format!("Membrane Cavity Phase & Drum Displacement HUD\nRadial Strike: {:.1}% | Velocity: {:.2}\n[Drag horizontally: Radial strike position | Drag vertically: Strike velocity]", strike_r * 100.0, strike_v));
                         }
                     } else {
                         // Filter Curve Mini View (slot-addressed)

@@ -106,6 +106,10 @@ pub struct ModernInspectorState {
     pub requested_open_woodwind_jet_hud: bool,
     #[serde(default)]
     pub requested_open_tonehole_matrix_hud: bool,
+    #[serde(default)]
+    pub requested_open_plate_dispersion_hud: bool,
+    #[serde(default)]
+    pub requested_open_membrane_cavity_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -165,6 +169,8 @@ impl Default for ModernInspectorState {
             requested_open_sympathetic_hud: false,
             requested_open_woodwind_jet_hud: false,
             requested_open_tonehole_matrix_hud: false,
+            requested_open_plate_dispersion_hud: false,
+            requested_open_membrane_cavity_hud: false,
         }
     }
 }
@@ -989,6 +995,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open interactive Woodwind 6-Tonehole Acoustic Radiation Matrix & Bore Standing Wave HUD").clicked() {
                     state.requested_open_tonehole_matrix_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("PlateTank") || active_kind.contains("PlateReverb") || active_kind.contains("PlateDispersion") || active_kind == "PlateTankNode" || active_kind == "PlateDispersionView" || active_kind == "PlateReverbNode" || active_kind.contains("EMT140") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🛸 Open Plate Dispersion & APDN Reverb HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 229, 255)))
+                        .fill(Color32::from_rgb(12, 34, 48))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 229, 255)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Mechanical Plate Dispersion & Allpass Delay Network Reverb HUD").clicked() {
+                    state.requested_open_plate_dispersion_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("PercussionMembrane") || active_kind.contains("MembranePercussion") || active_kind.contains("MembraneCavity") || active_kind.contains("MembraneResonator") || active_kind == "PercussionMembrane" || active_kind == "MembraneCavityView" || active_kind == "MembranePercussionModel" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🥁 Open Membrane Cavity & Drum Displacement HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(255, 170, 0)))
+                        .fill(Color32::from_rgb(38, 28, 12))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 170, 0)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Membrane Cavity Phase Canvas & 2D Drum Displacement HUD").clicked() {
+                    state.requested_open_membrane_cavity_hud = true;
                 }
                 ui.add_space(4.0);
             }

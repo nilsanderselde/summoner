@@ -1732,7 +1732,35 @@ Product Management has conducted a comprehensive readiness audit:
     * Pure tests: view initialization, instrument profiles, display modes, normalized coordinate conversions, physics updates from puck, hit testing, acoustics updates, standing wave pressure and reflection evaluations, slot arithmetic channel isolation, deterministic ASCII snapshots.
     * GUI tests: modal lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch, rack & inspector trigger propagation, command palette action registration.
   - Registered `tier131_turn67_tests` in `crates/summoner_gui/src/lib.rs`.
-  - Feature tests: 8 passed in 0.05s (`cargo test -p summoner_gui --features gui -- tier131_turn67`).
-  - Unit tests: 329 passed in 0.23s (`cargo test -p summoner_gui --lib`).
-  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`).
+### Turn #68 (Turn #31 Deliverable) — Mechanical Plate Dispersion & Membrane Cavity Drum Displacement HUDs Convergence (Milestones 19, 20 & 33)
+- [x] Mechanical Plate Dispersion & Membrane Cavity Drum Displacement Performance HUDs Integration:
+  - Integrated `PlateDispersionView` (Mechanical Plate Flexural Wave Dispersion & APDN Reverb HUD: 5 Plate Reverb Profiles [Vintage EMT 140 Steel, Studio Suspension Plate, EMT 240 Gold Foil, Compact Mechanical Tank, High-Tension Resonator], flexural wave dispersion curve $v_p(\omega) \propto \sqrt{\omega}$, APDN phase delay indicators, mechanical damper absorption decay readouts $T_{60} \in [0.4..8.0\text{ s}]$, high damping, driver saturation, stereo width, and touch-draggable damper position vs dispersion factor puck with $\ge 44 \times 44\text{pt}$ hit target) and `MembraneCavityView` (Membrane Cavity Phase Canvas & 2D Drumhead Displacement HUD: 6 Drum Instrument Profiles [Timpani Kettle, Concert Bass Drum, Snare Drum, Acoustic Tom-Tom, Bongos / Congas, Djembe / Frame Drum], 2D circular phase canvas evaluating Bessel membrane vibration modes $J_m(\alpha_{m,n} r)$, enclosed air cavity backpressure kettle loading, non-linear tension pitch-drop decay, rimshot damping, mallet hardness, and touch-draggable radial strike position vs strike velocity puck with $\ge 44 \times 44\text{pt}$ hit target) into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/plate_dispersion_view.rs` & `membrane_cavity_view.rs`):
+  - In `PlateDispersionView`: added `set_profile(&mut self, profile: PlateReverbViewProfile)`, `render_ascii_snapshot_str() -> String`, interactive profile tabs header in `show()`, and bottom dock parameter sliders (`high_damping`, `driver_saturation`, `stereo_width`).
+  - In `MembraneCavityView`: added `set_instrument(&mut self, inst: MembraneInstrumentViewProfile)`, `render_ascii_snapshot_str() -> String`, interactive drum profile tabs header in `show()`, and bottom dock parameter sliders (`mallet_hardness`, `air_cavity_depth`, `rimshot_damping`).
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_plate_dispersion_modal: bool`, `plate_dispersion_view: PlateDispersionView`, `show_membrane_cavity_modal: bool`, and `membrane_cavity_view: MembraneCavityView`.
+  - Added dedicated modal windows `show_plate_dispersion_modal_window` and `show_membrane_cavity_modal_window` with responsive styling, WCAG AAA contrast, and $\ge 44 \times 44\text{pt}$ touch bounds.
+  - Added public lifecycle methods: `open_plate_dispersion_hud()`, `close_plate_dispersion_hud()`, `is_plate_dispersion_hud_open()`, `open_membrane_cavity_hud()`, `close_membrane_cavity_hud()`, `is_membrane_cavity_hud_open()`.
+  - Real-time parameter sync bridges (`sync_plate_dispersion_hud_state` and `sync_membrane_cavity_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_plate_dispersion_hud: bool` and `requested_open_membrane_cavity_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🛸 Open Plate Dispersion & APDN Reverb HUD]` and `[🥁 Open Membrane Cavity & Drum Displacement HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header `[🛸 HUD]` / `[🥁 HUD]` and expanded toolbar buttons in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Plate Dispersion: Flexural wave dispersion curve, felt damper absorption pad line, drag-puck modulating `dispersion_factor` and `damper_position`, T60 decay readout, and live `ParamBus` slot dispatch.
+    * Membrane Cavity: Circular drumhead rim hoop, concentric Bessel nodal rings, radial strike puck modulating `radial_strike_pos` and `strike_velocity`, strike velocity needle gauge, and live `ParamBus` slot dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_plate_dispersion_hud` and `open_membrane_cavity_hud` under `"Physical Modeling"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_plate_dispersion_hud()` and `open_membrane_cavity_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier132_turn68_tests.rs`:
+    * Pure tests: view initialization, profile/instrument selections, normalized coordinate conversions, physics updates from puck, hit testing, flexural curve and Bessel displacement evaluations, slot arithmetic channel isolation, deterministic ASCII snapshots.
+    * GUI tests: modal lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch, rack & inspector trigger propagation, command palette action registration.
+  - Registered `tier132_turn68_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Feature tests: 8 passed in 0.05s (`cargo test -p summoner_gui --features gui -- tier132_turn68`).
+  - Unit tests: 329 passed in 0.22s (`cargo test -p summoner_gui --lib`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
 

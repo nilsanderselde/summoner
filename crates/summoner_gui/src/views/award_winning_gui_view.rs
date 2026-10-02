@@ -712,6 +712,10 @@ pub struct AwardWinningGuiView {
     pub woodwind_jet_view: crate::views::woodwind_jet_view::WoodwindJetView,
     pub show_tonehole_matrix_modal: bool,
     pub tonehole_matrix_view: crate::views::tonehole_matrix_view::ToneholeMatrixView,
+    pub show_plate_dispersion_modal: bool,
+    pub plate_dispersion_view: crate::views::plate_dispersion_view::PlateDispersionView,
+    pub show_membrane_cavity_modal: bool,
+    pub membrane_cavity_view: crate::views::membrane_cavity_view::MembraneCavityView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1040,6 +1044,10 @@ impl AwardWinningGuiView {
             woodwind_jet_view: crate::views::woodwind_jet_view::WoodwindJetView::new(),
             show_tonehole_matrix_modal: false,
             tonehole_matrix_view: crate::views::tonehole_matrix_view::ToneholeMatrixView::new(),
+            show_plate_dispersion_modal: false,
+            plate_dispersion_view: crate::views::plate_dispersion_view::PlateDispersionView::new(),
+            show_membrane_cavity_modal: false,
+            membrane_cavity_view: crate::views::membrane_cavity_view::MembraneCavityView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -1859,6 +1867,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_tonehole_matrix_hud = false;
             self.open_tonehole_matrix_hud();
         }
+        if self.inspector_state.requested_open_plate_dispersion_hud || self.device_rack_state.requested_open_plate_dispersion_hud {
+            self.inspector_state.requested_open_plate_dispersion_hud = false;
+            self.device_rack_state.requested_open_plate_dispersion_hud = false;
+            self.open_plate_dispersion_hud();
+        }
+        if self.inspector_state.requested_open_membrane_cavity_hud || self.device_rack_state.requested_open_membrane_cavity_hud {
+            self.inspector_state.requested_open_membrane_cavity_hud = false;
+            self.device_rack_state.requested_open_membrane_cavity_hud = false;
+            self.open_membrane_cavity_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -1898,6 +1916,8 @@ impl AwardWinningGuiView {
         self.show_sympathetic_modal_window(ui);
         self.show_woodwind_jet_modal_window(ui);
         self.show_tonehole_matrix_modal_window(ui);
+        self.show_plate_dispersion_modal_window(ui);
+        self.show_membrane_cavity_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -10964,6 +10984,182 @@ impl AwardWinningGuiView {
 
     pub fn is_tonehole_matrix_hud_open(&self) -> bool {
         self.show_tonehole_matrix_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_plate_dispersion_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_plate_dispersion_modal {
+            return;
+        }
+
+        let mut is_open = self.show_plate_dispersion_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🛸 Mechanical Plate Dispersion & APDN Reverb HUD")
+            .id(egui::Id::new("plate_dispersion_hud_modal"))
+            .open(&mut is_open)
+            .default_size([880.0, 580.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Mechanical Plate Flexural Wave Dispersion, APDN Phase Delay & Damper Absorption HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.plate_dispersion_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_plate_dispersion_modal = is_open;
+        self.sync_plate_dispersion_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_plate_dispersion_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let disp = self.plate_dispersion_view.dispersion_factor;
+        let damper = self.plate_dispersion_view.damper_position;
+        let t60 = self.plate_dispersion_view.decay_t60_sec;
+        let high_damp = self.plate_dispersion_view.high_damping;
+
+        self.device_rack_state.node_param_values.insert("dispersion_factor".to_string(), disp);
+        self.device_rack_state.node_param_values.insert("damper_position".to_string(), damper);
+        self.device_rack_state.node_param_values.insert("decay_t60_sec".to_string(), t60);
+        self.device_rack_state.node_param_values.insert("high_damping".to_string(), high_damp);
+
+        self.inspector_state.node_param_values.insert("dispersion_factor".to_string(), disp);
+        self.inspector_state.node_param_values.insert("damper_position".to_string(), damper);
+        self.inspector_state.node_param_values.insert("decay_t60_sec".to_string(), t60);
+        self.inspector_state.node_param_values.insert("high_damping".to_string(), high_damp);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_d = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_p = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_t = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_h = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_d).is_some() { bus.set(pid_d, disp); }
+            if bus.get(pid_p).is_some() { bus.set(pid_p, damper); }
+            if bus.get(pid_t).is_some() { bus.set(pid_t, t60); }
+            if bus.get(pid_h).is_some() { bus.set(pid_h, high_damp); }
+        }
+    }
+
+    pub fn open_plate_dispersion_hud(&mut self) {
+        self.show_plate_dispersion_modal = true;
+    }
+
+    pub fn close_plate_dispersion_hud(&mut self) {
+        self.show_plate_dispersion_modal = false;
+    }
+
+    pub fn is_plate_dispersion_hud_open(&self) -> bool {
+        self.show_plate_dispersion_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_membrane_cavity_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_membrane_cavity_modal {
+            return;
+        }
+
+        let mut is_open = self.show_membrane_cavity_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🥁 Membrane Cavity Phase & Drum Displacement HUD")
+            .id(egui::Id::new("membrane_cavity_hud_modal"))
+            .open(&mut is_open)
+            .default_size([880.0, 580.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("2D Bessel Membrane Vibration Modes, Air Cavity Backpressure & Strike Radial Position HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.membrane_cavity_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_membrane_cavity_modal = is_open;
+        self.sync_membrane_cavity_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_membrane_cavity_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let strike_r = self.membrane_cavity_view.radial_strike_pos;
+        let strike_v = self.membrane_cavity_view.strike_velocity;
+        let air = self.membrane_cavity_view.air_cavity_depth;
+        let rim = self.membrane_cavity_view.rimshot_damping;
+
+        self.device_rack_state.node_param_values.insert("radial_strike_pos".to_string(), strike_r);
+        self.device_rack_state.node_param_values.insert("strike_velocity".to_string(), strike_v);
+        self.device_rack_state.node_param_values.insert("air_cavity_depth".to_string(), air);
+        self.device_rack_state.node_param_values.insert("rimshot_damping".to_string(), rim);
+
+        self.inspector_state.node_param_values.insert("radial_strike_pos".to_string(), strike_r);
+        self.inspector_state.node_param_values.insert("strike_velocity".to_string(), strike_v);
+        self.inspector_state.node_param_values.insert("air_cavity_depth".to_string(), air);
+        self.inspector_state.node_param_values.insert("rimshot_damping".to_string(), rim);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_r = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_v = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_a = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_m = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_r).is_some() { bus.set(pid_r, strike_r); }
+            if bus.get(pid_v).is_some() { bus.set(pid_v, strike_v); }
+            if bus.get(pid_a).is_some() { bus.set(pid_a, air); }
+            if bus.get(pid_m).is_some() { bus.set(pid_m, rim); }
+        }
+    }
+
+    pub fn open_membrane_cavity_hud(&mut self) {
+        self.show_membrane_cavity_modal = true;
+    }
+
+    pub fn close_membrane_cavity_hud(&mut self) {
+        self.show_membrane_cavity_modal = false;
+    }
+
+    pub fn is_membrane_cavity_hud_open(&self) -> bool {
+        self.show_membrane_cavity_modal
     }
 
     #[cfg(feature = "gui")]

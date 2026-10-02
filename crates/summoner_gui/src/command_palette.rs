@@ -521,6 +521,18 @@ impl CommandPalette {
                 action_id: "open_tonehole_matrix_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Mechanical Plate Dispersion & APDN Reverb HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_plate_dispersion_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Membrane Cavity Phase & Drum Displacement HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_membrane_cavity_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

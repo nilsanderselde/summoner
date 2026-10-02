@@ -133,6 +133,16 @@ impl PlateDispersionView {
         let _ = disp;
     }
 
+    pub fn set_profile(&mut self, profile: PlateReverbViewProfile) {
+        self.profile = profile;
+        self.update_physics();
+    }
+
+    /// Render ASCII snapshot representation of the view as a single multiline string.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        self.render_ascii(80, 16).join("\n")
+    }
+
     /// Evaluates flexural phase velocity dispersion curve $v_p(f) / v_0 = \sqrt{f / f_0}$ across 32 frequency points.
     #[allow(clippy::needless_range_loop)]
     pub fn evaluate_dispersion_curve(&self) -> [f32; NUM_DISPERSION_CURVE_POINTS] {
@@ -158,9 +168,31 @@ impl PlateDispersionView {
 
     #[cfg(feature = "gui")]
     pub fn show(&mut self, ui: &mut egui::Ui) {
+        ui.horizontal_wrapped(|ui| {
+            ui.label(
+                egui::RichText::new("Plate Model:")
+                    .font(egui::FontId::proportional(11.0))
+                    .strong()
+                    .color(Color32::from_rgb(148, 163, 184)),
+            );
+            for &p in &[
+                PlateReverbViewProfile::VintageEmt140Steel,
+                PlateReverbViewProfile::StudioPlateSuspension,
+                PlateReverbViewProfile::GoldFoilPlate,
+                PlateReverbViewProfile::CompactMechanicalTank,
+                PlateReverbViewProfile::HighTensionResonator,
+            ] {
+                let is_sel = self.profile == p;
+                if ui.selectable_label(is_sel, p.name()).clicked() {
+                    self.set_profile(p);
+                }
+            }
+        });
+        ui.add_space(4.0);
+
         let available = ui.available_size();
         let width = available.x.max(320.0);
-        let height = 340.0;
+        let height = 300.0;
 
         let (rect, response) = ui.allocate_exact_size(
             egui::Vec2::new(width, height),
@@ -276,6 +308,28 @@ impl PlateDispersionView {
             12.0,
             Color32::from_rgb(0, 229, 255),
         );
+
+        ui.add_space(6.0);
+        ui.horizontal(|ui| {
+            ui.label(
+                egui::RichText::new("High Damping:")
+                    .font(egui::FontId::proportional(10.5))
+                    .color(Color32::from_rgb(148, 163, 184)),
+            );
+            ui.add(egui::Slider::new(&mut self.high_damping, 0.0..=1.0));
+            ui.label(
+                egui::RichText::new("Driver Sat:")
+                    .font(egui::FontId::proportional(10.5))
+                    .color(Color32::from_rgb(148, 163, 184)),
+            );
+            ui.add(egui::Slider::new(&mut self.driver_saturation, 0.0..=1.0));
+            ui.label(
+                egui::RichText::new("Stereo Width:")
+                    .font(egui::FontId::proportional(10.5))
+                    .color(Color32::from_rgb(148, 163, 184)),
+            );
+            ui.add(egui::Slider::new(&mut self.stereo_width, 0.0..=1.0));
+        });
     }
 
     /// Renders an ASCII visualization for terminal/headless audits.

@@ -131,6 +131,16 @@ impl MembraneCavityView {
         self.peak_cavity_pressure_pa = 40.0 + self.air_cavity_depth * self.strike_velocity * 180.0;
     }
 
+    pub fn set_instrument(&mut self, inst: MembraneInstrumentViewProfile) {
+        self.instrument = inst;
+        self.update_physics();
+    }
+
+    /// Render ASCII snapshot representation of the view as a single multiline string.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        self.render_ascii(80, 16).join("\n")
+    }
+
     /// Evaluates 2D Bessel displacement $z(r, \theta)$ at normalized radius $r \in [0.0, 1.0]$ and angle $\theta$.
     pub fn evaluate_membrane_displacement(&self, r: f32, theta: f32) -> f32 {
         let r_clamped = r.clamp(0.0, 1.0);
@@ -160,9 +170,32 @@ impl MembraneCavityView {
 
     #[cfg(feature = "gui")]
     pub fn show(&mut self, ui: &mut egui::Ui) {
+        ui.horizontal_wrapped(|ui| {
+            ui.label(
+                egui::RichText::new("Drum Profile:")
+                    .font(egui::FontId::proportional(11.0))
+                    .strong()
+                    .color(Color32::from_rgb(148, 163, 184)),
+            );
+            for &inst in &[
+                MembraneInstrumentViewProfile::TimpaniKettle,
+                MembraneInstrumentViewProfile::ConcertBassDrum,
+                MembraneInstrumentViewProfile::SnareDrum,
+                MembraneInstrumentViewProfile::TomTom,
+                MembraneInstrumentViewProfile::BongosCongas,
+                MembraneInstrumentViewProfile::DjembeFramedrum,
+            ] {
+                let is_sel = self.instrument == inst;
+                if ui.selectable_label(is_sel, inst.name()).clicked() {
+                    self.set_instrument(inst);
+                }
+            }
+        });
+        ui.add_space(4.0);
+
         let available = ui.available_size();
         let width = available.x.max(320.0);
-        let height = 340.0;
+        let height = 300.0;
 
         let (rect, response) = ui.allocate_exact_size(
             egui::Vec2::new(width, height),
@@ -289,6 +322,28 @@ impl MembraneCavityView {
                 Color32::from_rgb(170, 190, 215),
             );
         }
+
+        ui.add_space(6.0);
+        ui.horizontal(|ui| {
+            ui.label(
+                egui::RichText::new("Mallet Hardness:")
+                    .font(egui::FontId::proportional(10.5))
+                    .color(Color32::from_rgb(148, 163, 184)),
+            );
+            ui.add(egui::Slider::new(&mut self.mallet_hardness, 0.0..=1.0));
+            ui.label(
+                egui::RichText::new("Air Cavity:")
+                    .font(egui::FontId::proportional(10.5))
+                    .color(Color32::from_rgb(148, 163, 184)),
+            );
+            ui.add(egui::Slider::new(&mut self.air_cavity_depth, 0.0..=1.0));
+            ui.label(
+                egui::RichText::new("Rim Damping:")
+                    .font(egui::FontId::proportional(10.5))
+                    .color(Color32::from_rgb(148, 163, 184)),
+            );
+            ui.add(egui::Slider::new(&mut self.rimshot_damping, 0.0..=1.0));
+        });
     }
 
     /// Renders an ASCII visualization for terminal/headless audits.
