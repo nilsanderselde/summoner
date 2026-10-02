@@ -149,6 +149,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_idiophone_spectrum_hud: bool,
     #[serde(default)]
     pub requested_open_sonar_hydrophone_hud: bool,
+    #[serde(default)]
+    pub requested_open_hoa5_binaural_hud: bool,
+    #[serde(default)]
+    pub requested_open_mpegh_3d_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {

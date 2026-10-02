@@ -134,6 +134,10 @@ pub struct ModernInspectorState {
     pub requested_open_idiophone_spectrum_hud: bool,
     #[serde(default)]
     pub requested_open_sonar_hydrophone_hud: bool,
+    #[serde(default)]
+    pub requested_open_hoa5_binaural_hud: bool,
+    #[serde(default)]
+    pub requested_open_mpegh_3d_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -207,6 +211,8 @@ impl Default for ModernInspectorState {
             requested_open_membrane_plate_hud: false,
             requested_open_idiophone_spectrum_hud: false,
             requested_open_sonar_hydrophone_hud: false,
+            requested_open_hoa5_binaural_hud: false,
+            requested_open_mpegh_3d_hud: false,
         }
     }
 }
@@ -1171,6 +1177,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open interactive Physical Modeling Underwater Acoustic Sonar & Ocean Hydrophone Cavitation HUD").clicked() {
                     state.requested_open_sonar_hydrophone_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Hoa5") || active_kind.contains("Ambisonic5") || active_kind.contains("HOA5") || active_kind == "Hoa5BinauralView" || active_kind == "Hoa5BinauralNode" || active_kind == "Ambisonics5thOrderDecoder" || active_kind.contains("HigherOrderAmbisonics") || active_kind.contains("Hoa5thOrder") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🌐 Open 5th-Order Ambisonics HOA5 Binaural HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(157, 78, 221)))
+                        .fill(Color32::from_rgb(28, 14, 44))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(157, 78, 221)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Broadcast Mastering Immersive 5th-Order (36-Channel) Higher-Order Ambisonics Spherical Virtualizer HUD").clicked() {
+                    state.requested_open_hoa5_binaural_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Mpegh") || active_kind.contains("MPEG-H") || active_kind.contains("MpegH") || active_kind == "Mpegh3DSpatializerView" || active_kind == "Mpegh3DSpatializerNode" || active_kind == "Mpegh3DObjectSpatializer" || active_kind.contains("MpeghSpatializer") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🎧 Open MPEG-H 3D Immersive Spatializer HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 255, 180)))
+                        .fill(Color32::from_rgb(10, 36, 28))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 255, 180)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Broadcast Mastering Immersive MPEG-H 3D Audio Object Metadata Spatializer HUD").clicked() {
+                    state.requested_open_mpegh_3d_hud = true;
                 }
                 ui.add_space(4.0);
             }
