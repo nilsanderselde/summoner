@@ -399,7 +399,183 @@ impl EmbouchureAngleView {
                     self.update_embouchure_acoustics();
                 }
             });
+
+            ui.add_space(8.0);
+
+            // Interactive 2D Dual-Canvas Area (Geometry Puck & Overtone Radiation)
+            let (canvas_rect, response) = ui.allocate_exact_size(
+                egui::vec2(ui.available_width(), 320.0),
+                egui::Sense::click_and_drag(),
+            );
+            let painter = ui.painter_at(canvas_rect);
+
+            // Background
+            painter.rect_filled(canvas_rect, 6.0, Color32::from_rgb(10, 14, 24));
+            painter.rect_stroke(
+                canvas_rect,
+                6.0,
+                Stroke::new(1.5_f32, Color32::from_rgb(36, 50, 74)),
+            );
+
+            let margin = 12.0;
+            let half_w = (canvas_rect.width() - margin * 3.0) * 0.5;
+            let c_h = canvas_rect.height() - margin * 2.0;
+
+            // Left Canvas: Embouchure Geometry & Angle vs Pressure Puck
+            let left_rect = egui::Rect::from_min_size(
+                egui::pos2(canvas_rect.min.x + margin, canvas_rect.min.y + margin),
+                egui::vec2(half_w, c_h),
+            );
+            painter.rect_filled(left_rect, 4.0, Color32::from_rgb(18, 24, 36));
+            painter.rect_stroke(
+                left_rect,
+                4.0,
+                Stroke::new(1.0_f32, Color32::from_rgb(45, 65, 95)),
+            );
+
+            painter.text(
+                egui::pos2(left_rect.min.x + 10.0, left_rect.min.y + 10.0),
+                egui::Align2::LEFT_TOP,
+                "UTAGUCHI BLOWING EDGE & JET GEOMETRY",
+                egui::FontId::proportional(11.0),
+                Color32::from_rgb(160, 180, 205),
+            );
+
+            // Bamboo pipe bore wall (bottom-right of left canvas)
+            let bore_x = left_rect.min.x + left_rect.width() * 0.55;
+            let bore_y1 = left_rect.min.y + 40.0;
+            let bore_y2 = left_rect.max.y - 30.0;
+            painter.line_segment(
+                [egui::pos2(bore_x, bore_y1), egui::pos2(bore_x, bore_y2)],
+                Stroke::new(6.0_f32, Color32::from_rgb(180, 140, 75)),
+            );
+
+            // Utaguchi bevel edge wedge
+            let wedge_h = 35.0;
+            let angle_rad = self.embouchure_angle_deg.to_radians();
+            let wedge_dx = wedge_h * angle_rad.sin();
+            let wedge_dy = wedge_h * angle_rad.cos();
+            painter.line_segment(
+                [
+                    egui::pos2(bore_x, bore_y1),
+                    egui::pos2(bore_x - wedge_dx, bore_y1 + wedge_dy),
+                ],
+                Stroke::new(3.5_f32, Color32::from_rgb(255, 180, 50)),
+            );
+
+            // Airflow jet stream line
+            let jet_start = egui::pos2(left_rect.min.x + 30.0, bore_y1 - 6.0);
+            painter.line_segment(
+                [jet_start, egui::pos2(bore_x, bore_y1)],
+                Stroke::new(2.5_f32, Color32::from_rgb(0, 229, 255)),
+            );
+
+            // Puck interaction on Left Canvas
+            let puck_x = left_rect.min.x + 20.0 + self.puck_pos.0 * (left_rect.width() - 40.0);
+            let puck_y = left_rect.max.y - 20.0 - self.puck_pos.1 * (left_rect.height() - 60.0);
+            let puck_pos = egui::pos2(puck_x, puck_y);
+
+            if response.dragged() || response.clicked() {
+                if let Some(pos) = response.interact_pointer_pos() {
+                    if left_rect.contains(pos) {
+                        let nx = ((pos.x - (left_rect.min.x + 20.0)) / (left_rect.width() - 40.0)).clamp(0.0, 1.0);
+                        let ny = (((left_rect.max.y - 20.0) - pos.y) / (left_rect.height() - 60.0)).clamp(0.0, 1.0);
+                        self.update_physics_from_puck(nx, ny);
+                    }
+                }
+            }
+
+            // Puck circle (>= 44x44pt hit bounding target)
+            painter.circle_stroke(
+                puck_pos,
+                EMBOUCHURE_PUCK_HIT_RADIUS,
+                Stroke::new(1.5_f32, Color32::from_rgba_premultiplied(0, 229, 255, 120)),
+            );
+            painter.circle_filled(puck_pos, 14.0, Color32::from_rgb(0, 229, 255));
+            painter.circle_filled(puck_pos, 4.0, Color32::from_rgb(255, 255, 255));
+
+            painter.text(
+                egui::pos2(left_rect.min.x + 10.0, left_rect.max.y - 20.0),
+                egui::Align2::LEFT_BOTTOM,
+                format!("Angle: {:.1}°  |  Pressure: {:.0} Pa", self.embouchure_angle_deg, self.blowing_pressure_pa),
+                egui::FontId::proportional(11.0),
+                Color32::from_rgb(0, 229, 255),
+            );
+
+            // Right Canvas: 8-Harmonic Overtone Radiation Spectrum
+            let right_rect = egui::Rect::from_min_size(
+                egui::pos2(left_rect.max.x + margin, canvas_rect.min.y + margin),
+                egui::vec2(half_w, c_h),
+            );
+            painter.rect_filled(right_rect, 4.0, Color32::from_rgb(18, 24, 36));
+            painter.rect_stroke(
+                right_rect,
+                4.0,
+                Stroke::new(1.0_f32, Color32::from_rgb(45, 65, 95)),
+            );
+
+            painter.text(
+                egui::pos2(right_rect.min.x + 10.0, right_rect.min.y + 10.0),
+                egui::Align2::LEFT_TOP,
+                format!("BORE RADIATION SPECTRUM (Vortex: {:.0} Hz)", self.vortex_frequency_hz),
+                egui::FontId::proportional(11.0),
+                Color32::from_rgb(160, 180, 205),
+            );
+
+            let bar_spacing = right_rect.width() / 9.0;
+            let bar_width = bar_spacing * 0.70;
+            let bar_base_y = right_rect.max.y - 30.0;
+            let max_bar_h = c_h - 70.0;
+
+            for (i, &weight) in self.harmonic_weights.iter().enumerate() {
+                let bx = right_rect.min.x + bar_spacing * 0.60 + i as f32 * bar_spacing;
+                let bh = (weight * max_bar_h).clamp(4.0, max_bar_h);
+                let bar_rect = egui::Rect::from_min_max(
+                    egui::pos2(bx, bar_base_y - bh),
+                    egui::pos2(bx + bar_width, bar_base_y),
+                );
+
+                let bar_col = if i == 0 {
+                    Color32::from_rgb(255, 180, 50) // Fundamental Gold
+                } else if i % 2 == 1 {
+                    Color32::from_rgb(0, 255, 180) // Mint Odd Harmonics
+                } else {
+                    Color32::from_rgb(0, 229, 255) // Cyan Even Harmonics
+                };
+
+                painter.rect_filled(bar_rect, 2.0, bar_col);
+
+                painter.text(
+                    egui::pos2(bx + bar_width * 0.5, bar_base_y + 12.0),
+                    egui::Align2::CENTER_CENTER,
+                    format!("H{}", i + 1),
+                    egui::FontId::proportional(9.5),
+                    Color32::from_rgb(148, 163, 184),
+                );
+            }
+
+            painter.text(
+                egui::pos2(right_rect.min.x + 10.0, right_rect.max.y - 12.0),
+                egui::Align2::LEFT_BOTTOM,
+                format!("Jet Velocity: {:.1} m/s  |  Strouhal Vortex: {:.0} Hz", self.jet_velocity_mps, self.vortex_frequency_hz),
+                egui::FontId::proportional(10.0),
+                Color32::from_rgb(0, 255, 180),
+            );
         });
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
+    }
+
+    pub fn set_preset(&mut self, preset: EmbouchurePreset) {
+        self.preset = preset;
+        self.update_embouchure_acoustics();
+    }
+
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        self.render_ascii(80, 16).join("\n")
     }
 }
 

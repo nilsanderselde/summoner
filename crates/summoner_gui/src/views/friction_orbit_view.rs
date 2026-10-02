@@ -465,6 +465,19 @@ impl FrictionOrbitView {
         );
     }
 
+    #[cfg(feature = "gui")]
+    pub fn show(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
+    }
+
+    pub fn set_rosin(&mut self, rosin: RosinProfile) {
+        self.rosin = rosin;
+    }
+
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        self.render_ascii(80, 16).join("\n")
+    }
+
     /// Renders a high-fidelity headless RGBA PNG snapshot of the Friction Orbit HUD.
     pub fn render_snapshot_png(&self, path: &str, width: u32, height: u32) -> Result<(), String> {
         let mut pixels = vec![0u8; (width * height * 4) as usize];

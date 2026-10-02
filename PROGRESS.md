@@ -1764,3 +1764,36 @@ Product Management has conducted a comprehensive readiness audit:
   - Unit tests: 329 passed in 0.22s (`cargo test -p summoner_gui --lib`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
 
+### Turn #69 (Turn #32 Deliverable) — Shakuhachi Embouchure Angle & Bowed String Stick-Slip Friction Hysteresis HUDs Convergence (Milestones 16, 25 & 33)
+- [x] Shakuhachi Embouchure Angle & Bowed String Stick-Slip Friction Hysteresis Performance HUDs Integration:
+  - Integrated `EmbouchureAngleView` (Physical Modeling Shakuhachi Embouchure Angle & Meri/Kari Bore Radiation HUD: 6 Sound Presets [1.8 Shaku Honkyoku D4, 2.4 Shaku Jinashi Zen A3, 1.6 Shaku Min'yo Folk E4, 2.1 Shaku Sankyoku B3, Murai-Iki Turbulence Burst, 3.0 Shaku Kyotaku D3], Utaguchi blowing edge bevel angle $[10.0^\circ..60.0^\circ]$, blowing pressure $[100..3000\text{ Pa}]$, Bernoulli jet velocity $v = \sqrt{2P/\rho} \in [10..80\text{ m/s}]$, Strouhal vortex shedding frequency $[200..5000\text{ Hz}]$, 8-harmonic overtone radiation spectrum bars [Gold fundamental, Mint odd harmonics, Cyan even harmonics], dynamic Meri/Kari head tilt pitch offset $[-300..+200\text{ cents}]$, Murai-Iki burst intensity, and touch-draggable Utaguchi puck with $\ge 44 \times 44\text{pt}$ hit target) and `FrictionOrbitView` (Bowed String Stick-Slip Friction Hysteresis HUD & 2D Bowing Orbit Canvas: 4 Rosin Formulation Profiles [Light Violin, Medium Cello, Dark Double Bass, Synthetic Clean], 2D hyperbolic friction curve $\mu(v_{rel})$ canvas, Helmholtz limit cycle orbit $(v_{rel}(t), F_{friction}(t))$ phase portrait canvas, Rosin adhesion thermal hysteresis gauge, friction dissipation power readout, Helmholtz coherence score, and touch-draggable bow velocity vs normal force puck with $\ge 44 \times 44\text{pt}$ hit target) into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/embouchure_angle_view.rs` & `friction_orbit_view.rs`):
+  - In `EmbouchureAngleView`: added interactive 2D split canvas to `ui(&mut self, ui: &mut egui::Ui)` (bamboo bore wall, Utaguchi bevel edge line, air-jet stream line, draggable puck with $\ge 44 \times 44\text{pt}$ hit target, and 8-harmonic overtone radiation bars), added `set_preset(&mut self, preset: EmbouchurePreset)`, `show(&mut self, ui: &mut egui::Ui)`, and `render_ascii_snapshot_str() -> String`.
+  - In `FrictionOrbitView`: added `set_rosin(&mut self, rosin: RosinProfile)`, `show(&mut self, ui: &mut egui::Ui)`, and `render_ascii_snapshot_str() -> String`.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_embouchure_angle_modal: bool`, `embouchure_angle_view: EmbouchureAngleView`, `show_friction_orbit_modal: bool`, and `friction_orbit_view: FrictionOrbitView`.
+  - Added dedicated modal windows `show_embouchure_angle_modal_window` and `show_friction_orbit_modal_window` with responsive styling, WCAG AAA contrast, and $\ge 44 \times 44\text{pt}$ touch bounds.
+  - Added public lifecycle methods: `open_embouchure_angle_hud()`, `close_embouchure_angle_hud()`, `is_embouchure_angle_hud_open()`, `open_friction_orbit_hud()`, `close_friction_orbit_hud()`, `is_friction_orbit_hud_open()`.
+  - Real-time parameter sync bridges (`sync_embouchure_angle_hud_state` and `sync_friction_orbit_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_embouchure_angle_hud: bool` and `requested_open_friction_orbit_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🎋 Open Shakuhachi Embouchure & Meri/Kari HUD]` and `[🎻 Open Bowed String Stick-Slip Friction & Orbit HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header `[🎋 HUD]` / `[🎻 HUD]` and expanded toolbar buttons in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Shakuhachi Embouchure: 2D Utaguchi splitting wedge, Bernoulli jet stream line, drag-puck modulating `embouchure_angle_deg` and `blowing_pressure_pa`, harmonic overtone radiation mini-bars, and live `ParamBus` slot dispatch.
+    * Bowed String Friction: 2D hyperbolic friction characteristic line, Helmholtz limit cycle loop, drag-puck modulating `bow_velocity_mps` and `bow_force_n`, and live `ParamBus` slot dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_embouchure_angle_hud` and `open_friction_orbit_hud` under `"Physical Modeling"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_embouchure_angle_hud()` and `open_friction_orbit_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier133_turn69_tests.rs`:
+    * Pure tests: view initialization, preset/rosin selections, puck physics updates, normalized coordinate conversions, friction curve and limit cycle evaluations, slot arithmetic channel isolation, deterministic ASCII snapshots.
+    * GUI tests: modal lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch, rack & inspector trigger propagation, command palette action registration.
+  - Registered `tier133_turn69_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Feature tests: 8 passed in 0.05s (`cargo test -p summoner_gui --features gui -- tier133_turn69`).
+  - Unit tests: 329 passed in 0.23s (`cargo test -p summoner_gui --lib`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
+
+

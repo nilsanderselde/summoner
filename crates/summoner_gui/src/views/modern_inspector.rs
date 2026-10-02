@@ -110,6 +110,10 @@ pub struct ModernInspectorState {
     pub requested_open_plate_dispersion_hud: bool,
     #[serde(default)]
     pub requested_open_membrane_cavity_hud: bool,
+    #[serde(default)]
+    pub requested_open_embouchure_angle_hud: bool,
+    #[serde(default)]
+    pub requested_open_friction_orbit_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -171,6 +175,8 @@ impl Default for ModernInspectorState {
             requested_open_tonehole_matrix_hud: false,
             requested_open_plate_dispersion_hud: false,
             requested_open_membrane_cavity_hud: false,
+            requested_open_embouchure_angle_hud: false,
+            requested_open_friction_orbit_hud: false,
         }
     }
 }
@@ -1015,6 +1021,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open interactive Membrane Cavity Phase Canvas & 2D Drum Displacement HUD").clicked() {
                     state.requested_open_membrane_cavity_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("EmbouchureAngle") || active_kind.contains("ShakuhachiEmbouchure") || active_kind.contains("FluteEmbouchure") || active_kind == "EmbouchureAngleView" || active_kind == "EmbouchureAngle" || active_kind.contains("MeriKari") || active_kind.contains("Utaguchi") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🎋 Open Shakuhachi Embouchure & Meri/Kari HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 229, 255)))
+                        .fill(Color32::from_rgb(12, 34, 48))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 229, 255)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Shakuhachi Embouchure splitting angle, Bernoulli blowing pressure & Meri/Kari radiation HUD").clicked() {
+                    state.requested_open_embouchure_angle_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("FrictionOrbit") || active_kind.contains("StickSlip") || active_kind.contains("BowedFriction") || active_kind == "FrictionOrbitView" || active_kind == "FrictionOrbit" || active_kind.contains("RosinHysteresis") || active_kind.contains("HelmholtzOrbit") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🎻 Open Bowed String Stick-Slip Friction & Orbit HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(255, 107, 43)))
+                        .fill(Color32::from_rgb(38, 20, 12))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 107, 43)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Bowed String stick-slip friction characteristic, Helmholtz phase orbit & Rosin hysteresis HUD").clicked() {
+                    state.requested_open_friction_orbit_hud = true;
                 }
                 ui.add_space(4.0);
             }

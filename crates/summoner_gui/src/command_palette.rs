@@ -533,6 +533,18 @@ impl CommandPalette {
                 action_id: "open_membrane_cavity_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Shakuhachi Embouchure & Meri/Kari HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_embouchure_angle_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Bowed String Stick-Slip Friction & Orbit HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_friction_orbit_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

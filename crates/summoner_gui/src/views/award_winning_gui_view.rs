@@ -716,6 +716,10 @@ pub struct AwardWinningGuiView {
     pub plate_dispersion_view: crate::views::plate_dispersion_view::PlateDispersionView,
     pub show_membrane_cavity_modal: bool,
     pub membrane_cavity_view: crate::views::membrane_cavity_view::MembraneCavityView,
+    pub show_embouchure_angle_modal: bool,
+    pub embouchure_angle_view: crate::views::embouchure_angle_view::EmbouchureAngleView,
+    pub show_friction_orbit_modal: bool,
+    pub friction_orbit_view: crate::views::friction_orbit_view::FrictionOrbitView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1048,6 +1052,10 @@ impl AwardWinningGuiView {
             plate_dispersion_view: crate::views::plate_dispersion_view::PlateDispersionView::new(),
             show_membrane_cavity_modal: false,
             membrane_cavity_view: crate::views::membrane_cavity_view::MembraneCavityView::new(),
+            show_embouchure_angle_modal: false,
+            embouchure_angle_view: crate::views::embouchure_angle_view::EmbouchureAngleView::new(),
+            show_friction_orbit_modal: false,
+            friction_orbit_view: crate::views::friction_orbit_view::FrictionOrbitView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -1877,6 +1885,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_membrane_cavity_hud = false;
             self.open_membrane_cavity_hud();
         }
+        if self.inspector_state.requested_open_embouchure_angle_hud || self.device_rack_state.requested_open_embouchure_angle_hud {
+            self.inspector_state.requested_open_embouchure_angle_hud = false;
+            self.device_rack_state.requested_open_embouchure_angle_hud = false;
+            self.open_embouchure_angle_hud();
+        }
+        if self.inspector_state.requested_open_friction_orbit_hud || self.device_rack_state.requested_open_friction_orbit_hud {
+            self.inspector_state.requested_open_friction_orbit_hud = false;
+            self.device_rack_state.requested_open_friction_orbit_hud = false;
+            self.open_friction_orbit_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -1918,6 +1936,8 @@ impl AwardWinningGuiView {
         self.show_tonehole_matrix_modal_window(ui);
         self.show_plate_dispersion_modal_window(ui);
         self.show_membrane_cavity_modal_window(ui);
+        self.show_embouchure_angle_modal_window(ui);
+        self.show_friction_orbit_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -11160,6 +11180,182 @@ impl AwardWinningGuiView {
 
     pub fn is_membrane_cavity_hud_open(&self) -> bool {
         self.show_membrane_cavity_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_embouchure_angle_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_embouchure_angle_modal {
+            return;
+        }
+
+        let mut is_open = self.show_embouchure_angle_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎋 Shakuhachi Embouchure & Meri/Kari Radiation HUD")
+            .id(egui::Id::new("embouchure_angle_hud_modal"))
+            .open(&mut is_open)
+            .default_size([880.0, 580.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Utaguchi Blowing Edge Angle, Bernoulli Jet Velocity, Meri/Kari Head Tilt & 8-Harmonic Radiation HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.embouchure_angle_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_embouchure_angle_modal = is_open;
+        self.sync_embouchure_angle_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_embouchure_angle_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let angle = self.embouchure_angle_view.embouchure_angle_deg;
+        let press = self.embouchure_angle_view.blowing_pressure_pa;
+        let jet_v = self.embouchure_angle_view.jet_velocity_mps;
+        let meri = self.embouchure_angle_view.meri_kari_cents;
+
+        self.device_rack_state.node_param_values.insert("embouchure_angle_deg".to_string(), angle);
+        self.device_rack_state.node_param_values.insert("blowing_pressure_pa".to_string(), press);
+        self.device_rack_state.node_param_values.insert("jet_velocity_mps".to_string(), jet_v);
+        self.device_rack_state.node_param_values.insert("meri_kari_cents".to_string(), meri);
+
+        self.inspector_state.node_param_values.insert("embouchure_angle_deg".to_string(), angle);
+        self.inspector_state.node_param_values.insert("blowing_pressure_pa".to_string(), press);
+        self.inspector_state.node_param_values.insert("jet_velocity_mps".to_string(), jet_v);
+        self.inspector_state.node_param_values.insert("meri_kari_cents".to_string(), meri);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_ang = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_prs = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_vel = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_mer = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_ang).is_some() { bus.set(pid_ang, angle); }
+            if bus.get(pid_prs).is_some() { bus.set(pid_prs, press); }
+            if bus.get(pid_vel).is_some() { bus.set(pid_vel, jet_v); }
+            if bus.get(pid_mer).is_some() { bus.set(pid_mer, meri); }
+        }
+    }
+
+    pub fn open_embouchure_angle_hud(&mut self) {
+        self.show_embouchure_angle_modal = true;
+    }
+
+    pub fn close_embouchure_angle_hud(&mut self) {
+        self.show_embouchure_angle_modal = false;
+    }
+
+    pub fn is_embouchure_angle_hud_open(&self) -> bool {
+        self.show_embouchure_angle_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_friction_orbit_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_friction_orbit_modal {
+            return;
+        }
+
+        let mut is_open = self.show_friction_orbit_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎻 Bowed String Stick-Slip Friction & Orbit HUD")
+            .id(egui::Id::new("friction_orbit_hud_modal"))
+            .open(&mut is_open)
+            .default_size([880.0, 580.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Non-Linear Stick-Slip Friction Characteristic, Helmholtz Limit Cycle Orbit & Rosin Hysteresis HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.friction_orbit_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_friction_orbit_modal = is_open;
+        self.sync_friction_orbit_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_friction_orbit_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let bow_v = self.friction_orbit_view.bow_velocity_mps;
+        let bow_f = self.friction_orbit_view.bow_force_n;
+        let adhesion = self.friction_orbit_view.rosin_adhesion_pct;
+        let score = self.friction_orbit_view.helmholtz_coherence_score;
+
+        self.device_rack_state.node_param_values.insert("bow_velocity_mps".to_string(), bow_v);
+        self.device_rack_state.node_param_values.insert("bow_force_n".to_string(), bow_f);
+        self.device_rack_state.node_param_values.insert("rosin_adhesion_pct".to_string(), adhesion);
+        self.device_rack_state.node_param_values.insert("helmholtz_coherence_score".to_string(), score);
+
+        self.inspector_state.node_param_values.insert("bow_velocity_mps".to_string(), bow_v);
+        self.inspector_state.node_param_values.insert("bow_force_n".to_string(), bow_f);
+        self.inspector_state.node_param_values.insert("rosin_adhesion_pct".to_string(), adhesion);
+        self.inspector_state.node_param_values.insert("helmholtz_coherence_score".to_string(), score);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_v = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_f = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_a = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_s = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_v).is_some() { bus.set(pid_v, bow_v); }
+            if bus.get(pid_f).is_some() { bus.set(pid_f, bow_f); }
+            if bus.get(pid_a).is_some() { bus.set(pid_a, adhesion); }
+            if bus.get(pid_s).is_some() { bus.set(pid_s, score); }
+        }
+    }
+
+    pub fn open_friction_orbit_hud(&mut self) {
+        self.show_friction_orbit_modal = true;
+    }
+
+    pub fn close_friction_orbit_hud(&mut self) {
+        self.show_friction_orbit_modal = false;
+    }
+
+    pub fn is_friction_orbit_hud_open(&self) -> bool {
+        self.show_friction_orbit_modal
     }
 
     #[cfg(feature = "gui")]

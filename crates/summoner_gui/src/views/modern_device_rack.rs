@@ -125,6 +125,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_plate_dispersion_hud: bool,
     #[serde(default)]
     pub requested_open_membrane_cavity_hud: bool,
+    #[serde(default)]
+    pub requested_open_embouchure_angle_hud: bool,
+    #[serde(default)]
+    pub requested_open_friction_orbit_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -176,6 +180,8 @@ impl Default for ModernDeviceRackState {
             requested_open_tonehole_matrix_hud: false,
             requested_open_plate_dispersion_hud: false,
             requested_open_membrane_cavity_hud: false,
+            requested_open_embouchure_angle_hud: false,
+            requested_open_friction_orbit_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -394,6 +400,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_tonehole_matrix = cur_selection.contains("Tonehole") || cur_selection.contains("BoreModel") || cur_selection == "ToneholeMatrixView" || cur_selection == "ToneholeMatrix" || cur_selection == "ToneholeGrid" || cur_selection == "WoodwindToneholeGrid" || cur_selection == "ToneholeLattice";
                     let is_plate_dispersion = cur_selection.contains("PlateTank") || cur_selection.contains("PlateReverb") || cur_selection.contains("PlateDispersion") || cur_selection == "PlateTankNode" || cur_selection == "PlateDispersionView" || cur_selection == "PlateReverbNode" || cur_selection.contains("EMT140");
                     let is_membrane_cavity = cur_selection.contains("PercussionMembrane") || cur_selection.contains("MembranePercussion") || cur_selection.contains("MembraneCavity") || cur_selection.contains("MembraneResonator") || cur_selection == "PercussionMembrane" || cur_selection == "MembraneCavityView" || cur_selection == "MembranePercussionModel";
+                    let is_embouchure_angle = cur_selection.contains("EmbouchureAngle") || cur_selection.contains("ShakuhachiEmbouchure") || cur_selection.contains("FluteEmbouchure") || cur_selection == "EmbouchureAngleView" || cur_selection == "EmbouchureAngle" || cur_selection.contains("MeriKari") || cur_selection.contains("Utaguchi");
+                    let is_friction_orbit = cur_selection.contains("FrictionOrbit") || cur_selection.contains("StickSlip") || cur_selection.contains("BowedFriction") || cur_selection == "FrictionOrbitView" || cur_selection == "FrictionOrbit" || cur_selection.contains("RosinHysteresis") || cur_selection.contains("HelmholtzOrbit");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -530,10 +538,18 @@ pub fn show_modern_device_rack_with_context(
                         if ui.button(RichText::new("🛸 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Plate Dispersion & APDN Reverb HUD").clicked() {
                             state.requested_open_plate_dispersion_hud = true;
                         }
-                    } else if is_membrane_cavity
-                        && ui.button(RichText::new("🥁 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 170, 0))).on_hover_text("Open Membrane Cavity & Drum Displacement HUD").clicked()
+                    } else if is_membrane_cavity {
+                        if ui.button(RichText::new("🥁 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 170, 0))).on_hover_text("Open Membrane Cavity & Drum Displacement HUD").clicked() {
+                            state.requested_open_membrane_cavity_hud = true;
+                        }
+                    } else if is_embouchure_angle {
+                        if ui.button(RichText::new("🎋 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Shakuhachi Embouchure & Meri/Kari HUD").clicked() {
+                            state.requested_open_embouchure_angle_hud = true;
+                        }
+                    } else if is_friction_orbit
+                        && ui.button(RichText::new("🎻 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 107, 43))).on_hover_text("Open Bowed String Stick-Slip Friction & Orbit HUD").clicked()
                     {
-                        state.requested_open_membrane_cavity_hud = true;
+                        state.requested_open_friction_orbit_hud = true;
                     }
                     ui.add_space(4.0);
                     let pwr_col = if state.is_enabled { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(100, 116, 139) };
@@ -750,6 +766,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_tonehole_matrix = cur_selection.contains("Tonehole") || cur_selection.contains("BoreModel") || cur_selection == "ToneholeMatrixView" || cur_selection == "ToneholeMatrix" || cur_selection == "ToneholeGrid" || cur_selection == "WoodwindToneholeGrid" || cur_selection == "ToneholeLattice";
                     let is_plate_dispersion = cur_selection.contains("PlateTank") || cur_selection.contains("PlateReverb") || cur_selection.contains("PlateDispersion") || cur_selection == "PlateTankNode" || cur_selection == "PlateDispersionView" || cur_selection == "PlateReverbNode" || cur_selection.contains("EMT140");
                     let is_membrane_cavity = cur_selection.contains("PercussionMembrane") || cur_selection.contains("MembranePercussion") || cur_selection.contains("MembraneCavity") || cur_selection.contains("MembraneResonator") || cur_selection == "PercussionMembrane" || cur_selection == "MembraneCavityView" || cur_selection == "MembranePercussionModel";
+                    let is_embouchure_angle = cur_selection.contains("EmbouchureAngle") || cur_selection.contains("ShakuhachiEmbouchure") || cur_selection.contains("FluteEmbouchure") || cur_selection == "EmbouchureAngleView" || cur_selection == "EmbouchureAngle" || cur_selection.contains("MeriKari") || cur_selection.contains("Utaguchi");
+                    let is_friction_orbit = cur_selection.contains("FrictionOrbit") || cur_selection.contains("StickSlip") || cur_selection.contains("BowedFriction") || cur_selection == "FrictionOrbitView" || cur_selection == "FrictionOrbit" || cur_selection.contains("RosinHysteresis") || cur_selection.contains("HelmholtzOrbit");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -894,10 +912,18 @@ pub fn show_modern_device_rack_with_context(
                         if ui.button(RichText::new("🛸 Plate HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Plate Dispersion & APDN Reverb HUD").clicked() {
                             state.requested_open_plate_dispersion_hud = true;
                         }
-                    } else if is_membrane_cavity
-                        && ui.button(RichText::new("🥁 Membrane HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 170, 0))).on_hover_text("Open Membrane Cavity & Drum Displacement HUD").clicked()
+                    } else if is_membrane_cavity {
+                        if ui.button(RichText::new("🥁 Membrane HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 170, 0))).on_hover_text("Open Membrane Cavity & Drum Displacement HUD").clicked() {
+                            state.requested_open_membrane_cavity_hud = true;
+                        }
+                    } else if is_embouchure_angle {
+                        if ui.button(RichText::new("🎋 Embouchure HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Shakuhachi Embouchure & Meri/Kari HUD").clicked() {
+                            state.requested_open_embouchure_angle_hud = true;
+                        }
+                    } else if is_friction_orbit
+                        && ui.button(RichText::new("🎻 Friction HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 107, 43))).on_hover_text("Open Bowed String Stick-Slip Friction & Orbit HUD").clicked()
                     {
-                        state.requested_open_membrane_cavity_hud = true;
+                        state.requested_open_friction_orbit_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -1700,6 +1726,8 @@ fn show_pro_parameter_drawer(
                     let is_tonehole_matrix = dev_kind.contains("Tonehole") || dev_kind.contains("BoreModel") || dev_kind == "ToneholeMatrixView" || dev_kind == "ToneholeMatrix" || dev_kind == "ToneholeGrid" || dev_kind == "WoodwindToneholeGrid" || dev_kind == "ToneholeLattice";
                     let is_plate_dispersion = dev_kind.contains("PlateTank") || dev_kind.contains("PlateReverb") || dev_kind.contains("PlateDispersion") || dev_kind == "PlateTankNode" || dev_kind == "PlateDispersionView" || dev_kind == "PlateReverbNode" || dev_kind.contains("EMT140");
                     let is_membrane_cavity = dev_kind.contains("PercussionMembrane") || dev_kind.contains("MembranePercussion") || dev_kind.contains("MembraneCavity") || dev_kind.contains("MembraneResonator") || dev_kind == "PercussionMembrane" || dev_kind == "MembraneCavityView" || dev_kind == "MembranePercussionModel";
+                    let is_embouchure_angle = dev_kind.contains("EmbouchureAngle") || dev_kind.contains("ShakuhachiEmbouchure") || dev_kind.contains("FluteEmbouchure") || dev_kind == "EmbouchureAngleView" || dev_kind == "EmbouchureAngle" || dev_kind.contains("MeriKari") || dev_kind.contains("Utaguchi");
+                    let is_friction_orbit = dev_kind.contains("FrictionOrbit") || dev_kind.contains("StickSlip") || dev_kind.contains("BowedFriction") || dev_kind == "FrictionOrbitView" || dev_kind == "FrictionOrbit" || dev_kind.contains("RosinHysteresis") || dev_kind.contains("HelmholtzOrbit");
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -4501,6 +4529,194 @@ fn show_pro_parameter_drawer(
 
                         if mem_resp.hovered() {
                             let _ = mem_resp.on_hover_text(format!("Membrane Cavity Phase & Drum Displacement HUD\nRadial Strike: {:.1}% | Velocity: {:.2}\n[Drag horizontally: Radial strike position | Drag vertically: Strike velocity]", strike_r * 100.0, strike_v));
+                        }
+                    } else if is_embouchure_angle {
+                        // Shakuhachi Embouchure & Meri/Kari Radiation Mini Visualizer
+                        let (emb_resp, emb_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let emb_rect = emb_resp.rect;
+                        emb_painter.rect_filled(emb_rect, 2.0, Color32::from_rgb(10, 18, 26));
+
+                        let mut angle = state.node_param_values.get("embouchure_angle_deg").copied().unwrap_or(38.0);
+                        let mut press = state.node_param_values.get("blowing_pressure_pa").copied().unwrap_or(850.0);
+
+                        if emb_resp.dragged() {
+                            if let Some(pos) = emb_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - emb_rect.left()) / emb_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - emb_rect.top()) / emb_rect.height())).clamp(0.0, 1.0);
+                                angle = 10.0 + norm_x * 50.0;
+                                press = 100.0 + norm_y * 2900.0;
+                                let jet_v = (2.0 * press / 1.204).sqrt().clamp(10.0, 80.0);
+                                let meri = (state.node_param_values.get("meri_kari_cents").copied().unwrap_or(0.0)).clamp(-300.0, 200.0);
+
+                                state.node_param_values.insert("embouchure_angle_deg".to_string(), angle);
+                                state.node_param_values.insert("blowing_pressure_pa".to_string(), press);
+                                state.node_param_values.insert("jet_velocity_mps".to_string(), jet_v);
+                                state.node_param_values.insert("meri_kari_cents".to_string(), meri);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_ang = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_prs = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    let pid_vel = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 2);
+                                    let pid_mer = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 3);
+                                    if bus.get(pid_ang).is_some() { bus.set(pid_ang, angle); }
+                                    if bus.get(pid_prs).is_some() { bus.set(pid_prs, press); }
+                                    if bus.get(pid_vel).is_some() { bus.set(pid_vel, jet_v); }
+                                    if bus.get(pid_mer).is_some() { bus.set(pid_mer, meri); }
+                                }
+                            }
+                        }
+
+                        // Utaguchi splitting wedge & jet stream
+                        let wedge_x = emb_rect.left() + 48.0;
+                        let wedge_y = emb_rect.top() + 34.0;
+                        let rad = angle.to_radians();
+                        let wx = wedge_x - 16.0 * rad.sin();
+                        let wy = wedge_y + 16.0 * rad.cos();
+                        emb_painter.line_segment([egui::pos2(wedge_x, wedge_y), egui::pos2(wx, wy)], Stroke::new(2.5_f32, Color32::from_rgb(255, 180, 50)));
+                        emb_painter.line_segment([egui::pos2(emb_rect.left() + 10.0, wedge_y - 2.0), egui::pos2(wedge_x, wedge_y)], Stroke::new(1.8_f32, Color32::from_rgb(0, 229, 255)));
+
+                        // Puck
+                        let norm_x = ((angle - 10.0) / 50.0).clamp(0.0, 1.0);
+                        let norm_y = ((press - 100.0) / 2900.0).clamp(0.0, 1.0);
+                        let px = emb_rect.left() + 12.0 + norm_x * 70.0;
+                        let py = emb_rect.bottom() - 10.0 - norm_y * 45.0;
+                        emb_painter.circle_stroke(egui::pos2(px, py), 4.5, Stroke::new(1.2_f32, Color32::from_rgb(0, 229, 255)));
+                        emb_painter.circle_filled(egui::pos2(px, py), 2.0, Color32::from_rgb(255, 255, 255));
+
+                        // Harmonic overtone mini-bars on right side
+                        let bar_base_x = emb_rect.left() + 96.0;
+                        for h in 0..4 {
+                            let bx = bar_base_x + h as f32 * 14.0;
+                            let h_amp = match h {
+                                0 => 0.90,
+                                1 => 0.60 * (angle / 60.0),
+                                2 => 0.40,
+                                _ => 0.25 * (press / 3000.0),
+                            };
+                            let bh = (h_amp * 30.0).clamp(3.0, 30.0);
+                            let col = if h == 0 { Color32::from_rgb(255, 180, 50) } else { Color32::from_rgb(0, 255, 180) };
+                            emb_painter.rect_filled(
+                                egui::Rect::from_min_max(egui::pos2(bx, emb_rect.bottom() - 14.0 - bh), egui::pos2(bx + 10.0, emb_rect.bottom() - 14.0)),
+                                1.5_f32,
+                                col,
+                            );
+                        }
+
+                        // Readouts
+                        emb_painter.text(
+                            egui::pos2(emb_rect.left() + 4.0, emb_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("{:.1}°", angle),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+                        emb_painter.text(
+                            egui::pos2(emb_rect.right() - 4.0, emb_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("{:.0}Pa", press),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(255, 180, 50),
+                        );
+
+                        if emb_resp.hovered() {
+                            let _ = emb_resp.on_hover_text(format!("Shakuhachi Embouchure & Meri/Kari HUD\nAngle: {:.1}° | Pressure: {:.0} Pa\n[Drag horizontally: Utaguchi angle | Drag vertically: Blowing pressure]", angle, press));
+                        }
+                    } else if is_friction_orbit {
+                        // Bowed String Stick-Slip Friction & Orbit Mini Visualizer
+                        let (fric_resp, fric_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let fric_rect = fric_resp.rect;
+                        fric_painter.rect_filled(fric_rect, 2.0, Color32::from_rgb(20, 14, 24));
+
+                        let mut bow_v = state.node_param_values.get("bow_velocity_mps").copied().unwrap_or(0.45);
+                        let mut bow_f = state.node_param_values.get("bow_force_n").copied().unwrap_or(1.25);
+
+                        if fric_resp.dragged() {
+                            if let Some(pos) = fric_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - fric_rect.left()) / fric_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - fric_rect.top()) / fric_rect.height())).clamp(0.0, 1.0);
+                                bow_v = 0.01 + norm_x * 1.99;
+                                bow_f = 0.05 + norm_y * 4.95;
+                                let adhesion = (82.0 + (bow_f / 5.0) * 15.0).clamp(10.0, 100.0);
+                                let score = (0.95 - (bow_v / 2.0) * 0.15).clamp(0.5, 1.0);
+
+                                state.node_param_values.insert("bow_velocity_mps".to_string(), bow_v);
+                                state.node_param_values.insert("bow_force_n".to_string(), bow_f);
+                                state.node_param_values.insert("rosin_adhesion_pct".to_string(), adhesion);
+                                state.node_param_values.insert("helmholtz_coherence_score".to_string(), score);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_v = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_f = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    let pid_a = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 2);
+                                    let pid_s = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 3);
+                                    if bus.get(pid_v).is_some() { bus.set(pid_v, bow_v); }
+                                    if bus.get(pid_f).is_some() { bus.set(pid_f, bow_f); }
+                                    if bus.get(pid_a).is_some() { bus.set(pid_a, adhesion); }
+                                    if bus.get(pid_s).is_some() { bus.set(pid_s, score); }
+                                }
+                            }
+                        }
+
+                        // Hyperbolic friction characteristic line
+                        let left_w = 64.0;
+                        let mid_y = fric_rect.center().y;
+                        let mut prev_pt = None;
+                        for s in 0..=12 {
+                            let frac = s as f32 / 12.0;
+                            let v_rel = frac * 4.0 - 2.0;
+                            let mu = v_rel.signum() * (0.35 + 0.60 / (1.0 + 3.0 * v_rel.abs()));
+                            let px = fric_rect.left() + 6.0 + frac * left_w;
+                            let py = mid_y - mu * 18.0;
+                            let pt = egui::pos2(px, py);
+                            if let Some(prev) = prev_pt {
+                                fric_painter.line_segment([prev, pt], Stroke::new(1.5_f32, Color32::from_rgb(0, 229, 255)));
+                            }
+                            prev_pt = Some(pt);
+                        }
+
+                        // Helmholtz limit cycle loop on right side
+                        let cx = fric_rect.left() + 115.0;
+                        let cy = fric_rect.top() + 34.0;
+                        let rx = 24.0 * (bow_v / 2.0).clamp(0.3, 1.0);
+                        let ry = 18.0 * (bow_f / 5.0).clamp(0.3, 1.0);
+                        let mut prev_loop = None;
+                        for s in 0..=16 {
+                            let ph = s as f32 / 16.0 * std::f32::consts::TAU;
+                            let lx = cx + rx * ph.cos();
+                            let ly = cy + ry * ph.sin();
+                            let pt = egui::pos2(lx, ly);
+                            if let Some(prev) = prev_loop {
+                                fric_painter.line_segment([prev, pt], Stroke::new(1.8_f32, Color32::from_rgb(255, 215, 0)));
+                            }
+                            prev_loop = Some(pt);
+                        }
+
+                        // Interactive Puck
+                        let norm_x = ((bow_v - 0.01) / 1.99).clamp(0.0, 1.0);
+                        let norm_y = ((bow_f - 0.05) / 4.95).clamp(0.0, 1.0);
+                        let px = cx + (norm_x * 2.0 - 1.0) * rx;
+                        let py = cy - (norm_y * 2.0 - 1.0) * ry;
+                        fric_painter.circle_stroke(egui::pos2(px, py), 4.5, Stroke::new(1.2_f32, Color32::from_rgb(255, 107, 43)));
+                        fric_painter.circle_filled(egui::pos2(px, py), 2.0, Color32::from_rgb(255, 255, 255));
+
+                        // Readouts
+                        fric_painter.text(
+                            egui::pos2(fric_rect.left() + 4.0, fric_rect.top() + 4.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("{:.2}m/s", bow_v),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+                        fric_painter.text(
+                            egui::pos2(fric_rect.right() - 4.0, fric_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("{:.2}N", bow_f),
+                            FontId::proportional(8.5),
+                            Color32::from_rgb(255, 107, 43),
+                        );
+
+                        if fric_resp.hovered() {
+                            let _ = fric_resp.on_hover_text(format!("Bowed String Stick-Slip Friction & Orbit HUD\nVelocity: {:.2} m/s | Force: {:.2} N\n[Drag horizontally: Bow velocity | Drag vertically: Bow normal force]", bow_v, bow_f));
                         }
                     } else {
                         // Filter Curve Mini View (slot-addressed)
