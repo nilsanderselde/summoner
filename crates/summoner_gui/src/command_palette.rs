@@ -605,6 +605,18 @@ impl CommandPalette {
                 action_id: "open_sonar_hydrophone_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open 5th-Order Ambisonics HOA5 Binaural HUD".into(),
+                category: "Spatial".into(),
+                action_id: "open_hoa5_binaural_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open MPEG-H 3D Immersive Spatializer HUD".into(),
+                category: "Spatial".into(),
+                action_id: "open_mpegh_3d_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

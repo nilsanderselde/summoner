@@ -1924,3 +1924,66 @@ Product Management has conducted a comprehensive readiness audit:
   - Feature tests: 7 passed in 0.07s (`cargo test -p summoner_gui --features gui -- tier137_turn73`).
   - Unit tests: 329 passed in 0.23s (`cargo test -p summoner_gui --lib`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
+
+### Turn #74 (Turn #37 Deliverable) — Struck Idiophone Modal Resonator & Underwater Sonar Cavitation HUDs Convergence (Milestones 33 & 34)
+- [x] Struck Idiophone Modal Resonator & Underwater Sonar Cavitation Performance HUDs Integration:
+  - Integrated `IdiophoneSpectrumView` (Physical Modeling Struck Idiophone Modal Resonator Bank HUD: 6 Instrument Profiles [Orchestral Marimba Wood, Orchestral Xylophone Rosewood, Concert Vibraphone Aluminum, Trinidad Steelpan Shell, Kalimba/Mbira Lamellophone, Glockenspiel Steel Bell], 6-mode modal resonance frequency & amplitude spectrum bars, Mallet strike hardness [0.0..1.0], Strike velocity [0.0..1.0], Strike position [0.0..1.0], Resonator tube coupling mix [0.0..1.0], Vibraphone motorized tremolo rate/depth, touch-draggable strike puck with $\ge 44 \times 44\text{pt}$ bounding target) and `SonarHydrophoneView` (Physical Modeling Underwater Acoustic Sonar & Ocean Hydrophone Cavitation HUD: 5 Sonar Modes [Active Sonar Ping, Passive Hydrophone Listening, Deep Ocean Cavitation, Thermocline Acoustic Waveguide, Arctic Under-Ice Refraction], Depth [1.0..5000.0 m], Water temperature [-2.0..35.0 °C], Salinity [0.0..45.0 ppt], Cavitation index $\sigma$ [0.05..5.00], Mack-Ffrench empirical sound speed formula $c(T, S, z)$, Minnaert bubble resonance frequency, spherical transmission loss evaluation $TL = 20\log_{10}(r) + \alpha r$, touch-draggable sonar puck with $\ge 44 \times 44\text{pt}$ bounding target) into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/idiophone_spectrum_view.rs` & `sonar_hydrophone_view.rs`):
+  - In `IdiophoneSpectrumView`: added `set_profile(&mut self, profile: IdiophoneViewProfile)`, `show(&mut self, ui: &mut egui::Ui)`, and `render_ascii_snapshot_str() -> String`.
+  - In `SonarHydrophoneView`: added `set_mode(&mut self, mode: SonarMode)`, `show(&mut self, ui: &mut egui::Ui)`, and `render_ascii_snapshot_str() -> String`.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_idiophone_spectrum_modal: bool`, `idiophone_spectrum_view: IdiophoneSpectrumView`, `show_sonar_hydrophone_modal: bool`, and `sonar_hydrophone_view: SonarHydrophoneView`.
+  - Added dedicated modal windows `show_idiophone_spectrum_modal_window` and `show_sonar_hydrophone_modal_window` with responsive styling, WCAG AAA contrast, and $\ge 44 \times 44\text{pt}$ touch bounds.
+  - Added public lifecycle methods: `open_idiophone_spectrum_hud()`, `close_idiophone_spectrum_hud()`, `is_idiophone_spectrum_hud_open()`, `open_sonar_hydrophone_hud()`, `close_sonar_hydrophone_hud()`, `is_sonar_hydrophone_hud_open()`.
+  - Real-time parameter sync bridges (`sync_idiophone_spectrum_hud_state` and `sync_sonar_hydrophone_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_idiophone_spectrum_hud: bool` and `requested_open_sonar_hydrophone_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🎵 Open Struck Idiophone Modal Resonator HUD]` and `[🌊 Open Underwater Acoustic Sonar & Hydrophone HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header `[🎵 HUD]` / `[🌊 HUD]` and expanded toolbar buttons `[🎵 Idiophone HUD]` / `[🌊 Sonar HUD]` in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Idiophone: 6-bar modal harmonic radiation spectrum, draggable strike puck modulating `mallet_hardness` and `strike_velocity`, tube mix, and live `ParamBus` slot dispatch.
+    * Sonar Hydrophone: Concentric sonar acoustic wavefront rings, thermocline waveguide line, sound speed readout, draggable puck modulating `cavitation_index` and `depth_m`, and live `ParamBus` slot dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_idiophone_spectrum_hud` and `open_sonar_hydrophone_hud` under `"Physical Modeling"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_idiophone_spectrum_hud()` and `open_sonar_hydrophone_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier138_turn74_tests.rs`:
+    * Pure tests: view initialization, instrument profiles, sonar acoustic modes, coordinate conversions, puck hit testing, modal spectrum evaluations, transmission loss, slot arithmetic channel isolation, deterministic ASCII snapshots.
+    * GUI tests: modal lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch, rack & inspector trigger propagation, command palette action registration.
+  - Registered `tier138_turn74_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Feature tests: 7 passed in 0.08s (`cargo test -p summoner_gui --features gui -- tier138_turn74`).
+  - Unit tests: 329 passed in 0.26s (`cargo test -p summoner_gui --lib`).
+
+### Turn #75 (Turn #38 Deliverable) — Broadcast Mastering 5th-Order Ambisonics HOA5 & MPEG-H 3D Immersive Spatializer HUDs Convergence (Milestones 33 & 35)
+- [x] Broadcast Mastering 5th-Order Ambisonics HOA5 & MPEG-H 3D Immersive Spatializer Performance HUDs Integration:
+  - Integrated `Hoa5BinauralView` (Broadcast Mastering Immersive 5th-Order [36-Channel] Higher-Order Ambisonics Spherical Virtualizer HUD: 5 Decoding Profiles [5th-Order HOA 36-Ch Raw Spherical Harmonics Expansion, Max-rE Energy Optimized for sweet-spot vector focus, In-Phase Optimal Binaural Decoder suppressing side-lobes, High-Resolution KEMAR 5th-Order HRIR, 36-Channel HOA to Dolby Atmos 9.1.6 Bed Downmix Matrix], Azimuth [-180.0..180.0°], Elevation [-90.0..90.0°], Distance [0.5..10.0 m], Energy focus [0.0..1.0], Diffuse field percent [0..100%], 36-channel spherical harmonic component energy meter array, and Touch-Draggable Azimuth vs Elevation Puck with $\ge 44 \times 44\text{pt}$ Bounding Target) and `Mpegh3DSpatializerView` (Broadcast Mastering Immersive MPEG-H 3D Audio Object Metadata Spatializer HUD: 5 Delivery Profiles [7.1.4 Immersive Standard Broadcast Level 4, 22.2 Super Hi-Vision UHD Broadcast Level 5, MPEG-H 3D Binaural with 6-DOF Dynamic Head Tracking, Dynamic 3D Object Metadata Bitstream ADM/OAM, ITU-R BS.775 Advanced Immersive Downmix], Speaker counts [2..24 channels], Bitrate [256..1024 kbps], Azimuth [-180.0..180.0°], Elevation [-90.0..90.0°], Distance [0.5..20.0 m], Spread divergence cone [0..100%], 6-channel VBAP bed energy monitoring [L/R, C/LFE, Ls/Rs, Ltf/Rtf, Ltr/Rtr, OBJ], 3D Cartesian object coordinate evaluation $(x,y,z)$, and Touch-Draggable Azimuth vs Elevation Puck with $\ge 44 \times 44\text{pt}$ Bounding Target) into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/hoa5_binaural_view.rs` & `mpegh_3d_spatializer_view.rs`):
+  - In `Hoa5BinauralView`: `set_profile(&mut self, prof: Hoa5Profile)`, `show(&mut self, ui: &mut egui::Ui)`, and `render_ascii_snapshot_str() -> String`.
+  - In `Mpegh3DSpatializerView`: `set_profile(&mut self, profile: MpeghProfile)`, `show(&mut self, ui: &mut egui::Ui)`, and `render_ascii_snapshot_str() -> String`.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_hoa5_binaural_modal: bool`, `hoa5_binaural_view: Hoa5BinauralView`, `show_mpegh_3d_modal: bool`, and `mpegh_3d_spatializer_view: Mpegh3DSpatializerView`.
+  - Added dedicated modal windows `show_hoa5_binaural_modal_window` and `show_mpegh_3d_modal_window` with responsive styling, WCAG AAA contrast, and $\ge 44 \times 44\text{pt}$ touch bounds.
+  - Added public lifecycle methods: `open_hoa5_binaural_hud()`, `close_hoa5_binaural_hud()`, `is_hoa5_binaural_hud_open()`, `open_mpegh_3d_hud()`, `close_mpegh_3d_hud()`, `is_mpegh_3d_hud_open()`.
+  - Real-time parameter sync bridges (`sync_hoa5_binaural_hud_state` and `sync_mpegh_3d_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_hoa5_binaural_hud: bool` and `requested_open_mpegh_3d_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🌐 Open 5th-Order Ambisonics HOA5 Binaural HUD]` and `[🎧 Open MPEG-H 3D Immersive Spatializer HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header `[🌐 HUD]` / `[🎧 HUD]` and expanded toolbar buttons `[🌐 HOA5 HUD]` / `[🎧 MPEG-H HUD]` in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * HOA5 Binaural: 5 concentric spherical harmonic order rings ($N=1..5$), crosshairs, trajectory vector ray, puck modulating `azimuth_deg` and `elevation_deg`, energy focus readout, and live `ParamBus` slot dispatch.
+    * MPEG-H 3D: 7.1.4 bed speaker perimeter indicators, 3D trajectory ray, divergence aura cone, puck modulating `azimuth_deg` and `elevation_deg`, spread readout, and live `ParamBus` slot dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_hoa5_binaural_hud` and `open_mpegh_3d_hud` under `"Spatial"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_hoa5_binaural_hud()` and `open_mpegh_3d_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier139_turn75_tests.rs`:
+    * Pure tests: view initialization, decoding/delivery profiles, coordinate conversions, puck hit testing, spherical harmonic energy levels, 3D Cartesian coordinates, slot arithmetic channel isolation, deterministic ASCII snapshots.
+    * GUI tests: modal lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch, rack & inspector trigger propagation, command palette action registration.
+  - Registered `tier139_turn75_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Feature tests: 7 passed in 0.07s (`cargo test -p summoner_gui --features gui -- tier139_turn75`).
+  - Pure unit tests: 329 passed in 0.26s (`cargo test -p summoner_gui --lib`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).

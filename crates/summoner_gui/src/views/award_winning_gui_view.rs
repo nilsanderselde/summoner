@@ -740,6 +740,10 @@ pub struct AwardWinningGuiView {
     pub idiophone_spectrum_view: crate::views::idiophone_spectrum_view::IdiophoneSpectrumView,
     pub show_sonar_hydrophone_modal: bool,
     pub sonar_hydrophone_view: crate::views::sonar_hydrophone_view::SonarHydrophoneView,
+    pub show_hoa5_binaural_modal: bool,
+    pub hoa5_binaural_view: crate::views::hoa5_binaural_view::Hoa5BinauralView,
+    pub show_mpegh_3d_modal: bool,
+    pub mpegh_3d_spatializer_view: crate::views::mpegh_3d_spatializer_view::Mpegh3DSpatializerView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1096,6 +1100,10 @@ impl AwardWinningGuiView {
             idiophone_spectrum_view: crate::views::idiophone_spectrum_view::IdiophoneSpectrumView::new(),
             show_sonar_hydrophone_modal: false,
             sonar_hydrophone_view: crate::views::sonar_hydrophone_view::SonarHydrophoneView::new(),
+            show_hoa5_binaural_modal: false,
+            hoa5_binaural_view: crate::views::hoa5_binaural_view::Hoa5BinauralView::new(),
+            show_mpegh_3d_modal: false,
+            mpegh_3d_spatializer_view: crate::views::mpegh_3d_spatializer_view::Mpegh3DSpatializerView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -1985,6 +1993,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_sonar_hydrophone_hud = false;
             self.open_sonar_hydrophone_hud();
         }
+        if self.inspector_state.requested_open_hoa5_binaural_hud || self.device_rack_state.requested_open_hoa5_binaural_hud {
+            self.inspector_state.requested_open_hoa5_binaural_hud = false;
+            self.device_rack_state.requested_open_hoa5_binaural_hud = false;
+            self.open_hoa5_binaural_hud();
+        }
+        if self.inspector_state.requested_open_mpegh_3d_hud || self.device_rack_state.requested_open_mpegh_3d_hud {
+            self.inspector_state.requested_open_mpegh_3d_hud = false;
+            self.device_rack_state.requested_open_mpegh_3d_hud = false;
+            self.open_mpegh_3d_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2038,6 +2056,8 @@ impl AwardWinningGuiView {
         self.show_membrane_plate_modal_window(ui);
         self.show_idiophone_spectrum_modal_window(ui);
         self.show_sonar_hydrophone_modal_window(ui);
+        self.show_hoa5_binaural_modal_window(ui);
+        self.show_mpegh_3d_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -12336,6 +12356,182 @@ impl AwardWinningGuiView {
 
     pub fn is_sonar_hydrophone_hud_open(&self) -> bool {
         self.show_sonar_hydrophone_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_hoa5_binaural_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_hoa5_binaural_modal {
+            return;
+        }
+
+        let mut is_open = self.show_hoa5_binaural_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🌐 Broadcast Mastering 5th-Order Ambisonics HOA5 Binaural HUD")
+            .id(egui::Id::new("hoa5_binaural_hud_modal"))
+            .open(&mut is_open)
+            .default_size([920.0, 600.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Broadcast Mastering Immersive 5th-Order (36-Channel) Higher-Order Ambisonics Spherical Virtualizer HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.hoa5_binaural_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_hoa5_binaural_modal = is_open;
+        self.sync_hoa5_binaural_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_hoa5_binaural_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let az = self.hoa5_binaural_view.azimuth_deg;
+        let el = self.hoa5_binaural_view.elevation_deg;
+        let dist = self.hoa5_binaural_view.distance_m;
+        let focus = self.hoa5_binaural_view.energy_focus;
+
+        self.device_rack_state.node_param_values.insert("azimuth_deg".to_string(), az);
+        self.device_rack_state.node_param_values.insert("elevation_deg".to_string(), el);
+        self.device_rack_state.node_param_values.insert("distance_m".to_string(), dist);
+        self.device_rack_state.node_param_values.insert("energy_focus".to_string(), focus);
+
+        self.inspector_state.node_param_values.insert("azimuth_deg".to_string(), az);
+        self.inspector_state.node_param_values.insert("elevation_deg".to_string(), el);
+        self.inspector_state.node_param_values.insert("distance_m".to_string(), dist);
+        self.inspector_state.node_param_values.insert("energy_focus".to_string(), focus);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_az = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_el = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_dist = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_foc = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_az).is_some() { bus.set(pid_az, az); }
+            if bus.get(pid_el).is_some() { bus.set(pid_el, el); }
+            if bus.get(pid_dist).is_some() { bus.set(pid_dist, dist); }
+            if bus.get(pid_foc).is_some() { bus.set(pid_foc, focus); }
+        }
+    }
+
+    pub fn open_hoa5_binaural_hud(&mut self) {
+        self.show_hoa5_binaural_modal = true;
+    }
+
+    pub fn close_hoa5_binaural_hud(&mut self) {
+        self.show_hoa5_binaural_modal = false;
+    }
+
+    pub fn is_hoa5_binaural_hud_open(&self) -> bool {
+        self.show_hoa5_binaural_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_mpegh_3d_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_mpegh_3d_modal {
+            return;
+        }
+
+        let mut is_open = self.show_mpegh_3d_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎧 Broadcast Mastering Immersive MPEG-H 3D Spatializer HUD")
+            .id(egui::Id::new("mpegh_3d_hud_modal"))
+            .open(&mut is_open)
+            .default_size([920.0, 600.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Broadcast Mastering Immersive MPEG-H 3D Audio Object Metadata Spatializer HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.mpegh_3d_spatializer_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_mpegh_3d_modal = is_open;
+        self.sync_mpegh_3d_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_mpegh_3d_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let az = self.mpegh_3d_spatializer_view.azimuth_deg;
+        let el = self.mpegh_3d_spatializer_view.elevation_deg;
+        let dist = self.mpegh_3d_spatializer_view.distance_m;
+        let spread = self.mpegh_3d_spatializer_view.spread_divergence_pct;
+
+        self.device_rack_state.node_param_values.insert("azimuth_deg".to_string(), az);
+        self.device_rack_state.node_param_values.insert("elevation_deg".to_string(), el);
+        self.device_rack_state.node_param_values.insert("distance_m".to_string(), dist);
+        self.device_rack_state.node_param_values.insert("spread_divergence_pct".to_string(), spread);
+
+        self.inspector_state.node_param_values.insert("azimuth_deg".to_string(), az);
+        self.inspector_state.node_param_values.insert("elevation_deg".to_string(), el);
+        self.inspector_state.node_param_values.insert("distance_m".to_string(), dist);
+        self.inspector_state.node_param_values.insert("spread_divergence_pct".to_string(), spread);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_az = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_el = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_dist = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_spr = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_az).is_some() { bus.set(pid_az, az); }
+            if bus.get(pid_el).is_some() { bus.set(pid_el, el); }
+            if bus.get(pid_dist).is_some() { bus.set(pid_dist, dist); }
+            if bus.get(pid_spr).is_some() { bus.set(pid_spr, spread); }
+        }
+    }
+
+    pub fn open_mpegh_3d_hud(&mut self) {
+        self.show_mpegh_3d_modal = true;
+    }
+
+    pub fn close_mpegh_3d_hud(&mut self) {
+        self.show_mpegh_3d_modal = false;
+    }
+
+    pub fn is_mpegh_3d_hud_open(&self) -> bool {
+        self.show_mpegh_3d_modal
     }
 
 

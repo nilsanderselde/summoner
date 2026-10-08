@@ -216,6 +216,8 @@ impl Default for ModernDeviceRackState {
             requested_open_membrane_plate_hud: false,
             requested_open_idiophone_spectrum_hud: false,
             requested_open_sonar_hydrophone_hud: false,
+            requested_open_hoa5_binaural_hud: false,
+            requested_open_mpegh_3d_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -446,6 +448,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_diffractive_propagation = cur_selection.contains("DiffractivePropagation") || cur_selection.contains("Diffraction") || cur_selection == "DiffractivePropagationView" || cur_selection == "DiffractivePropagationNode";
                     let is_idiophone = cur_selection.contains("Idiophone") || cur_selection.contains("Marimba") || cur_selection.contains("Xylophone") || cur_selection.contains("Vibraphone") || cur_selection == "IdiophoneSpectrum" || cur_selection == "StruckIdiophoneResonatorNode" || cur_selection == "IdiophoneResonator" || cur_selection == "ModalIdiophoneResonator" || cur_selection == "ModalIdiophoneChimeBank";
                     let is_sonar_hydrophone = cur_selection.contains("Sonar") || cur_selection.contains("Hydrophone") || cur_selection == "SonarHydrophoneNode" || cur_selection == "SonarHydrophoneView";
+                    let is_hoa5_binaural = cur_selection.contains("Hoa5") || cur_selection.contains("Ambisonic5") || cur_selection.contains("HOA5") || cur_selection == "Hoa5BinauralView" || cur_selection == "Hoa5BinauralNode" || cur_selection == "Ambisonics5thOrderDecoder" || cur_selection.contains("HigherOrderAmbisonics") || cur_selection.contains("Hoa5thOrder");
+                    let is_mpegh_3d = cur_selection.contains("Mpegh") || cur_selection.contains("MPEG-H") || cur_selection.contains("MpegH") || cur_selection == "Mpegh3DSpatializerView" || cur_selection == "Mpegh3DSpatializerNode" || cur_selection == "Mpegh3DObjectSpatializer" || cur_selection.contains("MpeghSpatializer");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -634,6 +638,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("🌊 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 210, 255))).on_hover_text("Open Underwater Sonar & Hydrophone Cavitation HUD").clicked()
                     {
                         state.requested_open_sonar_hydrophone_hud = true;
+                    } else if is_hoa5_binaural
+                        && ui.button(RichText::new("🌐 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(157, 78, 221))).on_hover_text("Open 5th-Order Ambisonics HOA5 Binaural HUD").clicked()
+                    {
+                        state.requested_open_hoa5_binaural_hud = true;
+                    } else if is_mpegh_3d
+                        && ui.button(RichText::new("🎧 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 255, 180))).on_hover_text("Open MPEG-H 3D Immersive Spatializer HUD").clicked()
+                    {
+                        state.requested_open_mpegh_3d_hud = true;
                     }
                     ui.add_space(4.0);
                     let pwr_col = if state.is_enabled { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(100, 116, 139) };
@@ -862,6 +874,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_diffractive_propagation = cur_selection.contains("DiffractivePropagation") || cur_selection.contains("Diffraction") || cur_selection == "DiffractivePropagationView" || cur_selection == "DiffractivePropagationNode";
                     let is_idiophone = cur_selection.contains("Idiophone") || cur_selection.contains("Marimba") || cur_selection.contains("Xylophone") || cur_selection.contains("Vibraphone") || cur_selection == "IdiophoneSpectrum" || cur_selection == "StruckIdiophoneResonatorNode" || cur_selection == "IdiophoneResonator" || cur_selection == "ModalIdiophoneResonator" || cur_selection == "ModalIdiophoneChimeBank";
                     let is_sonar_hydrophone = cur_selection.contains("Sonar") || cur_selection.contains("Hydrophone") || cur_selection == "SonarHydrophoneNode" || cur_selection == "SonarHydrophoneView";
+                    let is_hoa5_binaural = cur_selection.contains("Hoa5") || cur_selection.contains("Ambisonic5") || cur_selection.contains("HOA5") || cur_selection == "Hoa5BinauralView" || cur_selection == "Hoa5BinauralNode" || cur_selection == "Ambisonics5thOrderDecoder" || cur_selection.contains("HigherOrderAmbisonics") || cur_selection.contains("Hoa5thOrder");
+                    let is_mpegh_3d = cur_selection.contains("Mpegh") || cur_selection.contains("MPEG-H") || cur_selection.contains("MpegH") || cur_selection == "Mpegh3DSpatializerView" || cur_selection == "Mpegh3DSpatializerNode" || cur_selection == "Mpegh3DObjectSpatializer" || cur_selection.contains("MpeghSpatializer");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1058,6 +1072,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("🌊 Sonar HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 210, 255))).on_hover_text("Open Underwater Sonar & Hydrophone Cavitation HUD").clicked()
                     {
                         state.requested_open_sonar_hydrophone_hud = true;
+                    } else if is_hoa5_binaural
+                        && ui.button(RichText::new("🌐 HOA5 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(157, 78, 221))).on_hover_text("Open 5th-Order Ambisonics HOA5 Binaural HUD").clicked()
+                    {
+                        state.requested_open_hoa5_binaural_hud = true;
+                    } else if is_mpegh_3d
+                        && ui.button(RichText::new("🎧 MPEG-H HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 255, 180))).on_hover_text("Open MPEG-H 3D Immersive Spatializer HUD").clicked()
+                    {
+                        state.requested_open_mpegh_3d_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -1872,6 +1894,8 @@ fn show_pro_parameter_drawer(
                     let is_diffractive_propagation = dev_kind.contains("DiffractivePropagation") || dev_kind.contains("Diffraction") || dev_kind == "DiffractivePropagationView" || dev_kind == "DiffractivePropagationNode";
                     let is_idiophone = dev_kind.contains("Idiophone") || dev_kind.contains("Marimba") || dev_kind.contains("Xylophone") || dev_kind.contains("Vibraphone") || dev_kind == "IdiophoneSpectrum" || dev_kind == "StruckIdiophoneResonatorNode" || dev_kind == "IdiophoneResonator" || dev_kind == "ModalIdiophoneResonator" || dev_kind == "ModalIdiophoneChimeBank";
                     let is_sonar_hydrophone = dev_kind.contains("Sonar") || dev_kind.contains("Hydrophone") || dev_kind == "SonarHydrophoneNode" || dev_kind == "SonarHydrophoneView";
+                    let is_hoa5_binaural = dev_kind.contains("Hoa5") || dev_kind.contains("Ambisonic5") || dev_kind.contains("HOA5") || dev_kind == "Hoa5BinauralView" || dev_kind == "Hoa5BinauralNode" || dev_kind == "Ambisonics5thOrderDecoder" || dev_kind.contains("HigherOrderAmbisonics") || dev_kind.contains("Hoa5thOrder");
+                    let is_mpegh_3d = dev_kind.contains("Mpegh") || dev_kind.contains("MPEG-H") || dev_kind.contains("MpegH") || dev_kind == "Mpegh3DSpatializerView" || dev_kind == "Mpegh3DSpatializerNode" || dev_kind == "Mpegh3DObjectSpatializer" || dev_kind.contains("MpeghSpatializer");
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -5690,6 +5714,154 @@ fn show_pro_parameter_drawer(
                             let _ = so_resp.on_hover_text(format!(
                                 "Underwater Sonar & Hydrophone HUD\nDepth: {:.0} m | Sound Speed: {:.0} m/s | Cavitation σ: {:.2}\n[Drag: Cavitation index (X) vs Depth (Y)]",
                                 depth, sound_speed, cav
+                            ));
+                        }
+                    } else if is_hoa5_binaural {
+                        // Broadcast Mastering 5th-Order Ambisonics HOA5 Spherical Virtualizer Mini Visualizer
+                        let (hoa_resp, hoa_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let hoa_rect = hoa_resp.rect;
+                        hoa_painter.rect_filled(hoa_rect, 2.0, Color32::from_rgb(16, 12, 28));
+
+                        let mut az = state.node_param_values.get("azimuth_deg").copied().unwrap_or(45.0);
+                        let mut el = state.node_param_values.get("elevation_deg").copied().unwrap_or(20.0);
+                        let dist = state.node_param_values.get("distance_m").copied().unwrap_or(2.5);
+                        let focus = state.node_param_values.get("energy_focus").copied().unwrap_or(0.65);
+
+                        if hoa_resp.dragged() {
+                            if let Some(pos) = hoa_resp.interact_pointer_pos() {
+                                let nx = ((pos.x - hoa_rect.left()) / hoa_rect.width()).clamp(0.0, 1.0);
+                                let ny = (1.0 - ((pos.y - hoa_rect.top()) / hoa_rect.height())).clamp(0.0, 1.0);
+                                az = -180.0 + nx * 360.0;
+                                el = -90.0 + ny * 180.0;
+                                state.node_param_values.insert("azimuth_deg".to_string(), az);
+                                state.node_param_values.insert("elevation_deg".to_string(), el);
+                                if let Some(bus) = param_bus {
+                                    let pid_az = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_az).is_some() { bus.set(pid_az, az); }
+                                    let pid_el = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_el).is_some() { bus.set(pid_el, el); }
+                                }
+                            }
+                        }
+
+                        // Spherical harmonic concentric order rings (N=1..5)
+                        let center = egui::pos2(hoa_rect.left() + 38.0, hoa_rect.center().y);
+                        for order in 1..=5 {
+                            let r = order as f32 * 5.5;
+                            let alpha = 30 + order as u8 * 20;
+                            hoa_painter.circle_stroke(
+                                center,
+                                r,
+                                Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(157, 78, 221, alpha)),
+                            );
+                        }
+
+                        // Crosshair axis lines
+                        hoa_painter.line_segment(
+                            [egui::pos2(center.x - 30.0, center.y), egui::pos2(center.x + 30.0, center.y)],
+                            Stroke::new(0.8_f32, Color32::from_rgba_unmultiplied(157, 78, 221, 60)),
+                        );
+                        hoa_painter.line_segment(
+                            [egui::pos2(center.x, center.y - 30.0), egui::pos2(center.x, center.y + 30.0)],
+                            Stroke::new(0.8_f32, Color32::from_rgba_unmultiplied(157, 78, 221, 60)),
+                        );
+
+                        // Sound Object trajectory vector & puck
+                        let az_rad = az.to_radians();
+                        let el_rad = el.to_radians();
+                        let puck_r = (el_rad.cos() * 26.0).clamp(3.0, 28.0);
+                        let puck_pos = egui::pos2(
+                            center.x + az_rad.sin() * puck_r,
+                            center.y - az_rad.cos() * puck_r * 0.7,
+                        );
+                        hoa_painter.line_segment([center, puck_pos], Stroke::new(1.2_f32, Color32::from_rgb(200, 120, 255)));
+                        hoa_painter.circle_filled(puck_pos, 4.0, Color32::from_rgb(220, 160, 255));
+                        hoa_painter.circle_stroke(puck_pos, 6.0, Stroke::new(1.0_f32, Color32::from_rgb(157, 78, 221)));
+
+                        // Readouts
+                        hoa_painter.text(
+                            egui::pos2(hoa_rect.right() - 6.0, hoa_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("HOA5 (36-CH)\naz: {:.0}° el: {:.0}°\nd: {:.1}m | rE: {:.2}", az, el, dist, focus),
+                            FontId::proportional(8.0),
+                            Color32::from_rgb(180, 140, 240),
+                        );
+
+                        if hoa_resp.hovered() {
+                            let _ = hoa_resp.on_hover_text(format!(
+                                "5th-Order Ambisonics HOA5 HUD\nAzimuth: {:.1}° | Elevation: {:.1}° | Distance: {:.1}m\nEnergy Vector Focus: {:.2}\n[Drag: Azimuth (X) vs Elevation (Y)]",
+                                az, el, dist, focus
+                            ));
+                        }
+                    } else if is_mpegh_3d {
+                        // Broadcast Mastering Immersive MPEG-H 3D Audio Object Spatializer Mini Visualizer
+                        let (mp_resp, mp_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let mp_rect = mp_resp.rect;
+                        mp_painter.rect_filled(mp_rect, 2.0, Color32::from_rgb(8, 24, 20));
+
+                        let mut az = state.node_param_values.get("azimuth_deg").copied().unwrap_or(35.0);
+                        let mut el = state.node_param_values.get("elevation_deg").copied().unwrap_or(20.0);
+                        let dist = state.node_param_values.get("distance_m").copied().unwrap_or(2.8);
+                        let spread = state.node_param_values.get("spread_divergence_pct").copied().unwrap_or(30.0);
+
+                        if mp_resp.dragged() {
+                            if let Some(pos) = mp_resp.interact_pointer_pos() {
+                                let nx = ((pos.x - mp_rect.left()) / mp_rect.width()).clamp(0.0, 1.0);
+                                let ny = (1.0 - ((pos.y - mp_rect.top()) / mp_rect.height())).clamp(0.0, 1.0);
+                                az = -180.0 + nx * 360.0;
+                                el = -90.0 + ny * 180.0;
+                                state.node_param_values.insert("azimuth_deg".to_string(), az);
+                                state.node_param_values.insert("elevation_deg".to_string(), el);
+                                if let Some(bus) = param_bus {
+                                    let pid_az = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_az).is_some() { bus.set(pid_az, az); }
+                                    let pid_el = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_el).is_some() { bus.set(pid_el, el); }
+                                }
+                            }
+                        }
+
+                        // 7.1.4 Bed speaker perimeter dots
+                        let center = egui::pos2(mp_rect.left() + 38.0, mp_rect.center().y);
+                        mp_painter.circle_stroke(
+                            center,
+                            26.0,
+                            Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(0, 255, 180, 50)),
+                        );
+                        // Speaker positions (L, R, C, Ls, Rs, Lb, Rb)
+                        let spk_angles = [-30.0_f32, 30.0, 0.0, -110.0, 110.0, -150.0, 150.0];
+                        for ang in spk_angles {
+                            let rad = ang.to_radians();
+                            let spk_p = egui::pos2(center.x + rad.sin() * 26.0, center.y - rad.cos() * 26.0 * 0.7);
+                            mp_painter.circle_filled(spk_p, 1.8, Color32::from_rgb(0, 255, 180));
+                        }
+
+                        // Object position puck & spread aura
+                        let az_rad = az.to_radians();
+                        let el_rad = el.to_radians();
+                        let obj_r = (el_rad.cos() * 24.0).clamp(2.0, 26.0);
+                        let obj_pos = egui::pos2(
+                            center.x + az_rad.sin() * obj_r,
+                            center.y - az_rad.cos() * obj_r * 0.7,
+                        );
+                        let spread_r = 4.0 + (spread / 100.0) * 8.0;
+                        mp_painter.circle_stroke(obj_pos, spread_r, Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(0, 255, 180, 80)));
+                        mp_painter.line_segment([center, obj_pos], Stroke::new(1.2_f32, Color32::from_rgb(0, 255, 180)));
+                        mp_painter.circle_filled(obj_pos, 3.8, Color32::from_rgb(180, 255, 220));
+
+                        // Readouts
+                        mp_painter.text(
+                            egui::pos2(mp_rect.right() - 6.0, mp_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("MPEG-H 3D\naz: {:.0}° el: {:.0}°\nd: {:.1}m | div: {:.0}%", az, el, dist, spread),
+                            FontId::proportional(8.0),
+                            Color32::from_rgb(0, 255, 180),
+                        );
+
+                        if mp_resp.hovered() {
+                            let _ = mp_resp.on_hover_text(format!(
+                                "MPEG-H 3D Audio Spatializer HUD\nAzimuth: {:.1}° | Elevation: {:.1}° | Distance: {:.1}m\nSpread Divergence: {:.0}%\n[Drag: Azimuth (X) vs Elevation (Y)]",
+                                az, el, dist, spread
                             ));
                         }
                     } else {
