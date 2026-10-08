@@ -653,6 +653,18 @@ impl CommandPalette {
                 action_id: "open_binaural_brir_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Continuous 3D Kinematic Spatializer & Doppler Shift Engine HUD".into(),
+                category: "Spatial".into(),
+                action_id: "open_continuous_doppler_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open 3D Shoebox Room Acoustics & Image-Source Reverb HUD".into(),
+                category: "Spatial".into(),
+                action_id: "open_spatial_room_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

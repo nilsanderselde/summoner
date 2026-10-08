@@ -2086,3 +2086,37 @@ Product Management has conducted a comprehensive readiness audit:
   - Pure unit tests: 329 passed in 0.24s (`cargo test -p summoner_gui --lib`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
 
+### Turn #79 (Turn #42 Deliverable / Sprint Turn #5) — Continuous 3D Doppler Kinematic Spatializer & 3D Shoebox Room Acoustics HUDs Convergence (Milestones 33 & 35)
+- [x] Continuous 3D Doppler Kinematic Spatializer & 3D Shoebox Room Acoustics HUDs Integration:
+  - Integrated `ContinuousDopplerView` (Continuous 3D Dynamic Spatializer & Doppler Engine HUD: 3 interpolation modes [4-point Cubic Hermite, Linear 2-point, Kaiser-Windowed Sinc], continuous time-varying Doppler pitch ratio & cents shift, speed of sound $c \in [300.0..400.0\text{m/s}]$, radial velocity $v_{\text{rad}}$ tracking, distance-dependent high-frequency air absorption lowpass cutoff [$800..20000\text{Hz}$], inverse-distance attenuation dB, and touch-draggable source puck with velocity vector tail and $\ge 44 \times 44\text{pt}$ bounding target) and `SpatialRoomView` (3D Shoebox Room Acoustics & 6-Wall Early Reflection / Diffuse FDN Reverb HUD: Shoebox room dimensions [Width $2..50\text{m}$, Depth $2..50\text{m}$, Height $2..20\text{m}$], 7 Wall Material Presets [Studio Acoustic $\alpha=0.35$, Wood Paneling $\alpha=0.15$, Concrete $\alpha=0.04$, Glass $\alpha=0.08$, Heavy Curtains $\alpha=0.60$, Plaster $\alpha=0.05$, Custom override $\alpha \in 0.01..0.99$], Sabine Reverberation Time $RT_{60} = \frac{0.161 V}{S \alpha}$, 6 first-order image reflection ray paths [Left, Right, Back, Front, Floor, Ceiling] with arrival delay ms and reflection attenuation dB, Direct-path distance & delay, 4-channel FDN diffuse late decay balance, and touch-draggable Source and Listener pucks with $\ge 44 \times 44\text{pt}$ bounding targets) into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Implementations (`crates/summoner_gui/src/views/continuous_doppler_view.rs` & `spatial_room_view.rs`):
+  - In `ContinuousDopplerView`: built `show(&mut self, ui: &mut egui::Ui)` delegating to `show_rect`, `calculate_doppler_ratio`, `update_kinematics`, `hit_test_source_puck`, and `render_ascii_snapshot_str() -> String`.
+  - In `SpatialRoomView`: built `show(&mut self, ui: &mut egui::Ui)` delegating to `show_rect`, `calculate_sabine_rt60`, `evaluate_early_reflections`, `hit_test_source_puck`, `hit_test_listener_puck`, and `render_ascii_snapshot_str() -> String`.
+  - Registered both modules in `crates/summoner_gui/src/views/mod.rs` with public re-exports.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_continuous_doppler_modal: bool`, `continuous_doppler_view: ContinuousDopplerView`, `show_spatial_room_modal: bool`, and `spatial_room_view: SpatialRoomView`.
+  - Added dedicated modal windows `show_continuous_doppler_modal_window` and `show_spatial_room_modal_window` with responsive styling, WCAG AAA contrast, and $\ge 44 \times 44\text{pt}$ touch bounds.
+  - Added public lifecycle methods: `open_continuous_doppler_hud()`, `close_continuous_doppler_hud()`, `is_continuous_doppler_hud_open()`, `open_spatial_room_hud()`, `close_spatial_room_hud()`, `is_spatial_room_hud_open()`.
+  - Real-time parameter sync bridges (`sync_continuous_doppler_hud_state` and `sync_spatial_room_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_continuous_doppler_hud: bool` and `requested_open_spatial_room_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🚀 Open Continuous 3D Doppler Spatializer HUD]` and `[🏛️ Open 3D Shoebox Room Acoustics & Reverb HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header `[🚀 Doppler HUD]` / `[🏛️ Room HUD]` in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Continuous Doppler 3D: Concentric distance range rings, central listener marker, draggable sound puck (X position vs Y distance), velocity vector tail, live Doppler cents / radial velocity readouts, and lock-free `ParamBus` slot dispatch.
+    * 3D Shoebox Room: Rectangular floor-plan perimeter with wall material indicator, direct path sound ray, 4 wall early bounce reflection rays, Source and Listener markers, Sabine RT60 readout, and lock-free `ParamBus` slot dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_continuous_doppler_hud` and `open_spatial_room_hud` under `"Spatial"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_continuous_doppler_hud()` and `open_spatial_room_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier143_turn79_tests.rs`:
+    * Pure tests: view initialization, Doppler kinematics (approaching/receding/stationary), Sabine RT60 estimation, 6-wall image reflection ray evaluation, coordinate normalizations, touch puck hit testing, slot arithmetic channel isolation, deterministic ASCII snapshots.
+    * GUI tests: modal lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch, rack & inspector trigger propagation, command palette action registration.
+  - Registered `tier143_turn79_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Feature tests: 7 passed in 0.07s (`cargo test -p summoner_gui --features gui -- tier143_turn79`).
+  - Pure unit tests: 329 passed in 0.24s (`cargo test -p summoner_gui --lib`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
+
+

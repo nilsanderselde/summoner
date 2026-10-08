@@ -150,6 +150,10 @@ pub struct ModernInspectorState {
     pub requested_open_binaural_panner_hud: bool,
     #[serde(default)]
     pub requested_open_binaural_brir_hud: bool,
+    #[serde(default)]
+    pub requested_open_continuous_doppler_hud: bool,
+    #[serde(default)]
+    pub requested_open_spatial_room_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -231,6 +235,8 @@ impl Default for ModernInspectorState {
             requested_open_wfs_array_hud: false,
             requested_open_binaural_panner_hud: false,
             requested_open_binaural_brir_hud: false,
+            requested_open_continuous_doppler_hud: false,
+            requested_open_spatial_room_hud: false,
         }
     }
 }
@@ -1275,6 +1281,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open interactive Multi-Source Binaural Room Impulse Response (BRIR) Acoustic Spatializer HUD").clicked() {
                     state.requested_open_binaural_brir_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("ContinuousSpatialPanner") || active_kind.contains("DistanceDoppler") || active_kind.contains("DopplerSpatializer") || active_kind == "ContinuousSpatialPannerDoppler3D" || active_kind == "ContinuousDopplerView" || active_kind.contains("BinauralDoppler") || active_kind.contains("AmbisonicBFormatDoppler") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🚀 Open Continuous 3D Doppler Spatializer HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(56, 189, 248)))
+                        .fill(Color32::from_rgb(12, 30, 48))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(56, 189, 248)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Continuous 3D Kinematic Spatializer & Doppler Shift Engine HUD").clicked() {
+                    state.requested_open_continuous_doppler_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("SpatialRoom") || active_kind.contains("ImageSourceRoom") || active_kind == "SpatialRoomNode" || active_kind == "SpatialRoomView" || active_kind.contains("RoomAcousticModel") || active_kind.contains("ShoeboxRoom") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🏛️ Open 3D Shoebox Room Acoustics & Reverb HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 255, 180)))
+                        .fill(Color32::from_rgb(12, 38, 28))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 255, 180)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive 3D Shoebox Room Acoustics & 6-Wall Early Reflection / Diffuse FDN Reverb HUD").clicked() {
+                    state.requested_open_spatial_room_hud = true;
                 }
                 ui.add_space(4.0);
             }

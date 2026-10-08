@@ -165,6 +165,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_binaural_panner_hud: bool,
     #[serde(default)]
     pub requested_open_binaural_brir_hud: bool,
+    #[serde(default)]
+    pub requested_open_continuous_doppler_hud: bool,
+    #[serde(default)]
+    pub requested_open_spatial_room_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -236,6 +240,8 @@ impl Default for ModernDeviceRackState {
             requested_open_wfs_array_hud: false,
             requested_open_binaural_panner_hud: false,
             requested_open_binaural_brir_hud: false,
+            requested_open_continuous_doppler_hud: false,
+            requested_open_spatial_room_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -930,6 +936,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_wfs_array = cur_selection.contains("WfsArray") || cur_selection.contains("WfsAcoustic") || cur_selection.contains("WfsPlanar") || cur_selection == "WfsArraySpatializerNode" || cur_selection == "WfsArraySpatializerView" || cur_selection.contains("WaveFieldSynthesis");
                     let is_binaural_panner = cur_selection.contains("BinauralSpatialPanner") || cur_selection.contains("BinauralPanner") || cur_selection == "BinauralPannerView" || cur_selection == "BinauralSpatialPannerNode" || cur_selection.contains("BinauralHrtf") || cur_selection.contains("HrtfPanner");
                     let is_binaural_brir = cur_selection.contains("BinauralBrir") || cur_selection.contains("PartitionedBinauralHrtfConvolver") || cur_selection == "BinauralBrirView" || cur_selection.contains("BrirSpatializer") || cur_selection.contains("RoomImpulseResponse") || cur_selection.contains("BinauralRoom");
+                    let is_continuous_doppler = cur_selection.contains("ContinuousSpatialPanner") || cur_selection.contains("DistanceDoppler") || cur_selection.contains("DopplerSpatializer") || cur_selection == "ContinuousSpatialPannerDoppler3D" || cur_selection == "ContinuousDopplerView" || cur_selection.contains("BinauralDoppler") || cur_selection.contains("AmbisonicBFormatDoppler");
+                    let is_spatial_room = cur_selection.contains("SpatialRoom") || cur_selection.contains("ImageSourceRoom") || cur_selection == "SpatialRoomNode" || cur_selection == "SpatialRoomView" || cur_selection.contains("RoomAcousticModel") || cur_selection.contains("ShoeboxRoom");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1158,6 +1166,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("🏛 BRIR HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 255, 180))).on_hover_text("Open Multi-Source Binaural BRIR Room Impulse Response HUD").clicked()
                     {
                         state.requested_open_binaural_brir_hud = true;
+                    } else if is_continuous_doppler
+                        && ui.button(RichText::new("🚀 Doppler HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Continuous 3D Kinematic Spatializer & Doppler Shift Engine HUD").clicked()
+                    {
+                        state.requested_open_continuous_doppler_hud = true;
+                    } else if is_spatial_room
+                        && ui.button(RichText::new("🏛️ Room HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 255, 180))).on_hover_text("Open 3D Shoebox Room Acoustics & 6-Wall Early Reflection / Diffuse FDN Reverb HUD").clicked()
+                    {
+                        state.requested_open_spatial_room_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -1980,6 +1996,8 @@ fn show_pro_parameter_drawer(
                     let is_wfs_array = dev_kind.contains("WfsArray") || dev_kind.contains("WfsAcoustic") || dev_kind.contains("WfsPlanar") || dev_kind == "WfsArraySpatializerNode" || dev_kind == "WfsArraySpatializerView" || dev_kind.contains("WaveFieldSynthesis");
                     let is_binaural_panner = dev_kind.contains("BinauralSpatialPanner") || dev_kind.contains("BinauralPanner") || dev_kind == "BinauralPannerView" || dev_kind == "BinauralSpatialPannerNode" || dev_kind.contains("BinauralHrtf") || dev_kind.contains("HrtfPanner");
                     let is_binaural_brir = dev_kind.contains("BinauralBrir") || dev_kind.contains("PartitionedBinauralHrtfConvolver") || dev_kind == "BinauralBrirView" || dev_kind.contains("BrirSpatializer") || dev_kind.contains("RoomImpulseResponse") || dev_kind.contains("BinauralRoom");
+                    let is_continuous_doppler = dev_kind.contains("ContinuousSpatialPanner") || dev_kind.contains("DistanceDoppler") || dev_kind.contains("DopplerSpatializer") || dev_kind == "ContinuousSpatialPannerDoppler3D" || dev_kind == "ContinuousDopplerView" || dev_kind.contains("BinauralDoppler") || dev_kind.contains("AmbisonicBFormatDoppler");
+                    let is_spatial_room = dev_kind.contains("SpatialRoom") || dev_kind.contains("ImageSourceRoom") || dev_kind == "SpatialRoomNode" || dev_kind == "SpatialRoomView" || dev_kind.contains("RoomAcousticModel") || dev_kind.contains("ShoeboxRoom");
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -6403,6 +6421,133 @@ fn show_pro_parameter_drawer(
                             let _ = brir_resp.on_hover_text(format!(
                                 "Multi-Source Binaural Room Impulse Response (BRIR) Spatializer HUD\nAzimuth: {:.1}° | Elevation: {:.1}° | Distance: {:.2}m\nPinna Notch: {:.0} Hz | Early Reflections: 6 Rays\n[Drag: Polar Azimuth (X) vs Distance (Y)]",
                                 az, el, dist, notch_hz
+                            ));
+                        }
+                    } else if is_continuous_doppler {
+                        // Continuous 3D Doppler Kinematic Radar Mini Visualizer
+                        let (dop_resp, dop_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let dop_rect = dop_resp.rect;
+                        dop_painter.rect_filled(dop_rect, 2.0, Color32::from_rgb(6, 12, 22));
+
+                        let mut pos_x = state.node_param_values.get("pos_x").copied().unwrap_or(0.0);
+                        let mut pos_y = state.node_param_values.get("pos_y").copied().unwrap_or(3.5);
+                        let pos_z = state.node_param_values.get("pos_z").copied().unwrap_or(1.0);
+                        let speed_of_sound = state.node_param_values.get("speed_of_sound").copied().unwrap_or(343.0);
+
+                        if dop_resp.dragged() {
+                            if let Some(pos) = dop_resp.interact_pointer_pos() {
+                                let nx = ((pos.x - dop_rect.left() - 34.0) / 26.0).clamp(-1.0, 1.0);
+                                let ny = ((dop_rect.center().y - pos.y) / 26.0).clamp(-1.0, 1.0);
+                                pos_x = nx * 25.0;
+                                pos_y = ny * 25.0;
+                                state.node_param_values.insert("pos_x".to_string(), pos_x);
+                                state.node_param_values.insert("pos_y".to_string(), pos_y);
+                                if let Some(bus) = param_bus {
+                                    let pid_x = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_y = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    bus.set(pid_x, pos_x);
+                                    bus.set(pid_y, pos_y);
+                                }
+                            }
+                        }
+
+                        // Concentric range circles
+                        let dcx = dop_rect.left() + 34.0;
+                        let dcy = dop_rect.center().y;
+                        dop_painter.circle_stroke(egui::pos2(dcx, dcy), 10.0, Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(56, 189, 248, 50)));
+                        dop_painter.circle_stroke(egui::pos2(dcx, dcy), 22.0, Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(56, 189, 248, 50)));
+                        dop_painter.circle_filled(egui::pos2(dcx, dcy), 2.5, Color32::from_rgb(56, 189, 248));
+
+                        // Sound source position
+                        let px = dcx + (pos_x / 25.0).clamp(-1.0, 1.0) * 24.0;
+                        let py = dcy - (pos_y / 25.0).clamp(-1.0, 1.0) * 24.0;
+                        dop_painter.circle_filled(egui::pos2(px, py), 3.5, Color32::from_rgb(0, 255, 200));
+
+                        // Calculate Doppler kinematics
+                        let (v_rad, _ratio, cents) = crate::views::continuous_doppler_view::ContinuousDopplerView::calculate_doppler_ratio(
+                            pos_x, pos_y, pos_z, 12.0, -8.0, 0.0, speed_of_sound
+                        );
+                        let dist = (pos_x * pos_x + pos_y * pos_y + pos_z * pos_z).sqrt().max(0.1);
+
+                        // Readout text
+                        dop_painter.text(
+                            egui::pos2(dop_rect.right() - 4.0, dop_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("DOPPLER 3D\nd: {:.1}m | c: {:.0}m/s\nVrad: {:+.1} m/s\nShift: {:+.1} cents", dist, speed_of_sound, v_rad, cents),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(56, 189, 248),
+                        );
+
+                        if dop_resp.hovered() {
+                            let _ = dop_resp.on_hover_text(format!(
+                                "Continuous 3D Kinematic Spatializer & Doppler Engine HUD\nPosition: ({:.1}, {:.1}, {:.1}) m | Distance: {:.2} m\nRadial Velocity: {:+.1} m/s | Doppler Shift: {:+.1} cents\n[Drag: Orbit Position X/Y]",
+                                pos_x, pos_y, pos_z, dist, v_rad, cents
+                            ));
+                        }
+                    } else if is_spatial_room {
+                        // 3D Shoebox Room Acoustics & Image-Source Reverb Mini Visualizer
+                        let (rm_resp, rm_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let rm_rect = rm_resp.rect;
+                        rm_painter.rect_filled(rm_rect, 2.0, Color32::from_rgb(6, 12, 22));
+
+                        let room_w = state.node_param_values.get("room_width").copied().unwrap_or(8.0);
+                        let room_d = state.node_param_values.get("room_depth").copied().unwrap_or(12.0);
+                        let room_h = state.node_param_values.get("room_height").copied().unwrap_or(3.5);
+                        let mut src_x = state.node_param_values.get("source_x").copied().unwrap_or(3.0);
+                        let mut src_y = state.node_param_values.get("source_y").copied().unwrap_or(4.0);
+                        let absorption = state.node_param_values.get("wall_absorption").copied().unwrap_or(0.35);
+
+                        // Shoebox mini box
+                        let box_rect = egui::Rect::from_min_size(egui::pos2(rm_rect.left() + 6.0, rm_rect.top() + 6.0), egui::vec2(56.0, 56.0));
+                        rm_painter.rect_filled(box_rect, 1.0, Color32::from_rgb(10, 18, 30));
+                        rm_painter.rect_stroke(box_rect, 1.0, Stroke::new(1.0_f32, Color32::from_rgb(0, 255, 180)));
+
+                        if rm_resp.dragged() {
+                            if let Some(pos) = rm_resp.interact_pointer_pos() {
+                                let nx = ((pos.x - box_rect.left()) / box_rect.width()).clamp(0.05, 0.95);
+                                let ny = ((box_rect.bottom() - pos.y) / box_rect.height()).clamp(0.05, 0.95);
+                                src_x = nx * room_w;
+                                src_y = ny * room_d;
+                                state.node_param_values.insert("source_x".to_string(), src_x);
+                                state.node_param_values.insert("source_y".to_string(), src_y);
+                                if let Some(bus) = param_bus {
+                                    let pid_sx = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 3);
+                                    let pid_sy = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 4);
+                                    bus.set(pid_sx, src_x);
+                                    bus.set(pid_sy, src_y);
+                                }
+                            }
+                        }
+
+                        // Source (S) and Listener (L)
+                        let spx = box_rect.left() + (src_x / room_w.max(1.0)).clamp(0.05, 0.95) * box_rect.width();
+                        let spy = box_rect.bottom() - (src_y / room_d.max(1.0)).clamp(0.05, 0.95) * box_rect.height();
+                        let lpx = box_rect.left() + 0.5 * box_rect.width();
+                        let lpy = box_rect.top() + 0.3 * box_rect.height();
+
+                        // Direct ray line
+                        rm_painter.line_segment([egui::pos2(spx, spy), egui::pos2(lpx, lpy)], Stroke::new(1.0_f32, Color32::from_rgb(255, 255, 255)));
+                        // Source point
+                        rm_painter.circle_filled(egui::pos2(spx, spy), 3.0, Color32::from_rgb(239, 68, 68));
+                        // Listener point
+                        rm_painter.circle_filled(egui::pos2(lpx, lpy), 3.0, Color32::from_rgb(56, 189, 248));
+
+                        let rt60 = crate::views::spatial_room_view::SpatialRoomView::calculate_sabine_rt60(room_w, room_d, room_h, absorption);
+                        let dist = ((src_x - 4.0).powi(2) + (src_y - 8.0).powi(2)).sqrt().max(0.1);
+
+                        // Readout
+                        rm_painter.text(
+                            egui::pos2(rm_rect.right() - 4.0, rm_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("SHOEBOX ROOM\n{}x{}x{}m\nRT60: {:.2}s\nSrc: ({:.1},{:.1})m", room_w as i32, room_d as i32, room_h as i32, rt60, src_x, src_y),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(0, 255, 180),
+                        );
+
+                        if rm_resp.hovered() {
+                            let _ = rm_resp.on_hover_text(format!(
+                                "3D Shoebox Room Acoustics & 6-Wall Early Reflection Reverb HUD\nDimensions: {:.1}m x {:.1}m x {:.1}m | Sabine RT60: {:.2} s\nSource: ({:.1}, {:.1}) m | Direct Dist: {:.2} m\n[Drag: Room Floor Source X/Y]",
+                                room_w, room_d, room_h, rt60, src_x, src_y, dist
                             ));
                         }
                     } else {

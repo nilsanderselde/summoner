@@ -756,6 +756,10 @@ pub struct AwardWinningGuiView {
     pub binaural_panner_view: crate::views::binaural_panner_view::BinauralPannerView,
     pub show_binaural_brir_modal: bool,
     pub binaural_brir_view: crate::views::binaural_brir_view::BinauralBrirView,
+    pub show_continuous_doppler_modal: bool,
+    pub continuous_doppler_view: crate::views::continuous_doppler_view::ContinuousDopplerView,
+    pub show_spatial_room_modal: bool,
+    pub spatial_room_view: crate::views::spatial_room_view::SpatialRoomView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1128,6 +1132,10 @@ impl AwardWinningGuiView {
             binaural_panner_view: crate::views::binaural_panner_view::BinauralPannerView::new(),
             show_binaural_brir_modal: false,
             binaural_brir_view: crate::views::binaural_brir_view::BinauralBrirView::new(),
+            show_continuous_doppler_modal: false,
+            continuous_doppler_view: crate::views::continuous_doppler_view::ContinuousDopplerView::new(),
+            show_spatial_room_modal: false,
+            spatial_room_view: crate::views::spatial_room_view::SpatialRoomView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2057,6 +2065,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_binaural_brir_hud = false;
             self.open_binaural_brir_hud();
         }
+        if self.inspector_state.requested_open_continuous_doppler_hud || self.device_rack_state.requested_open_continuous_doppler_hud {
+            self.inspector_state.requested_open_continuous_doppler_hud = false;
+            self.device_rack_state.requested_open_continuous_doppler_hud = false;
+            self.open_continuous_doppler_hud();
+        }
+        if self.inspector_state.requested_open_spatial_room_hud || self.device_rack_state.requested_open_spatial_room_hud {
+            self.inspector_state.requested_open_spatial_room_hud = false;
+            self.device_rack_state.requested_open_spatial_room_hud = false;
+            self.open_spatial_room_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2118,6 +2136,8 @@ impl AwardWinningGuiView {
         self.show_wfs_array_spatializer_modal_window(ui);
         self.show_binaural_panner_modal_window(ui);
         self.show_binaural_brir_modal_window(ui);
+        self.show_continuous_doppler_modal_window(ui);
+        self.show_spatial_room_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -13164,6 +13184,202 @@ impl AwardWinningGuiView {
 
     pub fn is_binaural_brir_hud_open(&self) -> bool {
         self.show_binaural_brir_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_continuous_doppler_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_continuous_doppler_modal {
+            return;
+        }
+
+        let mut is_open = self.show_continuous_doppler_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🚀 Continuous 3D Kinematic Spatializer & Doppler Shift Engine HUD")
+            .id(egui::Id::new("continuous_doppler_hud_modal"))
+            .open(&mut is_open)
+            .default_size([920.0, 600.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Continuous 3D Dynamic Spatializer & Fractional Delay Doppler Modulation HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.continuous_doppler_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_continuous_doppler_modal = is_open;
+        self.sync_continuous_doppler_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_continuous_doppler_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let px = self.continuous_doppler_view.pos_x;
+        let py = self.continuous_doppler_view.pos_y;
+        let pz = self.continuous_doppler_view.pos_z;
+        let speed = self.continuous_doppler_view.speed_of_sound_mps;
+        let air = self.continuous_doppler_view.air_absorption_coeff;
+
+        self.device_rack_state.node_param_values.insert("pos_x".to_string(), px);
+        self.device_rack_state.node_param_values.insert("pos_y".to_string(), py);
+        self.device_rack_state.node_param_values.insert("pos_z".to_string(), pz);
+        self.device_rack_state.node_param_values.insert("speed_of_sound".to_string(), speed);
+        self.device_rack_state.node_param_values.insert("air_absorption".to_string(), air);
+
+        self.inspector_state.node_param_values.insert("pos_x".to_string(), px);
+        self.inspector_state.node_param_values.insert("pos_y".to_string(), py);
+        self.inspector_state.node_param_values.insert("pos_z".to_string(), pz);
+        self.inspector_state.node_param_values.insert("speed_of_sound".to_string(), speed);
+        self.inspector_state.node_param_values.insert("air_absorption".to_string(), air);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_x = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_y = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_z = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_c = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_air = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+
+            if bus.get(pid_x).is_some() { bus.set(pid_x, px); }
+            if bus.get(pid_y).is_some() { bus.set(pid_y, py); }
+            if bus.get(pid_z).is_some() { bus.set(pid_z, pz); }
+            if bus.get(pid_c).is_some() { bus.set(pid_c, speed); }
+            if bus.get(pid_air).is_some() { bus.set(pid_air, air); }
+        }
+    }
+
+    pub fn open_continuous_doppler_hud(&mut self) {
+        self.show_continuous_doppler_modal = true;
+    }
+
+    pub fn close_continuous_doppler_hud(&mut self) {
+        self.show_continuous_doppler_modal = false;
+    }
+
+    pub fn is_continuous_doppler_hud_open(&self) -> bool {
+        self.show_continuous_doppler_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_spatial_room_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_spatial_room_modal {
+            return;
+        }
+
+        let mut is_open = self.show_spatial_room_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🏛️ 3D Shoebox Room Acoustics & Image-Source Reverb HUD")
+            .id(egui::Id::new("spatial_room_hud_modal"))
+            .open(&mut is_open)
+            .default_size([920.0, 600.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("3D Shoebox Acoustic Boundary Reflections & 4-Channel FDN Diffuse Reverb HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.spatial_room_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_spatial_room_modal = is_open;
+        self.sync_spatial_room_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_spatial_room_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let rw = self.spatial_room_view.room_width_m;
+        let rd = self.spatial_room_view.room_depth_m;
+        let rh = self.spatial_room_view.room_height_m;
+        let sx = self.spatial_room_view.source_pos.0;
+        let sy = self.spatial_room_view.source_pos.1;
+        let sz = self.spatial_room_view.source_pos.2;
+        let abs = self.spatial_room_view.active_absorption();
+
+        self.device_rack_state.node_param_values.insert("room_width".to_string(), rw);
+        self.device_rack_state.node_param_values.insert("room_depth".to_string(), rd);
+        self.device_rack_state.node_param_values.insert("room_height".to_string(), rh);
+        self.device_rack_state.node_param_values.insert("source_x".to_string(), sx);
+        self.device_rack_state.node_param_values.insert("source_y".to_string(), sy);
+        self.device_rack_state.node_param_values.insert("source_z".to_string(), sz);
+        self.device_rack_state.node_param_values.insert("wall_absorption".to_string(), abs);
+
+        self.inspector_state.node_param_values.insert("room_width".to_string(), rw);
+        self.inspector_state.node_param_values.insert("room_depth".to_string(), rd);
+        self.inspector_state.node_param_values.insert("room_height".to_string(), rh);
+        self.inspector_state.node_param_values.insert("source_x".to_string(), sx);
+        self.inspector_state.node_param_values.insert("source_y".to_string(), sy);
+        self.inspector_state.node_param_values.insert("source_z".to_string(), sz);
+        self.inspector_state.node_param_values.insert("wall_absorption".to_string(), abs);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_rw = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_rd = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_rh = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_sx = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_sy = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_sz = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+            let pid_abs = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 6);
+
+            if bus.get(pid_rw).is_some() { bus.set(pid_rw, rw); }
+            if bus.get(pid_rd).is_some() { bus.set(pid_rd, rd); }
+            if bus.get(pid_rh).is_some() { bus.set(pid_rh, rh); }
+            if bus.get(pid_sx).is_some() { bus.set(pid_sx, sx); }
+            if bus.get(pid_sy).is_some() { bus.set(pid_sy, sy); }
+            if bus.get(pid_sz).is_some() { bus.set(pid_sz, sz); }
+            if bus.get(pid_abs).is_some() { bus.set(pid_abs, abs); }
+        }
+    }
+
+    pub fn open_spatial_room_hud(&mut self) {
+        self.show_spatial_room_modal = true;
+    }
+
+    pub fn close_spatial_room_hud(&mut self) {
+        self.show_spatial_room_modal = false;
+    }
+
+    pub fn is_spatial_room_hud_open(&self) -> bool {
+        self.show_spatial_room_modal
     }
 
 
