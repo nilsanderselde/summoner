@@ -713,6 +713,18 @@ impl CommandPalette {
                 action_id: "open_mpegh_spatializer_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open 3D Spatial Trajectory Polar Canvas & Granular Cloud HUD".into(),
+                category: "Spatial".into(),
+                action_id: "open_spatial_trajectory_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open 3D Ambisonic Trajectory Radar & Surround Sound Panner HUD".into(),
+                category: "Spatial".into(),
+                action_id: "open_ambisonic_radar_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

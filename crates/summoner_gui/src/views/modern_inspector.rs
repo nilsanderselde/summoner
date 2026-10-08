@@ -170,6 +170,10 @@ pub struct ModernInspectorState {
     pub requested_open_hoa4_spatializer_hud: bool,
     #[serde(default)]
     pub requested_open_mpegh_spatializer_hud: bool,
+    #[serde(default)]
+    pub requested_open_spatial_trajectory_hud: bool,
+    #[serde(default)]
+    pub requested_open_ambisonic_radar_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -261,6 +265,8 @@ impl Default for ModernInspectorState {
             requested_open_nhk222_immersion_hud: false,
             requested_open_hoa4_spatializer_hud: false,
             requested_open_mpegh_spatializer_hud: false,
+            requested_open_spatial_trajectory_hud: false,
+            requested_open_ambisonic_radar_hud: false,
         }
     }
 }
@@ -1405,6 +1411,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open Broadcast Mastering Immersive MPEG-H 3D Spatial Audio & Personalized HRTF Profile HUD").clicked() {
                     state.requested_open_mpegh_spatializer_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("SpatialTrajectory") || active_kind == "SpatialTrajectoryView" || active_kind.contains("TrajectorySpline") || active_kind == "SpatialTrajectoryNode" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🚀 Open 3D Spatial Trajectory & Granular HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 229, 255)))
+                        .fill(Color32::from_rgb(10, 28, 48))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 229, 255)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open 3D Spatial Trajectory Polar Canvas & Granular Grain Cloud Density HUD").clicked() {
+                    state.requested_open_spatial_trajectory_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("AmbisonicRadar") || active_kind == "AmbisonicRadarView" || active_kind.contains("AmbisonicPanner") || active_kind == "AmbisonicRadarNode" || active_kind.contains("SurroundPanner") {
+                if ui.add(
+                    egui::Button::new(RichText::new("📡 Open 3D Ambisonic Trajectory Radar HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 255, 180)))
+                        .fill(Color32::from_rgb(10, 38, 30))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 255, 180)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open 3D Ambisonic Trajectory Radar & Multi-Channel Surround Sound Panner HUD").clicked() {
+                    state.requested_open_ambisonic_radar_hud = true;
                 }
                 ui.add_space(4.0);
             }

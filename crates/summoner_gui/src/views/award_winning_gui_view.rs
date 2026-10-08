@@ -776,6 +776,10 @@ pub struct AwardWinningGuiView {
     pub hoa4_spatializer_view: crate::views::hoa4_spatializer_view::Hoa4SpatializerView,
     pub show_mpegh_spatializer_modal: bool,
     pub mpegh_spatializer_view: crate::views::mpegh_spatializer_view::MpeghSpatializerView,
+    pub show_spatial_trajectory_modal: bool,
+    pub spatial_trajectory_view: crate::views::spatial_trajectory_view::SpatialTrajectoryView,
+    pub show_ambisonic_radar_modal: bool,
+    pub ambisonic_radar_view: crate::views::ambisonic_radar_view::AmbisonicRadarView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1168,6 +1172,10 @@ impl AwardWinningGuiView {
             hoa4_spatializer_view: crate::views::hoa4_spatializer_view::Hoa4SpatializerView::new(),
             show_mpegh_spatializer_modal: false,
             mpegh_spatializer_view: crate::views::mpegh_spatializer_view::MpeghSpatializerView::new(),
+            show_spatial_trajectory_modal: false,
+            spatial_trajectory_view: crate::views::spatial_trajectory_view::SpatialTrajectoryView::new(),
+            show_ambisonic_radar_modal: false,
+            ambisonic_radar_view: crate::views::ambisonic_radar_view::AmbisonicRadarView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2147,6 +2155,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_mpegh_spatializer_hud = false;
             self.open_mpegh_spatializer_hud();
         }
+        if self.inspector_state.requested_open_spatial_trajectory_hud || self.device_rack_state.requested_open_spatial_trajectory_hud {
+            self.inspector_state.requested_open_spatial_trajectory_hud = false;
+            self.device_rack_state.requested_open_spatial_trajectory_hud = false;
+            self.open_spatial_trajectory_hud();
+        }
+        if self.inspector_state.requested_open_ambisonic_radar_hud || self.device_rack_state.requested_open_ambisonic_radar_hud {
+            self.inspector_state.requested_open_ambisonic_radar_hud = false;
+            self.device_rack_state.requested_open_ambisonic_radar_hud = false;
+            self.open_ambisonic_radar_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2218,6 +2236,8 @@ impl AwardWinningGuiView {
         self.show_nhk222_immersion_modal_window(ui);
         self.show_hoa4_spatializer_modal_window(ui);
         self.show_mpegh_spatializer_modal_window(ui);
+        self.show_spatial_trajectory_modal_window(ui);
+        self.show_ambisonic_radar_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -14264,6 +14284,207 @@ impl AwardWinningGuiView {
 
     pub fn is_mpegh_spatializer_hud_open(&self) -> bool {
         self.show_mpegh_spatializer_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_spatial_trajectory_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_spatial_trajectory_modal {
+            return;
+        }
+
+        let mut is_open = self.show_spatial_trajectory_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🚀 3D Spatial Trajectory Polar Canvas & Granular Cloud Density HUD")
+            .id(egui::Id::new("spatial_trajectory_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(820.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("3D Spatial Orbit Polar Canvas & Granular Grain Cloud Density Visualizer (Milestones 12, 33 & 35)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.spatial_trajectory_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_spatial_trajectory_modal = is_open;
+        self.sync_spatial_trajectory_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_spatial_trajectory_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let az_deg = self.spatial_trajectory_view.source_azimuth_rad.to_degrees();
+        let el_deg = self.spatial_trajectory_view.source_elevation_rad.to_degrees();
+        let dist = self.spatial_trajectory_view.source_distance_m;
+        let spread = self.spatial_trajectory_view.spread;
+        let density = self.spatial_trajectory_view.grain_density;
+        let duration = self.spatial_trajectory_view.grain_duration_ms;
+        let spray = self.spatial_trajectory_view.grain_spray;
+
+        self.device_rack_state.node_param_values.insert("azimuth_deg".to_string(), az_deg);
+        self.device_rack_state.node_param_values.insert("elevation_deg".to_string(), el_deg);
+        self.device_rack_state.node_param_values.insert("distance_m".to_string(), dist);
+        self.device_rack_state.node_param_values.insert("spread".to_string(), spread);
+        self.device_rack_state.node_param_values.insert("grain_density".to_string(), density);
+        self.device_rack_state.node_param_values.insert("grain_duration_ms".to_string(), duration);
+        self.device_rack_state.node_param_values.insert("grain_spray".to_string(), spray);
+
+        self.inspector_state.node_param_values.insert("azimuth_deg".to_string(), az_deg);
+        self.inspector_state.node_param_values.insert("elevation_deg".to_string(), el_deg);
+        self.inspector_state.node_param_values.insert("distance_m".to_string(), dist);
+        self.inspector_state.node_param_values.insert("spread".to_string(), spread);
+        self.inspector_state.node_param_values.insert("grain_density".to_string(), density);
+        self.inspector_state.node_param_values.insert("grain_duration_ms".to_string(), duration);
+        self.inspector_state.node_param_values.insert("grain_spray".to_string(), spray);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_az = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_el = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_dist = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_sprd = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_dens = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_dur = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+            let pid_spry = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 6);
+
+            if bus.get(pid_az).is_some() { bus.set(pid_az, az_deg); }
+            if bus.get(pid_el).is_some() { bus.set(pid_el, el_deg); }
+            if bus.get(pid_dist).is_some() { bus.set(pid_dist, dist); }
+            if bus.get(pid_sprd).is_some() { bus.set(pid_sprd, spread); }
+            if bus.get(pid_dens).is_some() { bus.set(pid_dens, density); }
+            if bus.get(pid_dur).is_some() { bus.set(pid_dur, duration); }
+            if bus.get(pid_spry).is_some() { bus.set(pid_spry, spray); }
+        }
+    }
+
+    pub fn open_spatial_trajectory_hud(&mut self) {
+        self.show_spatial_trajectory_modal = true;
+    }
+
+    pub fn close_spatial_trajectory_hud(&mut self) {
+        self.show_spatial_trajectory_modal = false;
+    }
+
+    pub fn is_spatial_trajectory_hud_open(&self) -> bool {
+        self.show_spatial_trajectory_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_ambisonic_radar_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_ambisonic_radar_modal {
+            return;
+        }
+
+        let mut is_open = self.show_ambisonic_radar_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("📡 3D Ambisonic Trajectory Radar & Multi-Channel Surround Panner HUD")
+            .id(egui::Id::new("ambisonic_radar_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(820.0, 580.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Multi-Channel Surround Panner (1st/2nd/3rd HOA, 5.1, Atmos 7.1.4, 9.1.6) with 3D Sound Object Radar (Milestones 33 & 35)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.ambisonic_radar_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_ambisonic_radar_modal = is_open;
+        self.sync_ambisonic_radar_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_ambisonic_radar_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let (az, el, dist, sprd, gain) = if let Some(src) = self.ambisonic_radar_view.selected_source_idx.and_then(|idx| self.ambisonic_radar_view.sources.get(idx)) {
+            (src.azimuth_deg, src.elevation_deg, src.distance_m, src.spread_pct, src.gain_db)
+        } else {
+            (0.0, 0.0, 3.0, 20.0, 0.0)
+        };
+        let elev_off = self.ambisonic_radar_view.master_elevation_offset_deg;
+
+        self.device_rack_state.node_param_values.insert("azimuth_deg".to_string(), az);
+        self.device_rack_state.node_param_values.insert("elevation_deg".to_string(), el);
+        self.device_rack_state.node_param_values.insert("distance_m".to_string(), dist);
+        self.device_rack_state.node_param_values.insert("spread_pct".to_string(), sprd);
+        self.device_rack_state.node_param_values.insert("gain_db".to_string(), gain);
+        self.device_rack_state.node_param_values.insert("master_elevation_offset_deg".to_string(), elev_off);
+
+        self.inspector_state.node_param_values.insert("azimuth_deg".to_string(), az);
+        self.inspector_state.node_param_values.insert("elevation_deg".to_string(), el);
+        self.inspector_state.node_param_values.insert("distance_m".to_string(), dist);
+        self.inspector_state.node_param_values.insert("spread_pct".to_string(), sprd);
+        self.inspector_state.node_param_values.insert("gain_db".to_string(), gain);
+        self.inspector_state.node_param_values.insert("master_elevation_offset_deg".to_string(), elev_off);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_az = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_el = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_dist = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_sprd = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_gain = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_elev = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+
+            if bus.get(pid_az).is_some() { bus.set(pid_az, az); }
+            if bus.get(pid_el).is_some() { bus.set(pid_el, el); }
+            if bus.get(pid_dist).is_some() { bus.set(pid_dist, dist); }
+            if bus.get(pid_sprd).is_some() { bus.set(pid_sprd, sprd); }
+            if bus.get(pid_gain).is_some() { bus.set(pid_gain, gain); }
+            if bus.get(pid_elev).is_some() { bus.set(pid_elev, elev_off); }
+        }
+    }
+
+    pub fn open_ambisonic_radar_hud(&mut self) {
+        self.show_ambisonic_radar_modal = true;
+    }
+
+    pub fn close_ambisonic_radar_hud(&mut self) {
+        self.show_ambisonic_radar_modal = false;
+    }
+
+    pub fn is_ambisonic_radar_hud_open(&self) -> bool {
+        self.show_ambisonic_radar_modal
     }
 
 

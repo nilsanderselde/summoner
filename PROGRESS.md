@@ -1,6 +1,6 @@
 # Summoner DAW — Product Readiness & Shippability Tracker
 > **Current Shippability Score:** 10.0 / 10  
-> **Status:** Production Ready Release Candidate (Sprint Review Turn #83 / Sprint Turn #9)  
+> **Status:** Production Ready Release Candidate (Turn #84 / Sprint Turn #10)  
 > **Authoritative Root:** `PROGRESS.md`  
 > **License:** AGPLv3
 
@@ -2233,4 +2233,36 @@ Product Management has conducted a comprehensive readiness audit:
   - Registered `tier147_turn83_tests` in `crates/summoner_gui/src/lib.rs`.
   - Feature tests: 8 passed in 0.08s (`cargo test -p summoner_gui --features gui -- tier147_turn83`).
   - Pure unit tests: 329 passed in 0.22s (`cargo test -p summoner_gui --lib`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
+
+### Turn #84 (Sprint Turn #10) — 3D Spatial Trajectory Polar Canvas & Granular Grain Cloud Density HUD and 3D Ambisonic Trajectory Radar & Surround Sound Panner HUD Convergence (Milestones 33 & 35)
+- [x] Immersive 3D Spatial Trajectory & Ambisonic Radar HUDs Integration:
+  - Integrated `SpatialTrajectoryView` (3D Spatial Orbit Polar Canvas & Granular Particle Cloud Density Visualizer: 5 Trajectory Generators [Orbit, Lissajous3D, Spiral, Flyby, WaypointSpline], Granular particle spray dispersion with Hann/Hamming/Blackman window functions, Azimuth $[-180.0..+180.0^\circ]$, Elevation $[-90.0..+90.0^\circ]$, Distance $[0.5..10.0\text{m}]$, Spread $[0..100\%]$, Grain density $[4..32\text{ grains}]$, Duration $[10..500\text{ms}]$, Spray $[0..100\%]$, Elevation Profile Dome Arc, and Touch-Draggable 3D Source Puck with $\ge 44 \times 44\text{pt}$ bounding target) and `AmbisonicRadarView` (Multi-Channel Surround Sound Panner & 3D Ambisonic Trajectory Radar HUD: 6 Speaker Formats [1st-Order FOA 4-ch, 2nd-Order HOA 9-ch, 3rd-Order HOA 16-ch, 5.1 Surround 6-ch, 7.1.4 Dolby Atmos 12-ch, 9.1.6 Immersive 3D 16-ch], 5 Trajectory Motion Shapes [Static, OrbitCircle, LissajousFigure8, InwardSpiral, PingPong], Binaural HRTF preview toggle, Master elevation offset $[-90.0..+90.0^\circ]$, Air absorption and Doppler toggles, and Touch-Draggable Sound Object Pucks with $\ge 44 \times 44\text{pt}$ bounding targets) into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/spatial_trajectory_view.rs` & `ambisonic_radar_view.rs`):
+  - In `SpatialTrajectoryView`: verified `show(&mut self, ui: &mut egui::Ui)` delegating to `show_ui`, `show_rect(ui, rect)`, interactive touch/mouse drag event handling, and `render_ascii_snapshot_str() -> String`.
+  - In `AmbisonicRadarView`: added `render_ascii_snapshot_str() -> String` and verified `show(&mut self, ui: &mut egui::Ui)` with responsive styling and touch targets.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_spatial_trajectory_modal: bool`, `spatial_trajectory_view: SpatialTrajectoryView`, `show_ambisonic_radar_modal: bool`, and `ambisonic_radar_view: AmbisonicRadarView`.
+  - Added dedicated modal windows `show_spatial_trajectory_modal_window` and `show_ambisonic_radar_modal_window` with responsive styling, WCAG AAA contrast, and $\ge 44 \times 44\text{pt}$ touch bounds.
+  - Added public lifecycle methods: `open_spatial_trajectory_hud()`, `close_spatial_trajectory_hud()`, `is_spatial_trajectory_hud_open()`, `open_ambisonic_radar_hud()`, `close_ambisonic_radar_hud()`, `is_ambisonic_radar_hud_open()`.
+  - Real-time parameter sync bridges (`sync_spatial_trajectory_hud_state` and `sync_ambisonic_radar_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_spatial_trajectory_hud: bool` and `requested_open_ambisonic_radar_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🚀 Open 3D Spatial Trajectory & Granular HUD]` and `[📡 Open 3D Ambisonic Trajectory Radar HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header `[🚀 Traj HUD]` / `[📡 Ambisonic HUD]` in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Spatial Trajectory: Polar distance rings, trajectory orbit ribbon, simulated granular cloud particles, draggable puck updating azimuth and distance, live readout, and lock-free `ParamBus` slot dispatch.
+    * Ambisonic Radar: Polar outer ring, crosshairs, 8-speaker layout dots, center listener puck, draggable sound puck updating azimuth and distance, live readout, and lock-free `ParamBus` slot dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_spatial_trajectory_hud` and `open_ambisonic_radar_hud` under `"Spatial"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_spatial_trajectory_hud()` and `open_ambisonic_radar_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier148_turn84_tests.rs`:
+    * Pure tests: view initialization, trajectory kinematics, coordinate normalizations and polar/canvas conversions, hit testing ($\ge 44 \times 44\text{pt}$ bounding targets), channel isolation across tracks/slots, deterministic ASCII snapshots.
+    * GUI tests: modal window lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch without allocations, trigger button propagation from rack and inspector, command palette action verification.
+  - Registered `tier148_turn84_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Feature tests: 8 passed in 0.06s (`cargo test -p summoner_gui --features gui -- tier148_turn84`).
+  - Pure unit tests: 329 passed in 0.23s (`cargo test -p summoner_gui --lib`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).

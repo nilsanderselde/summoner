@@ -277,6 +277,11 @@ impl AmbisonicRadarView {
         }
         lines.join("\n")
     }
+
+    /// Render deterministic ASCII snapshot string.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        self.render_ascii(21)
+    }
 }
 
 #[cfg(feature = "gui")]

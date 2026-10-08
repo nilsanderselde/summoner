@@ -185,6 +185,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_hoa4_spatializer_hud: bool,
     #[serde(default)]
     pub requested_open_mpegh_spatializer_hud: bool,
+    #[serde(default)]
+    pub requested_open_spatial_trajectory_hud: bool,
+    #[serde(default)]
+    pub requested_open_ambisonic_radar_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -266,6 +270,8 @@ impl Default for ModernDeviceRackState {
             requested_open_nhk222_immersion_hud: false,
             requested_open_hoa4_spatializer_hud: false,
             requested_open_mpegh_spatializer_hud: false,
+            requested_open_spatial_trajectory_hud: false,
+            requested_open_ambisonic_radar_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -970,6 +976,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_nhk222_immersion = cur_selection.contains("Nhk222Immersion") || cur_selection.contains("NHK222Immersion") || cur_selection == "Nhk222ImmersionView" || cur_selection == "Nhk222ImmersionNode";
                     let is_hoa4_spatializer = cur_selection.contains("Hoa4") || cur_selection.contains("HOA4") || cur_selection == "Hoa4SpatializerView" || cur_selection == "Hoa4Spatializer" || cur_selection.contains("Ambisonics4thOrder") || cur_selection.contains("Hoa4Sphere");
                     let is_mpegh_spatializer = cur_selection.contains("MpeghSpatializer") || cur_selection.contains("MPEGHSpatializer") || cur_selection == "MpeghSpatializerView" || cur_selection == "MpeghSpatializerNode" || cur_selection.contains("MpeghHrtf") || cur_selection == "MpeghSpatialAudio";
+                    let is_spatial_trajectory = cur_selection.contains("SpatialTrajectory") || cur_selection == "SpatialTrajectoryView" || cur_selection.contains("TrajectorySpline") || cur_selection == "SpatialTrajectoryNode";
+                    let is_ambisonic_radar = cur_selection.contains("AmbisonicRadar") || cur_selection == "AmbisonicRadarView" || cur_selection.contains("AmbisonicPanner") || cur_selection == "AmbisonicRadarNode" || cur_selection.contains("SurroundPanner");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1238,6 +1246,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("📡 MPEG-H HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 255, 180))).on_hover_text("Open Broadcast Mastering MPEG-H 3D Spatial Audio & Personalized HRTF Profile HUD").clicked()
                     {
                         state.requested_open_mpegh_spatializer_hud = true;
+                    } else if is_spatial_trajectory
+                        && ui.button(RichText::new("🚀 Traj HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open 3D Spatial Trajectory Polar Canvas & Granular Grain Cloud Density HUD").clicked()
+                    {
+                        state.requested_open_spatial_trajectory_hud = true;
+                    } else if is_ambisonic_radar
+                        && ui.button(RichText::new("📡 Ambisonic HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 255, 180))).on_hover_text("Open 3D Ambisonic Trajectory Radar & Multi-Channel Surround Sound Panner HUD").clicked()
+                    {
+                        state.requested_open_ambisonic_radar_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2070,6 +2086,8 @@ fn show_pro_parameter_drawer(
                     let is_nhk222_immersion = dev_kind.contains("Nhk222Immersion") || dev_kind.contains("NHK222Immersion") || dev_kind == "Nhk222ImmersionView" || dev_kind == "Nhk222ImmersionNode";
                     let is_hoa4_spatializer = dev_kind.contains("Hoa4") || dev_kind.contains("HOA4") || dev_kind == "Hoa4SpatializerView" || dev_kind == "Hoa4Spatializer" || dev_kind.contains("Ambisonics4thOrder") || dev_kind.contains("Hoa4Sphere");
                     let is_mpegh_spatializer = dev_kind.contains("MpeghSpatializer") || dev_kind.contains("MPEGHSpatializer") || dev_kind == "MpeghSpatializerView" || dev_kind == "MpeghSpatializerNode" || dev_kind.contains("MpeghHrtf") || dev_kind == "MpeghSpatialAudio";
+                    let is_spatial_trajectory = dev_kind.contains("SpatialTrajectory") || dev_kind == "SpatialTrajectoryView" || dev_kind.contains("TrajectorySpline") || dev_kind == "SpatialTrajectoryNode";
+                    let is_ambisonic_radar = dev_kind.contains("AmbisonicRadar") || dev_kind == "AmbisonicRadarView" || dev_kind.contains("AmbisonicPanner") || dev_kind == "AmbisonicRadarNode" || dev_kind.contains("SurroundPanner");
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -7205,6 +7223,186 @@ fn show_pro_parameter_drawer(
                             let _ = mpg_resp.on_hover_text(format!(
                                 "MPEG-H 3D Spatial Audio & Personalized HRTF Profile HUD\nAzimuth: {:.0}° | Elevation: {:.0}° | Distance: {:.1}m\nITD: {:.0} μs | ILD: {:.1} dB | Loudness: {:.1} LUFS\n[Drag: Azimuth / Distance Object Spatialization]",
                                 az, el, dist, itd, ild, lufs
+                            ));
+                        }
+                    } else if is_spatial_trajectory {
+                        // 3D Spatial Trajectory & Granular Cloud Density Mini Visualizer
+                        let (spat_resp, spat_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let spat_rect = spat_resp.rect;
+                        spat_painter.rect_filled(spat_rect, 2.0, Color32::from_rgb(8, 16, 26));
+
+                        let mut az = state.node_param_values.get("azimuth_deg").copied().unwrap_or(0.0);
+                        let el = state.node_param_values.get("elevation_deg").copied().unwrap_or(0.0);
+                        let mut dist = state.node_param_values.get("distance_m").copied().unwrap_or(4.0);
+                        let spread = state.node_param_values.get("spread").copied().unwrap_or(0.25);
+                        let density = state.node_param_values.get("grain_density").copied().unwrap_or(45.0);
+                        let duration = state.node_param_values.get("grain_duration_ms").copied().unwrap_or(60.0);
+
+                        let scx = spat_rect.left() + 34.0;
+                        let scy = spat_rect.center().y;
+                        let max_r = 24.0_f32;
+
+                        if spat_resp.dragged() {
+                            if let Some(pos) = spat_resp.interact_pointer_pos() {
+                                let dx = pos.x - scx;
+                                let dy = scy - pos.y;
+                                let a = (dx.atan2(dy).to_degrees()).clamp(-180.0, 180.0);
+                                let d = (((dx * dx + dy * dy).sqrt() / max_r).clamp(0.0, 1.0) * 10.0).max(0.5);
+                                az = a;
+                                dist = d;
+                                state.node_param_values.insert("azimuth_deg".to_string(), az);
+                                state.node_param_values.insert("distance_m".to_string(), dist);
+                                if let Some(bus) = param_bus {
+                                    let pid_az = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_dist = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 2);
+                                    bus.set(pid_az, az);
+                                    bus.set(pid_dist, dist);
+                                }
+                            }
+                        }
+
+                        // Polar rings
+                        for r_step in [0.33, 0.66, 1.0] {
+                            spat_painter.circle_stroke(
+                                egui::pos2(scx, scy),
+                                max_r * r_step,
+                                Stroke::new(0.8_f32, Color32::from_rgba_unmultiplied(40, 55, 80, 140)),
+                            );
+                        }
+                        // Center listener
+                        spat_painter.circle_filled(egui::pos2(scx, scy), 2.5, Color32::from_rgb(0, 229, 255));
+
+                        // Trajectory orbit preview ribbon
+                        for step in 0..12 {
+                            let ang = (step as f32 / 12.0) * std::f32::consts::TAU;
+                            let rx = scx + ang.sin() * max_r * 0.7;
+                            let ry = scy - ang.cos() * max_r * 0.7;
+                            spat_painter.circle_filled(egui::pos2(rx, ry), 0.8, Color32::from_rgb(0, 229, 255));
+                        }
+
+                        // Simulated granular particle dots around puck
+                        for i in 0..8 {
+                            let t = i as f32 / 8.0;
+                            let jx = (t * 19.3).sin() * 5.0;
+                            let jy = (t * 31.7).cos() * 5.0;
+                            let norm_r = (dist / 10.0).clamp(0.05, 1.0) * max_r;
+                            let px = scx + az.to_radians().sin() * norm_r + jx;
+                            let py = scy - az.to_radians().cos() * norm_r + jy;
+                            spat_painter.circle_filled(egui::pos2(px, py), 1.2, Color32::from_rgba_unmultiplied(0, 255, 180, 180));
+                        }
+
+                        // Source Puck
+                        let norm_r = (dist / 10.0).clamp(0.05, 1.0) * max_r;
+                        let spx = scx + az.to_radians().sin() * norm_r;
+                        let spy = scy - az.to_radians().cos() * norm_r;
+                        spat_painter.circle_filled(egui::pos2(spx, spy), 3.5, Color32::from_rgb(255, 215, 0));
+
+                        // Readout
+                        spat_painter.text(
+                            egui::pos2(spat_rect.right() - 4.0, spat_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("TRAJECTORY 3D\nDist: {:.1}m | Az: {:.0}°\nEl: {:.0}° | Sprd: {:.0}%\nGrains: {:.0} | Dur: {:.0}ms", dist, az, el, spread * 100.0, density, duration),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+
+                        if spat_resp.hovered() {
+                            let _ = spat_resp.on_hover_text(format!(
+                                "3D Spatial Trajectory & Granular Cloud HUD\nAzimuth: {:.0}° | Elevation: {:.0}° | Distance: {:.1}m\nSpread: {:.0}% | Grain Density: {:.0} | Duration: {:.0}ms\n[Drag: Azimuth / Distance Position Puck]",
+                                az, el, dist, spread * 100.0, density, duration
+                            ));
+                        }
+                    } else if is_ambisonic_radar {
+                        // 3D Ambisonic Trajectory Radar Mini Visualizer
+                        let (rad_resp, rad_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let rad_rect = rad_resp.rect;
+                        rad_painter.rect_filled(rad_rect, 2.0, Color32::from_rgb(8, 24, 20));
+
+                        let mut az = state.node_param_values.get("azimuth_deg").copied().unwrap_or(-30.0);
+                        let el = state.node_param_values.get("elevation_deg").copied().unwrap_or(15.0);
+                        let mut dist = state.node_param_values.get("distance_m").copied().unwrap_or(2.5);
+                        let sprd = state.node_param_values.get("spread_pct").copied().unwrap_or(20.0);
+                        let gain = state.node_param_values.get("gain_db").copied().unwrap_or(0.0);
+                        let elev_off = state.node_param_values.get("master_elevation_offset_deg").copied().unwrap_or(0.0);
+
+                        let rcx = rad_rect.left() + 34.0;
+                        let rcy = rad_rect.center().y;
+                        let max_r = 24.0_f32;
+
+                        if rad_resp.dragged() {
+                            if let Some(pos) = rad_resp.interact_pointer_pos() {
+                                let dx = pos.x - rcx;
+                                let dy = rcy - pos.y;
+                                let a = (dx.atan2(dy).to_degrees()).clamp(-180.0, 180.0);
+                                let d = (((dx * dx + dy * dy).sqrt() / max_r).clamp(0.0, 1.0) * 5.0).max(0.1);
+                                az = a;
+                                dist = d;
+                                state.node_param_values.insert("azimuth_deg".to_string(), az);
+                                state.node_param_values.insert("distance_m".to_string(), dist);
+                                if let Some(bus) = param_bus {
+                                    let pid_az = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_dist = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 2);
+                                    bus.set(pid_az, az);
+                                    bus.set(pid_dist, dist);
+                                }
+                            }
+                        }
+
+                        // Radar outer ring & crosshairs
+                        rad_painter.circle_stroke(
+                            egui::pos2(rcx, rcy),
+                            max_r,
+                            Stroke::new(1.0_f32, Color32::from_rgb(0, 255, 180)),
+                        );
+                        rad_painter.circle_stroke(
+                            egui::pos2(rcx, rcy),
+                            max_r * 0.5,
+                            Stroke::new(0.6_f32, Color32::from_rgba_unmultiplied(0, 255, 180, 100)),
+                        );
+                        rad_painter.line_segment(
+                            [egui::pos2(rcx - max_r, rcy), egui::pos2(rcx + max_r, rcy)],
+                            Stroke::new(0.6_f32, Color32::from_rgba_unmultiplied(0, 255, 180, 70)),
+                        );
+                        rad_painter.line_segment(
+                            [egui::pos2(rcx, rcy - max_r), egui::pos2(rcx, rcy + max_r)],
+                            Stroke::new(0.6_f32, Color32::from_rgba_unmultiplied(0, 255, 180, 70)),
+                        );
+
+                        // Speaker perimeter markers (8 speakers around radar)
+                        for spk in 0..8 {
+                            let spk_ang = (spk as f32 * 45.0).to_radians();
+                            let sx = rcx + spk_ang.sin() * max_r;
+                            let sy = rcy - spk_ang.cos() * max_r;
+                            rad_painter.circle_filled(egui::pos2(sx, sy), 1.2, Color32::from_rgb(140, 165, 195));
+                        }
+
+                        // Center listener
+                        rad_painter.circle_filled(egui::pos2(rcx, rcy), 2.5, Color32::from_rgb(0, 255, 180));
+
+                        // Sound Object Puck
+                        let norm_r = (dist / 5.0).clamp(0.05, 1.0) * max_r;
+                        let rpx = rcx + az.to_radians().sin() * norm_r;
+                        let rpy = rcy - az.to_radians().cos() * norm_r;
+                        rad_painter.circle_filled(egui::pos2(rpx, rpy), 3.2, Color32::from_rgb(255, 215, 0));
+                        rad_painter.circle_stroke(
+                            egui::pos2(rpx, rpy),
+                            5.0,
+                            Stroke::new(0.8_f32, Color32::from_rgba_unmultiplied(255, 215, 0, 120)),
+                        );
+
+                        // Readout
+                        rad_painter.text(
+                            egui::pos2(rad_rect.right() - 4.0, rad_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("AMBISONIC RADAR\nDist: {:.1}m | Az: {:.0}°\nEl: {:.0}° | Sprd: {:.0}%\nGain: {:+.1}dB | Off: {:+.0}°", dist, az, el, sprd, gain, elev_off),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(0, 255, 180),
+                        );
+
+                        if rad_resp.hovered() {
+                            let _ = rad_resp.on_hover_text(format!(
+                                "3D Ambisonic Trajectory Radar HUD\nAzimuth: {:.0}° | Elevation: {:.0}° | Distance: {:.1}m\nSpread: {:.0}% | Gain: {:+.1}dB | Master Offset: {:+.0}°\n[Drag: Azimuth / Distance Object Puck]",
+                                az, el, dist, sprd, gain, elev_off
                             ));
                         }
                     } else {

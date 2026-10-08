@@ -362,7 +362,7 @@ impl SpatialTrajectoryView {
     }
 
     #[cfg(feature = "gui")]
-    pub fn show(&mut self, ui: &mut egui::Ui, rect: Rect) {
+    pub fn show_rect(&mut self, ui: &mut egui::Ui, rect: Rect) {
         let painter = ui.painter_at(egui::Rect::from_min_size(
             egui::pos2(rect.x, rect.y),
             egui::vec2(rect.width, rect.height),
@@ -546,8 +546,13 @@ impl SpatialTrajectoryView {
     }
 
     #[cfg(feature = "gui")]
+    pub fn show(&mut self, ui: &mut egui::Ui) {
+        self.show_ui(ui);
+    }
+
+    #[cfg(feature = "gui")]
     pub fn show_ui(&mut self, ui: &mut egui::Ui) {
-        let (rect_egui, _) = ui.allocate_exact_size(
+        let (rect_egui, resp) = ui.allocate_exact_size(
             egui::vec2(ui.available_width().max(400.0), 520.0),
             egui::Sense::click_and_drag(),
         );
@@ -557,7 +562,22 @@ impl SpatialTrajectoryView {
             rect_egui.width(),
             rect_egui.height(),
         );
-        self.show(ui, rect);
+
+        let polar_rect = Rect::new(rect.x + 20.0, rect.y + 52.0, 400.0, 274.0);
+        let center_x = polar_rect.x + polar_rect.width * 0.5;
+        let center_y = polar_rect.y + polar_rect.height * 0.5;
+        let max_rad_px = 115.0f32;
+
+        if resp.dragged() {
+            if let Some(pos) = resp.interact_pointer_pos() {
+                let (az, dist) = self.canvas_to_spherical((pos.x, pos.y), (center_x, center_y), max_rad_px);
+                self.source_azimuth_rad = az;
+                self.source_distance_m = dist;
+                self.refresh_particles();
+            }
+        }
+
+        self.show_rect(ui, rect);
     }
 
     pub fn render_ascii_snapshot_str(&self) -> String {
