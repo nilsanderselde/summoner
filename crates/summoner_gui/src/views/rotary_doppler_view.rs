@@ -171,8 +171,19 @@ impl RotaryDopplerView {
         lines
     }
 
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        self.render_ascii(40, 16).join("\n")
+    }
+
     #[cfg(feature = "gui")]
-    pub fn show(&mut self, ui: &mut egui::Ui, rect: Rect) {
+    pub fn show(&mut self, ui: &mut egui::Ui) {
+        let avail = ui.available_size();
+        let rect = Rect::new(0.0, 0.0, avail.x.max(780.0), avail.y.max(480.0));
+        self.show_rect(ui, rect);
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_rect(&mut self, ui: &mut egui::Ui, rect: Rect) {
         let painter = ui.painter_at(egui::Rect::from_min_size(
             egui::pos2(rect.x, rect.y),
             egui::vec2(rect.width, rect.height),

@@ -665,6 +665,18 @@ impl CommandPalette {
                 action_id: "open_spatial_room_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Stereo Rotary Speaker Doppler & Acoustic Cabinet HUD".into(),
+                category: "Acoustic".into(),
+                action_id: "open_rotary_doppler_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Acoustic Early Reflections Stochastic Raytracer HUD".into(),
+                category: "Spatial".into(),
+                action_id: "open_raytraced_reverb_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

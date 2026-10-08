@@ -2119,4 +2119,34 @@ Product Management has conducted a comprehensive readiness audit:
   - Pure unit tests: 329 passed in 0.24s (`cargo test -p summoner_gui --lib`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
 
-
+### Turn #80 (Turn #43 Deliverable / Sprint Turn #6 — Sprint Review) — Stereo Rotary Speaker Doppler Acceleration & Acoustic Early Reflections Raytracer HUDs Convergence (Milestones 33 & 35)
+- [x] Stereo Rotary Speaker Doppler Acceleration & Acoustic Early Reflections Raytracer Performance HUDs Integration:
+  - Integrated `RotaryDopplerView` (Stereo Rotary Speaker Horn/Drum Doppler Acceleration & Dual-Mic Distance Visualizer HUD: 4 Cabinet Models [Leslie 122 Vintage Tube, Leslie 147 Open Back, Leslie 760 Solid-State, Custom Twin Horn Spatial], 3 Speed States [Slow Chorale, Fast Tremolo, Brake Stop], Horn speed [0..800 RPM], Drum speed [0..500 RPM], Horn/Drum acoustic balance, Tube preamp drive [0..100%], Stereo mic angle [0..180°], Mic distance [0.1..2.0 m], Real-time Doppler frequency deviation cents [±25c] and AM modulation shimmer [±4.5 dB], and Touch-Draggable Mic Placement Puck with $\ge 44 \times 44\text{pt}$ bounding target) and `RaytracedReverbView` (Acoustic Early Reflections Stochastic Raytracer & Binaural Distance Attenuation HUD: 5 Wall Material Models [Polished Concrete $\alpha=0.02$, Hardwood Plank $\alpha=0.12$, Studio Acoustic Foam $\alpha=0.75$, Double-Glazed Glass $\alpha=0.05$, Heavy Velvet Drape $\alpha=0.60$], Room dimensions [Length $2..50\text{m}$, Width $2..50\text{m}$, Height $2..20\text{m}$], Atmospheric air damping absorption [0..100%], Stochastic / geometric acoustic raytracing [up to 4 reflection bounces], Sabine RT60 reverberation estimation, Direct line-of-sight vs. first/second-order boundary reflection paths, and Touch-Draggable Sound Source and Binaural Listener pucks with $\ge 44 \times 44\text{pt}$ bounding targets) into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Implementations & Upgrades (`crates/summoner_gui/src/views/rotary_doppler_view.rs` & `raytraced_reverb_view.rs`):
+  - In `RotaryDopplerView`: added `render_ascii_snapshot_str() -> String`, `show(&mut self, ui: &mut egui::Ui)` delegating to `show_rect`, keeping `show_rect(ui, rect)`.
+  - In `RaytracedReverbView`: added `render_ascii_snapshot_str() -> String` and `show(&mut self, ui: &mut egui::Ui)` delegating to `ui(ui)`.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_rotary_doppler_modal: bool`, `rotary_doppler_view: RotaryDopplerView`, `show_raytraced_reverb_modal: bool`, and `raytraced_reverb_view: RaytracedReverbView`.
+  - Added dedicated modal windows `show_rotary_doppler_modal_window` and `show_raytraced_reverb_modal_window` with responsive styling, WCAG AAA contrast, and $\ge 44 \times 44\text{pt}$ touch bounds.
+  - Added public lifecycle methods: `open_rotary_doppler_hud()`, `close_rotary_doppler_hud()`, `is_rotary_doppler_hud_open()`, `open_raytraced_reverb_hud()`, `close_raytraced_reverb_hud()`, `is_raytraced_reverb_hud_open()`.
+  - Real-time parameter sync bridges (`sync_rotary_doppler_hud_state` and `sync_raytraced_reverb_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_rotary_doppler_hud: bool` and `requested_open_raytraced_reverb_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🌪️ Open Stereo Rotary Doppler & Acoustic Visualizer HUD]` and `[⚡ Open Acoustic Early Reflections Raytracer HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header `[🌪️ Rotary HUD]` / `[⚡ Raytrace HUD]` in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Stereo Rotary Doppler: Concentric rotor trajectory orbits, rotating horn/drum indicators, draggable mic puck with angle & distance readout, live Doppler cents / AM dB readout, and live `ParamBus` slot dispatch.
+    * Raytraced Reverb: Room boundary rectangle, source and listener pucks, 4-bounce acoustic reflection rays with color-coded energy decay, Sabine RT60 readout, and live `ParamBus` slot dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_rotary_doppler_hud` (under `"Acoustic"`) and `open_raytraced_reverb_hud` (under `"Spatial"`) in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_rotary_doppler_hud()` and `open_raytraced_reverb_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier144_turn80_tests.rs`:
+    * Pure tests: view initialization, Doppler kinematics and AM shimmer, Sabine RT60 estimation, 4-wall ray bounces, coordinate normalizations, touch puck hit testing, slot arithmetic channel isolation, deterministic ASCII snapshots.
+    * GUI tests: modal lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch, rack & inspector trigger propagation, command palette action registration.
+  - Registered `tier144_turn80_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Feature tests: 7 passed in 0.07s (`cargo test -p summoner_gui --features gui -- tier144_turn80`).
+  - Pure unit tests: 329 passed in 0.25s (`cargo test -p summoner_gui --lib`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).

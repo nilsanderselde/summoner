@@ -169,6 +169,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_continuous_doppler_hud: bool,
     #[serde(default)]
     pub requested_open_spatial_room_hud: bool,
+    #[serde(default)]
+    pub requested_open_rotary_doppler_hud: bool,
+    #[serde(default)]
+    pub requested_open_raytraced_reverb_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -242,6 +246,8 @@ impl Default for ModernDeviceRackState {
             requested_open_binaural_brir_hud: false,
             requested_open_continuous_doppler_hud: false,
             requested_open_spatial_room_hud: false,
+            requested_open_rotary_doppler_hud: false,
+            requested_open_raytraced_reverb_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -938,6 +944,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_binaural_brir = cur_selection.contains("BinauralBrir") || cur_selection.contains("PartitionedBinauralHrtfConvolver") || cur_selection == "BinauralBrirView" || cur_selection.contains("BrirSpatializer") || cur_selection.contains("RoomImpulseResponse") || cur_selection.contains("BinauralRoom");
                     let is_continuous_doppler = cur_selection.contains("ContinuousSpatialPanner") || cur_selection.contains("DistanceDoppler") || cur_selection.contains("DopplerSpatializer") || cur_selection == "ContinuousSpatialPannerDoppler3D" || cur_selection == "ContinuousDopplerView" || cur_selection.contains("BinauralDoppler") || cur_selection.contains("AmbisonicBFormatDoppler");
                     let is_spatial_room = cur_selection.contains("SpatialRoom") || cur_selection.contains("ImageSourceRoom") || cur_selection == "SpatialRoomNode" || cur_selection == "SpatialRoomView" || cur_selection.contains("RoomAcousticModel") || cur_selection.contains("ShoeboxRoom");
+                    let is_rotary_doppler = cur_selection.contains("RotaryDualHorn") || cur_selection.contains("RotaryDualDrum") || cur_selection.contains("RotarySpeakerAcousticDeflector") || cur_selection.contains("RotaryDoppler") || cur_selection.contains("RotaryCabinet") || cur_selection.contains("DualRotorLeslie") || cur_selection == "RotaryDopplerView";
+                    let is_raytraced_reverb = cur_selection.contains("VolumetricRaytracedRoomAcoustics") || cur_selection.contains("BinauralRaytracedEarlyReflection") || cur_selection.contains("RaytracedReverb") || cur_selection == "RaytracedReverbView" || cur_selection.contains("RaytracedEarlyReflection") || cur_selection.contains("RaytracedRoom");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1174,6 +1182,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("🏛️ Room HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 255, 180))).on_hover_text("Open 3D Shoebox Room Acoustics & 6-Wall Early Reflection / Diffuse FDN Reverb HUD").clicked()
                     {
                         state.requested_open_spatial_room_hud = true;
+                    } else if is_rotary_doppler
+                        && ui.button(RichText::new("🌪️ Rotary HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Stereo Rotary Speaker Doppler & Acoustic Cabinet HUD").clicked()
+                    {
+                        state.requested_open_rotary_doppler_hud = true;
+                    } else if is_raytraced_reverb
+                        && ui.button(RichText::new("⚡ Raytrace HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 215, 0))).on_hover_text("Open Acoustic Early Reflections Raytracer HUD").clicked()
+                    {
+                        state.requested_open_raytraced_reverb_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -1998,6 +2014,8 @@ fn show_pro_parameter_drawer(
                     let is_binaural_brir = dev_kind.contains("BinauralBrir") || dev_kind.contains("PartitionedBinauralHrtfConvolver") || dev_kind == "BinauralBrirView" || dev_kind.contains("BrirSpatializer") || dev_kind.contains("RoomImpulseResponse") || dev_kind.contains("BinauralRoom");
                     let is_continuous_doppler = dev_kind.contains("ContinuousSpatialPanner") || dev_kind.contains("DistanceDoppler") || dev_kind.contains("DopplerSpatializer") || dev_kind == "ContinuousSpatialPannerDoppler3D" || dev_kind == "ContinuousDopplerView" || dev_kind.contains("BinauralDoppler") || dev_kind.contains("AmbisonicBFormatDoppler");
                     let is_spatial_room = dev_kind.contains("SpatialRoom") || dev_kind.contains("ImageSourceRoom") || dev_kind == "SpatialRoomNode" || dev_kind == "SpatialRoomView" || dev_kind.contains("RoomAcousticModel") || dev_kind.contains("ShoeboxRoom");
+                    let is_rotary_doppler = dev_kind.contains("RotaryDualHorn") || dev_kind.contains("RotaryDualDrum") || dev_kind.contains("RotarySpeakerAcousticDeflector") || dev_kind.contains("RotaryDoppler") || dev_kind.contains("RotaryCabinet") || dev_kind.contains("DualRotorLeslie") || dev_kind == "RotaryDopplerView";
+                    let is_raytraced_reverb = dev_kind.contains("VolumetricRaytracedRoomAcoustics") || dev_kind.contains("BinauralRaytracedEarlyReflection") || dev_kind.contains("RaytracedReverb") || dev_kind == "RaytracedReverbView" || dev_kind.contains("RaytracedEarlyReflection") || dev_kind.contains("RaytracedRoom");
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -6548,6 +6566,145 @@ fn show_pro_parameter_drawer(
                             let _ = rm_resp.on_hover_text(format!(
                                 "3D Shoebox Room Acoustics & 6-Wall Early Reflection Reverb HUD\nDimensions: {:.1}m x {:.1}m x {:.1}m | Sabine RT60: {:.2} s\nSource: ({:.1}, {:.1}) m | Direct Dist: {:.2} m\n[Drag: Room Floor Source X/Y]",
                                 room_w, room_d, room_h, rt60, src_x, src_y, dist
+                            ));
+                        }
+                    } else if is_rotary_doppler {
+                        // Stereo Rotary Speaker Doppler & Mic Placement Mini Visualizer
+                        let (rot_resp, rot_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let rot_rect = rot_resp.rect;
+                        rot_painter.rect_filled(rot_rect, 2.0, Color32::from_rgb(8, 12, 22));
+
+                        let horn_spd = state.node_param_values.get("horn_speed_rpm").copied().unwrap_or(380.0);
+                        let drum_spd = state.node_param_values.get("drum_speed_rpm").copied().unwrap_or(340.0);
+                        let mut mic_ang = state.node_param_values.get("mic_angle_deg").copied().unwrap_or(90.0);
+                        let mut mic_dist = state.node_param_values.get("mic_distance_m").copied().unwrap_or(0.6);
+
+                        let rcx = rot_rect.left() + 34.0;
+                        let rcy = rot_rect.center().y;
+
+                        if rot_resp.dragged() {
+                            if let Some(pos) = rot_resp.interact_pointer_pos() {
+                                let dx = pos.x - rcx;
+                                let dy = rcy - pos.y;
+                                let ang = (dy.atan2(dx).to_degrees() * 2.0).clamp(0.0, 180.0);
+                                let dist = ((dx * dx + dy * dy).sqrt() / 24.0 * 1.9 + 0.1).clamp(0.1, 2.0);
+                                mic_ang = ang;
+                                mic_dist = dist;
+                                state.node_param_values.insert("mic_angle_deg".to_string(), mic_ang);
+                                state.node_param_values.insert("mic_distance_m".to_string(), mic_dist);
+                                if let Some(bus) = param_bus {
+                                    let pid_ang = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 2);
+                                    let pid_dist = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 3);
+                                    bus.set(pid_ang, mic_ang);
+                                    bus.set(pid_dist, mic_dist);
+                                }
+                            }
+                        }
+
+                        // Horn orbit & drum orbit
+                        rot_painter.circle_stroke(egui::pos2(rcx, rcy), 18.0, Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(0, 229, 255, 60)));
+                        rot_painter.circle_stroke(egui::pos2(rcx, rcy), 11.0, Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(255, 215, 0, 60)));
+                        rot_painter.circle_filled(egui::pos2(rcx, rcy), 2.5, Color32::from_rgb(0, 229, 255));
+
+                        // Mic positions
+                        let mic_rad = (mic_ang * 0.5).to_radians();
+                        let mr = 18.0 + mic_dist * 6.0;
+                        let mlx = rcx - mic_rad.sin() * mr;
+                        let mly = rcy - mic_rad.cos() * mr;
+                        let mrx = rcx + mic_rad.sin() * mr;
+                        let mry = rcy - mic_rad.cos() * mr;
+                        rot_painter.circle_filled(egui::pos2(mlx, mly), 2.5, Color32::from_rgb(0, 255, 180));
+                        rot_painter.circle_filled(egui::pos2(mrx, mry), 2.5, Color32::from_rgb(0, 255, 180));
+
+                        // Doppler cues
+                        let speed_factor = horn_spd / 400.0;
+                        let dist_factor = (1.0 / mic_dist.max(0.1)).min(3.0);
+                        let dop_c = 25.0 * speed_factor * dist_factor;
+
+                        // Readout
+                        rot_painter.text(
+                            egui::pos2(rot_rect.right() - 4.0, rot_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("ROTARY DOPPLER\nHorn: {:.0} RPM\nDrum: {:.0} RPM\nShift: ±{:.1} c\nDist: {:.2}m", horn_spd, drum_spd, dop_c, mic_dist),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+
+                        if rot_resp.hovered() {
+                            let _ = rot_resp.on_hover_text(format!(
+                                "Stereo Rotary Speaker Doppler Acceleration & Mic Placement HUD\nHorn: {:.0} RPM | Drum: {:.0} RPM\nMic Angle: {:.0}° | Mic Distance: {:.2}m | Shift: ±{:.1} cents\n[Drag: Mic Angle / Distance]",
+                                horn_spd, drum_spd, mic_ang, mic_dist, dop_c
+                            ));
+                        }
+                    } else if is_raytraced_reverb {
+                        // Acoustic Early Reflections Raytracer Mini Visualizer
+                        let (ray_resp, ray_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let ray_rect = ray_resp.rect;
+                        ray_painter.rect_filled(ray_rect, 2.0, Color32::from_rgb(8, 12, 22));
+
+                        let r_len = state.node_param_values.get("room_length").copied().unwrap_or(12.0);
+                        let r_wid = state.node_param_values.get("room_width").copied().unwrap_or(8.0);
+                        let r_hgt = state.node_param_values.get("room_height").copied().unwrap_or(3.5);
+                        let mut s_x = state.node_param_values.get("source_x").copied().unwrap_or(0.3);
+                        let mut s_y = state.node_param_values.get("source_y").copied().unwrap_or(0.3);
+                        let l_x = state.node_param_values.get("listener_x").copied().unwrap_or(0.65);
+                        let l_y = state.node_param_values.get("listener_y").copied().unwrap_or(0.5);
+
+                        let box_r = egui::Rect::from_min_size(egui::pos2(ray_rect.left() + 6.0, ray_rect.top() + 6.0), egui::vec2(56.0, 56.0));
+                        ray_painter.rect_filled(box_r, 1.0, Color32::from_rgb(12, 16, 26));
+                        ray_painter.rect_stroke(box_r, 1.0, Stroke::new(1.0_f32, Color32::from_rgb(70, 95, 135)));
+
+                        if ray_resp.dragged() {
+                            if let Some(pos) = ray_resp.interact_pointer_pos() {
+                                let nx = ((pos.x - box_r.left()) / box_r.width()).clamp(0.05, 0.95);
+                                let ny = ((box_r.bottom() - pos.y) / box_r.height()).clamp(0.05, 0.95);
+                                s_x = nx;
+                                s_y = ny;
+                                state.node_param_values.insert("source_x".to_string(), s_x);
+                                state.node_param_values.insert("source_y".to_string(), s_y);
+                                if let Some(bus) = param_bus {
+                                    let pid_sx = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 3);
+                                    let pid_sy = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 4);
+                                    bus.set(pid_sx, s_x);
+                                    bus.set(pid_sy, s_y);
+                                }
+                            }
+                        }
+
+                        let spx = box_r.left() + s_x.clamp(0.05, 0.95) * box_r.width();
+                        let spy = box_r.bottom() - s_y.clamp(0.05, 0.95) * box_r.height();
+                        let lpx = box_r.left() + l_x.clamp(0.05, 0.95) * box_r.width();
+                        let lpy = box_r.bottom() - l_y.clamp(0.05, 0.95) * box_r.height();
+
+                        // Direct path
+                        ray_painter.line_segment([egui::pos2(spx, spy), egui::pos2(lpx, lpy)], Stroke::new(1.0_f32, Color32::from_rgb(0, 255, 180)));
+                        // Top bounce ray
+                        let top_y = box_r.top();
+                        let bounce_x = (spx + lpx) * 0.5;
+                        ray_painter.line_segment([egui::pos2(spx, spy), egui::pos2(bounce_x, top_y)], Stroke::new(1.0_f32, Color32::from_rgb(255, 215, 0)));
+                        ray_painter.line_segment([egui::pos2(bounce_x, top_y), egui::pos2(lpx, lpy)], Stroke::new(1.0_f32, Color32::from_rgb(255, 215, 0)));
+
+                        // Source (red) & Listener (cyan)
+                        ray_painter.circle_filled(egui::pos2(spx, spy), 3.0, Color32::from_rgb(239, 68, 68));
+                        ray_painter.circle_filled(egui::pos2(lpx, lpy), 3.0, Color32::from_rgb(56, 189, 248));
+
+                        let vol = r_len * r_wid * r_hgt;
+                        let s_area = 2.0 * (r_len * r_wid + r_len * r_hgt + r_wid * r_hgt);
+                        let rt60 = (0.161 * vol) / (s_area * 0.15).max(0.01);
+
+                        // Readout
+                        ray_painter.text(
+                            egui::pos2(ray_rect.right() - 4.0, ray_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("RAYTRACER\nRT60: {:.2} s\nDim: {:.0}x{:.0}m\nEarly Rays: 4\nSource: S/L", rt60, r_len, r_wid),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(255, 215, 0),
+                        );
+
+                        if ray_resp.hovered() {
+                            let _ = ray_resp.on_hover_text(format!(
+                                "Acoustic Early Reflections Raytracer & Binaural Distance HUD\nRoom: {:.1}m x {:.1}m x {:.1}m | RT60: {:.2}s\nSource ({:.2}, {:.2}) | Listener ({:.2}, {:.2})\n[Drag: Source Position]",
+                                r_len, r_wid, r_hgt, rt60, s_x, s_y, l_x, l_y
                             ));
                         }
                     } else {

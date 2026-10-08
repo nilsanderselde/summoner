@@ -1563,6 +1563,14 @@ impl eframe::App for SummonerApp {
                     self.current_view = ViewMode::ModernStudio;
                     self.award_winning_view.open_spatial_room_hud();
                 }
+                "open_rotary_doppler_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_rotary_doppler_hud();
+                }
+                "open_raytraced_reverb_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_raytraced_reverb_hud();
+                }
                 "sfz_convert" | "auto_slice" | "load_preset" | "export_clap" | "toggle_simd" => {
                     println!("Command palette action executed: {}", action);
                 }

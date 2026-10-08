@@ -154,6 +154,10 @@ pub struct ModernInspectorState {
     pub requested_open_continuous_doppler_hud: bool,
     #[serde(default)]
     pub requested_open_spatial_room_hud: bool,
+    #[serde(default)]
+    pub requested_open_rotary_doppler_hud: bool,
+    #[serde(default)]
+    pub requested_open_raytraced_reverb_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -237,6 +241,8 @@ impl Default for ModernInspectorState {
             requested_open_binaural_brir_hud: false,
             requested_open_continuous_doppler_hud: false,
             requested_open_spatial_room_hud: false,
+            requested_open_rotary_doppler_hud: false,
+            requested_open_raytraced_reverb_hud: false,
         }
     }
 }
@@ -1301,6 +1307,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open interactive 3D Shoebox Room Acoustics & 6-Wall Early Reflection / Diffuse FDN Reverb HUD").clicked() {
                     state.requested_open_spatial_room_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("RotaryDualHorn") || active_kind.contains("RotaryDualDrum") || active_kind.contains("RotarySpeakerAcousticDeflector") || active_kind.contains("RotaryDoppler") || active_kind.contains("RotaryCabinet") || active_kind.contains("DualRotorLeslie") || active_kind == "RotaryDopplerView" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🌪️ Open Stereo Rotary Doppler & Acoustic Visualizer HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 229, 255)))
+                        .fill(Color32::from_rgb(12, 32, 48))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 229, 255)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Stereo Rotary Speaker Horn/Drum Doppler Acceleration & Dual-Mic Distance Visualizer HUD").clicked() {
+                    state.requested_open_rotary_doppler_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("VolumetricRaytracedRoomAcoustics") || active_kind.contains("BinauralRaytracedEarlyReflection") || active_kind.contains("RaytracedReverb") || active_kind == "RaytracedReverbView" || active_kind.contains("RaytracedEarlyReflection") || active_kind.contains("RaytracedRoom") {
+                if ui.add(
+                    egui::Button::new(RichText::new("⚡ Open Acoustic Early Reflections Raytracer HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(255, 215, 0)))
+                        .fill(Color32::from_rgb(40, 32, 10))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 215, 0)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Acoustic Early Reflections Stochastic Raytracer & Binaural Distance Attenuation HUD").clicked() {
+                    state.requested_open_raytraced_reverb_hud = true;
                 }
                 ui.add_space(4.0);
             }

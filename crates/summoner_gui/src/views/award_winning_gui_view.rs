@@ -760,6 +760,10 @@ pub struct AwardWinningGuiView {
     pub continuous_doppler_view: crate::views::continuous_doppler_view::ContinuousDopplerView,
     pub show_spatial_room_modal: bool,
     pub spatial_room_view: crate::views::spatial_room_view::SpatialRoomView,
+    pub show_rotary_doppler_modal: bool,
+    pub rotary_doppler_view: crate::views::rotary_doppler_view::RotaryDopplerView,
+    pub show_raytraced_reverb_modal: bool,
+    pub raytraced_reverb_view: crate::views::raytraced_reverb_view::RaytracedReverbView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1136,6 +1140,10 @@ impl AwardWinningGuiView {
             continuous_doppler_view: crate::views::continuous_doppler_view::ContinuousDopplerView::new(),
             show_spatial_room_modal: false,
             spatial_room_view: crate::views::spatial_room_view::SpatialRoomView::new(),
+            show_rotary_doppler_modal: false,
+            rotary_doppler_view: crate::views::rotary_doppler_view::RotaryDopplerView::new(),
+            show_raytraced_reverb_modal: false,
+            raytraced_reverb_view: crate::views::raytraced_reverb_view::RaytracedReverbView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2075,6 +2083,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_spatial_room_hud = false;
             self.open_spatial_room_hud();
         }
+        if self.inspector_state.requested_open_rotary_doppler_hud || self.device_rack_state.requested_open_rotary_doppler_hud {
+            self.inspector_state.requested_open_rotary_doppler_hud = false;
+            self.device_rack_state.requested_open_rotary_doppler_hud = false;
+            self.open_rotary_doppler_hud();
+        }
+        if self.inspector_state.requested_open_raytraced_reverb_hud || self.device_rack_state.requested_open_raytraced_reverb_hud {
+            self.inspector_state.requested_open_raytraced_reverb_hud = false;
+            self.device_rack_state.requested_open_raytraced_reverb_hud = false;
+            self.open_raytraced_reverb_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2138,6 +2156,8 @@ impl AwardWinningGuiView {
         self.show_binaural_brir_modal_window(ui);
         self.show_continuous_doppler_modal_window(ui);
         self.show_spatial_room_modal_window(ui);
+        self.show_rotary_doppler_modal_window(ui);
+        self.show_raytraced_reverb_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -13380,6 +13400,212 @@ impl AwardWinningGuiView {
 
     pub fn is_spatial_room_hud_open(&self) -> bool {
         self.show_spatial_room_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_rotary_doppler_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_rotary_doppler_modal {
+            return;
+        }
+
+        let mut is_open = self.show_rotary_doppler_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🌪️ Stereo Rotary Doppler & Acoustic Cabinet HUD")
+            .id(egui::Id::new("rotary_doppler_hud_modal"))
+            .open(&mut is_open)
+            .default_size([920.0, 580.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Stereo Rotary Speaker Dual-Rotor Horn/Drum Doppler Acceleration & Dual-Mic Distance HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.rotary_doppler_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_rotary_doppler_modal = is_open;
+        self.sync_rotary_doppler_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_rotary_doppler_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let horn_spd = self.rotary_doppler_view.horn_speed_rpm;
+        let drum_spd = self.rotary_doppler_view.drum_speed_rpm;
+        let mic_ang = self.rotary_doppler_view.mic_angle_deg;
+        let mic_dist = self.rotary_doppler_view.mic_distance_m;
+        let bal = self.rotary_doppler_view.horn_drum_balance;
+        let drive = self.rotary_doppler_view.tube_drive_percent;
+
+        self.device_rack_state.node_param_values.insert("horn_speed_rpm".to_string(), horn_spd);
+        self.device_rack_state.node_param_values.insert("drum_speed_rpm".to_string(), drum_spd);
+        self.device_rack_state.node_param_values.insert("mic_angle_deg".to_string(), mic_ang);
+        self.device_rack_state.node_param_values.insert("mic_distance_m".to_string(), mic_dist);
+        self.device_rack_state.node_param_values.insert("horn_drum_balance".to_string(), bal);
+        self.device_rack_state.node_param_values.insert("tube_drive_percent".to_string(), drive);
+
+        self.inspector_state.node_param_values.insert("horn_speed_rpm".to_string(), horn_spd);
+        self.inspector_state.node_param_values.insert("drum_speed_rpm".to_string(), drum_spd);
+        self.inspector_state.node_param_values.insert("mic_angle_deg".to_string(), mic_ang);
+        self.inspector_state.node_param_values.insert("mic_distance_m".to_string(), mic_dist);
+        self.inspector_state.node_param_values.insert("horn_drum_balance".to_string(), bal);
+        self.inspector_state.node_param_values.insert("tube_drive_percent".to_string(), drive);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_horn = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_drum = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_ang = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_dist = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_bal = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_drv = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+
+            if bus.get(pid_horn).is_some() { bus.set(pid_horn, horn_spd); }
+            if bus.get(pid_drum).is_some() { bus.set(pid_drum, drum_spd); }
+            if bus.get(pid_ang).is_some() { bus.set(pid_ang, mic_ang); }
+            if bus.get(pid_dist).is_some() { bus.set(pid_dist, mic_dist); }
+            if bus.get(pid_bal).is_some() { bus.set(pid_bal, bal); }
+            if bus.get(pid_drv).is_some() { bus.set(pid_drv, drive); }
+        }
+    }
+
+    pub fn open_rotary_doppler_hud(&mut self) {
+        self.show_rotary_doppler_modal = true;
+    }
+
+    pub fn close_rotary_doppler_hud(&mut self) {
+        self.show_rotary_doppler_modal = false;
+    }
+
+    pub fn is_rotary_doppler_hud_open(&self) -> bool {
+        self.show_rotary_doppler_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_raytraced_reverb_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_raytraced_reverb_modal {
+            return;
+        }
+
+        let mut is_open = self.show_raytraced_reverb_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("⚡ Acoustic Early Reflections Raytracer & Binaural HUD")
+            .id(egui::Id::new("raytraced_reverb_hud_modal"))
+            .open(&mut is_open)
+            .default_size([920.0, 580.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Acoustic Early Reflections Stochastic Raytracer & Binaural Distance Attenuation HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.raytraced_reverb_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_raytraced_reverb_modal = is_open;
+        self.sync_raytraced_reverb_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_raytraced_reverb_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let r_len = self.raytraced_reverb_view.room_dimensions_m.0;
+        let r_wid = self.raytraced_reverb_view.room_dimensions_m.1;
+        let r_hgt = self.raytraced_reverb_view.room_dimensions_m.2;
+        let s_x = self.raytraced_reverb_view.source_pos.0;
+        let s_y = self.raytraced_reverb_view.source_pos.1;
+        let l_x = self.raytraced_reverb_view.listener_pos.0;
+        let l_y = self.raytraced_reverb_view.listener_pos.1;
+        let air = self.raytraced_reverb_view.air_damping_absorption;
+
+        self.device_rack_state.node_param_values.insert("room_length".to_string(), r_len);
+        self.device_rack_state.node_param_values.insert("room_width".to_string(), r_wid);
+        self.device_rack_state.node_param_values.insert("room_height".to_string(), r_hgt);
+        self.device_rack_state.node_param_values.insert("source_x".to_string(), s_x);
+        self.device_rack_state.node_param_values.insert("source_y".to_string(), s_y);
+        self.device_rack_state.node_param_values.insert("listener_x".to_string(), l_x);
+        self.device_rack_state.node_param_values.insert("listener_y".to_string(), l_y);
+        self.device_rack_state.node_param_values.insert("air_damping".to_string(), air);
+
+        self.inspector_state.node_param_values.insert("room_length".to_string(), r_len);
+        self.inspector_state.node_param_values.insert("room_width".to_string(), r_wid);
+        self.inspector_state.node_param_values.insert("room_height".to_string(), r_hgt);
+        self.inspector_state.node_param_values.insert("source_x".to_string(), s_x);
+        self.inspector_state.node_param_values.insert("source_y".to_string(), s_y);
+        self.inspector_state.node_param_values.insert("listener_x".to_string(), l_x);
+        self.inspector_state.node_param_values.insert("listener_y".to_string(), l_y);
+        self.inspector_state.node_param_values.insert("air_damping".to_string(), air);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_len = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_wid = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_hgt = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_sx = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_sy = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_lx = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+            let pid_ly = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 6);
+            let pid_air = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 7);
+
+            if bus.get(pid_len).is_some() { bus.set(pid_len, r_len); }
+            if bus.get(pid_wid).is_some() { bus.set(pid_wid, r_wid); }
+            if bus.get(pid_hgt).is_some() { bus.set(pid_hgt, r_hgt); }
+            if bus.get(pid_sx).is_some() { bus.set(pid_sx, s_x); }
+            if bus.get(pid_sy).is_some() { bus.set(pid_sy, s_y); }
+            if bus.get(pid_lx).is_some() { bus.set(pid_lx, l_x); }
+            if bus.get(pid_ly).is_some() { bus.set(pid_ly, l_y); }
+            if bus.get(pid_air).is_some() { bus.set(pid_air, air); }
+        }
+    }
+
+    pub fn open_raytraced_reverb_hud(&mut self) {
+        self.show_raytraced_reverb_modal = true;
+    }
+
+    pub fn close_raytraced_reverb_hud(&mut self) {
+        self.show_raytraced_reverb_modal = false;
+    }
+
+    pub fn is_raytraced_reverb_hud_open(&self) -> bool {
+        self.show_raytraced_reverb_modal
     }
 
 
