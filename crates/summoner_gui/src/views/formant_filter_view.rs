@@ -21,6 +21,17 @@ pub enum FormantTrajectoryMode {
     EnvelopeFollower,
 }
 
+impl FormantTrajectoryMode {
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::Static => "STATIC",
+            Self::CircularLfo => "CIRCLE LFO",
+            Self::Figure8Lfo => "FIG-8",
+            Self::EnvelopeFollower => "ENV FOLLOWER",
+        }
+    }
+}
+
 /// Standard vowel definitions with reference formant frequencies (Hz).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct VowelDefinition {
@@ -443,5 +454,73 @@ impl FormantFilterView {
                 });
             });
         });
+    }
+
+    pub fn set_trajectory_mode(&mut self, mode: FormantTrajectoryMode) {
+        self.trajectory_mode = mode;
+    }
+
+    pub fn set_vowel(&mut self, idx: usize) {
+        if idx < STANDARD_VOWELS.len() {
+            self.active_vowel_idx = idx;
+            self.morph_pos = STANDARD_VOWELS[idx].pad_norm_pos;
+        }
+    }
+
+    pub fn resonance_to_normalized(q: f32) -> f32 {
+        ((q - 1.0) / 24.0).clamp(0.0, 1.0)
+    }
+
+    pub fn normalized_to_resonance(norm: f32) -> f32 {
+        1.0 + norm.clamp(0.0, 1.0) * 24.0
+    }
+
+    pub fn boost_to_normalized(db: f32) -> f32 {
+        (db / 18.0).clamp(0.0, 1.0)
+    }
+
+    pub fn normalized_to_boost(norm: f32) -> f32 {
+        norm.clamp(0.0, 1.0) * 18.0
+    }
+
+    pub fn scale_to_normalized(scale: f32) -> f32 {
+        ((scale - 0.6) / 0.8).clamp(0.0, 1.0)
+    }
+
+    pub fn normalized_to_scale(norm: f32) -> f32 {
+        0.6 + norm.clamp(0.0, 1.0) * 0.8
+    }
+
+    pub fn warmth_to_normalized(db: f32) -> f32 {
+        (db / 12.0).clamp(0.0, 1.0)
+    }
+
+    pub fn normalized_to_warmth(norm: f32) -> f32 {
+        norm.clamp(0.0, 1.0) * 12.0
+    }
+
+    pub fn dry_wet_to_normalized(pct: f32) -> f32 {
+        (pct / 100.0).clamp(0.0, 1.0)
+    }
+
+    pub fn normalized_to_dry_wet(norm: f32) -> f32 {
+        norm.clamp(0.0, 1.0) * 100.0
+    }
+
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        let lines = self.render_ascii(80, 20);
+        let mut s = lines.join("\n");
+        let vowel_name = STANDARD_VOWELS.get(self.active_vowel_idx).map(|v| v.name).unwrap_or("CUSTOM");
+        s.push_str(&format!(
+            "\n[PASS] PHONETIC FORMANT FILTER HUD | VOWEL: {} | TRAJECTORY: {}",
+            vowel_name,
+            self.trajectory_mode.label()
+        ));
+        s
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_ui(&mut self, ui: &mut egui::Ui) {
+        self.show(ui);
     }
 }

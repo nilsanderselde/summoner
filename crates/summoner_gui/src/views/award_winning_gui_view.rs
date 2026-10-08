@@ -820,6 +820,10 @@ pub struct AwardWinningGuiView {
     pub ladder_filter_view: crate::views::ladder_filter_view::LadderFilterView,
     pub show_granular_freeze_modal: bool,
     pub granular_freeze_view: crate::views::granular_freeze_view::GranularFreezeView,
+    pub show_auto_wah_modal: bool,
+    pub auto_wah_view: crate::views::auto_wah_view::AutoWahView,
+    pub show_formant_filter_modal: bool,
+    pub formant_filter_view: crate::views::formant_filter_view::FormantFilterView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1256,6 +1260,10 @@ impl AwardWinningGuiView {
             ladder_filter_view: crate::views::ladder_filter_view::LadderFilterView::new(),
             show_granular_freeze_modal: false,
             granular_freeze_view: crate::views::granular_freeze_view::GranularFreezeView::new(),
+            show_auto_wah_modal: false,
+            auto_wah_view: crate::views::auto_wah_view::AutoWahView::new(),
+            show_formant_filter_modal: false,
+            formant_filter_view: crate::views::formant_filter_view::FormantFilterView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();

@@ -214,6 +214,10 @@ pub struct ModernInspectorState {
     pub requested_open_ladder_filter_hud: bool,
     #[serde(default)]
     pub requested_open_granular_freeze_hud: bool,
+    #[serde(default)]
+    pub requested_open_auto_wah_hud: bool,
+    #[serde(default)]
+    pub requested_open_formant_filter_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -327,6 +331,8 @@ impl Default for ModernInspectorState {
             requested_open_tape_saturation_hud: false,
             requested_open_ladder_filter_hud: false,
             requested_open_granular_freeze_hud: false,
+            requested_open_auto_wah_hud: false,
+            requested_open_formant_filter_hud: false,
         }
     }
 }
@@ -1691,6 +1697,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open Granular Spectral Cloud Freeze & Grain Trajectory HUD").clicked() {
                     state.requested_open_granular_freeze_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("AutoWah") || active_kind.contains("Wah") || active_kind == "AutoWahView" || active_kind == "AutoWahNode" || active_kind.contains("WahFilter") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🎛 Open Auto-Wah HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(6, 214, 160)))
+                        .fill(Color32::from_rgb(12, 32, 26))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(6, 214, 160)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Dynamic Resonant Auto-Wah Filter HUD").clicked() {
+                    state.requested_open_auto_wah_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Formant") || active_kind.contains("Vowel") || active_kind == "FormantFilterView" || active_kind == "FormantFilterNode" || active_kind.contains("FormantFilter") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🗣 Open Formant Filter HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(255, 215, 0)))
+                        .fill(Color32::from_rgb(32, 28, 14))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 215, 0)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open 5-Vowel Phonetic Formant Filter Resonator HUD").clicked() {
+                    state.requested_open_formant_filter_hud = true;
                 }
                 ui.add_space(4.0);
             }

@@ -229,6 +229,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_ladder_filter_hud: bool,
     #[serde(default)]
     pub requested_open_granular_freeze_hud: bool,
+    #[serde(default)]
+    pub requested_open_auto_wah_hud: bool,
+    #[serde(default)]
+    pub requested_open_formant_filter_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -332,6 +336,8 @@ impl Default for ModernDeviceRackState {
             requested_open_tape_saturation_hud: false,
             requested_open_ladder_filter_hud: false,
             requested_open_granular_freeze_hud: false,
+            requested_open_auto_wah_hud: false,
+            requested_open_formant_filter_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -1058,6 +1064,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_tape = cur_selection.contains("Tape") || cur_selection.contains("Hysteresis") || cur_selection == "TapeSaturationView" || cur_selection == "TapeSaturation" || cur_selection.contains("TapeWarmth") || cur_selection.contains("ReelToReel");
                     let is_ladder = cur_selection.contains("Ladder") || cur_selection.contains("Moog") || cur_selection.contains("Tb303") || cur_selection == "LadderFilterView" || cur_selection == "LadderFilter" || cur_selection.contains("FilterLadder");
                     let is_granular_freeze = cur_selection.contains("Freeze") || cur_selection == "GranularFreezeView" || cur_selection == "GranularFreeze" || cur_selection.contains("CloudFreeze") || cur_selection == "GranularFreezeNode";
+                    let is_auto_wah = cur_selection.contains("AutoWah") || cur_selection.contains("Wah") || cur_selection == "AutoWahView" || cur_selection == "AutoWahNode" || cur_selection.contains("WahFilter");
+                    let is_formant = cur_selection.contains("Formant") || cur_selection.contains("Vowel") || cur_selection == "FormantFilterView" || cur_selection == "FormantFilterNode" || cur_selection.contains("FormantFilter");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1414,6 +1422,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("❄ Freeze HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 255, 180))).on_hover_text("Open Granular Spectral Cloud Freeze & Trajectory HUD").clicked()
                     {
                         state.requested_open_granular_freeze_hud = true;
+                    } else if is_auto_wah
+                        && ui.button(RichText::new("🎛 Auto-Wah HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(6, 214, 160))).on_hover_text("Open Dynamic Resonant Auto-Wah Filter HUD").clicked()
+                    {
+                        state.requested_open_auto_wah_hud = true;
+                    } else if is_formant
+                        && ui.button(RichText::new("🗣 Formant HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 215, 0))).on_hover_text("Open 5-Vowel Phonetic Formant Filter Resonator HUD").clicked()
+                    {
+                        state.requested_open_formant_filter_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2268,6 +2284,8 @@ fn show_pro_parameter_drawer(
                     let is_tape = dev_kind.contains("Tape") || dev_kind.contains("Hysteresis") || dev_kind == "TapeSaturationView" || dev_kind == "TapeSaturation" || dev_kind.contains("TapeWarmth") || dev_kind.contains("ReelToReel");
                     let is_ladder = dev_kind.contains("Ladder") || dev_kind.contains("Moog") || dev_kind.contains("Tb303") || dev_kind == "LadderFilterView" || dev_kind == "LadderFilter" || dev_kind.contains("FilterLadder");
                     let is_granular_freeze = dev_kind.contains("Freeze") || dev_kind == "GranularFreezeView" || dev_kind == "GranularFreeze" || dev_kind.contains("CloudFreeze") || dev_kind == "GranularFreezeNode";
+                    let is_auto_wah = dev_kind.contains("AutoWah") || dev_kind.contains("Wah") || dev_kind == "AutoWahView" || dev_kind == "AutoWahNode" || dev_kind.contains("WahFilter");
+                    let is_formant = dev_kind.contains("Formant") || dev_kind.contains("Vowel") || dev_kind == "FormantFilterView" || dev_kind == "FormantFilterNode" || dev_kind.contains("FormantFilter");
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -9362,6 +9380,132 @@ fn show_pro_parameter_drawer(
                             let _ = gf_resp.on_hover_text(format!(
                                 "Granular Spectral Cloud Freeze & Trajectory HUD\nPitch Spray: {:+.1} st | Size: {:.0} ms\nDensity: {:.0} gr/s\n[Drag: Playhead (X) / Pitch Spray (Y) Puck]",
                                 spray, size, density
+                            ));
+                        }
+                    } else if is_auto_wah {
+                        // Dynamic Resonant Auto-Wah Filter Mini Visualizer
+                        let (aw_resp, aw_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let aw_rect = aw_resp.rect;
+                        aw_painter.rect_filled(aw_rect, 2.0, Color32::from_rgb(10, 16, 24));
+
+                        let mut sens = state.node_param_values.get("sensitivity").copied().unwrap_or(0.75);
+                        let mut res = state.node_param_values.get("resonance_q").copied().unwrap_or(6.5);
+                        let base_freq = state.node_param_values.get("base_freq_hz").copied().unwrap_or(350.0);
+
+                        if aw_resp.dragged() {
+                            if let Some(pos) = aw_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - aw_rect.left()) / aw_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - aw_rect.top()) / aw_rect.height())).clamp(0.0, 1.0);
+                                sens = crate::views::auto_wah_view::AutoWahView::normalized_to_sensitivity(norm_x);
+                                res = crate::views::auto_wah_view::AutoWahView::normalized_to_resonance(norm_y);
+                                state.node_param_values.insert("sensitivity".to_string(), sens);
+                                state.node_param_values.insert("resonance_q".to_string(), res);
+                                if let Some(bus) = param_bus {
+                                    let pid_sens = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_sens).is_some() { bus.set(pid_sens, sens); }
+                                    let pid_res = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 3);
+                                    if bus.get(pid_res).is_some() { bus.set(pid_res, res); }
+                                }
+                            }
+                        }
+
+                        // Background grid lines
+                        for step in 1..3 {
+                            let gy = aw_rect.top() + aw_rect.height() * (step as f32 * 0.33);
+                            aw_painter.line_segment([egui::pos2(aw_rect.left(), gy), egui::pos2(aw_rect.right(), gy)], Stroke::new(0.5_f32, Color32::from_rgba_unmultiplied(40, 55, 80, 80)));
+                        }
+
+                        // Draw bandpass response curve preview (16 points)
+                        let norm_s = crate::views::auto_wah_view::AutoWahView::sensitivity_to_normalized(sens);
+                        let norm_q = crate::views::auto_wah_view::AutoWahView::resonance_to_normalized(res);
+                        let steps = 16;
+                        let mut prev_pt = None;
+                        for i in 0..=steps {
+                            let nx = i as f32 / steps as f32;
+                            let bell = (1.0 - ((nx - norm_s) * 3.5).powi(2)).max(0.0) * (0.4 + norm_q * 0.6);
+                            let px = aw_rect.left() + nx * aw_rect.width();
+                            let py = aw_rect.bottom() - (bell.clamp(0.0, 1.0)) * (aw_rect.height() - 10.0) - 5.0;
+                            let cur_pt = egui::pos2(px, py);
+                            if let Some(prev) = prev_pt {
+                                aw_painter.line_segment([prev, cur_pt], Stroke::new(1.3_f32, Color32::from_rgb(6, 214, 160)));
+                            }
+                            prev_pt = Some(cur_pt);
+                        }
+
+                        // Puck handle
+                        let puck_x = aw_rect.left() + norm_s * aw_rect.width();
+                        let puck_y = aw_rect.bottom() - norm_q * (aw_rect.height() - 12.0) - 6.0;
+                        aw_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(6, 214, 160));
+                        aw_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::from_rgb(140, 255, 220)));
+
+                        // Readout
+                        aw_painter.text(
+                            egui::pos2(aw_rect.right() - 4.0, aw_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("AUTO-WAH\nSens:{:.2} | Q:{:.1}\n{:.0}Hz", sens, res, base_freq),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(6, 214, 160),
+                        );
+
+                        if aw_resp.hovered() {
+                            let _ = aw_resp.on_hover_text(format!(
+                                "Dynamic Resonant Auto-Wah Filter HUD\nSensitivity: {:.2} | Res Q: {:.1}\nBase Freq: {:.0} Hz\n[Drag: Sens (X) / Resonance (Y) Puck]",
+                                sens, res, base_freq
+                            ));
+                        }
+                    } else if is_formant {
+                        // 5-Vowel Formant Filter Mini Visualizer
+                        let (fm_resp, fm_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let fm_rect = fm_resp.rect;
+                        fm_painter.rect_filled(fm_rect, 2.0, Color32::from_rgb(12, 14, 24));
+
+                        let mut morph_x = state.node_param_values.get("morph_pos_x").copied().unwrap_or(0.40);
+                        let mut morph_y = state.node_param_values.get("morph_pos_y").copied().unwrap_or(0.85);
+                        let res = state.node_param_values.get("resonance_q").copied().unwrap_or(8.0);
+                        let tract = state.node_param_values.get("vocal_tract_scale").copied().unwrap_or(1.0);
+
+                        if fm_resp.dragged() {
+                            if let Some(pos) = fm_resp.interact_pointer_pos() {
+                                morph_x = ((pos.x - fm_rect.left()) / fm_rect.width()).clamp(0.0, 1.0);
+                                morph_y = (1.0 - ((pos.y - fm_rect.top()) / fm_rect.height())).clamp(0.0, 1.0);
+                                state.node_param_values.insert("morph_pos_x".to_string(), morph_x);
+                                state.node_param_values.insert("morph_pos_y".to_string(), morph_y);
+                                if let Some(bus) = param_bus {
+                                    let pid_x = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 5);
+                                    if bus.get(pid_x).is_some() { bus.set(pid_x, morph_x); }
+                                    let pid_y = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 6);
+                                    if bus.get(pid_y).is_some() { bus.set(pid_y, morph_y); }
+                                }
+                            }
+                        }
+
+                        // Draw vowel landmark dots
+                        for (vx, vy, lbl) in [(0.40, 0.85, "A"), (0.70, 0.50, "E"), (0.90, 0.15, "I"), (0.20, 0.45, "O"), (0.10, 0.15, "U")] {
+                            let px = fm_rect.left() + vx * fm_rect.width();
+                            let py = fm_rect.bottom() - vy * (fm_rect.height() - 10.0) - 5.0;
+                            fm_painter.circle_filled(egui::pos2(px, py), 2.0, Color32::from_rgb(255, 215, 0));
+                            fm_painter.text(egui::pos2(px + 4.0, py - 4.0), egui::Align2::LEFT_TOP, lbl, FontId::monospace(6.5), Color32::from_rgb(180, 200, 230));
+                        }
+
+                        // Puck handle
+                        let puck_x = fm_rect.left() + morph_x * fm_rect.width();
+                        let puck_y = fm_rect.bottom() - morph_y * (fm_rect.height() - 12.0) - 6.0;
+                        fm_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(255, 215, 0));
+                        fm_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::from_rgb(255, 235, 120)));
+
+                        // Readout
+                        fm_painter.text(
+                            egui::pos2(fm_rect.right() - 4.0, fm_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("FORMANT\nF1/F2 Morph\nQ:{:.1} | {:.2}x", res, tract),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(255, 215, 0),
+                        );
+
+                        if fm_resp.hovered() {
+                            let _ = fm_resp.on_hover_text(format!(
+                                "5-Vowel Phonetic Formant Filter Resonator HUD\nMorph: ({:.2}, {:.2})\nRes Q: {:.1} | Vocal Tract: {:.2}x\n[Drag: F2 (X) / F1 (Y) Vowel Morph Puck]",
+                                morph_x, morph_y, res, tract
                             ));
                         }
                     } else {

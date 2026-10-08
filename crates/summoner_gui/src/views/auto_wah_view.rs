@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "gui")]
 #[allow(unused_imports)]
-use eframe::egui::{self, Color32, Stroke, Vec2};
+use eframe::egui::{self, Color32, FontId, RichText, Rounding, Stroke, Vec2};
 
 pub const WAH_PUCK_HIT_RADIUS: f32 = 22.0; // 44x44pt bounding touch target
 
@@ -273,6 +273,303 @@ impl AutoWahView {
         }
 
         save_png_file(path, width, height, &pixels)
+    }
+
+    pub fn sensitivity_to_normalized(sens: f32) -> f32 {
+        sens.clamp(0.0, 1.0)
+    }
+
+    pub fn normalized_to_sensitivity(norm: f32) -> f32 {
+        norm.clamp(0.0, 1.0)
+    }
+
+    pub fn resonance_to_normalized(q: f32) -> f32 {
+        ((q - 0.5) / 24.5).clamp(0.0, 1.0)
+    }
+
+    pub fn normalized_to_resonance(norm: f32) -> f32 {
+        0.5 + norm.clamp(0.0, 1.0) * 24.5
+    }
+
+    pub fn freq_to_normalized(freq: f32) -> f32 {
+        let f_clamped = freq.clamp(50.0, 4000.0);
+        ((f_clamped / 50.0).ln() / (4000.0 / 50.0_f32).ln()).clamp(0.0, 1.0)
+    }
+
+    pub fn normalized_to_freq(norm: f32) -> f32 {
+        50.0 * (4000.0 / 50.0_f32).powf(norm.clamp(0.0, 1.0))
+    }
+
+    pub fn sweep_to_normalized(sweep: f32) -> f32 {
+        ((sweep - 0.5) / 5.5).clamp(0.0, 1.0)
+    }
+
+    pub fn normalized_to_sweep(norm: f32) -> f32 {
+        0.5 + norm.clamp(0.0, 1.0) * 5.5
+    }
+
+    pub fn mix_to_normalized(mix: f32) -> f32 {
+        mix.clamp(0.0, 1.0)
+    }
+
+    pub fn normalized_to_mix(norm: f32) -> f32 {
+        norm.clamp(0.0, 1.0)
+    }
+
+    pub fn set_filter_mode(&mut self, mode: GuiWahFilterMode) {
+        self.filter_mode = mode;
+    }
+
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        let lines = self.render_ascii(80, 16);
+        let mut s = lines.join("\n");
+        s.push_str(&format!(
+            "\n[PASS] DYNAMIC AUTO-WAH HUD | MODE: {}",
+            self.filter_mode.name()
+        ));
+        s
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_ui(&mut self, ui: &mut egui::Ui) {
+        ui.vertical(|ui| {
+            // 1. Top Header: Mode Selectors
+            ui.horizontal(|ui| {
+                ui.label(
+                    RichText::new("DYNAMIC RESONANT AUTO-WAH FILTER HUD")
+                        .size(15.0)
+                        .color(Color32::from_rgb(6, 214, 160))
+                        .strong(),
+                );
+                ui.separator();
+
+                let modes = [
+                    (GuiWahFilterMode::Bandpass, "BANDPASS (FUNK WAH)"),
+                    (GuiWahFilterMode::Lowpass, "LOWPASS (SYNTH SWEEP)"),
+                    (GuiWahFilterMode::PeakingWah, "PEAKING (VOCAL WAH)"),
+                ];
+
+                for (mode, label) in modes {
+                    let is_active = self.filter_mode == mode;
+                    let btn = egui::Button::new(
+                        RichText::new(label)
+                            .color(if is_active {
+                                Color32::from_rgb(10, 14, 22)
+                            } else {
+                                Color32::from_rgb(220, 235, 255)
+                            })
+                            .strong(),
+                    )
+                    .min_size(Vec2::new(120.0, 32.0))
+                    .fill(if is_active {
+                        Color32::from_rgb(6, 214, 160)
+                    } else {
+                        Color32::from_rgb(24, 32, 48)
+                    });
+
+                    if ui.add(btn).clicked() {
+                        self.filter_mode = mode;
+                    }
+                }
+            });
+
+            ui.add_space(8.0);
+
+            // 2. Dual Canvas: Left (2D Sensitivity vs Q Pad) & Right (SVF Response Curve)
+            ui.horizontal(|ui| {
+                let half_w = (ui.available_width() - 16.0) * 0.5;
+
+                // Left: 2D Puck Pad
+                ui.vertical(|ui| {
+                    ui.label(
+                        RichText::new("2D ENVELOPE SENSITIVITY vs RESONANCE Q")
+                            .color(Color32::from_rgb(6, 214, 160))
+                            .strong(),
+                    );
+                    let (res_l, painter_l) = ui.allocate_painter(
+                        Vec2::new(half_w.max(160.0), 210.0),
+                        egui::Sense::click_and_drag(),
+                    );
+                    let rect_l = res_l.rect;
+
+                    painter_l.rect_filled(rect_l, 6.0, Color32::from_rgb(14, 18, 28));
+                    painter_l.rect_stroke(
+                        rect_l,
+                        6.0,
+                        Stroke::new(1.5_f32, Color32::from_rgb(45, 60, 85)),
+                    );
+
+                    // Grid lines
+                    for step in 1..4 {
+                        let gy = rect_l.top() + rect_l.height() * (step as f32 * 0.25);
+                        painter_l.line_segment(
+                            [egui::pos2(rect_l.left(), gy), egui::pos2(rect_l.right(), gy)],
+                            Stroke::new(0.5_f32, Color32::from_rgba_unmultiplied(60, 80, 110, 80)),
+                        );
+                        let gx = rect_l.left() + rect_l.width() * (step as f32 * 0.25);
+                        painter_l.line_segment(
+                            [egui::pos2(gx, rect_l.top()), egui::pos2(gx, rect_l.bottom())],
+                            Stroke::new(0.5_f32, Color32::from_rgba_unmultiplied(60, 80, 110, 80)),
+                        );
+                    }
+
+                    // Dragging
+                    if res_l.dragged() || res_l.clicked() {
+                        if let Some(pos) = res_l.interact_pointer_pos() {
+                            let nx = ((pos.x - rect_l.left()) / rect_l.width()).clamp(0.0, 1.0);
+                            let ny = (1.0 - ((pos.y - rect_l.top()) / rect_l.height())).clamp(0.0, 1.0);
+                            self.update_physics_from_puck(nx, ny);
+                        }
+                    }
+
+                    // Puck handle
+                    let puck_x = rect_l.left() + self.puck_pos.0 * rect_l.width();
+                    let puck_y = rect_l.bottom() - self.puck_pos.1 * rect_l.height();
+
+                    // Puck hit target ring (>= 22pt radius -> 44x44pt bounding box)
+                    painter_l.circle_stroke(
+                        egui::pos2(puck_x, puck_y),
+                        WAH_PUCK_HIT_RADIUS,
+                        Stroke::new(1.5_f32, Color32::from_rgba_unmultiplied(6, 214, 160, 140)),
+                    );
+                    painter_l.circle_filled(
+                        egui::pos2(puck_x, puck_y),
+                        14.0,
+                        Color32::from_rgb(6, 214, 160),
+                    );
+                    painter_l.circle_filled(
+                        egui::pos2(puck_x, puck_y),
+                        4.0,
+                        Color32::from_rgb(255, 255, 255),
+                    );
+
+                    // Coordinate text
+                    painter_l.text(
+                        egui::pos2(rect_l.left() + 8.0, rect_l.bottom() - 18.0),
+                        egui::Align2::LEFT_BOTTOM,
+                        format!("Sens: {:.2} | Res Q: {:.1}", self.sensitivity, self.resonance_q),
+                        FontId::proportional(11.0),
+                        Color32::from_rgb(200, 240, 225),
+                    );
+                });
+
+                // Right: SVF Magnitude Response & Envelope Level
+                ui.vertical(|ui| {
+                    ui.label(
+                        RichText::new("SVF FILTER MAGNITUDE RESPONSE & BALLISTICS")
+                            .color(Color32::from_rgb(17, 138, 178))
+                            .strong(),
+                    );
+                    let (res_r, painter_r) = ui.allocate_painter(
+                        Vec2::new(half_w.max(160.0), 210.0),
+                        egui::Sense::hover(),
+                    );
+                    let rect_r = res_r.rect;
+
+                    painter_r.rect_filled(rect_r, 6.0, Color32::from_rgb(10, 14, 22));
+                    painter_r.rect_stroke(
+                        rect_r,
+                        6.0,
+                        Stroke::new(1.5_f32, Color32::from_rgb(45, 60, 85)),
+                    );
+
+                    // Logarithmic frequency grid lines
+                    for freq in [100.0, 500.0, 1000.0, 5000.0, 10000.0] {
+                        let norm_f = (freq / 40.0_f32).log10() / (16000.0 / 40.0_f32).log10();
+                        let sx = rect_r.left() + norm_f * rect_r.width();
+                        painter_r.line_segment(
+                            [egui::pos2(sx, rect_r.top()), egui::pos2(sx, rect_r.bottom())],
+                            Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(60, 80, 115, 60)),
+                        );
+                    }
+
+                    // Transfer curve
+                    let curve = self.evaluate_filter_magnitude_response();
+                    let mut prev_pt: Option<egui::Pos2> = None;
+                    for (i, &mag_norm) in curve.iter().enumerate() {
+                        let nx = i as f32 / 31.0;
+                        let px = rect_r.left() + nx * rect_r.width();
+                        let py = rect_r.bottom() - mag_norm * (rect_r.height() - 14.0) - 7.0;
+                        let pt = egui::pos2(px, py);
+                        if let Some(prev) = prev_pt {
+                            painter_r.line_segment(
+                                [prev, pt],
+                                Stroke::new(2.2_f32, Color32::from_rgb(17, 138, 178)),
+                            );
+                        }
+                        prev_pt = Some(pt);
+                    }
+
+                    // Envelope follower meter bar along bottom
+                    let bar_w = rect_r.width() - 20.0;
+                    let env_bar_rect = egui::Rect::from_min_size(
+                        egui::pos2(rect_r.left() + 10.0, rect_r.bottom() - 18.0),
+                        egui::vec2(bar_w, 8.0),
+                    );
+                    painter_r.rect_filled(env_bar_rect, 2.0, Color32::from_rgb(20, 26, 38));
+                    let env_fill = egui::Rect::from_min_size(
+                        egui::pos2(rect_r.left() + 10.0, rect_r.bottom() - 18.0),
+                        egui::vec2(bar_w * self.envelope_level.clamp(0.0, 1.0), 8.0),
+                    );
+                    painter_r.rect_filled(env_fill, 2.0, Color32::from_rgb(6, 214, 160));
+
+                    // Readout text
+                    painter_r.text(
+                        egui::pos2(rect_r.left() + 12.0, rect_r.top() + 10.0),
+                        egui::Align2::LEFT_TOP,
+                        format!("Base: {:.0} Hz | Range: {:.1} Oct", self.base_freq_hz, self.sweep_range_octaves),
+                        FontId::proportional(11.0),
+                        Color32::from_rgb(148, 163, 184),
+                    );
+                });
+            });
+
+            ui.add_space(8.0);
+
+            // 3. Tactile Sliders Bar
+            ui.group(|ui| {
+                ui.horizontal(|ui| {
+                    ui.vertical(|ui| {
+                        ui.label(RichText::new("Base Freq").strong());
+                        ui.add(egui::Slider::new(&mut self.base_freq_hz, 50.0..=4000.0).text("Hz"));
+                    });
+
+                    ui.vertical(|ui| {
+                        ui.label(RichText::new("Sweep Range").strong());
+                        ui.add(egui::Slider::new(&mut self.sweep_range_octaves, 0.5..=6.0).text("oct"));
+                    });
+
+                    ui.vertical(|ui| {
+                        ui.label(RichText::new("Sensitivity").strong());
+                        if ui.add(egui::Slider::new(&mut self.sensitivity, 0.0..=1.0)).changed() {
+                            self.update_puck_from_physics();
+                        }
+                    });
+
+                    ui.vertical(|ui| {
+                        ui.label(RichText::new("Resonance (Q)").strong());
+                        if ui.add(egui::Slider::new(&mut self.resonance_q, 0.5..=25.0).text("Q")).changed() {
+                            self.update_puck_from_physics();
+                        }
+                    });
+
+                    ui.vertical(|ui| {
+                        ui.label(RichText::new("Attack").strong());
+                        ui.add(egui::Slider::new(&mut self.attack_ms, 0.5..=100.0).text("ms"));
+                    });
+
+                    ui.vertical(|ui| {
+                        ui.label(RichText::new("Release").strong());
+                        ui.add(egui::Slider::new(&mut self.release_ms, 5.0..=1000.0).text("ms"));
+                    });
+
+                    ui.vertical(|ui| {
+                        ui.label(RichText::new("Dry / Wet").strong());
+                        ui.add(egui::Slider::new(&mut self.mix, 0.0..=1.0));
+                    });
+                });
+            });
+        });
     }
 }
 
