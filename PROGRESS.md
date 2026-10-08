@@ -1987,3 +1987,35 @@ Product Management has conducted a comprehensive readiness audit:
   - Feature tests: 7 passed in 0.07s (`cargo test -p summoner_gui --features gui -- tier139_turn75`).
   - Pure unit tests: 329 passed in 0.26s (`cargo test -p summoner_gui --lib`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
+
+### Turn #76 (Turn #39 Deliverable) — Broadcast Mastering Dolby Atmos 9.1.6 3D Room Raytracing & Auro-3D 13.1 Tri-Level Spatializer HUDs Convergence (Milestones 33 & 35)
+- [x] Broadcast Mastering Dolby Atmos 9.1.6 3D Acoustic Room Raytracing & Auro-3D 13.1 Tri-Level Height Elevation Spatializer Performance HUDs Integration:
+  - Integrated `Atmos916SpatializerView` (Broadcast Mastering Immersive Dolby Atmos 9.1.6 3D Acoustic Room Raytracing HUD: 5 Monitoring Stage Profiles [Mastering Stage 9.1.6, Cinema Auditorium Dolby Dub Stage, Nearfield Mixing Studio, Binaural Atmos Spatializer with HRIR, Car Audio 16-Channel Cabin], 16-channel speaker layout [9 Bed + 1 LFE + 6 Overheads], 16-channel discrete energy monitoring, raytracing image source simulation [up to 256 rays], RT60 reverberation decay evaluation [0.15..0.85 s], 3D Object Coordinate translation $(X, Y, Z)$ in meters, and Touch-Draggable Stage Position Puck with $\ge 44 \times 44\text{pt}$ bounding target) and `Auro3dSpatializerView` (Broadcast Mastering Immersive Auro-3D 13.1 Tri-Level Height Elevation Spatializer HUD: 5 Speaker Formats [Auro 9.1, Auro 10.1, Auro 11.1 Cinema, Auro 13.1 Ultimate Broadcast, AuroMax Binaural 3-Layer HRTF], Channel counts [2..14 channels], Tri-level energy panning distribution across Lower Bed 0°, Height +30°, and Voice of God Top +90° layers, Haas height layer precedence delay [0.0..30.0 ms], 3D Cartesian coordinate translation $(X, Y, Z)$ in meters, and Touch-Draggable Azimuth vs Elevation Puck with $\ge 44 \times 44\text{pt}$ bounding target) into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/atmos_916_spatializer_view.rs` & `auro3d_spatializer_view.rs`):
+  - In `Atmos916SpatializerView`: added `show(&mut self, ui: &mut egui::Ui)` and `render_ascii_snapshot_str() -> String`.
+  - In `Auro3dSpatializerView`: added `show(&mut self, ui: &mut egui::Ui)` and `render_ascii_snapshot_str() -> String`.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_atmos_916_spatializer_modal: bool`, `atmos_916_spatializer_view: Atmos916SpatializerView`, `show_auro3d_spatializer_modal: bool`, and `auro3d_spatializer_view: Auro3dSpatializerView`.
+  - Added dedicated modal windows `show_atmos_916_spatializer_modal_window` and `show_auro3d_spatializer_modal_window` with responsive styling, WCAG AAA contrast, and $\ge 44 \times 44\text{pt}$ touch bounds.
+  - Added public lifecycle methods: `open_atmos_916_spatializer_hud()`, `close_atmos_916_spatializer_hud()`, `is_atmos_916_spatializer_hud_open()`, `open_auro3d_spatializer_hud()`, `close_auro3d_spatializer_hud()`, `is_auro3d_spatializer_hud_open()`.
+  - Real-time parameter sync bridges (`sync_atmos_916_spatializer_hud_state` and `sync_auro3d_spatializer_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_atmos_916_hud: bool` and `requested_open_auro3d_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🎬 Open Dolby Atmos 9.1.6 3D Room Raytracer HUD]` and `[🏔 Open Auro-3D 13.1 Tri-Level Spatializer HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header `[🎬 HUD]` / `[🏔 HUD]` and expanded toolbar buttons `[🎬 Atmos HUD]` / `[🏔 Auro-3D HUD]` in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Dolby Atmos 9.1.6: 3D stage footprint rectangle, 8-channel bed perimeter dots, radiating acoustic raytracing paths, draggable source puck modulating `source_x_m` and `source_y_m`, RT60 readout, and live `ParamBus` slot dispatch.
+    * Auro-3D 13.1: Tri-level concentric elevation circles (Bed 0°, Height +30°, Top Voice of God +90°), 3D trajectory elevation ray, draggable puck modulating `azimuth_deg` and `elevation_deg`, Haas delay readout, and live `ParamBus` slot dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_atmos_916_spatializer_hud` and `open_auro3d_spatializer_hud` under `"Spatial"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_atmos_916_spatializer_hud()` and `open_auro3d_spatializer_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier140_turn76_tests.rs`:
+    * Pure tests: view initialization, room profiles/Auro formats, coordinate conversions, puck hit testing, speaker energy levels, 3D Cartesian coordinates, slot arithmetic channel isolation, deterministic ASCII snapshots.
+    * GUI tests: modal lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch, rack & inspector trigger propagation, command palette action registration.
+  - Registered `tier140_turn76_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Feature tests: 7 passed in 0.07s (`cargo test -p summoner_gui --features gui -- tier140_turn76`).
+  - Pure unit tests: 329 passed in 0.25s (`cargo test -p summoner_gui --lib`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).

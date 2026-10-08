@@ -744,6 +744,10 @@ pub struct AwardWinningGuiView {
     pub hoa5_binaural_view: crate::views::hoa5_binaural_view::Hoa5BinauralView,
     pub show_mpegh_3d_modal: bool,
     pub mpegh_3d_spatializer_view: crate::views::mpegh_3d_spatializer_view::Mpegh3DSpatializerView,
+    pub show_atmos_916_spatializer_modal: bool,
+    pub atmos_916_spatializer_view: crate::views::atmos_916_spatializer_view::Atmos916SpatializerView,
+    pub show_auro3d_spatializer_modal: bool,
+    pub auro3d_spatializer_view: crate::views::auro3d_spatializer_view::Auro3dSpatializerView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1104,6 +1108,10 @@ impl AwardWinningGuiView {
             hoa5_binaural_view: crate::views::hoa5_binaural_view::Hoa5BinauralView::new(),
             show_mpegh_3d_modal: false,
             mpegh_3d_spatializer_view: crate::views::mpegh_3d_spatializer_view::Mpegh3DSpatializerView::new(),
+            show_atmos_916_spatializer_modal: false,
+            atmos_916_spatializer_view: crate::views::atmos_916_spatializer_view::Atmos916SpatializerView::new(),
+            show_auro3d_spatializer_modal: false,
+            auro3d_spatializer_view: crate::views::auro3d_spatializer_view::Auro3dSpatializerView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2003,6 +2011,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_mpegh_3d_hud = false;
             self.open_mpegh_3d_hud();
         }
+        if self.inspector_state.requested_open_atmos_916_hud || self.device_rack_state.requested_open_atmos_916_hud {
+            self.inspector_state.requested_open_atmos_916_hud = false;
+            self.device_rack_state.requested_open_atmos_916_hud = false;
+            self.open_atmos_916_spatializer_hud();
+        }
+        if self.inspector_state.requested_open_auro3d_hud || self.device_rack_state.requested_open_auro3d_hud {
+            self.inspector_state.requested_open_auro3d_hud = false;
+            self.device_rack_state.requested_open_auro3d_hud = false;
+            self.open_auro3d_spatializer_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2058,6 +2076,8 @@ impl AwardWinningGuiView {
         self.show_sonar_hydrophone_modal_window(ui);
         self.show_hoa5_binaural_modal_window(ui);
         self.show_mpegh_3d_modal_window(ui);
+        self.show_atmos_916_spatializer_modal_window(ui);
+        self.show_auro3d_spatializer_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -12532,6 +12552,200 @@ impl AwardWinningGuiView {
 
     pub fn is_mpegh_3d_hud_open(&self) -> bool {
         self.show_mpegh_3d_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_atmos_916_spatializer_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_atmos_916_spatializer_modal {
+            return;
+        }
+
+        let mut is_open = self.show_atmos_916_spatializer_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎬 Broadcast Mastering Dolby Atmos 9.1.6 3D Room Raytracer HUD")
+            .id(egui::Id::new("atmos_916_spatializer_hud_modal"))
+            .open(&mut is_open)
+            .default_size([920.0, 600.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Broadcast Mastering Immersive Dolby Atmos 9.1.6 3D Acoustic Room Raytracing HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.atmos_916_spatializer_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_atmos_916_spatializer_modal = is_open;
+        self.sync_atmos_916_spatializer_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_atmos_916_spatializer_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let x = self.atmos_916_spatializer_view.source_x_m;
+        let y = self.atmos_916_spatializer_view.source_y_m;
+        let z = self.atmos_916_spatializer_view.source_z_m;
+        let rt60 = self.atmos_916_spatializer_view.rt60_decay_s;
+        let dist = (x * x + y * y + z * z).sqrt().max(0.01);
+        let az = x.atan2(y).to_degrees();
+        let el = (z / dist).clamp(-1.0, 1.0).asin().to_degrees();
+
+        self.device_rack_state.node_param_values.insert("source_x_m".to_string(), x);
+        self.device_rack_state.node_param_values.insert("source_y_m".to_string(), y);
+        self.device_rack_state.node_param_values.insert("source_z_m".to_string(), z);
+        self.device_rack_state.node_param_values.insert("rt60_decay_s".to_string(), rt60);
+        self.device_rack_state.node_param_values.insert("azimuth".to_string(), az);
+        self.device_rack_state.node_param_values.insert("elevation".to_string(), el);
+        self.device_rack_state.node_param_values.insert("distance".to_string(), dist);
+
+        self.inspector_state.node_param_values.insert("source_x_m".to_string(), x);
+        self.inspector_state.node_param_values.insert("source_y_m".to_string(), y);
+        self.inspector_state.node_param_values.insert("source_z_m".to_string(), z);
+        self.inspector_state.node_param_values.insert("rt60_decay_s".to_string(), rt60);
+        self.inspector_state.node_param_values.insert("azimuth".to_string(), az);
+        self.inspector_state.node_param_values.insert("elevation".to_string(), el);
+        self.inspector_state.node_param_values.insert("distance".to_string(), dist);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_x = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_y = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_z = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_rt = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_x).is_some() { bus.set(pid_x, x); }
+            if bus.get(pid_y).is_some() { bus.set(pid_y, y); }
+            if bus.get(pid_z).is_some() { bus.set(pid_z, z); }
+            if bus.get(pid_rt).is_some() { bus.set(pid_rt, rt60); }
+        }
+    }
+
+    pub fn open_atmos_916_spatializer_hud(&mut self) {
+        self.show_atmos_916_spatializer_modal = true;
+    }
+
+    pub fn close_atmos_916_spatializer_hud(&mut self) {
+        self.show_atmos_916_spatializer_modal = false;
+    }
+
+    pub fn is_atmos_916_spatializer_hud_open(&self) -> bool {
+        self.show_atmos_916_spatializer_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_auro3d_spatializer_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_auro3d_spatializer_modal {
+            return;
+        }
+
+        let mut is_open = self.show_auro3d_spatializer_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🏔 Broadcast Mastering Auro-3D 13.1 Tri-Level Spatializer HUD")
+            .id(egui::Id::new("auro3d_spatializer_hud_modal"))
+            .open(&mut is_open)
+            .default_size([920.0, 600.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Broadcast Mastering Immersive Auro-3D 13.1 Spatializer & Tri-Level Height Elevation HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.auro3d_spatializer_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_auro3d_spatializer_modal = is_open;
+        self.sync_auro3d_spatializer_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_auro3d_spatializer_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let az = self.auro3d_spatializer_view.azimuth_deg;
+        let el = self.auro3d_spatializer_view.elevation_deg;
+        let dist = self.auro3d_spatializer_view.distance_m;
+        let delay = self.auro3d_spatializer_view.height_layer_delay_ms;
+        let bed = self.auro3d_spatializer_view.bed_layer_energy;
+        let hgt = self.auro3d_spatializer_view.height_layer_energy;
+        let top = self.auro3d_spatializer_view.top_layer_energy;
+
+        self.device_rack_state.node_param_values.insert("azimuth_deg".to_string(), az);
+        self.device_rack_state.node_param_values.insert("elevation_deg".to_string(), el);
+        self.device_rack_state.node_param_values.insert("distance_m".to_string(), dist);
+        self.device_rack_state.node_param_values.insert("height_layer_delay_ms".to_string(), delay);
+        self.device_rack_state.node_param_values.insert("lower_layer".to_string(), bed);
+        self.device_rack_state.node_param_values.insert("height_layer".to_string(), hgt);
+        self.device_rack_state.node_param_values.insert("top_voice".to_string(), top);
+
+        self.inspector_state.node_param_values.insert("azimuth_deg".to_string(), az);
+        self.inspector_state.node_param_values.insert("elevation_deg".to_string(), el);
+        self.inspector_state.node_param_values.insert("distance_m".to_string(), dist);
+        self.inspector_state.node_param_values.insert("height_layer_delay_ms".to_string(), delay);
+        self.inspector_state.node_param_values.insert("lower_layer".to_string(), bed);
+        self.inspector_state.node_param_values.insert("height_layer".to_string(), hgt);
+        self.inspector_state.node_param_values.insert("top_voice".to_string(), top);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_az = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_el = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_dist = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_del = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_az).is_some() { bus.set(pid_az, az); }
+            if bus.get(pid_el).is_some() { bus.set(pid_el, el); }
+            if bus.get(pid_dist).is_some() { bus.set(pid_dist, dist); }
+            if bus.get(pid_del).is_some() { bus.set(pid_del, delay); }
+        }
+    }
+
+    pub fn open_auro3d_spatializer_hud(&mut self) {
+        self.show_auro3d_spatializer_modal = true;
+    }
+
+    pub fn close_auro3d_spatializer_hud(&mut self) {
+        self.show_auro3d_spatializer_modal = false;
+    }
+
+    pub fn is_auro3d_spatializer_hud_open(&self) -> bool {
+        self.show_auro3d_spatializer_modal
     }
 
 

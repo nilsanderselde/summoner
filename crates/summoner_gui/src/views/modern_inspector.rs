@@ -138,6 +138,10 @@ pub struct ModernInspectorState {
     pub requested_open_hoa5_binaural_hud: bool,
     #[serde(default)]
     pub requested_open_mpegh_3d_hud: bool,
+    #[serde(default)]
+    pub requested_open_atmos_916_hud: bool,
+    #[serde(default)]
+    pub requested_open_auro3d_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -213,6 +217,8 @@ impl Default for ModernInspectorState {
             requested_open_sonar_hydrophone_hud: false,
             requested_open_hoa5_binaural_hud: false,
             requested_open_mpegh_3d_hud: false,
+            requested_open_atmos_916_hud: false,
+            requested_open_auro3d_hud: false,
         }
     }
 }
@@ -1197,6 +1203,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open interactive Broadcast Mastering Immersive MPEG-H 3D Audio Object Metadata Spatializer HUD").clicked() {
                     state.requested_open_mpegh_3d_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Atmos916") || active_kind.contains("DolbyAtmos") || active_kind == "Atmos916Spatializer" || active_kind == "Atmos916SpatializerView" || active_kind.contains("AtmosBed") || active_kind.contains("AtmosSpatializer") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🎬 Open Dolby Atmos 9.1.6 3D Room Raytracer HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 255, 180)))
+                        .fill(Color32::from_rgb(12, 36, 26))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 255, 180)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Broadcast Mastering Dolby Atmos 9.1.6 3D Acoustic Room Raytracing HUD").clicked() {
+                    state.requested_open_atmos_916_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Auro3d") || active_kind.contains("Auro-3D") || active_kind.contains("Auro131") || active_kind == "Auro3dSpatializer" || active_kind == "Auro3dSpatializerView" || active_kind.contains("AuroSpatializer") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🏔 Open Auro-3D 13.1 Tri-Level Spatializer HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(255, 171, 0)))
+                        .fill(Color32::from_rgb(38, 28, 12))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 171, 0)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Broadcast Mastering Auro-3D 13.1 Tri-Level Height Elevation Spatializer HUD").clicked() {
+                    state.requested_open_auro3d_hud = true;
                 }
                 ui.add_space(4.0);
             }

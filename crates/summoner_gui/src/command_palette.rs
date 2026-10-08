@@ -617,6 +617,18 @@ impl CommandPalette {
                 action_id: "open_mpegh_3d_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Dolby Atmos 9.1.6 3D Room Raytracer HUD".into(),
+                category: "Spatial".into(),
+                action_id: "open_atmos_916_spatializer_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Auro-3D 13.1 Tri-Level Spatializer HUD".into(),
+                category: "Spatial".into(),
+                action_id: "open_auro3d_spatializer_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

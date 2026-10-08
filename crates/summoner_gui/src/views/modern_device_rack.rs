@@ -153,6 +153,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_hoa5_binaural_hud: bool,
     #[serde(default)]
     pub requested_open_mpegh_3d_hud: bool,
+    #[serde(default)]
+    pub requested_open_atmos_916_hud: bool,
+    #[serde(default)]
+    pub requested_open_auro3d_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -218,6 +222,8 @@ impl Default for ModernDeviceRackState {
             requested_open_sonar_hydrophone_hud: false,
             requested_open_hoa5_binaural_hud: false,
             requested_open_mpegh_3d_hud: false,
+            requested_open_atmos_916_hud: false,
+            requested_open_auro3d_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -450,6 +456,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_sonar_hydrophone = cur_selection.contains("Sonar") || cur_selection.contains("Hydrophone") || cur_selection == "SonarHydrophoneNode" || cur_selection == "SonarHydrophoneView";
                     let is_hoa5_binaural = cur_selection.contains("Hoa5") || cur_selection.contains("Ambisonic5") || cur_selection.contains("HOA5") || cur_selection == "Hoa5BinauralView" || cur_selection == "Hoa5BinauralNode" || cur_selection == "Ambisonics5thOrderDecoder" || cur_selection.contains("HigherOrderAmbisonics") || cur_selection.contains("Hoa5thOrder");
                     let is_mpegh_3d = cur_selection.contains("Mpegh") || cur_selection.contains("MPEG-H") || cur_selection.contains("MpegH") || cur_selection == "Mpegh3DSpatializerView" || cur_selection == "Mpegh3DSpatializerNode" || cur_selection == "Mpegh3DObjectSpatializer" || cur_selection.contains("MpeghSpatializer");
+                    let is_atmos_916 = cur_selection.contains("Atmos916") || cur_selection.contains("DolbyAtmos") || cur_selection == "Atmos916Spatializer" || cur_selection == "Atmos916SpatializerView" || cur_selection.contains("AtmosBed") || cur_selection.contains("AtmosSpatializer");
+                    let is_auro3d = cur_selection.contains("Auro3d") || cur_selection.contains("Auro-3D") || cur_selection.contains("Auro131") || cur_selection == "Auro3dSpatializer" || cur_selection == "Auro3dSpatializerView" || cur_selection.contains("AuroSpatializer");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -646,6 +654,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("🎧 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 255, 180))).on_hover_text("Open MPEG-H 3D Immersive Spatializer HUD").clicked()
                     {
                         state.requested_open_mpegh_3d_hud = true;
+                    } else if is_atmos_916
+                        && ui.button(RichText::new("🎬 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 255, 180))).on_hover_text("Open Dolby Atmos 9.1.6 3D Room Raytracer HUD").clicked()
+                    {
+                        state.requested_open_atmos_916_hud = true;
+                    } else if is_auro3d
+                        && ui.button(RichText::new("🏔 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 171, 0))).on_hover_text("Open Auro-3D 13.1 Tri-Level Spatializer HUD").clicked()
+                    {
+                        state.requested_open_auro3d_hud = true;
                     }
                     ui.add_space(4.0);
                     let pwr_col = if state.is_enabled { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(100, 116, 139) };
@@ -876,6 +892,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_sonar_hydrophone = cur_selection.contains("Sonar") || cur_selection.contains("Hydrophone") || cur_selection == "SonarHydrophoneNode" || cur_selection == "SonarHydrophoneView";
                     let is_hoa5_binaural = cur_selection.contains("Hoa5") || cur_selection.contains("Ambisonic5") || cur_selection.contains("HOA5") || cur_selection == "Hoa5BinauralView" || cur_selection == "Hoa5BinauralNode" || cur_selection == "Ambisonics5thOrderDecoder" || cur_selection.contains("HigherOrderAmbisonics") || cur_selection.contains("Hoa5thOrder");
                     let is_mpegh_3d = cur_selection.contains("Mpegh") || cur_selection.contains("MPEG-H") || cur_selection.contains("MpegH") || cur_selection == "Mpegh3DSpatializerView" || cur_selection == "Mpegh3DSpatializerNode" || cur_selection == "Mpegh3DObjectSpatializer" || cur_selection.contains("MpeghSpatializer");
+                    let is_atmos_916 = cur_selection.contains("Atmos916") || cur_selection.contains("DolbyAtmos") || cur_selection == "Atmos916Spatializer" || cur_selection == "Atmos916SpatializerView" || cur_selection.contains("AtmosBed") || cur_selection.contains("AtmosSpatializer");
+                    let is_auro3d = cur_selection.contains("Auro3d") || cur_selection.contains("Auro-3D") || cur_selection.contains("Auro131") || cur_selection == "Auro3dSpatializer" || cur_selection == "Auro3dSpatializerView" || cur_selection.contains("AuroSpatializer");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1080,6 +1098,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("🎧 MPEG-H HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 255, 180))).on_hover_text("Open MPEG-H 3D Immersive Spatializer HUD").clicked()
                     {
                         state.requested_open_mpegh_3d_hud = true;
+                    } else if is_atmos_916
+                        && ui.button(RichText::new("🎬 Atmos HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 255, 180))).on_hover_text("Open Dolby Atmos 9.1.6 3D Room Raytracer HUD").clicked()
+                    {
+                        state.requested_open_atmos_916_hud = true;
+                    } else if is_auro3d
+                        && ui.button(RichText::new("🏔 Auro-3D HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 171, 0))).on_hover_text("Open Auro-3D 13.1 Tri-Level Spatializer HUD").clicked()
+                    {
+                        state.requested_open_auro3d_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -1896,6 +1922,8 @@ fn show_pro_parameter_drawer(
                     let is_sonar_hydrophone = dev_kind.contains("Sonar") || dev_kind.contains("Hydrophone") || dev_kind == "SonarHydrophoneNode" || dev_kind == "SonarHydrophoneView";
                     let is_hoa5_binaural = dev_kind.contains("Hoa5") || dev_kind.contains("Ambisonic5") || dev_kind.contains("HOA5") || dev_kind == "Hoa5BinauralView" || dev_kind == "Hoa5BinauralNode" || dev_kind == "Ambisonics5thOrderDecoder" || dev_kind.contains("HigherOrderAmbisonics") || dev_kind.contains("Hoa5thOrder");
                     let is_mpegh_3d = dev_kind.contains("Mpegh") || dev_kind.contains("MPEG-H") || dev_kind.contains("MpegH") || dev_kind == "Mpegh3DSpatializerView" || dev_kind == "Mpegh3DSpatializerNode" || dev_kind == "Mpegh3DObjectSpatializer" || dev_kind.contains("MpeghSpatializer");
+                    let is_atmos_916 = dev_kind.contains("Atmos916") || dev_kind.contains("DolbyAtmos") || dev_kind == "Atmos916Spatializer" || dev_kind == "Atmos916SpatializerView" || dev_kind.contains("AtmosBed") || dev_kind.contains("AtmosSpatializer");
+                    let is_auro3d = dev_kind.contains("Auro3d") || dev_kind.contains("Auro-3D") || dev_kind.contains("Auro131") || dev_kind == "Auro3dSpatializer" || dev_kind == "Auro3dSpatializerView" || dev_kind.contains("AuroSpatializer");
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -5862,6 +5890,163 @@ fn show_pro_parameter_drawer(
                             let _ = mp_resp.on_hover_text(format!(
                                 "MPEG-H 3D Audio Spatializer HUD\nAzimuth: {:.1}° | Elevation: {:.1}° | Distance: {:.1}m\nSpread Divergence: {:.0}%\n[Drag: Azimuth (X) vs Elevation (Y)]",
                                 az, el, dist, spread
+                            ));
+                        }
+                    } else if is_atmos_916 {
+                        // Broadcast Mastering Dolby Atmos 9.1.6 3D Room Raytracing Mini Visualizer
+                        let (at_resp, at_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let at_rect = at_resp.rect;
+                        at_painter.rect_filled(at_rect, 2.0, Color32::from_rgb(10, 16, 26));
+
+                        let mut sx = state.node_param_values.get("source_x_m").copied().unwrap_or(1.5);
+                        let mut sy = state.node_param_values.get("source_y_m").copied().unwrap_or(2.0);
+                        let sz = state.node_param_values.get("source_z_m").copied().unwrap_or(1.2);
+                        let rt60 = state.node_param_values.get("rt60_decay_s").copied().unwrap_or(0.35);
+
+                        if at_resp.dragged() {
+                            if let Some(pos) = at_resp.interact_pointer_pos() {
+                                let nx = ((pos.x - at_rect.left()) / at_rect.width()).clamp(0.0, 1.0);
+                                let ny = (1.0 - ((pos.y - at_rect.top()) / at_rect.height())).clamp(0.0, 1.0);
+                                sx = -8.0 + nx * 16.0;
+                                sy = -8.0 + ny * 16.0;
+                                let dist = (sx * sx + sy * sy + sz * sz).sqrt().max(0.01);
+                                let az = sx.atan2(sy).to_degrees();
+                                let el = (sz / dist).clamp(-1.0, 1.0).asin().to_degrees();
+
+                                state.node_param_values.insert("source_x_m".to_string(), sx);
+                                state.node_param_values.insert("source_y_m".to_string(), sy);
+                                state.node_param_values.insert("azimuth".to_string(), az);
+                                state.node_param_values.insert("elevation".to_string(), el);
+                                state.node_param_values.insert("distance".to_string(), dist);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_x = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_y = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_x).is_some() { bus.set(pid_x, sx); }
+                                    if bus.get(pid_y).is_some() { bus.set(pid_y, sy); }
+                                }
+                            }
+                        }
+
+                        // Room Stage Boundary Box (Stage footprint)
+                        let room_min = egui::pos2(at_rect.left() + 10.0, at_rect.top() + 8.0);
+                        let room_max = egui::pos2(at_rect.left() + 74.0, at_rect.bottom() - 8.0);
+                        let room_rect = egui::Rect::from_min_max(room_min, room_max);
+                        at_painter.rect_stroke(room_rect, 2.0, Stroke::new(1.0_f32, Color32::from_rgb(45, 65, 95)));
+
+                        // 9.1.6 Bed speaker dots on stage perimeter
+                        let spk_pts = [
+                            room_rect.left_top(),
+                            room_rect.center_top(),
+                            room_rect.right_top(),
+                            room_rect.left_center(),
+                            room_rect.right_center(),
+                            room_rect.left_bottom(),
+                            room_rect.center_bottom(),
+                            room_rect.right_bottom(),
+                        ];
+                        for &sp in &spk_pts {
+                            at_painter.circle_filled(sp, 1.6, Color32::from_rgb(0, 229, 255));
+                        }
+
+                        // Object source puck inside stage
+                        let p_norm_x = ((sx + 8.0) / 16.0).clamp(0.0, 1.0);
+                        let p_norm_y = (1.0 - (sy + 8.0) / 16.0).clamp(0.0, 1.0);
+                        let puck_pos = egui::pos2(
+                            room_rect.left() + p_norm_x * room_rect.width(),
+                            room_rect.top() + p_norm_y * room_rect.height(),
+                        );
+
+                        // Raytrace rays radiating to room boundaries
+                        for sp in [&room_rect.left_top(), &room_rect.right_top(), &room_rect.right_bottom(), &room_rect.left_bottom()] {
+                            at_painter.line_segment([puck_pos, *sp], Stroke::new(0.8_f32, Color32::from_rgba_unmultiplied(0, 255, 180, 50)));
+                        }
+                        at_painter.circle_filled(puck_pos, 3.8, Color32::from_rgb(0, 255, 180));
+
+                        // Readouts
+                        at_painter.text(
+                            egui::pos2(at_rect.right() - 6.0, at_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("ATMOS (9.1.6)\nx: {:.1}m y: {:.1}m\nRT60: {:.2}s | 128 rays", sx, sy, rt60),
+                            FontId::proportional(8.0),
+                            Color32::from_rgb(0, 255, 180),
+                        );
+
+                        if at_resp.hovered() {
+                            let _ = at_resp.on_hover_text(format!(
+                                "Dolby Atmos 9.1.6 3D Room Raytracer HUD\nX: {:.2}m | Y: {:.2}m | Z: {:.2}m\nRT60: {:.2}s\n[Drag: Stage Position (X vs Y)]",
+                                sx, sy, sz, rt60
+                            ));
+                        }
+                    } else if is_auro3d {
+                        // Broadcast Mastering Immersive Auro-3D 13.1 Tri-Level Height Spatializer Mini Visualizer
+                        let (au_resp, au_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let au_rect = au_resp.rect;
+                        au_painter.rect_filled(au_rect, 2.0, Color32::from_rgb(18, 16, 26));
+
+                        let mut az = state.node_param_values.get("azimuth_deg").copied().unwrap_or(35.0);
+                        let mut el = state.node_param_values.get("elevation_deg").copied().unwrap_or(28.0);
+                        let dist = state.node_param_values.get("distance_m").copied().unwrap_or(2.8);
+                        let delay = state.node_param_values.get("height_layer_delay_ms").copied().unwrap_or(12.5);
+
+                        if au_resp.dragged() {
+                            if let Some(pos) = au_resp.interact_pointer_pos() {
+                                let nx = ((pos.x - au_rect.left()) / au_rect.width()).clamp(0.0, 1.0);
+                                let ny = (1.0 - ((pos.y - au_rect.top()) / au_rect.height())).clamp(0.0, 1.0);
+                                az = -180.0 + nx * 360.0;
+                                el = -30.0 + ny * 120.0;
+
+                                let bed = if el <= 0.0 { 1.0 } else if el <= 30.0 { (1.0 - el / 30.0).powi(2) } else { 0.0 };
+                                let hgt = if el <= 0.0 { 0.0 } else if el <= 30.0 { (el / 30.0 * (2.0 - el / 30.0)).clamp(0.0, 1.0) } else { (1.0 - (el - 30.0) / 60.0).powi(2) };
+                                let top = if el <= 30.0 { 0.0 } else { ((el - 30.0) / 60.0 * (2.0 - (el - 30.0) / 60.0)).clamp(0.0, 1.0) };
+
+                                state.node_param_values.insert("azimuth_deg".to_string(), az);
+                                state.node_param_values.insert("elevation_deg".to_string(), el);
+                                state.node_param_values.insert("lower_layer".to_string(), bed);
+                                state.node_param_values.insert("height_layer".to_string(), hgt);
+                                state.node_param_values.insert("top_voice".to_string(), top);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_az = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_el = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_az).is_some() { bus.set(pid_az, az); }
+                                    if bus.get(pid_el).is_some() { bus.set(pid_el, el); }
+                                }
+                            }
+                        }
+
+                        // Tri-Level Concentric Rings (Center on left half)
+                        let center = egui::pos2(au_rect.left() + 38.0, au_rect.center().y);
+                        // Layer 1: Lower Bed (outer ring)
+                        au_painter.circle_stroke(center, 26.0, Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(101, 84, 171, 70)));
+                        // Layer 2: Height Layer (middle ring)
+                        au_painter.circle_stroke(center, 17.0, Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(255, 171, 0, 90)));
+                        // Layer 3: Top Voice of God (center dot / small ring)
+                        au_painter.circle_stroke(center, 7.0, Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(255, 215, 0, 110)));
+
+                        // Azimuth / Elevation Vector Puck
+                        let az_rad = az.to_radians();
+                        let r_proj = ((1.0 - (el + 30.0) / 120.0) * 24.0).clamp(3.0, 26.0);
+                        let puck_pos = egui::pos2(
+                            center.x + az_rad.sin() * r_proj,
+                            center.y - az_rad.cos() * r_proj * 0.75,
+                        );
+                        au_painter.line_segment([center, puck_pos], Stroke::new(1.2_f32, Color32::from_rgb(255, 171, 0)));
+                        au_painter.circle_filled(puck_pos, 3.8, Color32::from_rgb(255, 215, 0));
+
+                        // Readouts
+                        au_painter.text(
+                            egui::pos2(au_rect.right() - 6.0, au_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("AURO-3D 13.1\naz: {:.0}° el: {:.0}°\nd: {:.1}m | del: {:.1}ms", az, el, dist, delay),
+                            FontId::proportional(8.0),
+                            Color32::from_rgb(255, 171, 0),
+                        );
+
+                        if au_resp.hovered() {
+                            let _ = au_resp.on_hover_text(format!(
+                                "Auro-3D 13.1 Tri-Level Spatializer HUD\nAzimuth: {:.1}° | Elevation: {:.1}° | Distance: {:.1}m\nHeight Delay: {:.1}ms\n[Drag: Azimuth (X) vs Elevation (Y)]",
+                                az, el, dist, delay
                             ));
                         }
                     } else {
