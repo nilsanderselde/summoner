@@ -173,6 +173,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_rotary_doppler_hud: bool,
     #[serde(default)]
     pub requested_open_raytraced_reverb_hud: bool,
+    #[serde(default)]
+    pub requested_open_atmos_surround_hud: bool,
+    #[serde(default)]
+    pub requested_open_atmos_proximity_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -248,6 +252,8 @@ impl Default for ModernDeviceRackState {
             requested_open_spatial_room_hud: false,
             requested_open_rotary_doppler_hud: false,
             requested_open_raytraced_reverb_hud: false,
+            requested_open_atmos_surround_hud: false,
+            requested_open_atmos_proximity_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -946,6 +952,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_spatial_room = cur_selection.contains("SpatialRoom") || cur_selection.contains("ImageSourceRoom") || cur_selection == "SpatialRoomNode" || cur_selection == "SpatialRoomView" || cur_selection.contains("RoomAcousticModel") || cur_selection.contains("ShoeboxRoom");
                     let is_rotary_doppler = cur_selection.contains("RotaryDualHorn") || cur_selection.contains("RotaryDualDrum") || cur_selection.contains("RotarySpeakerAcousticDeflector") || cur_selection.contains("RotaryDoppler") || cur_selection.contains("RotaryCabinet") || cur_selection.contains("DualRotorLeslie") || cur_selection == "RotaryDopplerView";
                     let is_raytraced_reverb = cur_selection.contains("VolumetricRaytracedRoomAcoustics") || cur_selection.contains("BinauralRaytracedEarlyReflection") || cur_selection.contains("RaytracedReverb") || cur_selection == "RaytracedReverbView" || cur_selection.contains("RaytracedEarlyReflection") || cur_selection.contains("RaytracedRoom");
+                    let is_atmos_surround = cur_selection.contains("AtmosSurround") || cur_selection.contains("SurroundStemSplitterBedObject") || cur_selection.contains("SurroundDownmixer") || cur_selection == "AtmosSurroundNode" || cur_selection == "AtmosSurroundView";
+                    let is_atmos_proximity = cur_selection.contains("AtmosProximity") || cur_selection == "AtmosProximityNode" || cur_selection == "AtmosProximityView";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1190,6 +1198,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("⚡ Raytrace HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 215, 0))).on_hover_text("Open Acoustic Early Reflections Raytracer HUD").clicked()
                     {
                         state.requested_open_raytraced_reverb_hud = true;
+                    } else if is_atmos_surround
+                        && ui.button(RichText::new("🌌 Atmos Bed HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open 7.1.4 Dolby Atmos 3D Immersive Bed & Object Radar HUD").clicked()
+                    {
+                        state.requested_open_atmos_surround_hud = true;
+                    } else if is_atmos_proximity
+                        && ui.button(RichText::new("📡 Atmos Prox HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 180, 0))).on_hover_text("Open 7.1.4 Dolby Atmos Spherical Proximity & Distance HUD").clicked()
+                    {
+                        state.requested_open_atmos_proximity_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2016,6 +2032,8 @@ fn show_pro_parameter_drawer(
                     let is_spatial_room = dev_kind.contains("SpatialRoom") || dev_kind.contains("ImageSourceRoom") || dev_kind == "SpatialRoomNode" || dev_kind == "SpatialRoomView" || dev_kind.contains("RoomAcousticModel") || dev_kind.contains("ShoeboxRoom");
                     let is_rotary_doppler = dev_kind.contains("RotaryDualHorn") || dev_kind.contains("RotaryDualDrum") || dev_kind.contains("RotarySpeakerAcousticDeflector") || dev_kind.contains("RotaryDoppler") || dev_kind.contains("RotaryCabinet") || dev_kind.contains("DualRotorLeslie") || dev_kind == "RotaryDopplerView";
                     let is_raytraced_reverb = dev_kind.contains("VolumetricRaytracedRoomAcoustics") || dev_kind.contains("BinauralRaytracedEarlyReflection") || dev_kind.contains("RaytracedReverb") || dev_kind == "RaytracedReverbView" || dev_kind.contains("RaytracedEarlyReflection") || dev_kind.contains("RaytracedRoom");
+                    let is_atmos_surround = dev_kind.contains("AtmosSurround") || dev_kind.contains("SurroundStemSplitterBedObject") || dev_kind.contains("SurroundDownmixer") || dev_kind == "AtmosSurroundNode" || dev_kind == "AtmosSurroundView";
+                    let is_atmos_proximity = dev_kind.contains("AtmosProximity") || dev_kind == "AtmosProximityNode" || dev_kind == "AtmosProximityView";
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer

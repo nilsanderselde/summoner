@@ -266,6 +266,10 @@ impl AtmosProximityView {
             .collect()
     }
 
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        self.render_ascii(40, 16).join("\n")
+    }
+
     #[cfg(feature = "gui")]
     pub fn show(&mut self, ui: &mut egui::Ui) {
         let bg_color = Color32::from_rgb(14, 18, 28);

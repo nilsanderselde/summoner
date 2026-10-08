@@ -764,6 +764,10 @@ pub struct AwardWinningGuiView {
     pub rotary_doppler_view: crate::views::rotary_doppler_view::RotaryDopplerView,
     pub show_raytraced_reverb_modal: bool,
     pub raytraced_reverb_view: crate::views::raytraced_reverb_view::RaytracedReverbView,
+    pub show_atmos_surround_modal: bool,
+    pub atmos_surround_view: crate::views::atmos_surround_view::AtmosSurroundView,
+    pub show_atmos_proximity_modal: bool,
+    pub atmos_proximity_view: crate::views::atmos_proximity_view::AtmosProximityView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1144,6 +1148,10 @@ impl AwardWinningGuiView {
             rotary_doppler_view: crate::views::rotary_doppler_view::RotaryDopplerView::new(),
             show_raytraced_reverb_modal: false,
             raytraced_reverb_view: crate::views::raytraced_reverb_view::RaytracedReverbView::new(),
+            show_atmos_surround_modal: false,
+            atmos_surround_view: crate::views::atmos_surround_view::AtmosSurroundView::new(),
+            show_atmos_proximity_modal: false,
+            atmos_proximity_view: crate::views::atmos_proximity_view::AtmosProximityView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2093,6 +2101,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_raytraced_reverb_hud = false;
             self.open_raytraced_reverb_hud();
         }
+        if self.inspector_state.requested_open_atmos_surround_hud || self.device_rack_state.requested_open_atmos_surround_hud {
+            self.inspector_state.requested_open_atmos_surround_hud = false;
+            self.device_rack_state.requested_open_atmos_surround_hud = false;
+            self.open_atmos_surround_hud();
+        }
+        if self.inspector_state.requested_open_atmos_proximity_hud || self.device_rack_state.requested_open_atmos_proximity_hud {
+            self.inspector_state.requested_open_atmos_proximity_hud = false;
+            self.device_rack_state.requested_open_atmos_proximity_hud = false;
+            self.open_atmos_proximity_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2158,6 +2176,8 @@ impl AwardWinningGuiView {
         self.show_spatial_room_modal_window(ui);
         self.show_rotary_doppler_modal_window(ui);
         self.show_raytraced_reverb_modal_window(ui);
+        self.show_atmos_surround_modal_window(ui);
+        self.show_atmos_proximity_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -13606,6 +13626,207 @@ impl AwardWinningGuiView {
 
     pub fn is_raytraced_reverb_hud_open(&self) -> bool {
         self.show_raytraced_reverb_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_atmos_surround_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_atmos_surround_modal {
+            return;
+        }
+
+        let mut is_open = self.show_atmos_surround_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🌌 7.1.4 Dolby Atmos 3D Immersive Bed & Object Radar HUD")
+            .id(egui::Id::new("atmos_surround_hud_modal"))
+            .open(&mut is_open)
+            .default_size([920.0, 580.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Master Broadcast 7.1.4 Dolby Atmos 3D Immersive Bed & Object Panning Radar HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.atmos_surround_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_atmos_surround_modal = is_open;
+        self.sync_atmos_surround_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_atmos_surround_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let obj_x = self.atmos_surround_view.object_x;
+        let obj_y = self.atmos_surround_view.object_y;
+        let obj_z = self.atmos_surround_view.object_z_height;
+        let spread = self.atmos_surround_view.object_size_spread;
+        let lfe_gain = self.atmos_surround_view.lfe_send_gain_db;
+
+        self.device_rack_state.node_param_values.insert("object_x".to_string(), obj_x);
+        self.device_rack_state.node_param_values.insert("object_y".to_string(), obj_y);
+        self.device_rack_state.node_param_values.insert("object_z_height".to_string(), obj_z);
+        self.device_rack_state.node_param_values.insert("object_size_spread".to_string(), spread);
+        self.device_rack_state.node_param_values.insert("lfe_send_gain_db".to_string(), lfe_gain);
+        self.device_rack_state.node_param_values.insert("surround_azimuth".to_string(), obj_x * 180.0);
+        self.device_rack_state.node_param_values.insert("height_elevation".to_string(), obj_z * 90.0);
+        self.device_rack_state.node_param_values.insert("divergence_spread".to_string(), spread * 0.01);
+        self.device_rack_state.node_param_values.insert("lfe_send_level".to_string(), lfe_gain);
+
+        self.inspector_state.node_param_values.insert("object_x".to_string(), obj_x);
+        self.inspector_state.node_param_values.insert("object_y".to_string(), obj_y);
+        self.inspector_state.node_param_values.insert("object_z_height".to_string(), obj_z);
+        self.inspector_state.node_param_values.insert("object_size_spread".to_string(), spread);
+        self.inspector_state.node_param_values.insert("lfe_send_gain_db".to_string(), lfe_gain);
+        self.inspector_state.node_param_values.insert("surround_azimuth".to_string(), obj_x * 180.0);
+        self.inspector_state.node_param_values.insert("height_elevation".to_string(), obj_z * 90.0);
+        self.inspector_state.node_param_values.insert("divergence_spread".to_string(), spread * 0.01);
+        self.inspector_state.node_param_values.insert("lfe_send_level".to_string(), lfe_gain);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_x = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_y = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_z = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_spr = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_lfe = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+
+            if bus.get(pid_x).is_some() { bus.set(pid_x, obj_x); }
+            if bus.get(pid_y).is_some() { bus.set(pid_y, obj_y); }
+            if bus.get(pid_z).is_some() { bus.set(pid_z, obj_z); }
+            if bus.get(pid_spr).is_some() { bus.set(pid_spr, spread); }
+            if bus.get(pid_lfe).is_some() { bus.set(pid_lfe, lfe_gain); }
+        }
+    }
+
+    pub fn open_atmos_surround_hud(&mut self) {
+        self.show_atmos_surround_modal = true;
+    }
+
+    pub fn close_atmos_surround_hud(&mut self) {
+        self.show_atmos_surround_modal = false;
+    }
+
+    pub fn is_atmos_surround_hud_open(&self) -> bool {
+        self.show_atmos_surround_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_atmos_proximity_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_atmos_proximity_modal {
+            return;
+        }
+
+        let mut is_open = self.show_atmos_proximity_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("📡 3D 7.1.4 Dolby Atmos Spherical Proximity HUD")
+            .id(egui::Id::new("atmos_proximity_hud_modal"))
+            .open(&mut is_open)
+            .default_size([920.0, 580.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Broadcast Mastering Immersive 3D 7.1.4 Dolby Atmos Binaural Distance Compensation HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.atmos_proximity_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_atmos_proximity_modal = is_open;
+        self.sync_atmos_proximity_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_atmos_proximity_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let dist = self.atmos_proximity_view.distance_m;
+        let az = self.atmos_proximity_view.azimuth_deg;
+        let el = self.atmos_proximity_view.elevation_deg;
+        let bass = self.atmos_proximity_view.proximity_bass_boost_db;
+        let air = self.atmos_proximity_view.air_absorption_loss_db;
+        let itd = self.atmos_proximity_view.itd_us;
+
+        self.device_rack_state.node_param_values.insert("distance_m".to_string(), dist);
+        self.device_rack_state.node_param_values.insert("azimuth_deg".to_string(), az);
+        self.device_rack_state.node_param_values.insert("elevation_deg".to_string(), el);
+        self.device_rack_state.node_param_values.insert("proximity_bass_boost_db".to_string(), bass);
+        self.device_rack_state.node_param_values.insert("air_absorption_loss_db".to_string(), air);
+        self.device_rack_state.node_param_values.insert("air_absorption_hf_loss_db".to_string(), air);
+        self.device_rack_state.node_param_values.insert("itd_spread".to_string(), (itd / 700.0).clamp(0.0, 1.0));
+
+        self.inspector_state.node_param_values.insert("distance_m".to_string(), dist);
+        self.inspector_state.node_param_values.insert("azimuth_deg".to_string(), az);
+        self.inspector_state.node_param_values.insert("elevation_deg".to_string(), el);
+        self.inspector_state.node_param_values.insert("proximity_bass_boost_db".to_string(), bass);
+        self.inspector_state.node_param_values.insert("air_absorption_loss_db".to_string(), air);
+        self.inspector_state.node_param_values.insert("air_absorption_hf_loss_db".to_string(), air);
+        self.inspector_state.node_param_values.insert("itd_spread".to_string(), (itd / 700.0).clamp(0.0, 1.0));
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_dist = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_az = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_el = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_bass = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_air = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_itd = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+
+            if bus.get(pid_dist).is_some() { bus.set(pid_dist, dist); }
+            if bus.get(pid_az).is_some() { bus.set(pid_az, az); }
+            if bus.get(pid_el).is_some() { bus.set(pid_el, el); }
+            if bus.get(pid_bass).is_some() { bus.set(pid_bass, bass); }
+            if bus.get(pid_air).is_some() { bus.set(pid_air, air); }
+            if bus.get(pid_itd).is_some() { bus.set(pid_itd, itd); }
+        }
+    }
+
+    pub fn open_atmos_proximity_hud(&mut self) {
+        self.show_atmos_proximity_modal = true;
+    }
+
+    pub fn close_atmos_proximity_hud(&mut self) {
+        self.show_atmos_proximity_modal = false;
+    }
+
+    pub fn is_atmos_proximity_hud_open(&self) -> bool {
+        self.show_atmos_proximity_modal
     }
 
 

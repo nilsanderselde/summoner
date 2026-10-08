@@ -158,6 +158,10 @@ pub struct ModernInspectorState {
     pub requested_open_rotary_doppler_hud: bool,
     #[serde(default)]
     pub requested_open_raytraced_reverb_hud: bool,
+    #[serde(default)]
+    pub requested_open_atmos_surround_hud: bool,
+    #[serde(default)]
+    pub requested_open_atmos_proximity_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -243,6 +247,8 @@ impl Default for ModernInspectorState {
             requested_open_spatial_room_hud: false,
             requested_open_rotary_doppler_hud: false,
             requested_open_raytraced_reverb_hud: false,
+            requested_open_atmos_surround_hud: false,
+            requested_open_atmos_proximity_hud: false,
         }
     }
 }
@@ -1327,6 +1333,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open interactive Acoustic Early Reflections Stochastic Raytracer & Binaural Distance Attenuation HUD").clicked() {
                     state.requested_open_raytraced_reverb_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("AtmosSurround") || active_kind.contains("SurroundStemSplitterBedObject") || active_kind.contains("SurroundDownmixer") || active_kind == "AtmosSurroundNode" || active_kind == "AtmosSurroundView" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🌌 Open 7.1.4 Dolby Atmos Surround Bed HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 229, 255)))
+                        .fill(Color32::from_rgb(10, 28, 48))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 229, 255)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Master Broadcast 7.1.4 Dolby Atmos 3D Immersive Bed & Object Panning Radar HUD").clicked() {
+                    state.requested_open_atmos_surround_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("AtmosProximity") || active_kind.contains("Atmos916Spatializer") || active_kind == "AtmosProximityNode" || active_kind == "AtmosProximityView" {
+                if ui.add(
+                    egui::Button::new(RichText::new("📡 Open 7.1.4 Dolby Atmos Spherical Proximity HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(255, 180, 0)))
+                        .fill(Color32::from_rgb(44, 32, 10))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 180, 0)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Broadcast Mastering Immersive 3D 7.1.4 Dolby Atmos Binaural Distance Compensation HUD").clicked() {
+                    state.requested_open_atmos_proximity_hud = true;
                 }
                 ui.add_space(4.0);
             }
