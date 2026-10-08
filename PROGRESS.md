@@ -2456,6 +2456,39 @@ Product Management has conducted a comprehensive readiness audit:
   - Pure unit tests: 329 passed in 0.23s (`cargo test -p summoner_gui --lib`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
 
+### Turn #91 (Sprint Turn #17) — Tactile Bitcrusher Morphology HUD and Multi-Voice Analog Bucket-Brigade (BBD) Chorus Matrix HUD Convergence (Milestones 33 & 34)
+- [x] Tactile Bitcrusher & Multi-Voice BBD Chorus HUDs Integration:
+  - Integrated `BitcrusherMorphView` (Tactile Bitcrusher Morphology Canvas with Downsampling Anti-Aliasing Curve & Quantization Jitter HUD: 4 Morphology Modes [Linear, Companded μ-Law, Companded A-Law, Chaotic Foldback], Bit Depth [1.0..24.0 bits], Downsample Ratio [1.0..64.0x], Jitter/Dither [0..100%], Anti-Alias Filter Cutoff [200..20000 Hz], Pre-Drive [-12.0..+24.0 dB], Dry/Wet Mix [0..100%], 64-Point Staircase Quantization Transfer Curve, and Touch-Draggable 2D Morph Puck with >= 44x44pt bounding target) and `BbdChorusView` (Multi-Voice Analog Bucket-Brigade BBD Chorus Matrix & Stereo Lissajous Spatial Drift HUD: 4 BBD Clock Modes [Vintage BBD MN3007, Clean Modern Analog, Dimension D Spatial, Lo-Fi Clock Bleed], 6 to 8 Configurable Chorus Delay Voices, Stereo Spread [0..100%], Feedback Regeneration [-100..+100%], Dry/Wet Mix [0..100%], BBD Clock Rate [10.0..96.0 kHz], 24-Point Lissajous Stereo Phase Trajectory Ellipse, and Touch-Draggable Spatial Puck with >= 44x44pt bounding target) into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/bitcrusher_morph_view.rs` & `bbd_chorus_view.rs`):
+  - In `BitcrusherMorphView`: added `mode_name()` to `MorphQuantizeMode`, `set_mode()`, `bit_to_normalized()`, `normalized_to_bit()`, `downsample_to_normalized()`, `normalized_to_downsample()`, and `render_ascii_snapshot_str() -> String` with quantization mode metadata banner.
+  - In `BbdChorusView`: added `mode_name()` to `BbdClockMode`, `set_mode()`, `show_ui(&mut self, ui: &mut egui::Ui)`, and `render_ascii_snapshot_str() -> String` with clock mode metadata banner.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_bitcrusher_morph_modal: bool`, `bitcrusher_morph_view: BitcrusherMorphView`, `show_bbd_chorus_modal: bool`, and `bbd_chorus_view: BbdChorusView`.
+  - Added dedicated modal windows `show_bitcrusher_morph_modal_window` and `show_bbd_chorus_modal_window` with responsive styling, WCAG AAA contrast, and >= 44x44pt touch bounds.
+  - Added public lifecycle methods: `open_bitcrusher_morph_hud()`, `close_bitcrusher_morph_hud()`, `is_bitcrusher_morph_hud_open()`, `open_bbd_chorus_hud()`, `close_bbd_chorus_hud()`, `is_bbd_chorus_hud_open()`.
+  - Real-time parameter sync bridges (`sync_bitcrusher_morph_hud_state` and `sync_bbd_chorus_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_bitcrusher_morph_hud: bool` and `requested_open_bbd_chorus_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🎛 Open Bitcrusher Morphology HUD]` and `[📻 Open BBD Chorus HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header buttons `[🎛 Bitcrush HUD]` and `[📻 BBD Chorus HUD]` in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Bitcrusher: 2D bits vs downsampling coordinate box, crosshairs, draggable puck updating normalized bit depth and downsampling ratio, 16-point staircase transfer curve preview, live readout, and lock-free `ParamBus` slot dispatch.
+    * BBD Chorus: 2D spread vs feedback coordinate box, crosshairs, draggable puck updating stereo spread and feedback, 24-point Lissajous phase ellipse preview, live readout, and lock-free `ParamBus` slot dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_bitcrusher_morph_hud` under `"Distortion / Lo-Fi"` and `open_bbd_chorus_hud` under `"Modulation / Time"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_bitcrusher_morph_hud()` and `open_bbd_chorus_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier155_turn91_tests.rs`:
+    * Pure tests: view initialization, coordinate normalizations (bit depth, downsample, spread, feedback), mode switching across all profiles for both views, transfer curve & Lissajous trajectory evaluation, touch puck hit testing (>= 44x44pt bounding targets), deterministic ASCII snapshots with metadata banners.
+    * GUI tests: modal window lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch without allocations, trigger button propagation from rack and inspector, command palette action verification.
+  - Registered `tier155_turn91_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Feature tests: 6 passed in 0.06s (`cargo test -p summoner_gui --features gui -- tier155_turn91`).
+  - Pure unit tests: 329 passed in 0.23s (`cargo test -p summoner_gui --lib`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
+
+
 
 
 

@@ -808,6 +808,10 @@ pub struct AwardWinningGuiView {
     pub neural_inpaint_view: crate::views::neural_inpaint_view::NeuralInpaintView,
     pub show_neural_timbre_modal: bool,
     pub neural_timbre_view: crate::views::neural_timbre_view::NeuralTimbreView,
+    pub show_bitcrusher_morph_modal: bool,
+    pub bitcrusher_morph_view: crate::views::bitcrusher_morph_view::BitcrusherMorphView,
+    pub show_bbd_chorus_modal: bool,
+    pub bbd_chorus_view: crate::views::bbd_chorus_view::BbdChorusView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1232,6 +1236,10 @@ impl AwardWinningGuiView {
             neural_inpaint_view: crate::views::neural_inpaint_view::NeuralInpaintView::new(),
             show_neural_timbre_modal: false,
             neural_timbre_view: crate::views::neural_timbre_view::NeuralTimbreView::new(),
+            show_bitcrusher_morph_modal: false,
+            bitcrusher_morph_view: crate::views::bitcrusher_morph_view::BitcrusherMorphView::new(),
+            show_bbd_chorus_modal: false,
+            bbd_chorus_view: crate::views::bbd_chorus_view::BbdChorusView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2291,6 +2299,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_neural_timbre_hud = false;
             self.open_neural_timbre_hud();
         }
+        if self.inspector_state.requested_open_bitcrusher_morph_hud || self.device_rack_state.requested_open_bitcrusher_morph_hud {
+            self.inspector_state.requested_open_bitcrusher_morph_hud = false;
+            self.device_rack_state.requested_open_bitcrusher_morph_hud = false;
+            self.open_bitcrusher_morph_hud();
+        }
+        if self.inspector_state.requested_open_bbd_chorus_hud || self.device_rack_state.requested_open_bbd_chorus_hud {
+            self.inspector_state.requested_open_bbd_chorus_hud = false;
+            self.device_rack_state.requested_open_bbd_chorus_hud = false;
+            self.open_bbd_chorus_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2378,6 +2396,8 @@ impl AwardWinningGuiView {
         self.show_nam_amp_modal_window(ui);
         self.show_neural_inpaint_modal_window(ui);
         self.show_neural_timbre_modal_window(ui);
+        self.show_bitcrusher_morph_modal_window(ui);
+        self.show_bbd_chorus_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -15790,6 +15810,192 @@ impl AwardWinningGuiView {
             if bus.get(pid_air).is_some() { bus.set(pid_air, air); }
             if bus.get(pid_sag).is_some() { bus.set(pid_sag, sag); }
             if bus.get(pid_pres).is_some() { bus.set(pid_pres, pres); }
+        }
+    }
+
+    pub fn open_bitcrusher_morph_hud(&mut self) {
+        self.show_bitcrusher_morph_modal = true;
+    }
+
+    pub fn close_bitcrusher_morph_hud(&mut self) {
+        self.show_bitcrusher_morph_modal = false;
+    }
+
+    pub fn is_bitcrusher_morph_hud_open(&self) -> bool {
+        self.show_bitcrusher_morph_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_bitcrusher_morph_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_bitcrusher_morph_modal {
+            return;
+        }
+
+        let mut is_open = self.show_bitcrusher_morph_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎛 Tactile Bitcrusher & Quantization Morphology HUD")
+            .id(egui::Id::new("bitcrusher_morph_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(800.0, 540.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Variable Bit Depth Quantizer, Downsampler & Non-Linear Transfer Curve (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.bitcrusher_morph_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_bitcrusher_morph_modal = is_open;
+        self.sync_bitcrusher_morph_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_bitcrusher_morph_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let bits = self.bitcrusher_morph_view.bit_depth;
+        let downsample = self.bitcrusher_morph_view.downsample_ratio;
+        let jitter = self.bitcrusher_morph_view.jitter_pct;
+        let filter = self.bitcrusher_morph_view.anti_alias_cutoff_hz;
+        let drive = self.bitcrusher_morph_view.pre_drive_db;
+        let mix = self.bitcrusher_morph_view.mix_pct;
+
+        self.device_rack_state.node_param_values.insert("bit_depth".to_string(), bits);
+        self.device_rack_state.node_param_values.insert("downsample_ratio".to_string(), downsample);
+        self.device_rack_state.node_param_values.insert("jitter_pct".to_string(), jitter);
+        self.device_rack_state.node_param_values.insert("anti_alias_cutoff_hz".to_string(), filter);
+        self.device_rack_state.node_param_values.insert("pre_drive_db".to_string(), drive);
+        self.device_rack_state.node_param_values.insert("mix_pct".to_string(), mix);
+
+        self.inspector_state.node_param_values.insert("bit_depth".to_string(), bits);
+        self.inspector_state.node_param_values.insert("downsample_ratio".to_string(), downsample);
+        self.inspector_state.node_param_values.insert("jitter_pct".to_string(), jitter);
+        self.inspector_state.node_param_values.insert("anti_alias_cutoff_hz".to_string(), filter);
+        self.inspector_state.node_param_values.insert("pre_drive_db".to_string(), drive);
+        self.inspector_state.node_param_values.insert("mix_pct".to_string(), mix);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_bits = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_downsample = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_jitter = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_filter = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_drive = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_mix = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+
+            if bus.get(pid_bits).is_some() { bus.set(pid_bits, bits); }
+            if bus.get(pid_downsample).is_some() { bus.set(pid_downsample, downsample); }
+            if bus.get(pid_jitter).is_some() { bus.set(pid_jitter, jitter); }
+            if bus.get(pid_filter).is_some() { bus.set(pid_filter, filter); }
+            if bus.get(pid_drive).is_some() { bus.set(pid_drive, drive); }
+            if bus.get(pid_mix).is_some() { bus.set(pid_mix, mix); }
+        }
+    }
+
+    pub fn open_bbd_chorus_hud(&mut self) {
+        self.show_bbd_chorus_modal = true;
+    }
+
+    pub fn close_bbd_chorus_hud(&mut self) {
+        self.show_bbd_chorus_modal = false;
+    }
+
+    pub fn is_bbd_chorus_hud_open(&self) -> bool {
+        self.show_bbd_chorus_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_bbd_chorus_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_bbd_chorus_modal {
+            return;
+        }
+
+        let mut is_open = self.show_bbd_chorus_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("📻 Multi-Voice Analog Bucket-Brigade (BBD) Chorus Matrix HUD")
+            .id(egui::Id::new("bbd_chorus_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(820.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Multi-Tap BBD Delay Lines, Lissajous Stereo Field & Analog Clock Bleed (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.bbd_chorus_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_bbd_chorus_modal = is_open;
+        self.sync_bbd_chorus_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_bbd_chorus_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let spread = self.bbd_chorus_view.stereo_spread_percent;
+        let feedback = self.bbd_chorus_view.feedback_percent;
+        let mix = self.bbd_chorus_view.mix_percent;
+        let clock = self.bbd_chorus_view.bbd_clock_rate_khz;
+
+        self.device_rack_state.node_param_values.insert("stereo_spread_percent".to_string(), spread);
+        self.device_rack_state.node_param_values.insert("feedback_percent".to_string(), feedback);
+        self.device_rack_state.node_param_values.insert("mix_percent".to_string(), mix);
+        self.device_rack_state.node_param_values.insert("bbd_clock_rate_khz".to_string(), clock);
+
+        self.inspector_state.node_param_values.insert("stereo_spread_percent".to_string(), spread);
+        self.inspector_state.node_param_values.insert("feedback_percent".to_string(), feedback);
+        self.inspector_state.node_param_values.insert("mix_percent".to_string(), mix);
+        self.inspector_state.node_param_values.insert("bbd_clock_rate_khz".to_string(), clock);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_spread = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_feedback = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_mix = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_clock = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_spread).is_some() { bus.set(pid_spread, spread); }
+            if bus.get(pid_feedback).is_some() { bus.set(pid_feedback, feedback); }
+            if bus.get(pid_mix).is_some() { bus.set(pid_mix, mix); }
+            if bus.get(pid_clock).is_some() { bus.set(pid_clock, clock); }
         }
     }
 

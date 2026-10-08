@@ -217,6 +217,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_neural_inpaint_hud: bool,
     #[serde(default)]
     pub requested_open_neural_timbre_hud: bool,
+    #[serde(default)]
+    pub requested_open_bitcrusher_morph_hud: bool,
+    #[serde(default)]
+    pub requested_open_bbd_chorus_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -314,6 +318,8 @@ impl Default for ModernDeviceRackState {
             requested_open_nam_amp_hud: false,
             requested_open_neural_inpaint_hud: false,
             requested_open_neural_timbre_hud: false,
+            requested_open_bitcrusher_morph_hud: false,
+            requested_open_bbd_chorus_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -1034,6 +1040,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_nam_amp = cur_selection.contains("NamAmp") || cur_selection.contains("NamModel") || cur_selection == "NamAmpView" || cur_selection == "NamAmpNode" || cur_selection.contains("NeuralAmp") || cur_selection.contains("WaveNet");
                     let is_neural_inpaint = cur_selection.contains("NeuralInpaint") || cur_selection.contains("Inpaint") || cur_selection == "NeuralInpaintView" || cur_selection == "NeuralInpaintNode" || cur_selection.contains("SpectralRepair");
                     let is_neural_timbre = cur_selection.contains("NeuralTimbre") || cur_selection.contains("TimbreTransfer") || cur_selection == "NeuralTimbreView" || cur_selection == "NeuralTimbreNode" || cur_selection.contains("LatentFlow");
+                    let is_bitcrusher = cur_selection.contains("Bitcrusher") || cur_selection.contains("BitCrush") || cur_selection == "BitcrusherMorphView" || cur_selection == "BitcrusherNode" || cur_selection.contains("SampleRateReduction");
+                    let is_bbd_chorus = cur_selection.contains("BbdChorus") || cur_selection.contains("Chorus") || cur_selection == "BbdChorusView" || cur_selection == "EffectChorus" || cur_selection.contains("BucketBrigade") || cur_selection.contains("LissajousChorus");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1366,6 +1374,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("🧬 Timbre HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(244, 63, 94))).on_hover_text("Open Neural Timbre Transfer Morphing Resynthesizer HUD").clicked()
                     {
                         state.requested_open_neural_timbre_hud = true;
+                    } else if is_bitcrusher
+                        && ui.button(RichText::new("🎛 Bitcrush HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 107, 43))).on_hover_text("Open Tactile Bitcrusher & Quantization Morphology HUD").clicked()
+                    {
+                        state.requested_open_bitcrusher_morph_hud = true;
+                    } else if is_bbd_chorus
+                        && ui.button(RichText::new("📻 BBD Chorus HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Multi-Voice Analog Bucket-Brigade (BBD) Chorus Matrix HUD").clicked()
+                    {
+                        state.requested_open_bbd_chorus_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2214,6 +2230,8 @@ fn show_pro_parameter_drawer(
                     let is_nam_amp = dev_kind.contains("NamAmp") || dev_kind.contains("NamModel") || dev_kind == "NamAmpView" || dev_kind == "NamAmpNode" || dev_kind.contains("NeuralAmp") || dev_kind.contains("WaveNet");
                     let is_neural_inpaint = dev_kind.contains("NeuralInpaint") || dev_kind.contains("Inpaint") || dev_kind == "NeuralInpaintView" || dev_kind == "NeuralInpaintNode" || dev_kind.contains("SpectralRepair");
                     let is_neural_timbre = dev_kind.contains("NeuralTimbre") || dev_kind.contains("TimbreTransfer") || dev_kind == "NeuralTimbreView" || dev_kind == "NeuralTimbreNode" || dev_kind.contains("LatentFlow");
+                    let is_bitcrusher = dev_kind.contains("Bitcrusher") || dev_kind.contains("BitCrush") || dev_kind == "BitcrusherMorphView" || dev_kind == "BitcrusherNode" || dev_kind.contains("SampleRateReduction");
+                    let is_bbd_chorus = dev_kind.contains("BbdChorus") || dev_kind.contains("Chorus") || dev_kind == "BbdChorusView" || dev_kind == "EffectChorus" || dev_kind.contains("BucketBrigade") || dev_kind.contains("LissajousChorus");
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -8831,6 +8849,202 @@ fn show_pro_parameter_drawer(
                             let _ = nt_resp.on_hover_text(format!(
                                 "Neural Timbre Transfer Morphing Resynthesizer HUD\nLatent Coord: ({:.2}, {:.2}) | Flow Rate: {:.2} Hz\nResidual Blend: {:.0}% | Convergence: {:.1}%\n[Drag: Latent Z1 (X) / Z2 (Y) Puck]",
                                 z1, z2, flow, blend * 100.0, conv
+                            ));
+                        }
+                    } else if is_bitcrusher {
+                        // Tactile Bitcrusher & Quantization Mini Visualizer
+                        let (bc_resp, bc_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let bc_rect = bc_resp.rect;
+                        bc_painter.rect_filled(bc_rect, 2.0, Color32::from_rgb(14, 10, 8));
+
+                        let mut bits = state.node_param_values.get("bit_depth").copied().unwrap_or(6.5);
+                        let mut downsample = state.node_param_values.get("downsample_ratio").copied().unwrap_or(8.0);
+                        let jitter = state.node_param_values.get("jitter_pct").copied().unwrap_or(12.0);
+                        let drive = state.node_param_values.get("pre_drive_db").copied().unwrap_or(4.5);
+                        let mix = state.node_param_values.get("mix_pct").copied().unwrap_or(100.0);
+
+                        let center = bc_rect.center();
+                        let max_box = 24.0;
+                        let bc_box = egui::Rect::from_center_size(
+                            egui::pos2(bc_rect.left() + 32.0, center.y),
+                            egui::vec2(max_box * 2.0, max_box * 2.0),
+                        );
+                        bc_painter.rect_filled(bc_box, 1.0, Color32::from_rgb(24, 16, 12));
+                        bc_painter.rect_stroke(
+                            bc_box,
+                            1.0,
+                            Stroke::new(0.6_f32, Color32::from_rgba_unmultiplied(255, 107, 43, 80)),
+                        );
+
+                        if bc_resp.dragged() {
+                            if let Some(pos) = bc_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - bc_box.left()) / (max_box * 2.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - (pos.y - bc_box.top()) / (max_box * 2.0)).clamp(0.0, 1.0);
+                                bits = crate::views::bitcrusher_morph_view::BitcrusherMorphView::normalized_to_bit(norm_x);
+                                downsample = crate::views::bitcrusher_morph_view::BitcrusherMorphView::normalized_to_downsample(1.0 - norm_y);
+
+                                state.node_param_values.insert("bit_depth".to_string(), bits);
+                                state.node_param_values.insert("downsample_ratio".to_string(), downsample);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_bits = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_down = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_bits).is_some() { bus.set(pid_bits, bits); }
+                                    if bus.get(pid_down).is_some() { bus.set(pid_down, downsample); }
+                                }
+                            }
+                        }
+
+                        // Grid crosshairs
+                        bc_painter.line_segment(
+                            [egui::pos2(bc_box.left(), bc_box.center().y), egui::pos2(bc_box.right(), bc_box.center().y)],
+                            Stroke::new(0.6_f32, Color32::from_rgba_unmultiplied(255, 107, 43, 80)),
+                        );
+                        bc_painter.line_segment(
+                            [egui::pos2(bc_box.center().x, bc_box.top()), egui::pos2(bc_box.center().x, bc_box.bottom())],
+                            Stroke::new(0.6_f32, Color32::from_rgba_unmultiplied(255, 107, 43, 80)),
+                        );
+
+                        // Bitcrusher Puck
+                        let norm_bits = crate::views::bitcrusher_morph_view::BitcrusherMorphView::bit_to_normalized(bits);
+                        let norm_down = 1.0 - crate::views::bitcrusher_morph_view::BitcrusherMorphView::downsample_to_normalized(downsample);
+                        let px = bc_box.left() + norm_bits * (max_box * 2.0);
+                        let py = bc_box.bottom() - norm_down * (max_box * 2.0);
+                        bc_painter.circle_filled(egui::pos2(px, py), 3.5, Color32::from_rgb(255, 107, 43));
+                        bc_painter.circle_stroke(
+                            egui::pos2(px, py),
+                            5.5,
+                            Stroke::new(0.8_f32, Color32::from_rgba_unmultiplied(255, 255, 255, 160)),
+                        );
+
+                        // Quantization staircase curve preview
+                        let curve_left = bc_rect.left() + 72.0;
+                        let curve_w = bc_rect.right() - curve_left - 8.0;
+                        let curve_center_y = bc_rect.center().y + 8.0;
+                        let steps = 16;
+                        let levels = 2.0_f32.powf(bits.clamp(1.0, 16.0));
+                        let mut prev_pt: Option<egui::Pos2> = None;
+                        for s in 0..=steps {
+                            let t = -1.0 + (s as f32 / steps as f32) * 2.0;
+                            let q = (t * levels * 0.5).round() / (levels * 0.5);
+                            let cur_pt = egui::pos2(curve_left + (s as f32 / steps as f32) * curve_w, curve_center_y - q.clamp(-1.0, 1.0) * 20.0);
+                            if let Some(p) = prev_pt {
+                                bc_painter.line_segment([p, cur_pt], Stroke::new(1.2_f32, Color32::from_rgb(255, 107, 43)));
+                            }
+                            prev_pt = Some(cur_pt);
+                        }
+
+                        // Readout
+                        bc_painter.text(
+                            egui::pos2(bc_rect.right() - 4.0, bc_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("BITCRUSHER\nBits: {:.1} | Down: {:.1}x\nJitter: {:.0}% | Mix: {:.0}%", bits, downsample, jitter, mix),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(255, 107, 43),
+                        );
+
+                        if bc_resp.hovered() {
+                            let _ = bc_resp.on_hover_text(format!(
+                                "Tactile Bitcrusher & Morphology HUD\nBit Depth: {:.1} bits | Downsample: {:.1}x\nJitter: {:.0}% | Pre-Drive: {:+.1} dB\n[Drag: Bits (X) / Downsample (Y) Puck]",
+                                bits, downsample, jitter, drive
+                            ));
+                        }
+                    } else if is_bbd_chorus {
+                        // Multi-Voice Analog Bucket-Brigade (BBD) Chorus Mini Visualizer
+                        let (bbd_resp, bbd_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let bbd_rect = bbd_resp.rect;
+                        bbd_painter.rect_filled(bbd_rect, 2.0, Color32::from_rgb(8, 16, 24));
+
+                        let mut spread = state.node_param_values.get("stereo_spread_percent").copied().unwrap_or(85.0);
+                        let mut feedback = state.node_param_values.get("feedback_percent").copied().unwrap_or(30.0);
+                        let mix = state.node_param_values.get("mix_percent").copied().unwrap_or(50.0);
+                        let clock = state.node_param_values.get("bbd_clock_rate_khz").copied().unwrap_or(44.1);
+
+                        let center = bbd_rect.center();
+                        let max_box = 24.0;
+                        let bbd_box = egui::Rect::from_center_size(
+                            egui::pos2(bbd_rect.left() + 32.0, center.y),
+                            egui::vec2(max_box * 2.0, max_box * 2.0),
+                        );
+                        bbd_painter.rect_filled(bbd_box, 1.0, Color32::from_rgb(12, 24, 34));
+                        bbd_painter.rect_stroke(
+                            bbd_box,
+                            1.0,
+                            Stroke::new(0.6_f32, Color32::from_rgba_unmultiplied(0, 229, 255, 80)),
+                        );
+
+                        if bbd_resp.dragged() {
+                            if let Some(pos) = bbd_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - bbd_box.left()) / (max_box * 2.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - (pos.y - bbd_box.top()) / (max_box * 2.0)).clamp(0.0, 1.0);
+                                spread = crate::views::bbd_chorus_view::BbdChorusView::normalized_to_spread(norm_x);
+                                feedback = crate::views::bbd_chorus_view::BbdChorusView::normalized_to_feedback(norm_y);
+
+                                state.node_param_values.insert("stereo_spread_percent".to_string(), spread);
+                                state.node_param_values.insert("feedback_percent".to_string(), feedback);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_spr = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_fb = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_spr).is_some() { bus.set(pid_spr, spread); }
+                                    if bus.get(pid_fb).is_some() { bus.set(pid_fb, feedback); }
+                                }
+                            }
+                        }
+
+                        // Grid crosshairs
+                        bbd_painter.line_segment(
+                            [egui::pos2(bbd_box.left(), bbd_box.center().y), egui::pos2(bbd_box.right(), bbd_box.center().y)],
+                            Stroke::new(0.6_f32, Color32::from_rgba_unmultiplied(0, 229, 255, 80)),
+                        );
+                        bbd_painter.line_segment(
+                            [egui::pos2(bbd_box.center().x, bbd_box.top()), egui::pos2(bbd_box.center().x, bbd_box.bottom())],
+                            Stroke::new(0.6_f32, Color32::from_rgba_unmultiplied(0, 229, 255, 80)),
+                        );
+
+                        // BBD Spatial Puck
+                        let norm_spr = crate::views::bbd_chorus_view::BbdChorusView::spread_to_normalized(spread);
+                        let norm_fb = crate::views::bbd_chorus_view::BbdChorusView::feedback_to_normalized(feedback);
+                        let px = bbd_box.left() + norm_spr * (max_box * 2.0);
+                        let py = bbd_box.bottom() - norm_fb * (max_box * 2.0);
+                        bbd_painter.circle_filled(egui::pos2(px, py), 3.5, Color32::from_rgb(0, 229, 255));
+                        bbd_painter.circle_stroke(
+                            egui::pos2(px, py),
+                            5.5,
+                            Stroke::new(0.8_f32, Color32::from_rgba_unmultiplied(255, 255, 255, 160)),
+                        );
+
+                        // Lissajous stereo phase ellipse preview
+                        let curve_left = bbd_rect.left() + 72.0;
+                        let curve_w = bbd_rect.right() - curve_left - 8.0;
+                        let curve_center_y = bbd_rect.center().y + 8.0;
+                        let steps = 24;
+                        let mut prev_pt: Option<egui::Pos2> = None;
+                        for s in 0..=steps {
+                            let theta = (s as f32 / steps as f32) * std::f32::consts::TAU;
+                            let phase_diff = (feedback / 100.0) * 1.5;
+                            let lx = theta.sin() * (spread / 100.0).clamp(0.2, 1.0);
+                            let ry = (theta + phase_diff).sin();
+                            let cur_pt = egui::pos2(curve_left + (lx * 0.5 + 0.5) * curve_w, curve_center_y - ry * 18.0);
+                            if let Some(p) = prev_pt {
+                                bbd_painter.line_segment([p, cur_pt], Stroke::new(1.2_f32, Color32::from_rgb(0, 229, 255)));
+                            }
+                            prev_pt = Some(cur_pt);
+                        }
+
+                        // Readout
+                        bbd_painter.text(
+                            egui::pos2(bbd_rect.right() - 4.0, bbd_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("BBD CHORUS\nSpread: {:.0}% | FB: {:+.0}%\nMix: {:.0}% | {:.1}kHz", spread, feedback, mix, clock),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+
+                        if bbd_resp.hovered() {
+                            let _ = bbd_resp.on_hover_text(format!(
+                                "Multi-Voice BBD Chorus Matrix HUD\nStereo Spread: {:.0}% | Feedback: {:+.0}%\nDry/Wet Mix: {:.0}% | Clock Rate: {:.1} kHz\n[Drag: Spread (X) / Feedback (Y) Puck]",
+                                spread, feedback, mix, clock
                             ));
                         }
                     } else {

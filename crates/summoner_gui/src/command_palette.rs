@@ -809,6 +809,18 @@ impl CommandPalette {
                 action_id: "open_neural_timbre_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Tactile Bitcrusher & Quantization Morphology HUD".into(),
+                category: "Distortion / Lo-Fi".into(),
+                action_id: "open_bitcrusher_morph_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Multi-Voice Analog Bucket-Brigade (BBD) Chorus Matrix HUD".into(),
+                category: "Modulation / Time".into(),
+                action_id: "open_bbd_chorus_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

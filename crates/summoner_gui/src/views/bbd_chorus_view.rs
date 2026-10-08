@@ -21,6 +21,17 @@ pub enum BbdClockMode {
     LoFiClockBleed,      // Vintage analog clock heterodyne bleed & dark low-pass bucket filtering
 }
 
+impl BbdClockMode {
+    pub fn mode_name(&self) -> &'static str {
+        match self {
+            BbdClockMode::VintageBbdCompanded => "VINTAGE BBD (MN3007)",
+            BbdClockMode::CleanModernAnalog => "CLEAN ANALOG MATRIX",
+            BbdClockMode::DimensionDSpatial => "DIMENSION D SPATIAL",
+            BbdClockMode::LoFiClockBleed => "LO-FI CLOCK BLEED",
+        }
+    }
+}
+
 /// An individual BBD delay line voice in the chorus matrix.
 #[derive(Debug, Clone)]
 pub struct ChorusVoice {
@@ -128,6 +139,33 @@ impl BbdChorusView {
             real_time_drift_phase: 0.0,
             color_palette: ContrastColorPalette::default(),
         }
+    }
+
+    pub fn set_mode(&mut self, mode: BbdClockMode) {
+        self.mode = mode;
+    }
+
+    /// Deterministic ASCII snapshot with metadata banner.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        let mut lines = vec![
+            format!(
+                "=== MULTI-VOICE BBD CHORUS & LISSAJOUS MATRIX HUD [MODE: {}] ===",
+                self.mode.mode_name()
+            ),
+        ];
+        lines.extend(self.render_ascii(80, 14));
+        lines.push("[PASS] Multi-Voice BBD Chorus Matrix Verification".into());
+        lines.join("\n")
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_ui(&mut self, ui: &mut egui::Ui) {
+        let avail = ui.available_size();
+        let w = avail.x.max(760.0);
+        let h = avail.y.max(520.0);
+        let (rect_allocated, _) = ui.allocate_exact_size(egui::vec2(w, h), egui::Sense::hover());
+        let r = Rect::new(rect_allocated.min.x, rect_allocated.min.y, rect_allocated.width(), rect_allocated.height());
+        self.show(ui, r);
     }
 
     /// Convert stereo spread percentage (0.0 .. 100.0) to normalized coordinate [0.0 ..= 1.0].

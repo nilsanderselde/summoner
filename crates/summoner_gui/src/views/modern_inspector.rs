@@ -202,6 +202,10 @@ pub struct ModernInspectorState {
     pub requested_open_neural_inpaint_hud: bool,
     #[serde(default)]
     pub requested_open_neural_timbre_hud: bool,
+    #[serde(default)]
+    pub requested_open_bitcrusher_morph_hud: bool,
+    #[serde(default)]
+    pub requested_open_bbd_chorus_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -309,6 +313,8 @@ impl Default for ModernInspectorState {
             requested_open_nam_amp_hud: false,
             requested_open_neural_inpaint_hud: false,
             requested_open_neural_timbre_hud: false,
+            requested_open_bitcrusher_morph_hud: false,
+            requested_open_bbd_chorus_hud: false,
         }
     }
 }
@@ -1613,6 +1619,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open Neural Timbre Transfer Morphing Resynthesizer HUD").clicked() {
                     state.requested_open_neural_timbre_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Bitcrusher") || active_kind.contains("BitCrush") || active_kind == "BitcrusherMorphView" || active_kind == "BitcrusherNode" || active_kind.contains("SampleRateReduction") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🎛 Open Bitcrusher Morphology HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(255, 107, 43)))
+                        .fill(Color32::from_rgb(28, 20, 16))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 107, 43)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Tactile Bitcrusher & Quantization Morphology HUD").clicked() {
+                    state.requested_open_bitcrusher_morph_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("BbdChorus") || active_kind.contains("Chorus") || active_kind == "BbdChorusView" || active_kind == "EffectChorus" || active_kind.contains("BucketBrigade") || active_kind.contains("LissajousChorus") {
+                if ui.add(
+                    egui::Button::new(RichText::new("📻 Open BBD Chorus HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 229, 255)))
+                        .fill(Color32::from_rgb(16, 28, 38))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 229, 255)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Multi-Voice Analog Bucket-Brigade (BBD) Chorus Matrix HUD").clicked() {
+                    state.requested_open_bbd_chorus_hud = true;
                 }
                 ui.add_space(4.0);
             }

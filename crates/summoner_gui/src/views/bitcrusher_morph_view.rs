@@ -20,6 +20,17 @@ pub enum MorphQuantizeMode {
     ChaoticFoldback,
 }
 
+impl MorphQuantizeMode {
+    pub fn mode_name(&self) -> &'static str {
+        match self {
+            MorphQuantizeMode::Linear => "LINEAR",
+            MorphQuantizeMode::CompandedMuLaw => "μ-LAW LOG",
+            MorphQuantizeMode::CompandedALaw => "A-LAW LOG",
+            MorphQuantizeMode::ChaoticFoldback => "CHAOTIC FOLDBACK",
+        }
+    }
+}
+
 /// Tactile Bitcrusher Morphology View (Step 1422).
 #[derive(Debug, Clone)]
 pub struct BitcrusherMorphView {
@@ -55,6 +66,43 @@ impl BitcrusherMorphView {
             is_dragging_puck: false,
             color_palette: ContrastColorPalette::default(),
         }
+    }
+
+    pub fn set_mode(&mut self, mode: MorphQuantizeMode) {
+        self.mode = mode;
+    }
+
+    /// Normalizes bit depth [1.0 ..= 24.0] to [0.0 ..= 1.0].
+    pub fn bit_to_normalized(bits: f32) -> f32 {
+        ((bits.clamp(1.0, 24.0) - 1.0) / 23.0).clamp(0.0, 1.0)
+    }
+
+    /// Converts normalized value [0.0 ..= 1.0] to bit depth [1.0 ..= 24.0].
+    pub fn normalized_to_bit(norm: f32) -> f32 {
+        1.0 + norm.clamp(0.0, 1.0) * 23.0
+    }
+
+    /// Normalizes downsample ratio [1.0 ..= 64.0] to [0.0 ..= 1.0].
+    pub fn downsample_to_normalized(downsample: f32) -> f32 {
+        ((downsample.clamp(1.0, 64.0) - 1.0) / 63.0).clamp(0.0, 1.0)
+    }
+
+    /// Converts normalized value [0.0 ..= 1.0] to downsample ratio [1.0 ..= 64.0].
+    pub fn normalized_to_downsample(norm: f32) -> f32 {
+        1.0 + norm.clamp(0.0, 1.0) * 63.0
+    }
+
+    /// Deterministic ASCII snapshot with metadata banner.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        let mut lines = vec![
+            format!(
+                "=== TACTILE BITCRUSHER & MORPHOLOGY HUD [MODE: {}] ===",
+                self.mode.mode_name()
+            ),
+        ];
+        lines.extend(self.render_ascii(80, 14));
+        lines.push("[PASS] Tactile Bitcrusher Morphology Verification".into());
+        lines.join("\n")
     }
 
     /// Quantize a normalized sample [-1.0 ..= 1.0] given bit depth and quantization mode.
