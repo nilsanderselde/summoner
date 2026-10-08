@@ -260,6 +260,8 @@ pub mod tier152_turn88_tests;
 #[cfg(feature = "gui")]
 pub mod tier153_turn89_tests;
 #[cfg(feature = "gui")]
+pub mod tier154_turn90_tests;
+#[cfg(feature = "gui")]
 pub mod touch_gestures;
 #[cfg(feature = "gui")]
 pub mod transport_bar;
@@ -448,6 +450,8 @@ pub use views::multiband_visualizer::{
 #[cfg(feature = "gui")]
 pub use views::multitap_delay_view::MultitapDelayView;
 #[cfg(feature = "gui")]
+pub use views::nam_amp_view::NamAmpView;
+#[cfg(feature = "gui")]
 pub use views::neural_choir_formant_view::NeuralChoirFormantView;
 #[cfg(feature = "gui")]
 pub use views::neural_dereverb_view::NeuralDereverbView;
@@ -459,6 +463,8 @@ pub use views::neural_phoneme_view::NeuralPhonemeView;
 pub use views::neural_radiance_view::NeuralRadianceView;
 #[cfg(feature = "gui")]
 pub use views::neural_speech_to_singing_view::NeuralSpeechToSingingView;
+#[cfg(feature = "gui")]
+pub use views::neural_super_resolution_view::NeuralSuperResolutionView;
 #[cfg(feature = "gui")]
 pub use views::neural_timbre_morph_view::NeuralTimbreMorphView;
 #[cfg(feature = "gui")]

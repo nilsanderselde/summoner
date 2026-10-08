@@ -194,6 +194,10 @@ pub struct ModernInspectorState {
     pub requested_open_neural_phoneme_hud: bool,
     #[serde(default)]
     pub requested_open_neural_dereverb_hud: bool,
+    #[serde(default)]
+    pub requested_open_neural_super_resolution_hud: bool,
+    #[serde(default)]
+    pub requested_open_nam_amp_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -297,6 +301,8 @@ impl Default for ModernInspectorState {
             requested_open_neural_wavetable_hud: false,
             requested_open_neural_phoneme_hud: false,
             requested_open_neural_dereverb_hud: false,
+            requested_open_neural_super_resolution_hud: false,
+            requested_open_nam_amp_hud: false,
         }
     }
 }
@@ -1561,6 +1567,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open Neural Acoustic Blind Dereverberation & Deconvolution HUD").clicked() {
                     state.requested_open_neural_dereverb_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("NeuralSuperResolution") || active_kind.contains("SuperResolution") || active_kind == "NeuralSuperResolutionView" || active_kind == "NeuralSuperResolutionNode" || active_kind.contains("SuperRes") {
+                if ui.add(
+                    egui::Button::new(RichText::new("✨ Open Super-Resolution HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(56, 189, 248)))
+                        .fill(Color32::from_rgb(15, 23, 42))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(56, 189, 248)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Neural Audio Super-Resolution & Bandwidth Extension HUD").clicked() {
+                    state.requested_open_neural_super_resolution_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("NamAmp") || active_kind.contains("NamModel") || active_kind == "NamAmpView" || active_kind == "NamAmpNode" || active_kind.contains("NeuralAmp") || active_kind.contains("WaveNet") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🎸 Open NAM Amp HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(245, 158, 11)))
+                        .fill(Color32::from_rgb(36, 24, 10))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(245, 158, 11)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Neural Amp Modeler (NAM) WaveNet Guitar & Bass Amplifier HUD").clicked() {
+                    state.requested_open_nam_amp_hud = true;
                 }
                 ui.add_space(4.0);
             }

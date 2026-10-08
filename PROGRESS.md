@@ -2427,5 +2427,35 @@ Product Management has conducted a comprehensive readiness audit:
   - Pure unit tests: 329 passed in 0.23s (`cargo test -p summoner_gui --lib`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
 
+### Turn #90 (Sprint Turn #16) — Neural Audio Super-Resolution HUD and Neural Amp Modeler (NAM) WaveNet Guitar & Bass Amplifier HUD Convergence (Milestones 33 & 36)
+- [x] Neural Audio Super-Resolution & NAM Amp HUDs Integration:
+  - Integrated `NeuralSuperResolutionView` (Neural Audio Super-Resolution & Bandwidth Extension HUD: 5 Reconstruction Profiles [Wavelet Transient Air, Vocal Sparkle LPC, SubHarmonic Octave, Diffusion Spectrogram, Archive Restoration], HF Boost [0.0..12.0 dB], Spectral Continuity [0..100%], Harmonic Density [0..100%], Cutoff Knee Frequency [4000..20000 Hz], Ultrasonic Air [0..6 dB], Reconstruction Quality [92.0..99.8% FID], 16-Band Baseband vs Reconstructed HF Spectrogram Preview, and Touch-Draggable Super-Res Puck with >= 44x44pt bounding target) and `NamAmpView` (Neural Amp Modeler WaveNet Guitar & Bass Amplifier HUD: 5 Neural Amp Profiles [Vintage Clean 6V6, British Plexi EL34, Modern Recto 12AX7, All-Tube Bass SVT, Boutique Class-A EL84], Pre-Amp Drive [0.0..5.0x], Master Output Gain [0.0..2.0x], Integrated Noise Gate Threshold [-90.0..0.0 dB], Cabinet Air IR [0..100%], Cathode Tube Sag [0..100%], Presence Boost [-6.0..+6.0 dB], 4-Stage WaveNet Dilation Activity Meters [d=1, 2, 4, 8], 16-Point Non-Linear Saturation Transfer Curve, and Touch-Draggable Amp Puck with >= 44x44pt bounding target) into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_neural_super_resolution_modal: bool`, `neural_super_resolution_view: NeuralSuperResolutionView`, `show_nam_amp_modal: bool`, and `nam_amp_view: NamAmpView`.
+  - Added dedicated modal windows `show_neural_super_resolution_modal_window` and `show_nam_amp_modal_window` with responsive styling, WCAG AAA contrast, and >= 44x44pt touch bounds.
+  - Added public lifecycle methods: `open_neural_super_resolution_hud()`, `close_neural_super_resolution_hud()`, `is_neural_super_resolution_hud_open()`, `open_nam_amp_hud()`, `close_nam_amp_hud()`, `is_nam_amp_hud_open()`.
+  - Real-time parameter sync bridges (`sync_neural_super_resolution_hud_state` and `sync_nam_amp_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_neural_super_resolution_hud: bool` and `requested_open_nam_amp_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[✨ Open Super-Resolution HUD]` and `[🎸 Open NAM Amp HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header `[✨ Super-Res HUD]` / `[🎸 NAM Amp HUD]` in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Neural Super-Resolution: 2D continuity vs boost coordinate box, crosshairs, draggable puck updating continuity and HF boost, 16-band spectrum preview, live readout, and lock-free `ParamBus` slot dispatch.
+    * NAM Amp: 2D gate vs drive coordinate box, crosshairs, draggable puck updating gate threshold and drive, 16-point saturation curve preview, live readout, and lock-free `ParamBus` slot dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_neural_super_resolution_hud` under `"Restoration"` and `open_nam_amp_hud` under `"Amplification"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_neural_super_resolution_hud()` and `open_nam_amp_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier154_turn90_tests.rs`:
+    * Pure tests: view initialization, coordinate normalizations (boost, continuity, drive, gate), profile switching across all 5 profiles for both views, spectrum simulation & non-linear saturation curve evaluation, touch puck hit testing (>= 44x44pt bounding targets), deterministic ASCII snapshots with metadata banners.
+    * GUI tests: modal window lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch without allocations, trigger button propagation from rack and inspector, command palette action verification.
+  - Registered `tier154_turn90_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Feature tests: 6 passed in 0.06s (`cargo test -p summoner_gui --features gui -- tier154_turn90`).
+  - Pure unit tests: 329 passed in 0.23s (`cargo test -p summoner_gui --lib`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
+
+
 
 

@@ -785,6 +785,18 @@ impl CommandPalette {
                 action_id: "open_neural_dereverb_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Neural Audio Super-Resolution & Bandwidth Extension HUD".into(),
+                category: "Restoration".into(),
+                action_id: "open_neural_super_resolution_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Neural Amp Modeler (NAM) WaveNet Guitar & Bass Amplifier HUD".into(),
+                category: "Amplification".into(),
+                action_id: "open_nam_amp_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

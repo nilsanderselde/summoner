@@ -800,6 +800,10 @@ pub struct AwardWinningGuiView {
     pub neural_phoneme_view: crate::views::neural_phoneme_view::NeuralPhonemeView,
     pub show_neural_dereverb_modal: bool,
     pub neural_dereverb_view: crate::views::neural_dereverb_view::NeuralDereverbView,
+    pub show_neural_super_resolution_modal: bool,
+    pub neural_super_resolution_view: crate::views::neural_super_resolution_view::NeuralSuperResolutionView,
+    pub show_nam_amp_modal: bool,
+    pub nam_amp_view: crate::views::nam_amp_view::NamAmpView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1216,6 +1220,10 @@ impl AwardWinningGuiView {
             neural_phoneme_view: crate::views::neural_phoneme_view::NeuralPhonemeView::new(),
             show_neural_dereverb_modal: false,
             neural_dereverb_view: crate::views::neural_dereverb_view::NeuralDereverbView::new(),
+            show_neural_super_resolution_modal: false,
+            neural_super_resolution_view: crate::views::neural_super_resolution_view::NeuralSuperResolutionView::new(),
+            show_nam_amp_modal: false,
+            nam_amp_view: crate::views::nam_amp_view::NamAmpView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2255,6 +2263,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_neural_dereverb_hud = false;
             self.open_neural_dereverb_hud();
         }
+        if self.inspector_state.requested_open_neural_super_resolution_hud || self.device_rack_state.requested_open_neural_super_resolution_hud {
+            self.inspector_state.requested_open_neural_super_resolution_hud = false;
+            self.device_rack_state.requested_open_neural_super_resolution_hud = false;
+            self.open_neural_super_resolution_hud();
+        }
+        if self.inspector_state.requested_open_nam_amp_hud || self.device_rack_state.requested_open_nam_amp_hud {
+            self.inspector_state.requested_open_nam_amp_hud = false;
+            self.device_rack_state.requested_open_nam_amp_hud = false;
+            self.open_nam_amp_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2338,6 +2356,8 @@ impl AwardWinningGuiView {
         self.show_neural_wavetable_modal_window(ui);
         self.show_neural_phoneme_modal_window(ui);
         self.show_neural_dereverb_modal_window(ui);
+        self.show_neural_super_resolution_modal_window(ui);
+        self.show_nam_amp_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -15554,6 +15574,202 @@ impl AwardWinningGuiView {
             if bus.get(pid_late).is_some() { bus.set(pid_late, late); }
             if bus.get(pid_rt60).is_some() { bus.set(pid_rt60, rt60); }
             if bus.get(pid_blend).is_some() { bus.set(pid_blend, blend); }
+        }
+    }
+
+    pub fn open_neural_super_resolution_hud(&mut self) {
+        self.show_neural_super_resolution_modal = true;
+    }
+
+    pub fn close_neural_super_resolution_hud(&mut self) {
+        self.show_neural_super_resolution_modal = false;
+    }
+
+    pub fn is_neural_super_resolution_hud_open(&self) -> bool {
+        self.show_neural_super_resolution_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_neural_super_resolution_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_neural_super_resolution_modal {
+            return;
+        }
+
+        let mut is_open = self.show_neural_super_resolution_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("✨ Neural Audio Super-Resolution & Bandwidth Extension HUD")
+            .id(egui::Id::new("neural_super_resolution_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(820.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("AI High-Frequency Ultrasonic Reconstruction & Bandwidth Extension (Milestones 33 & 36)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.neural_super_resolution_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_neural_super_resolution_modal = is_open;
+        self.sync_neural_super_resolution_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_neural_super_resolution_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let boost = self.neural_super_resolution_view.hf_boost_db;
+        let cont = self.neural_super_resolution_view.spectral_continuity;
+        let density = self.neural_super_resolution_view.harmonic_density;
+        let cutoff = self.neural_super_resolution_view.cutoff_frequency_hz;
+        let air = self.neural_super_resolution_view.ultrasonic_air_db;
+        let qual = self.neural_super_resolution_view.reconstruction_quality_pct;
+
+        self.device_rack_state.node_param_values.insert("hf_boost_db".to_string(), boost);
+        self.device_rack_state.node_param_values.insert("spectral_continuity".to_string(), cont);
+        self.device_rack_state.node_param_values.insert("harmonic_density".to_string(), density);
+        self.device_rack_state.node_param_values.insert("cutoff_frequency_hz".to_string(), cutoff);
+        self.device_rack_state.node_param_values.insert("ultrasonic_air_db".to_string(), air);
+        self.device_rack_state.node_param_values.insert("reconstruction_quality_pct".to_string(), qual);
+
+        self.inspector_state.node_param_values.insert("hf_boost_db".to_string(), boost);
+        self.inspector_state.node_param_values.insert("spectral_continuity".to_string(), cont);
+        self.inspector_state.node_param_values.insert("harmonic_density".to_string(), density);
+        self.inspector_state.node_param_values.insert("cutoff_frequency_hz".to_string(), cutoff);
+        self.inspector_state.node_param_values.insert("ultrasonic_air_db".to_string(), air);
+        self.inspector_state.node_param_values.insert("reconstruction_quality_pct".to_string(), qual);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_boost = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_cont = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_density = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_cutoff = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_air = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_qual = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+
+            if bus.get(pid_boost).is_some() { bus.set(pid_boost, boost); }
+            if bus.get(pid_cont).is_some() { bus.set(pid_cont, cont); }
+            if bus.get(pid_density).is_some() { bus.set(pid_density, density); }
+            if bus.get(pid_cutoff).is_some() { bus.set(pid_cutoff, cutoff); }
+            if bus.get(pid_air).is_some() { bus.set(pid_air, air); }
+            if bus.get(pid_qual).is_some() { bus.set(pid_qual, qual); }
+        }
+    }
+
+    pub fn open_nam_amp_hud(&mut self) {
+        self.show_nam_amp_modal = true;
+    }
+
+    pub fn close_nam_amp_hud(&mut self) {
+        self.show_nam_amp_modal = false;
+    }
+
+    pub fn is_nam_amp_hud_open(&self) -> bool {
+        self.show_nam_amp_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_nam_amp_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_nam_amp_modal {
+            return;
+        }
+
+        let mut is_open = self.show_nam_amp_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎸 Neural Amp Modeler (NAM) WaveNet Guitar & Bass Amplifier HUD")
+            .id(egui::Id::new("nam_amp_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(820.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("WaveNet Dilated Convolutional Guitar/Bass Tube Amplifier & Cabinet Emulation (Milestones 33 & 36)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.nam_amp_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_nam_amp_modal = is_open;
+        self.sync_nam_amp_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_nam_amp_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let drive = self.nam_amp_view.drive;
+        let gain = self.nam_amp_view.output_gain;
+        let gate = self.nam_amp_view.gate_threshold_db;
+        let air = self.nam_amp_view.cabinet_air;
+        let sag = self.nam_amp_view.tube_sag;
+        let pres = self.nam_amp_view.presence_boost_db;
+
+        self.device_rack_state.node_param_values.insert("drive".to_string(), drive);
+        self.device_rack_state.node_param_values.insert("output_gain".to_string(), gain);
+        self.device_rack_state.node_param_values.insert("gate_threshold_db".to_string(), gate);
+        self.device_rack_state.node_param_values.insert("cabinet_air".to_string(), air);
+        self.device_rack_state.node_param_values.insert("tube_sag".to_string(), sag);
+        self.device_rack_state.node_param_values.insert("presence_boost_db".to_string(), pres);
+
+        self.inspector_state.node_param_values.insert("drive".to_string(), drive);
+        self.inspector_state.node_param_values.insert("output_gain".to_string(), gain);
+        self.inspector_state.node_param_values.insert("gate_threshold_db".to_string(), gate);
+        self.inspector_state.node_param_values.insert("cabinet_air".to_string(), air);
+        self.inspector_state.node_param_values.insert("tube_sag".to_string(), sag);
+        self.inspector_state.node_param_values.insert("presence_boost_db".to_string(), pres);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_drive = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_gain = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_gate = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_air = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_sag = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_pres = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+
+            if bus.get(pid_drive).is_some() { bus.set(pid_drive, drive); }
+            if bus.get(pid_gain).is_some() { bus.set(pid_gain, gain); }
+            if bus.get(pid_gate).is_some() { bus.set(pid_gate, gate); }
+            if bus.get(pid_air).is_some() { bus.set(pid_air, air); }
+            if bus.get(pid_sag).is_some() { bus.set(pid_sag, sag); }
+            if bus.get(pid_pres).is_some() { bus.set(pid_pres, pres); }
         }
     }
 

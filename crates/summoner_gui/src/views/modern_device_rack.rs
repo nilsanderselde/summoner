@@ -209,6 +209,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_neural_phoneme_hud: bool,
     #[serde(default)]
     pub requested_open_neural_dereverb_hud: bool,
+    #[serde(default)]
+    pub requested_open_neural_super_resolution_hud: bool,
+    #[serde(default)]
+    pub requested_open_nam_amp_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -302,6 +306,8 @@ impl Default for ModernDeviceRackState {
             requested_open_neural_wavetable_hud: false,
             requested_open_neural_phoneme_hud: false,
             requested_open_neural_dereverb_hud: false,
+            requested_open_neural_super_resolution_hud: false,
+            requested_open_nam_amp_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -1018,6 +1024,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_neural_wavetable = cur_selection.contains("NeuralWavetable") || cur_selection.contains("DifferentialWavetable") || cur_selection == "NeuralWavetableView" || cur_selection == "NeuralDifferentialWavetableLatentOscillator" || cur_selection.contains("LatentWavetable") || cur_selection == "NeuralDifferentiableLatentWavetableSynthesizer";
                     let is_neural_phoneme = cur_selection.contains("NeuralPhoneme") || cur_selection.contains("PhonemeMorph") || cur_selection == "NeuralPhonemeView" || cur_selection == "NeuralPhonemeNode" || cur_selection.contains("Phoneme");
                     let is_neural_dereverb = cur_selection.contains("NeuralDereverb") || cur_selection.contains("Dereverb") || cur_selection == "NeuralDereverbView" || cur_selection == "NeuralDereverbNode" || cur_selection.contains("Deconvolution");
+                    let is_neural_super_res = cur_selection.contains("NeuralSuperResolution") || cur_selection.contains("SuperResolution") || cur_selection == "NeuralSuperResolutionView" || cur_selection == "NeuralSuperResolutionNode" || cur_selection.contains("SuperRes");
+                    let is_nam_amp = cur_selection.contains("NamAmp") || cur_selection.contains("NamModel") || cur_selection == "NamAmpView" || cur_selection == "NamAmpNode" || cur_selection.contains("NeuralAmp") || cur_selection.contains("WaveNet");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1334,6 +1342,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("🏛 Dereverb HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 245, 212))).on_hover_text("Open Neural Acoustic Blind Dereverberation & Deconvolution HUD").clicked()
                     {
                         state.requested_open_neural_dereverb_hud = true;
+                    } else if is_neural_super_res
+                        && ui.button(RichText::new("✨ Super-Res HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Neural Audio Super-Resolution & Bandwidth Extension HUD").clicked()
+                    {
+                        state.requested_open_neural_super_resolution_hud = true;
+                    } else if is_nam_amp
+                        && ui.button(RichText::new("🎸 NAM Amp HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(245, 158, 11))).on_hover_text("Open Neural Amp Modeler (NAM) WaveNet Guitar & Bass Amplifier HUD").clicked()
+                    {
+                        state.requested_open_nam_amp_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2178,6 +2194,8 @@ fn show_pro_parameter_drawer(
                     let is_neural_wavetable = dev_kind.contains("NeuralWavetable") || dev_kind.contains("DifferentialWavetable") || dev_kind == "NeuralWavetableView" || dev_kind == "NeuralDifferentialWavetableLatentOscillator" || dev_kind.contains("LatentWavetable") || dev_kind == "NeuralDifferentiableLatentWavetableSynthesizer";
                     let is_neural_phoneme = dev_kind.contains("NeuralPhoneme") || dev_kind.contains("PhonemeMorph") || dev_kind == "NeuralPhonemeView" || dev_kind == "NeuralPhonemeNode" || dev_kind.contains("Phoneme");
                     let is_neural_dereverb = dev_kind.contains("NeuralDereverb") || dev_kind.contains("Dereverb") || dev_kind == "NeuralDereverbView" || dev_kind == "NeuralDereverbNode" || dev_kind.contains("Deconvolution");
+                    let is_neural_super_res = dev_kind.contains("NeuralSuperResolution") || dev_kind.contains("SuperResolution") || dev_kind == "NeuralSuperResolutionView" || dev_kind == "NeuralSuperResolutionNode" || dev_kind.contains("SuperRes");
+                    let is_nam_amp = dev_kind.contains("NamAmp") || dev_kind.contains("NamModel") || dev_kind == "NamAmpView" || dev_kind == "NamAmpNode" || dev_kind.contains("NeuralAmp") || dev_kind.contains("WaveNet");
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -8382,6 +8400,211 @@ fn show_pro_parameter_drawer(
                             let _ = dr_resp.on_hover_text(format!(
                                 "Neural Acoustic Blind Dereverberation HUD\nSuppression Depth: {:.1} dB | DRR: {:+.1} dB\nRoom RT60: {:.2} s | Blend: {:.0}%\n[Drag: Depth (X) / DRR (Y) Dereverb Puck]",
                                 depth, drr, rt60, blend
+                            ));
+                        }
+                    } else if is_neural_super_res {
+                        // Neural Audio Super-Resolution & High-Frequency Bandwidth Extension Visualizer
+                        let (sr_resp, sr_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let sr_rect = sr_resp.rect;
+                        sr_painter.rect_filled(sr_rect, 2.0, Color32::from_rgb(6, 12, 22));
+
+                        let mut cont = state.node_param_values.get("spectral_continuity").copied().unwrap_or(0.75);
+                        let mut boost = state.node_param_values.get("hf_boost_db").copied().unwrap_or(4.5);
+                        let density = state.node_param_values.get("harmonic_density").copied().unwrap_or(0.60);
+                        let cutoff = state.node_param_values.get("cutoff_frequency_hz").copied().unwrap_or(12000.0);
+
+                        let center = sr_rect.center();
+                        let max_box = 24.0;
+                        let sr_box = egui::Rect::from_center_size(
+                            egui::pos2(sr_rect.left() + 32.0, center.y),
+                            egui::vec2(max_box * 2.0, max_box * 2.0),
+                        );
+                        sr_painter.rect_filled(sr_box, 1.0, Color32::from_rgb(10, 18, 30));
+                        sr_painter.rect_stroke(
+                            sr_box,
+                            1.0,
+                            Stroke::new(0.6_f32, Color32::from_rgba_unmultiplied(56, 189, 248, 80)),
+                        );
+
+                        if sr_resp.dragged() {
+                            if let Some(pos) = sr_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - sr_box.left()) / (max_box * 2.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - (pos.y - sr_box.top()) / (max_box * 2.0)).clamp(0.0, 1.0);
+                                cont = crate::views::neural_super_resolution_view::NeuralSuperResolutionView::normalized_to_continuity(norm_x);
+                                boost = crate::views::neural_super_resolution_view::NeuralSuperResolutionView::normalized_to_boost(norm_y);
+
+                                state.node_param_values.insert("spectral_continuity".to_string(), cont);
+                                state.node_param_values.insert("hf_boost_db".to_string(), boost);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_boost = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_cont = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_boost).is_some() { bus.set(pid_boost, boost); }
+                                    if bus.get(pid_cont).is_some() { bus.set(pid_cont, cont); }
+                                }
+                            }
+                        }
+
+                        // Grid crosshairs
+                        sr_painter.line_segment(
+                            [egui::pos2(sr_box.left(), sr_box.center().y), egui::pos2(sr_box.right(), sr_box.center().y)],
+                            Stroke::new(0.6_f32, Color32::from_rgba_unmultiplied(56, 189, 248, 80)),
+                        );
+                        sr_painter.line_segment(
+                            [egui::pos2(sr_box.center().x, sr_box.top()), egui::pos2(sr_box.center().x, sr_box.bottom())],
+                            Stroke::new(0.6_f32, Color32::from_rgba_unmultiplied(56, 189, 248, 80)),
+                        );
+
+                        // Super-Res Puck
+                        let norm_cont = crate::views::neural_super_resolution_view::NeuralSuperResolutionView::continuity_to_normalized(cont);
+                        let norm_boost = crate::views::neural_super_resolution_view::NeuralSuperResolutionView::boost_to_normalized(boost);
+                        let px = sr_box.left() + norm_cont * (max_box * 2.0);
+                        let py = sr_box.bottom() - norm_boost * (max_box * 2.0);
+                        sr_painter.circle_filled(egui::pos2(px, py), 3.5, Color32::from_rgb(56, 189, 248));
+                        sr_painter.circle_stroke(
+                            egui::pos2(px, py),
+                            5.5,
+                            Stroke::new(0.8_f32, Color32::from_rgba_unmultiplied(255, 255, 255, 160)),
+                        );
+
+                        // Spectrum analyzer preview bars (8 baseband + 8 reconstructed HF)
+                        let spec_left = sr_rect.left() + 72.0;
+                        let spec_w = sr_rect.right() - spec_left - 8.0;
+                        let bar_w = (spec_w / 16.0 - 1.0).max(1.5);
+                        let spec_bottom = sr_rect.center().y + 18.0;
+
+                        for i in 0..16 {
+                            let bx = spec_left + i as f32 * (bar_w + 1.0);
+                            let val = if i < 8 {
+                                (1.0 - 0.45 * (i as f32 / 8.0)).clamp(0.1, 1.0)
+                            } else {
+                                let decay = (-0.18 * (i - 8) as f32).exp();
+                                (decay * (1.0 + boost / 12.0) * (0.5 + 0.5 * cont) * (0.6 + 0.4 * density)).clamp(0.05, 1.25)
+                            };
+                            let bh = (val * 24.0).clamp(2.0, 28.0);
+                            let color = if i < 8 {
+                                Color32::from_rgb(71, 85, 105)
+                            } else {
+                                Color32::from_rgb(56, 189, 248)
+                            };
+                            sr_painter.rect_filled(
+                                egui::Rect::from_min_size(egui::pos2(bx, spec_bottom - bh), egui::vec2(bar_w, bh)),
+                                1.0,
+                                color,
+                            );
+                        }
+
+                        // Readout
+                        sr_painter.text(
+                            egui::pos2(sr_rect.right() - 4.0, sr_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("SUPER-RESOLUTION\nBoost: +{:.1}dB | Cont: {:.0}%\nCutoff: {:.0}Hz", boost, cont * 100.0, cutoff),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(56, 189, 248),
+                        );
+
+                        if sr_resp.hovered() {
+                            let _ = sr_resp.on_hover_text(format!(
+                                "Neural Audio Super-Resolution HUD\nHF Boost: +{:.1} dB | Continuity: {:.0}%\nHarmonic Density: {:.0}% | Cutoff: {:.0} Hz\n[Drag: Continuity (X) / Boost (Y) Puck]",
+                                boost, cont * 100.0, density * 100.0, cutoff
+                            ));
+                        }
+                    } else if is_nam_amp {
+                        // Neural Amp Modeler (NAM) WaveNet Guitar & Bass Amplifier Visualizer
+                        let (na_resp, na_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let na_rect = na_resp.rect;
+                        na_painter.rect_filled(na_rect, 2.0, Color32::from_rgb(18, 12, 6));
+
+                        let mut gate = state.node_param_values.get("gate_threshold_db").copied().unwrap_or(-60.0);
+                        let mut drive = state.node_param_values.get("drive").copied().unwrap_or(2.5);
+                        let gain = state.node_param_values.get("output_gain").copied().unwrap_or(0.95);
+                        let sag = state.node_param_values.get("tube_sag").copied().unwrap_or(0.35);
+
+                        let center = na_rect.center();
+                        let max_box = 24.0;
+                        let na_box = egui::Rect::from_center_size(
+                            egui::pos2(na_rect.left() + 32.0, center.y),
+                            egui::vec2(max_box * 2.0, max_box * 2.0),
+                        );
+                        na_painter.rect_filled(na_box, 1.0, Color32::from_rgb(26, 18, 10));
+                        na_painter.rect_stroke(
+                            na_box,
+                            1.0,
+                            Stroke::new(0.6_f32, Color32::from_rgba_unmultiplied(245, 158, 11, 80)),
+                        );
+
+                        if na_resp.dragged() {
+                            if let Some(pos) = na_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - na_box.left()) / (max_box * 2.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - (pos.y - na_box.top()) / (max_box * 2.0)).clamp(0.0, 1.0);
+                                gate = crate::views::nam_amp_view::NamAmpView::normalized_to_gate(norm_x);
+                                drive = crate::views::nam_amp_view::NamAmpView::normalized_to_drive(norm_y);
+
+                                state.node_param_values.insert("gate_threshold_db".to_string(), gate);
+                                state.node_param_values.insert("drive".to_string(), drive);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_drive = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_gain = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    let pid_gate = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 2);
+                                    if bus.get(pid_drive).is_some() { bus.set(pid_drive, drive); }
+                                    if bus.get(pid_gain).is_some() { bus.set(pid_gain, gain); }
+                                    if bus.get(pid_gate).is_some() { bus.set(pid_gate, gate); }
+                                }
+                            }
+                        }
+
+                        // Grid crosshairs
+                        na_painter.line_segment(
+                            [egui::pos2(na_box.left(), na_box.center().y), egui::pos2(na_box.right(), na_box.center().y)],
+                            Stroke::new(0.6_f32, Color32::from_rgba_unmultiplied(245, 158, 11, 80)),
+                        );
+                        na_painter.line_segment(
+                            [egui::pos2(na_box.center().x, na_box.top()), egui::pos2(na_box.center().x, na_box.bottom())],
+                            Stroke::new(0.6_f32, Color32::from_rgba_unmultiplied(245, 158, 11, 80)),
+                        );
+
+                        // NAM Amp Puck
+                        let norm_gate = crate::views::nam_amp_view::NamAmpView::gate_to_normalized(gate);
+                        let norm_drive = crate::views::nam_amp_view::NamAmpView::drive_to_normalized(drive);
+                        let px = na_box.left() + norm_gate * (max_box * 2.0);
+                        let py = na_box.bottom() - norm_drive * (max_box * 2.0);
+                        na_painter.circle_filled(egui::pos2(px, py), 3.5, Color32::from_rgb(245, 158, 11));
+                        na_painter.circle_stroke(
+                            egui::pos2(px, py),
+                            5.5,
+                            Stroke::new(0.8_f32, Color32::from_rgba_unmultiplied(255, 255, 255, 160)),
+                        );
+
+                        // Non-linear transfer curve preview
+                        let curve_left = na_rect.left() + 72.0;
+                        let curve_w = na_rect.right() - curve_left - 8.0;
+                        let curve_center_y = na_rect.center().y + 8.0;
+                        let steps = 16;
+                        let mut prev_pt: Option<egui::Pos2> = None;
+                        for s in 0..=steps {
+                            let t = -1.0 + (s as f32 / steps as f32) * 2.0;
+                            let y_sat = (t * drive * (1.0 + sag * 0.4)).tanh() * gain;
+                            let cur_pt = egui::pos2(curve_left + (s as f32 / steps as f32) * curve_w, curve_center_y - y_sat * 22.0);
+                            if let Some(p) = prev_pt {
+                                na_painter.line_segment([p, cur_pt], Stroke::new(1.2_f32, Color32::from_rgb(245, 158, 11)));
+                            }
+                            prev_pt = Some(cur_pt);
+                        }
+
+                        // Readout
+                        na_painter.text(
+                            egui::pos2(na_rect.right() - 4.0, na_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("NAM WAVENET AMP\nDrive: {:.2}x | Gate: {:.1}dB\nGain: {:.2}x | Sag: {:.0}%", drive, gate, gain, sag * 100.0),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(245, 158, 11),
+                        );
+
+                        if na_resp.hovered() {
+                            let _ = na_resp.on_hover_text(format!(
+                                "Neural Amp Modeler (NAM) WaveNet HUD\nPre-Amp Drive: {:.2} x | Gate Threshold: {:.1} dB\nOutput Gain: {:.2} x | Tube Sag: {:.0}%\n[Drag: Gate (X) / Drive (Y) Amp Puck]",
+                                drive, gate, gain, sag * 100.0
                             ));
                         }
                     } else {
