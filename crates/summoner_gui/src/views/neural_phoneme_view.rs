@@ -28,6 +28,16 @@ pub enum PhonemeModel {
 }
 
 impl PhonemeModel {
+    pub fn model_name(&self) -> &'static str {
+        match self {
+            Self::VowelFormantMorph => "VOWEL MORPH",
+            Self::WhisperToVoicedTransfer => "WHISPER TRANSFER",
+            Self::RoboticVocoderCarrier => "ROBOT VOCODER",
+            Self::AlienFormantShift => "ALIEN SHIFT",
+            Self::LatentDiffusionInterpolate => "LATENT DIFFUSION",
+        }
+    }
+
     pub fn default_f1_hz(&self) -> f32 {
         match self {
             Self::VowelFormantMorph => 500.0,
@@ -584,5 +594,23 @@ impl NeuralPhonemeView {
             egui::FontId::proportional(12.0),
             Color32::from_rgb(0, 255, 180),
         );
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
+    }
+
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        format!(
+            "--- NEURAL AUDIO LATENT STYLE TRANSFER & PHONEME MORPHING VOCODER HUD [PASS] ---\nModel: {:?} | Phoneme: {} | F1: {:.0}Hz | F2: {:.0}Hz | Tract: {:.1}cm | Style: {:.0}%\n{}",
+            self.model,
+            self.active_phoneme_symbol,
+            self.formant_f1_hz,
+            self.formant_f2_hz,
+            self.vocal_tract_cm,
+            self.latent_style_weight * 100.0,
+            self.render_ascii(80, 24).join("\n")
+        )
     }
 }

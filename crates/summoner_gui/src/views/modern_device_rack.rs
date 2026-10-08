@@ -205,6 +205,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_neural_vocoder_morph_hud: bool,
     #[serde(default)]
     pub requested_open_neural_wavetable_hud: bool,
+    #[serde(default)]
+    pub requested_open_neural_phoneme_hud: bool,
+    #[serde(default)]
+    pub requested_open_neural_dereverb_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -296,6 +300,8 @@ impl Default for ModernDeviceRackState {
             requested_open_neural_choir_formant_hud: false,
             requested_open_neural_vocoder_morph_hud: false,
             requested_open_neural_wavetable_hud: false,
+            requested_open_neural_phoneme_hud: false,
+            requested_open_neural_dereverb_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -1010,6 +1016,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_neural_choir_formant = cur_selection.contains("NeuralChoirFormant") || cur_selection.contains("ChoirFormant") || cur_selection == "NeuralChoirFormantView" || cur_selection == "NeuralChoirFormantNode" || cur_selection.contains("ChoirEnsemble") || cur_selection.contains("VowelTrajectory");
                     let is_neural_vocoder_morph = cur_selection.contains("NeuralVocoderMorph") || cur_selection.contains("VocoderMorph") || cur_selection == "NeuralVocoderMorphView" || cur_selection == "NeuralVocoderMorphNode";
                     let is_neural_wavetable = cur_selection.contains("NeuralWavetable") || cur_selection.contains("DifferentialWavetable") || cur_selection == "NeuralWavetableView" || cur_selection == "NeuralDifferentialWavetableLatentOscillator" || cur_selection.contains("LatentWavetable") || cur_selection == "NeuralDifferentiableLatentWavetableSynthesizer";
+                    let is_neural_phoneme = cur_selection.contains("NeuralPhoneme") || cur_selection.contains("PhonemeMorph") || cur_selection == "NeuralPhonemeView" || cur_selection == "NeuralPhonemeNode" || cur_selection.contains("Phoneme");
+                    let is_neural_dereverb = cur_selection.contains("NeuralDereverb") || cur_selection.contains("Dereverb") || cur_selection == "NeuralDereverbView" || cur_selection == "NeuralDereverbNode" || cur_selection.contains("Deconvolution");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1318,6 +1326,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("🌊 Wavetable HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(180, 90, 255))).on_hover_text("Open Neural Wavetable Morphing Synthesizer HUD").clicked()
                     {
                         state.requested_open_neural_wavetable_hud = true;
+                    } else if is_neural_phoneme
+                        && ui.button(RichText::new("🗣 Phoneme HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(180, 90, 255))).on_hover_text("Open Neural Audio Latent Style Transfer & Phoneme Morphing Vocoder HUD").clicked()
+                    {
+                        state.requested_open_neural_phoneme_hud = true;
+                    } else if is_neural_dereverb
+                        && ui.button(RichText::new("🏛 Dereverb HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 245, 212))).on_hover_text("Open Neural Acoustic Blind Dereverberation & Deconvolution HUD").clicked()
+                    {
+                        state.requested_open_neural_dereverb_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2160,6 +2176,8 @@ fn show_pro_parameter_drawer(
                     let is_neural_choir_formant = dev_kind.contains("NeuralChoirFormant") || dev_kind.contains("ChoirFormant") || dev_kind == "NeuralChoirFormantView" || dev_kind == "NeuralChoirFormantNode" || dev_kind.contains("ChoirEnsemble") || dev_kind.contains("VowelTrajectory");
                     let is_neural_vocoder_morph = dev_kind.contains("NeuralVocoderMorph") || dev_kind.contains("VocoderMorph") || dev_kind == "NeuralVocoderMorphView" || dev_kind == "NeuralVocoderMorphNode";
                     let is_neural_wavetable = dev_kind.contains("NeuralWavetable") || dev_kind.contains("DifferentialWavetable") || dev_kind == "NeuralWavetableView" || dev_kind == "NeuralDifferentialWavetableLatentOscillator" || dev_kind.contains("LatentWavetable") || dev_kind == "NeuralDifferentiableLatentWavetableSynthesizer";
+                    let is_neural_phoneme = dev_kind.contains("NeuralPhoneme") || dev_kind.contains("PhonemeMorph") || dev_kind == "NeuralPhonemeView" || dev_kind == "NeuralPhonemeNode" || dev_kind.contains("Phoneme");
+                    let is_neural_dereverb = dev_kind.contains("NeuralDereverb") || dev_kind.contains("Dereverb") || dev_kind == "NeuralDereverbView" || dev_kind == "NeuralDereverbNode" || dev_kind.contains("Deconvolution");
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -8191,6 +8209,179 @@ fn show_pro_parameter_drawer(
                             let _ = wt_resp.on_hover_text(format!(
                                 "Neural Wavetable Morphing Synthesizer HUD\nLatent Coord: ({:.2}, {:.2})\nMorph Speed: {:.2} Hz | Orbit Radius: {:.2}\n[Drag: z1 (X) / z2 (Y) Latent Puck]",
                                 z1, z2, speed, radius
+                            ));
+                        }
+                    } else if is_neural_phoneme {
+                        // Neural Phoneme Morphing Vocoder Mini Visualizer
+                        let (phon_resp, phon_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let phon_rect = phon_resp.rect;
+                        phon_painter.rect_filled(phon_rect, 2.0, Color32::from_rgb(16, 12, 24));
+
+                        let mut f1 = state.node_param_values.get("formant_f1_hz").copied().unwrap_or(500.0);
+                        let mut f2 = state.node_param_values.get("formant_f2_hz").copied().unwrap_or(1800.0);
+                        let tract = state.node_param_values.get("vocal_tract_cm").copied().unwrap_or(17.0);
+                        let style_weight = state.node_param_values.get("latent_style_weight").copied().unwrap_or(0.80);
+
+                        let pcx = phon_rect.left() + 34.0;
+                        let pcy = phon_rect.center().y;
+                        let max_box = 24.0_f32;
+
+                        if phon_resp.dragged() {
+                            if let Some(pos) = phon_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - (pcx - max_box)) / (max_box * 2.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - (pcy - max_box)) / (max_box * 2.0))).clamp(0.0, 1.0);
+                                f2 = crate::views::neural_phoneme_view::NeuralPhonemeView::normalized_to_f2(norm_x);
+                                f1 = crate::views::neural_phoneme_view::NeuralPhonemeView::normalized_to_f1(norm_y);
+                                state.node_param_values.insert("formant_f1_hz".to_string(), f1);
+                                state.node_param_values.insert("formant_f2_hz".to_string(), f2);
+                                if let Some(bus) = param_bus {
+                                    let pid_f1 = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_f2 = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    bus.set(pid_f1, f1);
+                                    bus.set(pid_f2, f2);
+                                }
+                            }
+                        }
+
+                        // IPA Vowel Quadrilateral box & corner guides
+                        let vowel_box = egui::Rect::from_center_size(egui::pos2(pcx, pcy), egui::vec2(max_box * 2.0, max_box * 2.0));
+                        phon_painter.rect_stroke(vowel_box, 2.0, Stroke::new(1.0_f32, Color32::from_rgb(180, 90, 255)));
+                        phon_painter.line_segment(
+                            [egui::pos2(vowel_box.left(), pcy), egui::pos2(vowel_box.right(), pcy)],
+                            Stroke::new(0.6_f32, Color32::from_rgba_unmultiplied(180, 90, 255, 80)),
+                        );
+                        phon_painter.line_segment(
+                            [egui::pos2(pcx, vowel_box.top()), egui::pos2(pcx, vowel_box.bottom())],
+                            Stroke::new(0.6_f32, Color32::from_rgba_unmultiplied(180, 90, 255, 80)),
+                        );
+
+                        // Phoneme Puck
+                        let norm_f2 = crate::views::neural_phoneme_view::NeuralPhonemeView::f2_to_normalized(f2);
+                        let norm_f1 = crate::views::neural_phoneme_view::NeuralPhonemeView::f1_to_normalized(f1);
+                        let px = vowel_box.left() + norm_f2 * (max_box * 2.0);
+                        let py = vowel_box.bottom() - norm_f1 * (max_box * 2.0);
+                        phon_painter.circle_filled(egui::pos2(px, py), 3.5, Color32::from_rgb(180, 90, 255));
+                        phon_painter.circle_stroke(
+                            egui::pos2(px, py),
+                            5.5,
+                            Stroke::new(0.8_f32, Color32::from_rgba_unmultiplied(255, 255, 255, 160)),
+                        );
+
+                        // 4 Latent Style Bars preview
+                        let bar_left = phon_rect.left() + 72.0;
+                        let bar_bottom = phon_rect.center().y + 18.0;
+                        for i in 0..4 {
+                            let bx = bar_left + i as f32 * 7.0;
+                            let bh = ((i as f32 * 0.2 + 0.35) * style_weight * 26.0).clamp(4.0, 26.0);
+                            let col = Color32::from_rgb(180, 90, 255);
+                            phon_painter.rect_filled(
+                                egui::Rect::from_min_max(egui::pos2(bx, bar_bottom - bh), egui::pos2(bx + 4.5, bar_bottom)),
+                                0.5,
+                                col,
+                            );
+                        }
+
+                        // Readout
+                        phon_painter.text(
+                            egui::pos2(phon_rect.right() - 4.0, phon_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("PHONEME MORPH\nF1: {:.0}Hz | F2: {:.0}Hz\nTract: {:.1}cm | Style: {:.0}%", f1, f2, tract, style_weight * 100.0),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(180, 90, 255),
+                        );
+
+                        if phon_resp.hovered() {
+                            let _ = phon_resp.on_hover_text(format!(
+                                "Neural Phoneme Morphing Vocoder HUD\nFormant F1: {:.0} Hz | Formant F2: {:.0} Hz\nVocal Tract: {:.1} cm | Style Weight: {:.0}%\n[Drag: F2 (X) / F1 (Y) Phoneme Puck]",
+                                f1, f2, tract, style_weight * 100.0
+                            ));
+                        }
+                    } else if is_neural_dereverb {
+                        // Neural Dereverberation & Deconvolution Mini Visualizer
+                        let (dr_resp, dr_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let dr_rect = dr_resp.rect;
+                        dr_painter.rect_filled(dr_rect, 2.0, Color32::from_rgb(8, 18, 20));
+
+                        let mut depth = state.node_param_values.get("suppression_depth_db").copied().unwrap_or(18.0);
+                        let mut drr = state.node_param_values.get("direct_to_reverberant_ratio_db").copied().unwrap_or(6.0);
+                        let rt60 = state.node_param_values.get("room_rt60_s").copied().unwrap_or(1.5);
+                        let blend = state.node_param_values.get("neural_blend_pct").copied().unwrap_or(85.0);
+
+                        let dcx = dr_rect.left() + 34.0;
+                        let dcy = dr_rect.center().y;
+                        let max_box = 24.0_f32;
+
+                        if dr_resp.dragged() {
+                            if let Some(pos) = dr_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - (dcx - max_box)) / (max_box * 2.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - (dcy - max_box)) / (max_box * 2.0))).clamp(0.0, 1.0);
+                                depth = crate::views::neural_dereverb_view::NeuralDereverbView::normalized_to_depth(norm_x);
+                                drr = crate::views::neural_dereverb_view::NeuralDereverbView::normalized_to_drr(norm_y);
+                                state.node_param_values.insert("suppression_depth_db".to_string(), depth);
+                                state.node_param_values.insert("direct_to_reverberant_ratio_db".to_string(), drr);
+                                if let Some(bus) = param_bus {
+                                    let pid_depth = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_drr = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    bus.set(pid_depth, depth);
+                                    bus.set(pid_drr, drr);
+                                }
+                            }
+                        }
+
+                        // DRR vs Depth coordinate box & crosshairs
+                        let drr_box = egui::Rect::from_center_size(egui::pos2(dcx, dcy), egui::vec2(max_box * 2.0, max_box * 2.0));
+                        dr_painter.rect_stroke(drr_box, 2.0, Stroke::new(1.0_f32, Color32::from_rgb(0, 245, 212)));
+                        dr_painter.line_segment(
+                            [egui::pos2(drr_box.left(), dcy), egui::pos2(drr_box.right(), dcy)],
+                            Stroke::new(0.6_f32, Color32::from_rgba_unmultiplied(0, 245, 212, 80)),
+                        );
+                        dr_painter.line_segment(
+                            [egui::pos2(dcx, drr_box.top()), egui::pos2(dcx, drr_box.bottom())],
+                            Stroke::new(0.6_f32, Color32::from_rgba_unmultiplied(0, 245, 212, 80)),
+                        );
+
+                        // Dereverb Puck
+                        let norm_depth = crate::views::neural_dereverb_view::NeuralDereverbView::depth_to_normalized(depth);
+                        let norm_drr = crate::views::neural_dereverb_view::NeuralDereverbView::drr_to_normalized(drr);
+                        let px = drr_box.left() + norm_depth * (max_box * 2.0);
+                        let py = drr_box.bottom() - norm_drr * (max_box * 2.0);
+                        dr_painter.circle_filled(egui::pos2(px, py), 3.5, Color32::from_rgb(0, 245, 212));
+                        dr_painter.circle_stroke(
+                            egui::pos2(px, py),
+                            5.5,
+                            Stroke::new(0.8_f32, Color32::from_rgba_unmultiplied(255, 255, 255, 160)),
+                        );
+
+                        // Impulse energy decay preview curve
+                        let curve_left = dr_rect.left() + 72.0;
+                        let curve_w = dr_rect.right() - curve_left - 8.0;
+                        let curve_bottom = dr_rect.center().y + 18.0;
+                        let steps = 16;
+                        let mut prev_pt: Option<egui::Pos2> = None;
+                        for s in 0..=steps {
+                            let t = s as f32 / steps as f32;
+                            let raw_decay = (-3.0 * t / (rt60 * 0.5 + 0.1)).exp();
+                            let cleaned = raw_decay * (1.0 - (depth / 36.0) * (1.0 - (-8.0 * t).exp()));
+                            let cur_pt = egui::pos2(curve_left + t * curve_w, curve_bottom - cleaned.clamp(0.0, 1.0) * 28.0);
+                            if let Some(p) = prev_pt {
+                                dr_painter.line_segment([p, cur_pt], Stroke::new(1.2_f32, Color32::from_rgb(0, 245, 212)));
+                            }
+                            prev_pt = Some(cur_pt);
+                        }
+
+                        // Readout
+                        dr_painter.text(
+                            egui::pos2(dr_rect.right() - 4.0, dr_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("NEURAL DEREVERB\nDepth: {:.1}dB | DRR: {:+.1}dB\nRT60: {:.2}s | Blend: {:.0}%", depth, drr, rt60, blend),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(0, 245, 212),
+                        );
+
+                        if dr_resp.hovered() {
+                            let _ = dr_resp.on_hover_text(format!(
+                                "Neural Acoustic Blind Dereverberation HUD\nSuppression Depth: {:.1} dB | DRR: {:+.1} dB\nRoom RT60: {:.2} s | Blend: {:.0}%\n[Drag: Depth (X) / DRR (Y) Dereverb Puck]",
+                                depth, drr, rt60, blend
                             ));
                         }
                     } else {

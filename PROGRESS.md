@@ -2395,4 +2395,37 @@ Product Management has conducted a comprehensive readiness audit:
   - Pure unit tests: 329 passed in 0.23s (`cargo test -p summoner_gui --lib`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
 
+### Turn #89 (Sprint Turn #15) — Neural Phoneme Morphing Vocoder HUD and Neural Blind Dereverberation & Deconvolution HUD Convergence (Milestones 33 & 36)
+- [x] Neural Phoneme Morphing Vocoder & Neural Blind Dereverberation HUDs Integration:
+  - Integrated `NeuralPhonemeView` (Neural Audio Latent Style Transfer & Phoneme Morphing Vocoder HUD: 5 Phoneme Models [Vowel Formant Morph, Whisper-to-Voiced Transfer, Robotic Vocoder Carrier, Alien Formant Shift, Latent Diffusion Interpolate], Formant F1 [200.0..1200.0 Hz], Formant F2 [600.0..3500.0 Hz], Formant F3 [1500.0..4500.0 Hz], Vocal Tract Length [8.0..25.0 cm], Latent Style Weight [0..100%], Glottal Open Quotient [0.3..0.8], 8-D Latent Style Embeddings vector, IPA Vowel Quadrilateral Map, and Touch-Draggable Phoneme Puck with >= 44x44pt bounding target) and `NeuralDereverbView` (Neural Acoustic Blind Dereverberation & Room Impulse Deconvolution HUD: 5 Dereverb Models [Neural Spectral U-Net, Statistical WPE Multi-Channel, Diffusion Deconvolution, Cathedral Long-Tail, Conference Room Automix], Suppression Depth [0.0..36.0 dB], Direct-to-Reverberant Ratio DRR [-12.0..+24.0 dB], Early Reflection Cancellation [0..100%], Late Tail Suppression [0..100%], Room RT60 [0.1..10.0 s], Neural Dry Blend [0..100%], 8-Band Direct Gain Spectral Mask, Impulse Energy Decay Curve, and Touch-Draggable Dereverb Puck with >= 44x44pt bounding target) into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/neural_phoneme_view.rs` & `neural_dereverb_view.rs`):
+  - In `NeuralPhonemeView`: added `model_name()` to `PhonemeModel`, `show(&mut self, ui: &mut egui::Ui)` delegating to `ui(ui)`, and `render_ascii_snapshot_str() -> String` with phoneme metadata banner.
+  - In `NeuralDereverbView`: added `show(&mut self, ui: &mut egui::Ui)` delegating to `ui(ui)`, and `render_ascii_snapshot_str() -> String` with dereverb metadata banner.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_neural_phoneme_modal: bool`, `neural_phoneme_view: NeuralPhonemeView`, `show_neural_dereverb_modal: bool`, and `neural_dereverb_view: NeuralDereverbView`.
+  - Added dedicated modal windows `show_neural_phoneme_modal_window` and `show_neural_dereverb_modal_window` with responsive styling, WCAG AAA contrast, and >= 44x44pt touch bounds.
+  - Added public lifecycle methods: `open_neural_phoneme_hud()`, `close_neural_phoneme_hud()`, `is_neural_phoneme_hud_open()`, `open_neural_dereverb_hud()`, `close_neural_dereverb_hud()`, `is_neural_dereverb_hud_open()`.
+  - Real-time parameter sync bridges (`sync_neural_phoneme_hud_state` and `sync_neural_dereverb_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_neural_phoneme_hud: bool` and `requested_open_neural_dereverb_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🗣 Open Phoneme Morpher HUD]` and `[🏛 Open Neural Dereverb HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header `[🗣 Phoneme HUD]` / `[🏛 Dereverb HUD]` in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Neural Phoneme: 2D IPA vowel formant coordinate box, crosshairs, draggable phoneme puck updating normalized F1 & F2, 4-bar style preview, live readout, and lock-free `ParamBus` slot dispatch.
+    * Neural Dereverb: 2D DRR vs Depth coordinate box, crosshairs, draggable dereverb puck updating depth and DRR, impulse decay curve preview, live readout, and lock-free `ParamBus` slot dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_neural_phoneme_hud` under `"Synthesis"` and `open_neural_dereverb_hud` under `"Restoration"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_neural_phoneme_hud()` and `open_neural_dereverb_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier153_turn89_tests.rs`:
+    * Pure tests: view initialization, coordinate normalizations (F1, F2, tract, depth, DRR), mode switching across all 5 profiles for both views, spectral envelope & decay curve evaluation, touch puck hit testing (>= 44x44pt bounding targets), deterministic ASCII snapshots with metadata banners.
+    * GUI tests: modal window lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch without allocations, trigger button propagation from rack and inspector, command palette action verification.
+  - Registered `tier153_turn89_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Feature tests: 6 passed in 0.06s (`cargo test -p summoner_gui --features gui -- tier153_turn89`).
+  - Pure unit tests: 329 passed in 0.23s (`cargo test -p summoner_gui --lib`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
+
+
 

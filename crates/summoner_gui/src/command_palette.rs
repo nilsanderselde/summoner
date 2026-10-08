@@ -773,6 +773,18 @@ impl CommandPalette {
                 action_id: "open_neural_wavetable_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Neural Phoneme Morphing & Style Transfer HUD".into(),
+                category: "Synthesis".into(),
+                action_id: "open_neural_phoneme_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Neural Blind Dereverberation & Deconvolution HUD".into(),
+                category: "Restoration".into(),
+                action_id: "open_neural_dereverb_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

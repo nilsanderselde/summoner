@@ -529,4 +529,22 @@ impl NeuralDereverbView {
             Color32::from_rgb(0, 255, 180),
         );
     }
+
+    #[cfg(feature = "gui")]
+    pub fn show(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
+    }
+
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        format!(
+            "--- NEURAL ACOUSTIC BLIND DEREVERBERATION & DECONVOLUTION HUD [PASS] ---\nModel: {:?} | Depth: {:.1}dB | DRR: {:+.1}dB | RT60: {:.2}s | Early: {:.0}% | Late: {:.0}%\n{}",
+            self.model,
+            self.suppression_depth_db,
+            self.direct_to_reverberant_ratio_db,
+            self.room_rt60_s,
+            self.early_reflection_cancel * 100.0,
+            self.late_tail_suppression * 100.0,
+            self.render_ascii(80, 24).join("\n")
+        )
+    }
 }

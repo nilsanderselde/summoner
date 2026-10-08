@@ -190,6 +190,10 @@ pub struct ModernInspectorState {
     pub requested_open_neural_vocoder_morph_hud: bool,
     #[serde(default)]
     pub requested_open_neural_wavetable_hud: bool,
+    #[serde(default)]
+    pub requested_open_neural_phoneme_hud: bool,
+    #[serde(default)]
+    pub requested_open_neural_dereverb_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -291,6 +295,8 @@ impl Default for ModernInspectorState {
             requested_open_neural_choir_formant_hud: false,
             requested_open_neural_vocoder_morph_hud: false,
             requested_open_neural_wavetable_hud: false,
+            requested_open_neural_phoneme_hud: false,
+            requested_open_neural_dereverb_hud: false,
         }
     }
 }
@@ -1535,6 +1541,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open Neural Wavetable Morphing Synthesizer HUD").clicked() {
                     state.requested_open_neural_wavetable_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("NeuralPhoneme") || active_kind.contains("PhonemeMorph") || active_kind == "NeuralPhonemeView" || active_kind == "NeuralPhonemeNode" || active_kind.contains("Phoneme") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🗣 Open Phoneme Morpher HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(180, 90, 255)))
+                        .fill(Color32::from_rgb(28, 16, 42))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(180, 90, 255)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Neural Audio Latent Style Transfer & Phoneme Morphing Vocoder HUD").clicked() {
+                    state.requested_open_neural_phoneme_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("NeuralDereverb") || active_kind.contains("Dereverb") || active_kind == "NeuralDereverbView" || active_kind == "NeuralDereverbNode" || active_kind.contains("Deconvolution") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🏛 Open Neural Dereverb HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 245, 212)))
+                        .fill(Color32::from_rgb(10, 32, 36))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 245, 212)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Neural Acoustic Blind Dereverberation & Deconvolution HUD").clicked() {
+                    state.requested_open_neural_dereverb_hud = true;
                 }
                 ui.add_space(4.0);
             }

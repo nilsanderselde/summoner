@@ -796,6 +796,10 @@ pub struct AwardWinningGuiView {
     pub neural_vocoder_morph_view: crate::views::neural_vocoder_morph_view::NeuralVocoderMorphView,
     pub show_neural_wavetable_modal: bool,
     pub neural_wavetable_view: crate::views::neural_wavetable_view::NeuralWavetableView,
+    pub show_neural_phoneme_modal: bool,
+    pub neural_phoneme_view: crate::views::neural_phoneme_view::NeuralPhonemeView,
+    pub show_neural_dereverb_modal: bool,
+    pub neural_dereverb_view: crate::views::neural_dereverb_view::NeuralDereverbView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1208,6 +1212,10 @@ impl AwardWinningGuiView {
             neural_vocoder_morph_view: crate::views::neural_vocoder_morph_view::NeuralVocoderMorphView::new(),
             show_neural_wavetable_modal: false,
             neural_wavetable_view: crate::views::neural_wavetable_view::NeuralWavetableView::new(),
+            show_neural_phoneme_modal: false,
+            neural_phoneme_view: crate::views::neural_phoneme_view::NeuralPhonemeView::new(),
+            show_neural_dereverb_modal: false,
+            neural_dereverb_view: crate::views::neural_dereverb_view::NeuralDereverbView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2237,6 +2245,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_neural_wavetable_hud = false;
             self.open_neural_wavetable_hud();
         }
+        if self.inspector_state.requested_open_neural_phoneme_hud || self.device_rack_state.requested_open_neural_phoneme_hud {
+            self.inspector_state.requested_open_neural_phoneme_hud = false;
+            self.device_rack_state.requested_open_neural_phoneme_hud = false;
+            self.open_neural_phoneme_hud();
+        }
+        if self.inspector_state.requested_open_neural_dereverb_hud || self.device_rack_state.requested_open_neural_dereverb_hud {
+            self.inspector_state.requested_open_neural_dereverb_hud = false;
+            self.device_rack_state.requested_open_neural_dereverb_hud = false;
+            self.open_neural_dereverb_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2318,6 +2336,8 @@ impl AwardWinningGuiView {
         self.show_neural_choir_formant_modal_window(ui);
         self.show_neural_vocoder_morph_modal_window(ui);
         self.show_neural_wavetable_modal_window(ui);
+        self.show_neural_phoneme_modal_window(ui);
+        self.show_neural_dereverb_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -15338,6 +15358,202 @@ impl AwardWinningGuiView {
             if bus.get(pid_speed).is_some() { bus.set(pid_speed, speed); }
             if bus.get(pid_radius).is_some() { bus.set(pid_radius, radius); }
             if bus.get(pid_entropy).is_some() { bus.set(pid_entropy, entropy); }
+        }
+    }
+
+    pub fn open_neural_phoneme_hud(&mut self) {
+        self.show_neural_phoneme_modal = true;
+    }
+
+    pub fn close_neural_phoneme_hud(&mut self) {
+        self.show_neural_phoneme_modal = false;
+    }
+
+    pub fn is_neural_phoneme_hud_open(&self) -> bool {
+        self.show_neural_phoneme_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_neural_phoneme_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_neural_phoneme_modal {
+            return;
+        }
+
+        let mut is_open = self.show_neural_phoneme_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🗣 Neural Audio Latent Style Transfer & Phoneme Morphing Vocoder HUD")
+            .id(egui::Id::new("neural_phoneme_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(820.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Continuous 2D Formant Synthesis & 8-D Latent Style Transfer (Milestones 33 & 36)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.neural_phoneme_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_neural_phoneme_modal = is_open;
+        self.sync_neural_phoneme_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_neural_phoneme_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let f1 = self.neural_phoneme_view.formant_f1_hz;
+        let f2 = self.neural_phoneme_view.formant_f2_hz;
+        let f3 = self.neural_phoneme_view.formant_f3_hz;
+        let tract = self.neural_phoneme_view.vocal_tract_cm;
+        let style = self.neural_phoneme_view.latent_style_weight;
+        let glottal = self.neural_phoneme_view.glottal_open_quotient;
+
+        self.device_rack_state.node_param_values.insert("formant_f1_hz".to_string(), f1);
+        self.device_rack_state.node_param_values.insert("formant_f2_hz".to_string(), f2);
+        self.device_rack_state.node_param_values.insert("formant_f3_hz".to_string(), f3);
+        self.device_rack_state.node_param_values.insert("vocal_tract_cm".to_string(), tract);
+        self.device_rack_state.node_param_values.insert("latent_style_weight".to_string(), style);
+        self.device_rack_state.node_param_values.insert("glottal_open_quotient".to_string(), glottal);
+
+        self.inspector_state.node_param_values.insert("formant_f1_hz".to_string(), f1);
+        self.inspector_state.node_param_values.insert("formant_f2_hz".to_string(), f2);
+        self.inspector_state.node_param_values.insert("formant_f3_hz".to_string(), f3);
+        self.inspector_state.node_param_values.insert("vocal_tract_cm".to_string(), tract);
+        self.inspector_state.node_param_values.insert("latent_style_weight".to_string(), style);
+        self.inspector_state.node_param_values.insert("glottal_open_quotient".to_string(), glottal);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_f1 = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_f2 = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_f3 = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_tract = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_style = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_glottal = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+
+            if bus.get(pid_f1).is_some() { bus.set(pid_f1, f1); }
+            if bus.get(pid_f2).is_some() { bus.set(pid_f2, f2); }
+            if bus.get(pid_f3).is_some() { bus.set(pid_f3, f3); }
+            if bus.get(pid_tract).is_some() { bus.set(pid_tract, tract); }
+            if bus.get(pid_style).is_some() { bus.set(pid_style, style); }
+            if bus.get(pid_glottal).is_some() { bus.set(pid_glottal, glottal); }
+        }
+    }
+
+    pub fn open_neural_dereverb_hud(&mut self) {
+        self.show_neural_dereverb_modal = true;
+    }
+
+    pub fn close_neural_dereverb_hud(&mut self) {
+        self.show_neural_dereverb_modal = false;
+    }
+
+    pub fn is_neural_dereverb_hud_open(&self) -> bool {
+        self.show_neural_dereverb_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_neural_dereverb_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_neural_dereverb_modal {
+            return;
+        }
+
+        let mut is_open = self.show_neural_dereverb_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🏛 Neural Acoustic Blind Dereverberation & Deconvolution HUD")
+            .id(egui::Id::new("neural_dereverb_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(820.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Acoustic Room Impulse Response Deconvolution & Spectral Direct-to-Reverberant Ratio (Milestones 33 & 36)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.neural_dereverb_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_neural_dereverb_modal = is_open;
+        self.sync_neural_dereverb_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_neural_dereverb_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let depth = self.neural_dereverb_view.suppression_depth_db;
+        let drr = self.neural_dereverb_view.direct_to_reverberant_ratio_db;
+        let early = self.neural_dereverb_view.early_reflection_cancel;
+        let late = self.neural_dereverb_view.late_tail_suppression;
+        let rt60 = self.neural_dereverb_view.room_rt60_s;
+        let blend = self.neural_dereverb_view.neural_blend_pct;
+
+        self.device_rack_state.node_param_values.insert("suppression_depth_db".to_string(), depth);
+        self.device_rack_state.node_param_values.insert("direct_to_reverberant_ratio_db".to_string(), drr);
+        self.device_rack_state.node_param_values.insert("early_reflection_cancel".to_string(), early);
+        self.device_rack_state.node_param_values.insert("late_tail_suppression".to_string(), late);
+        self.device_rack_state.node_param_values.insert("room_rt60_s".to_string(), rt60);
+        self.device_rack_state.node_param_values.insert("neural_blend_pct".to_string(), blend);
+
+        self.inspector_state.node_param_values.insert("suppression_depth_db".to_string(), depth);
+        self.inspector_state.node_param_values.insert("direct_to_reverberant_ratio_db".to_string(), drr);
+        self.inspector_state.node_param_values.insert("early_reflection_cancel".to_string(), early);
+        self.inspector_state.node_param_values.insert("late_tail_suppression".to_string(), late);
+        self.inspector_state.node_param_values.insert("room_rt60_s".to_string(), rt60);
+        self.inspector_state.node_param_values.insert("neural_blend_pct".to_string(), blend);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_depth = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_drr = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_early = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_late = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_rt60 = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_blend = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+
+            if bus.get(pid_depth).is_some() { bus.set(pid_depth, depth); }
+            if bus.get(pid_drr).is_some() { bus.set(pid_drr, drr); }
+            if bus.get(pid_early).is_some() { bus.set(pid_early, early); }
+            if bus.get(pid_late).is_some() { bus.set(pid_late, late); }
+            if bus.get(pid_rt60).is_some() { bus.set(pid_rt60, rt60); }
+            if bus.get(pid_blend).is_some() { bus.set(pid_blend, blend); }
         }
     }
 
