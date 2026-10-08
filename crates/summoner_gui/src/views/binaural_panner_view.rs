@@ -187,7 +187,17 @@ impl BinauralPannerView {
     }
 
     #[cfg(feature = "gui")]
-    pub fn show(&mut self, ui: &mut egui::Ui, rect: Rect) {
+    pub fn show(&mut self, ui: &mut egui::Ui) {
+        let (rect, _response) = ui.allocate_exact_size(
+            egui::vec2(ui.available_width().max(780.0), 480.0),
+            egui::Sense::click_and_drag(),
+        );
+        let r = Rect::new(rect.min.x, rect.min.y, rect.width(), rect.height());
+        self.show_rect(ui, r);
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_rect(&mut self, ui: &mut egui::Ui, rect: Rect) {
         let painter = ui.painter_at(egui::Rect::from_min_size(
             egui::pos2(rect.x, rect.y),
             egui::vec2(rect.width, rect.height),
@@ -513,5 +523,9 @@ impl BinauralPannerView {
             egui::FontId::proportional(11.0),
             Color32::from_rgb(0, 255, 180),
         );
+    }
+
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        self.render_ascii(40, 16).join("\n")
     }
 }

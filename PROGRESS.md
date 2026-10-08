@@ -2052,3 +2052,37 @@ Product Management has conducted a comprehensive readiness audit:
   - Full GUI test suite: 1,287 passed in 2.05s (`cargo test -p summoner_gui --features gui --lib`).
   - Pure unit tests: 329 passed in 0.23s (`cargo test -p summoner_gui --lib`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
+
+### Turn #78 (Turn #41 Deliverable / Sprint Turn #4) — Spatial Binaural HRTF 3D Orbit & Multi-Source Binaural BRIR Room Impulse Response HUDs Convergence (Milestones 33 & 35)
+- [x] Spatial Binaural HRTF 3D Orbit & Multi-Source Binaural BRIR Room Impulse Response Performance HUDs Integration:
+  - Integrated `BinauralPannerView` (Spatial Binaural Head-Related Transfer Function [HRTF] 3D Orbit Visualizer HUD: 4 HRTF model profiles [KEMAR Standard Dummy, Custom Subject Pinna, Spherical Head Rayleigh Ray-Traced, Near-Field Parallax Compensated], Azimuth $[-180.0..+180.0^\circ]$, Elevation $[-90.0..+90.0^\circ]$, Distance $[0.1..10.0\text{m}]$, Woodworth interaural cues synthesis [ITD microseconds $-650..+650\mu\text{s}$, ILD decibels $-16..+16\text{dB}$], Room Reflections simulation toggle, Crossfeed Blend $[0..100\%]$, and Touch-Draggable 3D Orbit Sound Source Puck with $\ge 44 \times 44\text{pt}$ bounding target) and `BinauralBrirView` (Multi-Source Binaural Room Impulse Response [BRIR] Acoustic Spatializer HUD: 5 Room Acoustic Profiles [Concert Hall $T_{60} 2.10\text{s}$, Scoring Stage $T_{60} 1.45\text{s}$, Cathedral Space $T_{60} 4.80\text{s}$, Dry Studio $T_{60} 0.35\text{s}$, Intimate Chamber $T_{60} 0.85\text{s}$], Direct-to-reverberant ratio dB, Early reflection delay ms, 6-ray BRIR impulse response reflectogram synthesis, Pinna notch frequency migration [$6000 + (\text{el} + 45) \times 45\text{Hz}$], Azimuth $[-180.0..+180.0^\circ]$, Elevation $[-90.0..+90.0^\circ]$, Distance $[0.20..10.00\text{m}]$, and Touch-Draggable Polar Source Puck with $\ge 44 \times 44\text{pt}$ bounding target) into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/binaural_panner_view.rs` & `binaural_brir_view.rs`):
+  - In `BinauralPannerView`: added `show(&mut self, ui: &mut egui::Ui)` delegating to `show_rect` and `render_ascii_snapshot_str() -> String`.
+  - In `BinauralBrirView`: added `show(&mut self, ui: &mut egui::Ui)` delegating to `ui` and `render_ascii_snapshot_str() -> String`.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_binaural_panner_modal: bool`, `binaural_panner_view: BinauralPannerView`, `show_binaural_brir_modal: bool`, and `binaural_brir_view: BinauralBrirView`.
+  - Added dedicated modal windows `show_binaural_panner_modal_window` and `show_binaural_brir_modal_window` with responsive styling, WCAG AAA contrast, and $\ge 44 \times 44\text{pt}$ touch bounds.
+  - Added public lifecycle methods: `open_binaural_panner_hud()`, `close_binaural_panner_hud()`, `is_binaural_panner_hud_open()`, `open_binaural_brir_hud()`, `close_binaural_brir_hud()`, `is_binaural_brir_hud_open()`.
+  - Real-time parameter sync bridges (`sync_binaural_panner_hud_state` and `sync_binaural_brir_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_binaural_panner_hud: bool` and `requested_open_binaural_brir_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🎧 Open Binaural HRTF 3D Orbit Spatializer HUD]` and `[🏛 Open Binaural BRIR Room Impulse Response HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header `[🎧 HUD]` / `[🏛 HUD]` and expanded toolbar buttons `[🎧 Binaural HUD]` / `[🏛 BRIR HUD]` in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Binaural HRTF: Head model with left/right ear markers, distance orbit circle, draggable sound puck (Azimuth X vs Distance Y), live Woodworth ITD/ILD readouts, and lock-free `ParamBus` slot dispatch.
+    * Binaural BRIR: Polar stage circle with listener in center and draggable sound source puck, 6 early reflection stem bars reflecting room profile decays, pinna notch readout, and lock-free `ParamBus` slot dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_binaural_panner_hud` and `open_binaural_brir_hud` under `"Spatial"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_binaural_panner_hud()` and `open_binaural_brir_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier142_turn78_tests.rs`:
+    * Pure tests: view initialization, HRTF and BRIR room profiles, coordinate normalizations, puck hit testing, ITD/ILD cue calculation, early reflection evaluation, slot arithmetic channel isolation, deterministic ASCII snapshots.
+    * GUI tests: modal lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch, rack & inspector trigger propagation, command palette action registration.
+  - Registered `tier142_turn78_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Feature tests: 7 passed in 0.06s (`cargo test -p summoner_gui --features gui -- tier142_turn78`).
+  - Full GUI test suite: 1,294 passed in 2.86s (`cargo test -p summoner_gui --features gui --lib`).
+  - Pure unit tests: 329 passed in 0.24s (`cargo test -p summoner_gui --lib`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
+

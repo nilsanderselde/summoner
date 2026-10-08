@@ -146,6 +146,10 @@ pub struct ModernInspectorState {
     pub requested_open_nhk222_hud: bool,
     #[serde(default)]
     pub requested_open_wfs_array_hud: bool,
+    #[serde(default)]
+    pub requested_open_binaural_panner_hud: bool,
+    #[serde(default)]
+    pub requested_open_binaural_brir_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -225,6 +229,8 @@ impl Default for ModernInspectorState {
             requested_open_auro3d_hud: false,
             requested_open_nhk222_hud: false,
             requested_open_wfs_array_hud: false,
+            requested_open_binaural_panner_hud: false,
+            requested_open_binaural_brir_hud: false,
         }
     }
 }
@@ -1249,6 +1255,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open interactive Broadcast Mastering Wave Field Synthesis (WFS) Holographic Linear Array HUD").clicked() {
                     state.requested_open_wfs_array_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("BinauralSpatialPanner") || active_kind.contains("BinauralPanner") || active_kind == "BinauralPannerView" || active_kind == "BinauralSpatialPannerNode" || active_kind.contains("BinauralHrtf") || active_kind.contains("HrtfPanner") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🎧 Open Binaural HRTF 3D Orbit Spatializer HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 229, 255)))
+                        .fill(Color32::from_rgb(12, 32, 45))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 229, 255)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Spatial Binaural Head-Related Transfer Function (HRTF) 3D Orbit Spatializer HUD").clicked() {
+                    state.requested_open_binaural_panner_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("BinauralBrir") || active_kind.contains("PartitionedBinauralHrtfConvolver") || active_kind == "BinauralBrirView" || active_kind.contains("BrirSpatializer") || active_kind.contains("RoomImpulseResponse") || active_kind.contains("BinauralRoom") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🏛 Open Binaural BRIR Room Impulse Response HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 255, 180)))
+                        .fill(Color32::from_rgb(12, 38, 28))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 255, 180)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Multi-Source Binaural Room Impulse Response (BRIR) Acoustic Spatializer HUD").clicked() {
+                    state.requested_open_binaural_brir_hud = true;
                 }
                 ui.add_space(4.0);
             }

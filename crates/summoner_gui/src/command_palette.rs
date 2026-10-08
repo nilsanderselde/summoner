@@ -641,6 +641,18 @@ impl CommandPalette {
                 action_id: "open_wfs_array_spatializer_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Spatial Binaural HRTF 3D Orbit Spatializer HUD".into(),
+                category: "Spatial".into(),
+                action_id: "open_binaural_panner_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Multi-Source Binaural BRIR Room Impulse Response Spatializer HUD".into(),
+                category: "Spatial".into(),
+                action_id: "open_binaural_brir_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

@@ -752,6 +752,10 @@ pub struct AwardWinningGuiView {
     pub nhk222_spatializer_view: crate::views::nhk222_spatializer_view::Nhk222SpatializerView,
     pub show_wfs_array_spatializer_modal: bool,
     pub wfs_array_spatializer_view: crate::views::wfs_array_spatializer_view::WfsArraySpatializerView,
+    pub show_binaural_panner_modal: bool,
+    pub binaural_panner_view: crate::views::binaural_panner_view::BinauralPannerView,
+    pub show_binaural_brir_modal: bool,
+    pub binaural_brir_view: crate::views::binaural_brir_view::BinauralBrirView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1120,6 +1124,10 @@ impl AwardWinningGuiView {
             nhk222_spatializer_view: crate::views::nhk222_spatializer_view::Nhk222SpatializerView::new(),
             show_wfs_array_spatializer_modal: false,
             wfs_array_spatializer_view: crate::views::wfs_array_spatializer_view::WfsArraySpatializerView::new(),
+            show_binaural_panner_modal: false,
+            binaural_panner_view: crate::views::binaural_panner_view::BinauralPannerView::new(),
+            show_binaural_brir_modal: false,
+            binaural_brir_view: crate::views::binaural_brir_view::BinauralBrirView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2039,6 +2047,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_wfs_array_hud = false;
             self.open_wfs_array_spatializer_hud();
         }
+        if self.inspector_state.requested_open_binaural_panner_hud || self.device_rack_state.requested_open_binaural_panner_hud {
+            self.inspector_state.requested_open_binaural_panner_hud = false;
+            self.device_rack_state.requested_open_binaural_panner_hud = false;
+            self.open_binaural_panner_hud();
+        }
+        if self.inspector_state.requested_open_binaural_brir_hud || self.device_rack_state.requested_open_binaural_brir_hud {
+            self.inspector_state.requested_open_binaural_brir_hud = false;
+            self.device_rack_state.requested_open_binaural_brir_hud = false;
+            self.open_binaural_brir_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2098,6 +2116,8 @@ impl AwardWinningGuiView {
         self.show_auro3d_spatializer_modal_window(ui);
         self.show_nhk222_spatializer_modal_window(ui);
         self.show_wfs_array_spatializer_modal_window(ui);
+        self.show_binaural_panner_modal_window(ui);
+        self.show_binaural_brir_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -12956,6 +12976,194 @@ impl AwardWinningGuiView {
 
     pub fn is_wfs_array_spatializer_hud_open(&self) -> bool {
         self.show_wfs_array_spatializer_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_binaural_panner_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_binaural_panner_modal {
+            return;
+        }
+
+        let mut is_open = self.show_binaural_panner_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎧 Spatial Binaural HRTF 3D Orbit Spatializer HUD")
+            .id(egui::Id::new("binaural_panner_hud_modal"))
+            .open(&mut is_open)
+            .default_size([920.0, 600.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Head-Related Transfer Function (HRTF) 3D Orbital Sound Panning & Binaural Cues HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.binaural_panner_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_binaural_panner_modal = is_open;
+        self.sync_binaural_panner_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_binaural_panner_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let az = self.binaural_panner_view.azimuth_deg;
+        let el = self.binaural_panner_view.elevation_deg;
+        let dist = self.binaural_panner_view.distance_m;
+        let crossfeed = self.binaural_panner_view.crossfeed_percent;
+        let itd = self.binaural_panner_view.itd_microseconds;
+        let ild = self.binaural_panner_view.ild_db;
+
+        self.device_rack_state.node_param_values.insert("azimuth_deg".to_string(), az);
+        self.device_rack_state.node_param_values.insert("elevation_deg".to_string(), el);
+        self.device_rack_state.node_param_values.insert("distance_m".to_string(), dist);
+        self.device_rack_state.node_param_values.insert("crossfeed_pct".to_string(), crossfeed);
+        self.device_rack_state.node_param_values.insert("itd_us".to_string(), itd);
+        self.device_rack_state.node_param_values.insert("ild_db".to_string(), ild);
+
+        self.inspector_state.node_param_values.insert("azimuth_deg".to_string(), az);
+        self.inspector_state.node_param_values.insert("elevation_deg".to_string(), el);
+        self.inspector_state.node_param_values.insert("distance_m".to_string(), dist);
+        self.inspector_state.node_param_values.insert("crossfeed_pct".to_string(), crossfeed);
+        self.inspector_state.node_param_values.insert("itd_us".to_string(), itd);
+        self.inspector_state.node_param_values.insert("ild_db".to_string(), ild);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_az = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_el = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_dist = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_cross = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_az).is_some() { bus.set(pid_az, az); }
+            if bus.get(pid_el).is_some() { bus.set(pid_el, el); }
+            if bus.get(pid_dist).is_some() { bus.set(pid_dist, dist); }
+            if bus.get(pid_cross).is_some() { bus.set(pid_cross, crossfeed); }
+        }
+    }
+
+    pub fn open_binaural_panner_hud(&mut self) {
+        self.show_binaural_panner_modal = true;
+    }
+
+    pub fn close_binaural_panner_hud(&mut self) {
+        self.show_binaural_panner_modal = false;
+    }
+
+    pub fn is_binaural_panner_hud_open(&self) -> bool {
+        self.show_binaural_panner_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_binaural_brir_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_binaural_brir_modal {
+            return;
+        }
+
+        let mut is_open = self.show_binaural_brir_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🏛 Multi-Source Binaural Room Impulse Response (BRIR) Acoustic Spatializer HUD")
+            .id(egui::Id::new("binaural_brir_hud_modal"))
+            .open(&mut is_open)
+            .default_size([920.0, 600.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Binaural Room Impulse Response Acoustic Convolution & Early Reflection Reflectogram HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.binaural_brir_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_binaural_brir_modal = is_open;
+        self.sync_binaural_brir_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_binaural_brir_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let az = self.binaural_brir_view.azimuth_deg;
+        let el = self.binaural_brir_view.elevation_deg;
+        let dist = self.binaural_brir_view.distance_m;
+        let notch_hz = self.binaural_brir_view.hrtf_pinna_notch_hz;
+        let rt60 = self.binaural_brir_view.room_profile.rt60_seconds();
+        let direct_ratio = self.binaural_brir_view.room_profile.direct_to_reverberant_ratio_db();
+
+        self.device_rack_state.node_param_values.insert("azimuth_deg".to_string(), az);
+        self.device_rack_state.node_param_values.insert("elevation_deg".to_string(), el);
+        self.device_rack_state.node_param_values.insert("distance_m".to_string(), dist);
+        self.device_rack_state.node_param_values.insert("pinna_notch_hz".to_string(), notch_hz);
+        self.device_rack_state.node_param_values.insert("room_rt60_s".to_string(), rt60);
+        self.device_rack_state.node_param_values.insert("direct_reverb_ratio_db".to_string(), direct_ratio);
+
+        self.inspector_state.node_param_values.insert("azimuth_deg".to_string(), az);
+        self.inspector_state.node_param_values.insert("elevation_deg".to_string(), el);
+        self.inspector_state.node_param_values.insert("distance_m".to_string(), dist);
+        self.inspector_state.node_param_values.insert("pinna_notch_hz".to_string(), notch_hz);
+        self.inspector_state.node_param_values.insert("room_rt60_s".to_string(), rt60);
+        self.inspector_state.node_param_values.insert("direct_reverb_ratio_db".to_string(), direct_ratio);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_az = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_el = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_dist = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_notch = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_az).is_some() { bus.set(pid_az, az); }
+            if bus.get(pid_el).is_some() { bus.set(pid_el, el); }
+            if bus.get(pid_dist).is_some() { bus.set(pid_dist, dist); }
+            if bus.get(pid_notch).is_some() { bus.set(pid_notch, notch_hz); }
+        }
+    }
+
+    pub fn open_binaural_brir_hud(&mut self) {
+        self.show_binaural_brir_modal = true;
+    }
+
+    pub fn close_binaural_brir_hud(&mut self) {
+        self.show_binaural_brir_modal = false;
+    }
+
+    pub fn is_binaural_brir_hud_open(&self) -> bool {
+        self.show_binaural_brir_modal
     }
 
 

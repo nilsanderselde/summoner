@@ -161,6 +161,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_nhk222_hud: bool,
     #[serde(default)]
     pub requested_open_wfs_array_hud: bool,
+    #[serde(default)]
+    pub requested_open_binaural_panner_hud: bool,
+    #[serde(default)]
+    pub requested_open_binaural_brir_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -230,6 +234,8 @@ impl Default for ModernDeviceRackState {
             requested_open_auro3d_hud: false,
             requested_open_nhk222_hud: false,
             requested_open_wfs_array_hud: false,
+            requested_open_binaural_panner_hud: false,
+            requested_open_binaural_brir_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -466,6 +472,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_auro3d = cur_selection.contains("Auro3d") || cur_selection.contains("Auro-3D") || cur_selection.contains("Auro131") || cur_selection == "Auro3dSpatializer" || cur_selection == "Auro3dSpatializerView" || cur_selection.contains("AuroSpatializer");
                     let is_nhk222 = cur_selection.contains("Nhk222") || cur_selection.contains("NHK222") || cur_selection == "Nhk222Spatializer" || cur_selection == "Nhk222SpatializerView" || cur_selection.contains("NhkSpatializer");
                     let is_wfs_array = cur_selection.contains("WfsArray") || cur_selection.contains("WfsAcoustic") || cur_selection.contains("WfsPlanar") || cur_selection == "WfsArraySpatializerNode" || cur_selection == "WfsArraySpatializerView" || cur_selection.contains("WaveFieldSynthesis");
+                    let is_binaural_panner = cur_selection.contains("BinauralSpatialPanner") || cur_selection.contains("BinauralPanner") || cur_selection == "BinauralPannerView" || cur_selection == "BinauralSpatialPannerNode" || cur_selection.contains("BinauralHrtf") || cur_selection.contains("HrtfPanner");
+                    let is_binaural_brir = cur_selection.contains("BinauralBrir") || cur_selection.contains("PartitionedBinauralHrtfConvolver") || cur_selection == "BinauralBrirView" || cur_selection.contains("BrirSpatializer") || cur_selection.contains("RoomImpulseResponse") || cur_selection.contains("BinauralRoom");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -678,6 +686,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("🌊 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 255, 180))).on_hover_text("Open Wave Field Synthesis (WFS) Holographic Linear Array HUD").clicked()
                     {
                         state.requested_open_wfs_array_hud = true;
+                    } else if is_binaural_panner
+                        && ui.button(RichText::new("🎧 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Spatial Binaural HRTF 3D Orbit Spatializer HUD").clicked()
+                    {
+                        state.requested_open_binaural_panner_hud = true;
+                    } else if is_binaural_brir
+                        && ui.button(RichText::new("🏛 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 255, 180))).on_hover_text("Open Multi-Source Binaural BRIR Room Impulse Response HUD").clicked()
+                    {
+                        state.requested_open_binaural_brir_hud = true;
                     }
                     ui.add_space(4.0);
                     let pwr_col = if state.is_enabled { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(100, 116, 139) };
@@ -912,6 +928,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_auro3d = cur_selection.contains("Auro3d") || cur_selection.contains("Auro-3D") || cur_selection.contains("Auro131") || cur_selection == "Auro3dSpatializer" || cur_selection == "Auro3dSpatializerView" || cur_selection.contains("AuroSpatializer");
                     let is_nhk222 = cur_selection.contains("Nhk222") || cur_selection.contains("NHK222") || cur_selection == "Nhk222Spatializer" || cur_selection == "Nhk222SpatializerView" || cur_selection.contains("NhkSpatializer");
                     let is_wfs_array = cur_selection.contains("WfsArray") || cur_selection.contains("WfsAcoustic") || cur_selection.contains("WfsPlanar") || cur_selection == "WfsArraySpatializerNode" || cur_selection == "WfsArraySpatializerView" || cur_selection.contains("WaveFieldSynthesis");
+                    let is_binaural_panner = cur_selection.contains("BinauralSpatialPanner") || cur_selection.contains("BinauralPanner") || cur_selection == "BinauralPannerView" || cur_selection == "BinauralSpatialPannerNode" || cur_selection.contains("BinauralHrtf") || cur_selection.contains("HrtfPanner");
+                    let is_binaural_brir = cur_selection.contains("BinauralBrir") || cur_selection.contains("PartitionedBinauralHrtfConvolver") || cur_selection == "BinauralBrirView" || cur_selection.contains("BrirSpatializer") || cur_selection.contains("RoomImpulseResponse") || cur_selection.contains("BinauralRoom");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1132,6 +1150,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("🌊 WFS HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 255, 180))).on_hover_text("Open Wave Field Synthesis (WFS) Holographic Linear Array HUD").clicked()
                     {
                         state.requested_open_wfs_array_hud = true;
+                    } else if is_binaural_panner
+                        && ui.button(RichText::new("🎧 Binaural HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Spatial Binaural HRTF 3D Orbit Spatializer HUD").clicked()
+                    {
+                        state.requested_open_binaural_panner_hud = true;
+                    } else if is_binaural_brir
+                        && ui.button(RichText::new("🏛 BRIR HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 255, 180))).on_hover_text("Open Multi-Source Binaural BRIR Room Impulse Response HUD").clicked()
+                    {
+                        state.requested_open_binaural_brir_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -1952,6 +1978,8 @@ fn show_pro_parameter_drawer(
                     let is_auro3d = dev_kind.contains("Auro3d") || dev_kind.contains("Auro-3D") || dev_kind.contains("Auro131") || dev_kind == "Auro3dSpatializer" || dev_kind == "Auro3dSpatializerView" || dev_kind.contains("AuroSpatializer");
                     let is_nhk222 = dev_kind.contains("Nhk222") || dev_kind.contains("NHK222") || dev_kind == "Nhk222Spatializer" || dev_kind == "Nhk222SpatializerView" || dev_kind.contains("NhkSpatializer");
                     let is_wfs_array = dev_kind.contains("WfsArray") || dev_kind.contains("WfsAcoustic") || dev_kind.contains("WfsPlanar") || dev_kind == "WfsArraySpatializerNode" || dev_kind == "WfsArraySpatializerView" || dev_kind.contains("WaveFieldSynthesis");
+                    let is_binaural_panner = dev_kind.contains("BinauralSpatialPanner") || dev_kind.contains("BinauralPanner") || dev_kind == "BinauralPannerView" || dev_kind == "BinauralSpatialPannerNode" || dev_kind.contains("BinauralHrtf") || dev_kind.contains("HrtfPanner");
+                    let is_binaural_brir = dev_kind.contains("BinauralBrir") || dev_kind.contains("PartitionedBinauralHrtfConvolver") || dev_kind == "BinauralBrirView" || dev_kind.contains("BrirSpatializer") || dev_kind.contains("RoomImpulseResponse") || dev_kind.contains("BinauralRoom");
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -6239,6 +6267,142 @@ fn show_pro_parameter_drawer(
                             let _ = wfs_resp.on_hover_text(format!(
                                 "Wave Field Synthesis (WFS) Acoustic Array HUD\nVirtual X: {:.2}m | Depth Y: {:.2}m\nChannels: {:.0} | Cutoff: {:.0}Hz\nFocus: {}\n[Drag: Virtual Source (X vs Depth Y)]",
                                 sx, sy, ch_count, alias_hz, if is_focused { "FOCUSED (In front)" } else { "BEHIND ARRAY" }
+                            ));
+                        }
+                    } else if is_binaural_panner {
+                        // Spatial Binaural HRTF 3D Orbit Mini Visualizer
+                        let (bin_resp, bin_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let bin_rect = bin_resp.rect;
+                        bin_painter.rect_filled(bin_rect, 2.0, Color32::from_rgb(10, 16, 26));
+
+                        let mut az = state.node_param_values.get("azimuth_deg").copied().unwrap_or(45.0);
+                        let mut dist = state.node_param_values.get("distance_m").copied().unwrap_or(1.5);
+                        let el = state.node_param_values.get("elevation_deg").copied().unwrap_or(10.0);
+                        let crossfeed = state.node_param_values.get("crossfeed_pct").copied().unwrap_or(65.0);
+
+                        if bin_resp.dragged() {
+                            if let Some(pos) = bin_resp.interact_pointer_pos() {
+                                let nx = ((pos.x - bin_rect.left()) / bin_rect.width()).clamp(0.0, 1.0);
+                                let ny = (1.0 - ((pos.y - bin_rect.top()) / bin_rect.height())).clamp(0.0, 1.0);
+                                az = -180.0 + nx * 360.0;
+                                dist = 0.1 + ny * 9.9;
+
+                                state.node_param_values.insert("azimuth_deg".to_string(), az);
+                                state.node_param_values.insert("distance_m".to_string(), dist);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_az = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_dist = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 2);
+                                    if bus.get(pid_az).is_some() { bus.set(pid_az, az); }
+                                    if bus.get(pid_dist).is_some() { bus.set(pid_dist, dist); }
+                                }
+                            }
+                        }
+
+                        // Head model in center of left region
+                        let center = egui::pos2(bin_rect.left() + 38.0, bin_rect.center().y);
+                        bin_painter.circle_filled(center, 9.0, Color32::from_rgb(28, 42, 65));
+                        bin_painter.circle_stroke(center, 9.0, Stroke::new(1.0_f32, Color32::from_rgb(0, 229, 255)));
+                        // Left & Right ears
+                        bin_painter.circle_filled(egui::pos2(center.x - 10.5, center.y), 2.2, Color32::from_rgb(0, 229, 255));
+                        bin_painter.circle_filled(egui::pos2(center.x + 10.5, center.y), 2.2, Color32::from_rgb(0, 229, 255));
+                        // Distance orbit circle
+                        bin_painter.circle_stroke(center, 24.0, Stroke::new(0.8_f32, Color32::from_rgba_unmultiplied(0, 229, 255, 60)));
+
+                        // Sound source puck
+                        let az_rad = (az - 90.0).to_radians();
+                        let d_norm = ((dist - 0.1) / 9.9).clamp(0.0, 1.0);
+                        let r_px = 12.0 + d_norm * 14.0;
+                        let puck_pos = egui::pos2(center.x + az_rad.cos() * r_px, center.y + az_rad.sin() * r_px);
+                        bin_painter.line_segment([center, puck_pos], Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(0, 229, 255, 120)));
+                        bin_painter.circle_filled(puck_pos, 3.5, Color32::from_rgb(0, 255, 200));
+
+                        // Calculate Woodworth ITD & ILD cues
+                        let (itd, ild) = crate::views::binaural_panner_view::BinauralPannerView::calculate_interaural_cues(az, el, dist);
+
+                        // Readouts
+                        bin_painter.text(
+                            egui::pos2(bin_rect.right() - 6.0, bin_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("HRTF 3D ORBIT\naz: {:.0}° el: {:.0}°\nd: {:.1}m | crs: {:.0}%\nITD: {:.0}µs | ILD: {:.1}dB", az, el, dist, crossfeed, itd, ild),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+
+                        if bin_resp.hovered() {
+                            let _ = bin_resp.on_hover_text(format!(
+                                "Spatial Binaural HRTF 3D Orbit Spatializer HUD\nAzimuth: {:.1}° | Elevation: {:.1}° | Distance: {:.2}m\nITD: {:.0} µs | ILD: {:.1} dB\nCrossfeed: {:.0}%\n[Drag: Azimuth (X) vs Distance (Y)]",
+                                az, el, dist, itd, ild, crossfeed
+                            ));
+                        }
+                    } else if is_binaural_brir {
+                        // Multi-Source Binaural BRIR Impulse Reflectogram Mini Visualizer
+                        let (brir_resp, brir_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let brir_rect = brir_resp.rect;
+                        brir_painter.rect_filled(brir_rect, 2.0, Color32::from_rgb(10, 24, 20));
+
+                        let mut az = state.node_param_values.get("azimuth_deg").copied().unwrap_or(0.0);
+                        let mut dist = state.node_param_values.get("distance_m").copied().unwrap_or(2.5);
+                        let el = state.node_param_values.get("elevation_deg").copied().unwrap_or(0.0);
+                        let notch_hz = state.node_param_values.get("pinna_notch_hz").copied().unwrap_or(7200.0);
+
+                        if brir_resp.dragged() {
+                            if let Some(pos) = brir_resp.interact_pointer_pos() {
+                                let nx = ((pos.x - brir_rect.left()) / (brir_rect.width() * 0.5)).clamp(0.0, 1.0);
+                                let ny = (1.0 - ((pos.y - brir_rect.top()) / brir_rect.height())).clamp(0.0, 1.0);
+                                az = -180.0 + nx * 360.0;
+                                dist = 0.2 + ny * 9.8;
+
+                                state.node_param_values.insert("azimuth_deg".to_string(), az);
+                                state.node_param_values.insert("distance_m".to_string(), dist);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_az = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_dist = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 2);
+                                    if bus.get(pid_az).is_some() { bus.set(pid_az, az); }
+                                    if bus.get(pid_dist).is_some() { bus.set(pid_dist, dist); }
+                                }
+                            }
+                        }
+
+                        // Left region: Polar Sound Source Radar
+                        let center = egui::pos2(brir_rect.left() + 28.0, brir_rect.center().y);
+                        brir_painter.circle_stroke(center, 22.0, Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(0, 255, 180, 70)));
+                        brir_painter.circle_filled(center, 2.5, Color32::from_rgb(0, 255, 200));
+
+                        let az_rad = (az - 90.0).to_radians();
+                        let d_norm = ((dist - 0.2) / 9.8).clamp(0.0, 1.0);
+                        let r_px = 6.0 + d_norm * 14.0;
+                        let puck_pos = egui::pos2(center.x + az_rad.cos() * r_px, center.y + az_rad.sin() * r_px);
+                        brir_painter.circle_filled(puck_pos, 3.2, Color32::from_rgb(0, 255, 180));
+
+                        // Right region: 6 BRIR Impulse Reflection Stem Bars
+                        let bar_x_start = brir_rect.left() + 64.0;
+                        let bar_w = 4.0;
+                        let bar_gap = 4.5;
+                        let base_y = brir_rect.bottom() - 10.0;
+                        for i in 0..6 {
+                            let delay_factor = (i as f32 * 10.0 + 8.0) * (dist / 3.0);
+                            let amp = (-0.03 * delay_factor).exp() * (0.85 / ((i as f32 + 1.0).sqrt()));
+                            let bar_h = (amp * 40.0).clamp(3.0, 44.0);
+                            let bx = bar_x_start + i as f32 * (bar_w + bar_gap);
+                            let bar_rect = egui::Rect::from_min_size(egui::pos2(bx, base_y - bar_h), egui::vec2(bar_w, bar_h));
+                            brir_painter.rect_filled(bar_rect, 1.0, Color32::from_rgba_unmultiplied(0, 255, 180, 180));
+                        }
+
+                        // Readouts
+                        brir_painter.text(
+                            egui::pos2(brir_rect.right() - 4.0, brir_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("BINAURAL BRIR\naz: {:.0}° el: {:.0}°\nd: {:.1}m | notch: {:.0}Hz\n6 Early Reflections", az, el, dist, notch_hz),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(0, 255, 180),
+                        );
+
+                        if brir_resp.hovered() {
+                            let _ = brir_resp.on_hover_text(format!(
+                                "Multi-Source Binaural Room Impulse Response (BRIR) Spatializer HUD\nAzimuth: {:.1}° | Elevation: {:.1}° | Distance: {:.2}m\nPinna Notch: {:.0} Hz | Early Reflections: 6 Rays\n[Drag: Polar Azimuth (X) vs Distance (Y)]",
+                                az, el, dist, notch_hz
                             ));
                         }
                     } else {
