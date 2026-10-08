@@ -821,6 +821,18 @@ impl CommandPalette {
                 action_id: "open_bbd_chorus_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Physical Vacuum Tube Triode Bias HUD".into(),
+                category: "Distortion / Saturation".into(),
+                action_id: "open_tube_bias_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Analog Reel-to-Reel Tape Saturation & Hysteresis HUD".into(),
+                category: "Distortion / Saturation".into(),
+                action_id: "open_tape_saturation_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

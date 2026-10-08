@@ -221,6 +221,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_bitcrusher_morph_hud: bool,
     #[serde(default)]
     pub requested_open_bbd_chorus_hud: bool,
+    #[serde(default)]
+    pub requested_open_tube_bias_hud: bool,
+    #[serde(default)]
+    pub requested_open_tape_saturation_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -320,6 +324,8 @@ impl Default for ModernDeviceRackState {
             requested_open_neural_timbre_hud: false,
             requested_open_bitcrusher_morph_hud: false,
             requested_open_bbd_chorus_hud: false,
+            requested_open_tube_bias_hud: false,
+            requested_open_tape_saturation_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -1042,6 +1048,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_neural_timbre = cur_selection.contains("NeuralTimbre") || cur_selection.contains("TimbreTransfer") || cur_selection == "NeuralTimbreView" || cur_selection == "NeuralTimbreNode" || cur_selection.contains("LatentFlow");
                     let is_bitcrusher = cur_selection.contains("Bitcrusher") || cur_selection.contains("BitCrush") || cur_selection == "BitcrusherMorphView" || cur_selection == "BitcrusherNode" || cur_selection.contains("SampleRateReduction");
                     let is_bbd_chorus = cur_selection.contains("BbdChorus") || cur_selection.contains("Chorus") || cur_selection == "BbdChorusView" || cur_selection == "EffectChorus" || cur_selection.contains("BucketBrigade") || cur_selection.contains("LissajousChorus");
+                    let is_tube = cur_selection.contains("Tube") || cur_selection.contains("Vacuum") || cur_selection.contains("Triode") || cur_selection == "TubeBiasView" || cur_selection == "TubeSaturation" || cur_selection.contains("TubeAmp");
+                    let is_tape = cur_selection.contains("Tape") || cur_selection.contains("Hysteresis") || cur_selection == "TapeSaturationView" || cur_selection == "TapeSaturation" || cur_selection.contains("TapeWarmth") || cur_selection.contains("ReelToReel");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1382,6 +1390,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("📻 BBD Chorus HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Multi-Voice Analog Bucket-Brigade (BBD) Chorus Matrix HUD").clicked()
                     {
                         state.requested_open_bbd_chorus_hud = true;
+                    } else if is_tube
+                        && ui.button(RichText::new("⚡ Tube HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 215, 0))).on_hover_text("Open Physical Vacuum Tube Triode Bias & Harmonic Distortion HUD").clicked()
+                    {
+                        state.requested_open_tube_bias_hud = true;
+                    } else if is_tape
+                        && ui.button(RichText::new("📼 Tape HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 179, 0))).on_hover_text("Open Analog Reel-to-Reel Tape Saturation & Magnetic Hysteresis HUD").clicked()
+                    {
+                        state.requested_open_tape_saturation_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2232,6 +2248,8 @@ fn show_pro_parameter_drawer(
                     let is_neural_timbre = dev_kind.contains("NeuralTimbre") || dev_kind.contains("TimbreTransfer") || dev_kind == "NeuralTimbreView" || dev_kind == "NeuralTimbreNode" || dev_kind.contains("LatentFlow");
                     let is_bitcrusher = dev_kind.contains("Bitcrusher") || dev_kind.contains("BitCrush") || dev_kind == "BitcrusherMorphView" || dev_kind == "BitcrusherNode" || dev_kind.contains("SampleRateReduction");
                     let is_bbd_chorus = dev_kind.contains("BbdChorus") || dev_kind.contains("Chorus") || dev_kind == "BbdChorusView" || dev_kind == "EffectChorus" || dev_kind.contains("BucketBrigade") || dev_kind.contains("LissajousChorus");
+                    let is_tube = dev_kind.contains("Tube") || dev_kind.contains("Vacuum") || dev_kind.contains("Triode") || dev_kind == "TubeBiasView" || dev_kind == "TubeSaturation" || dev_kind.contains("TubeAmp");
+                    let is_tape = dev_kind.contains("Tape") || dev_kind.contains("Hysteresis") || dev_kind == "TapeSaturationView" || dev_kind == "TapeSaturation" || dev_kind.contains("TapeWarmth") || dev_kind.contains("ReelToReel");
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -9045,6 +9063,158 @@ fn show_pro_parameter_drawer(
                             let _ = bbd_resp.on_hover_text(format!(
                                 "Multi-Voice BBD Chorus Matrix HUD\nStereo Spread: {:.0}% | Feedback: {:+.0}%\nDry/Wet Mix: {:.0}% | Clock Rate: {:.1} kHz\n[Drag: Spread (X) / Feedback (Y) Puck]",
                                 spread, feedback, mix, clock
+                            ));
+                        }
+                    } else if is_tube {
+                        // Vacuum Tube Triode Bias & Harmonic Distortion Mini Visualizer
+                        let (tb_resp, tb_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let tb_rect = tb_resp.rect;
+                        tb_painter.rect_filled(tb_rect, 2.0, Color32::from_rgb(14, 12, 10));
+
+                        let mut bias_v = state.node_param_values.get("bias_voltage_v").copied().unwrap_or(-1.85);
+                        let mut drive_db = state.node_param_values.get("drive_warmth_db").copied().unwrap_or(8.5);
+                        let plate_v = state.node_param_values.get("plate_voltage_v").copied().unwrap_or(250.0);
+
+                        if tb_resp.dragged() {
+                            if let Some(pos) = tb_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - tb_rect.left()) / tb_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - tb_rect.top()) / tb_rect.height())).clamp(0.0, 1.0);
+                                bias_v = -4.0 + norm_x * 4.0;
+                                drive_db = norm_y * 24.0;
+                                state.node_param_values.insert("bias_voltage_v".to_string(), bias_v);
+                                state.node_param_values.insert("drive_warmth_db".to_string(), drive_db);
+                                if let Some(bus) = param_bus {
+                                    let pid_bias = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_bias).is_some() { bus.set(pid_bias, bias_v); }
+                                    let pid_drive = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 2);
+                                    if bus.get(pid_drive).is_some() { bus.set(pid_drive, drive_db); }
+                                }
+                            }
+                        }
+
+                        // Load-line representation
+                        tb_painter.line_segment(
+                            [egui::pos2(tb_rect.left() + 8.0, tb_rect.top() + 14.0), egui::pos2(tb_rect.left() + 76.0, tb_rect.bottom() - 10.0)],
+                            Stroke::new(1.2_f32, Color32::from_rgb(255, 107, 43)),
+                        );
+
+                        // Q-point puck
+                        let norm_b = ((bias_v - (-4.0)) / 4.0).clamp(0.0, 1.0);
+                        let norm_d = (drive_db / 24.0).clamp(0.0, 1.0);
+                        let q_x = tb_rect.left() + 8.0 + norm_b * 68.0;
+                        let q_y = tb_rect.bottom() - 10.0 - norm_d * 44.0;
+                        tb_painter.circle_filled(egui::pos2(q_x, q_y), 4.0, Color32::from_rgb(255, 215, 0));
+                        tb_painter.circle_stroke(egui::pos2(q_x, q_y), 6.0, Stroke::new(1.0_f32, Color32::from_rgb(255, 240, 150)));
+
+                        // Harmonic bars preview (f0..5f0)
+                        let bar_base_x = tb_rect.left() + 90.0;
+                        for i in 0..5 {
+                            let bx = bar_base_x + (i as f32) * 8.0;
+                            let bh = match i {
+                                0 => 32.0,
+                                1 => (drive_db / 24.0 * 24.0).max(6.0),
+                                2 => (drive_db / 24.0 * 18.0).max(4.0),
+                                3 => (drive_db / 24.0 * 12.0).max(2.0),
+                                _ => (drive_db / 24.0 * 8.0).max(1.0),
+                            };
+                            let b_col = if i == 0 {
+                                Color32::from_rgb(0, 229, 255)
+                            } else if i % 2 == 1 {
+                                Color32::from_rgb(255, 215, 0)
+                            } else {
+                                Color32::from_rgb(255, 107, 43)
+                            };
+                            tb_painter.rect_filled(
+                                egui::Rect::from_min_max(egui::pos2(bx, tb_rect.bottom() - 10.0 - bh), egui::pos2(bx + 6.0, tb_rect.bottom() - 10.0)),
+                                1.0,
+                                b_col,
+                            );
+                        }
+
+                        // Readout
+                        tb_painter.text(
+                            egui::pos2(tb_rect.right() - 4.0, tb_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("TUBE BIAS\n{:.2}V | +{:.1}dB\n{:.0}V DC", bias_v, drive_db, plate_v),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(255, 215, 0),
+                        );
+
+                        if tb_resp.hovered() {
+                            let _ = tb_resp.on_hover_text(format!(
+                                "Vacuum Tube Triode Bias & Harmonic Distortion HUD\nGrid Bias: {:.2} V DC | Drive Warmth: +{:.1} dB\nPlate Voltage: {:.0} V DC\n[Drag: Grid Bias (X) / Drive (Y) Puck]",
+                                bias_v, drive_db, plate_v
+                            ));
+                        }
+                    } else if is_tape {
+                        // Analog Tape Saturation & Magnetic Hysteresis Mini Visualizer
+                        let (tp_resp, tp_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let tp_rect = tp_resp.rect;
+                        tp_painter.rect_filled(tp_rect, 2.0, Color32::from_rgb(12, 14, 20));
+
+                        let mut drive = state.node_param_values.get("drive").copied().unwrap_or(2.0);
+                        let mut sat = state.node_param_values.get("saturation").copied().unwrap_or(0.6);
+                        let bias = state.node_param_values.get("bias").copied().unwrap_or(0.0);
+
+                        if tp_resp.dragged() {
+                            if let Some(pos) = tp_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - tp_rect.left()) / tp_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - tp_rect.top()) / tp_rect.height())).clamp(0.0, 1.0);
+                                drive = 0.1 + norm_x * (10.0 - 0.1);
+                                sat = norm_y;
+                                state.node_param_values.insert("drive".to_string(), drive);
+                                state.node_param_values.insert("saturation".to_string(), sat);
+                                if let Some(bus) = param_bus {
+                                    let pid_drv = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_drv).is_some() { bus.set(pid_drv, drive); }
+                                    let pid_sat = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_sat).is_some() { bus.set(pid_sat, sat); }
+                                }
+                            }
+                        }
+
+                        // Center crosshair
+                        let center_x = tp_rect.left() + 48.0;
+                        let center_y = tp_rect.center().y;
+                        tp_painter.line_segment([egui::pos2(center_x, tp_rect.top() + 8.0), egui::pos2(center_x, tp_rect.bottom() - 8.0)], Stroke::new(0.6_f32, Color32::from_rgb(35, 48, 68)));
+                        tp_painter.line_segment([egui::pos2(center_x - 38.0, center_y), egui::pos2(center_x + 38.0, center_y)], Stroke::new(0.6_f32, Color32::from_rgb(35, 48, 68)));
+
+                        // Hysteresis B-H loop preview (16 points)
+                        let steps = 16;
+                        let mut prev_pt = None;
+                        for i in 0..=steps {
+                            let t = (i as f32 / steps as f32) * std::f32::consts::TAU;
+                            let h = t.sin();
+                            let b = ((h + bias * 0.2).tanh() * sat + 0.25 * (t - 0.4).cos()).clamp(-1.0, 1.0);
+                            let px = center_x + h * 34.0;
+                            let py = center_y - b * 24.0;
+                            let cur_pt = egui::pos2(px, py);
+                            if let Some(prev) = prev_pt {
+                                tp_painter.line_segment([prev, cur_pt], Stroke::new(1.2_f32, Color32::from_rgb(255, 179, 0)));
+                            }
+                            prev_pt = Some(cur_pt);
+                        }
+
+                        // Puck
+                        let norm_drv = ((drive - 0.1) / (10.0 - 0.1)).clamp(0.0, 1.0);
+                        let puck_x = center_x - 34.0 + norm_drv * 68.0;
+                        let puck_y = center_y + 24.0 - sat * 48.0;
+                        tp_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(255, 179, 0));
+                        tp_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.0, Stroke::new(1.0_f32, Color32::from_rgb(255, 220, 120)));
+
+                        // Readout
+                        tp_painter.text(
+                            egui::pos2(tp_rect.right() - 4.0, tp_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("TAPE SAT\nDrv: {:.1}x | Sat: {:.0}%\nBias: {:+.1}", drive, sat * 100.0, bias),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(255, 179, 0),
+                        );
+
+                        if tp_resp.hovered() {
+                            let _ = tp_resp.on_hover_text(format!(
+                                "Analog Tape Saturation & Magnetic Hysteresis HUD\nDrive: {:.1}x | Saturation: {:.0}%\nAC Bias: {:+.2}\n[Drag: Drive (X) / Saturation (Y) Puck]",
+                                drive, sat * 100.0, bias
                             ));
                         }
                     } else {

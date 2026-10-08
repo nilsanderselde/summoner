@@ -206,6 +206,10 @@ pub struct ModernInspectorState {
     pub requested_open_bitcrusher_morph_hud: bool,
     #[serde(default)]
     pub requested_open_bbd_chorus_hud: bool,
+    #[serde(default)]
+    pub requested_open_tube_bias_hud: bool,
+    #[serde(default)]
+    pub requested_open_tape_saturation_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -315,6 +319,8 @@ impl Default for ModernInspectorState {
             requested_open_neural_timbre_hud: false,
             requested_open_bitcrusher_morph_hud: false,
             requested_open_bbd_chorus_hud: false,
+            requested_open_tube_bias_hud: false,
+            requested_open_tape_saturation_hud: false,
         }
     }
 }
@@ -1639,6 +1645,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open Multi-Voice Analog Bucket-Brigade (BBD) Chorus Matrix HUD").clicked() {
                     state.requested_open_bbd_chorus_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Tube") || active_kind.contains("Vacuum") || active_kind.contains("Triode") || active_kind == "TubeBiasView" || active_kind == "TubeSaturation" || active_kind.contains("TubeAmp") {
+                if ui.add(
+                    egui::Button::new(RichText::new("⚡ Open Vacuum Tube Bias HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(255, 215, 0)))
+                        .fill(Color32::from_rgb(32, 26, 12))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 215, 0)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Physical Vacuum Tube Triode Bias & Harmonic Distortion HUD").clicked() {
+                    state.requested_open_tube_bias_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Tape") || active_kind.contains("Hysteresis") || active_kind == "TapeSaturationView" || active_kind == "TapeSaturation" || active_kind.contains("TapeWarmth") || active_kind.contains("ReelToReel") {
+                if ui.add(
+                    egui::Button::new(RichText::new("📼 Open Tape Saturation HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(255, 179, 0)))
+                        .fill(Color32::from_rgb(30, 24, 14))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 179, 0)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Analog Reel-to-Reel Tape Saturation & Magnetic Hysteresis HUD").clicked() {
+                    state.requested_open_tape_saturation_hud = true;
                 }
                 ui.add_space(4.0);
             }

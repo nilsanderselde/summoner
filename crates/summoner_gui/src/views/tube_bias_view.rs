@@ -124,6 +124,36 @@ impl TubeBiasView {
         (dx * dx + dy * dy).sqrt() <= TUBE_PUCK_HIT_RADIUS
     }
 
+    pub fn set_topology(&mut self, topology: TubeTopology) {
+        self.topology = topology;
+    }
+
+    pub fn bias_to_normalized(bias_v: f32) -> f32 {
+        ((bias_v - (-4.0)) / 4.0).clamp(0.0, 1.0)
+    }
+
+    pub fn normalized_to_bias(norm: f32) -> f32 {
+        -4.0 + norm.clamp(0.0, 1.0) * 4.0
+    }
+
+    pub fn drive_to_normalized(drive_db: f32) -> f32 {
+        (drive_db / 24.0).clamp(0.0, 1.0)
+    }
+
+    pub fn normalized_to_drive(norm: f32) -> f32 {
+        norm.clamp(0.0, 1.0) * 24.0
+    }
+
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        let lines = self.render_ascii(80, 24);
+        let mut s = lines.join("\n");
+        s.push_str(&format!(
+            "\n[PASS] TUBE AMP BIAS & HARMONIC DISTORTION HUD | TOPOLOGY: {}",
+            self.topology.label()
+        ));
+        s
+    }
+
     /// Render deterministic ASCII representation.
     pub fn render_ascii(&self, width: usize, height: usize) -> Vec<String> {
         let mut lines = Vec::with_capacity(height);
@@ -471,6 +501,33 @@ impl TubeBiasView {
             "[PASS] Tube Bias Q-Point & Harmonic Distortion Nodes (>= 44x44pt) Compliant",
             egui::FontId::proportional(11.0),
             Color32::from_rgb(0, 255, 180),
+        );
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_ui(&mut self, ui: &mut egui::Ui) {
+        let desired_size = egui::vec2(800.0, 500.0);
+        let (rect, response) = ui.allocate_exact_size(desired_size, egui::Sense::click_and_drag());
+
+        // Handle touch/mouse dragging of Q-point puck on the load-line canvas
+        let load_rect = Rect::new(rect.min.x + 20.0, rect.min.y + 56.0, 370.0, 224.0);
+        if response.dragged() {
+            if let Some(pos) = response.interact_pointer_pos() {
+                if pos.x >= load_rect.x && pos.x <= load_rect.x + load_rect.width
+                    && pos.y >= load_rect.y && pos.y <= load_rect.y + load_rect.height
+                {
+                    let norm_x = ((pos.x - load_rect.x) / load_rect.width).clamp(0.0, 1.0);
+                    let norm_y = (1.0 - ((pos.y - load_rect.y) / load_rect.height)).clamp(0.0, 1.0);
+                    self.q_point_norm = (norm_x, norm_y);
+                    self.bias_voltage_v = Self::normalized_to_bias(norm_x);
+                    self.drive_warmth_db = Self::normalized_to_drive(norm_y);
+                }
+            }
+        }
+
+        self.show(
+            ui,
+            Rect::new(rect.min.x, rect.min.y, rect.width(), rect.height()),
         );
     }
 }

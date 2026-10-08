@@ -812,6 +812,10 @@ pub struct AwardWinningGuiView {
     pub bitcrusher_morph_view: crate::views::bitcrusher_morph_view::BitcrusherMorphView,
     pub show_bbd_chorus_modal: bool,
     pub bbd_chorus_view: crate::views::bbd_chorus_view::BbdChorusView,
+    pub show_tube_bias_modal: bool,
+    pub tube_bias_view: crate::views::tube_bias_view::TubeBiasView,
+    pub show_tape_saturation_modal: bool,
+    pub tape_saturation_view: crate::views::tape_saturation_view::TapeSaturationView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1240,6 +1244,10 @@ impl AwardWinningGuiView {
             bitcrusher_morph_view: crate::views::bitcrusher_morph_view::BitcrusherMorphView::new(),
             show_bbd_chorus_modal: false,
             bbd_chorus_view: crate::views::bbd_chorus_view::BbdChorusView::new(),
+            show_tube_bias_modal: false,
+            tube_bias_view: crate::views::tube_bias_view::TubeBiasView::new(),
+            show_tape_saturation_modal: false,
+            tape_saturation_view: crate::views::tape_saturation_view::TapeSaturationView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2309,6 +2317,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_bbd_chorus_hud = false;
             self.open_bbd_chorus_hud();
         }
+        if self.inspector_state.requested_open_tube_bias_hud || self.device_rack_state.requested_open_tube_bias_hud {
+            self.inspector_state.requested_open_tube_bias_hud = false;
+            self.device_rack_state.requested_open_tube_bias_hud = false;
+            self.open_tube_bias_hud();
+        }
+        if self.inspector_state.requested_open_tape_saturation_hud || self.device_rack_state.requested_open_tape_saturation_hud {
+            self.inspector_state.requested_open_tape_saturation_hud = false;
+            self.device_rack_state.requested_open_tape_saturation_hud = false;
+            self.open_tape_saturation_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2398,6 +2416,8 @@ impl AwardWinningGuiView {
         self.show_neural_timbre_modal_window(ui);
         self.show_bitcrusher_morph_modal_window(ui);
         self.show_bbd_chorus_modal_window(ui);
+        self.show_tube_bias_modal_window(ui);
+        self.show_tape_saturation_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -16195,10 +16215,211 @@ impl AwardWinningGuiView {
         }
     }
 
+    pub fn open_tube_bias_hud(&mut self) {
+        self.show_tube_bias_modal = true;
+    }
 
+    pub fn close_tube_bias_hud(&mut self) {
+        self.show_tube_bias_modal = false;
+    }
 
+    pub fn is_tube_bias_hud_open(&self) -> bool {
+        self.show_tube_bias_modal
+    }
 
     #[cfg(feature = "gui")]
+    fn show_tube_bias_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_tube_bias_modal {
+            return;
+        }
+
+        let mut is_open = self.show_tube_bias_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("⚡ Physical Vacuum Tube Triode Bias & Harmonic Distortion HUD")
+            .id(egui::Id::new("tube_bias_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(840.0, 580.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Dynamic Load-Line Q-Point, 3/2 Power Law Saturation & Even/Odd Harmonics (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.tube_bias_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_tube_bias_modal = is_open;
+        self.sync_tube_bias_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_tube_bias_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let bias = self.tube_bias_view.bias_voltage_v;
+        let plate = self.tube_bias_view.plate_voltage_v;
+        let drive = self.tube_bias_view.drive_warmth_db;
+        let sag = self.tube_bias_view.sag_compression_pct;
+        let asym = self.tube_bias_view.asymmetry_balance_pct;
+        let mix = self.tube_bias_view.dry_wet_pct;
+
+        self.device_rack_state.node_param_values.insert("bias_voltage_v".to_string(), bias);
+        self.device_rack_state.node_param_values.insert("plate_voltage_v".to_string(), plate);
+        self.device_rack_state.node_param_values.insert("drive_warmth_db".to_string(), drive);
+        self.device_rack_state.node_param_values.insert("sag_compression_pct".to_string(), sag);
+        self.device_rack_state.node_param_values.insert("asymmetry_balance_pct".to_string(), asym);
+        self.device_rack_state.node_param_values.insert("dry_wet_pct".to_string(), mix);
+
+        self.inspector_state.node_param_values.insert("bias_voltage_v".to_string(), bias);
+        self.inspector_state.node_param_values.insert("plate_voltage_v".to_string(), plate);
+        self.inspector_state.node_param_values.insert("drive_warmth_db".to_string(), drive);
+        self.inspector_state.node_param_values.insert("sag_compression_pct".to_string(), sag);
+        self.inspector_state.node_param_values.insert("asymmetry_balance_pct".to_string(), asym);
+        self.inspector_state.node_param_values.insert("dry_wet_pct".to_string(), mix);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_bias = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_plate = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_drive = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_sag = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_asym = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_mix = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+
+            if bus.get(pid_bias).is_some() { bus.set(pid_bias, bias); }
+            if bus.get(pid_plate).is_some() { bus.set(pid_plate, plate); }
+            if bus.get(pid_drive).is_some() { bus.set(pid_drive, drive); }
+            if bus.get(pid_sag).is_some() { bus.set(pid_sag, sag); }
+            if bus.get(pid_asym).is_some() { bus.set(pid_asym, asym); }
+            if bus.get(pid_mix).is_some() { bus.set(pid_mix, mix); }
+        }
+    }
+
+    pub fn open_tape_saturation_hud(&mut self) {
+        self.show_tape_saturation_modal = true;
+    }
+
+    pub fn close_tape_saturation_hud(&mut self) {
+        self.show_tape_saturation_modal = false;
+    }
+
+    pub fn is_tape_saturation_hud_open(&self) -> bool {
+        self.show_tape_saturation_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_tape_saturation_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_tape_saturation_modal {
+            return;
+        }
+
+        let mut is_open = self.show_tape_saturation_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("📼 Analog Reel-to-Reel Tape Saturation & Magnetic Hysteresis HUD")
+            .id(egui::Id::new("tape_saturation_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(820.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Magnetic Hysteresis B-H Curve, Multi-Speed Head Bump & Tape Dynamics (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.tape_saturation_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_tape_saturation_modal = is_open;
+        self.sync_tape_saturation_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_tape_saturation_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let drive = self.tape_saturation_view.drive;
+        let sat = self.tape_saturation_view.saturation;
+        let bias = self.tape_saturation_view.bias;
+        let bump = self.tape_saturation_view.head_bump;
+        let wow = self.tape_saturation_view.wow_flutter;
+        let hyst = self.tape_saturation_view.hysteresis;
+        let tone = self.tape_saturation_view.tone;
+        let mix = self.tape_saturation_view.dry_wet;
+
+        self.device_rack_state.node_param_values.insert("drive".to_string(), drive);
+        self.device_rack_state.node_param_values.insert("saturation".to_string(), sat);
+        self.device_rack_state.node_param_values.insert("bias".to_string(), bias);
+        self.device_rack_state.node_param_values.insert("head_bump".to_string(), bump);
+        self.device_rack_state.node_param_values.insert("wow_flutter".to_string(), wow);
+        self.device_rack_state.node_param_values.insert("hysteresis".to_string(), hyst);
+        self.device_rack_state.node_param_values.insert("tone".to_string(), tone);
+        self.device_rack_state.node_param_values.insert("dry_wet".to_string(), mix);
+
+        self.inspector_state.node_param_values.insert("drive".to_string(), drive);
+        self.inspector_state.node_param_values.insert("saturation".to_string(), sat);
+        self.inspector_state.node_param_values.insert("bias".to_string(), bias);
+        self.inspector_state.node_param_values.insert("head_bump".to_string(), bump);
+        self.inspector_state.node_param_values.insert("wow_flutter".to_string(), wow);
+        self.inspector_state.node_param_values.insert("hysteresis".to_string(), hyst);
+        self.inspector_state.node_param_values.insert("tone".to_string(), tone);
+        self.inspector_state.node_param_values.insert("dry_wet".to_string(), mix);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_drive = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_sat = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_bias = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_bump = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_wow = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_hyst = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+            let pid_tone = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 6);
+            let pid_mix = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 7);
+
+            if bus.get(pid_drive).is_some() { bus.set(pid_drive, drive); }
+            if bus.get(pid_sat).is_some() { bus.set(pid_sat, sat); }
+            if bus.get(pid_bias).is_some() { bus.set(pid_bias, bias); }
+            if bus.get(pid_bump).is_some() { bus.set(pid_bump, bump); }
+            if bus.get(pid_wow).is_some() { bus.set(pid_wow, wow); }
+            if bus.get(pid_hyst).is_some() { bus.set(pid_hyst, hyst); }
+            if bus.get(pid_tone).is_some() { bus.set(pid_tone, tone); }
+            if bus.get(pid_mix).is_some() { bus.set(pid_mix, mix); }
+        }
+    }
     fn render_patch_cords_canvas(&mut self, ui: &mut egui::Ui, available_h: f32) {
         let (resp, painter) = ui.allocate_painter(Vec2::new(ui.available_width(), available_h), egui::Sense::click_and_drag());
         let rect = resp.rect;

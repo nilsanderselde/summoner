@@ -105,6 +105,48 @@ impl TapeSaturationView {
         }
     }
 
+    pub fn set_speed(&mut self, speed: TapeViewSpeed) {
+        self.speed = speed;
+    }
+
+    pub fn drive_to_normalized(drive: f32) -> f32 {
+        ((drive - 0.1) / (10.0 - 0.1)).clamp(0.0, 1.0)
+    }
+
+    pub fn normalized_to_drive(norm: f32) -> f32 {
+        0.1 + norm.clamp(0.0, 1.0) * (10.0 - 0.1)
+    }
+
+    pub fn saturation_to_normalized(sat: f32) -> f32 {
+        sat.clamp(0.0, 1.0)
+    }
+
+    pub fn normalized_to_saturation(norm: f32) -> f32 {
+        norm.clamp(0.0, 1.0)
+    }
+
+    pub fn hit_test_tape_puck(&self, pos: (f32, f32), canvas: crate::layout_math::Rect) -> bool {
+        let puck_x = canvas.x + self.puck_pos.0 * canvas.width;
+        let puck_y = canvas.y + (1.0 - self.puck_pos.1) * canvas.height;
+        let dx = pos.0 - puck_x;
+        let dy = pos.1 - puck_y;
+        (dx * dx + dy * dy).sqrt() <= TAPE_PUCK_HIT_RADIUS
+    }
+
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        let mut s = self.render_ascii(80, 24);
+        s.push_str(&format!(
+            "\n[PASS] ANALOG TAPE SATURATION & HYSTERESIS HUD | SPEED: {}",
+            self.speed.label()
+        ));
+        s
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_ui(&mut self, ui: &mut Ui) {
+        self.ui(ui);
+    }
+
     /// Compute static B-H hysteresis curve points for canvas rendering.
     pub fn compute_hysteresis_points(&self, num_points: usize) -> Vec<(f32, f32)> {
         let mut points = Vec::with_capacity(num_points);
