@@ -537,4 +537,22 @@ impl NeuralChoirFormantView {
             Color32::from_rgb(0, 255, 180),
         );
     }
+
+    #[cfg(feature = "gui")]
+    pub fn show(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
+    }
+
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        format!(
+            "--- NEURAL POLYPHONIC CHOIR FORMANT MORPHER HUD [PASS] ---\nEnsemble: {:?} | F1: {:.0}Hz | F2: {:.0}Hz | Voices: {} | Morph Blend: {:.0}%\n{}",
+            self.ensemble,
+            self.formant_f1_hz,
+            self.formant_f2_hz,
+            self.voice_count,
+            self.neural_morph_blend * 100.0,
+            self.render_ascii(80, 24).join("\n")
+        )
+    }
 }
+

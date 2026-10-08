@@ -182,6 +182,10 @@ pub struct ModernInspectorState {
     pub requested_open_neural_radiance_hud: bool,
     #[serde(default)]
     pub requested_open_neural_vocal_stylizer_hud: bool,
+    #[serde(default)]
+    pub requested_open_neural_speech_to_singing_hud: bool,
+    #[serde(default)]
+    pub requested_open_neural_choir_formant_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -279,6 +283,8 @@ impl Default for ModernInspectorState {
             requested_open_neural_timbre_morph_hud: false,
             requested_open_neural_radiance_hud: false,
             requested_open_neural_vocal_stylizer_hud: false,
+            requested_open_neural_speech_to_singing_hud: false,
+            requested_open_neural_choir_formant_hud: false,
         }
     }
 }
@@ -1483,6 +1489,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open Neural Polyphonic Vocal Stylizer & Microtonal Ornament Resynthesizer HUD").clicked() {
                     state.requested_open_neural_vocal_stylizer_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("NeuralSpeechToSinging") || active_kind.contains("SpeechToSinging") || active_kind == "NeuralSpeechToSingingView" || active_kind == "NeuralSpeechToSingingNode" || active_kind.contains("SingingVoice") || active_kind.contains("ProsodyIntonation") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🎙 Open Speech-to-Singing HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 229, 255)))
+                        .fill(Color32::from_rgb(10, 36, 48))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 229, 255)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Neural Speech-to-Singing Synthesis & Pitch Retuning HUD").clicked() {
+                    state.requested_open_neural_speech_to_singing_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("NeuralChoirFormant") || active_kind.contains("ChoirFormant") || active_kind == "NeuralChoirFormantView" || active_kind == "NeuralChoirFormantNode" || active_kind.contains("ChoirEnsemble") || active_kind.contains("VowelTrajectory") {
+                if ui.add(
+                    egui::Button::new(RichText::new("👥 Open Choir Formant HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(255, 215, 0)))
+                        .fill(Color32::from_rgb(48, 42, 14))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 215, 0)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Neural Polyphonic Choir Formant Morpher & Vowel Space HUD").clicked() {
+                    state.requested_open_neural_choir_formant_hud = true;
                 }
                 ui.add_space(4.0);
             }

@@ -788,6 +788,10 @@ pub struct AwardWinningGuiView {
     pub neural_radiance_view: crate::views::neural_radiance_view::NeuralRadianceView,
     pub show_neural_vocal_stylizer_modal: bool,
     pub neural_vocal_stylizer_view: crate::views::neural_vocal_stylizer_view::NeuralVocalStylizerView,
+    pub show_neural_speech_to_singing_modal: bool,
+    pub neural_speech_to_singing_view: crate::views::neural_speech_to_singing_view::NeuralSpeechToSingingView,
+    pub show_neural_choir_formant_modal: bool,
+    pub neural_choir_formant_view: crate::views::neural_choir_formant_view::NeuralChoirFormantView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1192,6 +1196,10 @@ impl AwardWinningGuiView {
             neural_radiance_view: crate::views::neural_radiance_view::NeuralRadianceView::new(),
             show_neural_vocal_stylizer_modal: false,
             neural_vocal_stylizer_view: crate::views::neural_vocal_stylizer_view::NeuralVocalStylizerView::new(),
+            show_neural_speech_to_singing_modal: false,
+            neural_speech_to_singing_view: crate::views::neural_speech_to_singing_view::NeuralSpeechToSingingView::new(),
+            show_neural_choir_formant_modal: false,
+            neural_choir_formant_view: crate::views::neural_choir_formant_view::NeuralChoirFormantView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2201,6 +2209,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_neural_vocal_stylizer_hud = false;
             self.open_neural_vocal_stylizer_hud();
         }
+        if self.inspector_state.requested_open_neural_speech_to_singing_hud || self.device_rack_state.requested_open_neural_speech_to_singing_hud {
+            self.inspector_state.requested_open_neural_speech_to_singing_hud = false;
+            self.device_rack_state.requested_open_neural_speech_to_singing_hud = false;
+            self.open_neural_speech_to_singing_hud();
+        }
+        if self.inspector_state.requested_open_neural_choir_formant_hud || self.device_rack_state.requested_open_neural_choir_formant_hud {
+            self.inspector_state.requested_open_neural_choir_formant_hud = false;
+            self.device_rack_state.requested_open_neural_choir_formant_hud = false;
+            self.open_neural_choir_formant_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2278,6 +2296,8 @@ impl AwardWinningGuiView {
         self.show_neural_timbre_morph_modal_window(ui);
         self.show_neural_radiance_modal_window(ui);
         self.show_neural_vocal_stylizer_modal_window(ui);
+        self.show_neural_speech_to_singing_modal_window(ui);
+        self.show_neural_choir_formant_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -14913,6 +14933,198 @@ impl AwardWinningGuiView {
     pub fn is_neural_vocal_stylizer_hud_open(&self) -> bool {
         self.show_neural_vocal_stylizer_modal
     }
+
+    pub fn open_neural_speech_to_singing_hud(&mut self) {
+        self.show_neural_speech_to_singing_modal = true;
+    }
+
+    pub fn close_neural_speech_to_singing_hud(&mut self) {
+        self.show_neural_speech_to_singing_modal = false;
+    }
+
+    pub fn is_neural_speech_to_singing_hud_open(&self) -> bool {
+        self.show_neural_speech_to_singing_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_neural_speech_to_singing_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_neural_speech_to_singing_modal {
+            return;
+        }
+
+        let mut is_open = self.show_neural_speech_to_singing_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎙 Neural Speech-to-Singing Synthesis & Pitch Retuning HUD")
+            .id(egui::Id::new("neural_speech_to_singing_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(820.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Speech-to-Singing AI Prosody, Formant Tracking & Microtonal Retuner (Milestones 33 & 36)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.neural_speech_to_singing_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_neural_speech_to_singing_modal = is_open;
+        self.sync_neural_speech_to_singing_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_neural_speech_to_singing_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let pitch = self.neural_speech_to_singing_view.target_pitch_hz;
+        let vib = self.neural_speech_to_singing_view.vibrato_depth_cents;
+        let vrate = self.neural_speech_to_singing_view.vibrato_rate_hz;
+        let fshift = self.neural_speech_to_singing_view.formant_shift_semitones;
+        let conf = self.neural_speech_to_singing_view.f0_confidence;
+
+        self.device_rack_state.node_param_values.insert("target_pitch_hz".to_string(), pitch);
+        self.device_rack_state.node_param_values.insert("vibrato_depth_cents".to_string(), vib);
+        self.device_rack_state.node_param_values.insert("vibrato_rate_hz".to_string(), vrate);
+        self.device_rack_state.node_param_values.insert("formant_shift_semitones".to_string(), fshift);
+        self.device_rack_state.node_param_values.insert("f0_confidence".to_string(), conf);
+
+        self.inspector_state.node_param_values.insert("target_pitch_hz".to_string(), pitch);
+        self.inspector_state.node_param_values.insert("vibrato_depth_cents".to_string(), vib);
+        self.inspector_state.node_param_values.insert("vibrato_rate_hz".to_string(), vrate);
+        self.inspector_state.node_param_values.insert("formant_shift_semitones".to_string(), fshift);
+        self.inspector_state.node_param_values.insert("f0_confidence".to_string(), conf);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_pitch = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_vib = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_vrate = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_fshift = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_conf = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+
+            if bus.get(pid_pitch).is_some() { bus.set(pid_pitch, pitch); }
+            if bus.get(pid_vib).is_some() { bus.set(pid_vib, vib); }
+            if bus.get(pid_vrate).is_some() { bus.set(pid_vrate, vrate); }
+            if bus.get(pid_fshift).is_some() { bus.set(pid_fshift, fshift); }
+            if bus.get(pid_conf).is_some() { bus.set(pid_conf, conf); }
+        }
+    }
+
+    pub fn open_neural_choir_formant_hud(&mut self) {
+        self.show_neural_choir_formant_modal = true;
+    }
+
+    pub fn close_neural_choir_formant_hud(&mut self) {
+        self.show_neural_choir_formant_modal = false;
+    }
+
+    pub fn is_neural_choir_formant_hud_open(&self) -> bool {
+        self.show_neural_choir_formant_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_neural_choir_formant_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_neural_choir_formant_modal {
+            return;
+        }
+
+        let mut is_open = self.show_neural_choir_formant_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("👥 Neural Polyphonic Choir Formant Morpher HUD")
+            .id(egui::Id::new("neural_choir_formant_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(820.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Multi-Voice Neural Formant Choir & Vowel Morph Engine (Milestones 33 & 36)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.neural_choir_formant_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_neural_choir_formant_modal = is_open;
+        self.sync_neural_choir_formant_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_neural_choir_formant_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let f1 = self.neural_choir_formant_view.formant_f1_hz;
+        let f2 = self.neural_choir_formant_view.formant_f2_hz;
+        let f3 = self.neural_choir_formant_view.formant_f3_hz;
+        let v_count = self.neural_choir_formant_view.voice_count as f32;
+        let blend = self.neural_choir_formant_view.neural_morph_blend;
+        let tract = self.neural_choir_formant_view.tract_scale;
+
+        self.device_rack_state.node_param_values.insert("formant_f1_hz".to_string(), f1);
+        self.device_rack_state.node_param_values.insert("formant_f2_hz".to_string(), f2);
+        self.device_rack_state.node_param_values.insert("formant_f3_hz".to_string(), f3);
+        self.device_rack_state.node_param_values.insert("voice_count".to_string(), v_count);
+        self.device_rack_state.node_param_values.insert("neural_morph_blend".to_string(), blend);
+        self.device_rack_state.node_param_values.insert("tract_scale".to_string(), tract);
+
+        self.inspector_state.node_param_values.insert("formant_f1_hz".to_string(), f1);
+        self.inspector_state.node_param_values.insert("formant_f2_hz".to_string(), f2);
+        self.inspector_state.node_param_values.insert("formant_f3_hz".to_string(), f3);
+        self.inspector_state.node_param_values.insert("voice_count".to_string(), v_count);
+        self.inspector_state.node_param_values.insert("neural_morph_blend".to_string(), blend);
+        self.inspector_state.node_param_values.insert("tract_scale".to_string(), tract);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_f1 = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_f2 = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_f3 = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_vcount = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_blend = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_tract = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+
+            if bus.get(pid_f1).is_some() { bus.set(pid_f1, f1); }
+            if bus.get(pid_f2).is_some() { bus.set(pid_f2, f2); }
+            if bus.get(pid_f3).is_some() { bus.set(pid_f3, f3); }
+            if bus.get(pid_vcount).is_some() { bus.set(pid_vcount, v_count); }
+            if bus.get(pid_blend).is_some() { bus.set(pid_blend, blend); }
+            if bus.get(pid_tract).is_some() { bus.set(pid_tract, tract); }
+        }
+    }
+
 
 
 

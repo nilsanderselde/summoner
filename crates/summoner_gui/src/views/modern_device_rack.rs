@@ -197,6 +197,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_neural_radiance_hud: bool,
     #[serde(default)]
     pub requested_open_neural_vocal_stylizer_hud: bool,
+    #[serde(default)]
+    pub requested_open_neural_speech_to_singing_hud: bool,
+    #[serde(default)]
+    pub requested_open_neural_choir_formant_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -284,6 +288,8 @@ impl Default for ModernDeviceRackState {
             requested_open_neural_timbre_morph_hud: false,
             requested_open_neural_radiance_hud: false,
             requested_open_neural_vocal_stylizer_hud: false,
+            requested_open_neural_speech_to_singing_hud: false,
+            requested_open_neural_choir_formant_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -994,6 +1000,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_neural_timbre_morph = cur_selection.contains("NeuralTimbreMorph") || cur_selection.contains("TimbreMorph") || cur_selection == "NeuralTimbreMorphView" || cur_selection == "NeuralTimbreMorphNode" || cur_selection == "NeuralTimbreMorphSynthesizer" || cur_selection.contains("DiffusionVocoder");
                     let is_neural_radiance = cur_selection.contains("NeuralRadiance") || cur_selection.contains("NeRFAcoustic") || cur_selection == "NeuralRadianceView" || cur_selection == "NeuralRadianceNode" || cur_selection.contains("ContinuousRadiance");
                     let is_neural_vocal_stylizer = cur_selection.contains("NeuralVocalStylizer") || cur_selection.contains("VocalStylizer") || cur_selection == "NeuralVocalStylizerView" || cur_selection == "NeuralVocalStylizerNode" || cur_selection.contains("VocalExpression") || cur_selection.contains("MelismaResynthesizer");
+                    let is_neural_speech_to_singing = cur_selection.contains("NeuralSpeechToSinging") || cur_selection.contains("SpeechToSinging") || cur_selection == "NeuralSpeechToSingingView" || cur_selection == "NeuralSpeechToSingingNode" || cur_selection.contains("SingingVoice") || cur_selection.contains("ProsodyIntonation");
+                    let is_neural_choir_formant = cur_selection.contains("NeuralChoirFormant") || cur_selection.contains("ChoirFormant") || cur_selection == "NeuralChoirFormantView" || cur_selection == "NeuralChoirFormantNode" || cur_selection.contains("ChoirEnsemble") || cur_selection.contains("VowelTrajectory");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1286,6 +1294,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("🎤 Stylizer HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 93, 143))).on_hover_text("Open Neural Polyphonic Vocal Stylizer & Microtonal Ornament Resynthesizer HUD").clicked()
                     {
                         state.requested_open_neural_vocal_stylizer_hud = true;
+                    } else if is_neural_speech_to_singing
+                        && ui.button(RichText::new("🎙 Speech2Sing HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Neural Speech-to-Singing Synthesis HUD").clicked()
+                    {
+                        state.requested_open_neural_speech_to_singing_hud = true;
+                    } else if is_neural_choir_formant
+                        && ui.button(RichText::new("👥 Choir HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 215, 0))).on_hover_text("Open Neural Choir Formant Morpher HUD").clicked()
+                    {
+                        state.requested_open_neural_choir_formant_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2124,6 +2140,8 @@ fn show_pro_parameter_drawer(
                     let is_neural_timbre_morph = dev_kind.contains("NeuralTimbreMorph") || dev_kind.contains("TimbreMorph") || dev_kind == "NeuralTimbreMorphView" || dev_kind == "NeuralTimbreMorphNode" || dev_kind == "NeuralTimbreMorphSynthesizer" || dev_kind.contains("DiffusionVocoder");
                     let is_neural_radiance = dev_kind.contains("NeuralRadiance") || dev_kind.contains("NeRFAcoustic") || dev_kind == "NeuralRadianceView" || dev_kind == "NeuralRadianceNode" || dev_kind.contains("ContinuousRadiance");
                     let is_neural_vocal_stylizer = dev_kind.contains("NeuralVocalStylizer") || dev_kind.contains("VocalStylizer") || dev_kind == "NeuralVocalStylizerView" || dev_kind == "NeuralVocalStylizerNode" || dev_kind.contains("VocalExpression") || dev_kind.contains("MelismaResynthesizer");
+                    let is_neural_speech_to_singing = dev_kind.contains("NeuralSpeechToSinging") || dev_kind.contains("SpeechToSinging") || dev_kind == "NeuralSpeechToSingingView" || dev_kind == "NeuralSpeechToSingingNode" || dev_kind.contains("SingingVoice") || dev_kind.contains("ProsodyIntonation");
+                    let is_neural_choir_formant = dev_kind.contains("NeuralChoirFormant") || dev_kind.contains("ChoirFormant") || dev_kind == "NeuralChoirFormantView" || dev_kind == "NeuralChoirFormantNode" || dev_kind.contains("ChoirEnsemble") || dev_kind.contains("VowelTrajectory");
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -7800,6 +7818,179 @@ fn show_pro_parameter_drawer(
                             let _ = voc_resp.on_hover_text(format!(
                                 "Neural Polyphonic Vocal Stylizer & Microtonal Ornament HUD\nStyle Blend: {:.0}% | Ornament: {:.0}%\nVibrato: {:.1} Hz (±{:.0} cents) | Microtonal Snap: {:.0} cents\n[Drag: Style Blend / Ornament Depth Puck]",
                                 blend * 100.0, ornm * 100.0, v_rate, v_depth, snap
+                            ));
+                        }
+                    } else if is_neural_speech_to_singing {
+                        // Neural Speech-to-Singing Synthesis Mini Visualizer
+                        let (sng_resp, sng_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let sng_rect = sng_resp.rect;
+                        sng_painter.rect_filled(sng_rect, 2.0, Color32::from_rgb(10, 16, 26));
+
+                        let mut pitch_f0 = state.node_param_values.get("target_pitch_hz").copied().unwrap_or(220.0);
+                        let mut vib_cents = state.node_param_values.get("vibrato_depth_cents").copied().unwrap_or(45.0);
+                        let v_rate = state.node_param_values.get("vibrato_rate_hz").copied().unwrap_or(5.8);
+                        let f_shift = state.node_param_values.get("formant_shift_semitones").copied().unwrap_or(0.0);
+                        let conf = state.node_param_values.get("f0_confidence").copied().unwrap_or(0.985);
+
+                        let scx = sng_rect.left() + 34.0;
+                        let scy = sng_rect.center().y;
+                        let max_box = 24.0_f32;
+
+                        if sng_resp.dragged() {
+                            if let Some(pos) = sng_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - (scx - max_box)) / (max_box * 2.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - (scy - max_box)) / (max_box * 2.0))).clamp(0.0, 1.0);
+                                pitch_f0 = crate::views::neural_speech_to_singing_view::NeuralSpeechToSingingView::normalized_to_pitch(norm_x);
+                                vib_cents = crate::views::neural_speech_to_singing_view::NeuralSpeechToSingingView::normalized_to_vibrato(norm_y);
+                                state.node_param_values.insert("target_pitch_hz".to_string(), pitch_f0);
+                                state.node_param_values.insert("vibrato_depth_cents".to_string(), vib_cents);
+                                if let Some(bus) = param_bus {
+                                    let pid_pitch = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_vib = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    bus.set(pid_pitch, pitch_f0);
+                                    bus.set(pid_vib, vib_cents);
+                                }
+                            }
+                        }
+
+                        // Retuning coordinate bounding box & axes
+                        let pitch_rect = egui::Rect::from_center_size(egui::pos2(scx, scy), egui::vec2(max_box * 2.0, max_box * 2.0));
+                        sng_painter.rect_stroke(pitch_rect, 2.0, Stroke::new(1.0_f32, Color32::from_rgb(0, 229, 255)));
+                        sng_painter.line_segment(
+                            [egui::pos2(pitch_rect.left(), scy), egui::pos2(pitch_rect.right(), scy)],
+                            Stroke::new(0.6_f32, Color32::from_rgba_unmultiplied(0, 229, 255, 80)),
+                        );
+                        sng_painter.line_segment(
+                            [egui::pos2(scx, pitch_rect.top()), egui::pos2(scx, pitch_rect.bottom())],
+                            Stroke::new(0.6_f32, Color32::from_rgba_unmultiplied(0, 229, 255, 80)),
+                        );
+
+                        // Singing Puck
+                        let norm_p = crate::views::neural_speech_to_singing_view::NeuralSpeechToSingingView::pitch_to_normalized(pitch_f0);
+                        let norm_v = crate::views::neural_speech_to_singing_view::NeuralSpeechToSingingView::vibrato_to_normalized(vib_cents);
+                        let px = pitch_rect.left() + norm_p * (max_box * 2.0);
+                        let py = pitch_rect.bottom() - norm_v * (max_box * 2.0);
+                        sng_painter.circle_filled(egui::pos2(px, py), 3.5, Color32::from_rgb(0, 229, 255));
+                        sng_painter.circle_stroke(
+                            egui::pos2(px, py),
+                            5.5,
+                            Stroke::new(0.8_f32, Color32::from_rgba_unmultiplied(255, 255, 255, 160)),
+                        );
+
+                        // 6-bar formant envelope preview
+                        let bar_x_start = sng_rect.left() + 74.0;
+                        let bar_bottom = sng_rect.bottom() - 10.0;
+                        let env_heights: [f32; 6] = [0.95, 0.80, 0.60, 0.90, 0.45, 0.25];
+                        for (b, &base_h) in env_heights.iter().enumerate() {
+                            let bh = base_h.clamp(0.1_f32, 1.0_f32) * 26.0;
+                            let bx = bar_x_start + b as f32 * 4.5;
+                            let col = Color32::from_rgb(0, 229, 255);
+                            sng_painter.rect_filled(
+                                egui::Rect::from_min_max(egui::pos2(bx, bar_bottom - bh), egui::pos2(bx + 3.0, bar_bottom)),
+                                0.5,
+                                col,
+                            );
+                        }
+
+                        // Readout
+                        sng_painter.text(
+                            egui::pos2(sng_rect.right() - 4.0, sng_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("SPEECH2SING\nF0: {:.1}Hz | Vib: {:.0}c\nRate: {:.1}Hz | Shift: {:+.1}st\nConf: {:.0}%", pitch_f0, vib_cents, v_rate, f_shift, conf * 100.0),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+
+                        if sng_resp.hovered() {
+                            let _ = sng_resp.on_hover_text(format!(
+                                "Neural Speech-to-Singing Prosody & Intonation Transformer HUD\nTarget F0: {:.1} Hz | Vibrato Depth: {:.0} cents\nVibrato Rate: {:.1} Hz | Formant Shift: {:+.1} semitones\n[Drag: F0 Pitch / Vibrato Depth Singing Puck]",
+                                pitch_f0, vib_cents, v_rate, f_shift
+                            ));
+                        }
+                    } else if is_neural_choir_formant {
+                        // Neural Polyphonic Choir Formant Morpher Mini Visualizer
+                        let (choir_resp, choir_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let choir_rect = choir_resp.rect;
+                        choir_painter.rect_filled(choir_rect, 2.0, Color32::from_rgb(18, 16, 10));
+
+                        let mut f1 = state.node_param_values.get("formant_f1_hz").copied().unwrap_or(650.0);
+                        let mut f2 = state.node_param_values.get("formant_f2_hz").copied().unwrap_or(1400.0);
+                        let v_count = state.node_param_values.get("voice_count").copied().unwrap_or(32.0) as usize;
+                        let morph = state.node_param_values.get("neural_morph_blend").copied().unwrap_or(0.88);
+
+                        let ccx = choir_rect.left() + 34.0;
+                        let ccy = choir_rect.center().y;
+                        let max_box = 24.0_f32;
+
+                        if choir_resp.dragged() {
+                            if let Some(pos) = choir_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - (ccx - max_box)) / (max_box * 2.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - (ccy - max_box)) / (max_box * 2.0))).clamp(0.0, 1.0);
+                                f2 = crate::views::neural_choir_formant_view::NeuralChoirFormantView::normalized_to_f2(norm_x);
+                                f1 = crate::views::neural_choir_formant_view::NeuralChoirFormantView::normalized_to_f1(norm_y);
+                                state.node_param_values.insert("formant_f1_hz".to_string(), f1);
+                                state.node_param_values.insert("formant_f2_hz".to_string(), f2);
+                                if let Some(bus) = param_bus {
+                                    let pid_f1 = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_f2 = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    bus.set(pid_f1, f1);
+                                    bus.set(pid_f2, f2);
+                                }
+                            }
+                        }
+
+                        // Vowel space bounding box & crosshairs
+                        let vowel_rect = egui::Rect::from_center_size(egui::pos2(ccx, ccy), egui::vec2(max_box * 2.0, max_box * 2.0));
+                        choir_painter.rect_stroke(vowel_rect, 2.0, Stroke::new(1.0_f32, Color32::from_rgb(255, 215, 0)));
+                        choir_painter.line_segment(
+                            [egui::pos2(vowel_rect.left(), ccy), egui::pos2(vowel_rect.right(), ccy)],
+                            Stroke::new(0.6_f32, Color32::from_rgba_unmultiplied(255, 215, 0, 80)),
+                        );
+                        choir_painter.line_segment(
+                            [egui::pos2(ccx, vowel_rect.top()), egui::pos2(ccx, vowel_rect.bottom())],
+                            Stroke::new(0.6_f32, Color32::from_rgba_unmultiplied(255, 215, 0, 80)),
+                        );
+
+                        // Choir Puck
+                        let norm_f2 = crate::views::neural_choir_formant_view::NeuralChoirFormantView::f2_to_normalized(f2);
+                        let norm_f1 = crate::views::neural_choir_formant_view::NeuralChoirFormantView::f1_to_normalized(f1);
+                        let px = vowel_rect.left() + norm_f2 * (max_box * 2.0);
+                        let py = vowel_rect.bottom() - norm_f1 * (max_box * 2.0);
+                        choir_painter.circle_filled(egui::pos2(px, py), 3.5, Color32::from_rgb(255, 215, 0));
+                        choir_painter.circle_stroke(
+                            egui::pos2(px, py),
+                            5.5,
+                            Stroke::new(0.8_f32, Color32::from_rgba_unmultiplied(255, 255, 255, 160)),
+                        );
+
+                        // 5-bar voice formant peaks preview
+                        let bar_x_start = choir_rect.left() + 74.0;
+                        let bar_bottom = choir_rect.bottom() - 10.0;
+                        let env_heights: [f32; 5] = [0.90, 0.75, 0.55, 0.40, 0.22];
+                        for (b, &base_h) in env_heights.iter().enumerate() {
+                            let bh = base_h.clamp(0.1_f32, 1.0_f32) * 26.0;
+                            let bx = bar_x_start + b as f32 * 4.5;
+                            let col = Color32::from_rgb(255, 215, 0);
+                            choir_painter.rect_filled(
+                                egui::Rect::from_min_max(egui::pos2(bx, bar_bottom - bh), egui::pos2(bx + 3.0, bar_bottom)),
+                                0.5,
+                                col,
+                            );
+                        }
+
+                        // Readout
+                        choir_painter.text(
+                            egui::pos2(choir_rect.right() - 4.0, choir_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("CHOIR FORMANT\nF1: {:.0}Hz | F2: {:.0}Hz\nVoices: {} | Morph: {:.0}%", f1, f2, v_count, morph * 100.0),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(255, 215, 0),
+                        );
+
+                        if choir_resp.hovered() {
+                            let _ = choir_resp.on_hover_text(format!(
+                                "Neural Polyphonic Choir Formant Morpher HUD\nFormant F1: {:.0} Hz | Formant F2: {:.0} Hz\nVoice Count: {} | Morph Blend: {:.0}%\n[Drag: F2 (Frontness) / F1 (Height) Choir Puck]",
+                                f1, f2, v_count, morph * 100.0
                             ));
                         }
                     } else {

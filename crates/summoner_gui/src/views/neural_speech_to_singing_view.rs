@@ -581,4 +581,22 @@ impl NeuralSpeechToSingingView {
             Color32::from_rgb(0, 255, 180),
         );
     }
+
+    #[cfg(feature = "gui")]
+    pub fn show(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
+    }
+
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        format!(
+            "--- NEURAL SPEECH-TO-SINGING SYNTHESIS & RETUNING HUD [PASS] ---\nModel: {:?} | Target F0: {:.1}Hz | Vib: {:.1}c @ {:.1}Hz | Formant Shift: {:+.1}st\n{}",
+            self.vocal_model,
+            self.target_pitch_hz,
+            self.vibrato_depth_cents,
+            self.vibrato_rate_hz,
+            self.formant_shift_semitones,
+            self.render_ascii(80, 24).join("\n")
+        )
+    }
 }
+

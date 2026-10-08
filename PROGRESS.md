@@ -2331,3 +2331,36 @@ Product Management has conducted a comprehensive readiness audit:
   - Pure unit tests: 329 passed in 0.22s (`cargo test -p summoner_gui --lib`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
 
+### Turn #87 (Sprint Turn #13) — Neural Speech-to-Singing Prosody & Intonation Transformer HUD and Neural Polyphonic Choir Formant Morpher HUD Convergence (Milestones 33 & 36)
+- [x] Immersive Speech-to-Singing & Neural Choir Formant Morpher HUDs Integration:
+  - Integrated `NeuralSpeechToSingingView` (Speech-to-Singing AI Prosody & Intonation Transformer HUD: 5 Vocal Models [Bel Canto Opera Tenor, Pop Modern Vocalist, Choral Polyphonic Choir, Microtonal Maqam Retune, Experimental Formant Morph], Target Pitch F0 $[55.0..880.0\text{Hz}]$, Vibrato Depth $[0.0..100.0\text{ cents}]$, Vibrato Rate $[2.0..9.0\text{Hz}]$, Formant Shift $[-12.0..+12.0\text{ st}]$, F0 Confidence tracking $[0.50..1.00]$, 6-formant vocal tract envelope, and Touch-Draggable Singing Puck with $\ge 44 \times 44\text{pt}$ bounding target) and `NeuralChoirFormantView` (Multi-Voice Neural Formant Choir & Vowel Morph Engine HUD: 5 Ensemble Types [Classical SATB Choir, Bulgarian Folk Choir, Gregorian Monastic Chant, Contemporary Vocal Ensemble, Gospel Wall of Sound], Formant F1 $[200.0..1000.0\text{Hz}]$, Formant F2 $[500.0..3000.0\text{Hz}]$, Formant F3 $[1800.0..3800.0\text{Hz}]$, Voice Count $[8..48]$, Neural Morph Blend $[0..100\%]$, Tract Scale $[0.8..1.2]$, 5-voice formant peaks simulation, and Touch-Draggable Choir Puck with $\ge 44 \times 44\text{pt}$ bounding target) into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/neural_speech_to_singing_view.rs` & `neural_choir_formant_view.rs`):
+  - In `NeuralSpeechToSingingView`: added `show(&mut self, ui: &mut egui::Ui)` delegating to `ui(ui)` and `render_ascii_snapshot_str() -> String` with vocal model metadata banner.
+  - In `NeuralChoirFormantView`: added `show(&mut self, ui: &mut egui::Ui)` delegating to `ui(ui)` and `render_ascii_snapshot_str() -> String` with choral ensemble metadata banner.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_neural_speech_to_singing_modal: bool`, `neural_speech_to_singing_view: NeuralSpeechToSingingView`, `show_neural_choir_formant_modal: bool`, and `neural_choir_formant_view: NeuralChoirFormantView`.
+  - Added dedicated modal windows `show_neural_speech_to_singing_modal_window` and `show_neural_choir_formant_modal_window` with responsive styling, WCAG AAA contrast, and $\ge 44 \times 44\text{pt}$ touch bounds.
+  - Added public lifecycle methods: `open_neural_speech_to_singing_hud()`, `close_neural_speech_to_singing_hud()`, `is_neural_speech_to_singing_hud_open()`, `open_neural_choir_formant_hud()`, `close_neural_choir_formant_hud()`, `is_neural_choir_formant_hud_open()`.
+  - Real-time parameter sync bridges (`sync_neural_speech_to_singing_hud_state` and `sync_neural_choir_formant_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_neural_speech_to_singing_hud: bool` and `requested_open_neural_choir_formant_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🎙 Open Speech-to-Singing HUD]` and `[👥 Open Choir Formant HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header `[🎙 Speech2Sing HUD]` / `[👥 Choir HUD]` in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Speech-to-Singing: Retuning coordinate box, horizontal/vertical axes, draggable singing puck updating logarithmic pitch F0 and vibrato depth, 6-bar formant envelope preview, live readout, and lock-free `ParamBus` slot dispatch.
+    * Neural Choir Formant: Vowel space coordinate box, crosshairs, draggable choir puck updating F1 (Pharynx) and F2 (Oral Cavity), 5-bar voice formant peaks preview, live readout, and lock-free `ParamBus` slot dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_neural_speech_to_singing_hud` and `open_neural_choir_formant_hud` under `"Synthesis"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_neural_speech_to_singing_hud()` and `open_neural_choir_formant_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier151_turn87_tests.rs`:
+    * Pure tests: view initialization, coordinate normalizations (pitch F0, vibrato depth, formant F1, formant F2), model switching across all 5 profiles for both views, 6-formant vocal tract envelope, 5-voice choral peaks simulation, touch puck hit testing ($\ge 44 \times 44\text{pt}$ bounding targets), channel isolation across tracks/slots, deterministic ASCII snapshots with metadata banners.
+    * GUI tests: modal window lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch without allocations, trigger button propagation from rack and inspector, command palette action verification.
+  - Registered `tier151_turn87_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Feature tests: 7 passed in 0.08s (`cargo test -p summoner_gui --features gui -- tier151_turn87`).
+  - Pure unit tests: 329 passed in 0.22s (`cargo test -p summoner_gui --lib`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
+
+
