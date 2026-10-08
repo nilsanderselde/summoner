@@ -701,6 +701,18 @@ impl CommandPalette {
                 action_id: "open_nhk222_immersion_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open HOA 4th-Order (25-ch) 3D Ambisonic Energy Density HUD".into(),
+                category: "Spatial".into(),
+                action_id: "open_hoa4_spatializer_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open MPEG-H 3D Spatial Audio & Personalized HRTF Profile HUD".into(),
+                category: "Spatial".into(),
+                action_id: "open_mpegh_spatializer_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

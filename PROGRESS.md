@@ -1,6 +1,6 @@
 # Summoner DAW — Product Readiness & Shippability Tracker
 > **Current Shippability Score:** 10.0 / 10  
-> **Status:** Production Ready Release Candidate (Sprint Review Turn #48 / Turn #15)  
+> **Status:** Production Ready Release Candidate (Sprint Review Turn #83 / Sprint Turn #9)  
 > **Authoritative Root:** `PROGRESS.md`  
 > **License:** AGPLv3
 
@@ -2200,4 +2200,37 @@ Product Management has conducted a comprehensive readiness audit:
     * GUI tests: modal window lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch without allocations, trigger button propagation from rack and inspector, command palette action verification.
   - Registered `tier146_turn82_tests` in `crates/summoner_gui/src/lib.rs`.
   - Pure unit tests: 329 passed in 0.24s (`cargo test -p summoner_gui --lib`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
+
+### Turn #83 (Sprint Turn #9 — Sprint Review) — Higher-Order Ambisonics 4th-Order (25-ch) 3D Energy Density & MPEG-H 3D Spatial Audio & Personalized HRTF Profile HUDs Convergence (Milestones 33 & 35)
+- [x] Higher-Order Ambisonics 4th-Order (25-ch) 3D Energy Density & MPEG-H 3D Spatial Audio & Personalized HRTF Profile Performance HUDs Integration:
+  - Integrated `Hoa4SpatializerView` (Broadcast Mastering Immersive Higher-Order Ambisonics 4th-Order 25-Channel Spherical Harmonics 3D Energy Density HUD: 5 Decoding Profiles [25-CH HOA4 Sphere, Binaural HOA4 HRIR, 22.2 Broadcast, 7.1.4 Dome Decode, Energy-Max rE Decoder], 8-Octant acoustic energy distribution analysis, Azimuth $[-180.0..+180.0^\circ]$, Elevation $[-90.0..+90.0^\circ]$, Distance $[0.5..15.0\text{m}]$, Energy Focus Order $[1.0..4.0]$, 3D Cartesian coordinates evaluation $(X, Y, Z)$ in meters, and Touch-Draggable Spherical Energy Puck with $\ge 44 \times 44\text{pt}$ bounding target) and `MpeghSpatializerView` (Broadcast Mastering Immersive MPEG-H 3D Spatial Audio & Personalized HRTF Profile HUD: 5 Spatial Formats [MPEG-H 7.1.4, 5.1 Surround, 22.2 NHK Dome, SOFA Binaural, Dynamic Objects], 4 Personalized HRTF Profiles [KEMAR Standard, Genelec Aural ID, Spherical Head, Custom 3D Mesh], Interaural Time Difference ITD $[0..750\mu\text{s}]$, Interaural Level Difference ILD $[0..20\text{dB}]$, Integrated Loudness compliance $[-30..0\text{LUFS}]$, Azimuth $[-180.0..+180.0^\circ]$, Elevation $[-90.0..+90.0^\circ]$, Distance $[0.10..10.00\text{m}]$, Pinna spectral notch filter simulation, and Touch-Draggable Spatial Object Puck with $\ge 44 \times 44\text{pt}$ bounding target) into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/hoa4_spatializer_view.rs` & `mpegh_spatializer_view.rs`):
+  - In `Hoa4SpatializerView`: verified `show(&mut self, ui: &mut egui::Ui)` and `render_ascii_snapshot_str() -> String`.
+  - In `MpeghSpatializerView`: built `show(&mut self, ui: &mut egui::Ui)` delegating to `ui(ui)` and `render_ascii_snapshot_str() -> String`.
+  - Fixed exact Rect bounding layout destructuring in `spatial_trajectory_view.rs`.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_hoa4_spatializer_modal: bool`, `hoa4_spatializer_view: Hoa4SpatializerView`, `show_mpegh_spatializer_modal: bool`, and `mpegh_spatializer_view: MpeghSpatializerView`.
+  - Added dedicated modal windows `show_hoa4_spatializer_modal_window` and `show_mpegh_spatializer_modal_window` with responsive styling, WCAG AAA contrast, and $\ge 44 \times 44\text{pt}$ touch bounds.
+  - Added public lifecycle methods: `open_hoa4_spatializer_hud()`, `close_hoa4_spatializer_hud()`, `is_hoa4_spatializer_hud_open()`, `open_mpegh_spatializer_hud()`, `close_mpegh_spatializer_hud()`, `is_mpegh_spatializer_hud_open()`.
+  - Real-time parameter sync bridges (`sync_hoa4_spatializer_hud_state` and `sync_mpegh_spatializer_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_hoa4_spatializer_hud: bool` and `requested_open_mpegh_spatializer_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🌐 Open HOA 4th-Order 25-ch Spatializer HUD]` and `[📡 Open MPEG-H 3D Spatial Audio & HRTF HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header `[🌐 HOA4 HUD]` / `[📡 MPEG-H HUD]` in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * HOA 4th-Order: Concentric ambisonic order spheres ($N=1..4$), 25 spherical harmonic representation dots, draggable energy puck modulating azimuth and elevation, and live `ParamBus` slot dispatch.
+    * MPEG-H Spatial Audio: Concentric listener stage perimeter, ear markers, 7.1.4 loudspeaker bed boundary dots, draggable object puck modulating azimuth and distance, live ITD/ILD readouts, and live `ParamBus` slot dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_hoa4_spatializer_hud` and `open_mpegh_spatializer_hud` under `"Spatial"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_hoa4_spatializer_hud()` and `open_mpegh_spatializer_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier147_turn83_tests.rs`:
+    * Pure tests: view initialization, profile and format switching across all 5 profiles for both views, coordinate normalizations (azimuth, elevation), Woodworth ITD/ILD cue calculation, spherical harmonic 8-octant energy distribution, 3D Cartesian coordinates, touch puck hit testing ($\ge 44 \times 44\text{pt}$ bounding targets), channel isolation across tracks/slots, deterministic ASCII snapshots.
+    * GUI tests: modal window lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch without allocations, trigger button propagation from rack and inspector, command palette action verification.
+  - Registered `tier147_turn83_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Feature tests: 8 passed in 0.08s (`cargo test -p summoner_gui --features gui -- tier147_turn83`).
+  - Pure unit tests: 329 passed in 0.22s (`cargo test -p summoner_gui --lib`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).

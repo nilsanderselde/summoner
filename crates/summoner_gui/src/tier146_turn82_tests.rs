@@ -311,7 +311,7 @@ pub mod gui_tests {
         state.selected_node_kind = Some("MpeghTrajectorySpatializer".to_string());
         let _ = ctx.run(egui::RawInput::default(), |ctx| {
             egui::CentralPanel::default().show(ctx, |ui| {
-                show_modern_inspector_with_context(&mut state, ui, None, 1, 0);
+                show_modern_inspector_with_context(ui, &mut state, None, 1);
             });
         });
         assert!(!state.requested_open_mpegh_trajectory_hud);
@@ -319,7 +319,7 @@ pub mod gui_tests {
         state.selected_node_kind = Some("Nhk222ImmersionView".to_string());
         let _ = ctx.run(egui::RawInput::default(), |ctx| {
             egui::CentralPanel::default().show(ctx, |ui| {
-                show_modern_inspector_with_context(&mut state, ui, None, 1, 0);
+                show_modern_inspector_with_context(ui, &mut state, None, 1);
             });
         });
         assert!(!state.requested_open_nhk222_immersion_hud);
@@ -333,7 +333,7 @@ pub mod gui_tests {
         state.selected_node_kind = Some("MpeghTrajectoryNode".to_string());
         let _ = ctx.run(egui::RawInput::default(), |ctx| {
             egui::CentralPanel::default().show(ctx, |ui| {
-                show_modern_device_rack_with_context(&mut state, ui, None, 1);
+                show_modern_device_rack_with_context(ui, &mut state, None, None, 1);
             });
         });
         assert!(!state.requested_open_mpegh_trajectory_hud);
@@ -341,7 +341,7 @@ pub mod gui_tests {
         state.selected_node_kind = Some("Nhk222ImmersionNode".to_string());
         let _ = ctx.run(egui::RawInput::default(), |ctx| {
             egui::CentralPanel::default().show(ctx, |ui| {
-                show_modern_device_rack_with_context(&mut state, ui, None, 1);
+                show_modern_device_rack_with_context(ui, &mut state, None, None, 1);
             });
         });
         assert!(!state.requested_open_nhk222_immersion_hud);
@@ -350,7 +350,7 @@ pub mod gui_tests {
     #[test]
     fn test_turn82_gui_command_palette_registration() {
         let palette = CommandPalette::new();
-        let actions = palette.available_actions();
+        let actions = &palette.actions;
 
         let has_trj = actions
             .iter()

@@ -547,15 +547,15 @@ impl SpatialTrajectoryView {
 
     #[cfg(feature = "gui")]
     pub fn show_ui(&mut self, ui: &mut egui::Ui) {
-        let (response, _) = ui.allocate_exact_size(
+        let (rect_egui, _) = ui.allocate_exact_size(
             egui::vec2(ui.available_width().max(400.0), 520.0),
             egui::Sense::click_and_drag(),
         );
         let rect = Rect::new(
-            response.rect.min.x,
-            response.rect.min.y,
-            response.rect.width(),
-            response.rect.height(),
+            rect_egui.min.x,
+            rect_egui.min.y,
+            rect_egui.width(),
+            rect_egui.height(),
         );
         self.show(ui, rect);
     }

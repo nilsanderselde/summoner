@@ -772,6 +772,10 @@ pub struct AwardWinningGuiView {
     pub mpegh_trajectory_view: crate::views::mpegh_trajectory_view::MpeghTrajectoryView,
     pub show_nhk222_immersion_modal: bool,
     pub nhk222_immersion_view: crate::views::nhk222_immersion_view::Nhk222ImmersionView,
+    pub show_hoa4_spatializer_modal: bool,
+    pub hoa4_spatializer_view: crate::views::hoa4_spatializer_view::Hoa4SpatializerView,
+    pub show_mpegh_spatializer_modal: bool,
+    pub mpegh_spatializer_view: crate::views::mpegh_spatializer_view::MpeghSpatializerView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1160,6 +1164,10 @@ impl AwardWinningGuiView {
             mpegh_trajectory_view: crate::views::mpegh_trajectory_view::MpeghTrajectoryView::new(),
             show_nhk222_immersion_modal: false,
             nhk222_immersion_view: crate::views::nhk222_immersion_view::Nhk222ImmersionView::new(),
+            show_hoa4_spatializer_modal: false,
+            hoa4_spatializer_view: crate::views::hoa4_spatializer_view::Hoa4SpatializerView::new(),
+            show_mpegh_spatializer_modal: false,
+            mpegh_spatializer_view: crate::views::mpegh_spatializer_view::MpeghSpatializerView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2129,6 +2137,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_nhk222_immersion_hud = false;
             self.open_nhk222_immersion_hud();
         }
+        if self.inspector_state.requested_open_hoa4_spatializer_hud || self.device_rack_state.requested_open_hoa4_spatializer_hud {
+            self.inspector_state.requested_open_hoa4_spatializer_hud = false;
+            self.device_rack_state.requested_open_hoa4_spatializer_hud = false;
+            self.open_hoa4_spatializer_hud();
+        }
+        if self.inspector_state.requested_open_mpegh_spatializer_hud || self.device_rack_state.requested_open_mpegh_spatializer_hud {
+            self.inspector_state.requested_open_mpegh_spatializer_hud = false;
+            self.device_rack_state.requested_open_mpegh_spatializer_hud = false;
+            self.open_mpegh_spatializer_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2198,6 +2216,8 @@ impl AwardWinningGuiView {
         self.show_atmos_proximity_modal_window(ui);
         self.show_mpegh_trajectory_modal_window(ui);
         self.show_nhk222_immersion_modal_window(ui);
+        self.show_hoa4_spatializer_modal_window(ui);
+        self.show_mpegh_spatializer_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -14048,6 +14068,202 @@ impl AwardWinningGuiView {
 
     pub fn is_nhk222_immersion_hud_open(&self) -> bool {
         self.show_nhk222_immersion_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_hoa4_spatializer_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_hoa4_spatializer_modal {
+            return;
+        }
+
+        let mut is_open = self.show_hoa4_spatializer_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🌐 HOA 4th-Order (25-ch) 3D Energy Density HUD")
+            .id(egui::Id::new("hoa4_spatializer_hud_modal"))
+            .open(&mut is_open)
+            .default_size([920.0, 580.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Broadcast Mastering Immersive Higher-Order Ambisonics 4th-Order (25-ch) 3D Energy Density HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.hoa4_spatializer_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_hoa4_spatializer_modal = is_open;
+        self.sync_hoa4_spatializer_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_hoa4_spatializer_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let az = self.hoa4_spatializer_view.azimuth_deg;
+        let el = self.hoa4_spatializer_view.elevation_deg;
+        let dist = self.hoa4_spatializer_view.distance_m;
+        let focus = self.hoa4_spatializer_view.energy_focus_order;
+        let oct0 = self.hoa4_spatializer_view.octant_energy[0];
+        let oct1 = self.hoa4_spatializer_view.octant_energy[1];
+
+        self.device_rack_state.node_param_values.insert("azimuth_deg".to_string(), az);
+        self.device_rack_state.node_param_values.insert("elevation_deg".to_string(), el);
+        self.device_rack_state.node_param_values.insert("distance_m".to_string(), dist);
+        self.device_rack_state.node_param_values.insert("energy_focus_order".to_string(), focus);
+        self.device_rack_state.node_param_values.insert("octant_energy_0".to_string(), oct0);
+        self.device_rack_state.node_param_values.insert("octant_energy_1".to_string(), oct1);
+
+        self.inspector_state.node_param_values.insert("azimuth_deg".to_string(), az);
+        self.inspector_state.node_param_values.insert("elevation_deg".to_string(), el);
+        self.inspector_state.node_param_values.insert("distance_m".to_string(), dist);
+        self.inspector_state.node_param_values.insert("energy_focus_order".to_string(), focus);
+        self.inspector_state.node_param_values.insert("octant_energy_0".to_string(), oct0);
+        self.inspector_state.node_param_values.insert("octant_energy_1".to_string(), oct1);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_az = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_el = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_dist = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_foc = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_oct0 = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_oct1 = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+
+            if bus.get(pid_az).is_some() { bus.set(pid_az, az); }
+            if bus.get(pid_el).is_some() { bus.set(pid_el, el); }
+            if bus.get(pid_dist).is_some() { bus.set(pid_dist, dist); }
+            if bus.get(pid_foc).is_some() { bus.set(pid_foc, focus); }
+            if bus.get(pid_oct0).is_some() { bus.set(pid_oct0, oct0); }
+            if bus.get(pid_oct1).is_some() { bus.set(pid_oct1, oct1); }
+        }
+    }
+
+    pub fn open_hoa4_spatializer_hud(&mut self) {
+        self.show_hoa4_spatializer_modal = true;
+    }
+
+    pub fn close_hoa4_spatializer_hud(&mut self) {
+        self.show_hoa4_spatializer_modal = false;
+    }
+
+    pub fn is_hoa4_spatializer_hud_open(&self) -> bool {
+        self.show_hoa4_spatializer_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_mpegh_spatializer_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_mpegh_spatializer_modal {
+            return;
+        }
+
+        let mut is_open = self.show_mpegh_spatializer_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("📡 MPEG-H 3D Spatial Audio & HRTF Profile HUD")
+            .id(egui::Id::new("mpegh_spatializer_hud_modal"))
+            .open(&mut is_open)
+            .default_size([920.0, 580.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Broadcast Mastering Immersive MPEG-H 3D Spatial Audio & Personalized HRTF Profile HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.mpegh_spatializer_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_mpegh_spatializer_modal = is_open;
+        self.sync_mpegh_spatializer_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_mpegh_spatializer_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let az = self.mpegh_spatializer_view.azimuth_deg;
+        let el = self.mpegh_spatializer_view.elevation_deg;
+        let dist = self.mpegh_spatializer_view.distance_m;
+        let itd = self.mpegh_spatializer_view.itd_microseconds;
+        let ild = self.mpegh_spatializer_view.ild_db;
+        let lufs = self.mpegh_spatializer_view.integrated_lufs;
+
+        self.device_rack_state.node_param_values.insert("azimuth_deg".to_string(), az);
+        self.device_rack_state.node_param_values.insert("elevation_deg".to_string(), el);
+        self.device_rack_state.node_param_values.insert("distance_m".to_string(), dist);
+        self.device_rack_state.node_param_values.insert("itd_microseconds".to_string(), itd);
+        self.device_rack_state.node_param_values.insert("ild_db".to_string(), ild);
+        self.device_rack_state.node_param_values.insert("integrated_lufs".to_string(), lufs);
+
+        self.inspector_state.node_param_values.insert("azimuth_deg".to_string(), az);
+        self.inspector_state.node_param_values.insert("elevation_deg".to_string(), el);
+        self.inspector_state.node_param_values.insert("distance_m".to_string(), dist);
+        self.inspector_state.node_param_values.insert("itd_microseconds".to_string(), itd);
+        self.inspector_state.node_param_values.insert("ild_db".to_string(), ild);
+        self.inspector_state.node_param_values.insert("integrated_lufs".to_string(), lufs);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_az = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_el = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_dist = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_itd = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_ild = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_lufs = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+
+            if bus.get(pid_az).is_some() { bus.set(pid_az, az); }
+            if bus.get(pid_el).is_some() { bus.set(pid_el, el); }
+            if bus.get(pid_dist).is_some() { bus.set(pid_dist, dist); }
+            if bus.get(pid_itd).is_some() { bus.set(pid_itd, itd); }
+            if bus.get(pid_ild).is_some() { bus.set(pid_ild, ild); }
+            if bus.get(pid_lufs).is_some() { bus.set(pid_lufs, lufs); }
+        }
+    }
+
+    pub fn open_mpegh_spatializer_hud(&mut self) {
+        self.show_mpegh_spatializer_modal = true;
+    }
+
+    pub fn close_mpegh_spatializer_hud(&mut self) {
+        self.show_mpegh_spatializer_modal = false;
+    }
+
+    pub fn is_mpegh_spatializer_hud_open(&self) -> bool {
+        self.show_mpegh_spatializer_modal
     }
 
 

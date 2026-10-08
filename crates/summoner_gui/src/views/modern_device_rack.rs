@@ -181,6 +181,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_mpegh_trajectory_hud: bool,
     #[serde(default)]
     pub requested_open_nhk222_immersion_hud: bool,
+    #[serde(default)]
+    pub requested_open_hoa4_spatializer_hud: bool,
+    #[serde(default)]
+    pub requested_open_mpegh_spatializer_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -260,6 +264,8 @@ impl Default for ModernDeviceRackState {
             requested_open_atmos_proximity_hud: false,
             requested_open_mpegh_trajectory_hud: false,
             requested_open_nhk222_immersion_hud: false,
+            requested_open_hoa4_spatializer_hud: false,
+            requested_open_mpegh_spatializer_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -962,6 +968,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_atmos_proximity = cur_selection.contains("AtmosProximity") || cur_selection == "AtmosProximityNode" || cur_selection == "AtmosProximityView";
                     let is_mpegh_trajectory = cur_selection.contains("MpeghTrajectory") || cur_selection.contains("MpegHTrajectory") || cur_selection == "MpeghTrajectorySpatializer" || cur_selection == "MpeghTrajectoryView" || cur_selection == "MpeghTrajectoryNode";
                     let is_nhk222_immersion = cur_selection.contains("Nhk222Immersion") || cur_selection.contains("NHK222Immersion") || cur_selection == "Nhk222ImmersionView" || cur_selection == "Nhk222ImmersionNode";
+                    let is_hoa4_spatializer = cur_selection.contains("Hoa4") || cur_selection.contains("HOA4") || cur_selection == "Hoa4SpatializerView" || cur_selection == "Hoa4Spatializer" || cur_selection.contains("Ambisonics4thOrder") || cur_selection.contains("Hoa4Sphere");
+                    let is_mpegh_spatializer = cur_selection.contains("MpeghSpatializer") || cur_selection.contains("MPEGHSpatializer") || cur_selection == "MpeghSpatializerView" || cur_selection == "MpeghSpatializerNode" || cur_selection.contains("MpeghHrtf") || cur_selection == "MpeghSpatialAudio";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1222,6 +1230,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("🌐 22.2 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 255, 180))).on_hover_text("Open Broadcast Mastering Immersive 22.2 Multichannel Audio (NHK 22.2) 3-Layer Spherical Immersion HUD").clicked()
                     {
                         state.requested_open_nhk222_immersion_hud = true;
+                    } else if is_hoa4_spatializer
+                        && ui.button(RichText::new("🌐 HOA4 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Broadcast Mastering Higher-Order Ambisonics 4th-Order 25-ch HUD").clicked()
+                    {
+                        state.requested_open_hoa4_spatializer_hud = true;
+                    } else if is_mpegh_spatializer
+                        && ui.button(RichText::new("📡 MPEG-H HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 255, 180))).on_hover_text("Open Broadcast Mastering MPEG-H 3D Spatial Audio & Personalized HRTF Profile HUD").clicked()
+                    {
+                        state.requested_open_mpegh_spatializer_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2052,6 +2068,8 @@ fn show_pro_parameter_drawer(
                     let is_atmos_proximity = dev_kind.contains("AtmosProximity") || dev_kind == "AtmosProximityNode" || dev_kind == "AtmosProximityView";
                     let is_mpegh_trajectory = dev_kind.contains("MpeghTrajectory") || dev_kind.contains("MpegHTrajectory") || dev_kind == "MpeghTrajectorySpatializer" || dev_kind == "MpeghTrajectoryView" || dev_kind == "MpeghTrajectoryNode";
                     let is_nhk222_immersion = dev_kind.contains("Nhk222Immersion") || dev_kind.contains("NHK222Immersion") || dev_kind == "Nhk222ImmersionView" || dev_kind == "Nhk222ImmersionNode";
+                    let is_hoa4_spatializer = dev_kind.contains("Hoa4") || dev_kind.contains("HOA4") || dev_kind == "Hoa4SpatializerView" || dev_kind == "Hoa4Spatializer" || dev_kind.contains("Ambisonics4thOrder") || dev_kind.contains("Hoa4Sphere");
+                    let is_mpegh_spatializer = dev_kind.contains("MpeghSpatializer") || dev_kind.contains("MPEGHSpatializer") || dev_kind == "MpeghSpatializerView" || dev_kind == "MpeghSpatializerNode" || dev_kind.contains("MpeghHrtf") || dev_kind == "MpeghSpatialAudio";
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -7028,6 +7046,165 @@ fn show_pro_parameter_drawer(
                             let _ = nhk_resp.on_hover_text(format!(
                                 "NHK 22.2 3-Layer Spherical Immersion HUD\nAzimuth: {:.0}° | Elevation: {:.0}° | Distance: {:.1}m\nTop Energy: {:.0}% | Mid Energy: {:.0}% | Bot: {:.0}% | LFE: {:.0}%\n[Drag: Azimuth / Elevation Immersion]",
                                 az, el, dist, top * 100.0, mid * 100.0, bot * 100.0, lfe * 100.0
+                            ));
+                        }
+                    } else if is_hoa4_spatializer {
+                        // HOA 4th-Order (25-ch) 3D Ambisonic Energy Density Mini Visualizer
+                        let (hoa_resp, hoa_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let hoa_rect = hoa_resp.rect;
+                        hoa_painter.rect_filled(hoa_rect, 2.0, Color32::from_rgb(8, 16, 26));
+
+                        let mut az = state.node_param_values.get("azimuth_deg").copied().unwrap_or(45.0);
+                        let mut el = state.node_param_values.get("elevation_deg").copied().unwrap_or(25.0);
+                        let dist = state.node_param_values.get("distance_m").copied().unwrap_or(3.0);
+                        let order = state.node_param_values.get("energy_focus_order").copied().unwrap_or(4.0);
+                        let oct0 = state.node_param_values.get("octant_energy_0").copied().unwrap_or(0.85);
+                        let oct1 = state.node_param_values.get("octant_energy_1").copied().unwrap_or(0.65);
+
+                        let hcx = hoa_rect.left() + 34.0;
+                        let hcy = hoa_rect.center().y;
+                        let max_r = 24.0_f32;
+
+                        if hoa_resp.dragged() {
+                            if let Some(pos) = hoa_resp.interact_pointer_pos() {
+                                let dx = pos.x - hcx;
+                                let dy = hcy - pos.y;
+                                let a = (dx.atan2(dy).to_degrees()).clamp(-180.0, 180.0);
+                                let e = (((dx * dx + dy * dy).sqrt() / max_r).clamp(0.0, 1.0) * 180.0 - 90.0).clamp(-90.0, 90.0);
+                                az = a;
+                                el = e;
+                                state.node_param_values.insert("azimuth_deg".to_string(), az);
+                                state.node_param_values.insert("elevation_deg".to_string(), el);
+                                if let Some(bus) = param_bus {
+                                    let pid_az = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_el = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    bus.set(pid_az, az);
+                                    bus.set(pid_el, el);
+                                }
+                            }
+                        }
+
+                        // 4 Concentric Ambisonic order spheres (N=1, 2, 3, 4)
+                        for n in 1..=4 {
+                            let r_frac = n as f32 / 4.0;
+                            hoa_painter.circle_stroke(
+                                egui::pos2(hcx, hcy),
+                                max_r * r_frac,
+                                Stroke::new(0.8_f32, Color32::from_rgba_unmultiplied(0, 229, 255, (25 + n * 20) as u8)),
+                            );
+                        }
+                        hoa_painter.circle_filled(egui::pos2(hcx, hcy), 2.5, Color32::from_rgb(0, 229, 255));
+
+                        // 25 spherical harmonic representation dots around perimeter
+                        for i in 0..16 {
+                            let ang = (i as f32 * 22.5).to_radians();
+                            let sx = hcx + ang.sin() * (max_r + 1.5);
+                            let sy = hcy - ang.cos() * (max_r + 1.5);
+                            hoa_painter.circle_filled(egui::pos2(sx, sy), 1.0, Color32::from_rgb(56, 189, 248));
+                        }
+
+                        // Ambisonic 4th-Order Energy Puck position
+                        let az_rad = az.to_radians();
+                        let el_norm = ((el + 90.0) / 180.0).clamp(0.1, 1.0);
+                        let hpx = hcx + az_rad.sin() * el_norm * max_r;
+                        let hpy = hcy - az_rad.cos() * el_norm * max_r;
+                        hoa_painter.circle_filled(egui::pos2(hpx, hpy), 3.2, Color32::from_rgb(255, 200, 50));
+
+                        // Readout
+                        hoa_painter.text(
+                            egui::pos2(hoa_rect.right() - 4.0, hoa_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("HOA4 25-CH\nOrder: {:.1} | Dist: {:.1}m\nOct0: {:.0}% Oct1: {:.0}%\nAz: {:.0}° El: {:.0}°", order, dist, oct0 * 100.0, oct1 * 100.0, az, el),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+
+                        if hoa_resp.hovered() {
+                            let _ = hoa_resp.on_hover_text(format!(
+                                "HOA 4th-Order (25-ch) 3D Ambisonic Energy Density HUD\nAzimuth: {:.0}° | Elevation: {:.0}° | Distance: {:.1}m\nEnergy Focus Order: {:.1} | Octant0: {:.0}% | Octant1: {:.0}%\n[Drag: Azimuth / Elevation Ambisonic Energy]",
+                                az, el, dist, order, oct0 * 100.0, oct1 * 100.0
+                            ));
+                        }
+                    } else if is_mpegh_spatializer {
+                        // MPEG-H 3D Spatial Audio & Personalized HRTF Profile Mini Visualizer
+                        let (mpg_resp, mpg_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let mpg_rect = mpg_resp.rect;
+                        mpg_painter.rect_filled(mpg_rect, 2.0, Color32::from_rgb(8, 22, 20));
+
+                        let mut az = state.node_param_values.get("azimuth_deg").copied().unwrap_or(0.0);
+                        let mut el = state.node_param_values.get("elevation_deg").copied().unwrap_or(0.0);
+                        let dist = state.node_param_values.get("distance_m").copied().unwrap_or(1.5);
+                        let itd = state.node_param_values.get("itd_microseconds").copied().unwrap_or(0.0);
+                        let ild = state.node_param_values.get("ild_db").copied().unwrap_or(0.0);
+                        let lufs = state.node_param_values.get("integrated_lufs").copied().unwrap_or(-24.0);
+
+                        let mcx = mpg_rect.left() + 34.0;
+                        let mcy = mpg_rect.center().y;
+                        let max_r = 24.0_f32;
+
+                        if mpg_resp.dragged() {
+                            if let Some(pos) = mpg_resp.interact_pointer_pos() {
+                                let dx = pos.x - mcx;
+                                let dy = mcy - pos.y;
+                                let a = (dx.atan2(dy).to_degrees()).clamp(-180.0, 180.0);
+                                let e = (((dx * dx + dy * dy).sqrt() / max_r).clamp(0.0, 1.0) * 180.0 - 90.0).clamp(-90.0, 90.0);
+                                az = a;
+                                el = e;
+                                state.node_param_values.insert("azimuth_deg".to_string(), az);
+                                state.node_param_values.insert("elevation_deg".to_string(), el);
+                                if let Some(bus) = param_bus {
+                                    let pid_az = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_el = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    bus.set(pid_az, az);
+                                    bus.set(pid_el, el);
+                                }
+                            }
+                        }
+
+                        // Spatial Stage Perimeter & Listener Ears
+                        mpg_painter.circle_stroke(
+                            egui::pos2(mcx, mcy),
+                            max_r,
+                            Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(0, 255, 180, 50)),
+                        );
+                        mpg_painter.circle_stroke(
+                            egui::pos2(mcx, mcy),
+                            max_r * 0.5,
+                            Stroke::new(0.7_f32, Color32::from_rgba_unmultiplied(0, 255, 180, 30)),
+                        );
+                        // Listener head & ears
+                        mpg_painter.circle_filled(egui::pos2(mcx, mcy), 3.0, Color32::from_rgb(0, 255, 180));
+                        mpg_painter.circle_filled(egui::pos2(mcx - 4.5, mcy), 1.5, Color32::from_rgb(52, 211, 153)); // L ear
+                        mpg_painter.circle_filled(egui::pos2(mcx + 4.5, mcy), 1.5, Color32::from_rgb(52, 211, 153)); // R ear
+
+                        // Speaker bed perimeter dots (7.1.4 layout positions)
+                        for spk_a in [-30.0, 30.0, 0.0, -90.0, 90.0, -135.0, 135.0_f32] {
+                            let spk_rad = spk_a.to_radians();
+                            let sx = mcx + spk_rad.sin() * max_r;
+                            let sy = mcy - spk_rad.cos() * max_r;
+                            mpg_painter.circle_filled(egui::pos2(sx, sy), 1.3, Color32::from_rgb(52, 211, 153));
+                        }
+
+                        // Object puck
+                        let az_rad = az.to_radians();
+                        let dist_norm = (dist / 10.0).clamp(0.15, 1.0);
+                        let opx = mcx + az_rad.sin() * dist_norm * max_r;
+                        let opy = mcy - az_rad.cos() * dist_norm * max_r;
+                        mpg_painter.circle_filled(egui::pos2(opx, opy), 3.0, Color32::from_rgb(255, 180, 0));
+
+                        // Readout
+                        mpg_painter.text(
+                            egui::pos2(mpg_rect.right() - 4.0, mpg_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("MPEG-H 3D\nITD: {:.0}μs | ILD: {:.1}dB\nLUFS: {:.1} | Dist: {:.1}m\nAz: {:.0}° El: {:.0}°", itd, ild, lufs, dist, az, el),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(0, 255, 180),
+                        );
+
+                        if mpg_resp.hovered() {
+                            let _ = mpg_resp.on_hover_text(format!(
+                                "MPEG-H 3D Spatial Audio & Personalized HRTF Profile HUD\nAzimuth: {:.0}° | Elevation: {:.0}° | Distance: {:.1}m\nITD: {:.0} μs | ILD: {:.1} dB | Loudness: {:.1} LUFS\n[Drag: Azimuth / Distance Object Spatialization]",
+                                az, el, dist, itd, ild, lufs
                             ));
                         }
                     } else {
