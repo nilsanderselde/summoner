@@ -677,6 +677,18 @@ impl CommandPalette {
                 action_id: "open_raytraced_reverb_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open 7.1.4 Dolby Atmos 3D Immersive Bed & Object Radar HUD".into(),
+                category: "Spatial".into(),
+                action_id: "open_atmos_surround_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open 7.1.4 Dolby Atmos Spherical Proximity & Distance HUD".into(),
+                category: "Spatial".into(),
+                action_id: "open_atmos_proximity_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

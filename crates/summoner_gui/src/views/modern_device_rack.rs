@@ -6725,6 +6725,148 @@ fn show_pro_parameter_drawer(
                                 r_len, r_wid, r_hgt, rt60, s_x, s_y, l_x, l_y
                             ));
                         }
+                    } else if is_atmos_surround {
+                        // 7.1.4 Dolby Atmos Immersive Bed & Object Radar Mini Visualizer
+                        let (atm_resp, atm_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let atm_rect = atm_resp.rect;
+                        atm_painter.rect_filled(atm_rect, 2.0, Color32::from_rgb(8, 12, 22));
+
+                        let mut obj_x = state.node_param_values.get("surround_azimuth").map(|v| v / 180.0).or_else(|| state.node_param_values.get("object_x").copied()).unwrap_or(0.35);
+                        let mut obj_y = state.node_param_values.get("surround_elevation").map(|v| v / 90.0).or_else(|| state.node_param_values.get("object_y").copied()).unwrap_or(0.55);
+                        let obj_z = state.node_param_values.get("height_elevation").map(|v| v / 90.0).or_else(|| state.node_param_values.get("object_z_height").copied()).unwrap_or(0.40);
+                        let spread = state.node_param_values.get("divergence_spread").map(|v| v * 100.0).or_else(|| state.node_param_values.get("object_size_spread").copied()).unwrap_or(25.0);
+                        let lfe_gain = state.node_param_values.get("lfe_send_level").copied().or_else(|| state.node_param_values.get("lfe_send_gain_db").copied()).unwrap_or(-12.0);
+
+                        let radar_cx = atm_rect.left() + 34.0;
+                        let radar_cy = atm_rect.center().y;
+                        let radar_r = 24.0_f32;
+
+                        if atm_resp.dragged() {
+                            if let Some(pos) = atm_resp.interact_pointer_pos() {
+                                let nx = ((pos.x - radar_cx) / radar_r).clamp(-1.0, 1.0);
+                                let ny = ((radar_cy - pos.y) / radar_r).clamp(-1.0, 1.0);
+                                obj_x = nx;
+                                obj_y = ny;
+                                state.node_param_values.insert("object_x".to_string(), obj_x);
+                                state.node_param_values.insert("object_y".to_string(), obj_y);
+                                state.node_param_values.insert("surround_azimuth".to_string(), obj_x * 180.0);
+                                state.node_param_values.insert("surround_elevation".to_string(), obj_y * 90.0);
+                                if let Some(bus) = param_bus {
+                                    let pid_x = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_y = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    bus.set(pid_x, obj_x);
+                                    bus.set(pid_y, obj_y);
+                                }
+                            }
+                        }
+
+                        // Boundary ring & listener center
+                        atm_painter.circle_stroke(egui::pos2(radar_cx, radar_cy), radar_r, Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(0, 229, 255, 60)));
+                        atm_painter.circle_stroke(egui::pos2(radar_cx, radar_cy), radar_r * 0.5, Stroke::new(0.8_f32, Color32::from_rgba_unmultiplied(0, 229, 255, 30)));
+                        atm_painter.circle_filled(egui::pos2(radar_cx, radar_cy), 2.5, Color32::from_rgb(0, 229, 255));
+
+                        // 7.1.4 Speaker markers (L, C, R, Ls, Rs, Lr, Rr)
+                        let spk_angles = [-30.0_f32, 0.0, 30.0, -90.0, 90.0, -135.0, 135.0];
+                        for deg in spk_angles {
+                            let rad = (deg - 90.0).to_radians();
+                            let sx = radar_cx + rad.cos() * (radar_r + 2.0);
+                            let sy = radar_cy + rad.sin() * (radar_r + 2.0);
+                            atm_painter.circle_filled(egui::pos2(sx, sy), 1.5, Color32::from_rgb(56, 189, 248));
+                        }
+
+                        // Object puck and spread diffusion circle
+                        let opx = radar_cx + obj_x.clamp(-1.0, 1.0) * radar_r;
+                        let opy = radar_cy - obj_y.clamp(-1.0, 1.0) * radar_r;
+                        let spr_r = (spread * 0.01 * 8.0).max(2.0);
+                        atm_painter.circle_stroke(egui::pos2(opx, opy), spr_r, Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(255, 180, 0, 120)));
+                        atm_painter.circle_filled(egui::pos2(opx, opy), 3.0, Color32::from_rgb(255, 180, 0));
+
+                        // Readout
+                        atm_painter.text(
+                            egui::pos2(atm_rect.right() - 4.0, atm_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("ATMOS 7.1.4\nX: {:.2} Y: {:.2}\nZ: {:.2} Spr: {:.0}%\nLFE: {:.1} dB", obj_x, obj_y, obj_z, spread, lfe_gain),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+
+                        if atm_resp.hovered() {
+                            let _ = atm_resp.on_hover_text(format!(
+                                "7.1.4 Dolby Atmos Immersive Bed & Object Radar HUD\nPan X: {:.2} | Depth Y: {:.2} | Height Z: {:.2}\nSpread: {:.0}% | LFE: {:.1} dB\n[Drag: Pan / Depth Position]",
+                                obj_x, obj_y, obj_z, spread, lfe_gain
+                            ));
+                        }
+                    } else if is_atmos_proximity {
+                        // 7.1.4 Dolby Atmos Spherical Proximity & Distance Mini Visualizer
+                        let (prx_resp, prx_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let prx_rect = prx_resp.rect;
+                        prx_painter.rect_filled(prx_rect, 2.0, Color32::from_rgb(8, 12, 22));
+
+                        let mut dist = state.node_param_values.get("distance_m").copied().unwrap_or(2.5);
+                        let mut az = state.node_param_values.get("azimuth_deg").copied().unwrap_or(30.0);
+                        let el = state.node_param_values.get("elevation_deg").copied().unwrap_or(15.0);
+                        let bass = state.node_param_values.get("proximity_bass_boost_db").copied().unwrap_or(3.5);
+                        let air = state.node_param_values.get("air_absorption_loss_db").copied().unwrap_or(2.0);
+
+                        let pcx = prx_rect.left() + 34.0;
+                        let pcy = prx_rect.center().y;
+                        let max_r = 24.0_f32;
+
+                        if prx_resp.dragged() {
+                            if let Some(pos) = prx_resp.interact_pointer_pos() {
+                                let dx = pos.x - pcx;
+                                let dy = pcy - pos.y;
+                                let d = ((dx * dx + dy * dy).sqrt() / max_r * 49.9 + 0.1).clamp(0.1, 50.0);
+                                let a = (dx.atan2(dy).to_degrees()).clamp(-180.0, 180.0);
+                                dist = d;
+                                az = a;
+                                state.node_param_values.insert("distance_m".to_string(), dist);
+                                state.node_param_values.insert("azimuth_deg".to_string(), az);
+                                if let Some(bus) = param_bus {
+                                    let pid_d = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_a = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    bus.set(pid_d, dist);
+                                    bus.set(pid_a, az);
+                                }
+                            }
+                        }
+
+                        // Polar concentric distance rings
+                        for r_factor in [0.33_f32, 0.66, 1.0] {
+                            prx_painter.circle_stroke(
+                                egui::pos2(pcx, pcy),
+                                max_r * r_factor,
+                                Stroke::new(0.8_f32, Color32::from_rgba_unmultiplied(255, 180, 0, 40)),
+                            );
+                        }
+                        // Listener head dot
+                        prx_painter.circle_filled(egui::pos2(pcx, pcy), 2.5, Color32::from_rgb(0, 229, 255));
+
+                        // Sound object position on polar grid
+                        let rad = az.to_radians();
+                        let d_norm = (dist / 50.0).clamp(0.1, 1.0);
+                        let spx = pcx + rad.sin() * d_norm * max_r;
+                        let spy = pcy - rad.cos() * d_norm * max_r;
+
+                        // Ray connecting listener to source
+                        prx_painter.line_segment([egui::pos2(pcx, pcy), egui::pos2(spx, spy)], Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(255, 180, 0, 100)));
+                        prx_painter.circle_filled(egui::pos2(spx, spy), 3.0, Color32::from_rgb(255, 180, 0));
+
+                        // Readout
+                        prx_painter.text(
+                            egui::pos2(prx_rect.right() - 4.0, prx_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("ATMOS PROX\nDist: {:.1}m\nAz: {:.0}° El: {:.0}°\nBass: +{:.1}dB\nAir: -{:.1}dB", dist, az, el, bass, air),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(255, 180, 0),
+                        );
+
+                        if prx_resp.hovered() {
+                            let _ = prx_resp.on_hover_text(format!(
+                                "7.1.4 Dolby Atmos Spherical Proximity HUD\nDistance: {:.1}m | Azimuth: {:.0}° | Elevation: {:.0}°\nProximity Bass Boost: +{:.1} dB | Air Absorption: -{:.1} dB\n[Drag: Distance / Azimuth Position]",
+                                dist, az, el, bass, air
+                            ));
+                        }
                     } else {
                         // Filter Curve Mini View (slot-addressed)
                         let (filt_resp, filt_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());

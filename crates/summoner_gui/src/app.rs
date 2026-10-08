@@ -1571,6 +1571,14 @@ impl eframe::App for SummonerApp {
                     self.current_view = ViewMode::ModernStudio;
                     self.award_winning_view.open_raytraced_reverb_hud();
                 }
+                "open_atmos_surround_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_atmos_surround_hud();
+                }
+                "open_atmos_proximity_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_atmos_proximity_hud();
+                }
                 "sfz_convert" | "auto_slice" | "load_preset" | "export_clap" | "toggle_simd" => {
                     println!("Command palette action executed: {}", action);
                 }
