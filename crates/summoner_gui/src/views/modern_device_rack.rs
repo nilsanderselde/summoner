@@ -189,6 +189,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_spatial_trajectory_hud: bool,
     #[serde(default)]
     pub requested_open_ambisonic_radar_hud: bool,
+    #[serde(default)]
+    pub requested_open_hoa_spatializer_hud: bool,
+    #[serde(default)]
+    pub requested_open_neural_timbre_morph_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -272,6 +276,8 @@ impl Default for ModernDeviceRackState {
             requested_open_mpegh_spatializer_hud: false,
             requested_open_spatial_trajectory_hud: false,
             requested_open_ambisonic_radar_hud: false,
+            requested_open_hoa_spatializer_hud: false,
+            requested_open_neural_timbre_morph_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -978,6 +984,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_mpegh_spatializer = cur_selection.contains("MpeghSpatializer") || cur_selection.contains("MPEGHSpatializer") || cur_selection == "MpeghSpatializerView" || cur_selection == "MpeghSpatializerNode" || cur_selection.contains("MpeghHrtf") || cur_selection == "MpeghSpatialAudio";
                     let is_spatial_trajectory = cur_selection.contains("SpatialTrajectory") || cur_selection == "SpatialTrajectoryView" || cur_selection.contains("TrajectorySpline") || cur_selection == "SpatialTrajectoryNode";
                     let is_ambisonic_radar = cur_selection.contains("AmbisonicRadar") || cur_selection == "AmbisonicRadarView" || cur_selection.contains("AmbisonicPanner") || cur_selection == "AmbisonicRadarNode" || cur_selection.contains("SurroundPanner");
+                    let is_hoa_spatializer = cur_selection.contains("HoaSpatializer") || cur_selection == "HoaSpatializerView" || cur_selection == "HoaSpatializerNode" || cur_selection.contains("DolbyAtmos714");
+                    let is_neural_timbre_morph = cur_selection.contains("NeuralTimbreMorph") || cur_selection.contains("TimbreMorph") || cur_selection == "NeuralTimbreMorphView" || cur_selection == "NeuralTimbreMorphNode" || cur_selection == "NeuralTimbreMorphSynthesizer" || cur_selection.contains("DiffusionVocoder");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1254,6 +1262,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("📡 Ambisonic HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 255, 180))).on_hover_text("Open 3D Ambisonic Trajectory Radar & Multi-Channel Surround Sound Panner HUD").clicked()
                     {
                         state.requested_open_ambisonic_radar_hud = true;
+                    } else if is_hoa_spatializer
+                        && ui.button(RichText::new("🌐 HOA 7.1.4").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Dolby Atmos HOA 7.1.4 3D Spatializer & Binaural Head-Tracking HUD").clicked()
+                    {
+                        state.requested_open_hoa_spatializer_hud = true;
+                    } else if is_neural_timbre_morph
+                        && ui.button(RichText::new("🧬 Timbre HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(180, 90, 255))).on_hover_text("Open Neural Timbre Morphing Diffusion Vocoder & Resynthesizer HUD").clicked()
+                    {
+                        state.requested_open_neural_timbre_morph_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2088,6 +2104,8 @@ fn show_pro_parameter_drawer(
                     let is_mpegh_spatializer = dev_kind.contains("MpeghSpatializer") || dev_kind.contains("MPEGHSpatializer") || dev_kind == "MpeghSpatializerView" || dev_kind == "MpeghSpatializerNode" || dev_kind.contains("MpeghHrtf") || dev_kind == "MpeghSpatialAudio";
                     let is_spatial_trajectory = dev_kind.contains("SpatialTrajectory") || dev_kind == "SpatialTrajectoryView" || dev_kind.contains("TrajectorySpline") || dev_kind == "SpatialTrajectoryNode";
                     let is_ambisonic_radar = dev_kind.contains("AmbisonicRadar") || dev_kind == "AmbisonicRadarView" || dev_kind.contains("AmbisonicPanner") || dev_kind == "AmbisonicRadarNode" || dev_kind.contains("SurroundPanner");
+                    let is_hoa_spatializer = dev_kind.contains("HoaSpatializer") || dev_kind == "HoaSpatializerView" || dev_kind == "HoaSpatializerNode" || dev_kind.contains("DolbyAtmos714");
+                    let is_neural_timbre_morph = dev_kind.contains("NeuralTimbreMorph") || dev_kind.contains("TimbreMorph") || dev_kind == "NeuralTimbreMorphView" || dev_kind == "NeuralTimbreMorphNode" || dev_kind == "NeuralTimbreMorphSynthesizer" || dev_kind.contains("DiffusionVocoder");
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -7403,6 +7421,188 @@ fn show_pro_parameter_drawer(
                             let _ = rad_resp.on_hover_text(format!(
                                 "3D Ambisonic Trajectory Radar HUD\nAzimuth: {:.0}° | Elevation: {:.0}° | Distance: {:.1}m\nSpread: {:.0}% | Gain: {:+.1}dB | Master Offset: {:+.0}°\n[Drag: Azimuth / Distance Object Puck]",
                                 az, el, dist, sprd, gain, elev_off
+                            ));
+                        }
+                    } else if is_hoa_spatializer {
+                        // Dolby Atmos HOA 7.1.4 3D Spatializer Mini Visualizer
+                        let (hoa_resp, hoa_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let hoa_rect = hoa_resp.rect;
+                        hoa_painter.rect_filled(hoa_rect, 2.0, Color32::from_rgb(10, 16, 26));
+
+                        let mut az = state.node_param_values.get("azimuth_deg").copied().unwrap_or(45.0);
+                        let el = state.node_param_values.get("elevation_deg").copied().unwrap_or(18.5);
+                        let mut dist = state.node_param_values.get("distance_m").copied().unwrap_or(2.4);
+                        let yaw = state.node_param_values.get("head_yaw_deg").copied().unwrap_or(-12.4);
+
+                        let hcx = hoa_rect.left() + 34.0;
+                        let hcy = hoa_rect.center().y;
+                        let max_r = 24.0_f32;
+
+                        if hoa_resp.dragged() {
+                            if let Some(pos) = hoa_resp.interact_pointer_pos() {
+                                let dx = pos.x - hcx;
+                                let dy = hcy - pos.y;
+                                let a = (dx.atan2(dy).to_degrees()).clamp(-180.0, 180.0);
+                                let d = (((dx * dx + dy * dy).sqrt() / max_r).clamp(0.0, 1.0) * 10.0).max(0.1);
+                                az = a;
+                                dist = d;
+                                state.node_param_values.insert("azimuth_deg".to_string(), az);
+                                state.node_param_values.insert("distance_m".to_string(), dist);
+                                if let Some(bus) = param_bus {
+                                    let pid_az = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_dist = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 2);
+                                    bus.set(pid_az, az);
+                                    bus.set(pid_dist, dist);
+                                }
+                            }
+                        }
+
+                        // Concentric rings & crosshairs
+                        for r_step in [0.33, 0.66, 1.0] {
+                            hoa_painter.circle_stroke(
+                                egui::pos2(hcx, hcy),
+                                max_r * r_step,
+                                Stroke::new(0.8_f32, Color32::from_rgba_unmultiplied(0, 229, 255, 60)),
+                            );
+                        }
+                        hoa_painter.line_segment(
+                            [egui::pos2(hcx - max_r, hcy), egui::pos2(hcx + max_r, hcy)],
+                            Stroke::new(0.6_f32, Color32::from_rgba_unmultiplied(0, 229, 255, 50)),
+                        );
+                        hoa_painter.line_segment(
+                            [egui::pos2(hcx, hcy - max_r), egui::pos2(hcx, hcy + max_r)],
+                            Stroke::new(0.6_f32, Color32::from_rgba_unmultiplied(0, 229, 255, 50)),
+                        );
+
+                        // Atmos 7.1.4 Speakers
+                        for spk_ang_deg in [-30.0_f32, 0.0, 30.0, -90.0, 90.0, -140.0, 140.0] {
+                            let spk_ang = spk_ang_deg.to_radians();
+                            let sx = hcx + spk_ang.sin() * max_r;
+                            let sy = hcy - spk_ang.cos() * max_r;
+                            hoa_painter.circle_filled(egui::pos2(sx, sy), 1.2, Color32::from_rgb(160, 185, 215));
+                        }
+
+                        // Center listener puck
+                        hoa_painter.circle_filled(egui::pos2(hcx, hcy), 2.5, Color32::from_rgb(0, 229, 255));
+
+                        // Spatial Sound Puck
+                        let norm_r = (dist / 10.0).clamp(0.05, 1.0) * max_r;
+                        let spx = hcx + az.to_radians().sin() * norm_r;
+                        let spy = hcy - az.to_radians().cos() * norm_r;
+                        hoa_painter.circle_filled(egui::pos2(spx, spy), 3.2, Color32::from_rgb(255, 215, 0));
+
+                        // Harmonic bars preview on right side
+                        let bar_x_start = hoa_rect.left() + 72.0;
+                        let bar_bottom = hoa_rect.bottom() - 10.0;
+                        for b in 0..8 {
+                            let h_norm = ((b as f32 * 1.7 + az.abs() * 0.1).sin().abs() * 0.8 + 0.2).clamp(0.1, 1.0);
+                            let bh = h_norm * 24.0;
+                            let bx = bar_x_start + b as f32 * 4.0;
+                            let b_col = if b < 2 { Color32::from_rgb(0, 255, 180) } else if b < 5 { Color32::from_rgb(255, 215, 0) } else { Color32::from_rgb(0, 229, 255) };
+                            hoa_painter.rect_filled(
+                                egui::Rect::from_min_max(egui::pos2(bx, bar_bottom - bh), egui::pos2(bx + 2.5, bar_bottom)),
+                                0.5,
+                                b_col,
+                            );
+                        }
+
+                        // Readout
+                        hoa_painter.text(
+                            egui::pos2(hoa_rect.right() - 4.0, hoa_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("HOA 7.1.4\nAz: {:+.0}° | El: {:+.0}°\nDist: {:.1}m\nYaw: {:+.0}°", az, el, dist, yaw),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+
+                        if hoa_resp.hovered() {
+                            let _ = hoa_resp.on_hover_text(format!(
+                                "Dolby Atmos HOA 7.1.4 3D Spatializer HUD\nAzimuth: {:+.1}° | Elevation: {:+.1}° | Distance: {:.2}m | Head Yaw: {:+.1}°\n[Drag: Azimuth / Distance Position Puck]",
+                                az, el, dist, yaw
+                            ));
+                        }
+                    } else if is_neural_timbre_morph {
+                        // Neural Timbre Morphing Diffusion Vocoder Mini Visualizer
+                        let (timb_resp, timb_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let timb_rect = timb_resp.rect;
+                        timb_painter.rect_filled(timb_rect, 2.0, Color32::from_rgb(18, 12, 28));
+
+                        let mut z1 = state.node_param_values.get("latent_z1").copied().unwrap_or(0.45);
+                        let mut z2 = state.node_param_values.get("latent_z2").copied().unwrap_or(-0.60);
+                        let f0 = state.node_param_values.get("tracked_f0_hz").copied().unwrap_or(220.0);
+                        let morph = state.node_param_values.get("morph_weight_pct").copied().unwrap_or(65.0);
+
+                        let tcx = timb_rect.left() + 34.0;
+                        let tcy = timb_rect.center().y;
+                        let max_box = 24.0_f32;
+
+                        if timb_resp.dragged() {
+                            if let Some(pos) = timb_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - (tcx - max_box)) / (max_box * 2.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - (tcy - max_box)) / (max_box * 2.0))).clamp(0.0, 1.0);
+                                z1 = -2.0 + norm_x * 4.0;
+                                z2 = -2.0 + norm_y * 4.0;
+                                state.node_param_values.insert("latent_z1".to_string(), z1);
+                                state.node_param_values.insert("latent_z2".to_string(), z2);
+                                if let Some(bus) = param_bus {
+                                    let pid_z1 = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_z2 = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    bus.set(pid_z1, z1);
+                                    bus.set(pid_z2, z2);
+                                }
+                            }
+                        }
+
+                        // Latent grid boundary & axes
+                        let latent_rect = egui::Rect::from_center_size(egui::pos2(tcx, tcy), egui::vec2(max_box * 2.0, max_box * 2.0));
+                        timb_painter.rect_stroke(latent_rect, 2.0, Stroke::new(1.0_f32, Color32::from_rgb(180, 90, 255)));
+                        timb_painter.line_segment(
+                            [egui::pos2(latent_rect.left(), tcy), egui::pos2(latent_rect.right(), tcy)],
+                            Stroke::new(0.6_f32, Color32::from_rgba_unmultiplied(180, 90, 255, 80)),
+                        );
+                        timb_painter.line_segment(
+                            [egui::pos2(tcx, latent_rect.top()), egui::pos2(tcx, latent_rect.bottom())],
+                            Stroke::new(0.6_f32, Color32::from_rgba_unmultiplied(180, 90, 255, 80)),
+                        );
+
+                        // Timbre Puck
+                        let px = tcx + (z1 / 2.0).clamp(-1.0, 1.0) * max_box;
+                        let py = tcy - (z2 / 2.0).clamp(-1.0, 1.0) * max_box;
+                        timb_painter.circle_filled(egui::pos2(px, py), 3.5, Color32::from_rgb(255, 105, 180));
+                        timb_painter.circle_stroke(
+                            egui::pos2(px, py),
+                            5.5,
+                            Stroke::new(0.8_f32, Color32::from_rgba_unmultiplied(255, 105, 180, 140)),
+                        );
+
+                        // 6-bar spectral envelope preview
+                        let bar_x_start = timb_rect.left() + 74.0;
+                        let bar_bottom = timb_rect.bottom() - 10.0;
+                        let env_heights = [0.90_f32, 0.75, 0.60, 0.45, 0.65, 0.25];
+                        for (b, base_h) in env_heights.iter().enumerate() {
+                            let bh = (*base_h * (morph / 100.0).clamp(0.2, 1.0)) * 26.0;
+                            let bx = bar_x_start + b as f32 * 4.5;
+                            let col = Color32::from_rgb(180, 90, 255);
+                            timb_painter.rect_filled(
+                                egui::Rect::from_min_max(egui::pos2(bx, bar_bottom - bh), egui::pos2(bx + 3.0, bar_bottom)),
+                                0.5,
+                                col,
+                            );
+                        }
+
+                        // Readout
+                        timb_painter.text(
+                            egui::pos2(timb_rect.right() - 4.0, timb_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("NEURAL TIMBRE\nZ1: {:+.2} | Z2: {:+.2}\nF0: {:.1} Hz\nMorph: {:.0}%", z1, z2, f0, morph),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(180, 90, 255),
+                        );
+
+                        if timb_resp.hovered() {
+                            let _ = timb_resp.on_hover_text(format!(
+                                "Neural Timbre Morphing Diffusion Vocoder HUD\nLatent Z1: {:+.2} | Z2: {:+.2} | Tracked F0: {:.1} Hz | Morph: {:.0}%\n[Drag: Latent Timbre Vector Puck]",
+                                z1, z2, f0, morph
                             ));
                         }
                     } else {

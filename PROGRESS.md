@@ -1,6 +1,6 @@
 # Summoner DAW — Product Readiness & Shippability Tracker
 > **Current Shippability Score:** 10.0 / 10  
-> **Status:** Production Ready Release Candidate (Turn #84 / Sprint Turn #10)  
+> **Status:** Production Ready Release Candidate (Turn #85 / Sprint Turn #11)  
 > **Authoritative Root:** `PROGRESS.md`  
 > **License:** AGPLv3
 
@@ -2264,5 +2264,37 @@ Product Management has conducted a comprehensive readiness audit:
     * GUI tests: modal window lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch without allocations, trigger button propagation from rack and inspector, command palette action verification.
   - Registered `tier148_turn84_tests` in `crates/summoner_gui/src/lib.rs`.
   - Feature tests: 8 passed in 0.06s (`cargo test -p summoner_gui --features gui -- tier148_turn84`).
+  - Pure unit tests: 329 passed in 0.23s (`cargo test -p summoner_gui --lib`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
+
+### Turn #85 (Sprint Turn #11) — Dolby Atmos HOA 7.1.4 3D Spatializer & Binaural Head-Tracking HUD and Neural Timbre Morphing Diffusion Vocoder & Resynthesizer HUD Convergence (Milestones 33, 35 & 36)
+- [x] Immersive Dolby Atmos HOA 7.1.4 & Neural Timbre Morphing HUDs Integration:
+  - Integrated `HoaSpatializerView` (Broadcast Mastering Immersive Dolby Atmos & Ambisonics HOA 7.1.4 3D Spatializer & Binaural Head-Tracking HUD: 5 Spatial Formats [HOA 3rd Order 16-ch, Dolby Atmos 7.1.4 12-ch, Binaural Head-Track 2-ch, Ambisonics 5.1.4 10-ch, Dome Acoustic 9.1.6 16-ch], 12 Atmos speaker definitions, Azimuth $[-180.0..+180.0^\circ]$, Elevation $[-90.0..+90.0^\circ]$, Distance $[0.10..10.00\text{m}]$, Head Yaw $[-180.0..+180.0^\circ]$, Head Pitch $[-90.0..+90.0^\circ]$, 16-channel HOA ACN/N3D spherical harmonic decomposition energy bars, and Touch-Draggable Spatial Puck with $\ge 44 \times 44\text{pt}$ bounding target) and `NeuralTimbreMorphView` (Neural Timbre Morphing Diffusion Vocoder & Real-Time Pitch-Tracking Resynthesizer HUD: 5 Timbre Presets [Cello -> Lead, Soprano -> Flute, 303 -> Vocal Tract, Perc -> Glass Bell, Latent Diffusion], Latent $Z_1$ and $Z_2$ $[-2.0..+2.0]$, Tracked $F_0$ $[40.0..2000.0\text{Hz}]$, Morph Weight $[0..100\%]$, Denoising inference steps $[1..50]$, 6-bar spectral envelope resynthesis $[F_0, F_1, F_2, F_3, \text{Brightness}, \text{Noise}]$, and Touch-Draggable Latent Timbre Puck with $\ge 44 \times 44\text{pt}$ bounding target) into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/hoa_spatializer_view.rs` & `neural_timbre_morph_view.rs`):
+  - In `HoaSpatializerView`: added `show(&mut self, ui: &mut egui::Ui)` delegating to `ui(ui)` and `render_ascii_snapshot_str() -> String` with format metadata banner.
+  - In `NeuralTimbreMorphView`: added `show(&mut self, ui: &mut egui::Ui)` delegating to `ui(ui)` and `render_ascii_snapshot_str() -> String` with preset metadata banner.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_hoa_spatializer_modal: bool`, `hoa_spatializer_view: HoaSpatializerView`, `show_neural_timbre_morph_modal: bool`, and `neural_timbre_morph_view: NeuralTimbreMorphView`.
+  - Added dedicated modal windows `show_hoa_spatializer_modal_window` and `show_neural_timbre_morph_modal_window` with responsive styling, WCAG AAA contrast, and $\ge 44 \times 44\text{pt}$ touch bounds.
+  - Added public lifecycle methods: `open_hoa_spatializer_hud()`, `close_hoa_spatializer_hud()`, `is_hoa_spatializer_hud_open()`, `open_neural_timbre_morph_hud()`, `close_neural_timbre_morph_hud()`, `is_neural_timbre_morph_hud_open()`.
+  - Real-time parameter sync bridges (`sync_hoa_spatializer_hud_state` and `sync_neural_timbre_morph_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_hoa_spatializer_hud: bool` and `requested_open_neural_timbre_morph_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🌐 Open HOA 7.1.4 3D Spatializer HUD]` and `[🧬 Open Neural Timbre Morph HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header `[🌐 HOA 7.1.4]` / `[🧬 Timbre HUD]` in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * HOA 7.1.4 Spatializer: Concentric distance rings, crosshairs, 7.1.4 speaker array layout dots, center listener puck, draggable sound puck updating azimuth and distance, 8-bar spherical harmonic energy preview, live readout, and lock-free `ParamBus` slot dispatch.
+    * Neural Timbre Morpher: 2D latent space coordinate bounding box, horizontal/vertical axes, draggable timbre puck updating latent coordinates ($Z_1, Z_2$), 6-bar spectral envelope preview, live readout, and lock-free `ParamBus` slot dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_hoa_spatializer_hud` under `"Spatial"` and `open_neural_timbre_morph_hud` under `"Synthesis"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_hoa_spatializer_hud()` and `open_neural_timbre_morph_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier149_turn85_tests.rs`:
+    * Pure tests: view initialization, coordinate normalizations (azimuth, elevation, distance, latent coordinates), format and preset profiles switching, spherical harmonics monopole / multi-order calculations, touch puck hit testing ($\ge 44 \times 44\text{pt}$ bounding targets), channel isolation across tracks/slots, deterministic ASCII snapshots with metadata banners.
+    * GUI tests: modal window lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch without allocations, trigger button propagation from rack and inspector, command palette action verification.
+  - Registered `tier149_turn85_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Feature tests: 8 passed in 0.07s (`cargo test -p summoner_gui --features gui -- tier149_turn85`).
   - Pure unit tests: 329 passed in 0.23s (`cargo test -p summoner_gui --lib`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).

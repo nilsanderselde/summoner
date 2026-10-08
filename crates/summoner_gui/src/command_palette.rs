@@ -725,6 +725,18 @@ impl CommandPalette {
                 action_id: "open_ambisonic_radar_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Dolby Atmos HOA 7.1.4 3D Spatializer & Head-Tracking HUD".into(),
+                category: "Spatial".into(),
+                action_id: "open_hoa_spatializer_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Neural Timbre Morphing Diffusion Vocoder & Resynthesizer HUD".into(),
+                category: "Synthesis".into(),
+                action_id: "open_neural_timbre_morph_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

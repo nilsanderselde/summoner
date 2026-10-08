@@ -174,6 +174,10 @@ pub struct ModernInspectorState {
     pub requested_open_spatial_trajectory_hud: bool,
     #[serde(default)]
     pub requested_open_ambisonic_radar_hud: bool,
+    #[serde(default)]
+    pub requested_open_hoa_spatializer_hud: bool,
+    #[serde(default)]
+    pub requested_open_neural_timbre_morph_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -267,6 +271,8 @@ impl Default for ModernInspectorState {
             requested_open_mpegh_spatializer_hud: false,
             requested_open_spatial_trajectory_hud: false,
             requested_open_ambisonic_radar_hud: false,
+            requested_open_hoa_spatializer_hud: false,
+            requested_open_neural_timbre_morph_hud: false,
         }
     }
 }
@@ -1431,6 +1437,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open 3D Ambisonic Trajectory Radar & Multi-Channel Surround Sound Panner HUD").clicked() {
                     state.requested_open_ambisonic_radar_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("HoaSpatializer") || active_kind == "HoaSpatializerView" || active_kind == "HoaSpatializerNode" || active_kind.contains("DolbyAtmos714") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🌐 Open HOA 7.1.4 3D Spatializer HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 229, 255)))
+                        .fill(Color32::from_rgb(10, 28, 48))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 229, 255)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Dolby Atmos HOA 7.1.4 3D Spatializer & Binaural Head-Tracking HUD").clicked() {
+                    state.requested_open_hoa_spatializer_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("NeuralTimbreMorph") || active_kind.contains("TimbreMorph") || active_kind == "NeuralTimbreMorphView" || active_kind == "NeuralTimbreMorphNode" || active_kind == "NeuralTimbreMorphSynthesizer" || active_kind.contains("DiffusionVocoder") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🧬 Open Neural Timbre Morph HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(180, 90, 255)))
+                        .fill(Color32::from_rgb(28, 14, 48))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(180, 90, 255)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Neural Timbre Morphing Diffusion Vocoder & Resynthesizer HUD").clicked() {
+                    state.requested_open_neural_timbre_morph_hud = true;
                 }
                 ui.add_space(4.0);
             }

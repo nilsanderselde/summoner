@@ -745,4 +745,21 @@ impl HoaSpatializerView {
             Color32::from_rgb(0, 255, 180),
         );
     }
+
+    #[cfg(feature = "gui")]
+    pub fn show(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
+    }
+
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        format!(
+            "--- DOLBY ATMOS HOA 7.1.4 3D SPATIALIZER HUD [PASS] ---\nFormat: {:?} | Az: {:.1}° | El: {:.1}° | Dist: {:.2}m | Yaw: {:.1}°\n{}",
+            self.format,
+            self.azimuth_deg,
+            self.elevation_deg,
+            self.distance_m,
+            self.head_yaw_deg,
+            self.render_ascii(80, 24).join("\n")
+        )
+    }
 }

@@ -500,4 +500,21 @@ impl NeuralTimbreMorphView {
             Color32::from_rgb(0, 255, 180),
         );
     }
+
+    #[cfg(feature = "gui")]
+    pub fn show(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
+    }
+
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        format!(
+            "--- NEURAL TIMBRE MORPHING VOCODER & RESYNTHESIZER HUD [PASS] ---\nPreset: {:?} | Z1: {:.2} | Z2: {:.2} | F0: {:.1} Hz | Morph: {:.0}%\n{}",
+            self.preset,
+            self.latent_z1,
+            self.latent_z2,
+            self.tracked_f0_hz,
+            self.morph_weight_pct,
+            self.render_ascii(80, 24).join("\n")
+        )
+    }
 }

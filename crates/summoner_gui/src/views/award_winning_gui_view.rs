@@ -780,6 +780,10 @@ pub struct AwardWinningGuiView {
     pub spatial_trajectory_view: crate::views::spatial_trajectory_view::SpatialTrajectoryView,
     pub show_ambisonic_radar_modal: bool,
     pub ambisonic_radar_view: crate::views::ambisonic_radar_view::AmbisonicRadarView,
+    pub show_hoa_spatializer_modal: bool,
+    pub hoa_spatializer_view: crate::views::hoa_spatializer_view::HoaSpatializerView,
+    pub show_neural_timbre_morph_modal: bool,
+    pub neural_timbre_morph_view: crate::views::neural_timbre_morph_view::NeuralTimbreMorphView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1176,6 +1180,10 @@ impl AwardWinningGuiView {
             spatial_trajectory_view: crate::views::spatial_trajectory_view::SpatialTrajectoryView::new(),
             show_ambisonic_radar_modal: false,
             ambisonic_radar_view: crate::views::ambisonic_radar_view::AmbisonicRadarView::new(),
+            show_hoa_spatializer_modal: false,
+            hoa_spatializer_view: crate::views::hoa_spatializer_view::HoaSpatializerView::new(),
+            show_neural_timbre_morph_modal: false,
+            neural_timbre_morph_view: crate::views::neural_timbre_morph_view::NeuralTimbreMorphView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2165,6 +2173,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_ambisonic_radar_hud = false;
             self.open_ambisonic_radar_hud();
         }
+        if self.inspector_state.requested_open_hoa_spatializer_hud || self.device_rack_state.requested_open_hoa_spatializer_hud {
+            self.inspector_state.requested_open_hoa_spatializer_hud = false;
+            self.device_rack_state.requested_open_hoa_spatializer_hud = false;
+            self.open_hoa_spatializer_hud();
+        }
+        if self.inspector_state.requested_open_neural_timbre_morph_hud || self.device_rack_state.requested_open_neural_timbre_morph_hud {
+            self.inspector_state.requested_open_neural_timbre_morph_hud = false;
+            self.device_rack_state.requested_open_neural_timbre_morph_hud = false;
+            self.open_neural_timbre_morph_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2238,6 +2256,8 @@ impl AwardWinningGuiView {
         self.show_mpegh_spatializer_modal_window(ui);
         self.show_spatial_trajectory_modal_window(ui);
         self.show_ambisonic_radar_modal_window(ui);
+        self.show_hoa_spatializer_modal_window(ui);
+        self.show_neural_timbre_morph_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -14485,6 +14505,197 @@ impl AwardWinningGuiView {
 
     pub fn is_ambisonic_radar_hud_open(&self) -> bool {
         self.show_ambisonic_radar_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_hoa_spatializer_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_hoa_spatializer_modal {
+            return;
+        }
+
+        let mut is_open = self.show_hoa_spatializer_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🌐 Dolby Atmos HOA 7.1.4 3D Spatializer & Head-Tracking HUD")
+            .id(egui::Id::new("hoa_spatializer_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(820.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Broadcast Mastering Immersive Dolby Atmos & Ambisonics HOA 7.1.4 3D Spatializer with Binaural Head-Tracking (Milestones 33 & 35)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.hoa_spatializer_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_hoa_spatializer_modal = is_open;
+        self.sync_hoa_spatializer_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_hoa_spatializer_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let az = self.hoa_spatializer_view.azimuth_deg;
+        let el = self.hoa_spatializer_view.elevation_deg;
+        let dist = self.hoa_spatializer_view.distance_m;
+        let yaw = self.hoa_spatializer_view.head_yaw_deg;
+        let pitch = self.hoa_spatializer_view.head_pitch_deg;
+
+        self.device_rack_state.node_param_values.insert("azimuth_deg".to_string(), az);
+        self.device_rack_state.node_param_values.insert("elevation_deg".to_string(), el);
+        self.device_rack_state.node_param_values.insert("distance_m".to_string(), dist);
+        self.device_rack_state.node_param_values.insert("head_yaw_deg".to_string(), yaw);
+        self.device_rack_state.node_param_values.insert("head_pitch_deg".to_string(), pitch);
+
+        self.inspector_state.node_param_values.insert("azimuth_deg".to_string(), az);
+        self.inspector_state.node_param_values.insert("elevation_deg".to_string(), el);
+        self.inspector_state.node_param_values.insert("distance_m".to_string(), dist);
+        self.inspector_state.node_param_values.insert("head_yaw_deg".to_string(), yaw);
+        self.inspector_state.node_param_values.insert("head_pitch_deg".to_string(), pitch);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_az = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_el = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_dist = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_yaw = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_pitch = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+
+            if bus.get(pid_az).is_some() { bus.set(pid_az, az); }
+            if bus.get(pid_el).is_some() { bus.set(pid_el, el); }
+            if bus.get(pid_dist).is_some() { bus.set(pid_dist, dist); }
+            if bus.get(pid_yaw).is_some() { bus.set(pid_yaw, yaw); }
+            if bus.get(pid_pitch).is_some() { bus.set(pid_pitch, pitch); }
+        }
+    }
+
+    pub fn open_hoa_spatializer_hud(&mut self) {
+        self.show_hoa_spatializer_modal = true;
+    }
+
+    pub fn close_hoa_spatializer_hud(&mut self) {
+        self.show_hoa_spatializer_modal = false;
+    }
+
+    pub fn is_hoa_spatializer_hud_open(&self) -> bool {
+        self.show_hoa_spatializer_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_neural_timbre_morph_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_neural_timbre_morph_modal {
+            return;
+        }
+
+        let mut is_open = self.show_neural_timbre_morph_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🧬 Neural Timbre Morphing Diffusion Vocoder & Resynthesizer HUD")
+            .id(egui::Id::new("neural_timbre_morph_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(820.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Neural Timbre Morphing Diffusion Vocoder & Real-Time Pitch-Tracking Resynthesizer HUD (Milestones 33 & 36)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.neural_timbre_morph_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_neural_timbre_morph_modal = is_open;
+        self.sync_neural_timbre_morph_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_neural_timbre_morph_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let z1 = self.neural_timbre_morph_view.latent_z1;
+        let z2 = self.neural_timbre_morph_view.latent_z2;
+        let f0 = self.neural_timbre_morph_view.tracked_f0_hz;
+        let morph = self.neural_timbre_morph_view.morph_weight_pct;
+        let steps = self.neural_timbre_morph_view.denoising_steps as f32;
+        let conf = self.neural_timbre_morph_view.confidence_score;
+
+        self.device_rack_state.node_param_values.insert("latent_z1".to_string(), z1);
+        self.device_rack_state.node_param_values.insert("latent_z2".to_string(), z2);
+        self.device_rack_state.node_param_values.insert("tracked_f0_hz".to_string(), f0);
+        self.device_rack_state.node_param_values.insert("morph_weight_pct".to_string(), morph);
+        self.device_rack_state.node_param_values.insert("denoising_steps".to_string(), steps);
+        self.device_rack_state.node_param_values.insert("confidence_score".to_string(), conf);
+
+        self.inspector_state.node_param_values.insert("latent_z1".to_string(), z1);
+        self.inspector_state.node_param_values.insert("latent_z2".to_string(), z2);
+        self.inspector_state.node_param_values.insert("tracked_f0_hz".to_string(), f0);
+        self.inspector_state.node_param_values.insert("morph_weight_pct".to_string(), morph);
+        self.inspector_state.node_param_values.insert("denoising_steps".to_string(), steps);
+        self.inspector_state.node_param_values.insert("confidence_score".to_string(), conf);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_z1 = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_z2 = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_f0 = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_morph = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_steps = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_conf = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+
+            if bus.get(pid_z1).is_some() { bus.set(pid_z1, z1); }
+            if bus.get(pid_z2).is_some() { bus.set(pid_z2, z2); }
+            if bus.get(pid_f0).is_some() { bus.set(pid_f0, f0); }
+            if bus.get(pid_morph).is_some() { bus.set(pid_morph, morph); }
+            if bus.get(pid_steps).is_some() { bus.set(pid_steps, steps); }
+            if bus.get(pid_conf).is_some() { bus.set(pid_conf, conf); }
+        }
+    }
+
+    pub fn open_neural_timbre_morph_hud(&mut self) {
+        self.show_neural_timbre_morph_modal = true;
+    }
+
+    pub fn close_neural_timbre_morph_hud(&mut self) {
+        self.show_neural_timbre_morph_modal = false;
+    }
+
+    pub fn is_neural_timbre_morph_hud_open(&self) -> bool {
+        self.show_neural_timbre_morph_modal
     }
 
 
