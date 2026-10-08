@@ -544,6 +544,25 @@ impl SpatialTrajectoryView {
             Color32::from_rgb(0, 255, 180),
         );
     }
+
+    #[cfg(feature = "gui")]
+    pub fn show_ui(&mut self, ui: &mut egui::Ui) {
+        let (response, _) = ui.allocate_exact_size(
+            egui::vec2(ui.available_width().max(400.0), 520.0),
+            egui::Sense::click_and_drag(),
+        );
+        let rect = Rect::new(
+            response.rect.min.x,
+            response.rect.min.y,
+            response.rect.width(),
+            response.rect.height(),
+        );
+        self.show(ui, rect);
+    }
+
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        self.render_ascii(80, 24).join("\n")
+    }
 }
 
 // ----------------------------------------------------------------------------
