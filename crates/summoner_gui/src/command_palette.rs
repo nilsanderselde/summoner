@@ -629,6 +629,18 @@ impl CommandPalette {
                 action_id: "open_auro3d_spatializer_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open NHK 22.2 Super Hi-Vision Hemispherical Spatializer HUD".into(),
+                category: "Spatial".into(),
+                action_id: "open_nhk222_spatializer_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Wave Field Synthesis (WFS) Holographic Linear Array HUD".into(),
+                category: "Spatial".into(),
+                action_id: "open_wfs_array_spatializer_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

@@ -2019,3 +2019,36 @@ Product Management has conducted a comprehensive readiness audit:
   - Feature tests: 7 passed in 0.07s (`cargo test -p summoner_gui --features gui -- tier140_turn76`).
   - Pure unit tests: 329 passed in 0.25s (`cargo test -p summoner_gui --lib`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
+
+### Turn #77 (Turn #40 Deliverable - Sprint Review) — Broadcast Mastering NHK 22.2 Super Hi-Vision Hemispherical Spatializer & Wave Field Synthesis (WFS) Holographic Linear Array HUDs Convergence (Milestones 33 & 35)
+- [x] Broadcast Mastering NHK 22.2 Super Hi-Vision Hemispherical Spatializer & Wave Field Synthesis (WFS) Holographic Linear Acoustic Array Performance HUDs Integration:
+  - Integrated `Nhk222SpatializerView` (Broadcast Mastering Immersive 22.2 NHK Super Hi-Vision Hemispherical Spatializer HUD: 5 Monitoring Formats [Full 24-channel Dome, 9.1 Channel Downmix, 5.1 ITU-R BS.775 Surround, 22.2 HRTF Binaural Virtual Dome, Dynamic 3D Object Trajectory VBAP Panning], 24-channel speaker layout [9 Top + 10 Middle + 3 Bottom + 2 LFE], Multi-layer discrete energy monitoring [Top, Middle, Bottom, LFE], Azimuth $[-180.0..+180.0^\circ]$, Elevation $[-30.0..+90.0^\circ]$, Distance $[0.5..30.0\text{m}]$, Divergence Spread $[0.0..100.0\%]$, 3D Cartesian coordinates evaluation $(X, Y, Z)$ in meters, and Touch-Draggable Hemispherical Projection Puck with $\ge 44 \times 44\text{pt}$ bounding target) and `WfsArraySpatializerView` (Broadcast Mastering Immersive Wave Field Synthesis [WFS] Holographic Linear Acoustic Array HUD: 5 Array Geometries [Linear Front Array 64-ch, Rectangular Room 128-ch, Curved Stage Proscenium 32-ch, Desktop Nearfield 48-ch, Hexagonal 360° Holographic 96-ch], Channel counts [32..128 channels], Kirchhoff-Helmholtz delay profile synthesis across 16 loudspeaker samples, Virtual Source lateral offset $X [-8.0..+8.0\text{m}]$ and depth $Y [-5.0..+10.0\text{m}]$, Focused source detection [virtual source projected in front of array into listener room], Spatial aliasing cutoff frequency calculation $[1400..4500\text{Hz}]$, and Touch-Draggable Virtual Source Puck with $\ge 44 \times 44\text{pt}$ bounding target) into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/nhk222_spatializer_view.rs` & `wfs_array_spatializer_view.rs`):
+  - In `Nhk222SpatializerView`: added `show(&mut self, ui: &mut egui::Ui)` and `render_ascii_snapshot_str() -> String`.
+  - In `WfsArraySpatializerView`: added `show(&mut self, ui: &mut egui::Ui)` and `render_ascii_snapshot_str() -> String`.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_nhk222_spatializer_modal: bool`, `nhk222_spatializer_view: Nhk222SpatializerView`, `show_wfs_array_spatializer_modal: bool`, and `wfs_array_spatializer_view: WfsArraySpatializerView`.
+  - Added dedicated modal windows `show_nhk222_spatializer_modal_window` and `show_wfs_array_spatializer_modal_window` with responsive styling, WCAG AAA contrast, and $\ge 44 \times 44\text{pt}$ touch bounds.
+  - Added public lifecycle methods: `open_nhk222_spatializer_hud()`, `close_nhk222_spatializer_hud()`, `is_nhk222_spatializer_hud_open()`, `open_wfs_array_spatializer_hud()`, `close_wfs_array_spatializer_hud()`, `is_wfs_array_spatializer_hud_open()`.
+  - Real-time parameter sync bridges (`sync_nhk222_spatializer_hud_state` and `sync_wfs_array_spatializer_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_nhk222_hud: bool` and `requested_open_wfs_array_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🛰 Open NHK 22.2 Super Hi-Vision Spatializer HUD]` and `[🌊 Open WFS Holographic Acoustic Array HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header `[🛰 HUD]` / `[🌊 HUD]` and expanded toolbar buttons `[🛰 NHK 22.2 HUD]` / `[🌊 WFS HUD]` in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * NHK 22.2: Hemispherical dome concentric elevation rings, 10-speaker middle layer perimeter dots, top ceiling dot, draggable azimuth vs. elevation vector puck, and live `ParamBus` slot dispatch.
+    * WFS Array: Frontal boundary line with 8 sampled transducer dots, radiating hyperbolic curved wavefront propagation arcs, virtual source puck with drag interaction, focused source color indicator, and live `ParamBus` slot dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_nhk222_spatializer_hud` and `open_wfs_array_spatializer_hud` under `"Spatial"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_nhk222_spatializer_hud()` and `open_wfs_array_spatializer_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier141_turn77_tests.rs`:
+    * Pure tests: view initialization, format and geometry profiles, coordinate conversions, puck hit testing, delay profiles, 3D Cartesian coordinates, slot arithmetic channel isolation, deterministic ASCII snapshots.
+    * GUI tests: modal lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch, rack & inspector trigger propagation, command palette action registration.
+  - Registered `tier141_turn77_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Feature tests: 7 passed in 0.07s (`cargo test -p summoner_gui --features gui -- tier141_turn77`).
+  - Full GUI test suite: 1,287 passed in 2.05s (`cargo test -p summoner_gui --features gui --lib`).
+  - Pure unit tests: 329 passed in 0.23s (`cargo test -p summoner_gui --lib`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).

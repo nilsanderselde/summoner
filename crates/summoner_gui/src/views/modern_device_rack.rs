@@ -157,6 +157,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_atmos_916_hud: bool,
     #[serde(default)]
     pub requested_open_auro3d_hud: bool,
+    #[serde(default)]
+    pub requested_open_nhk222_hud: bool,
+    #[serde(default)]
+    pub requested_open_wfs_array_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -224,6 +228,8 @@ impl Default for ModernDeviceRackState {
             requested_open_mpegh_3d_hud: false,
             requested_open_atmos_916_hud: false,
             requested_open_auro3d_hud: false,
+            requested_open_nhk222_hud: false,
+            requested_open_wfs_array_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -458,6 +464,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_mpegh_3d = cur_selection.contains("Mpegh") || cur_selection.contains("MPEG-H") || cur_selection.contains("MpegH") || cur_selection == "Mpegh3DSpatializerView" || cur_selection == "Mpegh3DSpatializerNode" || cur_selection == "Mpegh3DObjectSpatializer" || cur_selection.contains("MpeghSpatializer");
                     let is_atmos_916 = cur_selection.contains("Atmos916") || cur_selection.contains("DolbyAtmos") || cur_selection == "Atmos916Spatializer" || cur_selection == "Atmos916SpatializerView" || cur_selection.contains("AtmosBed") || cur_selection.contains("AtmosSpatializer");
                     let is_auro3d = cur_selection.contains("Auro3d") || cur_selection.contains("Auro-3D") || cur_selection.contains("Auro131") || cur_selection == "Auro3dSpatializer" || cur_selection == "Auro3dSpatializerView" || cur_selection.contains("AuroSpatializer");
+                    let is_nhk222 = cur_selection.contains("Nhk222") || cur_selection.contains("NHK222") || cur_selection == "Nhk222Spatializer" || cur_selection == "Nhk222SpatializerView" || cur_selection.contains("NhkSpatializer");
+                    let is_wfs_array = cur_selection.contains("WfsArray") || cur_selection.contains("WfsAcoustic") || cur_selection.contains("WfsPlanar") || cur_selection == "WfsArraySpatializerNode" || cur_selection == "WfsArraySpatializerView" || cur_selection.contains("WaveFieldSynthesis");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -662,6 +670,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("🏔 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 171, 0))).on_hover_text("Open Auro-3D 13.1 Tri-Level Spatializer HUD").clicked()
                     {
                         state.requested_open_auro3d_hud = true;
+                    } else if is_nhk222
+                        && ui.button(RichText::new("🛰 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open NHK 22.2 Super Hi-Vision Hemispherical Spatializer HUD").clicked()
+                    {
+                        state.requested_open_nhk222_hud = true;
+                    } else if is_wfs_array
+                        && ui.button(RichText::new("🌊 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 255, 180))).on_hover_text("Open Wave Field Synthesis (WFS) Holographic Linear Array HUD").clicked()
+                    {
+                        state.requested_open_wfs_array_hud = true;
                     }
                     ui.add_space(4.0);
                     let pwr_col = if state.is_enabled { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(100, 116, 139) };
@@ -894,6 +910,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_mpegh_3d = cur_selection.contains("Mpegh") || cur_selection.contains("MPEG-H") || cur_selection.contains("MpegH") || cur_selection == "Mpegh3DSpatializerView" || cur_selection == "Mpegh3DSpatializerNode" || cur_selection == "Mpegh3DObjectSpatializer" || cur_selection.contains("MpeghSpatializer");
                     let is_atmos_916 = cur_selection.contains("Atmos916") || cur_selection.contains("DolbyAtmos") || cur_selection == "Atmos916Spatializer" || cur_selection == "Atmos916SpatializerView" || cur_selection.contains("AtmosBed") || cur_selection.contains("AtmosSpatializer");
                     let is_auro3d = cur_selection.contains("Auro3d") || cur_selection.contains("Auro-3D") || cur_selection.contains("Auro131") || cur_selection == "Auro3dSpatializer" || cur_selection == "Auro3dSpatializerView" || cur_selection.contains("AuroSpatializer");
+                    let is_nhk222 = cur_selection.contains("Nhk222") || cur_selection.contains("NHK222") || cur_selection == "Nhk222Spatializer" || cur_selection == "Nhk222SpatializerView" || cur_selection.contains("NhkSpatializer");
+                    let is_wfs_array = cur_selection.contains("WfsArray") || cur_selection.contains("WfsAcoustic") || cur_selection.contains("WfsPlanar") || cur_selection == "WfsArraySpatializerNode" || cur_selection == "WfsArraySpatializerView" || cur_selection.contains("WaveFieldSynthesis");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1106,6 +1124,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("🏔 Auro-3D HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 171, 0))).on_hover_text("Open Auro-3D 13.1 Tri-Level Spatializer HUD").clicked()
                     {
                         state.requested_open_auro3d_hud = true;
+                    } else if is_nhk222
+                        && ui.button(RichText::new("🛰 NHK 22.2 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open NHK 22.2 Super Hi-Vision Hemispherical Spatializer HUD").clicked()
+                    {
+                        state.requested_open_nhk222_hud = true;
+                    } else if is_wfs_array
+                        && ui.button(RichText::new("🌊 WFS HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 255, 180))).on_hover_text("Open Wave Field Synthesis (WFS) Holographic Linear Array HUD").clicked()
+                    {
+                        state.requested_open_wfs_array_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -1924,6 +1950,8 @@ fn show_pro_parameter_drawer(
                     let is_mpegh_3d = dev_kind.contains("Mpegh") || dev_kind.contains("MPEG-H") || dev_kind.contains("MpegH") || dev_kind == "Mpegh3DSpatializerView" || dev_kind == "Mpegh3DSpatializerNode" || dev_kind == "Mpegh3DObjectSpatializer" || dev_kind.contains("MpeghSpatializer");
                     let is_atmos_916 = dev_kind.contains("Atmos916") || dev_kind.contains("DolbyAtmos") || dev_kind == "Atmos916Spatializer" || dev_kind == "Atmos916SpatializerView" || dev_kind.contains("AtmosBed") || dev_kind.contains("AtmosSpatializer");
                     let is_auro3d = dev_kind.contains("Auro3d") || dev_kind.contains("Auro-3D") || dev_kind.contains("Auro131") || dev_kind == "Auro3dSpatializer" || dev_kind == "Auro3dSpatializerView" || dev_kind.contains("AuroSpatializer");
+                    let is_nhk222 = dev_kind.contains("Nhk222") || dev_kind.contains("NHK222") || dev_kind == "Nhk222Spatializer" || dev_kind == "Nhk222SpatializerView" || dev_kind.contains("NhkSpatializer");
+                    let is_wfs_array = dev_kind.contains("WfsArray") || dev_kind.contains("WfsAcoustic") || dev_kind.contains("WfsPlanar") || dev_kind == "WfsArraySpatializerNode" || dev_kind == "WfsArraySpatializerView" || dev_kind.contains("WaveFieldSynthesis");
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -6047,6 +6075,170 @@ fn show_pro_parameter_drawer(
                             let _ = au_resp.on_hover_text(format!(
                                 "Auro-3D 13.1 Tri-Level Spatializer HUD\nAzimuth: {:.1}° | Elevation: {:.1}° | Distance: {:.1}m\nHeight Delay: {:.1}ms\n[Drag: Azimuth (X) vs Elevation (Y)]",
                                 az, el, dist, delay
+                            ));
+                        }
+                    } else if is_nhk222 {
+                        // Broadcast Mastering Immersive NHK 22.2 Hemispherical Loudspeaker Dome Mini Visualizer
+                        let (nhk_resp, nhk_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let nhk_rect = nhk_resp.rect;
+                        nhk_painter.rect_filled(nhk_rect, 2.0, Color32::from_rgb(10, 18, 28));
+
+                        let mut az = state.node_param_values.get("azimuth_deg").copied().unwrap_or(45.0);
+                        let mut el = state.node_param_values.get("elevation_deg").copied().unwrap_or(25.0);
+                        let dist = state.node_param_values.get("distance_m").copied().unwrap_or(3.5);
+                        let spread = state.node_param_values.get("spread_pct").copied().unwrap_or(35.0);
+
+                        if nhk_resp.dragged() {
+                            if let Some(pos) = nhk_resp.interact_pointer_pos() {
+                                let nx = ((pos.x - nhk_rect.left()) / nhk_rect.width()).clamp(0.0, 1.0);
+                                let ny = (1.0 - ((pos.y - nhk_rect.top()) / nhk_rect.height())).clamp(0.0, 1.0);
+                                az = -180.0 + nx * 360.0;
+                                el = -30.0 + ny * 120.0;
+
+                                let top = if el <= 0.0 { 0.0 } else { (el / 90.0).clamp(0.0, 1.0) };
+                                let mid = if el < 0.0 { ((el + 30.0) / 30.0).clamp(0.0, 1.0) } else { (1.0 - el / 60.0).clamp(0.0, 1.0) };
+                                let bot = if el < 0.0 { (-el / 30.0).clamp(0.0, 1.0) } else { 0.0 };
+                                let lfe = 0.20_f32;
+
+                                state.node_param_values.insert("azimuth_deg".to_string(), az);
+                                state.node_param_values.insert("elevation_deg".to_string(), el);
+                                state.node_param_values.insert("top_gain".to_string(), top);
+                                state.node_param_values.insert("mid_gain".to_string(), mid);
+                                state.node_param_values.insert("bottom_gain".to_string(), bot);
+                                state.node_param_values.insert("lfe_sub".to_string(), lfe);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_az = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_el = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_az).is_some() { bus.set(pid_az, az); }
+                                    if bus.get(pid_el).is_some() { bus.set(pid_el, el); }
+                                }
+                            }
+                        }
+
+                        // NHK 22.2 Dome Concentric Rings (Center on left half)
+                        let center = egui::pos2(nhk_rect.left() + 38.0, nhk_rect.center().y);
+                        // Middle Layer (10ch, outer ear-level ring)
+                        nhk_painter.circle_stroke(center, 26.0, Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(0, 229, 255, 70)));
+                        // Top Layer (9ch, middle elevation ring)
+                        nhk_painter.circle_stroke(center, 16.0, Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(101, 84, 171, 90)));
+                        // Top Voice of God center ceiling dot
+                        nhk_painter.circle_filled(center, 2.0, Color32::from_rgba_unmultiplied(0, 255, 180, 140));
+
+                        // 10 Middle-layer speaker dots around perimeter
+                        for spk_i in 0..10 {
+                            let spk_ang = spk_i as f32 * std::f32::consts::TAU / 10.0;
+                            let spk_pos = egui::pos2(center.x + spk_ang.sin() * 26.0, center.y - spk_ang.cos() * 26.0 * 0.75);
+                            nhk_painter.circle_filled(spk_pos, 1.4, Color32::from_rgb(0, 229, 255));
+                        }
+
+                        // Azimuth / Elevation Vector Puck
+                        let az_rad = az.to_radians();
+                        let r_proj = ((1.0 - (el + 30.0) / 120.0) * 24.0).clamp(2.0, 26.0);
+                        let puck_pos = egui::pos2(
+                            center.x + az_rad.sin() * r_proj,
+                            center.y - az_rad.cos() * r_proj * 0.75,
+                        );
+                        nhk_painter.line_segment([center, puck_pos], Stroke::new(1.2_f32, Color32::from_rgb(0, 229, 255)));
+                        nhk_painter.circle_filled(puck_pos, 3.8, Color32::from_rgb(0, 255, 200));
+
+                        // Readouts
+                        nhk_painter.text(
+                            egui::pos2(nhk_rect.right() - 6.0, nhk_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("NHK 22.2 DOME\naz: {:.0}° el: {:.0}°\nd: {:.1}m | spr: {:.0}%", az, el, dist, spread),
+                            FontId::proportional(8.0),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+
+                        if nhk_resp.hovered() {
+                            let _ = nhk_resp.on_hover_text(format!(
+                                "NHK 22.2 Super Hi-Vision Hemispherical Spatializer HUD\nAzimuth: {:.1}° | Elevation: {:.1}° | Distance: {:.1}m\nSpread: {:.0}%\n[Drag: Azimuth (X) vs Elevation (Y)]",
+                                az, el, dist, spread
+                            ));
+                        }
+                    } else if is_wfs_array {
+                        // Broadcast Mastering Wave Field Synthesis (WFS) Holographic Linear Acoustic Array Mini Visualizer
+                        let (wfs_resp, wfs_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let wfs_rect = wfs_resp.rect;
+                        wfs_painter.rect_filled(wfs_rect, 2.0, Color32::from_rgb(10, 22, 18));
+
+                        let mut sx = state.node_param_values.get("source_x_m").copied().unwrap_or(0.0);
+                        let mut sy = state.node_param_values.get("source_y_m").copied().unwrap_or(3.5);
+                        let ch_count = state.node_param_values.get("array_elements_count").copied().unwrap_or(64.0);
+                        let alias_hz = state.node_param_values.get("spatial_aliasing_cut").copied().unwrap_or(2200.0);
+
+                        if wfs_resp.dragged() {
+                            if let Some(pos) = wfs_resp.interact_pointer_pos() {
+                                let nx = ((pos.x - wfs_rect.left()) / wfs_rect.width()).clamp(0.0, 1.0);
+                                let ny = (1.0 - ((pos.y - wfs_rect.top()) / wfs_rect.height())).clamp(0.0, 1.0);
+                                sx = -8.0 + nx * 16.0;
+                                sy = -5.0 + ny * 15.0;
+
+                                state.node_param_values.insert("source_x_m".to_string(), sx);
+                                state.node_param_values.insert("source_y_m".to_string(), sy);
+                                state.node_param_values.insert("focused_source_depth_m".to_string(), sy);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_x = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_y = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_x).is_some() { bus.set(pid_x, sx); }
+                                    if bus.get(pid_y).is_some() { bus.set(pid_y, sy); }
+                                }
+                            }
+                        }
+
+                        // Linear Transducer Array Bar (drawn across left half)
+                        let array_y = wfs_rect.top() + 38.0;
+                        let array_x_min = wfs_rect.left() + 10.0;
+                        let array_x_max = wfs_rect.left() + 72.0;
+                        wfs_painter.line_segment(
+                            [egui::pos2(array_x_min, array_y), egui::pos2(array_x_max, array_y)],
+                            Stroke::new(1.8_f32, Color32::from_rgb(0, 255, 180)),
+                        );
+
+                        // 8 Sampled Transducer Dots along array line
+                        for i in 0..8 {
+                            let frac = i as f32 / 7.0;
+                            let dot_x = array_x_min + frac * (array_x_max - array_x_min);
+                            wfs_painter.circle_filled(egui::pos2(dot_x, array_y), 1.5, Color32::from_rgb(0, 255, 220));
+                        }
+
+                        // Virtual Source Puck
+                        let p_norm_x = ((sx + 8.0) / 16.0).clamp(0.0, 1.0);
+                        let p_norm_y = ((sy + 5.0) / 15.0).clamp(0.0, 1.0);
+                        let puck_pos = egui::pos2(
+                            array_x_min + p_norm_x * (array_x_max - array_x_min),
+                            wfs_rect.top() + 8.0 + (1.0 - p_norm_y) * (wfs_rect.height() - 16.0),
+                        );
+
+                        // Wavefront Curved Propagation Arc
+                        let is_focused = sy < 0.0;
+                        let wave_col = if is_focused {
+                            Color32::from_rgba_unmultiplied(255, 171, 0, 70)
+                        } else {
+                            Color32::from_rgba_unmultiplied(0, 255, 180, 60)
+                        };
+                        wfs_painter.circle_stroke(puck_pos, 14.0, Stroke::new(1.0_f32, wave_col));
+                        wfs_painter.circle_stroke(puck_pos, 22.0, Stroke::new(0.8_f32, wave_col));
+
+                        // Virtual Source Indicator
+                        let puck_col = if is_focused { Color32::from_rgb(255, 171, 0) } else { Color32::from_rgb(0, 255, 180) };
+                        wfs_painter.circle_filled(puck_pos, 3.8, puck_col);
+
+                        // Readouts
+                        wfs_painter.text(
+                            egui::pos2(wfs_rect.right() - 6.0, wfs_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("WFS ARRAY ({:.0}-CH)\nx: {:.1}m y: {:.1}m\ncut: {:.0}Hz | {}", ch_count, sx, sy, alias_hz, if is_focused { "FOCUSED" } else { "SYNTH" }),
+                            FontId::proportional(8.0),
+                            puck_col,
+                        );
+
+                        if wfs_resp.hovered() {
+                            let _ = wfs_resp.on_hover_text(format!(
+                                "Wave Field Synthesis (WFS) Acoustic Array HUD\nVirtual X: {:.2}m | Depth Y: {:.2}m\nChannels: {:.0} | Cutoff: {:.0}Hz\nFocus: {}\n[Drag: Virtual Source (X vs Depth Y)]",
+                                sx, sy, ch_count, alias_hz, if is_focused { "FOCUSED (In front)" } else { "BEHIND ARRAY" }
                             ));
                         }
                     } else {

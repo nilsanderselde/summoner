@@ -142,6 +142,10 @@ pub struct ModernInspectorState {
     pub requested_open_atmos_916_hud: bool,
     #[serde(default)]
     pub requested_open_auro3d_hud: bool,
+    #[serde(default)]
+    pub requested_open_nhk222_hud: bool,
+    #[serde(default)]
+    pub requested_open_wfs_array_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -219,6 +223,8 @@ impl Default for ModernInspectorState {
             requested_open_mpegh_3d_hud: false,
             requested_open_atmos_916_hud: false,
             requested_open_auro3d_hud: false,
+            requested_open_nhk222_hud: false,
+            requested_open_wfs_array_hud: false,
         }
     }
 }
@@ -1223,6 +1229,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open interactive Broadcast Mastering Auro-3D 13.1 Tri-Level Height Elevation Spatializer HUD").clicked() {
                     state.requested_open_auro3d_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Nhk222") || active_kind.contains("NHK222") || active_kind == "Nhk222Spatializer" || active_kind == "Nhk222SpatializerView" || active_kind.contains("NhkSpatializer") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🛰 Open NHK 22.2 Super Hi-Vision Spatializer HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 229, 255)))
+                        .fill(Color32::from_rgb(12, 32, 45))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 229, 255)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Broadcast Mastering NHK 22.2 Super Hi-Vision Hemispherical Spatializer HUD").clicked() {
+                    state.requested_open_nhk222_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("WfsArray") || active_kind.contains("WfsAcoustic") || active_kind.contains("WfsPlanar") || active_kind == "WfsArraySpatializerNode" || active_kind == "WfsArraySpatializerView" || active_kind.contains("WaveFieldSynthesis") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🌊 Open WFS Holographic Acoustic Array HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 255, 180)))
+                        .fill(Color32::from_rgb(12, 38, 28))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 255, 180)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open interactive Broadcast Mastering Wave Field Synthesis (WFS) Holographic Linear Array HUD").clicked() {
+                    state.requested_open_wfs_array_hud = true;
                 }
                 ui.add_space(4.0);
             }

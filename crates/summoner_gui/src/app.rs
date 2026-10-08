@@ -1539,6 +1539,14 @@ impl eframe::App for SummonerApp {
                     self.current_view = ViewMode::ModernStudio;
                     self.award_winning_view.open_auro3d_spatializer_hud();
                 }
+                "open_nhk222_spatializer_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_nhk222_spatializer_hud();
+                }
+                "open_wfs_array_spatializer_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_wfs_array_spatializer_hud();
+                }
                 "sfz_convert" | "auto_slice" | "load_preset" | "export_clap" | "toggle_simd" => {
                     println!("Command palette action executed: {}", action);
                 }

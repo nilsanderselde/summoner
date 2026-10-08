@@ -748,6 +748,10 @@ pub struct AwardWinningGuiView {
     pub atmos_916_spatializer_view: crate::views::atmos_916_spatializer_view::Atmos916SpatializerView,
     pub show_auro3d_spatializer_modal: bool,
     pub auro3d_spatializer_view: crate::views::auro3d_spatializer_view::Auro3dSpatializerView,
+    pub show_nhk222_spatializer_modal: bool,
+    pub nhk222_spatializer_view: crate::views::nhk222_spatializer_view::Nhk222SpatializerView,
+    pub show_wfs_array_spatializer_modal: bool,
+    pub wfs_array_spatializer_view: crate::views::wfs_array_spatializer_view::WfsArraySpatializerView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1112,6 +1116,10 @@ impl AwardWinningGuiView {
             atmos_916_spatializer_view: crate::views::atmos_916_spatializer_view::Atmos916SpatializerView::new(),
             show_auro3d_spatializer_modal: false,
             auro3d_spatializer_view: crate::views::auro3d_spatializer_view::Auro3dSpatializerView::new(),
+            show_nhk222_spatializer_modal: false,
+            nhk222_spatializer_view: crate::views::nhk222_spatializer_view::Nhk222SpatializerView::new(),
+            show_wfs_array_spatializer_modal: false,
+            wfs_array_spatializer_view: crate::views::wfs_array_spatializer_view::WfsArraySpatializerView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2021,6 +2029,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_auro3d_hud = false;
             self.open_auro3d_spatializer_hud();
         }
+        if self.inspector_state.requested_open_nhk222_hud || self.device_rack_state.requested_open_nhk222_hud {
+            self.inspector_state.requested_open_nhk222_hud = false;
+            self.device_rack_state.requested_open_nhk222_hud = false;
+            self.open_nhk222_spatializer_hud();
+        }
+        if self.inspector_state.requested_open_wfs_array_hud || self.device_rack_state.requested_open_wfs_array_hud {
+            self.inspector_state.requested_open_wfs_array_hud = false;
+            self.device_rack_state.requested_open_wfs_array_hud = false;
+            self.open_wfs_array_spatializer_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2078,6 +2096,8 @@ impl AwardWinningGuiView {
         self.show_mpegh_3d_modal_window(ui);
         self.show_atmos_916_spatializer_modal_window(ui);
         self.show_auro3d_spatializer_modal_window(ui);
+        self.show_nhk222_spatializer_modal_window(ui);
+        self.show_wfs_array_spatializer_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -12747,6 +12767,197 @@ impl AwardWinningGuiView {
     pub fn is_auro3d_spatializer_hud_open(&self) -> bool {
         self.show_auro3d_spatializer_modal
     }
+
+    #[cfg(feature = "gui")]
+    fn show_nhk222_spatializer_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_nhk222_spatializer_modal {
+            return;
+        }
+
+        let mut is_open = self.show_nhk222_spatializer_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🛰 Broadcast Mastering NHK 22.2 Super Hi-Vision Hemispherical Spatializer HUD")
+            .id(egui::Id::new("nhk222_spatializer_hud_modal"))
+            .open(&mut is_open)
+            .default_size([920.0, 600.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Broadcast Mastering Immersive 22.2 NHK Hemispherical Loudspeaker Dome HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.nhk222_spatializer_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_nhk222_spatializer_modal = is_open;
+        self.sync_nhk222_spatializer_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_nhk222_spatializer_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let az = self.nhk222_spatializer_view.azimuth_deg;
+        let el = self.nhk222_spatializer_view.elevation_deg;
+        let dist = self.nhk222_spatializer_view.distance_m;
+        let spread = self.nhk222_spatializer_view.divergence_spread_pct;
+        let top = self.nhk222_spatializer_view.top_layer_energy;
+        let mid = self.nhk222_spatializer_view.middle_layer_energy;
+        let bot = self.nhk222_spatializer_view.bottom_layer_energy;
+        let lfe = self.nhk222_spatializer_view.lfe_energy;
+
+        self.device_rack_state.node_param_values.insert("azimuth_deg".to_string(), az);
+        self.device_rack_state.node_param_values.insert("elevation_deg".to_string(), el);
+        self.device_rack_state.node_param_values.insert("distance_m".to_string(), dist);
+        self.device_rack_state.node_param_values.insert("spread_pct".to_string(), spread);
+        self.device_rack_state.node_param_values.insert("top_gain".to_string(), top);
+        self.device_rack_state.node_param_values.insert("mid_gain".to_string(), mid);
+        self.device_rack_state.node_param_values.insert("bottom_gain".to_string(), bot);
+        self.device_rack_state.node_param_values.insert("lfe_sub".to_string(), lfe);
+
+        self.inspector_state.node_param_values.insert("azimuth_deg".to_string(), az);
+        self.inspector_state.node_param_values.insert("elevation_deg".to_string(), el);
+        self.inspector_state.node_param_values.insert("distance_m".to_string(), dist);
+        self.inspector_state.node_param_values.insert("spread_pct".to_string(), spread);
+        self.inspector_state.node_param_values.insert("top_gain".to_string(), top);
+        self.inspector_state.node_param_values.insert("mid_gain".to_string(), mid);
+        self.inspector_state.node_param_values.insert("bottom_gain".to_string(), bot);
+        self.inspector_state.node_param_values.insert("lfe_sub".to_string(), lfe);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_az = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_el = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_dist = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_spread = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_az).is_some() { bus.set(pid_az, az); }
+            if bus.get(pid_el).is_some() { bus.set(pid_el, el); }
+            if bus.get(pid_dist).is_some() { bus.set(pid_dist, dist); }
+            if bus.get(pid_spread).is_some() { bus.set(pid_spread, spread); }
+        }
+    }
+
+    pub fn open_nhk222_spatializer_hud(&mut self) {
+        self.show_nhk222_spatializer_modal = true;
+    }
+
+    pub fn close_nhk222_spatializer_hud(&mut self) {
+        self.show_nhk222_spatializer_modal = false;
+    }
+
+    pub fn is_nhk222_spatializer_hud_open(&self) -> bool {
+        self.show_nhk222_spatializer_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_wfs_array_spatializer_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_wfs_array_spatializer_modal {
+            return;
+        }
+
+        let mut is_open = self.show_wfs_array_spatializer_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🌊 Broadcast Mastering Wave Field Synthesis (WFS) Holographic Linear Array HUD")
+            .id(egui::Id::new("wfs_array_spatializer_hud_modal"))
+            .open(&mut is_open)
+            .default_size([920.0, 600.0])
+            .collapsible(false)
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Broadcast Mastering Immersive Wave Field Synthesis Holographic Loudspeaker Array HUD")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.wfs_array_spatializer_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_wfs_array_spatializer_modal = is_open;
+        self.sync_wfs_array_spatializer_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_wfs_array_spatializer_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let sx = self.wfs_array_spatializer_view.source_x_m;
+        let sy = self.wfs_array_spatializer_view.source_y_m;
+        let ch_count = self.wfs_array_spatializer_view.channel_count as f32;
+        let alias_hz = self.wfs_array_spatializer_view.spatial_aliasing_cutoff_hz;
+
+        self.device_rack_state.node_param_values.insert("source_x_m".to_string(), sx);
+        self.device_rack_state.node_param_values.insert("source_y_m".to_string(), sy);
+        self.device_rack_state.node_param_values.insert("array_elements_count".to_string(), ch_count);
+        self.device_rack_state.node_param_values.insert("focused_source_depth_m".to_string(), sy);
+        self.device_rack_state.node_param_values.insert("spatial_aliasing_cut".to_string(), alias_hz);
+
+        self.inspector_state.node_param_values.insert("source_x_m".to_string(), sx);
+        self.inspector_state.node_param_values.insert("source_y_m".to_string(), sy);
+        self.inspector_state.node_param_values.insert("array_elements_count".to_string(), ch_count);
+        self.inspector_state.node_param_values.insert("focused_source_depth_m".to_string(), sy);
+        self.inspector_state.node_param_values.insert("spatial_aliasing_cut".to_string(), alias_hz);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_x = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_y = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_ch = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_al = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_x).is_some() { bus.set(pid_x, sx); }
+            if bus.get(pid_y).is_some() { bus.set(pid_y, sy); }
+            if bus.get(pid_ch).is_some() { bus.set(pid_ch, ch_count); }
+            if bus.get(pid_al).is_some() { bus.set(pid_al, alias_hz); }
+        }
+    }
+
+    pub fn open_wfs_array_spatializer_hud(&mut self) {
+        self.show_wfs_array_spatializer_modal = true;
+    }
+
+    pub fn close_wfs_array_spatializer_hud(&mut self) {
+        self.show_wfs_array_spatializer_modal = false;
+    }
+
+    pub fn is_wfs_array_spatializer_hud_open(&self) -> bool {
+        self.show_wfs_array_spatializer_modal
+    }
+
 
 
     #[cfg(feature = "gui")]
