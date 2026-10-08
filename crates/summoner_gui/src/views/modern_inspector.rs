@@ -178,6 +178,10 @@ pub struct ModernInspectorState {
     pub requested_open_hoa_spatializer_hud: bool,
     #[serde(default)]
     pub requested_open_neural_timbre_morph_hud: bool,
+    #[serde(default)]
+    pub requested_open_neural_radiance_hud: bool,
+    #[serde(default)]
+    pub requested_open_neural_vocal_stylizer_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -273,6 +277,8 @@ impl Default for ModernInspectorState {
             requested_open_ambisonic_radar_hud: false,
             requested_open_hoa_spatializer_hud: false,
             requested_open_neural_timbre_morph_hud: false,
+            requested_open_neural_radiance_hud: false,
+            requested_open_neural_vocal_stylizer_hud: false,
         }
     }
 }
@@ -1457,6 +1463,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open Neural Timbre Morphing Diffusion Vocoder & Resynthesizer HUD").clicked() {
                     state.requested_open_neural_timbre_morph_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("NeuralRadiance") || active_kind.contains("NeRFAcoustic") || active_kind == "NeuralRadianceView" || active_kind == "NeuralRadianceNode" || active_kind.contains("ContinuousRadiance") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🌐 Open Neural Radiance Field HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(157, 78, 221)))
+                        .fill(Color32::from_rgb(26, 14, 48))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(157, 78, 221)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Neural Acoustic HRTF/BRIR Continuous Radiance Field HUD").clicked() {
+                    state.requested_open_neural_radiance_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("NeuralVocalStylizer") || active_kind.contains("VocalStylizer") || active_kind == "NeuralVocalStylizerView" || active_kind == "NeuralVocalStylizerNode" || active_kind.contains("VocalExpression") || active_kind.contains("MelismaResynthesizer") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🎤 Open Neural Vocal Stylizer HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(255, 93, 143)))
+                        .fill(Color32::from_rgb(48, 14, 28))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 93, 143)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Neural Polyphonic Vocal Stylizer & Microtonal Ornament Resynthesizer HUD").clicked() {
+                    state.requested_open_neural_vocal_stylizer_hud = true;
                 }
                 ui.add_space(4.0);
             }

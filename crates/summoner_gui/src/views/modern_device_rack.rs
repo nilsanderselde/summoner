@@ -193,6 +193,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_hoa_spatializer_hud: bool,
     #[serde(default)]
     pub requested_open_neural_timbre_morph_hud: bool,
+    #[serde(default)]
+    pub requested_open_neural_radiance_hud: bool,
+    #[serde(default)]
+    pub requested_open_neural_vocal_stylizer_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -278,6 +282,8 @@ impl Default for ModernDeviceRackState {
             requested_open_ambisonic_radar_hud: false,
             requested_open_hoa_spatializer_hud: false,
             requested_open_neural_timbre_morph_hud: false,
+            requested_open_neural_radiance_hud: false,
+            requested_open_neural_vocal_stylizer_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -986,6 +992,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_ambisonic_radar = cur_selection.contains("AmbisonicRadar") || cur_selection == "AmbisonicRadarView" || cur_selection.contains("AmbisonicPanner") || cur_selection == "AmbisonicRadarNode" || cur_selection.contains("SurroundPanner");
                     let is_hoa_spatializer = cur_selection.contains("HoaSpatializer") || cur_selection == "HoaSpatializerView" || cur_selection == "HoaSpatializerNode" || cur_selection.contains("DolbyAtmos714");
                     let is_neural_timbre_morph = cur_selection.contains("NeuralTimbreMorph") || cur_selection.contains("TimbreMorph") || cur_selection == "NeuralTimbreMorphView" || cur_selection == "NeuralTimbreMorphNode" || cur_selection == "NeuralTimbreMorphSynthesizer" || cur_selection.contains("DiffusionVocoder");
+                    let is_neural_radiance = cur_selection.contains("NeuralRadiance") || cur_selection.contains("NeRFAcoustic") || cur_selection == "NeuralRadianceView" || cur_selection == "NeuralRadianceNode" || cur_selection.contains("ContinuousRadiance");
+                    let is_neural_vocal_stylizer = cur_selection.contains("NeuralVocalStylizer") || cur_selection.contains("VocalStylizer") || cur_selection == "NeuralVocalStylizerView" || cur_selection == "NeuralVocalStylizerNode" || cur_selection.contains("VocalExpression") || cur_selection.contains("MelismaResynthesizer");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1270,6 +1278,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("🧬 Timbre HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(180, 90, 255))).on_hover_text("Open Neural Timbre Morphing Diffusion Vocoder & Resynthesizer HUD").clicked()
                     {
                         state.requested_open_neural_timbre_morph_hud = true;
+                    } else if is_neural_radiance
+                        && ui.button(RichText::new("🌐 Radiance HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(157, 78, 221))).on_hover_text("Open Neural Acoustic HRTF/BRIR Continuous Radiance Field HUD").clicked()
+                    {
+                        state.requested_open_neural_radiance_hud = true;
+                    } else if is_neural_vocal_stylizer
+                        && ui.button(RichText::new("🎤 Stylizer HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 93, 143))).on_hover_text("Open Neural Polyphonic Vocal Stylizer & Microtonal Ornament Resynthesizer HUD").clicked()
+                    {
+                        state.requested_open_neural_vocal_stylizer_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2106,6 +2122,8 @@ fn show_pro_parameter_drawer(
                     let is_ambisonic_radar = dev_kind.contains("AmbisonicRadar") || dev_kind == "AmbisonicRadarView" || dev_kind.contains("AmbisonicPanner") || dev_kind == "AmbisonicRadarNode" || dev_kind.contains("SurroundPanner");
                     let is_hoa_spatializer = dev_kind.contains("HoaSpatializer") || dev_kind == "HoaSpatializerView" || dev_kind == "HoaSpatializerNode" || dev_kind.contains("DolbyAtmos714");
                     let is_neural_timbre_morph = dev_kind.contains("NeuralTimbreMorph") || dev_kind.contains("TimbreMorph") || dev_kind == "NeuralTimbreMorphView" || dev_kind == "NeuralTimbreMorphNode" || dev_kind == "NeuralTimbreMorphSynthesizer" || dev_kind.contains("DiffusionVocoder");
+                    let is_neural_radiance = dev_kind.contains("NeuralRadiance") || dev_kind.contains("NeRFAcoustic") || dev_kind == "NeuralRadianceView" || dev_kind == "NeuralRadianceNode" || dev_kind.contains("ContinuousRadiance");
+                    let is_neural_vocal_stylizer = dev_kind.contains("NeuralVocalStylizer") || dev_kind.contains("VocalStylizer") || dev_kind == "NeuralVocalStylizerView" || dev_kind == "NeuralVocalStylizerNode" || dev_kind.contains("VocalExpression") || dev_kind.contains("MelismaResynthesizer");
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -7603,6 +7621,185 @@ fn show_pro_parameter_drawer(
                             let _ = timb_resp.on_hover_text(format!(
                                 "Neural Timbre Morphing Diffusion Vocoder HUD\nLatent Z1: {:+.2} | Z2: {:+.2} | Tracked F0: {:.1} Hz | Morph: {:.0}%\n[Drag: Latent Timbre Vector Puck]",
                                 z1, z2, f0, morph
+                            ));
+                        }
+                    } else if is_neural_radiance {
+                        // Neural Continuous Spatial Radiance Field Mini Visualizer
+                        let (rad_resp, rad_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let rad_rect = rad_resp.rect;
+                        rad_painter.rect_filled(rad_rect, 2.0, Color32::from_rgb(10, 14, 24));
+
+                        let mut head = state.node_param_values.get("heading_deg").copied().unwrap_or(30.0);
+                        let mut dist = state.node_param_values.get("distance_m").copied().unwrap_or(3.5);
+                        let latent = state.node_param_values.get("latent_dim").copied().unwrap_or(256.0) as usize;
+                        let clarity = state.node_param_values.get("directivity_clarity_db").copied().unwrap_or(14.5);
+
+                        let rcx = rad_rect.left() + 34.0;
+                        let rcy = rad_rect.center().y;
+                        let max_r = 24.0_f32;
+
+                        if rad_resp.dragged() {
+                            if let Some(pos) = rad_resp.interact_pointer_pos() {
+                                let dx = pos.x - rcx;
+                                let dy = rcy - pos.y;
+                                let h = (dx.atan2(dy).to_degrees()).clamp(-180.0, 180.0);
+                                let d = (((dx * dx + dy * dy).sqrt() / max_r).clamp(0.0, 1.0) * 11.5 + 0.5).clamp(0.5, 12.0);
+                                head = h;
+                                dist = d;
+                                state.node_param_values.insert("heading_deg".to_string(), head);
+                                state.node_param_values.insert("distance_m".to_string(), dist);
+                                if let Some(bus) = param_bus {
+                                    let pid_head = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_dist = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    bus.set(pid_head, head);
+                                    bus.set(pid_dist, dist);
+                                }
+                            }
+                        }
+
+                        // Concentric field rings & crosshairs
+                        for r_step in [0.4, 0.7, 1.0] {
+                            rad_painter.circle_stroke(
+                                egui::pos2(rcx, rcy),
+                                max_r * r_step,
+                                Stroke::new(0.8_f32, Color32::from_rgba_unmultiplied(157, 78, 221, 60)),
+                            );
+                        }
+                        rad_painter.line_segment(
+                            [egui::pos2(rcx - max_r, rcy), egui::pos2(rcx + max_r, rcy)],
+                            Stroke::new(0.6_f32, Color32::from_rgba_unmultiplied(157, 78, 221, 50)),
+                        );
+                        rad_painter.line_segment(
+                            [egui::pos2(rcx, rcy - max_r), egui::pos2(rcx, rcy + max_r)],
+                            Stroke::new(0.6_f32, Color32::from_rgba_unmultiplied(157, 78, 221, 50)),
+                        );
+
+                        // 8-direction acoustic radiance rays preview
+                        let h_rad = head.to_radians();
+                        for i in 0..8 {
+                            let ray_angle = i as f32 * (std::f32::consts::TAU / 8.0);
+                            let angle_diff = (ray_angle - h_rad).cos();
+                            let len_norm = ((1.0 + angle_diff) * 0.5).powf(1.5).clamp(0.15, 1.0);
+                            let rx = rcx + ray_angle.sin() * (max_r * len_norm);
+                            let ry = rcy - ray_angle.cos() * (max_r * len_norm);
+                            rad_painter.line_segment(
+                                [egui::pos2(rcx, rcy), egui::pos2(rx, ry)],
+                                Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(157, 78, 221, 120)),
+                            );
+                        }
+
+                        // Center origin listener
+                        rad_painter.circle_filled(egui::pos2(rcx, rcy), 2.5, Color32::from_rgb(0, 229, 255));
+
+                        // Draggable Radiance Puck
+                        let norm_r = ((dist - 0.5) / 11.5).clamp(0.05, 1.0) * max_r;
+                        let rpx = rcx + head.to_radians().sin() * norm_r;
+                        let rpy = rcy - head.to_radians().cos() * norm_r;
+                        rad_painter.circle_filled(egui::pos2(rpx, rpy), 3.5, Color32::from_rgb(157, 78, 221));
+                        rad_painter.circle_stroke(
+                            egui::pos2(rpx, rpy),
+                            5.5,
+                            Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(255, 255, 255, 180)),
+                        );
+
+                        // Readout
+                        rad_painter.text(
+                            egui::pos2(rad_rect.right() - 4.0, rad_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("NEURAL RADIANCE\nHead: {:+.0}° | Dist: {:.1}m\nLatent: {} | Clar: {:.1}dB", head, dist, latent, clarity),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(157, 78, 221),
+                        );
+
+                        if rad_resp.hovered() {
+                            let _ = rad_resp.on_hover_text(format!(
+                                "Neural Acoustic Continuous Spatial Radiance Field HUD\nHeading: {:+.1}° | Distance: {:.2}m | Latent Dim: {}\nDirectivity Clarity: {:.1} dB\n[Drag: Heading / Distance Radiance Puck]",
+                                head, dist, latent, clarity
+                            ));
+                        }
+                    } else if is_neural_vocal_stylizer {
+                        // Neural Polyphonic Vocal Stylizer Mini Visualizer
+                        let (voc_resp, voc_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let voc_rect = voc_resp.rect;
+                        voc_painter.rect_filled(voc_rect, 2.0, Color32::from_rgb(18, 12, 22));
+
+                        let mut blend = state.node_param_values.get("style_blend_pct").copied().unwrap_or(0.85);
+                        let mut ornm = state.node_param_values.get("ornament_depth_pct").copied().unwrap_or(0.45);
+                        let v_rate = state.node_param_values.get("vibrato_rate_hz").copied().unwrap_or(5.8);
+                        let v_depth = state.node_param_values.get("vibrato_depth_cents").copied().unwrap_or(95.0);
+                        let snap = state.node_param_values.get("microtonal_snap_cents").copied().unwrap_or(25.0);
+
+                        let vcx = voc_rect.left() + 34.0;
+                        let vcy = voc_rect.center().y;
+                        let max_box = 24.0_f32;
+
+                        if voc_resp.dragged() {
+                            if let Some(pos) = voc_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - (vcx - max_box)) / (max_box * 2.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - (vcy - max_box)) / (max_box * 2.0))).clamp(0.0, 1.0);
+                                blend = norm_x;
+                                ornm = norm_y;
+                                state.node_param_values.insert("style_blend_pct".to_string(), blend);
+                                state.node_param_values.insert("ornament_depth_pct".to_string(), ornm);
+                                if let Some(bus) = param_bus {
+                                    let pid_blend = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_ornm = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    bus.set(pid_blend, blend);
+                                    bus.set(pid_ornm, ornm);
+                                }
+                            }
+                        }
+
+                        // Expression grid boundary & axes
+                        let expr_rect = egui::Rect::from_center_size(egui::pos2(vcx, vcy), egui::vec2(max_box * 2.0, max_box * 2.0));
+                        voc_painter.rect_stroke(expr_rect, 2.0, Stroke::new(1.0_f32, Color32::from_rgb(255, 93, 143)));
+                        voc_painter.line_segment(
+                            [egui::pos2(expr_rect.left(), vcy), egui::pos2(expr_rect.right(), vcy)],
+                            Stroke::new(0.6_f32, Color32::from_rgba_unmultiplied(255, 93, 143, 80)),
+                        );
+                        voc_painter.line_segment(
+                            [egui::pos2(vcx, expr_rect.top()), egui::pos2(vcx, expr_rect.bottom())],
+                            Stroke::new(0.6_f32, Color32::from_rgba_unmultiplied(255, 93, 143, 80)),
+                        );
+
+                        // Stylizer Puck
+                        let px = expr_rect.left() + blend.clamp(0.0, 1.0) * (max_box * 2.0);
+                        let py = expr_rect.bottom() - ornm.clamp(0.0, 1.0) * (max_box * 2.0);
+                        voc_painter.circle_filled(egui::pos2(px, py), 3.5, Color32::from_rgb(255, 93, 143));
+                        voc_painter.circle_stroke(
+                            egui::pos2(px, py),
+                            5.5,
+                            Stroke::new(0.8_f32, Color32::from_rgba_unmultiplied(255, 255, 255, 160)),
+                        );
+
+                        // 6-bar expression radar preview
+                        let bar_x_start = voc_rect.left() + 74.0;
+                        let bar_bottom = voc_rect.bottom() - 10.0;
+                        let env_heights = [ornm * 0.9, blend * 0.95, blend * 0.85, 0.25, 0.35, 0.88];
+                        for (b, base_h) in env_heights.iter().enumerate() {
+                            let bh = (base_h.clamp(0.1, 1.0)) * 26.0;
+                            let bx = bar_x_start + b as f32 * 4.5;
+                            let col = Color32::from_rgb(255, 93, 143);
+                            voc_painter.rect_filled(
+                                egui::Rect::from_min_max(egui::pos2(bx, bar_bottom - bh), egui::pos2(bx + 3.0, bar_bottom)),
+                                0.5,
+                                col,
+                            );
+                        }
+
+                        // Readout
+                        voc_painter.text(
+                            egui::pos2(voc_rect.right() - 4.0, voc_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("VOCAL STYLIZER\nBlend: {:.0}% | Ornm: {:.0}%\nVib: {:.1}Hz (±{:.0}c)\nSnap: {:.0}c", blend * 100.0, ornm * 100.0, v_rate, v_depth, snap),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(255, 93, 143),
+                        );
+
+                        if voc_resp.hovered() {
+                            let _ = voc_resp.on_hover_text(format!(
+                                "Neural Polyphonic Vocal Stylizer & Microtonal Ornament HUD\nStyle Blend: {:.0}% | Ornament: {:.0}%\nVibrato: {:.1} Hz (±{:.0} cents) | Microtonal Snap: {:.0} cents\n[Drag: Style Blend / Ornament Depth Puck]",
+                                blend * 100.0, ornm * 100.0, v_rate, v_depth, snap
                             ));
                         }
                     } else {

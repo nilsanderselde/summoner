@@ -561,4 +561,23 @@ impl NeuralVocalStylizerView {
             Color32::from_rgb(0, 255, 180),
         );
     }
+
+    #[cfg(feature = "gui")]
+    pub fn show(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
+    }
+
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        format!(
+            "--- NEURAL VOCAL EXPRESSION STYLIZER & RESYNTHESIZER HUD [PASS] ---\nModel: {:?} | Blend: {:.0}% | Ornament: {:.0}% | Vibrato: {:.1}Hz (±{:.0}c) | Snap: {:.0}c\n{}",
+            self.vocal_model,
+            self.style_blend_pct * 100.0,
+            self.ornament_depth_pct * 100.0,
+            self.vibrato_rate_hz,
+            self.vibrato_depth_cents,
+            self.microtonal_snap_cents,
+            self.render_ascii(80, 24).join("\n")
+        )
+    }
 }
+

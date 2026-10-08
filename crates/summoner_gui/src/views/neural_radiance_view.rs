@@ -508,4 +508,22 @@ impl NeuralRadianceView {
             Color32::from_rgb(0, 255, 180),
         );
     }
+
+    #[cfg(feature = "gui")]
+    pub fn show(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
+    }
+
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        format!(
+            "--- NEURAL CONTINUOUS SPATIAL RADIANCE FIELD HUD [PASS] ---\nModel: {:?} | Heading: {:.1}° | Dist: {:.2}m | Latent: {} | Directivity: {:.1}dB\n{}",
+            self.model,
+            self.heading_deg,
+            self.distance_m,
+            self.latent_dim,
+            self.directivity_clarity_db,
+            self.render_ascii(80, 24).join("\n")
+        )
+    }
 }
+

@@ -737,6 +737,18 @@ impl CommandPalette {
                 action_id: "open_neural_timbre_morph_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Continuous Spatial Neural Radiance Field & HRTF/BRIR HUD".into(),
+                category: "Spatial".into(),
+                action_id: "open_neural_radiance_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Neural Polyphonic Vocal Stylizer & Microtonal Ornament HUD".into(),
+                category: "Synthesis".into(),
+                action_id: "open_neural_vocal_stylizer_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

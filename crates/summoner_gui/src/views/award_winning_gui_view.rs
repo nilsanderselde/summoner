@@ -784,6 +784,10 @@ pub struct AwardWinningGuiView {
     pub hoa_spatializer_view: crate::views::hoa_spatializer_view::HoaSpatializerView,
     pub show_neural_timbre_morph_modal: bool,
     pub neural_timbre_morph_view: crate::views::neural_timbre_morph_view::NeuralTimbreMorphView,
+    pub show_neural_radiance_modal: bool,
+    pub neural_radiance_view: crate::views::neural_radiance_view::NeuralRadianceView,
+    pub show_neural_vocal_stylizer_modal: bool,
+    pub neural_vocal_stylizer_view: crate::views::neural_vocal_stylizer_view::NeuralVocalStylizerView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1184,6 +1188,10 @@ impl AwardWinningGuiView {
             hoa_spatializer_view: crate::views::hoa_spatializer_view::HoaSpatializerView::new(),
             show_neural_timbre_morph_modal: false,
             neural_timbre_morph_view: crate::views::neural_timbre_morph_view::NeuralTimbreMorphView::new(),
+            show_neural_radiance_modal: false,
+            neural_radiance_view: crate::views::neural_radiance_view::NeuralRadianceView::new(),
+            show_neural_vocal_stylizer_modal: false,
+            neural_vocal_stylizer_view: crate::views::neural_vocal_stylizer_view::NeuralVocalStylizerView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2183,6 +2191,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_neural_timbre_morph_hud = false;
             self.open_neural_timbre_morph_hud();
         }
+        if self.inspector_state.requested_open_neural_radiance_hud || self.device_rack_state.requested_open_neural_radiance_hud {
+            self.inspector_state.requested_open_neural_radiance_hud = false;
+            self.device_rack_state.requested_open_neural_radiance_hud = false;
+            self.open_neural_radiance_hud();
+        }
+        if self.inspector_state.requested_open_neural_vocal_stylizer_hud || self.device_rack_state.requested_open_neural_vocal_stylizer_hud {
+            self.inspector_state.requested_open_neural_vocal_stylizer_hud = false;
+            self.device_rack_state.requested_open_neural_vocal_stylizer_hud = false;
+            self.open_neural_vocal_stylizer_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2258,6 +2276,8 @@ impl AwardWinningGuiView {
         self.show_ambisonic_radar_modal_window(ui);
         self.show_hoa_spatializer_modal_window(ui);
         self.show_neural_timbre_morph_modal_window(ui);
+        self.show_neural_radiance_modal_window(ui);
+        self.show_neural_vocal_stylizer_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -14696,6 +14716,202 @@ impl AwardWinningGuiView {
 
     pub fn is_neural_timbre_morph_hud_open(&self) -> bool {
         self.show_neural_timbre_morph_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_neural_radiance_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_neural_radiance_modal {
+            return;
+        }
+
+        let mut is_open = self.show_neural_radiance_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🌐 Continuous Spatial Neural Radiance Field & HRTF/BRIR HUD")
+            .id(egui::Id::new("neural_radiance_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(820.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Neural Acoustic Room Transfer Function Continuous Spatial Radiance Field HUD (Milestones 33 & 35)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.neural_radiance_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_neural_radiance_modal = is_open;
+        self.sync_neural_radiance_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_neural_radiance_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let head = self.neural_radiance_view.heading_deg;
+        let dist = self.neural_radiance_view.distance_m;
+        let l_dim = self.neural_radiance_view.latent_dim as f32;
+        let alpha = self.neural_radiance_view.absorption_alpha;
+        let clar = self.neural_radiance_view.directivity_clarity_db;
+        let lat = self.neural_radiance_view.rendering_latency_ms;
+
+        self.device_rack_state.node_param_values.insert("heading_deg".to_string(), head);
+        self.device_rack_state.node_param_values.insert("distance_m".to_string(), dist);
+        self.device_rack_state.node_param_values.insert("latent_dim".to_string(), l_dim);
+        self.device_rack_state.node_param_values.insert("absorption_alpha".to_string(), alpha);
+        self.device_rack_state.node_param_values.insert("directivity_clarity_db".to_string(), clar);
+        self.device_rack_state.node_param_values.insert("rendering_latency_ms".to_string(), lat);
+
+        self.inspector_state.node_param_values.insert("heading_deg".to_string(), head);
+        self.inspector_state.node_param_values.insert("distance_m".to_string(), dist);
+        self.inspector_state.node_param_values.insert("latent_dim".to_string(), l_dim);
+        self.inspector_state.node_param_values.insert("absorption_alpha".to_string(), alpha);
+        self.inspector_state.node_param_values.insert("directivity_clarity_db".to_string(), clar);
+        self.inspector_state.node_param_values.insert("rendering_latency_ms".to_string(), lat);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_head = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_dist = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_ldim = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_alpha = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_clar = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_lat = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+
+            if bus.get(pid_head).is_some() { bus.set(pid_head, head); }
+            if bus.get(pid_dist).is_some() { bus.set(pid_dist, dist); }
+            if bus.get(pid_ldim).is_some() { bus.set(pid_ldim, l_dim); }
+            if bus.get(pid_alpha).is_some() { bus.set(pid_alpha, alpha); }
+            if bus.get(pid_clar).is_some() { bus.set(pid_clar, clar); }
+            if bus.get(pid_lat).is_some() { bus.set(pid_lat, lat); }
+        }
+    }
+
+    pub fn open_neural_radiance_hud(&mut self) {
+        self.show_neural_radiance_modal = true;
+    }
+
+    pub fn close_neural_radiance_hud(&mut self) {
+        self.show_neural_radiance_modal = false;
+    }
+
+    pub fn is_neural_radiance_hud_open(&self) -> bool {
+        self.show_neural_radiance_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_neural_vocal_stylizer_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_neural_vocal_stylizer_modal {
+            return;
+        }
+
+        let mut is_open = self.show_neural_vocal_stylizer_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎤 Neural Polyphonic Vocal Stylizer & Microtonal Ornament HUD")
+            .id(egui::Id::new("neural_vocal_stylizer_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(820.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Neural Polyphonic Vocal Expression Stylizer & Microtonal Ornament Resynthesizer HUD (Milestones 33 & 36)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.neural_vocal_stylizer_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_neural_vocal_stylizer_modal = is_open;
+        self.sync_neural_vocal_stylizer_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_neural_vocal_stylizer_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let blend = self.neural_vocal_stylizer_view.style_blend_pct;
+        let ornm = self.neural_vocal_stylizer_view.ornament_depth_pct;
+        let v_rate = self.neural_vocal_stylizer_view.vibrato_rate_hz;
+        let v_depth = self.neural_vocal_stylizer_view.vibrato_depth_cents;
+        let snap = self.neural_vocal_stylizer_view.microtonal_snap_cents;
+        let melisma = self.neural_vocal_stylizer_view.melisma_rate_hz;
+
+        self.device_rack_state.node_param_values.insert("style_blend_pct".to_string(), blend);
+        self.device_rack_state.node_param_values.insert("ornament_depth_pct".to_string(), ornm);
+        self.device_rack_state.node_param_values.insert("vibrato_rate_hz".to_string(), v_rate);
+        self.device_rack_state.node_param_values.insert("vibrato_depth_cents".to_string(), v_depth);
+        self.device_rack_state.node_param_values.insert("microtonal_snap_cents".to_string(), snap);
+        self.device_rack_state.node_param_values.insert("melisma_rate_hz".to_string(), melisma);
+
+        self.inspector_state.node_param_values.insert("style_blend_pct".to_string(), blend);
+        self.inspector_state.node_param_values.insert("ornament_depth_pct".to_string(), ornm);
+        self.inspector_state.node_param_values.insert("vibrato_rate_hz".to_string(), v_rate);
+        self.inspector_state.node_param_values.insert("vibrato_depth_cents".to_string(), v_depth);
+        self.inspector_state.node_param_values.insert("microtonal_snap_cents".to_string(), snap);
+        self.inspector_state.node_param_values.insert("melisma_rate_hz".to_string(), melisma);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_blend = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_ornm = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_vrate = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_vdepth = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_snap = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_melisma = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+
+            if bus.get(pid_blend).is_some() { bus.set(pid_blend, blend); }
+            if bus.get(pid_ornm).is_some() { bus.set(pid_ornm, ornm); }
+            if bus.get(pid_vrate).is_some() { bus.set(pid_vrate, v_rate); }
+            if bus.get(pid_vdepth).is_some() { bus.set(pid_vdepth, v_depth); }
+            if bus.get(pid_snap).is_some() { bus.set(pid_snap, snap); }
+            if bus.get(pid_melisma).is_some() { bus.set(pid_melisma, melisma); }
+        }
+    }
+
+    pub fn open_neural_vocal_stylizer_hud(&mut self) {
+        self.show_neural_vocal_stylizer_modal = true;
+    }
+
+    pub fn close_neural_vocal_stylizer_hud(&mut self) {
+        self.show_neural_vocal_stylizer_modal = false;
+    }
+
+    pub fn is_neural_vocal_stylizer_hud_open(&self) -> bool {
+        self.show_neural_vocal_stylizer_modal
     }
 
 

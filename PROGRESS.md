@@ -1,6 +1,6 @@
 # Summoner DAW — Product Readiness & Shippability Tracker
 > **Current Shippability Score:** 10.0 / 10  
-> **Status:** Production Ready Release Candidate (Turn #85 / Sprint Turn #11)  
+> **Status:** Production Ready Release Candidate (Turn #86 / Sprint Turn #12 — Sprint Review)  
 > **Authoritative Root:** `PROGRESS.md`  
 > **License:** AGPLv3
 
@@ -2298,3 +2298,36 @@ Product Management has conducted a comprehensive readiness audit:
   - Feature tests: 8 passed in 0.07s (`cargo test -p summoner_gui --features gui -- tier149_turn85`).
   - Pure unit tests: 329 passed in 0.23s (`cargo test -p summoner_gui --lib`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
+
+### Turn #86 (Sprint Turn #12 — Sprint Review) — Continuous Spatial Neural Radiance Field & HRTF/BRIR HUD and Neural Polyphonic Vocal Stylizer & Microtonal Ornament Resynthesizer HUD Convergence (Milestones 33, 35 & 36)
+- [x] Immersive Continuous Spatial Neural Radiance Field & Neural Polyphonic Vocal Stylizer HUDs Integration:
+  - Integrated `NeuralRadianceView` (Neural Acoustic Room Transfer Function HRTF/BRIR Continuous Spatial Neural Radiance Field HUD: 5 Radiance Field Models [Instant NeRF Hash Grid, Continuous Field HRIR Implicit SH, 6-DoF Binaural BRIR Radiance, Waveguide Neural FDTD Mesh, Diffusion Spatial Impulse Field], Heading $[-180.0..+180.0^\circ]$, Distance $[0.5..12.0\text{m}]$, Latent Dimension $[128..512]$, Absorption coefficient $\alpha$ $[0.15..0.65]$, Directivity clarity $[2.0..26.0\text{dB}]$, Rendering latency $[0.5..5.0\text{ms}]$, 8-direction cardinal acoustic radiance ray simulation, and Touch-Draggable Radiance Puck with $\ge 44 \times 44\text{pt}$ bounding target) and `NeuralVocalStylizerView` (Neural Polyphonic Vocal Expression Stylizer & Microtonal Ornament Resynthesizer HUD: 5 Vocal Style Models [Bel Canto Opera, Contemporary Pop Belt, Bulgarian Choir Open Throat, Tuvan Throat Kargyraa, Gospel Melisma Expressive], Style Blend $[0..100\%]$, Ornament Depth $[0..100\%]$, Melisma Run Rate $[1.0..12.0\text{Hz}]$, Vibrato Rate $[3.0..9.0\text{Hz}]$, Vibrato Depth $[0..150\text{ cents}]$, Microtonal Quantize Snap $[5..100\text{ cents}]$, 6-axis expression feature radar [Melisma, Vibrato, Singer's Formant, Subharmonic, Breathiness, Intonation], and Touch-Draggable Stylizer Puck with $\ge 44 \times 44\text{pt}$ bounding target) into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/neural_radiance_view.rs` & `neural_vocal_stylizer_view.rs`):
+  - In `NeuralRadianceView`: added `show(&mut self, ui: &mut egui::Ui)` delegating to `ui(ui)` and `render_ascii_snapshot_str() -> String` with model metadata banner.
+  - In `NeuralVocalStylizerView`: added `show(&mut self, ui: &mut egui::Ui)` delegating to `ui(ui)` and `render_ascii_snapshot_str() -> String` with vocal style metadata banner.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_neural_radiance_modal: bool`, `neural_radiance_view: NeuralRadianceView`, `show_neural_vocal_stylizer_modal: bool`, and `neural_vocal_stylizer_view: NeuralVocalStylizerView`.
+  - Added dedicated modal windows `show_neural_radiance_modal_window` and `show_neural_vocal_stylizer_modal_window` with responsive styling, WCAG AAA contrast, and $\ge 44 \times 44\text{pt}$ touch bounds.
+  - Added public lifecycle methods: `open_neural_radiance_hud()`, `close_neural_radiance_hud()`, `is_neural_radiance_hud_open()`, `open_neural_vocal_stylizer_hud()`, `close_neural_vocal_stylizer_hud()`, `is_neural_vocal_stylizer_hud_open()`.
+  - Real-time parameter sync bridges (`sync_neural_radiance_hud_state` and `sync_neural_vocal_stylizer_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_neural_radiance_hud: bool` and `requested_open_neural_vocal_stylizer_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🌐 Open Neural Radiance Field HUD]` and `[🎤 Open Neural Vocal Stylizer HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header `[🌐 Radiance HUD]` / `[🎤 Stylizer HUD]` in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Neural Radiance: Concentric field rings, crosshairs, 8-cardinal acoustic radiance ray vectors, center origin listener, draggable radiance puck updating heading and distance, live readout, and lock-free `ParamBus` slot dispatch.
+    * Neural Vocal Stylizer: 2D expression coordinate bounding box, horizontal/vertical axes, draggable stylizer puck updating style blend and ornament depth, 6-bar expression radar preview, live readout, and lock-free `ParamBus` slot dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_neural_radiance_hud` under `"Spatial"` and `open_neural_vocal_stylizer_hud` under `"Synthesis"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_neural_radiance_hud()` and `open_neural_vocal_stylizer_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier150_turn86_tests.rs`:
+    * Pure tests: view initialization, coordinate normalizations (heading, distance, style blend, ornament depth), model switching across all 5 profiles for both views, 8-ray acoustic radiance simulation, 6-axis expression radar, touch puck hit testing ($\ge 44 \times 44\text{pt}$ bounding targets), channel isolation across tracks/slots, deterministic ASCII snapshots with metadata banners.
+    * GUI tests: modal window lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch without allocations, trigger button propagation from rack and inspector, command palette action verification.
+  - Registered `tier150_turn86_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Feature tests: 8 passed in 0.07s (`cargo test -p summoner_gui --features gui -- tier150_turn86`).
+  - Pure unit tests: 329 passed in 0.22s (`cargo test -p summoner_gui --lib`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
+
