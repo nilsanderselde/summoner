@@ -57,6 +57,16 @@ impl LatentArchitecture {
             Self::SpectralFlow => 99.2,
         }
     }
+
+    pub fn architecture_name(&self) -> &'static str {
+        match self {
+            Self::VaeContinuous => "VAE CONTINUOUS",
+            Self::TransformerDyn => "TRANSFORMER DYN",
+            Self::DiffusionRes => "DIFFUSION RES",
+            Self::Hypersphere4D => "HYPERSPHERE 4D",
+            Self::SpectralFlow => "SPECTRAL FLOW",
+        }
+    }
 }
 
 /// Neural Wavetable Morphing Synthesizer View HUD (Step 1524).
@@ -573,5 +583,31 @@ impl NeuralWavetableView {
             egui::FontId::proportional(12.0),
             Color32::from_rgb(0, 255, 180),
         );
+    }
+
+    pub fn set_architecture(&mut self, arch: LatentArchitecture) {
+        self.architecture = arch;
+        self.morph_speed_hz = arch.default_morph_speed_hz();
+        self.orbit_radius = arch.default_orbit_radius();
+        self.update_neural_calculations();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
+    }
+
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        format!(
+            "--- NEURAL WAVETABLE SYNTHESIS & 3D LATENT TRAJECTORY HUD [PASS] ---\nArchitecture: {:?} | Latent Z: ({:.2}, {:.2}, {:.2}) | Speed: {:.2}Hz | Radius: {:.2} | Quality: {:.1}%\n{}",
+            self.architecture,
+            self.latent_z.0,
+            self.latent_z.1,
+            self.latent_z.2,
+            self.morph_speed_hz,
+            self.orbit_radius,
+            self.reconstruction_quality_pct,
+            self.render_ascii(80, 24).join("\n")
+        )
     }
 }

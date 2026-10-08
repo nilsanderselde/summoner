@@ -792,6 +792,10 @@ pub struct AwardWinningGuiView {
     pub neural_speech_to_singing_view: crate::views::neural_speech_to_singing_view::NeuralSpeechToSingingView,
     pub show_neural_choir_formant_modal: bool,
     pub neural_choir_formant_view: crate::views::neural_choir_formant_view::NeuralChoirFormantView,
+    pub show_neural_vocoder_morph_modal: bool,
+    pub neural_vocoder_morph_view: crate::views::neural_vocoder_morph_view::NeuralVocoderMorphView,
+    pub show_neural_wavetable_modal: bool,
+    pub neural_wavetable_view: crate::views::neural_wavetable_view::NeuralWavetableView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1200,6 +1204,10 @@ impl AwardWinningGuiView {
             neural_speech_to_singing_view: crate::views::neural_speech_to_singing_view::NeuralSpeechToSingingView::new(),
             show_neural_choir_formant_modal: false,
             neural_choir_formant_view: crate::views::neural_choir_formant_view::NeuralChoirFormantView::new(),
+            show_neural_vocoder_morph_modal: false,
+            neural_vocoder_morph_view: crate::views::neural_vocoder_morph_view::NeuralVocoderMorphView::new(),
+            show_neural_wavetable_modal: false,
+            neural_wavetable_view: crate::views::neural_wavetable_view::NeuralWavetableView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2219,6 +2227,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_neural_choir_formant_hud = false;
             self.open_neural_choir_formant_hud();
         }
+        if self.inspector_state.requested_open_neural_vocoder_morph_hud || self.device_rack_state.requested_open_neural_vocoder_morph_hud {
+            self.inspector_state.requested_open_neural_vocoder_morph_hud = false;
+            self.device_rack_state.requested_open_neural_vocoder_morph_hud = false;
+            self.open_neural_vocoder_morph_hud();
+        }
+        if self.inspector_state.requested_open_neural_wavetable_hud || self.device_rack_state.requested_open_neural_wavetable_hud {
+            self.inspector_state.requested_open_neural_wavetable_hud = false;
+            self.device_rack_state.requested_open_neural_wavetable_hud = false;
+            self.open_neural_wavetable_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2298,6 +2316,8 @@ impl AwardWinningGuiView {
         self.show_neural_vocal_stylizer_modal_window(ui);
         self.show_neural_speech_to_singing_modal_window(ui);
         self.show_neural_choir_formant_modal_window(ui);
+        self.show_neural_vocoder_morph_modal_window(ui);
+        self.show_neural_wavetable_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -15122,6 +15142,202 @@ impl AwardWinningGuiView {
             if bus.get(pid_vcount).is_some() { bus.set(pid_vcount, v_count); }
             if bus.get(pid_blend).is_some() { bus.set(pid_blend, blend); }
             if bus.get(pid_tract).is_some() { bus.set(pid_tract, tract); }
+        }
+    }
+
+    pub fn open_neural_vocoder_morph_hud(&mut self) {
+        self.show_neural_vocoder_morph_modal = true;
+    }
+
+    pub fn close_neural_vocoder_morph_hud(&mut self) {
+        self.show_neural_vocoder_morph_modal = false;
+    }
+
+    pub fn is_neural_vocoder_morph_hud_open(&self) -> bool {
+        self.show_neural_vocoder_morph_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_neural_vocoder_morph_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_neural_vocoder_morph_modal {
+            return;
+        }
+
+        let mut is_open = self.show_neural_vocoder_morph_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎙 Multi-Stage Neural Vocoder Formant Morpher HUD")
+            .id(egui::Id::new("neural_vocoder_morph_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(820.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Neural LPC-16, Phonetic Vowel & Carrier Articulation Morpher (Milestones 33 & 36)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.neural_vocoder_morph_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_neural_vocoder_morph_modal = is_open;
+        self.sync_neural_vocoder_morph_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_neural_vocoder_morph_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let f1 = crate::views::neural_vocoder_morph_view::NeuralVocoderMorphView::normalized_to_f1_freq(self.neural_vocoder_morph_view.formant_puck_pos.0);
+        let f2 = crate::views::neural_vocoder_morph_view::NeuralVocoderMorphView::normalized_to_f2_freq(self.neural_vocoder_morph_view.formant_puck_pos.1);
+        let artic = self.neural_vocoder_morph_view.articulation_depth_pct;
+        let carrier = self.neural_vocoder_morph_view.carrier_harmonics_mix;
+        let voicing = self.neural_vocoder_morph_view.voicing_probability_pct;
+        let shift = self.neural_vocoder_morph_view.formant_shift_semitones;
+
+        self.device_rack_state.node_param_values.insert("f1_freq_hz".to_string(), f1);
+        self.device_rack_state.node_param_values.insert("f2_freq_hz".to_string(), f2);
+        self.device_rack_state.node_param_values.insert("articulation_depth_pct".to_string(), artic);
+        self.device_rack_state.node_param_values.insert("carrier_harmonics_mix".to_string(), carrier);
+        self.device_rack_state.node_param_values.insert("voicing_probability_pct".to_string(), voicing);
+        self.device_rack_state.node_param_values.insert("formant_shift_semitones".to_string(), shift);
+
+        self.inspector_state.node_param_values.insert("f1_freq_hz".to_string(), f1);
+        self.inspector_state.node_param_values.insert("f2_freq_hz".to_string(), f2);
+        self.inspector_state.node_param_values.insert("articulation_depth_pct".to_string(), artic);
+        self.inspector_state.node_param_values.insert("carrier_harmonics_mix".to_string(), carrier);
+        self.inspector_state.node_param_values.insert("voicing_probability_pct".to_string(), voicing);
+        self.inspector_state.node_param_values.insert("formant_shift_semitones".to_string(), shift);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_f1 = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_f2 = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_artic = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_carrier = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_voicing = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_shift = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+
+            if bus.get(pid_f1).is_some() { bus.set(pid_f1, f1); }
+            if bus.get(pid_f2).is_some() { bus.set(pid_f2, f2); }
+            if bus.get(pid_artic).is_some() { bus.set(pid_artic, artic); }
+            if bus.get(pid_carrier).is_some() { bus.set(pid_carrier, carrier); }
+            if bus.get(pid_voicing).is_some() { bus.set(pid_voicing, voicing); }
+            if bus.get(pid_shift).is_some() { bus.set(pid_shift, shift); }
+        }
+    }
+
+    pub fn open_neural_wavetable_hud(&mut self) {
+        self.show_neural_wavetable_modal = true;
+    }
+
+    pub fn close_neural_wavetable_hud(&mut self) {
+        self.show_neural_wavetable_modal = false;
+    }
+
+    pub fn is_neural_wavetable_hud_open(&self) -> bool {
+        self.show_neural_wavetable_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_neural_wavetable_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_neural_wavetable_modal {
+            return;
+        }
+
+        let mut is_open = self.show_neural_wavetable_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🌊 Neural Wavetable Morphing Synthesizer HUD")
+            .id(egui::Id::new("neural_wavetable_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(820.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("3D Latent Trajectory Orbit & Differentiable Wavetable Resynthesizer (Milestones 33 & 36)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.neural_wavetable_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_neural_wavetable_modal = is_open;
+        self.sync_neural_wavetable_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_neural_wavetable_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let z1 = self.neural_wavetable_view.latent_z.0;
+        let z2 = self.neural_wavetable_view.latent_z.1;
+        let z3 = self.neural_wavetable_view.latent_z.2;
+        let speed = self.neural_wavetable_view.morph_speed_hz;
+        let radius = self.neural_wavetable_view.orbit_radius;
+        let entropy = self.neural_wavetable_view.spectral_entropy_bits;
+
+        self.device_rack_state.node_param_values.insert("latent_z1".to_string(), z1);
+        self.device_rack_state.node_param_values.insert("latent_z2".to_string(), z2);
+        self.device_rack_state.node_param_values.insert("latent_z3".to_string(), z3);
+        self.device_rack_state.node_param_values.insert("morph_speed_hz".to_string(), speed);
+        self.device_rack_state.node_param_values.insert("orbit_radius".to_string(), radius);
+        self.device_rack_state.node_param_values.insert("spectral_entropy_bits".to_string(), entropy);
+
+        self.inspector_state.node_param_values.insert("latent_z1".to_string(), z1);
+        self.inspector_state.node_param_values.insert("latent_z2".to_string(), z2);
+        self.inspector_state.node_param_values.insert("latent_z3".to_string(), z3);
+        self.inspector_state.node_param_values.insert("morph_speed_hz".to_string(), speed);
+        self.inspector_state.node_param_values.insert("orbit_radius".to_string(), radius);
+        self.inspector_state.node_param_values.insert("spectral_entropy_bits".to_string(), entropy);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_z1 = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_z2 = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_z3 = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_speed = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_radius = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_entropy = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+
+            if bus.get(pid_z1).is_some() { bus.set(pid_z1, z1); }
+            if bus.get(pid_z2).is_some() { bus.set(pid_z2, z2); }
+            if bus.get(pid_z3).is_some() { bus.set(pid_z3, z3); }
+            if bus.get(pid_speed).is_some() { bus.set(pid_speed, speed); }
+            if bus.get(pid_radius).is_some() { bus.set(pid_radius, radius); }
+            if bus.get(pid_entropy).is_some() { bus.set(pid_entropy, entropy); }
         }
     }
 

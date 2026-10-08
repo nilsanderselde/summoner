@@ -186,6 +186,10 @@ pub struct ModernInspectorState {
     pub requested_open_neural_speech_to_singing_hud: bool,
     #[serde(default)]
     pub requested_open_neural_choir_formant_hud: bool,
+    #[serde(default)]
+    pub requested_open_neural_vocoder_morph_hud: bool,
+    #[serde(default)]
+    pub requested_open_neural_wavetable_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -285,6 +289,8 @@ impl Default for ModernInspectorState {
             requested_open_neural_vocal_stylizer_hud: false,
             requested_open_neural_speech_to_singing_hud: false,
             requested_open_neural_choir_formant_hud: false,
+            requested_open_neural_vocoder_morph_hud: false,
+            requested_open_neural_wavetable_hud: false,
         }
     }
 }
@@ -1509,6 +1515,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open Neural Polyphonic Choir Formant Morpher & Vowel Space HUD").clicked() {
                     state.requested_open_neural_choir_formant_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("NeuralVocoderMorph") || active_kind.contains("VocoderMorph") || active_kind == "NeuralVocoderMorphView" || active_kind == "NeuralVocoderMorphNode" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🎙 Open Vocoder Morpher HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 229, 255)))
+                        .fill(Color32::from_rgb(10, 36, 48))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 229, 255)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Multi-Stage Neural Vocoder Formant Morpher HUD").clicked() {
+                    state.requested_open_neural_vocoder_morph_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("NeuralWavetable") || active_kind.contains("DifferentialWavetable") || active_kind == "NeuralWavetableView" || active_kind == "NeuralDifferentialWavetableLatentOscillator" || active_kind.contains("LatentWavetable") || active_kind == "NeuralDifferentiableLatentWavetableSynthesizer" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🌊 Open Neural Wavetable HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(180, 90, 255)))
+                        .fill(Color32::from_rgb(32, 16, 48))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(180, 90, 255)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Neural Wavetable Morphing Synthesizer HUD").clicked() {
+                    state.requested_open_neural_wavetable_hud = true;
                 }
                 ui.add_space(4.0);
             }

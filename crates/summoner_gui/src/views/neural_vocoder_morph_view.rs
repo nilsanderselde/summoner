@@ -24,6 +24,18 @@ pub enum VocoderMorphMode {
     SpectralResynth, // Phase-Vocoded Sinusoidal Additive Resynthesis
 }
 
+impl VocoderMorphMode {
+    pub fn mode_name(&self) -> &'static str {
+        match self {
+            Self::NeuralLpc16 => "NEURAL LPC-16",
+            Self::PhoneticVowel => "PHONETIC VOWEL",
+            Self::RoboticCarrier => "ROBOTIC CARRIER",
+            Self::CepstralMorph => "CEPSTRAL MORPH",
+            Self::SpectralResynth => "SPECTRAL RESYNTH",
+        }
+    }
+}
+
 /// Single Formant Frequency & Bandwidth Descriptor.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct FormantBand {
@@ -519,5 +531,28 @@ impl NeuralVocoderMorphView {
             egui::FontId::proportional(12.0),
             Color32::from_rgb(0, 255, 180),
         );
+    }
+
+    pub fn set_mode(&mut self, mode: VocoderMorphMode) {
+        self.mode = mode;
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
+    }
+
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        let f1 = Self::normalized_to_f1_freq(self.formant_puck_pos.0);
+        let f2 = Self::normalized_to_f2_freq(self.formant_puck_pos.1);
+        format!(
+            "--- MULTI-STAGE NEURAL VOCODER FORMANT MORPHER HUD [PASS] ---\nMode: {:?} | F1: {:.0}Hz | F2: {:.0}Hz | Articulation: {:.1}% | Carrier: {:.1}%\n{}",
+            self.mode,
+            f1,
+            f2,
+            self.articulation_depth_pct,
+            self.carrier_harmonics_mix,
+            self.render_ascii(80, 24).join("\n")
+        )
     }
 }

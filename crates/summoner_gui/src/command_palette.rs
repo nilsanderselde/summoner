@@ -761,6 +761,18 @@ impl CommandPalette {
                 action_id: "open_neural_choir_formant_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Multi-Stage Neural Vocoder Formant Morpher HUD".into(),
+                category: "Synthesis".into(),
+                action_id: "open_neural_vocoder_morph_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Neural Wavetable Morphing Synthesizer HUD".into(),
+                category: "Synthesis".into(),
+                action_id: "open_neural_wavetable_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

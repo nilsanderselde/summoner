@@ -2363,4 +2363,36 @@ Product Management has conducted a comprehensive readiness audit:
   - Pure unit tests: 329 passed in 0.22s (`cargo test -p summoner_gui --lib`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
 
+### Turn #88 (Sprint Turn #14) — Multi-Stage Neural Vocoder Formant Morpher HUD and Neural Wavetable Morphing Synthesizer HUD Convergence (Milestones 33 & 36)
+- [x] Multi-Stage Neural Vocoder & Neural Wavetable Synthesizer HUDs Integration:
+  - Integrated `NeuralVocoderMorphView` (Multi-Stage Neural Vocoder Formant Morpher & Carrier/Modulator Articulation HUD: 5 Vocoder Modes [Neural LPC-16, Phonetic Vowel, Robotic Carrier, Cepstral Morph, Spectral Resynth], Formant F1 [200.0..1200.0 Hz], Formant F2 [600.0..3200.0 Hz], Articulation Depth [0..100%], Carrier Harmonics Mix [0..100%], Voicing Probability [0..100%], Formant Pitch Shift [-24.0..+24.0 st], Unvoiced Noise Mix [0.0..1.0], LPC Prediction Order 16 poles, 4-bar formant peaks preview, and Touch-Draggable Formant Puck with >= 44x44pt bounding target) and `NeuralWavetableView` (Neural Wavetable Morphing Synthesizer & 3D Latent Trajectory Orbit HUD: 5 Latent Architecture Profiles [VAE Continuous, Transformer Dynamic, Diffusion Resolution, Hypersphere 4D Geodesic, Spectral Normalizing Flow], 3D Latent Coordinate (z1, z2, z3) [-2.50..+2.50], Morph Speed [0.01..20.00 Hz], Orbit Radius [0.00..2.00], Real-Time Orbital Phase [0..2π], Spectral Entropy [1.0..5.0 bits], Reconstruction Quality [97.8..99.6% FID], Single-Cycle Wavetable Waveform Reconstructor, and Touch-Draggable Latent Puck with >= 44x44pt bounding target) into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/neural_vocoder_morph_view.rs` & `neural_wavetable_view.rs`):
+  - In `NeuralVocoderMorphView`: added `set_mode(VocoderMorphMode)`, `show(&mut self, ui: &mut egui::Ui)` delegating to `ui(ui)`, and `render_ascii_snapshot_str() -> String` with vocoder mode metadata banner.
+  - In `NeuralWavetableView`: added `set_architecture(LatentArchitecture)`, `show(&mut self, ui: &mut egui::Ui)` delegating to `ui(ui)`, and `render_ascii_snapshot_str() -> String` with latent architecture metadata banner.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_neural_vocoder_morph_modal: bool`, `neural_vocoder_morph_view: NeuralVocoderMorphView`, `show_neural_wavetable_modal: bool`, and `neural_wavetable_view: NeuralWavetableView`.
+  - Added dedicated modal windows `show_neural_vocoder_morph_modal_window` and `show_neural_wavetable_modal_window` with responsive styling, WCAG AAA contrast, and >= 44x44pt touch bounds.
+  - Added public lifecycle methods: `open_neural_vocoder_morph_hud()`, `close_neural_vocoder_morph_hud()`, `is_neural_vocoder_morph_hud_open()`, `open_neural_wavetable_hud()`, `close_neural_wavetable_hud()`, `is_neural_wavetable_hud_open()`.
+  - Real-time parameter sync bridges (`sync_neural_vocoder_morph_hud_state` and `sync_neural_wavetable_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_neural_vocoder_morph_hud: bool` and `requested_open_neural_wavetable_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🎙 Open Vocoder Morpher HUD]` and `[🌊 Open Neural Wavetable HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header `[🎙 Vocoder HUD]` / `[🌊 Wavetable HUD]` in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Neural Vocoder: 2D vowel formant coordinate box, crosshairs, draggable formant puck updating normalized F1 & F2, 4-bar formant peaks preview, live readout, and lock-free `ParamBus` slot dispatch.
+    * Neural Wavetable: 2D latent trajectory coordinate box, crosshairs, orbital circle indicator, draggable latent puck updating z1 & z2, single-cycle wave curve preview, live readout, and lock-free `ParamBus` slot dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_neural_vocoder_morph_hud` and `open_neural_wavetable_hud` under `"Synthesis"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_neural_vocoder_morph_hud()` and `open_neural_wavetable_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier152_turn88_tests.rs`:
+    * Pure tests: view initialization, coordinate normalizations (F1, F2, shift, latent z, speed, radius), mode & architecture switching across all 5 profiles for both views, spectral envelope & overtone harmonic energy evaluation, touch puck hit testing (>= 44x44pt bounding targets), deterministic ASCII snapshots with metadata banners.
+    * GUI tests: modal window lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch without allocations, trigger button propagation from rack and inspector, command palette action verification.
+  - Registered `tier152_turn88_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Feature tests: 6 passed in 0.05s (`cargo test -p summoner_gui --features gui -- tier152_turn88`).
+  - Pure unit tests: 329 passed in 0.23s (`cargo test -p summoner_gui --lib`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
+
 
