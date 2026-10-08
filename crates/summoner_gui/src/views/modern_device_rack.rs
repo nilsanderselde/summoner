@@ -177,6 +177,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_atmos_surround_hud: bool,
     #[serde(default)]
     pub requested_open_atmos_proximity_hud: bool,
+    #[serde(default)]
+    pub requested_open_mpegh_trajectory_hud: bool,
+    #[serde(default)]
+    pub requested_open_nhk222_immersion_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -254,6 +258,8 @@ impl Default for ModernDeviceRackState {
             requested_open_raytraced_reverb_hud: false,
             requested_open_atmos_surround_hud: false,
             requested_open_atmos_proximity_hud: false,
+            requested_open_mpegh_trajectory_hud: false,
+            requested_open_nhk222_immersion_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -954,6 +960,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_raytraced_reverb = cur_selection.contains("VolumetricRaytracedRoomAcoustics") || cur_selection.contains("BinauralRaytracedEarlyReflection") || cur_selection.contains("RaytracedReverb") || cur_selection == "RaytracedReverbView" || cur_selection.contains("RaytracedEarlyReflection") || cur_selection.contains("RaytracedRoom");
                     let is_atmos_surround = cur_selection.contains("AtmosSurround") || cur_selection.contains("SurroundStemSplitterBedObject") || cur_selection.contains("SurroundDownmixer") || cur_selection == "AtmosSurroundNode" || cur_selection == "AtmosSurroundView";
                     let is_atmos_proximity = cur_selection.contains("AtmosProximity") || cur_selection == "AtmosProximityNode" || cur_selection == "AtmosProximityView";
+                    let is_mpegh_trajectory = cur_selection.contains("MpeghTrajectory") || cur_selection.contains("MpegHTrajectory") || cur_selection == "MpeghTrajectorySpatializer" || cur_selection == "MpeghTrajectoryView" || cur_selection == "MpeghTrajectoryNode";
+                    let is_nhk222_immersion = cur_selection.contains("Nhk222Immersion") || cur_selection.contains("NHK222Immersion") || cur_selection == "Nhk222ImmersionView" || cur_selection == "Nhk222ImmersionNode";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1206,6 +1214,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("📡 Atmos Prox HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 180, 0))).on_hover_text("Open 7.1.4 Dolby Atmos Spherical Proximity & Distance HUD").clicked()
                     {
                         state.requested_open_atmos_proximity_hud = true;
+                    } else if is_mpegh_trajectory
+                        && ui.button(RichText::new("💫 Traj HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Broadcast Mastering Immersive MPEG-H 3D Dynamic Object Trajectory HUD").clicked()
+                    {
+                        state.requested_open_mpegh_trajectory_hud = true;
+                    } else if is_nhk222_immersion
+                        && ui.button(RichText::new("🌐 22.2 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 255, 180))).on_hover_text("Open Broadcast Mastering Immersive 22.2 Multichannel Audio (NHK 22.2) 3-Layer Spherical Immersion HUD").clicked()
+                    {
+                        state.requested_open_nhk222_immersion_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2034,6 +2050,8 @@ fn show_pro_parameter_drawer(
                     let is_raytraced_reverb = dev_kind.contains("VolumetricRaytracedRoomAcoustics") || dev_kind.contains("BinauralRaytracedEarlyReflection") || dev_kind.contains("RaytracedReverb") || dev_kind == "RaytracedReverbView" || dev_kind.contains("RaytracedEarlyReflection") || dev_kind.contains("RaytracedRoom");
                     let is_atmos_surround = dev_kind.contains("AtmosSurround") || dev_kind.contains("SurroundStemSplitterBedObject") || dev_kind.contains("SurroundDownmixer") || dev_kind == "AtmosSurroundNode" || dev_kind == "AtmosSurroundView";
                     let is_atmos_proximity = dev_kind.contains("AtmosProximity") || dev_kind == "AtmosProximityNode" || dev_kind == "AtmosProximityView";
+                    let is_mpegh_trajectory = dev_kind.contains("MpeghTrajectory") || dev_kind.contains("MpegHTrajectory") || dev_kind == "MpeghTrajectorySpatializer" || dev_kind == "MpeghTrajectoryView" || dev_kind == "MpeghTrajectoryNode";
+                    let is_nhk222_immersion = dev_kind.contains("Nhk222Immersion") || dev_kind.contains("NHK222Immersion") || dev_kind == "Nhk222ImmersionView" || dev_kind == "Nhk222ImmersionNode";
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -6865,6 +6883,151 @@ fn show_pro_parameter_drawer(
                             let _ = prx_resp.on_hover_text(format!(
                                 "7.1.4 Dolby Atmos Spherical Proximity HUD\nDistance: {:.1}m | Azimuth: {:.0}° | Elevation: {:.0}°\nProximity Bass Boost: +{:.1} dB | Air Absorption: -{:.1} dB\n[Drag: Distance / Azimuth Position]",
                                 dist, az, el, bass, air
+                            ));
+                        }
+                    } else if is_mpegh_trajectory {
+                        // MPEG-H 3D Dynamic Object Trajectory Mini Visualizer
+                        let (traj_resp, traj_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let traj_rect = traj_resp.rect;
+                        traj_painter.rect_filled(traj_rect, 2.0, Color32::from_rgb(8, 14, 24));
+
+                        let mut az = state.node_param_values.get("azimuth_deg").copied().unwrap_or(45.0);
+                        let mut el = state.node_param_values.get("elevation_deg").copied().unwrap_or(35.0);
+                        let dist = state.node_param_values.get("distance_m").copied().unwrap_or(4.5);
+                        let spd = state.node_param_values.get("trajectory_speed_hz").copied().unwrap_or(0.25);
+                        let spread = state.node_param_values.get("object_spread").copied().unwrap_or(0.30);
+
+                        let tcx = traj_rect.left() + 34.0;
+                        let tcy = traj_rect.center().y;
+                        let max_r = 24.0_f32;
+
+                        if traj_resp.dragged() {
+                            if let Some(pos) = traj_resp.interact_pointer_pos() {
+                                let dx = pos.x - tcx;
+                                let dy = tcy - pos.y;
+                                let a = (dx.atan2(dy).to_degrees()).clamp(-180.0, 180.0);
+                                let e = (((dx * dx + dy * dy).sqrt() / max_r).clamp(0.0, 1.0) * 180.0 - 90.0).clamp(-90.0, 90.0);
+                                az = a;
+                                el = e;
+                                state.node_param_values.insert("azimuth_deg".to_string(), az);
+                                state.node_param_values.insert("elevation_deg".to_string(), el);
+                                if let Some(bus) = param_bus {
+                                    let pid_az = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_el = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    bus.set(pid_az, az);
+                                    bus.set(pid_el, el);
+                                }
+                            }
+                        }
+
+                        // Orbit bounding rings & crosshair
+                        traj_painter.circle_stroke(egui::pos2(tcx, tcy), max_r, Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(0, 229, 255, 50)));
+                        traj_painter.circle_stroke(egui::pos2(tcx, tcy), max_r * 0.5, Stroke::new(0.8_f32, Color32::from_rgba_unmultiplied(0, 229, 255, 25)));
+                        traj_painter.circle_filled(egui::pos2(tcx, tcy), 2.5, Color32::from_rgb(0, 229, 255));
+
+                        // 8 speaker dots
+                        for i in 0..8 {
+                            let spk_ang = (-180.0 + i as f32 * 45.0).to_radians();
+                            let sx = tcx + spk_ang.sin() * (max_r + 2.0);
+                            let sy = tcy - spk_ang.cos() * (max_r + 2.0);
+                            traj_painter.circle_filled(egui::pos2(sx, sy), 1.5, Color32::from_rgb(56, 189, 248));
+                        }
+
+                        // Sound object puck position
+                        let az_rad = az.to_radians();
+                        let el_norm = ((el + 90.0) / 180.0).clamp(0.1, 1.0);
+                        let opx = tcx + az_rad.sin() * el_norm * max_r;
+                        let opy = tcy - az_rad.cos() * el_norm * max_r;
+                        let spr_r = (spread * 6.0).max(2.0);
+                        traj_painter.circle_stroke(egui::pos2(opx, opy), spr_r, Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(255, 180, 0, 100)));
+                        traj_painter.circle_filled(egui::pos2(opx, opy), 3.0, Color32::from_rgb(255, 180, 0));
+
+                        // Readout
+                        traj_painter.text(
+                            egui::pos2(traj_rect.right() - 4.0, traj_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("MPEG-H 3D\nAz: {:.0}° El: {:.0}°\nDist: {:.1}m Spr: {:.0}%\nSpd: {:.2} Hz", az, el, dist, spread * 100.0, spd),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+
+                        if traj_resp.hovered() {
+                            let _ = traj_resp.on_hover_text(format!(
+                                "MPEG-H 3D Dynamic Object Trajectory HUD\nAzimuth: {:.0}° | Elevation: {:.0}° | Distance: {:.1}m\nSpread: {:.0}% | Trajectory Speed: {:.2} Hz\n[Drag: Azimuth / Elevation Trajectory]",
+                                az, el, dist, spread * 100.0, spd
+                            ));
+                        }
+                    } else if is_nhk222_immersion {
+                        // NHK 22.2 3-Layer Spherical Immersion Mini Visualizer
+                        let (nhk_resp, nhk_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let nhk_rect = nhk_resp.rect;
+                        nhk_painter.rect_filled(nhk_rect, 2.0, Color32::from_rgb(8, 20, 18));
+
+                        let mut az = state.node_param_values.get("azimuth_deg").copied().unwrap_or(0.0);
+                        let mut el = state.node_param_values.get("elevation_deg").copied().unwrap_or(35.0);
+                        let dist = state.node_param_values.get("distance_m").copied().unwrap_or(8.0);
+                        let top = state.node_param_values.get("top_layer_energy").copied().unwrap_or(0.85);
+                        let mid = state.node_param_values.get("middle_layer_energy").copied().unwrap_or(0.90);
+                        let bot = state.node_param_values.get("bottom_layer_energy").copied().unwrap_or(0.40);
+                        let lfe = state.node_param_values.get("lfe_energy").copied().unwrap_or(0.60);
+
+                        let ncx = nhk_rect.left() + 34.0;
+                        let ncy = nhk_rect.center().y;
+                        let max_r = 24.0_f32;
+
+                        if nhk_resp.dragged() {
+                            if let Some(pos) = nhk_resp.interact_pointer_pos() {
+                                let dx = pos.x - ncx;
+                                let dy = ncy - pos.y;
+                                let a = (dx.atan2(dy).to_degrees()).clamp(-180.0, 180.0);
+                                let e = (((dx * dx + dy * dy).sqrt() / max_r).clamp(0.0, 1.0) * 180.0 - 90.0).clamp(-90.0, 90.0);
+                                az = a;
+                                el = e;
+                                state.node_param_values.insert("azimuth_deg".to_string(), az);
+                                state.node_param_values.insert("elevation_deg".to_string(), el);
+                                if let Some(bus) = param_bus {
+                                    let pid_az = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_el = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    bus.set(pid_az, az);
+                                    bus.set(pid_el, el);
+                                }
+                            }
+                        }
+
+                        // 3 Concentric Hemisphere layer arcs (Top, Mid, Bottom)
+                        nhk_painter.circle_stroke(egui::pos2(ncx, ncy), max_r, Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(0, 255, 180, 60)));
+                        nhk_painter.circle_stroke(egui::pos2(ncx, ncy), max_r * 0.66, Stroke::new(0.8_f32, Color32::from_rgba_unmultiplied(0, 255, 180, 35)));
+                        nhk_painter.circle_stroke(egui::pos2(ncx, ncy), max_r * 0.33, Stroke::new(0.6_f32, Color32::from_rgba_unmultiplied(0, 255, 180, 20)));
+                        nhk_painter.circle_filled(egui::pos2(ncx, ncy), 2.5, Color32::from_rgb(0, 255, 180));
+
+                        // 22.2 speaker dots around perimeter
+                        for i in 0..12 {
+                            let spk_ang = (-180.0 + i as f32 * 30.0).to_radians();
+                            let sx = ncx + spk_ang.sin() * (max_r + 2.0);
+                            let sy = ncy - spk_ang.cos() * (max_r + 2.0);
+                            nhk_painter.circle_filled(egui::pos2(sx, sy), 1.2, Color32::from_rgb(52, 211, 153));
+                        }
+
+                        // Listener / Object puck position
+                        let az_rad = az.to_radians();
+                        let el_norm = ((el + 90.0) / 180.0).clamp(0.1, 1.0);
+                        let npx = ncx + az_rad.sin() * el_norm * max_r;
+                        let npy = ncy - az_rad.cos() * el_norm * max_r;
+                        nhk_painter.circle_filled(egui::pos2(npx, npy), 3.0, Color32::from_rgb(255, 180, 0));
+
+                        // Readout
+                        nhk_painter.text(
+                            egui::pos2(nhk_rect.right() - 4.0, nhk_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("NHK 22.2\nTop: {:.0}% Mid: {:.0}%\nBot: {:.0}% LFE: {:.0}%\nDist: {:.1}m", top * 100.0, mid * 100.0, bot * 100.0, lfe * 100.0, dist),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(0, 255, 180),
+                        );
+
+                        if nhk_resp.hovered() {
+                            let _ = nhk_resp.on_hover_text(format!(
+                                "NHK 22.2 3-Layer Spherical Immersion HUD\nAzimuth: {:.0}° | Elevation: {:.0}° | Distance: {:.1}m\nTop Energy: {:.0}% | Mid Energy: {:.0}% | Bot: {:.0}% | LFE: {:.0}%\n[Drag: Azimuth / Elevation Immersion]",
+                                az, el, dist, top * 100.0, mid * 100.0, bot * 100.0, lfe * 100.0
                             ));
                         }
                     } else {

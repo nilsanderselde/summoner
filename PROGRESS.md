@@ -2150,3 +2150,54 @@ Product Management has conducted a comprehensive readiness audit:
   - Feature tests: 7 passed in 0.07s (`cargo test -p summoner_gui --features gui -- tier144_turn80`).
   - Pure unit tests: 329 passed in 0.25s (`cargo test -p summoner_gui --lib`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
+
+### Turn #81 — 7.1.4 Dolby Atmos 3D Immersive Bed & Object Radar HUD and Atmos Spherical Proximity HUD Convergence
+- [x] Dedicated Immersive Spatial HUD Views:
+  - `AtmosSurroundView` (`crates/summoner_gui/src/views/atmos_surround_view.rs`): Master broadcast 7.1.4 Dolby Atmos 3D immersive bed & object panning radar HUD with VBAP energy distribution across 12 speaker channels, object puck touch targets (>= 44x44pt), spread diffusion circles, and deterministic ASCII snapshots.
+  - `AtmosProximityView` (`crates/summoner_gui/src/views/atmos_proximity_view.rs`): 7.1.4 Dolby Atmos spherical proximity & distance compensation HUD with nearfield bass boost, HF air absorption curves, ITD/ILD modeling, and deterministic ASCII snapshots.
+- [x] Master Triad GUI Integration (`AwardWinningGuiView`):
+  - Added `show_atmos_surround_modal`, `atmos_surround_view`, `show_atmos_proximity_modal`, `atmos_proximity_view` to `AwardWinningGuiView`.
+  - Added window modals `show_atmos_surround_modal_window` and `show_atmos_proximity_modal_window`.
+  - Added parameter synchronization `sync_atmos_surround_hud_state` and `sync_atmos_proximity_hud_state` with live `ParamBus` slot dispatch.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_atmos_surround_hud: bool` and `requested_open_atmos_proximity_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🌌 Open 7.1.4 Dolby Atmos Surround Bed HUD]` and `[📡 Open 7.1.4 Dolby Atmos Spherical Proximity HUD]` in `ModernInspectorView`.
+  - Added collapsed and expanded header buttons `[🌌 Atmos Bed HUD]` / `[📡 Atmos Prox HUD]` in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Atmos Bed & Object Radar: Polar azimuth/elevation/distance radar with draggable object puck, spread diffusion circle, 7.1.4 speaker markers, LFE readout, and live `ParamBus` slot dispatch.
+    * Atmos Spherical Proximity: Polar concentric distance rings, draggable azimuth/distance puck, bass boost & air absorption loss readouts, and live `ParamBus` slot dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_atmos_surround_hud` and `open_atmos_proximity_hud` under `"Spatial"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier145_turn81_tests.rs`:
+    * Pure tests: view initialization, VBAP gains, coordinate normalizations, profile switching, touch puck hit testing, slot arithmetic channel isolation, deterministic ASCII snapshots.
+    * GUI tests: modal lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch, rack & inspector trigger propagation, command palette action registration.
+  - Registered `tier145_turn81_tests` in `crates/summoner_gui/src/lib.rs`.
+
+### Turn #82 — MPEG-H 3D Dynamic Object Trajectory HUD & NHK 22.2 3-Layer Spherical Immersion HUD Convergence
+- [x] Dedicated Immersive Spatial HUD Views:
+  - `MpeghTrajectoryView` (`crates/summoner_gui/src/views/mpegh_trajectory_view.rs`): Broadcast mastering immersive MPEG-H 3D dynamic object-based audio trajectory panner HUD with 5 preset trajectories (Helical Ascent, Overhead Flyby, Equatorial Orbit, Pendulum Swing, Multi-Object Master), 8 speaker group gains, touch puck hit testing (>= 44x44pt), and deterministic ASCII snapshots (`render_ascii_snapshot_str`).
+  - `Nhk222ImmersionView` (`crates/summoner_gui/src/views/nhk222_immersion_view.rs`): Broadcast mastering immersive 22.2 multichannel audio (NHK 22.2) 3-layer spherical listener immersion HUD with 5 broadcast profiles (Orchestral Symphony, Stadium Sports Live, Theatrical Film Epic, Dome Planetarium, Binaural Headphones), 24-channel speaker energy calculations, and deterministic ASCII snapshots (`render_ascii_snapshot_str`).
+- [x] Master Triad GUI Integration (`AwardWinningGuiView`):
+  - Added `show_mpegh_trajectory_modal`, `mpegh_trajectory_view`, `show_nhk222_immersion_modal`, `nhk222_immersion_view` to `AwardWinningGuiView`.
+  - Added window modals `show_mpegh_trajectory_modal_window` and `show_nhk222_immersion_modal_window`.
+  - Added parameter synchronization `sync_mpegh_trajectory_hud_state` and `sync_nhk222_immersion_hud_state` with live `ParamBus` slot dispatch.
+  - Added trigger request handling in `show()`, and public methods `open_mpegh_trajectory_hud`, `close_mpegh_trajectory_hud`, `is_mpegh_trajectory_hud_open`, `open_nhk222_immersion_hud`, `close_nhk222_immersion_hud`, `is_nhk222_immersion_hud_open`.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_mpegh_trajectory_hud: bool` and `requested_open_nhk222_immersion_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[💫 Open MPEG-H 3D Dynamic Trajectory HUD]` and `[🌐 Open NHK 22.2 3-Layer Spherical Immersion HUD]` in `ModernInspectorView`.
+  - Added collapsed and expanded header buttons `[💫 Traj HUD]` and `[🌐 22.2 HUD]` in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * MPEG-H 3D Trajectory: Polar orbit bounding rings, 8 speaker group markers, draggable puck updating azimuth/elevation, dynamic spread diffusion indicator, live speed/spread/az/el readout, and lock-free `ParamBus` slot dispatch.
+    * NHK 22.2 Immersion: 3-layer concentric hemisphere arcs (Top, Mid, Bottom), 12 perimeter speaker position markers, draggable listener orientation puck, live layer energy distribution meters, and lock-free `ParamBus` slot dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_mpegh_trajectory_hud` and `open_nhk222_immersion_hud` under `"Spatial"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier146_turn82_tests.rs`:
+    * Pure tests: view initialization, coordinate normalizations (azimuth, elevation, distance), profile switching across all 5 profiles for both views, VBAP / 3-layer spherical distribution calculations, touch puck hit testing (>= 44x44pt bounding targets), channel isolation across tracks/slots.
+    * GUI tests: modal window lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch without allocations, trigger button propagation from rack and inspector, command palette action verification.
+  - Registered `tier146_turn82_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Pure unit tests: 329 passed in 0.24s (`cargo test -p summoner_gui --lib`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).

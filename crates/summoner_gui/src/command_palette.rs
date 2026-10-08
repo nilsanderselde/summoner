@@ -689,6 +689,18 @@ impl CommandPalette {
                 action_id: "open_atmos_proximity_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open MPEG-H 3D Dynamic Object Trajectory HUD".into(),
+                category: "Spatial".into(),
+                action_id: "open_mpegh_trajectory_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open NHK 22.2 3-Layer Spherical Immersion HUD".into(),
+                category: "Spatial".into(),
+                action_id: "open_nhk222_immersion_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

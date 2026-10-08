@@ -162,6 +162,10 @@ pub struct ModernInspectorState {
     pub requested_open_atmos_surround_hud: bool,
     #[serde(default)]
     pub requested_open_atmos_proximity_hud: bool,
+    #[serde(default)]
+    pub requested_open_mpegh_trajectory_hud: bool,
+    #[serde(default)]
+    pub requested_open_nhk222_immersion_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -249,6 +253,8 @@ impl Default for ModernInspectorState {
             requested_open_raytraced_reverb_hud: false,
             requested_open_atmos_surround_hud: false,
             requested_open_atmos_proximity_hud: false,
+            requested_open_mpegh_trajectory_hud: false,
+            requested_open_nhk222_immersion_hud: false,
         }
     }
 }
@@ -1353,6 +1359,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open Broadcast Mastering Immersive 3D 7.1.4 Dolby Atmos Binaural Distance Compensation HUD").clicked() {
                     state.requested_open_atmos_proximity_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("MpeghTrajectory") || active_kind.contains("MpegHTrajectory") || active_kind == "MpeghTrajectoryView" || active_kind == "MpeghTrajectoryNode" || active_kind == "MpeghTrajectorySpatializer" {
+                if ui.add(
+                    egui::Button::new(RichText::new("💫 Open MPEG-H 3D Dynamic Trajectory HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 229, 255)))
+                        .fill(Color32::from_rgb(10, 28, 48))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 229, 255)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Broadcast Mastering Immersive MPEG-H 3D Dynamic Object-Based Audio Trajectory Panner HUD").clicked() {
+                    state.requested_open_mpegh_trajectory_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Nhk222Immersion") || active_kind.contains("NHK222Immersion") || active_kind == "Nhk222ImmersionView" || active_kind == "Nhk222ImmersionNode" || active_kind == "Nhk222Spatializer" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🌐 Open NHK 22.2 3-Layer Spherical Immersion HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 255, 180)))
+                        .fill(Color32::from_rgb(10, 38, 30))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 255, 180)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Broadcast Mastering Immersive 22.2 Multichannel Audio (NHK 22.2) 3-Layer Spherical Listener Immersion HUD").clicked() {
+                    state.requested_open_nhk222_immersion_hud = true;
                 }
                 ui.add_space(4.0);
             }
