@@ -1651,6 +1651,14 @@ impl eframe::App for SummonerApp {
                     self.current_view = ViewMode::ModernStudio;
                     self.award_winning_view.open_nam_amp_hud();
                 }
+                "open_neural_inpaint_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_neural_inpaint_hud();
+                }
+                "open_neural_timbre_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_neural_timbre_hud();
+                }
                 "sfz_convert" | "auto_slice" | "load_preset" | "export_clap" | "toggle_simd" => {
                     println!("Command palette action executed: {}", action);
                 }

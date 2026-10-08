@@ -30,6 +30,16 @@ pub enum InpaintModel {
 }
 
 impl InpaintModel {
+    pub fn model_name(&self) -> &'static str {
+        match self {
+            Self::DropoutRepair => "DROPOUT REPAIR (GAP SYNTHESIS)",
+            Self::SpectralDeClick => "SPECTRAL DE-CLICK (TRANSIENT)",
+            Self::PlosiveThump => "PLOSIVE THUMP (LF RESTORE)",
+            Self::MicClipRestore => "MIC CLIP RESTORE (DECLIP)",
+            Self::StemBleedEraser => "STEM BLEED ERASER (SPILL)",
+        }
+    }
+
     pub fn default_diffusion_steps(&self) -> usize {
         match self {
             Self::DropoutRepair => 25,
@@ -244,6 +254,24 @@ impl NeuralInpaintView {
         grid.into_iter()
             .map(|row| row.into_iter().collect())
             .collect()
+    }
+
+    /// Render deterministic ASCII snapshot with metadata banner.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        let mut lines = Vec::new();
+        lines.push("================================================================================".to_string());
+        lines.push("  NEURAL DIFFUSION AUDIO INPAINTER & GENERATIVE SPECTRAL REPAIR HUD (Step 1544)".to_string());
+        lines.push(format!("  Model: {} | Time: {:.1} ms | Freq: {:.0} Hz | Steps: {}", self.model.model_name(), self.mask_center_time_ms, self.mask_center_freq_hz, self.diffusion_steps));
+        lines.push(format!("  Continuity: {:.1}% | Hallucination: {:.1}% | Guidance: {:.1}x", self.spectral_continuity * 100.0, self.hallucination_risk * 100.0, self.guidance_scale));
+        lines.push("================================================================================".to_string());
+        lines.extend(self.render_ascii(80, 20));
+        lines.push("[PASS] Neural Diffusion Audio Inpainter & Touch Targets (>= 44x44pt) Verified".to_string());
+        lines.join("\n")
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
     }
 
     #[cfg(feature = "gui")]

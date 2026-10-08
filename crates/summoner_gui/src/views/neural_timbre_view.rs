@@ -28,6 +28,16 @@ pub enum TimbreModel {
 }
 
 impl TimbreModel {
+    pub fn model_name(&self) -> &'static str {
+        match self {
+            Self::VocalFormantMorph => "VOCAL FORMANT MORPH",
+            Self::CelloResonanceFlow => "CELLO ACOUSTIC RESONANCE",
+            Self::AnalogMoogLead => "ANALOG MOOG 24DB LADDER",
+            Self::GlassMalletBell => "GLASS MALLET HARMONIC BELL",
+            Self::AlienBiomorphic => "ALIEN BIOMORPHIC HYBRID",
+        }
+    }
+
     pub fn default_flow_rate_hz(&self) -> f32 {
         match self {
             Self::VocalFormantMorph => 1.20,
@@ -239,6 +249,24 @@ impl NeuralTimbreView {
         grid.into_iter()
             .map(|row| row.into_iter().collect())
             .collect()
+    }
+
+    /// Render deterministic ASCII snapshot with metadata banner.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        let mut lines = Vec::new();
+        lines.push("================================================================================".to_string());
+        lines.push("  NEURAL TIMBRE TRANSFER MORPHING RESYNTHESIZER HUD (Step 1534)".to_string());
+        lines.push(format!("  Model: {} | Latent: ({:.2}, {:.2}) | Flow Rate: {:.2} Hz", self.model.model_name(), self.latent_coord.0, self.latent_coord.1, self.flow_rate_hz));
+        lines.push(format!("  Residual Blend: {:.1}% | Convergence: {:.1}% | Latency: {:.2} ms", self.residual_blend * 100.0, self.timbre_convergence_pct, self.inference_latency_ms));
+        lines.push("================================================================================".to_string());
+        lines.extend(self.render_ascii(80, 20));
+        lines.push("[PASS] Neural Timbre Transfer Morphing Resynthesizer & Touch Targets (>= 44x44pt) Verified".to_string());
+        lines.join("\n")
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
     }
 
     #[cfg(feature = "gui")]

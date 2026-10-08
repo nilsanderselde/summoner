@@ -198,6 +198,10 @@ pub struct ModernInspectorState {
     pub requested_open_neural_super_resolution_hud: bool,
     #[serde(default)]
     pub requested_open_nam_amp_hud: bool,
+    #[serde(default)]
+    pub requested_open_neural_inpaint_hud: bool,
+    #[serde(default)]
+    pub requested_open_neural_timbre_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -303,6 +307,8 @@ impl Default for ModernInspectorState {
             requested_open_neural_dereverb_hud: false,
             requested_open_neural_super_resolution_hud: false,
             requested_open_nam_amp_hud: false,
+            requested_open_neural_inpaint_hud: false,
+            requested_open_neural_timbre_hud: false,
         }
     }
 }
@@ -1587,6 +1593,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open Neural Amp Modeler (NAM) WaveNet Guitar & Bass Amplifier HUD").clicked() {
                     state.requested_open_nam_amp_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("NeuralInpaint") || active_kind.contains("Inpaint") || active_kind == "NeuralInpaintView" || active_kind == "NeuralInpaintNode" || active_kind.contains("SpectralRepair") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🩹 Open Inpainter HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 229, 255)))
+                        .fill(Color32::from_rgb(10, 30, 36))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 229, 255)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Neural Diffusion Audio Inpainter & Generative Spectral Repair HUD").clicked() {
+                    state.requested_open_neural_inpaint_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("NeuralTimbre") || active_kind.contains("TimbreTransfer") || active_kind == "NeuralTimbreView" || active_kind == "NeuralTimbreNode" || active_kind.contains("LatentFlow") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🧬 Open Timbre HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(244, 63, 94)))
+                        .fill(Color32::from_rgb(36, 12, 20))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(244, 63, 94)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Neural Timbre Transfer Morphing Resynthesizer HUD").clicked() {
+                    state.requested_open_neural_timbre_hud = true;
                 }
                 ui.add_space(4.0);
             }

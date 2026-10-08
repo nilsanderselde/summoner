@@ -797,6 +797,18 @@ impl CommandPalette {
                 action_id: "open_nam_amp_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Neural Diffusion Audio Inpainter & Generative Spectral Repair HUD".into(),
+                category: "Restoration".into(),
+                action_id: "open_neural_inpaint_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Neural Timbre Transfer Morphing Resynthesizer HUD".into(),
+                category: "Synthesis".into(),
+                action_id: "open_neural_timbre_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

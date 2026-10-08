@@ -804,6 +804,10 @@ pub struct AwardWinningGuiView {
     pub neural_super_resolution_view: crate::views::neural_super_resolution_view::NeuralSuperResolutionView,
     pub show_nam_amp_modal: bool,
     pub nam_amp_view: crate::views::nam_amp_view::NamAmpView,
+    pub show_neural_inpaint_modal: bool,
+    pub neural_inpaint_view: crate::views::neural_inpaint_view::NeuralInpaintView,
+    pub show_neural_timbre_modal: bool,
+    pub neural_timbre_view: crate::views::neural_timbre_view::NeuralTimbreView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1224,6 +1228,10 @@ impl AwardWinningGuiView {
             neural_super_resolution_view: crate::views::neural_super_resolution_view::NeuralSuperResolutionView::new(),
             show_nam_amp_modal: false,
             nam_amp_view: crate::views::nam_amp_view::NamAmpView::new(),
+            show_neural_inpaint_modal: false,
+            neural_inpaint_view: crate::views::neural_inpaint_view::NeuralInpaintView::new(),
+            show_neural_timbre_modal: false,
+            neural_timbre_view: crate::views::neural_timbre_view::NeuralTimbreView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2273,6 +2281,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_nam_amp_hud = false;
             self.open_nam_amp_hud();
         }
+        if self.inspector_state.requested_open_neural_inpaint_hud || self.device_rack_state.requested_open_neural_inpaint_hud {
+            self.inspector_state.requested_open_neural_inpaint_hud = false;
+            self.device_rack_state.requested_open_neural_inpaint_hud = false;
+            self.open_neural_inpaint_hud();
+        }
+        if self.inspector_state.requested_open_neural_timbre_hud || self.device_rack_state.requested_open_neural_timbre_hud {
+            self.inspector_state.requested_open_neural_timbre_hud = false;
+            self.device_rack_state.requested_open_neural_timbre_hud = false;
+            self.open_neural_timbre_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2358,6 +2376,8 @@ impl AwardWinningGuiView {
         self.show_neural_dereverb_modal_window(ui);
         self.show_neural_super_resolution_modal_window(ui);
         self.show_nam_amp_modal_window(ui);
+        self.show_neural_inpaint_modal_window(ui);
+        self.show_neural_timbre_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -15770,6 +15790,202 @@ impl AwardWinningGuiView {
             if bus.get(pid_air).is_some() { bus.set(pid_air, air); }
             if bus.get(pid_sag).is_some() { bus.set(pid_sag, sag); }
             if bus.get(pid_pres).is_some() { bus.set(pid_pres, pres); }
+        }
+    }
+
+    pub fn open_neural_inpaint_hud(&mut self) {
+        self.show_neural_inpaint_modal = true;
+    }
+
+    pub fn close_neural_inpaint_hud(&mut self) {
+        self.show_neural_inpaint_modal = false;
+    }
+
+    pub fn is_neural_inpaint_hud_open(&self) -> bool {
+        self.show_neural_inpaint_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_neural_inpaint_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_neural_inpaint_modal {
+            return;
+        }
+
+        let mut is_open = self.show_neural_inpaint_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🩹 Neural Diffusion Audio Inpainter & Generative Spectral Repair HUD")
+            .id(egui::Id::new("neural_inpaint_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(820.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Generative Diffusion Audio Inpainter, Transient De-Clicking & Spectral De-Bleeding (Milestones 33 & 36)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.neural_inpaint_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_neural_inpaint_modal = is_open;
+        self.sync_neural_inpaint_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_neural_inpaint_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let time_ms = self.neural_inpaint_view.mask_center_time_ms;
+        let freq_hz = self.neural_inpaint_view.mask_center_freq_hz;
+        let duration_ms = self.neural_inpaint_view.mask_duration_ms;
+        let bandwidth_oct = self.neural_inpaint_view.mask_bandwidth_oct;
+        let steps = self.neural_inpaint_view.diffusion_steps as f32;
+        let guidance = self.neural_inpaint_view.guidance_scale;
+
+        self.device_rack_state.node_param_values.insert("mask_center_time_ms".to_string(), time_ms);
+        self.device_rack_state.node_param_values.insert("mask_center_freq_hz".to_string(), freq_hz);
+        self.device_rack_state.node_param_values.insert("mask_duration_ms".to_string(), duration_ms);
+        self.device_rack_state.node_param_values.insert("mask_bandwidth_oct".to_string(), bandwidth_oct);
+        self.device_rack_state.node_param_values.insert("diffusion_steps".to_string(), steps);
+        self.device_rack_state.node_param_values.insert("guidance_scale".to_string(), guidance);
+
+        self.inspector_state.node_param_values.insert("mask_center_time_ms".to_string(), time_ms);
+        self.inspector_state.node_param_values.insert("mask_center_freq_hz".to_string(), freq_hz);
+        self.inspector_state.node_param_values.insert("mask_duration_ms".to_string(), duration_ms);
+        self.inspector_state.node_param_values.insert("mask_bandwidth_oct".to_string(), bandwidth_oct);
+        self.inspector_state.node_param_values.insert("diffusion_steps".to_string(), steps);
+        self.inspector_state.node_param_values.insert("guidance_scale".to_string(), guidance);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_time = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_freq = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_dur = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_bw = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_steps = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_guidance = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+
+            if bus.get(pid_time).is_some() { bus.set(pid_time, time_ms); }
+            if bus.get(pid_freq).is_some() { bus.set(pid_freq, freq_hz); }
+            if bus.get(pid_dur).is_some() { bus.set(pid_dur, duration_ms); }
+            if bus.get(pid_bw).is_some() { bus.set(pid_bw, bandwidth_oct); }
+            if bus.get(pid_steps).is_some() { bus.set(pid_steps, steps); }
+            if bus.get(pid_guidance).is_some() { bus.set(pid_guidance, guidance); }
+        }
+    }
+
+    pub fn open_neural_timbre_hud(&mut self) {
+        self.show_neural_timbre_modal = true;
+    }
+
+    pub fn close_neural_timbre_hud(&mut self) {
+        self.show_neural_timbre_modal = false;
+    }
+
+    pub fn is_neural_timbre_hud_open(&self) -> bool {
+        self.show_neural_timbre_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_neural_timbre_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_neural_timbre_modal {
+            return;
+        }
+
+        let mut is_open = self.show_neural_timbre_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🧬 Neural Timbre Transfer Morphing Resynthesizer & Continuous Latent Flow HUD")
+            .id(egui::Id::new("neural_timbre_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(820.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Continuous ODE Latent Timbre Flow, Neural Formant Resynthesis & Harmonic Residual Transfer (Milestones 33 & 36)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.neural_timbre_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_neural_timbre_modal = is_open;
+        self.sync_neural_timbre_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_neural_timbre_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let z1 = self.neural_timbre_view.latent_coord.0;
+        let z2 = self.neural_timbre_view.latent_coord.1;
+        let flow = self.neural_timbre_view.flow_rate_hz;
+        let blend = self.neural_timbre_view.residual_blend;
+        let full_mode = if self.neural_timbre_view.is_full_neural_mode { 1.0 } else { 0.0 };
+        let conv = self.neural_timbre_view.timbre_convergence_pct;
+
+        self.device_rack_state.node_param_values.insert("latent_z1".to_string(), z1);
+        self.device_rack_state.node_param_values.insert("latent_z2".to_string(), z2);
+        self.device_rack_state.node_param_values.insert("flow_rate_hz".to_string(), flow);
+        self.device_rack_state.node_param_values.insert("residual_blend".to_string(), blend);
+        self.device_rack_state.node_param_values.insert("is_full_neural_mode".to_string(), full_mode);
+        self.device_rack_state.node_param_values.insert("timbre_convergence_pct".to_string(), conv);
+
+        self.inspector_state.node_param_values.insert("latent_z1".to_string(), z1);
+        self.inspector_state.node_param_values.insert("latent_z2".to_string(), z2);
+        self.inspector_state.node_param_values.insert("flow_rate_hz".to_string(), flow);
+        self.inspector_state.node_param_values.insert("residual_blend".to_string(), blend);
+        self.inspector_state.node_param_values.insert("is_full_neural_mode".to_string(), full_mode);
+        self.inspector_state.node_param_values.insert("timbre_convergence_pct".to_string(), conv);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_z1 = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_z2 = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_flow = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_blend = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_mode = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_conv = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+
+            if bus.get(pid_z1).is_some() { bus.set(pid_z1, z1); }
+            if bus.get(pid_z2).is_some() { bus.set(pid_z2, z2); }
+            if bus.get(pid_flow).is_some() { bus.set(pid_flow, flow); }
+            if bus.get(pid_blend).is_some() { bus.set(pid_blend, blend); }
+            if bus.get(pid_mode).is_some() { bus.set(pid_mode, full_mode); }
+            if bus.get(pid_conv).is_some() { bus.set(pid_conv, conv); }
         }
     }
 

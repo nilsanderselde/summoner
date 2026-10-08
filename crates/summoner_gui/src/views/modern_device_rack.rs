@@ -213,6 +213,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_neural_super_resolution_hud: bool,
     #[serde(default)]
     pub requested_open_nam_amp_hud: bool,
+    #[serde(default)]
+    pub requested_open_neural_inpaint_hud: bool,
+    #[serde(default)]
+    pub requested_open_neural_timbre_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -308,6 +312,8 @@ impl Default for ModernDeviceRackState {
             requested_open_neural_dereverb_hud: false,
             requested_open_neural_super_resolution_hud: false,
             requested_open_nam_amp_hud: false,
+            requested_open_neural_inpaint_hud: false,
+            requested_open_neural_timbre_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -1026,6 +1032,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_neural_dereverb = cur_selection.contains("NeuralDereverb") || cur_selection.contains("Dereverb") || cur_selection == "NeuralDereverbView" || cur_selection == "NeuralDereverbNode" || cur_selection.contains("Deconvolution");
                     let is_neural_super_res = cur_selection.contains("NeuralSuperResolution") || cur_selection.contains("SuperResolution") || cur_selection == "NeuralSuperResolutionView" || cur_selection == "NeuralSuperResolutionNode" || cur_selection.contains("SuperRes");
                     let is_nam_amp = cur_selection.contains("NamAmp") || cur_selection.contains("NamModel") || cur_selection == "NamAmpView" || cur_selection == "NamAmpNode" || cur_selection.contains("NeuralAmp") || cur_selection.contains("WaveNet");
+                    let is_neural_inpaint = cur_selection.contains("NeuralInpaint") || cur_selection.contains("Inpaint") || cur_selection == "NeuralInpaintView" || cur_selection == "NeuralInpaintNode" || cur_selection.contains("SpectralRepair");
+                    let is_neural_timbre = cur_selection.contains("NeuralTimbre") || cur_selection.contains("TimbreTransfer") || cur_selection == "NeuralTimbreView" || cur_selection == "NeuralTimbreNode" || cur_selection.contains("LatentFlow");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1350,6 +1358,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("🎸 NAM Amp HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(245, 158, 11))).on_hover_text("Open Neural Amp Modeler (NAM) WaveNet Guitar & Bass Amplifier HUD").clicked()
                     {
                         state.requested_open_nam_amp_hud = true;
+                    } else if is_neural_inpaint
+                        && ui.button(RichText::new("🩹 Inpaint HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Neural Diffusion Audio Inpainter & Generative Spectral Repair HUD").clicked()
+                    {
+                        state.requested_open_neural_inpaint_hud = true;
+                    } else if is_neural_timbre
+                        && ui.button(RichText::new("🧬 Timbre HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(244, 63, 94))).on_hover_text("Open Neural Timbre Transfer Morphing Resynthesizer HUD").clicked()
+                    {
+                        state.requested_open_neural_timbre_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2196,6 +2212,8 @@ fn show_pro_parameter_drawer(
                     let is_neural_dereverb = dev_kind.contains("NeuralDereverb") || dev_kind.contains("Dereverb") || dev_kind == "NeuralDereverbView" || dev_kind == "NeuralDereverbNode" || dev_kind.contains("Deconvolution");
                     let is_neural_super_res = dev_kind.contains("NeuralSuperResolution") || dev_kind.contains("SuperResolution") || dev_kind == "NeuralSuperResolutionView" || dev_kind == "NeuralSuperResolutionNode" || dev_kind.contains("SuperRes");
                     let is_nam_amp = dev_kind.contains("NamAmp") || dev_kind.contains("NamModel") || dev_kind == "NamAmpView" || dev_kind == "NamAmpNode" || dev_kind.contains("NeuralAmp") || dev_kind.contains("WaveNet");
+                    let is_neural_inpaint = dev_kind.contains("NeuralInpaint") || dev_kind.contains("Inpaint") || dev_kind == "NeuralInpaintView" || dev_kind == "NeuralInpaintNode" || dev_kind.contains("SpectralRepair");
+                    let is_neural_timbre = dev_kind.contains("NeuralTimbre") || dev_kind.contains("TimbreTransfer") || dev_kind == "NeuralTimbreView" || dev_kind == "NeuralTimbreNode" || dev_kind.contains("LatentFlow");
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -8605,6 +8623,214 @@ fn show_pro_parameter_drawer(
                             let _ = na_resp.on_hover_text(format!(
                                 "Neural Amp Modeler (NAM) WaveNet HUD\nPre-Amp Drive: {:.2} x | Gate Threshold: {:.1} dB\nOutput Gain: {:.2} x | Tube Sag: {:.0}%\n[Drag: Gate (X) / Drive (Y) Amp Puck]",
                                 drive, gate, gain, sag * 100.0
+                            ));
+                        }
+                    } else if is_neural_inpaint {
+                        // Neural Diffusion Audio Inpainter & Spectral Repair Mini Visualizer
+                        let (nip_resp, nip_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let nip_rect = nip_resp.rect;
+                        nip_painter.rect_filled(nip_rect, 2.0, Color32::from_rgb(10, 16, 24));
+
+                        let mut time_ms = state.node_param_values.get("mask_center_time_ms").copied().unwrap_or(250.0);
+                        let mut freq_hz = state.node_param_values.get("mask_center_freq_hz").copied().unwrap_or(1000.0);
+                        let duration_ms = state.node_param_values.get("mask_duration_ms").copied().unwrap_or(45.0);
+                        let steps = state.node_param_values.get("diffusion_steps").copied().unwrap_or(25.0) as usize;
+                        let guidance = state.node_param_values.get("guidance_scale").copied().unwrap_or(4.5);
+
+                        let center = nip_rect.center();
+                        let max_box = 24.0;
+                        let nip_box = egui::Rect::from_center_size(
+                            egui::pos2(nip_rect.left() + 32.0, center.y),
+                            egui::vec2(max_box * 2.0, max_box * 2.0),
+                        );
+                        nip_painter.rect_filled(nip_box, 1.0, Color32::from_rgb(14, 22, 34));
+                        nip_painter.rect_stroke(
+                            nip_box,
+                            1.0,
+                            Stroke::new(0.6_f32, Color32::from_rgba_unmultiplied(0, 229, 255, 80)),
+                        );
+
+                        if nip_resp.dragged() {
+                            if let Some(pos) = nip_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - nip_box.left()) / (max_box * 2.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - (pos.y - nip_box.top()) / (max_box * 2.0)).clamp(0.0, 1.0);
+                                time_ms = crate::views::neural_inpaint_view::NeuralInpaintView::normalized_to_time(norm_x);
+                                freq_hz = crate::views::neural_inpaint_view::NeuralInpaintView::normalized_to_freq(norm_y);
+
+                                state.node_param_values.insert("mask_center_time_ms".to_string(), time_ms);
+                                state.node_param_values.insert("mask_center_freq_hz".to_string(), freq_hz);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_time = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_freq = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_time).is_some() { bus.set(pid_time, time_ms); }
+                                    if bus.get(pid_freq).is_some() { bus.set(pid_freq, freq_hz); }
+                                }
+                            }
+                        }
+
+                        // Grid crosshairs
+                        nip_painter.line_segment(
+                            [egui::pos2(nip_box.left(), nip_box.center().y), egui::pos2(nip_box.right(), nip_box.center().y)],
+                            Stroke::new(0.6_f32, Color32::from_rgba_unmultiplied(0, 229, 255, 80)),
+                        );
+                        nip_painter.line_segment(
+                            [egui::pos2(nip_box.center().x, nip_box.top()), egui::pos2(nip_box.center().x, nip_box.bottom())],
+                            Stroke::new(0.6_f32, Color32::from_rgba_unmultiplied(0, 229, 255, 80)),
+                        );
+
+                        // Inpaint Mask Puck
+                        let norm_t = crate::views::neural_inpaint_view::NeuralInpaintView::time_to_normalized(time_ms);
+                        let norm_f = crate::views::neural_inpaint_view::NeuralInpaintView::freq_to_normalized(freq_hz);
+                        let px = nip_box.left() + norm_t * (max_box * 2.0);
+                        let py = nip_box.bottom() - norm_f * (max_box * 2.0);
+                        nip_painter.circle_filled(egui::pos2(px, py), 3.5, Color32::from_rgb(0, 229, 255));
+                        nip_painter.circle_stroke(
+                            egui::pos2(px, py),
+                            5.5,
+                            Stroke::new(0.8_f32, Color32::from_rgba_unmultiplied(255, 107, 43, 180)),
+                        );
+
+                        // Mask rectangle preview
+                        let mask_w = (duration_ms / 500.0) * (max_box * 2.0) * 1.5;
+                        let mask_rect = egui::Rect::from_center_size(egui::pos2(px, py), egui::vec2(mask_w.clamp(6.0, 36.0), 12.0));
+                        nip_painter.rect_stroke(
+                            mask_rect,
+                            1.0,
+                            Stroke::new(0.8_f32, Color32::from_rgba_unmultiplied(255, 107, 43, 140)),
+                        );
+
+                        // Diffusion step progress bars preview
+                        let bars_left = nip_rect.left() + 72.0;
+                        let bars_w = nip_rect.right() - bars_left - 8.0;
+                        let num_steps = steps.clamp(5, 30);
+                        let step_w = (bars_w / num_steps as f32 - 1.0).max(1.5);
+                        let step_bottom = nip_rect.center().y + 18.0;
+                        for i in 0..num_steps {
+                            let bx = bars_left + i as f32 * (step_w + 1.0);
+                            let bh = ((i + 1) as f32 / num_steps as f32 * 22.0).clamp(3.0, 24.0);
+                            let col = if i < num_steps / 2 {
+                                Color32::from_rgb(0, 229, 255)
+                            } else {
+                                Color32::from_rgb(255, 215, 0)
+                            };
+                            nip_painter.rect_filled(
+                                egui::Rect::from_min_size(egui::pos2(bx, step_bottom - bh), egui::vec2(step_w, bh)),
+                                1.0,
+                                col,
+                            );
+                        }
+
+                        // Readout
+                        nip_painter.text(
+                            egui::pos2(nip_rect.right() - 4.0, nip_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("DIFFUSION INPAINT\n{:.1}ms @ {:.0}Hz\nSteps: {} | Guide: {:.1}x", time_ms, freq_hz, steps, guidance),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+
+                        if nip_resp.hovered() {
+                            let _ = nip_resp.on_hover_text(format!(
+                                "Neural Diffusion Audio Inpainter HUD\nCenter: {:.1} ms @ {:.0} Hz | Duration: {:.1} ms\nDiffusion Steps: {} | Guidance: {:.1}x\n[Drag: Time (X) / Frequency (Y) Puck]",
+                                time_ms, freq_hz, duration_ms, steps, guidance
+                            ));
+                        }
+                    } else if is_neural_timbre {
+                        // Neural Timbre Transfer Morphing Mini Visualizer
+                        let (nt_resp, nt_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let nt_rect = nt_resp.rect;
+                        nt_painter.rect_filled(nt_rect, 2.0, Color32::from_rgb(20, 10, 16));
+
+                        let mut z1 = state.node_param_values.get("latent_z1").copied().unwrap_or(0.45);
+                        let mut z2 = state.node_param_values.get("latent_z2").copied().unwrap_or(-0.30);
+                        let flow = state.node_param_values.get("flow_rate_hz").copied().unwrap_or(1.20);
+                        let blend = state.node_param_values.get("residual_blend").copied().unwrap_or(0.20);
+                        let conv = state.node_param_values.get("timbre_convergence_pct").copied().unwrap_or(99.4);
+
+                        let center = nt_rect.center();
+                        let max_box = 24.0;
+                        let nt_box = egui::Rect::from_center_size(
+                            egui::pos2(nt_rect.left() + 32.0, center.y),
+                            egui::vec2(max_box * 2.0, max_box * 2.0),
+                        );
+                        nt_painter.rect_filled(nt_box, 1.0, Color32::from_rgb(28, 14, 22));
+                        nt_painter.rect_stroke(
+                            nt_box,
+                            1.0,
+                            Stroke::new(0.6_f32, Color32::from_rgba_unmultiplied(244, 63, 94, 80)),
+                        );
+
+                        if nt_resp.dragged() {
+                            if let Some(pos) = nt_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - nt_box.left()) / (max_box * 2.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - (pos.y - nt_box.top()) / (max_box * 2.0)).clamp(0.0, 1.0);
+                                z1 = crate::views::neural_timbre_view::NeuralTimbreView::normalized_to_coord(norm_x);
+                                z2 = crate::views::neural_timbre_view::NeuralTimbreView::normalized_to_coord(norm_y);
+
+                                state.node_param_values.insert("latent_z1".to_string(), z1);
+                                state.node_param_values.insert("latent_z2".to_string(), z2);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_z1 = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_z2 = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_z1).is_some() { bus.set(pid_z1, z1); }
+                                    if bus.get(pid_z2).is_some() { bus.set(pid_z2, z2); }
+                                }
+                            }
+                        }
+
+                        // Grid crosshairs
+                        nt_painter.line_segment(
+                            [egui::pos2(nt_box.left(), nt_box.center().y), egui::pos2(nt_box.right(), nt_box.center().y)],
+                            Stroke::new(0.6_f32, Color32::from_rgba_unmultiplied(244, 63, 94, 80)),
+                        );
+                        nt_painter.line_segment(
+                            [egui::pos2(nt_box.center().x, nt_box.top()), egui::pos2(nt_box.center().x, nt_box.bottom())],
+                            Stroke::new(0.6_f32, Color32::from_rgba_unmultiplied(244, 63, 94, 80)),
+                        );
+
+                        // Timbre Puck
+                        let norm_z1 = crate::views::neural_timbre_view::NeuralTimbreView::coord_to_normalized(z1);
+                        let norm_z2 = crate::views::neural_timbre_view::NeuralTimbreView::coord_to_normalized(z2);
+                        let px = nt_box.left() + norm_z1 * (max_box * 2.0);
+                        let py = nt_box.bottom() - norm_z2 * (max_box * 2.0);
+                        nt_painter.circle_filled(egui::pos2(px, py), 3.5, Color32::from_rgb(244, 63, 94));
+                        nt_painter.circle_stroke(
+                            egui::pos2(px, py),
+                            5.5,
+                            Stroke::new(0.8_f32, Color32::from_rgba_unmultiplied(255, 255, 255, 160)),
+                        );
+
+                        // Spectral envelope trajectory preview curve
+                        let curve_left = nt_rect.left() + 72.0;
+                        let curve_w = nt_rect.right() - curve_left - 8.0;
+                        let curve_center_y = nt_rect.center().y + 8.0;
+                        let steps = 16;
+                        let mut prev_pt: Option<egui::Pos2> = None;
+                        for s in 0..=steps {
+                            let frac = s as f32 / steps as f32;
+                            let y_env = ((frac * 3.14159 * 2.0 + z1).sin() * 0.5 + (frac * 6.28 + z2).cos() * 0.3) * (0.6 + 0.4 * blend);
+                            let cur_pt = egui::pos2(curve_left + frac * curve_w, curve_center_y - y_env * 20.0);
+                            if let Some(p) = prev_pt {
+                                nt_painter.line_segment([p, cur_pt], Stroke::new(1.2_f32, Color32::from_rgb(244, 63, 94)));
+                            }
+                            prev_pt = Some(cur_pt);
+                        }
+
+                        // Readout
+                        nt_painter.text(
+                            egui::pos2(nt_rect.right() - 4.0, nt_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("TIMBRE FLOW\nZ: ({:.2}, {:.2})\nFlow: {:.2}Hz | {:.0}%", z1, z2, flow, blend * 100.0),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(244, 63, 94),
+                        );
+
+                        if nt_resp.hovered() {
+                            let _ = nt_resp.on_hover_text(format!(
+                                "Neural Timbre Transfer Morphing Resynthesizer HUD\nLatent Coord: ({:.2}, {:.2}) | Flow Rate: {:.2} Hz\nResidual Blend: {:.0}% | Convergence: {:.1}%\n[Drag: Latent Z1 (X) / Z2 (Y) Puck]",
+                                z1, z2, flow, blend * 100.0, conv
                             ));
                         }
                     } else {
