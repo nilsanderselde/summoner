@@ -210,6 +210,10 @@ pub struct ModernInspectorState {
     pub requested_open_tube_bias_hud: bool,
     #[serde(default)]
     pub requested_open_tape_saturation_hud: bool,
+    #[serde(default)]
+    pub requested_open_ladder_filter_hud: bool,
+    #[serde(default)]
+    pub requested_open_granular_freeze_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -321,6 +325,8 @@ impl Default for ModernInspectorState {
             requested_open_bbd_chorus_hud: false,
             requested_open_tube_bias_hud: false,
             requested_open_tape_saturation_hud: false,
+            requested_open_ladder_filter_hud: false,
+            requested_open_granular_freeze_hud: false,
         }
     }
 }
@@ -1665,6 +1671,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open Analog Reel-to-Reel Tape Saturation & Magnetic Hysteresis HUD").clicked() {
                     state.requested_open_tape_saturation_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Ladder") || active_kind.contains("Moog") || active_kind.contains("Tb303") || active_kind == "LadderFilterView" || active_kind == "LadderFilter" || active_kind.contains("FilterLadder") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🎛 Open Ladder Filter HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 229, 255)))
+                        .fill(Color32::from_rgb(14, 28, 38))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 229, 255)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Analog Ladder 24dB/oct Diode/Transistor Filter & Self-Oscillation HUD").clicked() {
+                    state.requested_open_ladder_filter_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Granular") || active_kind.contains("Freeze") || active_kind.contains("Grain") || active_kind == "GranularFreezeView" || active_kind == "GranularFreeze" || active_kind.contains("CloudFreeze") {
+                if ui.add(
+                    egui::Button::new(RichText::new("❄ Open Granular Freeze HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 255, 180)))
+                        .fill(Color32::from_rgb(12, 32, 26))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 255, 180)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Granular Spectral Cloud Freeze & Grain Trajectory HUD").clicked() {
+                    state.requested_open_granular_freeze_hud = true;
                 }
                 ui.add_space(4.0);
             }

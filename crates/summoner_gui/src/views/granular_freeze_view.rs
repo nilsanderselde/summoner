@@ -27,6 +27,18 @@ pub enum GrainEnvelopeWindow {
     TrapezoidSharp, // Linear rise/fall (Experimental rhythmic chop)
 }
 
+impl GrainEnvelopeWindow {
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::HannSmooth => "HANN BELL (SMOOTH)",
+            Self::BlackmanHarris => "BLACKMAN-HARRIS (4-TERM)",
+            Self::GaussianBell => "GAUSSIAN BELL (DIFFUSE)",
+            Self::TukeyTapered => "TUKEY FLAT (PUNCH)",
+            Self::TrapezoidSharp => "TRAPEZOID (CHOP)",
+        }
+    }
+}
+
 /// Simulated Active Grain Particle in Spectral Cloud.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ActiveGrainParticle {
@@ -527,5 +539,38 @@ impl GranularFreezeView {
             egui::FontId::proportional(12.0),
             Color32::from_rgb(0, 255, 180),
         );
+    }
+
+    pub fn density_to_normalized(hz: f32) -> f32 {
+        let d = hz.clamp(MIN_GRAIN_DENSITY_HZ, MAX_GRAIN_DENSITY_HZ);
+        ((d - MIN_GRAIN_DENSITY_HZ) / (MAX_GRAIN_DENSITY_HZ - MIN_GRAIN_DENSITY_HZ)).clamp(0.0, 1.0)
+    }
+
+    pub fn normalized_to_density(norm: f32) -> f32 {
+        MIN_GRAIN_DENSITY_HZ + norm.clamp(0.0, 1.0) * (MAX_GRAIN_DENSITY_HZ - MIN_GRAIN_DENSITY_HZ)
+    }
+
+    pub fn set_window_type(&mut self, window_type: GrainEnvelopeWindow) {
+        self.window_type = window_type;
+    }
+
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        let lines = self.render_ascii(80, 24);
+        let mut s = lines.join("\n");
+        s.push_str(&format!(
+            "\n[PASS] GRANULAR CLOUD FREEZE HUD | WINDOW: {}",
+            self.window_type.label()
+        ));
+        s
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_ui(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
     }
 }

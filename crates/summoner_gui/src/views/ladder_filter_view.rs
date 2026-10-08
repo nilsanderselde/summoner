@@ -22,6 +22,17 @@ pub enum LadderTopology {
     Ms20SallenKeyKorg,   // 12dB/oct aggressive screaming OTA/Sallen-Key resonance
 }
 
+impl LadderTopology {
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::MoogTransistor4Pole => "MOOG 24dB TRANSISTOR",
+            Self::Tb303DiodeLadder => "TB-303 DIODE LADDER",
+            Self::OberheimSem2Pole => "SEM 12dB 2-POLE",
+            Self::Ms20SallenKeyKorg => "MS-20 SALLEN-KEY",
+        }
+    }
+}
+
 /// Analog Ladder Filter HUD View (Step 1471).
 #[derive(Debug, Clone)]
 pub struct LadderFilterView {
@@ -555,6 +566,73 @@ impl LadderFilterView {
             "[PASS] Analog Ladder Filter Touch Puck (>= 44x44pt) & Self-Oscillation HUD Verified",
             egui::FontId::proportional(12.0),
             Color32::from_rgb(0, 255, 180),
+        );
+    }
+
+    pub fn set_topology(&mut self, topology: LadderTopology) {
+        self.topology = topology;
+    }
+
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        let lines = self.render_ascii(80, 24);
+        let mut s = lines.join("\n");
+        s.push_str(&format!(
+            "\n[PASS] ANALOG LADDER FILTER HUD | TOPOLOGY: {}",
+            self.topology.label()
+        ));
+        s
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_ui(&mut self, ui: &mut egui::Ui) {
+        let desired_size = egui::vec2(800.0, 500.0);
+        let (rect, response) = ui.allocate_exact_size(desired_size, egui::Sense::click_and_drag());
+
+        // Handle button clicks for topology
+        let topologies = [
+            LadderTopology::MoogTransistor4Pole,
+            LadderTopology::Tb303DiodeLadder,
+            LadderTopology::OberheimSem2Pole,
+            LadderTopology::Ms20SallenKeyKorg,
+        ];
+        let btn_y = rect.min.y + 54.0;
+        let btn_w = (rect.width() - 40.0 - 30.0) / 4.0;
+
+        // Check clicks on topologies
+        if response.clicked() {
+            if let Some(pos) = response.interact_pointer_pos() {
+                if pos.y >= btn_y && pos.y <= btn_y + 36.0 {
+                    for (i, topo) in topologies.iter().enumerate() {
+                        let bx = rect.min.x + 20.0 + i as f32 * (btn_w + 10.0);
+                        if pos.x >= bx && pos.x <= bx + btn_w {
+                            self.topology = *topo;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Handle dragging on filter response canvas
+        let filter_canvas = Rect::new(rect.min.x + 20.0, rect.min.y + 100.0, 480.0, 230.0);
+        if response.dragged() {
+            if let Some(pos) = response.interact_pointer_pos() {
+                if pos.x >= filter_canvas.x && pos.x <= filter_canvas.x + filter_canvas.width
+                    && pos.y >= filter_canvas.y && pos.y <= filter_canvas.y + filter_canvas.height
+                {
+                    let norm_x = ((pos.x - filter_canvas.x) / filter_canvas.width).clamp(0.0, 1.0);
+                    let norm_y = (1.0 - ((pos.y - filter_canvas.y) / filter_canvas.height)).clamp(0.0, 1.0);
+                    self.filter_puck_pos = (norm_x, norm_y);
+                    self.cutoff_freq_hz = Self::normalized_to_freq(norm_x);
+                    self.resonance_q = Self::normalized_to_resonance(norm_y);
+                    self.self_oscillating = self.check_self_oscillation();
+                }
+            }
+        }
+
+        self.show(
+            ui,
+            Rect::new(rect.min.x, rect.min.y, rect.width(), rect.height()),
         );
     }
 }

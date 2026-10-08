@@ -833,6 +833,18 @@ impl CommandPalette {
                 action_id: "open_tape_saturation_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Analog Ladder 24dB Filter & Self-Oscillation HUD".into(),
+                category: "Filter / EQ".into(),
+                action_id: "open_ladder_filter_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Granular Spectral Cloud Freeze & Trajectory HUD".into(),
+                category: "Granular / Time".into(),
+                action_id: "open_granular_freeze_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

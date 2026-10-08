@@ -225,6 +225,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_tube_bias_hud: bool,
     #[serde(default)]
     pub requested_open_tape_saturation_hud: bool,
+    #[serde(default)]
+    pub requested_open_ladder_filter_hud: bool,
+    #[serde(default)]
+    pub requested_open_granular_freeze_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -326,6 +330,8 @@ impl Default for ModernDeviceRackState {
             requested_open_bbd_chorus_hud: false,
             requested_open_tube_bias_hud: false,
             requested_open_tape_saturation_hud: false,
+            requested_open_ladder_filter_hud: false,
+            requested_open_granular_freeze_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -988,7 +994,7 @@ pub fn show_modern_device_rack_with_context(
                     let is_vocal_tract = cur_selection.contains("VocalTract") || cur_selection.contains("VocalTractModel") || cur_selection.contains("VowelSpace") || cur_selection.contains("VocalFormant") || cur_selection == "VocalTractNode" || cur_selection == "VocalTractProfile";
                     let is_rotary_speaker = cur_selection.contains("Rotary") || cur_selection.contains("Leslie") || cur_selection.contains("DopplerSpeaker") || cur_selection == "RotarySpeakerNode" || cur_selection == "DualRotorLeslieDopplerSpeaker" || cur_selection == "RotaryCabinetModel";
                     let is_free_reed = cur_selection.contains("FreeReed") || cur_selection.contains("Harmonium") || cur_selection.contains("Accordion") || cur_selection.contains("Bandoneon") || cur_selection.contains("Bayan") || cur_selection.contains("Cassotto") || cur_selection == "FreeReedNode" || cur_selection == "FreeReedVoice" || cur_selection == "FreeReedOscillator";
-                    let is_granular = cur_selection.contains("Granular") || cur_selection.contains("Grain") || cur_selection == "GranularSynthNode" || cur_selection == "GranularFreezeNode" || cur_selection == "GranularPitchShifter";
+                    let is_granular = cur_selection.contains("Granular") || cur_selection.contains("Grain") || cur_selection == "GranularSynthNode" || cur_selection == "GranularFreezeNode" || cur_selection == "GranularPitchShifter" || cur_selection == "GranularFreezeView" || cur_selection.contains("Freeze") || cur_selection.contains("CloudFreeze");
                     let is_spring_lattice = cur_selection.contains("Spring") || cur_selection.contains("Lattice") || cur_selection == "SpringLatticeNode" || cur_selection == "SpringReverb" || cur_selection == "SpringTankModel" || cur_selection == "SpringMassLattice";
                     let is_waveguide_mesh = cur_selection.contains("WaveguideMesh") || cur_selection.contains("MeshPlate") || cur_selection.contains("MeshMembrane") || cur_selection == "WaveguideMeshNode" || cur_selection == "WaveguideMesh2D" || cur_selection == "RectilinearWaveguideMesh" || cur_selection == "WaveguideMeshBoundary" || cur_selection == "WaveguideMesh";
                     let is_plucked_string = cur_selection.contains("PluckedString") || cur_selection.contains("CommutedPlucked") || cur_selection == "PluckedStringNode" || cur_selection == "CommutedPluckedStringNode" || cur_selection == "CommutedPluckedString" || cur_selection == "PluckedStringWaveguide" || cur_selection == "KarplusStrong";
@@ -1050,6 +1056,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_bbd_chorus = cur_selection.contains("BbdChorus") || cur_selection.contains("Chorus") || cur_selection == "BbdChorusView" || cur_selection == "EffectChorus" || cur_selection.contains("BucketBrigade") || cur_selection.contains("LissajousChorus");
                     let is_tube = cur_selection.contains("Tube") || cur_selection.contains("Vacuum") || cur_selection.contains("Triode") || cur_selection == "TubeBiasView" || cur_selection == "TubeSaturation" || cur_selection.contains("TubeAmp");
                     let is_tape = cur_selection.contains("Tape") || cur_selection.contains("Hysteresis") || cur_selection == "TapeSaturationView" || cur_selection == "TapeSaturation" || cur_selection.contains("TapeWarmth") || cur_selection.contains("ReelToReel");
+                    let is_ladder = cur_selection.contains("Ladder") || cur_selection.contains("Moog") || cur_selection.contains("Tb303") || cur_selection == "LadderFilterView" || cur_selection == "LadderFilter" || cur_selection.contains("FilterLadder");
+                    let is_granular_freeze = cur_selection.contains("Freeze") || cur_selection == "GranularFreezeView" || cur_selection == "GranularFreeze" || cur_selection.contains("CloudFreeze") || cur_selection == "GranularFreezeNode";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1398,6 +1406,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("📼 Tape HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 179, 0))).on_hover_text("Open Analog Reel-to-Reel Tape Saturation & Magnetic Hysteresis HUD").clicked()
                     {
                         state.requested_open_tape_saturation_hud = true;
+                    } else if is_ladder
+                        && ui.button(RichText::new("🎛 Ladder HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Analog Ladder 24dB/oct Filter & Self-Oscillation HUD").clicked()
+                    {
+                        state.requested_open_ladder_filter_hud = true;
+                    } else if is_granular_freeze
+                        && ui.button(RichText::new("❄ Freeze HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 255, 180))).on_hover_text("Open Granular Spectral Cloud Freeze & Trajectory HUD").clicked()
+                    {
+                        state.requested_open_granular_freeze_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2188,7 +2204,7 @@ fn show_pro_parameter_drawer(
                     let is_vocal_tract = dev_kind.contains("VocalTract") || dev_kind.contains("VocalTractModel") || dev_kind.contains("VowelSpace") || dev_kind.contains("VocalFormant") || dev_kind == "VocalTractNode" || dev_kind == "VocalTractProfile";
                     let is_rotary_speaker = dev_kind.contains("Rotary") || dev_kind.contains("Leslie") || dev_kind.contains("DopplerSpeaker") || dev_kind == "RotarySpeakerNode" || dev_kind == "DualRotorLeslieDopplerSpeaker" || dev_kind == "RotaryCabinetModel";
                     let is_free_reed = dev_kind.contains("FreeReed") || dev_kind.contains("Harmonium") || dev_kind.contains("Accordion") || dev_kind.contains("Bandoneon") || dev_kind.contains("Bayan") || dev_kind.contains("Cassotto") || dev_kind == "FreeReedNode" || dev_kind == "FreeReedVoice" || dev_kind == "FreeReedOscillator";
-                    let is_granular = dev_kind.contains("Granular") || dev_kind.contains("Grain") || dev_kind == "GranularSynthNode" || dev_kind == "GranularFreezeNode" || dev_kind == "GranularPitchShifter";
+                    let is_granular = dev_kind.contains("Granular") || dev_kind.contains("Grain") || dev_kind == "GranularSynthNode" || dev_kind == "GranularFreezeNode" || dev_kind == "GranularPitchShifter" || dev_kind == "GranularFreezeView" || dev_kind.contains("Freeze") || dev_kind.contains("CloudFreeze");
                     let is_spring_lattice = dev_kind.contains("Spring") || dev_kind.contains("Lattice") || dev_kind == "SpringLatticeNode" || dev_kind == "SpringReverb" || dev_kind == "SpringTankModel" || dev_kind == "SpringMassLattice";
                     let is_waveguide_mesh = dev_kind.contains("WaveguideMesh") || dev_kind.contains("MeshPlate") || dev_kind.contains("MeshMembrane") || dev_kind == "WaveguideMeshNode" || dev_kind == "WaveguideMesh2D" || dev_kind == "RectilinearWaveguideMesh" || dev_kind == "WaveguideMeshBoundary" || dev_kind == "WaveguideMesh";
                     let is_plucked_string = dev_kind.contains("PluckedString") || dev_kind.contains("CommutedPlucked") || dev_kind == "PluckedStringNode" || dev_kind == "CommutedPluckedStringNode" || dev_kind == "CommutedPluckedString" || dev_kind == "PluckedStringWaveguide" || dev_kind == "KarplusStrong";
@@ -2250,6 +2266,8 @@ fn show_pro_parameter_drawer(
                     let is_bbd_chorus = dev_kind.contains("BbdChorus") || dev_kind.contains("Chorus") || dev_kind == "BbdChorusView" || dev_kind == "EffectChorus" || dev_kind.contains("BucketBrigade") || dev_kind.contains("LissajousChorus");
                     let is_tube = dev_kind.contains("Tube") || dev_kind.contains("Vacuum") || dev_kind.contains("Triode") || dev_kind == "TubeBiasView" || dev_kind == "TubeSaturation" || dev_kind.contains("TubeAmp");
                     let is_tape = dev_kind.contains("Tape") || dev_kind.contains("Hysteresis") || dev_kind == "TapeSaturationView" || dev_kind == "TapeSaturation" || dev_kind.contains("TapeWarmth") || dev_kind.contains("ReelToReel");
+                    let is_ladder = dev_kind.contains("Ladder") || dev_kind.contains("Moog") || dev_kind.contains("Tb303") || dev_kind == "LadderFilterView" || dev_kind == "LadderFilter" || dev_kind.contains("FilterLadder");
+                    let is_granular_freeze = dev_kind.contains("Freeze") || dev_kind == "GranularFreezeView" || dev_kind == "GranularFreeze" || dev_kind.contains("CloudFreeze") || dev_kind == "GranularFreezeNode";
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -9215,6 +9233,135 @@ fn show_pro_parameter_drawer(
                             let _ = tp_resp.on_hover_text(format!(
                                 "Analog Tape Saturation & Magnetic Hysteresis HUD\nDrive: {:.1}x | Saturation: {:.0}%\nAC Bias: {:+.2}\n[Drag: Drive (X) / Saturation (Y) Puck]",
                                 drive, sat * 100.0, bias
+                            ));
+                        }
+                    } else if is_ladder {
+                        // Analog Ladder 24dB/oct Filter Mini Visualizer
+                        let (lf_resp, lf_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let lf_rect = lf_resp.rect;
+                        lf_painter.rect_filled(lf_rect, 2.0, Color32::from_rgb(10, 14, 22));
+
+                        let mut cutoff = state.node_param_values.get("cutoff_freq_hz").copied().unwrap_or(1450.0);
+                        let mut res = state.node_param_values.get("resonance_q").copied().unwrap_or(6.5);
+                        let drive = state.node_param_values.get("drive_saturation").copied().unwrap_or(35.0);
+
+                        if lf_resp.dragged() {
+                            if let Some(pos) = lf_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - lf_rect.left()) / lf_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - lf_rect.top()) / lf_rect.height())).clamp(0.0, 1.0);
+                                cutoff = crate::views::ladder_filter_view::LadderFilterView::normalized_to_freq(norm_x);
+                                res = crate::views::ladder_filter_view::LadderFilterView::normalized_to_resonance(norm_y);
+                                state.node_param_values.insert("cutoff_freq_hz".to_string(), cutoff);
+                                state.node_param_values.insert("resonance_q".to_string(), res);
+                                if let Some(bus) = param_bus {
+                                    let pid_cut = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_cut).is_some() { bus.set(pid_cut, cutoff); }
+                                    let pid_res = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_res).is_some() { bus.set(pid_res, res); }
+                                }
+                            }
+                        }
+
+                        // Background grid lines
+                        for step in 1..3 {
+                            let gy = lf_rect.top() + lf_rect.height() * (step as f32 * 0.33);
+                            lf_painter.line_segment([egui::pos2(lf_rect.left(), gy), egui::pos2(lf_rect.right(), gy)], Stroke::new(0.5_f32, Color32::from_rgba_unmultiplied(40, 55, 80, 80)));
+                        }
+
+                        // Draw 24dB/oct response curve preview (16 points)
+                        let norm_cut = crate::views::ladder_filter_view::LadderFilterView::freq_to_normalized(cutoff);
+                        let norm_res = crate::views::ladder_filter_view::LadderFilterView::resonance_to_normalized(res);
+                        let steps = 16;
+                        let mut prev_pt = None;
+                        for i in 0..=steps {
+                            let nx = i as f32 / steps as f32;
+                            let slope = if nx <= norm_cut { 1.0 + (norm_res * 0.8) * (1.0 - (nx - norm_cut).abs() * 3.0).max(0.0) } else { (1.0 - (nx - norm_cut) * 2.2).max(0.05) };
+                            let px = lf_rect.left() + nx * lf_rect.width();
+                            let py = lf_rect.bottom() - (slope.clamp(0.0, 1.8) / 1.8) * (lf_rect.height() - 10.0) - 5.0;
+                            let cur_pt = egui::pos2(px, py);
+                            if let Some(prev) = prev_pt {
+                                lf_painter.line_segment([prev, cur_pt], Stroke::new(1.3_f32, Color32::from_rgb(0, 229, 255)));
+                            }
+                            prev_pt = Some(cur_pt);
+                        }
+
+                        // Cutoff / Resonance Puck
+                        let puck_x = lf_rect.left() + norm_cut * lf_rect.width();
+                        let puck_y = lf_rect.bottom() - norm_res * (lf_rect.height() - 12.0) - 6.0;
+                        lf_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(0, 229, 255));
+                        lf_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::from_rgb(140, 240, 255)));
+
+                        // Readout
+                        lf_painter.text(
+                            egui::pos2(lf_rect.right() - 4.0, lf_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("LADDER 24dB\n{:.0}Hz | Q:{:.1}\nDrv:{:.0}%", cutoff, res, drive),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+
+                        if lf_resp.hovered() {
+                            let _ = lf_resp.on_hover_text(format!(
+                                "Analog Ladder 24dB/oct Filter & Self-Oscillation HUD\nCutoff: {:.0} Hz | Res Q: {:.1}\nDrive: {:.0}%\n[Drag: Cutoff (X) / Resonance (Y) Puck]",
+                                cutoff, res, drive
+                            ));
+                        }
+                    } else if is_granular_freeze {
+                        // Granular Spectral Cloud Freeze Mini Visualizer
+                        let (gf_resp, gf_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let gf_rect = gf_resp.rect;
+                        gf_painter.rect_filled(gf_rect, 2.0, Color32::from_rgb(12, 16, 26));
+
+                        let mut playhead = state.node_param_values.get("position_norm").copied().unwrap_or(0.45);
+                        let mut spray = state.node_param_values.get("pitch_spray_st").copied().unwrap_or(7.0);
+                        let size = state.node_param_values.get("grain_size_ms").copied().unwrap_or(120.0);
+                        let density = state.node_param_values.get("grain_density_hz").copied().unwrap_or(35.0);
+
+                        if gf_resp.dragged() {
+                            if let Some(pos) = gf_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - gf_rect.left()) / gf_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - gf_rect.top()) / gf_rect.height())).clamp(0.0, 1.0);
+                                playhead = norm_x;
+                                spray = crate::views::granular_freeze_view::GranularFreezeView::normalized_to_pitch(norm_y);
+                                state.node_param_values.insert("position_norm".to_string(), playhead);
+                                state.node_param_values.insert("pitch_spray_st".to_string(), spray);
+                                if let Some(bus) = param_bus {
+                                    let pid_spray = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 2);
+                                    if bus.get(pid_spray).is_some() { bus.set(pid_spray, spray); }
+                                }
+                            }
+                        }
+
+                        // Simulated grain particles cloud
+                        for i in 0..8 {
+                            let gx = gf_rect.left() + 10.0 + ((i as f32 * 17.3 + playhead * 40.0) % (gf_rect.width() - 20.0));
+                            let gy = gf_rect.top() + 10.0 + ((i as f32 * 23.7) % (gf_rect.height() - 20.0));
+                            gf_painter.circle_filled(egui::pos2(gx, gy), 2.5, Color32::from_rgba_premultiplied(0, 255, 180, 140));
+                        }
+
+                        // Vertical Playhead Line
+                        let pk_x = gf_rect.left() + playhead * gf_rect.width();
+                        gf_painter.line_segment([egui::pos2(pk_x, gf_rect.top() + 4.0), egui::pos2(pk_x, gf_rect.bottom() - 4.0)], Stroke::new(1.0_f32, Color32::from_rgb(0, 229, 255)));
+
+                        // Playhead Puck
+                        let norm_p = crate::views::granular_freeze_view::GranularFreezeView::pitch_to_normalized(spray);
+                        let pk_y = gf_rect.bottom() - norm_p * (gf_rect.height() - 12.0) - 6.0;
+                        gf_painter.circle_filled(egui::pos2(pk_x, pk_y), 4.0, Color32::from_rgb(0, 255, 180));
+                        gf_painter.circle_stroke(egui::pos2(pk_x, pk_y), 6.5, Stroke::new(1.0_f32, Color32::from_rgb(160, 255, 220)));
+
+                        // Readout
+                        gf_painter.text(
+                            egui::pos2(gf_rect.right() - 4.0, gf_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("GRANULAR\n{:.0}ms | {:+.1}st\n{:.0} gr/s", size, spray, density),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(0, 255, 180),
+                        );
+
+                        if gf_resp.hovered() {
+                            let _ = gf_resp.on_hover_text(format!(
+                                "Granular Spectral Cloud Freeze & Trajectory HUD\nPitch Spray: {:+.1} st | Size: {:.0} ms\nDensity: {:.0} gr/s\n[Drag: Playhead (X) / Pitch Spray (Y) Puck]",
+                                spray, size, density
                             ));
                         }
                     } else {

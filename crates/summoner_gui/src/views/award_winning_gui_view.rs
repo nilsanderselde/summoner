@@ -816,6 +816,10 @@ pub struct AwardWinningGuiView {
     pub tube_bias_view: crate::views::tube_bias_view::TubeBiasView,
     pub show_tape_saturation_modal: bool,
     pub tape_saturation_view: crate::views::tape_saturation_view::TapeSaturationView,
+    pub show_ladder_filter_modal: bool,
+    pub ladder_filter_view: crate::views::ladder_filter_view::LadderFilterView,
+    pub show_granular_freeze_modal: bool,
+    pub granular_freeze_view: crate::views::granular_freeze_view::GranularFreezeView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1248,6 +1252,10 @@ impl AwardWinningGuiView {
             tube_bias_view: crate::views::tube_bias_view::TubeBiasView::new(),
             show_tape_saturation_modal: false,
             tape_saturation_view: crate::views::tape_saturation_view::TapeSaturationView::new(),
+            show_ladder_filter_modal: false,
+            ladder_filter_view: crate::views::ladder_filter_view::LadderFilterView::new(),
+            show_granular_freeze_modal: false,
+            granular_freeze_view: crate::views::granular_freeze_view::GranularFreezeView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2327,6 +2335,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_tape_saturation_hud = false;
             self.open_tape_saturation_hud();
         }
+        if self.inspector_state.requested_open_ladder_filter_hud || self.device_rack_state.requested_open_ladder_filter_hud {
+            self.inspector_state.requested_open_ladder_filter_hud = false;
+            self.device_rack_state.requested_open_ladder_filter_hud = false;
+            self.open_ladder_filter_hud();
+        }
+        if self.inspector_state.requested_open_granular_freeze_hud || self.device_rack_state.requested_open_granular_freeze_hud {
+            self.inspector_state.requested_open_granular_freeze_hud = false;
+            self.device_rack_state.requested_open_granular_freeze_hud = false;
+            self.open_granular_freeze_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2418,6 +2436,8 @@ impl AwardWinningGuiView {
         self.show_bbd_chorus_modal_window(ui);
         self.show_tube_bias_modal_window(ui);
         self.show_tape_saturation_modal_window(ui);
+        self.show_ladder_filter_modal_window(ui);
+        self.show_granular_freeze_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -16418,6 +16438,197 @@ impl AwardWinningGuiView {
             if bus.get(pid_hyst).is_some() { bus.set(pid_hyst, hyst); }
             if bus.get(pid_tone).is_some() { bus.set(pid_tone, tone); }
             if bus.get(pid_mix).is_some() { bus.set(pid_mix, mix); }
+        }
+    }
+
+    pub fn open_ladder_filter_hud(&mut self) {
+        self.show_ladder_filter_modal = true;
+    }
+
+    pub fn close_ladder_filter_hud(&mut self) {
+        self.show_ladder_filter_modal = false;
+    }
+
+    pub fn is_ladder_filter_hud_open(&self) -> bool {
+        self.show_ladder_filter_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_ladder_filter_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_ladder_filter_modal {
+            return;
+        }
+
+        let mut is_open = self.show_ladder_filter_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎛 Analog Ladder 24dB/oct Filter & Self-Oscillation HUD")
+            .id(egui::Id::new("ladder_filter_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(840.0, 580.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Moog, TB-303, SEM, MS-20 Filter Topologies & Non-Linear Resonance Saturation (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.ladder_filter_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_ladder_filter_modal = is_open;
+        self.sync_ladder_filter_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_ladder_filter_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let cutoff = self.ladder_filter_view.cutoff_freq_hz;
+        let res = self.ladder_filter_view.resonance_q;
+        let drive = self.ladder_filter_view.drive_saturation;
+        let key_track = self.ladder_filter_view.key_tracking_percent;
+        let env_depth = self.ladder_filter_view.envelope_depth;
+
+        self.device_rack_state.node_param_values.insert("cutoff_freq_hz".to_string(), cutoff);
+        self.device_rack_state.node_param_values.insert("resonance_q".to_string(), res);
+        self.device_rack_state.node_param_values.insert("drive_saturation".to_string(), drive);
+        self.device_rack_state.node_param_values.insert("key_tracking_percent".to_string(), key_track);
+        self.device_rack_state.node_param_values.insert("envelope_depth".to_string(), env_depth);
+
+        self.inspector_state.node_param_values.insert("cutoff_freq_hz".to_string(), cutoff);
+        self.inspector_state.node_param_values.insert("resonance_q".to_string(), res);
+        self.inspector_state.node_param_values.insert("drive_saturation".to_string(), drive);
+        self.inspector_state.node_param_values.insert("key_tracking_percent".to_string(), key_track);
+        self.inspector_state.node_param_values.insert("envelope_depth".to_string(), env_depth);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_cut = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_res = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_drv = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_key = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_env = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+
+            if bus.get(pid_cut).is_some() { bus.set(pid_cut, cutoff); }
+            if bus.get(pid_res).is_some() { bus.set(pid_res, res); }
+            if bus.get(pid_drv).is_some() { bus.set(pid_drv, drive); }
+            if bus.get(pid_key).is_some() { bus.set(pid_key, key_track); }
+            if bus.get(pid_env).is_some() { bus.set(pid_env, env_depth); }
+        }
+    }
+
+    pub fn open_granular_freeze_hud(&mut self) {
+        self.show_granular_freeze_modal = true;
+    }
+
+    pub fn close_granular_freeze_hud(&mut self) {
+        self.show_granular_freeze_modal = false;
+    }
+
+    pub fn is_granular_freeze_hud_open(&self) -> bool {
+        self.show_granular_freeze_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_granular_freeze_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_granular_freeze_modal {
+            return;
+        }
+
+        let mut is_open = self.show_granular_freeze_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("❄ Granular Spectral Cloud Freeze & Grain Trajectory HUD")
+            .id(egui::Id::new("granular_freeze_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(840.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Spectral Cloud Freeze, Window Envelopes & Polyphonic Grain Trajectory Particle Physics (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.granular_freeze_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_granular_freeze_modal = is_open;
+        self.sync_granular_freeze_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_granular_freeze_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let size = self.granular_freeze_view.grain_size_ms;
+        let density = self.granular_freeze_view.grain_density_hz;
+        let spray = self.granular_freeze_view.pitch_spray_st;
+        let jitter = self.granular_freeze_view.position_jitter_pct;
+        let spread = self.granular_freeze_view.stereo_spread_pct;
+        let frozen = if self.granular_freeze_view.is_frozen { 1.0 } else { 0.0 };
+
+        self.device_rack_state.node_param_values.insert("grain_size_ms".to_string(), size);
+        self.device_rack_state.node_param_values.insert("grain_density_hz".to_string(), density);
+        self.device_rack_state.node_param_values.insert("pitch_spray_st".to_string(), spray);
+        self.device_rack_state.node_param_values.insert("position_jitter_pct".to_string(), jitter);
+        self.device_rack_state.node_param_values.insert("stereo_spread_pct".to_string(), spread);
+        self.device_rack_state.node_param_values.insert("is_frozen".to_string(), frozen);
+
+        self.inspector_state.node_param_values.insert("grain_size_ms".to_string(), size);
+        self.inspector_state.node_param_values.insert("grain_density_hz".to_string(), density);
+        self.inspector_state.node_param_values.insert("pitch_spray_st".to_string(), spray);
+        self.inspector_state.node_param_values.insert("position_jitter_pct".to_string(), jitter);
+        self.inspector_state.node_param_values.insert("stereo_spread_pct".to_string(), spread);
+        self.inspector_state.node_param_values.insert("is_frozen".to_string(), frozen);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_size = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_dens = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_spray = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_jit = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_spread = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_froz = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+
+            if bus.get(pid_size).is_some() { bus.set(pid_size, size); }
+            if bus.get(pid_dens).is_some() { bus.set(pid_dens, density); }
+            if bus.get(pid_spray).is_some() { bus.set(pid_spray, spray); }
+            if bus.get(pid_jit).is_some() { bus.set(pid_jit, jitter); }
+            if bus.get(pid_spread).is_some() { bus.set(pid_spread, spread); }
+            if bus.get(pid_froz).is_some() { bus.set(pid_froz, frozen); }
         }
     }
     fn render_patch_cords_canvas(&mut self, ui: &mut egui::Ui, available_h: f32) {
