@@ -274,7 +274,7 @@ pub use membrane_cavity_view::{MembraneCavityView, MembraneInstrumentViewProfile
 pub use membrane_plate_view::MembranePlateView;
 pub use membrane_resonator_view::MembraneResonatorView;
 pub use meter_bridge_view::MeterBridgeView;
-pub use midside_focuser_view::MidSideFocuserView;
+pub use midside_focuser_view::{MidSideFocuserView, MidSideProfileType};
 pub use modulation_matrix::*;
 pub use mpe_editor::{MpeCurveNode, MpeDimension, MpeEditorView, MpeNoteBlock};
 pub use mpegh_3d_spatializer_view::Mpegh3DSpatializerView;
@@ -302,7 +302,7 @@ pub use nhk222_immersion_view::Nhk222ImmersionView;
 pub use nhk222_spatializer_view::Nhk222SpatializerView;
 pub use optical_compressor_view::{CompressorTopology, OpticalCompressorView};
 pub use oversampled_limiter_view::OversampledLimiterView;
-pub use parallel_transient_saturator_view::ParallelTransientSaturatorView;
+pub use parallel_transient_saturator_view::{ParallelTransientSaturatorView, SaturatorMode};
 pub use phase_align_view::PhaseAlignView;
 pub use pipe_organ_view::PipeOrganView;
 pub use pitch_corrector_view::PitchCorrectorView;

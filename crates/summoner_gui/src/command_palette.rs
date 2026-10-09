@@ -1004,6 +1004,18 @@ impl CommandPalette {
                 action_id: "open_linear_phase_crossover_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Mastering Multi-Bus Parallel Dynamic Saturator HUD".into(),
+                category: "Dynamics & Saturation".into(),
+                action_id: "open_parallel_transient_saturator_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Mastering Stereo Mid/Side Dynamic Punch & Mono-Bass HUD".into(),
+                category: "Spatial & Surround".into(),
+                action_id: "open_midside_focuser_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

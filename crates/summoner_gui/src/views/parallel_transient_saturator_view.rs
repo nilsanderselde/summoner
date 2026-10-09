@@ -36,6 +36,10 @@ impl SaturatorMode {
         }
     }
 
+    pub fn name(&self) -> &'static str {
+        self.mode_name()
+    }
+
     pub fn nominal_drive_db(&self) -> f32 {
         match self {
             Self::TriodeTubeEvenOdd => 6.0,
@@ -115,6 +119,14 @@ impl ParallelTransientSaturatorView {
 
     pub fn normalized_to_drive(norm: f32) -> f32 {
         MIN_SAT_DRIVE_DB + norm.clamp(0.0, 1.0) * (MAX_SAT_DRIVE_DB - MIN_SAT_DRIVE_DB)
+    }
+
+    pub fn body_drive_to_normalized(drive_db: f32) -> f32 {
+        Self::drive_to_normalized(drive_db)
+    }
+
+    pub fn normalized_to_body_drive(norm: f32) -> f32 {
+        Self::normalized_to_drive(norm)
     }
 
     pub fn set_saturator_mode(&mut self, mode: SaturatorMode) {
@@ -266,6 +278,36 @@ impl ParallelTransientSaturatorView {
         grid.into_iter()
             .map(|row| row.into_iter().collect())
             .collect()
+    }
+
+    /// High-contrast ASCII snapshot string with metadata banner and compliance badge.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        let lines = self.render_ascii(60, 16);
+        let mut output = String::new();
+        output.push_str("============================================================\n");
+        output.push_str(" MASTERING PARALLEL TRANSIENT / BODY SATURATOR HUD          \n");
+        output.push_str(&format!(
+            " Mode: {:<20} Target Puck: [PASS: >=44pt]\n",
+            self.saturator_mode.mode_name()
+        ));
+        output.push_str(&format!(
+            " Blend: {:<5.1}% | Drive: +{:<4.1} dB | THD: {:<4.2}%\n",
+            self.blend_ratio * 100.0,
+            self.transient_drive_db,
+            self.thd_percent
+        ));
+        output.push_str("------------------------------------------------------------\n");
+        for line in lines {
+            output.push_str(&line);
+            output.push('\n');
+        }
+        output.push_str("============================================================\n");
+        output
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_ui(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
     }
 
     #[cfg(feature = "gui")]

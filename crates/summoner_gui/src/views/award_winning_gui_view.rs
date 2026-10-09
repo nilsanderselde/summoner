@@ -872,6 +872,10 @@ pub struct AwardWinningGuiView {
     pub dynamic_crest_shaper_view: crate::views::dynamic_crest_shaper_view::DynamicCrestShaperView,
     pub show_linear_phase_crossover_modal: bool,
     pub linear_phase_crossover_view: crate::views::linear_phase_crossover_view::LinearPhaseCrossoverView,
+    pub show_parallel_transient_saturator_modal: bool,
+    pub parallel_transient_saturator_view: crate::views::parallel_transient_saturator_view::ParallelTransientSaturatorView,
+    pub show_midside_focuser_modal: bool,
+    pub midside_focuser_view: crate::views::midside_focuser_view::MidSideFocuserView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1360,6 +1364,10 @@ impl AwardWinningGuiView {
             dynamic_crest_shaper_view: crate::views::dynamic_crest_shaper_view::DynamicCrestShaperView::new(),
             show_linear_phase_crossover_modal: false,
             linear_phase_crossover_view: crate::views::linear_phase_crossover_view::LinearPhaseCrossoverView::new(),
+            show_parallel_transient_saturator_modal: false,
+            parallel_transient_saturator_view: crate::views::parallel_transient_saturator_view::ParallelTransientSaturatorView::new(),
+            show_midside_focuser_modal: false,
+            midside_focuser_view: crate::views::midside_focuser_view::MidSideFocuserView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2579,6 +2587,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_linear_phase_crossover_hud = false;
             self.open_linear_phase_crossover_hud();
         }
+        if self.inspector_state.requested_open_parallel_transient_saturator_hud || self.device_rack_state.requested_open_parallel_transient_saturator_hud {
+            self.inspector_state.requested_open_parallel_transient_saturator_hud = false;
+            self.device_rack_state.requested_open_parallel_transient_saturator_hud = false;
+            self.open_parallel_transient_saturator_hud();
+        }
+        if self.inspector_state.requested_open_midside_focuser_hud || self.device_rack_state.requested_open_midside_focuser_hud {
+            self.inspector_state.requested_open_midside_focuser_hud = false;
+            self.device_rack_state.requested_open_midside_focuser_hud = false;
+            self.open_midside_focuser_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2698,6 +2716,8 @@ impl AwardWinningGuiView {
         self.show_dynamic_stereo_width_modal_window(ui);
         self.show_dynamic_crest_shaper_modal_window(ui);
         self.show_linear_phase_crossover_modal_window(ui);
+        self.show_parallel_transient_saturator_modal_window(ui);
+        self.show_midside_focuser_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -19439,6 +19459,191 @@ impl AwardWinningGuiView {
             if bus.get(pid_mid).is_some() { bus.set(pid_mid, mid_hz); }
             if bus.get(pid_hig).is_some() { bus.set(pid_hig, high_hz); }
             if bus.get(pid_cei).is_some() { bus.set(pid_cei, ceiling); }
+        }
+    }
+
+    pub fn open_parallel_transient_saturator_hud(&mut self) {
+        self.show_parallel_transient_saturator_modal = true;
+    }
+
+    pub fn close_parallel_transient_saturator_hud(&mut self) {
+        self.show_parallel_transient_saturator_modal = false;
+    }
+
+    pub fn is_parallel_transient_saturator_hud_open(&self) -> bool {
+        self.show_parallel_transient_saturator_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_parallel_transient_saturator_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_parallel_transient_saturator_modal {
+            return;
+        }
+
+        let mut is_open = self.show_parallel_transient_saturator_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🔥 Mastering Multi-Bus Parallel Dynamic Transient / Body Saturator HUD")
+            .id(egui::Id::new("parallel_transient_saturator_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Mastering Parallel Wet/Dry Transient & Body Sustain Saturation Stage (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.parallel_transient_saturator_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_parallel_transient_saturator_modal = is_open;
+        self.sync_parallel_transient_saturator_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_parallel_transient_saturator_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let blend = self.parallel_transient_saturator_view.blend_ratio;
+        let drive = self.parallel_transient_saturator_view.transient_drive_db;
+        let body = self.parallel_transient_saturator_view.body_sustain_drive_db;
+        let thd = self.parallel_transient_saturator_view.thd_percent;
+        let crest = self.parallel_transient_saturator_view.crest_factor_db;
+
+        self.device_rack_state.node_param_values.insert("blend_ratio".to_string(), blend);
+        self.device_rack_state.node_param_values.insert("blend".to_string(), blend);
+        self.device_rack_state.node_param_values.insert("transient_drive_db".to_string(), drive);
+        self.device_rack_state.node_param_values.insert("drive".to_string(), drive);
+        self.device_rack_state.node_param_values.insert("body_sustain_drive_db".to_string(), body);
+        self.device_rack_state.node_param_values.insert("thd_percent".to_string(), thd);
+        self.device_rack_state.node_param_values.insert("crest_factor_db".to_string(), crest);
+
+        self.inspector_state.node_param_values.insert("blend_ratio".to_string(), blend);
+        self.inspector_state.node_param_values.insert("blend".to_string(), blend);
+        self.inspector_state.node_param_values.insert("transient_drive_db".to_string(), drive);
+        self.inspector_state.node_param_values.insert("drive".to_string(), drive);
+        self.inspector_state.node_param_values.insert("body_sustain_drive_db".to_string(), body);
+        self.inspector_state.node_param_values.insert("thd_percent".to_string(), thd);
+        self.inspector_state.node_param_values.insert("crest_factor_db".to_string(), crest);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_bl = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_dr = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_bo = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+
+            if bus.get(pid_bl).is_some() { bus.set(pid_bl, blend); }
+            if bus.get(pid_dr).is_some() { bus.set(pid_dr, drive); }
+            if bus.get(pid_bo).is_some() { bus.set(pid_bo, body); }
+        }
+    }
+
+    pub fn open_midside_focuser_hud(&mut self) {
+        self.show_midside_focuser_modal = true;
+    }
+
+    pub fn close_midside_focuser_hud(&mut self) {
+        self.show_midside_focuser_modal = false;
+    }
+
+    pub fn is_midside_focuser_hud_open(&self) -> bool {
+        self.show_midside_focuser_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_midside_focuser_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_midside_focuser_modal {
+            return;
+        }
+
+        let mut is_open = self.show_midside_focuser_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎯 Mastering Linear-Phase Stereo Mid/Side Dynamic Punch & Mono-Bass Focuser HUD")
+            .id(egui::Id::new("midside_focuser_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Surgical Mid/Side Bass Mono Elliptical Filter, Mid Punch & Stereo Correlation (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.midside_focuser_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_midside_focuser_modal = is_open;
+        self.sync_midside_focuser_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_midside_focuser_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let cutoff = self.midside_focuser_view.mono_cutoff_hz;
+        let punch = self.midside_focuser_view.mid_punch_boost_db;
+        let width = self.midside_focuser_view.side_width_ratio;
+        let corr = self.midside_focuser_view.stereo_correlation;
+
+        self.device_rack_state.node_param_values.insert("mono_cutoff_hz".to_string(), cutoff);
+        self.device_rack_state.node_param_values.insert("cutoff_hz".to_string(), cutoff);
+        self.device_rack_state.node_param_values.insert("mid_punch_boost_db".to_string(), punch);
+        self.device_rack_state.node_param_values.insert("mid_punch".to_string(), punch);
+        self.device_rack_state.node_param_values.insert("side_width_ratio".to_string(), width);
+        self.device_rack_state.node_param_values.insert("width".to_string(), width);
+        self.device_rack_state.node_param_values.insert("stereo_correlation".to_string(), corr);
+
+        self.inspector_state.node_param_values.insert("mono_cutoff_hz".to_string(), cutoff);
+        self.inspector_state.node_param_values.insert("cutoff_hz".to_string(), cutoff);
+        self.inspector_state.node_param_values.insert("mid_punch_boost_db".to_string(), punch);
+        self.inspector_state.node_param_values.insert("mid_punch".to_string(), punch);
+        self.inspector_state.node_param_values.insert("side_width_ratio".to_string(), width);
+        self.inspector_state.node_param_values.insert("width".to_string(), width);
+        self.inspector_state.node_param_values.insert("stereo_correlation".to_string(), corr);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_co = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_pu = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_wi = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+
+            if bus.get(pid_co).is_some() { bus.set(pid_co, cutoff); }
+            if bus.get(pid_pu).is_some() { bus.set(pid_pu, punch); }
+            if bus.get(pid_wi).is_some() { bus.set(pid_wi, width); }
         }
     }
     fn render_patch_cords_canvas(&mut self, ui: &mut egui::Ui, available_h: f32) {

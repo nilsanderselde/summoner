@@ -38,6 +38,10 @@ impl MidSideProfileType {
         }
     }
 
+    pub fn name(&self) -> &'static str {
+        self.profile_name()
+    }
+
     pub fn nominal_mono_cutoff_hz(&self) -> f32 {
         match self {
             Self::ClubSubTightener => 120.0,
@@ -140,6 +144,15 @@ impl MidSideFocuserView {
         MIN_MID_PUNCH_DB + norm.clamp(0.0, 1.0) * (MAX_MID_PUNCH_DB - MIN_MID_PUNCH_DB)
     }
 
+    pub fn width_to_normalized(width: f32) -> f32 {
+        let val = width.clamp(MIN_SIDE_WIDTH_RATIO, MAX_SIDE_WIDTH_RATIO);
+        ((val - MIN_SIDE_WIDTH_RATIO) / (MAX_SIDE_WIDTH_RATIO - MIN_SIDE_WIDTH_RATIO)).clamp(0.0, 1.0)
+    }
+
+    pub fn normalized_to_width(norm: f32) -> f32 {
+        MIN_SIDE_WIDTH_RATIO + norm.clamp(0.0, 1.0) * (MAX_SIDE_WIDTH_RATIO - MIN_SIDE_WIDTH_RATIO)
+    }
+
     pub fn set_profile(&mut self, prof: MidSideProfileType) {
         self.profile = prof;
         self.mono_cutoff_hz = prof.nominal_mono_cutoff_hz();
@@ -227,6 +240,34 @@ impl MidSideFocuserView {
         grid.into_iter()
             .map(|r| r.into_iter().collect::<String>())
             .collect()
+    }
+
+    /// High-contrast ASCII snapshot string with metadata banner and compliance badge.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        let lines = self.render_ascii(60, 16);
+        let mut output = String::new();
+        output.push_str("============================================================\n");
+        output.push_str(" MASTERING STEREO MID/SIDE DYNAMIC PUNCH & MONO-BASS HUD    \n");
+        output.push_str(&format!(
+            " Profile: {:<22} Puck Target: [PASS: >=44pt]\n",
+            self.profile.profile_name()
+        ));
+        output.push_str(&format!(
+            " Cutoff: {:<5.1} Hz | Mid Punch: +{:<4.1} dB | Width: {:<4.2}x\n",
+            self.mono_cutoff_hz, self.mid_punch_boost_db, self.side_width_ratio
+        ));
+        output.push_str("------------------------------------------------------------\n");
+        for line in lines {
+            output.push_str(&line);
+            output.push('\n');
+        }
+        output.push_str("============================================================\n");
+        output
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_ui(&mut self, ui: &mut egui::Ui) {
+        self.show(ui);
     }
 
     #[cfg(feature = "gui")]

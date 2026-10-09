@@ -266,6 +266,10 @@ pub struct ModernInspectorState {
     pub requested_open_dynamic_crest_shaper_hud: bool,
     #[serde(default)]
     pub requested_open_linear_phase_crossover_hud: bool,
+    #[serde(default)]
+    pub requested_open_parallel_transient_saturator_hud: bool,
+    #[serde(default)]
+    pub requested_open_midside_focuser_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -405,6 +409,8 @@ impl Default for ModernInspectorState {
             requested_open_dynamic_stereo_width_hud: false,
             requested_open_dynamic_crest_shaper_hud: false,
             requested_open_linear_phase_crossover_hud: false,
+            requested_open_parallel_transient_saturator_hud: false,
+            requested_open_midside_focuser_hud: false,
         }
     }
 }
@@ -2029,6 +2035,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open Mastering Dynamic Linear-Phase Crossover & Multiband Limiter HUD").clicked() {
                     state.requested_open_linear_phase_crossover_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("ParallelTransientSaturator") || active_kind.contains("TransientSaturator") || active_kind == "ParallelTransientSaturatorNode" || active_kind.contains("ParallelSaturator") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🔥 Open Parallel Transient Saturator HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(255, 107, 43)))
+                        .fill(Color32::from_rgb(34, 18, 12))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 107, 43)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Mastering Multi-Bus Parallel Dynamic Transient/Body Saturator HUD").clicked() {
+                    state.requested_open_parallel_transient_saturator_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("MidSideFocuser") || active_kind.contains("SideFocuser") || active_kind == "MidSideFocuserNode" || active_kind.contains("MonoBassFocuser") || active_kind.contains("MidPunchFocuser") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🎯 Open Mid/Side Focuser HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 229, 255)))
+                        .fill(Color32::from_rgb(12, 28, 38))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 229, 255)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Mastering Linear-Phase Stereo Mid/Side Dynamic Punch & Multiband Mono-Bass Focuser HUD").clicked() {
+                    state.requested_open_midside_focuser_hud = true;
                 }
                 ui.add_space(4.0);
             }

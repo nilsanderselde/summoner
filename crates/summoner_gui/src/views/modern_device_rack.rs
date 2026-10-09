@@ -281,6 +281,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_dynamic_crest_shaper_hud: bool,
     #[serde(default)]
     pub requested_open_linear_phase_crossover_hud: bool,
+    #[serde(default)]
+    pub requested_open_parallel_transient_saturator_hud: bool,
+    #[serde(default)]
+    pub requested_open_midside_focuser_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -410,6 +414,8 @@ impl Default for ModernDeviceRackState {
             requested_open_dynamic_stereo_width_hud: false,
             requested_open_dynamic_crest_shaper_hud: false,
             requested_open_linear_phase_crossover_hud: false,
+            requested_open_parallel_transient_saturator_hud: false,
+            requested_open_midside_focuser_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -1162,6 +1168,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_multiband_decompressor = cur_selection.contains("MultibandDecompressor") || cur_selection.contains("DynamicDecompressor") || cur_selection == "MultibandDecompressorNode" || cur_selection.contains("UpwardDecompressor") || cur_selection.contains("MasteringDecompressor");
                     let is_dynamic_crest_shaper = cur_selection.contains("DynamicCrestShaper") || cur_selection.contains("CrestShaper") || cur_selection == "DynamicCrestShaperNode" || cur_selection.contains("PunchLeveler") || cur_selection.contains("MasteringCrestShaper");
                     let is_linear_phase_crossover = cur_selection.contains("LinearPhaseCrossover") || cur_selection.contains("LinPhaseCrossover") || cur_selection == "LinearPhaseCrossoverNode" || cur_selection.contains("MultibandCrossover") || cur_selection.contains("LinearPhaseLimiter");
+                    let is_parallel_transient_saturator = cur_selection.contains("ParallelTransientSaturator") || cur_selection.contains("TransientSaturator") || cur_selection == "ParallelTransientSaturatorNode" || cur_selection.contains("ParallelSaturator");
+                    let is_midside_focuser = cur_selection.contains("MidSideFocuser") || cur_selection.contains("SideFocuser") || cur_selection == "MidSideFocuserNode" || cur_selection.contains("MonoBassFocuser") || cur_selection.contains("MidPunchFocuser");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1622,6 +1630,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("🎚 Crossover HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 255, 180))).on_hover_text("Open Mastering Dynamic Linear-Phase Crossover HUD").clicked()
                     {
                         state.requested_open_linear_phase_crossover_hud = true;
+                    } else if is_parallel_transient_saturator
+                        && ui.button(RichText::new("🔥 Saturator HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 107, 43))).on_hover_text("Open Mastering Multi-Bus Parallel Dynamic Transient/Body Saturator HUD").clicked()
+                    {
+                        state.requested_open_parallel_transient_saturator_hud = true;
+                    } else if is_midside_focuser
+                        && ui.button(RichText::new("🎯 Focuser HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Mastering Linear-Phase Stereo Mid/Side Dynamic Punch & Multiband Mono-Bass Focuser HUD").clicked()
+                    {
+                        state.requested_open_midside_focuser_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2502,6 +2518,8 @@ fn show_pro_parameter_drawer(
                     let is_multiband_decompressor = dev_kind.contains("MultibandDecompressor") || dev_kind.contains("DynamicDecompressor") || dev_kind == "MultibandDecompressorNode" || dev_kind.contains("UpwardDecompressor") || dev_kind.contains("MasteringDecompressor");
                     let is_dynamic_crest_shaper = dev_kind.contains("DynamicCrestShaper") || dev_kind.contains("CrestShaper") || dev_kind == "DynamicCrestShaperNode" || dev_kind.contains("PunchLeveler") || dev_kind.contains("MasteringCrestShaper");
                     let is_linear_phase_crossover = dev_kind.contains("LinearPhaseCrossover") || dev_kind.contains("LinPhaseCrossover") || dev_kind == "LinearPhaseCrossoverNode" || dev_kind.contains("MultibandCrossover") || dev_kind.contains("LinearPhaseLimiter");
+                    let is_parallel_transient_saturator = dev_kind.contains("ParallelTransientSaturator") || dev_kind.contains("TransientSaturator") || dev_kind == "ParallelTransientSaturatorNode" || dev_kind.contains("ParallelSaturator");
+                    let is_midside_focuser = dev_kind.contains("MidSideFocuser") || dev_kind.contains("SideFocuser") || dev_kind == "MidSideFocuserNode" || dev_kind.contains("MonoBassFocuser") || dev_kind.contains("MidPunchFocuser");
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -11470,6 +11488,139 @@ fn show_pro_parameter_drawer(
                             let _ = xov_resp.on_hover_text(format!(
                                 "Mastering Dynamic Linear-Phase Crossover & Multiband Limiter HUD\nMid Crossover: {:.0} Hz | Limiter Ceiling: {:.1} dBFS\nZero Group Delay (Phase Linear)\n[Drag: Crossover Cutoff (X) / Limiter Ceiling (Y) Puck]",
                                 split_mid_hz, ceiling_db
+                            ));
+                        }
+                    } else if is_parallel_transient_saturator {
+                        // Mastering Multi-Bus Parallel Dynamic Transient / Body Saturator Mini View
+                        let (sat_resp, sat_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let sat_rect = sat_resp.rect;
+                        sat_painter.rect_filled(sat_rect, 2.0, Color32::from_rgb(20, 12, 16));
+
+                        let mut blend_ratio = state.node_param_values.get("blend_ratio").or_else(|| state.node_param_values.get("blend")).copied().unwrap_or(0.50);
+                        let mut transient_drive = state.node_param_values.get("transient_drive_db").or_else(|| state.node_param_values.get("drive")).copied().unwrap_or(6.0);
+                        let body_drive = state.node_param_values.get("body_sustain_drive_db").copied().unwrap_or(4.5);
+
+                        if sat_resp.dragged() {
+                            if let Some(pos) = sat_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - sat_rect.left()) / sat_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - sat_rect.top()) / sat_rect.height())).clamp(0.0, 1.0);
+                                blend_ratio = crate::views::parallel_transient_saturator_view::ParallelTransientSaturatorView::normalized_to_blend(norm_x);
+                                transient_drive = crate::views::parallel_transient_saturator_view::ParallelTransientSaturatorView::normalized_to_drive(norm_y);
+                                state.node_param_values.insert("blend_ratio".to_string(), blend_ratio);
+                                state.node_param_values.insert("blend".to_string(), blend_ratio);
+                                state.node_param_values.insert("transient_drive_db".to_string(), transient_drive);
+                                state.node_param_values.insert("drive".to_string(), transient_drive);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_bl = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_bl).is_some() { bus.set(pid_bl, blend_ratio); }
+                                    let pid_dr = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_dr).is_some() { bus.set(pid_dr, transient_drive); }
+                                }
+                            }
+                        }
+
+                        // Mini Transfer Curve
+                        let steps = 25;
+                        let mut sat_pts = Vec::with_capacity(steps);
+                        for i in 0..steps {
+                            let t = i as f32 / (steps - 1) as f32;
+                            let in_val = (t - 0.5) * 2.0;
+                            let out_val = (in_val * (1.0 + transient_drive * 0.1)).tanh();
+                            let px = sat_rect.left() + t * (sat_rect.width() - 55.0);
+                            let py = sat_rect.center().y - out_val * (sat_rect.height() * 0.35);
+                            sat_pts.push(egui::pos2(px, py));
+                        }
+                        sat_painter.add(egui::Shape::line(
+                            sat_pts,
+                            Stroke::new(1.8_f32, Color32::from_rgb(255, 107, 43)),
+                        ));
+
+                        // Interactive Puck
+                        let norm_b = crate::views::parallel_transient_saturator_view::ParallelTransientSaturatorView::blend_to_normalized(blend_ratio);
+                        let norm_d = crate::views::parallel_transient_saturator_view::ParallelTransientSaturatorView::drive_to_normalized(transient_drive);
+                        let puck_x = sat_rect.left() + norm_b * (sat_rect.width() - 55.0);
+                        let puck_y = sat_rect.bottom() - norm_d * (sat_rect.height() - 20.0) - 10.0;
+                        sat_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(255, 107, 43));
+                        sat_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        let thd_est = (0.5 * (transient_drive / 20.0).exp().powi(2)).clamp(0.05, 15.0);
+                        sat_painter.text(
+                            egui::pos2(sat_rect.right() - 4.0, sat_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("SATURATOR\n{:.0}% Blend\n+{:.1}dB\n{:.2}%THD", blend_ratio * 100.0, transient_drive, thd_est),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(255, 107, 43),
+                        );
+
+                        if sat_resp.hovered() {
+                            let _ = sat_resp.on_hover_text(format!(
+                                "Mastering Multi-Bus Parallel Dynamic Transient / Body Saturator HUD\nBlend: {:.0}% | Transient Drive: +{:.1} dB | Body Drive: +{:.1} dB\nEstimated THD: {:.2}%\n[Drag: Blend Ratio (X) / Transient Drive (Y) Puck]",
+                                blend_ratio * 100.0, transient_drive, body_drive, thd_est
+                            ));
+                        }
+                    } else if is_midside_focuser {
+                        // Mastering Linear-Phase Stereo Mid/Side Dynamic Punch & Mono-Bass Focuser Mini View
+                        let (ms_resp, ms_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let ms_rect = ms_resp.rect;
+                        ms_painter.rect_filled(ms_rect, 2.0, Color32::from_rgb(10, 16, 26));
+
+                        let mut mono_cutoff_hz = state.node_param_values.get("mono_cutoff_hz").or_else(|| state.node_param_values.get("cutoff_hz")).copied().unwrap_or(120.0);
+                        let mut mid_punch_db = state.node_param_values.get("mid_punch_boost_db").or_else(|| state.node_param_values.get("mid_punch")).copied().unwrap_or(4.0);
+                        let side_width = state.node_param_values.get("side_width_ratio").or_else(|| state.node_param_values.get("width")).copied().unwrap_or(1.35);
+
+                        if ms_resp.dragged() {
+                            if let Some(pos) = ms_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - ms_rect.left()) / ms_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - ms_rect.top()) / ms_rect.height())).clamp(0.0, 1.0);
+                                mono_cutoff_hz = crate::views::midside_focuser_view::MidSideFocuserView::normalized_to_cutoff(norm_x);
+                                mid_punch_db = crate::views::midside_focuser_view::MidSideFocuserView::normalized_to_punch(norm_y);
+                                state.node_param_values.insert("mono_cutoff_hz".to_string(), mono_cutoff_hz);
+                                state.node_param_values.insert("cutoff_hz".to_string(), mono_cutoff_hz);
+                                state.node_param_values.insert("mid_punch_boost_db".to_string(), mid_punch_db);
+                                state.node_param_values.insert("mid_punch".to_string(), mid_punch_db);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_co = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_co).is_some() { bus.set(pid_co, mono_cutoff_hz); }
+                                    let pid_pu = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_pu).is_some() { bus.set(pid_pu, mid_punch_db); }
+                                }
+                            }
+                        }
+
+                        // Mono Cutoff vertical marker
+                        let norm_co = crate::views::midside_focuser_view::MidSideFocuserView::cutoff_to_normalized(mono_cutoff_hz);
+                        let co_x = ms_rect.left() + norm_co * (ms_rect.width() - 55.0);
+                        ms_painter.line_segment(
+                            [egui::pos2(co_x, ms_rect.top() + 6.0), egui::pos2(co_x, ms_rect.bottom() - 6.0)],
+                            Stroke::new(1.2_f32, Color32::from_rgb(0, 229, 255)),
+                        );
+
+                        // Mid Punch horizontal line
+                        let norm_pu = crate::views::midside_focuser_view::MidSideFocuserView::punch_to_normalized(mid_punch_db);
+                        let pu_y = ms_rect.bottom() - norm_pu * (ms_rect.height() - 20.0) - 10.0;
+                        ms_painter.line_segment(
+                            [egui::pos2(ms_rect.left() + 4.0, pu_y), egui::pos2(ms_rect.left() + ms_rect.width() - 55.0, pu_y)],
+                            Stroke::new(1.0_f32, Color32::from_rgb(0, 255, 180)),
+                        );
+
+                        // Interactive Puck
+                        ms_painter.circle_filled(egui::pos2(co_x, pu_y), 4.0, Color32::from_rgb(0, 229, 255));
+                        ms_painter.circle_stroke(egui::pos2(co_x, pu_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        ms_painter.text(
+                            egui::pos2(ms_rect.right() - 4.0, ms_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("M/S FOCUS\n{:.0}Hz Cut\n+{:.1}dB Pn\n{:.2}x Wide", mono_cutoff_hz, mid_punch_db, side_width),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+
+                        if ms_resp.hovered() {
+                            let _ = ms_resp.on_hover_text(format!(
+                                "Mastering Linear-Phase Stereo Mid/Side Dynamic Punch & Mono-Bass Focuser HUD\nMono Cutoff: {:.0} Hz | Mid Punch Boost: +{:.1} dB | Side Width: {:.2}x\n[Drag: Mono Cutoff (X) / Mid Punch (Y) Puck]",
+                                mono_cutoff_hz, mid_punch_db, side_width
                             ));
                         }
                     } else {

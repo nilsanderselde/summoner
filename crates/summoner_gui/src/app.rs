@@ -1792,6 +1792,14 @@ impl eframe::App for SummonerApp {
                     self.current_view = ViewMode::ModernStudio;
                     self.award_winning_view.open_linear_phase_crossover_hud();
                 }
+                "open_parallel_transient_saturator_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_parallel_transient_saturator_hud();
+                }
+                "open_midside_focuser_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_midside_focuser_hud();
+                }
                 "sfz_convert" | "auto_slice" | "load_preset" | "export_clap" | "toggle_simd" => {
                     println!("Command palette action executed: {}", action);
                 }
