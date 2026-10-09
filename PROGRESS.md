@@ -2892,6 +2892,39 @@ Product Management has conducted a comprehensive readiness audit:
   - Pure unit tests: 329 passed in 0.22s (`cargo test -p summoner_gui --lib`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`).
 
+### Turn #105 (Sprint Turn #31) — Mastering Linear-Phase Multiband Upward Dynamic De-Compressor & Mastering Dynamic Stereo Width & Bass Mono HUDs Convergence (Milestones 33 & 34)
+- [x] Mastering Linear-Phase Multiband Upward De-Compressor & Dynamic Stereo Width HUDs Integration:
+  - Integrated `MultibandDecompressorView` (Mastering Linear-Phase Multiband Upward Dynamic De-Compressor & Crest Factor Recovery HUD: 4 Operating Frequency Bands [Sub <120Hz, Low-Mid 120-1k, High-Mid 1k-6k, Air High >6k], 5 Presets [Master Dynamic Rescue, Drum Transients, Slap Bass Punch, Vocal Air Expand, Orchestral Open], Threshold [-60.0..0.0 dB], Upward Ratio [1.0..4.0], Dynamic Range [0.0..18.0 dB], Crest Factor [0.0..24.0 dB], 1024-tap Linear-Phase FIR crossovers, 2D Non-Linear Expansion Transfer Curve Canvas, and Touch Decompressor Puck with >= 44x44pt bounding target) and `DynamicStereoWidthView` (Mastering Multi-Band Dynamic Stereo Width, Elliptical Bass Mono & Side Phase Correlation HUD: 4 Operating Bands [Sub Bass, Low-Mid, High-Mid, High Air], 5 Mastering Profiles [Broadcast Master Clean, Club Vinyl Cut 180Hz Mono, Cinematic Super Wide, Acoustic Natural Depth, EDM Hyper Width 200%], Elliptical Bass Cutoff [40.0..300.0 Hz], Side Width Ratio [0.0..2.5], Phase Correlation [-1.0..+1.0], Mono Compatibility [0.0..1.0], 2D Goniometer Lissajous & Stereo Width Curve Canvas, and Touch Stereo Puck with >= 44x44pt bounding target) into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/multiband_decompressor_view.rs` & `dynamic_stereo_width_view.rs`):
+  - In `MultibandDecompressorView`: added `name()`, `default_threshold_db()`, `default_ratio()`, `default_range_db()`, `default_crossovers_hz()` to `DecompressorPreset`, coordinate normalizations & round-trips (`threshold_to_normalized`, `normalized_to_threshold`, `ratio_to_normalized`, `normalized_to_ratio`, `range_to_normalized`, `normalized_to_range`), `set_active_band()`, `set_preset()`, `evaluate_expansion_curve()`, `hit_test_decompressor_puck()`, `show_ui(&mut self, ui: &mut egui::Ui)`, and `render_ascii_snapshot_str() -> String` with mastering multiband de-compressor metadata banner and verified hit target badge (`[PASS: >=44pt]`).
+  - In `DynamicStereoWidthView`: added `name()`, `nominal_bass_cutoff_hz()`, `nominal_width_ratio()`, `nominal_phase_correlation()` to `StereoWidthProfile`, coordinate normalizations & round-trips (`elliptical_bass_to_normalized`, `normalized_to_elliptical_bass`, `side_width_to_normalized`, `normalized_to_side_width`), `set_profile()`, `hit_test_stereo_puck()`, `show_ui(&mut self, ui: &mut egui::Ui)`, and `render_ascii_snapshot_str() -> String` with mastering dynamic stereo width metadata banner and verified hit target badge (`[PASS: >=44pt]`).
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added modal fields (`show_multiband_decompressor_modal`, `multiband_decompressor_view`, `show_dynamic_stereo_width_modal`, `dynamic_stereo_width_view`).
+  - Added dedicated modal windows (`show_multiband_decompressor_modal_window`, `show_dynamic_stereo_width_modal_window`) with responsive styling, WCAG AAA contrast, and >= 44x44pt touch bounds.
+  - Added public lifecycle methods: `open_multiband_decompressor_hud()`, `close_multiband_decompressor_hud()`, `is_multiband_decompressor_hud_open()`, `open_dynamic_stereo_width_hud()`, `close_dynamic_stereo_width_hud()`, `is_dynamic_stereo_width_hud_open()`.
+  - Real-time parameter sync bridges (`sync_multiband_decompressor_hud_state` and `sync_dynamic_stereo_width_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_multiband_decompressor_hud: bool` and `requested_open_dynamic_stereo_width_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[📈 Open Multiband Decompressor HUD]` and `[🌐 Open Dynamic Stereo Width HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header buttons `[📈 Decompressor HUD]` and `[🌐 Stereo Width HUD]` in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Multiband Decompressor: 2D dynamic upward expansion curve preview, interactive Threshold / Ratio puck, live crest readout, and lock-free slot-addressed `ParamBus` dispatch.
+    * Dynamic Stereo Width: 2D goniometer lissajous width preview, interactive Cutoff / Width puck, live correlation readout, and lock-free slot-addressed `ParamBus` dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_multiband_decompressor_hud` under `"Mastering & Dynamics"` and `open_dynamic_stereo_width_hud` under `"Spatial & Surround"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_multiband_decompressor_hud()` and `open_dynamic_stereo_width_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier168_turn105_tests.rs`:
+    * Pure tests: view initialization, coordinate normalizations (threshold, ratio, range, bass cutoff, width), preset and profile switching across all modes, transfer curve & goniometer calculations, touch puck hit testing (>= 44x44pt bounding targets), deterministic ASCII snapshots with metadata banners.
+    * GUI tests: modal window lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch without allocations, trigger button propagation from rack and inspector, command palette action verification.
+  - Registered `tier168_turn105_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Feature tests: 3 passed (`cargo test -p summoner_gui --features gui -- tier168`).
+  - Pure unit tests: 329 passed in 0.22s (`cargo test -p summoner_gui --lib`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`).
+
+
 
 
 

@@ -236,12 +236,11 @@ pub mod gui_tests {
 
         // 6. Command Palette Registration & Action Verification
         let palette = CommandPalette::new();
-        let actions = palette.available_actions();
-        let decomp_action = actions.iter().find(|a| a.action_id == "open_multiband_decompressor_hud");
+        let decomp_action = palette.actions.iter().find(|a| a.action_id == "open_multiband_decompressor_hud");
         assert!(decomp_action.is_some(), "open_multiband_decompressor_hud should be registered");
         assert_eq!(decomp_action.unwrap().category, "Mastering & Dynamics");
 
-        let stereo_action = actions.iter().find(|a| a.action_id == "open_dynamic_stereo_width_hud");
+        let stereo_action = palette.actions.iter().find(|a| a.action_id == "open_dynamic_stereo_width_hud");
         assert!(stereo_action.is_some(), "open_dynamic_stereo_width_hud should be registered");
         assert_eq!(stereo_action.unwrap().category, "Spatial & Surround");
     }

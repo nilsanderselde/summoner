@@ -19062,7 +19062,7 @@ impl AwardWinningGuiView {
     }
 
     #[cfg(feature = "gui")]
-    fn show_multiband_decompressor_modal_window(&mut self, ui: &mut egui::Ui) {
+    pub fn show_multiband_decompressor_modal_window(&mut self, ui: &mut egui::Ui) {
         if !self.show_multiband_decompressor_modal {
             return;
         }
@@ -19155,7 +19155,7 @@ impl AwardWinningGuiView {
     }
 
     #[cfg(feature = "gui")]
-    fn show_dynamic_stereo_width_modal_window(&mut self, ui: &mut egui::Ui) {
+    pub fn show_dynamic_stereo_width_modal_window(&mut self, ui: &mut egui::Ui) {
         if !self.show_dynamic_stereo_width_modal {
             return;
         }
