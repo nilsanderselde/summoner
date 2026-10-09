@@ -1088,6 +1088,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_vari_mu = cur_selection.contains("VariMu") || cur_selection.contains("VariableMu") || cur_selection == "VariMuMasterNode" || cur_selection == "VariMuMasterLimiter" || cur_selection == "MasterStereoVariMuLimiter" || cur_selection.contains("ValveLimiter");
                     let is_through_zero_flanger = cur_selection.contains("ThroughZero") || cur_selection.contains("Flanger") || cur_selection == "ThroughZeroFlangerNode" || cur_selection == "EffectFlanger" || cur_selection.contains("TapeFlanger");
                     let is_multitap_delay = cur_selection.contains("Multitap") || cur_selection.contains("MultiTap") || cur_selection == "MultitapDelayNode" || cur_selection.contains("TapDelay") || cur_selection == "MultiTapModulatedDiffuser";
+                    let is_frequency_shifter = cur_selection.contains("FrequencyShift") || cur_selection.contains("FreqShift") || cur_selection == "FrequencyShifterNode" || cur_selection == "FrequencyShifter" || cur_selection == "FrequencyShifterRingModulator";
+                    let is_optical_compressor = cur_selection.contains("OpticalCompressor") || cur_selection.contains("OptoComp") || cur_selection == "OpticalCompressorNode" || cur_selection.contains("VactrolCompressor") || cur_selection == "OpticalTubeCompressorLimiter" || cur_selection == "OptoelectronicVactrolOptocoupler" || cur_selection == "OpticalVactrolPeakMasterCompressor";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1468,6 +1470,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("🎛 Multitap HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Multi-Tap Delay Matrix & Spatial Bounce HUD").clicked()
                     {
                         state.requested_open_multitap_delay_hud = true;
+                    } else if is_frequency_shifter
+                        && ui.button(RichText::new("🎛 FreqShift HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Frequency Shifter & SSB Modulator HUD").clicked()
+                    {
+                        state.requested_open_frequency_shifter_hud = true;
+                    } else if is_optical_compressor
+                        && ui.button(RichText::new("💡 OptoComp HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 215, 0))).on_hover_text("Open Vintage Optical & VCA Compressor HUD").clicked()
+                    {
+                        state.requested_open_optical_compressor_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2328,6 +2338,8 @@ fn show_pro_parameter_drawer(
                     let is_vari_mu = dev_kind.contains("VariMu") || dev_kind.contains("VariableMu") || dev_kind == "VariMuMasterNode" || dev_kind == "VariMuMasterLimiter" || dev_kind == "MasterStereoVariMuLimiter" || dev_kind.contains("ValveLimiter");
                     let is_through_zero_flanger = dev_kind.contains("ThroughZero") || dev_kind.contains("Flanger") || dev_kind == "ThroughZeroFlangerNode" || dev_kind == "EffectFlanger" || dev_kind.contains("TapeFlanger");
                     let is_multitap_delay = dev_kind.contains("Multitap") || dev_kind.contains("MultiTap") || dev_kind == "MultitapDelayNode" || dev_kind.contains("TapDelay") || dev_kind == "MultiTapModulatedDiffuser";
+                    let is_frequency_shifter = dev_kind.contains("FrequencyShift") || dev_kind.contains("FreqShift") || dev_kind == "FrequencyShifterNode" || dev_kind == "FrequencyShifter" || dev_kind == "FrequencyShifterRingModulator";
+                    let is_optical_compressor = dev_kind.contains("OpticalCompressor") || dev_kind.contains("OptoComp") || dev_kind == "OpticalCompressorNode" || dev_kind.contains("VactrolCompressor") || dev_kind == "OpticalTubeCompressorLimiter" || dev_kind == "OptoelectronicVactrolOptocoupler" || dev_kind == "OpticalVactrolPeakMasterCompressor";
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -9853,6 +9865,178 @@ fn show_pro_parameter_drawer(
                             let _ = mt_resp.on_hover_text(format!(
                                 "Multi-Tap Delay Matrix & Stereo Spatial Tap-Tempo Bounce Editor HUD\nStereo Width: {:.0}% | Diffusion: {:.0}%\nTempo: {:.1} BPM | Dry/Wet: {:.0}%\n[Drag: Width (X) / Diffusion (Y) Puck]",
                                 width_pct, diff_pct, bpm, wet
+                            ));
+                        }
+                    } else if is_frequency_shifter {
+                        // Frequency Shifter & SSB Quadrature Modulator Mini View
+                        let (fs_resp, fs_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let fs_rect = fs_resp.rect;
+                        fs_painter.rect_filled(fs_rect, 2.0, Color32::from_rgb(8, 14, 22));
+
+                        let mut shift_hz = state.node_param_values.get("shift_hz").copied().unwrap_or(0.0);
+                        let mut feedback_pct = state.node_param_values.get("feedback_pct").copied().unwrap_or(30.0);
+                        let phase_deg = state.node_param_values.get("quadrature_phase_deg").copied().unwrap_or(90.0);
+
+                        if fs_resp.dragged() {
+                            if let Some(pos) = fs_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - fs_rect.left()) / fs_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - fs_rect.top()) / fs_rect.height())).clamp(0.0, 1.0);
+                                shift_hz = crate::views::frequency_shifter_view::FrequencyShifterView::normalized_to_shift(norm_x);
+                                feedback_pct = crate::views::frequency_shifter_view::FrequencyShifterView::normalized_to_feedback(norm_y);
+                                state.node_param_values.insert("shift_hz".to_string(), shift_hz);
+                                state.node_param_values.insert("feedback_pct".to_string(), feedback_pct);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_shift = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_shift).is_some() { bus.set(pid_shift, shift_hz); }
+                                    let pid_fb = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 3);
+                                    if bus.get(pid_fb).is_some() { bus.set(pid_fb, feedback_pct); }
+                                }
+                            }
+                        }
+
+                        // Background grid & center 0 Hz carrier line
+                        let center_x = fs_rect.left() + fs_rect.width() * 0.5;
+                        fs_painter.line_segment(
+                            [egui::pos2(center_x, fs_rect.top()), egui::pos2(center_x, fs_rect.bottom())],
+                            Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(0, 229, 255, 80)),
+                        );
+
+                        // Frequency spectrum shift curves (Upper & Lower sidebands)
+                        let norm_s = crate::views::frequency_shifter_view::FrequencyShifterView::shift_to_normalized(shift_hz);
+                        let norm_fb = crate::views::frequency_shifter_view::FrequencyShifterView::feedback_to_normalized(feedback_pct);
+
+                        let steps = 30;
+                        for i in 0..steps {
+                            let t0 = i as f32 / steps as f32;
+                            let t1 = (i + 1) as f32 / steps as f32;
+                            let x0 = fs_rect.left() + t0 * fs_rect.width();
+                            let x1 = fs_rect.left() + t1 * fs_rect.width();
+                            let delta0 = (t0 - norm_s).abs();
+                            let delta1 = (t1 - norm_s).abs();
+                            let y0 = fs_rect.bottom() - (-delta0 * 12.0).exp() * (fs_rect.height() - 10.0) * (0.3 + norm_fb * 0.6) - 5.0;
+                            let y1 = fs_rect.bottom() - (-delta1 * 12.0).exp() * (fs_rect.height() - 10.0) * (0.3 + norm_fb * 0.6) - 5.0;
+                            fs_painter.line_segment(
+                                [egui::pos2(x0, y0), egui::pos2(x1, y1)],
+                                Stroke::new(1.5_f32, Color32::from_rgb(0, 229, 255)),
+                            );
+                        }
+
+                        // Interactive Shift/FB puck
+                        let puck_x = fs_rect.left() + norm_s * fs_rect.width();
+                        let puck_y = fs_rect.bottom() - norm_fb * (fs_rect.height() - 12.0) - 6.0;
+                        fs_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(0, 229, 255));
+                        fs_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::from_rgb(186, 230, 253)));
+
+                        // Readout
+                        fs_painter.text(
+                            egui::pos2(fs_rect.right() - 4.0, fs_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("FREQSHIFT\nShift:{:+.0}Hz\nFB:{:.0}%\nPhase:{:.0}°", shift_hz, feedback_pct, phase_deg),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+
+                        if fs_resp.hovered() {
+                            let _ = fs_resp.on_hover_text(format!(
+                                "Frequency Shifter & SSB Quadrature Modulator HUD\nShift: {:+.1} Hz | Feedback: {:.0}%\nQuadrature Phase: {:.1}°\n[Drag: Shift Hz (X) / Feedback % (Y) Puck]",
+                                shift_hz, feedback_pct, phase_deg
+                            ));
+                        }
+                    } else if is_optical_compressor {
+                        // Vintage Optical & VCA Compressor Mini View
+                        let (op_resp, op_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let op_rect = op_resp.rect;
+                        op_painter.rect_filled(op_rect, 2.0, Color32::from_rgb(20, 18, 8));
+
+                        let mut thresh_db = state.node_param_values.get("threshold_db").copied().unwrap_or(-18.0);
+                        let mut knee_db = state.node_param_values.get("knee_width_db").copied().unwrap_or(8.0);
+                        let ratio = state.node_param_values.get("ratio").copied().unwrap_or(4.0);
+                        let gr_db = state.node_param_values.get("current_gain_reduction_db").copied().unwrap_or(0.0);
+
+                        if op_resp.dragged() {
+                            if let Some(pos) = op_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - op_rect.left()) / op_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - op_rect.top()) / op_rect.height())).clamp(0.0, 1.0);
+                                thresh_db = -40.0 + norm_x * 40.0;
+                                knee_db = crate::views::optical_compressor_view::OpticalCompressorView::normalized_to_knee(norm_y);
+                                state.node_param_values.insert("threshold_db".to_string(), thresh_db);
+                                state.node_param_values.insert("knee_width_db".to_string(), knee_db);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_thresh = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_thresh).is_some() { bus.set(pid_thresh, thresh_db); }
+                                    let pid_knee = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 2);
+                                    if bus.get(pid_knee).is_some() { bus.set(pid_knee, knee_db); }
+                                }
+                            }
+                        }
+
+                        // 1:1 Unity Line
+                        op_painter.line_segment(
+                            [egui::pos2(op_rect.left(), op_rect.bottom()), egui::pos2(op_rect.right(), op_rect.top())],
+                            Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(120, 110, 80, 80)),
+                        );
+
+                        // Compression Transfer Curve
+                        let norm_th = ((thresh_db + 40.0) / 40.0).clamp(0.0, 1.0);
+                        let norm_kn = crate::views::optical_compressor_view::OpticalCompressorView::knee_to_normalized(knee_db);
+
+                        let steps = 30;
+                        for i in 0..steps {
+                            let t0 = i as f32 / steps as f32;
+                            let t1 = (i + 1) as f32 / steps as f32;
+                            let in_db0 = -40.0 + t0 * 40.0;
+                            let in_db1 = -40.0 + t1 * 40.0;
+
+                            let out_db0 = if in_db0 < thresh_db - knee_db * 0.5 {
+                                in_db0
+                            } else if in_db0 > thresh_db + knee_db * 0.5 {
+                                thresh_db + (in_db0 - thresh_db) / ratio
+                            } else {
+                                let k = (in_db0 - thresh_db + knee_db * 0.5) / knee_db.max(0.1);
+                                in_db0 + (1.0 / ratio - 1.0) * (in_db0 - thresh_db + knee_db * 0.5) * k * 0.5
+                            };
+
+                            let out_db1 = if in_db1 < thresh_db - knee_db * 0.5 {
+                                in_db1
+                            } else if in_db1 > thresh_db + knee_db * 0.5 {
+                                thresh_db + (in_db1 - thresh_db) / ratio
+                            } else {
+                                let k = (in_db1 - thresh_db + knee_db * 0.5) / knee_db.max(0.1);
+                                in_db1 + (1.0 / ratio - 1.0) * (in_db1 - thresh_db + knee_db * 0.5) * k * 0.5
+                            };
+
+                            let x0 = op_rect.left() + t0 * op_rect.width();
+                            let x1 = op_rect.left() + t1 * op_rect.width();
+                            let y0 = op_rect.bottom() - ((out_db0 + 40.0) / 40.0).clamp(0.0, 1.0) * op_rect.height();
+                            let y1 = op_rect.bottom() - ((out_db1 + 40.0) / 40.0).clamp(0.0, 1.0) * op_rect.height();
+
+                            op_painter.line_segment(
+                                [egui::pos2(x0, y0), egui::pos2(x1, y1)],
+                                Stroke::new(1.5_f32, Color32::from_rgb(255, 215, 0)),
+                            );
+                        }
+
+                        // Interactive Threshold/Knee puck
+                        let puck_x = op_rect.left() + norm_th * op_rect.width();
+                        let puck_y = op_rect.bottom() - norm_kn * (op_rect.height() - 12.0) - 6.0;
+                        op_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(255, 215, 0));
+                        op_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::from_rgb(254, 240, 138)));
+
+                        // Readout
+                        op_painter.text(
+                            egui::pos2(op_rect.right() - 4.0, op_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("OPTO COMP\nTh:{:.0}dB\nRatio:{:.1}:1\nGR:{:.1}dB", thresh_db, ratio, gr_db),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(255, 215, 0),
+                        );
+
+                        if op_resp.hovered() {
+                            let _ = op_resp.on_hover_text(format!(
+                                "Vintage Optical & VCA Compressor HUD\nThreshold: {:.1} dB | Knee: {:.1} dB\nRatio: {:.1}:1 | GR: {:.1} dB\n[Drag: Threshold dB (X) / Knee dB (Y) Puck]",
+                                thresh_db, knee_db, ratio, gr_db
                             ));
                         }
                     } else {

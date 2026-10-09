@@ -2666,6 +2666,38 @@ Product Management has conducted a comprehensive readiness audit:
   - Pure unit tests: 329 passed in 0.23s (`cargo test -p summoner_gui --lib`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
 
+### Turn #98 (Sprint Turn #24 — Sprint Review) — Frequency Shifter & SSB Quadrature Modulator HUD and Vintage Optical & VCA Compressor HUD Convergence (Milestones 33 & 34)
+- [x] Frequency Shifter & Vintage Optical Compressor HUDs Integration:
+  - Integrated `FrequencyShifterView` (Analytic Single-Sideband Frequency Shifter & SSB Quadrature Ring Modulator HUD: 4 Sideband Modes [Upper SSB (USB), Lower SSB (LSB), Dual Bode Stereo, Ring Modulation], Shift Frequency [-5000.0..+5000.0 Hz], Fine Shift [-10.0..+10.0 Hz], Quadrature Phase [0.0..360.0 deg], Feedback with Anti-Saturation Limiting [0.0..95.0 %], Master Dry/Wet Mix [0.0..100.0 %], 2D Lissajous Analytic Quadrature Orbit Trajectory Canvas, and Touch-Draggable Orbital Puck with >= 44x44pt bounding target) and `OpticalCompressorView` (Vintage Optical & VCA Compressor Knee & Gain Transfer Curve HUD: 4 Compressor Circuit Topologies [Opto T4B Teletronix, VCA Fast Feed-Forward, Vari-Mu Tube Variable-Gain, FET Peak Limiter 1176], Threshold [-60.0..0.0 dB], Compression Ratio [1.0..20.0:1], Knee Width [0.0..24.0 dB], Makeup Gain [-12.0..+24.0 dB], Attack Time [0.02..100.0 ms], Release Time [10.0..2500.0 ms], Current Gain Reduction Readout, Quadratic Soft-Knee Non-Linear Compression Transfer Curve Canvas, and Touch-Draggable Threshold vs Knee Inflection Puck with >= 44x44pt bounding target) into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/frequency_shifter_view.rs` & `optical_compressor_view.rs`):
+  - In `FrequencyShifterView`: added `name()` to `SidebandMode`, coordinate normalizations & round-trips (`shift_to_normalized`, `normalized_to_shift`, `phase_to_normalized`, `normalized_to_phase`, `feedback_to_normalized`, `normalized_to_feedback`, `dry_wet_to_normalized`, `normalized_to_dry_wet`), `set_mode()`, `show_ui(&mut self, ui: &mut egui::Ui)`, and `render_ascii_snapshot_str() -> String` with sideband mode metadata banner.
+  - In `OpticalCompressorView`: added `name()` to `CompressorTopology`, coordinate normalizations & round-trips (`knee_to_normalized`, `normalized_to_knee`, `attack_to_normalized`, `normalized_to_attack`, `release_to_normalized`, `normalized_to_release`), `set_topology()`, `show_ui(&mut self, ui: &mut egui::Ui)`, and `render_ascii_snapshot_str() -> String` with compressor topology metadata banner.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_frequency_shifter_modal: bool`, `frequency_shifter_view: FrequencyShifterView`, `show_optical_compressor_modal: bool`, and `optical_compressor_view: OpticalCompressorView`.
+  - Added dedicated modal windows `show_frequency_shifter_modal_window` and `show_optical_compressor_modal_window` with responsive styling, WCAG AAA contrast, and >= 44x44pt touch bounds.
+  - Added public lifecycle methods: `open_frequency_shifter_hud()`, `close_frequency_shifter_hud()`, `is_frequency_shifter_hud_open()`, `open_optical_compressor_hud()`, `close_optical_compressor_hud()`, `is_optical_compressor_hud_open()`.
+  - Real-time parameter sync bridges (`sync_frequency_shifter_hud_state` and `sync_optical_compressor_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_frequency_shifter_hud: bool` and `requested_open_optical_compressor_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🎛 Open Frequency Shifter HUD]` and `[💡 Open Optical Compressor HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header buttons `[🎛 FreqShift HUD]` and `[💡 OptoComp HUD]` in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Frequency Shifter: 2D quadrature phase & SSB shift spectrum preview, center 0 Hz carrier line, interactive Shift/Feedback puck, live readout, and lock-free `ParamBus` slot dispatch.
+    * Optical Compressor: 2D soft-knee non-linear compression transfer curve preview, 1:1 unity guide, interactive Threshold/Knee puck, live readout, and lock-free `ParamBus` slot dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_frequency_shifter_hud` under `"Modulation"` and `open_optical_compressor_hud` under `"Dynamics & Mastering"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_frequency_shifter_hud()` and `open_optical_compressor_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier161_turn98_tests.rs`:
+    * Pure tests: view initialization, coordinate normalizations (shift, phase, feedback, dry/wet, knee, attack, release), mode & topology switching across all profiles, quadrature trajectory & non-linear transfer curve evaluation, touch puck hit testing (>= 44x44pt bounding targets), deterministic ASCII snapshots with metadata banners.
+    * GUI tests: modal window lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch without allocations, trigger button propagation from rack and inspector, command palette action verification.
+  - Registered `tier161_turn98_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Pure unit tests: 329 passed in 0.23s (`cargo test -p summoner_gui --lib`).
+  - Feature tests: 5 passed in 0.05s (`cargo test -p summoner_gui --features gui -- tier161`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`).
+
 
 
 

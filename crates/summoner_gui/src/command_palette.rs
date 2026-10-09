@@ -881,6 +881,18 @@ impl CommandPalette {
                 action_id: "open_multitap_delay_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Frequency Shifter & SSB Modulator HUD".into(),
+                category: "Modulation".into(),
+                action_id: "open_frequency_shifter_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Vintage Optical & VCA Compressor HUD".into(),
+                category: "Dynamics & Mastering".into(),
+                action_id: "open_optical_compressor_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES
