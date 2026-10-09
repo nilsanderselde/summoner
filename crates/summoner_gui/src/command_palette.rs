@@ -1148,6 +1148,18 @@ impl CommandPalette {
                 action_id: "open_chaotic_attractor_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Visual Spectrogram Art & Sonification Engine HUD".into(),
+                category: "Spectral Resynthesis".into(),
+                action_id: "open_spectrogram_art_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open 10-20 BCI EEG Brainwave Decoder & Neuro-Feedback HUD".into(),
+                category: "Neural & Modulation".into(),
+                action_id: "open_bci_eeg_decoder_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

@@ -920,6 +920,10 @@ pub struct AwardWinningGuiView {
     pub quantum_bloch_sphere_view: crate::views::quantum_bloch_sphere_view::QuantumBlochSphereView,
     pub show_chaotic_attractor_modal: bool,
     pub chaotic_attractor_view: crate::views::chaotic_attractor_view::ChaoticAttractorView,
+    pub show_spectrogram_art_modal: bool,
+    pub spectrogram_art_view: crate::views::spectrogram_art_view::SpectrogramArtView,
+    pub show_bci_eeg_decoder_modal: bool,
+    pub bci_eeg_decoder_view: crate::views::bci_eeg_decoder_view::BciEegDecoderView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1456,6 +1460,10 @@ impl AwardWinningGuiView {
             quantum_bloch_sphere_view: crate::views::quantum_bloch_sphere_view::QuantumBlochSphereView::new(),
             show_chaotic_attractor_modal: false,
             chaotic_attractor_view: crate::views::chaotic_attractor_view::ChaoticAttractorView::new(),
+            show_spectrogram_art_modal: false,
+            spectrogram_art_view: crate::views::spectrogram_art_view::SpectrogramArtView::new(),
+            show_bci_eeg_decoder_modal: false,
+            bci_eeg_decoder_view: crate::views::bci_eeg_decoder_view::BciEegDecoderView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2795,6 +2803,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_chaotic_attractor_hud = false;
             self.open_chaotic_attractor_hud();
         }
+        if self.inspector_state.requested_open_spectrogram_art_hud || self.device_rack_state.requested_open_spectrogram_art_hud {
+            self.inspector_state.requested_open_spectrogram_art_hud = false;
+            self.device_rack_state.requested_open_spectrogram_art_hud = false;
+            self.open_spectrogram_art_hud();
+        }
+        if self.inspector_state.requested_open_bci_eeg_decoder_hud || self.device_rack_state.requested_open_bci_eeg_decoder_hud {
+            self.inspector_state.requested_open_bci_eeg_decoder_hud = false;
+            self.device_rack_state.requested_open_bci_eeg_decoder_hud = false;
+            self.open_bci_eeg_decoder_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2938,6 +2956,8 @@ impl AwardWinningGuiView {
         self.show_tape_stop_glitch_modal_window(ui);
         self.show_quantum_bloch_sphere_modal_window(ui);
         self.show_chaotic_attractor_modal_window(ui);
+        self.show_spectrogram_art_modal_window(ui);
+        self.show_bci_eeg_decoder_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -21948,6 +21968,186 @@ impl AwardWinningGuiView {
             if bus.get(pid_sigma).is_some() { bus.set(pid_sigma, sigma); }
             if bus.get(pid_beta).is_some() { bus.set(pid_beta, beta); }
             if bus.get(pid_dt).is_some() { bus.set(pid_dt, dt); }
+        }
+    }
+
+    pub fn open_spectrogram_art_hud(&mut self) {
+        self.show_spectrogram_art_modal = true;
+    }
+
+    pub fn close_spectrogram_art_hud(&mut self) {
+        self.show_spectrogram_art_modal = false;
+    }
+
+    pub fn is_spectrogram_art_hud_open(&self) -> bool {
+        self.show_spectrogram_art_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_spectrogram_art_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_spectrogram_art_modal {
+            return;
+        }
+
+        let mut is_open = self.show_spectrogram_art_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎨 Visual Spectrogram Art & Sonification Engine HUD")
+            .id(egui::Id::new("spectrogram_art_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(660.0, 520.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Visual Spectrogram Bitmap Sonification, Logarithmic Octaves & Additive Banks (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.spectrogram_art_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_spectrogram_art_modal = is_open;
+        self.sync_spectrogram_art_hud_state();
+    }
+
+    pub fn sync_spectrogram_art_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let playhead = self.spectrogram_art_view.playhead_pos;
+        let density = self.spectrogram_art_view.spectral_density as f32;
+        let f_min = self.spectrogram_art_view.min_freq_hz;
+        let f_max = self.spectrogram_art_view.max_freq_hz;
+        let gain = self.spectrogram_art_view.gain_db;
+
+        self.device_rack_state.node_param_values.insert("playhead_pos".to_string(), playhead);
+        self.device_rack_state.node_param_values.insert("spectral_density".to_string(), density);
+        self.device_rack_state.node_param_values.insert("min_freq_hz".to_string(), f_min);
+        self.device_rack_state.node_param_values.insert("max_freq_hz".to_string(), f_max);
+        self.device_rack_state.node_param_values.insert("gain_db".to_string(), gain);
+
+        self.inspector_state.node_param_values.insert("playhead_pos".to_string(), playhead);
+        self.inspector_state.node_param_values.insert("spectral_density".to_string(), density);
+        self.inspector_state.node_param_values.insert("min_freq_hz".to_string(), f_min);
+        self.inspector_state.node_param_values.insert("max_freq_hz".to_string(), f_max);
+        self.inspector_state.node_param_values.insert("gain_db".to_string(), gain);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_playhead = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_density = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_fmin = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_fmax = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_playhead).is_some() { bus.set(pid_playhead, playhead); }
+            if bus.get(pid_density).is_some() { bus.set(pid_density, density); }
+            if bus.get(pid_fmin).is_some() { bus.set(pid_fmin, f_min); }
+            if bus.get(pid_fmax).is_some() { bus.set(pid_fmax, f_max); }
+        }
+    }
+
+    pub fn open_bci_eeg_decoder_hud(&mut self) {
+        self.show_bci_eeg_decoder_modal = true;
+    }
+
+    pub fn close_bci_eeg_decoder_hud(&mut self) {
+        self.show_bci_eeg_decoder_modal = false;
+    }
+
+    pub fn is_bci_eeg_decoder_hud_open(&self) -> bool {
+        self.show_bci_eeg_decoder_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_bci_eeg_decoder_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_bci_eeg_decoder_modal {
+            return;
+        }
+
+        let mut is_open = self.show_bci_eeg_decoder_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🧠 10-20 BCI EEG Brainwave Decoder & Neuro-Feedback HUD")
+            .id(egui::Id::new("bci_eeg_decoder_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(660.0, 520.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("10-20 Scalp Electrodes, 5-Band Spectral Energy & Neuro-Affective State CV (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.bci_eeg_decoder_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_bci_eeg_decoder_modal = is_open;
+        self.sync_bci_eeg_decoder_hud_state();
+    }
+
+    pub fn sync_bci_eeg_decoder_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let alpha = self.bci_eeg_decoder_view.alpha_power;
+        let beta = self.bci_eeg_decoder_view.beta_power;
+        let theta = self.bci_eeg_decoder_view.theta_power;
+        let focus = self.bci_eeg_decoder_view.focus_index;
+        let cv = self.bci_eeg_decoder_view.cv_modulation_out;
+
+        self.device_rack_state.node_param_values.insert("alpha_power".to_string(), alpha);
+        self.device_rack_state.node_param_values.insert("beta_power".to_string(), beta);
+        self.device_rack_state.node_param_values.insert("theta_power".to_string(), theta);
+        self.device_rack_state.node_param_values.insert("focus_index".to_string(), focus);
+        self.device_rack_state.node_param_values.insert("cv_modulation_out".to_string(), cv);
+
+        self.inspector_state.node_param_values.insert("alpha_power".to_string(), alpha);
+        self.inspector_state.node_param_values.insert("beta_power".to_string(), beta);
+        self.inspector_state.node_param_values.insert("theta_power".to_string(), theta);
+        self.inspector_state.node_param_values.insert("focus_index".to_string(), focus);
+        self.inspector_state.node_param_values.insert("cv_modulation_out".to_string(), cv);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_alpha = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_beta = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_theta = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_cv = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_alpha).is_some() { bus.set(pid_alpha, alpha); }
+            if bus.get(pid_beta).is_some() { bus.set(pid_beta, beta); }
+            if bus.get(pid_theta).is_some() { bus.set(pid_theta, theta); }
+            if bus.get(pid_cv).is_some() { bus.set(pid_cv, cv); }
         }
     }
 

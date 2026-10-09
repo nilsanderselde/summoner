@@ -314,6 +314,10 @@ pub struct ModernInspectorState {
     pub requested_open_quantum_bloch_sphere_hud: bool,
     #[serde(default)]
     pub requested_open_chaotic_attractor_hud: bool,
+    #[serde(default)]
+    pub requested_open_spectrogram_art_hud: bool,
+    #[serde(default)]
+    pub requested_open_bci_eeg_decoder_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -477,6 +481,8 @@ impl Default for ModernInspectorState {
             requested_open_tape_stop_glitch_hud: false,
             requested_open_quantum_bloch_sphere_hud: false,
             requested_open_chaotic_attractor_hud: false,
+            requested_open_spectrogram_art_hud: false,
+            requested_open_bci_eeg_decoder_hud: false,
         }
     }
 }
@@ -2341,6 +2347,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open Chaotic Fractal Attractor & Dynamic Systems Modulation HUD").clicked() {
                     state.requested_open_chaotic_attractor_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("SpectrogramArt") || active_kind.contains("Spectrogram") || active_kind.contains("ImageSound") || active_kind == "SpectrogramArtNode" || active_kind == "SpectrogramArtEngine" || active_kind == "SpectrogramArtMorphNode" || active_kind == "SpectrogramArtConfig" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🎨 Open Spectrogram Art HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(45, 212, 191)))
+                        .fill(Color32::from_rgb(15, 35, 35))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(45, 212, 191)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Visual Spectrogram Art & Sonification Engine HUD").clicked() {
+                    state.requested_open_spectrogram_art_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Bci") || active_kind.contains("EEG") || active_kind.contains("Eeg") || active_kind.contains("Brainwave") || active_kind == "BciEegDecoderNode" || active_kind == "EegBands" || active_kind == "MentalImageryClassifier" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🧠 Open BCI EEG Brainwave HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(34, 197, 94)))
+                        .fill(Color32::from_rgb(15, 35, 20))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(34, 197, 94)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open 10-20 BCI EEG Brainwave Decoder & Neuro-Feedback HUD").clicked() {
+                    state.requested_open_bci_eeg_decoder_hud = true;
                 }
                 ui.add_space(4.0);
             }

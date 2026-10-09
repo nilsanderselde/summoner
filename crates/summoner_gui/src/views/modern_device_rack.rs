@@ -329,6 +329,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_quantum_bloch_sphere_hud: bool,
     #[serde(default)]
     pub requested_open_chaotic_attractor_hud: bool,
+    #[serde(default)]
+    pub requested_open_spectrogram_art_hud: bool,
+    #[serde(default)]
+    pub requested_open_bci_eeg_decoder_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -482,6 +486,8 @@ impl Default for ModernDeviceRackState {
             requested_open_tape_stop_glitch_hud: false,
             requested_open_quantum_bloch_sphere_hud: false,
             requested_open_chaotic_attractor_hud: false,
+            requested_open_spectrogram_art_hud: false,
+            requested_open_bci_eeg_decoder_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -1258,6 +1264,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_tape_stop_glitch = cur_selection.contains("TapeStop") || cur_selection.contains("Glitch") || cur_selection.contains("TurntableBrake") || cur_selection.contains("Stutter") || cur_selection == "TapeStopEffect" || cur_selection == "GlitchStutterNode";
                     let is_quantum_bloch_sphere = cur_selection.contains("Quantum") || cur_selection.contains("Bloch") || cur_selection.contains("Qubit") || cur_selection == "QuantumStateVectorOscillator" || cur_selection == "QuantumTomographyData";
                     let is_chaotic_attractor = cur_selection.contains("Chaotic") || cur_selection.contains("Attractor") || cur_selection.contains("Lorenz") || cur_selection.contains("Rossler") || cur_selection == "ChaoticFractalAttractorModulator";
+                    let is_spectrogram_art = cur_selection.contains("SpectrogramArt") || cur_selection.contains("Spectrogram") || cur_selection.contains("ImageSound") || cur_selection == "SpectrogramArtNode" || cur_selection == "SpectrogramArtEngine" || cur_selection == "SpectrogramArtMorphNode" || cur_selection == "SpectrogramArtConfig";
+                    let is_bci_eeg_decoder = cur_selection.contains("Bci") || cur_selection.contains("EEG") || cur_selection.contains("Eeg") || cur_selection.contains("Brainwave") || cur_selection == "BciEegDecoderNode" || cur_selection == "EegBands" || cur_selection == "MentalImageryClassifier";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1814,6 +1822,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("🦋 Chaos HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(234, 179, 8))).on_hover_text("Open Chaotic Fractal Attractor & Dynamic Systems Modulation HUD").clicked()
                     {
                         state.requested_open_chaotic_attractor_hud = true;
+                    } else if is_spectrogram_art
+                        && ui.button(RichText::new("🎨 Spectro HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(45, 212, 191))).on_hover_text("Open Visual Spectrogram Art & Sonification Engine HUD").clicked()
+                    {
+                        state.requested_open_spectrogram_art_hud = true;
+                    } else if is_bci_eeg_decoder
+                        && ui.button(RichText::new("🧠 BCI HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(34, 197, 94))).on_hover_text("Open 10-20 BCI EEG Brainwave Decoder & Neuro-Feedback HUD").clicked()
+                    {
+                        state.requested_open_bci_eeg_decoder_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2718,6 +2734,8 @@ fn show_pro_parameter_drawer(
                     let is_tape_stop_glitch = dev_kind.contains("TapeStop") || dev_kind.contains("Glitch") || dev_kind.contains("TurntableBrake") || dev_kind.contains("Stutter") || dev_kind == "TapeStopEffect" || dev_kind == "GlitchStutterNode";
                     let is_quantum_bloch_sphere = dev_kind.contains("Quantum") || dev_kind.contains("Bloch") || dev_kind.contains("Qubit") || dev_kind == "QuantumStateVectorOscillator" || dev_kind == "QuantumTomographyData";
                     let is_chaotic_attractor = dev_kind.contains("Chaotic") || dev_kind.contains("Attractor") || dev_kind.contains("Lorenz") || dev_kind.contains("Rossler") || dev_kind == "ChaoticFractalAttractorModulator";
+                    let is_spectrogram_art = dev_kind.contains("SpectrogramArt") || dev_kind.contains("Spectrogram") || dev_kind.contains("ImageSound") || dev_kind == "SpectrogramArtNode" || dev_kind == "SpectrogramArtEngine" || dev_kind == "SpectrogramArtMorphNode" || dev_kind == "SpectrogramArtConfig";
+                    let is_bci_eeg_decoder = dev_kind.contains("Bci") || dev_kind.contains("EEG") || dev_kind.contains("Eeg") || dev_kind.contains("Brainwave") || dev_kind == "BciEegDecoderNode" || dev_kind == "EegBands" || dev_kind == "MentalImageryClassifier";
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -13334,6 +13352,133 @@ fn show_pro_parameter_drawer(
                             let _ = ch_resp.on_hover_text(format!(
                                 "Chaotic Strange Attractor HUD\nRayleigh Drive ρ: {:.1} | Prandtl Dissipation σ: {:.1}\n[Drag: Drive (X) / Dissipation (Y) Puck]",
                                 rho, sigma
+                            ));
+                        }
+                    } else if is_spectrogram_art {
+                        // Visual Spectrogram Art Mini View
+                        let (sp_resp, sp_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let sp_rect = sp_resp.rect;
+                        sp_painter.rect_filled(sp_rect, 2.0, Color32::from_rgb(8, 12, 22));
+
+                        let mut playhead = state.node_param_values.get("playhead_pos").or_else(|| state.node_param_values.get("spectrogram_playhead")).copied().unwrap_or(0.25);
+                        let mut density = state.node_param_values.get("spectral_density").or_else(|| state.node_param_values.get("spectrogram_density")).copied().unwrap_or(128.0);
+
+                        if sp_resp.dragged() || sp_resp.clicked() {
+                            if let Some(pos) = sp_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - sp_rect.left() - 4.0) / (sp_rect.width() - 60.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - sp_rect.top() - 10.0) / (sp_rect.height() - 20.0))).clamp(0.0, 1.0);
+                                playhead = crate::views::spectrogram_art_view::SpectrogramArtView::normalized_to_playhead(norm_x);
+                                density = crate::views::spectrogram_art_view::SpectrogramArtView::normalized_to_density(norm_y) as f32;
+                                state.node_param_values.insert("playhead_pos".to_string(), playhead);
+                                state.node_param_values.insert("spectrogram_playhead".to_string(), playhead);
+                                state.node_param_values.insert("spectral_density".to_string(), density);
+                                state.node_param_values.insert("spectrogram_density".to_string(), density);
+                                if let Some(bus) = param_bus {
+                                    let pid_playhead = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_density = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_playhead).is_some() { bus.set(pid_playhead, playhead); }
+                                    if bus.get(pid_density).is_some() { bus.set(pid_density, density); }
+                                }
+                            }
+                        }
+
+                        // Draw raster scan lines preview
+                        for i in 0..8 {
+                            let y = sp_rect.top() + 8.0 + i as f32 * 6.5;
+                            sp_painter.line_segment(
+                                [egui::pos2(sp_rect.left() + 4.0, y), egui::pos2(sp_rect.left() + 94.0, y)],
+                                Stroke::new(0.8_f32, Color32::from_rgb(15, 35, 45)),
+                            );
+                        }
+
+                        // Scanning playhead line
+                        let norm_p = crate::views::spectrogram_art_view::SpectrogramArtView::playhead_to_normalized(playhead);
+                        let norm_d = crate::views::spectrogram_art_view::SpectrogramArtView::density_to_normalized(density as usize);
+                        let pl_x = sp_rect.left() + 4.0 + norm_p * (sp_rect.width() - 60.0);
+                        sp_painter.line_segment(
+                            [egui::pos2(pl_x, sp_rect.top() + 6.0), egui::pos2(pl_x, sp_rect.bottom() - 6.0)],
+                            Stroke::new(1.2_f32, Color32::from_rgb(45, 212, 191)),
+                        );
+
+                        // Target puck
+                        let puck_y = sp_rect.bottom() - 10.0 - norm_d * (sp_rect.height() - 20.0);
+                        sp_painter.circle_filled(egui::pos2(pl_x, puck_y), 4.0, Color32::from_rgb(20, 184, 166));
+                        sp_painter.circle_stroke(egui::pos2(pl_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        sp_painter.text(
+                            egui::pos2(sp_rect.right() - 4.0, sp_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("SPECTRO\nPos {:.0}%\nBands {:.0}", playhead * 100.0, density),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(45, 212, 191),
+                        );
+
+                        if sp_resp.hovered() {
+                            let _ = sp_resp.on_hover_text(format!(
+                                "Visual Spectrogram Art HUD\nPlayhead: {:.1}% | Bands: {:.0}\n[Drag: Playhead (X) / Density (Y) Puck]",
+                                playhead * 100.0, density
+                            ));
+                        }
+                    } else if is_bci_eeg_decoder {
+                        // BCI EEG Decoder Mini View
+                        let (bci_resp, bci_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let bci_rect = bci_resp.rect;
+                        bci_painter.rect_filled(bci_rect, 2.0, Color32::from_rgb(10, 16, 26));
+
+                        let mut alpha = state.node_param_values.get("alpha_power").or_else(|| state.node_param_values.get("bci_alpha")).copied().unwrap_or(0.85);
+                        let mut beta = state.node_param_values.get("beta_power").or_else(|| state.node_param_values.get("bci_beta")).copied().unwrap_or(0.20);
+
+                        if bci_resp.dragged() || bci_resp.clicked() {
+                            if let Some(pos) = bci_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - bci_rect.left() - 4.0) / (bci_rect.width() - 60.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - bci_rect.top() - 10.0) / (bci_rect.height() - 20.0))).clamp(0.0, 1.0);
+                                alpha = crate::views::bci_eeg_decoder_view::BciEegDecoderView::normalized_to_alpha(norm_x);
+                                beta = crate::views::bci_eeg_decoder_view::BciEegDecoderView::normalized_to_beta(norm_y);
+                                state.node_param_values.insert("alpha_power".to_string(), alpha);
+                                state.node_param_values.insert("bci_alpha".to_string(), alpha);
+                                state.node_param_values.insert("beta_power".to_string(), beta);
+                                state.node_param_values.insert("bci_beta".to_string(), beta);
+                                if let Some(bus) = param_bus {
+                                    let pid_alpha = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_beta = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_alpha).is_some() { bus.set(pid_alpha, alpha); }
+                                    if bus.get(pid_beta).is_some() { bus.set(pid_beta, beta); }
+                                }
+                            }
+                        }
+
+                        // Draw 5 mini-band levels
+                        let mini_bands = [(0.25, Color32::from_rgb(6, 182, 212)), (0.50, Color32::from_rgb(20, 184, 166)), (alpha, Color32::from_rgb(34, 197, 94)), (beta, Color32::from_rgb(245, 158, 11)), (0.15, Color32::from_rgb(168, 85, 247))];
+                        for (idx, (pwr, col)) in mini_bands.iter().enumerate() {
+                            let bx = bci_rect.left() + 6.0 + idx as f32 * 17.0;
+                            let bar_h = (pwr.clamp(0.0, 1.0) * 44.0).max(2.0);
+                            bci_painter.rect_filled(
+                                egui::Rect::from_min_size(egui::pos2(bx, bci_rect.bottom() - 10.0 - bar_h), Vec2::new(12.0, bar_h)),
+                                1.0,
+                                *col,
+                            );
+                        }
+
+                        // Target puck
+                        let norm_a = crate::views::bci_eeg_decoder_view::BciEegDecoderView::alpha_to_normalized(alpha);
+                        let norm_b = crate::views::bci_eeg_decoder_view::BciEegDecoderView::beta_to_normalized(beta);
+                        let puck_x = bci_rect.left() + 4.0 + norm_a * (bci_rect.width() - 60.0);
+                        let puck_y = bci_rect.bottom() - 10.0 - norm_b * (bci_rect.height() - 20.0);
+                        bci_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(16, 185, 129));
+                        bci_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        bci_painter.text(
+                            egui::pos2(bci_rect.right() - 4.0, bci_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("BCI EEG\nα {:.0}%\nβ {:.0}%", alpha * 100.0, beta * 100.0),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(34, 197, 94),
+                        );
+
+                        if bci_resp.hovered() {
+                            let _ = bci_resp.on_hover_text(format!(
+                                "10-20 BCI EEG Brainwave Decoder HUD\nAlpha Power: {:.0}% | Beta Focus: {:.0}%\n[Drag: Alpha (X) / Beta (Y) Puck]",
+                                alpha * 100.0, beta * 100.0
                             ));
                         }
                     } else {

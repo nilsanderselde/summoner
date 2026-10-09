@@ -1888,6 +1888,14 @@ impl eframe::App for SummonerApp {
                     self.current_view = ViewMode::ModernStudio;
                     self.award_winning_view.open_chaotic_attractor_hud();
                 }
+                "open_spectrogram_art_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_spectrogram_art_hud();
+                }
+                "open_bci_eeg_decoder_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_bci_eeg_decoder_hud();
+                }
                 "sfz_convert" | "auto_slice" | "load_preset" | "export_clap" | "toggle_simd" => {
                     println!("Command palette action executed: {}", action);
                 }
