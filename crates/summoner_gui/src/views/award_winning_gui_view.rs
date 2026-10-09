@@ -900,6 +900,10 @@ pub struct AwardWinningGuiView {
     pub cassotto_chamber_view: crate::views::cassotto_chamber_view::CassottoChamberView,
     pub show_zero_gravity_fluid_modal: bool,
     pub zero_gravity_fluid_view: crate::views::zero_gravity_fluid_view::ZeroGravityFluidView,
+    pub show_horn_reflection_modal: bool,
+    pub horn_reflection_view: crate::views::horn_reflection_view::HornReflectionView,
+    pub show_glottal_pulse_modal: bool,
+    pub glottal_pulse_view: crate::views::glottal_pulse_view::GlottalPulseView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1416,6 +1420,10 @@ impl AwardWinningGuiView {
             cassotto_chamber_view: crate::views::cassotto_chamber_view::CassottoChamberView::new(),
             show_zero_gravity_fluid_modal: false,
             zero_gravity_fluid_view: crate::views::zero_gravity_fluid_view::ZeroGravityFluidView::new(),
+            show_horn_reflection_modal: false,
+            horn_reflection_view: crate::views::horn_reflection_view::HornReflectionView::new(),
+            show_glottal_pulse_modal: false,
+            glottal_pulse_view: crate::views::glottal_pulse_view::GlottalPulseView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2705,6 +2713,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_zero_gravity_fluid_hud = false;
             self.open_zero_gravity_fluid_hud();
         }
+        if self.inspector_state.requested_open_horn_reflection_hud || self.device_rack_state.requested_open_horn_reflection_hud {
+            self.inspector_state.requested_open_horn_reflection_hud = false;
+            self.device_rack_state.requested_open_horn_reflection_hud = false;
+            self.open_horn_reflection_hud();
+        }
+        if self.inspector_state.requested_open_glottal_pulse_hud || self.device_rack_state.requested_open_glottal_pulse_hud {
+            self.inspector_state.requested_open_glottal_pulse_hud = false;
+            self.device_rack_state.requested_open_glottal_pulse_hud = false;
+            self.open_glottal_pulse_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2838,6 +2856,8 @@ impl AwardWinningGuiView {
         self.show_spectral_reshaper_modal_window(ui);
         self.show_cassotto_chamber_modal_window(ui);
         self.show_zero_gravity_fluid_modal_window(ui);
+        self.show_horn_reflection_modal_window(ui);
+        self.show_glottal_pulse_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -20914,6 +20934,202 @@ impl AwardWinningGuiView {
             if bus.get(pid_c).is_some() { bus.set(pid_c, c); }
             if bus.get(pid_t).is_some() { bus.set(pid_t, tension); }
             if bus.get(pid_d).is_some() { bus.set(pid_d, damp); }
+        }
+    }
+
+    pub fn open_horn_reflection_hud(&mut self) {
+        self.show_horn_reflection_modal = true;
+    }
+
+    pub fn close_horn_reflection_hud(&mut self) {
+        self.show_horn_reflection_modal = false;
+    }
+
+    pub fn is_horn_reflection_hud_open(&self) -> bool {
+        self.show_horn_reflection_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_horn_reflection_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_horn_reflection_modal {
+            return;
+        }
+
+        let mut is_open = self.show_horn_reflection_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎺 Acoustic Horn Bell Flare Convolver & Radiation Reflection HUD")
+            .id(egui::Id::new("horn_reflection_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Acoustic Horn Bell Impedance Matcher & Flared Radiator (Milestones 14, 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.horn_reflection_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_horn_reflection_modal = is_open;
+        self.sync_horn_reflection_hud_state();
+    }
+
+    pub fn sync_horn_reflection_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let fc = self.horn_reflection_view.cutoff_hz;
+        let gamma = self.horn_reflection_view.flare_coefficient;
+        let damp = self.horn_reflection_view.reflection_damping;
+        let r_bell = self.horn_reflection_view.bell_radius_m;
+        let z_th = self.horn_reflection_view.throat_impedance_score;
+        let rad = self.horn_reflection_view.radiation_efficiency;
+
+        self.device_rack_state.node_param_values.insert("cutoff_hz".to_string(), fc);
+        self.device_rack_state.node_param_values.insert("horn_cutoff_hz".to_string(), fc);
+        self.device_rack_state.node_param_values.insert("flare_coefficient".to_string(), gamma);
+        self.device_rack_state.node_param_values.insert("reflection_damping".to_string(), damp);
+        self.device_rack_state.node_param_values.insert("bell_radius_m".to_string(), r_bell);
+        self.device_rack_state.node_param_values.insert("throat_impedance_score".to_string(), z_th);
+        self.device_rack_state.node_param_values.insert("radiation_efficiency".to_string(), rad);
+
+        self.inspector_state.node_param_values.insert("cutoff_hz".to_string(), fc);
+        self.inspector_state.node_param_values.insert("horn_cutoff_hz".to_string(), fc);
+        self.inspector_state.node_param_values.insert("flare_coefficient".to_string(), gamma);
+        self.inspector_state.node_param_values.insert("reflection_damping".to_string(), damp);
+        self.inspector_state.node_param_values.insert("bell_radius_m".to_string(), r_bell);
+        self.inspector_state.node_param_values.insert("throat_impedance_score".to_string(), z_th);
+        self.inspector_state.node_param_values.insert("radiation_efficiency".to_string(), rad);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_fc = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_fl = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_dp = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_rd = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_fc).is_some() { bus.set(pid_fc, fc); }
+            if bus.get(pid_fl).is_some() { bus.set(pid_fl, gamma); }
+            if bus.get(pid_dp).is_some() { bus.set(pid_dp, damp); }
+            if bus.get(pid_rd).is_some() { bus.set(pid_rd, r_bell); }
+        }
+    }
+
+    pub fn open_glottal_pulse_hud(&mut self) {
+        self.show_glottal_pulse_modal = true;
+    }
+
+    pub fn close_glottal_pulse_hud(&mut self) {
+        self.show_glottal_pulse_modal = false;
+    }
+
+    pub fn is_glottal_pulse_hud_open(&self) -> bool {
+        self.show_glottal_pulse_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_glottal_pulse_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_glottal_pulse_modal {
+            return;
+        }
+
+        let mut is_open = self.show_glottal_pulse_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🗣 Rosenberg Glottal Flow Waveguide Pulse Oscillator HUD")
+            .id(egui::Id::new("glottal_pulse_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Liljencrants-Fant (LF) Glottal Flow Vocal Source & Dynamics (Milestones 15, 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.glottal_pulse_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_glottal_pulse_modal = is_open;
+        self.sync_glottal_pulse_hud_state();
+    }
+
+    pub fn sync_glottal_pulse_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let f0 = self.glottal_pulse_view.frequency_hz;
+        let amp = self.glottal_pulse_view.voicing_amplitude;
+        let oq = self.glottal_pulse_view.open_quotient;
+        let sq = self.glottal_pulse_view.speed_quotient;
+        let asp = self.glottal_pulse_view.aspiration_level;
+        let jit = self.glottal_pulse_view.jitter;
+        let shim = self.glottal_pulse_view.shimmer;
+        let ee = self.glottal_pulse_view.closure_energy_score;
+
+        self.device_rack_state.node_param_values.insert("frequency_hz".to_string(), f0);
+        self.device_rack_state.node_param_values.insert("glottal_f0_hz".to_string(), f0);
+        self.device_rack_state.node_param_values.insert("voicing_amplitude".to_string(), amp);
+        self.device_rack_state.node_param_values.insert("open_quotient".to_string(), oq);
+        self.device_rack_state.node_param_values.insert("speed_quotient".to_string(), sq);
+        self.device_rack_state.node_param_values.insert("aspiration_level".to_string(), asp);
+        self.device_rack_state.node_param_values.insert("jitter".to_string(), jit);
+        self.device_rack_state.node_param_values.insert("shimmer".to_string(), shim);
+        self.device_rack_state.node_param_values.insert("closure_energy_score".to_string(), ee);
+
+        self.inspector_state.node_param_values.insert("frequency_hz".to_string(), f0);
+        self.inspector_state.node_param_values.insert("glottal_f0_hz".to_string(), f0);
+        self.inspector_state.node_param_values.insert("voicing_amplitude".to_string(), amp);
+        self.inspector_state.node_param_values.insert("open_quotient".to_string(), oq);
+        self.inspector_state.node_param_values.insert("speed_quotient".to_string(), sq);
+        self.inspector_state.node_param_values.insert("aspiration_level".to_string(), asp);
+        self.inspector_state.node_param_values.insert("jitter".to_string(), jit);
+        self.inspector_state.node_param_values.insert("shimmer".to_string(), shim);
+        self.inspector_state.node_param_values.insert("closure_energy_score".to_string(), ee);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_f0 = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_oq = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_sq = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_as = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_f0).is_some() { bus.set(pid_f0, f0); }
+            if bus.get(pid_oq).is_some() { bus.set(pid_oq, oq); }
+            if bus.get(pid_sq).is_some() { bus.set(pid_sq, sq); }
+            if bus.get(pid_as).is_some() { bus.set(pid_as, asp); }
         }
     }
 

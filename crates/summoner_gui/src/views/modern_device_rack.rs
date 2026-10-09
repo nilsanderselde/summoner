@@ -309,6 +309,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_cassotto_chamber_hud: bool,
     #[serde(default)]
     pub requested_open_zero_gravity_fluid_hud: bool,
+    #[serde(default)]
+    pub requested_open_horn_reflection_hud: bool,
+    #[serde(default)]
+    pub requested_open_glottal_pulse_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
