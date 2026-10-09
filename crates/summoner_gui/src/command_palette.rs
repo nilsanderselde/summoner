@@ -869,6 +869,18 @@ impl CommandPalette {
                 action_id: "open_vari_mu_master_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Analog Tape Flanger & Through-Zero HUD".into(),
+                category: "Modulation".into(),
+                action_id: "open_through_zero_flanger_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Multi-Tap Delay Matrix & Spatial Bounce HUD".into(),
+                category: "Delay & Reverb".into(),
+                action_id: "open_multitap_delay_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

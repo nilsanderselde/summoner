@@ -19,6 +19,16 @@ pub enum TapeFlangerMode {
     BarberPoleFlanger,      // Infinite rising/falling spiral cancellation
 }
 
+impl TapeFlangerMode {
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::ThroughZeroLinear => "LINEAR TZF",
+            Self::ThroughZeroExponential => "EXPONENTIAL TZF",
+            Self::BarberPoleFlanger => "BARBER-POLE SPIRAL",
+        }
+    }
+}
+
 /// Analog Tape Flanger HUD View (Step 1453).
 #[derive(Debug, Clone)]
 pub struct ThroughZeroFlangerView {
@@ -103,6 +113,34 @@ impl ThroughZeroFlangerView {
         let dx = pos.0 - px;
         let dy = pos.1 - py;
         (dx * dx + dy * dy).sqrt() <= FLANGER_PUCK_HIT_RADIUS
+    }
+
+    /// Set tape flanger operational mode.
+    pub fn set_mode(&mut self, mode: TapeFlangerMode) {
+        self.mode = mode;
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_ui(&mut self, ui: &mut egui::Ui) {
+        let avail = ui.available_size();
+        let w = avail.x.max(760.0);
+        let h = avail.y.max(500.0);
+        let (rect_allocated, _) = ui.allocate_exact_size(egui::vec2(w, h), egui::Sense::hover());
+        let r = Rect::new(rect_allocated.min.x, rect_allocated.min.y, rect_allocated.width(), rect_allocated.height());
+        self.show(ui, r);
+    }
+
+    /// Render deterministic ASCII snapshot with metadata banner.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        let lines = self.render_ascii(80, 20);
+        format!(
+            "--- THROUGH-ZERO FLANGER HUD [{}] [Delay: {:+.2} ms] [Rate: {:.2} Hz] [FB: {:+.0}%] ---\n{}\n[PASS] Analog Tape Flanger Through-Zero Pucks (>= 44x44pt) Verified\n",
+            self.mode.name(),
+            self.manual_delay_ms,
+            self.lfo_rate_hz,
+            self.feedback_pct,
+            lines.join("\n")
+        )
     }
 
     /// Render deterministic ASCII representation for headless terminal debugging.

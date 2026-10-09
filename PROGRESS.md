@@ -2635,6 +2635,38 @@ Product Management has conducted a comprehensive readiness audit:
   - Pure unit tests: 329 passed in 0.23s (`cargo test -p summoner_gui --lib`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`).
 
+### Turn #97 (Sprint Turn #23) — Analog Tape Flanger Through-Zero HUD & Multi-Tap Delay Matrix & Stereo Spatial Bounce HUD Convergence (Milestones 33 & 34)
+- [x] Analog Tape Flanger & Multi-Tap Delay Matrix HUDs Integration:
+  - Integrated `ThroughZeroFlangerView` (Analog Tape Flanger & Feedback Through-Zero Delay Modulator HUD: 3 Operating Modes [Linear TZF, Exponential TZF, Barber-Pole Spiral], Manual Delay Offset [-5.0..+5.0 ms] with True Zero Phase Null crossover at 0.0 ms, LFO Modulation Speed [0.01..10.0 Hz], LFO Depth [0.0..5.0 ms], Feedback with Phase Inversion [-99.0..+99.0 %], Non-linear Tape Head Saturation [0.0..100.0 %], Mechanical Wow & Flutter Wobble [0.0..100.0 %], Master Dry/Wet Mix [0.0..100.0 %], Dual Tape Deck Phase Null Interferometer Canvas, and Touch-Draggable Zero-Cross Puck with >= 44x44pt bounding target) and `MultitapDelayView` (Multi-Tap Delay Matrix & Stereo Spatial Tap-Tempo Bounce Editor HUD: Up to 8 Independent Delay Taps with Time [10.0..2000.0 ms], Gain [0.0..100.0 %], Stereo Pan [-1.0..+1.0], Feedback [0.0..95.0 %], Filter Cutoff [200.0..20000.0 Hz], Tempo BPM [20.0..300.0 BPM] with BPM Sync Toggle, Ping-Pong Stereo Width [0.0..100.0 %], Late Diffusion Matrix [0.0..100.0 %], Master Dry/Wet [0.0..100.0 %], 2D Multi-Tap Spatial Bounce Canvas, and Touch-Draggable Tap Handles with >= 44x44pt bounding target) into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/through_zero_flanger_view.rs` & `multitap_delay_view.rs`):
+  - In `ThroughZeroFlangerView`: added `name()` to `TapeFlangerMode`, `set_mode()`, `show_ui(&mut self, ui: &mut egui::Ui)`, and `render_ascii_snapshot_str() -> String` with tape flanger metadata banner.
+  - In `MultitapDelayView`: added `width_to_normalized()`, `normalized_to_width()`, `diffusion_to_normalized()`, `normalized_to_diffusion()`, `show_ui(&mut self, ui: &mut egui::Ui)`, and `render_ascii_snapshot_str() -> String` with multi-tap metadata banner.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_through_zero_flanger_modal: bool`, `through_zero_flanger_view: ThroughZeroFlangerView`, `show_multitap_delay_modal: bool`, and `multitap_delay_view: MultitapDelayView`.
+  - Added dedicated modal windows `show_through_zero_flanger_modal_window` and `show_multitap_delay_modal_window` with responsive styling, WCAG AAA contrast, and >= 44x44pt touch bounds.
+  - Added public lifecycle methods: `open_through_zero_flanger_hud()`, `close_through_zero_flanger_hud()`, `is_through_zero_flanger_hud_open()`, `open_multitap_delay_hud()`, `close_multitap_delay_hud()`, `is_multitap_delay_hud_open()`.
+  - Real-time parameter sync bridges (`sync_through_zero_flanger_hud_state` and `sync_multitap_delay_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_through_zero_flanger_hud: bool` and `requested_open_multitap_delay_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🌀 Open Through-Zero Flanger HUD]` and `[🎛️ Open Multi-Tap Delay HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header buttons `[🌀 Flanger HUD]` and `[🎛 Multitap HUD]` in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Flanger: 2D Comb notch frequency response preview, center gold true-zero null line, interactive Delay/Feedback puck, live readout, and lock-free `ParamBus` slot dispatch.
+    * Multitap: 2D multi-tap spatial delay impulse bars, center pan axis, interactive Width/Diffusion puck, live readout, and lock-free `ParamBus` slot dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_through_zero_flanger_hud` under `"Modulation"` and `open_multitap_delay_hud` under `"Delay & Reverb"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_through_zero_flanger_hud()` and `open_multitap_delay_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier160_turn97_tests.rs`:
+    * Pure tests: view initialization, coordinate normalizations (delay, feedback, time, pan, width, diffusion), mode switching across all 3 modes, comb notch magnitude evaluation, tap handle & zero-cross puck hit testing (>= 44x44pt bounding targets), deterministic ASCII snapshots with metadata banners.
+    * GUI tests: modal window lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch without allocations, trigger button propagation from rack and inspector, command palette action verification.
+  - Registered `tier160_turn97_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Pure unit tests: 329 passed in 0.23s (`cargo test -p summoner_gui --lib`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
+
+
 
 
 

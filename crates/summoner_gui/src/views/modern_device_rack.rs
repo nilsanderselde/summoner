@@ -237,6 +237,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_oversampled_limiter_hud: bool,
     #[serde(default)]
     pub requested_open_vari_mu_master_hud: bool,
+    #[serde(default)]
+    pub requested_open_through_zero_flanger_hud: bool,
+    #[serde(default)]
+    pub requested_open_multitap_delay_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -344,6 +348,8 @@ impl Default for ModernDeviceRackState {
             requested_open_formant_filter_hud: false,
             requested_open_oversampled_limiter_hud: false,
             requested_open_vari_mu_master_hud: false,
+            requested_open_through_zero_flanger_hud: false,
+            requested_open_multitap_delay_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -1074,6 +1080,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_formant = cur_selection.contains("Formant") || cur_selection.contains("Vowel") || cur_selection == "FormantFilterView" || cur_selection == "FormantFilterNode" || cur_selection.contains("FormantFilter");
                     let is_limiter = cur_selection.contains("Limiter") || cur_selection.contains("TruePeak") || cur_selection == "OversampledLimiterNode" || cur_selection == "TruePeakOversampledLimiter" || cur_selection.contains("PeakLimiter");
                     let is_vari_mu = cur_selection.contains("VariMu") || cur_selection.contains("VariableMu") || cur_selection == "VariMuMasterNode" || cur_selection == "VariMuMasterLimiter" || cur_selection == "MasterStereoVariMuLimiter" || cur_selection.contains("ValveLimiter");
+                    let is_through_zero_flanger = cur_selection.contains("ThroughZero") || cur_selection.contains("Flanger") || cur_selection == "ThroughZeroFlangerNode" || cur_selection == "EffectFlanger" || cur_selection.contains("TapeFlanger");
+                    let is_multitap_delay = cur_selection.contains("Multitap") || cur_selection.contains("MultiTap") || cur_selection == "MultitapDelayNode" || cur_selection.contains("TapDelay") || cur_selection == "MultiTapModulatedDiffuser";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1446,6 +1454,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("📻 Vari-Mu HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 170, 50))).on_hover_text("Open Mastering Dual-Mono Variable-Mu Tube Optical Compressor HUD").clicked()
                     {
                         state.requested_open_vari_mu_master_hud = true;
+                    } else if is_through_zero_flanger
+                        && ui.button(RichText::new("🌀 Flanger HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Analog Tape Flanger & Through-Zero HUD").clicked()
+                    {
+                        state.requested_open_through_zero_flanger_hud = true;
+                    } else if is_multitap_delay
+                        && ui.button(RichText::new("🎛 Multitap HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Multi-Tap Delay Matrix & Spatial Bounce HUD").clicked()
+                    {
+                        state.requested_open_multitap_delay_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2304,6 +2320,8 @@ fn show_pro_parameter_drawer(
                     let is_formant = dev_kind.contains("Formant") || dev_kind.contains("Vowel") || dev_kind == "FormantFilterView" || dev_kind == "FormantFilterNode" || dev_kind.contains("FormantFilter");
                     let is_limiter = dev_kind.contains("Limiter") || dev_kind.contains("TruePeak") || dev_kind == "OversampledLimiterNode" || dev_kind == "TruePeakOversampledLimiter" || dev_kind.contains("PeakLimiter");
                     let is_vari_mu = dev_kind.contains("VariMu") || dev_kind.contains("VariableMu") || dev_kind == "VariMuMasterNode" || dev_kind == "VariMuMasterLimiter" || dev_kind == "MasterStereoVariMuLimiter" || dev_kind.contains("ValveLimiter");
+                    let is_through_zero_flanger = dev_kind.contains("ThroughZero") || dev_kind.contains("Flanger") || dev_kind == "ThroughZeroFlangerNode" || dev_kind == "EffectFlanger" || dev_kind.contains("TapeFlanger");
+                    let is_multitap_delay = dev_kind.contains("Multitap") || dev_kind.contains("MultiTap") || dev_kind == "MultitapDelayNode" || dev_kind.contains("TapDelay") || dev_kind == "MultiTapModulatedDiffuser";
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -9677,6 +9695,158 @@ fn show_pro_parameter_drawer(
                             let _ = vm_resp.on_hover_text(format!(
                                 "Mastering Dual-Mono Variable-Mu Vacuum Tube Optical Compressor HUD\nThreshold: {:.1} dB | Drive: {:+.1} dB\nRatio: {:.1}:1 | THD: {:.2}%\n[Drag: Thresh (X) / Drive (Y) Puck]",
                                 thresh, drive, ratio, thd
+                            ));
+                        }
+                    } else if is_through_zero_flanger {
+                        // Analog Tape Flanger Through-Zero Phase Null Mini Visualizer
+                        let (tz_resp, tz_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let tz_rect = tz_resp.rect;
+                        tz_painter.rect_filled(tz_rect, 2.0, Color32::from_rgb(12, 16, 26));
+
+                        let mut delay_ms = state.node_param_values.get("manual_delay_ms").copied().unwrap_or(0.0);
+                        let mut feedback_pct = state.node_param_values.get("feedback_pct").copied().unwrap_or(65.0);
+                        let lfo_rate = state.node_param_values.get("lfo_rate_hz").copied().unwrap_or(0.25);
+                        let sat = state.node_param_values.get("tape_saturation_pct").copied().unwrap_or(35.0);
+
+                        if tz_resp.dragged() {
+                            if let Some(pos) = tz_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - tz_rect.left()) / tz_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - tz_rect.top()) / tz_rect.height())).clamp(0.0, 1.0);
+                                delay_ms = crate::views::through_zero_flanger_view::ThroughZeroFlangerView::normalized_to_delay(norm_x);
+                                feedback_pct = crate::views::through_zero_flanger_view::ThroughZeroFlangerView::normalized_to_feedback(norm_y);
+                                state.node_param_values.insert("manual_delay_ms".to_string(), delay_ms);
+                                state.node_param_values.insert("feedback_pct".to_string(), feedback_pct);
+                                if let Some(bus) = param_bus {
+                                    let pid_delay = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_delay).is_some() { bus.set(pid_delay, delay_ms); }
+                                    let pid_fb = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 3);
+                                    if bus.get(pid_fb).is_some() { bus.set(pid_fb, feedback_pct); }
+                                }
+                            }
+                        }
+
+                        // Background grid lines
+                        for step in 1..3 {
+                            let gy = tz_rect.top() + tz_rect.height() * (step as f32 * 0.33);
+                            tz_painter.line_segment([egui::pos2(tz_rect.left(), gy), egui::pos2(tz_rect.right(), gy)], Stroke::new(0.5_f32, Color32::from_rgba_unmultiplied(35, 50, 75, 80)));
+                        }
+
+                        // Center True Zero Null line
+                        let zero_x = tz_rect.left() + tz_rect.width() * 0.5;
+                        tz_painter.line_segment([egui::pos2(zero_x, tz_rect.top()), egui::pos2(zero_x, tz_rect.bottom())], Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(255, 215, 0, 120)));
+
+                        // Through-zero comb notch frequency response curve preview (16 points)
+                        let norm_d = crate::views::through_zero_flanger_view::ThroughZeroFlangerView::delay_to_normalized(delay_ms);
+                        let norm_fb = crate::views::through_zero_flanger_view::ThroughZeroFlangerView::feedback_to_normalized(feedback_pct);
+                        let steps = 16;
+                        let mut prev_pt = None;
+                        for i in 0..=steps {
+                            let nx = i as f32 / steps as f32;
+                            let phase = 2.0 * std::f32::consts::PI * (nx * 4.0 + 1.0) * (delay_ms.abs() * 0.2 + 0.05);
+                            let mag = (1.0 - phase.cos()).max(0.0).sqrt() * 0.5;
+                            let px = tz_rect.left() + nx * tz_rect.width();
+                            let py = tz_rect.bottom() - (mag * (0.6 + 0.4 * norm_fb)).clamp(0.0, 1.0) * (tz_rect.height() - 10.0) - 5.0;
+                            let cur_pt = egui::pos2(px, py);
+                            if let Some(prev) = prev_pt {
+                                tz_painter.line_segment([prev, cur_pt], Stroke::new(1.3_f32, Color32::from_rgb(0, 229, 255)));
+                            }
+                            prev_pt = Some(cur_pt);
+                        }
+
+                        // Puck handle
+                        let puck_x = tz_rect.left() + norm_d * tz_rect.width();
+                        let puck_y = tz_rect.bottom() - norm_fb * (tz_rect.height() - 12.0) - 6.0;
+                        tz_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(0, 229, 255));
+                        tz_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::from_rgb(180, 245, 255)));
+
+                        // Readout
+                        tz_painter.text(
+                            egui::pos2(tz_rect.right() - 4.0, tz_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("TZ FLANGER\nNull:{:+.1}ms\nFB:{:+.0}%\nSat:{:.0}%", delay_ms, feedback_pct, sat),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+
+                        if tz_resp.hovered() {
+                            let _ = tz_resp.on_hover_text(format!(
+                                "Analog Tape Flanger & Feedback Through-Zero Delay Modulator HUD\nManual Delay: {:+.2} ms | Feedback: {:+.0}%\nLFO Rate: {:.2} Hz | Saturation: {:.0}%\n[Drag: Delay (X) / Feedback (Y) Puck]",
+                                delay_ms, feedback_pct, lfo_rate, sat
+                            ));
+                        }
+                    } else if is_multitap_delay {
+                        // Multi-Tap Delay Matrix Spatial Bounce Mini Visualizer
+                        let (mt_resp, mt_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let mt_rect = mt_resp.rect;
+                        mt_painter.rect_filled(mt_rect, 2.0, Color32::from_rgb(10, 15, 24));
+
+                        let mut width_pct = state.node_param_values.get("ping_pong_width_pct").copied().unwrap_or(75.0);
+                        let mut diff_pct = state.node_param_values.get("diffusion_pct").copied().unwrap_or(40.0);
+                        let bpm = state.node_param_values.get("tempo_bpm").copied().unwrap_or(120.0);
+                        let wet = state.node_param_values.get("master_dry_wet_pct").copied().unwrap_or(50.0);
+
+                        if mt_resp.dragged() {
+                            if let Some(pos) = mt_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - mt_rect.left()) / mt_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - mt_rect.top()) / mt_rect.height())).clamp(0.0, 1.0);
+                                width_pct = crate::views::multitap_delay_view::MultitapDelayView::normalized_to_width(norm_x);
+                                diff_pct = crate::views::multitap_delay_view::MultitapDelayView::normalized_to_diffusion(norm_y);
+                                state.node_param_values.insert("ping_pong_width_pct".to_string(), width_pct);
+                                state.node_param_values.insert("diffusion_pct".to_string(), diff_pct);
+                                if let Some(bus) = param_bus {
+                                    let pid_wet = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_wet).is_some() { bus.set(pid_wet, wet); }
+                                    let pid_width = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_width).is_some() { bus.set(pid_width, width_pct); }
+                                    let pid_diff = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 2);
+                                    if bus.get(pid_diff).is_some() { bus.set(pid_diff, diff_pct); }
+                                }
+                            }
+                        }
+
+                        // Background grid lines & center pan line
+                        let center_y = mt_rect.top() + mt_rect.height() * 0.5;
+                        mt_painter.line_segment([egui::pos2(mt_rect.left(), center_y), egui::pos2(mt_rect.right(), center_y)], Stroke::new(0.6_f32, Color32::from_rgba_unmultiplied(60, 90, 120, 80)));
+
+                        // Multi-tap spatial delay impulse bars (4 taps)
+                        let tap_offsets = [0.18, 0.38, 0.58, 0.82];
+                        let tap_pans = [-0.6, 0.6, -0.3, 0.3];
+                        let tap_gains = [0.85, 0.70, 0.55, 0.40];
+
+                        let norm_w = crate::views::multitap_delay_view::MultitapDelayView::width_to_normalized(width_pct);
+                        let norm_df = crate::views::multitap_delay_view::MultitapDelayView::diffusion_to_normalized(diff_pct);
+
+                        for i in 0..4 {
+                            let tx = mt_rect.left() + tap_offsets[i] * mt_rect.width();
+                            let pan_shift = tap_pans[i] * norm_w * 16.0;
+                            let ty_base = center_y + pan_shift;
+                            let h = tap_gains[i] * 18.0 * (1.0 - 0.3 * norm_df);
+                            mt_painter.line_segment(
+                                [egui::pos2(tx, ty_base - h * 0.5), egui::pos2(tx, ty_base + h * 0.5)],
+                                Stroke::new(2.0_f32, Color32::from_rgb(56, 189, 248)),
+                            );
+                            mt_painter.circle_filled(egui::pos2(tx, ty_base - h * 0.5), 2.5, Color32::from_rgb(0, 229, 255));
+                        }
+
+                        // Puck handle (Width X / Diffusion Y)
+                        let puck_x = mt_rect.left() + norm_w * mt_rect.width();
+                        let puck_y = mt_rect.bottom() - norm_df * (mt_rect.height() - 12.0) - 6.0;
+                        mt_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(56, 189, 248));
+                        mt_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::from_rgb(186, 230, 253)));
+
+                        // Readout
+                        mt_painter.text(
+                            egui::pos2(mt_rect.right() - 4.0, mt_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("MULTITAP\nBPM:{:.0}\nWidth:{:.0}%\nDiff:{:.0}%", bpm, width_pct, diff_pct),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(56, 189, 248),
+                        );
+
+                        if mt_resp.hovered() {
+                            let _ = mt_resp.on_hover_text(format!(
+                                "Multi-Tap Delay Matrix & Stereo Spatial Tap-Tempo Bounce Editor HUD\nStereo Width: {:.0}% | Diffusion: {:.0}%\nTempo: {:.1} BPM | Dry/Wet: {:.0}%\n[Drag: Width (X) / Diffusion (Y) Puck]",
+                                width_pct, diff_pct, bpm, wet
                             ));
                         }
                     } else {

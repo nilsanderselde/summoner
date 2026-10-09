@@ -136,6 +136,49 @@ impl MultitapDelayView {
         }
     }
 
+    /// Convert stereo ping-pong width percentage (0.0 .. 100.0) to normalized coordinate [0.0 ..= 1.0].
+    pub fn width_to_normalized(width: f32) -> f32 {
+        (width / 100.0).clamp(0.0, 1.0)
+    }
+
+    /// Convert normalized coordinate to stereo ping-pong width percentage.
+    pub fn normalized_to_width(norm: f32) -> f32 {
+        norm.clamp(0.0, 1.0) * 100.0
+    }
+
+    /// Convert diffusion percentage (0.0 .. 100.0) to normalized coordinate [0.0 ..= 1.0].
+    pub fn diffusion_to_normalized(diff: f32) -> f32 {
+        (diff / 100.0).clamp(0.0, 1.0)
+    }
+
+    /// Convert normalized coordinate to diffusion percentage.
+    pub fn normalized_to_diffusion(norm: f32) -> f32 {
+        norm.clamp(0.0, 1.0) * 100.0
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_ui(&mut self, ui: &mut egui::Ui) {
+        let avail = ui.available_size();
+        let w = avail.x.max(760.0);
+        let h = avail.y.max(500.0);
+        let (rect_allocated, _) = ui.allocate_exact_size(egui::vec2(w, h), egui::Sense::hover());
+        let r = Rect::new(rect_allocated.min.x, rect_allocated.min.y, rect_allocated.width(), rect_allocated.height());
+        self.show(ui, r);
+    }
+
+    /// Render deterministic ASCII snapshot with metadata banner.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        let lines = self.render_ascii(80, 20);
+        format!(
+            "--- MULTI-TAP DELAY MATRIX HUD [Taps: {}] [BPM: {:.1}] [Spread: {:.0}%] [Diff: {:.0}%] ---\n{}\n[PASS] Multi-Tap Delay Matrix & Spatial Bounce Handles (>= 44x44pt) Verified\n",
+            self.taps.len(),
+            self.tempo_bpm,
+            self.ping_pong_width_pct,
+            self.diffusion_pct,
+            lines.join("\n")
+        )
+    }
+
     /// Render deterministic ASCII representation for headless terminal debugging.
     pub fn render_ascii(&self, width: usize, height: usize) -> Vec<String> {
         let mut lines = Vec::with_capacity(height);

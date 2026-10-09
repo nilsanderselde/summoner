@@ -222,6 +222,10 @@ pub struct ModernInspectorState {
     pub requested_open_oversampled_limiter_hud: bool,
     #[serde(default)]
     pub requested_open_vari_mu_master_hud: bool,
+    #[serde(default)]
+    pub requested_open_through_zero_flanger_hud: bool,
+    #[serde(default)]
+    pub requested_open_multitap_delay_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -339,6 +343,8 @@ impl Default for ModernInspectorState {
             requested_open_formant_filter_hud: false,
             requested_open_oversampled_limiter_hud: false,
             requested_open_vari_mu_master_hud: false,
+            requested_open_through_zero_flanger_hud: false,
+            requested_open_multitap_delay_hud: false,
         }
     }
 }
@@ -1743,6 +1749,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open Mastering Dual-Mono Variable-Mu Vacuum Tube Optical Compressor HUD").clicked() {
                     state.requested_open_vari_mu_master_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("ThroughZero") || active_kind.contains("Flanger") || active_kind == "ThroughZeroFlangerNode" || active_kind == "EffectFlanger" || active_kind.contains("TapeFlanger") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🌀 Open Through-Zero Flanger HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 229, 255)))
+                        .fill(Color32::from_rgb(14, 28, 40))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 229, 255)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Analog Tape Flanger & Feedback Through-Zero Delay Modulator HUD").clicked() {
+                    state.requested_open_through_zero_flanger_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Multitap") || active_kind.contains("MultiTap") || active_kind == "MultitapDelayNode" || active_kind.contains("TapDelay") || active_kind == "MultiTapModulatedDiffuser" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🎛️ Open Multi-Tap Delay HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(56, 189, 248)))
+                        .fill(Color32::from_rgb(16, 26, 42))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(56, 189, 248)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Multi-Tap Delay Matrix & Stereo Spatial Tap-Tempo Bounce Editor HUD").clicked() {
+                    state.requested_open_multitap_delay_hud = true;
                 }
                 ui.add_space(4.0);
             }

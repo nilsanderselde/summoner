@@ -828,6 +828,10 @@ pub struct AwardWinningGuiView {
     pub oversampled_limiter_view: crate::views::oversampled_limiter_view::OversampledLimiterView,
     pub show_vari_mu_master_modal: bool,
     pub vari_mu_master_view: crate::views::vari_mu_master_view::VariMuMasterView,
+    pub show_through_zero_flanger_modal: bool,
+    pub through_zero_flanger_view: crate::views::through_zero_flanger_view::ThroughZeroFlangerView,
+    pub show_multitap_delay_modal: bool,
+    pub multitap_delay_view: crate::views::multitap_delay_view::MultitapDelayView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1272,6 +1276,10 @@ impl AwardWinningGuiView {
             oversampled_limiter_view: crate::views::oversampled_limiter_view::OversampledLimiterView::new(),
             show_vari_mu_master_modal: false,
             vari_mu_master_view: crate::views::vari_mu_master_view::VariMuMasterView::new(),
+            show_through_zero_flanger_modal: false,
+            through_zero_flanger_view: crate::views::through_zero_flanger_view::ThroughZeroFlangerView::new(),
+            show_multitap_delay_modal: false,
+            multitap_delay_view: crate::views::multitap_delay_view::MultitapDelayView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2381,6 +2389,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_vari_mu_master_hud = false;
             self.open_vari_mu_master_hud();
         }
+        if self.inspector_state.requested_open_through_zero_flanger_hud || self.device_rack_state.requested_open_through_zero_flanger_hud {
+            self.inspector_state.requested_open_through_zero_flanger_hud = false;
+            self.device_rack_state.requested_open_through_zero_flanger_hud = false;
+            self.open_through_zero_flanger_hud();
+        }
+        if self.inspector_state.requested_open_multitap_delay_hud || self.device_rack_state.requested_open_multitap_delay_hud {
+            self.inspector_state.requested_open_multitap_delay_hud = false;
+            self.device_rack_state.requested_open_multitap_delay_hud = false;
+            self.open_multitap_delay_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2478,6 +2496,8 @@ impl AwardWinningGuiView {
         self.show_formant_filter_modal_window(ui);
         self.show_oversampled_limiter_modal_window(ui);
         self.show_vari_mu_master_modal_window(ui);
+        self.show_through_zero_flanger_modal_window(ui);
+        self.show_multitap_delay_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -17075,6 +17095,205 @@ impl AwardWinningGuiView {
             if bus.get(pid_link).is_some() { bus.set(pid_link, link); }
             if bus.get(pid_bias).is_some() { bus.set(pid_bias, bias); }
             if bus.get(pid_ratio).is_some() { bus.set(pid_ratio, ratio); }
+        }
+    }
+
+    pub fn open_through_zero_flanger_hud(&mut self) {
+        self.show_through_zero_flanger_modal = true;
+    }
+
+    pub fn close_through_zero_flanger_hud(&mut self) {
+        self.show_through_zero_flanger_modal = false;
+    }
+
+    pub fn is_through_zero_flanger_hud_open(&self) -> bool {
+        self.show_through_zero_flanger_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_through_zero_flanger_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_through_zero_flanger_modal {
+            return;
+        }
+
+        let mut is_open = self.show_through_zero_flanger_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🌀 Analog Tape Flanger & Feedback Through-Zero Delay Modulator HUD")
+            .id(egui::Id::new("through_zero_flanger_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Dual-Capstan Tape Flanging, True-Zero Phase Cancellation & Barber-Pole Modulation (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.through_zero_flanger_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_through_zero_flanger_modal = is_open;
+        self.sync_through_zero_flanger_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_through_zero_flanger_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let delay = self.through_zero_flanger_view.manual_delay_ms;
+        let rate = self.through_zero_flanger_view.lfo_rate_hz;
+        let depth = self.through_zero_flanger_view.lfo_depth_ms;
+        let fb = self.through_zero_flanger_view.feedback_pct;
+        let sat = self.through_zero_flanger_view.tape_saturation_pct;
+        let wow = self.through_zero_flanger_view.wow_flutter_pct;
+        let wet = self.through_zero_flanger_view.dry_wet_pct;
+
+        self.device_rack_state.node_param_values.insert("manual_delay_ms".to_string(), delay);
+        self.device_rack_state.node_param_values.insert("lfo_rate_hz".to_string(), rate);
+        self.device_rack_state.node_param_values.insert("lfo_depth_ms".to_string(), depth);
+        self.device_rack_state.node_param_values.insert("feedback_pct".to_string(), fb);
+        self.device_rack_state.node_param_values.insert("tape_saturation_pct".to_string(), sat);
+        self.device_rack_state.node_param_values.insert("wow_flutter_pct".to_string(), wow);
+        self.device_rack_state.node_param_values.insert("dry_wet_pct".to_string(), wet);
+
+        self.inspector_state.node_param_values.insert("manual_delay_ms".to_string(), delay);
+        self.inspector_state.node_param_values.insert("lfo_rate_hz".to_string(), rate);
+        self.inspector_state.node_param_values.insert("lfo_depth_ms".to_string(), depth);
+        self.inspector_state.node_param_values.insert("feedback_pct".to_string(), fb);
+        self.inspector_state.node_param_values.insert("tape_saturation_pct".to_string(), sat);
+        self.inspector_state.node_param_values.insert("wow_flutter_pct".to_string(), wow);
+        self.inspector_state.node_param_values.insert("dry_wet_pct".to_string(), wet);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_delay = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_rate = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_depth = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_fb = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_sat = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_wow = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+            let pid_wet = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 6);
+
+            if bus.get(pid_delay).is_some() { bus.set(pid_delay, delay); }
+            if bus.get(pid_rate).is_some() { bus.set(pid_rate, rate); }
+            if bus.get(pid_depth).is_some() { bus.set(pid_depth, depth); }
+            if bus.get(pid_fb).is_some() { bus.set(pid_fb, fb); }
+            if bus.get(pid_sat).is_some() { bus.set(pid_sat, sat); }
+            if bus.get(pid_wow).is_some() { bus.set(pid_wow, wow); }
+            if bus.get(pid_wet).is_some() { bus.set(pid_wet, wet); }
+        }
+    }
+
+    pub fn open_multitap_delay_hud(&mut self) {
+        self.show_multitap_delay_modal = true;
+    }
+
+    pub fn close_multitap_delay_hud(&mut self) {
+        self.show_multitap_delay_modal = false;
+    }
+
+    pub fn is_multitap_delay_hud_open(&self) -> bool {
+        self.show_multitap_delay_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_multitap_delay_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_multitap_delay_modal {
+            return;
+        }
+
+        let mut is_open = self.show_multitap_delay_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎛️ Multi-Tap Delay Matrix & Stereo Spatial Tap-Tempo Bounce Editor HUD")
+            .id(egui::Id::new("multitap_delay_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("8-Tap Modulated Stereo Delay Network, Ping-Pong Width & Diffusion Matrix (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.multitap_delay_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_multitap_delay_modal = is_open;
+        self.sync_multitap_delay_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_multitap_delay_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let bpm = self.multitap_delay_view.tempo_bpm;
+        let sync = if self.multitap_delay_view.sync_to_bpm { 1.0 } else { 0.0 };
+        let width = self.multitap_delay_view.ping_pong_width_pct;
+        let diff = self.multitap_delay_view.diffusion_pct;
+        let wet = self.multitap_delay_view.master_dry_wet_pct;
+        let tap_count = self.multitap_delay_view.taps.len() as f32;
+
+        self.device_rack_state.node_param_values.insert("tempo_bpm".to_string(), bpm);
+        self.device_rack_state.node_param_values.insert("sync_to_bpm".to_string(), sync);
+        self.device_rack_state.node_param_values.insert("ping_pong_width_pct".to_string(), width);
+        self.device_rack_state.node_param_values.insert("diffusion_pct".to_string(), diff);
+        self.device_rack_state.node_param_values.insert("master_dry_wet_pct".to_string(), wet);
+        self.device_rack_state.node_param_values.insert("tap_count".to_string(), tap_count);
+
+        self.inspector_state.node_param_values.insert("tempo_bpm".to_string(), bpm);
+        self.inspector_state.node_param_values.insert("sync_to_bpm".to_string(), sync);
+        self.inspector_state.node_param_values.insert("ping_pong_width_pct".to_string(), width);
+        self.inspector_state.node_param_values.insert("diffusion_pct".to_string(), diff);
+        self.inspector_state.node_param_values.insert("master_dry_wet_pct".to_string(), wet);
+        self.inspector_state.node_param_values.insert("tap_count".to_string(), tap_count);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_wet = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_width = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_diff = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_bpm = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_sync = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+
+            if bus.get(pid_wet).is_some() { bus.set(pid_wet, wet); }
+            if bus.get(pid_width).is_some() { bus.set(pid_width, width); }
+            if bus.get(pid_diff).is_some() { bus.set(pid_diff, diff); }
+            if bus.get(pid_bpm).is_some() { bus.set(pid_bpm, bpm); }
+            if bus.get(pid_sync).is_some() { bus.set(pid_sync, sync); }
         }
     }
     fn render_patch_cords_canvas(&mut self, ui: &mut egui::Ui, available_h: f32) {
