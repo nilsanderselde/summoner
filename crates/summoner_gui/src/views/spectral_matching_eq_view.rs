@@ -23,6 +23,17 @@ pub enum MatchingProfile {
     WarmAnalogMasterTilt, // Gentle musical 1.5dB tilt with sub-bass containment
 }
 
+impl MatchingProfile {
+    pub fn name(&self) -> &'static str {
+        match self {
+            MatchingProfile::ReferenceTrackMatch => "Reference Track Match",
+            MatchingProfile::PinkNoiseMasterTarget => "Pink Noise Master Target",
+            MatchingProfile::LoudnessBalancedTarget => "Loudness Balanced Target",
+            MatchingProfile::WarmAnalogMasterTilt => "Warm Analog Master Tilt",
+        }
+    }
+}
+
 /// 64-Band Dynamic Spectral Matching Equalizer HUD View (Step 1475).
 #[derive(Debug, Clone)]
 pub struct SpectralMatchingEqView {
@@ -124,6 +135,47 @@ impl SpectralMatchingEqView {
         1.0 + norm.clamp(0.0, 1.0) * (24.0 - 1.0)
     }
 
+    /// Set matching profile and update target spectrum.
+    pub fn set_profile(&mut self, profile: MatchingProfile) {
+        self.profile = profile;
+        for i in 0..MATCH_EQ_NUM_BANDS {
+            let norm = i as f32 / (MATCH_EQ_NUM_BANDS - 1) as f32;
+            let f = Self::normalized_to_freq(norm);
+            match profile {
+                MatchingProfile::ReferenceTrackMatch => {
+                    self.target_spectrum_db[i] = -14.0 - (f / 1000.0).log10() * 6.0;
+                }
+                MatchingProfile::PinkNoiseMasterTarget => {
+                    self.target_spectrum_db[i] = -12.0 - (f / 1000.0).log2() * 3.0;
+                }
+                MatchingProfile::LoudnessBalancedTarget => {
+                    let bass_boost = if f < 120.0 { 3.5 } else { 0.0 };
+                    let air_boost = if f > 6000.0 { 2.5 } else { 0.0 };
+                    self.target_spectrum_db[i] = -15.0 - (f / 1000.0).log10() * 5.0 + bass_boost + air_boost;
+                }
+                MatchingProfile::WarmAnalogMasterTilt => {
+                    self.target_spectrum_db[i] = -13.0 - (f / 1000.0).log10() * 7.5;
+                }
+            }
+        }
+        self.recompute_match_curve();
+    }
+
+    /// Convert gain limit dB (3.0 .. 24.0) to normalized coordinate [0.0 ..= 1.0].
+    pub fn limit_to_normalized(limit: f32) -> f32 {
+        ((limit - 3.0) / (24.0 - 3.0)).clamp(0.0, 1.0)
+    }
+
+    /// Convert normalized coordinate [0.0 ..= 1.0] to gain limit dB (3.0 .. 24.0).
+    pub fn normalized_to_limit(norm: f32) -> f32 {
+        3.0 + norm.clamp(0.0, 1.0) * (24.0 - 3.0)
+    }
+
+    /// Render deterministic ASCII snapshot string with metadata banner.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        self.render_ascii(60, 14).join("\n")
+    }
+
     /// Recompute matched gain curve based on current match amount and gain limits.
     pub fn recompute_match_curve(&mut self) {
         let amount = self.match_amount_percent / 100.0;
@@ -196,7 +248,67 @@ impl SpectralMatchingEqView {
     }
 
     #[cfg(feature = "gui")]
+    pub fn show_ui(&mut self, ui: &mut egui::Ui) {
+        let desired_size = egui::vec2(ui.available_width().max(780.0), 485.0);
+        let (rect, _response) = ui.allocate_exact_size(desired_size, egui::Sense::click_and_drag());
+        self.show(
+            ui,
+            Rect::new(rect.min.x, rect.min.y, rect.width(), rect.height()),
+        );
+    }
+
+    #[cfg(feature = "gui")]
     pub fn show(&mut self, ui: &mut egui::Ui, rect: Rect) {
+        let btn_y = rect.y + 54.0;
+        let btn_w = (rect.width - 40.0 - 30.0) / 4.0;
+        let eq_canvas = Rect::new(rect.x + 20.0, rect.y + 100.0, rect.width - 40.0, 230.0);
+        let dock_rect = Rect::new(rect.x + 20.0, rect.y + 345.0, rect.width - 40.0, 135.0);
+
+        // Pointer interactions for puck, profile buttons, phase mode
+        ui.input(|i| {
+            if let Some(pos) = i.pointer.latest_pos() {
+                let pos_t = (pos.x, pos.y);
+                if i.pointer.any_down() {
+                    if self.hit_test_eq_puck(pos_t, eq_canvas) || self.is_dragging_puck {
+                        self.is_dragging_puck = true;
+                        let nx = ((pos.x - eq_canvas.x) / eq_canvas.width).clamp(0.0, 1.0);
+                        let ny = (1.0 - ((pos.y - eq_canvas.y) / eq_canvas.height)).clamp(0.0, 1.0);
+                        self.eq_puck_pos = (nx, ny);
+                        self.match_amount_percent = Self::normalized_to_amount(nx);
+                        self.smoothing_semitones = Self::normalized_to_smoothing(ny);
+                        self.recompute_match_curve();
+                    }
+                } else {
+                    self.is_dragging_puck = false;
+                }
+
+                if i.pointer.any_click() {
+                    let profiles = [
+                        MatchingProfile::ReferenceTrackMatch,
+                        MatchingProfile::PinkNoiseMasterTarget,
+                        MatchingProfile::LoudnessBalancedTarget,
+                        MatchingProfile::WarmAnalogMasterTilt,
+                    ];
+                    for (idx, &prof) in profiles.iter().enumerate() {
+                        let bx = rect.x + 20.0 + idx as f32 * (btn_w + 10.0);
+                        let btn_box = egui::Rect::from_min_size(egui::pos2(bx, btn_y), egui::vec2(btn_w, 36.0));
+                        if btn_box.contains(pos) {
+                            self.set_profile(prof);
+                        }
+                    }
+
+                    // Phase mode toggle click in dock
+                    let phase_box = egui::Rect::from_min_size(
+                        egui::pos2(dock_rect.x + 20.0 + 3.0 * ((dock_rect.width - 40.0) / 4.0), dock_rect.y + 16.0),
+                        egui::vec2((dock_rect.width - 40.0) / 4.0, 48.0),
+                    );
+                    if phase_box.contains(pos) {
+                        self.linear_phase = !self.linear_phase;
+                    }
+                }
+            }
+        });
+
         let painter = ui.painter_at(egui::Rect::from_min_size(
             egui::pos2(rect.x, rect.y),
             egui::vec2(rect.width, rect.height),

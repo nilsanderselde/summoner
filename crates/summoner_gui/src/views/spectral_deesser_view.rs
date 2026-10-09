@@ -21,6 +21,16 @@ pub enum DeEsserMode {
     DynamicNotch, // Surgical floating notch tracked to sibilance peak
 }
 
+impl DeEsserMode {
+    pub fn name(&self) -> &'static str {
+        match self {
+            DeEsserMode::SplitBand => "Split Band",
+            DeEsserMode::WideBand => "Wide Band",
+            DeEsserMode::DynamicNotch => "Dynamic Notch",
+        }
+    }
+}
+
 /// Dynamic Spectral De-Esser HUD View (Step 1451).
 #[derive(Debug, Clone)]
 pub struct SpectralDeEsserView {
@@ -64,6 +74,10 @@ impl SpectralDeEsserView {
         }
     }
 
+    pub fn set_mode(&mut self, mode: DeEsserMode) {
+        self.mode = mode;
+    }
+
     /// Convert frequency in Hz (2000 .. 16000) to logarithmic normalized coordinate [0.0 ..= 1.0].
     pub fn freq_to_normalized(freq_hz: f32) -> f32 {
         let freq = freq_hz.clamp(MIN_SIBILANCE_FREQ_HZ, MAX_SIBILANCE_FREQ_HZ);
@@ -87,6 +101,51 @@ impl SpectralDeEsserView {
     /// Convert normalized coordinate to threshold dB.
     pub fn normalized_to_db(norm: f32) -> f32 {
         -60.0 + norm.clamp(0.0, 1.0) * 60.0
+    }
+
+    /// Convert bandwidth Q (0.5 .. 5.0) to normalized coordinate [0.0 ..= 1.0].
+    pub fn bandwidth_to_normalized(q: f32) -> f32 {
+        ((q - 0.5) / (5.0 - 0.5)).clamp(0.0, 1.0)
+    }
+
+    /// Convert normalized coordinate [0.0 ..= 1.0] to bandwidth Q (0.5 .. 5.0).
+    pub fn normalized_to_bandwidth(norm: f32) -> f32 {
+        0.5 + norm.clamp(0.0, 1.0) * (5.0 - 0.5)
+    }
+
+    /// Convert reduction range dB (0.0 .. 30.0) to normalized coordinate [0.0 ..= 1.0].
+    pub fn reduction_to_normalized(red: f32) -> f32 {
+        (red / 30.0).clamp(0.0, 1.0)
+    }
+
+    /// Convert normalized coordinate [0.0 ..= 1.0] to reduction range dB (0.0 .. 30.0).
+    pub fn normalized_to_reduction(norm: f32) -> f32 {
+        norm.clamp(0.0, 1.0) * 30.0
+    }
+
+    /// Convert attack time ms (1.0 .. 50.0) to normalized coordinate [0.0 ..= 1.0].
+    pub fn attack_to_normalized(atk: f32) -> f32 {
+        ((atk - 1.0) / (50.0 - 1.0)).clamp(0.0, 1.0)
+    }
+
+    /// Convert normalized coordinate [0.0 ..= 1.0] to attack time ms (1.0 .. 50.0).
+    pub fn normalized_to_attack(norm: f32) -> f32 {
+        1.0 + norm.clamp(0.0, 1.0) * (50.0 - 1.0)
+    }
+
+    /// Convert release time ms (10.0 .. 500.0) to normalized coordinate [0.0 ..= 1.0].
+    pub fn release_to_normalized(rel: f32) -> f32 {
+        ((rel - 10.0) / (500.0 - 10.0)).clamp(0.0, 1.0)
+    }
+
+    /// Convert normalized coordinate [0.0 ..= 1.0] to release time ms (10.0 .. 500.0).
+    pub fn normalized_to_release(norm: f32) -> f32 {
+        10.0 + norm.clamp(0.0, 1.0) * (500.0 - 10.0)
+    }
+
+    /// Render deterministic ASCII snapshot string with metadata banner.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        self.render_ascii(60, 14).join("\n")
     }
 
     /// Calculate attenuation curve magnitude at given frequency `f_hz`.
@@ -158,7 +217,64 @@ impl SpectralDeEsserView {
     }
 
     #[cfg(feature = "gui")]
+    pub fn show_ui(&mut self, ui: &mut egui::Ui) {
+        let desired_size = egui::vec2(ui.available_width().max(780.0), 485.0);
+        let (rect, _response) = ui.allocate_exact_size(desired_size, egui::Sense::click_and_drag());
+        self.show(
+            ui,
+            Rect::new(rect.min.x, rect.min.y, rect.width(), rect.height()),
+        );
+    }
+
+    #[cfg(feature = "gui")]
     pub fn show(&mut self, ui: &mut egui::Ui, rect: Rect) {
+        let curve_rect = Rect::new(rect.x + 20.0, rect.y + 56.0, 430.0, 224.0);
+        let mode_rect = Rect::new(rect.x + 470.0, rect.y + 56.0, 310.0, 224.0);
+
+        // Pointer interactions for puck, modes, and audition solo
+        ui.input(|i| {
+            if let Some(pos) = i.pointer.latest_pos() {
+                let pos_t = (pos.x, pos.y);
+                if i.pointer.any_down() {
+                    if self.hit_test_sibilance_puck(pos_t, curve_rect) || self.is_dragging_puck {
+                        self.is_dragging_puck = true;
+                        let nx = ((pos.x - curve_rect.x) / curve_rect.width).clamp(0.0, 1.0);
+                        let ny = (1.0 - ((pos.y - curve_rect.y) / curve_rect.height)).clamp(0.0, 1.0);
+                        self.sibilance_puck_pos = (nx, ny);
+                        self.frequency_hz = Self::normalized_to_freq(nx);
+                        self.threshold_db = Self::normalized_to_db(ny);
+                    }
+                } else {
+                    self.is_dragging_puck = false;
+                }
+
+                if i.pointer.any_click() {
+                    let modes = [
+                        (mode_rect.x + 12.0, DeEsserMode::SplitBand),
+                        (mode_rect.x + 106.0, DeEsserMode::WideBand),
+                        (mode_rect.x + 200.0, DeEsserMode::DynamicNotch),
+                    ];
+                    for (bx, m) in modes {
+                        let btn_box = egui::Rect::from_min_size(
+                            egui::pos2(bx, mode_rect.y + 40.0),
+                            egui::vec2(88.0, 44.0),
+                        );
+                        if btn_box.contains(pos) {
+                            self.mode = m;
+                        }
+                    }
+
+                    let aud_box = egui::Rect::from_min_size(
+                        egui::pos2(mode_rect.x + 15.0, mode_rect.y + 165.0),
+                        egui::vec2(mode_rect.width - 30.0, 44.0),
+                    );
+                    if aud_box.contains(pos) {
+                        self.audition_sibilance = !self.audition_sibilance;
+                    }
+                }
+            }
+        });
+
         let painter = ui.painter_at(egui::Rect::from_min_size(
             egui::pos2(rect.x, rect.y),
             egui::vec2(rect.width, rect.height),
@@ -196,7 +312,6 @@ impl SpectralDeEsserView {
         );
 
         // Left Panel: Frequency Bell Curve & Threshold Canvas (20..450)
-        let curve_rect = Rect::new(rect.x + 20.0, rect.y + 56.0, 430.0, 224.0);
         painter.rect_filled(
             egui::Rect::from_min_size(
                 egui::pos2(curve_rect.x, curve_rect.y),
@@ -407,6 +522,47 @@ impl SpectralDeEsserView {
             ),
             6.0,
             Color32::from_rgb(18, 25, 38),
+        );
+        painter.rect_stroke(
+            egui::Rect::from_min_size(
+                egui::pos2(ctrl_rect.x, ctrl_rect.y),
+                egui::vec2(ctrl_rect.width, ctrl_rect.height),
+            ),
+            6.0,
+            Stroke::new(1.5_f32, Color32::from_rgb(45, 60, 85)),
+        );
+
+        let params = [
+            ("SIBILANCE FREQ", format!("{:.0} Hz", self.frequency_hz), (0, 229, 255)),
+            ("THRESHOLD", format!("{:.1} dBFS", self.threshold_db), (255, 215, 0)),
+            ("MAX REDUCTION", format!("{:.1} dB", self.reduction_range_db), (255, 107, 43)),
+            ("BANDWIDTH Q", format!("{:.2}", self.bandwidth_q), (0, 255, 180)),
+        ];
+        let col_w = (ctrl_rect.width - 40.0) / 4.0;
+        for (i, (label, val, col)) in params.iter().enumerate() {
+            let px = ctrl_rect.x + 20.0 + i as f32 * col_w;
+            painter.text(
+                egui::pos2(px, ctrl_rect.y + 14.0),
+                egui::Align2::LEFT_TOP,
+                *label,
+                egui::FontId::proportional(11.0),
+                Color32::from_rgb(180, 200, 225),
+            );
+            painter.text(
+                egui::pos2(px, ctrl_rect.y + 34.0),
+                egui::Align2::LEFT_TOP,
+                val,
+                egui::FontId::proportional(16.0),
+                Color32::from_rgb(col.0, col.1, col.2),
+            );
+        }
+
+        painter.text(
+            egui::pos2(ctrl_rect.x + 20.0, ctrl_rect.y + 70.0),
+            egui::Align2::LEFT_TOP,
+            format!("Dynamic Ballistics: Attack {:.1} ms | Release {:.0} ms | Mode: {:?}", self.attack_ms, self.release_ms, self.mode),
+            egui::FontId::proportional(11.0),
+            Color32::from_rgb(148, 163, 184),
         );
 
         // Verified Hit Target Badge

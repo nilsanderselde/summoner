@@ -257,6 +257,14 @@ pub struct ModernDeviceRackState {
     pub requested_open_transient_designer_hud: bool,
     #[serde(default)]
     pub requested_open_upward_compressor_hud: bool,
+    #[serde(default)]
+    pub requested_open_resonance_suppressor_hud: bool,
+    #[serde(default)]
+    pub requested_open_fm_matrix_hud: bool,
+    #[serde(default)]
+    pub requested_open_spectral_deesser_hud: bool,
+    #[serde(default)]
+    pub requested_open_spectral_matching_eq_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -374,6 +382,10 @@ impl Default for ModernDeviceRackState {
             requested_open_tape_flutter_hud: false,
             requested_open_transient_designer_hud: false,
             requested_open_upward_compressor_hud: false,
+            requested_open_resonance_suppressor_hud: false,
+            requested_open_fm_matrix_hud: false,
+            requested_open_spectral_deesser_hud: false,
+            requested_open_spectral_matching_eq_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -1114,6 +1126,10 @@ pub fn show_modern_device_rack_with_context(
                     let is_tape_flutter = cur_selection.contains("TapeFlutter") || cur_selection.contains("TapeWow") || cur_selection == "TapeFlutterNode" || cur_selection == "TapeWowFlutter" || cur_selection.contains("ReelFlutter");
                     let is_transient_designer = cur_selection.contains("TransientDesigner") || cur_selection.contains("TransientShaper") || cur_selection == "TransientDesignerNode" || cur_selection == "TransientShaperNode" || cur_selection.contains("TransientPunch");
                     let is_upward_compressor = cur_selection.contains("UpwardCompressor") || cur_selection.contains("MultibandUpward") || cur_selection.contains("OttCompressor") || cur_selection == "UpwardCompressorNode" || cur_selection.contains("MultibandOtt");
+                    let is_resonance_suppressor = cur_selection.contains("ResonanceSuppressor") || cur_selection.contains("ResonanceNotch") || cur_selection == "ResonanceSuppressorNode";
+                    let is_fm_matrix = cur_selection.contains("FmMatrix") || cur_selection.contains("FmSynthesizer") || cur_selection.contains("Dx7") || cur_selection == "FmMatrixNode" || cur_selection == "FmMatrixSynthesizer";
+                    let is_spectral_deesser = cur_selection.contains("SpectralDeEsser") || cur_selection.contains("DeEsser") || cur_selection.contains("Deesser") || cur_selection == "SpectralDeEsserNode" || cur_selection == "DynamicSpectralDeEsser" || cur_selection == "LinearPhaseDeEsser";
+                    let is_spectral_matching_eq = cur_selection.contains("SpectralMatchingEq") || cur_selection.contains("MatchingEq") || cur_selection == "SpectralMatchingEqNode" || cur_selection.contains("SpectrumMatching");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1526,6 +1542,22 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("⬆ Upward HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 255, 180))).on_hover_text("Open Mastering Multiband Upward Compressor (OTT) HUD").clicked()
                     {
                         state.requested_open_upward_compressor_hud = true;
+                    } else if is_resonance_suppressor
+                        && ui.button(RichText::new("🎯 Resonance HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Multi-Band Dynamic Resonance Suppressor & Notch HUD").clicked()
+                    {
+                        state.requested_open_resonance_suppressor_hud = true;
+                    } else if is_fm_matrix
+                        && ui.button(RichText::new("🎛 FM Matrix HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 215, 0))).on_hover_text("Open 6-Operator FM Matrix Synthesizer HUD").clicked()
+                    {
+                        state.requested_open_fm_matrix_hud = true;
+                    } else if is_spectral_deesser
+                        && ui.button(RichText::new("🎙 De-Esser HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Dynamic Spectral De-Esser HUD").clicked()
+                    {
+                        state.requested_open_spectral_deesser_hud = true;
+                    } else if is_spectral_matching_eq
+                        && ui.button(RichText::new("📊 Match EQ HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 255, 180))).on_hover_text("Open 64-Band Dynamic Linear-Phase Spectral Matching EQ HUD").clicked()
+                    {
+                        state.requested_open_spectral_matching_eq_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2394,6 +2426,10 @@ fn show_pro_parameter_drawer(
                     let is_tape_flutter = dev_kind.contains("TapeFlutter") || dev_kind.contains("TapeWow") || dev_kind == "TapeFlutterNode" || dev_kind == "TapeWowFlutter" || dev_kind.contains("ReelFlutter");
                     let is_transient_designer = dev_kind.contains("TransientDesigner") || dev_kind.contains("TransientShaper") || dev_kind == "TransientDesignerNode" || dev_kind == "TransientShaperNode" || dev_kind.contains("TransientPunch");
                     let is_upward_compressor = dev_kind.contains("UpwardCompressor") || dev_kind.contains("MultibandUpward") || dev_kind.contains("OttCompressor") || dev_kind == "UpwardCompressorNode" || dev_kind.contains("MultibandOtt");
+                    let is_resonance_suppressor = dev_kind.contains("ResonanceSuppressor") || dev_kind.contains("ResonanceNotch") || dev_kind == "ResonanceSuppressorNode";
+                    let is_fm_matrix = dev_kind.contains("FmMatrix") || dev_kind.contains("FmSynthesizer") || dev_kind.contains("Dx7") || dev_kind == "FmMatrixNode" || dev_kind == "FmMatrixSynthesizer";
+                    let is_spectral_deesser = dev_kind.contains("SpectralDeEsser") || dev_kind.contains("DeEsser") || dev_kind.contains("Deesser") || dev_kind == "SpectralDeEsserNode" || dev_kind == "DynamicSpectralDeEsser" || dev_kind == "LinearPhaseDeEsser";
+                    let is_spectral_matching_eq = dev_kind.contains("SpectralMatchingEq") || dev_kind.contains("MatchingEq") || dev_kind == "SpectralMatchingEqNode" || dev_kind.contains("SpectrumMatching");
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -10542,6 +10578,271 @@ fn show_pro_parameter_drawer(
                             let _ = uc_resp.on_hover_text(format!(
                                 "Mastering Multiband Upward Compressor HUD\nThreshold: {:.1} dBFS | Max Boost: +{:.1} dB\nActive Lift: +{:.1} dB\n[Drag: Upward Threshold dB (X) / Max Boost dB (Y) Puck]",
                                 thresh_db, boost_db, lift_db
+                            ));
+                        }
+                    } else if is_resonance_suppressor {
+                        // Multi-Band Dynamic Resonance Suppressor Mini View
+                        let (rs_resp, rs_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let rs_rect = rs_resp.rect;
+                        rs_painter.rect_filled(rs_rect, 2.0, Color32::from_rgb(10, 16, 26));
+
+                        let mut sens = state.node_param_values.get("global_sensitivity").or_else(|| state.node_param_values.get("sensitivity")).copied().unwrap_or(65.0);
+                        let mut depth = state.node_param_values.get("depth_db").or_else(|| state.node_param_values.get("depth")).copied().unwrap_or(12.0);
+
+                        if rs_resp.dragged() {
+                            if let Some(pos) = rs_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - rs_rect.left()) / rs_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - rs_rect.top()) / rs_rect.height())).clamp(0.0, 1.0);
+                                sens = norm_x * 100.0;
+                                depth = norm_y * 24.0;
+                                state.node_param_values.insert("global_sensitivity".to_string(), sens);
+                                state.node_param_values.insert("sensitivity".to_string(), sens);
+                                state.node_param_values.insert("depth_db".to_string(), depth);
+                                state.node_param_values.insert("depth".to_string(), depth);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_sens = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_sens).is_some() { bus.set(pid_sens, sens); }
+                                    let pid_depth = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_depth).is_some() { bus.set(pid_depth, depth); }
+                                }
+                            }
+                        }
+
+                        // Mini Multi-Notch Frequency Spectrum
+                        let steps = 30;
+                        let mut notch_pts = Vec::with_capacity(steps);
+                        let mid_y = rs_rect.top() + 15.0;
+                        for i in 0..steps {
+                            let t = i as f32 / (steps - 1) as f32;
+                            let px = rs_rect.left() + t * (rs_rect.width() - 55.0);
+                            let notch1 = (-0.5 * ((t - 0.35) * 15.0).powi(2)).exp() * (depth / 24.0) * 22.0;
+                            let notch2 = (-0.5 * ((t - 0.70) * 20.0).powi(2)).exp() * (depth / 24.0) * 18.0;
+                            let py = mid_y + notch1 + notch2;
+                            notch_pts.push(egui::pos2(px, py));
+                        }
+                        rs_painter.add(egui::Shape::line(
+                            notch_pts,
+                            Stroke::new(1.8_f32, Color32::from_rgb(0, 229, 255)),
+                        ));
+
+                        // Interactive Sensitivity / Depth Puck
+                        let norm_s = (sens / 100.0).clamp(0.0, 1.0);
+                        let norm_d = (depth / 24.0).clamp(0.0, 1.0);
+                        let puck_x = rs_rect.left() + norm_s * (rs_rect.width() - 55.0);
+                        let puck_y = rs_rect.bottom() - norm_d * (rs_rect.height() - 20.0) - 10.0;
+                        rs_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(0, 229, 255));
+                        rs_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        rs_painter.text(
+                            egui::pos2(rs_rect.right() - 4.0, rs_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("RESONANCE\nSens:{:.0}%\nDep:-{:.1}dB", sens, depth),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+
+                        if rs_resp.hovered() {
+                            let _ = rs_resp.on_hover_text(format!(
+                                "Multi-Band Dynamic Resonance Suppressor HUD\nSensitivity: {:.0}%\nDepth: -{:.1} dB\n[Drag: Sensitivity % (X) / Depth dB (Y) Puck]",
+                                sens, depth
+                            ));
+                        }
+                    } else if is_fm_matrix {
+                        // 6-Operator FM Matrix Synthesizer Mini View
+                        let (fm_resp, fm_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let fm_rect = fm_resp.rect;
+                        fm_painter.rect_filled(fm_rect, 2.0, Color32::from_rgb(20, 16, 10));
+
+                        let mut algo_idx = state.node_param_values.get("algorithm_idx").or_else(|| state.node_param_values.get("algorithm")).copied().unwrap_or(0.0);
+                        let mut feedback = state.node_param_values.get("feedback_amount").or_else(|| state.node_param_values.get("feedback")).copied().unwrap_or(3.5);
+
+                        if fm_resp.dragged() {
+                            if let Some(pos) = fm_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - fm_rect.left()) / fm_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - fm_rect.top()) / fm_rect.height())).clamp(0.0, 1.0);
+                                algo_idx = (norm_x * 4.0).round();
+                                feedback = norm_y * 10.0;
+                                state.node_param_values.insert("algorithm_idx".to_string(), algo_idx);
+                                state.node_param_values.insert("algorithm".to_string(), algo_idx);
+                                state.node_param_values.insert("feedback_amount".to_string(), feedback);
+                                state.node_param_values.insert("feedback".to_string(), feedback);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_algo = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_algo).is_some() { bus.set(pid_algo, algo_idx); }
+                                    let pid_fb = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_fb).is_some() { bus.set(pid_fb, feedback); }
+                                }
+                            }
+                        }
+
+                        // Mini 6 Operator Pucks
+                        let op_spacing = (fm_rect.width() - 55.0) / 6.0;
+                        for op_i in 0..6 {
+                            let ox = fm_rect.left() + (op_i as f32 + 0.5) * op_spacing;
+                            let is_c = op_i < 2;
+                            let col = if is_c { Color32::from_rgb(255, 215, 0) } else { Color32::from_rgb(0, 229, 255) };
+                            fm_painter.circle_filled(egui::pos2(ox, fm_rect.center().y), 4.5, col);
+                        }
+
+                        // Interactive Algorithm / Feedback Puck
+                        let norm_a = (algo_idx / 4.0).clamp(0.0, 1.0);
+                        let norm_f = (feedback / 10.0).clamp(0.0, 1.0);
+                        let puck_x = fm_rect.left() + norm_a * (fm_rect.width() - 55.0);
+                        let puck_y = fm_rect.bottom() - norm_f * (fm_rect.height() - 20.0) - 10.0;
+                        fm_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(255, 215, 0));
+                        fm_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        fm_painter.text(
+                            egui::pos2(fm_rect.right() - 4.0, fm_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("FM MATRIX\nAlg:{:.0}\nFbk:{:.1}", algo_idx + 1.0, feedback),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(255, 215, 0),
+                        );
+
+                        if fm_resp.hovered() {
+                            let _ = fm_resp.on_hover_text(format!(
+                                "6-Operator FM Matrix Synthesizer HUD\nAlgorithm: #{:.0}\nFeedback: {:.1}\n[Drag: Algorithm Preset (X) / Feedback (Y) Puck]",
+                                algo_idx + 1.0, feedback
+                            ));
+                        }
+                    } else if is_spectral_deesser {
+                        // Dynamic Spectral De-Esser Mini View
+                        let (de_resp, de_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let de_rect = de_resp.rect;
+                        de_painter.rect_filled(de_rect, 2.0, Color32::from_rgb(10, 14, 24));
+
+                        let mut freq_hz = state.node_param_values.get("frequency_hz").or_else(|| state.node_param_values.get("frequency")).copied().unwrap_or(6500.0);
+                        let mut thresh_db = state.node_param_values.get("threshold_db").or_else(|| state.node_param_values.get("threshold")).copied().unwrap_or(-24.0);
+                        let red_db = state.node_param_values.get("reduction_range_db").or_else(|| state.node_param_values.get("reduction")).copied().unwrap_or(12.0);
+
+                        if de_resp.dragged() {
+                            if let Some(pos) = de_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - de_rect.left()) / de_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - de_rect.top()) / de_rect.height())).clamp(0.0, 1.0);
+                                freq_hz = crate::views::spectral_deesser_view::SpectralDeEsserView::normalized_to_freq(norm_x);
+                                thresh_db = crate::views::spectral_deesser_view::SpectralDeEsserView::normalized_to_db(norm_y);
+                                state.node_param_values.insert("frequency_hz".to_string(), freq_hz);
+                                state.node_param_values.insert("frequency".to_string(), freq_hz);
+                                state.node_param_values.insert("threshold_db".to_string(), thresh_db);
+                                state.node_param_values.insert("threshold".to_string(), thresh_db);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_f = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_f).is_some() { bus.set(pid_f, freq_hz); }
+                                    let pid_th = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_th).is_some() { bus.set(pid_th, thresh_db); }
+                                }
+                            }
+                        }
+
+                        // Mini Sibilance Attenuation Curve
+                        let steps = 30;
+                        let mut de_pts = Vec::with_capacity(steps);
+                        let mid_y = de_rect.top() + 15.0;
+                        let norm_fx = crate::views::spectral_deesser_view::SpectralDeEsserView::freq_to_normalized(freq_hz);
+                        for i in 0..steps {
+                            let t = i as f32 / (steps - 1) as f32;
+                            let px = de_rect.left() + t * (de_rect.width() - 55.0);
+                            let bell = (-0.5 * ((t - norm_fx) * 16.0).powi(2)).exp() * (red_db / 30.0) * 22.0;
+                            let py = mid_y + bell;
+                            de_pts.push(egui::pos2(px, py));
+                        }
+                        de_painter.add(egui::Shape::line(
+                            de_pts,
+                            Stroke::new(1.8_f32, Color32::from_rgb(0, 229, 255)),
+                        ));
+
+                        // Interactive Sibilance Puck
+                        let norm_th = crate::views::spectral_deesser_view::SpectralDeEsserView::db_to_normalized(thresh_db);
+                        let puck_x = de_rect.left() + norm_fx * (de_rect.width() - 55.0);
+                        let puck_y = de_rect.bottom() - norm_th * (de_rect.height() - 20.0) - 10.0;
+                        de_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(0, 229, 255));
+                        de_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        de_painter.text(
+                            egui::pos2(de_rect.right() - 4.0, de_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("DE-ESSER\n{:.0}Hz\nThr:{:.1}dB\nRed:{:.0}dB", freq_hz, thresh_db, red_db),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+
+                        if de_resp.hovered() {
+                            let _ = de_resp.on_hover_text(format!(
+                                "Dynamic Spectral De-Esser HUD\nSibilance Frequency: {:.0} Hz | Threshold: {:.1} dBFS\nMax Reduction: {:.1} dB\n[Drag: Sibilance Frequency (X) / Threshold (Y) Puck]",
+                                freq_hz, thresh_db, red_db
+                            ));
+                        }
+                    } else if is_spectral_matching_eq {
+                        // 64-Band Dynamic Spectral Matching EQ Mini View
+                        let (me_resp, me_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let me_rect = me_resp.rect;
+                        me_painter.rect_filled(me_rect, 2.0, Color32::from_rgb(8, 20, 18));
+
+                        let mut amount = state.node_param_values.get("match_amount_percent").or_else(|| state.node_param_values.get("amount")).copied().unwrap_or(75.0);
+                        let mut smooth = state.node_param_values.get("smoothing_semitones").or_else(|| state.node_param_values.get("smoothing")).copied().unwrap_or(4.5);
+                        let limit = state.node_param_values.get("gain_limit_db").or_else(|| state.node_param_values.get("limit")).copied().unwrap_or(12.0);
+
+                        if me_resp.dragged() {
+                            if let Some(pos) = me_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - me_rect.left()) / me_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - me_rect.top()) / me_rect.height())).clamp(0.0, 1.0);
+                                amount = crate::views::spectral_matching_eq_view::SpectralMatchingEqView::normalized_to_amount(norm_x);
+                                smooth = crate::views::spectral_matching_eq_view::SpectralMatchingEqView::normalized_to_smoothing(norm_y);
+                                state.node_param_values.insert("match_amount_percent".to_string(), amount);
+                                state.node_param_values.insert("amount".to_string(), amount);
+                                state.node_param_values.insert("smoothing_semitones".to_string(), smooth);
+                                state.node_param_values.insert("smoothing".to_string(), smooth);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_amt = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_amt).is_some() { bus.set(pid_amt, amount); }
+                                    let pid_sm = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_sm).is_some() { bus.set(pid_sm, smooth); }
+                                }
+                            }
+                        }
+
+                        // Mini 16-Bar Sampled Match Spectrum Preview
+                        let num_mini_bars = 16;
+                        let bar_w = (me_rect.width() - 55.0) / num_mini_bars as f32;
+                        let mid_y = me_rect.center().y;
+                        for b_i in 0..num_mini_bars {
+                            let bx = me_rect.left() + b_i as f32 * bar_w;
+                            let b_norm = (b_i as f32 * 0.45).sin() * (amount / 100.0) * 12.0;
+                            let b_y = if b_norm >= 0.0 { mid_y - b_norm } else { mid_y };
+                            let b_h = b_norm.abs().max(1.0);
+                            let col = if b_norm >= 0.0 { Color32::from_rgb(0, 229, 255) } else { Color32::from_rgb(255, 107, 43) };
+                            me_painter.rect_filled(
+                                egui::Rect::from_min_size(egui::pos2(bx, b_y), egui::vec2(bar_w - 1.0, b_h)),
+                                1.0,
+                                col,
+                            );
+                        }
+
+                        // Interactive Match Amount / Smoothing Puck
+                        let norm_amt = crate::views::spectral_matching_eq_view::SpectralMatchingEqView::amount_to_normalized(amount);
+                        let norm_sm = crate::views::spectral_matching_eq_view::SpectralMatchingEqView::smoothing_to_normalized(smooth);
+                        let puck_x = me_rect.left() + norm_amt * (me_rect.width() - 55.0);
+                        let puck_y = me_rect.bottom() - norm_sm * (me_rect.height() - 20.0) - 10.0;
+                        me_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(0, 255, 180));
+                        me_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        me_painter.text(
+                            egui::pos2(me_rect.right() - 4.0, me_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("MATCH EQ\n{:.0}%\nSm:{:.1}st\n±{:.0}dB", amount, smooth, limit),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(0, 255, 180),
+                        );
+
+                        if me_resp.hovered() {
+                            let _ = me_resp.on_hover_text(format!(
+                                "64-Band Dynamic Linear-Phase Spectral Matching EQ HUD\nMatch Amount: {:.0}%\nSmoothing Width: {:.1} semitones\nGain Limit: ±{:.0} dB\n[Drag: Match Amount % (X) / Smoothing Width (Y) Puck]",
+                                amount, smooth, limit
                             ));
                         }
                     } else {

@@ -648,7 +648,8 @@ impl CommandPalette {
                 shortcut_hint: None,
             },
             CommandAction {
-                label: "Open Multi-Source Binaural BRIR Room Impulse Response Spatializer HUD".into(),
+                label: "Open Multi-Source Binaural BRIR Room Impulse Response Spatializer HUD"
+                    .into(),
                 category: "Spatial".into(),
                 action_id: "open_binaural_brir_hud".into(),
                 shortcut_hint: None,
@@ -798,7 +799,8 @@ impl CommandPalette {
                 shortcut_hint: None,
             },
             CommandAction {
-                label: "Open Neural Diffusion Audio Inpainter & Generative Spectral Repair HUD".into(),
+                label: "Open Neural Diffusion Audio Inpainter & Generative Spectral Repair HUD"
+                    .into(),
                 category: "Restoration".into(),
                 action_id: "open_neural_inpaint_hud".into(),
                 shortcut_hint: None,
@@ -864,7 +866,8 @@ impl CommandPalette {
                 shortcut_hint: None,
             },
             CommandAction {
-                label: "Open Mastering Dual-Mono Variable-Mu Vacuum Tube Optical Compressor HUD".into(),
+                label: "Open Mastering Dual-Mono Variable-Mu Vacuum Tube Optical Compressor HUD"
+                    .into(),
                 category: "Dynamics & Mastering".into(),
                 action_id: "open_vari_mu_master_hud".into(),
                 shortcut_hint: None,
@@ -927,6 +930,30 @@ impl CommandPalette {
                 label: "Open Mastering Multiband Upward Compressor (OTT) HUD".into(),
                 category: "Dynamics & Mastering".into(),
                 action_id: "open_upward_compressor_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Multi-Band Dynamic Resonance Suppressor HUD".into(),
+                category: "Dynamics & EQ".into(),
+                action_id: "open_resonance_suppressor_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open 6-Operator FM Matrix Synthesizer HUD".into(),
+                category: "Synthesis".into(),
+                action_id: "open_fm_matrix_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Dynamic Spectral De-Esser HUD".into(),
+                category: "Restoration & Dynamics".into(),
+                action_id: "open_spectral_deesser_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open 64-Band Spectral Matching Linear-Phase EQ HUD".into(),
+                category: "Mastering & EQ".into(),
+                action_id: "open_spectral_matching_eq_hud".into(),
                 shortcut_hint: None,
             },
         ];

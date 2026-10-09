@@ -2793,6 +2793,42 @@ Product Management has conducted a comprehensive readiness audit:
   - Pure unit tests: 329 passed in 0.24s (`cargo test -p summoner_gui --lib`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`).
 
+### Turn #102 (Sprint Turn #28) — Dynamic Spectral De-Esser & 64-Band Spectral Matching Linear-Phase EQ HUDs Convergence (Milestones 33 & 34)
+- [x] Dynamic Spectral De-Esser & 64-Band Spectral Matching Linear-Phase EQ HUDs Integration:
+  - Integrated `SpectralDeEsserView` (Precision Dynamic Spectral Sibilance Taming & Gain Reduction Radar: 3 Operating Modes [Split Band, Wide Band, Dynamic Notch], Sibilance Center Frequency [2000.0..16000.0 Hz], Bandwidth / Q [0.5..5.0], Detection Threshold [-60.0..0.0 dBFS], Max Gain Reduction Range [0.0..30.0 dB], Attack Time [1.0..50.0 ms], Release Time [10.0..500.0 ms], Audition Sibilance Solo Toggle, Real-time Gain Reduction Metering [-30.0..0.0 dB], 2D Attenuation Response Spectrum Canvas, and Touch-Draggable Center Frequency vs Threshold Sibilance Puck with >= 44x44pt bounding target) and `SpectralMatchingEqView` (Master Bus 64-Band Dynamic Linear-Phase Spectral Matching Equalizer HUD: 4 Target Profiles [Reference Track Match, Pink Noise Master Target, Loudness Balanced Target, Warm Analog Master Tilt], 64-Band High-Resolution Spectrum Comparison, Match Intensity [0.0..100.0 %], Spectral Smoothing Width [1.0..24.0 semitones], Dynamic Correction Gain Limit [3.0..24.0 dB], Zero-Phase FIR / Minimum-Phase IIR Linear-Phase Toggle, 64-Band Delta Correction Curve Shaper Canvas, and Touch-Draggable Match Amount vs Smoothing Semitones Puck with >= 44x44pt bounding target) into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+  - Completed end-to-end integration and parameter bridges for `ResonanceSuppressorView` (Multi-Band Dynamic Resonance Suppressor) and `FmMatrixView` (6-Operator FM Matrix Synthesizer).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/spectral_deesser_view.rs` & `spectral_matching_eq_view.rs`):
+  - In `SpectralDeEsserView`: added `name()` to `DeEsserMode`, coordinate normalizations & round-trips (`bandwidth_to_normalized`, `normalized_to_bandwidth`, `reduction_to_normalized`, `normalized_to_reduction`, `attack_to_normalized`, `normalized_to_attack`, `release_to_normalized`, `normalized_to_release`), `set_mode()`, `show_ui(&mut self, ui: &mut egui::Ui)`, and `render_ascii_snapshot_str() -> String` with sibilance attenuation curve metadata banner and verified hit target badge (`[PASS: >=44pt]`).
+  - In `SpectralMatchingEqView`: added `name()` to `MatchingProfile`, coordinate normalizations & round-trips (`limit_to_normalized`, `normalized_to_limit`), `set_profile()`, `show_ui(&mut self, ui: &mut egui::Ui)`, and `render_ascii_snapshot_str() -> String` with 64-band matching curve metadata banner and verified hit target badge (`[PASS: >=44pt]`).
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added modal fields (`show_spectral_deesser_modal`, `spectral_deesser_view`, `show_spectral_matching_eq_modal`, `spectral_matching_eq_view`, `show_resonance_suppressor_modal`, `resonance_suppressor_view`, `show_fm_matrix_modal`, `fm_matrix_view`).
+  - Added dedicated modal windows (`show_spectral_deesser_modal_window`, `show_spectral_matching_eq_modal_window`, `show_resonance_suppressor_modal_window`, `show_fm_matrix_modal_window`) with responsive styling, WCAG AAA contrast, and >= 44x44pt touch bounds.
+  - Added public lifecycle methods: `open_spectral_deesser_hud()`, `close_spectral_deesser_hud()`, `is_spectral_deesser_hud_open()`, `open_spectral_matching_eq_hud()`, `close_spectral_matching_eq_hud()`, `is_spectral_matching_eq_hud_open()`, `open_resonance_suppressor_hud()`, `close_resonance_suppressor_hud()`, `is_resonance_suppressor_hud_open()`, `open_fm_matrix_hud()`, `close_fm_matrix_hud()`, `is_fm_matrix_hud_open()`.
+  - Real-time parameter sync bridges (`sync_spectral_deesser_hud_state`, `sync_spectral_matching_eq_hud_state`, `sync_resonance_suppressor_hud_state`, `sync_fm_matrix_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_spectral_deesser_hud: bool`, `requested_open_spectral_matching_eq_hud: bool`, `requested_open_resonance_suppressor_hud: bool`, `requested_open_fm_matrix_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🎯 Open Resonance Suppressor HUD]`, `[🎛 Open FM Matrix HUD]`, `[🎙 Open Spectral De-Esser HUD]`, `[📊 Open Spectral Matching EQ HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header buttons `[🎯 Resonance HUD]`, `[🎛 FM Matrix HUD]`, `[🎙 De-Esser HUD]`, `[📊 Match EQ HUD]` in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Resonance Suppressor: 2D dynamic notch attenuation curve preview, interactive Sensitivity/Depth puck, live readout, and lock-free slot-addressed `ParamBus` dispatch.
+    * FM Matrix: 2D operator algorithm routing preview, interactive Mod Index / Ratio puck, live readout, and lock-free slot-addressed `ParamBus` dispatch.
+    * Spectral De-Esser: 2D dynamic sibilance attenuation curve preview, interactive Frequency/Threshold puck, live readout, and lock-free slot-addressed `ParamBus` dispatch.
+    * Spectral Matching EQ: 2D 64-band target vs source comparison curve preview, interactive Match Amount / Smoothing puck, live readout, and lock-free slot-addressed `ParamBus` dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_resonance_suppressor_hud` under `"Dynamics & EQ"`, `open_fm_matrix_hud` under `"Synthesis"`, `open_spectral_deesser_hud` under `"Restoration & Dynamics"`, and `open_spectral_matching_eq_hud` under `"Mastering & EQ"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_*_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier165_turn102_tests.rs`:
+    * Pure tests: view initialization, coordinate normalizations (frequency, threshold, bandwidth Q, reduction range, attack, release, amount, smoothing, limit, freq, mod index, ratio, depth), mode and profile switching across all modes, attenuation curve & 64-band matching curve calculations, touch puck hit testing (>= 44x44pt bounding targets), deterministic ASCII snapshots with metadata banners.
+    * GUI tests: modal window lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch without allocations, trigger button propagation from rack and inspector, command palette action verification.
+  - Registered `tier165_turn102_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Feature tests: 8 passed (`cargo test -p summoner_gui --features gui -- tier165`).
+  - Pure unit tests: 333 passed in 0.24s (`cargo test -p summoner_gui --lib`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`).
+
+
 
 
 

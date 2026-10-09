@@ -852,6 +852,10 @@ pub struct AwardWinningGuiView {
     pub resonance_suppressor_view: crate::views::resonance_suppressor_view::ResonanceSuppressorView,
     pub show_fm_matrix_modal: bool,
     pub fm_matrix_view: crate::views::fm_matrix_view::FmMatrixView,
+    pub show_spectral_deesser_modal: bool,
+    pub spectral_deesser_view: crate::views::spectral_deesser_view::SpectralDeEsserView,
+    pub show_spectral_matching_eq_modal: bool,
+    pub spectral_matching_eq_view: crate::views::spectral_matching_eq_view::SpectralMatchingEqView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1320,6 +1324,10 @@ impl AwardWinningGuiView {
             resonance_suppressor_view: crate::views::resonance_suppressor_view::ResonanceSuppressorView::new(),
             show_fm_matrix_modal: false,
             fm_matrix_view: crate::views::fm_matrix_view::FmMatrixView::new(),
+            show_spectral_deesser_modal: false,
+            spectral_deesser_view: crate::views::spectral_deesser_view::SpectralDeEsserView::new(),
+            show_spectral_matching_eq_modal: false,
+            spectral_matching_eq_view: crate::views::spectral_matching_eq_view::SpectralMatchingEqView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2489,6 +2497,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_fm_matrix_hud = false;
             self.open_fm_matrix_hud();
         }
+        if self.inspector_state.requested_open_spectral_deesser_hud || self.device_rack_state.requested_open_spectral_deesser_hud {
+            self.inspector_state.requested_open_spectral_deesser_hud = false;
+            self.device_rack_state.requested_open_spectral_deesser_hud = false;
+            self.open_spectral_deesser_hud();
+        }
+        if self.inspector_state.requested_open_spectral_matching_eq_hud || self.device_rack_state.requested_open_spectral_matching_eq_hud {
+            self.inspector_state.requested_open_spectral_matching_eq_hud = false;
+            self.device_rack_state.requested_open_spectral_matching_eq_hud = false;
+            self.open_spectral_matching_eq_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2596,6 +2614,10 @@ impl AwardWinningGuiView {
         self.show_tape_flutter_modal_window(ui);
         self.show_transient_designer_modal_window(ui);
         self.show_upward_compressor_modal_window(ui);
+        self.show_resonance_suppressor_modal_window(ui);
+        self.show_fm_matrix_modal_window(ui);
+        self.show_spectral_deesser_modal_window(ui);
+        self.show_spectral_matching_eq_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -18189,6 +18211,395 @@ impl AwardWinningGuiView {
             if bus.get(pid_boost).is_some() { bus.set(pid_boost, boost); }
             if bus.get(pid_ratio).is_some() { bus.set(pid_ratio, ratio); }
             if bus.get(pid_lift).is_some() { bus.set(pid_lift, active_lift); }
+        }
+    }
+
+    pub fn open_resonance_suppressor_hud(&mut self) {
+        self.show_resonance_suppressor_modal = true;
+    }
+
+    pub fn close_resonance_suppressor_hud(&mut self) {
+        self.show_resonance_suppressor_modal = false;
+    }
+
+    pub fn is_resonance_suppressor_hud_open(&self) -> bool {
+        self.show_resonance_suppressor_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_resonance_suppressor_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_resonance_suppressor_modal {
+            return;
+        }
+
+        let mut is_open = self.show_resonance_suppressor_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎯 Multi-Band Dynamic Resonance Suppressor & Notch HUD")
+            .id(egui::Id::new("resonance_suppressor_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Surgical Dynamic Resonance Suppression & Tracking Notches (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.resonance_suppressor_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_resonance_suppressor_modal = is_open;
+        self.sync_resonance_suppressor_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_resonance_suppressor_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let sens = self.resonance_suppressor_view.global_sensitivity;
+        let (depth, q) = if let Some(node) = self.resonance_suppressor_view.nodes.get(self.resonance_suppressor_view.selected_node_idx) {
+            (node.depth_db, node.q)
+        } else {
+            (12.0, 4.0)
+        };
+        let attack = self.resonance_suppressor_view.attack_ms;
+
+        self.device_rack_state.node_param_values.insert("global_sensitivity".to_string(), sens);
+        self.device_rack_state.node_param_values.insert("sensitivity".to_string(), sens);
+        self.device_rack_state.node_param_values.insert("depth_db".to_string(), depth);
+        self.device_rack_state.node_param_values.insert("depth".to_string(), depth);
+        self.device_rack_state.node_param_values.insert("bandwidth_q".to_string(), q);
+        self.device_rack_state.node_param_values.insert("q".to_string(), q);
+        self.device_rack_state.node_param_values.insert("attack_ms".to_string(), attack);
+        self.device_rack_state.node_param_values.insert("attack".to_string(), attack);
+
+        self.inspector_state.node_param_values.insert("global_sensitivity".to_string(), sens);
+        self.inspector_state.node_param_values.insert("sensitivity".to_string(), sens);
+        self.inspector_state.node_param_values.insert("depth_db".to_string(), depth);
+        self.inspector_state.node_param_values.insert("depth".to_string(), depth);
+        self.inspector_state.node_param_values.insert("bandwidth_q".to_string(), q);
+        self.inspector_state.node_param_values.insert("q".to_string(), q);
+        self.inspector_state.node_param_values.insert("attack_ms".to_string(), attack);
+        self.inspector_state.node_param_values.insert("attack".to_string(), attack);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_sens = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_depth = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_q = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_atk = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_sens).is_some() { bus.set(pid_sens, sens); }
+            if bus.get(pid_depth).is_some() { bus.set(pid_depth, depth); }
+            if bus.get(pid_q).is_some() { bus.set(pid_q, q); }
+            if bus.get(pid_atk).is_some() { bus.set(pid_atk, attack); }
+        }
+    }
+
+    pub fn open_fm_matrix_hud(&mut self) {
+        self.show_fm_matrix_modal = true;
+    }
+
+    pub fn close_fm_matrix_hud(&mut self) {
+        self.show_fm_matrix_modal = false;
+    }
+
+    pub fn is_fm_matrix_hud_open(&self) -> bool {
+        self.show_fm_matrix_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_fm_matrix_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_fm_matrix_modal {
+            return;
+        }
+
+        let mut is_open = self.show_fm_matrix_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎛 6-Operator Frequency Modulation (FM) Matrix Synthesizer HUD")
+            .id(egui::Id::new("fm_matrix_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Interactive 6-Operator FM Topologies & Phase Modulation Feedback (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.fm_matrix_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_fm_matrix_modal = is_open;
+        self.sync_fm_matrix_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_fm_matrix_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let algo_idx = match self.fm_matrix_view.algorithm {
+            crate::views::fm_matrix_view::FmAlgorithm::Algo1LinearCascade => 0.0,
+            crate::views::fm_matrix_view::FmAlgorithm::Algo5DualCascade => 1.0,
+            crate::views::fm_matrix_view::FmAlgorithm::Algo16BranchModulator => 2.0,
+            crate::views::fm_matrix_view::FmAlgorithm::Algo22ParallelCarrier => 3.0,
+            crate::views::fm_matrix_view::FmAlgorithm::Algo32PureAdditive => 4.0,
+        };
+        let feedback = self.fm_matrix_view.operators[5].output_level * 10.0;
+        let richness = self.fm_matrix_view.matrix_puck_pos.0 * 100.0;
+        let op1_ratio = self.fm_matrix_view.operators[0].ratio;
+
+        self.device_rack_state.node_param_values.insert("algorithm_idx".to_string(), algo_idx);
+        self.device_rack_state.node_param_values.insert("algorithm".to_string(), algo_idx);
+        self.device_rack_state.node_param_values.insert("feedback_amount".to_string(), feedback);
+        self.device_rack_state.node_param_values.insert("feedback".to_string(), feedback);
+        self.device_rack_state.node_param_values.insert("harmonic_richness".to_string(), richness);
+        self.device_rack_state.node_param_values.insert("op1_ratio".to_string(), op1_ratio);
+
+        self.inspector_state.node_param_values.insert("algorithm_idx".to_string(), algo_idx);
+        self.inspector_state.node_param_values.insert("algorithm".to_string(), algo_idx);
+        self.inspector_state.node_param_values.insert("feedback_amount".to_string(), feedback);
+        self.inspector_state.node_param_values.insert("feedback".to_string(), feedback);
+        self.inspector_state.node_param_values.insert("harmonic_richness".to_string(), richness);
+        self.inspector_state.node_param_values.insert("op1_ratio".to_string(), op1_ratio);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_algo = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_fb = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_rich = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_ratio = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_algo).is_some() { bus.set(pid_algo, algo_idx); }
+            if bus.get(pid_fb).is_some() { bus.set(pid_fb, feedback); }
+            if bus.get(pid_rich).is_some() { bus.set(pid_rich, richness); }
+            if bus.get(pid_ratio).is_some() { bus.set(pid_ratio, op1_ratio); }
+        }
+    }
+
+    pub fn open_spectral_deesser_hud(&mut self) {
+        self.show_spectral_deesser_modal = true;
+    }
+
+    pub fn close_spectral_deesser_hud(&mut self) {
+        self.show_spectral_deesser_modal = false;
+    }
+
+    pub fn is_spectral_deesser_hud_open(&self) -> bool {
+        self.show_spectral_deesser_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_spectral_deesser_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_spectral_deesser_modal {
+            return;
+        }
+
+        let mut is_open = self.show_spectral_deesser_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎙 Dynamic Spectral De-Esser & Sibilance Reduction HUD")
+            .id(egui::Id::new("spectral_deesser_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Precision Dynamic Spectral Sibilance Taming & Gain Reduction Radar (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.spectral_deesser_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_spectral_deesser_modal = is_open;
+        self.sync_spectral_deesser_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_spectral_deesser_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let freq = self.spectral_deesser_view.frequency_hz;
+        let thresh = self.spectral_deesser_view.threshold_db;
+        let red = self.spectral_deesser_view.reduction_range_db;
+        let q = self.spectral_deesser_view.bandwidth_q;
+
+        self.device_rack_state.node_param_values.insert("frequency_hz".to_string(), freq);
+        self.device_rack_state.node_param_values.insert("frequency".to_string(), freq);
+        self.device_rack_state.node_param_values.insert("threshold_db".to_string(), thresh);
+        self.device_rack_state.node_param_values.insert("threshold".to_string(), thresh);
+        self.device_rack_state.node_param_values.insert("reduction_range_db".to_string(), red);
+        self.device_rack_state.node_param_values.insert("reduction".to_string(), red);
+        self.device_rack_state.node_param_values.insert("bandwidth_q".to_string(), q);
+        self.device_rack_state.node_param_values.insert("bandwidth".to_string(), q);
+
+        self.inspector_state.node_param_values.insert("frequency_hz".to_string(), freq);
+        self.inspector_state.node_param_values.insert("frequency".to_string(), freq);
+        self.inspector_state.node_param_values.insert("threshold_db".to_string(), thresh);
+        self.inspector_state.node_param_values.insert("threshold".to_string(), thresh);
+        self.inspector_state.node_param_values.insert("reduction_range_db".to_string(), red);
+        self.inspector_state.node_param_values.insert("reduction".to_string(), red);
+        self.inspector_state.node_param_values.insert("bandwidth_q".to_string(), q);
+        self.inspector_state.node_param_values.insert("bandwidth".to_string(), q);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_freq = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_thresh = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_red = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_q = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_freq).is_some() { bus.set(pid_freq, freq); }
+            if bus.get(pid_thresh).is_some() { bus.set(pid_thresh, thresh); }
+            if bus.get(pid_red).is_some() { bus.set(pid_red, red); }
+            if bus.get(pid_q).is_some() { bus.set(pid_q, q); }
+        }
+    }
+
+    pub fn open_spectral_matching_eq_hud(&mut self) {
+        self.show_spectral_matching_eq_modal = true;
+    }
+
+    pub fn close_spectral_matching_eq_hud(&mut self) {
+        self.show_spectral_matching_eq_modal = false;
+    }
+
+    pub fn is_spectral_matching_eq_hud_open(&self) -> bool {
+        self.show_spectral_matching_eq_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_spectral_matching_eq_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_spectral_matching_eq_modal {
+            return;
+        }
+
+        let mut is_open = self.show_spectral_matching_eq_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("📊 64-Band Dynamic Linear-Phase Spectral Matching EQ HUD")
+            .id(egui::Id::new("spectral_matching_eq_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("64-Band Dynamic Target Matching, Reference Track Comparison & Linear-Phase Equalization (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.spectral_matching_eq_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_spectral_matching_eq_modal = is_open;
+        self.sync_spectral_matching_eq_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_spectral_matching_eq_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let amount = self.spectral_matching_eq_view.match_amount_percent;
+        let smooth = self.spectral_matching_eq_view.smoothing_semitones;
+        let limit = self.spectral_matching_eq_view.gain_limit_db;
+        let phase = if self.spectral_matching_eq_view.linear_phase { 1.0 } else { 0.0 };
+
+        self.device_rack_state.node_param_values.insert("match_amount_percent".to_string(), amount);
+        self.device_rack_state.node_param_values.insert("match_amount".to_string(), amount);
+        self.device_rack_state.node_param_values.insert("amount".to_string(), amount);
+        self.device_rack_state.node_param_values.insert("smoothing_semitones".to_string(), smooth);
+        self.device_rack_state.node_param_values.insert("smoothing".to_string(), smooth);
+        self.device_rack_state.node_param_values.insert("gain_limit_db".to_string(), limit);
+        self.device_rack_state.node_param_values.insert("limit".to_string(), limit);
+        self.device_rack_state.node_param_values.insert("linear_phase".to_string(), phase);
+
+        self.inspector_state.node_param_values.insert("match_amount_percent".to_string(), amount);
+        self.inspector_state.node_param_values.insert("match_amount".to_string(), amount);
+        self.inspector_state.node_param_values.insert("amount".to_string(), amount);
+        self.inspector_state.node_param_values.insert("smoothing_semitones".to_string(), smooth);
+        self.inspector_state.node_param_values.insert("smoothing".to_string(), smooth);
+        self.inspector_state.node_param_values.insert("gain_limit_db".to_string(), limit);
+        self.inspector_state.node_param_values.insert("limit".to_string(), limit);
+        self.inspector_state.node_param_values.insert("linear_phase".to_string(), phase);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_amt = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_smooth = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_limit = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_phase = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_amt).is_some() { bus.set(pid_amt, amount); }
+            if bus.get(pid_smooth).is_some() { bus.set(pid_smooth, smooth); }
+            if bus.get(pid_limit).is_some() { bus.set(pid_limit, limit); }
+            if bus.get(pid_phase).is_some() { bus.set(pid_phase, phase); }
         }
     }
     fn render_patch_cords_canvas(&mut self, ui: &mut egui::Ui, available_h: f32) {

@@ -282,7 +282,10 @@ impl SummonerApp {
                 bus.register(summoner_core::param_bus::ParamId(tid * 1000 + p_idx), 0.5);
             }
             for p_idx in 0..16 {
-                bus.register(summoner_core::param_bus::ParamId(tid * 1000 + 100 + p_idx), 0.5);
+                bus.register(
+                    summoner_core::param_bus::ParamId(tid * 1000 + 100 + p_idx),
+                    0.5,
+                );
             }
         }
         let param_bus = Arc::new(bus);
@@ -507,7 +510,9 @@ impl SummonerApp {
             let mut graph = NodeGraph::new(format!("Track {} Graph", track_id), 64, 2);
             self.node_graph_state.positions.clear();
             for (idx, _node_cfg) in track.nodes.iter().enumerate() {
-                graph.nodes.push(Box::new(summoner_core::node::PassthroughNode));
+                graph
+                    .nodes
+                    .push(Box::new(summoner_core::node::PassthroughNode));
                 self.node_graph_state.positions.insert(
                     idx,
                     egui::pos2(120.0 + (idx as f32) * 160.0, 120.0 + (idx as f32) * 30.0),
@@ -1739,6 +1744,22 @@ impl eframe::App for SummonerApp {
                     self.current_view = ViewMode::ModernStudio;
                     self.award_winning_view.open_upward_compressor_hud();
                 }
+                "open_resonance_suppressor_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_resonance_suppressor_hud();
+                }
+                "open_fm_matrix_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_fm_matrix_hud();
+                }
+                "open_spectral_deesser_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_spectral_deesser_hud();
+                }
+                "open_spectral_matching_eq_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_spectral_matching_eq_hud();
+                }
                 "sfz_convert" | "auto_slice" | "load_preset" | "export_clap" | "toggle_simd" => {
                     println!("Command palette action executed: {}", action);
                 }
@@ -1878,7 +1899,10 @@ impl eframe::App for SummonerApp {
                         self.export_wav();
                         ui.close_menu();
                     }
-                    if ui.button("📦 Export Multi-Track Stems... (Ctrl+Shift+E)").clicked() {
+                    if ui
+                        .button("📦 Export Multi-Track Stems... (Ctrl+Shift+E)")
+                        .clicked()
+                    {
                         self.current_view = ViewMode::ModernStudio;
                         self.award_winning_view.open_stems_export_modal();
                         ui.close_menu();

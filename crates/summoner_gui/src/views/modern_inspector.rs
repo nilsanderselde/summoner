@@ -242,6 +242,14 @@ pub struct ModernInspectorState {
     pub requested_open_transient_designer_hud: bool,
     #[serde(default)]
     pub requested_open_upward_compressor_hud: bool,
+    #[serde(default)]
+    pub requested_open_resonance_suppressor_hud: bool,
+    #[serde(default)]
+    pub requested_open_fm_matrix_hud: bool,
+    #[serde(default)]
+    pub requested_open_spectral_deesser_hud: bool,
+    #[serde(default)]
+    pub requested_open_spectral_matching_eq_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -369,6 +377,10 @@ impl Default for ModernInspectorState {
             requested_open_tape_flutter_hud: false,
             requested_open_transient_designer_hud: false,
             requested_open_upward_compressor_hud: false,
+            requested_open_resonance_suppressor_hud: false,
+            requested_open_fm_matrix_hud: false,
+            requested_open_spectral_deesser_hud: false,
+            requested_open_spectral_matching_eq_hud: false,
         }
     }
 }
@@ -1873,6 +1885,46 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open Mastering Multiband Upward Compressor (OTT) HUD").clicked() {
                     state.requested_open_upward_compressor_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("ResonanceSuppressor") || active_kind.contains("ResonanceNotch") || active_kind == "ResonanceSuppressorNode" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🎯 Open Resonance Suppressor HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 229, 255)))
+                        .fill(Color32::from_rgb(12, 28, 38))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 229, 255)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Multi-Band Dynamic Resonance Suppressor & Notch HUD").clicked() {
+                    state.requested_open_resonance_suppressor_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("FmMatrix") || active_kind.contains("FmSynthesizer") || active_kind.contains("Dx7") || active_kind == "FmMatrixNode" || active_kind == "FmMatrixSynthesizer" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🎛 Open FM Matrix HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(255, 215, 0)))
+                        .fill(Color32::from_rgb(38, 30, 10))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 215, 0)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open 6-Operator FM Matrix Synthesizer HUD").clicked() {
+                    state.requested_open_fm_matrix_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("SpectralDeEsser") || active_kind.contains("DeEsser") || active_kind.contains("Deesser") || active_kind == "SpectralDeEsserNode" || active_kind == "DynamicSpectralDeEsser" || active_kind == "LinearPhaseDeEsser" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🎙 Open Spectral De-Esser HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 229, 255)))
+                        .fill(Color32::from_rgb(12, 28, 38))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 229, 255)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Dynamic Spectral De-Esser & Sibilance Reduction HUD").clicked() {
+                    state.requested_open_spectral_deesser_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("SpectralMatchingEq") || active_kind.contains("MatchingEq") || active_kind == "SpectralMatchingEqNode" || active_kind.contains("SpectrumMatching") {
+                if ui.add(
+                    egui::Button::new(RichText::new("📊 Open Spectral Matching EQ HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 255, 180)))
+                        .fill(Color32::from_rgb(12, 35, 28))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 255, 180)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open 64-Band Dynamic Linear-Phase Spectral Matching Equalizer HUD").clicked() {
+                    state.requested_open_spectral_matching_eq_hud = true;
                 }
                 ui.add_space(4.0);
             }
