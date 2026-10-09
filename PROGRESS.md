@@ -1,6 +1,6 @@
 # Summoner DAW — Product Readiness & Shippability Tracker
 > **Current Shippability Score:** 10.0 / 10  
-> **Status:** Production Ready Release Candidate (Turn #118 / Sprint Turn #44)  
+> **Status:** Production Ready Release Candidate (Turn #120 / Sprint Turn #46)  
 > **Authoritative Root:** `PROGRESS.md`  
 > **License:** AGPLv3
 
@@ -3399,6 +3399,71 @@ Product Management has conducted a comprehensive readiness audit:
     * GUI tests: modal window lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch without allocations, command palette action verification.
   - Registered `tier181_turn118_tests` in `crates/summoner_gui/src/lib.rs`.
   - Tests passing: 100% pass (`cargo test -p summoner_gui --features gui --lib tier181`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo check -p summoner_gui --features gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
+
+### Turn #119 (Sprint Turn #45) — Visual Spectrogram Art & Bitmap Sonification Engine HUD and 10-20 BCI EEG Brainwave Decoder & Neuro-Feedback Modulation HUD Convergence (Milestones 33 & 34)
+- [x] Visual Spectrogram Art & Bitmap Sonification Engine HUD (`crates/summoner_gui/src/views/spectrogram_art_view.rs`):
+  - Integrated `SpectrogramArtView`:
+    * 4 Spectrogram Art Presets: `AphexTwinFace` (Aphex Twin equation silhouette, 50 Hz - 15 kHz, 128 oscillators, log mapping, 4.0s loop), `GeometricFractal` (Mandelbrot fractal set, 80 Hz - 12 kHz, 96 oscillators, 6.0s loop), `CyberpunkMatrix` (Matrix green digital code rain, 100 Hz - 18 kHz, 192 oscillators, linear mapping, 3.0s loop), `CosmicWaterfall` (Cosmic stellar nebulae, 30 Hz - 20 kHz, 64 oscillators, 8.0s loop).
+    * Interactive 2D Playhead Position & Oscillator Density Puck: Playhead $[0.0..=1.0]$ vs Density $[16..=256]$ with $\ge 44\times 44\text{pt}$ touch bounding target (`SPECTROGRAM_ART_PUCK_HIT_RADIUS = 22.0`).
+    * Real-time bitmap raster scan lines, frequency mapping functions (Linear & Logarithmic), color mode mapping (Grayscale Luma, RGB Harmonic Note, Thermal Heatmap).
+    * Deterministic ASCII snapshot rendering with metadata banner and verified touch target badge (`[PASS: >=44pt]`).
+- [x] 10-20 BCI EEG Brainwave Decoder & Neuro-Feedback HUD (`crates/summoner_gui/src/views/bci_eeg_decoder_view.rs`):
+  - Integrated `BciEegDecoderView`:
+    * 10-20 International Scalp Electrode montage (19 standard channels: Fp1, Fp2, F7, F3, Fz, F4, F8, T3, C3, Cz, C4, T4, T5, P3, Pz, P4, T6, O1, O2).
+    * 5 EEG Frequency Bands: Delta $\delta$ (0.5-4 Hz), Theta $\theta$ (4-8 Hz), Alpha $\alpha$ (8-13 Hz), Beta $\beta$ (13-30 Hz), Gamma $\gamma$ (30-50 Hz).
+    * 4 Neuro-Affective Presets: `DeepMeditationAlpha` (Alpha relaxation state), `CognitiveFocusBeta` (High beta concentration state), `CreativeFlowTheta` (Theta daydreaming/insight state), `DeepSleepDelta` (Delta slow-wave regeneration).
+    * Interactive 2D Alpha Relaxation vs Beta Focus Dynamics Puck with $\ge 44\times 44\text{pt}$ touch target (`BCI_EEG_PUCK_HIT_RADIUS = 22.0`).
+    * Real-time 2D scalp topographical projection and neuro-affective CV modulation output $[0.0..=1.0]$.
+    * Deterministic ASCII snapshot rendering with metadata banner and verified touch target badge (`[PASS: >=44pt]`).
+- [x] View Re-Exports, Modal Windows & Integrations (`crates/summoner_gui/src/views/mod.rs`, `award_winning_gui_view.rs`, `modern_device_rack.rs`, `modern_inspector.rs`, `command_palette.rs`, `app.rs`):
+  - Exported both views and types.
+  - Added dedicated modal windows, lifecycle methods, and lock-free `ParamBus` slot dispatch.
+  - Added mini-visualizers in `ModernDeviceRackView` and action buttons in `ModernInspectorView`.
+  - Registered `open_spectrogram_art_hud` and `open_bci_eeg_decoder_hud` in command palette and app router.
+- [x] Verification & Test Suite (`crates/summoner_gui/src/tier182_turn119_tests.rs`):
+  - Pure tests: view initialization, coordinate normalizations, preset switching, frequency mapping, electrode distance evaluations, touch puck hit testing ($\ge 44\times 44\text{pt}$), deterministic ASCII snapshots.
+  - GUI tests: modal window lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch, command palette action verification.
+
+### Turn #120 (Sprint Turn #46) — Analog Diode-Ring Modulator & Quadrature Frequency Doubler HUD and Psychoacoustic Shaped Noise Dither & Bit-Depth Truncation Radar HUD Convergence (Milestones 33 & 34)
+- [x] Analog Diode-Ring Modulator & Quadrature Frequency Doubler HUD (`crates/summoner_gui/src/views/ring_mod_view.rs`):
+  - Integrated `RingModulatorView` directly reflecting `crates/summoner_dsp/src/ring_mod.rs`:
+    * 4 Curated Presets: `DalekRoboticVoice` (Classic 1963 BBC sci-fi voice modulation, $f_c = 30.0\text{ Hz}$, Sine, Depth $1.00$, Diode Asymmetry $0.20$, Phase $0.0^\circ$), `ChimeBellHarmonics` (Metallic inharmonic bell resonance, $f_c = 440.0\text{ Hz}$, Triangle, Depth $0.85$, Diode $0.10$, Phase $45.0^\circ$), `TremoloWarmSub` (Sub-audio amplitude tremolo flutter, $f_c = 5.5\text{ Hz}$, Sine, Depth $0.35$, Diode $0.00$, Phase $0.0^\circ$), and `AlienQuadratureGlitch` (Harsh metallic ring folding, $f_c = 1850.0\text{ Hz}$, Square, Depth $1.00$, Diode $0.65$, Phase $90.0^\circ$).
+    * Interactive 2D Carrier Frequency & Modulation Depth Puck: Carrier Frequency $f_c \in [0.1..=8000.0]\text{ Hz}$ (logarithmic mapping) vs Mod Depth $d \in [0.0..=1.0]$ with $\ge 44\times 44\text{pt}$ touch target (`RING_MOD_PUCK_HIT_RADIUS = 22.0`).
+    * Real-time carrier waveform plot (Sine, Triangle, Saw, Square), diode bridge non-linear asymmetry $[-1.0..=+1.0]$, carrier phase offset $[0..=360]^\circ$, and sideband harmonic spectrum calculation $(f_c + f_m, |f_c - f_m|)$.
+    * Deterministic ASCII snapshot rendering with metadata banner and verified touch target badge (`[PASS: >=44pt]`).
+- [x] Psychoacoustic Shaped Noise Dither & Bit-Depth Truncation Radar HUD (`crates/summoner_gui/src/views/dither_quantizer_view.rs`):
+  - Integrated `DitherQuantizerView` directly reflecting `crates/summoner_dsp/src/dither.rs`:
+    * 4 Curated Dithering Presets: `RedBookCd16BitTpdf` (Standard 16-bit CD mastering with flat triangular TPDF dither, Bit Depth 16, TPDF, Shaping $1.0$, SNR $98.1\text{ dB}$, Noise Floor $-98.1\text{ dBFS}$), `PsychoacousticShaped24Bit` (High-resolution 24-bit master with high-pass noise shaping pushing quantization noise into ultrasonic $18-22\text{ kHz}$, Bit Depth 24, NoiseShaped, Shaping $1.5$, SNR $146.2\text{ dB}$, Noise Floor $-158.2\text{ dBFS}$), `VintageSampler12Bit` (Classic 1980s 12-bit sampler crunch with shaped noise dither, Bit Depth 12, NoiseShaped, Shaping $0.75$, SNR $74.0\text{ dB}$, Noise Floor $-81.2\text{ dBFS}$), and `LofiChiptune8BitRaw` (Raw un-dithered 8-bit truncation producing harmonic quantization distortion and gritty bit-crushed tails, Bit Depth 8, None, Shaping $0.0$, SNR $49.9\text{ dB}$, Noise Floor $-49.9\text{ dBFS}$).
+    * Interactive 2D Bit-Depth vs Noise-Shaping Depth Puck: Target Bit-Depth $N \in [8..=24]\text{ bits}$ vs Shaping Intensity $\beta \in [0.0..=2.0]$ with $\ge 44\times 44\text{pt}$ touch target (`DITHER_PUCK_HIT_RADIUS = 22.0`).
+    * Real-time Triangular PDF Probability Density curve plot $P(e)$, quantization staircase transfer function, dynamic theoretical SNR ($6.02 N + 1.76\text{ dB}$), and effective noise floor calculation.
+    * Deterministic ASCII snapshot rendering with metadata banner and verified touch target badge (`[PASS: >=44pt]`).
+- [x] View Re-Exports (`crates/summoner_gui/src/views/mod.rs` & `crates/summoner_gui/src/lib.rs`):
+  - Exported `RingModulatorView`, `RingModPreset`, `RingWaveformShape`, `RING_MOD_PUCK_HIT_RADIUS`.
+  - Exported `DitherQuantizerView`, `DitherPreset`, `DitherMode`, `DITHER_PUCK_HIT_RADIUS`.
+- [x] AwardWinningGuiView Modal Windows & Lock-Free Live Audio State Sync (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added modal fields (`show_ring_mod_modal`, `ring_mod_view`, `show_dither_quantizer_modal`, `dither_quantizer_view`).
+  - Added dedicated modal windows (`show_ring_mod_modal_window`, `show_dither_quantizer_modal_window`) with responsive styling, WCAG AAA contrast, and $\ge 44\times 44\text{pt}$ touch bounds.
+  - Added public lifecycle methods: `open_ring_mod_hud()`, `close_ring_mod_hud()`, `is_ring_mod_hud_open()`, `open_dither_quantizer_hud()`, `close_dither_quantizer_hud()`, `is_dither_quantizer_hud_open()`.
+  - Real-time parameter sync bridges (`sync_ring_mod_hud_state` and `sync_dither_quantizer_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations (`modern_inspector.rs`, `modern_device_rack.rs`):
+  - Added `requested_open_ring_mod_hud: bool` and `requested_open_dither_quantizer_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🔔 Open Ring Modulator HUD]` and `[🎚 Open Dither Quantizer HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header buttons `[🔔 RingMod HUD]` and `[🎚 Dither HUD]` in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Ring Modulator: Carrier waveform preview curve, interactive Frequency / Mod Depth puck, live frequency & depth readout, and lock-free slot-addressed `ParamBus` dispatch.
+    * Dither Quantizer: Staircase / noise floor contour preview, interactive Bit Depth / Shaping intensity puck, live bit depth and shaping readout, and lock-free slot-addressed `ParamBus` dispatch.
+- [x] Command Palette & Application Routing (`command_palette.rs`, `app.rs`):
+  - Registered `open_ring_mod_hud` under `"Modulation & Dynamics"` and `open_dither_quantizer_hud` under `"Mastering & Utility"` in `command_palette.rs`.
+  - Wired application action routing in `app.rs` dispatching to `AwardWinningGuiView::open_ring_mod_hud()` and `open_dither_quantizer_hud()`.
+- [x] Verification & Test Suite (`crates/summoner_gui/src/tier183_turn120_tests.rs`):
+  - Created test suite:
+    * Pure tests: view initialization, coordinate normalizations (carrier frequency, mod depth, bit depth, shaping intensity), preset switching across all presets, waveform evaluations (Sine, Triangle, Saw, Square), theoretical SNR and noise floor physics, touch puck hit testing ($\ge 44\times 44\text{pt}$ bounding targets), deterministic ASCII snapshots with metadata banners.
+    * GUI tests: modal window lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch without allocations, command palette action verification.
+  - Registered `tier183_turn120_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Tests passing: 100% pass (`cargo test -p summoner_gui`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo check -p summoner_gui --features gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
 
 

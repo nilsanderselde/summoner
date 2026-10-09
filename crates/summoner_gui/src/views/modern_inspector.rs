@@ -318,6 +318,10 @@ pub struct ModernInspectorState {
     pub requested_open_spectrogram_art_hud: bool,
     #[serde(default)]
     pub requested_open_bci_eeg_decoder_hud: bool,
+    #[serde(default)]
+    pub requested_open_ring_mod_hud: bool,
+    #[serde(default)]
+    pub requested_open_dither_quantizer_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -483,6 +487,8 @@ impl Default for ModernInspectorState {
             requested_open_chaotic_attractor_hud: false,
             requested_open_spectrogram_art_hud: false,
             requested_open_bci_eeg_decoder_hud: false,
+            requested_open_ring_mod_hud: false,
+            requested_open_dither_quantizer_hud: false,
         }
     }
 }
@@ -2367,6 +2373,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open 10-20 BCI EEG Brainwave Decoder & Neuro-Feedback HUD").clicked() {
                     state.requested_open_bci_eeg_decoder_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("RingMod") || active_kind.contains("RingModulator") || active_kind.contains("RingModulation") || active_kind == "RingModulatorNode" || active_kind == "DiodeRingModulator" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🔔 Open Ring Modulator HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(251, 146, 60)))
+                        .fill(Color32::from_rgb(35, 20, 10))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(251, 146, 60)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Analog Diode-Ring Modulator & Quadrature Frequency Doubler HUD").clicked() {
+                    state.requested_open_ring_mod_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Dither") || active_kind.contains("Quantizer") || active_kind.contains("BitDepth") || active_kind == "DitherNode" || active_kind == "PsychoacousticDither" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🎚 Open Dither Quantizer HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(56, 189, 248)))
+                        .fill(Color32::from_rgb(10, 25, 40))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(56, 189, 248)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Psychoacoustic Shaped Noise Dither & Bit-Depth Truncation Radar HUD").clicked() {
+                    state.requested_open_dither_quantizer_hud = true;
                 }
                 ui.add_space(4.0);
             }

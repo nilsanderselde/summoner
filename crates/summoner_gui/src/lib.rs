@@ -318,6 +318,8 @@ pub mod tier181_turn118_tests;
 #[cfg(feature = "gui")]
 pub mod tier182_turn119_tests;
 #[cfg(feature = "gui")]
+pub mod tier183_turn120_tests;
+#[cfg(feature = "gui")]
 pub mod touch_gestures;
 #[cfg(feature = "gui")]
 pub mod transport_bar;
@@ -384,6 +386,8 @@ pub use views::detachable_window_manager::DetachableWindowManagerView;
 pub use views::device_catalog::*;
 #[cfg(feature = "gui")]
 pub use views::dialog_gating_view::DialogGatingView;
+#[cfg(feature = "gui")]
+pub use views::dither_quantizer_view::{DitherMode, DitherPreset, DitherQuantizerView, DITHER_PUCK_HIT_RADIUS};
 #[cfg(feature = "gui")]
 pub use views::diffractive_propagation_view::DiffractivePropagationView;
 #[cfg(feature = "gui")]
@@ -565,6 +569,8 @@ pub use views::resonance_suppressor_view::ResonanceSuppressorView;
 pub use views::reverb_space_view::ReverbSpaceView;
 #[cfg(feature = "gui")]
 pub use views::ribbon_controller_view::RibbonControllerView;
+#[cfg(feature = "gui")]
+pub use views::ring_mod_view::{RingModPreset, RingModulatorView, RingWaveformShape, RING_MOD_PUCK_HIT_RADIUS};
 #[cfg(feature = "gui")]
 pub use views::rotary_doppler_view::RotaryDopplerView;
 #[cfg(feature = "gui")]

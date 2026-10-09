@@ -1160,6 +1160,18 @@ impl CommandPalette {
                 action_id: "open_bci_eeg_decoder_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Analog Diode-Ring Modulator & Quadrature Frequency Doubler HUD".into(),
+                category: "Modulation & Dynamics".into(),
+                action_id: "open_ring_mod_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Psychoacoustic Shaped Noise Dither & Bit-Depth Truncation Radar HUD".into(),
+                category: "Mastering & Utility".into(),
+                action_id: "open_dither_quantizer_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

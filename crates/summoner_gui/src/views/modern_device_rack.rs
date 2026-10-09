@@ -333,6 +333,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_spectrogram_art_hud: bool,
     #[serde(default)]
     pub requested_open_bci_eeg_decoder_hud: bool,
+    #[serde(default)]
+    pub requested_open_ring_mod_hud: bool,
+    #[serde(default)]
+    pub requested_open_dither_quantizer_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -488,6 +492,8 @@ impl Default for ModernDeviceRackState {
             requested_open_chaotic_attractor_hud: false,
             requested_open_spectrogram_art_hud: false,
             requested_open_bci_eeg_decoder_hud: false,
+            requested_open_ring_mod_hud: false,
+            requested_open_dither_quantizer_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -1266,6 +1272,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_chaotic_attractor = cur_selection.contains("Chaotic") || cur_selection.contains("Attractor") || cur_selection.contains("Lorenz") || cur_selection.contains("Rossler") || cur_selection == "ChaoticFractalAttractorModulator";
                     let is_spectrogram_art = cur_selection.contains("SpectrogramArt") || cur_selection.contains("Spectrogram") || cur_selection.contains("ImageSound") || cur_selection == "SpectrogramArtNode" || cur_selection == "SpectrogramArtEngine" || cur_selection == "SpectrogramArtMorphNode" || cur_selection == "SpectrogramArtConfig";
                     let is_bci_eeg_decoder = cur_selection.contains("Bci") || cur_selection.contains("EEG") || cur_selection.contains("Eeg") || cur_selection.contains("Brainwave") || cur_selection == "BciEegDecoderNode" || cur_selection == "EegBands" || cur_selection == "MentalImageryClassifier";
+                    let is_ring_mod = cur_selection.contains("RingMod") || cur_selection.contains("RingModulator") || cur_selection.contains("RingModulation") || cur_selection == "RingModulatorNode" || cur_selection == "DiodeRingModulator";
+                    let is_dither_quantizer = cur_selection.contains("Dither") || cur_selection.contains("Quantizer") || cur_selection.contains("BitDepth") || cur_selection == "DitherNode" || cur_selection == "PsychoacousticDither";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1830,6 +1838,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("🧠 BCI HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(34, 197, 94))).on_hover_text("Open 10-20 BCI EEG Brainwave Decoder & Neuro-Feedback HUD").clicked()
                     {
                         state.requested_open_bci_eeg_decoder_hud = true;
+                    } else if is_ring_mod
+                        && ui.button(RichText::new("🔔 RingMod HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(251, 146, 60))).on_hover_text("Open Analog Diode-Ring Modulator & Quadrature Frequency Doubler HUD").clicked()
+                    {
+                        state.requested_open_ring_mod_hud = true;
+                    } else if is_dither_quantizer
+                        && ui.button(RichText::new("🎚 Dither HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Psychoacoustic Shaped Noise Dither & Bit-Depth Truncation Radar HUD").clicked()
+                    {
+                        state.requested_open_dither_quantizer_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2736,6 +2752,8 @@ fn show_pro_parameter_drawer(
                     let is_chaotic_attractor = dev_kind.contains("Chaotic") || dev_kind.contains("Attractor") || dev_kind.contains("Lorenz") || dev_kind.contains("Rossler") || dev_kind == "ChaoticFractalAttractorModulator";
                     let is_spectrogram_art = dev_kind.contains("SpectrogramArt") || dev_kind.contains("Spectrogram") || dev_kind.contains("ImageSound") || dev_kind == "SpectrogramArtNode" || dev_kind == "SpectrogramArtEngine" || dev_kind == "SpectrogramArtMorphNode" || dev_kind == "SpectrogramArtConfig";
                     let is_bci_eeg_decoder = dev_kind.contains("Bci") || dev_kind.contains("EEG") || dev_kind.contains("Eeg") || dev_kind.contains("Brainwave") || dev_kind == "BciEegDecoderNode" || dev_kind == "EegBands" || dev_kind == "MentalImageryClassifier";
+                    let is_ring_mod = dev_kind.contains("RingMod") || dev_kind.contains("RingModulator") || dev_kind.contains("RingModulation") || dev_kind == "RingModulatorNode" || dev_kind == "DiodeRingModulator";
+                    let is_dither_quantizer = dev_kind.contains("Dither") || dev_kind.contains("Quantizer") || dev_kind.contains("BitDepth") || dev_kind == "DitherNode" || dev_kind == "PsychoacousticDither";
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -13479,6 +13497,128 @@ fn show_pro_parameter_drawer(
                             let _ = bci_resp.on_hover_text(format!(
                                 "10-20 BCI EEG Brainwave Decoder HUD\nAlpha Power: {:.0}% | Beta Focus: {:.0}%\n[Drag: Alpha (X) / Beta (Y) Puck]",
                                 alpha * 100.0, beta * 100.0
+                            ));
+                        }
+                    } else if is_ring_mod {
+                        // Ring Modulator Mini View
+                        let (rm_resp, rm_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let rm_rect = rm_resp.rect;
+                        rm_painter.rect_filled(rm_rect, 2.0, Color32::from_rgb(24, 14, 8));
+
+                        let mut freq = state.node_param_values.get("carrier_freq_hz").or_else(|| state.node_param_values.get("carrier_freq")).copied().unwrap_or(30.0);
+                        let mut depth = state.node_param_values.get("mod_depth").or_else(|| state.node_param_values.get("ring_depth")).copied().unwrap_or(1.0);
+
+                        if rm_resp.dragged() || rm_resp.clicked() {
+                            if let Some(pos) = rm_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - rm_rect.left() - 4.0) / (rm_rect.width() - 60.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - rm_rect.top() - 10.0) / (rm_rect.height() - 20.0))).clamp(0.0, 1.0);
+                                freq = crate::views::ring_mod_view::RingModulatorView::normalized_to_freq(norm_x);
+                                depth = crate::views::ring_mod_view::RingModulatorView::normalized_to_depth(norm_y);
+                                state.node_param_values.insert("carrier_freq_hz".to_string(), freq);
+                                state.node_param_values.insert("carrier_freq".to_string(), freq);
+                                state.node_param_values.insert("mod_depth".to_string(), depth);
+                                state.node_param_values.insert("ring_depth".to_string(), depth);
+                                if let Some(bus) = param_bus {
+                                    let pid_freq = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_depth = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_freq).is_some() { bus.set(pid_freq, freq); }
+                                    if bus.get(pid_depth).is_some() { bus.set(pid_depth, depth); }
+                                }
+                            }
+                        }
+
+                        // Draw carrier waveform preview curve
+                        for i in 0..16 {
+                            let frac1 = i as f32 / 16.0;
+                            let frac2 = (i + 1) as f32 / 16.0;
+                            let v1 = (frac1 * std::f32::consts::TAU * 2.0).sin();
+                            let v2 = (frac2 * std::f32::consts::TAU * 2.0).sin();
+                            let p1 = egui::pos2(rm_rect.left() + 6.0 + frac1 * (rm_rect.width() - 65.0), rm_rect.center().y - v1 * 18.0);
+                            let p2 = egui::pos2(rm_rect.left() + 6.0 + frac2 * (rm_rect.width() - 65.0), rm_rect.center().y - v2 * 18.0);
+                            rm_painter.line_segment([p1, p2], Stroke::new(1.0_f32, Color32::from_rgb(234, 88, 12)));
+                        }
+
+                        // Target puck
+                        let norm_f = crate::views::ring_mod_view::RingModulatorView::freq_to_normalized(freq);
+                        let norm_d = crate::views::ring_mod_view::RingModulatorView::depth_to_normalized(depth);
+                        let puck_x = rm_rect.left() + 4.0 + norm_f * (rm_rect.width() - 60.0);
+                        let puck_y = rm_rect.bottom() - 10.0 - norm_d * (rm_rect.height() - 20.0);
+                        rm_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(251, 146, 60));
+                        rm_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        rm_painter.text(
+                            egui::pos2(rm_rect.right() - 4.0, rm_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("RING MOD\n{:.0} Hz\n{:.0}%", freq, depth * 100.0),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(251, 146, 60),
+                        );
+
+                        if rm_resp.hovered() {
+                            let _ = rm_resp.on_hover_text(format!(
+                                "Analog Diode-Ring Modulator HUD\nCarrier: {:.1} Hz | Depth: {:.0}%\n[Drag: Freq (X) / Depth (Y) Puck]",
+                                freq, depth * 100.0
+                            ));
+                        }
+                    } else if is_dither_quantizer {
+                        // Dither Quantizer Mini View
+                        let (dq_resp, dq_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let dq_rect = dq_resp.rect;
+                        dq_painter.rect_filled(dq_rect, 2.0, Color32::from_rgb(8, 18, 30));
+
+                        let mut bits = state.node_param_values.get("bit_depth").or_else(|| state.node_param_values.get("dither_bits")).copied().unwrap_or(16.0);
+                        let mut shaping = state.node_param_values.get("shaping_intensity").or_else(|| state.node_param_values.get("dither_shaping")).copied().unwrap_or(1.0);
+
+                        if dq_resp.dragged() || dq_resp.clicked() {
+                            if let Some(pos) = dq_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - dq_rect.left() - 4.0) / (dq_rect.width() - 60.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - dq_rect.top() - 10.0) / (dq_rect.height() - 20.0))).clamp(0.0, 1.0);
+                                bits = crate::views::dither_quantizer_view::DitherQuantizerView::normalized_to_bit_depth(norm_x) as f32;
+                                shaping = crate::views::dither_quantizer_view::DitherQuantizerView::normalized_to_shaping(norm_y);
+                                state.node_param_values.insert("bit_depth".to_string(), bits);
+                                state.node_param_values.insert("dither_bits".to_string(), bits);
+                                state.node_param_values.insert("shaping_intensity".to_string(), shaping);
+                                state.node_param_values.insert("dither_shaping".to_string(), shaping);
+                                if let Some(bus) = param_bus {
+                                    let pid_bits = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_shaping = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_bits).is_some() { bus.set(pid_bits, bits); }
+                                    if bus.get(pid_shaping).is_some() { bus.set(pid_shaping, shaping); }
+                                }
+                            }
+                        }
+
+                        // Draw staircase / noise floor contour
+                        for i in 0..8 {
+                            let step_x = dq_rect.left() + 6.0 + i as f32 * 11.5;
+                            let step_y = dq_rect.bottom() - 10.0 - (i as f32 / 7.0) * 44.0;
+                            dq_painter.rect_filled(
+                                egui::Rect::from_min_size(egui::pos2(step_x, step_y), Vec2::new(10.0, 4.0)),
+                                1.0,
+                                Color32::from_rgb(14, 165, 233),
+                            );
+                        }
+
+                        // Target puck
+                        let norm_b = crate::views::dither_quantizer_view::DitherQuantizerView::bit_depth_to_normalized(bits as u8);
+                        let norm_s = crate::views::dither_quantizer_view::DitherQuantizerView::shaping_to_normalized(shaping);
+                        let puck_x = dq_rect.left() + 4.0 + norm_b * (dq_rect.width() - 60.0);
+                        let puck_y = dq_rect.bottom() - 10.0 - norm_s * (dq_rect.height() - 20.0);
+                        dq_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(56, 189, 248));
+                        dq_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        dq_painter.text(
+                            egui::pos2(dq_rect.right() - 4.0, dq_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("DITHER\n{:.0} bits\n{:.1}x", bits, shaping),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(56, 189, 248),
+                        );
+
+                        if dq_resp.hovered() {
+                            let _ = dq_resp.on_hover_text(format!(
+                                "Psychoacoustic Shaped Noise Dither HUD\nBit Depth: {:.0} bits | Shaping: {:.2}x\n[Drag: Bit Depth (X) / Shaping (Y) Puck]",
+                                bits, shaping
                             ));
                         }
                     } else {

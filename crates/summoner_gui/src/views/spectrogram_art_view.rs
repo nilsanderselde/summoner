@@ -283,7 +283,7 @@ impl SpectrogramArtView {
             SpectrogramArtPreset::CyberpunkMatrix => {
                 // Vertical glyph streaks
                 let col = (u_clamped * 24.0).floor();
-                let seed = ((col * 37.17).sin() * 43758.5453).fract().abs();
+                let seed = ((col * 37.17).sin() * 43_758.55).fract().abs();
                 let streak_v = (v_clamped + seed * 2.0) % 1.0;
                 streak_v.powf(2.5).clamp(0.0, 1.0)
             }

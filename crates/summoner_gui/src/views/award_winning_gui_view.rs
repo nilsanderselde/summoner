@@ -924,6 +924,10 @@ pub struct AwardWinningGuiView {
     pub spectrogram_art_view: crate::views::spectrogram_art_view::SpectrogramArtView,
     pub show_bci_eeg_decoder_modal: bool,
     pub bci_eeg_decoder_view: crate::views::bci_eeg_decoder_view::BciEegDecoderView,
+    pub show_ring_mod_modal: bool,
+    pub ring_mod_view: crate::views::ring_mod_view::RingModulatorView,
+    pub show_dither_quantizer_modal: bool,
+    pub dither_quantizer_view: crate::views::dither_quantizer_view::DitherQuantizerView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1464,6 +1468,10 @@ impl AwardWinningGuiView {
             spectrogram_art_view: crate::views::spectrogram_art_view::SpectrogramArtView::new(),
             show_bci_eeg_decoder_modal: false,
             bci_eeg_decoder_view: crate::views::bci_eeg_decoder_view::BciEegDecoderView::new(),
+            show_ring_mod_modal: false,
+            ring_mod_view: crate::views::ring_mod_view::RingModulatorView::new(),
+            show_dither_quantizer_modal: false,
+            dither_quantizer_view: crate::views::dither_quantizer_view::DitherQuantizerView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2813,6 +2821,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_bci_eeg_decoder_hud = false;
             self.open_bci_eeg_decoder_hud();
         }
+        if self.inspector_state.requested_open_ring_mod_hud || self.device_rack_state.requested_open_ring_mod_hud {
+            self.inspector_state.requested_open_ring_mod_hud = false;
+            self.device_rack_state.requested_open_ring_mod_hud = false;
+            self.open_ring_mod_hud();
+        }
+        if self.inspector_state.requested_open_dither_quantizer_hud || self.device_rack_state.requested_open_dither_quantizer_hud {
+            self.inspector_state.requested_open_dither_quantizer_hud = false;
+            self.device_rack_state.requested_open_dither_quantizer_hud = false;
+            self.open_dither_quantizer_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2958,6 +2976,8 @@ impl AwardWinningGuiView {
         self.show_chaotic_attractor_modal_window(ui);
         self.show_spectrogram_art_modal_window(ui);
         self.show_bci_eeg_decoder_modal_window(ui);
+        self.show_ring_mod_modal_window(ui);
+        self.show_dither_quantizer_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -22148,6 +22168,188 @@ impl AwardWinningGuiView {
             if bus.get(pid_beta).is_some() { bus.set(pid_beta, beta); }
             if bus.get(pid_theta).is_some() { bus.set(pid_theta, theta); }
             if bus.get(pid_cv).is_some() { bus.set(pid_cv, cv); }
+        }
+    }
+
+    pub fn open_ring_mod_hud(&mut self) {
+        self.show_ring_mod_modal = true;
+    }
+
+    pub fn close_ring_mod_hud(&mut self) {
+        self.show_ring_mod_modal = false;
+    }
+
+    pub fn is_ring_mod_hud_open(&self) -> bool {
+        self.show_ring_mod_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_ring_mod_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_ring_mod_modal {
+            return;
+        }
+
+        let mut is_open = self.show_ring_mod_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🔔 Analog Diode-Ring Modulator & Quadrature HUD")
+            .id(egui::Id::new("ring_mod_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(640.0, 480.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Bipolar Carrier Synthesis, Diode Ring Asymmetry & Sideband Harmonics (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.ring_mod_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_ring_mod_modal = is_open;
+        self.sync_ring_mod_hud_state();
+    }
+
+    pub fn sync_ring_mod_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let freq = self.ring_mod_view.carrier_freq_hz;
+        let depth = self.ring_mod_view.mod_depth;
+        let asym = self.ring_mod_view.diode_asymmetry;
+        let phase = self.ring_mod_view.phase_deg;
+
+        self.device_rack_state.node_param_values.insert("carrier_freq_hz".to_string(), freq);
+        self.device_rack_state.node_param_values.insert("carrier_freq".to_string(), freq);
+        self.device_rack_state.node_param_values.insert("mod_depth".to_string(), depth);
+        self.device_rack_state.node_param_values.insert("ring_depth".to_string(), depth);
+        self.device_rack_state.node_param_values.insert("diode_asymmetry".to_string(), asym);
+        self.device_rack_state.node_param_values.insert("phase_deg".to_string(), phase);
+
+        self.inspector_state.node_param_values.insert("carrier_freq_hz".to_string(), freq);
+        self.inspector_state.node_param_values.insert("carrier_freq".to_string(), freq);
+        self.inspector_state.node_param_values.insert("mod_depth".to_string(), depth);
+        self.inspector_state.node_param_values.insert("ring_depth".to_string(), depth);
+        self.inspector_state.node_param_values.insert("diode_asymmetry".to_string(), asym);
+        self.inspector_state.node_param_values.insert("phase_deg".to_string(), phase);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_freq = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_depth = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_asym = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_phase = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_freq).is_some() { bus.set(pid_freq, freq); }
+            if bus.get(pid_depth).is_some() { bus.set(pid_depth, depth); }
+            if bus.get(pid_asym).is_some() { bus.set(pid_asym, asym); }
+            if bus.get(pid_phase).is_some() { bus.set(pid_phase, phase); }
+        }
+    }
+
+    pub fn open_dither_quantizer_hud(&mut self) {
+        self.show_dither_quantizer_modal = true;
+    }
+
+    pub fn close_dither_quantizer_hud(&mut self) {
+        self.show_dither_quantizer_modal = false;
+    }
+
+    pub fn is_dither_quantizer_hud_open(&self) -> bool {
+        self.show_dither_quantizer_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_dither_quantizer_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_dither_quantizer_modal {
+            return;
+        }
+
+        let mut is_open = self.show_dither_quantizer_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎚 Psychoacoustic Shaped Noise Dither & Quantization HUD")
+            .id(egui::Id::new("dither_quantizer_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(640.0, 480.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("TPDF Triangular PDF, Psychoacoustic High-Pass Noise Shaping & Dynamic SNR (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.dither_quantizer_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_dither_quantizer_modal = is_open;
+        self.sync_dither_quantizer_hud_state();
+    }
+
+    pub fn sync_dither_quantizer_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let bits = self.dither_quantizer_view.bit_depth as f32;
+        let shaping = self.dither_quantizer_view.shaping_intensity;
+        let snr = self.dither_quantizer_view.theoretical_snr_db();
+        let floor = self.dither_quantizer_view.effective_noise_floor_dbfs();
+
+        self.device_rack_state.node_param_values.insert("bit_depth".to_string(), bits);
+        self.device_rack_state.node_param_values.insert("dither_bits".to_string(), bits);
+        self.device_rack_state.node_param_values.insert("shaping_intensity".to_string(), shaping);
+        self.device_rack_state.node_param_values.insert("dither_shaping".to_string(), shaping);
+        self.device_rack_state.node_param_values.insert("snr_db".to_string(), snr);
+        self.device_rack_state.node_param_values.insert("noise_floor_dbfs".to_string(), floor);
+
+        self.inspector_state.node_param_values.insert("bit_depth".to_string(), bits);
+        self.inspector_state.node_param_values.insert("dither_bits".to_string(), bits);
+        self.inspector_state.node_param_values.insert("shaping_intensity".to_string(), shaping);
+        self.inspector_state.node_param_values.insert("dither_shaping".to_string(), shaping);
+        self.inspector_state.node_param_values.insert("snr_db".to_string(), snr);
+        self.inspector_state.node_param_values.insert("noise_floor_dbfs".to_string(), floor);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_bits = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_shaping = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_snr = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_floor = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_bits).is_some() { bus.set(pid_bits, bits); }
+            if bus.get(pid_shaping).is_some() { bus.set(pid_shaping, shaping); }
+            if bus.get(pid_snr).is_some() { bus.set(pid_snr, snr); }
+            if bus.get(pid_floor).is_some() { bus.set(pid_floor, floor); }
         }
     }
 
