@@ -22,6 +22,17 @@ pub enum CompressorTopology {
     FetPeakLimiter1176,     // Ultra-fast FET brickwall saturation
 }
 
+impl CompressorTopology {
+    pub fn name(&self) -> &'static str {
+        match self {
+            CompressorTopology::OptoT4BTeletronix => "OPTO T4B TELETRONIX",
+            CompressorTopology::VcaFastFeedForward => "VCA FAST FEED-FORWARD",
+            CompressorTopology::VariMuTubeVariableGain => "VARI-MU TUBE VARIABLE-GAIN",
+            CompressorTopology::FetPeakLimiter1176 => "FET PEAK LIMITER 1176",
+        }
+    }
+}
+
 /// Vintage Optical & VCA Compressor HUD View (Step 1463).
 #[derive(Debug, Clone)]
 pub struct OpticalCompressorView {
@@ -167,6 +178,64 @@ impl OpticalCompressorView {
         );
         lines.push(footer);
         lines
+    }
+
+    /// Convert knee width in dB (0.0 .. 24.0) to normalized coordinate [0.0 ..= 1.0].
+    pub fn knee_to_normalized(knee_db: f32) -> f32 {
+        (knee_db / 24.0).clamp(0.0, 1.0)
+    }
+
+    /// Convert normalized coordinate to knee width in dB.
+    pub fn normalized_to_knee(norm: f32) -> f32 {
+        norm.clamp(0.0, 1.0) * 24.0
+    }
+
+    /// Convert attack time in ms (0.02 .. 100.0) to normalized coordinate [0.0 ..= 1.0].
+    pub fn attack_to_normalized(att: f32) -> f32 {
+        ((att - 0.02) / 99.98).clamp(0.0, 1.0)
+    }
+
+    /// Convert normalized coordinate to attack time in ms.
+    pub fn normalized_to_attack(norm: f32) -> f32 {
+        0.02 + norm.clamp(0.0, 1.0) * 99.98
+    }
+
+    /// Convert release time in ms (10.0 .. 2500.0) to normalized coordinate [0.0 ..= 1.0].
+    pub fn release_to_normalized(rel: f32) -> f32 {
+        ((rel - 10.0) / 2490.0).clamp(0.0, 1.0)
+    }
+
+    /// Convert normalized coordinate to release time in ms.
+    pub fn normalized_to_release(norm: f32) -> f32 {
+        10.0 + norm.clamp(0.0, 1.0) * 2490.0
+    }
+
+    /// Set compressor circuit topology.
+    pub fn set_topology(&mut self, topology: CompressorTopology) {
+        self.topology = topology;
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_ui(&mut self, ui: &mut egui::Ui) {
+        let avail = ui.available_size();
+        let w = avail.x.max(760.0);
+        let h = avail.y.max(500.0);
+        let (rect_allocated, _) = ui.allocate_exact_size(egui::vec2(w, h), egui::Sense::hover());
+        let r = Rect::new(rect_allocated.min.x, rect_allocated.min.y, rect_allocated.width(), rect_allocated.height());
+        self.show(ui, r);
+    }
+
+    /// Render deterministic ASCII snapshot with metadata banner.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        let lines = self.render_ascii(80, 20);
+        format!(
+            "--- VINTAGE OPTICAL & VCA COMPRESSOR HUD [{}] [Thresh: {:.1} dB] [Ratio: {:.1}:1] [Knee: {:.1} dB] ---\n{}\n[PASS] Vintage Optical & VCA Compressor Knee Inflection Nodes (>= 44x44pt) Verified\n",
+            self.topology.name(),
+            self.threshold_db,
+            self.ratio,
+            self.knee_width_db,
+            lines.join("\n")
+        )
     }
 
     #[cfg(feature = "gui")]

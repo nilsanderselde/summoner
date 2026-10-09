@@ -832,6 +832,10 @@ pub struct AwardWinningGuiView {
     pub through_zero_flanger_view: crate::views::through_zero_flanger_view::ThroughZeroFlangerView,
     pub show_multitap_delay_modal: bool,
     pub multitap_delay_view: crate::views::multitap_delay_view::MultitapDelayView,
+    pub show_frequency_shifter_modal: bool,
+    pub frequency_shifter_view: crate::views::frequency_shifter_view::FrequencyShifterView,
+    pub show_optical_compressor_modal: bool,
+    pub optical_compressor_view: crate::views::optical_compressor_view::OpticalCompressorView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1280,6 +1284,10 @@ impl AwardWinningGuiView {
             through_zero_flanger_view: crate::views::through_zero_flanger_view::ThroughZeroFlangerView::new(),
             show_multitap_delay_modal: false,
             multitap_delay_view: crate::views::multitap_delay_view::MultitapDelayView::new(),
+            show_frequency_shifter_modal: false,
+            frequency_shifter_view: crate::views::frequency_shifter_view::FrequencyShifterView::new(),
+            show_optical_compressor_modal: false,
+            optical_compressor_view: crate::views::optical_compressor_view::OpticalCompressorView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2399,6 +2407,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_multitap_delay_hud = false;
             self.open_multitap_delay_hud();
         }
+        if self.inspector_state.requested_open_frequency_shifter_hud || self.device_rack_state.requested_open_frequency_shifter_hud {
+            self.inspector_state.requested_open_frequency_shifter_hud = false;
+            self.device_rack_state.requested_open_frequency_shifter_hud = false;
+            self.open_frequency_shifter_hud();
+        }
+        if self.inspector_state.requested_open_optical_compressor_hud || self.device_rack_state.requested_open_optical_compressor_hud {
+            self.inspector_state.requested_open_optical_compressor_hud = false;
+            self.device_rack_state.requested_open_optical_compressor_hud = false;
+            self.open_optical_compressor_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2498,6 +2516,8 @@ impl AwardWinningGuiView {
         self.show_vari_mu_master_modal_window(ui);
         self.show_through_zero_flanger_modal_window(ui);
         self.show_multitap_delay_modal_window(ui);
+        self.show_frequency_shifter_modal_window(ui);
+        self.show_optical_compressor_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -17294,6 +17314,200 @@ impl AwardWinningGuiView {
             if bus.get(pid_diff).is_some() { bus.set(pid_diff, diff); }
             if bus.get(pid_bpm).is_some() { bus.set(pid_bpm, bpm); }
             if bus.get(pid_sync).is_some() { bus.set(pid_sync, sync); }
+        }
+    }
+
+    pub fn open_frequency_shifter_hud(&mut self) {
+        self.show_frequency_shifter_modal = true;
+    }
+
+    pub fn close_frequency_shifter_hud(&mut self) {
+        self.show_frequency_shifter_modal = false;
+    }
+
+    pub fn is_frequency_shifter_hud_open(&self) -> bool {
+        self.show_frequency_shifter_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_frequency_shifter_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_frequency_shifter_modal {
+            return;
+        }
+
+        let mut is_open = self.show_frequency_shifter_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎛 Frequency Shifter & SSB Quadrature Modulator HUD")
+            .id(egui::Id::new("frequency_shifter_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Single-Sideband Analytic Frequency Shifter & Ring Modulation Matrix (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.frequency_shifter_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_frequency_shifter_modal = is_open;
+        self.sync_frequency_shifter_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_frequency_shifter_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let shift = self.frequency_shifter_view.shift_hz;
+        let fine = self.frequency_shifter_view.fine_hz;
+        let phase = self.frequency_shifter_view.quadrature_phase_deg;
+        let fb = self.frequency_shifter_view.feedback_pct;
+        let wet = self.frequency_shifter_view.dry_wet_pct;
+
+        self.device_rack_state.node_param_values.insert("linear_frequency_shift_hz".to_string(), shift);
+        self.device_rack_state.node_param_values.insert("fine_frequency_shift_hz".to_string(), fine);
+        self.device_rack_state.node_param_values.insert("quadrature_phase_deg".to_string(), phase);
+        self.device_rack_state.node_param_values.insert("feedback_pct".to_string(), fb);
+        self.device_rack_state.node_param_values.insert("dry_wet_pct".to_string(), wet);
+
+        self.inspector_state.node_param_values.insert("linear_frequency_shift_hz".to_string(), shift);
+        self.inspector_state.node_param_values.insert("fine_frequency_shift_hz".to_string(), fine);
+        self.inspector_state.node_param_values.insert("quadrature_phase_deg".to_string(), phase);
+        self.inspector_state.node_param_values.insert("feedback_pct".to_string(), fb);
+        self.inspector_state.node_param_values.insert("dry_wet_pct".to_string(), wet);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_shift = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_fine = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_phase = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_fb = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_wet = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+
+            if bus.get(pid_shift).is_some() { bus.set(pid_shift, shift); }
+            if bus.get(pid_fine).is_some() { bus.set(pid_fine, fine); }
+            if bus.get(pid_phase).is_some() { bus.set(pid_phase, phase); }
+            if bus.get(pid_fb).is_some() { bus.set(pid_fb, fb); }
+            if bus.get(pid_wet).is_some() { bus.set(pid_wet, wet); }
+        }
+    }
+
+    pub fn open_optical_compressor_hud(&mut self) {
+        self.show_optical_compressor_modal = true;
+    }
+
+    pub fn close_optical_compressor_hud(&mut self) {
+        self.show_optical_compressor_modal = false;
+    }
+
+    pub fn is_optical_compressor_hud_open(&self) -> bool {
+        self.show_optical_compressor_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_optical_compressor_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_optical_compressor_modal {
+            return;
+        }
+
+        let mut is_open = self.show_optical_compressor_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("💡 Vintage Optical & VCA Compressor Knee & Gain Transfer Curve HUD")
+            .id(egui::Id::new("optical_compressor_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Photocell CdS LDR Attenuation, Dual-Time-Constant Release & VCA Transfer Knee (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.optical_compressor_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_optical_compressor_modal = is_open;
+        self.sync_optical_compressor_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_optical_compressor_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let thresh = self.optical_compressor_view.threshold_db;
+        let ratio = self.optical_compressor_view.ratio;
+        let knee = self.optical_compressor_view.knee_width_db;
+        let attack = self.optical_compressor_view.attack_ms;
+        let release = self.optical_compressor_view.release_ms;
+        let makeup = self.optical_compressor_view.makeup_gain_db;
+        let gr = self.optical_compressor_view.current_gain_reduction_db;
+
+        self.device_rack_state.node_param_values.insert("threshold_db".to_string(), thresh);
+        self.device_rack_state.node_param_values.insert("ratio".to_string(), ratio);
+        self.device_rack_state.node_param_values.insert("knee_width_db".to_string(), knee);
+        self.device_rack_state.node_param_values.insert("attack_ms".to_string(), attack);
+        self.device_rack_state.node_param_values.insert("release_ms".to_string(), release);
+        self.device_rack_state.node_param_values.insert("makeup_gain_db".to_string(), makeup);
+        self.device_rack_state.node_param_values.insert("current_gain_reduction_db".to_string(), gr);
+
+        self.inspector_state.node_param_values.insert("threshold_db".to_string(), thresh);
+        self.inspector_state.node_param_values.insert("ratio".to_string(), ratio);
+        self.inspector_state.node_param_values.insert("knee_width_db".to_string(), knee);
+        self.inspector_state.node_param_values.insert("attack_ms".to_string(), attack);
+        self.inspector_state.node_param_values.insert("release_ms".to_string(), release);
+        self.inspector_state.node_param_values.insert("makeup_gain_db".to_string(), makeup);
+        self.inspector_state.node_param_values.insert("current_gain_reduction_db".to_string(), gr);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_thresh = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_ratio = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_knee = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_makeup = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_att = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_rel = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+
+            if bus.get(pid_thresh).is_some() { bus.set(pid_thresh, thresh); }
+            if bus.get(pid_ratio).is_some() { bus.set(pid_ratio, ratio); }
+            if bus.get(pid_knee).is_some() { bus.set(pid_knee, knee); }
+            if bus.get(pid_makeup).is_some() { bus.set(pid_makeup, makeup); }
+            if bus.get(pid_att).is_some() { bus.set(pid_att, attack); }
+            if bus.get(pid_rel).is_some() { bus.set(pid_rel, release); }
         }
     }
     fn render_patch_cords_canvas(&mut self, ui: &mut egui::Ui, available_h: f32) {

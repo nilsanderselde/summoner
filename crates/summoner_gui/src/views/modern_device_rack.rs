@@ -241,6 +241,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_through_zero_flanger_hud: bool,
     #[serde(default)]
     pub requested_open_multitap_delay_hud: bool,
+    #[serde(default)]
+    pub requested_open_frequency_shifter_hud: bool,
+    #[serde(default)]
+    pub requested_open_optical_compressor_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -350,6 +354,8 @@ impl Default for ModernDeviceRackState {
             requested_open_vari_mu_master_hud: false,
             requested_open_through_zero_flanger_hud: false,
             requested_open_multitap_delay_hud: false,
+            requested_open_frequency_shifter_hud: false,
+            requested_open_optical_compressor_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
