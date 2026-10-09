@@ -876,6 +876,10 @@ pub struct AwardWinningGuiView {
     pub parallel_transient_saturator_view: crate::views::parallel_transient_saturator_view::ParallelTransientSaturatorView,
     pub show_midside_focuser_modal: bool,
     pub midside_focuser_view: crate::views::midside_focuser_view::MidSideFocuserView,
+    pub show_transient_clipper_modal: bool,
+    pub transient_clipper_view: crate::views::transient_clipper_view::TransientClipperView,
+    pub show_tape_flux_master_modal: bool,
+    pub tape_flux_master_view: crate::views::tape_flux_master_view::TapeFluxMasterView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1368,6 +1372,10 @@ impl AwardWinningGuiView {
             parallel_transient_saturator_view: crate::views::parallel_transient_saturator_view::ParallelTransientSaturatorView::new(),
             show_midside_focuser_modal: false,
             midside_focuser_view: crate::views::midside_focuser_view::MidSideFocuserView::new(),
+            show_transient_clipper_modal: false,
+            transient_clipper_view: crate::views::transient_clipper_view::TransientClipperView::new(),
+            show_tape_flux_master_modal: false,
+            tape_flux_master_view: crate::views::tape_flux_master_view::TapeFluxMasterView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2597,6 +2605,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_midside_focuser_hud = false;
             self.open_midside_focuser_hud();
         }
+        if self.inspector_state.requested_open_transient_clipper_hud || self.device_rack_state.requested_open_transient_clipper_hud {
+            self.inspector_state.requested_open_transient_clipper_hud = false;
+            self.device_rack_state.requested_open_transient_clipper_hud = false;
+            self.open_transient_clipper_hud();
+        }
+        if self.inspector_state.requested_open_tape_flux_master_hud || self.device_rack_state.requested_open_tape_flux_master_hud {
+            self.inspector_state.requested_open_tape_flux_master_hud = false;
+            self.device_rack_state.requested_open_tape_flux_master_hud = false;
+            self.open_tape_flux_master_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2718,6 +2736,8 @@ impl AwardWinningGuiView {
         self.show_linear_phase_crossover_modal_window(ui);
         self.show_parallel_transient_saturator_modal_window(ui);
         self.show_midside_focuser_modal_window(ui);
+        self.show_transient_clipper_modal_window(ui);
+        self.show_tape_flux_master_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -19644,6 +19664,194 @@ impl AwardWinningGuiView {
             if bus.get(pid_co).is_some() { bus.set(pid_co, cutoff); }
             if bus.get(pid_pu).is_some() { bus.set(pid_pu, punch); }
             if bus.get(pid_wi).is_some() { bus.set(pid_wi, width); }
+        }
+    }
+
+    pub fn open_transient_clipper_hud(&mut self) {
+        self.show_transient_clipper_modal = true;
+    }
+
+    pub fn close_transient_clipper_hud(&mut self) {
+        self.show_transient_clipper_modal = false;
+    }
+
+    pub fn is_transient_clipper_hud_open(&self) -> bool {
+        self.show_transient_clipper_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_transient_clipper_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_transient_clipper_modal {
+            return;
+        }
+
+        let mut is_open = self.show_transient_clipper_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("💥 Mastering Multi-Band Dynamic Transient Clipper & Oversampled Ceiling HUD")
+            .id(egui::Id::new("transient_clipper_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Sub-Millisecond Dynamic Transient Soft/Hard Clipper, True-Peak Oversampling & Crest Control (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.transient_clipper_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_transient_clipper_modal = is_open;
+        self.sync_transient_clipper_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_transient_clipper_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let drive = self.transient_clipper_view.clip_drive_db;
+        let knee = self.transient_clipper_view.knee_softness_db;
+        let ceil = self.transient_clipper_view.ceiling_dbfs;
+        let crest = self.transient_clipper_view.crest_factor_reduction_db;
+        let os = self.transient_clipper_view.oversampling_factor as f32;
+
+        self.device_rack_state.node_param_values.insert("clip_drive_db".to_string(), drive);
+        self.device_rack_state.node_param_values.insert("threshold_db".to_string(), drive);
+        self.device_rack_state.node_param_values.insert("knee_softness_db".to_string(), knee);
+        self.device_rack_state.node_param_values.insert("clip_hardness".to_string(), knee);
+        self.device_rack_state.node_param_values.insert("ceiling_dbfs".to_string(), ceil);
+        self.device_rack_state.node_param_values.insert("ceiling_db".to_string(), ceil);
+        self.device_rack_state.node_param_values.insert("crest_factor_reduction_db".to_string(), crest);
+        self.device_rack_state.node_param_values.insert("oversampling_order".to_string(), os);
+
+        self.inspector_state.node_param_values.insert("clip_drive_db".to_string(), drive);
+        self.inspector_state.node_param_values.insert("threshold_db".to_string(), drive);
+        self.inspector_state.node_param_values.insert("knee_softness_db".to_string(), knee);
+        self.inspector_state.node_param_values.insert("clip_hardness".to_string(), knee);
+        self.inspector_state.node_param_values.insert("ceiling_dbfs".to_string(), ceil);
+        self.inspector_state.node_param_values.insert("ceiling_db".to_string(), ceil);
+        self.inspector_state.node_param_values.insert("crest_factor_reduction_db".to_string(), crest);
+        self.inspector_state.node_param_values.insert("oversampling_order".to_string(), os);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_dr = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_kn = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_ce = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+
+            if bus.get(pid_dr).is_some() { bus.set(pid_dr, drive); }
+            if bus.get(pid_kn).is_some() { bus.set(pid_kn, knee); }
+            if bus.get(pid_ce).is_some() { bus.set(pid_ce, ceil); }
+        }
+    }
+
+    pub fn open_tape_flux_master_hud(&mut self) {
+        self.show_tape_flux_master_modal = true;
+    }
+
+    pub fn close_tape_flux_master_hud(&mut self) {
+        self.show_tape_flux_master_modal = false;
+    }
+
+    pub fn is_tape_flux_master_hud_open(&self) -> bool {
+        self.show_tape_flux_master_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_tape_flux_master_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_tape_flux_master_modal {
+            return;
+        }
+
+        let mut is_open = self.show_tape_flux_master_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("📼 Mastering Multi-Stage Magnetic Tape Flux Saturation & Hysteresis HUD")
+            .id(egui::Id::new("tape_flux_master_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Half-Inch Mastering Tape Saturation, Ferromagnetic Hysteresis & HF Bias Compression (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.tape_flux_master_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_tape_flux_master_modal = is_open;
+        self.sync_tape_flux_master_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_tape_flux_master_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let drive = self.tape_flux_master_view.flux_drive_db;
+        let bias = self.tape_flux_master_view.bias_trim_db;
+        let speed = self.tape_flux_master_view.tape_speed_ips;
+        let thd = self.tape_flux_master_view.thd_distortion_pct;
+        let hf_comp = self.tape_flux_master_view.hf_compression_pct;
+
+        self.device_rack_state.node_param_values.insert("flux_drive_db".to_string(), drive);
+        self.device_rack_state.node_param_values.insert("tape_flux_nanoweber".to_string(), drive);
+        self.device_rack_state.node_param_values.insert("bias_trim_db".to_string(), bias);
+        self.device_rack_state.node_param_values.insert("bias_hf_saturation".to_string(), bias);
+        self.device_rack_state.node_param_values.insert("tape_speed_ips".to_string(), speed);
+        self.device_rack_state.node_param_values.insert("thd_distortion_pct".to_string(), thd);
+        self.device_rack_state.node_param_values.insert("hf_compression_pct".to_string(), hf_comp);
+
+        self.inspector_state.node_param_values.insert("flux_drive_db".to_string(), drive);
+        self.inspector_state.node_param_values.insert("tape_flux_nanoweber".to_string(), drive);
+        self.inspector_state.node_param_values.insert("bias_trim_db".to_string(), bias);
+        self.inspector_state.node_param_values.insert("bias_hf_saturation".to_string(), bias);
+        self.inspector_state.node_param_values.insert("tape_speed_ips".to_string(), speed);
+        self.inspector_state.node_param_values.insert("thd_distortion_pct".to_string(), thd);
+        self.inspector_state.node_param_values.insert("hf_compression_pct".to_string(), hf_comp);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_fl = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_bi = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_sp = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+
+            if bus.get(pid_fl).is_some() { bus.set(pid_fl, drive); }
+            if bus.get(pid_bi).is_some() { bus.set(pid_bi, bias); }
+            if bus.get(pid_sp).is_some() { bus.set(pid_sp, speed); }
         }
     }
     fn render_patch_cords_canvas(&mut self, ui: &mut egui::Ui, available_h: f32) {

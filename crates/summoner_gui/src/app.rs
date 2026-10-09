@@ -1800,6 +1800,14 @@ impl eframe::App for SummonerApp {
                     self.current_view = ViewMode::ModernStudio;
                     self.award_winning_view.open_midside_focuser_hud();
                 }
+                "open_transient_clipper_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_transient_clipper_hud();
+                }
+                "open_tape_flux_master_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_tape_flux_master_hud();
+                }
                 "sfz_convert" | "auto_slice" | "load_preset" | "export_clap" | "toggle_simd" => {
                     println!("Command palette action executed: {}", action);
                 }

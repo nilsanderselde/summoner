@@ -36,6 +36,10 @@ impl TapeFormulation {
         }
     }
 
+    pub fn name(&self) -> &'static str {
+        self.formulation_name()
+    }
+
     pub fn nominal_flux_drive_db(&self) -> f32 {
         match self {
             Self::Ampex456GrandMaster => 6.0,
@@ -152,6 +156,15 @@ impl TapeFluxMasterView {
         MIN_BIAS_TRIM_DB + norm.clamp(0.0, 1.0) * (MAX_BIAS_TRIM_DB - MIN_BIAS_TRIM_DB)
     }
 
+    pub fn speed_to_normalized(speed: f32) -> f32 {
+        let s = speed.clamp(3.75, 30.0);
+        ((s - 3.75) / (30.0 - 3.75)).clamp(0.0, 1.0)
+    }
+
+    pub fn normalized_to_speed(norm: f32) -> f32 {
+        3.75 + norm.clamp(0.0, 1.0) * (30.0 - 3.75)
+    }
+
     pub fn set_formulation(&mut self, tape: TapeFormulation) {
         self.formulation = tape;
         self.flux_drive_db = tape.nominal_flux_drive_db();
@@ -246,6 +259,37 @@ impl TapeFluxMasterView {
         grid.into_iter()
             .map(|row| row.into_iter().collect())
             .collect()
+    }
+
+    /// High-contrast ASCII snapshot string with metadata banner and compliance badge.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        let lines = self.render_ascii(60, 16);
+        let mut output = String::new();
+        output.push_str("============================================================\n");
+        output.push_str(" MASTERING MAGNETIC TAPE FLUX SATURATION & HYSTERESIS HUD   \n");
+        output.push_str(&format!(
+            " Formulation: {:<18} Puck Target: [PASS: >=44pt]\n",
+            self.formulation.formulation_name()
+        ));
+        output.push_str(&format!(
+            " Drive: +{:<4.1} dB | Bias: {:<+4.1} dB | Speed: {:<4.1} ips | THD: {:<4.2}%\n",
+            self.flux_drive_db,
+            self.bias_trim_db,
+            self.tape_speed_ips,
+            self.thd_distortion_pct
+        ));
+        output.push_str("------------------------------------------------------------\n");
+        for line in lines {
+            output.push_str(&line);
+            output.push('\n');
+        }
+        output.push_str("============================================================\n");
+        output
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_ui(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
     }
 
     #[cfg(feature = "gui")]

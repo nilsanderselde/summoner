@@ -1016,6 +1016,18 @@ impl CommandPalette {
                 action_id: "open_midside_focuser_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Mastering Multi-Band Dynamic Transient Clipper HUD".into(),
+                category: "Mastering & Dynamics".into(),
+                action_id: "open_transient_clipper_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Mastering Multi-Stage Magnetic Tape Flux Saturation HUD".into(),
+                category: "Dynamics & Saturation".into(),
+                action_id: "open_tape_flux_master_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

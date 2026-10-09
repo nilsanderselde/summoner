@@ -36,6 +36,10 @@ impl ClipperProfileType {
         }
     }
 
+    pub fn name(&self) -> &'static str {
+        self.profile_name()
+    }
+
     pub fn nominal_drive_db(&self) -> f32 {
         match self {
             Self::LinearPhase4BandMaster => 6.0,
@@ -140,6 +144,15 @@ impl TransientClipperView {
 
     pub fn normalized_to_knee(norm: f32) -> f32 {
         MIN_KNEE_SOFTNESS_DB + norm.clamp(0.0, 1.0) * (MAX_KNEE_SOFTNESS_DB - MIN_KNEE_SOFTNESS_DB)
+    }
+
+    pub fn ceiling_to_normalized(ceil: f32) -> f32 {
+        let c = ceil.clamp(-12.0, 0.0);
+        ((c - (-12.0)) / (0.0 - (-12.0))).clamp(0.0, 1.0)
+    }
+
+    pub fn normalized_to_ceiling(norm: f32) -> f32 {
+        -12.0 + norm.clamp(0.0, 1.0) * (0.0 - (-12.0))
     }
 
     pub fn set_profile(&mut self, profile: ClipperProfileType) {
@@ -263,6 +276,37 @@ impl TransientClipperView {
         grid.into_iter()
             .map(|row| row.into_iter().collect())
             .collect()
+    }
+
+    /// High-contrast ASCII snapshot string with metadata banner and compliance badge.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        let lines = self.render_ascii(60, 16);
+        let mut output = String::new();
+        output.push_str("============================================================\n");
+        output.push_str(" MASTERING MULTI-BAND DYNAMIC TRANSIENT CLIPPER HUD         \n");
+        output.push_str(&format!(
+            " Profile: {:<20} Target Puck: [PASS: >=44pt]\n",
+            self.profile_type.profile_name()
+        ));
+        output.push_str(&format!(
+            " Drive: +{:<4.1} dB | Knee: {:<4.1} dB | OS: {}x | Ceil: {:<4.1} dBFS\n",
+            self.clip_drive_db,
+            self.knee_softness_db,
+            self.oversampling_factor,
+            self.ceiling_dbfs
+        ));
+        output.push_str("------------------------------------------------------------\n");
+        for line in lines {
+            output.push_str(&line);
+            output.push('\n');
+        }
+        output.push_str("============================================================\n");
+        output
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_ui(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
     }
 
     #[cfg(feature = "gui")]

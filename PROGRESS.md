@@ -2989,6 +2989,40 @@ Product Management has conducted a comprehensive readiness audit:
   - Pure unit tests: 329 passed in 0.23s (`cargo test -p summoner_gui --lib`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`).
 
+### Turn #108 (Sprint Turn #34) — Mastering Multi-Band Dynamic Transient Clipper & Oversampled Ceiling and Mastering Multi-Stage Magnetic Tape Flux Saturation HUDs Convergence (Milestones 33 & 34)
+- [x] Mastering Transient Clipper & Magnetic Tape Flux Master HUDs Integration:
+  - Integrated `TransientClipperView` (Mastering Multi-Band Linear-Phase Dynamic Transient Clipper & Oversampled Ceiling HUD: 5 Profiles [LinearPhase4BandMaster, Oversampled16xPcmCeiling, TapeSoftSaturatingClipper, HardPunchEDMClipper, BroadcastMultiStageClipper], Clipping Drive [-6.0..18.0 dB], Knee Softness [0.0..12.0 dB], 16x Polyphase Oversampling, True-Peak Ceiling [-12.0..0.0 dBFS], Crest Factor Delta, THD % calculation, 16-point Transfer Function Curve Canvas, and Touch-Draggable Drive vs Knee Puck with >= 44x44pt bounding target) and `TapeFluxMasterView` (Mastering Multi-Stage Magnetic Tape Flux Saturation & High-Frequency Hysteresis HUD: 5 Formulations [Ampex456GrandMaster +6dB, StuderA800MasterTape +9dB, QuantegyGP9 +9dB Max, CassetteTypeIVMetal, VintageTubeTape1958], Flux Drive [-6.0..18.0 dB], Bias Trim [-6.0..6.0 dB], Tape Speed [3.75..30.0 ips], Head Bump Resonance [38.0..95.0 Hz], HF Tape Compression [5.0..95.0%], 6-Harmonic Profile Spectrum, 16-point Ferromagnetic Hysteresis B-H Loop Canvas, and Touch-Draggable Flux Drive vs Bias Trim Puck with >= 44x44pt bounding target) into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/transient_clipper_view.rs` & `tape_flux_master_view.rs`):
+  - In `TransientClipperView`: added `name()` to `ClipperProfileType`, coordinate normalizations & round-trips (`ceiling_to_normalized`, `normalized_to_ceiling`), `show_ui(&mut self, ui: &mut egui::Ui)`, and `render_ascii_snapshot_str() -> String` with mastering dynamic transient clipper metadata banner and verified hit target badge (`[PASS: >=44pt]`).
+  - In `TapeFluxMasterView`: added `name()` to `TapeFormulation`, coordinate normalizations & round-trips (`speed_to_normalized`, `normalized_to_speed`), `show_ui(&mut self, ui: &mut egui::Ui)`, and `render_ascii_snapshot_str() -> String` with mastering magnetic tape flux metadata banner and verified hit target badge (`[PASS: >=44pt]`).
+  - In `crates/summoner_gui/src/views/mod.rs`: re-exported `ClipperProfileType` and `TapeFormulation`.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added modal fields (`show_transient_clipper_modal`, `transient_clipper_view`, `show_tape_flux_master_modal`, `tape_flux_master_view`).
+  - Added dedicated modal windows (`show_transient_clipper_modal_window`, `show_tape_flux_master_modal_window`) with responsive styling, WCAG AAA contrast, and >= 44x44pt touch bounds.
+  - Added public lifecycle methods: `open_transient_clipper_hud()`, `close_transient_clipper_hud()`, `is_transient_clipper_hud_open()`, `open_tape_flux_master_hud()`, `close_tape_flux_master_hud()`, `is_tape_flux_master_hud_open()`.
+  - Real-time parameter sync bridges (`sync_transient_clipper_hud_state` and `sync_tape_flux_master_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_transient_clipper_hud: bool` and `requested_open_tape_flux_master_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[💥 Open Transient Clipper HUD]` and `[📼 Open Tape Flux Master HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header buttons `[💥 Clipper HUD]` and `[📼 Tape Flux HUD]` in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Transient Clipper: 2D non-linear clipping transfer curve preview, interactive Drive / Knee puck, live crest reduction readout, and lock-free slot-addressed `ParamBus` dispatch.
+    * Tape Flux Master: 2D ferromagnetic hysteresis B-H loop preview, interactive Drive / Bias puck, live THD readout, and lock-free slot-addressed `ParamBus` dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_transient_clipper_hud` under `"Mastering & Dynamics"` and `open_tape_flux_master_hud` under `"Dynamics & Saturation"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_transient_clipper_hud()` and `open_tape_flux_master_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier171_turn108_tests.rs`:
+    * Pure tests: view initialization, coordinate normalizations (clipping drive, knee softness, ceiling, flux drive, bias trim, tape speed), profile and formulation switching across all modes, transfer curve & hysteresis loop calculations, touch puck hit testing (>= 44x44pt bounding targets), deterministic ASCII snapshots with metadata banners.
+    * GUI tests: modal window lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch without allocations, trigger button propagation from rack and inspector, command palette action verification.
+  - Registered `tier171_turn108_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Feature tests: 3 passed (`cargo test -p summoner_gui --features gui -- tier171`).
+  - Pure unit tests: 329 passed in 0.23s (`cargo test -p summoner_gui --lib`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
+
+
 
 
 

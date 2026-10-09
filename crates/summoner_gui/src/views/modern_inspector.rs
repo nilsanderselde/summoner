@@ -270,6 +270,10 @@ pub struct ModernInspectorState {
     pub requested_open_parallel_transient_saturator_hud: bool,
     #[serde(default)]
     pub requested_open_midside_focuser_hud: bool,
+    #[serde(default)]
+    pub requested_open_transient_clipper_hud: bool,
+    #[serde(default)]
+    pub requested_open_tape_flux_master_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -411,6 +415,8 @@ impl Default for ModernInspectorState {
             requested_open_linear_phase_crossover_hud: false,
             requested_open_parallel_transient_saturator_hud: false,
             requested_open_midside_focuser_hud: false,
+            requested_open_transient_clipper_hud: false,
+            requested_open_tape_flux_master_hud: false,
         }
     }
 }
@@ -2055,6 +2061,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open Mastering Linear-Phase Stereo Mid/Side Dynamic Punch & Multiband Mono-Bass Focuser HUD").clicked() {
                     state.requested_open_midside_focuser_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("TransientClipper") || active_kind.contains("ClipperNode") || active_kind == "TransientClipperNode" || active_kind.contains("DynamicClipper") || active_kind.contains("MasterClipper") {
+                if ui.add(
+                    egui::Button::new(RichText::new("💥 Open Transient Clipper HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(255, 107, 107)))
+                        .fill(Color32::from_rgb(36, 16, 18))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 107, 107)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Mastering Multi-Band Dynamic Transient Clipper & Oversampled Ceiling HUD").clicked() {
+                    state.requested_open_transient_clipper_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("TapeFlux") || active_kind.contains("TapeFluxMaster") || active_kind == "TapeFluxMasterNode" || active_kind.contains("MasteringTape") || active_kind.contains("MagneticTape") {
+                if ui.add(
+                    egui::Button::new(RichText::new("📼 Open Tape Flux Master HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(235, 94, 40)))
+                        .fill(Color32::from_rgb(34, 18, 14))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(235, 94, 40)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Mastering Multi-Stage Magnetic Tape Flux Saturation & HF Hysteresis HUD").clicked() {
+                    state.requested_open_tape_flux_master_hud = true;
                 }
                 ui.add_space(4.0);
             }

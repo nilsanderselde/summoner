@@ -285,6 +285,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_parallel_transient_saturator_hud: bool,
     #[serde(default)]
     pub requested_open_midside_focuser_hud: bool,
+    #[serde(default)]
+    pub requested_open_transient_clipper_hud: bool,
+    #[serde(default)]
+    pub requested_open_tape_flux_master_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -416,6 +420,8 @@ impl Default for ModernDeviceRackState {
             requested_open_linear_phase_crossover_hud: false,
             requested_open_parallel_transient_saturator_hud: false,
             requested_open_midside_focuser_hud: false,
+            requested_open_transient_clipper_hud: false,
+            requested_open_tape_flux_master_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -1170,6 +1176,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_linear_phase_crossover = cur_selection.contains("LinearPhaseCrossover") || cur_selection.contains("LinPhaseCrossover") || cur_selection == "LinearPhaseCrossoverNode" || cur_selection.contains("MultibandCrossover") || cur_selection.contains("LinearPhaseLimiter");
                     let is_parallel_transient_saturator = cur_selection.contains("ParallelTransientSaturator") || cur_selection.contains("TransientSaturator") || cur_selection == "ParallelTransientSaturatorNode" || cur_selection.contains("ParallelSaturator");
                     let is_midside_focuser = cur_selection.contains("MidSideFocuser") || cur_selection.contains("SideFocuser") || cur_selection == "MidSideFocuserNode" || cur_selection.contains("MonoBassFocuser") || cur_selection.contains("MidPunchFocuser");
+                    let is_transient_clipper = cur_selection.contains("TransientClipper") || cur_selection.contains("ClipperNode") || cur_selection == "TransientClipperNode" || cur_selection.contains("DynamicClipper") || cur_selection.contains("MasterClipper");
+                    let is_tape_flux_master = cur_selection.contains("TapeFlux") || cur_selection.contains("TapeFluxMaster") || cur_selection == "TapeFluxMasterNode" || cur_selection.contains("MasteringTape") || cur_selection.contains("MagneticTape");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1638,6 +1646,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("🎯 Focuser HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Mastering Linear-Phase Stereo Mid/Side Dynamic Punch & Multiband Mono-Bass Focuser HUD").clicked()
                     {
                         state.requested_open_midside_focuser_hud = true;
+                    } else if is_transient_clipper
+                        && ui.button(RichText::new("💥 Clipper HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 107, 107))).on_hover_text("Open Mastering Multi-Band Dynamic Transient Clipper HUD").clicked()
+                    {
+                        state.requested_open_transient_clipper_hud = true;
+                    } else if is_tape_flux_master
+                        && ui.button(RichText::new("📼 Tape Flux HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(235, 94, 40))).on_hover_text("Open Mastering Multi-Stage Magnetic Tape Flux Saturation HUD").clicked()
+                    {
+                        state.requested_open_tape_flux_master_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2520,6 +2536,8 @@ fn show_pro_parameter_drawer(
                     let is_linear_phase_crossover = dev_kind.contains("LinearPhaseCrossover") || dev_kind.contains("LinPhaseCrossover") || dev_kind == "LinearPhaseCrossoverNode" || dev_kind.contains("MultibandCrossover") || dev_kind.contains("LinearPhaseLimiter");
                     let is_parallel_transient_saturator = dev_kind.contains("ParallelTransientSaturator") || dev_kind.contains("TransientSaturator") || dev_kind == "ParallelTransientSaturatorNode" || dev_kind.contains("ParallelSaturator");
                     let is_midside_focuser = dev_kind.contains("MidSideFocuser") || dev_kind.contains("SideFocuser") || dev_kind == "MidSideFocuserNode" || dev_kind.contains("MonoBassFocuser") || dev_kind.contains("MidPunchFocuser");
+                    let is_transient_clipper = dev_kind.contains("TransientClipper") || dev_kind.contains("ClipperNode") || dev_kind == "TransientClipperNode" || dev_kind.contains("DynamicClipper") || dev_kind.contains("MasterClipper");
+                    let is_tape_flux_master = dev_kind.contains("TapeFlux") || dev_kind.contains("TapeFluxMaster") || dev_kind == "TapeFluxMasterNode" || dev_kind.contains("MasteringTape") || dev_kind.contains("MagneticTape");
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -11621,6 +11639,153 @@ fn show_pro_parameter_drawer(
                             let _ = ms_resp.on_hover_text(format!(
                                 "Mastering Linear-Phase Stereo Mid/Side Dynamic Punch & Mono-Bass Focuser HUD\nMono Cutoff: {:.0} Hz | Mid Punch Boost: +{:.1} dB | Side Width: {:.2}x\n[Drag: Mono Cutoff (X) / Mid Punch (Y) Puck]",
                                 mono_cutoff_hz, mid_punch_db, side_width
+                            ));
+                        }
+                    } else if is_transient_clipper {
+                        // Mastering Multi-Band Dynamic Transient Clipper Mini View
+                        let (clip_resp, clip_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let clip_rect = clip_resp.rect;
+                        clip_painter.rect_filled(clip_rect, 2.0, Color32::from_rgb(17, 22, 37));
+
+                        let mut clip_drive_db = state.node_param_values.get("clip_drive_db").or_else(|| state.node_param_values.get("threshold_db")).copied().unwrap_or(6.0);
+                        let mut knee_softness_db = state.node_param_values.get("knee_softness_db").or_else(|| state.node_param_values.get("clip_hardness")).copied().unwrap_or(3.5);
+                        let ceiling_dbfs = state.node_param_values.get("ceiling_dbfs").or_else(|| state.node_param_values.get("ceiling_db")).copied().unwrap_or(-0.1);
+
+                        if clip_resp.dragged() {
+                            if let Some(pos) = clip_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - clip_rect.left()) / clip_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - clip_rect.top()) / clip_rect.height())).clamp(0.0, 1.0);
+                                clip_drive_db = crate::views::transient_clipper_view::TransientClipperView::normalized_to_drive(norm_x);
+                                knee_softness_db = crate::views::transient_clipper_view::TransientClipperView::normalized_to_knee(norm_y);
+                                state.node_param_values.insert("clip_drive_db".to_string(), clip_drive_db);
+                                state.node_param_values.insert("threshold_db".to_string(), clip_drive_db);
+                                state.node_param_values.insert("knee_softness_db".to_string(), knee_softness_db);
+                                state.node_param_values.insert("clip_hardness".to_string(), knee_softness_db);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_dr = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_dr).is_some() { bus.set(pid_dr, clip_drive_db); }
+                                    let pid_kn = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_kn).is_some() { bus.set(pid_kn, knee_softness_db); }
+                                }
+                            }
+                        }
+
+                        // Mini Transfer Curve
+                        let steps = 25;
+                        let mut clip_pts = Vec::with_capacity(steps);
+                        let drive_lin = 10.0_f32.powf(clip_drive_db / 20.0);
+                        for i in 0..steps {
+                            let t = i as f32 / (steps - 1) as f32;
+                            let in_val = (t - 0.5) * 2.0;
+                            let driven = in_val * drive_lin;
+                            let out_val = if knee_softness_db < 0.5 {
+                                driven.clamp(-1.0, 1.0)
+                            } else {
+                                (driven / (1.0 + driven.abs().powf(knee_softness_db / 3.0)).powf(3.0 / knee_softness_db)).clamp(-1.0, 1.0)
+                            };
+                            let px = clip_rect.left() + t * (clip_rect.width() - 55.0);
+                            let py = clip_rect.center().y - out_val * (clip_rect.height() * 0.35);
+                            clip_pts.push(egui::pos2(px, py));
+                        }
+                        clip_painter.add(egui::Shape::line(
+                            clip_pts,
+                            Stroke::new(1.8_f32, Color32::from_rgb(255, 107, 107)),
+                        ));
+
+                        // Interactive Puck
+                        let norm_dr = crate::views::transient_clipper_view::TransientClipperView::drive_to_normalized(clip_drive_db);
+                        let norm_kn = crate::views::transient_clipper_view::TransientClipperView::knee_to_normalized(knee_softness_db);
+                        let puck_x = clip_rect.left() + norm_dr * (clip_rect.width() - 55.0);
+                        let puck_y = clip_rect.bottom() - norm_kn * (clip_rect.height() - 20.0) - 10.0;
+                        clip_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(255, 107, 107));
+                        clip_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        let crest_red = (clip_drive_db * 0.70 - knee_softness_db * 0.15).clamp(0.0, 12.0);
+                        clip_painter.text(
+                            egui::pos2(clip_rect.right() - 4.0, clip_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("CLIPPER\n+{:.1}dB Dr\n{:.1}dB Kn\n-{:.1}dB Cr", clip_drive_db, knee_softness_db, crest_red),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(255, 107, 107),
+                        );
+
+                        if clip_resp.hovered() {
+                            let _ = clip_resp.on_hover_text(format!(
+                                "Mastering Multi-Band Dynamic Transient Clipper HUD\nClip Drive: +{:.1} dB | Knee Softness: {:.1} dB | Ceiling: {:.1} dBFS\nCrest Factor Delta: -{:.1} dB\n[Drag: Drive (X) / Knee (Y) Puck]",
+                                clip_drive_db, knee_softness_db, ceiling_dbfs, crest_red
+                            ));
+                        }
+                    } else if is_tape_flux_master {
+                        // Mastering Multi-Stage Magnetic Tape Flux Saturation Mini View
+                        let (tape_resp, tape_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let tape_rect = tape_resp.rect;
+                        tape_painter.rect_filled(tape_rect, 2.0, Color32::from_rgb(20, 14, 16));
+
+                        let mut flux_drive_db = state.node_param_values.get("flux_drive_db").or_else(|| state.node_param_values.get("tape_flux_nanoweber")).copied().unwrap_or(9.0);
+                        let mut bias_trim_db = state.node_param_values.get("bias_trim_db").or_else(|| state.node_param_values.get("bias_hf_saturation")).copied().unwrap_or(3.0);
+                        let speed_ips = state.node_param_values.get("tape_speed_ips").copied().unwrap_or(30.0);
+
+                        if tape_resp.dragged() {
+                            if let Some(pos) = tape_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - tape_rect.left()) / tape_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - tape_rect.top()) / tape_rect.height())).clamp(0.0, 1.0);
+                                flux_drive_db = crate::views::tape_flux_master_view::TapeFluxMasterView::normalized_to_drive(norm_x);
+                                bias_trim_db = crate::views::tape_flux_master_view::TapeFluxMasterView::normalized_to_bias(norm_y);
+                                state.node_param_values.insert("flux_drive_db".to_string(), flux_drive_db);
+                                state.node_param_values.insert("tape_flux_nanoweber".to_string(), flux_drive_db);
+                                state.node_param_values.insert("bias_trim_db".to_string(), bias_trim_db);
+                                state.node_param_values.insert("bias_hf_saturation".to_string(), bias_trim_db);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_fl = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_fl).is_some() { bus.set(pid_fl, flux_drive_db); }
+                                    let pid_bi = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_bi).is_some() { bus.set(pid_bi, bias_trim_db); }
+                                }
+                            }
+                        }
+
+                        // Mini Hysteresis Loop
+                        let steps = 20;
+                        let mut loop_pts = Vec::with_capacity(steps);
+                        let drive_lin = 10.0_f32.powf(flux_drive_db / 20.0);
+                        let rem = (0.25 - bias_trim_db * 0.03).clamp(0.05, 0.45);
+                        for i in 0..steps {
+                            let theta = i as f32 * (std::f32::consts::TAU / (steps as f32 - 1.0));
+                            let h = theta.cos() * 0.9;
+                            let dir = if theta.sin() >= 0.0 { 1.0 } else { -1.0 };
+                            let b = (h * drive_lin * 0.6).tanh() + dir * rem * (1.0 - h.abs() * 0.5);
+                            let px = tape_rect.left() + ((h + 1.0) * 0.5) * (tape_rect.width() - 55.0);
+                            let py = tape_rect.center().y - b.clamp(-1.0, 1.0) * (tape_rect.height() * 0.35);
+                            loop_pts.push(egui::pos2(px, py));
+                        }
+                        tape_painter.add(egui::Shape::line(
+                            loop_pts,
+                            Stroke::new(1.8_f32, Color32::from_rgb(235, 94, 40)),
+                        ));
+
+                        // Interactive Puck
+                        let norm_fl = crate::views::tape_flux_master_view::TapeFluxMasterView::drive_to_normalized(flux_drive_db);
+                        let norm_bi = crate::views::tape_flux_master_view::TapeFluxMasterView::bias_to_normalized(bias_trim_db);
+                        let puck_x = tape_rect.left() + norm_fl * (tape_rect.width() - 55.0);
+                        let puck_y = tape_rect.bottom() - norm_bi * (tape_rect.height() - 20.0) - 10.0;
+                        tape_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(235, 94, 40));
+                        tape_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        let thd_est = (0.05 + (flux_drive_db / 18.0).powi(2) * 0.6).clamp(0.05, 3.5);
+                        tape_painter.text(
+                            egui::pos2(tape_rect.right() - 4.0, tape_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("TAPE FLUX\n+{:.1}dB Fl\n{:+.1}dB Bi\n{:.2}%THD", flux_drive_db, bias_trim_db, thd_est),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(235, 94, 40),
+                        );
+
+                        if tape_resp.hovered() {
+                            let _ = tape_resp.on_hover_text(format!(
+                                "Mastering Multi-Stage Magnetic Tape Flux Saturation HUD\nFlux Drive: +{:.1} dB | Bias Trim: {:+.1} dB | Speed: {:.1} ips\nEstimated THD: {:.2}%\n[Drag: Flux Drive (X) / Bias Trim (Y) Puck]",
+                                flux_drive_db, bias_trim_db, speed_ips, thd_est
                             ));
                         }
                     } else {
