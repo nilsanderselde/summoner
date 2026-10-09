@@ -1,6 +1,6 @@
 # Summoner DAW — Product Readiness & Shippability Tracker
 > **Current Shippability Score:** 10.0 / 10  
-> **Status:** Production Ready Release Candidate (Turn #101 / Sprint Turn #27 - Sprint Review)  
+> **Status:** Production Ready Release Candidate (Turn #104 / Sprint Turn #30 - Sprint Review)  
 > **Authoritative Root:** `PROGRESS.md`  
 > **License:** AGPLv3
 
@@ -2858,6 +2858,40 @@ Product Management has conducted a comprehensive readiness audit:
   - Feature tests: 5 passed (`cargo test -p summoner_gui --features gui -- tier166`).
   - Pure unit tests: 329 passed in 0.23s (`cargo test -p summoner_gui --lib`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`).
+
+### Turn #104 (Sprint Turn #30 - Sprint Review) — Mastering Linear-Phase Dynamic Multiband Clipper & 4-Band Dynamic Expander & Noise Gate HUDs Convergence (Milestones 33 & 34)
+- [x] Dynamic Multiband Clipper & 4-Band Dynamic Expander HUDs Integration:
+  - Integrated `MultibandClipperView` (Mastering Linear-Phase Dynamic Multiband Clipper & Saturation Stage HUD: 4 Frequency Bands [Sub Low <120Hz, Low-Mid 120-1k, High-Mid 1k-6k, Air High >6k], 5 Transfer Curve Modes [Soft-Knee Cubic, Analog Tanh, Hard Brickwall, Quintic Smooth, Asymmetric Tube], Threshold [-24.0..0.0 dB] vs Ceiling [-12.0..0.0 dB] touch puck with >= 44x44pt bounding target, Knee Width [0.0..12.0 dB], Drive [0.0..12.0 dB], 4x Linear-Phase Oversampling, Real-time THD % readout, True-Peak Inter-Sample Metering, 2D Non-Linear Clipping Transfer Curve Canvas) and `MultibandExpanderView` (Mastering 4-Band Dynamic Expander & Noise Gate HUD: 4 Frequency Bands [Low, Low-Mid, High-Mid, High], 4 Operating Modes [Downward Expansion, Upward Expansion, Noise Gate, Dynamic Ducking], 3 Linear-Phase Crossover Handles with >= 44x44pt hit targets, Threshold [-60.0..0.0 dB], Ratio [1:1..1:10], Knee [0.0..18.0 dB], Attack/Release, Gain Reduction metering per band, Dynamic Transfer Puck with >= 44x44pt hit target, Lookahead [0.0..20.0 ms], Dry/Wet Mix [0.0..100.0%]) into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/multiband_clipper_view.rs` & `multiband_expander_view.rs`):
+  - In `MultibandClipperView`: added `name()` to `ClipperCurveMode`, coordinate normalizations & round-trips (`threshold_to_normalized`, `normalized_to_threshold`, `ceiling_to_normalized`, `normalized_to_ceiling`, `knee_width_to_normalized`, `normalized_to_knee_width`, `drive_to_normalized`, `normalized_to_drive`), `set_active_band()`, `set_curve_mode()`, `show_ui(&mut self, ui: &mut egui::Ui)`, and `render_ascii_snapshot_str() -> String` with mastering multiband clipper metadata banner and verified hit target badge (`[PASS: >=44pt]`).
+  - In `MultibandExpanderView`: added `name()` to `ExpanderMode`, coordinate normalizations & round-trips (`threshold_to_normalized`, `normalized_to_threshold`, `ratio_to_normalized`, `normalized_to_ratio`, `knee_to_normalized`, `normalized_to_knee`, `dry_wet_to_normalized`, `normalized_to_dry_wet`), `set_active_band()`, `set_mode()`, `hit_test_transfer_puck()`, `show_ui(&mut self, ui: &mut egui::Ui)`, and `render_ascii_snapshot_str() -> String` with 4-band dynamic expander metadata banner and verified hit target badge (`[PASS: >=44pt]`).
+  - In `crates/summoner_gui/src/views/mod.rs`: re-exported `ClipperCurveMode` and `ExpanderMode`.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added modal fields (`show_multiband_clipper_modal`, `multiband_clipper_view`, `show_multiband_expander_modal`, `multiband_expander_view`).
+  - Added dedicated modal windows (`show_multiband_clipper_modal_window`, `show_multiband_expander_modal_window`) with responsive styling, WCAG AAA contrast, and >= 44x44pt touch bounds.
+  - Added public lifecycle methods: `open_multiband_clipper_hud()`, `close_multiband_clipper_hud()`, `is_multiband_clipper_hud_open()`, `open_multiband_expander_hud()`, `close_multiband_expander_hud()`, `is_multiband_expander_hud_open()`.
+  - Real-time parameter sync bridges (`sync_multiband_clipper_hud_state` and `sync_multiband_expander_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_multiband_clipper_hud: bool` and `requested_open_multiband_expander_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[✂ Open Multiband Clipper HUD]` and `[📈 Open Multiband Expander HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header buttons `[✂ Clipper HUD]` and `[📈 Expander HUD]` in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Multiband Clipper: 2D non-linear clipping transfer curve preview, interactive Threshold / Ceiling puck, live readout, and lock-free slot-addressed `ParamBus` dispatch.
+    * Multiband Expander: 2D dynamic expansion transfer curve preview, interactive Threshold / Ratio puck, live readout, and lock-free slot-addressed `ParamBus` dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_multiband_clipper_hud` under `"Mastering & Dynamics"` and `open_multiband_expander_hud` under `"Dynamics & Gate"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_multiband_clipper_hud()` and `open_multiband_expander_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier167_turn104_tests.rs`:
+    * Pure tests: view initialization, coordinate normalizations (threshold, ceiling, knee width, drive, ratio, knee, dry/wet), band and mode switching across all modes, transfer curve calculations across bands, touch handle & puck hit testing (>= 44x44pt bounding targets), deterministic ASCII snapshots with metadata banners.
+    * GUI tests: modal window lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch without allocations, trigger button propagation from rack and inspector, command palette action verification.
+  - Registered `tier167_turn104_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Feature tests: 5 passed (`cargo test -p summoner_gui --features gui -- tier167`).
+  - Pure unit tests: 329 passed in 0.22s (`cargo test -p summoner_gui --lib`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`).
+
 
 
 

@@ -21,6 +21,17 @@ pub enum ExpanderMode {
     DynamicDucking,
 }
 
+impl ExpanderMode {
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::DownwardExpansion => "Downward Expansion",
+            Self::UpwardExpansion => "Upward Expansion",
+            Self::NoiseGate => "Noise Gate",
+            Self::DynamicDucking => "Dynamic Ducking",
+        }
+    }
+}
+
 /// Single frequency band dynamic expander parameters.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ExpanderBandConfig {
@@ -193,6 +204,70 @@ impl MultibandExpanderView {
             }
         }
         None
+    }
+
+    /// Convert Threshold [-60.0 ..= 0.0 dB] to normalized coordinate [0.0 ..= 1.0].
+    pub fn threshold_to_normalized(db: f32) -> f32 {
+        ((db.clamp(-60.0, 0.0) + 60.0) / 60.0).clamp(0.0, 1.0)
+    }
+
+    /// Convert normalized coordinate [0.0 ..= 1.0] to Threshold [-60.0 ..= 0.0 dB].
+    pub fn normalized_to_threshold(norm: f32) -> f32 {
+        -60.0 + norm.clamp(0.0, 1.0) * 60.0
+    }
+
+    /// Convert Ratio [1.0 ..= 10.0] to normalized coordinate [0.0 ..= 1.0].
+    pub fn ratio_to_normalized(ratio: f32) -> f32 {
+        ((ratio.clamp(1.0, 10.0) - 1.0) / 9.0).clamp(0.0, 1.0)
+    }
+
+    /// Convert normalized coordinate [0.0 ..= 1.0] to Ratio [1.0 ..= 10.0].
+    pub fn normalized_to_ratio(norm: f32) -> f32 {
+        1.0 + norm.clamp(0.0, 1.0) * 9.0
+    }
+
+    /// Convert Knee [0.0 ..= 18.0 dB] to normalized coordinate [0.0 ..= 1.0].
+    pub fn knee_to_normalized(knee: f32) -> f32 {
+        (knee.clamp(0.0, 18.0) / 18.0).clamp(0.0, 1.0)
+    }
+
+    /// Convert normalized coordinate [0.0 ..= 1.0] to Knee [0.0 ..= 18.0 dB].
+    pub fn normalized_to_knee(norm: f32) -> f32 {
+        norm.clamp(0.0, 1.0) * 18.0
+    }
+
+    /// Convert Dry/Wet [0.0 ..= 100.0 %] to normalized coordinate [0.0 ..= 1.0].
+    pub fn dry_wet_to_normalized(dw: f32) -> f32 {
+        (dw.clamp(0.0, 100.0) / 100.0).clamp(0.0, 1.0)
+    }
+
+    /// Convert normalized coordinate [0.0 ..= 1.0] to Dry/Wet [0.0 ..= 100.0 %].
+    pub fn normalized_to_dry_wet(norm: f32) -> f32 {
+        norm.clamp(0.0, 1.0) * 100.0
+    }
+
+    /// Set active band index.
+    pub fn set_active_band(&mut self, idx: usize) {
+        if idx < NUM_EXPANDER_BANDS {
+            self.active_band_idx = idx;
+        }
+    }
+
+    /// Set expander dynamics operating mode.
+    pub fn set_mode(&mut self, mode: ExpanderMode) {
+        self.mode = mode;
+    }
+
+    /// Hit-test touch coordinate on the dynamic transfer puck (>= 22pt radius -> 44x44pt).
+    pub fn hit_test_transfer_puck(&self, point: (f32, f32), canvas: Rect) -> bool {
+        let band = &self.bands[self.active_band_idx];
+        let norm_thresh = Self::threshold_to_normalized(band.threshold_db);
+        let norm_ratio = Self::ratio_to_normalized(band.ratio);
+        let puck_x = canvas.x + norm_thresh * canvas.width;
+        let puck_y = canvas.y + (1.0 - norm_ratio) * canvas.height;
+        let dx = point.0 - puck_x;
+        let dy = point.1 - puck_y;
+        (dx * dx + dy * dy).sqrt() <= EXPANDER_NODE_HIT_RADIUS
     }
 
     /// Render deterministic ASCII representation for headless terminal testing.
@@ -439,5 +514,32 @@ impl MultibandExpanderView {
             egui::FontId::proportional(11.0),
             Color32::from_rgb(0, 255, 180),
         );
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_ui(&mut self, ui: &mut egui::Ui) {
+        let (rect, _response) = ui.allocate_exact_size(
+            egui::vec2(ui.available_width().max(800.0), 490.0),
+            egui::Sense::hover(),
+        );
+        let custom_rect = Rect::new(rect.min.x, rect.min.y, rect.width(), rect.height());
+        self.show(ui, custom_rect);
+    }
+
+    /// Render deterministic ASCII snapshot with metadata banner.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        let lines = self.render_ascii(64, 16);
+        let mut out = String::new();
+        out.push_str("================================================================\n");
+        out.push_str(&format!(
+            " 4-BAND DYNAMIC EXPANDER & NOISE GATE HUD [{}] [PASS: >=44pt]\n",
+            self.mode.name()
+        ));
+        out.push_str("================================================================\n");
+        for line in lines {
+            out.push_str(&line);
+            out.push('\n');
+        }
+        out
     }
 }

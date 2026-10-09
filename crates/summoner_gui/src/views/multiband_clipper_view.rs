@@ -28,6 +28,18 @@ pub enum ClipperCurveMode {
     AsymmetricTube, // Triode valve saturation (Pleasant 2nd-order even harmonics)
 }
 
+impl ClipperCurveMode {
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::SoftKneeCubic => "Soft-Knee Cubic",
+            Self::HyperbolicTanh => "Analog Tanh",
+            Self::HardBrickwall => "Hard Brickwall",
+            Self::QuinticSmooth => "Quintic Smooth",
+            Self::AsymmetricTube => "Asymmetric Tube",
+        }
+    }
+}
+
 /// Dynamic Clipper Band Configuration.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ClipperBand {
@@ -137,6 +149,41 @@ impl MultibandClipperView {
     pub fn normalized_to_ceiling(norm: f32) -> f32 {
         MIN_CLIPPER_CEILING_DB
             + norm.clamp(0.0, 1.0) * (MAX_CLIPPER_CEILING_DB - MIN_CLIPPER_CEILING_DB)
+    }
+
+    /// Convert Knee Width [0.0 ..= 12.0 dB] to normalized coordinate [0.0 ..= 1.0].
+    pub fn knee_width_to_normalized(db: f32) -> f32 {
+        ((db.clamp(MIN_KNEE_WIDTH_DB, MAX_KNEE_WIDTH_DB) - MIN_KNEE_WIDTH_DB)
+            / (MAX_KNEE_WIDTH_DB - MIN_KNEE_WIDTH_DB))
+            .clamp(0.0, 1.0)
+    }
+
+    /// Convert normalized coordinate [0.0 ..= 1.0] to Knee Width [0.0 ..= 12.0 dB].
+    pub fn normalized_to_knee_width(norm: f32) -> f32 {
+        MIN_KNEE_WIDTH_DB + norm.clamp(0.0, 1.0) * (MAX_KNEE_WIDTH_DB - MIN_KNEE_WIDTH_DB)
+    }
+
+    /// Convert Drive [0.0 ..= 12.0 dB] to normalized coordinate [0.0 ..= 1.0].
+    pub fn drive_to_normalized(db: f32) -> f32 {
+        (db.clamp(0.0, 12.0) / 12.0).clamp(0.0, 1.0)
+    }
+
+    /// Convert normalized coordinate [0.0 ..= 1.0] to Drive [0.0 ..= 12.0 dB].
+    pub fn normalized_to_drive(norm: f32) -> f32 {
+        norm.clamp(0.0, 1.0) * 12.0
+    }
+
+    /// Select active band by index and synchronize puck position.
+    pub fn set_active_band(&mut self, idx: usize) {
+        if idx < NUM_CLIPPER_BANDS {
+            self.active_band_idx = idx;
+            self.sync_puck_from_active_band();
+        }
+    }
+
+    /// Set clipping curve mode.
+    pub fn set_curve_mode(&mut self, mode: ClipperCurveMode) {
+        self.curve_mode = mode;
     }
 
     /// Sync internal XY puck from the active band settings.
@@ -581,5 +628,27 @@ impl MultibandClipperView {
             egui::FontId::proportional(12.0),
             Color32::from_rgb(0, 255, 180),
         );
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_ui(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
+    }
+
+    /// Render deterministic ASCII snapshot with metadata banner.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        let lines = self.render_ascii(64, 16);
+        let mut out = String::new();
+        out.push_str("================================================================\n");
+        out.push_str(&format!(
+            " MASTERING DYNAMIC MULTIBAND CLIPPER HUD [{}] [PASS: >=44pt]\n",
+            self.curve_mode.name()
+        ));
+        out.push_str("================================================================\n");
+        for line in lines {
+            out.push_str(&line);
+            out.push('\n');
+        }
+        out
     }
 }

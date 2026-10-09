@@ -860,6 +860,10 @@ pub struct AwardWinningGuiView {
     pub multiband_saturator_view: crate::views::multiband_saturator_view::MultibandSaturatorView,
     pub show_multiband_imager_modal: bool,
     pub multiband_imager_view: crate::views::multiband_imager_view::MultibandImagerView,
+    pub show_multiband_clipper_modal: bool,
+    pub multiband_clipper_view: crate::views::multiband_clipper_view::MultibandClipperView,
+    pub show_multiband_expander_modal: bool,
+    pub multiband_expander_view: crate::views::multiband_expander_view::MultibandExpanderView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1336,6 +1340,10 @@ impl AwardWinningGuiView {
             multiband_saturator_view: crate::views::multiband_saturator_view::MultibandSaturatorView::new(),
             show_multiband_imager_modal: false,
             multiband_imager_view: crate::views::multiband_imager_view::MultibandImagerView::new(),
+            show_multiband_clipper_modal: false,
+            multiband_clipper_view: crate::views::multiband_clipper_view::MultibandClipperView::new(),
+            show_multiband_expander_modal: false,
+            multiband_expander_view: crate::views::multiband_expander_view::MultibandExpanderView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2525,6 +2533,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_multiband_imager_hud = false;
             self.open_multiband_imager_hud();
         }
+        if self.inspector_state.requested_open_multiband_clipper_hud || self.device_rack_state.requested_open_multiband_clipper_hud {
+            self.inspector_state.requested_open_multiband_clipper_hud = false;
+            self.device_rack_state.requested_open_multiband_clipper_hud = false;
+            self.open_multiband_clipper_hud();
+        }
+        if self.inspector_state.requested_open_multiband_expander_hud || self.device_rack_state.requested_open_multiband_expander_hud {
+            self.inspector_state.requested_open_multiband_expander_hud = false;
+            self.device_rack_state.requested_open_multiband_expander_hud = false;
+            self.open_multiband_expander_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2638,6 +2656,8 @@ impl AwardWinningGuiView {
         self.show_spectral_matching_eq_modal_window(ui);
         self.show_multiband_saturator_modal_window(ui);
         self.show_multiband_imager_modal_window(ui);
+        self.show_multiband_clipper_modal_window(ui);
+        self.show_multiband_expander_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -18816,6 +18836,196 @@ impl AwardWinningGuiView {
             if bus.get(pid_pan).is_some() { bus.set(pid_pan, pan); }
             if bus.get(pid_mix).is_some() { bus.set(pid_mix, dry_wet); }
             if bus.get(pid_avg).is_some() { bus.set(pid_avg, avg_width); }
+        }
+    }
+
+    pub fn open_multiband_clipper_hud(&mut self) {
+        self.show_multiband_clipper_modal = true;
+    }
+
+    pub fn close_multiband_clipper_hud(&mut self) {
+        self.show_multiband_clipper_modal = false;
+    }
+
+    pub fn is_multiband_clipper_hud_open(&self) -> bool {
+        self.show_multiband_clipper_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_multiband_clipper_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_multiband_clipper_modal {
+            return;
+        }
+
+        let mut is_open = self.show_multiband_clipper_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("✂ Mastering Linear-Phase Dynamic Multiband Clipper HUD")
+            .id(egui::Id::new("multiband_clipper_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("4-Band Linear-Phase Peak Clipping, Soft-Knee Transfer Curves & True-Peak Metering (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.multiband_clipper_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_multiband_clipper_modal = is_open;
+        self.sync_multiband_clipper_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_multiband_clipper_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let cur_band = &self.multiband_clipper_view.bands[self.multiband_clipper_view.active_band_idx];
+        let thresh = cur_band.threshold_db;
+        let ceiling = cur_band.ceiling_db;
+        let drive = cur_band.drive_db;
+        let knee = self.multiband_clipper_view.knee_width_db;
+
+        self.device_rack_state.node_param_values.insert("threshold_db".to_string(), thresh);
+        self.device_rack_state.node_param_values.insert("threshold".to_string(), thresh);
+        self.device_rack_state.node_param_values.insert("ceiling_db".to_string(), ceiling);
+        self.device_rack_state.node_param_values.insert("ceiling".to_string(), ceiling);
+        self.device_rack_state.node_param_values.insert("drive_db".to_string(), drive);
+        self.device_rack_state.node_param_values.insert("drive".to_string(), drive);
+        self.device_rack_state.node_param_values.insert("knee_width_db".to_string(), knee);
+        self.device_rack_state.node_param_values.insert("knee".to_string(), knee);
+
+        self.inspector_state.node_param_values.insert("threshold_db".to_string(), thresh);
+        self.inspector_state.node_param_values.insert("threshold".to_string(), thresh);
+        self.inspector_state.node_param_values.insert("ceiling_db".to_string(), ceiling);
+        self.inspector_state.node_param_values.insert("ceiling".to_string(), ceiling);
+        self.inspector_state.node_param_values.insert("drive_db".to_string(), drive);
+        self.inspector_state.node_param_values.insert("drive".to_string(), drive);
+        self.inspector_state.node_param_values.insert("knee_width_db".to_string(), knee);
+        self.inspector_state.node_param_values.insert("knee".to_string(), knee);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_th = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_cl = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_dr = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_kn = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_th).is_some() { bus.set(pid_th, thresh); }
+            if bus.get(pid_cl).is_some() { bus.set(pid_cl, ceiling); }
+            if bus.get(pid_dr).is_some() { bus.set(pid_dr, drive); }
+            if bus.get(pid_kn).is_some() { bus.set(pid_kn, knee); }
+        }
+    }
+
+    pub fn open_multiband_expander_hud(&mut self) {
+        self.show_multiband_expander_modal = true;
+    }
+
+    pub fn close_multiband_expander_hud(&mut self) {
+        self.show_multiband_expander_modal = false;
+    }
+
+    pub fn is_multiband_expander_hud_open(&self) -> bool {
+        self.show_multiband_expander_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_multiband_expander_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_multiband_expander_modal {
+            return;
+        }
+
+        let mut is_open = self.show_multiband_expander_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("📈 4-Band Dynamic Expander & Noise Gate HUD")
+            .id(egui::Id::new("multiband_expander_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("4-Band Upward/Downward Expansion, Crossover Dividers & Dynamic Ducking (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.multiband_expander_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_multiband_expander_modal = is_open;
+        self.sync_multiband_expander_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_multiband_expander_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let cur_band = &self.multiband_expander_view.bands[self.multiband_expander_view.active_band_idx];
+        let thresh = cur_band.threshold_db;
+        let ratio = cur_band.ratio;
+        let knee = cur_band.knee_db;
+        let lookahead = self.multiband_expander_view.lookahead_ms;
+
+        self.device_rack_state.node_param_values.insert("threshold_db".to_string(), thresh);
+        self.device_rack_state.node_param_values.insert("threshold".to_string(), thresh);
+        self.device_rack_state.node_param_values.insert("ratio".to_string(), ratio);
+        self.device_rack_state.node_param_values.insert("knee_db".to_string(), knee);
+        self.device_rack_state.node_param_values.insert("knee".to_string(), knee);
+        self.device_rack_state.node_param_values.insert("lookahead_ms".to_string(), lookahead);
+
+        self.inspector_state.node_param_values.insert("threshold_db".to_string(), thresh);
+        self.inspector_state.node_param_values.insert("threshold".to_string(), thresh);
+        self.inspector_state.node_param_values.insert("ratio".to_string(), ratio);
+        self.inspector_state.node_param_values.insert("knee_db".to_string(), knee);
+        self.inspector_state.node_param_values.insert("knee".to_string(), knee);
+        self.inspector_state.node_param_values.insert("lookahead_ms".to_string(), lookahead);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_th = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_rt = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_kn = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_la = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_th).is_some() { bus.set(pid_th, thresh); }
+            if bus.get(pid_rt).is_some() { bus.set(pid_rt, ratio); }
+            if bus.get(pid_kn).is_some() { bus.set(pid_kn, knee); }
+            if bus.get(pid_la).is_some() { bus.set(pid_la, lookahead); }
         }
     }
     fn render_patch_cords_canvas(&mut self, ui: &mut egui::Ui, available_h: f32) {

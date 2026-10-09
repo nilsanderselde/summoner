@@ -269,6 +269,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_multiband_saturator_hud: bool,
     #[serde(default)]
     pub requested_open_multiband_imager_hud: bool,
+    #[serde(default)]
+    pub requested_open_multiband_clipper_hud: bool,
+    #[serde(default)]
+    pub requested_open_multiband_expander_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -392,6 +396,8 @@ impl Default for ModernDeviceRackState {
             requested_open_spectral_matching_eq_hud: false,
             requested_open_multiband_saturator_hud: false,
             requested_open_multiband_imager_hud: false,
+            requested_open_multiband_clipper_hud: false,
+            requested_open_multiband_expander_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -1138,6 +1144,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_spectral_matching_eq = cur_selection.contains("SpectralMatchingEq") || cur_selection.contains("MatchingEq") || cur_selection == "SpectralMatchingEqNode" || cur_selection.contains("SpectrumMatching");
                     let is_multiband_saturator = cur_selection.contains("MultibandSaturator") || cur_selection.contains("MultibandSaturation") || cur_selection == "MultibandSaturatorNode";
                     let is_multiband_imager = cur_selection.contains("MultibandImager") || cur_selection.contains("MultibandStereoImager") || cur_selection.contains("StereoImager") || cur_selection == "MultibandImagerNode";
+                    let is_multiband_clipper = cur_selection.contains("MultibandClipper") || cur_selection.contains("MasteringClipper") || cur_selection == "MultibandClipperNode" || cur_selection == "TriBandMasteringClipper";
+                    let is_multiband_expander = cur_selection.contains("MultibandExpander") || cur_selection.contains("MasteringMidSideMultibandExpander") || cur_selection == "MultibandExpanderNode" || cur_selection.contains("MidSideMultibandExpander");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1574,6 +1582,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("🌐 Imager HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Multiband Stereo Imager HUD").clicked()
                     {
                         state.requested_open_multiband_imager_hud = true;
+                    } else if is_multiband_clipper
+                        && ui.button(RichText::new("✂ Clipper HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Mastering Linear-Phase Multiband Clipper HUD").clicked()
+                    {
+                        state.requested_open_multiband_clipper_hud = true;
+                    } else if is_multiband_expander
+                        && ui.button(RichText::new("📈 Expander HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 255, 180))).on_hover_text("Open 4-Band Dynamic Expander HUD").clicked()
+                    {
+                        state.requested_open_multiband_expander_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2448,6 +2464,8 @@ fn show_pro_parameter_drawer(
                     let is_spectral_matching_eq = dev_kind.contains("SpectralMatchingEq") || dev_kind.contains("MatchingEq") || dev_kind == "SpectralMatchingEqNode" || dev_kind.contains("SpectrumMatching");
                     let is_multiband_saturator = dev_kind.contains("MultibandSaturator") || dev_kind.contains("MultibandSaturation") || dev_kind == "MultibandSaturatorNode";
                     let is_multiband_imager = dev_kind.contains("MultibandImager") || dev_kind.contains("MultibandStereoImager") || dev_kind.contains("StereoImager") || dev_kind == "MultibandImagerNode";
+                    let is_multiband_clipper = dev_kind.contains("MultibandClipper") || dev_kind.contains("MasteringClipper") || dev_kind == "MultibandClipperNode" || dev_kind == "TriBandMasteringClipper";
+                    let is_multiband_expander = dev_kind.contains("MultibandExpander") || dev_kind.contains("MasteringMidSideMultibandExpander") || dev_kind == "MultibandExpanderNode" || dev_kind.contains("MidSideMultibandExpander");
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -11003,6 +11021,153 @@ fn show_pro_parameter_drawer(
                             let _ = img_resp.on_hover_text(format!(
                                 "Multiband Stereo Imager HUD\nStereo Width: {:.0}%\nPan: {:+.0}%\nDry/Wet: {:.0}%\n[Drag: Stereo Width % (X) / Pan % (Y) Puck]",
                                 width_pct, pan_pct, dry_wet
+                            ));
+                        }
+                    } else if is_multiband_clipper {
+                        // Mastering Linear-Phase Dynamic Multiband Clipper Mini View
+                        let (clip_resp, clip_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let clip_rect = clip_resp.rect;
+                        clip_painter.rect_filled(clip_rect, 2.0, Color32::from_rgb(12, 18, 28));
+
+                        let mut thresh_db = state.node_param_values.get("threshold_db").or_else(|| state.node_param_values.get("threshold")).copied().unwrap_or(-4.5);
+                        let mut ceil_db = state.node_param_values.get("ceiling_db").or_else(|| state.node_param_values.get("ceiling")).copied().unwrap_or(-0.8);
+                        let knee_w = state.node_param_values.get("knee_width_db").or_else(|| state.node_param_values.get("knee")).copied().unwrap_or(4.0);
+
+                        if clip_resp.dragged() {
+                            if let Some(pos) = clip_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - clip_rect.left()) / clip_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - clip_rect.top()) / clip_rect.height())).clamp(0.0, 1.0);
+                                thresh_db = crate::views::multiband_clipper_view::MultibandClipperView::normalized_to_threshold(norm_x);
+                                ceil_db = crate::views::multiband_clipper_view::MultibandClipperView::normalized_to_ceiling(norm_y);
+                                state.node_param_values.insert("threshold_db".to_string(), thresh_db);
+                                state.node_param_values.insert("threshold".to_string(), thresh_db);
+                                state.node_param_values.insert("ceiling_db".to_string(), ceil_db);
+                                state.node_param_values.insert("ceiling".to_string(), ceil_db);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_th = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_th).is_some() { bus.set(pid_th, thresh_db); }
+                                    let pid_cl = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_cl).is_some() { bus.set(pid_cl, ceil_db); }
+                                }
+                            }
+                        }
+
+                        // Mini Dynamic Transfer Curve (30 steps)
+                        let steps = 30;
+                        let mut clip_pts = Vec::with_capacity(steps);
+                        for i in 0..steps {
+                            let t = i as f32 / (steps - 1) as f32;
+                            let in_db = -24.0 + t * 24.0;
+                            let out_db = if in_db < thresh_db {
+                                in_db
+                            } else {
+                                ceil_db - 1.0 / (1.0 + (in_db - thresh_db) * 0.5)
+                            };
+                            let norm_y = ((out_db + 24.0) / 24.0).clamp(0.0, 1.0);
+                            let px = clip_rect.left() + t * (clip_rect.width() - 55.0);
+                            let py = clip_rect.bottom() - norm_y * (clip_rect.height() - 10.0) - 5.0;
+                            clip_pts.push(egui::pos2(px, py));
+                        }
+                        clip_painter.add(egui::Shape::line(
+                            clip_pts,
+                            Stroke::new(1.8_f32, Color32::from_rgb(0, 229, 255)),
+                        ));
+
+                        // Interactive Clipper Puck
+                        let norm_th = crate::views::multiband_clipper_view::MultibandClipperView::threshold_to_normalized(thresh_db);
+                        let norm_cl = crate::views::multiband_clipper_view::MultibandClipperView::ceiling_to_normalized(ceil_db);
+                        let puck_x = clip_rect.left() + norm_th * (clip_rect.width() - 55.0);
+                        let puck_y = clip_rect.bottom() - norm_cl * (clip_rect.height() - 20.0) - 10.0;
+                        clip_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(0, 229, 255));
+                        clip_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        clip_painter.text(
+                            egui::pos2(clip_rect.right() - 4.0, clip_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("CLIPPER\n{:.1}dB Th\n{:.1}dB Cl\n{:.1}dB Kn", thresh_db, ceil_db, knee_w),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+
+                        if clip_resp.hovered() {
+                            let _ = clip_resp.on_hover_text(format!(
+                                "Mastering Linear-Phase Multiband Clipper HUD\nThreshold: {:.1} dB | Ceiling: {:.1} dB\nKnee Width: {:.1} dB\n[Drag: Threshold (X) / Ceiling (Y) Puck]",
+                                thresh_db, ceil_db, knee_w
+                            ));
+                        }
+                    } else if is_multiband_expander {
+                        // 4-Band Dynamic Expander Mini View
+                        let (exp_resp, exp_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let exp_rect = exp_resp.rect;
+                        exp_painter.rect_filled(exp_rect, 2.0, Color32::from_rgb(10, 22, 18));
+
+                        let mut thresh_db = state.node_param_values.get("threshold_db").or_else(|| state.node_param_values.get("threshold")).copied().unwrap_or(-32.0);
+                        let mut ratio = state.node_param_values.get("ratio").copied().unwrap_or(2.5);
+                        let knee = state.node_param_values.get("knee_db").or_else(|| state.node_param_values.get("knee")).copied().unwrap_or(6.0);
+
+                        if exp_resp.dragged() {
+                            if let Some(pos) = exp_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - exp_rect.left()) / exp_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - exp_rect.top()) / exp_rect.height())).clamp(0.0, 1.0);
+                                thresh_db = crate::views::multiband_expander_view::MultibandExpanderView::normalized_to_threshold(norm_x);
+                                ratio = crate::views::multiband_expander_view::MultibandExpanderView::normalized_to_ratio(norm_y);
+                                state.node_param_values.insert("threshold_db".to_string(), thresh_db);
+                                state.node_param_values.insert("threshold".to_string(), thresh_db);
+                                state.node_param_values.insert("ratio".to_string(), ratio);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_th = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_th).is_some() { bus.set(pid_th, thresh_db); }
+                                    let pid_rt = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_rt).is_some() { bus.set(pid_rt, ratio); }
+                                }
+                            }
+                        }
+
+                        // Mini Dynamic Expansion Transfer Curve (30 steps)
+                        let steps = 30;
+                        let mut exp_pts = Vec::with_capacity(steps);
+                        for i in 0..steps {
+                            let t = i as f32 / (steps - 1) as f32;
+                            let in_db = -60.0 + t * 60.0;
+                            let out_db = crate::views::multiband_expander_view::MultibandExpanderView::evaluate_transfer_curve(
+                                in_db,
+                                thresh_db,
+                                ratio,
+                                knee,
+                                crate::views::multiband_expander_view::ExpanderMode::DownwardExpansion,
+                            );
+                            let norm_y = ((out_db + 60.0) / 60.0).clamp(0.0, 1.0);
+                            let px = exp_rect.left() + t * (exp_rect.width() - 55.0);
+                            let py = exp_rect.bottom() - norm_y * (exp_rect.height() - 10.0) - 5.0;
+                            exp_pts.push(egui::pos2(px, py));
+                        }
+                        exp_painter.add(egui::Shape::line(
+                            exp_pts,
+                            Stroke::new(1.8_f32, Color32::from_rgb(0, 255, 180)),
+                        ));
+
+                        // Interactive Expander Puck
+                        let norm_th = crate::views::multiband_expander_view::MultibandExpanderView::threshold_to_normalized(thresh_db);
+                        let norm_rt = crate::views::multiband_expander_view::MultibandExpanderView::ratio_to_normalized(ratio);
+                        let puck_x = exp_rect.left() + norm_th * (exp_rect.width() - 55.0);
+                        let puck_y = exp_rect.bottom() - norm_rt * (exp_rect.height() - 20.0) - 10.0;
+                        exp_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(0, 255, 180));
+                        exp_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        exp_painter.text(
+                            egui::pos2(exp_rect.right() - 4.0, exp_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("EXPANDER\n{:.1}dB Th\n1:{:.1} R\n{:.1}dB Kn", thresh_db, ratio, knee),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(0, 255, 180),
+                        );
+
+                        if exp_resp.hovered() {
+                            let _ = exp_resp.on_hover_text(format!(
+                                "4-Band Dynamic Expander & Noise Gate HUD\nThreshold: {:.1} dB | Ratio: 1:{:.1}\nKnee: {:.1} dB\n[Drag: Threshold (X) / Ratio (Y) Puck]",
+                                thresh_db, ratio, knee
                             ));
                         }
                     } else {

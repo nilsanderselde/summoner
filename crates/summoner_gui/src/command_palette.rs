@@ -968,6 +968,18 @@ impl CommandPalette {
                 action_id: "open_multiband_imager_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Mastering Dynamic Multiband Clipper HUD".into(),
+                category: "Mastering & Dynamics".into(),
+                action_id: "open_multiband_clipper_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open 4-Band Dynamic Expander & Noise Gate HUD".into(),
+                category: "Dynamics & Gate".into(),
+                action_id: "open_multiband_expander_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES
