@@ -234,6 +234,10 @@ pub struct ModernInspectorState {
     pub requested_open_harmonic_exciter_hud: bool,
     #[serde(default)]
     pub requested_open_stereo_widener_hud: bool,
+    #[serde(default)]
+    pub requested_open_subharmonic_synth_hud: bool,
+    #[serde(default)]
+    pub requested_open_tape_flutter_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -357,6 +361,8 @@ impl Default for ModernInspectorState {
             requested_open_optical_compressor_hud: false,
             requested_open_harmonic_exciter_hud: false,
             requested_open_stereo_widener_hud: false,
+            requested_open_subharmonic_synth_hud: false,
+            requested_open_tape_flutter_hud: false,
         }
     }
 }
@@ -1821,6 +1827,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open Psychoacoustic Stereo Widener & Vector Scope HUD").clicked() {
                     state.requested_open_stereo_widener_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Subharmonic") || active_kind.contains("SubBass") || active_kind == "SubharmonicSynthNode" || active_kind == "SubharmonicGenerator" || active_kind.contains("SubSynth") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🔊 Open Subharmonic Synth HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(180, 90, 255)))
+                        .fill(Color32::from_rgb(28, 16, 40))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(180, 90, 255)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Psychoacoustic Subharmonic Synth & Phase Alignment HUD").clicked() {
+                    state.requested_open_subharmonic_synth_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("TapeFlutter") || active_kind.contains("TapeWow") || active_kind == "TapeFlutterNode" || active_kind == "TapeWowFlutter" || active_kind.contains("ReelFlutter") {
+                if ui.add(
+                    egui::Button::new(RichText::new("📼 Open Tape Wow/Flutter HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(255, 107, 43)))
+                        .fill(Color32::from_rgb(38, 20, 12))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 107, 43)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Analog Tape Wow/Flutter & Hysteresis Saturation HUD").clicked() {
+                    state.requested_open_tape_flutter_hud = true;
                 }
                 ui.add_space(4.0);
             }

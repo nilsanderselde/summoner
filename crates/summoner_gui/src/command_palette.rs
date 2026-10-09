@@ -905,6 +905,18 @@ impl CommandPalette {
                 action_id: "open_stereo_widener_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Psychoacoustic Subharmonic Synth & Phase Alignment HUD".into(),
+                category: "Dynamics & Saturation".into(),
+                action_id: "open_subharmonic_synth_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Analog Tape Wow/Flutter & Hysteresis Saturation HUD".into(),
+                category: "Distortion & Color".into(),
+                action_id: "open_tape_flutter_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

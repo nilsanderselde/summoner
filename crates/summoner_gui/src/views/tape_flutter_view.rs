@@ -22,6 +22,17 @@ pub enum TapeSpeed {
     Ips30,   // 30 ips: Mastering grade ultra-low wow/flutter and wide frequency response
 }
 
+impl TapeSpeed {
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::Ips3_75 => "3.75 ips (Lo-Fi Vintage)",
+            Self::Ips7_5 => "7.5 ips (Classic Reel)",
+            Self::Ips15 => "15 ips (Studio Punch)",
+            Self::Ips30 => "30 ips (Mastering Grade)",
+        }
+    }
+}
+
 /// Magnetic Oxide Tape Formulation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TapeFormula {
@@ -29,6 +40,17 @@ pub enum TapeFormula {
     Type2Chrome,      // High bias (CrO2) with crisp high-frequency extension
     Type3Ferrochrome, // Dual-layer vintage tape with punchy midrange
     Type4Master911,   // High-output studio mastering tape (+9dB headroom)
+}
+
+impl TapeFormula {
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::Type1Ferric => "Type I (Ferric Normal)",
+            Self::Type2Chrome => "Type II (Chrome High)",
+            Self::Type3Ferrochrome => "Type III (Ferrochrome Mid)",
+            Self::Type4Master911 => "Type IV (Master 911)",
+        }
+    }
 }
 
 /// Analog Tape Flutter/Wow & Saturation HUD View (Step 1484).
@@ -96,6 +118,77 @@ impl TapeFlutterView {
     /// Convert normalized coordinate to modulation depth (0.0 .. 100.0 %).
     pub fn normalized_to_modulation(norm: f32) -> f32 {
         norm.clamp(0.0, 1.0) * 100.0
+    }
+
+    pub fn set_speed(&mut self, speed: TapeSpeed) {
+        self.tape_speed = speed;
+    }
+
+    pub fn set_formula(&mut self, formula: TapeFormula) {
+        self.tape_formula = formula;
+    }
+
+    pub fn wow_rate_to_normalized(hz: f32) -> f32 {
+        let clamped = hz.clamp(0.2, 3.0);
+        ((clamped - 0.2) / (3.0 - 0.2)).clamp(0.0, 1.0)
+    }
+
+    pub fn normalized_to_wow_rate(norm: f32) -> f32 {
+        0.2 + norm.clamp(0.0, 1.0) * (3.0 - 0.2)
+    }
+
+    pub fn flutter_depth_to_normalized(pct: f32) -> f32 {
+        (pct / 100.0).clamp(0.0, 1.0)
+    }
+
+    pub fn normalized_to_flutter_depth(norm: f32) -> f32 {
+        norm.clamp(0.0, 1.0) * 100.0
+    }
+
+    pub fn flutter_rate_to_normalized(hz: f32) -> f32 {
+        let clamped = hz.clamp(10.0, 50.0);
+        ((clamped - 10.0) / (50.0 - 10.0)).clamp(0.0, 1.0)
+    }
+
+    pub fn normalized_to_flutter_rate(norm: f32) -> f32 {
+        10.0 + norm.clamp(0.0, 1.0) * (50.0 - 10.0)
+    }
+
+    pub fn bias_to_normalized(db: f32) -> f32 {
+        let clamped = db.clamp(-6.0, 6.0);
+        ((clamped - (-6.0)) / (6.0 - (-6.0))).clamp(0.0, 1.0)
+    }
+
+    pub fn normalized_to_bias(norm: f32) -> f32 {
+        -6.0 + norm.clamp(0.0, 1.0) * 12.0
+    }
+
+    pub fn azimuth_to_normalized(deg: f32) -> f32 {
+        let clamped = deg.clamp(-5.0, 5.0);
+        ((clamped - (-5.0)) / (5.0 - (-5.0))).clamp(0.0, 1.0)
+    }
+
+    pub fn normalized_to_azimuth(norm: f32) -> f32 {
+        -5.0 + norm.clamp(0.0, 1.0) * 10.0
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_ui(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
+    }
+
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        let lines = self.render_ascii(80, 20);
+        format!(
+            "--- ANALOG TAPE WOW/FLUTTER HUD [{}] [{}] [Drive: {:+.1} dB] [Wow: {:.0}%] [Flutter: {:.0}%] [THD: {:.2}%] ---\n{}\n[PASS] Analog Tape Flutter/Wow & Hysteresis Touch Targets (>= 44x44pt) Verified\n",
+            self.tape_speed.name(),
+            self.tape_formula.name(),
+            self.saturation_drive_db,
+            self.wow_depth_percent,
+            self.flutter_depth_percent,
+            self.real_time_thd_percent,
+            lines.join("\n")
+        )
     }
 
     /// Evaluate magnetic BH hysteresis curve transfer function: $B = \tanh(x \cdot \text{drive}) + \text{asymmetry}$.

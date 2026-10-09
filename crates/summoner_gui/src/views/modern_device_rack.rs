@@ -249,6 +249,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_harmonic_exciter_hud: bool,
     #[serde(default)]
     pub requested_open_stereo_widener_hud: bool,
+    #[serde(default)]
+    pub requested_open_subharmonic_synth_hud: bool,
+    #[serde(default)]
+    pub requested_open_tape_flutter_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -362,6 +366,8 @@ impl Default for ModernDeviceRackState {
             requested_open_optical_compressor_hud: false,
             requested_open_harmonic_exciter_hud: false,
             requested_open_stereo_widener_hud: false,
+            requested_open_subharmonic_synth_hud: false,
+            requested_open_tape_flutter_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -1098,6 +1104,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_optical_compressor = cur_selection.contains("OpticalCompressor") || cur_selection.contains("OptoComp") || cur_selection == "OpticalCompressorNode" || cur_selection.contains("VactrolCompressor") || cur_selection == "OpticalTubeCompressorLimiter" || cur_selection == "OptoelectronicVactrolOptocoupler" || cur_selection == "OpticalVactrolPeakMasterCompressor";
                     let is_harmonic_exciter = cur_selection.contains("HarmonicExciter") || cur_selection.contains("Exciter") || cur_selection == "HarmonicExciterNode" || cur_selection == "AuralExciter" || cur_selection.contains("TapeExciter");
                     let is_stereo_widener = cur_selection.contains("StereoWidener") || cur_selection.contains("StereoWidth") || cur_selection == "StereoWidenerNode" || cur_selection == "DynamicStereoWidthNode" || cur_selection.contains("HaasWidener") || cur_selection.contains("TransientSplayStereoWidener");
+                    let is_subharmonic_synth = cur_selection.contains("Subharmonic") || cur_selection.contains("SubBass") || cur_selection == "SubharmonicSynthNode" || cur_selection == "SubharmonicGenerator" || cur_selection.contains("SubSynth");
+                    let is_tape_flutter = cur_selection.contains("TapeFlutter") || cur_selection.contains("TapeWow") || cur_selection == "TapeFlutterNode" || cur_selection == "TapeWowFlutter" || cur_selection.contains("ReelFlutter");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1494,6 +1502,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("↔ Widener HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 255, 180))).on_hover_text("Open Psychoacoustic Stereo Widener & Vector Scope HUD").clicked()
                     {
                         state.requested_open_stereo_widener_hud = true;
+                    } else if is_subharmonic_synth
+                        && ui.button(RichText::new("🔊 Sub HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(180, 90, 255))).on_hover_text("Open Psychoacoustic Subharmonic Synth HUD").clicked()
+                    {
+                        state.requested_open_subharmonic_synth_hud = true;
+                    } else if is_tape_flutter
+                        && ui.button(RichText::new("📼 Tape HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 107, 43))).on_hover_text("Open Analog Tape Wow/Flutter & Hysteresis HUD").clicked()
+                    {
+                        state.requested_open_tape_flutter_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2358,6 +2374,8 @@ fn show_pro_parameter_drawer(
                     let is_optical_compressor = dev_kind.contains("OpticalCompressor") || dev_kind.contains("OptoComp") || dev_kind == "OpticalCompressorNode" || dev_kind.contains("VactrolCompressor") || dev_kind == "OpticalTubeCompressorLimiter" || dev_kind == "OptoelectronicVactrolOptocoupler" || dev_kind == "OpticalVactrolPeakMasterCompressor";
                     let is_harmonic_exciter = dev_kind.contains("HarmonicExciter") || dev_kind.contains("Exciter") || dev_kind == "HarmonicExciterNode" || dev_kind == "AuralExciter" || dev_kind.contains("TapeExciter");
                     let is_stereo_widener = dev_kind.contains("StereoWidener") || dev_kind.contains("StereoWidth") || dev_kind == "StereoWidenerNode" || dev_kind == "DynamicStereoWidthNode" || dev_kind.contains("HaasWidener") || dev_kind.contains("TransientSplayStereoWidener");
+                    let is_subharmonic_synth = dev_kind.contains("Subharmonic") || dev_kind.contains("SubBass") || dev_kind == "SubharmonicSynthNode" || dev_kind == "SubharmonicGenerator" || dev_kind.contains("SubSynth");
+                    let is_tape_flutter = dev_kind.contains("TapeFlutter") || dev_kind.contains("TapeWow") || dev_kind == "TapeFlutterNode" || dev_kind == "TapeWowFlutter" || dev_kind.contains("ReelFlutter");
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -10212,6 +10230,152 @@ fn show_pro_parameter_drawer(
                             let _ = sw_resp.on_hover_text(format!(
                                 "Psychoacoustic Stereo Widener HUD\nMid Width: {:.0}% | Haas Delay: {:.1} ms\nCorrelation: {:+.2}\n[Drag: Mid Width % (X) / Haas Delay ms (Y) Puck]",
                                 mid_w, haas_ms, corr
+                            ));
+                        }
+                    } else if is_subharmonic_synth {
+                        // Psychoacoustic Subharmonic Synth Mini View
+                        let (sub_resp, sub_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let sub_rect = sub_resp.rect;
+                        sub_painter.rect_filled(sub_rect, 2.0, Color32::from_rgb(12, 10, 24));
+
+                        let mut fc_hz = state.node_param_values.get("crossover_freq_hz").or_else(|| state.node_param_values.get("frequency")).copied().unwrap_or(80.0);
+                        let mut drive_db = state.node_param_values.get("sub_drive_db").or_else(|| state.node_param_values.get("drive")).copied().unwrap_or(4.5);
+                        let phase = state.node_param_values.get("phase_alignment_deg").or_else(|| state.node_param_values.get("phase")).copied().unwrap_or(0.0);
+
+                        if sub_resp.dragged() {
+                            if let Some(pos) = sub_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - sub_rect.left()) / sub_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - sub_rect.top()) / sub_rect.height())).clamp(0.0, 1.0);
+                                fc_hz = crate::views::subharmonic_synth_view::SubharmonicSynthView::normalized_to_freq(norm_x);
+                                drive_db = crate::views::subharmonic_synth_view::SubharmonicSynthView::normalized_to_drive(norm_y);
+                                state.node_param_values.insert("crossover_freq_hz".to_string(), fc_hz);
+                                state.node_param_values.insert("frequency".to_string(), fc_hz);
+                                state.node_param_values.insert("sub_drive_db".to_string(), drive_db);
+                                state.node_param_values.insert("drive".to_string(), drive_db);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_drive = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_drive).is_some() { bus.set(pid_drive, drive_db); }
+                                    let pid_freq = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_freq).is_some() { bus.set(pid_freq, fc_hz); }
+                                }
+                            }
+                        }
+
+                        // Subharmonic Energy Bars preview
+                        let norm_fc = crate::views::subharmonic_synth_view::SubharmonicSynthView::freq_to_normalized(fc_hz);
+                        let norm_dr = crate::views::subharmonic_synth_view::SubharmonicSynthView::drive_to_normalized(drive_db);
+
+                        // Draw baseline
+                        sub_painter.line_segment(
+                            [egui::pos2(sub_rect.left(), sub_rect.bottom() - 8.0), egui::pos2(sub_rect.right(), sub_rect.bottom() - 8.0)],
+                            Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(100, 70, 160, 80)),
+                        );
+
+                        // Sub-octave bar indicator
+                        let bar_h1 = (norm_dr * (sub_rect.height() - 20.0)).clamp(4.0, sub_rect.height() - 20.0);
+                        let bar_h2 = (norm_dr * 0.7 * (sub_rect.height() - 20.0)).clamp(3.0, sub_rect.height() - 20.0);
+                        let b1_rect = egui::Rect::from_min_max(
+                            egui::pos2(sub_rect.left() + 12.0, sub_rect.bottom() - 8.0 - bar_h1),
+                            egui::pos2(sub_rect.left() + 24.0, sub_rect.bottom() - 8.0),
+                        );
+                        let b2_rect = egui::Rect::from_min_max(
+                            egui::pos2(sub_rect.left() + 28.0, sub_rect.bottom() - 8.0 - bar_h2),
+                            egui::pos2(sub_rect.left() + 40.0, sub_rect.bottom() - 8.0),
+                        );
+                        sub_painter.rect_filled(b1_rect, 2.0, Color32::from_rgb(180, 90, 255));
+                        sub_painter.rect_filled(b2_rect, 2.0, Color32::from_rgb(140, 60, 220));
+
+                        // Interactive Frequency/Drive Puck
+                        let puck_x = sub_rect.left() + norm_fc * (sub_rect.width() - 55.0) + 48.0;
+                        let puck_y = sub_rect.bottom() - norm_dr * (sub_rect.height() - 22.0) - 10.0;
+                        sub_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(180, 90, 255));
+                        sub_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        // Readout
+                        sub_painter.text(
+                            egui::pos2(sub_rect.right() - 4.0, sub_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("SUB-SYNTH\nFc:{:.0}Hz\nDrv:{:+.1}dB\nPhs:{:+.0}°", fc_hz, drive_db, phase),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(180, 90, 255),
+                        );
+
+                        if sub_resp.hovered() {
+                            let _ = sub_resp.on_hover_text(format!(
+                                "Psychoacoustic Subharmonic Synth HUD\nCrossover: {:.1} Hz | Drive: {:+.1} dB\nPhase: {:+.1}°\n[Drag: Crossover Hz (X) / Sub Drive dB (Y) Puck]",
+                                fc_hz, drive_db, phase
+                            ));
+                        }
+                    } else if is_tape_flutter {
+                        // Analog Tape Flutter/Wow Mini View
+                        let (tf_resp, tf_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let tf_rect = tf_resp.rect;
+                        tf_painter.rect_filled(tf_rect, 2.0, Color32::from_rgb(18, 12, 8));
+
+                        let mut drive_db = state.node_param_values.get("saturation_drive_db").or_else(|| state.node_param_values.get("drive")).copied().unwrap_or(6.5);
+                        let mut wow_pct = state.node_param_values.get("wow_depth_percent").or_else(|| state.node_param_values.get("wow_depth")).copied().unwrap_or(35.0);
+                        let flutter_pct = state.node_param_values.get("flutter_depth_percent").or_else(|| state.node_param_values.get("flutter_depth")).copied().unwrap_or(25.0);
+
+                        if tf_resp.dragged() {
+                            if let Some(pos) = tf_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - tf_rect.left()) / tf_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - tf_rect.top()) / tf_rect.height())).clamp(0.0, 1.0);
+                                drive_db = crate::views::tape_flutter_view::TapeFlutterView::normalized_to_drive(norm_x);
+                                wow_pct = crate::views::tape_flutter_view::TapeFlutterView::normalized_to_modulation(norm_y);
+                                state.node_param_values.insert("saturation_drive_db".to_string(), drive_db);
+                                state.node_param_values.insert("drive".to_string(), drive_db);
+                                state.node_param_values.insert("wow_depth_percent".to_string(), wow_pct);
+                                state.node_param_values.insert("wow_depth".to_string(), wow_pct);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_drive = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_drive).is_some() { bus.set(pid_drive, drive_db); }
+                                    let pid_wow = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_wow).is_some() { bus.set(pid_wow, wow_pct); }
+                                }
+                            }
+                        }
+
+                        // Mini Hysteresis Curve Preview
+                        let steps = 24;
+                        let mut curve_pts = Vec::with_capacity(steps);
+                        let mid_y = tf_rect.center().y;
+                        let drive_gain = 10.0_f32.powf(drive_db / 20.0);
+                        for i in 0..steps {
+                            let t = i as f32 / (steps - 1) as f32;
+                            let px = tf_rect.left() + t * (tf_rect.width() - 55.0);
+                            let x = (t * 2.0 - 1.0) * drive_gain * 0.5;
+                            let y = (x / (1.0 + x * x).sqrt()).clamp(-1.0, 1.0);
+                            let py = mid_y - y * (tf_rect.height() * 0.38);
+                            curve_pts.push(egui::pos2(px, py));
+                        }
+                        tf_painter.add(egui::Shape::line(
+                            curve_pts,
+                            Stroke::new(1.8_f32, Color32::from_rgb(255, 107, 43)),
+                        ));
+
+                        // Interactive Drive/Wow Puck
+                        let norm_dr = crate::views::tape_flutter_view::TapeFlutterView::drive_to_normalized(drive_db);
+                        let norm_wow = crate::views::tape_flutter_view::TapeFlutterView::modulation_to_normalized(wow_pct);
+                        let puck_x = tf_rect.left() + norm_dr * (tf_rect.width() - 55.0);
+                        let puck_y = tf_rect.bottom() - norm_wow * (tf_rect.height() - 20.0) - 10.0;
+                        tf_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(255, 107, 43));
+                        tf_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        // Readout
+                        tf_painter.text(
+                            egui::pos2(tf_rect.right() - 4.0, tf_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("TAPE FLUTTER\nDrv:{:+.1}dB\nWow:{:.0}%\nFlut:{:.0}%", drive_db, wow_pct, flutter_pct),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(255, 107, 43),
+                        );
+
+                        if tf_resp.hovered() {
+                            let _ = tf_resp.on_hover_text(format!(
+                                "Analog Tape Flutter & Saturation HUD\nDrive: {:+.1} dB | Wow Drift: {:.0}%\nScrape Flutter: {:.0}%\n[Drag: Saturation Drive dB (X) / Wow Depth % (Y) Puck]",
+                                drive_db, wow_pct, flutter_pct
                             ));
                         }
                     } else {

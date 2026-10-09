@@ -2730,6 +2730,38 @@ Product Management has conducted a comprehensive readiness audit:
   - Pure unit tests: 329 passed in 0.22s (`cargo test -p summoner_gui --lib`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`).
 
+### Turn #100 (Sprint Turn #26) — Psychoacoustic Subharmonic Synth & Phase Alignment HUD and Analog Tape Wow/Flutter & Hysteresis Saturation HUD Convergence (Milestones 33 & 34)
+- [x] Psychoacoustic Subharmonic Synth & Analog Tape Wow/Flutter HUDs Integration:
+  - Integrated `SubharmonicSynthView` (Psychoacoustic Subharmonic Bass Generator & Phase Alignment HUD: 5 Operating Profiles [Sub -1 Oct (-12st), Sub -2 Oct (-24st), Sub 5th (-19st), Dual Sub Aligned, Saturated Transient], Crossover Frequency [20.0..160.0 Hz], Sub Drive [-24.0..+18.0 dB], Phase Alignment [-180.0..+180.0 deg], Master Dry/Wet Mix [0.0..100.0 %], Multi-Band Harmonic Energy Bars [Sub2, Sub1, Fundamental, Air1, Air2], Phase Correlation Readout, 2D Frequency vs Sub Drive Touch Puck with >= 44x44pt bounding target) and `TapeFlutterView` (Analog Tape Wow/Flutter & Magnetic Hysteresis Saturation HUD: 4 Transport Speeds [3.75 ips, 7.5 ips, 15 ips, 30 ips], 4 Oxide Tape Formulations [Type I Ferric, Type II Chrome, Type III Ferrochrome, Type IV Master 911], Saturation Drive [-12.0..+24.0 dB], Wow Depth [0.0..100.0 %], Wow Rate [0.2..3.0 Hz], Scrape Flutter Depth [0.0..100.0 %], Flutter Rate [10.0..50.0 Hz], AC Bias Calibration [-6.0..+6.0 dB], Azimuth Skew [-5.0..+5.0 deg], Real-time Harmonic THD Readout, 2D Magnetic Hysteresis Curve Canvas, and Touch-Draggable Drive vs Wow Puck with >= 44x44pt bounding target) into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/subharmonic_synth_view.rs` & `tape_flutter_view.rs`):
+  - In `SubharmonicSynthView`: added `name()` to `SubharmonicProfile`, coordinate normalizations & round-trips (`phase_to_normalized`, `normalized_to_phase`, `mix_to_normalized`, `normalized_to_mix`), `show_ui(&mut self, ui: &mut egui::Ui)`, and `render_ascii_snapshot_str() -> String` with subharmonic synthesis metadata banner and verified hit target badge.
+  - In `TapeFlutterView`: added `name()` to `TapeSpeed` and `TapeFormula`, `set_speed()`, `set_formula()`, coordinate normalizations & round-trips (`wow_rate_to_normalized`, `normalized_to_wow_rate`, `flutter_depth_to_normalized`, `normalized_to_flutter_depth`, `flutter_rate_to_normalized`, `normalized_to_flutter_rate`, `bias_to_normalized`, `normalized_to_bias`, `azimuth_to_normalized`, `normalized_to_azimuth`), `show_ui(&mut self, ui: &mut egui::Ui)`, and `render_ascii_snapshot_str() -> String` with tape flutter/wow metadata banner and verified hit target badge.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_subharmonic_synth_modal: bool`, `subharmonic_synth_view: SubharmonicSynthView`, `show_tape_flutter_modal: bool`, and `tape_flutter_view: TapeFlutterView`.
+  - Added dedicated modal windows `show_subharmonic_synth_modal_window` and `show_tape_flutter_modal_window` with responsive styling, WCAG AAA contrast, and >= 44x44pt touch bounds.
+  - Added public lifecycle methods: `open_subharmonic_synth_hud()`, `close_subharmonic_synth_hud()`, `is_subharmonic_synth_hud_open()`, `open_tape_flutter_hud()`, `close_tape_flutter_hud()`, `is_tape_flutter_hud_open()`.
+  - Real-time parameter sync bridges (`sync_subharmonic_synth_hud_state` and `sync_tape_flutter_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_subharmonic_synth_hud: bool` and `requested_open_tape_flutter_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🔊 Open Subharmonic Synth HUD]` and `[📼 Open Tape Wow/Flutter HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header buttons `[🔊 Sub HUD]` and `[📼 Tape HUD]` in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Subharmonic Synth: 2D subharmonic energy bars & baseline preview, interactive Crossover/Drive puck, live readout, and lock-free `ParamBus` slot dispatch.
+    * Tape Flutter: 2D magnetic hysteresis curve & saturation preview, interactive Drive/Wow puck, live readout, and lock-free `ParamBus` slot dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_subharmonic_synth_hud` under `"Dynamics & Saturation"` and `open_tape_flutter_hud` under `"Distortion & Color"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_subharmonic_synth_hud()` and `open_tape_flutter_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier163_turn100_tests.rs`:
+    * Pure tests: view initialization, coordinate normalizations (crossover frequency, drive, phase, mix, wow rate, flutter depth, flutter rate, bias, azimuth), mode and profile switching across all modes, energy bar & speed modulation calculations, touch puck hit testing (>= 44x44pt bounding targets), deterministic ASCII snapshots with metadata banners.
+    * GUI tests: modal window lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch without allocations, trigger button propagation from rack and inspector, command palette action verification.
+  - Registered `tier163_turn100_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Feature tests: 5 passed in 0.08s (`cargo test -p summoner_gui --features gui -- tier163`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`).
+
+
 
 
 

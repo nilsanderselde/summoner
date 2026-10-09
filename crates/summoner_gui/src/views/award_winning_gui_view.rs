@@ -840,6 +840,10 @@ pub struct AwardWinningGuiView {
     pub harmonic_exciter_view: crate::views::harmonic_exciter_view::HarmonicExciterView,
     pub show_stereo_widener_modal: bool,
     pub stereo_widener_view: crate::views::stereo_widener_view::StereoWidenerView,
+    pub show_subharmonic_synth_modal: bool,
+    pub subharmonic_synth_view: crate::views::subharmonic_synth_view::SubharmonicSynthView,
+    pub show_tape_flutter_modal: bool,
+    pub tape_flutter_view: crate::views::tape_flutter_view::TapeFlutterView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1296,6 +1300,10 @@ impl AwardWinningGuiView {
             harmonic_exciter_view: crate::views::harmonic_exciter_view::HarmonicExciterView::new(),
             show_stereo_widener_modal: false,
             stereo_widener_view: crate::views::stereo_widener_view::StereoWidenerView::new(),
+            show_subharmonic_synth_modal: false,
+            subharmonic_synth_view: crate::views::subharmonic_synth_view::SubharmonicSynthView::new(),
+            show_tape_flutter_modal: false,
+            tape_flutter_view: crate::views::tape_flutter_view::TapeFlutterView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2435,6 +2443,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_stereo_widener_hud = false;
             self.open_stereo_widener_hud();
         }
+        if self.inspector_state.requested_open_subharmonic_synth_hud || self.device_rack_state.requested_open_subharmonic_synth_hud {
+            self.inspector_state.requested_open_subharmonic_synth_hud = false;
+            self.device_rack_state.requested_open_subharmonic_synth_hud = false;
+            self.open_subharmonic_synth_hud();
+        }
+        if self.inspector_state.requested_open_tape_flutter_hud || self.device_rack_state.requested_open_tape_flutter_hud {
+            self.inspector_state.requested_open_tape_flutter_hud = false;
+            self.device_rack_state.requested_open_tape_flutter_hud = false;
+            self.open_tape_flutter_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2538,6 +2556,8 @@ impl AwardWinningGuiView {
         self.show_optical_compressor_modal_window(ui);
         self.show_harmonic_exciter_modal_window(ui);
         self.show_stereo_widener_modal_window(ui);
+        self.show_subharmonic_synth_modal_window(ui);
+        self.show_tape_flutter_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -17732,6 +17752,213 @@ impl AwardWinningGuiView {
             if bus.get(pid_xlow).is_some() { bus.set(pid_xlow, xlow); }
             if bus.get(pid_xhigh).is_some() { bus.set(pid_xhigh, xhigh); }
             if bus.get(pid_bal).is_some() { bus.set(pid_bal, bal); }
+        }
+    }
+
+    pub fn open_subharmonic_synth_hud(&mut self) {
+        self.show_subharmonic_synth_modal = true;
+    }
+
+    pub fn close_subharmonic_synth_hud(&mut self) {
+        self.show_subharmonic_synth_modal = false;
+    }
+
+    pub fn is_subharmonic_synth_hud_open(&self) -> bool {
+        self.show_subharmonic_synth_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_subharmonic_synth_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_subharmonic_synth_modal {
+            return;
+        }
+
+        let mut is_open = self.show_subharmonic_synth_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🔊 Psychoacoustic Subharmonic Synth & Phase Alignment HUD")
+            .id(egui::Id::new("subharmonic_synth_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Multi-Band Subharmonic Bass Generation, Phase Correlation & Harmonic Saturation (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.subharmonic_synth_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_subharmonic_synth_modal = is_open;
+        self.sync_subharmonic_synth_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_subharmonic_synth_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let fc = self.subharmonic_synth_view.crossover_freq_hz;
+        let drive = self.subharmonic_synth_view.sub_drive_db;
+        let phase = self.subharmonic_synth_view.phase_alignment_deg;
+        let mix = self.subharmonic_synth_view.dry_wet_mix_pct;
+
+        self.device_rack_state.node_param_values.insert("crossover_freq_hz".to_string(), fc);
+        self.device_rack_state.node_param_values.insert("frequency".to_string(), fc);
+        self.device_rack_state.node_param_values.insert("sub_drive_db".to_string(), drive);
+        self.device_rack_state.node_param_values.insert("drive".to_string(), drive);
+        self.device_rack_state.node_param_values.insert("phase_alignment_deg".to_string(), phase);
+        self.device_rack_state.node_param_values.insert("phase".to_string(), phase);
+        self.device_rack_state.node_param_values.insert("dry_wet_mix_pct".to_string(), mix);
+        self.device_rack_state.node_param_values.insert("mix".to_string(), mix);
+
+        self.inspector_state.node_param_values.insert("crossover_freq_hz".to_string(), fc);
+        self.inspector_state.node_param_values.insert("frequency".to_string(), fc);
+        self.inspector_state.node_param_values.insert("sub_drive_db".to_string(), drive);
+        self.inspector_state.node_param_values.insert("drive".to_string(), drive);
+        self.inspector_state.node_param_values.insert("phase_alignment_deg".to_string(), phase);
+        self.inspector_state.node_param_values.insert("phase".to_string(), phase);
+        self.inspector_state.node_param_values.insert("dry_wet_mix_pct".to_string(), mix);
+        self.inspector_state.node_param_values.insert("mix".to_string(), mix);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_drive = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_freq = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_phase = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_mix = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_drive).is_some() { bus.set(pid_drive, drive); }
+            if bus.get(pid_freq).is_some() { bus.set(pid_freq, fc); }
+            if bus.get(pid_phase).is_some() { bus.set(pid_phase, phase); }
+            if bus.get(pid_mix).is_some() { bus.set(pid_mix, mix); }
+        }
+    }
+
+    pub fn open_tape_flutter_hud(&mut self) {
+        self.show_tape_flutter_modal = true;
+    }
+
+    pub fn close_tape_flutter_hud(&mut self) {
+        self.show_tape_flutter_modal = false;
+    }
+
+    pub fn is_tape_flutter_hud_open(&self) -> bool {
+        self.show_tape_flutter_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_tape_flutter_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_tape_flutter_modal {
+            return;
+        }
+
+        let mut is_open = self.show_tape_flutter_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("📼 Analog Tape Wow/Flutter & Hysteresis Saturation HUD")
+            .id(egui::Id::new("tape_flutter_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Reel-to-Reel Capstan Eccentricity, Scrape Flutter & Magnetic Oxide Hysteresis (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.tape_flutter_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_tape_flutter_modal = is_open;
+        self.sync_tape_flutter_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_tape_flutter_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let drive = self.tape_flutter_view.saturation_drive_db;
+        let wow = self.tape_flutter_view.wow_depth_percent;
+        let wow_rate = self.tape_flutter_view.wow_rate_hz;
+        let flutter = self.tape_flutter_view.flutter_depth_percent;
+        let flutter_rate = self.tape_flutter_view.flutter_rate_hz;
+        let bias = self.tape_flutter_view.bias_calibration_db;
+        let azimuth = self.tape_flutter_view.azimuth_skew_deg;
+
+        self.device_rack_state.node_param_values.insert("saturation_drive_db".to_string(), drive);
+        self.device_rack_state.node_param_values.insert("drive".to_string(), drive);
+        self.device_rack_state.node_param_values.insert("wow_depth_percent".to_string(), wow);
+        self.device_rack_state.node_param_values.insert("wow_depth".to_string(), wow);
+        self.device_rack_state.node_param_values.insert("wow_rate_hz".to_string(), wow_rate);
+        self.device_rack_state.node_param_values.insert("wow_rate".to_string(), wow_rate);
+        self.device_rack_state.node_param_values.insert("flutter_depth_percent".to_string(), flutter);
+        self.device_rack_state.node_param_values.insert("flutter_depth".to_string(), flutter);
+        self.device_rack_state.node_param_values.insert("flutter_rate_hz".to_string(), flutter_rate);
+        self.device_rack_state.node_param_values.insert("flutter_rate".to_string(), flutter_rate);
+        self.device_rack_state.node_param_values.insert("bias_calibration_db".to_string(), bias);
+        self.device_rack_state.node_param_values.insert("bias".to_string(), bias);
+        self.device_rack_state.node_param_values.insert("azimuth_skew_deg".to_string(), azimuth);
+        self.device_rack_state.node_param_values.insert("azimuth".to_string(), azimuth);
+
+        self.inspector_state.node_param_values.insert("saturation_drive_db".to_string(), drive);
+        self.inspector_state.node_param_values.insert("drive".to_string(), drive);
+        self.inspector_state.node_param_values.insert("wow_depth_percent".to_string(), wow);
+        self.inspector_state.node_param_values.insert("wow_depth".to_string(), wow);
+        self.inspector_state.node_param_values.insert("wow_rate_hz".to_string(), wow_rate);
+        self.inspector_state.node_param_values.insert("wow_rate".to_string(), wow_rate);
+        self.inspector_state.node_param_values.insert("flutter_depth_percent".to_string(), flutter);
+        self.inspector_state.node_param_values.insert("flutter_depth".to_string(), flutter);
+        self.inspector_state.node_param_values.insert("flutter_rate_hz".to_string(), flutter_rate);
+        self.inspector_state.node_param_values.insert("flutter_rate".to_string(), flutter_rate);
+        self.inspector_state.node_param_values.insert("bias_calibration_db".to_string(), bias);
+        self.inspector_state.node_param_values.insert("bias".to_string(), bias);
+        self.inspector_state.node_param_values.insert("azimuth_skew_deg".to_string(), azimuth);
+        self.inspector_state.node_param_values.insert("azimuth".to_string(), azimuth);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_drive = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_wow = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_flutter = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_bias = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_drive).is_some() { bus.set(pid_drive, drive); }
+            if bus.get(pid_wow).is_some() { bus.set(pid_wow, wow); }
+            if bus.get(pid_flutter).is_some() { bus.set(pid_flutter, flutter); }
+            if bus.get(pid_bias).is_some() { bus.set(pid_bias, bias); }
         }
     }
     fn render_patch_cords_canvas(&mut self, ui: &mut egui::Ui, available_h: f32) {

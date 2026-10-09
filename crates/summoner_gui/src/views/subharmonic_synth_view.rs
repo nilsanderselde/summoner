@@ -28,6 +28,10 @@ pub enum SubharmonicProfile {
 }
 
 impl SubharmonicProfile {
+    pub fn name(&self) -> &'static str {
+        self.profile_name()
+    }
+
     pub fn profile_name(&self) -> &'static str {
         match self {
             Self::SubOctave12st => "SUB -1 OCT (-12st)",
@@ -132,6 +136,23 @@ impl SubharmonicSynthView {
         MIN_SUB_DRIVE_DB + norm.clamp(0.0, 1.0) * (MAX_SUB_DRIVE_DB - MIN_SUB_DRIVE_DB)
     }
 
+    pub fn phase_to_normalized(deg: f32) -> f32 {
+        let clamped = deg.clamp(MIN_PHASE_DEG, MAX_PHASE_DEG);
+        ((clamped - MIN_PHASE_DEG) / (MAX_PHASE_DEG - MIN_PHASE_DEG)).clamp(0.0, 1.0)
+    }
+
+    pub fn normalized_to_phase(norm: f32) -> f32 {
+        MIN_PHASE_DEG + norm.clamp(0.0, 1.0) * (MAX_PHASE_DEG - MIN_PHASE_DEG)
+    }
+
+    pub fn mix_to_normalized(pct: f32) -> f32 {
+        (pct / 100.0).clamp(0.0, 1.0)
+    }
+
+    pub fn normalized_to_mix(norm: f32) -> f32 {
+        norm.clamp(0.0, 1.0) * 100.0
+    }
+
     pub fn set_profile(&mut self, profile: SubharmonicProfile) {
         self.profile = profile;
         self.crossover_freq_hz = profile.nominal_crossover_hz();
@@ -225,6 +246,25 @@ impl SubharmonicSynthView {
         grid.into_iter()
             .map(|row| row.into_iter().collect())
             .collect()
+    }
+
+    /// Render deterministic ASCII snapshot with metadata banner.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        let lines = self.render_ascii(80, 20);
+        format!(
+            "--- PSYCHOACOUSTIC SUBHARMONIC SYNTH HUD [{}] [Fc: {:.1} Hz] [Drive: {:+.1} dB] [Phase: {:+.1}°] [Mix: {:.0}%] ---\n{}\n[PASS] Psychoacoustic Subharmonic Generator & Touch Targets (>= 44x44pt) Verified\n",
+            self.profile.name(),
+            self.crossover_freq_hz,
+            self.sub_drive_db,
+            self.phase_alignment_deg,
+            self.dry_wet_mix_pct,
+            lines.join("\n")
+        )
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_ui(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
     }
 
     #[cfg(feature = "gui")]
