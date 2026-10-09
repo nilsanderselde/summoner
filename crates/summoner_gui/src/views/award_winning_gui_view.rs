@@ -848,6 +848,10 @@ pub struct AwardWinningGuiView {
     pub transient_designer_view: crate::views::transient_designer_view::TransientDesignerView,
     pub show_upward_compressor_modal: bool,
     pub upward_compressor_view: crate::views::upward_compressor_view::UpwardCompressorView,
+    pub show_resonance_suppressor_modal: bool,
+    pub resonance_suppressor_view: crate::views::resonance_suppressor_view::ResonanceSuppressorView,
+    pub show_fm_matrix_modal: bool,
+    pub fm_matrix_view: crate::views::fm_matrix_view::FmMatrixView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1312,6 +1316,10 @@ impl AwardWinningGuiView {
             transient_designer_view: crate::views::transient_designer_view::TransientDesignerView::new(),
             show_upward_compressor_modal: false,
             upward_compressor_view: crate::views::upward_compressor_view::UpwardCompressorView::new(),
+            show_resonance_suppressor_modal: false,
+            resonance_suppressor_view: crate::views::resonance_suppressor_view::ResonanceSuppressorView::new(),
+            show_fm_matrix_modal: false,
+            fm_matrix_view: crate::views::fm_matrix_view::FmMatrixView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2470,6 +2478,16 @@ impl AwardWinningGuiView {
             self.inspector_state.requested_open_upward_compressor_hud = false;
             self.device_rack_state.requested_open_upward_compressor_hud = false;
             self.open_upward_compressor_hud();
+        }
+        if self.inspector_state.requested_open_resonance_suppressor_hud || self.device_rack_state.requested_open_resonance_suppressor_hud {
+            self.inspector_state.requested_open_resonance_suppressor_hud = false;
+            self.device_rack_state.requested_open_resonance_suppressor_hud = false;
+            self.open_resonance_suppressor_hud();
+        }
+        if self.inspector_state.requested_open_fm_matrix_hud || self.device_rack_state.requested_open_fm_matrix_hud {
+            self.inspector_state.requested_open_fm_matrix_hud = false;
+            self.device_rack_state.requested_open_fm_matrix_hud = false;
+            self.open_fm_matrix_hud();
         }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter

@@ -34,6 +34,18 @@ pub enum FmAlgorithm {
     Algo32PureAdditive,    // 1, 2, 3, 4, 5, 6 (6 independent carrier oscillators)
 }
 
+impl FmAlgorithm {
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::Algo1LinearCascade => "Linear Cascade",
+            Self::Algo5DualCascade => "Dual Cascade",
+            Self::Algo16BranchModulator => "Branch Modulator",
+            Self::Algo22ParallelCarrier => "Parallel Carrier",
+            Self::Algo32PureAdditive => "Pure Additive",
+        }
+    }
+}
+
 /// Single FM Operator Configuration.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct FmOperator {
@@ -164,6 +176,41 @@ impl FmMatrixView {
     pub fn normalized_to_ratio(norm: f32) -> f32 {
         let norm = norm.clamp(0.0, 1.0);
         0.5 * 2.0_f32.powf(norm * 6.0)
+    }
+
+    /// Set FM routing algorithm.
+    pub fn set_algorithm(&mut self, algo: FmAlgorithm) {
+        self.algorithm = algo;
+    }
+
+    /// Convert feedback amount [0.0 ..= 100.0 %] to normalized coordinate [0.0 ..= 1.0].
+    pub fn feedback_to_normalized(feedback: f32) -> f32 {
+        (feedback.clamp(0.0, 100.0) / 100.0).clamp(0.0, 1.0)
+    }
+
+    /// Convert normalized coordinate [0.0 ..= 1.0] to feedback amount [0.0 ..= 100.0 %].
+    pub fn normalized_to_feedback(norm: f32) -> f32 {
+        norm.clamp(0.0, 1.0) * 100.0
+    }
+
+    /// Convert harmonic richness metric [0.0 ..= 100.0 %] to normalized coordinate [0.0 ..= 1.0].
+    pub fn richness_to_normalized(richness: f32) -> f32 {
+        (richness.clamp(0.0, 100.0) / 100.0).clamp(0.0, 1.0)
+    }
+
+    /// Convert normalized coordinate [0.0 ..= 1.0] to harmonic richness [0.0 ..= 100.0 %].
+    pub fn normalized_to_richness(norm: f32) -> f32 {
+        norm.clamp(0.0, 1.0) * 100.0
+    }
+
+    /// Render ASCII snapshot as a single newline-delimited string.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        self.render_ascii(80, 24).join("\n")
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_ui(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
     }
 
     /// Calculate approximate Bessel sideband spectrum energy for a given modulation index $\beta$.

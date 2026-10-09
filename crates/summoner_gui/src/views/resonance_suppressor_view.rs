@@ -22,6 +22,16 @@ pub enum SuppressorMode {
     DeepHarmonicTame, // Multi-harmonic tracking across octave partials
 }
 
+impl SuppressorMode {
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::FastSurgical => "Surgical",
+            Self::MusicalSmooth => "Smooth",
+            Self::DeepHarmonicTame => "Harmonic",
+        }
+    }
+}
+
 /// A single dynamic resonance suppression node.
 #[derive(Debug, Clone)]
 pub struct ResonanceNode {
@@ -109,6 +119,31 @@ impl ResonanceSuppressorView {
     /// Convert normalized coordinate to depth dB (0.0 .. 24.0).
     pub fn normalized_to_depth(norm: f32) -> f32 {
         norm.clamp(0.0, 1.0) * 24.0
+    }
+
+    /// Set suppressor operating mode.
+    pub fn set_mode(&mut self, mode: SuppressorMode) {
+        self.mode = mode;
+    }
+
+    /// Convert Q bandwidth [0.5 ..= 30.0] to normalized coordinate [0.0 ..= 1.0].
+    pub fn q_to_normalized(q: f32) -> f32 {
+        ((q.clamp(0.5, 30.0) - 0.5) / 29.5).clamp(0.0, 1.0)
+    }
+
+    /// Convert normalized coordinate [0.0 ..= 1.0] to Q bandwidth [0.5 ..= 30.0].
+    pub fn normalized_to_q(norm: f32) -> f32 {
+        0.5 + norm.clamp(0.0, 1.0) * 29.5
+    }
+
+    /// Convert sensitivity [0.0 ..= 100.0 %] to normalized coordinate [0.0 ..= 1.0].
+    pub fn sensitivity_to_normalized(sens: f32) -> f32 {
+        (sens.clamp(0.0, 100.0) / 100.0).clamp(0.0, 1.0)
+    }
+
+    /// Convert normalized coordinate [0.0 ..= 1.0] to sensitivity [0.0 ..= 100.0 %].
+    pub fn normalized_to_sensitivity(norm: f32) -> f32 {
+        norm.clamp(0.0, 1.0) * 100.0
     }
 
     /// Add a new resonance tracking node if under `MAX_RESONANCE_NODES`.
@@ -228,6 +263,22 @@ impl ResonanceSuppressorView {
         );
         lines.push(footer);
         lines
+    }
+
+    /// Render ASCII snapshot as a single newline-delimited string.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        self.render_ascii(80, 24).join("\n")
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_ui(&mut self, ui: &mut egui::Ui) {
+        let available_w = ui.available_width().max(800.0);
+        let (rect, _response) = ui.allocate_exact_size(
+            egui::vec2(available_w, 495.0),
+            egui::Sense::click_and_drag(),
+        );
+        let layout_rect = Rect::new(rect.min.x, rect.min.y, rect.width(), rect.height());
+        self.show(ui, layout_rect);
     }
 
     #[cfg(feature = "gui")]
@@ -592,5 +643,64 @@ impl ResonanceSuppressorView {
             egui::FontId::proportional(11.0),
             Color32::from_rgb(0, 255, 180),
         );
+
+        // Interactive Pointer Input
+        if let Some(pos) = ui.input(|i| i.pointer.interact_pos()) {
+            if ui.input(|i| i.pointer.primary_down()) {
+                let egui_curve = egui::Rect::from_min_size(
+                    egui::pos2(curve_rect.x, curve_rect.y),
+                    egui::vec2(curve_rect.width, curve_rect.height),
+                );
+                if egui_curve.contains(pos) {
+                    for idx in 0..self.nodes.len() {
+                        if self.hit_test_node((pos.x, pos.y), curve_rect, idx) {
+                            self.selected_node_idx = idx;
+                            break;
+                        }
+                    }
+                    if let Some(node) = self.nodes.get_mut(self.selected_node_idx) {
+                        let norm_x = ((pos.x - curve_rect.x) / curve_rect.width).clamp(0.0, 1.0);
+                        let norm_y = (1.0 - (pos.y - curve_rect.y) / curve_rect.height).clamp(0.0, 1.0);
+                        node.freq_hz = Self::normalized_to_freq(norm_x);
+                        node.depth_db = Self::normalized_to_depth(norm_y);
+                    }
+                }
+            }
+
+            if ui.input(|i| i.pointer.primary_clicked()) {
+                // Check mode tabs
+                for (i, (m, _label)) in modes.iter().enumerate() {
+                    let bx = mode_rect.x + 12.0 + (i as f32 * (tab_w + 8.0));
+                    let by = mode_rect.y + 40.0;
+                    let tab_rect = egui::Rect::from_min_size(egui::pos2(bx, by), egui::vec2(tab_w, tab_h));
+                    if tab_rect.contains(pos) {
+                        self.mode = *m;
+                    }
+                }
+                // Check add/remove node buttons
+                if btn_add_rect.contains(pos) {
+                    let next_f = match self.nodes.len() {
+                        1 => 1200.0,
+                        2 => 3200.0,
+                        3 => 6500.0,
+                        4 => 9000.0,
+                        _ => 12000.0,
+                    };
+                    self.add_node(next_f, 10.0, 10.0);
+                }
+                if btn_rem_rect.contains(pos) {
+                    let cur = self.selected_node_idx;
+                    self.remove_node(cur);
+                }
+                // Check delta audition toggle
+                let delta_btn_rect = egui::Rect::from_min_size(
+                    egui::pos2(mode_rect.x + 12.0, delta_y),
+                    egui::vec2(286.0, 44.0),
+                );
+                if delta_btn_rect.contains(pos) {
+                    self.delta_listen = !self.delta_listen;
+                }
+            }
+        }
     }
 }
