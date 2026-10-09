@@ -282,6 +282,10 @@ pub struct ModernInspectorState {
     pub requested_open_dialog_gating_hud: bool,
     #[serde(default)]
     pub requested_open_transient_reconstructor_hud: bool,
+    #[serde(default)]
+    pub requested_open_transient_unwrapper_hud: bool,
+    #[serde(default)]
+    pub requested_open_spectral_unmasker_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -429,6 +433,8 @@ impl Default for ModernInspectorState {
             requested_open_transient_gate_hud: false,
             requested_open_dialog_gating_hud: false,
             requested_open_transient_reconstructor_hud: false,
+            requested_open_transient_unwrapper_hud: false,
+            requested_open_spectral_unmasker_hud: false,
         }
     }
 }
@@ -2133,6 +2139,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open Multiband Linear-Phase Transient Reconstructor & Crest Expander HUD").clicked() {
                     state.requested_open_transient_reconstructor_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("TransientUnwrapper") || active_kind.contains("Unwrapper") || active_kind == "TransientUnwrapperNode" || active_kind.contains("DynamicUnwrapper") || active_kind.contains("DeCompression") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🌐 Open Transient Unwrapper HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 229, 255)))
+                        .fill(Color32::from_rgb(14, 24, 38))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 229, 255)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Psychoacoustic Stereo Transient Unwrapper & Spatial Depth HUD").clicked() {
+                    state.requested_open_transient_unwrapper_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("SpectralUnmasker") || active_kind.contains("Unmasker") || active_kind == "SpectralUnmaskerNode" || active_kind.contains("IntelligentSpectral") || active_kind.contains("SidechainUnmask") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🌊 Open Spectral Unmasker HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 255, 180)))
+                        .fill(Color32::from_rgb(12, 32, 24))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 255, 180)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Master Bus Multi-Point Spectral Dynamics Unmasker HUD").clicked() {
+                    state.requested_open_spectral_unmasker_hud = true;
                 }
                 ui.add_space(4.0);
             }

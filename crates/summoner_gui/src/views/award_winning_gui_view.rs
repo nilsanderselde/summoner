@@ -888,6 +888,10 @@ pub struct AwardWinningGuiView {
     pub dialog_gating_view: crate::views::dialog_gating_view::DialogGatingView,
     pub show_transient_reconstructor_modal: bool,
     pub transient_reconstructor_view: crate::views::transient_reconstructor_view::TransientReconstructorView,
+    pub show_transient_unwrapper_modal: bool,
+    pub transient_unwrapper_view: crate::views::transient_unwrapper_view::TransientUnwrapperView,
+    pub show_spectral_unmasker_modal: bool,
+    pub spectral_unmasker_view: crate::views::spectral_unmasker_view::SpectralUnmaskerView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1392,6 +1396,10 @@ impl AwardWinningGuiView {
             dialog_gating_view: crate::views::dialog_gating_view::DialogGatingView::new(),
             show_transient_reconstructor_modal: false,
             transient_reconstructor_view: crate::views::transient_reconstructor_view::TransientReconstructorView::new(),
+            show_transient_unwrapper_modal: false,
+            transient_unwrapper_view: crate::views::transient_unwrapper_view::TransientUnwrapperView::new(),
+            show_spectral_unmasker_modal: false,
+            spectral_unmasker_view: crate::views::spectral_unmasker_view::SpectralUnmaskerView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2651,6 +2659,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_transient_reconstructor_hud = false;
             self.open_transient_reconstructor_hud();
         }
+        if self.inspector_state.requested_open_transient_unwrapper_hud || self.device_rack_state.requested_open_transient_unwrapper_hud {
+            self.inspector_state.requested_open_transient_unwrapper_hud = false;
+            self.device_rack_state.requested_open_transient_unwrapper_hud = false;
+            self.open_transient_unwrapper_hud();
+        }
+        if self.inspector_state.requested_open_spectral_unmasker_hud || self.device_rack_state.requested_open_spectral_unmasker_hud {
+            self.inspector_state.requested_open_spectral_unmasker_hud = false;
+            self.device_rack_state.requested_open_spectral_unmasker_hud = false;
+            self.open_spectral_unmasker_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2778,6 +2796,8 @@ impl AwardWinningGuiView {
         self.show_transient_gate_modal_window(ui);
         self.show_dialog_gating_modal_window(ui);
         self.show_transient_reconstructor_modal_window(ui);
+        self.show_transient_unwrapper_modal_window(ui);
+        self.show_spectral_unmasker_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -20265,6 +20285,204 @@ impl AwardWinningGuiView {
             if bus.get(pid_hd).is_some() { bus.set(pid_hd, hold); }
         }
     }
+
+    pub fn open_transient_unwrapper_hud(&mut self) {
+        self.show_transient_unwrapper_modal = true;
+    }
+
+    pub fn close_transient_unwrapper_hud(&mut self) {
+        self.show_transient_unwrapper_modal = false;
+    }
+
+    pub fn is_transient_unwrapper_hud_open(&self) -> bool {
+        self.show_transient_unwrapper_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_transient_unwrapper_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_transient_unwrapper_modal {
+            return;
+        }
+
+        let mut is_open = self.show_transient_unwrapper_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🌐 Psychoacoustic Stereo Transient Unwrapper & Spatial Depth HUD")
+            .id(egui::Id::new("transient_unwrapper_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Dynamic Side-Transient Unwrapping, Spatial Depth Decorrelation & Sub-Bass Monomaker (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.transient_unwrapper_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_transient_unwrapper_modal = is_open;
+        self.sync_transient_unwrapper_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_transient_unwrapper_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let width = self.transient_unwrapper_view.spatial_width_pct;
+        let delay = self.transient_unwrapper_view.decorrelation_delay_ms;
+        let angle = self.transient_unwrapper_view.unwrap_angle_deg;
+        let crossover = self.transient_unwrapper_view.mono_crossover_hz;
+        let sens = self.transient_unwrapper_view.transient_sensitivity;
+        let iacc = self.transient_unwrapper_view.iacc_correlation;
+        let side_gain = self.transient_unwrapper_view.side_channel_gain_db;
+
+        self.device_rack_state.node_param_values.insert("spatial_width_pct".to_string(), width);
+        self.device_rack_state.node_param_values.insert("crest_expansion_ratio".to_string(), (width / 100.0).clamp(1.0, 3.5));
+        self.device_rack_state.node_param_values.insert("decorrelation_delay_ms".to_string(), delay);
+        self.device_rack_state.node_param_values.insert("unwrap_angle_deg".to_string(), angle);
+        self.device_rack_state.node_param_values.insert("mono_crossover_hz".to_string(), crossover);
+        self.device_rack_state.node_param_values.insert("transient_sensitivity".to_string(), sens);
+        self.device_rack_state.node_param_values.insert("iacc_correlation".to_string(), iacc);
+        self.device_rack_state.node_param_values.insert("side_channel_gain_db".to_string(), side_gain);
+
+        self.inspector_state.node_param_values.insert("spatial_width_pct".to_string(), width);
+        self.inspector_state.node_param_values.insert("crest_expansion_ratio".to_string(), (width / 100.0).clamp(1.0, 3.5));
+        self.inspector_state.node_param_values.insert("decorrelation_delay_ms".to_string(), delay);
+        self.inspector_state.node_param_values.insert("unwrap_angle_deg".to_string(), angle);
+        self.inspector_state.node_param_values.insert("mono_crossover_hz".to_string(), crossover);
+        self.inspector_state.node_param_values.insert("transient_sensitivity".to_string(), sens);
+        self.inspector_state.node_param_values.insert("iacc_correlation".to_string(), iacc);
+        self.inspector_state.node_param_values.insert("side_channel_gain_db".to_string(), side_gain);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_w = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_d = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_a = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_c = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_w).is_some() { bus.set(pid_w, width); }
+            if bus.get(pid_d).is_some() { bus.set(pid_d, delay); }
+            if bus.get(pid_a).is_some() { bus.set(pid_a, angle); }
+            if bus.get(pid_c).is_some() { bus.set(pid_c, crossover); }
+        }
+    }
+
+    pub fn open_spectral_unmasker_hud(&mut self) {
+        self.show_spectral_unmasker_modal = true;
+    }
+
+    pub fn close_spectral_unmasker_hud(&mut self) {
+        self.show_spectral_unmasker_modal = false;
+    }
+
+    pub fn is_spectral_unmasker_hud_open(&self) -> bool {
+        self.show_spectral_unmasker_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_spectral_unmasker_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_spectral_unmasker_modal {
+            return;
+        }
+
+        let mut is_open = self.show_spectral_unmasker_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🌊 Master Bus Multi-Point Spectral Dynamics Unmasker HUD")
+            .id(egui::Id::new("spectral_unmasker_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Intelligent Sidechain Spectral Masking Suppression & Collision Heatmap (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.spectral_unmasker_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_spectral_unmasker_modal = is_open;
+        self.sync_spectral_unmasker_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_spectral_unmasker_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let freq = self.spectral_unmasker_view.collision_freq_hz;
+        let depth = self.spectral_unmasker_view.reduction_depth_db;
+        let sens = self.spectral_unmasker_view.sensitivity_pct;
+        let clarity = self.spectral_unmasker_view.clarity_gain_pct;
+        let att = self.spectral_unmasker_view.attack_ms;
+        let rel = self.spectral_unmasker_view.release_ms;
+
+        self.device_rack_state.node_param_values.insert("collision_freq_hz".to_string(), freq);
+        self.device_rack_state.node_param_values.insert("reduction_depth_db".to_string(), depth);
+        self.device_rack_state.node_param_values.insert("unmasking_depth_db".to_string(), depth);
+        self.device_rack_state.node_param_values.insert("sensitivity_pct".to_string(), sens);
+        self.device_rack_state.node_param_values.insert("clarity_gain_pct".to_string(), clarity);
+        self.device_rack_state.node_param_values.insert("attack_ms".to_string(), att);
+        self.device_rack_state.node_param_values.insert("adaptation_speed_ms".to_string(), att);
+        self.device_rack_state.node_param_values.insert("release_ms".to_string(), rel);
+
+        self.inspector_state.node_param_values.insert("collision_freq_hz".to_string(), freq);
+        self.inspector_state.node_param_values.insert("reduction_depth_db".to_string(), depth);
+        self.inspector_state.node_param_values.insert("unmasking_depth_db".to_string(), depth);
+        self.inspector_state.node_param_values.insert("sensitivity_pct".to_string(), sens);
+        self.inspector_state.node_param_values.insert("clarity_gain_pct".to_string(), clarity);
+        self.inspector_state.node_param_values.insert("attack_ms".to_string(), att);
+        self.inspector_state.node_param_values.insert("adaptation_speed_ms".to_string(), att);
+        self.inspector_state.node_param_values.insert("release_ms".to_string(), rel);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_fr = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_dp = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_se = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_at = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_fr).is_some() { bus.set(pid_fr, freq); }
+            if bus.get(pid_dp).is_some() { bus.set(pid_dp, depth); }
+            if bus.get(pid_se).is_some() { bus.set(pid_se, sens); }
+            if bus.get(pid_at).is_some() { bus.set(pid_at, att); }
+        }
+    }
+
     fn render_patch_cords_canvas(&mut self, ui: &mut egui::Ui, available_h: f32) {
         let (resp, painter) = ui.allocate_painter(Vec2::new(ui.available_width(), available_h), egui::Sense::click_and_drag());
         let rect = resp.rect;

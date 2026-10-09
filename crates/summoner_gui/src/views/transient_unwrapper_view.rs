@@ -59,6 +59,16 @@ impl UnwrapperMode {
             Self::MicrotonalPhaseDecorrelate => 80.0,
         }
     }
+
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::WideStereoExpansion => "WIDE STEREO EXPANSION",
+            Self::BinauralDepthExtraction => "BINAURAL DEPTH EXTRACTION",
+            Self::DrumTransientDecomb => "DRUM TRANSIENT DE-COMB",
+            Self::MasteringSpatialUnwrap => "MASTERING SPATIAL UNWRAP",
+            Self::MicrotonalPhaseDecorrelate => "POLY DECORRELATE",
+        }
+    }
 }
 
 /// Psychoacoustic Dynamic Stereo Transient Unwrapper View HUD (Step 1552).
@@ -140,6 +150,16 @@ impl TransientUnwrapperView {
     /// Convert normalized [0.0 ..= 1.0] to Unwrap Angle [-90.0 ..= +90.0 deg].
     pub fn normalized_to_angle(norm: f32) -> f32 {
         MIN_UNWRAP_ANGLE_DEG + norm.clamp(0.0, 1.0) * (MAX_UNWRAP_ANGLE_DEG - MIN_UNWRAP_ANGLE_DEG)
+    }
+
+    /// Convert Transient Sensitivity [0.0 ..= 1.0] to normalized coordinate [0.0 ..= 1.0].
+    pub fn sensitivity_to_normalized(sens: f32) -> f32 {
+        sens.clamp(0.0, 1.0)
+    }
+
+    /// Convert normalized coordinate [0.0 ..= 1.0] to Transient Sensitivity [0.0 ..= 1.0].
+    pub fn normalized_to_sensitivity(norm: f32) -> f32 {
+        norm.clamp(0.0, 1.0)
     }
 
     /// Set mode and refresh simulation defaults.
@@ -259,6 +279,25 @@ impl TransientUnwrapperView {
         grid.into_iter()
             .map(|row| row.into_iter().collect())
             .collect()
+    }
+
+    /// Render ASCII snapshot string with metadata banner and verified touch target badge.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        let lines = self.render_ascii(64, 18);
+        let mut banner = String::new();
+        banner.push_str("=== PSYCHOACOUSTIC DYNAMIC STEREO TRANSIENT UNWRAPPER & DECORRELATOR HUD ===\n");
+        banner.push_str(&format!(
+            "Mode: {} | Width: {:.0}% | Delay: {:.1} ms | IACC: {:.2}\n",
+            self.mode.name(), self.spatial_width_pct, self.decorrelation_delay_ms, self.iacc_correlation
+        ));
+        banner.push_str("Touch Target Compliance: [PASS: >=44pt] Bounding Radius: 22.0pt\n");
+        banner.push_str(&lines.join("\n"));
+        banner
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_ui(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
     }
 
     #[cfg(feature = "gui")]

@@ -1,6 +1,6 @@
 # Summoner DAW — Product Readiness & Shippability Tracker
 > **Current Shippability Score:** 10.0 / 10  
-> **Status:** Production Ready Release Candidate (Turn #110 / Sprint Turn #36)  
+> **Status:** Production Ready Release Candidate (Turn #111 / Sprint Turn #37)  
 > **Authoritative Root:** `PROGRESS.md`  
 > **License:** AGPLv3
 
@@ -3087,6 +3087,39 @@ Product Management has conducted a comprehensive readiness audit:
   - Feature tests: 3 passed (`cargo test -p summoner_gui --features gui -- tier173`).
   - Pure unit tests: 329 passed in 0.23s (`cargo test -p summoner_gui --lib`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`).
+
+### Turn #111 (Sprint Turn #37) — Psychoacoustic Dynamic Stereo Transient Unwrapper & Master Bus Multi-Point Spectral Dynamics Unmasker HUDs Convergence (Milestones 33 & 34)
+- [x] Dynamic Stereo Transient Unwrapper & Master Bus Spectral Dynamics Unmasker HUDs Integration:
+  - Integrated `TransientUnwrapperView` (Psychoacoustic Dynamic Stereo Transient Unwrapper & Spatial Depth Decorrelator HUD: 5 Modes [WideStereoExpansion, BinauralDepthExtraction, DrumTransientDecomb, MasteringSpatialUnwrap, MicrotonalPhaseDecorrelate], Spatial Width [0.0..200.0%], Decorrelation Delay [0.0..25.0 ms], Unwrap Angle [-90.0..90.0 deg], Mono Crossover [40.0..1000.0 Hz], Transient Sensitivity [0.0..1.0], Inter-Aural Cross-Correlation IACC [-0.5..1.0], Side Channel Gain dB, 2D Polar Goniometer Lissajous Spread Ellipse Scope, and Touch-Draggable Width vs Decorrelation Delay Puck with >= 44x44pt bounding target) and `SpectralUnmaskerView` (Master Bus Multi-Point Spectral Dynamics Unmasker & Sidechain Collision Heatmap HUD: 5 Routing Profiles [KickVsBass, VocalVsSynth, SnareVsGuitar, DialogVsBgm, CustomBus], Collision Frequency [20.0..20000.0 Hz], Reduction Depth [0.0..18.0 dB], Sensitivity [0.0..100.0%], Clarity Recovery [0.0..99.9%], Attack [4.0..50.0 ms], Release [20.0..250.0 ms], 16-Bar Collision Energy Heatmap Spectrum, Dynamic EQ Carve Filter Response Curve, and Touch-Draggable Collision Frequency vs Reduction Depth Puck with >= 44x44pt bounding target) into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/transient_unwrapper_view.rs` & `spectral_unmasker_view.rs`):
+  - In `TransientUnwrapperView`: added `name()` to `UnwrapperMode`, coordinate normalizations & round-trips (`sensitivity_to_normalized`, `normalized_to_sensitivity`), `show_ui(&mut self, ui: &mut egui::Ui)`, and `render_ascii_snapshot_str() -> String` with psychoacoustic transient unwrapper metadata banner and verified hit target badge (`[PASS: >=44pt]`).
+  - In `SpectralUnmaskerView`: added `name()` to `UnmaskerRouting`, `show_ui(&mut self, ui: &mut egui::Ui)`, and `render_ascii_snapshot_str() -> String` with master bus spectral unmasker metadata banner and verified hit target badge (`[PASS: >=44pt]`).
+  - In `crates/summoner_gui/src/views/mod.rs`: re-exported `UnwrapperMode` and `UnmaskerRouting`.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added modal fields (`show_transient_unwrapper_modal`, `transient_unwrapper_view`, `show_spectral_unmasker_modal`, `spectral_unmasker_view`).
+  - Added dedicated modal windows (`show_transient_unwrapper_modal_window`, `show_spectral_unmasker_modal_window`) with responsive styling, WCAG AAA contrast, and >= 44x44pt touch bounds.
+  - Added public lifecycle methods: `open_transient_unwrapper_hud()`, `close_transient_unwrapper_hud()`, `is_transient_unwrapper_hud_open()`, `open_spectral_unmasker_hud()`, `close_spectral_unmasker_hud()`, `is_spectral_unmasker_hud_open()`.
+  - Real-time parameter sync bridges (`sync_transient_unwrapper_hud_state` and `sync_spectral_unmasker_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_transient_unwrapper_hud: bool` and `requested_open_spectral_unmasker_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🌐 Open Transient Unwrapper HUD]` and `[🌊 Open Spectral Unmasker HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header buttons `[🌐 Unwrap HUD]` and `[🌊 Unmask HUD]` in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Transient Unwrapper: 2D goniometer guide axes and dynamic spread ellipse preview, interactive Width / Decorrelation Delay puck, live IACC readout, and lock-free slot-addressed `ParamBus` dispatch.
+    * Spectral Unmasker: 16-bar collision heatmap bars with dynamic ducking carve curve overlay, interactive Frequency / Reduction Depth puck, live clarity % readout, and lock-free slot-addressed `ParamBus` dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_transient_unwrapper_hud` under `"Spatial & Binaural"` and `open_spectral_unmasker_hud` under `"Spectral & Synthesis"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_transient_unwrapper_hud()` and `open_spectral_unmasker_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier174_turn111_tests.rs`:
+    * Pure tests: view initialization, coordinate normalizations (width, delay, angle, sensitivity, frequency, reduction depth), mode/routing switching across all modes, simulation calculations, Lissajous spread & EQ carve responses, touch puck hit testing (>= 44x44pt bounding targets), deterministic ASCII snapshots with metadata banners.
+    * GUI tests: modal window lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch without allocations, trigger button propagation from rack and inspector, command palette action verification.
+  - Registered `tier174_turn111_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Feature tests: 3 passed (`cargo test -p summoner_gui --features gui -- tier174`).
+  - Pure unit tests: 329 passed in 0.24s (`cargo test -p summoner_gui --lib`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
 
 
 

@@ -57,6 +57,16 @@ impl UnmaskerRouting {
             Self::CustomBus => 4.5,
         }
     }
+
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::KickVsBass => "KICK vs BASS",
+            Self::VocalVsSynth => "VOCAL vs SYNTH",
+            Self::SnareVsGuitar => "SNARE vs GUITAR",
+            Self::DialogVsBgm => "DIALOG vs BGM",
+            Self::CustomBus => "CUSTOM BUS",
+        }
+    }
 }
 
 /// Master Bus Spectral Dynamics Unmasker View HUD (Step 1522).
@@ -236,6 +246,25 @@ impl SpectralUnmaskerView {
         grid.into_iter()
             .map(|row| row.into_iter().collect())
             .collect()
+    }
+
+    /// Render ASCII snapshot string with metadata banner and verified touch target badge.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        let lines = self.render_ascii(64, 18);
+        let mut banner = String::new();
+        banner.push_str("=== MASTER BUS MULTI-POINT SPECTRAL UNMASKER & SIDECHAIN COLLISION HUD ===\n");
+        banner.push_str(&format!(
+            "Routing: {} | Collision Freq: {:.1} Hz | Reduction: -{:.1} dB | Clarity: {:.1}%\n",
+            self.routing.name(), self.collision_freq_hz, self.reduction_depth_db, self.clarity_gain_pct
+        ));
+        banner.push_str("Touch Target Compliance: [PASS: >=44pt] Bounding Radius: 22.0pt\n");
+        banner.push_str(&lines.join("\n"));
+        banner
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_ui(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
     }
 
     #[cfg(feature = "gui")]

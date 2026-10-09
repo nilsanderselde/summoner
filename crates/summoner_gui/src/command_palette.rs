@@ -1052,6 +1052,18 @@ impl CommandPalette {
                 action_id: "open_transient_reconstructor_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Psychoacoustic Stereo Transient Unwrapper & Spatial Depth HUD".into(),
+                category: "Spatial & Binaural".into(),
+                action_id: "open_transient_unwrapper_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Master Bus Multi-Point Spectral Dynamics Unmasker HUD".into(),
+                category: "Spectral & Synthesis".into(),
+                action_id: "open_spectral_unmasker_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

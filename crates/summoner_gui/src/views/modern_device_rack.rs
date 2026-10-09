@@ -297,6 +297,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_dialog_gating_hud: bool,
     #[serde(default)]
     pub requested_open_transient_reconstructor_hud: bool,
+    #[serde(default)]
+    pub requested_open_transient_unwrapper_hud: bool,
+    #[serde(default)]
+    pub requested_open_spectral_unmasker_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -434,6 +438,8 @@ impl Default for ModernDeviceRackState {
             requested_open_transient_gate_hud: false,
             requested_open_dialog_gating_hud: false,
             requested_open_transient_reconstructor_hud: false,
+            requested_open_transient_unwrapper_hud: false,
+            requested_open_spectral_unmasker_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -1194,6 +1200,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_transient_gate = cur_selection.contains("TransientGate") || cur_selection.contains("SidechainGate") || cur_selection.contains("NoiseGate") || cur_selection == "TransientGateNode" || cur_selection.contains("HysteresisGate") || cur_selection.contains("DynamicGate") || cur_selection.contains("TransientExpanderGate");
                     let is_dialog_gating = cur_selection.contains("DialogGating") || cur_selection.contains("DialogGate") || cur_selection.contains("LoudnessGating") || cur_selection == "DialogGatingNode" || cur_selection.contains("SpeechNormalization") || cur_selection.contains("BS1770") || cur_selection.contains("ItuLoudness");
                     let is_transient_reconstructor = cur_selection.contains("TransientReconstructor") || cur_selection.contains("TransientReconstruct") || cur_selection == "TransientReconstructorNode" || cur_selection.contains("CrestFactor") || cur_selection.contains("AttackReconstructor") || cur_selection.contains("MultibandTransient");
+                    let is_transient_unwrapper = cur_selection.contains("TransientUnwrapper") || cur_selection.contains("Unwrapper") || cur_selection == "TransientUnwrapperNode" || cur_selection.contains("DynamicUnwrapper") || cur_selection.contains("DeCompression");
+                    let is_spectral_unmasker = cur_selection.contains("SpectralUnmasker") || cur_selection.contains("Unmasker") || cur_selection == "SpectralUnmaskerNode" || cur_selection.contains("IntelligentSpectral") || cur_selection.contains("SidechainUnmask");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1686,6 +1694,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("💥 Reconstruct HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 180, 0))).on_hover_text("Open Multiband Linear-Phase Transient Reconstructor & Crest Expander HUD").clicked()
                     {
                         state.requested_open_transient_reconstructor_hud = true;
+                    } else if is_transient_unwrapper
+                        && ui.button(RichText::new("🌐 Unwrap HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Psychoacoustic Stereo Transient Unwrapper & Spatial Depth HUD").clicked()
+                    {
+                        state.requested_open_transient_unwrapper_hud = true;
+                    } else if is_spectral_unmasker
+                        && ui.button(RichText::new("🌊 Unmask HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 255, 180))).on_hover_text("Open Master Bus Multi-Point Spectral Dynamics Unmasker HUD").clicked()
+                    {
+                        state.requested_open_spectral_unmasker_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2574,6 +2590,8 @@ fn show_pro_parameter_drawer(
                     let is_transient_gate = dev_kind.contains("TransientGate") || dev_kind.contains("SidechainGate") || dev_kind.contains("NoiseGate") || dev_kind == "TransientGateNode" || dev_kind.contains("HysteresisGate") || dev_kind.contains("DynamicGate") || dev_kind.contains("TransientExpanderGate");
                     let is_dialog_gating = dev_kind.contains("DialogGating") || dev_kind.contains("DialogGate") || dev_kind.contains("LoudnessGating") || dev_kind == "DialogGatingNode" || dev_kind.contains("SpeechNormalization") || dev_kind.contains("BS1770") || dev_kind.contains("ItuLoudness");
                     let is_transient_reconstructor = dev_kind.contains("TransientReconstructor") || dev_kind.contains("TransientReconstruct") || dev_kind == "TransientReconstructorNode" || dev_kind.contains("CrestFactor") || dev_kind.contains("AttackReconstructor") || dev_kind.contains("MultibandTransient");
+                    let is_transient_unwrapper = dev_kind.contains("TransientUnwrapper") || dev_kind.contains("Unwrapper") || dev_kind == "TransientUnwrapperNode" || dev_kind.contains("DynamicUnwrapper") || dev_kind.contains("DeCompression");
+                    let is_spectral_unmasker = dev_kind.contains("SpectralUnmasker") || dev_kind.contains("Unmasker") || dev_kind == "SpectralUnmaskerNode" || dev_kind.contains("IntelligentSpectral") || dev_kind.contains("SidechainUnmask");
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -12081,8 +12099,8 @@ fn show_pro_parameter_drawer(
                         let bands = 4;
                         let bar_w = (tr_rect.width() - 60.0) / bands as f32;
                         let band_factors = [0.70, 0.90, 1.15, 0.85];
-                        for b in 0..bands {
-                            let gain = (crest_boost_db * band_factors[b] * sens).clamp(0.0, 12.0);
+                        for (b, &factor) in band_factors.iter().enumerate() {
+                            let gain = (crest_boost_db * factor * sens).clamp(0.0, 12.0);
                             let bh = (gain / 12.0) * (tr_rect.height() * 0.7);
                             let bx = tr_rect.left() + 4.0 + b as f32 * bar_w;
                             let b_rect = egui::Rect::from_min_max(
@@ -12118,6 +12136,156 @@ fn show_pro_parameter_drawer(
                             let _ = tr_resp.on_hover_text(format!(
                                 "Multiband Linear-Phase Transient Reconstructor HUD\nLookahead: {:.1} ms | Crest Boost: +{:.1} dB | Sensitivity: {:.2}\n[Drag: Lookahead (X) / Crest Boost (Y) Puck]",
                                 lookahead_ms, crest_boost_db, sens
+                            ));
+                        }
+                    } else if is_transient_unwrapper {
+                        // Psychoacoustic Dynamic Stereo Transient Unwrapper Mini View
+                        let (tu_resp, tu_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let tu_rect = tu_resp.rect;
+                        tu_painter.rect_filled(tu_rect, 2.0, Color32::from_rgb(10, 16, 26));
+
+                        let mut width_pct = state.node_param_values.get("spatial_width_pct").copied().unwrap_or(140.0);
+                        let mut delay_ms = state.node_param_values.get("decorrelation_delay_ms").copied().unwrap_or(4.5);
+                        let iacc = state.node_param_values.get("iacc_correlation").copied().unwrap_or(0.35);
+
+                        if tu_resp.dragged() || tu_resp.clicked() {
+                            if let Some(pos) = tu_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - tu_rect.left()) / (tu_rect.width() - 55.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - tu_rect.top() - 10.0) / (tu_rect.height() - 20.0))).clamp(0.0, 1.0);
+                                width_pct = crate::views::transient_unwrapper_view::TransientUnwrapperView::normalized_to_width(norm_x);
+                                delay_ms = crate::views::transient_unwrapper_view::TransientUnwrapperView::normalized_to_delay(norm_y);
+                                let crest_ratio = (width_pct / 100.0).clamp(1.0, 3.5);
+                                state.node_param_values.insert("spatial_width_pct".to_string(), width_pct);
+                                state.node_param_values.insert("crest_expansion_ratio".to_string(), crest_ratio);
+                                state.node_param_values.insert("decorrelation_delay_ms".to_string(), delay_ms);
+                                if let Some(bus) = param_bus {
+                                    let pid_w = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_d = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_w).is_some() { bus.set(pid_w, width_pct); }
+                                    if bus.get(pid_d).is_some() { bus.set(pid_d, delay_ms); }
+                                }
+                            }
+                        }
+
+                        // Goniometer diamond guide & spread ellipse
+                        let g_center = egui::pos2(tu_rect.left() + (tu_rect.width() - 60.0) * 0.5, tu_rect.center().y);
+                        let g_radius = 24.0_f32;
+                        tu_painter.line_segment(
+                            [egui::pos2(g_center.x - g_radius, g_center.y), egui::pos2(g_center.x + g_radius, g_center.y)],
+                            Stroke::new(1.0_f32, Color32::from_rgb(25, 40, 65)),
+                        );
+                        tu_painter.line_segment(
+                            [egui::pos2(g_center.x, g_center.y - g_radius), egui::pos2(g_center.x, g_center.y + g_radius)],
+                            Stroke::new(1.0_f32, Color32::from_rgb(25, 40, 65)),
+                        );
+
+                        // Ellipse spread
+                        let w_scale = (width_pct / 100.0).clamp(0.1, 2.0);
+                        let num_pts = 16;
+                        let mut prev_pt = None;
+                        for p in 0..=num_pts {
+                            let phase = (p as f32 / num_pts as f32) * std::f32::consts::TAU;
+                            let ex = g_center.x + phase.sin() * (g_radius * 0.5 * w_scale);
+                            let ey = g_center.y - phase.cos() * (g_radius * 0.7);
+                            let pt = egui::pos2(ex, ey);
+                            if let Some(prev) = prev_pt {
+                                tu_painter.line_segment([prev, pt], Stroke::new(1.5_f32, Color32::from_rgb(0, 229, 255)));
+                            }
+                            prev_pt = Some(pt);
+                        }
+
+                        // Interactive Target Puck
+                        let norm_w = crate::views::transient_unwrapper_view::TransientUnwrapperView::width_to_normalized(width_pct);
+                        let norm_d = crate::views::transient_unwrapper_view::TransientUnwrapperView::delay_to_normalized(delay_ms);
+                        let puck_x = tu_rect.left() + 4.0 + norm_w * (tu_rect.width() - 60.0);
+                        let puck_y = tu_rect.bottom() - 10.0 - norm_d * (tu_rect.height() - 20.0);
+                        tu_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(0, 229, 255));
+                        tu_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        tu_painter.text(
+                            egui::pos2(tu_rect.right() - 4.0, tu_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("UNWRAP\n{:.0}% W\n{:.1}ms D\n{:.2} IACC", width_pct, delay_ms, iacc),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+
+                        if tu_resp.hovered() {
+                            let _ = tu_resp.on_hover_text(format!(
+                                "Psychoacoustic Stereo Transient Unwrapper HUD\nSpatial Width: {:.0}% | Decorrelation Delay: {:.1} ms\nIACC Correlation: {:.2}\n[Drag: Width (X) / Decorrelation (Y) Puck]",
+                                width_pct, delay_ms, iacc
+                            ));
+                        }
+                    } else if is_spectral_unmasker {
+                        // Master Bus Multi-Point Spectral Dynamics Unmasker Mini View
+                        let (su_resp, su_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let su_rect = su_resp.rect;
+                        su_painter.rect_filled(su_rect, 2.0, Color32::from_rgb(10, 18, 24));
+
+                        let mut freq_hz = state.node_param_values.get("collision_freq_hz").copied().unwrap_or(68.4);
+                        let mut depth_db = state.node_param_values.get("reduction_depth_db").copied().unwrap_or(5.2);
+                        let clarity = state.node_param_values.get("clarity_gain_pct").copied().unwrap_or(94.5);
+
+                        if su_resp.dragged() || su_resp.clicked() {
+                            if let Some(pos) = su_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - su_rect.left()) / (su_rect.width() - 55.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - su_rect.top() - 10.0) / (su_rect.height() - 20.0))).clamp(0.0, 1.0);
+                                freq_hz = crate::views::spectral_unmasker_view::SpectralUnmaskerView::normalized_to_freq(norm_x);
+                                depth_db = crate::views::spectral_unmasker_view::SpectralUnmaskerView::normalized_to_depth(norm_y);
+                                state.node_param_values.insert("collision_freq_hz".to_string(), freq_hz);
+                                state.node_param_values.insert("reduction_depth_db".to_string(), depth_db);
+                                state.node_param_values.insert("unmasking_depth_db".to_string(), depth_db);
+                                if let Some(bus) = param_bus {
+                                    let pid_f = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_d = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_f).is_some() { bus.set(pid_f, freq_hz); }
+                                    if bus.get(pid_d).is_some() { bus.set(pid_d, depth_db); }
+                                }
+                            }
+                        }
+
+                        // 16-bar collision heatmap bars
+                        let num_bars = 16;
+                        let bar_w = (su_rect.width() - 60.0) / num_bars as f32;
+                        for b in 0..num_bars {
+                            let frac = b as f32 / num_bars as f32;
+                            let bar_freq = crate::views::spectral_unmasker_view::SpectralUnmaskerView::normalized_to_freq(frac);
+                            let log_dist = (bar_freq.log10() - freq_hz.log10()).abs();
+                            let collision = (-0.5 * (log_dist / 0.25).powi(2)).exp();
+                            let bh = collision * (su_rect.height() * 0.7);
+                            let bx = su_rect.left() + 4.0 + b as f32 * bar_w;
+                            let b_rect = egui::Rect::from_min_max(
+                                egui::pos2(bx, su_rect.bottom() - 6.0 - bh),
+                                egui::pos2(bx + bar_w - 1.0, su_rect.bottom() - 6.0),
+                            );
+                            let col = if collision > 0.6 {
+                                Color32::from_rgb(0, 255, 180)
+                            } else {
+                                Color32::from_rgb(30, 60, 70)
+                            };
+                            su_painter.rect_filled(b_rect, 0.5, col);
+                        }
+
+                        // Interactive Target Puck
+                        let norm_f = crate::views::spectral_unmasker_view::SpectralUnmaskerView::freq_to_normalized(freq_hz);
+                        let norm_d = crate::views::spectral_unmasker_view::SpectralUnmaskerView::depth_to_normalized(depth_db);
+                        let puck_x = su_rect.left() + 4.0 + norm_f * (su_rect.width() - 60.0);
+                        let puck_y = su_rect.bottom() - 10.0 - norm_d * (su_rect.height() - 20.0);
+                        su_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(0, 255, 180));
+                        su_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        su_painter.text(
+                            egui::pos2(su_rect.right() - 4.0, su_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("UNMASK\n{:.0}Hz\n-{:.1}dB\n{:.1}% Clr", freq_hz, depth_db, clarity),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(0, 255, 180),
+                        );
+
+                        if su_resp.hovered() {
+                            let _ = su_resp.on_hover_text(format!(
+                                "Master Bus Multi-Point Spectral Dynamics Unmasker HUD\nCollision Freq: {:.1} Hz | Reduction Depth: -{:.1} dB\nClarity Recovery: {:.1}%\n[Drag: Frequency (X) / Reduction (Y) Puck]",
+                                freq_hz, depth_db, clarity
                             ));
                         }
                     } else {
