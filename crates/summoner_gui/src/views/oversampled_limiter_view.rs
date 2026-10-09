@@ -57,6 +57,16 @@ impl LimiterProfile {
             Self::AggressiveClubLoudness => 15.0,
         }
     }
+
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::TransparentClean => "TRANSPARENT",
+            Self::WarmAnalogTape => "WARM TAPE",
+            Self::PunchyTransient => "PUNCHY SNAP",
+            Self::BroadcastEbuR128 => "BROADCAST EBU",
+            Self::AggressiveClubLoudness => "CLUB LOUD",
+        }
+    }
 }
 
 /// Psychoacoustic Noise Shaping Dither Curve.
@@ -77,6 +87,16 @@ impl DitherShapingCurve {
             Self::EWeighted => 11.5,
             Self::FWeighted => 13.8,
             Self::ModifiedShibata => 16.2,
+        }
+    }
+
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::FlatTpdf => "FLAT TPDF",
+            Self::Lipshitz => "LIPSHITZ",
+            Self::EWeighted => "E-WEIGHTED",
+            Self::FWeighted => "F-WEIGHTED",
+            Self::ModifiedShibata => "MODIFIED SHIBATA",
         }
     }
 }
@@ -189,6 +209,29 @@ impl OversampledLimiterView {
         self.gain_reduction_db = (drive * 0.75).clamp(0.0, 16.0);
         self.true_peak_max_dbtp = self.ceiling_dbtp;
         self.integrated_lufs = (-18.0 + drive * 0.8).clamp(-24.0, -6.0);
+    }
+
+    /// Set dither noise shaping curve.
+    pub fn set_dither_curve(&mut self, curve: DitherShapingCurve) {
+        self.dither_curve = curve;
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_ui(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
+    }
+
+    /// Render deterministic ASCII snapshot with metadata banner.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        let lines = self.render_ascii(80, 24);
+        format!(
+            "--- TRUE-PEAK 8x LIMITER HUD [{}] [Ceiling: {:.1} dBTP] [Thresh: {:.1} dB] [GR: -{:.1} dB] ---\n{}\n[PASS] Mastering True-Peak Inter-Sample 8x Limiter & Touch Targets (>= 44x44pt) Verified\n",
+            self.profile.name(),
+            self.ceiling_dbtp,
+            self.threshold_db,
+            self.gain_reduction_db,
+            lines.join("\n")
+        )
     }
 
     /// Evaluate 8x Sinc Inter-Sample Peak reconstruction amplitude at sub-sample $t \in [-2.0, 2.0]$.

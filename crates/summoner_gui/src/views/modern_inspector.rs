@@ -218,6 +218,10 @@ pub struct ModernInspectorState {
     pub requested_open_auto_wah_hud: bool,
     #[serde(default)]
     pub requested_open_formant_filter_hud: bool,
+    #[serde(default)]
+    pub requested_open_oversampled_limiter_hud: bool,
+    #[serde(default)]
+    pub requested_open_vari_mu_master_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -333,6 +337,8 @@ impl Default for ModernInspectorState {
             requested_open_granular_freeze_hud: false,
             requested_open_auto_wah_hud: false,
             requested_open_formant_filter_hud: false,
+            requested_open_oversampled_limiter_hud: false,
+            requested_open_vari_mu_master_hud: false,
         }
     }
 }
@@ -1717,6 +1723,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open 5-Vowel Phonetic Formant Filter Resonator HUD").clicked() {
                     state.requested_open_formant_filter_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Limiter") || active_kind.contains("TruePeak") || active_kind == "OversampledLimiterNode" || active_kind == "TruePeakOversampledLimiter" || active_kind.contains("PeakLimiter") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🛡️ Open True-Peak Limiter HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 229, 255)))
+                        .fill(Color32::from_rgb(14, 28, 40))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 229, 255)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Mastering True-Peak 8x Oversampled Limiter & Noise Shaping HUD").clicked() {
+                    state.requested_open_oversampled_limiter_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("VariMu") || active_kind.contains("VariableMu") || active_kind == "VariMuMasterNode" || active_kind == "VariMuMasterLimiter" || active_kind == "MasterStereoVariMuLimiter" || active_kind.contains("ValveLimiter") {
+                if ui.add(
+                    egui::Button::new(RichText::new("📻 Open Vari-Mu Compressor HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(255, 170, 50)))
+                        .fill(Color32::from_rgb(38, 24, 18))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 170, 50)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Mastering Dual-Mono Variable-Mu Vacuum Tube Optical Compressor HUD").clicked() {
+                    state.requested_open_vari_mu_master_hud = true;
                 }
                 ui.add_space(4.0);
             }

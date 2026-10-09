@@ -233,6 +233,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_auto_wah_hud: bool,
     #[serde(default)]
     pub requested_open_formant_filter_hud: bool,
+    #[serde(default)]
+    pub requested_open_oversampled_limiter_hud: bool,
+    #[serde(default)]
+    pub requested_open_vari_mu_master_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -338,6 +342,8 @@ impl Default for ModernDeviceRackState {
             requested_open_granular_freeze_hud: false,
             requested_open_auto_wah_hud: false,
             requested_open_formant_filter_hud: false,
+            requested_open_oversampled_limiter_hud: false,
+            requested_open_vari_mu_master_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -1066,6 +1072,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_granular_freeze = cur_selection.contains("Freeze") || cur_selection == "GranularFreezeView" || cur_selection == "GranularFreeze" || cur_selection.contains("CloudFreeze") || cur_selection == "GranularFreezeNode";
                     let is_auto_wah = cur_selection.contains("AutoWah") || cur_selection.contains("Wah") || cur_selection == "AutoWahView" || cur_selection == "AutoWahNode" || cur_selection.contains("WahFilter");
                     let is_formant = cur_selection.contains("Formant") || cur_selection.contains("Vowel") || cur_selection == "FormantFilterView" || cur_selection == "FormantFilterNode" || cur_selection.contains("FormantFilter");
+                    let is_limiter = cur_selection.contains("Limiter") || cur_selection.contains("TruePeak") || cur_selection == "OversampledLimiterNode" || cur_selection == "TruePeakOversampledLimiter" || cur_selection.contains("PeakLimiter");
+                    let is_vari_mu = cur_selection.contains("VariMu") || cur_selection.contains("VariableMu") || cur_selection == "VariMuMasterNode" || cur_selection == "VariMuMasterLimiter" || cur_selection == "MasterStereoVariMuLimiter" || cur_selection.contains("ValveLimiter");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1430,6 +1438,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("🗣 Formant HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 215, 0))).on_hover_text("Open 5-Vowel Phonetic Formant Filter Resonator HUD").clicked()
                     {
                         state.requested_open_formant_filter_hud = true;
+                    } else if is_limiter
+                        && ui.button(RichText::new("🛡️ Limiter HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Mastering True-Peak 8x Oversampled Limiter HUD").clicked()
+                    {
+                        state.requested_open_oversampled_limiter_hud = true;
+                    } else if is_vari_mu
+                        && ui.button(RichText::new("📻 Vari-Mu HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 170, 50))).on_hover_text("Open Mastering Dual-Mono Variable-Mu Tube Optical Compressor HUD").clicked()
+                    {
+                        state.requested_open_vari_mu_master_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2286,6 +2302,8 @@ fn show_pro_parameter_drawer(
                     let is_granular_freeze = dev_kind.contains("Freeze") || dev_kind == "GranularFreezeView" || dev_kind == "GranularFreeze" || dev_kind.contains("CloudFreeze") || dev_kind == "GranularFreezeNode";
                     let is_auto_wah = dev_kind.contains("AutoWah") || dev_kind.contains("Wah") || dev_kind == "AutoWahView" || dev_kind == "AutoWahNode" || dev_kind.contains("WahFilter");
                     let is_formant = dev_kind.contains("Formant") || dev_kind.contains("Vowel") || dev_kind == "FormantFilterView" || dev_kind == "FormantFilterNode" || dev_kind.contains("FormantFilter");
+                    let is_limiter = dev_kind.contains("Limiter") || dev_kind.contains("TruePeak") || dev_kind == "OversampledLimiterNode" || dev_kind == "TruePeakOversampledLimiter" || dev_kind.contains("PeakLimiter");
+                    let is_vari_mu = dev_kind.contains("VariMu") || dev_kind.contains("VariableMu") || dev_kind == "VariMuMasterNode" || dev_kind == "VariMuMasterLimiter" || dev_kind == "MasterStereoVariMuLimiter" || dev_kind.contains("ValveLimiter");
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -9506,6 +9524,159 @@ fn show_pro_parameter_drawer(
                             let _ = fm_resp.on_hover_text(format!(
                                 "5-Vowel Phonetic Formant Filter Resonator HUD\nMorph: ({:.2}, {:.2})\nRes Q: {:.1} | Vocal Tract: {:.2}x\n[Drag: F2 (X) / F1 (Y) Vowel Morph Puck]",
                                 morph_x, morph_y, res, tract
+                            ));
+                        }
+                    } else if is_limiter {
+                        // Mastering True-Peak 8x Oversampled Limiter Mini Visualizer
+                        let (lm_resp, lm_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let lm_rect = lm_resp.rect;
+                        lm_painter.rect_filled(lm_rect, 2.0, Color32::from_rgb(10, 14, 24));
+
+                        let mut thresh = state.node_param_values.get("threshold_db").copied().unwrap_or(-6.0);
+                        let mut ceil = state.node_param_values.get("ceiling_dbtp").copied().unwrap_or(-0.3);
+                        let gr = state.node_param_values.get("gain_reduction_db").copied().unwrap_or(4.2);
+
+                        if lm_resp.dragged() {
+                            if let Some(pos) = lm_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - lm_rect.left()) / lm_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - lm_rect.top()) / lm_rect.height())).clamp(0.0, 1.0);
+                                thresh = crate::views::oversampled_limiter_view::OversampledLimiterView::normalized_to_thresh(norm_x);
+                                ceil = crate::views::oversampled_limiter_view::OversampledLimiterView::normalized_to_ceiling(norm_y);
+                                state.node_param_values.insert("threshold_db".to_string(), thresh);
+                                state.node_param_values.insert("ceiling_dbtp".to_string(), ceil);
+                                if let Some(bus) = param_bus {
+                                    let pid_ceil = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_ceil).is_some() { bus.set(pid_ceil, ceil); }
+                                    let pid_thresh = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_thresh).is_some() { bus.set(pid_thresh, thresh); }
+                                }
+                            }
+                        }
+
+                        // Background grid lines
+                        for step in 1..3 {
+                            let gy = lm_rect.top() + lm_rect.height() * (step as f32 * 0.33);
+                            lm_painter.line_segment([egui::pos2(lm_rect.left(), gy), egui::pos2(lm_rect.right(), gy)], Stroke::new(0.5_f32, Color32::from_rgba_unmultiplied(35, 50, 75, 80)));
+                        }
+
+                        // 8x Polyphase Sinc ISP waveform preview (16 points)
+                        let norm_t = crate::views::oversampled_limiter_view::OversampledLimiterView::thresh_to_normalized(thresh);
+                        let norm_c = crate::views::oversampled_limiter_view::OversampledLimiterView::ceiling_to_normalized(ceil);
+                        let steps = 16;
+                        let mut prev_pt = None;
+                        for i in 0..=steps {
+                            let nx = i as f32 / steps as f32;
+                            let sinc = if (nx - 0.5).abs() < 1e-3 {
+                                1.0
+                            } else {
+                                let pi_t = std::f32::consts::PI * (nx - 0.5) * 4.0;
+                                (pi_t.sin() / pi_t).abs()
+                            };
+                            let px = lm_rect.left() + nx * lm_rect.width();
+                            let py = lm_rect.bottom() - (sinc * 0.75 * norm_c).clamp(0.0, 1.0) * (lm_rect.height() - 10.0) - 5.0;
+                            let cur_pt = egui::pos2(px, py);
+                            if let Some(prev) = prev_pt {
+                                lm_painter.line_segment([prev, cur_pt], Stroke::new(1.3_f32, Color32::from_rgb(0, 229, 255)));
+                            }
+                            prev_pt = Some(cur_pt);
+                        }
+
+                        // Puck handle
+                        let puck_x = lm_rect.left() + norm_t * lm_rect.width();
+                        let puck_y = lm_rect.bottom() - norm_c * (lm_rect.height() - 12.0) - 6.0;
+                        lm_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(0, 229, 255));
+                        lm_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::from_rgb(180, 245, 255)));
+
+                        // Readout
+                        lm_painter.text(
+                            egui::pos2(lm_rect.right() - 4.0, lm_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("LIMITER 8x ISP\nCeil:{:.1} | Th:{:.1}\nGR: -{:.1}dB", ceil, thresh, gr),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+
+                        if lm_resp.hovered() {
+                            let _ = lm_resp.on_hover_text(format!(
+                                "Mastering True-Peak 8x Oversampled Limiter HUD\nCeiling: {:.1} dBTP | Threshold: {:.1} dB\nGain Reduction: -{:.1} dB\n[Drag: Thresh (X) / Ceiling (Y) Puck]",
+                                ceil, thresh, gr
+                            ));
+                        }
+                    } else if is_vari_mu {
+                        // Mastering Dual-Mono Variable-Mu Tube Optical Compressor Mini Visualizer
+                        let (vm_resp, vm_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let vm_rect = vm_resp.rect;
+                        vm_painter.rect_filled(vm_rect, 2.0, Color32::from_rgb(18, 14, 22));
+
+                        let mut thresh = state.node_param_values.get("threshold_db").copied().unwrap_or(-14.0);
+                        let mut drive = state.node_param_values.get("input_drive_db").copied().unwrap_or(4.5);
+                        let ratio = state.node_param_values.get("dynamic_ratio").copied().unwrap_or(2.4);
+                        let thd = state.node_param_values.get("thd_distortion_pct").copied().unwrap_or(0.35);
+
+                        if vm_resp.dragged() {
+                            if let Some(pos) = vm_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - vm_rect.left()) / vm_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - vm_rect.top()) / vm_rect.height())).clamp(0.0, 1.0);
+                                thresh = crate::views::vari_mu_master_view::VariMuMasterView::normalized_to_threshold(norm_x);
+                                drive = crate::views::vari_mu_master_view::VariMuMasterView::normalized_to_drive(norm_y);
+                                state.node_param_values.insert("threshold_db".to_string(), thresh);
+                                state.node_param_values.insert("input_drive_db".to_string(), drive);
+                                if let Some(bus) = param_bus {
+                                    let pid_th = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_th).is_some() { bus.set(pid_th, thresh); }
+                                    let pid_drv = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_drv).is_some() { bus.set(pid_drv, drive); }
+                                }
+                            }
+                        }
+
+                        // Background grid lines & 1:1 diagonal guide
+                        for step in 1..3 {
+                            let gy = vm_rect.top() + vm_rect.height() * (step as f32 * 0.33);
+                            vm_painter.line_segment([egui::pos2(vm_rect.left(), gy), egui::pos2(vm_rect.right(), gy)], Stroke::new(0.5_f32, Color32::from_rgba_unmultiplied(60, 45, 35, 80)));
+                        }
+                        vm_painter.line_segment([vm_rect.left_bottom(), vm_rect.right_top()], Stroke::new(0.6_f32, Color32::from_rgba_unmultiplied(100, 80, 60, 60)));
+
+                        // Soft-knee dynamic compression curve preview (16 points)
+                        let norm_th = crate::views::vari_mu_master_view::VariMuMasterView::threshold_to_normalized(thresh);
+                        let norm_drv = crate::views::vari_mu_master_view::VariMuMasterView::drive_to_normalized(drive);
+                        let steps = 16;
+                        let mut prev_pt = None;
+                        for i in 0..=steps {
+                            let nx = i as f32 / steps as f32;
+                            let ny = if nx <= norm_th {
+                                nx * (0.8 + 0.2 * norm_drv)
+                            } else {
+                                norm_th * (0.8 + 0.2 * norm_drv) + (nx - norm_th) / ratio
+                            };
+                            let px = vm_rect.left() + nx * vm_rect.width();
+                            let py = vm_rect.bottom() - ny.clamp(0.0, 1.0) * (vm_rect.height() - 10.0) - 5.0;
+                            let cur_pt = egui::pos2(px, py);
+                            if let Some(prev) = prev_pt {
+                                vm_painter.line_segment([prev, cur_pt], Stroke::new(1.3_f32, Color32::from_rgb(255, 170, 50)));
+                            }
+                            prev_pt = Some(cur_pt);
+                        }
+
+                        // Puck handle
+                        let puck_x = vm_rect.left() + norm_th * vm_rect.width();
+                        let puck_y = vm_rect.bottom() - norm_drv * (vm_rect.height() - 12.0) - 6.0;
+                        vm_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(255, 170, 50));
+                        vm_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::from_rgb(255, 220, 150)));
+
+                        // Readout
+                        vm_painter.text(
+                            egui::pos2(vm_rect.right() - 4.0, vm_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("VARI-MU TUBE\nRatio:{:.1}:1\nTh:{:.0} | Drv:{:.0}\nTHD:{:.2}%", ratio, thresh, drive, thd),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(255, 170, 50),
+                        );
+
+                        if vm_resp.hovered() {
+                            let _ = vm_resp.on_hover_text(format!(
+                                "Mastering Dual-Mono Variable-Mu Vacuum Tube Optical Compressor HUD\nThreshold: {:.1} dB | Drive: {:+.1} dB\nRatio: {:.1}:1 | THD: {:.2}%\n[Drag: Thresh (X) / Drive (Y) Puck]",
+                                thresh, drive, ratio, thd
                             ));
                         }
                     } else {

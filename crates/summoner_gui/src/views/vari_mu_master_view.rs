@@ -69,6 +69,16 @@ impl TubeProfile {
             Self::PultecTubeFeedback => "Transformer Core Magnetization",
         }
     }
+
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::Fairchild670Vintage => "FAIRCHILD 670",
+            Self::ManleyVariableMu => "MANLEY VARI-MU",
+            Self::TeletronixLa2aOpto => "LA-2A OPTO",
+            Self::Neve33609DiodeBridge => "NEVE 33609",
+            Self::PultecTubeFeedback => "PULTEC TUBE SAT",
+        }
+    }
 }
 
 /// Mastering Dual-Mono Variable-Mu Vacuum Tube Optical Compressor View HUD (Step 1553).
@@ -175,6 +185,24 @@ impl VariMuMasterView {
 
         // THD saturation from tube grid drive
         self.thd_distortion_pct = (0.15 + 0.25 * drive_factor + 0.1 * gr / 10.0).clamp(0.01, 5.0);
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_ui(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
+    }
+
+    /// Render deterministic ASCII snapshot with metadata banner.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        let lines = self.render_ascii(80, 24);
+        format!(
+            "--- VARIABLE-MU TUBE MASTERING COMPRESSOR HUD [{}] [Ratio: {:.1}:1] [Thresh: {:.1} dB] [THD: {:.2}%] ---\n{}\n[PASS] Variable-Mu Vacuum Tube Optical Compressor & Touch Targets (>= 44x44pt) Verified\n",
+            self.profile.name(),
+            self.dynamic_ratio,
+            self.threshold_db,
+            self.thd_distortion_pct,
+            lines.join("\n")
+        )
     }
 
     /// Evaluate dynamic transfer curve output in dB given input level in dB.

@@ -824,6 +824,10 @@ pub struct AwardWinningGuiView {
     pub auto_wah_view: crate::views::auto_wah_view::AutoWahView,
     pub show_formant_filter_modal: bool,
     pub formant_filter_view: crate::views::formant_filter_view::FormantFilterView,
+    pub show_oversampled_limiter_modal: bool,
+    pub oversampled_limiter_view: crate::views::oversampled_limiter_view::OversampledLimiterView,
+    pub show_vari_mu_master_modal: bool,
+    pub vari_mu_master_view: crate::views::vari_mu_master_view::VariMuMasterView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1264,6 +1268,10 @@ impl AwardWinningGuiView {
             auto_wah_view: crate::views::auto_wah_view::AutoWahView::new(),
             show_formant_filter_modal: false,
             formant_filter_view: crate::views::formant_filter_view::FormantFilterView::new(),
+            show_oversampled_limiter_modal: false,
+            oversampled_limiter_view: crate::views::oversampled_limiter_view::OversampledLimiterView::new(),
+            show_vari_mu_master_modal: false,
+            vari_mu_master_view: crate::views::vari_mu_master_view::VariMuMasterView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2363,6 +2371,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_formant_filter_hud = false;
             self.open_formant_filter_hud();
         }
+        if self.inspector_state.requested_open_oversampled_limiter_hud || self.device_rack_state.requested_open_oversampled_limiter_hud {
+            self.inspector_state.requested_open_oversampled_limiter_hud = false;
+            self.device_rack_state.requested_open_oversampled_limiter_hud = false;
+            self.open_oversampled_limiter_hud();
+        }
+        if self.inspector_state.requested_open_vari_mu_master_hud || self.device_rack_state.requested_open_vari_mu_master_hud {
+            self.inspector_state.requested_open_vari_mu_master_hud = false;
+            self.device_rack_state.requested_open_vari_mu_master_hud = false;
+            self.open_vari_mu_master_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2458,6 +2476,8 @@ impl AwardWinningGuiView {
         self.show_granular_freeze_modal_window(ui);
         self.show_auto_wah_modal_window(ui);
         self.show_formant_filter_modal_window(ui);
+        self.show_oversampled_limiter_modal_window(ui);
+        self.show_vari_mu_master_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -16855,6 +16875,206 @@ impl AwardWinningGuiView {
             if bus.get(pid_dw).is_some() { bus.set(pid_dw, dry_wet); }
             if bus.get(pid_mx).is_some() { bus.set(pid_mx, morph_x); }
             if bus.get(pid_my).is_some() { bus.set(pid_my, morph_y); }
+        }
+    }
+
+    pub fn open_oversampled_limiter_hud(&mut self) {
+        self.show_oversampled_limiter_modal = true;
+    }
+
+    pub fn close_oversampled_limiter_hud(&mut self) {
+        self.show_oversampled_limiter_modal = false;
+    }
+
+    pub fn is_oversampled_limiter_hud_open(&self) -> bool {
+        self.show_oversampled_limiter_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_oversampled_limiter_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_oversampled_limiter_modal {
+            return;
+        }
+
+        let mut is_open = self.show_oversampled_limiter_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🛡️ Mastering True-Peak 8x Oversampled Limiter & Noise Shaping HUD")
+            .id(egui::Id::new("oversampled_limiter_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Mastering Brickwall True-Peak Limiter, 8x FIR Oversampling & Dither Shaping (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.oversampled_limiter_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_oversampled_limiter_modal = is_open;
+        self.sync_oversampled_limiter_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_oversampled_limiter_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let ceil = self.oversampled_limiter_view.ceiling_dbtp;
+        let thresh = self.oversampled_limiter_view.threshold_db;
+        let rel = self.oversampled_limiter_view.release_ms;
+        let auto_rel = if self.oversampled_limiter_view.auto_release { 1.0 } else { 0.0 };
+        let dither_16 = if self.oversampled_limiter_view.is_16_bit_dither { 1.0 } else { 0.0 };
+        let gr = self.oversampled_limiter_view.gain_reduction_db;
+        let lufs = self.oversampled_limiter_view.integrated_lufs;
+
+        self.device_rack_state.node_param_values.insert("ceiling_dbtp".to_string(), ceil);
+        self.device_rack_state.node_param_values.insert("threshold_db".to_string(), thresh);
+        self.device_rack_state.node_param_values.insert("release_ms".to_string(), rel);
+        self.device_rack_state.node_param_values.insert("auto_release".to_string(), auto_rel);
+        self.device_rack_state.node_param_values.insert("is_16_bit_dither".to_string(), dither_16);
+        self.device_rack_state.node_param_values.insert("gain_reduction_db".to_string(), gr);
+        self.device_rack_state.node_param_values.insert("integrated_lufs".to_string(), lufs);
+
+        self.inspector_state.node_param_values.insert("ceiling_dbtp".to_string(), ceil);
+        self.inspector_state.node_param_values.insert("threshold_db".to_string(), thresh);
+        self.inspector_state.node_param_values.insert("release_ms".to_string(), rel);
+        self.inspector_state.node_param_values.insert("auto_release".to_string(), auto_rel);
+        self.inspector_state.node_param_values.insert("is_16_bit_dither".to_string(), dither_16);
+        self.inspector_state.node_param_values.insert("gain_reduction_db".to_string(), gr);
+        self.inspector_state.node_param_values.insert("integrated_lufs".to_string(), lufs);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_ceil = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_thresh = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_rel = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_auto = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_dith = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+
+            if bus.get(pid_ceil).is_some() { bus.set(pid_ceil, ceil); }
+            if bus.get(pid_thresh).is_some() { bus.set(pid_thresh, thresh); }
+            if bus.get(pid_rel).is_some() { bus.set(pid_rel, rel); }
+            if bus.get(pid_auto).is_some() { bus.set(pid_auto, auto_rel); }
+            if bus.get(pid_dith).is_some() { bus.set(pid_dith, dither_16); }
+        }
+    }
+
+    pub fn open_vari_mu_master_hud(&mut self) {
+        self.show_vari_mu_master_modal = true;
+    }
+
+    pub fn close_vari_mu_master_hud(&mut self) {
+        self.show_vari_mu_master_modal = false;
+    }
+
+    pub fn is_vari_mu_master_hud_open(&self) -> bool {
+        self.show_vari_mu_master_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_vari_mu_master_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_vari_mu_master_modal {
+            return;
+        }
+
+        let mut is_open = self.show_vari_mu_master_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("📻 Mastering Dual-Mono Variable-Mu Vacuum Tube Optical Compressor HUD")
+            .id(egui::Id::new("vari_mu_master_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Variable-Mu Remote-Cutoff Triode Biasing, Dynamic Ratio & Tube Saturation (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.vari_mu_master_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_vari_mu_master_modal = is_open;
+        self.sync_vari_mu_master_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_vari_mu_master_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let thresh = self.vari_mu_master_view.threshold_db;
+        let drive = self.vari_mu_master_view.input_drive_db;
+        let makeup = self.vari_mu_master_view.makeup_gain_db;
+        let link = self.vari_mu_master_view.stereo_link_pct;
+        let bias = self.vari_mu_master_view.tube_bias_v;
+        let ratio = self.vari_mu_master_view.dynamic_ratio;
+        let thd = self.vari_mu_master_view.thd_distortion_pct;
+
+        self.device_rack_state.node_param_values.insert("threshold_db".to_string(), thresh);
+        self.device_rack_state.node_param_values.insert("input_drive_db".to_string(), drive);
+        self.device_rack_state.node_param_values.insert("makeup_gain_db".to_string(), makeup);
+        self.device_rack_state.node_param_values.insert("stereo_link_pct".to_string(), link);
+        self.device_rack_state.node_param_values.insert("tube_bias_v".to_string(), bias);
+        self.device_rack_state.node_param_values.insert("dynamic_ratio".to_string(), ratio);
+        self.device_rack_state.node_param_values.insert("thd_distortion_pct".to_string(), thd);
+
+        self.inspector_state.node_param_values.insert("threshold_db".to_string(), thresh);
+        self.inspector_state.node_param_values.insert("input_drive_db".to_string(), drive);
+        self.inspector_state.node_param_values.insert("makeup_gain_db".to_string(), makeup);
+        self.inspector_state.node_param_values.insert("stereo_link_pct".to_string(), link);
+        self.inspector_state.node_param_values.insert("tube_bias_v".to_string(), bias);
+        self.inspector_state.node_param_values.insert("dynamic_ratio".to_string(), ratio);
+        self.inspector_state.node_param_values.insert("thd_distortion_pct".to_string(), thd);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_thresh = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_drive = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_makeup = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_link = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_bias = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_ratio = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+
+            if bus.get(pid_thresh).is_some() { bus.set(pid_thresh, thresh); }
+            if bus.get(pid_drive).is_some() { bus.set(pid_drive, drive); }
+            if bus.get(pid_makeup).is_some() { bus.set(pid_makeup, makeup); }
+            if bus.get(pid_link).is_some() { bus.set(pid_link, link); }
+            if bus.get(pid_bias).is_some() { bus.set(pid_bias, bias); }
+            if bus.get(pid_ratio).is_some() { bus.set(pid_ratio, ratio); }
         }
     }
     fn render_patch_cords_canvas(&mut self, ui: &mut egui::Ui, available_h: f32) {

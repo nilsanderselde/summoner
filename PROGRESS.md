@@ -1,6 +1,6 @@
 # Summoner DAW — Product Readiness & Shippability Tracker
 > **Current Shippability Score:** 10.0 / 10  
-> **Status:** Production Ready Release Candidate (Turn #95 / Sprint Turn #21 — Sprint Review)  
+> **Status:** Production Ready Release Candidate (Turn #96 / Sprint Turn #22)  
 > **Authoritative Root:** `PROGRESS.md`  
 > **License:** AGPLv3
 
@@ -2602,6 +2602,39 @@ Product Management has conducted a comprehensive readiness audit:
   - `cargo clippy -p summoner_gui --features gui -- -D warnings`: Clean, 0 warnings (16.65s).
   - `cargo test -p summoner_gui --lib`: 329 passed in 0.22s (100% pass rate).
   - `cargo test -p summoner_gui --features gui -- tier158`: 7 passed in 0.05s (100% pass rate).
+
+### Turn #96 (Sprint Turn #22) — Mastering True-Peak 8x Oversampled Limiter HUD & Dual-Mono Variable-Mu Vacuum Tube Optical Compressor HUD Convergence (Milestones 33 & 34)
+- [x] Mastering Limiter & Vari-Mu Tube Optical Compressor HUDs Integration:
+  - Integrated `OversampledLimiterView` (Mastering True-Peak Inter-Sample 8x Oversampled Limiter & Psychoacoustic Noise Shaping HUD: 5 Limiter Character Profiles [Transparent Clean, Warm Analog Tape, Punchy Transient, Broadcast EBU R128, Aggressive Club Loudness], Ceiling [-6.0..0.0 dBTP], Threshold [-18.0..0.0 dB], Release [1.0..1000.0 ms], Program-Dependent Auto-Release Toggle, 5 Dither Noise Shaping Curves [Flat TPDF, Lipshitz, E-Weighted, F-Weighted, Modified Shibata], 16-bit / 24-bit Dither Depth, 8x Polyphase Sinc True-Peak Inter-Sample Peak [ISP] Reconstruction Canvas, and Touch-Draggable Threshold vs Ceiling Puck with >= 44x44pt bounding target) and `VariMuMasterView` (Mastering Dual-Mono Variable-Mu Vacuum Tube Optical Compressor HUD: 5 Tube Topologies [Fairchild 670 Vintage, Manley Variable-Mu, Teletronix LA-2A Opto, Neve 33609 Diode Bridge, Pultec Tube Feedback], Threshold [-40.0..+10.0 dB], Input Drive [-12.0..+24.0 dB], Makeup Gain [-12.0..+24.0 dB], Stereo Link [0.0..100.0% Dual-Mono], Grid Bias Voltage [-15.0..0.0 V], Dynamic Variable-Mu Ratio [1.2..10.0:1], Non-Linear Soft-Knee Transfer Characteristic Curve Canvas, Dual-Mono L/R Gain Reduction VU Meters, and Touch-Draggable Threshold vs Drive Puck with >= 44x44pt bounding target) into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/oversampled_limiter_view.rs` & `vari_mu_master_view.rs`):
+  - In `OversampledLimiterView`: added `name()` to `LimiterProfile`, `label()` to `DitherShapingCurve`, `set_dither_curve()`, `show_ui(&mut self, ui: &mut egui::Ui)`, and `render_ascii_snapshot_str() -> String` with limiter profile metadata banner.
+  - In `VariMuMasterView`: added `name()` to `TubeProfile`, `show_ui(&mut self, ui: &mut egui::Ui)`, and `render_ascii_snapshot_str() -> String` with tube profile metadata banner.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_oversampled_limiter_modal: bool`, `oversampled_limiter_view: OversampledLimiterView`, `show_vari_mu_master_modal: bool`, and `vari_mu_master_view: VariMuMasterView`.
+  - Added dedicated modal windows `show_oversampled_limiter_modal_window` and `show_vari_mu_master_modal_window` with responsive styling, WCAG AAA contrast, and >= 44x44pt touch bounds.
+  - Added public lifecycle methods: `open_oversampled_limiter_hud()`, `close_oversampled_limiter_hud()`, `is_oversampled_limiter_hud_open()`, `open_vari_mu_master_hud()`, `close_vari_mu_master_hud()`, `is_vari_mu_master_hud_open()`.
+  - Real-time parameter sync bridges (`sync_oversampled_limiter_hud_state` and `sync_vari_mu_master_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_oversampled_limiter_hud: bool` and `requested_open_vari_mu_master_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🛡️ Open True-Peak Limiter HUD]` and `[📻 Open Vari-Mu Compressor HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header buttons `[🛡️ Limiter HUD]` and `[📻 Vari-Mu HUD]` in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Limiter: 2D 8x Sinc ISP waveform preview, interactive Threshold/Ceiling puck updating ceiling and threshold levels, background grid lines, live readout, and lock-free `ParamBus` slot dispatch.
+    * Vari-Mu: 2D soft-knee non-linear compression transfer curve preview, 1:1 unity guide, interactive Threshold/Drive puck updating threshold and drive warmth, live readout, and lock-free `ParamBus` slot dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_oversampled_limiter_hud` and `open_vari_mu_master_hud` under `"Dynamics & Mastering"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_oversampled_limiter_hud()` and `open_vari_mu_master_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier159_turn96_tests.rs`:
+    * Pure tests: view initialization, coordinate normalizations (threshold, ceiling, release, drive, link), profile & dither mode switching across all 5 profiles, Sinc ISP & non-linear transfer curve evaluation, touch puck hit testing (>= 44x44pt bounding targets), deterministic ASCII snapshots with metadata banners.
+    * GUI tests: modal window lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch without allocations, trigger button propagation from rack and inspector, command palette action verification.
+  - Registered `tier159_turn96_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Feature tests: 7 passed in 0.05s (`cargo test -p summoner_gui --features gui -- tier159`).
+  - Pure unit tests: 329 passed in 0.23s (`cargo test -p summoner_gui --lib`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`).
+
 
 
 

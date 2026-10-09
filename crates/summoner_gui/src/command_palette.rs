@@ -857,6 +857,18 @@ impl CommandPalette {
                 action_id: "open_formant_filter_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Mastering True-Peak 8x Oversampled Limiter HUD".into(),
+                category: "Dynamics & Mastering".into(),
+                action_id: "open_oversampled_limiter_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Mastering Dual-Mono Variable-Mu Vacuum Tube Optical Compressor HUD".into(),
+                category: "Dynamics & Mastering".into(),
+                action_id: "open_vari_mu_master_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES
