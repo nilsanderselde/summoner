@@ -2698,6 +2698,39 @@ Product Management has conducted a comprehensive readiness audit:
   - Feature tests: 5 passed in 0.05s (`cargo test -p summoner_gui --features gui -- tier161`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`).
 
+### Turn #99 (Sprint Turn #25) — Dynamic Harmonic Exciter & Brilliance HUD and Psychoacoustic Stereo Widener & Vector Scope HUD Convergence (Milestones 33 & 34)
+- [x] Dynamic Harmonic Exciter & Psychoacoustic Stereo Widener HUDs Integration:
+  - Integrated `HarmonicExciterView` (Dynamic Harmonic Exciter & Psychoacoustic Brilliance Curve HUD: 4 Exciter Modes [Tape (3rd Harmonic), Tube (2nd Harmonic), Transistor Edge, Psychoacoustic Air], Crossover Frequency [1000.0..20000.0 Hz], Harmonic Drive [0.0..100.0 %], High-Shelf Brilliance [0.0..18.0 dB], Warmth Blend [0.0..1.0], Transient Weight [0.0..100.0 %], Solo Harmonics Toggle, 2D Saturation & Brilliance Response Curve Canvas, and Touch-Draggable Crossover vs Drive Puck with >= 44x44pt bounding target) and `StereoWidenerView` (Psychoacoustic Stereo Widener & Haas Effect Delay HUD with Phase Vector Scope: 4 Operating Modes [Mid/Side Band Width, Haas Micro-Delay, Frequency Split Multiband, Binaural HRTF Spatializer], 3-Band Width Controls [Low / Mono Bass 0.0..200.0%, Mid 0.0..200.0%, High Air 0.0..200.0%], Crossover Low [60.0..400.0 Hz], Crossover High [1000.0..10000.0 Hz], Haas Delay [0.0..30.0 ms], Channel Offset [-1.0..+1.0], Stereo Balance [-1.0..+1.0], Phase Correlation Readout Badge, Lissajous Stereo Phase Vector Scope Canvas, and Touch-Draggable Crossover Handles with >= 44x44pt bounding target) into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/harmonic_exciter_view.rs` & `stereo_widener_view.rs`):
+  - In `HarmonicExciterView`: added `name()` to `ExciterMode`, coordinate normalizations & round-trips (`warmth_to_normalized`, `normalized_to_warmth`, `transient_to_normalized`, `normalized_to_transient`), `set_mode()`, `show_ui(&mut self, ui: &mut egui::Ui)`, and `render_ascii_snapshot_str() -> String` with exciter mode metadata banner and verified hit target badge.
+  - In `StereoWidenerView`: added `name()` to `StereoWidenerMode`, coordinate normalizations & round-trips (`width_to_normalized`, `normalized_to_width`, `haas_delay_to_normalized`, `normalized_to_haas_delay`, `balance_to_normalized`, `normalized_to_balance`), `set_mode()`, `show_ui(&mut self, ui: &mut egui::Ui)`, and `render_ascii_snapshot_str() -> String` with stereo widener mode metadata banner and verified hit target badge.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_harmonic_exciter_modal: bool`, `harmonic_exciter_view: HarmonicExciterView`, `show_stereo_widener_modal: bool`, and `stereo_widener_view: StereoWidenerView`.
+  - Added dedicated modal windows `show_harmonic_exciter_modal_window` and `show_stereo_widener_modal_window` with responsive styling, WCAG AAA contrast, and >= 44x44pt touch bounds.
+  - Added public lifecycle methods: `open_harmonic_exciter_hud()`, `close_harmonic_exciter_hud()`, `is_harmonic_exciter_hud_open()`, `open_stereo_widener_hud()`, `close_stereo_widener_hud()`, `is_stereo_widener_hud_open()`.
+  - Real-time parameter sync bridges (`sync_harmonic_exciter_hud_state` and `sync_stereo_widener_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_harmonic_exciter_hud: bool` and `requested_open_stereo_widener_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[✨ Open Harmonic Exciter HUD]` and `[↔ Open Stereo Widener HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header buttons `[✨ Exciter HUD]` and `[↔ Widener HUD]` in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Harmonic Exciter: 2D harmonic response curve preview, crossover marker, interactive Crossover/Drive puck, live readout, and lock-free `ParamBus` slot dispatch.
+    * Stereo Widener: 2D stereo width spread & Haas delay response preview, center reference axis, interactive Width/Haas puck, live readout, and lock-free `ParamBus` slot dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_harmonic_exciter_hud` under `"Distortion & Color"` and `open_stereo_widener_hud` under `"Spatial & Surround"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_harmonic_exciter_hud()` and `open_stereo_widener_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier162_turn99_tests.rs`:
+    * Pure tests: view initialization, coordinate normalizations (frequency, drive, brilliance, warmth, transient, width, haas delay, balance), mode switching across all 4 modes, harmonic response & vector scope calculations, touch puck & crossover handle hit testing (>= 44x44pt bounding targets), deterministic ASCII snapshots with metadata banners.
+    * GUI tests: modal window lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch without allocations, trigger button propagation from rack and inspector, command palette action verification.
+  - Registered `tier162_turn99_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Feature tests: 6 passed in 0.08s (`cargo test -p summoner_gui --features gui -- tier162`).
+  - Pure unit tests: 329 passed in 0.22s (`cargo test -p summoner_gui --lib`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`).
+
+
 
 
 

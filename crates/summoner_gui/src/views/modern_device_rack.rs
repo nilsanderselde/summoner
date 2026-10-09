@@ -245,6 +245,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_frequency_shifter_hud: bool,
     #[serde(default)]
     pub requested_open_optical_compressor_hud: bool,
+    #[serde(default)]
+    pub requested_open_harmonic_exciter_hud: bool,
+    #[serde(default)]
+    pub requested_open_stereo_widener_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -356,6 +360,8 @@ impl Default for ModernDeviceRackState {
             requested_open_multitap_delay_hud: false,
             requested_open_frequency_shifter_hud: false,
             requested_open_optical_compressor_hud: false,
+            requested_open_harmonic_exciter_hud: false,
+            requested_open_stereo_widener_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -1090,6 +1096,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_multitap_delay = cur_selection.contains("Multitap") || cur_selection.contains("MultiTap") || cur_selection == "MultitapDelayNode" || cur_selection.contains("TapDelay") || cur_selection == "MultiTapModulatedDiffuser";
                     let is_frequency_shifter = cur_selection.contains("FrequencyShift") || cur_selection.contains("FreqShift") || cur_selection == "FrequencyShifterNode" || cur_selection == "FrequencyShifter" || cur_selection == "FrequencyShifterRingModulator";
                     let is_optical_compressor = cur_selection.contains("OpticalCompressor") || cur_selection.contains("OptoComp") || cur_selection == "OpticalCompressorNode" || cur_selection.contains("VactrolCompressor") || cur_selection == "OpticalTubeCompressorLimiter" || cur_selection == "OptoelectronicVactrolOptocoupler" || cur_selection == "OpticalVactrolPeakMasterCompressor";
+                    let is_harmonic_exciter = cur_selection.contains("HarmonicExciter") || cur_selection.contains("Exciter") || cur_selection == "HarmonicExciterNode" || cur_selection == "AuralExciter" || cur_selection.contains("TapeExciter");
+                    let is_stereo_widener = cur_selection.contains("StereoWidener") || cur_selection.contains("StereoWidth") || cur_selection == "StereoWidenerNode" || cur_selection == "DynamicStereoWidthNode" || cur_selection.contains("HaasWidener") || cur_selection.contains("TransientSplayStereoWidener");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1478,6 +1486,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("💡 OptoComp HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 215, 0))).on_hover_text("Open Vintage Optical & VCA Compressor HUD").clicked()
                     {
                         state.requested_open_optical_compressor_hud = true;
+                    } else if is_harmonic_exciter
+                        && ui.button(RichText::new("✨ Exciter HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Dynamic Harmonic Exciter & Brilliance HUD").clicked()
+                    {
+                        state.requested_open_harmonic_exciter_hud = true;
+                    } else if is_stereo_widener
+                        && ui.button(RichText::new("↔ Widener HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 255, 180))).on_hover_text("Open Psychoacoustic Stereo Widener & Vector Scope HUD").clicked()
+                    {
+                        state.requested_open_stereo_widener_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2340,6 +2356,8 @@ fn show_pro_parameter_drawer(
                     let is_multitap_delay = dev_kind.contains("Multitap") || dev_kind.contains("MultiTap") || dev_kind == "MultitapDelayNode" || dev_kind.contains("TapDelay") || dev_kind == "MultiTapModulatedDiffuser";
                     let is_frequency_shifter = dev_kind.contains("FrequencyShift") || dev_kind.contains("FreqShift") || dev_kind == "FrequencyShifterNode" || dev_kind == "FrequencyShifter" || dev_kind == "FrequencyShifterRingModulator";
                     let is_optical_compressor = dev_kind.contains("OpticalCompressor") || dev_kind.contains("OptoComp") || dev_kind == "OpticalCompressorNode" || dev_kind.contains("VactrolCompressor") || dev_kind == "OpticalTubeCompressorLimiter" || dev_kind == "OptoelectronicVactrolOptocoupler" || dev_kind == "OpticalVactrolPeakMasterCompressor";
+                    let is_harmonic_exciter = dev_kind.contains("HarmonicExciter") || dev_kind.contains("Exciter") || dev_kind == "HarmonicExciterNode" || dev_kind == "AuralExciter" || dev_kind.contains("TapeExciter");
+                    let is_stereo_widener = dev_kind.contains("StereoWidener") || dev_kind.contains("StereoWidth") || dev_kind == "StereoWidenerNode" || dev_kind == "DynamicStereoWidthNode" || dev_kind.contains("HaasWidener") || dev_kind.contains("TransientSplayStereoWidener");
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -10037,6 +10055,163 @@ fn show_pro_parameter_drawer(
                             let _ = op_resp.on_hover_text(format!(
                                 "Vintage Optical & VCA Compressor HUD\nThreshold: {:.1} dB | Knee: {:.1} dB\nRatio: {:.1}:1 | GR: {:.1} dB\n[Drag: Threshold dB (X) / Knee dB (Y) Puck]",
                                 thresh_db, knee_db, ratio, gr_db
+                            ));
+                        }
+                    } else if is_harmonic_exciter {
+                        // Dynamic Harmonic Exciter & Brilliance Curve Mini View
+                        let (ex_resp, ex_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let ex_rect = ex_resp.rect;
+                        ex_painter.rect_filled(ex_rect, 2.0, Color32::from_rgb(12, 16, 26));
+
+                        let mut fc_hz = state.node_param_values.get("crossover_freq_hz").or_else(|| state.node_param_values.get("frequency")).copied().unwrap_or(5000.0);
+                        let mut drive = state.node_param_values.get("drive_percent").or_else(|| state.node_param_values.get("drive")).copied().unwrap_or(45.0);
+                        let brill_db = state.node_param_values.get("brilliance_db").or_else(|| state.node_param_values.get("brilliance")).copied().unwrap_or(6.5);
+
+                        if ex_resp.dragged() {
+                            if let Some(pos) = ex_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - ex_rect.left()) / ex_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - ex_rect.top()) / ex_rect.height())).clamp(0.0, 1.0);
+                                fc_hz = crate::views::harmonic_exciter_view::HarmonicExciterView::normalized_to_freq(norm_x);
+                                drive = crate::views::harmonic_exciter_view::HarmonicExciterView::normalized_to_drive(norm_y);
+                                state.node_param_values.insert("crossover_freq_hz".to_string(), fc_hz);
+                                state.node_param_values.insert("frequency".to_string(), fc_hz);
+                                state.node_param_values.insert("drive_percent".to_string(), drive);
+                                state.node_param_values.insert("drive".to_string(), drive);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_drive = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_drive).is_some() { bus.set(pid_drive, drive); }
+                                    let pid_freq = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_freq).is_some() { bus.set(pid_freq, fc_hz); }
+                                }
+                            }
+                        }
+
+                        // Grid lines
+                        for s in 1..3 {
+                            let gy = ex_rect.top() + ex_rect.height() * (s as f32 * 0.33);
+                            ex_painter.line_segment(
+                                [egui::pos2(ex_rect.left(), gy), egui::pos2(ex_rect.right(), gy)],
+                                Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(45, 60, 85, 60)),
+                            );
+                        }
+
+                        // Harmonic Response Curve
+                        let norm_fc = crate::views::harmonic_exciter_view::HarmonicExciterView::freq_to_normalized(fc_hz);
+                        let norm_dr = crate::views::harmonic_exciter_view::HarmonicExciterView::drive_to_normalized(drive);
+                        let cx = ex_rect.left() + norm_fc * ex_rect.width();
+
+                        // Crossover dashed line
+                        ex_painter.line_segment(
+                            [egui::pos2(cx, ex_rect.top() + 6.0), egui::pos2(cx, ex_rect.bottom() - 6.0)],
+                            Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(255, 215, 0, 100)),
+                        );
+
+                        let steps = 30;
+                        let mut prev_pt: Option<egui::Pos2> = None;
+                        for i in 0..=steps {
+                            let t = i as f32 / steps as f32;
+                            let f = crate::views::harmonic_exciter_view::HarmonicExciterView::normalized_to_freq(t);
+                            let high_ratio = (f / fc_hz).clamp(0.5, 10.0);
+                            let curve = 1.0 - (-0.8 * (high_ratio - 0.5)).exp();
+                            let mag = (0.05 + curve * (0.45 * (drive / 100.0) + 0.50 * (brill_db / 18.0))).clamp(0.0, 1.0);
+
+                            let px = ex_rect.left() + t * ex_rect.width();
+                            let py = ex_rect.bottom() - mag * (ex_rect.height() - 12.0) - 6.0;
+                            let pt = egui::pos2(px, py);
+                            if let Some(prev) = prev_pt {
+                                ex_painter.line_segment([prev, pt], Stroke::new(1.5_f32, Color32::from_rgb(0, 229, 255)));
+                            }
+                            prev_pt = Some(pt);
+                        }
+
+                        // Touch Puck
+                        let puck_x = cx;
+                        let puck_y = ex_rect.bottom() - norm_dr * (ex_rect.height() - 12.0) - 6.0;
+                        ex_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(0, 229, 255));
+                        ex_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::from_rgb(255, 255, 255)));
+
+                        // Readout
+                        ex_painter.text(
+                            egui::pos2(ex_rect.right() - 4.0, ex_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("EXCITER\nFc:{:.0}Hz\nDrv:{:.0}%\nBrill:+{:.1}dB", fc_hz, drive, brill_db),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+
+                        if ex_resp.hovered() {
+                            let _ = ex_resp.on_hover_text(format!(
+                                "Dynamic Harmonic Exciter HUD\nCrossover: {:.0} Hz | Drive: {:.0}%\nBrilliance: +{:.1} dB\n[Drag: Crossover Hz (X) / Drive % (Y) Puck]",
+                                fc_hz, drive, brill_db
+                            ));
+                        }
+                    } else if is_stereo_widener {
+                        // Psychoacoustic Stereo Widener Mini View
+                        let (sw_resp, sw_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let sw_rect = sw_resp.rect;
+                        sw_painter.rect_filled(sw_rect, 2.0, Color32::from_rgb(10, 14, 22));
+
+                        let mut mid_w = state.node_param_values.get("mid_band_width_pct").or_else(|| state.node_param_values.get("mid_side_ratio")).copied().unwrap_or(100.0);
+                        let mut haas_ms = state.node_param_values.get("haas_delay_ms").copied().unwrap_or(8.5);
+                        let corr = state.node_param_values.get("phase_correlation").copied().unwrap_or(0.82);
+
+                        if sw_resp.dragged() {
+                            if let Some(pos) = sw_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - sw_rect.left()) / sw_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - sw_rect.top()) / sw_rect.height())).clamp(0.0, 1.0);
+                                mid_w = crate::views::stereo_widener_view::StereoWidenerView::normalized_to_width(norm_x);
+                                haas_ms = crate::views::stereo_widener_view::StereoWidenerView::normalized_to_haas_delay(norm_y);
+                                state.node_param_values.insert("mid_band_width_pct".to_string(), mid_w);
+                                state.node_param_values.insert("mid_side_ratio".to_string(), mid_w / 100.0 * 1.25);
+                                state.node_param_values.insert("haas_delay_ms".to_string(), haas_ms);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_delay = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_delay).is_some() { bus.set(pid_delay, haas_ms); }
+                                    let pid_width = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_width).is_some() { bus.set(pid_width, mid_w); }
+                                }
+                            }
+                        }
+
+                        // Center Reference Axis
+                        let mid_y = sw_rect.center().y;
+                        sw_painter.line_segment(
+                            [egui::pos2(sw_rect.left(), mid_y), egui::pos2(sw_rect.right(), mid_y)],
+                            Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(60, 80, 110, 80)),
+                        );
+
+                        // Width Spread Bars
+                        let norm_w = crate::views::stereo_widener_view::StereoWidenerView::width_to_normalized(mid_w);
+                        let norm_h = crate::views::stereo_widener_view::StereoWidenerView::haas_delay_to_normalized(haas_ms);
+
+                        let spread_w = (sw_rect.width() * 0.40) * norm_w;
+                        let cx = sw_rect.center().x;
+                        sw_painter.line_segment(
+                            [egui::pos2(cx - spread_w, mid_y), egui::pos2(cx + spread_w, mid_y)],
+                            Stroke::new(3.0_f32, Color32::from_rgb(0, 255, 180)),
+                        );
+
+                        // Interactive Width / Haas Puck
+                        let puck_x = sw_rect.left() + norm_w * sw_rect.width();
+                        let puck_y = sw_rect.bottom() - norm_h * (sw_rect.height() - 12.0) - 6.0;
+                        sw_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(0, 255, 180));
+                        sw_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::from_rgb(255, 255, 255)));
+
+                        // Readout
+                        sw_painter.text(
+                            egui::pos2(sw_rect.right() - 4.0, sw_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("WIDENER\nMidW:{:.0}%\nHaas:{:.1}ms\nCorr:{:+.2}", mid_w, haas_ms, corr),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(0, 255, 180),
+                        );
+
+                        if sw_resp.hovered() {
+                            let _ = sw_resp.on_hover_text(format!(
+                                "Psychoacoustic Stereo Widener HUD\nMid Width: {:.0}% | Haas Delay: {:.1} ms\nCorrelation: {:+.2}\n[Drag: Mid Width % (X) / Haas Delay ms (Y) Puck]",
+                                mid_w, haas_ms, corr
                             ));
                         }
                     } else {

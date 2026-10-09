@@ -893,6 +893,18 @@ impl CommandPalette {
                 action_id: "open_optical_compressor_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Dynamic Harmonic Exciter & Brilliance HUD".into(),
+                category: "Distortion & Color".into(),
+                action_id: "open_harmonic_exciter_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Psychoacoustic Stereo Widener & Vector Scope HUD".into(),
+                category: "Spatial & Surround".into(),
+                action_id: "open_stereo_widener_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

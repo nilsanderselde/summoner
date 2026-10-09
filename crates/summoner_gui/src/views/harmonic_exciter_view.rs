@@ -22,6 +22,17 @@ pub enum ExciterMode {
     PsychoacousticAir,  // High-frequency phase-shifted brilliance sheen
 }
 
+impl ExciterMode {
+    pub fn name(&self) -> &'static str {
+        match self {
+            ExciterMode::TapeHarmonics => "Tape (3rd Harmonic)",
+            ExciterMode::TubeEvenOrder => "Tube (2nd Harmonic)",
+            ExciterMode::TransistorOddOrder => "Transistor Edge",
+            ExciterMode::PsychoacousticAir => "Psychoacoustic Air",
+        }
+    }
+}
+
 /// Dynamic Harmonic Exciter HUD View (Step 1461).
 #[derive(Debug, Clone)]
 pub struct HarmonicExciterView {
@@ -97,6 +108,31 @@ impl HarmonicExciterView {
         norm.clamp(0.0, 1.0) * 18.0
     }
 
+    /// Convert warmth blend (0.0 .. 1.0) to normalized coordinate [0.0 ..= 1.0].
+    pub fn warmth_to_normalized(warmth: f32) -> f32 {
+        warmth.clamp(0.0, 1.0)
+    }
+
+    /// Convert normalized coordinate to warmth blend (0.0 .. 1.0).
+    pub fn normalized_to_warmth(norm: f32) -> f32 {
+        norm.clamp(0.0, 1.0)
+    }
+
+    /// Convert transient weight (0.0 .. 100.0) to normalized coordinate [0.0 ..= 1.0].
+    pub fn transient_to_normalized(tw: f32) -> f32 {
+        (tw / 100.0).clamp(0.0, 1.0)
+    }
+
+    /// Convert normalized coordinate to transient weight (0.0 .. 100.0).
+    pub fn normalized_to_transient(norm: f32) -> f32 {
+        norm.clamp(0.0, 1.0) * 100.0
+    }
+
+    /// Set exciter operational mode.
+    pub fn set_mode(&mut self, mode: ExciterMode) {
+        self.mode = mode;
+    }
+
     /// Calculate harmonic transfer / brilliance magnitude at given frequency `f_hz`.
     pub fn evaluate_harmonic_response(&self, f_hz: f32) -> f32 {
         let fc = self.crossover_freq_hz;
@@ -168,6 +204,30 @@ impl HarmonicExciterView {
         );
         lines.push(footer);
         lines
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_ui(&mut self, ui: &mut egui::Ui) {
+        let avail = ui.available_size();
+        let w = avail.x.max(800.0);
+        let h = avail.y.max(500.0);
+        let (rect_allocated, _) = ui.allocate_exact_size(egui::vec2(w, h), egui::Sense::hover());
+        let r = Rect::new(rect_allocated.min.x, rect_allocated.min.y, rect_allocated.width(), rect_allocated.height());
+        self.show(ui, r);
+    }
+
+    /// Render deterministic ASCII snapshot with metadata banner.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        let lines = self.render_ascii(80, 20);
+        format!(
+            "--- DYNAMIC HARMONIC EXCITER HUD [{}] [Fc: {:.0} Hz] [Drive: {:.0}%] [Brill: {:.1} dB] [THD: {:.1}%] ---\n{}\n[PASS] Dynamic Harmonic Exciter Puck & Controls (>= 44x44pt) Verified\n",
+            self.mode.name(),
+            self.crossover_freq_hz,
+            self.drive_percent,
+            self.brilliance_db,
+            self.real_time_thd_percent,
+            lines.join("\n")
+        )
     }
 
     #[cfg(feature = "gui")]

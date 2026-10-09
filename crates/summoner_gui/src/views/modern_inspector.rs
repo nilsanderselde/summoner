@@ -230,6 +230,10 @@ pub struct ModernInspectorState {
     pub requested_open_frequency_shifter_hud: bool,
     #[serde(default)]
     pub requested_open_optical_compressor_hud: bool,
+    #[serde(default)]
+    pub requested_open_harmonic_exciter_hud: bool,
+    #[serde(default)]
+    pub requested_open_stereo_widener_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -351,6 +355,8 @@ impl Default for ModernInspectorState {
             requested_open_multitap_delay_hud: false,
             requested_open_frequency_shifter_hud: false,
             requested_open_optical_compressor_hud: false,
+            requested_open_harmonic_exciter_hud: false,
+            requested_open_stereo_widener_hud: false,
         }
     }
 }
@@ -1795,6 +1801,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open Vintage Optical & VCA Compressor Knee & Gain Transfer Curve HUD").clicked() {
                     state.requested_open_optical_compressor_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("HarmonicExciter") || active_kind.contains("Exciter") || active_kind == "HarmonicExciterNode" || active_kind == "AuralExciter" || active_kind.contains("TapeExciter") {
+                if ui.add(
+                    egui::Button::new(RichText::new("✨ Open Harmonic Exciter HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 229, 255)))
+                        .fill(Color32::from_rgb(14, 28, 40))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 229, 255)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Dynamic Harmonic Exciter & Psychoacoustic Brilliance HUD").clicked() {
+                    state.requested_open_harmonic_exciter_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("StereoWidener") || active_kind.contains("StereoWidth") || active_kind == "StereoWidenerNode" || active_kind == "DynamicStereoWidthNode" || active_kind.contains("HaasWidener") || active_kind.contains("TransientSplayStereoWidener") {
+                if ui.add(
+                    egui::Button::new(RichText::new("↔ Open Stereo Widener HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 255, 180)))
+                        .fill(Color32::from_rgb(12, 32, 26))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 255, 180)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Psychoacoustic Stereo Widener & Vector Scope HUD").clicked() {
+                    state.requested_open_stereo_widener_hud = true;
                 }
                 ui.add_space(4.0);
             }

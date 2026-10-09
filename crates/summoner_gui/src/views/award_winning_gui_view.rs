@@ -836,6 +836,10 @@ pub struct AwardWinningGuiView {
     pub frequency_shifter_view: crate::views::frequency_shifter_view::FrequencyShifterView,
     pub show_optical_compressor_modal: bool,
     pub optical_compressor_view: crate::views::optical_compressor_view::OpticalCompressorView,
+    pub show_harmonic_exciter_modal: bool,
+    pub harmonic_exciter_view: crate::views::harmonic_exciter_view::HarmonicExciterView,
+    pub show_stereo_widener_modal: bool,
+    pub stereo_widener_view: crate::views::stereo_widener_view::StereoWidenerView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1288,6 +1292,10 @@ impl AwardWinningGuiView {
             frequency_shifter_view: crate::views::frequency_shifter_view::FrequencyShifterView::new(),
             show_optical_compressor_modal: false,
             optical_compressor_view: crate::views::optical_compressor_view::OpticalCompressorView::new(),
+            show_harmonic_exciter_modal: false,
+            harmonic_exciter_view: crate::views::harmonic_exciter_view::HarmonicExciterView::new(),
+            show_stereo_widener_modal: false,
+            stereo_widener_view: crate::views::stereo_widener_view::StereoWidenerView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2417,6 +2425,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_optical_compressor_hud = false;
             self.open_optical_compressor_hud();
         }
+        if self.inspector_state.requested_open_harmonic_exciter_hud || self.device_rack_state.requested_open_harmonic_exciter_hud {
+            self.inspector_state.requested_open_harmonic_exciter_hud = false;
+            self.device_rack_state.requested_open_harmonic_exciter_hud = false;
+            self.open_harmonic_exciter_hud();
+        }
+        if self.inspector_state.requested_open_stereo_widener_hud || self.device_rack_state.requested_open_stereo_widener_hud {
+            self.inspector_state.requested_open_stereo_widener_hud = false;
+            self.device_rack_state.requested_open_stereo_widener_hud = false;
+            self.open_stereo_widener_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2518,6 +2536,8 @@ impl AwardWinningGuiView {
         self.show_multitap_delay_modal_window(ui);
         self.show_frequency_shifter_modal_window(ui);
         self.show_optical_compressor_modal_window(ui);
+        self.show_harmonic_exciter_modal_window(ui);
+        self.show_stereo_widener_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -17512,6 +17532,206 @@ impl AwardWinningGuiView {
             if bus.get(pid_makeup).is_some() { bus.set(pid_makeup, makeup); }
             if bus.get(pid_att).is_some() { bus.set(pid_att, attack); }
             if bus.get(pid_rel).is_some() { bus.set(pid_rel, release); }
+        }
+    }
+
+    pub fn open_harmonic_exciter_hud(&mut self) {
+        self.show_harmonic_exciter_modal = true;
+    }
+
+    pub fn close_harmonic_exciter_hud(&mut self) {
+        self.show_harmonic_exciter_modal = false;
+    }
+
+    pub fn is_harmonic_exciter_hud_open(&self) -> bool {
+        self.show_harmonic_exciter_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_harmonic_exciter_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_harmonic_exciter_modal {
+            return;
+        }
+
+        let mut is_open = self.show_harmonic_exciter_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("✨ Dynamic Harmonic Exciter & Psychoacoustic Brilliance HUD")
+            .id(egui::Id::new("harmonic_exciter_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Aural Exciter Harmonics Generation, Psychoacoustic High Sheen & Tape/Tube Saturation (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.harmonic_exciter_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_harmonic_exciter_modal = is_open;
+        self.sync_harmonic_exciter_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_harmonic_exciter_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let fc = self.harmonic_exciter_view.crossover_freq_hz;
+        let drive = self.harmonic_exciter_view.drive_percent;
+        let brill = self.harmonic_exciter_view.brilliance_db;
+        let warmth = self.harmonic_exciter_view.warmth_blend;
+        let tw = self.harmonic_exciter_view.transient_weight;
+
+        self.device_rack_state.node_param_values.insert("crossover_freq_hz".to_string(), fc);
+        self.device_rack_state.node_param_values.insert("frequency".to_string(), fc);
+        self.device_rack_state.node_param_values.insert("drive_percent".to_string(), drive);
+        self.device_rack_state.node_param_values.insert("drive".to_string(), drive);
+        self.device_rack_state.node_param_values.insert("brilliance_db".to_string(), brill);
+        self.device_rack_state.node_param_values.insert("brilliance".to_string(), brill);
+        self.device_rack_state.node_param_values.insert("warmth_blend".to_string(), warmth);
+        self.device_rack_state.node_param_values.insert("transient_weight".to_string(), tw);
+
+        self.inspector_state.node_param_values.insert("crossover_freq_hz".to_string(), fc);
+        self.inspector_state.node_param_values.insert("frequency".to_string(), fc);
+        self.inspector_state.node_param_values.insert("drive_percent".to_string(), drive);
+        self.inspector_state.node_param_values.insert("drive".to_string(), drive);
+        self.inspector_state.node_param_values.insert("brilliance_db".to_string(), brill);
+        self.inspector_state.node_param_values.insert("brilliance".to_string(), brill);
+        self.inspector_state.node_param_values.insert("warmth_blend".to_string(), warmth);
+        self.inspector_state.node_param_values.insert("transient_weight".to_string(), tw);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_drive = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_freq = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_brill = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_warmth = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_drive).is_some() { bus.set(pid_drive, drive); }
+            if bus.get(pid_freq).is_some() { bus.set(pid_freq, fc); }
+            if bus.get(pid_brill).is_some() { bus.set(pid_brill, brill); }
+            if bus.get(pid_warmth).is_some() { bus.set(pid_warmth, warmth); }
+        }
+    }
+
+    pub fn open_stereo_widener_hud(&mut self) {
+        self.show_stereo_widener_modal = true;
+    }
+
+    pub fn close_stereo_widener_hud(&mut self) {
+        self.show_stereo_widener_modal = false;
+    }
+
+    pub fn is_stereo_widener_hud_open(&self) -> bool {
+        self.show_stereo_widener_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_stereo_widener_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_stereo_widener_modal {
+            return;
+        }
+
+        let mut is_open = self.show_stereo_widener_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("↔ Psychoacoustic Stereo Widener & Vector Scope HUD")
+            .id(egui::Id::new("stereo_widener_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("3-Band Frequency Width, Haas Micro-Delay & Real-Time Lissajous Vector Scope (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.stereo_widener_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_stereo_widener_modal = is_open;
+        self.sync_stereo_widener_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_stereo_widener_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let mid_w = self.stereo_widener_view.mid_band_width_pct;
+        let low_w = self.stereo_widener_view.low_band_width_pct;
+        let high_w = self.stereo_widener_view.high_band_width_pct;
+        let haas = self.stereo_widener_view.haas_delay_ms;
+        let xlow = self.stereo_widener_view.crossover_low_hz;
+        let xhigh = self.stereo_widener_view.crossover_high_hz;
+        let bal = self.stereo_widener_view.balance_lr;
+
+        self.device_rack_state.node_param_values.insert("mid_band_width_pct".to_string(), mid_w);
+        self.device_rack_state.node_param_values.insert("width".to_string(), mid_w);
+        self.device_rack_state.node_param_values.insert("mid_side_ratio".to_string(), mid_w / 100.0 * 1.25);
+        self.device_rack_state.node_param_values.insert("low_band_width_pct".to_string(), low_w);
+        self.device_rack_state.node_param_values.insert("high_band_width_pct".to_string(), high_w);
+        self.device_rack_state.node_param_values.insert("haas_delay_ms".to_string(), haas);
+        self.device_rack_state.node_param_values.insert("crossover_low_hz".to_string(), xlow);
+        self.device_rack_state.node_param_values.insert("crossover_high_hz".to_string(), xhigh);
+        self.device_rack_state.node_param_values.insert("balance_lr".to_string(), bal);
+
+        self.inspector_state.node_param_values.insert("mid_band_width_pct".to_string(), mid_w);
+        self.inspector_state.node_param_values.insert("width".to_string(), mid_w);
+        self.inspector_state.node_param_values.insert("mid_side_ratio".to_string(), mid_w / 100.0 * 1.25);
+        self.inspector_state.node_param_values.insert("low_band_width_pct".to_string(), low_w);
+        self.inspector_state.node_param_values.insert("high_band_width_pct".to_string(), high_w);
+        self.inspector_state.node_param_values.insert("haas_delay_ms".to_string(), haas);
+        self.inspector_state.node_param_values.insert("crossover_low_hz".to_string(), xlow);
+        self.inspector_state.node_param_values.insert("crossover_high_hz".to_string(), xhigh);
+        self.inspector_state.node_param_values.insert("balance_lr".to_string(), bal);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_haas = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_width = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_xlow = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_xhigh = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_bal = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+
+            if bus.get(pid_haas).is_some() { bus.set(pid_haas, haas); }
+            if bus.get(pid_width).is_some() { bus.set(pid_width, mid_w); }
+            if bus.get(pid_xlow).is_some() { bus.set(pid_xlow, xlow); }
+            if bus.get(pid_xhigh).is_some() { bus.set(pid_xhigh, xhigh); }
+            if bus.get(pid_bal).is_some() { bus.set(pid_bal, bal); }
         }
     }
     fn render_patch_cords_canvas(&mut self, ui: &mut egui::Ui, available_h: f32) {

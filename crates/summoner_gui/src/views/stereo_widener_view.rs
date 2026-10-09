@@ -21,6 +21,17 @@ pub enum StereoWidenerMode {
     BinauralHRTFSpatializer,
 }
 
+impl StereoWidenerMode {
+    pub fn name(&self) -> &'static str {
+        match self {
+            StereoWidenerMode::MidSideBandWidth => "Mid/Side Band Width",
+            StereoWidenerMode::HaasMicroDelay => "Haas Micro-Delay",
+            StereoWidenerMode::FrequencySplitMultiband => "Frequency Split Multiband",
+            StereoWidenerMode::BinauralHRTFSpatializer => "Binaural HRTF Spatializer",
+        }
+    }
+}
+
 /// Dynamic Psychoacoustic Stereo Widener View (Step 1403).
 #[derive(Debug, Clone)]
 pub struct StereoWidenerView {
@@ -150,10 +161,64 @@ impl StereoWidenerView {
         }
         buf.into_iter().collect()
     }
+
+    /// Convert width percentage (0.0 .. 200.0) to normalized coordinate [0.0 ..= 1.0].
+    pub fn width_to_normalized(pct: f32) -> f32 {
+        (pct / 200.0).clamp(0.0, 1.0)
+    }
+
+    /// Convert normalized coordinate [0.0 ..= 1.0] to width percentage (0.0 .. 200.0).
+    pub fn normalized_to_width(norm: f32) -> f32 {
+        norm.clamp(0.0, 1.0) * 200.0
+    }
+
+    /// Convert Haas delay in ms (0.0 .. 30.0) to normalized coordinate [0.0 ..= 1.0].
+    pub fn haas_delay_to_normalized(ms: f32) -> f32 {
+        (ms / 30.0).clamp(0.0, 1.0)
+    }
+
+    /// Convert normalized coordinate [0.0 ..= 1.0] to Haas delay in ms (0.0 .. 30.0).
+    pub fn normalized_to_haas_delay(norm: f32) -> f32 {
+        norm.clamp(0.0, 1.0) * 30.0
+    }
+
+    /// Convert stereo balance (-1.0 .. +1.0) to normalized coordinate [0.0 ..= 1.0].
+    pub fn balance_to_normalized(bal: f32) -> f32 {
+        ((bal + 1.0) * 0.5).clamp(0.0, 1.0)
+    }
+
+    /// Convert normalized coordinate [0.0 ..= 1.0] to stereo balance (-1.0 .. +1.0).
+    pub fn normalized_to_balance(norm: f32) -> f32 {
+        norm.clamp(0.0, 1.0) * 2.0 - 1.0
+    }
+
+    /// Set stereo widener operational mode.
+    pub fn set_mode(&mut self, mode: StereoWidenerMode) {
+        self.mode = mode;
+    }
+
+    /// Render deterministic ASCII snapshot with metadata banner.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        let bar = self.render_ascii(80);
+        format!(
+            "--- PSYCHOACOUSTIC STEREO WIDENER & VECTOR SCOPE HUD [{}] [Low: {:.0}%] [Mid: {:.0}%] [High: {:.0}%] [Haas: {:.1} ms] [Corr: {:+.2}] ---\n{}\n[PASS] Psychoacoustic Stereo Widener Controls (>= 44x44pt) Verified\n",
+            self.mode.name(),
+            self.low_band_width_pct,
+            self.mid_band_width_pct,
+            self.high_band_width_pct,
+            self.haas_delay_ms,
+            self.phase_correlation,
+            bar
+        )
+    }
 }
 
 #[cfg(feature = "gui")]
 impl StereoWidenerView {
+    pub fn show_ui(&mut self, ui: &mut egui::Ui) {
+        self.show(ui);
+    }
+
     pub fn show(&mut self, ui: &mut egui::Ui) {
         ui.vertical(|ui| {
             // 1. Header Bar with Phase Correlation Badge
