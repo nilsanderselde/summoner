@@ -289,6 +289,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_transient_clipper_hud: bool,
     #[serde(default)]
     pub requested_open_tape_flux_master_hud: bool,
+    #[serde(default)]
+    pub requested_open_transient_declicker_hud: bool,
+    #[serde(default)]
+    pub requested_open_transient_gate_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -422,6 +426,8 @@ impl Default for ModernDeviceRackState {
             requested_open_midside_focuser_hud: false,
             requested_open_transient_clipper_hud: false,
             requested_open_tape_flux_master_hud: false,
+            requested_open_transient_declicker_hud: false,
+            requested_open_transient_gate_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -1178,6 +1184,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_midside_focuser = cur_selection.contains("MidSideFocuser") || cur_selection.contains("SideFocuser") || cur_selection == "MidSideFocuserNode" || cur_selection.contains("MonoBassFocuser") || cur_selection.contains("MidPunchFocuser");
                     let is_transient_clipper = cur_selection.contains("TransientClipper") || cur_selection.contains("ClipperNode") || cur_selection == "TransientClipperNode" || cur_selection.contains("DynamicClipper") || cur_selection.contains("MasterClipper");
                     let is_tape_flux_master = cur_selection.contains("TapeFlux") || cur_selection.contains("TapeFluxMaster") || cur_selection == "TapeFluxMasterNode" || cur_selection.contains("MasteringTape") || cur_selection.contains("MagneticTape");
+                    let is_transient_declicker = cur_selection.contains("Declick") || cur_selection.contains("DeClick") || cur_selection.contains("VinylRestoration") || cur_selection.contains("TransientDeclicker") || cur_selection == "TransientDeclickerNode" || cur_selection.contains("ClickRepair") || cur_selection.contains("AudioRestoration");
+                    let is_transient_gate = cur_selection.contains("TransientGate") || cur_selection.contains("SidechainGate") || cur_selection.contains("NoiseGate") || cur_selection == "TransientGateNode" || cur_selection.contains("HysteresisGate") || cur_selection.contains("DynamicGate") || cur_selection.contains("TransientExpanderGate");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1654,6 +1662,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("📼 Tape Flux HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(235, 94, 40))).on_hover_text("Open Mastering Multi-Stage Magnetic Tape Flux Saturation HUD").clicked()
                     {
                         state.requested_open_tape_flux_master_hud = true;
+                    } else if is_transient_declicker
+                        && ui.button(RichText::new("🧹 De-Clicker HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Linear-Phase Dynamic Transient De-Clicker & Vinyl Restoration HUD").clicked()
+                    {
+                        state.requested_open_transient_declicker_hud = true;
+                    } else if is_transient_gate
+                        && ui.button(RichText::new("⚡ Gate HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 255, 180))).on_hover_text("Open Dynamic Transient Sidechain Expander/Gate & Hysteresis HUD").clicked()
+                    {
+                        state.requested_open_transient_gate_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2538,6 +2554,8 @@ fn show_pro_parameter_drawer(
                     let is_midside_focuser = dev_kind.contains("MidSideFocuser") || dev_kind.contains("SideFocuser") || dev_kind == "MidSideFocuserNode" || dev_kind.contains("MonoBassFocuser") || dev_kind.contains("MidPunchFocuser");
                     let is_transient_clipper = dev_kind.contains("TransientClipper") || dev_kind.contains("ClipperNode") || dev_kind == "TransientClipperNode" || dev_kind.contains("DynamicClipper") || dev_kind.contains("MasterClipper");
                     let is_tape_flux_master = dev_kind.contains("TapeFlux") || dev_kind.contains("TapeFluxMaster") || dev_kind == "TapeFluxMasterNode" || dev_kind.contains("MasteringTape") || dev_kind.contains("MagneticTape");
+                    let is_transient_declicker = dev_kind.contains("Declick") || dev_kind.contains("DeClick") || dev_kind.contains("VinylRestoration") || dev_kind.contains("TransientDeclicker") || dev_kind == "TransientDeclickerNode" || dev_kind.contains("ClickRepair") || dev_kind.contains("AudioRestoration");
+                    let is_transient_gate = dev_kind.contains("TransientGate") || dev_kind.contains("SidechainGate") || dev_kind.contains("NoiseGate") || dev_kind == "TransientGateNode" || dev_kind.contains("HysteresisGate") || dev_kind.contains("DynamicGate") || dev_kind.contains("TransientExpanderGate");
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -11786,6 +11804,153 @@ fn show_pro_parameter_drawer(
                             let _ = tape_resp.on_hover_text(format!(
                                 "Mastering Multi-Stage Magnetic Tape Flux Saturation HUD\nFlux Drive: +{:.1} dB | Bias Trim: {:+.1} dB | Speed: {:.1} ips\nEstimated THD: {:.2}%\n[Drag: Flux Drive (X) / Bias Trim (Y) Puck]",
                                 flux_drive_db, bias_trim_db, speed_ips, thd_est
+                            ));
+                        }
+                    } else if is_transient_declicker {
+                        // Linear-Phase Dynamic Transient De-Clicker Mini View
+                        let (dec_resp, dec_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let dec_rect = dec_resp.rect;
+                        dec_painter.rect_filled(dec_rect, 2.0, Color32::from_rgb(14, 18, 28));
+
+                        let mut thresh_db = state.node_param_values.get("threshold_db").copied().unwrap_or(-18.5);
+                        let mut width_ms = state.node_param_values.get("click_width_ms").copied().unwrap_or(1.20);
+                        let crackle_pct = state.node_param_values.get("crackle_density_pct").copied().unwrap_or(68.0);
+
+                        if dec_resp.dragged() || dec_resp.clicked() {
+                            if let Some(pos) = dec_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - dec_rect.left()) / (dec_rect.width() - 55.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - dec_rect.top() - 10.0) / (dec_rect.height() - 20.0))).clamp(0.0, 1.0);
+                                width_ms = crate::views::transient_declicker_view::TransientDeclickerView::normalized_to_width(norm_x);
+                                thresh_db = crate::views::transient_declicker_view::TransientDeclickerView::normalized_to_threshold(norm_y);
+                                state.node_param_values.insert("click_width_ms".to_string(), width_ms);
+                                state.node_param_values.insert("threshold_db".to_string(), thresh_db);
+                                state.node_param_values.insert("detection_threshold_db".to_string(), thresh_db);
+                                if let Some(bus) = param_bus {
+                                    let pid_th = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_wd = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_th).is_some() { bus.set(pid_th, thresh_db); }
+                                    if bus.get(pid_wd).is_some() { bus.set(pid_wd, width_ms); }
+                                }
+                            }
+                        }
+
+                        // Background threshold line
+                        let norm_th = crate::views::transient_declicker_view::TransientDeclickerView::threshold_to_normalized(thresh_db);
+                        let thresh_y = dec_rect.bottom() - norm_th * (dec_rect.height() - 20.0) - 10.0;
+                        dec_painter.line_segment(
+                            [egui::pos2(dec_rect.left() + 4.0, thresh_y), egui::pos2(dec_rect.right() - 55.0, thresh_y)],
+                            Stroke::new(1.0_f32, Color32::from_rgb(255, 215, 0)),
+                        );
+
+                        // Waveform spikes (clicks vs smooth Hermite repair)
+                        let pts_count = 14;
+                        let mut wave_pts = Vec::with_capacity(pts_count);
+                        for i in 0..pts_count {
+                            let t = i as f32 / (pts_count - 1) as f32;
+                            let px = dec_rect.left() + 4.0 + t * (dec_rect.width() - 60.0);
+                            let spike = if i == 7 { 0.85 } else if i % 2 == 0 { 0.2 } else { -0.2 };
+                            let py = dec_rect.center().y - spike * (dec_rect.height() * 0.35);
+                            wave_pts.push(egui::pos2(px, py));
+                        }
+                        dec_painter.add(egui::Shape::line(
+                            wave_pts,
+                            Stroke::new(1.2_f32, Color32::from_rgb(0, 229, 255)),
+                        ));
+
+                        // Interactive Puck
+                        let norm_wd = crate::views::transient_declicker_view::TransientDeclickerView::width_to_normalized(width_ms);
+                        let puck_x = dec_rect.left() + norm_wd * (dec_rect.width() - 55.0);
+                        let puck_y = thresh_y;
+                        dec_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(0, 229, 255));
+                        dec_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        let snr_est = (10.0 + ((-thresh_db) / 48.0) * 8.0).clamp(5.0, 22.0);
+                        dec_painter.text(
+                            egui::pos2(dec_rect.right() - 4.0, dec_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("DE-CLICK\n{:.1}dB Th\n{:.2}ms Wd\n+{:.1}dB SNR", thresh_db, width_ms, snr_est),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+
+                        if dec_resp.hovered() {
+                            let _ = dec_resp.on_hover_text(format!(
+                                "Linear-Phase Dynamic Transient De-Clicker HUD\nThreshold: {:.1} dB | Width: {:.2} ms | Crackle: {:.0}%\nEstimated SNR Gain: +{:.1} dB\n[Drag: Width (X) / Threshold (Y) Puck]",
+                                thresh_db, width_ms, crackle_pct, snr_est
+                            ));
+                        }
+                    } else if is_transient_gate {
+                        // Dynamic Transient Sidechain Expander/Gate Mini View
+                        let (gate_resp, gate_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let gate_rect = gate_resp.rect;
+                        gate_painter.rect_filled(gate_rect, 2.0, Color32::from_rgb(12, 16, 26));
+
+                        let mut open_th = state.node_param_values.get("open_threshold_db").copied().unwrap_or(-32.0);
+                        let mut hyst_db = state.node_param_values.get("hysteresis_db").copied().unwrap_or(6.0);
+                        let att_ms = state.node_param_values.get("attack_ms").copied().unwrap_or(1.2);
+                        let rel_ms = state.node_param_values.get("release_ms").copied().unwrap_or(180.0);
+
+                        if gate_resp.dragged() || gate_resp.clicked() {
+                            if let Some(pos) = gate_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - gate_rect.left()) / (gate_rect.width() - 55.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - gate_rect.top() - 10.0) / (gate_rect.height() - 20.0))).clamp(0.0, 1.0);
+                                open_th = crate::views::transient_gate_view::TransientGateView::normalized_to_db(norm_x);
+                                hyst_db = crate::views::transient_gate_view::TransientGateView::normalized_to_hysteresis(norm_y);
+                                state.node_param_values.insert("open_threshold_db".to_string(), open_th);
+                                state.node_param_values.insert("threshold_db".to_string(), open_th);
+                                state.node_param_values.insert("hysteresis_db".to_string(), hyst_db);
+                                if let Some(bus) = param_bus {
+                                    let pid_th = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_hy = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_th).is_some() { bus.set(pid_th, open_th); }
+                                    if bus.get(pid_hy).is_some() { bus.set(pid_hy, hyst_db); }
+                                }
+                            }
+                        }
+
+                        // Shaded hysteresis zone
+                        let norm_open = crate::views::transient_gate_view::TransientGateView::db_to_normalized(open_th);
+                        let close_th = (open_th - hyst_db).max(-80.0);
+                        let norm_close = crate::views::transient_gate_view::TransientGateView::db_to_normalized(close_th);
+                        let open_x = gate_rect.left() + norm_open * (gate_rect.width() - 55.0);
+                        let close_x = gate_rect.left() + norm_close * (gate_rect.width() - 55.0);
+
+                        gate_painter.rect_filled(
+                            egui::Rect::from_min_max(
+                                egui::pos2(close_x, gate_rect.top() + 6.0),
+                                egui::pos2(open_x, gate_rect.bottom() - 6.0),
+                            ),
+                            0.0,
+                            Color32::from_rgba_unmultiplied(0, 229, 255, 30),
+                        );
+                        gate_painter.line_segment(
+                            [egui::pos2(open_x, gate_rect.top() + 6.0), egui::pos2(open_x, gate_rect.bottom() - 6.0)],
+                            Stroke::new(1.5_f32, Color32::from_rgb(0, 255, 180)),
+                        );
+                        gate_painter.line_segment(
+                            [egui::pos2(close_x, gate_rect.top() + 6.0), egui::pos2(close_x, gate_rect.bottom() - 6.0)],
+                            Stroke::new(1.5_f32, Color32::from_rgb(255, 107, 43)),
+                        );
+
+                        // Interactive Puck
+                        let norm_hy = crate::views::transient_gate_view::TransientGateView::hysteresis_to_normalized(hyst_db);
+                        let puck_x = open_x;
+                        let puck_y = gate_rect.bottom() - norm_hy * (gate_rect.height() - 20.0) - 10.0;
+                        gate_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(0, 255, 180));
+                        gate_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        gate_painter.text(
+                            egui::pos2(gate_rect.right() - 4.0, gate_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("GATE/EXP\n{:.1}dB Op\n{:.1}dB Cl\n{:.1}ms Att", open_th, close_th, att_ms),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(0, 255, 180),
+                        );
+
+                        if gate_resp.hovered() {
+                            let _ = gate_resp.on_hover_text(format!(
+                                "Dynamic Transient Sidechain Expander/Gate HUD\nOpen: {:.1} dB | Close: {:.1} dB | Hyst: {:.1} dB\nAttack: {:.1} ms | Release: {:.0} ms\n[Drag: Open Threshold (X) / Hysteresis (Y) Puck]",
+                                open_th, close_th, hyst_db, att_ms, rel_ms
                             ));
                         }
                     } else {

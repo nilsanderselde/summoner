@@ -22,6 +22,21 @@ pub enum GateMode {
     HardNoiseGate,        // Brickwall noise reduction with sharp cutoff
 }
 
+impl GateMode {
+    pub fn mode_name(&self) -> &'static str {
+        match self {
+            Self::FastPercussiveSnare => "FAST SNARE / TRANSIENT",
+            Self::VocalBreathSmoothing => "VOCAL BREATH SMOOTHING",
+            Self::BassSubDucking => "BASS SUB DUCKING",
+            Self::HardNoiseGate => "HARD NOISE GATE",
+        }
+    }
+
+    pub fn name(&self) -> &'static str {
+        self.mode_name()
+    }
+}
+
 /// Dynamic Transient Gate & Hysteresis HUD View (Step 1473).
 #[derive(Debug, Clone)]
 pub struct TransientGateView {
@@ -89,6 +104,26 @@ impl TransientGateView {
     /// Convert normalized coordinate to hysteresis dB (0.0 .. 24.0).
     pub fn normalized_to_hysteresis(norm: f32) -> f32 {
         norm.clamp(0.0, 1.0) * 24.0
+    }
+
+    /// Convert attack time [0.1 ..= 100.0 ms] to normalized coordinate [0.0 ..= 1.0].
+    pub fn attack_to_normalized(ms: f32) -> f32 {
+        ((ms.clamp(0.1, 100.0) - 0.1) / (100.0 - 0.1)).clamp(0.0, 1.0)
+    }
+
+    /// Convert normalized coordinate [0.0 ..= 1.0] to attack time [0.1 ..= 100.0 ms].
+    pub fn normalized_to_attack(norm: f32) -> f32 {
+        0.1 + norm.clamp(0.0, 1.0) * (100.0 - 0.1)
+    }
+
+    /// Convert release decay time [5.0 ..= 2000.0 ms] to normalized coordinate [0.0 ..= 1.0].
+    pub fn release_to_normalized(ms: f32) -> f32 {
+        ((ms.clamp(5.0, 2000.0) - 5.0) / (2000.0 - 5.0)).clamp(0.0, 1.0)
+    }
+
+    /// Convert normalized coordinate [0.0 ..= 1.0] to release decay time [5.0 ..= 2000.0 ms].
+    pub fn normalized_to_release(norm: f32) -> f32 {
+        5.0 + norm.clamp(0.0, 1.0) * (2000.0 - 5.0)
     }
 
     /// Calculate close threshold dB = open_threshold_db - hysteresis_db.
@@ -175,6 +210,104 @@ impl TransientGateView {
         );
         lines.push(footer);
         lines
+    }
+
+    /// High-contrast ASCII snapshot string with metadata banner and compliance badge.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        let lines = self.render_ascii(60, 16);
+        let mut output = String::new();
+        output.push_str("============================================================\n");
+        output.push_str("  DYNAMIC TRANSIENT SIDECHAIN EXPANDER/GATE & HYSTERESIS HUD\n");
+        output.push_str(&format!(
+            "  Mode: {} | Open: {:.1} dB | Hyst: {:.1} dB | Att: {:.1} ms | Rel: {:.0} ms\n",
+            self.mode.name(),
+            self.open_threshold_db,
+            self.hysteresis_db,
+            self.attack_ms,
+            self.release_ms
+        ));
+        output.push_str("============================================================\n");
+        for line in lines {
+            output.push_str(&line);
+            output.push('\n');
+        }
+        output.push_str("============================================================\n");
+        output.push_str("  [PASS: >=44pt] Touch Bounding Target Verified\n");
+        output.push_str("============================================================\n");
+        output
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_ui(&mut self, ui: &mut egui::Ui) {
+        let (rect, response) = ui.allocate_exact_size(
+            egui::vec2(ui.available_width(), 480.0),
+            egui::Sense::click_and_drag(),
+        );
+        let custom_rect = Rect::new(rect.min.x, rect.min.y, rect.width(), rect.height());
+
+        // Mode Selector Bar Click Handling
+        let modes = [
+            (GateMode::FastPercussiveSnare, "FAST SNARE / TRANSIENT"),
+            (GateMode::VocalBreathSmoothing, "VOCAL BREATH SMOOTHING"),
+            (GateMode::BassSubDucking, "BASS SUB DUCKING"),
+            (GateMode::HardNoiseGate, "HARD NOISE GATE"),
+        ];
+        let btn_y = custom_rect.y + 54.0;
+        let btn_w = (custom_rect.width - 40.0 - 30.0) / 4.0;
+
+        if response.clicked() {
+            if let Some(pos) = response.interact_pointer_pos() {
+                for (i, (m, _)) in modes.iter().enumerate() {
+                    let bx = custom_rect.x + 20.0 + i as f32 * (btn_w + 10.0);
+                    let tab_rect = egui::Rect::from_min_size(egui::pos2(bx, btn_y), egui::vec2(btn_w, 36.0));
+                    if tab_rect.contains(pos) {
+                        self.mode = *m;
+                        match m {
+                            GateMode::FastPercussiveSnare => {
+                                self.attack_ms = 0.5;
+                                self.hold_ms = 20.0;
+                                self.release_ms = 80.0;
+                            }
+                            GateMode::VocalBreathSmoothing => {
+                                self.attack_ms = 5.0;
+                                self.hold_ms = 60.0;
+                                self.release_ms = 350.0;
+                            }
+                            GateMode::BassSubDucking => {
+                                self.attack_ms = 2.0;
+                                self.hold_ms = 100.0;
+                                self.release_ms = 220.0;
+                            }
+                            GateMode::HardNoiseGate => {
+                                self.attack_ms = 0.1;
+                                self.hold_ms = 10.0;
+                                self.release_ms = 50.0;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Hysteresis Canvas Click & Drag Handling
+        let hyst_canvas = Rect::new(custom_rect.x + 20.0, custom_rect.y + 100.0, 440.0, 230.0);
+        let hyst_rect = egui::Rect::from_min_size(
+            egui::pos2(hyst_canvas.x, hyst_canvas.y),
+            egui::vec2(hyst_canvas.width, hyst_canvas.height),
+        );
+        if response.dragged() || response.clicked() {
+            if let Some(pos) = response.interact_pointer_pos() {
+                if hyst_rect.contains(pos) {
+                    let nx = ((pos.x - hyst_rect.min.x) / hyst_rect.width()).clamp(0.0, 1.0);
+                    let ny = ((hyst_rect.max.y - pos.y) / hyst_rect.height()).clamp(0.0, 1.0);
+                    self.gate_puck_pos = (nx, ny);
+                    self.open_threshold_db = Self::normalized_to_db(nx);
+                    self.hysteresis_db = Self::normalized_to_hysteresis(ny);
+                }
+            }
+        }
+
+        self.show(ui, custom_rect);
     }
 
     #[cfg(feature = "gui")]

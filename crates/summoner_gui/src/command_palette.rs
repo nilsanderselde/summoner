@@ -1028,6 +1028,18 @@ impl CommandPalette {
                 action_id: "open_tape_flux_master_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Linear-Phase Dynamic Transient De-Clicker & Vinyl Restoration HUD".into(),
+                category: "Restoration & Dynamics".into(),
+                action_id: "open_transient_declicker_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Dynamic Transient Sidechain Expander/Gate & Hysteresis HUD".into(),
+                category: "Dynamics & Saturation".into(),
+                action_id: "open_transient_gate_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

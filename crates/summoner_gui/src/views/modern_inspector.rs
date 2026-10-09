@@ -274,6 +274,10 @@ pub struct ModernInspectorState {
     pub requested_open_transient_clipper_hud: bool,
     #[serde(default)]
     pub requested_open_tape_flux_master_hud: bool,
+    #[serde(default)]
+    pub requested_open_transient_declicker_hud: bool,
+    #[serde(default)]
+    pub requested_open_transient_gate_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -417,6 +421,8 @@ impl Default for ModernInspectorState {
             requested_open_midside_focuser_hud: false,
             requested_open_transient_clipper_hud: false,
             requested_open_tape_flux_master_hud: false,
+            requested_open_transient_declicker_hud: false,
+            requested_open_transient_gate_hud: false,
         }
     }
 }
@@ -2081,6 +2087,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open Mastering Multi-Stage Magnetic Tape Flux Saturation & HF Hysteresis HUD").clicked() {
                     state.requested_open_tape_flux_master_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Declick") || active_kind.contains("DeClick") || active_kind.contains("VinylRestoration") || active_kind.contains("TransientDeclicker") || active_kind == "TransientDeclickerNode" || active_kind.contains("ClickRepair") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🧹 Open Transient De-Clicker HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 229, 255)))
+                        .fill(Color32::from_rgb(14, 24, 38))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 229, 255)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Linear-Phase Dynamic Transient De-Clicker & Vinyl Restoration HUD").clicked() {
+                    state.requested_open_transient_declicker_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("TransientGate") || active_kind.contains("SidechainGate") || active_kind.contains("NoiseGate") || active_kind == "TransientGateNode" || active_kind.contains("HysteresisGate") || active_kind.contains("TransientExpanderGate") {
+                if ui.add(
+                    egui::Button::new(RichText::new("⚡ Open Transient Gate HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 255, 180)))
+                        .fill(Color32::from_rgb(14, 32, 26))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 255, 180)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Dynamic Transient Sidechain Expander/Gate & Hysteresis HUD").clicked() {
+                    state.requested_open_transient_gate_hud = true;
                 }
                 ui.add_space(4.0);
             }

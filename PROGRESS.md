@@ -1,6 +1,6 @@
 # Summoner DAW — Product Readiness & Shippability Tracker
 > **Current Shippability Score:** 10.0 / 10  
-> **Status:** Production Ready Release Candidate (Turn #107 / Sprint Turn #33)  
+> **Status:** Production Ready Release Candidate (Turn #109 / Sprint Turn #35)  
 > **Authoritative Root:** `PROGRESS.md`  
 > **License:** AGPLv3
 
@@ -3021,6 +3021,40 @@ Product Management has conducted a comprehensive readiness audit:
   - Feature tests: 3 passed (`cargo test -p summoner_gui --features gui -- tier171`).
   - Pure unit tests: 329 passed in 0.23s (`cargo test -p summoner_gui --lib`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
+
+### Turn #109 (Sprint Turn #35) — Linear-Phase Dynamic Transient Crossover De-Clicker & Vinyl Restoration and Dynamic Transient Sidechain Expander/Gate & Hysteresis Curve HUDs Convergence (Milestones 33 & 34)
+- [x] Linear-Phase Transient De-Clicker & Dynamic Transient Expander/Gate HUDs Integration:
+  - Integrated `TransientDeclickerView` (Linear-Phase Dynamic Transient Crossover De-Clicker & Vinyl Restoration HUD: 5 Restoration Modes [VinylMicrogroove, Shellac78Rpm, DigitalClicks, ThumpAndPlop, TapeDropout], Threshold [-48.0..0.0 dB], Click Width [0.05..5.00 ms], Crackle Density [0.0..100.0%], Repair Window, SNR Improvement dB, Repair Rate Clicks/sec calculation, Waveform Defect vs Hermite Spline Repair Scope, and Touch-Draggable Click Width vs Threshold Puck with >= 44x44pt bounding target) and `TransientGateView` (Dynamic Transient Sidechain Expander/Gate & Envelope Hysteresis Curve HUD: 4 Modes [FastPercussiveSnare, VocalBreathSmoothing, BassSubDucking, HardNoiseGate], Open Threshold [-80.0..0.0 dB], Hysteresis Offset [0.0..24.0 dB], Attack Time [0.1..100.0 ms], Hold Time [0.0..500.0 ms], Release Time [5.0..2000.0 ms], Floor Attenuation [-80.0..0.0 dB], Sidechain HPF/LPF Filter Matrix, Dual-Threshold Hysteresis Transfer Function Curve Canvas, and Touch-Draggable Open Threshold vs Hysteresis Puck with >= 44x44pt bounding target) into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/transient_declicker_view.rs` & `transient_gate_view.rs`):
+  - In `TransientDeclickerView`: added `name()` to `VinylRestorationMode`, coordinate normalizations & round-trips (`density_to_normalized`, `normalized_to_density`), `show_ui(&mut self, ui: &mut egui::Ui)`, and `render_ascii_snapshot_str() -> String` with restoration de-clicker metadata banner and verified hit target badge (`[PASS: >=44pt]`).
+  - In `TransientGateView`: added `name()` to `GateMode`, coordinate normalizations & round-trips (`attack_to_normalized`, `normalized_to_attack`, `release_to_normalized`, `normalized_to_release`), `show_ui(&mut self, ui: &mut egui::Ui)`, and `render_ascii_snapshot_str() -> String` with dynamic transient gate metadata banner and verified hit target badge (`[PASS: >=44pt]`).
+  - In `crates/summoner_gui/src/views/mod.rs`: re-exported `VinylRestorationMode` and `GateMode`.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added modal fields (`show_transient_declicker_modal`, `transient_declicker_view`, `show_transient_gate_modal`, `transient_gate_view`).
+  - Added dedicated modal windows (`show_transient_declicker_modal_window`, `show_transient_gate_modal_window`) with responsive styling, WCAG AAA contrast, and >= 44x44pt touch bounds.
+  - Added public lifecycle methods: `open_transient_declicker_hud()`, `close_transient_declicker_hud()`, `is_transient_declicker_hud_open()`, `open_transient_gate_hud()`, `close_transient_gate_hud()`, `is_transient_gate_hud_open()`.
+  - Real-time parameter sync bridges (`sync_transient_declicker_hud_state` and `sync_transient_gate_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_transient_declicker_hud: bool` and `requested_open_transient_gate_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🧹 Open Transient De-Clicker HUD]` and `[⚡ Open Transient Gate HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header buttons `[🧹 De-Clicker HUD]` and `[⚡ Gate HUD]` in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Transient De-Clicker: 2D threshold level and waveform defect / repair spikes preview, interactive Width / Threshold puck, live SNR gain readout, and lock-free slot-addressed `ParamBus` dispatch.
+    * Transient Gate: 2D dual-threshold hysteresis zone and transfer curve preview, interactive Open Threshold / Hysteresis puck, live gate open/close readout, and lock-free slot-addressed `ParamBus` dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_transient_declicker_hud` under `"Restoration & Dynamics"` and `open_transient_gate_hud` under `"Dynamics & Saturation"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_transient_declicker_hud()` and `open_transient_gate_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier172_turn109_tests.rs`:
+    * Pure tests: view initialization, coordinate normalizations (click width, threshold, crackle density, open threshold, hysteresis, attack, release), mode switching across all modes, transfer curve & waveform repair calculations, touch puck hit testing (>= 44x44pt bounding targets), deterministic ASCII snapshots with metadata banners.
+    * GUI tests: modal window lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch without allocations, trigger button propagation from rack and inspector, command palette action verification.
+  - Registered `tier172_turn109_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Feature tests: 3 passed (`cargo test -p summoner_gui --features gui -- tier172`).
+  - Pure unit tests: 329 passed in 0.24s (`cargo test -p summoner_gui --lib`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
+
 
 
 

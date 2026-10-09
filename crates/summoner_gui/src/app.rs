@@ -1808,6 +1808,14 @@ impl eframe::App for SummonerApp {
                     self.current_view = ViewMode::ModernStudio;
                     self.award_winning_view.open_tape_flux_master_hud();
                 }
+                "open_transient_declicker_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_transient_declicker_hud();
+                }
+                "open_transient_gate_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_transient_gate_hud();
+                }
                 "sfz_convert" | "auto_slice" | "load_preset" | "export_clap" | "toggle_simd" => {
                     println!("Command palette action executed: {}", action);
                 }

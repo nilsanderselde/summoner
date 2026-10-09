@@ -880,6 +880,10 @@ pub struct AwardWinningGuiView {
     pub transient_clipper_view: crate::views::transient_clipper_view::TransientClipperView,
     pub show_tape_flux_master_modal: bool,
     pub tape_flux_master_view: crate::views::tape_flux_master_view::TapeFluxMasterView,
+    pub show_transient_declicker_modal: bool,
+    pub transient_declicker_view: crate::views::transient_declicker_view::TransientDeclickerView,
+    pub show_transient_gate_modal: bool,
+    pub transient_gate_view: crate::views::transient_gate_view::TransientGateView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1376,6 +1380,10 @@ impl AwardWinningGuiView {
             transient_clipper_view: crate::views::transient_clipper_view::TransientClipperView::new(),
             show_tape_flux_master_modal: false,
             tape_flux_master_view: crate::views::tape_flux_master_view::TapeFluxMasterView::new(),
+            show_transient_declicker_modal: false,
+            transient_declicker_view: crate::views::transient_declicker_view::TransientDeclickerView::new(),
+            show_transient_gate_modal: false,
+            transient_gate_view: crate::views::transient_gate_view::TransientGateView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2615,6 +2623,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_tape_flux_master_hud = false;
             self.open_tape_flux_master_hud();
         }
+        if self.inspector_state.requested_open_transient_declicker_hud || self.device_rack_state.requested_open_transient_declicker_hud {
+            self.inspector_state.requested_open_transient_declicker_hud = false;
+            self.device_rack_state.requested_open_transient_declicker_hud = false;
+            self.open_transient_declicker_hud();
+        }
+        if self.inspector_state.requested_open_transient_gate_hud || self.device_rack_state.requested_open_transient_gate_hud {
+            self.inspector_state.requested_open_transient_gate_hud = false;
+            self.device_rack_state.requested_open_transient_gate_hud = false;
+            self.open_transient_gate_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2738,6 +2756,8 @@ impl AwardWinningGuiView {
         self.show_midside_focuser_modal_window(ui);
         self.show_transient_clipper_modal_window(ui);
         self.show_tape_flux_master_modal_window(ui);
+        self.show_transient_declicker_modal_window(ui);
+        self.show_transient_gate_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -19852,6 +19872,195 @@ impl AwardWinningGuiView {
             if bus.get(pid_fl).is_some() { bus.set(pid_fl, drive); }
             if bus.get(pid_bi).is_some() { bus.set(pid_bi, bias); }
             if bus.get(pid_sp).is_some() { bus.set(pid_sp, speed); }
+        }
+    }
+
+    pub fn open_transient_declicker_hud(&mut self) {
+        self.show_transient_declicker_modal = true;
+    }
+
+    pub fn close_transient_declicker_hud(&mut self) {
+        self.show_transient_declicker_modal = false;
+    }
+
+    pub fn is_transient_declicker_hud_open(&self) -> bool {
+        self.show_transient_declicker_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_transient_declicker_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_transient_declicker_modal {
+            return;
+        }
+
+        let mut is_open = self.show_transient_declicker_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🧹 Linear-Phase Dynamic Transient De-Clicker & Vinyl Restoration HUD")
+            .id(egui::Id::new("transient_declicker_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Sub-Millisecond Transient Detection Plane, Hermite Spline Repair & SNR Enhancement (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.transient_declicker_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_transient_declicker_modal = is_open;
+        self.sync_transient_declicker_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_transient_declicker_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let thresh = self.transient_declicker_view.threshold_db;
+        let width = self.transient_declicker_view.click_width_ms;
+        let crackle = self.transient_declicker_view.crackle_density_pct;
+        let snr = self.transient_declicker_view.snr_improvement_db;
+        let repair_rate = self.transient_declicker_view.repair_rate_per_sec;
+
+        self.device_rack_state.node_param_values.insert("threshold_db".to_string(), thresh);
+        self.device_rack_state.node_param_values.insert("detection_threshold_db".to_string(), thresh);
+        self.device_rack_state.node_param_values.insert("click_width_ms".to_string(), width);
+        self.device_rack_state.node_param_values.insert("repair_window_ms".to_string(), width);
+        self.device_rack_state.node_param_values.insert("crackle_density_pct".to_string(), crackle);
+        self.device_rack_state.node_param_values.insert("snr_improvement_db".to_string(), snr);
+        self.device_rack_state.node_param_values.insert("repair_rate_per_sec".to_string(), repair_rate);
+
+        self.inspector_state.node_param_values.insert("threshold_db".to_string(), thresh);
+        self.inspector_state.node_param_values.insert("detection_threshold_db".to_string(), thresh);
+        self.inspector_state.node_param_values.insert("click_width_ms".to_string(), width);
+        self.inspector_state.node_param_values.insert("repair_window_ms".to_string(), width);
+        self.inspector_state.node_param_values.insert("crackle_density_pct".to_string(), crackle);
+        self.inspector_state.node_param_values.insert("snr_improvement_db".to_string(), snr);
+        self.inspector_state.node_param_values.insert("repair_rate_per_sec".to_string(), repair_rate);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_th = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_wd = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_cr = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+
+            if bus.get(pid_th).is_some() { bus.set(pid_th, thresh); }
+            if bus.get(pid_wd).is_some() { bus.set(pid_wd, width); }
+            if bus.get(pid_cr).is_some() { bus.set(pid_cr, crackle); }
+        }
+    }
+
+    pub fn open_transient_gate_hud(&mut self) {
+        self.show_transient_gate_modal = true;
+    }
+
+    pub fn close_transient_gate_hud(&mut self) {
+        self.show_transient_gate_modal = false;
+    }
+
+    pub fn is_transient_gate_hud_open(&self) -> bool {
+        self.show_transient_gate_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_transient_gate_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_transient_gate_modal {
+            return;
+        }
+
+        let mut is_open = self.show_transient_gate_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("⚡ Dynamic Transient Sidechain Expander/Gate & Hysteresis HUD")
+            .id(egui::Id::new("transient_gate_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Dual-Threshold Hysteresis Transfer Curves, Sub-Millisecond Attack & Sidechain Detector (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.transient_gate_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_transient_gate_modal = is_open;
+        self.sync_transient_gate_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_transient_gate_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let open_th = self.transient_gate_view.open_threshold_db;
+        let hyst = self.transient_gate_view.hysteresis_db;
+        let att = self.transient_gate_view.attack_ms;
+        let rel = self.transient_gate_view.release_ms;
+        let floor = self.transient_gate_view.range_floor_db;
+        let hpf = self.transient_gate_view.sidechain_hpf_hz;
+
+        self.device_rack_state.node_param_values.insert("open_threshold_db".to_string(), open_th);
+        self.device_rack_state.node_param_values.insert("threshold_db".to_string(), open_th);
+        self.device_rack_state.node_param_values.insert("hysteresis_db".to_string(), hyst);
+        self.device_rack_state.node_param_values.insert("attack_ms".to_string(), att);
+        self.device_rack_state.node_param_values.insert("release_ms".to_string(), rel);
+        self.device_rack_state.node_param_values.insert("range_floor_db".to_string(), floor);
+        self.device_rack_state.node_param_values.insert("sidechain_hpf_hz".to_string(), hpf);
+
+        self.inspector_state.node_param_values.insert("open_threshold_db".to_string(), open_th);
+        self.inspector_state.node_param_values.insert("threshold_db".to_string(), open_th);
+        self.inspector_state.node_param_values.insert("hysteresis_db".to_string(), hyst);
+        self.inspector_state.node_param_values.insert("attack_ms".to_string(), att);
+        self.inspector_state.node_param_values.insert("release_ms".to_string(), rel);
+        self.inspector_state.node_param_values.insert("range_floor_db".to_string(), floor);
+        self.inspector_state.node_param_values.insert("sidechain_hpf_hz".to_string(), hpf);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_th = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_hy = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_at = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_re = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_th).is_some() { bus.set(pid_th, open_th); }
+            if bus.get(pid_hy).is_some() { bus.set(pid_hy, hyst); }
+            if bus.get(pid_at).is_some() { bus.set(pid_at, att); }
+            if bus.get(pid_re).is_some() { bus.set(pid_re, rel); }
         }
     }
     fn render_patch_cords_canvas(&mut self, ui: &mut egui::Ui, available_h: f32) {
