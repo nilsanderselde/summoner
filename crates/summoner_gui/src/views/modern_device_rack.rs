@@ -321,6 +321,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_biwa_sawari_hud: bool,
     #[serde(default)]
     pub requested_open_schottky_wavefolder_hud: bool,
+    #[serde(default)]
+    pub requested_open_windchest_reservoir_hud: bool,
+    #[serde(default)]
+    pub requested_open_tape_stop_glitch_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -470,6 +474,8 @@ impl Default for ModernDeviceRackState {
             requested_open_console_emulation_hud: false,
             requested_open_biwa_sawari_hud: false,
             requested_open_schottky_wavefolder_hud: false,
+            requested_open_windchest_reservoir_hud: false,
+            requested_open_tape_stop_glitch_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -1242,6 +1248,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_console_emulation = cur_selection.contains("ConsoleEmulation") || cur_selection.contains("ConsoleDesk") || cur_selection.contains("NeveConsole") || cur_selection.contains("SslDesk") || cur_selection == "ConsoleEmulationNode" || cur_selection == "ConsoleDeskModel";
                     let is_biwa_sawari = cur_selection.contains("Biwa") || cur_selection.contains("Sawari") || cur_selection == "AcousticJapaneseBiwaSilkStringPlectrum" || cur_selection == "BiwaSawariBridge";
                     let is_schottky_wavefolder = cur_selection.contains("Schottky") || cur_selection.contains("Wavefolder") || cur_selection == "DiscreteSchottkyDiodeWavefolderOverdrive" || cur_selection == "SchottkyWavefolder";
+                    let is_windchest_reservoir = cur_selection.contains("Windchest") || cur_selection.contains("Bellows") || cur_selection.contains("OrganReservoir") || cur_selection == "WindchestModel" || cur_selection == "WindchestAerodynamicsNode";
+                    let is_tape_stop_glitch = cur_selection.contains("TapeStop") || cur_selection.contains("Glitch") || cur_selection.contains("TurntableBrake") || cur_selection.contains("Stutter") || cur_selection == "TapeStopEffect" || cur_selection == "GlitchStutterNode";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1782,6 +1790,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("⚡ Wavefold HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(239, 68, 68))).on_hover_text("Open Discrete Schottky Diode Multi-Stage Wavefolder & Overdrive HUD").clicked()
                     {
                         state.requested_open_schottky_wavefolder_hud = true;
+                    } else if is_windchest_reservoir
+                        && ui.button(RichText::new("💨 Windchest HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(6, 182, 212))).on_hover_text("Open Pipe Organ Windchest Aerodynamics & Dynamic Reservoir HUD").clicked()
+                    {
+                        state.requested_open_windchest_reservoir_hud = true;
+                    } else if is_tape_stop_glitch
+                        && ui.button(RichText::new("🎛 Tape Stop HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(245, 158, 11))).on_hover_text("Open Vinyl Turntable Inertial Motor Brake Tape Stop & Stutter HUD").clicked()
+                    {
+                        state.requested_open_tape_stop_glitch_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2682,6 +2698,8 @@ fn show_pro_parameter_drawer(
                     let is_console_emulation = dev_kind.contains("ConsoleEmulation") || dev_kind.contains("ConsoleDesk") || dev_kind.contains("NeveConsole") || dev_kind.contains("SslDesk") || dev_kind == "ConsoleEmulationNode" || dev_kind == "ConsoleDeskModel";
                     let is_biwa_sawari = dev_kind.contains("Biwa") || dev_kind.contains("Sawari") || dev_kind == "AcousticJapaneseBiwaSilkStringPlectrum" || dev_kind == "BiwaSawariBridge";
                     let is_schottky_wavefolder = dev_kind.contains("Schottky") || dev_kind.contains("Wavefolder") || dev_kind == "DiscreteSchottkyDiodeWavefolderOverdrive" || dev_kind == "SchottkyWavefolder";
+                    let is_windchest_reservoir = dev_kind.contains("Windchest") || dev_kind.contains("Bellows") || dev_kind.contains("OrganReservoir") || dev_kind == "WindchestModel" || dev_kind == "WindchestAerodynamicsNode";
+                    let is_tape_stop_glitch = dev_kind.contains("TapeStop") || dev_kind.contains("Glitch") || dev_kind.contains("TurntableBrake") || dev_kind.contains("Stutter") || dev_kind == "TapeStopEffect" || dev_kind == "GlitchStutterNode";
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -13052,6 +13070,137 @@ fn show_pro_parameter_drawer(
                             let _ = sf_resp.on_hover_text(format!(
                                 "Discrete Schottky Diode Wavefolder HUD\nDrive: {:.1} dB | Symmetry Bias: {:.2}\n[Drag: Drive (X) / Bias (Y) Puck]",
                                 drive, bias
+                            ));
+                        }
+                    } else if is_windchest_reservoir {
+                        // Organ Windchest Aerodynamics Mini View
+                        let (wc_resp, wc_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let wc_rect = wc_resp.rect;
+                        wc_painter.rect_filled(wc_rect, 2.0, Color32::from_rgb(10, 20, 26));
+
+                        let mut pres = state.node_param_values.get("nominal_pressure_mmh2o").or_else(|| state.node_param_values.get("windchest_pressure")).copied().unwrap_or(68.0);
+                        let mut sag = state.node_param_values.get("sag_coefficient").or_else(|| state.node_param_values.get("windchest_sag")).copied().unwrap_or(0.012);
+
+                        if wc_resp.dragged() || wc_resp.clicked() {
+                            if let Some(pos) = wc_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - wc_rect.left()) / (wc_rect.width() - 55.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - wc_rect.top() - 10.0) / (wc_rect.height() - 20.0))).clamp(0.0, 1.0);
+                                pres = crate::views::windchest_reservoir_view::WindchestReservoirView::normalized_to_pressure(norm_x);
+                                sag = crate::views::windchest_reservoir_view::WindchestReservoirView::normalized_to_sag(norm_y);
+                                state.node_param_values.insert("nominal_pressure_mmh2o".to_string(), pres);
+                                state.node_param_values.insert("windchest_pressure".to_string(), pres);
+                                state.node_param_values.insert("sag_coefficient".to_string(), sag);
+                                state.node_param_values.insert("windchest_sag".to_string(), sag);
+                                if let Some(bus) = param_bus {
+                                    let pid_pres = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_sag = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_pres).is_some() { bus.set(pid_pres, pres); }
+                                    if bus.get(pid_sag).is_some() { bus.set(pid_sag, sag); }
+                                }
+                            }
+                        }
+
+                        // Dynamic pressure envelope mini preview
+                        let num_steps = 16;
+                        let mut prev_pt = None;
+                        for s in 0..=num_steps {
+                            let frac = s as f32 / num_steps as f32;
+                            let sag_drop = (sag * 15.0) * (1.0 - (-frac * 4.0).exp());
+                            let p_norm = ((1.0 - sag_drop) * (pres / 160.0)).clamp(0.1, 1.0);
+                            let px = wc_rect.left() + 4.0 + frac * (wc_rect.width() - 60.0);
+                            let py = wc_rect.bottom() - 10.0 - p_norm * (wc_rect.height() - 20.0);
+                            let pt = egui::pos2(px, py);
+                            if let Some(prev) = prev_pt {
+                                wc_painter.line_segment([prev, pt], Stroke::new(1.3_f32, Color32::from_rgb(6, 182, 212)));
+                            }
+                            prev_pt = Some(pt);
+                        }
+
+                        // Target puck
+                        let norm_pres = crate::views::windchest_reservoir_view::WindchestReservoirView::pressure_to_normalized(pres);
+                        let norm_sag = crate::views::windchest_reservoir_view::WindchestReservoirView::sag_to_normalized(sag);
+                        let puck_x = wc_rect.left() + 4.0 + norm_pres * (wc_rect.width() - 60.0);
+                        let puck_y = wc_rect.bottom() - 10.0 - norm_sag * (wc_rect.height() - 20.0);
+                        wc_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(6, 182, 212));
+                        wc_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        wc_painter.text(
+                            egui::pos2(wc_rect.right() - 4.0, wc_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("WIND\n{:.0} mmH2O\n{:.3} Sag", pres, sag),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(6, 182, 212),
+                        );
+
+                        if wc_resp.hovered() {
+                            let _ = wc_resp.on_hover_text(format!(
+                                "Pipe Organ Windchest HUD\nPressure: {:.1} mmH2O | Sag Coeff: {:.4}\n[Drag: Pressure (X) / Sag (Y) Puck]",
+                                pres, sag
+                            ));
+                        }
+                    } else if is_tape_stop_glitch {
+                        // Vinyl Turntable Tape Stop & Stutter Mini View
+                        let (ts_resp, ts_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let ts_rect = ts_resp.rect;
+                        ts_painter.rect_filled(ts_rect, 2.0, Color32::from_rgb(26, 16, 8));
+
+                        let mut brake_ms = state.node_param_values.get("brake_duration_ms").or_else(|| state.node_param_values.get("tape_stop_ms")).copied().unwrap_or(650.0);
+                        let mut div = state.node_param_values.get("stutter_division").or_else(|| state.node_param_values.get("stutter_div")).copied().unwrap_or(16.0);
+
+                        if ts_resp.dragged() || ts_resp.clicked() {
+                            if let Some(pos) = ts_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - ts_rect.left()) / (ts_rect.width() - 55.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - ts_rect.top() - 10.0) / (ts_rect.height() - 20.0))).clamp(0.0, 1.0);
+                                brake_ms = crate::views::tape_stop_glitch_view::TapeStopGlitchView::normalized_to_brake(norm_x);
+                                div = crate::views::tape_stop_glitch_view::TapeStopGlitchView::normalized_to_division(norm_y);
+                                state.node_param_values.insert("brake_duration_ms".to_string(), brake_ms);
+                                state.node_param_values.insert("tape_stop_ms".to_string(), brake_ms);
+                                state.node_param_values.insert("stutter_division".to_string(), div);
+                                state.node_param_values.insert("stutter_div".to_string(), div);
+                                if let Some(bus) = param_bus {
+                                    let pid_brk = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_div = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 2);
+                                    if bus.get(pid_brk).is_some() { bus.set(pid_brk, brake_ms); }
+                                    if bus.get(pid_div).is_some() { bus.set(pid_div, div); }
+                                }
+                            }
+                        }
+
+                        // Deceleration curve mini preview
+                        let num_steps = 16;
+                        let mut prev_pt = None;
+                        for s in 0..=num_steps {
+                            let frac = s as f32 / num_steps as f32;
+                            let v_curve = (1.0 - frac).max(0.0).powf(1.8);
+                            let px = ts_rect.left() + 4.0 + frac * (ts_rect.width() - 60.0);
+                            let py = ts_rect.bottom() - 10.0 - v_curve * (ts_rect.height() - 20.0);
+                            let pt = egui::pos2(px, py);
+                            if let Some(prev) = prev_pt {
+                                ts_painter.line_segment([prev, pt], Stroke::new(1.3_f32, Color32::from_rgb(245, 158, 11)));
+                            }
+                            prev_pt = Some(pt);
+                        }
+
+                        // Target puck
+                        let norm_brk = crate::views::tape_stop_glitch_view::TapeStopGlitchView::brake_to_normalized(brake_ms);
+                        let norm_div = crate::views::tape_stop_glitch_view::TapeStopGlitchView::division_to_normalized(div);
+                        let puck_x = ts_rect.left() + 4.0 + norm_brk * (ts_rect.width() - 60.0);
+                        let puck_y = ts_rect.bottom() - 10.0 - norm_div * (ts_rect.height() - 20.0);
+                        ts_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(245, 158, 11));
+                        ts_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        ts_painter.text(
+                            egui::pos2(ts_rect.right() - 4.0, ts_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("BRAKE\n{:.0} ms\n1/{:.0} Div", brake_ms, div),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(245, 158, 11),
+                        );
+
+                        if ts_resp.hovered() {
+                            let _ = ts_resp.on_hover_text(format!(
+                                "Vinyl Turntable Tape Stop & Stutter HUD\nBrake Duration: {:.0} ms | Division: 1/{:.0}\n[Drag: Brake (X) / Stutter (Y) Puck]",
+                                brake_ms, div
                             ));
                         }
                     } else {

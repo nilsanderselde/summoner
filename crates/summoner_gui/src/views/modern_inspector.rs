@@ -306,6 +306,10 @@ pub struct ModernInspectorState {
     pub requested_open_biwa_sawari_hud: bool,
     #[serde(default)]
     pub requested_open_schottky_wavefolder_hud: bool,
+    #[serde(default)]
+    pub requested_open_windchest_reservoir_hud: bool,
+    #[serde(default)]
+    pub requested_open_tape_stop_glitch_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -465,6 +469,8 @@ impl Default for ModernInspectorState {
             requested_open_console_emulation_hud: false,
             requested_open_biwa_sawari_hud: false,
             requested_open_schottky_wavefolder_hud: false,
+            requested_open_windchest_reservoir_hud: false,
+            requested_open_tape_stop_glitch_hud: false,
         }
     }
 }
@@ -2289,6 +2295,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open Discrete Schottky Diode Multi-Stage Wavefolder & Overdrive HUD").clicked() {
                     state.requested_open_schottky_wavefolder_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Windchest") || active_kind.contains("Bellows") || active_kind.contains("OrganReservoir") || active_kind == "WindchestModel" || active_kind == "WindchestAerodynamicsNode" {
+                if ui.add(
+                    egui::Button::new(RichText::new("💨 Open Windchest Reservoir HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(6, 182, 212)))
+                        .fill(Color32::from_rgb(10, 30, 40))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(6, 182, 212)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Pipe Organ Windchest Aerodynamics & Dynamic Reservoir HUD").clicked() {
+                    state.requested_open_windchest_reservoir_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("TapeStop") || active_kind.contains("Glitch") || active_kind.contains("TurntableBrake") || active_kind.contains("Stutter") || active_kind == "TapeStopEffect" || active_kind == "GlitchStutterNode" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🎛 Open Tape Stop & Stutter HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(245, 158, 11)))
+                        .fill(Color32::from_rgb(40, 25, 10))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(245, 158, 11)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Vinyl Turntable Inertial Motor Brake Tape Stop & Stutter HUD").clicked() {
+                    state.requested_open_tape_stop_glitch_hud = true;
                 }
                 ui.add_space(4.0);
             }

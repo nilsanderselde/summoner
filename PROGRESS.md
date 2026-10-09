@@ -1,6 +1,6 @@
 # Summoner DAW — Product Readiness & Shippability Tracker
 > **Current Shippability Score:** 10.0 / 10  
-> **Status:** Production Ready Release Candidate (Turn #116 / Sprint Turn #42)  
+> **Status:** Production Ready Release Candidate (Turn #117 / Sprint Turn #43)  
 > **Authoritative Root:** `PROGRESS.md`  
 > **License:** AGPLv3
 
@@ -3283,6 +3283,80 @@ Product Management has conducted a comprehensive readiness audit:
   - Feature tests: 3 passed (`cargo test -p summoner_gui --features gui -- tier178`).
   - Pure unit tests: 329 passed in 0.24s (`cargo test -p summoner_gui --lib`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
+
+### Turn #116 (Sprint Turn #42) — Japanese Satsuma Biwa Silk String & Sawari Buzzing Bridge HUD and Discrete Schottky Diode Multi-Stage Wavefolder & Overdrive HUD Convergence (Milestones 11, 18, 33 & 34)
+- [x] Japanese Satsuma Biwa Silk String, Bachi Strike Dynamics & Sawari Buzzing Bridge HUD (`crates/summoner_gui/src/views/biwa_sawari_view.rs`):
+  - Integrated `BiwaSawariView`:
+    * 4 Playing Style Presets: `SatsumaHeikeEpic` (Traditional Tale of the Heike narrative recitation with heavy boxwood bachi snap and wide sawari buzz), `ChikuzenDelicateLyric` (Refined 5-string lyric style with subtle sawari clearance, soft plectrum, and singing silk micro-bends), `GagakuCourtBiwa` (Ancient Gaku-biwa court orchestra with restrained sawari, heavy formal strike, and sustained resonance), and `ModernExperimentalPercussive` (Contemporary percussive technique with aggressive body slapping, high sawari rattle, and deep tension bends).
+    * Interactive 2D Dynamics Puck: Bachi Impact Force [0.0..1.0] vs Sawari Buzz Clearance [0.01..2.0 mm] with $\ge 44\times 44\text{pt}$ touch bounding target (`BIWA_PUCK_HIT_RADIUS = 22.0`).
+    * Real-time non-linear unilateral obstacle collision string displacement waveform $y(x, t)$ with barrier clipping and boundary rebound.
+    * 8-Harmonic Sawari buzzing cascade spectrum with inharmonic overtone spray and silk micro-bend pitch evaluation.
+    * Deterministic ASCII snapshot rendering with metadata banner and verified touch target badge (`[PASS: >=44pt]`).
+- [x] Discrete Schottky Diode Multi-Stage Wavefolder & Overdrive HUD (`crates/summoner_gui/src/views/schottky_wavefolder_view.rs`):
+  - Integrated `SchottkyWavefolderView`:
+    * 4 Wavefolding Saturation Presets: `SubtleEvenFoldWarmth` (2-stage diode folding with gentle asymmetric bias for rich 2nd harmonics), `BuchlaWestCoastHarmonics` (Classic 3-stage West-Coast complex timbre wavefolder), `ScreamingDiodeCascade` (High-gain 5-stage diode folding cascade with sharp conduction knees), and `AsymmetricMetallicCrunch` (Industrial asymmetric bias with heavy Miller capacitance roll-off).
+    * Interactive 2D Wavefolding Puck: Pre-Amp Drive [0.0..36.0 dB] vs Diode Threshold Asymmetry Bias [-1.0..1.0] with $\ge 44\times 44\text{pt}$ touch bounding target (`SCHOTTKY_PUCK_HIT_RADIUS = 22.0`).
+    * Real-time folded transfer curve $V_{\text{out}} = f(V_{\text{in}})$ across $[-2.0..+2.0\text{ V}]$ with exponential Schottky knee smoothing.
+    * 9-Harmonic distortion breakdown (Fundamental $H_1$ through $H_9$ with odd crimson vs even amber harmonic separation) and Miller low-pass capacitance rolloff.
+    * Deterministic ASCII snapshot rendering with metadata banner and verified touch target badge (`[PASS: >=44pt]`).
+- [x] View Re-Exports (`crates/summoner_gui/src/views/mod.rs`):
+  - Exported `BiwaSawariView`, `BiwaSawariPreset`, `SchottkyWavefolderView`, `SchottkyWavefolderPreset`.
+- [x] AwardWinningGuiView Modal Windows & Lock-Free Live Audio State Sync (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added modal fields (`show_biwa_sawari_modal`, `biwa_sawari_view`, `show_schottky_wavefolder_modal`, `schottky_wavefolder_view`).
+  - Added dedicated modal windows (`show_biwa_sawari_modal_window`, `show_schottky_wavefolder_modal_window`) with responsive styling, WCAG AAA contrast, and $\ge 44\times 44\text{pt}$ touch bounds.
+  - Added public lifecycle methods: `open_biwa_sawari_hud()`, `close_biwa_sawari_hud()`, `is_biwa_sawari_hud_open()`, `open_schottky_wavefolder_hud()`, `close_schottky_wavefolder_hud()`, `is_schottky_wavefolder_hud_open()`.
+  - Real-time parameter sync bridges (`sync_biwa_sawari_hud_state` and `sync_schottky_wavefolder_hud_state`).
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added action buttons and collapsed header buttons in `ModernInspectorView` and `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`.
+- [x] Command Palette & Application Routing:
+  - Registered `open_biwa_sawari_hud` under `"Physical Modeling"` and `open_schottky_wavefolder_hud` under `"Dynamics & Saturation"` in `command_palette.rs`.
+  - Wired application action routing in `app.rs`.
+- [x] Verification & Test Suite (`crates/summoner_gui/src/tier179_turn116_tests.rs`):
+  - Pure tests: view initialization, coordinate normalizations, preset switching, wavefolding transfer curves, touch puck hit testing ($\ge 44\times 44\text{pt}$), deterministic ASCII snapshots.
+  - GUI tests: modal window lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch, command palette action verification.
+
+### Turn #117 (Sprint Turn #43) — Physical Modeling Organ Windchest Aerodynamics & Dynamic Pneumatic Bellows Reservoir HUD and Vinyl Turntable Inertial Motor Brake Tape Stop & Stutter Chopper HUD Convergence (Milestones 14, 24, 33 & 34)
+- [x] Physical Modeling Organ Windchest Aerodynamics & Pneumatic Bellows Reservoir HUD (`crates/summoner_gui/src/views/windchest_reservoir_view.rs`):
+  - Integrated `WindchestReservoirView`:
+    * 4 Historical Organ Wind System Presets: `BaroqueSchnitger` (Arp Schnitger 1690 North German Baroque church organ with flexible wedge bellows and gentle wind sag, $P_0 = 68.0\text{ mmH2O}, k_{\text{sag}} = 0.012, \tau_{\text{rec}} = 0.18\text{s}, f_{\text{trem}} = 4.5\text{ Hz}, d_{\text{trem}} = 0.15$), `RomanticCavailleColl` (Aristide Cavaillé-Coll 1880 French Symphonic organ with high-pressure reservoir and pneumatic Barker levers, $P_0 = 115.0\text{ mmH2O}, k_{\text{sag}} = 0.005, \tau_{\text{rec}} = 0.08\text{s}, f_{\text{trem}} = 5.8\text{ Hz}, d_{\text{trem}} = 0.08$), `EnglishCathedral` (Father Henry Willis 1895 British Victorian cathedral organ with heavy reservoir regulator and stable steady wind, $P_0 = 95.0\text{ mmH2O}, k_{\text{sag}} = 0.003, \tau_{\text{rec}} = 0.05\text{s}, f_{\text{trem}} = 3.8\text{ Hz}, d_{\text{trem}} = 0.10$), and `ModernChamberPortative` (20th Century compact portative organ with hand bellows and rapid dynamic sag, $P_0 = 48.0\text{ mmH2O}, k_{\text{sag}} = 0.035, \tau_{\text{rec}} = 0.32\text{s}, f_{\text{trem}} = 6.2\text{ Hz}, d_{\text{trem}} = 0.22$).
+    * Interactive 2D Windchest Dynamics Puck: Nominal Static Wind Pressure [40.0..160.0 mmH2O] vs Bellows Sag Compliance [0.001..0.050] with $\ge 44\times 44\text{pt}$ touch bounding target (`WINDCHEST_PUCK_HIT_RADIUS = 22.0`).
+    * Real-time pneumatic air pressure trajectory $P(t)$ with bellows deflection, tremulant sinusoidal flutter, and flue jet acoustic velocity $v(t) = \sqrt{2 P / \rho}\text{ m/s}$ readout.
+    * Flue slit air velocity progress bar & Pascal conversion gauge ($1\text{ mmH2O} = 9.80665\text{ Pa}, \rho = 1.204\text{ kg/m}^3$).
+    * Deterministic ASCII snapshot rendering with metadata banner and verified touch target badge (`[PASS: >=44pt]`).
+- [x] Vinyl Turntable Inertial Motor Brake Tape Stop & Stutter Chopper HUD (`crates/summoner_gui/src/views/tape_stop_glitch_view.rs`):
+  - Integrated `TapeStopGlitchView`:
+    * 4 Turntable & Tape Braking Presets: `DirectDriveVinylBrake` (Technics SL-1200 style direct-drive turntable motor power switch cutoff with classic slow exponential inertia curve, $T_{\text{brake}} = 650.0\text{ ms}, T_{\text{start}} = 350.0\text{ ms}, \text{div} = 16.0, \text{pw} = 0.50, \text{curve} = 1.8$), `FastTapeSlamStop` (Quarter-inch reel-to-reel magnetic tape pinch-roller stop with instant mechanical grab, $T_{\text{brake}} = 120.0\text{ ms}, T_{\text{start}} = 80.0\text{ ms}, \text{div} = 32.0, \text{pw} = 0.70, \text{curve} = 0.9$), `SlowDubSpinDown` (Heavy belt-drive turntable motor cutoff with extended platter momentum glide, $T_{\text{brake}} = 1450.0\text{ ms}, T_{\text{start}} = 750.0\text{ ms}, \text{div} = 8.0, \text{pw} = 0.35, \text{curve} = 2.4$), and `HyperStutterGlitch` (Digital micro-buffer buffer-override stutter repeater with extreme chopping, $T_{\text{brake}} = 250.0\text{ ms}, T_{\text{start}} = 100.0\text{ ms}, \text{div} = 48.0, \text{pw} = 0.85, \text{curve} = 1.2$).
+    * Interactive 2D Tape Stop & Stutter Dynamics Puck: Brake Duration [20.0..2000.0 ms] vs Stutter Slice Division [1.0..64.0] with $\ge 44\times 44\text{pt}$ touch target (`TAPESTOP_PUCK_HIT_RADIUS = 22.0`).
+    * Real-time motor deceleration velocity curve plot $v(t) = (1 - t/T)^p$, vinyl concentric grooves graphic, and dynamic semitone pitch dive calculation ($\Delta\text{semitones} = 12 \cdot \log_2(v / v_0)$).
+    * Rhythmic chopped stutter gate with variable pulse width duty cycle [0.01..0.99] and performance trigger buttons (`[⏹ Brake Stop]`, `[▶ Motor Start]`, `[⚡ Tap Stutter]`).
+    * Deterministic ASCII snapshot rendering with metadata banner and verified touch target badge (`[PASS: >=44pt]`).
+- [x] View Re-Exports (`crates/summoner_gui/src/views/mod.rs`):
+  - Exported `WindchestReservoirView`, `WindchestPreset`, `TapeStopGlitchView`, `TapeStopPreset`.
+- [x] AwardWinningGuiView Modal Windows & Lock-Free Live Audio State Sync (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added modal fields (`show_windchest_reservoir_modal`, `windchest_reservoir_view`, `show_tape_stop_glitch_modal`, `tape_stop_glitch_view`).
+  - Added dedicated modal windows (`show_windchest_reservoir_modal_window`, `show_tape_stop_glitch_modal_window`) with responsive styling, WCAG AAA contrast, and $\ge 44\times 44\text{pt}$ touch bounds.
+  - Added public lifecycle methods: `open_windchest_reservoir_hud()`, `close_windchest_reservoir_hud()`, `is_windchest_reservoir_hud_open()`, `open_tape_stop_glitch_hud()`, `close_tape_stop_glitch_hud()`, `is_tape_stop_glitch_hud_open()`.
+  - Real-time parameter sync bridges (`sync_windchest_reservoir_hud_state` and `sync_tape_stop_glitch_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_windchest_reservoir_hud: bool` and `requested_open_tape_stop_glitch_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[💨 Open Windchest Reservoir HUD]` and `[🎛 Open Tape Stop & Stutter HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header buttons `[💨 Windchest HUD]` and `[🎛 Tape Stop HUD]` in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Windchest: Pressure envelope preview curve, interactive Pressure / Sag compliance puck, live pressure & sag readout, and lock-free slot-addressed `ParamBus` dispatch.
+    * Tape Stop: Deceleration curve preview, interactive Brake / Stutter division puck, live brake duration and division readout, and lock-free slot-addressed `ParamBus` dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_windchest_reservoir_hud` under `"Physical Modeling"` and `open_tape_stop_glitch_hud` under `"Creative & Glitch"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_windchest_reservoir_hud()` and `open_tape_stop_glitch_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier180_turn117_tests.rs`:
+    * Pure tests: view initialization, coordinate normalizations (pressure, sag compliance, brake duration, division), preset switching across all presets, flue jet velocity and pitch dive physics evaluations, touch puck hit testing ($\ge 44\times 44\text{pt}$ bounding targets), deterministic ASCII snapshots with metadata banners.
+    * GUI tests: modal window lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch without allocations, trigger button propagation from rack and inspector, command palette action verification.
+  - Registered `tier180_turn117_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Pure unit tests: 329 passed in 0.25s (`cargo test -p summoner_gui --lib`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
 
 
 

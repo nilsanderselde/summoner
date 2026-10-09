@@ -1124,6 +1124,18 @@ impl CommandPalette {
                 action_id: "open_schottky_wavefolder_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Pipe Organ Windchest Aerodynamics & Dynamic Reservoir HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_windchest_reservoir_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Vinyl Turntable Inertial Motor Brake Tape Stop & Stutter HUD".into(),
+                category: "Creative & Glitch".into(),
+                action_id: "open_tape_stop_glitch_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

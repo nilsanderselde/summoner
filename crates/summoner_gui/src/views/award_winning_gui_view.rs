@@ -912,6 +912,10 @@ pub struct AwardWinningGuiView {
     pub biwa_sawari_view: crate::views::biwa_sawari_view::BiwaSawariView,
     pub show_schottky_wavefolder_modal: bool,
     pub schottky_wavefolder_view: crate::views::schottky_wavefolder_view::SchottkyWavefolderView,
+    pub show_windchest_reservoir_modal: bool,
+    pub windchest_reservoir_view: crate::views::windchest_reservoir_view::WindchestReservoirView,
+    pub show_tape_stop_glitch_modal: bool,
+    pub tape_stop_glitch_view: crate::views::tape_stop_glitch_view::TapeStopGlitchView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1440,6 +1444,10 @@ impl AwardWinningGuiView {
             biwa_sawari_view: crate::views::biwa_sawari_view::BiwaSawariView::new(),
             show_schottky_wavefolder_modal: false,
             schottky_wavefolder_view: crate::views::schottky_wavefolder_view::SchottkyWavefolderView::new(),
+            show_windchest_reservoir_modal: false,
+            windchest_reservoir_view: crate::views::windchest_reservoir_view::WindchestReservoirView::new(),
+            show_tape_stop_glitch_modal: false,
+            tape_stop_glitch_view: crate::views::tape_stop_glitch_view::TapeStopGlitchView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2759,6 +2767,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_schottky_wavefolder_hud = false;
             self.open_schottky_wavefolder_hud();
         }
+        if self.inspector_state.requested_open_windchest_reservoir_hud || self.device_rack_state.requested_open_windchest_reservoir_hud {
+            self.inspector_state.requested_open_windchest_reservoir_hud = false;
+            self.device_rack_state.requested_open_windchest_reservoir_hud = false;
+            self.open_windchest_reservoir_hud();
+        }
+        if self.inspector_state.requested_open_tape_stop_glitch_hud || self.device_rack_state.requested_open_tape_stop_glitch_hud {
+            self.inspector_state.requested_open_tape_stop_glitch_hud = false;
+            self.device_rack_state.requested_open_tape_stop_glitch_hud = false;
+            self.open_tape_stop_glitch_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2898,6 +2916,8 @@ impl AwardWinningGuiView {
         self.show_console_emulation_modal_window(ui);
         self.show_biwa_sawari_modal_window(ui);
         self.show_schottky_wavefolder_modal_window(ui);
+        self.show_windchest_reservoir_modal_window(ui);
+        self.show_tape_stop_glitch_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -21542,6 +21562,192 @@ impl AwardWinningGuiView {
             if bus.get(pid_bias).is_some() { bus.set(pid_bias, bias); }
             if bus.get(pid_stg).is_some() { bus.set(pid_stg, stg); }
             if bus.get(pid_trm).is_some() { bus.set(pid_trm, trim); }
+        }
+    }
+
+    pub fn open_windchest_reservoir_hud(&mut self) {
+        self.show_windchest_reservoir_modal = true;
+    }
+
+    pub fn close_windchest_reservoir_hud(&mut self) {
+        self.show_windchest_reservoir_modal = false;
+    }
+
+    pub fn is_windchest_reservoir_hud_open(&self) -> bool {
+        self.show_windchest_reservoir_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_windchest_reservoir_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_windchest_reservoir_modal {
+            return;
+        }
+
+        let mut is_open = self.show_windchest_reservoir_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("💨 Pipe Organ Windchest Aerodynamics & Dynamic Reservoir HUD")
+            .id(egui::Id::new("windchest_reservoir_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Physical Modeling Windchest Aerodynamics, Bellows Compliance Sag & Pneumatic Tremulant (Milestones 24, 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.windchest_reservoir_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_windchest_reservoir_modal = is_open;
+        self.sync_windchest_reservoir_hud_state();
+    }
+
+    pub fn sync_windchest_reservoir_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let pres = self.windchest_reservoir_view.nominal_pressure_mmh2o;
+        let sag = self.windchest_reservoir_view.sag_coefficient;
+        let rec = self.windchest_reservoir_view.recovery_time_sec;
+        let rate = self.windchest_reservoir_view.tremulant_rate_hz;
+        let dpth = self.windchest_reservoir_view.tremulant_depth;
+        let draw = self.windchest_reservoir_view.pipe_consumption_rate;
+
+        self.device_rack_state.node_param_values.insert("nominal_pressure_mmh2o".to_string(), pres);
+        self.device_rack_state.node_param_values.insert("sag_coefficient".to_string(), sag);
+        self.device_rack_state.node_param_values.insert("recovery_time_sec".to_string(), rec);
+        self.device_rack_state.node_param_values.insert("tremulant_rate_hz".to_string(), rate);
+        self.device_rack_state.node_param_values.insert("tremulant_depth".to_string(), dpth);
+        self.device_rack_state.node_param_values.insert("pipe_consumption_rate".to_string(), draw);
+
+        self.inspector_state.node_param_values.insert("nominal_pressure_mmh2o".to_string(), pres);
+        self.inspector_state.node_param_values.insert("sag_coefficient".to_string(), sag);
+        self.inspector_state.node_param_values.insert("recovery_time_sec".to_string(), rec);
+        self.inspector_state.node_param_values.insert("tremulant_rate_hz".to_string(), rate);
+        self.inspector_state.node_param_values.insert("tremulant_depth".to_string(), dpth);
+        self.inspector_state.node_param_values.insert("pipe_consumption_rate".to_string(), draw);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_pres = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_sag = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_rec = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_dpth = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_pres).is_some() { bus.set(pid_pres, pres); }
+            if bus.get(pid_sag).is_some() { bus.set(pid_sag, sag); }
+            if bus.get(pid_rec).is_some() { bus.set(pid_rec, rec); }
+            if bus.get(pid_dpth).is_some() { bus.set(pid_dpth, dpth); }
+        }
+    }
+
+    pub fn open_tape_stop_glitch_hud(&mut self) {
+        self.show_tape_stop_glitch_modal = true;
+    }
+
+    pub fn close_tape_stop_glitch_hud(&mut self) {
+        self.show_tape_stop_glitch_modal = false;
+    }
+
+    pub fn is_tape_stop_glitch_hud_open(&self) -> bool {
+        self.show_tape_stop_glitch_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_tape_stop_glitch_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_tape_stop_glitch_modal {
+            return;
+        }
+
+        let mut is_open = self.show_tape_stop_glitch_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎛 Vinyl Turntable Inertial Motor Brake Tape Stop & Stutter HUD")
+            .id(egui::Id::new("tape_stop_glitch_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Turntable Inertia Spin-Down, Stutter Chopper & Pitch Dive (Milestones 14, 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.tape_stop_glitch_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_tape_stop_glitch_modal = is_open;
+        self.sync_tape_stop_glitch_hud_state();
+    }
+
+    pub fn sync_tape_stop_glitch_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let brk = self.tape_stop_glitch_view.brake_duration_ms;
+        let strt = self.tape_stop_glitch_view.start_duration_ms;
+        let div = self.tape_stop_glitch_view.stutter_division;
+        let pw = self.tape_stop_glitch_view.stutter_pulse_width;
+        let crv = self.tape_stop_glitch_view.deceleration_curvature;
+        let spd = self.tape_stop_glitch_view.current_speed_ratio;
+
+        self.device_rack_state.node_param_values.insert("brake_duration_ms".to_string(), brk);
+        self.device_rack_state.node_param_values.insert("start_duration_ms".to_string(), strt);
+        self.device_rack_state.node_param_values.insert("stutter_division".to_string(), div);
+        self.device_rack_state.node_param_values.insert("stutter_pulse_width".to_string(), pw);
+        self.device_rack_state.node_param_values.insert("deceleration_curvature".to_string(), crv);
+        self.device_rack_state.node_param_values.insert("current_speed_ratio".to_string(), spd);
+
+        self.inspector_state.node_param_values.insert("brake_duration_ms".to_string(), brk);
+        self.inspector_state.node_param_values.insert("start_duration_ms".to_string(), strt);
+        self.inspector_state.node_param_values.insert("stutter_division".to_string(), div);
+        self.inspector_state.node_param_values.insert("stutter_pulse_width".to_string(), pw);
+        self.inspector_state.node_param_values.insert("deceleration_curvature".to_string(), crv);
+        self.inspector_state.node_param_values.insert("current_speed_ratio".to_string(), spd);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_brk = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_strt = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_div = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_spd = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_brk).is_some() { bus.set(pid_brk, brk); }
+            if bus.get(pid_strt).is_some() { bus.set(pid_strt, strt); }
+            if bus.get(pid_div).is_some() { bus.set(pid_div, div); }
+            if bus.get(pid_spd).is_some() { bus.set(pid_spd, spd); }
         }
     }
 
