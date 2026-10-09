@@ -290,6 +290,10 @@ pub struct ModernInspectorState {
     pub requested_open_spectral_debleed_hud: bool,
     #[serde(default)]
     pub requested_open_spectral_reshaper_hud: bool,
+    #[serde(default)]
+    pub requested_open_cassotto_chamber_hud: bool,
+    #[serde(default)]
+    pub requested_open_zero_gravity_fluid_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -441,6 +445,8 @@ impl Default for ModernInspectorState {
             requested_open_spectral_unmasker_hud: false,
             requested_open_spectral_debleed_hud: false,
             requested_open_spectral_reshaper_hud: false,
+            requested_open_cassotto_chamber_hud: false,
+            requested_open_zero_gravity_fluid_hud: false,
         }
     }
 }
@@ -2185,6 +2191,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open Multi-Band Transient Spectral Reshaper & Formant Envelope HUD").clicked() {
                     state.requested_open_spectral_reshaper_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Cassotto") || active_kind.contains("ToneChamber") || active_kind.contains("Soundbox") || active_kind == "CassottoChamber" || active_kind == "CassottoToneChamberResonator" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🪗 Open Cassotto Chamber HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(245, 158, 11)))
+                        .fill(Color32::from_rgb(32, 24, 12))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(245, 158, 11)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Physical Modeling Wooden Cassotto Tone Chamber & Resonant Soundbox HUD").clicked() {
+                    state.requested_open_cassotto_chamber_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("ZeroGravity") || active_kind.contains("NavierStokes") || active_kind.contains("FluidAcoustic") || active_kind.contains("MolecularVibration") || active_kind == "NavierStokesFluidNode" || active_kind == "ZeroGravityFluidAcousticModel" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🌊 Open Zero-Gravity Fluid HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 229, 255)))
+                        .fill(Color32::from_rgb(14, 28, 42))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 229, 255)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Zero-Gravity Navier-Stokes Acoustic Fluid Dynamics & Molecular Resonator HUD").clicked() {
+                    state.requested_open_zero_gravity_fluid_hud = true;
                 }
                 ui.add_space(4.0);
             }

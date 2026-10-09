@@ -896,6 +896,10 @@ pub struct AwardWinningGuiView {
     pub spectral_debleed_view: crate::views::spectral_debleed_view::SpectralDebleedView,
     pub show_spectral_reshaper_modal: bool,
     pub spectral_reshaper_view: crate::views::spectral_reshaper_view::SpectralReshaperView,
+    pub show_cassotto_chamber_modal: bool,
+    pub cassotto_chamber_view: crate::views::cassotto_chamber_view::CassottoChamberView,
+    pub show_zero_gravity_fluid_modal: bool,
+    pub zero_gravity_fluid_view: crate::views::zero_gravity_fluid_view::ZeroGravityFluidView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1408,6 +1412,10 @@ impl AwardWinningGuiView {
             spectral_debleed_view: crate::views::spectral_debleed_view::SpectralDebleedView::new(),
             show_spectral_reshaper_modal: false,
             spectral_reshaper_view: crate::views::spectral_reshaper_view::SpectralReshaperView::new(),
+            show_cassotto_chamber_modal: false,
+            cassotto_chamber_view: crate::views::cassotto_chamber_view::CassottoChamberView::new(),
+            show_zero_gravity_fluid_modal: false,
+            zero_gravity_fluid_view: crate::views::zero_gravity_fluid_view::ZeroGravityFluidView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2687,6 +2695,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_spectral_reshaper_hud = false;
             self.open_spectral_reshaper_hud();
         }
+        if self.inspector_state.requested_open_cassotto_chamber_hud || self.device_rack_state.requested_open_cassotto_chamber_hud {
+            self.inspector_state.requested_open_cassotto_chamber_hud = false;
+            self.device_rack_state.requested_open_cassotto_chamber_hud = false;
+            self.open_cassotto_chamber_hud();
+        }
+        if self.inspector_state.requested_open_zero_gravity_fluid_hud || self.device_rack_state.requested_open_zero_gravity_fluid_hud {
+            self.inspector_state.requested_open_zero_gravity_fluid_hud = false;
+            self.device_rack_state.requested_open_zero_gravity_fluid_hud = false;
+            self.open_zero_gravity_fluid_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2818,6 +2836,8 @@ impl AwardWinningGuiView {
         self.show_spectral_unmasker_modal_window(ui);
         self.show_spectral_debleed_modal_window(ui);
         self.show_spectral_reshaper_modal_window(ui);
+        self.show_cassotto_chamber_modal_window(ui);
+        self.show_zero_gravity_fluid_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -20692,6 +20712,208 @@ impl AwardWinningGuiView {
             if bus.get(pid_env).is_some() { bus.set(pid_env, attack); }
             if bus.get(pid_sm).is_some()  { bus.set(pid_sm, (iso * 4.0).clamp(0.1, 5.0)); }
             if bus.get(pid_dt).is_some()  { bus.set(pid_dt, 1.0); }
+        }
+    }
+
+    pub fn open_cassotto_chamber_hud(&mut self) {
+        self.show_cassotto_chamber_modal = true;
+    }
+
+    pub fn close_cassotto_chamber_hud(&mut self) {
+        self.show_cassotto_chamber_modal = false;
+    }
+
+    pub fn is_cassotto_chamber_hud_open(&self) -> bool {
+        self.show_cassotto_chamber_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_cassotto_chamber_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_cassotto_chamber_modal {
+            return;
+        }
+
+        let mut is_open = self.show_cassotto_chamber_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🪗 Physical Modeling Wooden Cassotto Tone Chamber HUD")
+            .id(egui::Id::new("cassotto_chamber_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Acoustic Cavity Resonator & Soundbox Aperture Matrix (Milestones 28, 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.cassotto_chamber_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_cassotto_chamber_modal = is_open;
+        self.sync_cassotto_chamber_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_cassotto_chamber_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let aperture = self.cassotto_chamber_view.aperture;
+        let warmth = self.cassotto_chamber_view.wood_warmth;
+        let cutoff = self.cassotto_chamber_view.lowpass_cutoff_hz;
+        let q = self.cassotto_chamber_view.cavity_q;
+        let f1 = self.cassotto_chamber_view.mode1_freq_hz;
+        let f2 = self.cassotto_chamber_view.mode2_freq_hz;
+        let mix = self.cassotto_chamber_view.chamber_mix;
+
+        self.device_rack_state.node_param_values.insert("aperture".to_string(), aperture);
+        self.device_rack_state.node_param_values.insert("aperture_shutter_fraction".to_string(), aperture);
+        self.device_rack_state.node_param_values.insert("wood_warmth".to_string(), warmth);
+        self.device_rack_state.node_param_values.insert("wooden_warmth_resonance".to_string(), warmth);
+        self.device_rack_state.node_param_values.insert("lowpass_cutoff_hz".to_string(), cutoff);
+        self.device_rack_state.node_param_values.insert("cavity_q".to_string(), q);
+        self.device_rack_state.node_param_values.insert("mode1_freq_hz".to_string(), f1);
+        self.device_rack_state.node_param_values.insert("mode2_freq_hz".to_string(), f2);
+        self.device_rack_state.node_param_values.insert("chamber_mix".to_string(), mix);
+
+        self.inspector_state.node_param_values.insert("aperture".to_string(), aperture);
+        self.inspector_state.node_param_values.insert("aperture_shutter_fraction".to_string(), aperture);
+        self.inspector_state.node_param_values.insert("wood_warmth".to_string(), warmth);
+        self.inspector_state.node_param_values.insert("wooden_warmth_resonance".to_string(), warmth);
+        self.inspector_state.node_param_values.insert("lowpass_cutoff_hz".to_string(), cutoff);
+        self.inspector_state.node_param_values.insert("cavity_q".to_string(), q);
+        self.inspector_state.node_param_values.insert("mode1_freq_hz".to_string(), f1);
+        self.inspector_state.node_param_values.insert("mode2_freq_hz".to_string(), f2);
+        self.inspector_state.node_param_values.insert("chamber_mix".to_string(), mix);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_ap = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_ww = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_fc = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_q  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_ap).is_some() { bus.set(pid_ap, aperture); }
+            if bus.get(pid_ww).is_some() { bus.set(pid_ww, warmth); }
+            if bus.get(pid_fc).is_some() { bus.set(pid_fc, cutoff); }
+            if bus.get(pid_q).is_some()  { bus.set(pid_q, q); }
+        }
+    }
+
+    pub fn open_zero_gravity_fluid_hud(&mut self) {
+        self.show_zero_gravity_fluid_modal = true;
+    }
+
+    pub fn close_zero_gravity_fluid_hud(&mut self) {
+        self.show_zero_gravity_fluid_modal = false;
+    }
+
+    pub fn is_zero_gravity_fluid_hud_open(&self) -> bool {
+        self.show_zero_gravity_fluid_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_zero_gravity_fluid_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_zero_gravity_fluid_modal {
+            return;
+        }
+
+        let mut is_open = self.show_zero_gravity_fluid_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🌊 Zero-Gravity Navier-Stokes Acoustic Fluid Dynamics HUD")
+            .id(egui::Id::new("zero_gravity_fluid_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("3D Fluid Grid Pressure Solver & Molecular Resonator (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.zero_gravity_fluid_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_zero_gravity_fluid_modal = is_open;
+        self.sync_zero_gravity_fluid_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_zero_gravity_fluid_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let visc = self.zero_gravity_fluid_view.viscosity_cst;
+        let c = self.zero_gravity_fluid_view.sound_speed_mps;
+        let tension = self.zero_gravity_fluid_view.surface_tension_mnm;
+        let damp = self.zero_gravity_fluid_view.pressure_damping;
+        let f_cap = self.zero_gravity_fluid_view.capillary_freq_hz;
+
+        self.device_rack_state.node_param_values.insert("viscosity_cst".to_string(), visc);
+        self.device_rack_state.node_param_values.insert("fluid_viscosity_cst".to_string(), visc);
+        self.device_rack_state.node_param_values.insert("fluid_viscosity_coefficient".to_string(), visc * 0.05);
+        self.device_rack_state.node_param_values.insert("sound_speed_mps".to_string(), c);
+        self.device_rack_state.node_param_values.insert("fluid_sound_speed_mps".to_string(), c);
+        self.device_rack_state.node_param_values.insert("surface_tension_mnm".to_string(), tension);
+        self.device_rack_state.node_param_values.insert("surface_tension_nm".to_string(), tension);
+        self.device_rack_state.node_param_values.insert("pressure_damping".to_string(), damp);
+        self.device_rack_state.node_param_values.insert("damping_fluid_resistance".to_string(), (1.0 - damp) * 100.0);
+        self.device_rack_state.node_param_values.insert("capillary_freq_hz".to_string(), f_cap);
+
+        self.inspector_state.node_param_values.insert("viscosity_cst".to_string(), visc);
+        self.inspector_state.node_param_values.insert("fluid_viscosity_cst".to_string(), visc);
+        self.inspector_state.node_param_values.insert("fluid_viscosity_coefficient".to_string(), visc * 0.05);
+        self.inspector_state.node_param_values.insert("sound_speed_mps".to_string(), c);
+        self.inspector_state.node_param_values.insert("fluid_sound_speed_mps".to_string(), c);
+        self.inspector_state.node_param_values.insert("surface_tension_mnm".to_string(), tension);
+        self.inspector_state.node_param_values.insert("surface_tension_nm".to_string(), tension);
+        self.inspector_state.node_param_values.insert("pressure_damping".to_string(), damp);
+        self.inspector_state.node_param_values.insert("damping_fluid_resistance".to_string(), (1.0 - damp) * 100.0);
+        self.inspector_state.node_param_values.insert("capillary_freq_hz".to_string(), f_cap);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_v = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_c = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_t = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_d = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_v).is_some() { bus.set(pid_v, visc); }
+            if bus.get(pid_c).is_some() { bus.set(pid_c, c); }
+            if bus.get(pid_t).is_some() { bus.set(pid_t, tension); }
+            if bus.get(pid_d).is_some() { bus.set(pid_d, damp); }
         }
     }
 

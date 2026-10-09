@@ -305,6 +305,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_spectral_debleed_hud: bool,
     #[serde(default)]
     pub requested_open_spectral_reshaper_hud: bool,
+    #[serde(default)]
+    pub requested_open_cassotto_chamber_hud: bool,
+    #[serde(default)]
+    pub requested_open_zero_gravity_fluid_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -446,6 +450,8 @@ impl Default for ModernDeviceRackState {
             requested_open_spectral_unmasker_hud: false,
             requested_open_spectral_debleed_hud: false,
             requested_open_spectral_reshaper_hud: false,
+            requested_open_cassotto_chamber_hud: false,
+            requested_open_zero_gravity_fluid_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -1210,6 +1216,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_spectral_unmasker = cur_selection.contains("SpectralUnmasker") || cur_selection.contains("Unmasker") || cur_selection == "SpectralUnmaskerNode" || cur_selection.contains("IntelligentSpectral") || cur_selection.contains("SidechainUnmask");
                     let is_spectral_debleed = cur_selection.contains("SpectralDebleed") || cur_selection.contains("Debleed") || cur_selection == "SpectralDebleedNode" || cur_selection.contains("AcousticBleed") || cur_selection.contains("LeakageSeparator");
                     let is_spectral_reshaper = cur_selection.contains("SpectralReshaper") || cur_selection.contains("Reshaper") || cur_selection == "SpectralReshaperNode" || cur_selection.contains("SpectralEnvelope") || cur_selection.contains("FormantReshaper");
+                    let is_cassotto = cur_selection.contains("Cassotto") || cur_selection.contains("ToneChamber") || cur_selection.contains("Soundbox") || cur_selection == "CassottoChamber" || cur_selection == "CassottoToneChamberResonator";
+                    let is_zero_gravity = cur_selection.contains("ZeroGravity") || cur_selection.contains("NavierStokes") || cur_selection.contains("FluidAcoustic") || cur_selection.contains("MolecularVibration") || cur_selection == "NavierStokesFluidNode" || cur_selection == "ZeroGravityFluidAcousticModel";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1718,6 +1726,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("🎛 Reshaper HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 107, 43))).on_hover_text("Open Multi-Band Transient Spectral Reshaper & Formant Envelope HUD").clicked()
                     {
                         state.requested_open_spectral_reshaper_hud = true;
+                    } else if is_cassotto
+                        && ui.button(RichText::new("🪗 Cassotto HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(245, 158, 11))).on_hover_text("Open Physical Modeling Wooden Cassotto Tone Chamber HUD").clicked()
+                    {
+                        state.requested_open_cassotto_chamber_hud = true;
+                    } else if is_zero_gravity
+                        && ui.button(RichText::new("🌊 Fluid HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Zero-Gravity Navier-Stokes Acoustic Fluid Dynamics HUD").clicked()
+                    {
+                        state.requested_open_zero_gravity_fluid_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2610,6 +2626,8 @@ fn show_pro_parameter_drawer(
                     let is_spectral_unmasker = dev_kind.contains("SpectralUnmasker") || dev_kind.contains("Unmasker") || dev_kind == "SpectralUnmaskerNode" || dev_kind.contains("IntelligentSpectral") || dev_kind.contains("SidechainUnmask");
                     let is_spectral_debleed = dev_kind.contains("SpectralDebleed") || dev_kind.contains("Debleed") || dev_kind == "SpectralDebleedNode" || dev_kind.contains("AcousticBleed") || dev_kind.contains("LeakageSeparator");
                     let is_spectral_reshaper = dev_kind.contains("SpectralReshaper") || dev_kind.contains("Reshaper") || dev_kind == "SpectralReshaperNode" || dev_kind.contains("SpectralEnvelope") || dev_kind.contains("FormantReshaper");
+                    let is_cassotto = dev_kind.contains("Cassotto") || dev_kind.contains("ToneChamber") || dev_kind.contains("Soundbox") || dev_kind == "CassottoChamber" || dev_kind == "CassottoToneChamberResonator";
+                    let is_zero_gravity = dev_kind.contains("ZeroGravity") || dev_kind.contains("NavierStokes") || dev_kind.contains("FluidAcoustic") || dev_kind.contains("MolecularVibration") || dev_kind == "NavierStokesFluidNode" || dev_kind == "ZeroGravityFluidAcousticModel";
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -12441,6 +12459,138 @@ fn show_pro_parameter_drawer(
                             let _ = sr_resp.on_hover_text(format!(
                                 "Multi-Band Transient Spectral Reshaper HUD\nActive Band Attack: {:+0.1} dB | Sustain: {:+0.1} dB\nDe-Bleed Isolation: {:.0}%\n[Drag: Attack (X) / Sustain (Y) Puck]",
                                 attack_db, sustain_db, isolation * 100.0
+                            ));
+                        }
+                    } else if is_cassotto {
+                        // Cassotto Tone Chamber Mini View
+                        let (cas_resp, cas_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let cas_rect = cas_resp.rect;
+                        cas_painter.rect_filled(cas_rect, 2.0, Color32::from_rgb(18, 14, 10));
+
+                        let mut aperture = state.node_param_values.get("aperture").or_else(|| state.node_param_values.get("aperture_shutter_fraction")).copied().unwrap_or(0.85);
+                        let mut warmth = state.node_param_values.get("wood_warmth").or_else(|| state.node_param_values.get("wooden_warmth_resonance")).copied().unwrap_or(0.85);
+                        let cutoff = state.node_param_values.get("lowpass_cutoff_hz").copied().unwrap_or(2600.0);
+
+                        if cas_resp.dragged() || cas_resp.clicked() {
+                            if let Some(pos) = cas_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - cas_rect.left()) / (cas_rect.width() - 55.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - cas_rect.top() - 10.0) / (cas_rect.height() - 20.0))).clamp(0.0, 1.0);
+                                aperture = crate::views::cassotto_chamber_view::CassottoChamberView::normalized_to_aperture(norm_x);
+                                warmth = crate::views::cassotto_chamber_view::CassottoChamberView::normalized_to_warmth(norm_y);
+                                state.node_param_values.insert("aperture".to_string(), aperture);
+                                state.node_param_values.insert("aperture_shutter_fraction".to_string(), aperture);
+                                state.node_param_values.insert("wood_warmth".to_string(), warmth);
+                                state.node_param_values.insert("wooden_warmth_resonance".to_string(), warmth);
+                                if let Some(bus) = param_bus {
+                                    let pid_ap = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_ww = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_ap).is_some() { bus.set(pid_ap, aperture); }
+                                    if bus.get(pid_ww).is_some() { bus.set(pid_ww, warmth); }
+                                }
+                            }
+                        }
+
+                        // Resonance response curve
+                        let num_steps = 16;
+                        let mut prev_pt = None;
+                        for s in 0..=num_steps {
+                            let frac = s as f32 / num_steps as f32;
+                            let px = cas_rect.left() + 4.0 + frac * (cas_rect.width() - 60.0);
+                            let peak_gain = if (frac - 0.35).abs() < 0.15 { warmth * 8.0 } else { 0.0 };
+                            let py = cas_rect.center().y - (peak_gain / 16.0) * 18.0 + (frac * 6.0);
+                            let pt = egui::pos2(px, py);
+                            if let Some(prev) = prev_pt {
+                                cas_painter.line_segment([prev, pt], Stroke::new(1.5_f32, Color32::from_rgb(245, 158, 11)));
+                            }
+                            prev_pt = Some(pt);
+                        }
+
+                        // Target puck
+                        let norm_a = crate::views::cassotto_chamber_view::CassottoChamberView::aperture_to_normalized(aperture);
+                        let norm_w = crate::views::cassotto_chamber_view::CassottoChamberView::warmth_to_normalized(warmth);
+                        let puck_x = cas_rect.left() + 4.0 + norm_a * (cas_rect.width() - 60.0);
+                        let puck_y = cas_rect.bottom() - 10.0 - norm_w * (cas_rect.height() - 20.0);
+                        cas_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(245, 158, 11));
+                        cas_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        cas_painter.text(
+                            egui::pos2(cas_rect.right() - 4.0, cas_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("CASSOTTO\n{:.0}% Apt\n{:.2}x Warm\n{:.0}Hz", aperture * 100.0, warmth, cutoff * (0.35 + 0.65 * aperture)),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(245, 158, 11),
+                        );
+
+                        if cas_resp.hovered() {
+                            let _ = cas_resp.on_hover_text(format!(
+                                "Physical Modeling Cassotto Tone Chamber HUD\nAperture Shutter: {:.0}% | Wooden Warmth: {:.2}x\n[Drag: Aperture (X) / Warmth (Y) Puck]",
+                                aperture * 100.0, warmth
+                            ));
+                        }
+                    } else if is_zero_gravity {
+                        // Zero-Gravity Fluid Dynamics Mini View
+                        let (fl_resp, fl_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let fl_rect = fl_resp.rect;
+                        fl_painter.rect_filled(fl_rect, 2.0, Color32::from_rgb(10, 18, 26));
+
+                        let mut visc = state.node_param_values.get("viscosity_cst").or_else(|| state.node_param_values.get("fluid_viscosity_cst")).copied().unwrap_or(1.0);
+                        let mut sound_speed = state.node_param_values.get("sound_speed_mps").or_else(|| state.node_param_values.get("fluid_sound_speed_mps")).copied().unwrap_or(1482.0);
+                        let f_cap = state.node_param_values.get("capillary_freq_hz").copied().unwrap_or(18.5);
+
+                        if fl_resp.dragged() || fl_resp.clicked() {
+                            if let Some(pos) = fl_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - fl_rect.left()) / (fl_rect.width() - 55.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - fl_rect.top() - 10.0) / (fl_rect.height() - 20.0))).clamp(0.0, 1.0);
+                                visc = crate::views::zero_gravity_fluid_view::ZeroGravityFluidView::normalized_to_viscosity(norm_x);
+                                sound_speed = crate::views::zero_gravity_fluid_view::ZeroGravityFluidView::normalized_to_sound_speed(norm_y);
+                                state.node_param_values.insert("viscosity_cst".to_string(), visc);
+                                state.node_param_values.insert("fluid_viscosity_cst".to_string(), visc);
+                                state.node_param_values.insert("sound_speed_mps".to_string(), sound_speed);
+                                state.node_param_values.insert("fluid_sound_speed_mps".to_string(), sound_speed);
+                                if let Some(bus) = param_bus {
+                                    let pid_v = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_c = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_v).is_some() { bus.set(pid_v, visc); }
+                                    if bus.get(pid_c).is_some() { bus.set(pid_c, sound_speed); }
+                                }
+                            }
+                        }
+
+                        // 4x2 fluid pressure slice preview
+                        for gy in 0..2 {
+                            for gx in 0..4 {
+                                let bx = fl_rect.left() + 4.0 + gx as f32 * 22.0;
+                                let by = fl_rect.top() + 14.0 + gy as f32 * 20.0;
+                                let cell_rect = egui::Rect::from_min_size(egui::pos2(bx, by), Vec2::new(18.0, 16.0));
+                                let color = if (gx + gy) % 2 == 0 {
+                                    Color32::from_rgb(0, 180, 220)
+                                } else {
+                                    Color32::from_rgb(0, 120, 160)
+                                };
+                                fl_painter.rect_filled(cell_rect, 1.0, color);
+                            }
+                        }
+
+                        // Target puck
+                        let norm_v = crate::views::zero_gravity_fluid_view::ZeroGravityFluidView::viscosity_to_normalized(visc);
+                        let norm_c = crate::views::zero_gravity_fluid_view::ZeroGravityFluidView::sound_speed_to_normalized(sound_speed);
+                        let puck_x = fl_rect.left() + 4.0 + norm_v * (fl_rect.width() - 60.0);
+                        let puck_y = fl_rect.bottom() - 10.0 - norm_c * (fl_rect.height() - 20.0);
+                        fl_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(0, 229, 255));
+                        fl_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        fl_painter.text(
+                            egui::pos2(fl_rect.right() - 4.0, fl_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("FLUID\n{:.3}cSt\n{:.0}m/s\n{:.1}Hz f₀", visc, sound_speed, f_cap),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+
+                        if fl_resp.hovered() {
+                            let _ = fl_resp.on_hover_text(format!(
+                                "Zero-Gravity Navier-Stokes Fluid Dynamics HUD\nKinematic Viscosity: {:.3} cSt | Speed of Sound: {:.0} m/s\n[Drag: Viscosity (X) / Sound Speed (Y) Puck]",
+                                visc, sound_speed
                             ));
                         }
                     } else {

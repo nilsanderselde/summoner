@@ -1,6 +1,6 @@
 # Summoner DAW — Product Readiness & Shippability Tracker
 > **Current Shippability Score:** 10.0 / 10  
-> **Status:** Production Ready Release Candidate (Turn #112 / Sprint Turn #38)  
+> **Status:** Production Ready Release Candidate (Turn #113 / Sprint Turn #39 — Sprint Review)  
 > **Authoritative Root:** `PROGRESS.md`  
 > **License:** AGPLv3
 
@@ -3151,6 +3151,49 @@ Product Management has conducted a comprehensive readiness audit:
     * GUI tests: modal window lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch without allocations, trigger button propagation from rack and inspector, command palette action verification.
   - Registered `tier175_turn112_tests` in `crates/summoner_gui/src/lib.rs`.
   - Feature tests: 3 passed (`cargo test -p summoner_gui --features gui -- tier175`).
+  - Pure unit tests: 329 passed in 0.22s (`cargo test -p summoner_gui --lib`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
+
+### Turn #113 (Sprint Turn #39 — Sprint Review) — Physical Modeling Wooden Cassotto Tone Chamber & Zero-Gravity Navier-Stokes Acoustic Fluid Dynamics HUDs Convergence (Milestones 28, 33 & 34)
+- [x] Physical Modeling Wooden Cassotto Tone Chamber & Soundbox Resonator HUD (`crates/summoner_gui/src/views/cassotto_chamber_view.rs`):
+  - Integrated `CassottoChamberView`:
+    * 5 Acoustic Chamber Profiles: `DobleCassottoBandoneon` (Premier 2-rank chamber for 16' Bassoon & 8' Clarinet, deep velvety resonance), `StandardAccordionChamber` (Italian solid maple chamber, warm singing mids), `ConcertinaSpruceCavity` (Compact hexagonal body, crisp fast acoustic reflection), `HarmoniumResonantBox` (Large pine pumping box with rich low-mid sustain), and `OpenAirBayan` (Direct open reedblock with bright cutting projection).
+    * Interactive 2D Chamber Shutter & Warmth Puck: Aperture Shutter Opening [0.0..1.0] vs Wooden Warmth Resonance Gain [0.0..2.0] with >= 44x44pt bounding target (`CASSOTTO_PUCK_HIT_RADIUS = 22.0`).
+    * Real-time 4-mode cavity resonance filter bank $(f_1, f_2, f_3, f_4)$ frequency response evaluation + lowpass acoustic transmission curve.
+    * Dual-path direct radiation vs enclosed chambered radiation with transmission loss and warmth boost readout.
+    * Deterministic ASCII snapshot rendering with metadata banner and verified touch target badge (`[PASS: >=44pt]`).
+- [x] Zero-Gravity Navier-Stokes Acoustic Fluid Dynamics & Molecular Resonator HUD (`crates/summoner_gui/src/views/zero_gravity_fluid_view.rs`):
+  - Integrated `ZeroGravityFluidView`:
+    * 5 Microgravity Fluid Regimes: `MicrogravityWaterSphere` (Capillary surface oscillation, pure acoustic sphere), `SupercriticalCo2Vortex` (Dense gas/liquid acoustic cavitation, vortex whistle), `LiquidHeliumSuperfluid` (Near-zero viscosity, second sound thermal-acoustic waves), `ViscousGlycerinDroplet` (High viscous damping, boundary layer diffusion), and `FerrofluidMagneticSuspension` (Field-aligned anisotropic acoustic dispersion).
+    * Interactive 2D Fluid Dynamics Puck: Kinematic Viscosity [0.001..50.0 cSt] (log-scale) vs Medium Sound Speed [100.0..2000.0 m/s] with >= 44x44pt bounding target (`FLUID_PUCK_HIT_RADIUS = 22.0`).
+    * Real-time 4x4x4 3D Navier-Stokes fluid pressure wave propagation grid simulation and central acoustic perturbation diffusion display.
+    * Rayleigh capillary surface wave droplet resonance calculation ($f_{\text{capillary}} = \sqrt{\frac{8\sigma}{\pi^2\rho R^3}}$).
+    * Deterministic ASCII snapshot rendering with metadata banner and verified touch target badge (`[PASS: >=44pt]`).
+- [x] View Re-Exports (`crates/summoner_gui/src/views/mod.rs`):
+  - Exported `CassottoChamberView`, `CassottoChamberProfile`, `ZeroGravityFluidView`, `FluidAcousticRegime`.
+- [x] AwardWinningGuiView Modal Windows & Lock-Free Live Audio State Sync (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added modal fields (`show_cassotto_chamber_modal`, `cassotto_chamber_view`, `show_zero_gravity_fluid_modal`, `zero_gravity_fluid_view`).
+  - Added dedicated modal windows (`show_cassotto_chamber_modal_window`, `show_zero_gravity_fluid_modal_window`) with responsive styling, WCAG AAA contrast, and >= 44x44pt touch bounds.
+  - Added public lifecycle methods: `open_cassotto_chamber_hud()`, `close_cassotto_chamber_hud()`, `is_cassotto_chamber_hud_open()`, `open_zero_gravity_fluid_hud()`, `close_zero_gravity_fluid_hud()`, `is_zero_gravity_fluid_hud_open()`.
+  - Real-time parameter sync bridges (`sync_cassotto_chamber_hud_state` and `sync_zero_gravity_fluid_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_cassotto_chamber_hud: bool` and `requested_open_zero_gravity_fluid_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🪗 Open Cassotto Chamber HUD]` and `[🌊 Open Zero-Gravity Fluid HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header buttons `[🪗 Cassotto HUD]` and `[🌊 Fluid HUD]` in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Cassotto Chamber: Response contour preview curve, interactive Aperture / Warmth puck, live aperture & warmth readout, and lock-free slot-addressed `ParamBus` dispatch.
+    * Zero-Gravity Fluid: 4x2 pressure field slice preview, interactive Viscosity / Sound Speed puck, live viscosity and sound speed readout, and lock-free slot-addressed `ParamBus` dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_cassotto_chamber_hud` and `open_zero_gravity_fluid_hud` under `"Physical Modeling"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_cassotto_chamber_hud()` and `open_zero_gravity_fluid_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier176_turn113_tests.rs`:
+    * Pure tests: view initialization, coordinate normalizations (aperture, warmth, log-viscosity, sound speed), profile/regime switching across all 5 profiles and regimes, simulation calculations, frequency response evaluations, touch puck hit testing (>= 44x44pt bounding targets), deterministic ASCII snapshots with metadata banners.
+    * GUI tests: modal window lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch without allocations, trigger button propagation from rack and inspector, command palette action verification.
+  - Registered `tier176_turn113_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Feature tests: 3 passed (`cargo test -p summoner_gui --features gui -- tier176`).
   - Pure unit tests: 329 passed in 0.22s (`cargo test -p summoner_gui --lib`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
 

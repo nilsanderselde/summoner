@@ -1076,6 +1076,18 @@ impl CommandPalette {
                 action_id: "open_spectral_reshaper_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Physical Modeling Wooden Cassotto Tone Chamber & Soundbox HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_cassotto_chamber_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Zero-Gravity Navier-Stokes Acoustic Fluid Dynamics & Molecular Resonator HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_zero_gravity_fluid_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

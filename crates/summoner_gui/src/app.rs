@@ -1840,6 +1840,14 @@ impl eframe::App for SummonerApp {
                     self.current_view = ViewMode::ModernStudio;
                     self.award_winning_view.open_spectral_reshaper_hud();
                 }
+                "open_cassotto_chamber_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_cassotto_chamber_hud();
+                }
+                "open_zero_gravity_fluid_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_zero_gravity_fluid_hud();
+                }
                 "sfz_convert" | "auto_slice" | "load_preset" | "export_clap" | "toggle_simd" => {
                     println!("Command palette action executed: {}", action);
                 }
