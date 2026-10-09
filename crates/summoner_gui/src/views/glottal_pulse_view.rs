@@ -322,7 +322,7 @@ impl GlottalPulseView {
             let half_width = (available_width - 16.0) * 0.5;
             let canvas_height = 200.0;
 
-            let (total_rect, _resp) = ui.allocate_exact_size(Vec2::new(available_width, canvas_height), egui::Sense::hover());
+            let (total_rect, resp) = ui.allocate_exact_size(Vec2::new(available_width, canvas_height), egui::Sense::click_and_drag());
             let painter = ui.painter();
 
             let left_rect = egui::Rect::from_min_size(total_rect.min, Vec2::new(half_width, canvas_height));
@@ -361,19 +361,16 @@ impl GlottalPulseView {
             let puck_screen_y = left_rect.max.y - 15.0 - self.puck_pos.1 * (left_rect.height() - 30.0);
             let puck_screen_pos = egui::pos2(puck_screen_x, puck_screen_y);
 
-            let puck_resp = ui.allocate_rect(
-                egui::Rect::from_center_size(puck_screen_pos, Vec2::splat(GLOTTAL_PUCK_HIT_RADIUS * 2.0)),
-                egui::Sense::click_and_drag(),
-            );
-
-            if puck_resp.dragged() || puck_resp.clicked() {
-                if let Some(pos) = puck_resp.interact_pointer_pos() {
-                    let norm_x = ((pos.x - left_rect.min.x - 15.0) / (left_rect.width() - 30.0)).clamp(0.0, 1.0);
-                    let norm_y = (1.0 - ((pos.y - left_rect.min.y - 15.0) / (left_rect.height() - 30.0))).clamp(0.0, 1.0);
-                    self.puck_pos = (norm_x, norm_y);
-                    self.open_quotient = Self::normalized_to_open_quotient(norm_x);
-                    self.speed_quotient = Self::normalized_to_speed_quotient(norm_y);
-                    self.update_closure_energy();
+            if resp.dragged() || resp.clicked() {
+                if let Some(pos) = resp.interact_pointer_pos() {
+                    if left_rect.contains(pos) {
+                        let norm_x = ((pos.x - left_rect.min.x - 15.0) / (left_rect.width() - 30.0)).clamp(0.0, 1.0);
+                        let norm_y = (1.0 - ((pos.y - left_rect.min.y - 15.0) / (left_rect.height() - 30.0))).clamp(0.0, 1.0);
+                        self.puck_pos = (norm_x, norm_y);
+                        self.open_quotient = Self::normalized_to_open_quotient(norm_x);
+                        self.speed_quotient = Self::normalized_to_speed_quotient(norm_y);
+                        self.update_closure_energy();
+                    }
                 }
             }
 

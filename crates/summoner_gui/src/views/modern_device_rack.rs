@@ -456,6 +456,8 @@ impl Default for ModernDeviceRackState {
             requested_open_spectral_reshaper_hud: false,
             requested_open_cassotto_chamber_hud: false,
             requested_open_zero_gravity_fluid_hud: false,
+            requested_open_horn_reflection_hud: false,
+            requested_open_glottal_pulse_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -1222,6 +1224,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_spectral_reshaper = cur_selection.contains("SpectralReshaper") || cur_selection.contains("Reshaper") || cur_selection == "SpectralReshaperNode" || cur_selection.contains("SpectralEnvelope") || cur_selection.contains("FormantReshaper");
                     let is_cassotto = cur_selection.contains("Cassotto") || cur_selection.contains("ToneChamber") || cur_selection.contains("Soundbox") || cur_selection == "CassottoChamber" || cur_selection == "CassottoToneChamberResonator";
                     let is_zero_gravity = cur_selection.contains("ZeroGravity") || cur_selection.contains("NavierStokes") || cur_selection.contains("FluidAcoustic") || cur_selection.contains("MolecularVibration") || cur_selection == "NavierStokesFluidNode" || cur_selection == "ZeroGravityFluidAcousticModel";
+                    let is_horn_reflection = cur_selection.contains("HornReflection") || cur_selection.contains("HornFlare") || cur_selection.contains("WebsterHorn") || cur_selection.contains("BrassBell") || cur_selection == "HornReflectionNode" || cur_selection == "AcousticHornReflection";
+                    let is_glottal_pulse = cur_selection.contains("GlottalPulse") || cur_selection.contains("GlottalFlow") || cur_selection.contains("VocalFold") || cur_selection.contains("RosenbergGlottal") || cur_selection == "GlottalPulseNode" || cur_selection == "GlottalFlowModel";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1738,6 +1742,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("🌊 Fluid HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Zero-Gravity Navier-Stokes Acoustic Fluid Dynamics HUD").clicked()
                     {
                         state.requested_open_zero_gravity_fluid_hud = true;
+                    } else if is_horn_reflection
+                        && ui.button(RichText::new("🎺 Horn HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 215, 0))).on_hover_text("Open Acoustic Waveguide Brass Horn Flare Reflection & Webster Horn Impedance HUD").clicked()
+                    {
+                        state.requested_open_horn_reflection_hud = true;
+                    } else if is_glottal_pulse
+                        && ui.button(RichText::new("🗣 Glottal HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(52, 211, 153))).on_hover_text("Open Acoustic Glottal Pulse Flow & Vocal Fold Vibration Phonation HUD").clicked()
+                    {
+                        state.requested_open_glottal_pulse_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2632,6 +2644,8 @@ fn show_pro_parameter_drawer(
                     let is_spectral_reshaper = dev_kind.contains("SpectralReshaper") || dev_kind.contains("Reshaper") || dev_kind == "SpectralReshaperNode" || dev_kind.contains("SpectralEnvelope") || dev_kind.contains("FormantReshaper");
                     let is_cassotto = dev_kind.contains("Cassotto") || dev_kind.contains("ToneChamber") || dev_kind.contains("Soundbox") || dev_kind == "CassottoChamber" || dev_kind == "CassottoToneChamberResonator";
                     let is_zero_gravity = dev_kind.contains("ZeroGravity") || dev_kind.contains("NavierStokes") || dev_kind.contains("FluidAcoustic") || dev_kind.contains("MolecularVibration") || dev_kind == "NavierStokesFluidNode" || dev_kind == "ZeroGravityFluidAcousticModel";
+                    let is_horn_reflection = dev_kind.contains("HornReflection") || dev_kind.contains("HornFlare") || dev_kind.contains("WebsterHorn") || dev_kind.contains("BrassBell") || dev_kind == "HornReflectionNode" || dev_kind == "AcousticHornReflection";
+                    let is_glottal_pulse = dev_kind.contains("GlottalPulse") || dev_kind.contains("GlottalFlow") || dev_kind.contains("VocalFold") || dev_kind.contains("RosenbergGlottal") || dev_kind == "GlottalPulseNode" || dev_kind == "GlottalFlowModel";
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -12595,6 +12609,142 @@ fn show_pro_parameter_drawer(
                             let _ = fl_resp.on_hover_text(format!(
                                 "Zero-Gravity Navier-Stokes Fluid Dynamics HUD\nKinematic Viscosity: {:.3} cSt | Speed of Sound: {:.0} m/s\n[Drag: Viscosity (X) / Sound Speed (Y) Puck]",
                                 visc, sound_speed
+                            ));
+                        }
+                    } else if is_horn_reflection {
+                        // Horn Reflection & Flare Mini View
+                        let (horn_resp, horn_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let horn_rect = horn_resp.rect;
+                        horn_painter.rect_filled(horn_rect, 2.0, Color32::from_rgb(20, 16, 8));
+
+                        let mut cutoff = state.node_param_values.get("cutoff_hz").or_else(|| state.node_param_values.get("flare_cutoff_hz")).copied().unwrap_or(650.0);
+                        let mut flare = state.node_param_values.get("flare_coefficient").or_else(|| state.node_param_values.get("horn_flare_coefficient")).copied().unwrap_or(1.25);
+                        let bell_r = state.node_param_values.get("bell_radius_m").copied().unwrap_or(0.12);
+
+                        if horn_resp.dragged() || horn_resp.clicked() {
+                            if let Some(pos) = horn_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - horn_rect.left()) / (horn_rect.width() - 55.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - horn_rect.top() - 10.0) / (horn_rect.height() - 20.0))).clamp(0.0, 1.0);
+                                cutoff = crate::views::horn_reflection_view::HornReflectionView::normalized_to_cutoff(norm_x);
+                                flare = crate::views::horn_reflection_view::HornReflectionView::normalized_to_flare(norm_y);
+                                state.node_param_values.insert("cutoff_hz".to_string(), cutoff);
+                                state.node_param_values.insert("flare_cutoff_hz".to_string(), cutoff);
+                                state.node_param_values.insert("flare_coefficient".to_string(), flare);
+                                state.node_param_values.insert("horn_flare_coefficient".to_string(), flare);
+                                if let Some(bus) = param_bus {
+                                    let pid_fc = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_fl = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_fc).is_some() { bus.set(pid_fc, cutoff); }
+                                    if bus.get(pid_fl).is_some() { bus.set(pid_fl, flare); }
+                                }
+                            }
+                        }
+
+                        // Flare profile mini curve
+                        let num_steps = 14;
+                        let mut prev_pt = None;
+                        for s in 0..=num_steps {
+                            let frac = s as f32 / num_steps as f32;
+                            let px = horn_rect.left() + 4.0 + frac * (horn_rect.width() - 60.0);
+                            let half_h = 2.0 + (frac.powf(flare * 1.8)) * 14.0;
+                            let pt = egui::pos2(px, horn_rect.center().y - half_h * 0.5);
+                            if let Some(prev) = prev_pt {
+                                horn_painter.line_segment([prev, pt], Stroke::new(1.3_f32, Color32::from_rgb(255, 215, 0)));
+                            }
+                            prev_pt = Some(pt);
+                        }
+
+                        // Target puck
+                        let norm_fc = crate::views::horn_reflection_view::HornReflectionView::cutoff_to_normalized(cutoff);
+                        let norm_fl = crate::views::horn_reflection_view::HornReflectionView::flare_to_normalized(flare);
+                        let puck_x = horn_rect.left() + 4.0 + norm_fc * (horn_rect.width() - 60.0);
+                        let puck_y = horn_rect.bottom() - 10.0 - norm_fl * (horn_rect.height() - 20.0);
+                        horn_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(255, 215, 0));
+                        horn_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        horn_painter.text(
+                            egui::pos2(horn_rect.right() - 4.0, horn_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("HORN\n{:.0}Hz fc\n{:.2} Flare\n{:.1}cm Bell", cutoff, flare, bell_r * 100.0),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(255, 215, 0),
+                        );
+
+                        if horn_resp.hovered() {
+                            let _ = horn_resp.on_hover_text(format!(
+                                "Waveguide Horn Flare & Impedance HUD\nCutoff Frequency: {:.0} Hz | Flare: {:.2}\n[Drag: Cutoff (X) / Flare (Y) Puck]",
+                                cutoff, flare
+                            ));
+                        }
+                    } else if is_glottal_pulse {
+                        // Glottal Pulse Mini View
+                        let (gl_resp, gl_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let gl_rect = gl_resp.rect;
+                        gl_painter.rect_filled(gl_rect, 2.0, Color32::from_rgb(8, 20, 14));
+
+                        let mut open_q = state.node_param_values.get("open_quotient").or_else(|| state.node_param_values.get("glottal_open_quotient")).copied().unwrap_or(0.60);
+                        let mut speed_q = state.node_param_values.get("speed_quotient").or_else(|| state.node_param_values.get("glottal_speed_quotient")).copied().unwrap_or(2.0);
+                        let ee_score = (1.5 * speed_q / (1.0 + open_q)).clamp(0.1, 2.5);
+
+                        if gl_resp.dragged() || gl_resp.clicked() {
+                            if let Some(pos) = gl_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - gl_rect.left()) / (gl_rect.width() - 55.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - gl_rect.top() - 10.0) / (gl_rect.height() - 20.0))).clamp(0.0, 1.0);
+                                open_q = crate::views::glottal_pulse_view::GlottalPulseView::normalized_to_open_quotient(norm_x);
+                                speed_q = crate::views::glottal_pulse_view::GlottalPulseView::normalized_to_speed_quotient(norm_y);
+                                state.node_param_values.insert("open_quotient".to_string(), open_q);
+                                state.node_param_values.insert("glottal_open_quotient".to_string(), open_q);
+                                state.node_param_values.insert("speed_quotient".to_string(), speed_q);
+                                state.node_param_values.insert("glottal_speed_quotient".to_string(), speed_q);
+                                if let Some(bus) = param_bus {
+                                    let pid_oq = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_sq = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_oq).is_some() { bus.set(pid_oq, open_q); }
+                                    if bus.get(pid_sq).is_some() { bus.set(pid_sq, speed_q); }
+                                }
+                            }
+                        }
+
+                        // Mini volume velocity pulse curve
+                        let num_steps = 16;
+                        let mut prev_pt = None;
+                        for s in 0..=num_steps {
+                            let frac = s as f32 / num_steps as f32;
+                            let px = gl_rect.left() + 4.0 + frac * (gl_rect.width() - 60.0);
+                            let ug = if frac < open_q {
+                                let t_norm = frac / open_q;
+                                (std::f32::consts::PI * t_norm).sin().powi(2)
+                            } else {
+                                0.0
+                            };
+                            let py = gl_rect.bottom() - 12.0 - ug * 22.0;
+                            let pt = egui::pos2(px, py);
+                            if let Some(prev) = prev_pt {
+                                gl_painter.line_segment([prev, pt], Stroke::new(1.4_f32, Color32::from_rgb(52, 211, 153)));
+                            }
+                            prev_pt = Some(pt);
+                        }
+
+                        // Target puck
+                        let norm_oq = crate::views::glottal_pulse_view::GlottalPulseView::open_quotient_to_normalized(open_q);
+                        let norm_sq = crate::views::glottal_pulse_view::GlottalPulseView::speed_quotient_to_normalized(speed_q);
+                        let puck_x = gl_rect.left() + 4.0 + norm_oq * (gl_rect.width() - 60.0);
+                        let puck_y = gl_rect.bottom() - 10.0 - norm_sq * (gl_rect.height() - 20.0);
+                        gl_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(52, 211, 153));
+                        gl_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        gl_painter.text(
+                            egui::pos2(gl_rect.right() - 4.0, gl_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("GLOTTAL\nOq {:.2}\nSq {:.2}\nEe {:.2}", open_q, speed_q, ee_score),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(52, 211, 153),
+                        );
+
+                        if gl_resp.hovered() {
+                            let _ = gl_resp.on_hover_text(format!(
+                                "Physical Modeling Glottal Pulse Flow HUD\nOpen Quotient: {:.2} | Speed Quotient: {:.2}\n[Drag: Open Quot (X) / Speed Quot (Y) Puck]",
+                                open_q, speed_q
                             ));
                         }
                     } else {

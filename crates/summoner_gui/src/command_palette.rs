@@ -1088,6 +1088,18 @@ impl CommandPalette {
                 action_id: "open_zero_gravity_fluid_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Acoustic Waveguide Brass Horn Flare Reflection & Webster Horn Impedance HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_horn_reflection_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Acoustic Glottal Pulse Flow & Vocal Fold Vibration Phonation HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_glottal_pulse_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

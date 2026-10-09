@@ -1,6 +1,6 @@
 # Summoner DAW — Product Readiness & Shippability Tracker
 > **Current Shippability Score:** 10.0 / 10  
-> **Status:** Production Ready Release Candidate (Turn #113 / Sprint Turn #39 — Sprint Review)  
+> **Status:** Production Ready Release Candidate (Turn #114 / Sprint Turn #40)  
 > **Authoritative Root:** `PROGRESS.md`  
 > **License:** AGPLv3
 
@@ -3195,6 +3195,49 @@ Product Management has conducted a comprehensive readiness audit:
   - Registered `tier176_turn113_tests` in `crates/summoner_gui/src/lib.rs`.
   - Feature tests: 3 passed (`cargo test -p summoner_gui --features gui -- tier176`).
   - Pure unit tests: 329 passed in 0.22s (`cargo test -p summoner_gui --lib`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
+
+### Turn #114 (Sprint Turn #40) — Acoustic Waveguide Brass Horn Flare Reflection & Glottal Flow Vocal Fold Vibration HUDs Convergence (Milestones 15, 28, 33 & 34)
+- [x] Acoustic Waveguide Brass Horn Flare Reflection & Webster Horn Impedance HUD (`crates/summoner_gui/src/views/horn_reflection_view.rs`):
+  - Integrated `HornReflectionView`:
+    * 5 Flare Geometry Presets: `Trumpet` (Bb Trumpet bell flare, ~1200 Hz cutoff, 6.5 cm bell radius), `FrenchHorn` (F French Horn hyperbolic bell, ~700 Hz cutoff, 15.5 cm bell radius), `Trombone` (Bb Tenor Trombone Bessel flare, ~850 Hz cutoff, 11.0 cm bell radius), `Tuba` (Eb Concert Tuba massive bell, ~400 Hz cutoff, 25.0 cm bell radius), and `Custom` (Configurable flared bell geometry).
+    * 4 Acoustic Mute Coloration Types: `Open` (Unmuted), `Straight` (Nasal resonance), `Harmon` (Metallic buzz), `Cup` (Warm high-frequency rolloff).
+    * Interactive 2D Horn Bell Flare & Cutoff Puck: Cutoff Frequency [200.0..5000.0 Hz] (log-scale) vs Bell Flare Curvature [0.1..2.0] with >= 44x44pt touch bounding target (`HORN_PUCK_HIT_RADIUS = 22.0`).
+    * Real-time acoustic radiation transmission $|T(f)|^2$ & waveguide reflection $|R(f)|^2$ evaluation + Webster horn throat impedance matching score.
+    * Deterministic ASCII snapshot rendering with metadata banner and verified touch target badge (`[PASS: >=44pt]`).
+- [x] Acoustic Glottal Pulse Flow & Vocal Fold Vibration Phonation HUD (`crates/summoner_gui/src/views/glottal_pulse_view.rs`):
+  - Integrated `GlottalPulseView`:
+    * 5 Voicing Phonation Registers: `Modal` (Standard chest singing voice), `Falsetto` (Thin vocal fold closure), `Creaky` (Vocal fry, short explosive pulses), `Breathy` (Incomplete glottal closure, elevated aspiration), and `Whisper` (Unvoiced pure turbulent aspiration).
+    * Interactive 2D Glottal Dynamics Puck: Open Quotient $O_q$ [0.20..0.95] vs Speed Quotient $S_q$ [0.80..4.00] with >= 44x44pt touch bounding target (`GLOTTAL_PUCK_HIT_RADIUS = 22.0`).
+    * Physiological volume velocity waveform $U_g(t)$ & flow derivative $dU_g/dt$ acoustic dipole pressure curve plotting.
+    * Real-time glottal closure excitation energy score $E_e$, pitch jitter, amplitude shimmer, and turbulent aspiration controls.
+    * Deterministic ASCII snapshot rendering with metadata banner and verified touch target badge (`[PASS: >=44pt]`).
+- [x] View Re-Exports (`crates/summoner_gui/src/views/mod.rs`):
+  - Exported `HornReflectionView`, `HornFlarePreset`, `HornMuteType`, `GlottalPulseView`, `GlottalVoicingMode`.
+- [x] AwardWinningGuiView Modal Windows & Lock-Free Live Audio State Sync (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added modal fields (`show_horn_reflection_modal`, `horn_reflection_view`, `show_glottal_pulse_modal`, `glottal_pulse_view`).
+  - Added dedicated modal windows (`show_horn_reflection_modal_window`, `show_glottal_pulse_modal_window`) with responsive styling, WCAG AAA contrast, and >= 44x44pt touch bounds.
+  - Added public lifecycle methods: `open_horn_reflection_hud()`, `close_horn_reflection_hud()`, `is_horn_reflection_hud_open()`, `open_glottal_pulse_hud()`, `close_glottal_pulse_hud()`, `is_glottal_pulse_hud_open()`.
+  - Real-time parameter sync bridges (`sync_horn_reflection_hud_state` and `sync_glottal_pulse_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_horn_reflection_hud: bool` and `requested_open_glottal_pulse_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🎺 Open Horn Flare HUD]` and `[🗣 Open Glottal Pulse HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header buttons `[🎺 Horn HUD]` and `[🗣 Glottal HUD]` in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Horn Reflection: Flare curvature preview curve, interactive Cutoff / Flare puck, live cutoff & flare readout, and lock-free slot-addressed `ParamBus` dispatch.
+    * Glottal Pulse: Volume velocity pulse preview curve, interactive Open Quotient / Speed Quotient puck, live $O_q$ and $S_q$ readout, and lock-free slot-addressed `ParamBus` dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_horn_reflection_hud` and `open_glottal_pulse_hud` under `"Physical Modeling"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_horn_reflection_hud()` and `open_glottal_pulse_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier177_turn114_tests.rs`:
+    * Pure tests: view initialization, coordinate normalizations (cutoff, flare, open quotient, speed quotient), preset/mode switching across all 5 profiles and modes, simulation calculations, acoustic response evaluations, touch puck hit testing (>= 44x44pt bounding targets), deterministic ASCII snapshots with metadata banners.
+    * GUI tests: modal window lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch without allocations, trigger button propagation from rack and inspector, command palette action verification.
+  - Registered `tier177_turn114_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Feature tests: 3 passed (`cargo test -p summoner_gui --features gui -- tier177`).
+  - Pure unit tests: 329 passed in 0.24s (`cargo test -p summoner_gui --lib`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
 
 

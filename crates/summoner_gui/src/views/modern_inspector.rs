@@ -294,6 +294,10 @@ pub struct ModernInspectorState {
     pub requested_open_cassotto_chamber_hud: bool,
     #[serde(default)]
     pub requested_open_zero_gravity_fluid_hud: bool,
+    #[serde(default)]
+    pub requested_open_horn_reflection_hud: bool,
+    #[serde(default)]
+    pub requested_open_glottal_pulse_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -447,6 +451,8 @@ impl Default for ModernInspectorState {
             requested_open_spectral_reshaper_hud: false,
             requested_open_cassotto_chamber_hud: false,
             requested_open_zero_gravity_fluid_hud: false,
+            requested_open_horn_reflection_hud: false,
+            requested_open_glottal_pulse_hud: false,
         }
     }
 }
@@ -2211,6 +2217,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open Zero-Gravity Navier-Stokes Acoustic Fluid Dynamics & Molecular Resonator HUD").clicked() {
                     state.requested_open_zero_gravity_fluid_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("HornReflection") || active_kind.contains("HornFlare") || active_kind.contains("WebsterHorn") || active_kind.contains("BrassBell") || active_kind == "HornReflectionNode" || active_kind == "AcousticHornReflection" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🎺 Open Horn Flare HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(255, 215, 0)))
+                        .fill(Color32::from_rgb(34, 28, 12))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 215, 0)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Acoustic Waveguide Brass Horn Flare Reflection & Webster Horn Impedance HUD").clicked() {
+                    state.requested_open_horn_reflection_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("GlottalPulse") || active_kind.contains("GlottalFlow") || active_kind.contains("VocalFold") || active_kind.contains("RosenbergGlottal") || active_kind == "GlottalPulseNode" || active_kind == "GlottalFlowModel" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🗣 Open Glottal Pulse HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(52, 211, 153)))
+                        .fill(Color32::from_rgb(14, 32, 24))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(52, 211, 153)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Acoustic Glottal Pulse Flow & Vocal Fold Vibration Phonation HUD").clicked() {
+                    state.requested_open_glottal_pulse_hud = true;
                 }
                 ui.add_space(4.0);
             }
