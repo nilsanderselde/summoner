@@ -17,11 +17,11 @@ pub mod pure_tests {
     fn test_turn98_pure_frequency_shifter_initialization_and_kinematics() {
         let mut view = FrequencyShifterView::new();
         assert_eq!(view.mode, SidebandMode::UpperSSB);
-        assert!((view.shift_hz - 0.0).abs() < 1e-3);
+        assert!((view.shift_hz - 120.0).abs() < 1e-3);
         assert!((view.fine_hz - 0.0).abs() < 1e-3);
         assert!((view.quadrature_phase_deg - 90.0).abs() < 1e-3);
-        assert!((view.feedback_pct - 30.0).abs() < 1e-3);
-        assert!((view.dry_wet_pct - 100.0).abs() < 1e-3);
+        assert!((view.feedback_pct - 25.0).abs() < 1e-3);
+        assert!((view.dry_wet_pct - 80.0).abs() < 1e-3);
         assert_eq!(FREQ_SHIFTER_PUCK_HIT_RADIUS, 22.0); // >= 44x44pt bounding target
 
         // Mode switching & names
@@ -87,12 +87,12 @@ pub mod pure_tests {
     fn test_turn98_pure_optical_compressor_initialization_and_kinematics() {
         let mut view = OpticalCompressorView::new();
         assert_eq!(view.topology, CompressorTopology::OptoT4BTeletronix);
-        assert!((view.threshold_db - (-18.0)).abs() < 1e-3);
+        assert!((view.threshold_db - (-20.0)).abs() < 1e-3);
         assert!((view.ratio - 4.0).abs() < 1e-3);
-        assert!((view.knee_width_db - 8.0).abs() < 1e-3);
-        assert!((view.makeup_gain_db - 0.0).abs() < 1e-3);
+        assert!((view.knee_width_db - 12.0).abs() < 1e-3);
+        assert!((view.makeup_gain_db - 4.5).abs() < 1e-3);
         assert!((view.attack_ms - 10.0).abs() < 1e-3);
-        assert!((view.release_ms - 150.0).abs() < 1e-3);
+        assert!((view.release_ms - 250.0).abs() < 1e-3);
         assert_eq!(COMPRESSOR_PUCK_HIT_RADIUS, 22.0); // >= 44x44pt bounding target
 
         // Topology switching & names

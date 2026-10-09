@@ -17384,13 +17384,17 @@ impl AwardWinningGuiView {
         let wet = self.frequency_shifter_view.dry_wet_pct;
 
         self.device_rack_state.node_param_values.insert("linear_frequency_shift_hz".to_string(), shift);
+        self.device_rack_state.node_param_values.insert("shift_hz".to_string(), shift);
         self.device_rack_state.node_param_values.insert("fine_frequency_shift_hz".to_string(), fine);
+        self.device_rack_state.node_param_values.insert("fine_shift_hz".to_string(), fine);
         self.device_rack_state.node_param_values.insert("quadrature_phase_deg".to_string(), phase);
         self.device_rack_state.node_param_values.insert("feedback_pct".to_string(), fb);
         self.device_rack_state.node_param_values.insert("dry_wet_pct".to_string(), wet);
 
         self.inspector_state.node_param_values.insert("linear_frequency_shift_hz".to_string(), shift);
+        self.inspector_state.node_param_values.insert("shift_hz".to_string(), shift);
         self.inspector_state.node_param_values.insert("fine_frequency_shift_hz".to_string(), fine);
+        self.inspector_state.node_param_values.insert("fine_shift_hz".to_string(), fine);
         self.inspector_state.node_param_values.insert("quadrature_phase_deg".to_string(), phase);
         self.inspector_state.node_param_values.insert("feedback_pct".to_string(), fb);
         self.inspector_state.node_param_values.insert("dry_wet_pct".to_string(), wet);
