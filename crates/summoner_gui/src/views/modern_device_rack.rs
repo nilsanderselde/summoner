@@ -265,6 +265,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_spectral_deesser_hud: bool,
     #[serde(default)]
     pub requested_open_spectral_matching_eq_hud: bool,
+    #[serde(default)]
+    pub requested_open_multiband_saturator_hud: bool,
+    #[serde(default)]
+    pub requested_open_multiband_imager_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -386,6 +390,8 @@ impl Default for ModernDeviceRackState {
             requested_open_fm_matrix_hud: false,
             requested_open_spectral_deesser_hud: false,
             requested_open_spectral_matching_eq_hud: false,
+            requested_open_multiband_saturator_hud: false,
+            requested_open_multiband_imager_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -1130,6 +1136,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_fm_matrix = cur_selection.contains("FmMatrix") || cur_selection.contains("FmSynthesizer") || cur_selection.contains("Dx7") || cur_selection == "FmMatrixNode" || cur_selection == "FmMatrixSynthesizer";
                     let is_spectral_deesser = cur_selection.contains("SpectralDeEsser") || cur_selection.contains("DeEsser") || cur_selection.contains("Deesser") || cur_selection == "SpectralDeEsserNode" || cur_selection == "DynamicSpectralDeEsser" || cur_selection == "LinearPhaseDeEsser";
                     let is_spectral_matching_eq = cur_selection.contains("SpectralMatchingEq") || cur_selection.contains("MatchingEq") || cur_selection == "SpectralMatchingEqNode" || cur_selection.contains("SpectrumMatching");
+                    let is_multiband_saturator = cur_selection.contains("MultibandSaturator") || cur_selection.contains("MultibandSaturation") || cur_selection == "MultibandSaturatorNode";
+                    let is_multiband_imager = cur_selection.contains("MultibandImager") || cur_selection.contains("MultibandStereoImager") || cur_selection.contains("StereoImager") || cur_selection == "MultibandImagerNode";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1558,6 +1566,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("📊 Match EQ HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 255, 180))).on_hover_text("Open 64-Band Dynamic Linear-Phase Spectral Matching EQ HUD").clicked()
                     {
                         state.requested_open_spectral_matching_eq_hud = true;
+                    } else if is_multiband_saturator
+                        && ui.button(RichText::new("🔥 Saturator HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 107, 43))).on_hover_text("Open Dynamic Multiband Saturator HUD").clicked()
+                    {
+                        state.requested_open_multiband_saturator_hud = true;
+                    } else if is_multiband_imager
+                        && ui.button(RichText::new("🌐 Imager HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Multiband Stereo Imager HUD").clicked()
+                    {
+                        state.requested_open_multiband_imager_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2430,6 +2446,8 @@ fn show_pro_parameter_drawer(
                     let is_fm_matrix = dev_kind.contains("FmMatrix") || dev_kind.contains("FmSynthesizer") || dev_kind.contains("Dx7") || dev_kind == "FmMatrixNode" || dev_kind == "FmMatrixSynthesizer";
                     let is_spectral_deesser = dev_kind.contains("SpectralDeEsser") || dev_kind.contains("DeEsser") || dev_kind.contains("Deesser") || dev_kind == "SpectralDeEsserNode" || dev_kind == "DynamicSpectralDeEsser" || dev_kind == "LinearPhaseDeEsser";
                     let is_spectral_matching_eq = dev_kind.contains("SpectralMatchingEq") || dev_kind.contains("MatchingEq") || dev_kind == "SpectralMatchingEqNode" || dev_kind.contains("SpectrumMatching");
+                    let is_multiband_saturator = dev_kind.contains("MultibandSaturator") || dev_kind.contains("MultibandSaturation") || dev_kind == "MultibandSaturatorNode";
+                    let is_multiband_imager = dev_kind.contains("MultibandImager") || dev_kind.contains("MultibandStereoImager") || dev_kind.contains("StereoImager") || dev_kind == "MultibandImagerNode";
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -10843,6 +10861,148 @@ fn show_pro_parameter_drawer(
                             let _ = me_resp.on_hover_text(format!(
                                 "64-Band Dynamic Linear-Phase Spectral Matching EQ HUD\nMatch Amount: {:.0}%\nSmoothing Width: {:.1} semitones\nGain Limit: ±{:.0} dB\n[Drag: Match Amount % (X) / Smoothing Width (Y) Puck]",
                                 amount, smooth, limit
+                            ));
+                        }
+                    } else if is_multiband_saturator {
+                        // Dynamic Multiband Saturator Mini View
+                        let (sat_resp, sat_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let sat_rect = sat_resp.rect;
+                        sat_painter.rect_filled(sat_rect, 2.0, Color32::from_rgb(18, 14, 22));
+
+                        let mut drive_db = state.node_param_values.get("drive_gain_db").or_else(|| state.node_param_values.get("drive")).copied().unwrap_or(6.8);
+                        let mut bias = state.node_param_values.get("bias_even_harmonics").or_else(|| state.node_param_values.get("bias")).copied().unwrap_or(-0.15);
+                        let mix = state.node_param_values.get("mix_percent").or_else(|| state.node_param_values.get("mix")).copied().unwrap_or(85.0);
+
+                        if sat_resp.dragged() {
+                            if let Some(pos) = sat_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - sat_rect.left()) / sat_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - sat_rect.top()) / sat_rect.height())).clamp(0.0, 1.0);
+                                drive_db = crate::views::multiband_saturator_view::MultibandSaturatorView::normalized_to_drive(norm_x);
+                                bias = crate::views::multiband_saturator_view::MultibandSaturatorView::normalized_to_bias(norm_y);
+                                state.node_param_values.insert("drive_gain_db".to_string(), drive_db);
+                                state.node_param_values.insert("drive".to_string(), drive_db);
+                                state.node_param_values.insert("bias_even_harmonics".to_string(), bias);
+                                state.node_param_values.insert("bias".to_string(), bias);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_dr = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_dr).is_some() { bus.set(pid_dr, drive_db); }
+                                    let pid_bi = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_bi).is_some() { bus.set(pid_bi, bias); }
+                                }
+                            }
+                        }
+
+                        // Mini Transfer Curve
+                        let steps = 30;
+                        let mut sat_pts = Vec::with_capacity(steps);
+                        let gain_lin = 10.0_f32.powf(drive_db / 20.0);
+                        for i in 0..steps {
+                            let t = i as f32 / (steps - 1) as f32;
+                            let in_x = t * 2.0 - 1.0;
+                            let pre = in_x * gain_lin + bias * 0.25;
+                            let sat_y = (pre * 1.5).tanh() * 0.85;
+                            let norm_y = ((sat_y.clamp(-1.2, 1.2) + 1.2) / 2.4).clamp(0.0, 1.0);
+                            let px = sat_rect.left() + t * (sat_rect.width() - 55.0);
+                            let py = sat_rect.bottom() - norm_y * (sat_rect.height() - 10.0) - 5.0;
+                            sat_pts.push(egui::pos2(px, py));
+                        }
+                        sat_painter.add(egui::Shape::line(
+                            sat_pts,
+                            Stroke::new(1.8_f32, Color32::from_rgb(255, 107, 43)),
+                        ));
+
+                        // Interactive Saturation Puck
+                        let norm_dr = crate::views::multiband_saturator_view::MultibandSaturatorView::drive_to_normalized(drive_db);
+                        let norm_bi = crate::views::multiband_saturator_view::MultibandSaturatorView::bias_to_normalized(bias);
+                        let puck_x = sat_rect.left() + norm_dr * (sat_rect.width() - 55.0);
+                        let puck_y = sat_rect.bottom() - norm_bi * (sat_rect.height() - 20.0) - 10.0;
+                        sat_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(255, 107, 43));
+                        sat_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        sat_painter.text(
+                            egui::pos2(sat_rect.right() - 4.0, sat_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("SATURATOR\n+{:.1}dB\n{:+.2}Bias\n{:.0}%Mix", drive_db, bias, mix),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(255, 107, 43),
+                        );
+
+                        if sat_resp.hovered() {
+                            let _ = sat_resp.on_hover_text(format!(
+                                "Dynamic Multiband Saturator HUD\nDrive Gain: +{:.1} dB | Harmonic Bias: {:+.2}\nMix: {:.0}%\n[Drag: Saturation Drive (X) / Harmonic Bias (Y) Puck]",
+                                drive_db, bias, mix
+                            ));
+                        }
+                    } else if is_multiband_imager {
+                        // Multiband Stereo Imager Mini View
+                        let (img_resp, img_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let img_rect = img_resp.rect;
+                        img_painter.rect_filled(img_rect, 2.0, Color32::from_rgb(10, 16, 26));
+
+                        let mut width_pct = state.node_param_values.get("width_pct").or_else(|| state.node_param_values.get("width")).copied().unwrap_or(135.0);
+                        let mut pan_pct = state.node_param_values.get("pan_pct").or_else(|| state.node_param_values.get("pan")).copied().unwrap_or(0.0);
+                        let dry_wet = state.node_param_values.get("dry_wet_pct").or_else(|| state.node_param_values.get("mix")).copied().unwrap_or(100.0);
+
+                        if img_resp.dragged() {
+                            if let Some(pos) = img_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - img_rect.left()) / img_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - img_rect.top()) / img_rect.height())).clamp(0.0, 1.0);
+                                width_pct = crate::views::multiband_imager_view::MultibandImagerView::normalized_to_width(norm_x);
+                                pan_pct = crate::views::multiband_imager_view::MultibandImagerView::normalized_to_pan(norm_y);
+                                state.node_param_values.insert("width_pct".to_string(), width_pct);
+                                state.node_param_values.insert("width".to_string(), width_pct);
+                                state.node_param_values.insert("pan_pct".to_string(), pan_pct);
+                                state.node_param_values.insert("pan".to_string(), pan_pct);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_w = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_w).is_some() { bus.set(pid_w, width_pct); }
+                                    let pid_p = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_p).is_some() { bus.set(pid_p, pan_pct); }
+                                }
+                            }
+                        }
+
+                        // Draw Mini 4-Band Stereo Spread Wedge Preview
+                        let wedge_cx = img_rect.left() + (img_rect.width() - 55.0) * 0.5;
+                        let wedge_top_y = img_rect.top() + 8.0;
+                        let wedge_bot_y = img_rect.bottom() - 10.0;
+                        let spread_half = ((img_rect.width() - 55.0) * 0.45 * (width_pct / 200.0)).clamp(2.0, (img_rect.width() - 55.0) * 0.48);
+
+                        img_painter.line_segment(
+                            [egui::pos2(wedge_cx, wedge_top_y), egui::pos2(wedge_cx - spread_half, wedge_bot_y)],
+                            Stroke::new(1.8_f32, Color32::from_rgb(0, 229, 255)),
+                        );
+                        img_painter.line_segment(
+                            [egui::pos2(wedge_cx, wedge_top_y), egui::pos2(wedge_cx + spread_half, wedge_bot_y)],
+                            Stroke::new(1.8_f32, Color32::from_rgb(0, 229, 255)),
+                        );
+                        img_painter.line_segment(
+                            [egui::pos2(wedge_cx - spread_half, wedge_bot_y), egui::pos2(wedge_cx + spread_half, wedge_bot_y)],
+                            Stroke::new(1.8_f32, Color32::from_rgb(0, 229, 255)),
+                        );
+
+                        // Interactive Imager Puck
+                        let norm_w = crate::views::multiband_imager_view::MultibandImagerView::width_to_normalized(width_pct);
+                        let norm_p = crate::views::multiband_imager_view::MultibandImagerView::pan_to_normalized(pan_pct);
+                        let puck_x = img_rect.left() + norm_w * (img_rect.width() - 55.0);
+                        let puck_y = img_rect.bottom() - norm_p * (img_rect.height() - 20.0) - 10.0;
+                        img_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(0, 229, 255));
+                        img_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        img_painter.text(
+                            egui::pos2(img_rect.right() - 4.0, img_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("IMAGER\n{:.0}%\n{:+.0}%Pan\n{:.0}%DryWet", width_pct, pan_pct, dry_wet),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+
+                        if img_resp.hovered() {
+                            let _ = img_resp.on_hover_text(format!(
+                                "Multiband Stereo Imager HUD\nStereo Width: {:.0}%\nPan: {:+.0}%\nDry/Wet: {:.0}%\n[Drag: Stereo Width % (X) / Pan % (Y) Puck]",
+                                width_pct, pan_pct, dry_wet
                             ));
                         }
                     } else {

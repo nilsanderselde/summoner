@@ -1760,6 +1760,14 @@ impl eframe::App for SummonerApp {
                     self.current_view = ViewMode::ModernStudio;
                     self.award_winning_view.open_spectral_matching_eq_hud();
                 }
+                "open_multiband_saturator_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_multiband_saturator_hud();
+                }
+                "open_multiband_imager_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_multiband_imager_hud();
+                }
                 "sfz_convert" | "auto_slice" | "load_preset" | "export_clap" | "toggle_simd" => {
                     println!("Command palette action executed: {}", action);
                 }

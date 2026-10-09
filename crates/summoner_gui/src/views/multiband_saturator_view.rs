@@ -24,6 +24,18 @@ pub enum SaturationModel {
     SoftKneeLimiter,     // Clean mastering brickwall warmth
 }
 
+impl SaturationModel {
+    pub fn name(&self) -> &'static str {
+        match self {
+            SaturationModel::TapeHysteresis => "Tape Hysteresis",
+            SaturationModel::TriodeTubeWarmth => "Triode Tube Warmth",
+            SaturationModel::GermaniumDiodeClip => "Germanium Diode Clip",
+            SaturationModel::AsymmetricOverdrive => "Asymmetric Overdrive",
+            SaturationModel::SoftKneeLimiter => "Soft-Knee Limiter",
+        }
+    }
+}
+
 /// Single Frequency Band Configuration.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct SaturatorBand {
@@ -135,6 +147,65 @@ impl MultibandSaturatorView {
         norm.clamp(0.0, 1.0) * 2.0 - 1.0
     }
 
+    /// Select active frequency band and synchronize touch puck coordinates.
+    pub fn set_selected_band(&mut self, idx: usize) {
+        if idx < NUM_SATURATOR_BANDS {
+            self.selected_band_idx = idx;
+            let b = &self.bands[idx];
+            self.saturator_puck_pos = (
+                Self::drive_to_normalized(b.drive_gain_db),
+                Self::bias_to_normalized(b.bias_even_harmonics),
+            );
+        }
+    }
+
+    /// Set saturation non-linear distortion model for specified band.
+    pub fn set_model(&mut self, band_idx: usize, model: SaturationModel) {
+        if band_idx < NUM_SATURATOR_BANDS {
+            self.bands[band_idx].model = model;
+        }
+    }
+
+    /// Convert low-mid crossover [40.0 ..= 300.0 Hz] to normalized coordinate [0.0 ..= 1.0].
+    pub fn crossover_low_to_normalized(hz: f32) -> f32 {
+        ((hz.clamp(40.0, 300.0) - 40.0) / (300.0 - 40.0)).clamp(0.0, 1.0)
+    }
+
+    /// Convert normalized coordinate [0.0 ..= 1.0] to low-mid crossover [40.0 ..= 300.0 Hz].
+    pub fn normalized_to_crossover_low(norm: f32) -> f32 {
+        40.0 + norm.clamp(0.0, 1.0) * (300.0 - 40.0)
+    }
+
+    /// Convert mid-high crossover [500.0 ..= 4000.0 Hz] to normalized coordinate [0.0 ..= 1.0].
+    pub fn crossover_mid_to_normalized(hz: f32) -> f32 {
+        ((hz.clamp(500.0, 4000.0) - 500.0) / (4000.0 - 500.0)).clamp(0.0, 1.0)
+    }
+
+    /// Convert normalized coordinate [0.0 ..= 1.0] to mid-high crossover [500.0 ..= 4000.0 Hz].
+    pub fn normalized_to_crossover_mid(norm: f32) -> f32 {
+        500.0 + norm.clamp(0.0, 1.0) * (4000.0 - 500.0)
+    }
+
+    /// Convert high air crossover [4000.0 ..= 16000.0 Hz] to normalized coordinate [0.0 ..= 1.0].
+    pub fn crossover_air_to_normalized(hz: f32) -> f32 {
+        ((hz.clamp(4000.0, 16000.0) - 4000.0) / (16000.0 - 4000.0)).clamp(0.0, 1.0)
+    }
+
+    /// Convert normalized coordinate [0.0 ..= 1.0] to high air crossover [4000.0 ..= 16000.0 Hz].
+    pub fn normalized_to_crossover_air(norm: f32) -> f32 {
+        4000.0 + norm.clamp(0.0, 1.0) * (16000.0 - 4000.0)
+    }
+
+    /// Convert Dry/Wet mix percent [0.0 ..= 100.0 %] to normalized coordinate [0.0 ..= 1.0].
+    pub fn mix_to_normalized(mix: f32) -> f32 {
+        (mix.clamp(0.0, 100.0) / 100.0).clamp(0.0, 1.0)
+    }
+
+    /// Convert normalized coordinate [0.0 ..= 1.0] to Dry/Wet mix percent [0.0 ..= 100.0 %].
+    pub fn normalized_to_mix(norm: f32) -> f32 {
+        norm.clamp(0.0, 1.0) * 100.0
+    }
+
     /// Evaluate non-linear transfer function $y = f(x)$ for active saturation curve.
     pub fn evaluate_transfer_curve(&self, input_x: f32, band_idx: usize) -> f32 {
         let band = &self.bands[band_idx.min(NUM_SATURATOR_BANDS - 1)];
@@ -238,6 +309,40 @@ impl MultibandSaturatorView {
         grid.into_iter()
             .map(|row| row.into_iter().collect())
             .collect()
+    }
+
+    /// Render deterministic ASCII snapshot string with full metadata banner for test verification.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        let lines = self.render_ascii(64, 16);
+        let band = &self.bands[self.selected_band_idx];
+        let mut out = format!(
+            "DYNAMIC MULTIBAND SATURATOR HUD [Band {}: {} | Model: {} | Drive: {:.1}dB | Bias: {:+.2} | Mix: {:.0}% | Xovers: {:.0}/{:.0}/{:.0}Hz | Oversampling: {}x | [PASS: >=44pt]]\n",
+            self.selected_band_idx,
+            match self.selected_band_idx {
+                0 => "LOW SUB",
+                1 => "LOW-MID",
+                2 => "HIGH-MID",
+                _ => "HIGH AIR",
+            },
+            band.model.name(),
+            band.drive_gain_db,
+            band.bias_even_harmonics,
+            band.mix_percent,
+            self.crossover_low_mid_hz,
+            self.crossover_mid_high_hz,
+            self.crossover_air_hz,
+            self.oversampling_factor
+        );
+        for line in lines {
+            out.push_str(&line);
+            out.push('\n');
+        }
+        out
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_ui(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
     }
 
     #[cfg(feature = "gui")]

@@ -250,6 +250,10 @@ pub struct ModernInspectorState {
     pub requested_open_spectral_deesser_hud: bool,
     #[serde(default)]
     pub requested_open_spectral_matching_eq_hud: bool,
+    #[serde(default)]
+    pub requested_open_multiband_saturator_hud: bool,
+    #[serde(default)]
+    pub requested_open_multiband_imager_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -381,6 +385,8 @@ impl Default for ModernInspectorState {
             requested_open_fm_matrix_hud: false,
             requested_open_spectral_deesser_hud: false,
             requested_open_spectral_matching_eq_hud: false,
+            requested_open_multiband_saturator_hud: false,
+            requested_open_multiband_imager_hud: false,
         }
     }
 }
@@ -1925,6 +1931,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open 64-Band Dynamic Linear-Phase Spectral Matching Equalizer HUD").clicked() {
                     state.requested_open_spectral_matching_eq_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("MultibandSaturator") || active_kind.contains("MultibandSaturation") || active_kind == "MultibandSaturatorNode" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🔥 Open Multiband Saturator HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(255, 107, 43)))
+                        .fill(Color32::from_rgb(38, 18, 12))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 107, 43)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Master Bus Dynamic Multiband Saturator & Harmonic Warmth HUD").clicked() {
+                    state.requested_open_multiband_saturator_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("MultibandImager") || active_kind.contains("MultibandStereoImager") || active_kind.contains("StereoImager") || active_kind == "MultibandImagerNode" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🌐 Open Multiband Imager HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 229, 255)))
+                        .fill(Color32::from_rgb(12, 28, 38))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 229, 255)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Multiband Stereo Imager & Spectral Correlation Matrix HUD").clicked() {
+                    state.requested_open_multiband_imager_hud = true;
                 }
                 ui.add_space(4.0);
             }

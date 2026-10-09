@@ -856,6 +856,10 @@ pub struct AwardWinningGuiView {
     pub spectral_deesser_view: crate::views::spectral_deesser_view::SpectralDeEsserView,
     pub show_spectral_matching_eq_modal: bool,
     pub spectral_matching_eq_view: crate::views::spectral_matching_eq_view::SpectralMatchingEqView,
+    pub show_multiband_saturator_modal: bool,
+    pub multiband_saturator_view: crate::views::multiband_saturator_view::MultibandSaturatorView,
+    pub show_multiband_imager_modal: bool,
+    pub multiband_imager_view: crate::views::multiband_imager_view::MultibandImagerView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1328,6 +1332,10 @@ impl AwardWinningGuiView {
             spectral_deesser_view: crate::views::spectral_deesser_view::SpectralDeEsserView::new(),
             show_spectral_matching_eq_modal: false,
             spectral_matching_eq_view: crate::views::spectral_matching_eq_view::SpectralMatchingEqView::new(),
+            show_multiband_saturator_modal: false,
+            multiband_saturator_view: crate::views::multiband_saturator_view::MultibandSaturatorView::new(),
+            show_multiband_imager_modal: false,
+            multiband_imager_view: crate::views::multiband_imager_view::MultibandImagerView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2507,6 +2515,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_spectral_matching_eq_hud = false;
             self.open_spectral_matching_eq_hud();
         }
+        if self.inspector_state.requested_open_multiband_saturator_hud || self.device_rack_state.requested_open_multiband_saturator_hud {
+            self.inspector_state.requested_open_multiband_saturator_hud = false;
+            self.device_rack_state.requested_open_multiband_saturator_hud = false;
+            self.open_multiband_saturator_hud();
+        }
+        if self.inspector_state.requested_open_multiband_imager_hud || self.device_rack_state.requested_open_multiband_imager_hud {
+            self.inspector_state.requested_open_multiband_imager_hud = false;
+            self.device_rack_state.requested_open_multiband_imager_hud = false;
+            self.open_multiband_imager_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2618,6 +2636,8 @@ impl AwardWinningGuiView {
         self.show_fm_matrix_modal_window(ui);
         self.show_spectral_deesser_modal_window(ui);
         self.show_spectral_matching_eq_modal_window(ui);
+        self.show_multiband_saturator_modal_window(ui);
+        self.show_multiband_imager_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -18600,6 +18620,202 @@ impl AwardWinningGuiView {
             if bus.get(pid_smooth).is_some() { bus.set(pid_smooth, smooth); }
             if bus.get(pid_limit).is_some() { bus.set(pid_limit, limit); }
             if bus.get(pid_phase).is_some() { bus.set(pid_phase, phase); }
+        }
+    }
+
+    pub fn open_multiband_saturator_hud(&mut self) {
+        self.show_multiband_saturator_modal = true;
+    }
+
+    pub fn close_multiband_saturator_hud(&mut self) {
+        self.show_multiband_saturator_modal = false;
+    }
+
+    pub fn is_multiband_saturator_hud_open(&self) -> bool {
+        self.show_multiband_saturator_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_multiband_saturator_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_multiband_saturator_modal {
+            return;
+        }
+
+        let mut is_open = self.show_multiband_saturator_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🔥 Master Bus Dynamic Multiband Saturator & Harmonic Warmth HUD")
+            .id(egui::Id::new("multiband_saturator_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("4-Band Linear-Phase Saturation, Tape/Tube Distortion Curves & Real-time THD (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.multiband_saturator_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_multiband_saturator_modal = is_open;
+        self.sync_multiband_saturator_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_multiband_saturator_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let cur_band = &self.multiband_saturator_view.bands[self.multiband_saturator_view.selected_band_idx];
+        let drive = cur_band.drive_gain_db;
+        let bias = cur_band.bias_even_harmonics;
+        let mix = cur_band.mix_percent;
+        let xover_low = self.multiband_saturator_view.crossover_low_mid_hz;
+        let xover_mid = self.multiband_saturator_view.crossover_mid_high_hz;
+        let xover_air = self.multiband_saturator_view.crossover_air_hz;
+
+        self.device_rack_state.node_param_values.insert("drive_gain_db".to_string(), drive);
+        self.device_rack_state.node_param_values.insert("drive".to_string(), drive);
+        self.device_rack_state.node_param_values.insert("bias_even_harmonics".to_string(), bias);
+        self.device_rack_state.node_param_values.insert("bias".to_string(), bias);
+        self.device_rack_state.node_param_values.insert("mix_percent".to_string(), mix);
+        self.device_rack_state.node_param_values.insert("mix".to_string(), mix);
+        self.device_rack_state.node_param_values.insert("crossover_low_mid_hz".to_string(), xover_low);
+        self.device_rack_state.node_param_values.insert("crossover_mid_high_hz".to_string(), xover_mid);
+        self.device_rack_state.node_param_values.insert("crossover_air_hz".to_string(), xover_air);
+
+        self.inspector_state.node_param_values.insert("drive_gain_db".to_string(), drive);
+        self.inspector_state.node_param_values.insert("drive".to_string(), drive);
+        self.inspector_state.node_param_values.insert("bias_even_harmonics".to_string(), bias);
+        self.inspector_state.node_param_values.insert("bias".to_string(), bias);
+        self.inspector_state.node_param_values.insert("mix_percent".to_string(), mix);
+        self.inspector_state.node_param_values.insert("mix".to_string(), mix);
+        self.inspector_state.node_param_values.insert("crossover_low_mid_hz".to_string(), xover_low);
+        self.inspector_state.node_param_values.insert("crossover_mid_high_hz".to_string(), xover_mid);
+        self.inspector_state.node_param_values.insert("crossover_air_hz".to_string(), xover_air);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_dr = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_bi = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_mix = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_xlow = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_dr).is_some() { bus.set(pid_dr, drive); }
+            if bus.get(pid_bi).is_some() { bus.set(pid_bi, bias); }
+            if bus.get(pid_mix).is_some() { bus.set(pid_mix, mix); }
+            if bus.get(pid_xlow).is_some() { bus.set(pid_xlow, xover_low); }
+        }
+    }
+
+    pub fn open_multiband_imager_hud(&mut self) {
+        self.show_multiband_imager_modal = true;
+    }
+
+    pub fn close_multiband_imager_hud(&mut self) {
+        self.show_multiband_imager_modal = false;
+    }
+
+    pub fn is_multiband_imager_hud_open(&self) -> bool {
+        self.show_multiband_imager_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_multiband_imager_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_multiband_imager_modal {
+            return;
+        }
+
+        let mut is_open = self.show_multiband_imager_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🌐 Multiband Stereo Imager & Correlation Matrix HUD")
+            .id(egui::Id::new("multiband_imager_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("4-Band Stereo Spread Wedges, Spectral Correlation Matrix & Crossover Dividers (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.multiband_imager_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_multiband_imager_modal = is_open;
+        self.sync_multiband_imager_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_multiband_imager_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let active_band = &self.multiband_imager_view.bands[self.multiband_imager_view.active_band_idx];
+        let width = active_band.width_pct;
+        let pan = active_band.pan_pct;
+        let dry_wet = self.multiband_imager_view.dry_wet_pct;
+        let avg_width = self.multiband_imager_view.average_width_pct();
+
+        self.device_rack_state.node_param_values.insert("width_pct".to_string(), width);
+        self.device_rack_state.node_param_values.insert("width".to_string(), width);
+        self.device_rack_state.node_param_values.insert("pan_pct".to_string(), pan);
+        self.device_rack_state.node_param_values.insert("pan".to_string(), pan);
+        self.device_rack_state.node_param_values.insert("dry_wet_pct".to_string(), dry_wet);
+        self.device_rack_state.node_param_values.insert("mix".to_string(), dry_wet);
+        self.device_rack_state.node_param_values.insert("average_width".to_string(), avg_width);
+
+        self.inspector_state.node_param_values.insert("width_pct".to_string(), width);
+        self.inspector_state.node_param_values.insert("width".to_string(), width);
+        self.inspector_state.node_param_values.insert("pan_pct".to_string(), pan);
+        self.inspector_state.node_param_values.insert("pan".to_string(), pan);
+        self.inspector_state.node_param_values.insert("dry_wet_pct".to_string(), dry_wet);
+        self.inspector_state.node_param_values.insert("mix".to_string(), dry_wet);
+        self.inspector_state.node_param_values.insert("average_width".to_string(), avg_width);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_width = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_pan = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_mix = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_avg = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_width).is_some() { bus.set(pid_width, width); }
+            if bus.get(pid_pan).is_some() { bus.set(pid_pan, pan); }
+            if bus.get(pid_mix).is_some() { bus.set(pid_mix, dry_wet); }
+            if bus.get(pid_avg).is_some() { bus.set(pid_avg, avg_width); }
         }
     }
     fn render_patch_cords_canvas(&mut self, ui: &mut egui::Ui, available_h: f32) {

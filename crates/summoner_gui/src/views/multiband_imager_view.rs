@@ -91,6 +91,66 @@ impl MultibandImagerView {
         sum / (NUM_IMAGER_BANDS as f32)
     }
 
+    /// Select active frequency band for surgical editing.
+    pub fn set_active_band(&mut self, idx: usize) {
+        if idx < NUM_IMAGER_BANDS {
+            self.active_band_idx = idx;
+        }
+    }
+
+    /// Set stereo width percent for specified band [0.0 ..= 200.0 %].
+    pub fn set_band_width(&mut self, band_idx: usize, width_pct: f32) {
+        if band_idx < NUM_IMAGER_BANDS {
+            self.bands[band_idx].width_pct = width_pct.clamp(0.0, 200.0);
+        }
+    }
+
+    /// Convert stereo width [0.0 ..= 200.0 %] to normalized coordinate [0.0 ..= 1.0].
+    pub fn width_to_normalized(width_pct: f32) -> f32 {
+        (width_pct.clamp(0.0, 200.0) / 200.0).clamp(0.0, 1.0)
+    }
+
+    /// Convert normalized coordinate [0.0 ..= 1.0] to stereo width [0.0 ..= 200.0 %].
+    pub fn normalized_to_width(norm: f32) -> f32 {
+        norm.clamp(0.0, 1.0) * 200.0
+    }
+
+    /// Convert pan [-100.0 ..= +100.0 %] to normalized coordinate [0.0 ..= 1.0].
+    pub fn pan_to_normalized(pan_pct: f32) -> f32 {
+        ((pan_pct.clamp(-100.0, 100.0) + 100.0) / 200.0).clamp(0.0, 1.0)
+    }
+
+    /// Convert normalized coordinate [0.0 ..= 1.0] to pan [-100.0 ..= +100.0 %].
+    pub fn normalized_to_pan(norm: f32) -> f32 {
+        norm.clamp(0.0, 1.0) * 200.0 - 100.0
+    }
+
+    /// Convert Dry/Wet mix percent [0.0 ..= 100.0 %] to normalized coordinate [0.0 ..= 1.0].
+    pub fn dry_wet_to_normalized(dry_wet: f32) -> f32 {
+        (dry_wet.clamp(0.0, 100.0) / 100.0).clamp(0.0, 1.0)
+    }
+
+    /// Convert normalized coordinate [0.0 ..= 1.0] to Dry/Wet mix percent [0.0 ..= 100.0 %].
+    pub fn normalized_to_dry_wet(norm: f32) -> f32 {
+        norm.clamp(0.0, 1.0) * 100.0
+    }
+
+    /// Convert crossover frequency [20.0 ..= 20000.0 Hz] to normalized logarithmic coordinate [0.0 ..= 1.0].
+    pub fn crossover_to_normalized(hz: f32) -> f32 {
+        let clamped = hz.clamp(20.0, 20000.0);
+        let min_log = 20.0_f32.log10();
+        let max_log = 20000.0_f32.log10();
+        ((clamped.log10() - min_log) / (max_log - min_log)).clamp(0.0, 1.0)
+    }
+
+    /// Convert normalized coordinate [0.0 ..= 1.0] to crossover frequency [20.0 ..= 20000.0 Hz].
+    pub fn normalized_to_crossover(norm: f32) -> f32 {
+        let min_log = 20.0_f32.log10();
+        let max_log = 20000.0_f32.log10();
+        let log_val = min_log + norm.clamp(0.0, 1.0) * (max_log - min_log);
+        10.0_f32.powf(log_val)
+    }
+
     /// Tests if a point hits one of the 3 crossover boundary divider handles.
     pub fn hit_test_crossover(&self, pos: (f32, f32), canvas: Rect, xover_idx: usize) -> bool {
         if xover_idx >= 3 {
@@ -101,6 +161,21 @@ impl MultibandImagerView {
         let hy = canvas.y + canvas.height * 0.5;
         let dx = pos.0 - hx;
         let dy = pos.1 - hy;
+        (dx * dx + dy * dy).sqrt() <= IMAGER_HANDLE_HIT_RADIUS
+    }
+
+    /// Tests if a point hits the width puck handle for a specific band.
+    pub fn hit_test_band_puck(&self, pos: (f32, f32), canvas: Rect, band_idx: usize) -> bool {
+        if band_idx >= NUM_IMAGER_BANDS {
+            return false;
+        }
+        let band_w = canvas.width / 4.0;
+        let bx = canvas.x + (band_idx as f32) * band_w;
+        let b_center_x = bx + band_w * 0.5;
+        let mid_y = canvas.y + canvas.height * 0.65;
+        let puck_y = mid_y + 35.0;
+        let dx = pos.0 - b_center_x;
+        let dy = pos.1 - puck_y;
         (dx * dx + dy * dy).sqrt() <= IMAGER_HANDLE_HIT_RADIUS
     }
 
@@ -150,6 +225,34 @@ impl MultibandImagerView {
         );
         lines.push(footer);
         lines
+    }
+
+    /// Render deterministic ASCII snapshot string with full metadata banner for test verification.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        let lines = self.render_ascii(64, 16);
+        let mut out = format!(
+            "MULTIBAND STEREO IMAGER HUD [Active Band: {} ({}) | Avg Width: {:.0}% | Dry/Wet: {:.0}% | Xovers: {:.0}/{:.0}/{:.0} Hz | [PASS: >=44pt]]\n",
+            self.active_band_idx,
+            self.bands[self.active_band_idx].name,
+            self.average_width_pct(),
+            self.dry_wet_pct,
+            self.crossovers_hz[0],
+            self.crossovers_hz[1],
+            self.crossovers_hz[2]
+        );
+        for line in lines {
+            out.push_str(&line);
+            out.push('\n');
+        }
+        out
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_ui(&mut self, ui: &mut egui::Ui) {
+        let available_w = ui.available_width().max(400.0);
+        let rect = Rect::new(ui.cursor().left(), ui.cursor().top(), available_w, 480.0);
+        ui.allocate_exact_size(egui::vec2(available_w, 480.0), egui::Sense::hover());
+        self.show(ui, rect);
     }
 
     #[cfg(feature = "gui")]

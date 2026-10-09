@@ -956,6 +956,18 @@ impl CommandPalette {
                 action_id: "open_spectral_matching_eq_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Master Bus Dynamic Multiband Saturator HUD".into(),
+                category: "Dynamics & Saturation".into(),
+                action_id: "open_multiband_saturator_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Multiband Stereo Imager & Correlation HUD".into(),
+                category: "Spatial & Surround".into(),
+                action_id: "open_multiband_imager_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES
