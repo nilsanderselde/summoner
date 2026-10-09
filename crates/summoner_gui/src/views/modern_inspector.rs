@@ -262,6 +262,10 @@ pub struct ModernInspectorState {
     pub requested_open_multiband_decompressor_hud: bool,
     #[serde(default)]
     pub requested_open_dynamic_stereo_width_hud: bool,
+    #[serde(default)]
+    pub requested_open_dynamic_crest_shaper_hud: bool,
+    #[serde(default)]
+    pub requested_open_linear_phase_crossover_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -399,6 +403,8 @@ impl Default for ModernInspectorState {
             requested_open_multiband_expander_hud: false,
             requested_open_multiband_decompressor_hud: false,
             requested_open_dynamic_stereo_width_hud: false,
+            requested_open_dynamic_crest_shaper_hud: false,
+            requested_open_linear_phase_crossover_hud: false,
         }
     }
 }
@@ -2003,6 +2009,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open Mastering Linear-Phase Multiband Upward De-Compressor HUD").clicked() {
                     state.requested_open_multiband_decompressor_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("DynamicCrestShaper") || active_kind.contains("CrestShaper") || active_kind == "DynamicCrestShaperNode" || active_kind.contains("PunchLeveler") || active_kind.contains("MasteringCrestShaper") {
+                if ui.add(
+                    egui::Button::new(RichText::new("💥 Open Dynamic Crest Shaper HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(217, 70, 239)))
+                        .fill(Color32::from_rgb(28, 12, 34))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(217, 70, 239)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Mastering Multi-Band Dynamic Crest Shaper & Punch Leveler HUD").clicked() {
+                    state.requested_open_dynamic_crest_shaper_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("LinearPhaseCrossover") || active_kind.contains("LinPhaseCrossover") || active_kind == "LinearPhaseCrossoverNode" || active_kind.contains("MultibandCrossover") || active_kind.contains("LinearPhaseLimiter") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🎚 Open Linear-Phase Crossover HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 255, 180)))
+                        .fill(Color32::from_rgb(12, 34, 26))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 255, 180)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Mastering Dynamic Linear-Phase Crossover & Multiband Limiter HUD").clicked() {
+                    state.requested_open_linear_phase_crossover_hud = true;
                 }
                 ui.add_space(4.0);
             }

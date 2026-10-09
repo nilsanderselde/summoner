@@ -1,6 +1,6 @@
 # Summoner DAW — Product Readiness & Shippability Tracker
 > **Current Shippability Score:** 10.0 / 10  
-> **Status:** Production Ready Release Candidate (Turn #104 / Sprint Turn #30 - Sprint Review)  
+> **Status:** Production Ready Release Candidate (Turn #106 / Sprint Turn #32)  
 > **Authoritative Root:** `PROGRESS.md`  
 > **License:** AGPLv3
 
@@ -2923,6 +2923,39 @@ Product Management has conducted a comprehensive readiness audit:
   - Feature tests: 3 passed (`cargo test -p summoner_gui --features gui -- tier168`).
   - Pure unit tests: 329 passed in 0.22s (`cargo test -p summoner_gui --lib`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`).
+
+### Turn #106 (Sprint Turn #32) — Mastering Multi-Band Dynamic Crest Shaper & Linear-Phase Crossover Multiband Limiter HUDs Convergence (Milestones 33 & 34)
+- [x] Mastering Dynamic Crest Shaper & Linear-Phase Crossover HUDs Integration:
+  - Integrated `DynamicCrestShaperView` (Mastering Multi-Band Upward/Downward Dynamic Crest Shaper & Punch Leveler HUD: 4 Operating Frequency Bands [Low <150Hz, Low-Mid 150-1k, High-Mid 1k-4k, High Air >4k], 5 Topologies [Punch Maximizer, Density Compactor, Multiband Leveler, Acoustic Preserver, Broadcast Sculptor], Target Crest [3.0..24.0 dB], Upward Expansion Ratio [1.0..4.0], Downward Comp Ratio [1.0..12.0], Attack [0.1..100.0 ms], Release [10.0..1000.0 ms], 2D Dynamic Crest Response Curve, and Touch Crest Puck with >= 44x44pt bounding target) and `LinearPhaseCrossoverView` (Mastering Dynamic Linear-Phase Crossover & Multiband Limiter HUD: 4 Operating Frequency Bands, 5 Filter Slope Modes [24 dB/oct LR4, 48 dB/oct LinPhase, 96 dB/oct Brickwall, Dynamic Adaptive FFT, Multi-Rate Transient FIR], Crossover Split Frequencies [Low, Mid, High], True-Peak Ceiling [-18.0..0.0 dBFS], Zero Group Delay Dispersion, 2D Crossover Split & Brickwall Limiter Response Canvas, and Touch Crossover Puck with >= 44x44pt bounding target) into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/dynamic_crest_shaper_view.rs` & `linear_phase_crossover_view.rs`):
+  - In `DynamicCrestShaperView`: added coordinate normalizations & round-trips (`downward_to_normalized`, `normalized_to_downward`, `attack_to_normalized`, `normalized_to_attack`), `show_ui(&mut self, ui: &mut egui::Ui)`, and `render_ascii_snapshot_str() -> String` with mastering dynamic crest shaper metadata banner and verified hit target badge (`[PASS: >=44pt]`).
+  - In `LinearPhaseCrossoverView`: added `show_ui(&mut self, ui: &mut egui::Ui)`, and `render_ascii_snapshot_str() -> String` with mastering linear-phase crossover metadata banner and verified hit target badge (`[PASS: >=44pt]`).
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added modal fields (`show_dynamic_crest_shaper_modal`, `dynamic_crest_shaper_view`, `show_linear_phase_crossover_modal`, `linear_phase_crossover_view`).
+  - Added dedicated modal windows (`show_dynamic_crest_shaper_modal_window`, `show_linear_phase_crossover_modal_window`) with responsive styling, WCAG AAA contrast, and >= 44x44pt touch bounds.
+  - Added public lifecycle methods: `open_dynamic_crest_shaper_hud()`, `close_dynamic_crest_shaper_hud()`, `is_dynamic_crest_shaper_hud_open()`, `open_linear_phase_crossover_hud()`, `close_linear_phase_crossover_hud()`, `is_linear_phase_crossover_hud_open()`.
+  - Real-time parameter sync bridges (`sync_dynamic_crest_shaper_hud_state` and `sync_linear_phase_crossover_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_dynamic_crest_shaper_hud: bool` and `requested_open_linear_phase_crossover_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[💥 Open Dynamic Crest Shaper HUD]` and `[🎚 Open Linear-Phase Crossover HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header buttons `[💥 Crest HUD]` and `[🎚 Crossover HUD]` in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Dynamic Crest Shaper: 2D non-linear crest response curve preview, interactive Target Crest / Expansion Ratio puck, live readout, and lock-free slot-addressed `ParamBus` dispatch.
+    * Linear-Phase Crossover: 2D 4-band crossover split & limiter ceiling line preview, interactive Crossover Frequency / Ceiling puck, live readout, and lock-free slot-addressed `ParamBus` dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_dynamic_crest_shaper_hud` and `open_linear_phase_crossover_hud` under `"Mastering & Dynamics"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_dynamic_crest_shaper_hud()` and `open_linear_phase_crossover_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier169_turn106_tests.rs`:
+    * Pure tests: view initialization, coordinate normalizations (target crest, expansion ratio, downward comp, attack, crossover frequency, ceiling), topology and slope switching across all modes, transfer curve & zero group delay calculations, touch puck hit testing (>= 44x44pt bounding targets), deterministic ASCII snapshots with metadata banners.
+    * GUI tests: modal window lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch without allocations, trigger button propagation from rack and inspector, command palette action verification.
+  - Registered `tier169_turn106_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Feature tests: 3 passed (`cargo test -p summoner_gui --features gui -- tier169`).
+  - Pure unit tests: 329 passed in 0.23s (`cargo test -p summoner_gui --lib`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`).
+
 
 
 

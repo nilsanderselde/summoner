@@ -277,6 +277,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_multiband_decompressor_hud: bool,
     #[serde(default)]
     pub requested_open_dynamic_stereo_width_hud: bool,
+    #[serde(default)]
+    pub requested_open_dynamic_crest_shaper_hud: bool,
+    #[serde(default)]
+    pub requested_open_linear_phase_crossover_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -404,6 +408,8 @@ impl Default for ModernDeviceRackState {
             requested_open_multiband_expander_hud: false,
             requested_open_multiband_decompressor_hud: false,
             requested_open_dynamic_stereo_width_hud: false,
+            requested_open_dynamic_crest_shaper_hud: false,
+            requested_open_linear_phase_crossover_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -1154,6 +1160,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_multiband_clipper = cur_selection.contains("MultibandClipper") || cur_selection.contains("MasteringClipper") || cur_selection == "MultibandClipperNode" || cur_selection == "TriBandMasteringClipper";
                     let is_multiband_expander = cur_selection.contains("MultibandExpander") || cur_selection.contains("MasteringMidSideMultibandExpander") || cur_selection == "MultibandExpanderNode" || cur_selection.contains("MidSideMultibandExpander");
                     let is_multiband_decompressor = cur_selection.contains("MultibandDecompressor") || cur_selection.contains("DynamicDecompressor") || cur_selection == "MultibandDecompressorNode" || cur_selection.contains("UpwardDecompressor") || cur_selection.contains("MasteringDecompressor");
+                    let is_dynamic_crest_shaper = cur_selection.contains("DynamicCrestShaper") || cur_selection.contains("CrestShaper") || cur_selection == "DynamicCrestShaperNode" || cur_selection.contains("PunchLeveler") || cur_selection.contains("MasteringCrestShaper");
+                    let is_linear_phase_crossover = cur_selection.contains("LinearPhaseCrossover") || cur_selection.contains("LinPhaseCrossover") || cur_selection == "LinearPhaseCrossoverNode" || cur_selection.contains("MultibandCrossover") || cur_selection.contains("LinearPhaseLimiter");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1606,6 +1614,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("🌐 Stereo Width HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 215, 0))).on_hover_text("Open Mastering Dynamic Stereo Width & Bass Mono HUD").clicked()
                     {
                         state.requested_open_dynamic_stereo_width_hud = true;
+                    } else if is_dynamic_crest_shaper
+                        && ui.button(RichText::new("💥 Crest HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(217, 70, 239))).on_hover_text("Open Mastering Dynamic Crest Shaper & Punch Leveler HUD").clicked()
+                    {
+                        state.requested_open_dynamic_crest_shaper_hud = true;
+                    } else if is_linear_phase_crossover
+                        && ui.button(RichText::new("🎚 Crossover HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 255, 180))).on_hover_text("Open Mastering Dynamic Linear-Phase Crossover HUD").clicked()
+                    {
+                        state.requested_open_linear_phase_crossover_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2484,6 +2500,8 @@ fn show_pro_parameter_drawer(
                     let is_multiband_clipper = dev_kind.contains("MultibandClipper") || dev_kind.contains("MasteringClipper") || dev_kind == "MultibandClipperNode" || dev_kind == "TriBandMasteringClipper";
                     let is_multiband_expander = dev_kind.contains("MultibandExpander") || dev_kind.contains("MasteringMidSideMultibandExpander") || dev_kind == "MultibandExpanderNode" || dev_kind.contains("MidSideMultibandExpander");
                     let is_multiband_decompressor = dev_kind.contains("MultibandDecompressor") || dev_kind.contains("DynamicDecompressor") || dev_kind == "MultibandDecompressorNode" || dev_kind.contains("UpwardDecompressor") || dev_kind.contains("MasteringDecompressor");
+                    let is_dynamic_crest_shaper = dev_kind.contains("DynamicCrestShaper") || dev_kind.contains("CrestShaper") || dev_kind == "DynamicCrestShaperNode" || dev_kind.contains("PunchLeveler") || dev_kind.contains("MasteringCrestShaper");
+                    let is_linear_phase_crossover = dev_kind.contains("LinearPhaseCrossover") || dev_kind.contains("LinPhaseCrossover") || dev_kind == "LinearPhaseCrossoverNode" || dev_kind.contains("MultibandCrossover") || dev_kind.contains("LinearPhaseLimiter");
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -11318,6 +11336,140 @@ fn show_pro_parameter_drawer(
                             let _ = stw_resp.on_hover_text(format!(
                                 "Mastering Dynamic Stereo Width & Bass Mono HUD\nBass Cutoff: {:.0} Hz | Width: {:.0}%\n[Drag: Bass Mono Cutoff (X) / Side Width (Y) Puck]",
                                 bass_hz, width_ratio * 100.0
+                            ));
+                        }
+                    } else if is_dynamic_crest_shaper {
+                        // Mastering Multi-Band Dynamic Crest Shaper & Punch Leveler Mini View
+                        let (crs_resp, crs_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let crs_rect = crs_resp.rect;
+                        crs_painter.rect_filled(crs_rect, 2.0, Color32::from_rgb(14, 10, 22));
+
+                        let mut target_crest = state.node_param_values.get("target_crest_db").or_else(|| state.node_param_values.get("crest")).copied().unwrap_or(16.5);
+                        let mut expansion = state.node_param_values.get("expansion_ratio").or_else(|| state.node_param_values.get("ratio")).copied().unwrap_or(2.6);
+                        let comp = state.node_param_values.get("downward_comp_ratio").copied().unwrap_or(1.2);
+
+                        if crs_resp.dragged() {
+                            if let Some(pos) = crs_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - crs_rect.left()) / crs_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - crs_rect.top()) / crs_rect.height())).clamp(0.0, 1.0);
+                                target_crest = crate::views::dynamic_crest_shaper_view::DynamicCrestShaperView::normalized_to_crest(norm_x);
+                                expansion = crate::views::dynamic_crest_shaper_view::DynamicCrestShaperView::normalized_to_ratio(norm_y);
+                                state.node_param_values.insert("target_crest_db".to_string(), target_crest);
+                                state.node_param_values.insert("crest".to_string(), target_crest);
+                                state.node_param_values.insert("expansion_ratio".to_string(), expansion);
+                                state.node_param_values.insert("ratio".to_string(), expansion);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_cr = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_cr).is_some() { bus.set(pid_cr, target_crest); }
+                                    let pid_ex = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_ex).is_some() { bus.set(pid_ex, expansion); }
+                                }
+                            }
+                        }
+
+                        // Mini Dynamic Crest Response Curve (30 steps)
+                        let steps = 30;
+                        let mut crs_pts = Vec::with_capacity(steps);
+                        for i in 0..steps {
+                            let t = i as f32 / (steps - 1) as f32;
+                            let in_amp = t;
+                            let out_amp = if in_amp > 0.4 {
+                                (in_amp + (in_amp - 0.4) * (expansion - 1.0) * 0.5).clamp(0.0, 1.0)
+                            } else {
+                                in_amp * (1.0 - (comp - 1.0) * 0.1).clamp(0.2, 1.0)
+                            };
+                            let px = crs_rect.left() + t * (crs_rect.width() - 55.0);
+                            let py = crs_rect.bottom() - out_amp * (crs_rect.height() - 14.0) - 7.0;
+                            crs_pts.push(egui::pos2(px, py));
+                        }
+                        crs_painter.add(egui::Shape::line(
+                            crs_pts,
+                            Stroke::new(1.8_f32, Color32::from_rgb(217, 70, 239)),
+                        ));
+
+                        // Interactive Puck
+                        let norm_c = crate::views::dynamic_crest_shaper_view::DynamicCrestShaperView::crest_to_normalized(target_crest);
+                        let norm_e = crate::views::dynamic_crest_shaper_view::DynamicCrestShaperView::ratio_to_normalized(expansion);
+                        let puck_x = crs_rect.left() + norm_c * (crs_rect.width() - 55.0);
+                        let puck_y = crs_rect.bottom() - norm_e * (crs_rect.height() - 20.0) - 10.0;
+                        crs_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(217, 70, 239));
+                        crs_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        crs_painter.text(
+                            egui::pos2(crs_rect.right() - 4.0, crs_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("CREST\n{:.1}dB\n{:.2}:1 Up\n{:.1}:1 Dn", target_crest, expansion, comp),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(217, 70, 239),
+                        );
+
+                        if crs_resp.hovered() {
+                            let _ = crs_resp.on_hover_text(format!(
+                                "Mastering Dynamic Crest Shaper & Punch Leveler HUD\nTarget Crest: {:.1} dB | Upward Ratio: {:.2}:1\nDownward Comp: {:.1}:1\n[Drag: Target Crest (X) / Expansion Ratio (Y) Puck]",
+                                target_crest, expansion, comp
+                            ));
+                        }
+                    } else if is_linear_phase_crossover {
+                        // Mastering Dynamic Linear-Phase Crossover & Limiter Mini View
+                        let (xov_resp, xov_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let xov_rect = xov_resp.rect;
+                        xov_painter.rect_filled(xov_rect, 2.0, Color32::from_rgb(8, 18, 20));
+
+                        let mut split_mid_hz = state.node_param_values.get("split_mid_hz").copied().unwrap_or(2400.0);
+                        let mut ceiling_db = state.node_param_values.get("ceiling_db").or_else(|| state.node_param_values.get("ceiling")).copied().unwrap_or(-0.5);
+
+                        if xov_resp.dragged() {
+                            if let Some(pos) = xov_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - xov_rect.left()) / xov_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - xov_rect.top()) / xov_rect.height())).clamp(0.0, 1.0);
+                                split_mid_hz = crate::views::linear_phase_crossover_view::LinearPhaseCrossoverView::normalized_to_freq(norm_x);
+                                ceiling_db = crate::views::linear_phase_crossover_view::LinearPhaseCrossoverView::normalized_to_ceiling(norm_y);
+                                state.node_param_values.insert("split_mid_hz".to_string(), split_mid_hz);
+                                state.node_param_values.insert("ceiling_db".to_string(), ceiling_db);
+                                state.node_param_values.insert("ceiling".to_string(), ceiling_db);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_mid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_mid).is_some() { bus.set(pid_mid, split_mid_hz); }
+                                    let pid_cei = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 3);
+                                    if bus.get(pid_cei).is_some() { bus.set(pid_cei, ceiling_db); }
+                                }
+                            }
+                        }
+
+                        // Mini 4-Band Crossover Split Display (3 split vertical lines + curves)
+                        let norm_f = crate::views::linear_phase_crossover_view::LinearPhaseCrossoverView::freq_to_normalized(split_mid_hz);
+                        let mid_x = xov_rect.left() + norm_f * (xov_rect.width() - 55.0);
+                        xov_painter.line_segment(
+                            [egui::pos2(mid_x, xov_rect.top() + 6.0), egui::pos2(mid_x, xov_rect.bottom() - 6.0)],
+                            Stroke::new(1.2_f32, Color32::from_rgb(0, 255, 180)),
+                        );
+
+                        // Horizontal Limiter Ceiling Line
+                        let norm_c = crate::views::linear_phase_crossover_view::LinearPhaseCrossoverView::ceiling_to_normalized(ceiling_db);
+                        let cei_y = xov_rect.bottom() - norm_c * (xov_rect.height() - 20.0) - 10.0;
+                        xov_painter.line_segment(
+                            [egui::pos2(xov_rect.left() + 4.0, cei_y), egui::pos2(xov_rect.left() + xov_rect.width() - 55.0, cei_y)],
+                            Stroke::new(1.0_f32, Color32::from_rgb(255, 180, 50)),
+                        );
+
+                        // Interactive Puck
+                        xov_painter.circle_filled(egui::pos2(mid_x, cei_y), 4.0, Color32::from_rgb(0, 255, 180));
+                        xov_painter.circle_stroke(egui::pos2(mid_x, cei_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        xov_painter.text(
+                            egui::pos2(xov_rect.right() - 4.0, xov_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("XOVER\n{:.0}Hz\n{:.1}dBFS\n[4-Band FIR]", split_mid_hz, ceiling_db),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(0, 255, 180),
+                        );
+
+                        if xov_resp.hovered() {
+                            let _ = xov_resp.on_hover_text(format!(
+                                "Mastering Dynamic Linear-Phase Crossover & Multiband Limiter HUD\nMid Crossover: {:.0} Hz | Limiter Ceiling: {:.1} dBFS\nZero Group Delay (Phase Linear)\n[Drag: Crossover Cutoff (X) / Limiter Ceiling (Y) Puck]",
+                                split_mid_hz, ceiling_db
                             ));
                         }
                     } else {

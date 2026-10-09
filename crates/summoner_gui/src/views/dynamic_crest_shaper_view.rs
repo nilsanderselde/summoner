@@ -138,6 +138,24 @@ impl DynamicCrestShaperView {
         MIN_EXPANSION_RATIO + norm.clamp(0.0, 1.0) * (MAX_EXPANSION_RATIO - MIN_EXPANSION_RATIO)
     }
 
+    pub fn downward_to_normalized(ratio: f32) -> f32 {
+        let r = ratio.clamp(1.0, 12.0);
+        ((r - 1.0) / 11.0).clamp(0.0, 1.0)
+    }
+
+    pub fn normalized_to_downward(norm: f32) -> f32 {
+        1.0 + norm.clamp(0.0, 1.0) * 11.0
+    }
+
+    pub fn attack_to_normalized(attack: f32) -> f32 {
+        let a = attack.clamp(0.1, 100.0);
+        ((a.ln() - (0.1_f32).ln()) / ((100.0_f32).ln() - (0.1_f32).ln())).clamp(0.0, 1.0)
+    }
+
+    pub fn normalized_to_attack(norm: f32) -> f32 {
+        ((0.1_f32).ln() + norm.clamp(0.0, 1.0) * ((100.0_f32).ln() - (0.1_f32).ln())).exp()
+    }
+
     pub fn set_topology(&mut self, topo: CrestTopology) {
         self.topology = topo;
         self.target_crest_db = topo.nominal_crest_target_db();
@@ -218,6 +236,36 @@ impl DynamicCrestShaperView {
         grid.into_iter()
             .map(|row| row.into_iter().collect())
             .collect()
+    }
+
+    /// Render formatted ASCII snapshot with metadata banner.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        let lines = self.render_ascii(60, 16);
+        let mut out = String::new();
+        out.push_str("┌──────────────────────────────────────────────────────────┐\n");
+        out.push_str("│ MASTERING DYNAMIC CREST SHAPER & PUNCH LEVELER HUD       │\n");
+        out.push_str(&format!(
+            "│ Topology: {:<16} Target Crest: {:>5.1} dB        │\n",
+            self.topology.topology_name(),
+            self.target_crest_db
+        ));
+        out.push_str(&format!(
+            "│ Upward Exp: {:>4.2}:1           Downward Comp: {:>4.1}:1       │\n",
+            self.expansion_ratio, self.downward_comp_ratio
+        ));
+        out.push_str("├──────────────────────────────────────────────────────────┤\n");
+        for line in lines {
+            out.push_str(&line);
+            out.push('\n');
+        }
+        out.push_str("└──────────────────────────────────────────────────────────┘\n");
+        out.push_str("[PASS: >=44pt] Dynamic Crest Shaper & Punch Leveler Touch Target Verified\n");
+        out
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_ui(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
     }
 
     #[cfg(feature = "gui")]

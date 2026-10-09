@@ -1784,6 +1784,14 @@ impl eframe::App for SummonerApp {
                     self.current_view = ViewMode::ModernStudio;
                     self.award_winning_view.open_dynamic_stereo_width_hud();
                 }
+                "open_dynamic_crest_shaper_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_dynamic_crest_shaper_hud();
+                }
+                "open_linear_phase_crossover_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_linear_phase_crossover_hud();
+                }
                 "sfz_convert" | "auto_slice" | "load_preset" | "export_clap" | "toggle_simd" => {
                     println!("Command palette action executed: {}", action);
                 }

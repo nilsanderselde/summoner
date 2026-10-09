@@ -290,6 +290,8 @@ pub mod tier167_turn104_tests;
 #[cfg(feature = "gui")]
 pub mod tier168_turn105_tests;
 #[cfg(feature = "gui")]
+pub mod tier169_turn106_tests;
+#[cfg(feature = "gui")]
 pub mod touch_gestures;
 #[cfg(feature = "gui")]
 pub mod transport_bar;
@@ -366,7 +368,7 @@ pub use views::dsp_rack_dock::DspRackDockView;
 #[cfg(feature = "gui")]
 pub use views::dulcimer_cimbalom_view::DulcimerCimbalomView;
 #[cfg(feature = "gui")]
-pub use views::dynamic_crest_shaper_view::DynamicCrestShaperView;
+pub use views::dynamic_crest_shaper_view::{CrestTopology, DynamicCrestShaperView};
 #[cfg(feature = "gui")]
 pub use views::dynamic_stereo_width_view::DynamicStereoWidthView;
 #[cfg(feature = "gui")]
@@ -428,7 +430,7 @@ pub use views::koto_view::*;
 #[cfg(feature = "gui")]
 pub use views::ladder_filter_view::LadderFilterView;
 #[cfg(feature = "gui")]
-pub use views::linear_phase_crossover_view::LinearPhaseCrossoverView;
+pub use views::linear_phase_crossover_view::{CrossoverSlope, LinearPhaseCrossoverView};
 #[cfg(feature = "gui")]
 pub use views::live_macro_rack::LiveMacroRackView;
 #[cfg(feature = "gui")]

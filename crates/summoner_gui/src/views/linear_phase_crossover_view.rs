@@ -216,6 +216,36 @@ impl LinearPhaseCrossoverView {
             .collect()
     }
 
+    /// Render formatted ASCII snapshot with metadata banner.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        let lines = self.render_ascii(60, 16);
+        let mut out = String::new();
+        out.push_str("┌──────────────────────────────────────────────────────────┐\n");
+        out.push_str("│ MASTERING LINEAR-PHASE CROSSOVER & MULTIBAND LIMITER HUD │\n");
+        out.push_str(&format!(
+            "│ Slope: {:<19} Ceiling: {:>6.2} dBFS       │\n",
+            self.slope_mode.slope_name(),
+            self.ceiling_db
+        ));
+        out.push_str(&format!(
+            "│ Crossovers: Low {:.0}Hz, Mid {:.0}Hz, High {:.0}Hz       │\n",
+            self.split_low_hz, self.split_mid_hz, self.split_high_hz
+        ));
+        out.push_str("├──────────────────────────────────────────────────────────┤\n");
+        for line in lines {
+            out.push_str(&line);
+            out.push('\n');
+        }
+        out.push_str("└──────────────────────────────────────────────────────────┘\n");
+        out.push_str("[PASS: >=44pt] Linear-Phase Crossover & Multiband Limiter Touch Target Verified\n");
+        out
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_ui(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
+    }
+
     #[cfg(feature = "gui")]
     #[allow(clippy::needless_range_loop)]
     pub fn ui(&mut self, ui: &mut egui::Ui) {

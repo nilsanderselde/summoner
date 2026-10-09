@@ -992,6 +992,18 @@ impl CommandPalette {
                 action_id: "open_dynamic_stereo_width_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Mastering Multi-Band Dynamic Crest Shaper HUD".into(),
+                category: "Mastering & Dynamics".into(),
+                action_id: "open_dynamic_crest_shaper_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Mastering Linear-Phase Crossover & Limiter HUD".into(),
+                category: "Mastering & Dynamics".into(),
+                action_id: "open_linear_phase_crossover_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

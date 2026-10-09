@@ -868,6 +868,10 @@ pub struct AwardWinningGuiView {
     pub multiband_decompressor_view: crate::views::multiband_decompressor_view::MultibandDecompressorView,
     pub show_dynamic_stereo_width_modal: bool,
     pub dynamic_stereo_width_view: crate::views::dynamic_stereo_width_view::DynamicStereoWidthView,
+    pub show_dynamic_crest_shaper_modal: bool,
+    pub dynamic_crest_shaper_view: crate::views::dynamic_crest_shaper_view::DynamicCrestShaperView,
+    pub show_linear_phase_crossover_modal: bool,
+    pub linear_phase_crossover_view: crate::views::linear_phase_crossover_view::LinearPhaseCrossoverView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1352,6 +1356,10 @@ impl AwardWinningGuiView {
             multiband_decompressor_view: crate::views::multiband_decompressor_view::MultibandDecompressorView::new(),
             show_dynamic_stereo_width_modal: false,
             dynamic_stereo_width_view: crate::views::dynamic_stereo_width_view::DynamicStereoWidthView::new(),
+            show_dynamic_crest_shaper_modal: false,
+            dynamic_crest_shaper_view: crate::views::dynamic_crest_shaper_view::DynamicCrestShaperView::new(),
+            show_linear_phase_crossover_modal: false,
+            linear_phase_crossover_view: crate::views::linear_phase_crossover_view::LinearPhaseCrossoverView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2561,6 +2569,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_dynamic_stereo_width_hud = false;
             self.open_dynamic_stereo_width_hud();
         }
+        if self.inspector_state.requested_open_dynamic_crest_shaper_hud || self.device_rack_state.requested_open_dynamic_crest_shaper_hud {
+            self.inspector_state.requested_open_dynamic_crest_shaper_hud = false;
+            self.device_rack_state.requested_open_dynamic_crest_shaper_hud = false;
+            self.open_dynamic_crest_shaper_hud();
+        }
+        if self.inspector_state.requested_open_linear_phase_crossover_hud || self.device_rack_state.requested_open_linear_phase_crossover_hud {
+            self.inspector_state.requested_open_linear_phase_crossover_hud = false;
+            self.device_rack_state.requested_open_linear_phase_crossover_hud = false;
+            self.open_linear_phase_crossover_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2678,6 +2696,8 @@ impl AwardWinningGuiView {
         self.show_multiband_expander_modal_window(ui);
         self.show_multiband_decompressor_modal_window(ui);
         self.show_dynamic_stereo_width_modal_window(ui);
+        self.show_dynamic_crest_shaper_modal_window(ui);
+        self.show_linear_phase_crossover_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -19231,6 +19251,194 @@ impl AwardWinningGuiView {
             if bus.get(pid_w).is_some() { bus.set(pid_w, width_ratio); }
             if bus.get(pid_c).is_some() { bus.set(pid_c, correlation); }
             if bus.get(pid_m).is_some() { bus.set(pid_m, mono_compat); }
+        }
+    }
+
+    pub fn open_dynamic_crest_shaper_hud(&mut self) {
+        self.show_dynamic_crest_shaper_modal = true;
+    }
+
+    pub fn close_dynamic_crest_shaper_hud(&mut self) {
+        self.show_dynamic_crest_shaper_modal = false;
+    }
+
+    pub fn is_dynamic_crest_shaper_hud_open(&self) -> bool {
+        self.show_dynamic_crest_shaper_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_dynamic_crest_shaper_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_dynamic_crest_shaper_modal {
+            return;
+        }
+
+        let mut is_open = self.show_dynamic_crest_shaper_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("💥 Mastering Multi-Band Dynamic Crest Shaper & Punch Leveler HUD")
+            .id(egui::Id::new("dynamic_crest_shaper_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Mastering Peak-to-RMS Headroom Sculpting, Upward Expansion & Punch Leveling (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.dynamic_crest_shaper_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_dynamic_crest_shaper_modal = is_open;
+        self.sync_dynamic_crest_shaper_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_dynamic_crest_shaper_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let target_crest = self.dynamic_crest_shaper_view.target_crest_db;
+        let expansion = self.dynamic_crest_shaper_view.expansion_ratio;
+        let comp = self.dynamic_crest_shaper_view.downward_comp_ratio;
+        let attack = self.dynamic_crest_shaper_view.attack_ms;
+        let release = self.dynamic_crest_shaper_view.release_ms;
+
+        self.device_rack_state.node_param_values.insert("target_crest_db".to_string(), target_crest);
+        self.device_rack_state.node_param_values.insert("crest".to_string(), target_crest);
+        self.device_rack_state.node_param_values.insert("expansion_ratio".to_string(), expansion);
+        self.device_rack_state.node_param_values.insert("ratio".to_string(), expansion);
+        self.device_rack_state.node_param_values.insert("downward_comp_ratio".to_string(), comp);
+        self.device_rack_state.node_param_values.insert("attack_ms".to_string(), attack);
+        self.device_rack_state.node_param_values.insert("release_ms".to_string(), release);
+
+        self.inspector_state.node_param_values.insert("target_crest_db".to_string(), target_crest);
+        self.inspector_state.node_param_values.insert("crest".to_string(), target_crest);
+        self.inspector_state.node_param_values.insert("expansion_ratio".to_string(), expansion);
+        self.inspector_state.node_param_values.insert("ratio".to_string(), expansion);
+        self.inspector_state.node_param_values.insert("downward_comp_ratio".to_string(), comp);
+        self.inspector_state.node_param_values.insert("attack_ms".to_string(), attack);
+        self.inspector_state.node_param_values.insert("release_ms".to_string(), release);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_cr = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_ex = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_co = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_at = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_cr).is_some() { bus.set(pid_cr, target_crest); }
+            if bus.get(pid_ex).is_some() { bus.set(pid_ex, expansion); }
+            if bus.get(pid_co).is_some() { bus.set(pid_co, comp); }
+            if bus.get(pid_at).is_some() { bus.set(pid_at, attack); }
+        }
+    }
+
+    pub fn open_linear_phase_crossover_hud(&mut self) {
+        self.show_linear_phase_crossover_modal = true;
+    }
+
+    pub fn close_linear_phase_crossover_hud(&mut self) {
+        self.show_linear_phase_crossover_modal = false;
+    }
+
+    pub fn is_linear_phase_crossover_hud_open(&self) -> bool {
+        self.show_linear_phase_crossover_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_linear_phase_crossover_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_linear_phase_crossover_modal {
+            return;
+        }
+
+        let mut is_open = self.show_linear_phase_crossover_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎚 Mastering Dynamic Linear-Phase Crossover & Multiband Limiter HUD")
+            .id(egui::Id::new("linear_phase_crossover_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Mastering 4-Band Linear-Phase FIR Split, Zero Group Delay & Dynamic Brickwall Limiter (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.linear_phase_crossover_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_linear_phase_crossover_modal = is_open;
+        self.sync_linear_phase_crossover_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_linear_phase_crossover_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let low_hz = self.linear_phase_crossover_view.split_low_hz;
+        let mid_hz = self.linear_phase_crossover_view.split_mid_hz;
+        let high_hz = self.linear_phase_crossover_view.split_high_hz;
+        let ceiling = self.linear_phase_crossover_view.ceiling_db;
+        let delay = self.linear_phase_crossover_view.group_delay_ms;
+
+        self.device_rack_state.node_param_values.insert("split_low_hz".to_string(), low_hz);
+        self.device_rack_state.node_param_values.insert("split_mid_hz".to_string(), mid_hz);
+        self.device_rack_state.node_param_values.insert("split_high_hz".to_string(), high_hz);
+        self.device_rack_state.node_param_values.insert("ceiling_db".to_string(), ceiling);
+        self.device_rack_state.node_param_values.insert("ceiling".to_string(), ceiling);
+        self.device_rack_state.node_param_values.insert("group_delay_ms".to_string(), delay);
+
+        self.inspector_state.node_param_values.insert("split_low_hz".to_string(), low_hz);
+        self.inspector_state.node_param_values.insert("split_mid_hz".to_string(), mid_hz);
+        self.inspector_state.node_param_values.insert("split_high_hz".to_string(), high_hz);
+        self.inspector_state.node_param_values.insert("ceiling_db".to_string(), ceiling);
+        self.inspector_state.node_param_values.insert("ceiling".to_string(), ceiling);
+        self.inspector_state.node_param_values.insert("group_delay_ms".to_string(), delay);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_low = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_mid = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_hig = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_cei = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_low).is_some() { bus.set(pid_low, low_hz); }
+            if bus.get(pid_mid).is_some() { bus.set(pid_mid, mid_hz); }
+            if bus.get(pid_hig).is_some() { bus.set(pid_hig, high_hz); }
+            if bus.get(pid_cei).is_some() { bus.set(pid_cei, ceiling); }
         }
     }
     fn render_patch_cords_canvas(&mut self, ui: &mut egui::Ui, available_h: f32) {
