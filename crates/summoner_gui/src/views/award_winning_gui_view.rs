@@ -2353,6 +2353,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_granular_freeze_hud = false;
             self.open_granular_freeze_hud();
         }
+        if self.inspector_state.requested_open_auto_wah_hud || self.device_rack_state.requested_open_auto_wah_hud {
+            self.inspector_state.requested_open_auto_wah_hud = false;
+            self.device_rack_state.requested_open_auto_wah_hud = false;
+            self.open_auto_wah_hud();
+        }
+        if self.inspector_state.requested_open_formant_filter_hud || self.device_rack_state.requested_open_formant_filter_hud {
+            self.inspector_state.requested_open_formant_filter_hud = false;
+            self.device_rack_state.requested_open_formant_filter_hud = false;
+            self.open_formant_filter_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2446,6 +2456,8 @@ impl AwardWinningGuiView {
         self.show_tape_saturation_modal_window(ui);
         self.show_ladder_filter_modal_window(ui);
         self.show_granular_freeze_modal_window(ui);
+        self.show_auto_wah_modal_window(ui);
+        self.show_formant_filter_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -16637,6 +16649,212 @@ impl AwardWinningGuiView {
             if bus.get(pid_jit).is_some() { bus.set(pid_jit, jitter); }
             if bus.get(pid_spread).is_some() { bus.set(pid_spread, spread); }
             if bus.get(pid_froz).is_some() { bus.set(pid_froz, frozen); }
+        }
+    }
+
+    pub fn open_auto_wah_hud(&mut self) {
+        self.show_auto_wah_modal = true;
+    }
+
+    pub fn close_auto_wah_hud(&mut self) {
+        self.show_auto_wah_modal = false;
+    }
+
+    pub fn is_auto_wah_hud_open(&self) -> bool {
+        self.show_auto_wah_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_auto_wah_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_auto_wah_modal {
+            return;
+        }
+
+        let mut is_open = self.show_auto_wah_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎛 Dynamic Resonant Auto-Wah Filter HUD")
+            .id(egui::Id::new("auto_wah_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(820.0, 520.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Dynamic Resonant Envelope Wah Filter & SVF Ballistics (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.auto_wah_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_auto_wah_modal = is_open;
+        self.sync_auto_wah_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_auto_wah_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let sens = self.auto_wah_view.sensitivity;
+        let base_freq = self.auto_wah_view.base_freq_hz;
+        let sweep_range = self.auto_wah_view.sweep_range_octaves;
+        let res = self.auto_wah_view.resonance_q;
+        let attack = self.auto_wah_view.attack_ms;
+        let release = self.auto_wah_view.release_ms;
+        let mix = self.auto_wah_view.mix;
+
+        self.device_rack_state.node_param_values.insert("sensitivity".to_string(), sens);
+        self.device_rack_state.node_param_values.insert("base_freq_hz".to_string(), base_freq);
+        self.device_rack_state.node_param_values.insert("sweep_range_octaves".to_string(), sweep_range);
+        self.device_rack_state.node_param_values.insert("resonance_q".to_string(), res);
+        self.device_rack_state.node_param_values.insert("attack_ms".to_string(), attack);
+        self.device_rack_state.node_param_values.insert("release_ms".to_string(), release);
+        self.device_rack_state.node_param_values.insert("mix".to_string(), mix);
+
+        self.inspector_state.node_param_values.insert("sensitivity".to_string(), sens);
+        self.inspector_state.node_param_values.insert("base_freq_hz".to_string(), base_freq);
+        self.inspector_state.node_param_values.insert("sweep_range_octaves".to_string(), sweep_range);
+        self.inspector_state.node_param_values.insert("resonance_q".to_string(), res);
+        self.inspector_state.node_param_values.insert("attack_ms".to_string(), attack);
+        self.inspector_state.node_param_values.insert("release_ms".to_string(), release);
+        self.inspector_state.node_param_values.insert("mix".to_string(), mix);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_sens = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_base = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_range = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_res = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_att = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_rel = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+            let pid_mix = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 6);
+
+            if bus.get(pid_sens).is_some() { bus.set(pid_sens, sens); }
+            if bus.get(pid_base).is_some() { bus.set(pid_base, base_freq); }
+            if bus.get(pid_range).is_some() { bus.set(pid_range, sweep_range); }
+            if bus.get(pid_res).is_some() { bus.set(pid_res, res); }
+            if bus.get(pid_att).is_some() { bus.set(pid_att, attack); }
+            if bus.get(pid_rel).is_some() { bus.set(pid_rel, release); }
+            if bus.get(pid_mix).is_some() { bus.set(pid_mix, mix); }
+        }
+    }
+
+    pub fn open_formant_filter_hud(&mut self) {
+        self.show_formant_filter_modal = true;
+    }
+
+    pub fn close_formant_filter_hud(&mut self) {
+        self.show_formant_filter_modal = false;
+    }
+
+    pub fn is_formant_filter_hud_open(&self) -> bool {
+        self.show_formant_filter_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_formant_filter_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_formant_filter_modal {
+            return;
+        }
+
+        let mut is_open = self.show_formant_filter_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🗣 5-Vowel Phonetic Formant Filter Resonator HUD")
+            .id(egui::Id::new("formant_filter_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("5-Vowel Formant Resonators, F1/F2 Trajectory Physics & Vocal Tract Scaling (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.formant_filter_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_formant_filter_modal = is_open;
+        self.sync_formant_filter_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_formant_filter_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let res = self.formant_filter_view.resonance_q;
+        let boost = self.formant_filter_view.peak_boost_db;
+        let tract = self.formant_filter_view.vocal_tract_scale;
+        let warmth = self.formant_filter_view.drive_warmth_db;
+        let dry_wet = self.formant_filter_view.dry_wet_pct;
+        let morph_x = self.formant_filter_view.morph_pos.0;
+        let morph_y = self.formant_filter_view.morph_pos.1;
+
+        self.device_rack_state.node_param_values.insert("resonance_q".to_string(), res);
+        self.device_rack_state.node_param_values.insert("peak_boost_db".to_string(), boost);
+        self.device_rack_state.node_param_values.insert("vocal_tract_scale".to_string(), tract);
+        self.device_rack_state.node_param_values.insert("drive_warmth_db".to_string(), warmth);
+        self.device_rack_state.node_param_values.insert("dry_wet_pct".to_string(), dry_wet);
+        self.device_rack_state.node_param_values.insert("morph_pos_x".to_string(), morph_x);
+        self.device_rack_state.node_param_values.insert("morph_pos_y".to_string(), morph_y);
+
+        self.inspector_state.node_param_values.insert("resonance_q".to_string(), res);
+        self.inspector_state.node_param_values.insert("peak_boost_db".to_string(), boost);
+        self.inspector_state.node_param_values.insert("vocal_tract_scale".to_string(), tract);
+        self.inspector_state.node_param_values.insert("drive_warmth_db".to_string(), warmth);
+        self.inspector_state.node_param_values.insert("dry_wet_pct".to_string(), dry_wet);
+        self.inspector_state.node_param_values.insert("morph_pos_x".to_string(), morph_x);
+        self.inspector_state.node_param_values.insert("morph_pos_y".to_string(), morph_y);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_res = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_boost = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_tract = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_warmth = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+            let pid_dw = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 4);
+            let pid_mx = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 5);
+            let pid_my = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 6);
+
+            if bus.get(pid_res).is_some() { bus.set(pid_res, res); }
+            if bus.get(pid_boost).is_some() { bus.set(pid_boost, boost); }
+            if bus.get(pid_tract).is_some() { bus.set(pid_tract, tract); }
+            if bus.get(pid_warmth).is_some() { bus.set(pid_warmth, warmth); }
+            if bus.get(pid_dw).is_some() { bus.set(pid_dw, dry_wet); }
+            if bus.get(pid_mx).is_some() { bus.set(pid_mx, morph_x); }
+            if bus.get(pid_my).is_some() { bus.set(pid_my, morph_y); }
         }
     }
     fn render_patch_cords_canvas(&mut self, ui: &mut egui::Ui, available_h: f32) {

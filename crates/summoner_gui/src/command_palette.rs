@@ -845,6 +845,18 @@ impl CommandPalette {
                 action_id: "open_granular_freeze_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Dynamic Resonant Auto-Wah Filter HUD".into(),
+                category: "Filter / EQ".into(),
+                action_id: "open_auto_wah_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open 5-Vowel Phonetic Formant Filter Resonator HUD".into(),
+                category: "Filter / EQ".into(),
+                action_id: "open_formant_filter_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES
