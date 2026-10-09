@@ -286,6 +286,10 @@ pub struct ModernInspectorState {
     pub requested_open_transient_unwrapper_hud: bool,
     #[serde(default)]
     pub requested_open_spectral_unmasker_hud: bool,
+    #[serde(default)]
+    pub requested_open_spectral_debleed_hud: bool,
+    #[serde(default)]
+    pub requested_open_spectral_reshaper_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -435,6 +439,8 @@ impl Default for ModernInspectorState {
             requested_open_transient_reconstructor_hud: false,
             requested_open_transient_unwrapper_hud: false,
             requested_open_spectral_unmasker_hud: false,
+            requested_open_spectral_debleed_hud: false,
+            requested_open_spectral_reshaper_hud: false,
         }
     }
 }
@@ -2159,6 +2165,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open Master Bus Multi-Point Spectral Dynamics Unmasker HUD").clicked() {
                     state.requested_open_spectral_unmasker_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("SpectralDebleed") || active_kind.contains("Debleed") || active_kind == "SpectralDebleedNode" || active_kind.contains("AcousticBleed") || active_kind.contains("LeakageSeparator") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🧹 Open Spectral De-Bleed HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 229, 255)))
+                        .fill(Color32::from_rgb(14, 24, 38))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 229, 255)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Psychoacoustic Multi-Band Spectral Transient De-Bleed & Leakage Separator HUD").clicked() {
+                    state.requested_open_spectral_debleed_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("SpectralReshaper") || active_kind.contains("Reshaper") || active_kind == "SpectralReshaperNode" || active_kind.contains("SpectralEnvelope") || active_kind.contains("FormantReshaper") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🎛 Open Spectral Reshaper HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(255, 107, 43)))
+                        .fill(Color32::from_rgb(32, 20, 16))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 107, 43)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Multi-Band Transient Spectral Reshaper & Formant Envelope HUD").clicked() {
+                    state.requested_open_spectral_reshaper_hud = true;
                 }
                 ui.add_space(4.0);
             }

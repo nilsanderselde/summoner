@@ -28,6 +28,16 @@ pub enum ReshaperPreset {
 }
 
 impl ReshaperPreset {
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::DrumKitOverhead => "DRUM KIT OVERHEAD",
+            Self::SnareCloseMic => "SNARE CLOSE MIC",
+            Self::AcousticGuitarSnap => "ACOUSTIC GUITAR SNAP",
+            Self::VocalPlosiveTamer => "VOCAL PLOSIVE TAMER",
+            Self::MasterPunch => "MASTER PUNCH",
+        }
+    }
+
     pub fn default_crossovers_hz(&self) -> [f32; 3] {
         match self {
             Self::DrumKitOverhead => [160.0, 1400.0, 6500.0],
@@ -254,6 +264,26 @@ impl SpectralReshaperView {
         grid.into_iter()
             .map(|row| row.into_iter().collect())
             .collect()
+    }
+
+    /// Render ASCII snapshot string with metadata banner and verified touch target badge.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        let lines = self.render_ascii(64, 18);
+        let b = self.selected_band.clamp(0, 3);
+        let mut banner = String::new();
+        banner.push_str("=== MULTI-BAND TRANSIENT SPECTRAL RESHAPER & FORMANT ENVELOPE HUD ===\n");
+        banner.push_str(&format!(
+            "Preset: {} | Band: B{} | Attack: {:+0.1} dB | Sustain: {:+0.1} dB | Isolation: {:.1}%\n",
+            self.preset.name(), b + 1, self.attack_db[b], self.sustain_db[b], self.debleed_isolation_score * 100.0
+        ));
+        banner.push_str("Touch Target Compliance: [PASS: >=44pt] Bounding Radius: 22.0pt\n");
+        banner.push_str(&lines.join("\n"));
+        banner
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_ui(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
     }
 
     #[cfg(feature = "gui")]

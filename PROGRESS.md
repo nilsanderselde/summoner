@@ -1,6 +1,6 @@
 # Summoner DAW — Product Readiness & Shippability Tracker
 > **Current Shippability Score:** 10.0 / 10  
-> **Status:** Production Ready Release Candidate (Turn #111 / Sprint Turn #37)  
+> **Status:** Production Ready Release Candidate (Turn #112 / Sprint Turn #38)  
 > **Authoritative Root:** `PROGRESS.md`  
 > **License:** AGPLv3
 
@@ -3120,6 +3120,40 @@ Product Management has conducted a comprehensive readiness audit:
   - Feature tests: 3 passed (`cargo test -p summoner_gui --features gui -- tier174`).
   - Pure unit tests: 329 passed in 0.24s (`cargo test -p summoner_gui --lib`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
+
+### Turn #112 (Sprint Turn #38) — Psychoacoustic Multi-Band Spectral Transient De-Bleed & Multi-Band Transient Spectral Reshaper HUDs Convergence (Milestones 33 & 34)
+- [x] Spectral Transient De-Bleed & Spectral Reshaper HUDs Integration:
+  - Integrated `SpectralDebleedView` (Psychoacoustic Multi-Band Spectral Transient De-Bleed & Leakage Separator HUD: 5 Target Environments [DrumKitHiHatBleed, VocalHeadphoneSpill, LiveStageGuitarSpill, AcousticPianoHammerDebleed, OrchestralSectionIsolator], Separation Threshold [-60.0..0.0 dBFS], Mask Sharpness Gamma [0.5..4.0], Transient Preservation [0.0..100.0%], Phase Coherence [0.0..100.0%], 8-Band Detected Spill vs Attenuation Bars, and Touch-Draggable Threshold vs Sharpness Puck with >= 44x44pt bounding target) and `SpectralReshaperView` (Multi-Band Transient Spectral Reshaper & Formant Envelope HUD: 5 Profiles [DrumKitOverhead, SnareCloseMic, AcousticGuitarSnap, VocalPlosiveTamer, MasterPunch], 4 Independent Spectral Bands with Active Band Puck, Attack Gain [-12.0..+12.0 dB], Sustain Gain [-12.0..+12.0 dB], Gating De-Bleed Threshold [-60.0..0.0 dB], Transient Crest Factor [6.0..26.0 dB], Isolation Efficiency [10.0..99.0%], 4-Band Composite Frequency Response Evaluation, and Touch-Draggable Attack vs Sustain Puck with >= 44x44pt bounding target) into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/spectral_debleed_view.rs` & `spectral_reshaper_view.rs`):
+  - In `SpectralDebleedView`: added `name()` alias to `DebleedMode`, `show_ui(&mut self, ui: &mut egui::Ui)`, and `render_ascii_snapshot_str() -> String` with psychoacoustic spectral de-bleed metadata banner and verified hit target badge (`[PASS: >=44pt]`).
+  - In `SpectralReshaperView`: added `name()` to `ReshaperPreset`, `show_ui(&mut self, ui: &mut egui::Ui)`, and `render_ascii_snapshot_str() -> String` with multi-band transient spectral reshaper metadata banner and verified hit target badge (`[PASS: >=44pt]`).
+  - In `crates/summoner_gui/src/views/mod.rs`: re-exported `DebleedMode` and `ReshaperPreset`.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added modal fields (`show_spectral_debleed_modal`, `spectral_debleed_view`, `show_spectral_reshaper_modal`, `spectral_reshaper_view`).
+  - Added dedicated modal windows (`show_spectral_debleed_modal_window`, `show_spectral_reshaper_modal_window`) with responsive styling, WCAG AAA contrast, and >= 44x44pt touch bounds.
+  - Added public lifecycle methods: `open_spectral_debleed_hud()`, `close_spectral_debleed_hud()`, `is_spectral_debleed_hud_open()`, `open_spectral_reshaper_hud()`, `close_spectral_reshaper_hud()`, `is_spectral_reshaper_hud_open()`.
+  - Real-time parameter sync bridges (`sync_spectral_debleed_hud_state` and `sync_spectral_reshaper_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_spectral_debleed_hud: bool` and `requested_open_spectral_reshaper_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🧹 Open Spectral De-Bleed HUD]` and `[🎛 Open Spectral Reshaper HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header buttons `[🧹 De-Bleed HUD]` and `[🎛 Reshaper HUD]` in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Spectral De-Bleed: 8-band leakage attenuation bars, interactive Threshold / Mask Sharpness puck, live threshold & gamma readout, and lock-free slot-addressed `ParamBus` dispatch.
+    * Spectral Reshaper: 4-band response contour preview curve, interactive Attack / Sustain puck, live attack/sustain readout, and lock-free slot-addressed `ParamBus` dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_spectral_debleed_hud` and `open_spectral_reshaper_hud` under `"Spectral & Synthesis"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_spectral_debleed_hud()` and `open_spectral_reshaper_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier175_turn112_tests.rs`:
+    * Pure tests: view initialization, coordinate normalizations (threshold, sharpness, attack, sustain, debleed threshold), mode/preset switching across all modes, simulation calculations, frequency response evaluations, touch puck hit testing (>= 44x44pt bounding targets), deterministic ASCII snapshots with metadata banners.
+    * GUI tests: modal window lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch without allocations, trigger button propagation from rack and inspector, command palette action verification.
+  - Registered `tier175_turn112_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Feature tests: 3 passed (`cargo test -p summoner_gui --features gui -- tier175`).
+  - Pure unit tests: 329 passed in 0.22s (`cargo test -p summoner_gui --lib`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
+
 
 
 

@@ -1064,6 +1064,18 @@ impl CommandPalette {
                 action_id: "open_spectral_unmasker_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Psychoacoustic Multi-Band Spectral Transient De-Bleed HUD".into(),
+                category: "Spectral & Synthesis".into(),
+                action_id: "open_spectral_debleed_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Multi-Band Transient Spectral Reshaper & Formant Envelope HUD".into(),
+                category: "Spectral & Synthesis".into(),
+                action_id: "open_spectral_reshaper_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

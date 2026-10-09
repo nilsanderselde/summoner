@@ -301,6 +301,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_transient_unwrapper_hud: bool,
     #[serde(default)]
     pub requested_open_spectral_unmasker_hud: bool,
+    #[serde(default)]
+    pub requested_open_spectral_debleed_hud: bool,
+    #[serde(default)]
+    pub requested_open_spectral_reshaper_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -440,6 +444,8 @@ impl Default for ModernDeviceRackState {
             requested_open_transient_reconstructor_hud: false,
             requested_open_transient_unwrapper_hud: false,
             requested_open_spectral_unmasker_hud: false,
+            requested_open_spectral_debleed_hud: false,
+            requested_open_spectral_reshaper_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -1202,6 +1208,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_transient_reconstructor = cur_selection.contains("TransientReconstructor") || cur_selection.contains("TransientReconstruct") || cur_selection == "TransientReconstructorNode" || cur_selection.contains("CrestFactor") || cur_selection.contains("AttackReconstructor") || cur_selection.contains("MultibandTransient");
                     let is_transient_unwrapper = cur_selection.contains("TransientUnwrapper") || cur_selection.contains("Unwrapper") || cur_selection == "TransientUnwrapperNode" || cur_selection.contains("DynamicUnwrapper") || cur_selection.contains("DeCompression");
                     let is_spectral_unmasker = cur_selection.contains("SpectralUnmasker") || cur_selection.contains("Unmasker") || cur_selection == "SpectralUnmaskerNode" || cur_selection.contains("IntelligentSpectral") || cur_selection.contains("SidechainUnmask");
+                    let is_spectral_debleed = cur_selection.contains("SpectralDebleed") || cur_selection.contains("Debleed") || cur_selection == "SpectralDebleedNode" || cur_selection.contains("AcousticBleed") || cur_selection.contains("LeakageSeparator");
+                    let is_spectral_reshaper = cur_selection.contains("SpectralReshaper") || cur_selection.contains("Reshaper") || cur_selection == "SpectralReshaperNode" || cur_selection.contains("SpectralEnvelope") || cur_selection.contains("FormantReshaper");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1702,6 +1710,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("🌊 Unmask HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 255, 180))).on_hover_text("Open Master Bus Multi-Point Spectral Dynamics Unmasker HUD").clicked()
                     {
                         state.requested_open_spectral_unmasker_hud = true;
+                    } else if is_spectral_debleed
+                        && ui.button(RichText::new("🧹 De-Bleed HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Psychoacoustic Multi-Band Spectral Transient De-Bleed HUD").clicked()
+                    {
+                        state.requested_open_spectral_debleed_hud = true;
+                    } else if is_spectral_reshaper
+                        && ui.button(RichText::new("🎛 Reshaper HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 107, 43))).on_hover_text("Open Multi-Band Transient Spectral Reshaper & Formant Envelope HUD").clicked()
+                    {
+                        state.requested_open_spectral_reshaper_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2592,6 +2608,8 @@ fn show_pro_parameter_drawer(
                     let is_transient_reconstructor = dev_kind.contains("TransientReconstructor") || dev_kind.contains("TransientReconstruct") || dev_kind == "TransientReconstructorNode" || dev_kind.contains("CrestFactor") || dev_kind.contains("AttackReconstructor") || dev_kind.contains("MultibandTransient");
                     let is_transient_unwrapper = dev_kind.contains("TransientUnwrapper") || dev_kind.contains("Unwrapper") || dev_kind == "TransientUnwrapperNode" || dev_kind.contains("DynamicUnwrapper") || dev_kind.contains("DeCompression");
                     let is_spectral_unmasker = dev_kind.contains("SpectralUnmasker") || dev_kind.contains("Unmasker") || dev_kind == "SpectralUnmaskerNode" || dev_kind.contains("IntelligentSpectral") || dev_kind.contains("SidechainUnmask");
+                    let is_spectral_debleed = dev_kind.contains("SpectralDebleed") || dev_kind.contains("Debleed") || dev_kind == "SpectralDebleedNode" || dev_kind.contains("AcousticBleed") || dev_kind.contains("LeakageSeparator");
+                    let is_spectral_reshaper = dev_kind.contains("SpectralReshaper") || dev_kind.contains("Reshaper") || dev_kind == "SpectralReshaperNode" || dev_kind.contains("SpectralEnvelope") || dev_kind.contains("FormantReshaper");
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -12286,6 +12304,143 @@ fn show_pro_parameter_drawer(
                             let _ = su_resp.on_hover_text(format!(
                                 "Master Bus Multi-Point Spectral Dynamics Unmasker HUD\nCollision Freq: {:.1} Hz | Reduction Depth: -{:.1} dB\nClarity Recovery: {:.1}%\n[Drag: Frequency (X) / Reduction (Y) Puck]",
                                 freq_hz, depth_db, clarity
+                            ));
+                        }
+                    } else if is_spectral_debleed {
+                        // Psychoacoustic Multi-Band Spectral Transient De-Bleed Mini View
+                        let (sd_resp, sd_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let sd_rect = sd_resp.rect;
+                        sd_painter.rect_filled(sd_rect, 2.0, Color32::from_rgb(10, 16, 26));
+
+                        let mut thresh_db = state.node_param_values.get("separation_thresh_db").or_else(|| state.node_param_values.get("spectral_gate_threshold")).copied().unwrap_or(-28.0);
+                        let mut sharpness = state.node_param_values.get("mask_sharpness_gamma").copied().unwrap_or(2.4);
+                        let transient_preserve = state.node_param_values.get("transient_preserve_pct").copied().unwrap_or(0.95);
+
+                        if sd_resp.dragged() || sd_resp.clicked() {
+                            if let Some(pos) = sd_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - sd_rect.left()) / (sd_rect.width() - 55.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - sd_rect.top() - 10.0) / (sd_rect.height() - 20.0))).clamp(0.0, 1.0);
+                                thresh_db = crate::views::spectral_debleed_view::SpectralDebleedView::normalized_to_thresh(norm_x);
+                                sharpness = crate::views::spectral_debleed_view::SpectralDebleedView::normalized_to_sharpness(norm_y);
+                                state.node_param_values.insert("separation_thresh_db".to_string(), thresh_db);
+                                state.node_param_values.insert("spectral_gate_threshold".to_string(), thresh_db);
+                                state.node_param_values.insert("mask_sharpness_gamma".to_string(), sharpness);
+                                if let Some(bus) = param_bus {
+                                    let pid_t = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    let pid_s = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_t).is_some() { bus.set(pid_t, thresh_db); }
+                                    if bus.get(pid_s).is_some() { bus.set(pid_s, sharpness * 5.0); }
+                                }
+                            }
+                        }
+
+                        // 8-band leakage attenuation bars
+                        let num_bars = 8;
+                        let bar_w = (sd_rect.width() - 60.0) / num_bars as f32;
+                        let thresh_norm = crate::views::spectral_debleed_view::SpectralDebleedView::thresh_to_normalized(thresh_db);
+                        for b in 0..num_bars {
+                            let leak_factor = (b as f32 + 1.0) / num_bars as f32;
+                            let att = (leak_factor * (1.0 - thresh_norm) * (sharpness / 2.0)).clamp(0.05, 0.95);
+                            let bh = att * (sd_rect.height() * 0.75);
+                            let bx = sd_rect.left() + 4.0 + b as f32 * bar_w;
+                            let b_rect = egui::Rect::from_min_max(
+                                egui::pos2(bx, sd_rect.bottom() - 6.0 - bh),
+                                egui::pos2(bx + bar_w - 1.0, sd_rect.bottom() - 6.0),
+                            );
+                            let col = if b >= 4 {
+                                Color32::from_rgb(0, 229, 255)
+                            } else {
+                                Color32::from_rgb(0, 180, 220)
+                            };
+                            sd_painter.rect_filled(b_rect, 0.5, col);
+                        }
+
+                        // Target puck
+                        let norm_t = crate::views::spectral_debleed_view::SpectralDebleedView::thresh_to_normalized(thresh_db);
+                        let norm_s = crate::views::spectral_debleed_view::SpectralDebleedView::sharpness_to_normalized(sharpness);
+                        let puck_x = sd_rect.left() + 4.0 + norm_t * (sd_rect.width() - 60.0);
+                        let puck_y = sd_rect.bottom() - 10.0 - norm_s * (sd_rect.height() - 20.0);
+                        sd_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(0, 229, 255));
+                        sd_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        sd_painter.text(
+                            egui::pos2(sd_rect.right() - 4.0, sd_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("DEBLEED\n{:.1}dB\nγ={:.2}\n{:.0}% Dir", thresh_db, sharpness, transient_preserve * 100.0),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+
+                        if sd_resp.hovered() {
+                            let _ = sd_resp.on_hover_text(format!(
+                                "Psychoacoustic Multi-Band Spectral Transient De-Bleed HUD\nThreshold: {:.1} dBFS | Sharpness (γ): {:.2}\nTransient Preserve: {:.0}%\n[Drag: Threshold (X) / Sharpness (Y) Puck]",
+                                thresh_db, sharpness, transient_preserve * 100.0
+                            ));
+                        }
+                    } else if is_spectral_reshaper {
+                        // Multi-Band Transient Spectral Reshaper Mini View
+                        let (sr_resp, sr_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let sr_rect = sr_resp.rect;
+                        sr_painter.rect_filled(sr_rect, 2.0, Color32::from_rgb(14, 18, 28));
+
+                        let mut attack_db = state.node_param_values.get("attack_gain_db").or_else(|| state.node_param_values.get("spectral_envelope_gain")).copied().unwrap_or(2.5);
+                        let mut sustain_db = state.node_param_values.get("sustain_gain_db").or_else(|| state.node_param_values.get("formant_shift_semitones")).copied().unwrap_or(-1.0);
+                        let isolation = state.node_param_values.get("debleed_isolation_score").copied().unwrap_or(0.89);
+
+                        if sr_resp.dragged() || sr_resp.clicked() {
+                            if let Some(pos) = sr_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - sr_rect.left()) / (sr_rect.width() - 55.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - sr_rect.top() - 10.0) / (sr_rect.height() - 20.0))).clamp(0.0, 1.0);
+                                attack_db = crate::views::spectral_reshaper_view::SpectralReshaperView::normalized_to_attack(norm_x);
+                                sustain_db = crate::views::spectral_reshaper_view::SpectralReshaperView::normalized_to_sustain(norm_y);
+                                state.node_param_values.insert("attack_gain_db".to_string(), attack_db);
+                                state.node_param_values.insert("spectral_envelope_gain".to_string(), attack_db);
+                                state.node_param_values.insert("sustain_gain_db".to_string(), sustain_db);
+                                state.node_param_values.insert("formant_shift_semitones".to_string(), sustain_db);
+                                if let Some(bus) = param_bus {
+                                    let pid_a = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    let pid_s = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_a).is_some() { bus.set(pid_a, attack_db); }
+                                    if bus.get(pid_s).is_some() { bus.set(pid_s, sustain_db); }
+                                }
+                            }
+                        }
+
+                        // Response contour preview curve
+                        let num_steps = 16;
+                        let mut prev_pt = None;
+                        for s in 0..=num_steps {
+                            let frac = s as f32 / num_steps as f32;
+                            let px = sr_rect.left() + 4.0 + frac * (sr_rect.width() - 60.0);
+                            let weight = if frac < 0.5 { attack_db } else { sustain_db };
+                            let py = sr_rect.center().y - (weight / 12.0) * 18.0;
+                            let pt = egui::pos2(px, py);
+                            if let Some(prev) = prev_pt {
+                                sr_painter.line_segment([prev, pt], Stroke::new(1.5_f32, Color32::from_rgb(255, 107, 43)));
+                            }
+                            prev_pt = Some(pt);
+                        }
+
+                        // Target puck
+                        let norm_a = crate::views::spectral_reshaper_view::SpectralReshaperView::attack_to_normalized(attack_db);
+                        let norm_s = crate::views::spectral_reshaper_view::SpectralReshaperView::sustain_to_normalized(sustain_db);
+                        let puck_x = sr_rect.left() + 4.0 + norm_a * (sr_rect.width() - 60.0);
+                        let puck_y = sr_rect.bottom() - 10.0 - norm_s * (sr_rect.height() - 20.0);
+                        sr_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(255, 107, 43));
+                        sr_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        sr_painter.text(
+                            egui::pos2(sr_rect.right() - 4.0, sr_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("RESHAPE\n{:+0.1}dB A\n{:+0.1}dB S\n{:.0}% Iso", attack_db, sustain_db, isolation * 100.0),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(255, 107, 43),
+                        );
+
+                        if sr_resp.hovered() {
+                            let _ = sr_resp.on_hover_text(format!(
+                                "Multi-Band Transient Spectral Reshaper HUD\nActive Band Attack: {:+0.1} dB | Sustain: {:+0.1} dB\nDe-Bleed Isolation: {:.0}%\n[Drag: Attack (X) / Sustain (Y) Puck]",
+                                attack_db, sustain_db, isolation * 100.0
                             ));
                         }
                     } else {

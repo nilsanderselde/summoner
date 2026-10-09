@@ -892,6 +892,10 @@ pub struct AwardWinningGuiView {
     pub transient_unwrapper_view: crate::views::transient_unwrapper_view::TransientUnwrapperView,
     pub show_spectral_unmasker_modal: bool,
     pub spectral_unmasker_view: crate::views::spectral_unmasker_view::SpectralUnmaskerView,
+    pub show_spectral_debleed_modal: bool,
+    pub spectral_debleed_view: crate::views::spectral_debleed_view::SpectralDebleedView,
+    pub show_spectral_reshaper_modal: bool,
+    pub spectral_reshaper_view: crate::views::spectral_reshaper_view::SpectralReshaperView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1400,6 +1404,10 @@ impl AwardWinningGuiView {
             transient_unwrapper_view: crate::views::transient_unwrapper_view::TransientUnwrapperView::new(),
             show_spectral_unmasker_modal: false,
             spectral_unmasker_view: crate::views::spectral_unmasker_view::SpectralUnmaskerView::new(),
+            show_spectral_debleed_modal: false,
+            spectral_debleed_view: crate::views::spectral_debleed_view::SpectralDebleedView::new(),
+            show_spectral_reshaper_modal: false,
+            spectral_reshaper_view: crate::views::spectral_reshaper_view::SpectralReshaperView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2669,6 +2677,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_spectral_unmasker_hud = false;
             self.open_spectral_unmasker_hud();
         }
+        if self.inspector_state.requested_open_spectral_debleed_hud || self.device_rack_state.requested_open_spectral_debleed_hud {
+            self.inspector_state.requested_open_spectral_debleed_hud = false;
+            self.device_rack_state.requested_open_spectral_debleed_hud = false;
+            self.open_spectral_debleed_hud();
+        }
+        if self.inspector_state.requested_open_spectral_reshaper_hud || self.device_rack_state.requested_open_spectral_reshaper_hud {
+            self.inspector_state.requested_open_spectral_reshaper_hud = false;
+            self.device_rack_state.requested_open_spectral_reshaper_hud = false;
+            self.open_spectral_reshaper_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2798,6 +2816,8 @@ impl AwardWinningGuiView {
         self.show_transient_reconstructor_modal_window(ui);
         self.show_transient_unwrapper_modal_window(ui);
         self.show_spectral_unmasker_modal_window(ui);
+        self.show_spectral_debleed_modal_window(ui);
+        self.show_spectral_reshaper_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -20480,6 +20500,198 @@ impl AwardWinningGuiView {
             if bus.get(pid_dp).is_some() { bus.set(pid_dp, depth); }
             if bus.get(pid_se).is_some() { bus.set(pid_se, sens); }
             if bus.get(pid_at).is_some() { bus.set(pid_at, att); }
+        }
+    }
+
+    pub fn open_spectral_debleed_hud(&mut self) {
+        self.show_spectral_debleed_modal = true;
+    }
+
+    pub fn close_spectral_debleed_hud(&mut self) {
+        self.show_spectral_debleed_modal = false;
+    }
+
+    pub fn is_spectral_debleed_hud_open(&self) -> bool {
+        self.show_spectral_debleed_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_spectral_debleed_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_spectral_debleed_modal {
+            return;
+        }
+
+        let mut is_open = self.show_spectral_debleed_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🧹 Psychoacoustic Multi-Band Spectral Transient De-Bleed HUD")
+            .id(egui::Id::new("spectral_debleed_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Acoustic Spill Isolation & Wiener Masking Envelope Matrix (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.spectral_debleed_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_spectral_debleed_modal = is_open;
+        self.sync_spectral_debleed_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_spectral_debleed_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let thresh = self.spectral_debleed_view.separation_thresh_db;
+        let sharpness = self.spectral_debleed_view.mask_sharpness_gamma;
+        let preserve = self.spectral_debleed_view.transient_preserve_pct;
+        let coherence = self.spectral_debleed_view.phase_coherence_pct;
+
+        self.device_rack_state.node_param_values.insert("separation_thresh_db".to_string(), thresh);
+        self.device_rack_state.node_param_values.insert("spectral_gate_threshold".to_string(), thresh);
+        self.device_rack_state.node_param_values.insert("mask_sharpness_gamma".to_string(), sharpness);
+        self.device_rack_state.node_param_values.insert("bleed_suppression_db".to_string(), (sharpness * 6.0).clamp(0.0, 30.0));
+        self.device_rack_state.node_param_values.insert("crosstalk_estimate_ms".to_string(), (sharpness * 3.5).clamp(0.1, 50.0));
+        self.device_rack_state.node_param_values.insert("transient_preserve_pct".to_string(), preserve);
+        self.device_rack_state.node_param_values.insert("phase_coherence_pct".to_string(), coherence);
+
+        self.inspector_state.node_param_values.insert("separation_thresh_db".to_string(), thresh);
+        self.inspector_state.node_param_values.insert("spectral_gate_threshold".to_string(), thresh);
+        self.inspector_state.node_param_values.insert("mask_sharpness_gamma".to_string(), sharpness);
+        self.inspector_state.node_param_values.insert("bleed_suppression_db".to_string(), (sharpness * 6.0).clamp(0.0, 30.0));
+        self.inspector_state.node_param_values.insert("crosstalk_estimate_ms".to_string(), (sharpness * 3.5).clamp(0.1, 50.0));
+        self.inspector_state.node_param_values.insert("transient_preserve_pct".to_string(), preserve);
+        self.inspector_state.node_param_values.insert("phase_coherence_pct".to_string(), coherence);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_b = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_t = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_c = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_p = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_b).is_some() { bus.set(pid_b, (sharpness * 6.0).clamp(0.0, 30.0)); }
+            if bus.get(pid_t).is_some() { bus.set(pid_t, thresh); }
+            if bus.get(pid_c).is_some() { bus.set(pid_c, (sharpness * 3.5).clamp(0.1, 50.0)); }
+            if bus.get(pid_p).is_some() { bus.set(pid_p, preserve); }
+        }
+    }
+
+    pub fn open_spectral_reshaper_hud(&mut self) {
+        self.show_spectral_reshaper_modal = true;
+    }
+
+    pub fn close_spectral_reshaper_hud(&mut self) {
+        self.show_spectral_reshaper_modal = false;
+    }
+
+    pub fn is_spectral_reshaper_hud_open(&self) -> bool {
+        self.show_spectral_reshaper_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_spectral_reshaper_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_spectral_reshaper_modal {
+            return;
+        }
+
+        let mut is_open = self.show_spectral_reshaper_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎛 Multi-Band Transient Spectral Reshaper & Formant Envelope HUD")
+            .id(egui::Id::new("spectral_reshaper_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Dynamic Spectral Envelope Reshaping & Formant Shift Contour (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.spectral_reshaper_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_spectral_reshaper_modal = is_open;
+        self.sync_spectral_reshaper_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_spectral_reshaper_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+        let b = self.spectral_reshaper_view.selected_band.clamp(0, 3);
+
+        let attack = self.spectral_reshaper_view.attack_db[b];
+        let sustain = self.spectral_reshaper_view.sustain_db[b];
+        let thresh = self.spectral_reshaper_view.debleed_thresh_db[b];
+        let iso = self.spectral_reshaper_view.debleed_isolation_score;
+        let crest = self.spectral_reshaper_view.transient_crest_factor_db;
+
+        self.device_rack_state.node_param_values.insert("attack_gain_db".to_string(), attack);
+        self.device_rack_state.node_param_values.insert("spectral_envelope_gain".to_string(), attack);
+        self.device_rack_state.node_param_values.insert("sustain_gain_db".to_string(), sustain);
+        self.device_rack_state.node_param_values.insert("formant_shift_semitones".to_string(), sustain * 2.0);
+        self.device_rack_state.node_param_values.insert("debleed_thresh_db".to_string(), thresh);
+        self.device_rack_state.node_param_values.insert("debleed_isolation_score".to_string(), iso);
+        self.device_rack_state.node_param_values.insert("smoothing_factor".to_string(), (iso * 4.0).clamp(0.1, 5.0));
+        self.device_rack_state.node_param_values.insert("transient_crest_factor_db".to_string(), crest);
+
+        self.inspector_state.node_param_values.insert("attack_gain_db".to_string(), attack);
+        self.inspector_state.node_param_values.insert("spectral_envelope_gain".to_string(), attack);
+        self.inspector_state.node_param_values.insert("sustain_gain_db".to_string(), sustain);
+        self.inspector_state.node_param_values.insert("formant_shift_semitones".to_string(), sustain * 2.0);
+        self.inspector_state.node_param_values.insert("debleed_thresh_db".to_string(), thresh);
+        self.inspector_state.node_param_values.insert("debleed_isolation_score".to_string(), iso);
+        self.inspector_state.node_param_values.insert("smoothing_factor".to_string(), (iso * 4.0).clamp(0.1, 5.0));
+        self.inspector_state.node_param_values.insert("transient_crest_factor_db".to_string(), crest);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_fmt = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_env = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_sm  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_dt  = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_fmt).is_some() { bus.set(pid_fmt, sustain * 2.0); }
+            if bus.get(pid_env).is_some() { bus.set(pid_env, attack); }
+            if bus.get(pid_sm).is_some()  { bus.set(pid_sm, (iso * 4.0).clamp(0.1, 5.0)); }
+            if bus.get(pid_dt).is_some()  { bus.set(pid_dt, 1.0); }
         }
     }
 

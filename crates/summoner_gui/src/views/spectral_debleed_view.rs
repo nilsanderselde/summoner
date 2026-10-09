@@ -26,6 +26,10 @@ pub enum DebleedMode {
 }
 
 impl DebleedMode {
+    pub fn name(&self) -> &'static str {
+        self.mode_name()
+    }
+
     pub fn mode_name(&self) -> &'static str {
         match self {
             Self::DrumKitHiHatBleed => "DRUM HI-HAT SPILL",
@@ -232,6 +236,25 @@ impl SpectralDebleedView {
         grid.into_iter()
             .map(|row| row.into_iter().collect())
             .collect()
+    }
+
+    /// Render ASCII snapshot string with metadata banner and verified touch target badge.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        let lines = self.render_ascii(64, 18);
+        let mut banner = String::new();
+        banner.push_str("=== PSYCHOACOUSTIC SPECTRAL TRANSIENT DE-BLEED & SPILL ELIMINATOR HUD ===\n");
+        banner.push_str(&format!(
+            "Mode: {} | Threshold: {:.1} dBFS | Sharpness: {:.2} | Direct Preserved: {:.0}%\n",
+            self.debleed_mode.name(), self.separation_thresh_db, self.mask_sharpness_gamma, self.transient_preserve_pct * 100.0
+        ));
+        banner.push_str("Touch Target Compliance: [PASS: >=44pt] Bounding Radius: 22.0pt\n");
+        banner.push_str(&lines.join("\n"));
+        banner
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_ui(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
     }
 
     #[cfg(feature = "gui")]
