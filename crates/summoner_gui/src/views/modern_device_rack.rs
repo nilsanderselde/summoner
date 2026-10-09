@@ -325,6 +325,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_windchest_reservoir_hud: bool,
     #[serde(default)]
     pub requested_open_tape_stop_glitch_hud: bool,
+    #[serde(default)]
+    pub requested_open_quantum_bloch_sphere_hud: bool,
+    #[serde(default)]
+    pub requested_open_chaotic_attractor_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -476,6 +480,8 @@ impl Default for ModernDeviceRackState {
             requested_open_schottky_wavefolder_hud: false,
             requested_open_windchest_reservoir_hud: false,
             requested_open_tape_stop_glitch_hud: false,
+            requested_open_quantum_bloch_sphere_hud: false,
+            requested_open_chaotic_attractor_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -1250,6 +1256,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_schottky_wavefolder = cur_selection.contains("Schottky") || cur_selection.contains("Wavefolder") || cur_selection == "DiscreteSchottkyDiodeWavefolderOverdrive" || cur_selection == "SchottkyWavefolder";
                     let is_windchest_reservoir = cur_selection.contains("Windchest") || cur_selection.contains("Bellows") || cur_selection.contains("OrganReservoir") || cur_selection == "WindchestModel" || cur_selection == "WindchestAerodynamicsNode";
                     let is_tape_stop_glitch = cur_selection.contains("TapeStop") || cur_selection.contains("Glitch") || cur_selection.contains("TurntableBrake") || cur_selection.contains("Stutter") || cur_selection == "TapeStopEffect" || cur_selection == "GlitchStutterNode";
+                    let is_quantum_bloch_sphere = cur_selection.contains("Quantum") || cur_selection.contains("Bloch") || cur_selection.contains("Qubit") || cur_selection == "QuantumStateVectorOscillator" || cur_selection == "QuantumTomographyData";
+                    let is_chaotic_attractor = cur_selection.contains("Chaotic") || cur_selection.contains("Attractor") || cur_selection.contains("Lorenz") || cur_selection.contains("Rossler") || cur_selection == "ChaoticFractalAttractorModulator";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1798,6 +1806,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("🎛 Tape Stop HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(245, 158, 11))).on_hover_text("Open Vinyl Turntable Inertial Motor Brake Tape Stop & Stutter HUD").clicked()
                     {
                         state.requested_open_tape_stop_glitch_hud = true;
+                    } else if is_quantum_bloch_sphere
+                        && ui.button(RichText::new("⚛ Bloch HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(168, 85, 247))).on_hover_text("Open Quantum Bloch Sphere & State Tomography HUD").clicked()
+                    {
+                        state.requested_open_quantum_bloch_sphere_hud = true;
+                    } else if is_chaotic_attractor
+                        && ui.button(RichText::new("🦋 Chaos HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(234, 179, 8))).on_hover_text("Open Chaotic Fractal Attractor & Dynamic Systems Modulation HUD").clicked()
+                    {
+                        state.requested_open_chaotic_attractor_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2700,6 +2716,8 @@ fn show_pro_parameter_drawer(
                     let is_schottky_wavefolder = dev_kind.contains("Schottky") || dev_kind.contains("Wavefolder") || dev_kind == "DiscreteSchottkyDiodeWavefolderOverdrive" || dev_kind == "SchottkyWavefolder";
                     let is_windchest_reservoir = dev_kind.contains("Windchest") || dev_kind.contains("Bellows") || dev_kind.contains("OrganReservoir") || dev_kind == "WindchestModel" || dev_kind == "WindchestAerodynamicsNode";
                     let is_tape_stop_glitch = dev_kind.contains("TapeStop") || dev_kind.contains("Glitch") || dev_kind.contains("TurntableBrake") || dev_kind.contains("Stutter") || dev_kind == "TapeStopEffect" || dev_kind == "GlitchStutterNode";
+                    let is_quantum_bloch_sphere = dev_kind.contains("Quantum") || dev_kind.contains("Bloch") || dev_kind.contains("Qubit") || dev_kind == "QuantumStateVectorOscillator" || dev_kind == "QuantumTomographyData";
+                    let is_chaotic_attractor = dev_kind.contains("Chaotic") || dev_kind.contains("Attractor") || dev_kind.contains("Lorenz") || dev_kind.contains("Rossler") || dev_kind == "ChaoticFractalAttractorModulator";
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -13201,6 +13219,121 @@ fn show_pro_parameter_drawer(
                             let _ = ts_resp.on_hover_text(format!(
                                 "Vinyl Turntable Tape Stop & Stutter HUD\nBrake Duration: {:.0} ms | Division: 1/{:.0}\n[Drag: Brake (X) / Stutter (Y) Puck]",
                                 brake_ms, div
+                            ));
+                        }
+                    } else if is_quantum_bloch_sphere {
+                        // Quantum Bloch Sphere Mini View
+                        let (q_resp, q_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let q_rect = q_resp.rect;
+                        q_painter.rect_filled(q_rect, 2.0, Color32::from_rgb(6, 10, 20));
+
+                        let mut alpha = state.node_param_values.get("alpha_prob").or_else(|| state.node_param_values.get("quantum_alpha")).copied().unwrap_or(0.50);
+                        let mut phase = state.node_param_values.get("relative_phase_rad").or_else(|| state.node_param_values.get("quantum_phase")).copied().unwrap_or(0.0);
+
+                        if q_resp.dragged() || q_resp.clicked() {
+                            if let Some(pos) = q_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - q_rect.left() - 4.0) / (q_rect.width() - 60.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - q_rect.top() - 10.0) / (q_rect.height() - 20.0))).clamp(0.0, 1.0);
+                                alpha = crate::views::quantum_bloch_sphere_view::QuantumBlochSphereView::normalized_to_alpha_prob(norm_x);
+                                phase = crate::views::quantum_bloch_sphere_view::QuantumBlochSphereView::normalized_to_phase(norm_y);
+                                state.node_param_values.insert("alpha_prob".to_string(), alpha);
+                                state.node_param_values.insert("quantum_alpha".to_string(), alpha);
+                                state.node_param_values.insert("relative_phase_rad".to_string(), phase);
+                                state.node_param_values.insert("quantum_phase".to_string(), phase);
+                                if let Some(bus) = param_bus {
+                                    let pid_alpha = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_phase = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_alpha).is_some() { bus.set(pid_alpha, alpha); }
+                                    if bus.get(pid_phase).is_some() { bus.set(pid_phase, phase); }
+                                }
+                            }
+                        }
+
+                        // Draw Bloch circle and equator
+                        let center = egui::pos2(q_rect.left() + 48.0, q_rect.center().y);
+                        q_painter.circle_stroke(center, 24.0, Stroke::new(1.0_f32, Color32::from_rgb(51, 65, 85)));
+                        q_painter.line_segment([egui::pos2(center.x - 24.0, center.y), egui::pos2(center.x + 24.0, center.y)], Stroke::new(0.8_f32, Color32::from_rgb(71, 85, 105)));
+
+                        // Target puck
+                        let norm_a = crate::views::quantum_bloch_sphere_view::QuantumBlochSphereView::alpha_prob_to_normalized(alpha);
+                        let norm_p = crate::views::quantum_bloch_sphere_view::QuantumBlochSphereView::phase_to_normalized(phase);
+                        let puck_x = q_rect.left() + 4.0 + norm_a * (q_rect.width() - 60.0);
+                        let puck_y = q_rect.bottom() - 10.0 - norm_p * (q_rect.height() - 20.0);
+                        q_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(168, 85, 247));
+                        q_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        q_painter.text(
+                            egui::pos2(q_rect.right() - 4.0, q_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("QUBIT\n|α|² {:.0}%\nϕ {:.1} rad", alpha * 100.0, phase),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(168, 85, 247),
+                        );
+
+                        if q_resp.hovered() {
+                            let _ = q_resp.on_hover_text(format!(
+                                "Quantum Bloch Sphere HUD\n|α|² (|0⟩): {:.1}% | Phase ϕ: {:.2} rad\n[Drag: Superposition (X) / Phase (Y) Puck]",
+                                alpha * 100.0, phase
+                            ));
+                        }
+                    } else if is_chaotic_attractor {
+                        // Chaotic Attractor Mini View
+                        let (ch_resp, ch_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let ch_rect = ch_resp.rect;
+                        ch_painter.rect_filled(ch_rect, 2.0, Color32::from_rgb(16, 12, 6));
+
+                        let mut rho = state.node_param_values.get("rayleigh_rho").or_else(|| state.node_param_values.get("attractor_rho")).copied().unwrap_or(28.0);
+                        let mut sigma = state.node_param_values.get("prandtl_sigma").or_else(|| state.node_param_values.get("attractor_sigma")).copied().unwrap_or(10.0);
+
+                        if ch_resp.dragged() || ch_resp.clicked() {
+                            if let Some(pos) = ch_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - ch_rect.left() - 4.0) / (ch_rect.width() - 60.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - ch_rect.top() - 10.0) / (ch_rect.height() - 20.0))).clamp(0.0, 1.0);
+                                rho = crate::views::chaotic_attractor_view::ChaoticAttractorView::normalized_to_rho(norm_x);
+                                sigma = crate::views::chaotic_attractor_view::ChaoticAttractorView::normalized_to_sigma(norm_y);
+                                state.node_param_values.insert("rayleigh_rho".to_string(), rho);
+                                state.node_param_values.insert("attractor_rho".to_string(), rho);
+                                state.node_param_values.insert("prandtl_sigma".to_string(), sigma);
+                                state.node_param_values.insert("attractor_sigma".to_string(), sigma);
+                                if let Some(bus) = param_bus {
+                                    let pid_rho = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_sigma = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_rho).is_some() { bus.set(pid_rho, rho); }
+                                    if bus.get(pid_sigma).is_some() { bus.set(pid_sigma, sigma); }
+                                }
+                            }
+                        }
+
+                        // Draw butterfly trajectory ribbon outline
+                        let center_x = ch_rect.left() + 45.0;
+                        let bottom_y = ch_rect.bottom() - 8.0;
+                        for i in 0..16 {
+                            let t = (i as f32) / 15.0;
+                            let bx = (t * std::f32::consts::TAU).sin() * 20.0;
+                            let bz = (t * std::f32::consts::TAU * 2.0).cos() * 18.0 + 20.0;
+                            ch_painter.circle_filled(egui::pos2(center_x + bx, bottom_y - bz), 1.0, Color32::from_rgb(234, 179, 8));
+                        }
+
+                        // Target puck
+                        let norm_rho = crate::views::chaotic_attractor_view::ChaoticAttractorView::rho_to_normalized(rho);
+                        let norm_sig = crate::views::chaotic_attractor_view::ChaoticAttractorView::sigma_to_normalized(sigma);
+                        let puck_x = ch_rect.left() + 4.0 + norm_rho * (ch_rect.width() - 60.0);
+                        let puck_y = ch_rect.bottom() - 10.0 - norm_sig * (ch_rect.height() - 20.0);
+                        ch_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(234, 179, 8));
+                        ch_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        ch_painter.text(
+                            egui::pos2(ch_rect.right() - 4.0, ch_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("CHAOS\nρ {:.1}\nσ {:.1}", rho, sigma),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(234, 179, 8),
+                        );
+
+                        if ch_resp.hovered() {
+                            let _ = ch_resp.on_hover_text(format!(
+                                "Chaotic Strange Attractor HUD\nRayleigh Drive ρ: {:.1} | Prandtl Dissipation σ: {:.1}\n[Drag: Drive (X) / Dissipation (Y) Puck]",
+                                rho, sigma
                             ));
                         }
                     } else {

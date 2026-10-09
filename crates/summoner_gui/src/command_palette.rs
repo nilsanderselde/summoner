@@ -1136,6 +1136,18 @@ impl CommandPalette {
                 action_id: "open_tape_stop_glitch_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Quantum Bloch Sphere & State Tomography HUD".into(),
+                category: "Quantum & Spectral Synthesis".into(),
+                action_id: "open_quantum_bloch_sphere_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Chaotic Fractal Attractor & Dynamic Systems Modulation HUD".into(),
+                category: "Modulation & Dynamics".into(),
+                action_id: "open_chaotic_attractor_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

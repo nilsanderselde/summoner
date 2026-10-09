@@ -310,6 +310,10 @@ pub struct ModernInspectorState {
     pub requested_open_windchest_reservoir_hud: bool,
     #[serde(default)]
     pub requested_open_tape_stop_glitch_hud: bool,
+    #[serde(default)]
+    pub requested_open_quantum_bloch_sphere_hud: bool,
+    #[serde(default)]
+    pub requested_open_chaotic_attractor_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -471,6 +475,8 @@ impl Default for ModernInspectorState {
             requested_open_schottky_wavefolder_hud: false,
             requested_open_windchest_reservoir_hud: false,
             requested_open_tape_stop_glitch_hud: false,
+            requested_open_quantum_bloch_sphere_hud: false,
+            requested_open_chaotic_attractor_hud: false,
         }
     }
 }
@@ -2315,6 +2321,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open Vinyl Turntable Inertial Motor Brake Tape Stop & Stutter HUD").clicked() {
                     state.requested_open_tape_stop_glitch_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Quantum") || active_kind.contains("Bloch") || active_kind.contains("Qubit") || active_kind == "QuantumStateVectorOscillator" || active_kind == "QuantumTomographyData" {
+                if ui.add(
+                    egui::Button::new(RichText::new("⚛ Open Quantum Bloch Sphere HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(168, 85, 247)))
+                        .fill(Color32::from_rgb(30, 20, 45))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(168, 85, 247)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Quantum Bloch Sphere & Qubit State Tomography HUD").clicked() {
+                    state.requested_open_quantum_bloch_sphere_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Chaotic") || active_kind.contains("Attractor") || active_kind.contains("Lorenz") || active_kind.contains("Rossler") || active_kind == "ChaoticFractalAttractorModulator" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🦋 Open Chaotic Strange Attractor HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(234, 179, 8)))
+                        .fill(Color32::from_rgb(40, 32, 10))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(234, 179, 8)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Chaotic Fractal Attractor & Dynamic Systems Modulation HUD").clicked() {
+                    state.requested_open_chaotic_attractor_hud = true;
                 }
                 ui.add_space(4.0);
             }

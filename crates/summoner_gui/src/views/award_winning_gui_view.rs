@@ -916,6 +916,10 @@ pub struct AwardWinningGuiView {
     pub windchest_reservoir_view: crate::views::windchest_reservoir_view::WindchestReservoirView,
     pub show_tape_stop_glitch_modal: bool,
     pub tape_stop_glitch_view: crate::views::tape_stop_glitch_view::TapeStopGlitchView,
+    pub show_quantum_bloch_sphere_modal: bool,
+    pub quantum_bloch_sphere_view: crate::views::quantum_bloch_sphere_view::QuantumBlochSphereView,
+    pub show_chaotic_attractor_modal: bool,
+    pub chaotic_attractor_view: crate::views::chaotic_attractor_view::ChaoticAttractorView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1448,6 +1452,10 @@ impl AwardWinningGuiView {
             windchest_reservoir_view: crate::views::windchest_reservoir_view::WindchestReservoirView::new(),
             show_tape_stop_glitch_modal: false,
             tape_stop_glitch_view: crate::views::tape_stop_glitch_view::TapeStopGlitchView::new(),
+            show_quantum_bloch_sphere_modal: false,
+            quantum_bloch_sphere_view: crate::views::quantum_bloch_sphere_view::QuantumBlochSphereView::new(),
+            show_chaotic_attractor_modal: false,
+            chaotic_attractor_view: crate::views::chaotic_attractor_view::ChaoticAttractorView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2777,6 +2785,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_tape_stop_glitch_hud = false;
             self.open_tape_stop_glitch_hud();
         }
+        if self.inspector_state.requested_open_quantum_bloch_sphere_hud || self.device_rack_state.requested_open_quantum_bloch_sphere_hud {
+            self.inspector_state.requested_open_quantum_bloch_sphere_hud = false;
+            self.device_rack_state.requested_open_quantum_bloch_sphere_hud = false;
+            self.open_quantum_bloch_sphere_hud();
+        }
+        if self.inspector_state.requested_open_chaotic_attractor_hud || self.device_rack_state.requested_open_chaotic_attractor_hud {
+            self.inspector_state.requested_open_chaotic_attractor_hud = false;
+            self.device_rack_state.requested_open_chaotic_attractor_hud = false;
+            self.open_chaotic_attractor_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2918,6 +2936,8 @@ impl AwardWinningGuiView {
         self.show_schottky_wavefolder_modal_window(ui);
         self.show_windchest_reservoir_modal_window(ui);
         self.show_tape_stop_glitch_modal_window(ui);
+        self.show_quantum_bloch_sphere_modal_window(ui);
+        self.show_chaotic_attractor_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -21748,6 +21768,186 @@ impl AwardWinningGuiView {
             if bus.get(pid_strt).is_some() { bus.set(pid_strt, strt); }
             if bus.get(pid_div).is_some() { bus.set(pid_div, div); }
             if bus.get(pid_spd).is_some() { bus.set(pid_spd, spd); }
+        }
+    }
+
+    pub fn open_quantum_bloch_sphere_hud(&mut self) {
+        self.show_quantum_bloch_sphere_modal = true;
+    }
+
+    pub fn close_quantum_bloch_sphere_hud(&mut self) {
+        self.show_quantum_bloch_sphere_modal = false;
+    }
+
+    pub fn is_quantum_bloch_sphere_hud_open(&self) -> bool {
+        self.show_quantum_bloch_sphere_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_quantum_bloch_sphere_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_quantum_bloch_sphere_modal {
+            return;
+        }
+
+        let mut is_open = self.show_quantum_bloch_sphere_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("⚛ Quantum Bloch Sphere & State Tomography HUD")
+            .id(egui::Id::new("quantum_bloch_sphere_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(660.0, 520.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Qubit Superposition Wavefunction, Density Matrix Tomography & Quantum Logic Gates (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.quantum_bloch_sphere_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_quantum_bloch_sphere_modal = is_open;
+        self.sync_quantum_bloch_sphere_hud_state();
+    }
+
+    pub fn sync_quantum_bloch_sphere_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let alpha = self.quantum_bloch_sphere_view.alpha_prob;
+        let phase = self.quantum_bloch_sphere_view.relative_phase_rad;
+        let freq = self.quantum_bloch_sphere_view.frequency_hz;
+        let decoh = self.quantum_bloch_sphere_view.decoherence_rate;
+        let purity = self.quantum_bloch_sphere_view.state_purity;
+
+        self.device_rack_state.node_param_values.insert("alpha_prob".to_string(), alpha);
+        self.device_rack_state.node_param_values.insert("relative_phase_rad".to_string(), phase);
+        self.device_rack_state.node_param_values.insert("frequency_hz".to_string(), freq);
+        self.device_rack_state.node_param_values.insert("decoherence_rate".to_string(), decoh);
+        self.device_rack_state.node_param_values.insert("state_purity".to_string(), purity);
+
+        self.inspector_state.node_param_values.insert("alpha_prob".to_string(), alpha);
+        self.inspector_state.node_param_values.insert("relative_phase_rad".to_string(), phase);
+        self.inspector_state.node_param_values.insert("frequency_hz".to_string(), freq);
+        self.inspector_state.node_param_values.insert("decoherence_rate".to_string(), decoh);
+        self.inspector_state.node_param_values.insert("state_purity".to_string(), purity);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_alpha = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_phase = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_freq = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_decoh = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_alpha).is_some() { bus.set(pid_alpha, alpha); }
+            if bus.get(pid_phase).is_some() { bus.set(pid_phase, phase); }
+            if bus.get(pid_freq).is_some() { bus.set(pid_freq, freq); }
+            if bus.get(pid_decoh).is_some() { bus.set(pid_decoh, decoh); }
+        }
+    }
+
+    pub fn open_chaotic_attractor_hud(&mut self) {
+        self.show_chaotic_attractor_modal = true;
+    }
+
+    pub fn close_chaotic_attractor_hud(&mut self) {
+        self.show_chaotic_attractor_modal = false;
+    }
+
+    pub fn is_chaotic_attractor_hud_open(&self) -> bool {
+        self.show_chaotic_attractor_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_chaotic_attractor_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_chaotic_attractor_modal {
+            return;
+        }
+
+        let mut is_open = self.show_chaotic_attractor_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🦋 Chaotic Fractal Attractor & Dynamic Systems Modulation HUD")
+            .id(egui::Id::new("chaotic_attractor_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(660.0, 520.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Lorenz Atmospheric Butterfly, Rössler Spiral Band & Lyapunov Dynamics (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.chaotic_attractor_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_chaotic_attractor_modal = is_open;
+        self.sync_chaotic_attractor_hud_state();
+    }
+
+    pub fn sync_chaotic_attractor_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let rho = self.chaotic_attractor_view.rayleigh_rho;
+        let sigma = self.chaotic_attractor_view.prandtl_sigma;
+        let beta = self.chaotic_attractor_view.geometric_beta;
+        let dt = self.chaotic_attractor_view.time_step_dt;
+        let lyap = self.chaotic_attractor_view.lyapunov_exponent;
+
+        self.device_rack_state.node_param_values.insert("rayleigh_rho".to_string(), rho);
+        self.device_rack_state.node_param_values.insert("prandtl_sigma".to_string(), sigma);
+        self.device_rack_state.node_param_values.insert("geometric_beta".to_string(), beta);
+        self.device_rack_state.node_param_values.insert("time_step_dt".to_string(), dt);
+        self.device_rack_state.node_param_values.insert("lyapunov_exponent".to_string(), lyap);
+
+        self.inspector_state.node_param_values.insert("rayleigh_rho".to_string(), rho);
+        self.inspector_state.node_param_values.insert("prandtl_sigma".to_string(), sigma);
+        self.inspector_state.node_param_values.insert("geometric_beta".to_string(), beta);
+        self.inspector_state.node_param_values.insert("time_step_dt".to_string(), dt);
+        self.inspector_state.node_param_values.insert("lyapunov_exponent".to_string(), lyap);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_rho = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_sigma = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_beta = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_dt = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_rho).is_some() { bus.set(pid_rho, rho); }
+            if bus.get(pid_sigma).is_some() { bus.set(pid_sigma, sigma); }
+            if bus.get(pid_beta).is_some() { bus.set(pid_beta, beta); }
+            if bus.get(pid_dt).is_some() { bus.set(pid_dt, dt); }
         }
     }
 
