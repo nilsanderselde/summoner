@@ -1100,6 +1100,18 @@ impl CommandPalette {
                 action_id: "open_glottal_pulse_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Physical Modeling Non-Linear Felt Hammer Strike & Sympathetic Resonance Matrix HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_hammer_strike_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Analog Mixing Console Desk Emulation & Transformer Character HUD".into(),
+                category: "Dynamics & Saturation".into(),
+                action_id: "open_console_emulation_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

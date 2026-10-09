@@ -904,6 +904,10 @@ pub struct AwardWinningGuiView {
     pub horn_reflection_view: crate::views::horn_reflection_view::HornReflectionView,
     pub show_glottal_pulse_modal: bool,
     pub glottal_pulse_view: crate::views::glottal_pulse_view::GlottalPulseView,
+    pub show_hammer_strike_modal: bool,
+    pub hammer_strike_view: crate::views::hammer_strike_view::HammerStrikeView,
+    pub show_console_emulation_modal: bool,
+    pub console_emulation_view: crate::views::console_emulation_view::ConsoleEmulationView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1424,6 +1428,10 @@ impl AwardWinningGuiView {
             horn_reflection_view: crate::views::horn_reflection_view::HornReflectionView::new(),
             show_glottal_pulse_modal: false,
             glottal_pulse_view: crate::views::glottal_pulse_view::GlottalPulseView::new(),
+            show_hammer_strike_modal: false,
+            hammer_strike_view: crate::views::hammer_strike_view::HammerStrikeView::new(),
+            show_console_emulation_modal: false,
+            console_emulation_view: crate::views::console_emulation_view::ConsoleEmulationView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2723,6 +2731,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_glottal_pulse_hud = false;
             self.open_glottal_pulse_hud();
         }
+        if self.inspector_state.requested_open_hammer_strike_hud || self.device_rack_state.requested_open_hammer_strike_hud {
+            self.inspector_state.requested_open_hammer_strike_hud = false;
+            self.device_rack_state.requested_open_hammer_strike_hud = false;
+            self.open_hammer_strike_hud();
+        }
+        if self.inspector_state.requested_open_console_emulation_hud || self.device_rack_state.requested_open_console_emulation_hud {
+            self.inspector_state.requested_open_console_emulation_hud = false;
+            self.device_rack_state.requested_open_console_emulation_hud = false;
+            self.open_console_emulation_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2858,6 +2876,8 @@ impl AwardWinningGuiView {
         self.show_zero_gravity_fluid_modal_window(ui);
         self.show_horn_reflection_modal_window(ui);
         self.show_glottal_pulse_modal_window(ui);
+        self.show_hammer_strike_modal_window(ui);
+        self.show_console_emulation_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -21130,6 +21150,192 @@ impl AwardWinningGuiView {
             if bus.get(pid_oq).is_some() { bus.set(pid_oq, oq); }
             if bus.get(pid_sq).is_some() { bus.set(pid_sq, sq); }
             if bus.get(pid_as).is_some() { bus.set(pid_as, asp); }
+        }
+    }
+
+    pub fn open_hammer_strike_hud(&mut self) {
+        self.show_hammer_strike_modal = true;
+    }
+
+    pub fn close_hammer_strike_hud(&mut self) {
+        self.show_hammer_strike_modal = false;
+    }
+
+    pub fn is_hammer_strike_hud_open(&self) -> bool {
+        self.show_hammer_strike_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_hammer_strike_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_hammer_strike_modal {
+            return;
+        }
+
+        let mut is_open = self.show_hammer_strike_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎹 Physical Modeling Felt Hammer & Plectrum Contact Dynamics HUD")
+            .id(egui::Id::new("hammer_strike_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Non-Linear Felt Hammer Dynamics & Sympathetic Resonance Matrix (Milestones 18, 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.hammer_strike_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_hammer_strike_modal = is_open;
+        self.sync_hammer_strike_hud_state();
+    }
+
+    pub fn sync_hammer_strike_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let beta = self.hammer_strike_view.strike_position;
+        let vel = self.hammer_strike_view.strike_velocity;
+        let coupling = self.hammer_strike_view.sympathetic_coupling;
+        let kh = self.hammer_strike_view.stiffness_k;
+        let p_exp = self.hammer_strike_view.exponent_p;
+        let f_peak = self.hammer_strike_view.peak_force_n;
+
+        self.device_rack_state.node_param_values.insert("strike_position".to_string(), beta);
+        self.device_rack_state.node_param_values.insert("strike_velocity".to_string(), vel);
+        self.device_rack_state.node_param_values.insert("sympathetic_coupling".to_string(), coupling);
+        self.device_rack_state.node_param_values.insert("stiffness_k".to_string(), kh);
+        self.device_rack_state.node_param_values.insert("exponent_p".to_string(), p_exp);
+        self.device_rack_state.node_param_values.insert("peak_force_n".to_string(), f_peak);
+
+        self.inspector_state.node_param_values.insert("strike_position".to_string(), beta);
+        self.inspector_state.node_param_values.insert("strike_velocity".to_string(), vel);
+        self.inspector_state.node_param_values.insert("sympathetic_coupling".to_string(), coupling);
+        self.inspector_state.node_param_values.insert("stiffness_k".to_string(), kh);
+        self.inspector_state.node_param_values.insert("exponent_p".to_string(), p_exp);
+        self.inspector_state.node_param_values.insert("peak_force_n".to_string(), f_peak);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_pos = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_vel = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_cpl = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_kh = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_pos).is_some() { bus.set(pid_pos, beta); }
+            if bus.get(pid_vel).is_some() { bus.set(pid_vel, vel); }
+            if bus.get(pid_cpl).is_some() { bus.set(pid_cpl, coupling); }
+            if bus.get(pid_kh).is_some() { bus.set(pid_kh, kh); }
+        }
+    }
+
+    pub fn open_console_emulation_hud(&mut self) {
+        self.show_console_emulation_modal = true;
+    }
+
+    pub fn close_console_emulation_hud(&mut self) {
+        self.show_console_emulation_modal = false;
+    }
+
+    pub fn is_console_emulation_hud_open(&self) -> bool {
+        self.show_console_emulation_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_console_emulation_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_console_emulation_modal {
+            return;
+        }
+
+        let mut is_open = self.show_console_emulation_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎚 Analog Mixing Console Desk & Transformer Character HUD")
+            .id(egui::Id::new("console_emulation_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("British Class-A, VCA & Discrete Console Preamp Character (Milestones 11, 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.console_emulation_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_console_emulation_modal = is_open;
+        self.sync_console_emulation_hud_state();
+    }
+
+    pub fn sync_console_emulation_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let drv = self.console_emulation_view.drive_db;
+        let sat = self.console_emulation_view.transformer_saturation;
+        let thd = self.console_emulation_view.thd_coloration;
+        let trim = self.console_emulation_view.output_trim_db;
+        let fc = self.console_emulation_view.transformer_center_hz;
+        let bump = self.console_emulation_view.transformer_bump_db;
+
+        self.device_rack_state.node_param_values.insert("drive_db".to_string(), drv);
+        self.device_rack_state.node_param_values.insert("transformer_saturation".to_string(), sat);
+        self.device_rack_state.node_param_values.insert("thd_coloration".to_string(), thd);
+        self.device_rack_state.node_param_values.insert("output_trim_db".to_string(), trim);
+        self.device_rack_state.node_param_values.insert("transformer_center_hz".to_string(), fc);
+        self.device_rack_state.node_param_values.insert("transformer_bump_db".to_string(), bump);
+
+        self.inspector_state.node_param_values.insert("drive_db".to_string(), drv);
+        self.inspector_state.node_param_values.insert("transformer_saturation".to_string(), sat);
+        self.inspector_state.node_param_values.insert("thd_coloration".to_string(), thd);
+        self.inspector_state.node_param_values.insert("output_trim_db".to_string(), trim);
+        self.inspector_state.node_param_values.insert("transformer_center_hz".to_string(), fc);
+        self.inspector_state.node_param_values.insert("transformer_bump_db".to_string(), bump);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_drv = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_sat = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_thd = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_trm = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_drv).is_some() { bus.set(pid_drv, drv); }
+            if bus.get(pid_sat).is_some() { bus.set(pid_sat, sat); }
+            if bus.get(pid_thd).is_some() { bus.set(pid_thd, thd); }
+            if bus.get(pid_trm).is_some() { bus.set(pid_trm, trim); }
         }
     }
 

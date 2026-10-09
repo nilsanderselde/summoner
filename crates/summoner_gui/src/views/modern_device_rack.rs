@@ -313,6 +313,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_horn_reflection_hud: bool,
     #[serde(default)]
     pub requested_open_glottal_pulse_hud: bool,
+    #[serde(default)]
+    pub requested_open_hammer_strike_hud: bool,
+    #[serde(default)]
+    pub requested_open_console_emulation_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -458,6 +462,8 @@ impl Default for ModernDeviceRackState {
             requested_open_zero_gravity_fluid_hud: false,
             requested_open_horn_reflection_hud: false,
             requested_open_glottal_pulse_hud: false,
+            requested_open_hammer_strike_hud: false,
+            requested_open_console_emulation_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -1226,6 +1232,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_zero_gravity = cur_selection.contains("ZeroGravity") || cur_selection.contains("NavierStokes") || cur_selection.contains("FluidAcoustic") || cur_selection.contains("MolecularVibration") || cur_selection == "NavierStokesFluidNode" || cur_selection == "ZeroGravityFluidAcousticModel";
                     let is_horn_reflection = cur_selection.contains("HornReflection") || cur_selection.contains("HornFlare") || cur_selection.contains("WebsterHorn") || cur_selection.contains("BrassBell") || cur_selection == "HornReflectionNode" || cur_selection == "AcousticHornReflection";
                     let is_glottal_pulse = cur_selection.contains("GlottalPulse") || cur_selection.contains("GlottalFlow") || cur_selection.contains("VocalFold") || cur_selection.contains("RosenbergGlottal") || cur_selection == "GlottalPulseNode" || cur_selection == "GlottalFlowModel";
+                    let is_hammer_strike = cur_selection.contains("HammerStrike") || cur_selection.contains("FeltHammer") || cur_selection.contains("Plectrum") || cur_selection.contains("HammerExciter") || cur_selection == "HammerStrikeModel" || cur_selection == "NonlinearHammerStrike";
+                    let is_console_emulation = cur_selection.contains("ConsoleEmulation") || cur_selection.contains("ConsoleDesk") || cur_selection.contains("NeveConsole") || cur_selection.contains("SslDesk") || cur_selection == "ConsoleEmulationNode" || cur_selection == "ConsoleDeskModel";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1750,6 +1758,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("🗣 Glottal HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(52, 211, 153))).on_hover_text("Open Acoustic Glottal Pulse Flow & Vocal Fold Vibration Phonation HUD").clicked()
                     {
                         state.requested_open_glottal_pulse_hud = true;
+                    } else if is_hammer_strike
+                        && ui.button(RichText::new("🎹 Hammer HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(251, 191, 36))).on_hover_text("Open Physical Modeling Felt Hammer & Sympathetic Resonance Matrix HUD").clicked()
+                    {
+                        state.requested_open_hammer_strike_hud = true;
+                    } else if is_console_emulation
+                        && ui.button(RichText::new("🎚 Console HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(249, 115, 22))).on_hover_text("Open Analog Mixing Console Desk Emulation & Transformer Character HUD").clicked()
+                    {
+                        state.requested_open_console_emulation_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2645,7 +2661,9 @@ fn show_pro_parameter_drawer(
                     let is_cassotto = dev_kind.contains("Cassotto") || dev_kind.contains("ToneChamber") || dev_kind.contains("Soundbox") || dev_kind == "CassottoChamber" || dev_kind == "CassottoToneChamberResonator";
                     let is_zero_gravity = dev_kind.contains("ZeroGravity") || dev_kind.contains("NavierStokes") || dev_kind.contains("FluidAcoustic") || dev_kind.contains("MolecularVibration") || dev_kind == "NavierStokesFluidNode" || dev_kind == "ZeroGravityFluidAcousticModel";
                     let is_horn_reflection = dev_kind.contains("HornReflection") || dev_kind.contains("HornFlare") || dev_kind.contains("WebsterHorn") || dev_kind.contains("BrassBell") || dev_kind == "HornReflectionNode" || dev_kind == "AcousticHornReflection";
-                    let is_glottal_pulse = dev_kind.contains("GlottalPulse") || dev_kind.contains("GlottalFlow") || dev_kind.contains("VocalFold") || dev_kind.contains("RosenbergGlottal") || dev_kind == "GlottalPulseNode" || dev_kind == "GlottalFlowModel";
+                    let is_glottal_pulse = dev_kind.contains("GlottalPulse") || dev_kind.contains("GlottalFlow") || dev_kind == "GlottalPulseNode" || dev_kind.contains("RosenbergGlottal") || dev_kind == "GlottalFlowModel";
+                    let is_hammer_strike = dev_kind.contains("HammerStrike") || dev_kind.contains("FeltHammer") || dev_kind.contains("Plectrum") || dev_kind.contains("HammerExciter") || dev_kind == "HammerStrikeModel" || dev_kind == "NonlinearHammerStrike";
+                    let is_console_emulation = dev_kind.contains("ConsoleEmulation") || dev_kind.contains("ConsoleDesk") || dev_kind.contains("NeveConsole") || dev_kind.contains("SslDesk") || dev_kind == "ConsoleEmulationNode" || dev_kind == "ConsoleDeskModel";
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -12745,6 +12763,140 @@ fn show_pro_parameter_drawer(
                             let _ = gl_resp.on_hover_text(format!(
                                 "Physical Modeling Glottal Pulse Flow HUD\nOpen Quotient: {:.2} | Speed Quotient: {:.2}\n[Drag: Open Quot (X) / Speed Quot (Y) Puck]",
                                 open_q, speed_q
+                            ));
+                        }
+                    } else if is_hammer_strike {
+                        // Felt Hammer & Plectrum Contact Mini View
+                        let (hm_resp, hm_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let hm_rect = hm_resp.rect;
+                        hm_painter.rect_filled(hm_rect, 2.0, Color32::from_rgb(20, 16, 10));
+
+                        let mut strike_pos = state.node_param_values.get("strike_position").or_else(|| state.node_param_values.get("hammer_strike_position")).copied().unwrap_or(0.12);
+                        let mut strike_vel = state.node_param_values.get("strike_velocity").or_else(|| state.node_param_values.get("hammer_velocity")).copied().unwrap_or(2.8);
+                        let f_peak = state.node_param_values.get("peak_force_n").copied().unwrap_or(145.0);
+
+                        if hm_resp.dragged() || hm_resp.clicked() {
+                            if let Some(pos) = hm_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - hm_rect.left()) / (hm_rect.width() - 55.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - hm_rect.top() - 10.0) / (hm_rect.height() - 20.0))).clamp(0.0, 1.0);
+                                strike_pos = crate::views::hammer_strike_view::HammerStrikeView::normalized_to_strike_position(norm_x);
+                                strike_vel = crate::views::hammer_strike_view::HammerStrikeView::normalized_to_strike_velocity(norm_y);
+                                state.node_param_values.insert("strike_position".to_string(), strike_pos);
+                                state.node_param_values.insert("hammer_strike_position".to_string(), strike_pos);
+                                state.node_param_values.insert("strike_velocity".to_string(), strike_vel);
+                                state.node_param_values.insert("hammer_velocity".to_string(), strike_vel);
+                                if let Some(bus) = param_bus {
+                                    let pid_pos = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_vel = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_pos).is_some() { bus.set(pid_pos, strike_pos); }
+                                    if bus.get(pid_vel).is_some() { bus.set(pid_vel, strike_vel); }
+                                }
+                            }
+                        }
+
+                        // Force pulse curve mini preview
+                        let num_steps = 14;
+                        let mut prev_pt = None;
+                        for s in 0..=num_steps {
+                            let frac = s as f32 / num_steps as f32;
+                            let px = hm_rect.left() + 4.0 + frac * (hm_rect.width() - 60.0);
+                            let pulse = (std::f32::consts::PI * frac).sin().powf(2.4);
+                            let py = hm_rect.bottom() - 12.0 - pulse * 22.0;
+                            let pt = egui::pos2(px, py);
+                            if let Some(prev) = prev_pt {
+                                hm_painter.line_segment([prev, pt], Stroke::new(1.3_f32, Color32::from_rgb(251, 191, 36)));
+                            }
+                            prev_pt = Some(pt);
+                        }
+
+                        // Target puck
+                        let norm_pos = crate::views::hammer_strike_view::HammerStrikeView::strike_position_to_normalized(strike_pos);
+                        let norm_vel = crate::views::hammer_strike_view::HammerStrikeView::strike_velocity_to_normalized(strike_vel);
+                        let puck_x = hm_rect.left() + 4.0 + norm_pos * (hm_rect.width() - 60.0);
+                        let puck_y = hm_rect.bottom() - 10.0 - norm_vel * (hm_rect.height() - 20.0);
+                        hm_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(251, 191, 36));
+                        hm_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        hm_painter.text(
+                            egui::pos2(hm_rect.right() - 4.0, hm_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("HAMMER\nβ {:.2}\n{:.1}m/s\n{:.0}N Fpk", strike_pos, strike_vel, f_peak),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(251, 191, 36),
+                        );
+
+                        if hm_resp.hovered() {
+                            let _ = hm_resp.on_hover_text(format!(
+                                "Physical Modeling Felt Hammer Contact HUD\nStrike Pos β: {:.2} | Velocity: {:.1} m/s\n[Drag: Pos (X) / Vel (Y) Puck]",
+                                strike_pos, strike_vel
+                            ));
+                        }
+                    } else if is_console_emulation {
+                        // Console Desk Emulation Mini View
+                        let (cs_resp, cs_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let cs_rect = cs_resp.rect;
+                        cs_painter.rect_filled(cs_rect, 2.0, Color32::from_rgb(18, 14, 10));
+
+                        let mut drive = state.node_param_values.get("drive_db").or_else(|| state.node_param_values.get("console_drive_db")).copied().unwrap_or(3.5);
+                        let mut sat = state.node_param_values.get("transformer_saturation").or_else(|| state.node_param_values.get("console_saturation")).copied().unwrap_or(0.65);
+                        let thd = state.node_param_values.get("thd_percentage").copied().unwrap_or(1.25);
+
+                        if cs_resp.dragged() || cs_resp.clicked() {
+                            if let Some(pos) = cs_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - cs_rect.left()) / (cs_rect.width() - 55.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - cs_rect.top() - 10.0) / (cs_rect.height() - 20.0))).clamp(0.0, 1.0);
+                                drive = crate::views::console_emulation_view::ConsoleEmulationView::normalized_to_drive(norm_x);
+                                sat = crate::views::console_emulation_view::ConsoleEmulationView::normalized_to_saturation(norm_y);
+                                state.node_param_values.insert("drive_db".to_string(), drive);
+                                state.node_param_values.insert("console_drive_db".to_string(), drive);
+                                state.node_param_values.insert("transformer_saturation".to_string(), sat);
+                                state.node_param_values.insert("console_saturation".to_string(), sat);
+                                if let Some(bus) = param_bus {
+                                    let pid_drv = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_sat = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_drv).is_some() { bus.set(pid_drv, drive); }
+                                    if bus.get(pid_sat).is_some() { bus.set(pid_sat, sat); }
+                                }
+                            }
+                        }
+
+                        // Saturation transfer curve mini preview
+                        let num_steps = 14;
+                        let mut prev_pt = None;
+                        let gain = 10.0f32.powf(drive / 20.0);
+                        for s in 0..=num_steps {
+                            let frac = s as f32 / num_steps as f32;
+                            let vin = (frac - 0.5) * 3.0;
+                            let vout = (vin * gain * (0.7 + sat * 0.6)).tanh();
+                            let px = cs_rect.left() + 4.0 + frac * (cs_rect.width() - 60.0);
+                            let py = cs_rect.center().y - vout * 16.0;
+                            let pt = egui::pos2(px, py);
+                            if let Some(prev) = prev_pt {
+                                cs_painter.line_segment([prev, pt], Stroke::new(1.3_f32, Color32::from_rgb(249, 115, 22)));
+                            }
+                            prev_pt = Some(pt);
+                        }
+
+                        // Target puck
+                        let norm_drv = crate::views::console_emulation_view::ConsoleEmulationView::drive_to_normalized(drive);
+                        let norm_sat = crate::views::console_emulation_view::ConsoleEmulationView::saturation_to_normalized(sat);
+                        let puck_x = cs_rect.left() + 4.0 + norm_drv * (cs_rect.width() - 60.0);
+                        let puck_y = cs_rect.bottom() - 10.0 - norm_sat * (cs_rect.height() - 20.0);
+                        cs_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(249, 115, 22));
+                        cs_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        cs_painter.text(
+                            egui::pos2(cs_rect.right() - 4.0, cs_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("DESK\n{:.1}dB Drv\n{:.2} Sat\n{:.1}% THD", drive, sat, thd),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(249, 115, 22),
+                        );
+
+                        if cs_resp.hovered() {
+                            let _ = cs_resp.on_hover_text(format!(
+                                "Analog Console Desk Emulation HUD\nDrive: {:.1} dB | Saturation: {:.2}\n[Drag: Drive (X) / Sat (Y) Puck]",
+                                drive, sat
                             ));
                         }
                     } else {

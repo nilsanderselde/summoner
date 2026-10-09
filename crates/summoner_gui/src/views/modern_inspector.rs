@@ -298,6 +298,10 @@ pub struct ModernInspectorState {
     pub requested_open_horn_reflection_hud: bool,
     #[serde(default)]
     pub requested_open_glottal_pulse_hud: bool,
+    #[serde(default)]
+    pub requested_open_hammer_strike_hud: bool,
+    #[serde(default)]
+    pub requested_open_console_emulation_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -453,6 +457,8 @@ impl Default for ModernInspectorState {
             requested_open_zero_gravity_fluid_hud: false,
             requested_open_horn_reflection_hud: false,
             requested_open_glottal_pulse_hud: false,
+            requested_open_hammer_strike_hud: false,
+            requested_open_console_emulation_hud: false,
         }
     }
 }
@@ -2237,6 +2243,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open Acoustic Glottal Pulse Flow & Vocal Fold Vibration Phonation HUD").clicked() {
                     state.requested_open_glottal_pulse_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("HammerStrike") || active_kind.contains("FeltHammer") || active_kind.contains("Plectrum") || active_kind.contains("HammerExciter") || active_kind == "HammerStrikeModel" || active_kind == "NonlinearHammerStrike" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🎹 Open Hammer Strike HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(251, 191, 36)))
+                        .fill(Color32::from_rgb(36, 28, 14))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(251, 191, 36)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Physical Modeling Non-Linear Felt Hammer Strike & Sympathetic Resonance Matrix HUD").clicked() {
+                    state.requested_open_hammer_strike_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("ConsoleEmulation") || active_kind.contains("ConsoleDesk") || active_kind.contains("NeveConsole") || active_kind.contains("SslDesk") || active_kind == "ConsoleEmulationNode" || active_kind == "ConsoleDeskModel" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🎚 Open Console Desk HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(249, 115, 22)))
+                        .fill(Color32::from_rgb(32, 20, 12))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(249, 115, 22)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Analog Mixing Console Desk Emulation & Transformer Character HUD").clicked() {
+                    state.requested_open_console_emulation_hud = true;
                 }
                 ui.add_space(4.0);
             }
