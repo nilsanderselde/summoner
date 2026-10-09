@@ -1864,6 +1864,14 @@ impl eframe::App for SummonerApp {
                     self.current_view = ViewMode::ModernStudio;
                     self.award_winning_view.open_console_emulation_hud();
                 }
+                "open_biwa_sawari_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_biwa_sawari_hud();
+                }
+                "open_schottky_wavefolder_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_schottky_wavefolder_hud();
+                }
                 "sfz_convert" | "auto_slice" | "load_preset" | "export_clap" | "toggle_simd" => {
                     println!("Command palette action executed: {}", action);
                 }

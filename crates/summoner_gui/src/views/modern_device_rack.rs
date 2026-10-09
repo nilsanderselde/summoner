@@ -317,6 +317,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_hammer_strike_hud: bool,
     #[serde(default)]
     pub requested_open_console_emulation_hud: bool,
+    #[serde(default)]
+    pub requested_open_biwa_sawari_hud: bool,
+    #[serde(default)]
+    pub requested_open_schottky_wavefolder_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -464,6 +468,8 @@ impl Default for ModernDeviceRackState {
             requested_open_glottal_pulse_hud: false,
             requested_open_hammer_strike_hud: false,
             requested_open_console_emulation_hud: false,
+            requested_open_biwa_sawari_hud: false,
+            requested_open_schottky_wavefolder_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -1234,6 +1240,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_glottal_pulse = cur_selection.contains("GlottalPulse") || cur_selection.contains("GlottalFlow") || cur_selection.contains("VocalFold") || cur_selection.contains("RosenbergGlottal") || cur_selection == "GlottalPulseNode" || cur_selection == "GlottalFlowModel";
                     let is_hammer_strike = cur_selection.contains("HammerStrike") || cur_selection.contains("FeltHammer") || cur_selection.contains("Plectrum") || cur_selection.contains("HammerExciter") || cur_selection == "HammerStrikeModel" || cur_selection == "NonlinearHammerStrike";
                     let is_console_emulation = cur_selection.contains("ConsoleEmulation") || cur_selection.contains("ConsoleDesk") || cur_selection.contains("NeveConsole") || cur_selection.contains("SslDesk") || cur_selection == "ConsoleEmulationNode" || cur_selection == "ConsoleDeskModel";
+                    let is_biwa_sawari = cur_selection.contains("Biwa") || cur_selection.contains("Sawari") || cur_selection == "AcousticJapaneseBiwaSilkStringPlectrum" || cur_selection == "BiwaSawariBridge";
+                    let is_schottky_wavefolder = cur_selection.contains("Schottky") || cur_selection.contains("Wavefolder") || cur_selection == "DiscreteSchottkyDiodeWavefolderOverdrive" || cur_selection == "SchottkyWavefolder";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1766,6 +1774,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("🎚 Console HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(249, 115, 22))).on_hover_text("Open Analog Mixing Console Desk Emulation & Transformer Character HUD").clicked()
                     {
                         state.requested_open_console_emulation_hud = true;
+                    } else if is_biwa_sawari
+                        && ui.button(RichText::new("🪕 Biwa HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(245, 158, 11))).on_hover_text("Open Japanese Satsuma Biwa Silk String & Sawari Buzzing Bridge HUD").clicked()
+                    {
+                        state.requested_open_biwa_sawari_hud = true;
+                    } else if is_schottky_wavefolder
+                        && ui.button(RichText::new("⚡ Wavefold HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(239, 68, 68))).on_hover_text("Open Discrete Schottky Diode Multi-Stage Wavefolder & Overdrive HUD").clicked()
+                    {
+                        state.requested_open_schottky_wavefolder_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2664,6 +2680,8 @@ fn show_pro_parameter_drawer(
                     let is_glottal_pulse = dev_kind.contains("GlottalPulse") || dev_kind.contains("GlottalFlow") || dev_kind == "GlottalPulseNode" || dev_kind.contains("RosenbergGlottal") || dev_kind == "GlottalFlowModel";
                     let is_hammer_strike = dev_kind.contains("HammerStrike") || dev_kind.contains("FeltHammer") || dev_kind.contains("Plectrum") || dev_kind.contains("HammerExciter") || dev_kind == "HammerStrikeModel" || dev_kind == "NonlinearHammerStrike";
                     let is_console_emulation = dev_kind.contains("ConsoleEmulation") || dev_kind.contains("ConsoleDesk") || dev_kind.contains("NeveConsole") || dev_kind.contains("SslDesk") || dev_kind == "ConsoleEmulationNode" || dev_kind == "ConsoleDeskModel";
+                    let is_biwa_sawari = dev_kind.contains("Biwa") || dev_kind.contains("Sawari") || dev_kind == "AcousticJapaneseBiwaSilkStringPlectrum" || dev_kind == "BiwaSawariBridge";
+                    let is_schottky_wavefolder = dev_kind.contains("Schottky") || dev_kind.contains("Wavefolder") || dev_kind == "DiscreteSchottkyDiodeWavefolderOverdrive" || dev_kind == "SchottkyWavefolder";
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -12897,6 +12915,143 @@ fn show_pro_parameter_drawer(
                             let _ = cs_resp.on_hover_text(format!(
                                 "Analog Console Desk Emulation HUD\nDrive: {:.1} dB | Saturation: {:.2}\n[Drag: Drive (X) / Sat (Y) Puck]",
                                 drive, sat
+                            ));
+                        }
+                    } else if is_biwa_sawari {
+                        // Japanese Satsuma Biwa Silk String & Sawari Buzz Mini View
+                        let (bw_resp, bw_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let bw_rect = bw_resp.rect;
+                        bw_painter.rect_filled(bw_rect, 2.0, Color32::from_rgb(18, 14, 10));
+
+                        let mut bachi_vel = state.node_param_values.get("bachi_plectrum_velocity").or_else(|| state.node_param_values.get("biwa_bachi_velocity")).copied().unwrap_or(0.85);
+                        let mut sawari_gap = state.node_param_values.get("sawari_buzz_clearance").or_else(|| state.node_param_values.get("biwa_sawari_clearance")).copied().unwrap_or(0.40);
+
+                        if bw_resp.dragged() || bw_resp.clicked() {
+                            if let Some(pos) = bw_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - bw_rect.left()) / (bw_rect.width() - 55.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - bw_rect.top() - 10.0) / (bw_rect.height() - 20.0))).clamp(0.0, 1.0);
+                                bachi_vel = crate::views::biwa_sawari_view::BiwaSawariView::normalized_to_bachi_velocity(norm_x);
+                                sawari_gap = crate::views::biwa_sawari_view::BiwaSawariView::normalized_to_sawari_clearance(norm_y);
+                                state.node_param_values.insert("bachi_plectrum_velocity".to_string(), bachi_vel);
+                                state.node_param_values.insert("biwa_bachi_velocity".to_string(), bachi_vel);
+                                state.node_param_values.insert("sawari_buzz_clearance".to_string(), sawari_gap);
+                                state.node_param_values.insert("biwa_sawari_clearance".to_string(), sawari_gap);
+                                if let Some(bus) = param_bus {
+                                    let pid_vel = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_gap = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_vel).is_some() { bus.set(pid_vel, bachi_vel); }
+                                    if bus.get(pid_gap).is_some() { bus.set(pid_gap, sawari_gap); }
+                                }
+                            }
+                        }
+
+                        // String deflection wave mini preview
+                        let num_steps = 16;
+                        let mut prev_pt = None;
+                        let barrier_norm = sawari_gap / 2.0;
+                        for s in 0..=num_steps {
+                            let frac = s as f32 / num_steps as f32;
+                            let phase = frac * std::f32::consts::TAU;
+                            let mut wave = bachi_vel * (phase.sin() + 0.35 * (2.0 * phase).sin());
+                            if wave < -barrier_norm {
+                                wave = -barrier_norm + (barrier_norm + wave).abs() * 0.5;
+                            }
+                            let px = bw_rect.left() + 4.0 + frac * (bw_rect.width() - 60.0);
+                            let py = bw_rect.center().y - wave * 16.0;
+                            let pt = egui::pos2(px, py);
+                            if let Some(prev) = prev_pt {
+                                bw_painter.line_segment([prev, pt], Stroke::new(1.3_f32, Color32::from_rgb(245, 158, 11)));
+                            }
+                            prev_pt = Some(pt);
+                        }
+
+                        // Target puck
+                        let norm_vel = crate::views::biwa_sawari_view::BiwaSawariView::bachi_velocity_to_normalized(bachi_vel);
+                        let norm_gap = crate::views::biwa_sawari_view::BiwaSawariView::sawari_clearance_to_normalized(sawari_gap);
+                        let puck_x = bw_rect.left() + 4.0 + norm_vel * (bw_rect.width() - 60.0);
+                        let puck_y = bw_rect.bottom() - 10.0 - norm_gap * (bw_rect.height() - 20.0);
+                        bw_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(245, 158, 11));
+                        bw_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        bw_painter.text(
+                            egui::pos2(bw_rect.right() - 4.0, bw_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("BIWA\n{:.2} Vel\n{:.2}mm Gap", bachi_vel, sawari_gap),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(245, 158, 11),
+                        );
+
+                        if bw_resp.hovered() {
+                            let _ = bw_resp.on_hover_text(format!(
+                                "Japanese Satsuma Biwa Silk String & Sawari Buzz HUD\nBachi Velocity: {:.2} | Sawari Gap: {:.2} mm\n[Drag: Velocity (X) / Clearance (Y) Puck]",
+                                bachi_vel, sawari_gap
+                            ));
+                        }
+                    } else if is_schottky_wavefolder {
+                        // Discrete Schottky Diode Wavefolder Mini View
+                        let (sf_resp, sf_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let sf_rect = sf_resp.rect;
+                        sf_painter.rect_filled(sf_rect, 2.0, Color32::from_rgb(20, 10, 10));
+
+                        let mut drive = state.node_param_values.get("input_drive_gain").or_else(|| state.node_param_values.get("schottky_drive_db")).copied().unwrap_or(18.0);
+                        let mut bias = state.node_param_values.get("fold_symmetry_bias").or_else(|| state.node_param_values.get("schottky_bias")).copied().unwrap_or(0.0);
+
+                        if sf_resp.dragged() || sf_resp.clicked() {
+                            if let Some(pos) = sf_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - sf_rect.left()) / (sf_rect.width() - 55.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - sf_rect.top() - 10.0) / (sf_rect.height() - 20.0))).clamp(0.0, 1.0);
+                                drive = crate::views::schottky_wavefolder_view::SchottkyWavefolderView::normalized_to_drive(norm_x);
+                                bias = crate::views::schottky_wavefolder_view::SchottkyWavefolderView::normalized_to_bias(norm_y);
+                                state.node_param_values.insert("input_drive_gain".to_string(), drive);
+                                state.node_param_values.insert("schottky_drive_db".to_string(), drive);
+                                state.node_param_values.insert("fold_symmetry_bias".to_string(), bias);
+                                state.node_param_values.insert("schottky_bias".to_string(), bias);
+                                if let Some(bus) = param_bus {
+                                    let pid_drv = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_bias = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_drv).is_some() { bus.set(pid_drv, drive); }
+                                    if bus.get(pid_bias).is_some() { bus.set(pid_bias, bias); }
+                                }
+                            }
+                        }
+
+                        // Folded transfer curve mini preview
+                        let num_steps = 16;
+                        let mut prev_pt = None;
+                        let drive_lin = 10.0f32.powf(drive / 20.0);
+                        for s in 0..=num_steps {
+                            let frac = s as f32 / num_steps as f32;
+                            let vin = (frac - 0.5) * 3.0 + bias * 0.45;
+                            let vout = (vin * drive_lin * 0.5 * std::f32::consts::FRAC_PI_2).sin();
+                            let px = sf_rect.left() + 4.0 + frac * (sf_rect.width() - 60.0);
+                            let py = sf_rect.center().y - vout * 16.0;
+                            let pt = egui::pos2(px, py);
+                            if let Some(prev) = prev_pt {
+                                sf_painter.line_segment([prev, pt], Stroke::new(1.3_f32, Color32::from_rgb(239, 68, 68)));
+                            }
+                            prev_pt = Some(pt);
+                        }
+
+                        // Target puck
+                        let norm_drv = crate::views::schottky_wavefolder_view::SchottkyWavefolderView::drive_to_normalized(drive);
+                        let norm_bias = crate::views::schottky_wavefolder_view::SchottkyWavefolderView::bias_to_normalized(bias);
+                        let puck_x = sf_rect.left() + 4.0 + norm_drv * (sf_rect.width() - 60.0);
+                        let puck_y = sf_rect.bottom() - 10.0 - norm_bias * (sf_rect.height() - 20.0);
+                        sf_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(239, 68, 68));
+                        sf_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        sf_painter.text(
+                            egui::pos2(sf_rect.right() - 4.0, sf_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("FOLD\n{:.1}dB Drv\n{:.2} Bias", drive, bias),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(239, 68, 68),
+                        );
+
+                        if sf_resp.hovered() {
+                            let _ = sf_resp.on_hover_text(format!(
+                                "Discrete Schottky Diode Wavefolder HUD\nDrive: {:.1} dB | Symmetry Bias: {:.2}\n[Drag: Drive (X) / Bias (Y) Puck]",
+                                drive, bias
                             ));
                         }
                     } else {

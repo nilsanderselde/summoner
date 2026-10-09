@@ -302,6 +302,10 @@ pub struct ModernInspectorState {
     pub requested_open_hammer_strike_hud: bool,
     #[serde(default)]
     pub requested_open_console_emulation_hud: bool,
+    #[serde(default)]
+    pub requested_open_biwa_sawari_hud: bool,
+    #[serde(default)]
+    pub requested_open_schottky_wavefolder_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -459,6 +463,8 @@ impl Default for ModernInspectorState {
             requested_open_glottal_pulse_hud: false,
             requested_open_hammer_strike_hud: false,
             requested_open_console_emulation_hud: false,
+            requested_open_biwa_sawari_hud: false,
+            requested_open_schottky_wavefolder_hud: false,
         }
     }
 }
@@ -2263,6 +2269,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open Analog Mixing Console Desk Emulation & Transformer Character HUD").clicked() {
                     state.requested_open_console_emulation_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Biwa") || active_kind.contains("Sawari") || active_kind == "AcousticJapaneseBiwaSilkStringPlectrum" || active_kind == "BiwaSawariBridge" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🪕 Open Biwa Sawari HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(245, 158, 11)))
+                        .fill(Color32::from_rgb(38, 28, 14))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(245, 158, 11)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Japanese Satsuma Biwa Silk String & Sawari Buzzing Bridge HUD").clicked() {
+                    state.requested_open_biwa_sawari_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Schottky") || active_kind.contains("Wavefolder") || active_kind == "DiscreteSchottkyDiodeWavefolderOverdrive" || active_kind == "SchottkyWavefolder" {
+                if ui.add(
+                    egui::Button::new(RichText::new("⚡ Open Schottky Wavefolder HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(239, 68, 68)))
+                        .fill(Color32::from_rgb(40, 20, 20))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(239, 68, 68)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Discrete Schottky Diode Multi-Stage Wavefolder & Overdrive HUD").clicked() {
+                    state.requested_open_schottky_wavefolder_hud = true;
                 }
                 ui.add_space(4.0);
             }

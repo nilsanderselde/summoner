@@ -1112,6 +1112,18 @@ impl CommandPalette {
                 action_id: "open_console_emulation_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Japanese Satsuma Biwa Silk String & Sawari Buzzing Bridge HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_biwa_sawari_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Discrete Schottky Diode Multi-Stage Wavefolder & Overdrive HUD".into(),
+                category: "Dynamics & Saturation".into(),
+                action_id: "open_schottky_wavefolder_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

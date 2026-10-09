@@ -908,6 +908,10 @@ pub struct AwardWinningGuiView {
     pub hammer_strike_view: crate::views::hammer_strike_view::HammerStrikeView,
     pub show_console_emulation_modal: bool,
     pub console_emulation_view: crate::views::console_emulation_view::ConsoleEmulationView,
+    pub show_biwa_sawari_modal: bool,
+    pub biwa_sawari_view: crate::views::biwa_sawari_view::BiwaSawariView,
+    pub show_schottky_wavefolder_modal: bool,
+    pub schottky_wavefolder_view: crate::views::schottky_wavefolder_view::SchottkyWavefolderView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1432,6 +1436,10 @@ impl AwardWinningGuiView {
             hammer_strike_view: crate::views::hammer_strike_view::HammerStrikeView::new(),
             show_console_emulation_modal: false,
             console_emulation_view: crate::views::console_emulation_view::ConsoleEmulationView::new(),
+            show_biwa_sawari_modal: false,
+            biwa_sawari_view: crate::views::biwa_sawari_view::BiwaSawariView::new(),
+            show_schottky_wavefolder_modal: false,
+            schottky_wavefolder_view: crate::views::schottky_wavefolder_view::SchottkyWavefolderView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2741,6 +2749,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_console_emulation_hud = false;
             self.open_console_emulation_hud();
         }
+        if self.inspector_state.requested_open_biwa_sawari_hud || self.device_rack_state.requested_open_biwa_sawari_hud {
+            self.inspector_state.requested_open_biwa_sawari_hud = false;
+            self.device_rack_state.requested_open_biwa_sawari_hud = false;
+            self.open_biwa_sawari_hud();
+        }
+        if self.inspector_state.requested_open_schottky_wavefolder_hud || self.device_rack_state.requested_open_schottky_wavefolder_hud {
+            self.inspector_state.requested_open_schottky_wavefolder_hud = false;
+            self.device_rack_state.requested_open_schottky_wavefolder_hud = false;
+            self.open_schottky_wavefolder_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2878,6 +2896,8 @@ impl AwardWinningGuiView {
         self.show_glottal_pulse_modal_window(ui);
         self.show_hammer_strike_modal_window(ui);
         self.show_console_emulation_modal_window(ui);
+        self.show_biwa_sawari_modal_window(ui);
+        self.show_schottky_wavefolder_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -21335,6 +21355,192 @@ impl AwardWinningGuiView {
             if bus.get(pid_drv).is_some() { bus.set(pid_drv, drv); }
             if bus.get(pid_sat).is_some() { bus.set(pid_sat, sat); }
             if bus.get(pid_thd).is_some() { bus.set(pid_thd, thd); }
+            if bus.get(pid_trm).is_some() { bus.set(pid_trm, trim); }
+        }
+    }
+
+    pub fn open_biwa_sawari_hud(&mut self) {
+        self.show_biwa_sawari_modal = true;
+    }
+
+    pub fn close_biwa_sawari_hud(&mut self) {
+        self.show_biwa_sawari_modal = false;
+    }
+
+    pub fn is_biwa_sawari_hud_open(&self) -> bool {
+        self.show_biwa_sawari_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_biwa_sawari_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_biwa_sawari_modal {
+            return;
+        }
+
+        let mut is_open = self.show_biwa_sawari_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🪕 Japanese Satsuma Biwa Silk String & Sawari Buzzing Bridge HUD")
+            .id(egui::Id::new("biwa_sawari_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Acoustic Physical Modeling Satsuma Biwa Silk String & Sawari Resonance (Milestones 18, 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.biwa_sawari_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_biwa_sawari_modal = is_open;
+        self.sync_biwa_sawari_hud_state();
+    }
+
+    pub fn sync_biwa_sawari_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let vel = self.biwa_sawari_view.bachi_plectrum_velocity;
+        let gap = self.biwa_sawari_view.sawari_buzz_clearance;
+        let bend = self.biwa_sawari_view.silk_string_tension_bend;
+        let mul = self.biwa_sawari_view.mulberry_casing_resonance;
+        let damp = self.biwa_sawari_view.fret_contact_damping;
+        let slap = self.biwa_sawari_view.slap_soundboard_transient;
+
+        self.device_rack_state.node_param_values.insert("bachi_plectrum_velocity".to_string(), vel);
+        self.device_rack_state.node_param_values.insert("sawari_buzz_clearance".to_string(), gap);
+        self.device_rack_state.node_param_values.insert("silk_string_tension_bend".to_string(), bend);
+        self.device_rack_state.node_param_values.insert("mulberry_casing_resonance".to_string(), mul);
+        self.device_rack_state.node_param_values.insert("fret_contact_damping".to_string(), damp);
+        self.device_rack_state.node_param_values.insert("slap_soundboard_transient".to_string(), slap);
+
+        self.inspector_state.node_param_values.insert("bachi_plectrum_velocity".to_string(), vel);
+        self.inspector_state.node_param_values.insert("sawari_buzz_clearance".to_string(), gap);
+        self.inspector_state.node_param_values.insert("silk_string_tension_bend".to_string(), bend);
+        self.inspector_state.node_param_values.insert("mulberry_casing_resonance".to_string(), mul);
+        self.inspector_state.node_param_values.insert("fret_contact_damping".to_string(), damp);
+        self.inspector_state.node_param_values.insert("slap_soundboard_transient".to_string(), slap);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_vel = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_gap = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_bnd = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_mul = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_vel).is_some() { bus.set(pid_vel, vel); }
+            if bus.get(pid_gap).is_some() { bus.set(pid_gap, gap); }
+            if bus.get(pid_bnd).is_some() { bus.set(pid_bnd, bend); }
+            if bus.get(pid_mul).is_some() { bus.set(pid_mul, mul); }
+        }
+    }
+
+    pub fn open_schottky_wavefolder_hud(&mut self) {
+        self.show_schottky_wavefolder_modal = true;
+    }
+
+    pub fn close_schottky_wavefolder_hud(&mut self) {
+        self.show_schottky_wavefolder_modal = false;
+    }
+
+    pub fn is_schottky_wavefolder_hud_open(&self) -> bool {
+        self.show_schottky_wavefolder_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_schottky_wavefolder_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_schottky_wavefolder_modal {
+            return;
+        }
+
+        let mut is_open = self.show_schottky_wavefolder_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("⚡ Discrete Schottky Diode Multi-Stage Wavefolder & Overdrive HUD")
+            .id(egui::Id::new("schottky_wavefolder_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Analog Diode Conduction Thresholds, Asymmetry Bias & Multi-Stage Folding (Milestones 11, 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.schottky_wavefolder_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_schottky_wavefolder_modal = is_open;
+        self.sync_schottky_wavefolder_hud_state();
+    }
+
+    pub fn sync_schottky_wavefolder_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let drv = self.schottky_wavefolder_view.input_drive_gain;
+        let bias = self.schottky_wavefolder_view.fold_symmetry_bias;
+        let stg = self.schottky_wavefolder_view.folding_stages_count;
+        let cap = self.schottky_wavefolder_view.miller_junction_capacitance;
+        let knee = self.schottky_wavefolder_view.diode_saturation_softness;
+        let trim = self.schottky_wavefolder_view.output_trim_makeup;
+
+        self.device_rack_state.node_param_values.insert("input_drive_gain".to_string(), drv);
+        self.device_rack_state.node_param_values.insert("fold_symmetry_bias".to_string(), bias);
+        self.device_rack_state.node_param_values.insert("folding_stages_count".to_string(), stg);
+        self.device_rack_state.node_param_values.insert("miller_junction_capacitance".to_string(), cap);
+        self.device_rack_state.node_param_values.insert("diode_saturation_softness".to_string(), knee);
+        self.device_rack_state.node_param_values.insert("output_trim_makeup".to_string(), trim);
+
+        self.inspector_state.node_param_values.insert("input_drive_gain".to_string(), drv);
+        self.inspector_state.node_param_values.insert("fold_symmetry_bias".to_string(), bias);
+        self.inspector_state.node_param_values.insert("folding_stages_count".to_string(), stg);
+        self.inspector_state.node_param_values.insert("miller_junction_capacitance".to_string(), cap);
+        self.inspector_state.node_param_values.insert("diode_saturation_softness".to_string(), knee);
+        self.inspector_state.node_param_values.insert("output_trim_makeup".to_string(), trim);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_drv = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_bias = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_stg = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_trm = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_drv).is_some() { bus.set(pid_drv, drv); }
+            if bus.get(pid_bias).is_some() { bus.set(pid_bias, bias); }
+            if bus.get(pid_stg).is_some() { bus.set(pid_stg, stg); }
             if bus.get(pid_trm).is_some() { bus.set(pid_trm, trim); }
         }
     }
