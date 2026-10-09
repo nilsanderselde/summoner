@@ -19,6 +19,16 @@ pub enum TransientMode {
     HarmonicPunch,  // Dynamic saturation injection on attack crests
 }
 
+impl TransientMode {
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::Broadband => "Broadband",
+            Self::FrequencySplit => "Frequency Split",
+            Self::HarmonicPunch => "Harmonic Punch",
+        }
+    }
+}
+
 /// Tactile Transient Designer View (Step 1454).
 #[derive(Debug, Clone)]
 pub struct TransientDesignerView {
@@ -174,8 +184,108 @@ impl TransientDesignerView {
         lines
     }
 
+    pub fn set_mode(&mut self, mode: TransientMode) {
+        self.mode = mode;
+    }
+
+    pub fn punch_freq_to_normalized(hz: f32) -> f32 {
+        ((hz - 40.0) / (500.0 - 40.0)).clamp(0.0, 1.0)
+    }
+
+    pub fn normalized_to_punch_freq(norm: f32) -> f32 {
+        40.0 + norm.clamp(0.0, 1.0) * (500.0 - 40.0)
+    }
+
+    pub fn output_gain_to_normalized(gain_db: f32) -> f32 {
+        ((gain_db + 12.0) / 24.0).clamp(0.0, 1.0)
+    }
+
+    pub fn normalized_to_output_gain(norm: f32) -> f32 {
+        -12.0 + norm.clamp(0.0, 1.0) * 24.0
+    }
+
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        self.render_ascii(80, 20).join("\n")
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_ui(&mut self, ui: &mut egui::Ui) {
+        let desired_size = egui::vec2(ui.available_width().max(780.0), 485.0);
+        let (rect, _response) = ui.allocate_exact_size(desired_size, egui::Sense::click_and_drag());
+        self.show(
+            ui,
+            Rect::new(rect.min.x, rect.min.y, rect.width(), rect.height()),
+        );
+    }
+
     #[cfg(feature = "gui")]
     pub fn show(&mut self, ui: &mut egui::Ui, rect: Rect) {
+        // Pointer interactions for Attack, Sustain handles, mode buttons, soft-clip
+        let env_rect = Rect::new(rect.x + 20.0, rect.y + 56.0, 430.0, 224.0);
+        let plot_top = env_rect.y + 36.0;
+        let plot_h = env_rect.height - 56.0;
+        let mode_rect = Rect::new(rect.x + 470.0, rect.y + 56.0, 310.0, 224.0);
+
+        ui.input(|i| {
+            if let Some(pos) = i.pointer.latest_pos() {
+                let pos_t = (pos.x, pos.y);
+                if i.pointer.any_down() {
+                    if self.hit_test_attack_handle(pos_t, env_rect) || self.is_dragging_attack {
+                        self.is_dragging_attack = true;
+                        let nx = ((pos.x - env_rect.x) / (env_rect.width * 0.35)).clamp(0.0, 1.0);
+                        let ny = ((plot_top + plot_h - pos.y) / plot_h).clamp(0.0, 1.0);
+                        self.attack_handle_pos = (nx, ny);
+                        self.attack_length_ms = Self::normalized_to_attack_time(nx);
+                        self.attack_gain_db = Self::normalized_to_gain(ny);
+                    } else if self.hit_test_sustain_handle(pos_t, env_rect) || self.is_dragging_sustain {
+                        self.is_dragging_sustain = true;
+                        let nx = ((pos.x - (env_rect.x + env_rect.width * 0.35)) / (env_rect.width * 0.65)).clamp(0.0, 1.0);
+                        let ny = ((plot_top + plot_h - pos.y) / plot_h).clamp(0.0, 1.0);
+                        self.sustain_handle_pos = (nx, ny);
+                        self.sustain_length_ms = Self::normalized_to_sustain_time(nx);
+                        self.sustain_gain_db = Self::normalized_to_gain(ny);
+                    } else {
+                        let punch_box = egui::Rect::from_min_size(
+                            egui::pos2(mode_rect.x + 15.0, mode_rect.y + 125.0),
+                            egui::vec2(mode_rect.width - 30.0, 24.0),
+                        );
+                        if punch_box.contains(pos) {
+                            let np = ((pos.x - punch_box.min.x) / punch_box.width()).clamp(0.0, 1.0);
+                            self.punch_freq_hz = Self::normalized_to_punch_freq(np);
+                        }
+                    }
+                } else {
+                    self.is_dragging_attack = false;
+                    self.is_dragging_sustain = false;
+                }
+
+                if i.pointer.any_click() {
+                    let modes = [
+                        (mode_rect.x + 12.0, TransientMode::Broadband),
+                        (mode_rect.x + 106.0, TransientMode::FrequencySplit),
+                        (mode_rect.x + 200.0, TransientMode::HarmonicPunch),
+                    ];
+                    for (bx, m) in modes {
+                        let btn_box = egui::Rect::from_min_size(
+                            egui::pos2(bx, mode_rect.y + 40.0),
+                            egui::vec2(88.0, 44.0),
+                        );
+                        if btn_box.contains(pos) {
+                            self.mode = m;
+                        }
+                    }
+
+                    let clip_box = egui::Rect::from_min_size(
+                        egui::pos2(mode_rect.x + 15.0, mode_rect.y + 165.0),
+                        egui::vec2(mode_rect.width - 30.0, 44.0),
+                    );
+                    if clip_box.contains(pos) {
+                        self.soft_clip_enabled = !self.soft_clip_enabled;
+                    }
+                }
+            }
+        });
+
         let painter = ui.painter_at(egui::Rect::from_min_size(
             egui::pos2(rect.x, rect.y),
             egui::vec2(rect.width, rect.height),

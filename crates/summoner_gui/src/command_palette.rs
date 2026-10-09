@@ -917,6 +917,18 @@ impl CommandPalette {
                 action_id: "open_tape_flutter_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Tactile Transient Designer & Harmonic Punch HUD".into(),
+                category: "Dynamics & Saturation".into(),
+                action_id: "open_transient_designer_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Mastering Multiband Upward Compressor (OTT) HUD".into(),
+                category: "Dynamics & Mastering".into(),
+                action_id: "open_upward_compressor_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

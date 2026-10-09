@@ -238,6 +238,10 @@ pub struct ModernInspectorState {
     pub requested_open_subharmonic_synth_hud: bool,
     #[serde(default)]
     pub requested_open_tape_flutter_hud: bool,
+    #[serde(default)]
+    pub requested_open_transient_designer_hud: bool,
+    #[serde(default)]
+    pub requested_open_upward_compressor_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -363,6 +367,8 @@ impl Default for ModernInspectorState {
             requested_open_stereo_widener_hud: false,
             requested_open_subharmonic_synth_hud: false,
             requested_open_tape_flutter_hud: false,
+            requested_open_transient_designer_hud: false,
+            requested_open_upward_compressor_hud: false,
         }
     }
 }
@@ -1847,6 +1853,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open Analog Tape Wow/Flutter & Hysteresis Saturation HUD").clicked() {
                     state.requested_open_tape_flutter_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("TransientDesigner") || active_kind.contains("TransientShaper") || active_kind == "TransientDesignerNode" || active_kind == "TransientShaperNode" || active_kind.contains("TransientPunch") {
+                if ui.add(
+                    egui::Button::new(RichText::new("💥 Open Transient Designer HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 229, 255)))
+                        .fill(Color32::from_rgb(12, 28, 38))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 229, 255)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Tactile Transient Designer & Harmonic Punch HUD").clicked() {
+                    state.requested_open_transient_designer_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("UpwardCompressor") || active_kind.contains("MultibandUpward") || active_kind.contains("OttCompressor") || active_kind == "UpwardCompressorNode" || active_kind.contains("MultibandOtt") {
+                if ui.add(
+                    egui::Button::new(RichText::new("⬆ Open Upward OTT HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 255, 180)))
+                        .fill(Color32::from_rgb(12, 35, 28))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 255, 180)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Mastering Multiband Upward Compressor (OTT) HUD").clicked() {
+                    state.requested_open_upward_compressor_hud = true;
                 }
                 ui.add_space(4.0);
             }

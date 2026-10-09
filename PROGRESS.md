@@ -1,6 +1,6 @@
 # Summoner DAW — Product Readiness & Shippability Tracker
 > **Current Shippability Score:** 10.0 / 10  
-> **Status:** Production Ready Release Candidate (Turn #96 / Sprint Turn #22)  
+> **Status:** Production Ready Release Candidate (Turn #101 / Sprint Turn #27 - Sprint Review)  
 > **Authoritative Root:** `PROGRESS.md`  
 > **License:** AGPLv3
 
@@ -2760,6 +2760,39 @@ Product Management has conducted a comprehensive readiness audit:
   - Registered `tier163_turn100_tests` in `crates/summoner_gui/src/lib.rs`.
   - Feature tests: 5 passed in 0.08s (`cargo test -p summoner_gui --features gui -- tier163`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`).
+
+### Turn #101 (Sprint Turn #27 - Sprint Review) — Tactile Transient Designer & Harmonic Punch HUD and Mastering Multiband Upward Compressor (OTT) HUD Convergence (Milestones 33 & 34)
+- [x] Tactile Transient Designer & Mastering Multiband Upward Compressor HUDs Integration:
+  - Integrated `TransientDesignerView` (Tactile Transient Designer & Punch/Sustain Harmonic Modeler Canvas: 3 Operating Modes [Broadband, Frequency Split, Harmonic Punch], Attack Boost/Cut [-24.0..+24.0 dB], Attack Transient Window [5.0..100.0 ms], Sustain Body Boost/Cut [-24.0..+24.0 dB], Sustain Decay Window [50.0..1000.0 ms], Harmonic Punch Resonance [40.0..500.0 Hz], Analog Soft Clipper Toggle, Output Gain [-12.0..+12.0 dB], 2D Dynamic Envelope Waveform Shaper Canvas, and Touch-Draggable Attack vs Sustain Handles with >= 44x44pt bounding targets) and `UpwardCompressorView` (Mastering Dynamic Multiband Upward Compressor & Low-Level Detail Enhancer HUD: 5 Operating Profiles [Low Level Detail, OTT Aggressive, Broadcast Density, Vocal Air Extract, Linear Phase Master], 4-Band Dynamics [Low <200Hz, Low-Mid 200-1.2kHz, High-Mid 1.2-6kHz, High >6kHz], Upward Threshold [-60.0..-10.0 dBFS], Max Gain Boost [0.0..18.0 dB], Upward Compression Ratio [1.0..4.0], Attack [1.0..100.0 ms], Release [10.0..500.0 ms], Active Gain Boost Lift Readout, 2D Upward Transfer Curve Canvas with Unity Gain Reference, and Touch-Draggable Threshold vs Max Boost Puck with >= 44x44pt bounding target) into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/transient_designer_view.rs` & `upward_compressor_view.rs`):
+  - In `TransientDesignerView`: added `name()` to `TransientMode`, coordinate normalizations & round-trips (`punch_freq_to_normalized`, `normalized_to_punch_freq`, `output_gain_to_normalized`, `normalized_to_output_gain`), `set_mode()`, `show_ui(&mut self, ui: &mut egui::Ui)`, and `render_ascii_snapshot_str() -> String` with transient envelope metadata banner and verified hit target badge.
+  - In `UpwardCompressorView`: added `name()` to `UpwardCompressionProfile`, coordinate normalizations & round-trips (`ratio_to_normalized`, `normalized_to_ratio`, `attack_to_normalized`, `normalized_to_attack`, `release_to_normalized`, `normalized_to_release`), `set_profile()`, `show_ui(&mut self, ui: &mut egui::Ui)`, and `render_ascii_snapshot_str() -> String` with upward compression transfer curve metadata banner and verified hit target badge.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added `show_transient_designer_modal: bool`, `transient_designer_view: TransientDesignerView`, `show_upward_compressor_modal: bool`, and `upward_compressor_view: UpwardCompressorView`.
+  - Added dedicated modal windows `show_transient_designer_modal_window` and `show_upward_compressor_modal_window` with responsive styling, WCAG AAA contrast, and >= 44x44pt touch bounds.
+  - Added public lifecycle methods: `open_transient_designer_hud()`, `close_transient_designer_hud()`, `is_transient_designer_hud_open()`, `open_upward_compressor_hud()`, `close_upward_compressor_hud()`, `is_upward_compressor_hud_open()`.
+  - Real-time parameter sync bridges (`sync_transient_designer_hud_state` and `sync_upward_compressor_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_transient_designer_hud: bool` and `requested_open_upward_compressor_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[💥 Open Transient Designer HUD]` and `[⬆ Open Upward OTT HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header buttons `[💥 Transient HUD]` and `[⬆ Upward HUD]` in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Transient Designer: 2D dynamic envelope curve preview, attack spike / sustain decay body, interactive Attack/Sustain puck, live readout, and lock-free `ParamBus` slot dispatch.
+    * Upward Compressor: 2D multiband upward compression transfer curve preview, unity gain reference axis, interactive Threshold/Boost puck, live readout, and lock-free `ParamBus` slot dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_transient_designer_hud` under `"Dynamics & Saturation"` and `open_upward_compressor_hud` under `"Dynamics & Mastering"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_transient_designer_hud()` and `open_upward_compressor_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier164_turn101_tests.rs`:
+    * Pure tests: view initialization, coordinate normalizations (gain, attack time, sustain time, punch frequency, output gain, threshold, boost, ratio, attack, release), mode and profile switching across all modes, envelope curve & multiband upward transfer calculations, touch handle & puck hit testing (>= 44x44pt bounding targets), deterministic ASCII snapshots with metadata banners.
+    * GUI tests: modal window lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch without allocations, trigger button propagation from rack and inspector, command palette action verification.
+  - Registered `tier164_turn101_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Feature tests: 5 passed in 0.08s (`cargo test -p summoner_gui --features gui -- tier164`).
+  - Pure unit tests: 329 passed in 0.24s (`cargo test -p summoner_gui --lib`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`).
+
 
 
 

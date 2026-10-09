@@ -26,6 +26,18 @@ pub enum UpwardCompressionProfile {
     LinearPhaseMaster, // Mastering transparent linear-phase crossover upward lift
 }
 
+impl UpwardCompressionProfile {
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::LowLevelDetail => "Low Level Detail",
+            Self::OttAggressive => "OTT Aggressive",
+            Self::BroadcastDensity => "Broadcast Density",
+            Self::VocalAirExtract => "Vocal Air Extract",
+            Self::LinearPhaseMaster => "Linear Phase Master",
+        }
+    }
+}
+
 /// Single Band Upward Dynamic Parameters.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct UpwardBandParams {
@@ -210,6 +222,43 @@ impl UpwardCompressorView {
         grid.into_iter()
             .map(|row| row.into_iter().collect())
             .collect()
+    }
+
+    pub fn set_profile(&mut self, profile: UpwardCompressionProfile) {
+        self.profile = profile;
+    }
+
+    pub fn ratio_to_normalized(ratio: f32) -> f32 {
+        ((ratio - 1.0) / (4.0 - 1.0)).clamp(0.0, 1.0)
+    }
+
+    pub fn normalized_to_ratio(norm: f32) -> f32 {
+        1.0 + norm.clamp(0.0, 1.0) * 3.0
+    }
+
+    pub fn attack_to_normalized(attack_ms: f32) -> f32 {
+        ((attack_ms - 1.0) / (100.0 - 1.0)).clamp(0.0, 1.0)
+    }
+
+    pub fn normalized_to_attack(norm: f32) -> f32 {
+        1.0 + norm.clamp(0.0, 1.0) * 99.0
+    }
+
+    pub fn release_to_normalized(release_ms: f32) -> f32 {
+        ((release_ms - 10.0) / (500.0 - 10.0)).clamp(0.0, 1.0)
+    }
+
+    pub fn normalized_to_release(norm: f32) -> f32 {
+        10.0 + norm.clamp(0.0, 1.0) * 490.0
+    }
+
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        self.render_ascii(80, 20).join("\n")
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_ui(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
     }
 
     #[cfg(feature = "gui")]

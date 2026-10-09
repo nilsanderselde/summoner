@@ -253,6 +253,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_subharmonic_synth_hud: bool,
     #[serde(default)]
     pub requested_open_tape_flutter_hud: bool,
+    #[serde(default)]
+    pub requested_open_transient_designer_hud: bool,
+    #[serde(default)]
+    pub requested_open_upward_compressor_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -368,6 +372,8 @@ impl Default for ModernDeviceRackState {
             requested_open_stereo_widener_hud: false,
             requested_open_subharmonic_synth_hud: false,
             requested_open_tape_flutter_hud: false,
+            requested_open_transient_designer_hud: false,
+            requested_open_upward_compressor_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -1106,6 +1112,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_stereo_widener = cur_selection.contains("StereoWidener") || cur_selection.contains("StereoWidth") || cur_selection == "StereoWidenerNode" || cur_selection == "DynamicStereoWidthNode" || cur_selection.contains("HaasWidener") || cur_selection.contains("TransientSplayStereoWidener");
                     let is_subharmonic_synth = cur_selection.contains("Subharmonic") || cur_selection.contains("SubBass") || cur_selection == "SubharmonicSynthNode" || cur_selection == "SubharmonicGenerator" || cur_selection.contains("SubSynth");
                     let is_tape_flutter = cur_selection.contains("TapeFlutter") || cur_selection.contains("TapeWow") || cur_selection == "TapeFlutterNode" || cur_selection == "TapeWowFlutter" || cur_selection.contains("ReelFlutter");
+                    let is_transient_designer = cur_selection.contains("TransientDesigner") || cur_selection.contains("TransientShaper") || cur_selection == "TransientDesignerNode" || cur_selection == "TransientShaperNode" || cur_selection.contains("TransientPunch");
+                    let is_upward_compressor = cur_selection.contains("UpwardCompressor") || cur_selection.contains("MultibandUpward") || cur_selection.contains("OttCompressor") || cur_selection == "UpwardCompressorNode" || cur_selection.contains("MultibandOtt");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1510,6 +1518,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("📼 Tape HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 107, 43))).on_hover_text("Open Analog Tape Wow/Flutter & Hysteresis HUD").clicked()
                     {
                         state.requested_open_tape_flutter_hud = true;
+                    } else if is_transient_designer
+                        && ui.button(RichText::new("💥 Transient HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Tactile Transient Designer & Harmonic Punch HUD").clicked()
+                    {
+                        state.requested_open_transient_designer_hud = true;
+                    } else if is_upward_compressor
+                        && ui.button(RichText::new("⬆ Upward HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 255, 180))).on_hover_text("Open Mastering Multiband Upward Compressor (OTT) HUD").clicked()
+                    {
+                        state.requested_open_upward_compressor_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2376,6 +2392,8 @@ fn show_pro_parameter_drawer(
                     let is_stereo_widener = dev_kind.contains("StereoWidener") || dev_kind.contains("StereoWidth") || dev_kind == "StereoWidenerNode" || dev_kind == "DynamicStereoWidthNode" || dev_kind.contains("HaasWidener") || dev_kind.contains("TransientSplayStereoWidener");
                     let is_subharmonic_synth = dev_kind.contains("Subharmonic") || dev_kind.contains("SubBass") || dev_kind == "SubharmonicSynthNode" || dev_kind == "SubharmonicGenerator" || dev_kind.contains("SubSynth");
                     let is_tape_flutter = dev_kind.contains("TapeFlutter") || dev_kind.contains("TapeWow") || dev_kind == "TapeFlutterNode" || dev_kind == "TapeWowFlutter" || dev_kind.contains("ReelFlutter");
+                    let is_transient_designer = dev_kind.contains("TransientDesigner") || dev_kind.contains("TransientShaper") || dev_kind == "TransientDesignerNode" || dev_kind == "TransientShaperNode" || dev_kind.contains("TransientPunch");
+                    let is_upward_compressor = dev_kind.contains("UpwardCompressor") || dev_kind.contains("MultibandUpward") || dev_kind.contains("OttCompressor") || dev_kind == "UpwardCompressorNode" || dev_kind.contains("MultibandOtt");
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -10376,6 +10394,154 @@ fn show_pro_parameter_drawer(
                             let _ = tf_resp.on_hover_text(format!(
                                 "Analog Tape Flutter & Saturation HUD\nDrive: {:+.1} dB | Wow Drift: {:.0}%\nScrape Flutter: {:.0}%\n[Drag: Saturation Drive dB (X) / Wow Depth % (Y) Puck]",
                                 drive_db, wow_pct, flutter_pct
+                            ));
+                        }
+                    } else if is_transient_designer {
+                        // Tactile Transient Designer Mini View
+                        let (td_resp, td_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let td_rect = td_resp.rect;
+                        td_painter.rect_filled(td_rect, 2.0, Color32::from_rgb(10, 16, 26));
+
+                        let mut atk_db = state.node_param_values.get("attack_gain_db").or_else(|| state.node_param_values.get("attack")).copied().unwrap_or(6.0);
+                        let mut sus_db = state.node_param_values.get("sustain_gain_db").or_else(|| state.node_param_values.get("sustain")).copied().unwrap_or(-3.0);
+                        let punch_hz = state.node_param_values.get("punch_freq_hz").or_else(|| state.node_param_values.get("punch")).copied().unwrap_or(90.0);
+
+                        if td_resp.dragged() {
+                            if let Some(pos) = td_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - td_rect.left()) / td_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - td_rect.top()) / td_rect.height())).clamp(0.0, 1.0);
+                                atk_db = crate::views::transient_designer_view::TransientDesignerView::normalized_to_gain(norm_x);
+                                sus_db = crate::views::transient_designer_view::TransientDesignerView::normalized_to_gain(norm_y);
+                                state.node_param_values.insert("attack_gain_db".to_string(), atk_db);
+                                state.node_param_values.insert("attack".to_string(), atk_db);
+                                state.node_param_values.insert("sustain_gain_db".to_string(), sus_db);
+                                state.node_param_values.insert("sustain".to_string(), sus_db);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_atk = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_atk).is_some() { bus.set(pid_atk, atk_db); }
+                                    let pid_sus = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_sus).is_some() { bus.set(pid_sus, sus_db); }
+                                }
+                            }
+                        }
+
+                        // Mini Dynamic Envelope Preview
+                        let steps = 30;
+                        let mut env_pts = Vec::with_capacity(steps);
+                        let mid_y = td_rect.center().y;
+                        let atk_mult = 1.0 + (atk_db / 24.0) * 0.7;
+                        let sus_mult = 1.0 + (sus_db / 24.0) * 0.5;
+                        for i in 0..steps {
+                            let t = i as f32 / (steps - 1) as f32;
+                            let px = td_rect.left() + t * (td_rect.width() - 55.0);
+                            let env = if t < 0.25 {
+                                (t / 0.25 * std::f32::consts::FRAC_PI_2).sin() * atk_mult
+                            } else {
+                                (-2.5 * ((t - 0.25) / 0.75)).exp() * sus_mult
+                            };
+                            let py = mid_y - (env * 16.0).clamp(-26.0, 26.0);
+                            env_pts.push(egui::pos2(px, py));
+                        }
+                        td_painter.add(egui::Shape::line(
+                            env_pts,
+                            Stroke::new(1.8_f32, Color32::from_rgb(0, 229, 255)),
+                        ));
+
+                        // Interactive Attack / Sustain Puck
+                        let norm_atk = crate::views::transient_designer_view::TransientDesignerView::gain_to_normalized(atk_db);
+                        let norm_sus = crate::views::transient_designer_view::TransientDesignerView::gain_to_normalized(sus_db);
+                        let puck_x = td_rect.left() + norm_atk * (td_rect.width() - 55.0);
+                        let puck_y = td_rect.bottom() - norm_sus * (td_rect.height() - 20.0) - 10.0;
+                        td_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(0, 229, 255));
+                        td_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        // Readout
+                        td_painter.text(
+                            egui::pos2(td_rect.right() - 4.0, td_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("TRANSIENT\nAtk:{:+.1}dB\nSus:{:+.1}dB\nPch:{:.0}Hz", atk_db, sus_db, punch_hz),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+
+                        if td_resp.hovered() {
+                            let _ = td_resp.on_hover_text(format!(
+                                "Tactile Transient Designer HUD\nAttack: {:+.1} dB | Sustain: {:+.1} dB\nPunch: {:.0} Hz\n[Drag: Attack Gain dB (X) / Sustain Gain dB (Y) Puck]",
+                                atk_db, sus_db, punch_hz
+                            ));
+                        }
+                    } else if is_upward_compressor {
+                        // Mastering Upward Multiband Compressor Mini View
+                        let (uc_resp, uc_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let uc_rect = uc_resp.rect;
+                        uc_painter.rect_filled(uc_rect, 2.0, Color32::from_rgb(8, 20, 16));
+
+                        let mut thresh_db = state.node_param_values.get("threshold_dbfs").or_else(|| state.node_param_values.get("threshold")).copied().unwrap_or(-42.0);
+                        let mut boost_db = state.node_param_values.get("max_boost_db").or_else(|| state.node_param_values.get("boost")).copied().unwrap_or(11.0);
+                        let lift_db = state.node_param_values.get("active_gain_boost_db").or_else(|| state.node_param_values.get("lift")).copied().unwrap_or(6.2);
+
+                        if uc_resp.dragged() {
+                            if let Some(pos) = uc_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - uc_rect.left()) / uc_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - uc_rect.top()) / uc_rect.height())).clamp(0.0, 1.0);
+                                thresh_db = crate::views::upward_compressor_view::UpwardCompressorView::normalized_to_threshold(norm_x);
+                                boost_db = crate::views::upward_compressor_view::UpwardCompressorView::normalized_to_boost(norm_y);
+                                state.node_param_values.insert("threshold_dbfs".to_string(), thresh_db);
+                                state.node_param_values.insert("threshold".to_string(), thresh_db);
+                                state.node_param_values.insert("max_boost_db".to_string(), boost_db);
+                                state.node_param_values.insert("boost".to_string(), boost_db);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_thr = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_thr).is_some() { bus.set(pid_thr, thresh_db); }
+                                    let pid_bst = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_bst).is_some() { bus.set(pid_bst, boost_db); }
+                                }
+                            }
+                        }
+
+                        // Mini Upward Transfer Curve
+                        let steps = 24;
+                        let mut curve_pts = Vec::with_capacity(steps);
+                        let norm_th = crate::views::upward_compressor_view::UpwardCompressorView::threshold_to_normalized(thresh_db);
+                        for i in 0..steps {
+                            let t = i as f32 / (steps - 1) as f32;
+                            let px = uc_rect.left() + t * (uc_rect.width() - 55.0);
+                            let y = if t < norm_th {
+                                let boost_factor = (1.0 - t / norm_th) * (boost_db / 18.0) * 0.45;
+                                t + boost_factor
+                            } else {
+                                t
+                            };
+                            let py = uc_rect.bottom() - y * (uc_rect.height() - 20.0) - 10.0;
+                            curve_pts.push(egui::pos2(px, py));
+                        }
+                        uc_painter.add(egui::Shape::line(
+                            curve_pts,
+                            Stroke::new(1.8_f32, Color32::from_rgb(0, 255, 180)),
+                        ));
+
+                        // Interactive Threshold / Boost Puck
+                        let norm_bst = crate::views::upward_compressor_view::UpwardCompressorView::boost_to_normalized(boost_db);
+                        let puck_x = uc_rect.left() + norm_th * (uc_rect.width() - 55.0);
+                        let puck_y = uc_rect.bottom() - norm_bst * (uc_rect.height() - 20.0) - 10.0;
+                        uc_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(0, 255, 180));
+                        uc_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        // Readout
+                        uc_painter.text(
+                            egui::pos2(uc_rect.right() - 4.0, uc_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("UPWARD OTT\nThr:{:.0}dB\nBst:+{:.1}dB\nLft:+{:.1}dB", thresh_db, boost_db, lift_db),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(0, 255, 180),
+                        );
+
+                        if uc_resp.hovered() {
+                            let _ = uc_resp.on_hover_text(format!(
+                                "Mastering Multiband Upward Compressor HUD\nThreshold: {:.1} dBFS | Max Boost: +{:.1} dB\nActive Lift: +{:.1} dB\n[Drag: Upward Threshold dB (X) / Max Boost dB (Y) Puck]",
+                                thresh_db, boost_db, lift_db
                             ));
                         }
                     } else {

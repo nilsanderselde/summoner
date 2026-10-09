@@ -844,6 +844,10 @@ pub struct AwardWinningGuiView {
     pub subharmonic_synth_view: crate::views::subharmonic_synth_view::SubharmonicSynthView,
     pub show_tape_flutter_modal: bool,
     pub tape_flutter_view: crate::views::tape_flutter_view::TapeFlutterView,
+    pub show_transient_designer_modal: bool,
+    pub transient_designer_view: crate::views::transient_designer_view::TransientDesignerView,
+    pub show_upward_compressor_modal: bool,
+    pub upward_compressor_view: crate::views::upward_compressor_view::UpwardCompressorView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1304,6 +1308,10 @@ impl AwardWinningGuiView {
             subharmonic_synth_view: crate::views::subharmonic_synth_view::SubharmonicSynthView::new(),
             show_tape_flutter_modal: false,
             tape_flutter_view: crate::views::tape_flutter_view::TapeFlutterView::new(),
+            show_transient_designer_modal: false,
+            transient_designer_view: crate::views::transient_designer_view::TransientDesignerView::new(),
+            show_upward_compressor_modal: false,
+            upward_compressor_view: crate::views::upward_compressor_view::UpwardCompressorView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2453,6 +2461,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_tape_flutter_hud = false;
             self.open_tape_flutter_hud();
         }
+        if self.inspector_state.requested_open_transient_designer_hud || self.device_rack_state.requested_open_transient_designer_hud {
+            self.inspector_state.requested_open_transient_designer_hud = false;
+            self.device_rack_state.requested_open_transient_designer_hud = false;
+            self.open_transient_designer_hud();
+        }
+        if self.inspector_state.requested_open_upward_compressor_hud || self.device_rack_state.requested_open_upward_compressor_hud {
+            self.inspector_state.requested_open_upward_compressor_hud = false;
+            self.device_rack_state.requested_open_upward_compressor_hud = false;
+            self.open_upward_compressor_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2558,6 +2576,8 @@ impl AwardWinningGuiView {
         self.show_stereo_widener_modal_window(ui);
         self.show_subharmonic_synth_modal_window(ui);
         self.show_tape_flutter_modal_window(ui);
+        self.show_transient_designer_modal_window(ui);
+        self.show_upward_compressor_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -17959,6 +17979,198 @@ impl AwardWinningGuiView {
             if bus.get(pid_wow).is_some() { bus.set(pid_wow, wow); }
             if bus.get(pid_flutter).is_some() { bus.set(pid_flutter, flutter); }
             if bus.get(pid_bias).is_some() { bus.set(pid_bias, bias); }
+        }
+    }
+
+    pub fn open_transient_designer_hud(&mut self) {
+        self.show_transient_designer_modal = true;
+    }
+
+    pub fn close_transient_designer_hud(&mut self) {
+        self.show_transient_designer_modal = false;
+    }
+
+    pub fn is_transient_designer_hud_open(&self) -> bool {
+        self.show_transient_designer_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_transient_designer_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_transient_designer_modal {
+            return;
+        }
+
+        let mut is_open = self.show_transient_designer_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("💥 Tactile Transient Designer & Harmonic Punch HUD")
+            .id(egui::Id::new("transient_designer_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Tactile Transient Attack/Sustain Reshaping, Punch Resonance & Analog Soft Clipper (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.transient_designer_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_transient_designer_modal = is_open;
+        self.sync_transient_designer_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_transient_designer_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let atk_g = self.transient_designer_view.attack_gain_db;
+        let sus_g = self.transient_designer_view.sustain_gain_db;
+        let punch = self.transient_designer_view.punch_freq_hz;
+        let out_g = self.transient_designer_view.output_gain_db;
+
+        self.device_rack_state.node_param_values.insert("attack_gain_db".to_string(), atk_g);
+        self.device_rack_state.node_param_values.insert("attack".to_string(), atk_g);
+        self.device_rack_state.node_param_values.insert("sustain_gain_db".to_string(), sus_g);
+        self.device_rack_state.node_param_values.insert("sustain".to_string(), sus_g);
+        self.device_rack_state.node_param_values.insert("punch_freq_hz".to_string(), punch);
+        self.device_rack_state.node_param_values.insert("punch".to_string(), punch);
+        self.device_rack_state.node_param_values.insert("output_gain_db".to_string(), out_g);
+        self.device_rack_state.node_param_values.insert("gain".to_string(), out_g);
+
+        self.inspector_state.node_param_values.insert("attack_gain_db".to_string(), atk_g);
+        self.inspector_state.node_param_values.insert("attack".to_string(), atk_g);
+        self.inspector_state.node_param_values.insert("sustain_gain_db".to_string(), sus_g);
+        self.inspector_state.node_param_values.insert("sustain".to_string(), sus_g);
+        self.inspector_state.node_param_values.insert("punch_freq_hz".to_string(), punch);
+        self.inspector_state.node_param_values.insert("punch".to_string(), punch);
+        self.inspector_state.node_param_values.insert("output_gain_db".to_string(), out_g);
+        self.inspector_state.node_param_values.insert("gain".to_string(), out_g);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_atk = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_sus = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_punch = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_out = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_atk).is_some() { bus.set(pid_atk, atk_g); }
+            if bus.get(pid_sus).is_some() { bus.set(pid_sus, sus_g); }
+            if bus.get(pid_punch).is_some() { bus.set(pid_punch, punch); }
+            if bus.get(pid_out).is_some() { bus.set(pid_out, out_g); }
+        }
+    }
+
+    pub fn open_upward_compressor_hud(&mut self) {
+        self.show_upward_compressor_modal = true;
+    }
+
+    pub fn close_upward_compressor_hud(&mut self) {
+        self.show_upward_compressor_modal = false;
+    }
+
+    pub fn is_upward_compressor_hud_open(&self) -> bool {
+        self.show_upward_compressor_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_upward_compressor_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_upward_compressor_modal {
+            return;
+        }
+
+        let mut is_open = self.show_upward_compressor_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("⬆ Mastering Multiband Upward Compressor (OTT) HUD")
+            .id(egui::Id::new("upward_compressor_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Low-Level Detail Extraction, Multiband Upward Dynamics & Linear-Phase Lift (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.upward_compressor_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_upward_compressor_modal = is_open;
+        self.sync_upward_compressor_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_upward_compressor_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+        let sel_idx = self.upward_compressor_view.selected_band_idx.min(3);
+        let band = &self.upward_compressor_view.bands[sel_idx];
+
+        let thresh = band.threshold_dbfs;
+        let boost = band.max_boost_db;
+        let ratio = band.ratio;
+        let active_lift = band.active_gain_boost_db;
+
+        self.device_rack_state.node_param_values.insert("threshold_dbfs".to_string(), thresh);
+        self.device_rack_state.node_param_values.insert("threshold".to_string(), thresh);
+        self.device_rack_state.node_param_values.insert("max_boost_db".to_string(), boost);
+        self.device_rack_state.node_param_values.insert("boost".to_string(), boost);
+        self.device_rack_state.node_param_values.insert("ratio".to_string(), ratio);
+        self.device_rack_state.node_param_values.insert("active_gain_boost_db".to_string(), active_lift);
+        self.device_rack_state.node_param_values.insert("lift".to_string(), active_lift);
+
+        self.inspector_state.node_param_values.insert("threshold_dbfs".to_string(), thresh);
+        self.inspector_state.node_param_values.insert("threshold".to_string(), thresh);
+        self.inspector_state.node_param_values.insert("max_boost_db".to_string(), boost);
+        self.inspector_state.node_param_values.insert("boost".to_string(), boost);
+        self.inspector_state.node_param_values.insert("ratio".to_string(), ratio);
+        self.inspector_state.node_param_values.insert("active_gain_boost_db".to_string(), active_lift);
+        self.inspector_state.node_param_values.insert("lift".to_string(), active_lift);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_thresh = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_boost = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_ratio = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_lift = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_thresh).is_some() { bus.set(pid_thresh, thresh); }
+            if bus.get(pid_boost).is_some() { bus.set(pid_boost, boost); }
+            if bus.get(pid_ratio).is_some() { bus.set(pid_ratio, ratio); }
+            if bus.get(pid_lift).is_some() { bus.set(pid_lift, active_lift); }
         }
     }
     fn render_patch_cords_canvas(&mut self, ui: &mut egui::Ui, available_h: f32) {
