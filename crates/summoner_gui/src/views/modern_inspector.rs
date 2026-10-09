@@ -258,6 +258,10 @@ pub struct ModernInspectorState {
     pub requested_open_multiband_clipper_hud: bool,
     #[serde(default)]
     pub requested_open_multiband_expander_hud: bool,
+    #[serde(default)]
+    pub requested_open_multiband_decompressor_hud: bool,
+    #[serde(default)]
+    pub requested_open_dynamic_stereo_width_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -393,6 +397,8 @@ impl Default for ModernInspectorState {
             requested_open_multiband_imager_hud: false,
             requested_open_multiband_clipper_hud: false,
             requested_open_multiband_expander_hud: false,
+            requested_open_multiband_decompressor_hud: false,
+            requested_open_dynamic_stereo_width_hud: false,
         }
     }
 }
@@ -1849,7 +1855,17 @@ pub fn show_modern_inspector_with_context(
                     state.requested_open_harmonic_exciter_hud = true;
                 }
                 ui.add_space(4.0);
-            } else if active_kind.contains("StereoWidener") || active_kind.contains("StereoWidth") || active_kind == "StereoWidenerNode" || active_kind == "DynamicStereoWidthNode" || active_kind.contains("HaasWidener") || active_kind.contains("TransientSplayStereoWidener") {
+            } else if active_kind.contains("DynamicStereoWidth") || active_kind.contains("MasteringDynamicStereoWidthImager") || active_kind.contains("EllipticalBassMono") || active_kind == "DynamicStereoWidthNode" || active_kind.contains("SidePhaseUnmasker") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🌐 Open Dynamic Stereo Width HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(255, 215, 0)))
+                        .fill(Color32::from_rgb(28, 24, 10))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 215, 0)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Mastering Dynamic Stereo Width & Bass Mono HUD").clicked() {
+                    state.requested_open_dynamic_stereo_width_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("StereoWidener") || active_kind.contains("StereoWidth") || active_kind == "StereoWidenerNode" || active_kind.contains("HaasWidener") || active_kind.contains("TransientSplayStereoWidener") {
                 if ui.add(
                     egui::Button::new(RichText::new("↔ Open Stereo Widener HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 255, 180)))
                         .fill(Color32::from_rgb(12, 32, 26))
@@ -1977,6 +1993,16 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open 4-Band Dynamic Expander & Noise Gate HUD").clicked() {
                     state.requested_open_multiband_expander_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("MultibandDecompressor") || active_kind.contains("DynamicDecompressor") || active_kind == "MultibandDecompressorNode" || active_kind.contains("UpwardDecompressor") || active_kind.contains("MasteringDecompressor") {
+                if ui.add(
+                    egui::Button::new(RichText::new("📈 Open Multiband De-Compressor HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 229, 255)))
+                        .fill(Color32::from_rgb(10, 28, 36))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 229, 255)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Mastering Linear-Phase Multiband Upward De-Compressor HUD").clicked() {
+                    state.requested_open_multiband_decompressor_hud = true;
                 }
                 ui.add_space(4.0);
             }

@@ -980,6 +980,18 @@ impl CommandPalette {
                 action_id: "open_multiband_expander_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Mastering Linear-Phase Multiband De-Compressor HUD".into(),
+                category: "Mastering & Dynamics".into(),
+                action_id: "open_multiband_decompressor_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Mastering Dynamic Stereo Width & Bass Mono HUD".into(),
+                category: "Spatial & Surround".into(),
+                action_id: "open_dynamic_stereo_width_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

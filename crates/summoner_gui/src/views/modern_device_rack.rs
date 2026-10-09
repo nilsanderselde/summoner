@@ -273,6 +273,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_multiband_clipper_hud: bool,
     #[serde(default)]
     pub requested_open_multiband_expander_hud: bool,
+    #[serde(default)]
+    pub requested_open_multiband_decompressor_hud: bool,
+    #[serde(default)]
+    pub requested_open_dynamic_stereo_width_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -398,6 +402,8 @@ impl Default for ModernDeviceRackState {
             requested_open_multiband_imager_hud: false,
             requested_open_multiband_clipper_hud: false,
             requested_open_multiband_expander_hud: false,
+            requested_open_multiband_decompressor_hud: false,
+            requested_open_dynamic_stereo_width_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -1133,7 +1139,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_frequency_shifter = cur_selection.contains("FrequencyShift") || cur_selection.contains("FreqShift") || cur_selection == "FrequencyShifterNode" || cur_selection == "FrequencyShifter" || cur_selection == "FrequencyShifterRingModulator";
                     let is_optical_compressor = cur_selection.contains("OpticalCompressor") || cur_selection.contains("OptoComp") || cur_selection == "OpticalCompressorNode" || cur_selection.contains("VactrolCompressor") || cur_selection == "OpticalTubeCompressorLimiter" || cur_selection == "OptoelectronicVactrolOptocoupler" || cur_selection == "OpticalVactrolPeakMasterCompressor";
                     let is_harmonic_exciter = cur_selection.contains("HarmonicExciter") || cur_selection.contains("Exciter") || cur_selection == "HarmonicExciterNode" || cur_selection == "AuralExciter" || cur_selection.contains("TapeExciter");
-                    let is_stereo_widener = cur_selection.contains("StereoWidener") || cur_selection.contains("StereoWidth") || cur_selection == "StereoWidenerNode" || cur_selection == "DynamicStereoWidthNode" || cur_selection.contains("HaasWidener") || cur_selection.contains("TransientSplayStereoWidener");
+                    let is_dynamic_stereo_width = cur_selection.contains("DynamicStereoWidth") || cur_selection.contains("MasteringDynamicStereoWidthImager") || cur_selection.contains("EllipticalBassMono") || cur_selection == "DynamicStereoWidthNode" || cur_selection.contains("SidePhaseUnmasker");
+                    let is_stereo_widener = !is_dynamic_stereo_width && (cur_selection.contains("StereoWidener") || cur_selection.contains("StereoWidth") || cur_selection == "StereoWidenerNode" || cur_selection.contains("HaasWidener") || cur_selection.contains("TransientSplayStereoWidener"));
                     let is_subharmonic_synth = cur_selection.contains("Subharmonic") || cur_selection.contains("SubBass") || cur_selection == "SubharmonicSynthNode" || cur_selection == "SubharmonicGenerator" || cur_selection.contains("SubSynth");
                     let is_tape_flutter = cur_selection.contains("TapeFlutter") || cur_selection.contains("TapeWow") || cur_selection == "TapeFlutterNode" || cur_selection == "TapeWowFlutter" || cur_selection.contains("ReelFlutter");
                     let is_transient_designer = cur_selection.contains("TransientDesigner") || cur_selection.contains("TransientShaper") || cur_selection == "TransientDesignerNode" || cur_selection == "TransientShaperNode" || cur_selection.contains("TransientPunch");
@@ -1146,6 +1153,7 @@ pub fn show_modern_device_rack_with_context(
                     let is_multiband_imager = cur_selection.contains("MultibandImager") || cur_selection.contains("MultibandStereoImager") || cur_selection.contains("StereoImager") || cur_selection == "MultibandImagerNode";
                     let is_multiband_clipper = cur_selection.contains("MultibandClipper") || cur_selection.contains("MasteringClipper") || cur_selection == "MultibandClipperNode" || cur_selection == "TriBandMasteringClipper";
                     let is_multiband_expander = cur_selection.contains("MultibandExpander") || cur_selection.contains("MasteringMidSideMultibandExpander") || cur_selection == "MultibandExpanderNode" || cur_selection.contains("MidSideMultibandExpander");
+                    let is_multiband_decompressor = cur_selection.contains("MultibandDecompressor") || cur_selection.contains("DynamicDecompressor") || cur_selection == "MultibandDecompressorNode" || cur_selection.contains("UpwardDecompressor") || cur_selection.contains("MasteringDecompressor");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1590,6 +1598,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("📈 Expander HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 255, 180))).on_hover_text("Open 4-Band Dynamic Expander HUD").clicked()
                     {
                         state.requested_open_multiband_expander_hud = true;
+                    } else if is_multiband_decompressor
+                        && ui.button(RichText::new("📈 De-Compressor HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Mastering Linear-Phase Multiband Upward De-Compressor HUD").clicked()
+                    {
+                        state.requested_open_multiband_decompressor_hud = true;
+                    } else if is_dynamic_stereo_width
+                        && ui.button(RichText::new("🌐 Stereo Width HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 215, 0))).on_hover_text("Open Mastering Dynamic Stereo Width & Bass Mono HUD").clicked()
+                    {
+                        state.requested_open_dynamic_stereo_width_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2453,7 +2469,8 @@ fn show_pro_parameter_drawer(
                     let is_frequency_shifter = dev_kind.contains("FrequencyShift") || dev_kind.contains("FreqShift") || dev_kind == "FrequencyShifterNode" || dev_kind == "FrequencyShifter" || dev_kind == "FrequencyShifterRingModulator";
                     let is_optical_compressor = dev_kind.contains("OpticalCompressor") || dev_kind.contains("OptoComp") || dev_kind == "OpticalCompressorNode" || dev_kind.contains("VactrolCompressor") || dev_kind == "OpticalTubeCompressorLimiter" || dev_kind == "OptoelectronicVactrolOptocoupler" || dev_kind == "OpticalVactrolPeakMasterCompressor";
                     let is_harmonic_exciter = dev_kind.contains("HarmonicExciter") || dev_kind.contains("Exciter") || dev_kind == "HarmonicExciterNode" || dev_kind == "AuralExciter" || dev_kind.contains("TapeExciter");
-                    let is_stereo_widener = dev_kind.contains("StereoWidener") || dev_kind.contains("StereoWidth") || dev_kind == "StereoWidenerNode" || dev_kind == "DynamicStereoWidthNode" || dev_kind.contains("HaasWidener") || dev_kind.contains("TransientSplayStereoWidener");
+                    let is_dynamic_stereo_width = dev_kind.contains("DynamicStereoWidth") || dev_kind.contains("MasteringDynamicStereoWidthImager") || dev_kind.contains("EllipticalBassMono") || dev_kind == "DynamicStereoWidthNode" || dev_kind.contains("SidePhaseUnmasker");
+                    let is_stereo_widener = !is_dynamic_stereo_width && (dev_kind.contains("StereoWidener") || dev_kind.contains("StereoWidth") || dev_kind == "StereoWidenerNode" || dev_kind.contains("HaasWidener") || dev_kind.contains("TransientSplayStereoWidener"));
                     let is_subharmonic_synth = dev_kind.contains("Subharmonic") || dev_kind.contains("SubBass") || dev_kind == "SubharmonicSynthNode" || dev_kind == "SubharmonicGenerator" || dev_kind.contains("SubSynth");
                     let is_tape_flutter = dev_kind.contains("TapeFlutter") || dev_kind.contains("TapeWow") || dev_kind == "TapeFlutterNode" || dev_kind == "TapeWowFlutter" || dev_kind.contains("ReelFlutter");
                     let is_transient_designer = dev_kind.contains("TransientDesigner") || dev_kind.contains("TransientShaper") || dev_kind == "TransientDesignerNode" || dev_kind == "TransientShaperNode" || dev_kind.contains("TransientPunch");
@@ -2466,6 +2483,7 @@ fn show_pro_parameter_drawer(
                     let is_multiband_imager = dev_kind.contains("MultibandImager") || dev_kind.contains("MultibandStereoImager") || dev_kind.contains("StereoImager") || dev_kind == "MultibandImagerNode";
                     let is_multiband_clipper = dev_kind.contains("MultibandClipper") || dev_kind.contains("MasteringClipper") || dev_kind == "MultibandClipperNode" || dev_kind == "TriBandMasteringClipper";
                     let is_multiband_expander = dev_kind.contains("MultibandExpander") || dev_kind.contains("MasteringMidSideMultibandExpander") || dev_kind == "MultibandExpanderNode" || dev_kind.contains("MidSideMultibandExpander");
+                    let is_multiband_decompressor = dev_kind.contains("MultibandDecompressor") || dev_kind.contains("DynamicDecompressor") || dev_kind == "MultibandDecompressorNode" || dev_kind.contains("UpwardDecompressor") || dev_kind.contains("MasteringDecompressor");
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -11168,6 +11186,138 @@ fn show_pro_parameter_drawer(
                             let _ = exp_resp.on_hover_text(format!(
                                 "4-Band Dynamic Expander & Noise Gate HUD\nThreshold: {:.1} dB | Ratio: 1:{:.1}\nKnee: {:.1} dB\n[Drag: Threshold (X) / Ratio (Y) Puck]",
                                 thresh_db, ratio, knee
+                            ));
+                        }
+                    } else if is_multiband_decompressor {
+                        // Mastering Linear-Phase Multiband Upward De-Compressor Mini View
+                        let (dec_resp, dec_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let dec_rect = dec_resp.rect;
+                        dec_painter.rect_filled(dec_rect, 2.0, Color32::from_rgb(10, 18, 28));
+
+                        let mut thresh_db = state.node_param_values.get("threshold_db").or_else(|| state.node_param_values.get("threshold")).copied().unwrap_or(-18.0);
+                        let mut ratio = state.node_param_values.get("ratio").copied().unwrap_or(1.8);
+                        let range_db = state.node_param_values.get("range_db").or_else(|| state.node_param_values.get("range")).copied().unwrap_or(6.0);
+
+                        if dec_resp.dragged() {
+                            if let Some(pos) = dec_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - dec_rect.left()) / dec_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - dec_rect.top()) / dec_rect.height())).clamp(0.0, 1.0);
+                                thresh_db = crate::views::multiband_decompressor_view::MultibandDecompressorView::normalized_to_threshold(norm_x);
+                                ratio = crate::views::multiband_decompressor_view::MultibandDecompressorView::normalized_to_ratio(norm_y);
+                                state.node_param_values.insert("threshold_db".to_string(), thresh_db);
+                                state.node_param_values.insert("threshold".to_string(), thresh_db);
+                                state.node_param_values.insert("ratio".to_string(), ratio);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_th = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_th).is_some() { bus.set(pid_th, thresh_db); }
+                                    let pid_rt = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_rt).is_some() { bus.set(pid_rt, ratio); }
+                                }
+                            }
+                        }
+
+                        // Mini Upward Expansion Transfer Curve (30 steps)
+                        let steps = 30;
+                        let mut dec_pts = Vec::with_capacity(steps);
+                        for i in 0..steps {
+                            let t = i as f32 / (steps - 1) as f32;
+                            let in_db = -60.0 + t * 60.0;
+                            let out_db = if in_db > thresh_db {
+                                let over = in_db - thresh_db;
+                                in_db + (over * (ratio - 1.0)).min(range_db)
+                            } else {
+                                in_db
+                            };
+                            let norm_y = ((out_db + 60.0) / 66.0).clamp(0.0, 1.0);
+                            let px = dec_rect.left() + t * (dec_rect.width() - 55.0);
+                            let py = dec_rect.bottom() - norm_y * (dec_rect.height() - 10.0) - 5.0;
+                            dec_pts.push(egui::pos2(px, py));
+                        }
+                        dec_painter.add(egui::Shape::line(
+                            dec_pts,
+                            Stroke::new(1.8_f32, Color32::from_rgb(0, 229, 255)),
+                        ));
+
+                        // Interactive Decompressor Puck
+                        let norm_th = crate::views::multiband_decompressor_view::MultibandDecompressorView::threshold_to_normalized(thresh_db);
+                        let norm_rt = crate::views::multiband_decompressor_view::MultibandDecompressorView::ratio_to_normalized(ratio);
+                        let puck_x = dec_rect.left() + norm_th * (dec_rect.width() - 55.0);
+                        let puck_y = dec_rect.bottom() - norm_rt * (dec_rect.height() - 20.0) - 10.0;
+                        dec_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(0, 229, 255));
+                        dec_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        dec_painter.text(
+                            egui::pos2(dec_rect.right() - 4.0, dec_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("DECOMP\n{:.1}dB Th\n1:{:.1} R\n+{:.1}dB", thresh_db, ratio, range_db),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+
+                        if dec_resp.hovered() {
+                            let _ = dec_resp.on_hover_text(format!(
+                                "Mastering Linear-Phase Multiband De-Compressor HUD\nThreshold: {:.1} dB | Ratio: 1:{:.1}\nRange Boost: +{:.1} dB\n[Drag: Threshold (X) / Ratio (Y) Puck]",
+                                thresh_db, ratio, range_db
+                            ));
+                        }
+                    } else if is_dynamic_stereo_width {
+                        // Mastering Dynamic Stereo Width & Bass Mono Mini View
+                        let (stw_resp, stw_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let stw_rect = stw_resp.rect;
+                        stw_painter.rect_filled(stw_rect, 2.0, Color32::from_rgb(12, 16, 26));
+
+                        let mut bass_hz = state.node_param_values.get("elliptical_bass_hz").or_else(|| state.node_param_values.get("bass_cutoff_hz")).copied().unwrap_or(120.0);
+                        let mut width_ratio = state.node_param_values.get("side_width_ratio").or_else(|| state.node_param_values.get("width")).copied().unwrap_or(1.25);
+
+                        if stw_resp.dragged() {
+                            if let Some(pos) = stw_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - stw_rect.left()) / stw_rect.width()).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - stw_rect.top()) / stw_rect.height())).clamp(0.0, 1.0);
+                                bass_hz = crate::views::dynamic_stereo_width_view::DynamicStereoWidthView::normalized_to_bass(norm_x);
+                                width_ratio = crate::views::dynamic_stereo_width_view::DynamicStereoWidthView::normalized_to_width(norm_y);
+                                state.node_param_values.insert("elliptical_bass_hz".to_string(), bass_hz);
+                                state.node_param_values.insert("side_width_ratio".to_string(), width_ratio);
+
+                                if let Some(bus) = param_bus {
+                                    let pid_b = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    if bus.get(pid_b).is_some() { bus.set(pid_b, bass_hz); }
+                                    let pid_w = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_w).is_some() { bus.set(pid_w, width_ratio); }
+                                }
+                            }
+                        }
+
+                        // Mini Lissajous / Polar Phase Correlation Ellipse Preview
+                        let center = egui::pos2(stw_rect.left() + 45.0, stw_rect.center().y);
+                        let rx = (25.0 * (width_ratio / 1.25)).clamp(5.0, 40.0);
+                        let ry = 22.0;
+                        stw_painter.circle_stroke(
+                            center,
+                            rx.min(ry),
+                            Stroke::new(1.8_f32, Color32::from_rgb(255, 215, 0)),
+                        );
+
+                        // Interactive Puck
+                        let norm_b = crate::views::dynamic_stereo_width_view::DynamicStereoWidthView::bass_to_normalized(bass_hz);
+                        let norm_w = crate::views::dynamic_stereo_width_view::DynamicStereoWidthView::width_to_normalized(width_ratio);
+                        let puck_x = stw_rect.left() + norm_b * (stw_rect.width() - 55.0);
+                        let puck_y = stw_rect.bottom() - norm_w * (stw_rect.height() - 20.0) - 10.0;
+                        stw_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(255, 215, 0));
+                        stw_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        stw_painter.text(
+                            egui::pos2(stw_rect.right() - 4.0, stw_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("WIDTH\n{:.0}Hz Mono\n{:.0}%\n[M/S]", bass_hz, width_ratio * 100.0),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(255, 215, 0),
+                        );
+
+                        if stw_resp.hovered() {
+                            let _ = stw_resp.on_hover_text(format!(
+                                "Mastering Dynamic Stereo Width & Bass Mono HUD\nBass Cutoff: {:.0} Hz | Width: {:.0}%\n[Drag: Bass Mono Cutoff (X) / Side Width (Y) Puck]",
+                                bass_hz, width_ratio * 100.0
                             ));
                         }
                     } else {

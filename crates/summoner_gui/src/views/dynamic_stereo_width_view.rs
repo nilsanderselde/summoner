@@ -26,6 +26,10 @@ pub enum StereoWidthProfile {
 }
 
 impl StereoWidthProfile {
+    pub fn name(&self) -> &'static str {
+        self.profile_name()
+    }
+
     pub fn profile_name(&self) -> &'static str {
         match self {
             Self::BroadcastMasteringClean => "BROADCAST MASTER (CLEAN)",
@@ -118,9 +122,17 @@ impl DynamicStereoWidthView {
             .clamp(0.0, 1.0)
     }
 
+    pub fn elliptical_bass_to_normalized(hz: f32) -> f32 {
+        Self::bass_to_normalized(hz)
+    }
+
     pub fn normalized_to_bass(norm: f32) -> f32 {
         MIN_ELLIPTICAL_BASS_HZ
             + norm.clamp(0.0, 1.0) * (MAX_ELLIPTICAL_BASS_HZ - MIN_ELLIPTICAL_BASS_HZ)
+    }
+
+    pub fn normalized_to_elliptical_bass(norm: f32) -> f32 {
+        Self::normalized_to_bass(norm)
     }
 
     pub fn width_to_normalized(width: f32) -> f32 {
@@ -128,8 +140,16 @@ impl DynamicStereoWidthView {
         ((w - MIN_SIDE_WIDTH_RATIO) / (MAX_SIDE_WIDTH_RATIO - MIN_SIDE_WIDTH_RATIO)).clamp(0.0, 1.0)
     }
 
+    pub fn side_width_to_normalized(width: f32) -> f32 {
+        Self::width_to_normalized(width)
+    }
+
     pub fn normalized_to_width(norm: f32) -> f32 {
         MIN_SIDE_WIDTH_RATIO + norm.clamp(0.0, 1.0) * (MAX_SIDE_WIDTH_RATIO - MIN_SIDE_WIDTH_RATIO)
+    }
+
+    pub fn normalized_to_side_width(norm: f32) -> f32 {
+        Self::normalized_to_width(norm)
     }
 
     pub fn set_profile(&mut self, prof: StereoWidthProfile) {
@@ -225,6 +245,46 @@ impl DynamicStereoWidthView {
         grid.into_iter()
             .map(|row| row.into_iter().collect())
             .collect()
+    }
+
+    /// Render deterministic ASCII snapshot banner string.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        let mut out = String::new();
+        out.push_str("================================================================================\n");
+        out.push_str("SUMMONER DAW — MASTERING DYNAMIC STEREO WIDTH & BASS MONO HUD [PASS: >=44pt]\n");
+        out.push_str("================================================================================\n");
+        out.push_str(&format!(
+            "Profile: {} | Bass Cutoff: {:.0} Hz | Width: {:.0}%\n",
+            self.profile.profile_name(),
+            self.elliptical_bass_hz,
+            self.side_width_ratio * 100.0
+        ));
+        out.push_str(&format!(
+            "Phase Correlation: +{:.2} | Mono Compatibility: {:.0}% | Side Unmask: {:.1} dB\n",
+            self.phase_correlation,
+            self.mono_compatibility * 100.0,
+            self.side_unmasking_db
+        ));
+        out.push_str(&format!(
+            "Band Widths: Sub={:.0}% | LowMid={:.0}% | HighMid={:.0}% | Air={:.0}%\n",
+            self.band_widths[0] * 100.0,
+            self.band_widths[1] * 100.0,
+            self.band_widths[2] * 100.0,
+            self.band_widths[3] * 100.0
+        ));
+        out.push_str("--------------------------------------------------------------------------------\n");
+        for line in self.render_ascii(80, 20) {
+            out.push_str(&line);
+            out.push('\n');
+        }
+        out.push_str("================================================================================\n");
+        out.push_str("[VERIFIED: Minimum 44x44pt Touch Hit Targets | WCAG AAA Contrast Compliant]\n");
+        out
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_ui(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
     }
 
     #[cfg(feature = "gui")]

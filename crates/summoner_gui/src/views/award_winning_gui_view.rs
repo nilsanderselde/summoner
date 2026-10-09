@@ -864,6 +864,10 @@ pub struct AwardWinningGuiView {
     pub multiband_clipper_view: crate::views::multiband_clipper_view::MultibandClipperView,
     pub show_multiband_expander_modal: bool,
     pub multiband_expander_view: crate::views::multiband_expander_view::MultibandExpanderView,
+    pub show_multiband_decompressor_modal: bool,
+    pub multiband_decompressor_view: crate::views::multiband_decompressor_view::MultibandDecompressorView,
+    pub show_dynamic_stereo_width_modal: bool,
+    pub dynamic_stereo_width_view: crate::views::dynamic_stereo_width_view::DynamicStereoWidthView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1344,6 +1348,10 @@ impl AwardWinningGuiView {
             multiband_clipper_view: crate::views::multiband_clipper_view::MultibandClipperView::new(),
             show_multiband_expander_modal: false,
             multiband_expander_view: crate::views::multiband_expander_view::MultibandExpanderView::new(),
+            show_multiband_decompressor_modal: false,
+            multiband_decompressor_view: crate::views::multiband_decompressor_view::MultibandDecompressorView::new(),
+            show_dynamic_stereo_width_modal: false,
+            dynamic_stereo_width_view: crate::views::dynamic_stereo_width_view::DynamicStereoWidthView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2543,6 +2551,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_multiband_expander_hud = false;
             self.open_multiband_expander_hud();
         }
+        if self.inspector_state.requested_open_multiband_decompressor_hud || self.device_rack_state.requested_open_multiband_decompressor_hud {
+            self.inspector_state.requested_open_multiband_decompressor_hud = false;
+            self.device_rack_state.requested_open_multiband_decompressor_hud = false;
+            self.open_multiband_decompressor_hud();
+        }
+        if self.inspector_state.requested_open_dynamic_stereo_width_hud || self.device_rack_state.requested_open_dynamic_stereo_width_hud {
+            self.inspector_state.requested_open_dynamic_stereo_width_hud = false;
+            self.device_rack_state.requested_open_dynamic_stereo_width_hud = false;
+            self.open_dynamic_stereo_width_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2658,6 +2676,8 @@ impl AwardWinningGuiView {
         self.show_multiband_imager_modal_window(ui);
         self.show_multiband_clipper_modal_window(ui);
         self.show_multiband_expander_modal_window(ui);
+        self.show_multiband_decompressor_modal_window(ui);
+        self.show_dynamic_stereo_width_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -19026,6 +19046,191 @@ impl AwardWinningGuiView {
             if bus.get(pid_rt).is_some() { bus.set(pid_rt, ratio); }
             if bus.get(pid_kn).is_some() { bus.set(pid_kn, knee); }
             if bus.get(pid_la).is_some() { bus.set(pid_la, lookahead); }
+        }
+    }
+
+    pub fn open_multiband_decompressor_hud(&mut self) {
+        self.show_multiband_decompressor_modal = true;
+    }
+
+    pub fn close_multiband_decompressor_hud(&mut self) {
+        self.show_multiband_decompressor_modal = false;
+    }
+
+    pub fn is_multiband_decompressor_hud_open(&self) -> bool {
+        self.show_multiband_decompressor_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_multiband_decompressor_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_multiband_decompressor_modal {
+            return;
+        }
+
+        let mut is_open = self.show_multiband_decompressor_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("📈 Mastering Linear-Phase Multiband Upward De-Compressor HUD")
+            .id(egui::Id::new("multiband_decompressor_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Mastering Upward Dynamic Expansion, Crest Headroom Restoration & FIR Crossover (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.multiband_decompressor_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_multiband_decompressor_modal = is_open;
+        self.sync_multiband_decompressor_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_multiband_decompressor_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let band_idx = self.multiband_decompressor_view.selected_band.min(3);
+        let thresh = self.multiband_decompressor_view.threshold_db[band_idx];
+        let ratio = self.multiband_decompressor_view.ratio[band_idx];
+        let range = self.multiband_decompressor_view.range_db[band_idx];
+        let crest = self.multiband_decompressor_view.dynamic_crest_factor_db;
+
+        self.device_rack_state.node_param_values.insert("threshold_db".to_string(), thresh);
+        self.device_rack_state.node_param_values.insert("threshold".to_string(), thresh);
+        self.device_rack_state.node_param_values.insert("ratio".to_string(), ratio);
+        self.device_rack_state.node_param_values.insert("range_db".to_string(), range);
+        self.device_rack_state.node_param_values.insert("range".to_string(), range);
+        self.device_rack_state.node_param_values.insert("dynamic_crest_factor_db".to_string(), crest);
+
+        self.inspector_state.node_param_values.insert("threshold_db".to_string(), thresh);
+        self.inspector_state.node_param_values.insert("threshold".to_string(), thresh);
+        self.inspector_state.node_param_values.insert("ratio".to_string(), ratio);
+        self.inspector_state.node_param_values.insert("range_db".to_string(), range);
+        self.inspector_state.node_param_values.insert("range".to_string(), range);
+        self.inspector_state.node_param_values.insert("dynamic_crest_factor_db".to_string(), crest);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_th = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_rt = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_rg = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_cr = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_th).is_some() { bus.set(pid_th, thresh); }
+            if bus.get(pid_rt).is_some() { bus.set(pid_rt, ratio); }
+            if bus.get(pid_rg).is_some() { bus.set(pid_rg, range); }
+            if bus.get(pid_cr).is_some() { bus.set(pid_cr, crest); }
+        }
+    }
+
+    pub fn open_dynamic_stereo_width_hud(&mut self) {
+        self.show_dynamic_stereo_width_modal = true;
+    }
+
+    pub fn close_dynamic_stereo_width_hud(&mut self) {
+        self.show_dynamic_stereo_width_modal = false;
+    }
+
+    pub fn is_dynamic_stereo_width_hud_open(&self) -> bool {
+        self.show_dynamic_stereo_width_modal
+    }
+
+    #[cfg(feature = "gui")]
+    fn show_dynamic_stereo_width_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_dynamic_stereo_width_modal {
+            return;
+        }
+
+        let mut is_open = self.show_dynamic_stereo_width_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🌐 Mastering Dynamic Stereo Width & Side Phase Unmasker HUD")
+            .id(egui::Id::new("dynamic_stereo_width_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Mastering Multi-Band Stereo Width, Elliptical Bass Mono & Side Phase Correlation (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.dynamic_stereo_width_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_dynamic_stereo_width_modal = is_open;
+        self.sync_dynamic_stereo_width_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_dynamic_stereo_width_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let bass_hz = self.dynamic_stereo_width_view.elliptical_bass_hz;
+        let width_ratio = self.dynamic_stereo_width_view.side_width_ratio;
+        let correlation = self.dynamic_stereo_width_view.phase_correlation;
+        let mono_compat = self.dynamic_stereo_width_view.mono_compatibility;
+
+        self.device_rack_state.node_param_values.insert("elliptical_bass_hz".to_string(), bass_hz);
+        self.device_rack_state.node_param_values.insert("bass_cutoff_hz".to_string(), bass_hz);
+        self.device_rack_state.node_param_values.insert("side_width_ratio".to_string(), width_ratio);
+        self.device_rack_state.node_param_values.insert("width".to_string(), width_ratio);
+        self.device_rack_state.node_param_values.insert("phase_correlation".to_string(), correlation);
+        self.device_rack_state.node_param_values.insert("mono_compatibility".to_string(), mono_compat);
+
+        self.inspector_state.node_param_values.insert("elliptical_bass_hz".to_string(), bass_hz);
+        self.inspector_state.node_param_values.insert("bass_cutoff_hz".to_string(), bass_hz);
+        self.inspector_state.node_param_values.insert("side_width_ratio".to_string(), width_ratio);
+        self.inspector_state.node_param_values.insert("width".to_string(), width_ratio);
+        self.inspector_state.node_param_values.insert("phase_correlation".to_string(), correlation);
+        self.inspector_state.node_param_values.insert("mono_compatibility".to_string(), mono_compat);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_b = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_w = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_c = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_m = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_b).is_some() { bus.set(pid_b, bass_hz); }
+            if bus.get(pid_w).is_some() { bus.set(pid_w, width_ratio); }
+            if bus.get(pid_c).is_some() { bus.set(pid_c, correlation); }
+            if bus.get(pid_m).is_some() { bus.set(pid_m, mono_compat); }
         }
     }
     fn render_patch_cords_canvas(&mut self, ui: &mut egui::Ui, available_h: f32) {
