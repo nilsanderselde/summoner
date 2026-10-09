@@ -293,6 +293,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_transient_declicker_hud: bool,
     #[serde(default)]
     pub requested_open_transient_gate_hud: bool,
+    #[serde(default)]
+    pub requested_open_dialog_gating_hud: bool,
+    #[serde(default)]
+    pub requested_open_transient_reconstructor_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -428,6 +432,8 @@ impl Default for ModernDeviceRackState {
             requested_open_tape_flux_master_hud: false,
             requested_open_transient_declicker_hud: false,
             requested_open_transient_gate_hud: false,
+            requested_open_dialog_gating_hud: false,
+            requested_open_transient_reconstructor_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -1186,6 +1192,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_tape_flux_master = cur_selection.contains("TapeFlux") || cur_selection.contains("TapeFluxMaster") || cur_selection == "TapeFluxMasterNode" || cur_selection.contains("MasteringTape") || cur_selection.contains("MagneticTape");
                     let is_transient_declicker = cur_selection.contains("Declick") || cur_selection.contains("DeClick") || cur_selection.contains("VinylRestoration") || cur_selection.contains("TransientDeclicker") || cur_selection == "TransientDeclickerNode" || cur_selection.contains("ClickRepair") || cur_selection.contains("AudioRestoration");
                     let is_transient_gate = cur_selection.contains("TransientGate") || cur_selection.contains("SidechainGate") || cur_selection.contains("NoiseGate") || cur_selection == "TransientGateNode" || cur_selection.contains("HysteresisGate") || cur_selection.contains("DynamicGate") || cur_selection.contains("TransientExpanderGate");
+                    let is_dialog_gating = cur_selection.contains("DialogGating") || cur_selection.contains("DialogGate") || cur_selection.contains("LoudnessGating") || cur_selection == "DialogGatingNode" || cur_selection.contains("SpeechNormalization") || cur_selection.contains("BS1770") || cur_selection.contains("ItuLoudness");
+                    let is_transient_reconstructor = cur_selection.contains("TransientReconstructor") || cur_selection.contains("TransientReconstruct") || cur_selection == "TransientReconstructorNode" || cur_selection.contains("CrestFactor") || cur_selection.contains("AttackReconstructor") || cur_selection.contains("MultibandTransient");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1670,6 +1678,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("⚡ Gate HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 255, 180))).on_hover_text("Open Dynamic Transient Sidechain Expander/Gate & Hysteresis HUD").clicked()
                     {
                         state.requested_open_transient_gate_hud = true;
+                    } else if is_dialog_gating
+                        && ui.button(RichText::new("🎙 Dialog Gate HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Broadcast Mastering ITU-R BS.1770-4 Dialog Gating HUD").clicked()
+                    {
+                        state.requested_open_dialog_gating_hud = true;
+                    } else if is_transient_reconstructor
+                        && ui.button(RichText::new("💥 Reconstruct HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 180, 0))).on_hover_text("Open Multiband Linear-Phase Transient Reconstructor & Crest Expander HUD").clicked()
+                    {
+                        state.requested_open_transient_reconstructor_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2556,6 +2572,8 @@ fn show_pro_parameter_drawer(
                     let is_tape_flux_master = dev_kind.contains("TapeFlux") || dev_kind.contains("TapeFluxMaster") || dev_kind == "TapeFluxMasterNode" || dev_kind.contains("MasteringTape") || dev_kind.contains("MagneticTape");
                     let is_transient_declicker = dev_kind.contains("Declick") || dev_kind.contains("DeClick") || dev_kind.contains("VinylRestoration") || dev_kind.contains("TransientDeclicker") || dev_kind == "TransientDeclickerNode" || dev_kind.contains("ClickRepair") || dev_kind.contains("AudioRestoration");
                     let is_transient_gate = dev_kind.contains("TransientGate") || dev_kind.contains("SidechainGate") || dev_kind.contains("NoiseGate") || dev_kind == "TransientGateNode" || dev_kind.contains("HysteresisGate") || dev_kind.contains("DynamicGate") || dev_kind.contains("TransientExpanderGate");
+                    let is_dialog_gating = dev_kind.contains("DialogGating") || dev_kind.contains("DialogGate") || dev_kind.contains("LoudnessGating") || dev_kind == "DialogGatingNode" || dev_kind.contains("SpeechNormalization") || dev_kind.contains("BS1770") || dev_kind.contains("ItuLoudness");
+                    let is_transient_reconstructor = dev_kind.contains("TransientReconstructor") || dev_kind.contains("TransientReconstruct") || dev_kind == "TransientReconstructorNode" || dev_kind.contains("CrestFactor") || dev_kind.contains("AttackReconstructor") || dev_kind.contains("MultibandTransient");
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -11951,6 +11969,155 @@ fn show_pro_parameter_drawer(
                             let _ = gate_resp.on_hover_text(format!(
                                 "Dynamic Transient Sidechain Expander/Gate HUD\nOpen: {:.1} dB | Close: {:.1} dB | Hyst: {:.1} dB\nAttack: {:.1} ms | Release: {:.0} ms\n[Drag: Open Threshold (X) / Hysteresis (Y) Puck]",
                                 open_th, close_th, hyst_db, att_ms, rel_ms
+                            ));
+                        }
+                    } else if is_dialog_gating {
+                        // Broadcast Mastering ITU-R BS.1770-4 Dialog Gating Mini View
+                        let (dg_resp, dg_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let dg_rect = dg_resp.rect;
+                        dg_painter.rect_filled(dg_rect, 2.0, Color32::from_rgb(10, 14, 24));
+
+                        let mut gated_lkfs = state.node_param_values.get("gated_integrated_lkfs").copied().unwrap_or(-23.0);
+                        let mut vad_pct = state.node_param_values.get("vad_speech_activity_pct").copied().unwrap_or(68.5);
+                        let tp_max = state.node_param_values.get("true_peak_max_dbtp").copied().unwrap_or(-1.25);
+
+                        if dg_resp.dragged() || dg_resp.clicked() {
+                            if let Some(pos) = dg_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - dg_rect.left()) / (dg_rect.width() - 55.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - dg_rect.top() - 10.0) / (dg_rect.height() - 20.0))).clamp(0.0, 1.0);
+                                gated_lkfs = crate::views::dialog_gating_view::DialogGatingView::normalized_to_lufs(norm_x);
+                                vad_pct = crate::views::dialog_gating_view::DialogGatingView::normalized_to_vad(norm_y);
+                                state.node_param_values.insert("gated_integrated_lkfs".to_string(), gated_lkfs);
+                                state.node_param_values.insert("target_lufs".to_string(), gated_lkfs);
+                                state.node_param_values.insert("vad_speech_activity_pct".to_string(), vad_pct);
+                                if let Some(bus) = param_bus {
+                                    let pid_lu = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_va = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_lu).is_some() { bus.set(pid_lu, gated_lkfs); }
+                                    if bus.get(pid_va).is_some() { bus.set(pid_va, vad_pct); }
+                                }
+                            }
+                        }
+
+                        // Histogram energy bars
+                        let num_bars = 16;
+                        let bar_w = (dg_rect.width() - 60.0) / num_bars as f32;
+                        for b in 0..num_bars {
+                            let frac = b as f32 / num_bars as f32;
+                            let lufs = -40.0 + frac * 30.0;
+                            let energy = (-0.5 * ((lufs - gated_lkfs) / 4.0).powi(2)).exp();
+                            let bh = energy * (dg_rect.height() * 0.7);
+                            let bx = dg_rect.left() + 4.0 + b as f32 * bar_w;
+                            let b_rect = egui::Rect::from_min_max(
+                                egui::pos2(bx, dg_rect.bottom() - 6.0 - bh),
+                                egui::pos2(bx + bar_w - 1.0, dg_rect.bottom() - 6.0),
+                            );
+                            let col = if lufs >= -23.0 {
+                                Color32::from_rgb(0, 229, 255)
+                            } else {
+                                Color32::from_rgb(45, 65, 95)
+                            };
+                            dg_painter.rect_filled(b_rect, 0.5, col);
+                        }
+
+                        // Target line (-23 LUFS EBU R128)
+                        let norm_target = crate::views::dialog_gating_view::DialogGatingView::lufs_to_normalized(-23.0);
+                        let tgt_x = dg_rect.left() + 4.0 + norm_target * (dg_rect.width() - 60.0);
+                        dg_painter.line_segment(
+                            [egui::pos2(tgt_x, dg_rect.top() + 6.0), egui::pos2(tgt_x, dg_rect.bottom() - 6.0)],
+                            Stroke::new(1.0_f32, Color32::from_rgb(255, 107, 43)),
+                        );
+
+                        // Interactive Target Puck
+                        let norm_lu = crate::views::dialog_gating_view::DialogGatingView::lufs_to_normalized(gated_lkfs);
+                        let norm_va = crate::views::dialog_gating_view::DialogGatingView::vad_to_normalized(vad_pct);
+                        let puck_x = dg_rect.left() + 4.0 + norm_lu * (dg_rect.width() - 60.0);
+                        let puck_y = dg_rect.bottom() - 10.0 - norm_va * (dg_rect.height() - 20.0);
+                        dg_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(0, 229, 255));
+                        dg_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        dg_painter.text(
+                            egui::pos2(dg_rect.right() - 4.0, dg_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("DIALOG\n{:.1}LKFS\nVAD {:.0}%\n{:.2}dBTP", gated_lkfs, vad_pct, tp_max),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(0, 229, 255),
+                        );
+
+                        if dg_resp.hovered() {
+                            let _ = dg_resp.on_hover_text(format!(
+                                "ITU-R BS.1770-4 Dialog Gating HUD\nGated Loudness: {:.1} LKFS | VAD Confidence: {:.1}%\nTrue-Peak: {:.2} dBTP\n[Drag: Gated LKFS (X) / VAD % (Y) Puck]",
+                                gated_lkfs, vad_pct, tp_max
+                            ));
+                        }
+                    } else if is_transient_reconstructor {
+                        // Multiband Linear-Phase Transient Reconstructor Mini View
+                        let (tr_resp, tr_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let tr_rect = tr_resp.rect;
+                        tr_painter.rect_filled(tr_rect, 2.0, Color32::from_rgb(14, 18, 28));
+
+                        let mut lookahead_ms = state.node_param_values.get("lookahead_ms").copied().unwrap_or(4.0);
+                        let mut crest_boost_db = state.node_param_values.get("crest_factor_boost_db").copied().unwrap_or(3.5);
+                        let sens = state.node_param_values.get("transient_sensitivity").copied().unwrap_or(0.65);
+
+                        if tr_resp.dragged() || tr_resp.clicked() {
+                            if let Some(pos) = tr_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - tr_rect.left()) / (tr_rect.width() - 55.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - tr_rect.top() - 10.0) / (tr_rect.height() - 20.0))).clamp(0.0, 1.0);
+                                lookahead_ms = crate::views::transient_reconstructor_view::TransientReconstructorView::normalized_to_lookahead(norm_x);
+                                crest_boost_db = crate::views::transient_reconstructor_view::TransientReconstructorView::normalized_to_crest(norm_y);
+                                state.node_param_values.insert("lookahead_ms".to_string(), lookahead_ms);
+                                state.node_param_values.insert("crest_factor_boost_db".to_string(), crest_boost_db);
+                                if let Some(bus) = param_bus {
+                                    let pid_la = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_cr = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_la).is_some() { bus.set(pid_la, lookahead_ms); }
+                                    if bus.get(pid_cr).is_some() { bus.set(pid_cr, crest_boost_db); }
+                                }
+                            }
+                        }
+
+                        // 4-band crest expansion bars
+                        let bands = 4;
+                        let bar_w = (tr_rect.width() - 60.0) / bands as f32;
+                        let band_factors = [0.70, 0.90, 1.15, 0.85];
+                        for b in 0..bands {
+                            let gain = (crest_boost_db * band_factors[b] * sens).clamp(0.0, 12.0);
+                            let bh = (gain / 12.0) * (tr_rect.height() * 0.7);
+                            let bx = tr_rect.left() + 4.0 + b as f32 * bar_w;
+                            let b_rect = egui::Rect::from_min_max(
+                                egui::pos2(bx, tr_rect.bottom() - 6.0 - bh),
+                                egui::pos2(bx + bar_w - 2.0, tr_rect.bottom() - 6.0),
+                            );
+                            let col = match b {
+                                0 => Color32::from_rgb(56, 189, 248),
+                                1 => Color32::from_rgb(0, 229, 255),
+                                2 => Color32::from_rgb(255, 180, 0),
+                                _ => Color32::from_rgb(0, 255, 180),
+                            };
+                            tr_painter.rect_filled(b_rect, 1.0, col);
+                        }
+
+                        // Interactive Puck
+                        let norm_la = crate::views::transient_reconstructor_view::TransientReconstructorView::lookahead_to_normalized(lookahead_ms);
+                        let norm_cr = crate::views::transient_reconstructor_view::TransientReconstructorView::crest_to_normalized(crest_boost_db);
+                        let puck_x = tr_rect.left() + 4.0 + norm_la * (tr_rect.width() - 60.0);
+                        let puck_y = tr_rect.bottom() - 10.0 - norm_cr * (tr_rect.height() - 20.0);
+                        tr_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(255, 180, 0));
+                        tr_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        tr_painter.text(
+                            egui::pos2(tr_rect.right() - 4.0, tr_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("RECON\n{:.1}ms LA\n+{:.1}dB Cr\n{:.2} Sens", lookahead_ms, crest_boost_db, sens),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(255, 180, 0),
+                        );
+
+                        if tr_resp.hovered() {
+                            let _ = tr_resp.on_hover_text(format!(
+                                "Multiband Linear-Phase Transient Reconstructor HUD\nLookahead: {:.1} ms | Crest Boost: +{:.1} dB | Sensitivity: {:.2}\n[Drag: Lookahead (X) / Crest Boost (Y) Puck]",
+                                lookahead_ms, crest_boost_db, sens
                             ));
                         }
                     } else {

@@ -1040,6 +1040,18 @@ impl CommandPalette {
                 action_id: "open_transient_gate_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open ITU-R BS.1770-4 Dialog Gating & Speech Normalization HUD".into(),
+                category: "Mastering & Dynamics".into(),
+                action_id: "open_dialog_gating_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Multiband Lookahead Transient Reconstructor & Crest Expander HUD".into(),
+                category: "Dynamics & Saturation".into(),
+                action_id: "open_transient_reconstructor_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

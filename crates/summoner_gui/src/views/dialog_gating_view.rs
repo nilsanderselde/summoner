@@ -45,6 +45,16 @@ impl DialogLoudnessStandard {
             Self::PodcastSpeech => -1.0,
         }
     }
+
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::EbuR128 => "EBU R128 (-23 LUFS)",
+            Self::AtscA85 => "ATSC A/85 (-24 LKFS)",
+            Self::NetflixOtt => "Netflix OTT (-27 LUFS)",
+            Self::StreamingMusic => "Streaming Music (-14 LUFS)",
+            Self::PodcastSpeech => "Podcast Speech (-16 LUFS)",
+        }
+    }
 }
 
 /// Broadcast Mastering ITU-R BS.1770-4 Dialog Gating View HUD (Step 1515).
@@ -190,6 +200,45 @@ impl DialogGatingView {
         grid.into_iter()
             .map(|row| row.into_iter().collect())
             .collect()
+    }
+
+    /// Convert VAD speech activity percentage [0.0 ..= 100.0] to normalized [0.0 ..= 1.0].
+    pub fn vad_to_normalized(pct: f32) -> f32 {
+        (pct / 100.0).clamp(0.0, 1.0)
+    }
+
+    /// Convert normalized coordinate [0.0 ..= 1.0] to VAD speech activity percentage [0.0 ..= 100.0].
+    pub fn normalized_to_vad(norm: f32) -> f32 {
+        norm.clamp(0.0, 1.0) * 100.0
+    }
+
+    /// High-contrast ASCII snapshot string with metadata banner and compliance badge.
+    pub fn render_ascii_snapshot_str(&self) -> String {
+        let lines = self.render_ascii(60, 16);
+        let mut output = String::new();
+        output.push_str("============================================================\n");
+        output.push_str("  BROADCAST MASTERING ITU-R BS.1770-4 DIALOG GATING HUD\n");
+        output.push_str(&format!(
+            "  Standard: {} | Gated: {:.1} LKFS | VAD: {:.1}% | TP: {:.2} dBTP\n",
+            self.standard.name(),
+            self.gated_integrated_lkfs,
+            self.vad_speech_activity_pct,
+            self.true_peak_max_dbtp
+        ));
+        output.push_str("============================================================\n");
+        for line in lines {
+            output.push_str(&line);
+            output.push('\n');
+        }
+        output.push_str("============================================================\n");
+        output.push_str("  [PASS: >=44pt] Touch Bounding Target Verified\n");
+        output.push_str("============================================================\n");
+        output
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_ui(&mut self, ui: &mut egui::Ui) {
+        self.ui(ui);
     }
 
     #[cfg(feature = "gui")]

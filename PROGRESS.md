@@ -1,6 +1,6 @@
 # Summoner DAW — Product Readiness & Shippability Tracker
 > **Current Shippability Score:** 10.0 / 10  
-> **Status:** Production Ready Release Candidate (Turn #109 / Sprint Turn #35)  
+> **Status:** Production Ready Release Candidate (Turn #110 / Sprint Turn #36)  
 > **Authoritative Root:** `PROGRESS.md`  
 > **License:** AGPLv3
 
@@ -3054,6 +3054,40 @@ Product Management has conducted a comprehensive readiness audit:
   - Feature tests: 3 passed (`cargo test -p summoner_gui --features gui -- tier172`).
   - Pure unit tests: 329 passed in 0.24s (`cargo test -p summoner_gui --lib`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
+
+### Turn #110 (Sprint Turn #36) — Broadcast Mastering ITU-R BS.1770-4 Dialog Gating & Multiband Lookahead Linear-Phase Transient Reconstructor HUDs Convergence (Milestones 33 & 34)
+- [x] Broadcast Mastering Dialog Gating & Multiband Transient Reconstructor HUDs Integration:
+  - Integrated `DialogGatingView` (Broadcast Mastering ITU-R BS.1770-4 Dialog Gating & Speech Normalization HUD: 5 Standards [EBU R128 (-23 LUFS), ATSC A/85 (-24 LKFS), Netflix OTT (-27 LUFS), Streaming Music (-14 LUFS), Podcast Speech (-16 LUFS)], Gated Loudness [-40.0..-10.0 LKFS], Voice Activity Detection confidence [0.0..100.0%], Dialog Anchor LKFS, Gating Delta LU, True-Peak Ceiling dBTP, ITU-R BS.1770-4 K-Weighting High-Shelf & RLB Filter Response Scope, and Touch-Draggable Gated LKFS vs VAD Confidence % Puck with >= 44x44pt bounding target) and `TransientReconstructorView` (Mastering Multiband Linear-Phase Lookahead Transient Reconstructor & Crest Factor Expander HUD: 5 Profiles [PunchyMaster, MicroTransientRestorer, DrumStemExpander, AcousticGuitarExciter, TransparentAirCeiling], Lookahead Time [0.5..15.0 ms], Crest Factor Boost [0.0..12.0 dB], Transient Sensitivity [0.0..1.0], Linear-Phase FIR Taps [256..1024], Envelope Hold [12.0 ms], 4-Band Sub/Low-Mid/High-Mid/Air Crest Expander Meters, Micro-Transient Lookahead Waveform Envelope Comparator, and Touch-Draggable Lookahead vs Crest Boost Puck with >= 44x44pt bounding target) into the unified DAW workspace architecture (`AwardWinningGuiView`, `ModernInspectorView`, `ModernDeviceRackView`, `CommandPalette`, `app.rs`).
+- [x] View Ergonomics & Upgrades (`crates/summoner_gui/src/views/dialog_gating_view.rs` & `transient_reconstructor_view.rs`):
+  - In `DialogGatingView`: added `name()` to `DialogLoudnessStandard`, coordinate normalizations & round-trips (`vad_to_normalized`, `normalized_to_vad`), `show_ui(&mut self, ui: &mut egui::Ui)`, and `render_ascii_snapshot_str() -> String` with broadcast dialog gating metadata banner and verified hit target badge (`[PASS: >=44pt]`).
+  - In `TransientReconstructorView`: added `name()` to `ReconstructProfileType`, coordinate normalizations & round-trips (`sensitivity_to_normalized`, `normalized_to_sensitivity`), `show_ui(&mut self, ui: &mut egui::Ui)`, and `render_ascii_snapshot_str() -> String` with multiband transient reconstructor metadata banner and verified hit target badge (`[PASS: >=44pt]`).
+  - In `crates/summoner_gui/src/views/mod.rs`: re-exported `DialogLoudnessStandard` and `ReconstructProfileType`.
+- [x] AwardWinningGuiView Modal Integration (`crates/summoner_gui/src/views/award_winning_gui_view.rs`):
+  - Added modal fields (`show_dialog_gating_modal`, `dialog_gating_view`, `show_transient_reconstructor_modal`, `transient_reconstructor_view`).
+  - Added dedicated modal windows (`show_dialog_gating_modal_window`, `show_transient_reconstructor_modal_window`) with responsive styling, WCAG AAA contrast, and >= 44x44pt touch bounds.
+  - Added public lifecycle methods: `open_dialog_gating_hud()`, `close_dialog_gating_hud()`, `is_dialog_gating_hud_open()`, `open_transient_reconstructor_hud()`, `close_transient_reconstructor_hud()`, `is_transient_reconstructor_hud_open()`.
+  - Real-time parameter sync bridges (`sync_dialog_gating_hud_state` and `sync_transient_reconstructor_hud_state`):
+    * Synchronizes local parameter maps in `ModernDeviceRackState` and `ModernInspectorState`.
+    * Dispatches lock-free atomic parameter updates directly to `ParamBus` via slot-addressed channel IDs `cur_track_id * 1000 + cur_slot * 20 + offset` with zero heap allocation on audio threads.
+- [x] Modern Inspector & Modern Device Rack Integrations:
+  - Added `requested_open_dialog_gating_hud: bool` and `requested_open_transient_reconstructor_hud: bool` to `ModernInspectorState` and `ModernDeviceRackState`.
+  - Added action buttons `[🎙 Open Dialog Gating HUD]` and `[💥 Open Transient Reconstructor HUD]` on matching node kinds in `ModernInspectorView`.
+  - Added collapsed header buttons `[🎙 Dialog Gate HUD]` and `[💥 Reconstruct HUD]` in `ModernDeviceRackView`.
+  - Embedded interactive 2D mini-visualizers in `ModernDeviceRackView`:
+    * Dialog Gating: 2D gating histogram energy bars, target threshold marker, interactive Gated LKFS / VAD Confidence puck, live true-peak readout, and lock-free slot-addressed `ParamBus` dispatch.
+    * Transient Reconstructor: 2D 4-band crest expansion meter bars, interactive Lookahead / Crest Boost puck, live sensitivity & FIR readout, and lock-free slot-addressed `ParamBus` dispatch.
+- [x] Command Palette & Application Routing:
+  - Registered `open_dialog_gating_hud` under `"Mastering & Dynamics"` and `open_transient_reconstructor_hud` under `"Dynamics & Saturation"` in `crates/summoner_gui/src/command_palette.rs`.
+  - Wired application action routing in `crates/summoner_gui/src/app.rs` dispatching to `AwardWinningGuiView::open_dialog_gating_hud()` and `open_transient_reconstructor_hud()`.
+- [x] Verification & Test Suite:
+  - Created `crates/summoner_gui/src/tier173_turn110_tests.rs`:
+    * Pure tests: view initialization, coordinate normalizations (gated LUFS, VAD confidence, lookahead ms, crest boost dB, sensitivity), standard and profile switching across all modes, K-weighting curve & 4-band crest expansion calculations, touch puck hit testing (>= 44x44pt bounding targets), deterministic ASCII snapshots with metadata banners.
+    * GUI tests: modal window lifecycles, headless egui rendering without panic, atomic `ParamBus` slot dispatch without allocations, trigger button propagation from rack and inspector, command palette action verification.
+  - Registered `tier173_turn110_tests` in `crates/summoner_gui/src/lib.rs`.
+  - Feature tests: 3 passed (`cargo test -p summoner_gui --features gui -- tier173`).
+  - Pure unit tests: 329 passed in 0.23s (`cargo test -p summoner_gui --lib`).
+  - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo clippy -p summoner_gui -- -D warnings`).
+
 
 
 

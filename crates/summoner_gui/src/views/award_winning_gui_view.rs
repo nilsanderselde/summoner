@@ -884,6 +884,10 @@ pub struct AwardWinningGuiView {
     pub transient_declicker_view: crate::views::transient_declicker_view::TransientDeclickerView,
     pub show_transient_gate_modal: bool,
     pub transient_gate_view: crate::views::transient_gate_view::TransientGateView,
+    pub show_dialog_gating_modal: bool,
+    pub dialog_gating_view: crate::views::dialog_gating_view::DialogGatingView,
+    pub show_transient_reconstructor_modal: bool,
+    pub transient_reconstructor_view: crate::views::transient_reconstructor_view::TransientReconstructorView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1384,6 +1388,10 @@ impl AwardWinningGuiView {
             transient_declicker_view: crate::views::transient_declicker_view::TransientDeclickerView::new(),
             show_transient_gate_modal: false,
             transient_gate_view: crate::views::transient_gate_view::TransientGateView::new(),
+            show_dialog_gating_modal: false,
+            dialog_gating_view: crate::views::dialog_gating_view::DialogGatingView::new(),
+            show_transient_reconstructor_modal: false,
+            transient_reconstructor_view: crate::views::transient_reconstructor_view::TransientReconstructorView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2633,6 +2641,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_transient_gate_hud = false;
             self.open_transient_gate_hud();
         }
+        if self.inspector_state.requested_open_dialog_gating_hud || self.device_rack_state.requested_open_dialog_gating_hud {
+            self.inspector_state.requested_open_dialog_gating_hud = false;
+            self.device_rack_state.requested_open_dialog_gating_hud = false;
+            self.open_dialog_gating_hud();
+        }
+        if self.inspector_state.requested_open_transient_reconstructor_hud || self.device_rack_state.requested_open_transient_reconstructor_hud {
+            self.inspector_state.requested_open_transient_reconstructor_hud = false;
+            self.device_rack_state.requested_open_transient_reconstructor_hud = false;
+            self.open_transient_reconstructor_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2758,6 +2776,8 @@ impl AwardWinningGuiView {
         self.show_tape_flux_master_modal_window(ui);
         self.show_transient_declicker_modal_window(ui);
         self.show_transient_gate_modal_window(ui);
+        self.show_dialog_gating_modal_window(ui);
+        self.show_transient_reconstructor_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -20061,6 +20081,188 @@ impl AwardWinningGuiView {
             if bus.get(pid_hy).is_some() { bus.set(pid_hy, hyst); }
             if bus.get(pid_at).is_some() { bus.set(pid_at, att); }
             if bus.get(pid_re).is_some() { bus.set(pid_re, rel); }
+        }
+    }
+
+    pub fn open_dialog_gating_hud(&mut self) {
+        self.show_dialog_gating_modal = true;
+    }
+
+    pub fn close_dialog_gating_hud(&mut self) {
+        self.show_dialog_gating_modal = false;
+    }
+
+    pub fn is_dialog_gating_hud_open(&self) -> bool {
+        self.show_dialog_gating_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_dialog_gating_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_dialog_gating_modal {
+            return;
+        }
+
+        let mut is_open = self.show_dialog_gating_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎙 Broadcast Mastering ITU-R BS.1770-4 Dialog Gating HUD")
+            .id(egui::Id::new("dialog_gating_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("ITU-R BS.1770-4 Dual-Stage Loudness Gating, Speech Normalization & K-Weighting Pre-Filter (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.dialog_gating_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_dialog_gating_modal = is_open;
+        self.sync_dialog_gating_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_dialog_gating_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let gated_lufs = self.dialog_gating_view.gated_integrated_lkfs;
+        let vad_pct = self.dialog_gating_view.vad_speech_activity_pct;
+        let anchored_lufs = self.dialog_gating_view.dialog_anchored_lkfs;
+        let delta_lu = self.dialog_gating_view.gating_delta_lu;
+        let tp_max = self.dialog_gating_view.true_peak_max_dbtp;
+
+        self.device_rack_state.node_param_values.insert("gated_integrated_lkfs".to_string(), gated_lufs);
+        self.device_rack_state.node_param_values.insert("target_lufs".to_string(), gated_lufs);
+        self.device_rack_state.node_param_values.insert("vad_speech_activity_pct".to_string(), vad_pct);
+        self.device_rack_state.node_param_values.insert("dialog_anchored_lkfs".to_string(), anchored_lufs);
+        self.device_rack_state.node_param_values.insert("gating_delta_lu".to_string(), delta_lu);
+        self.device_rack_state.node_param_values.insert("true_peak_max_dbtp".to_string(), tp_max);
+
+        self.inspector_state.node_param_values.insert("gated_integrated_lkfs".to_string(), gated_lufs);
+        self.inspector_state.node_param_values.insert("target_lufs".to_string(), gated_lufs);
+        self.inspector_state.node_param_values.insert("vad_speech_activity_pct".to_string(), vad_pct);
+        self.inspector_state.node_param_values.insert("dialog_anchored_lkfs".to_string(), anchored_lufs);
+        self.inspector_state.node_param_values.insert("gating_delta_lu".to_string(), delta_lu);
+        self.inspector_state.node_param_values.insert("true_peak_max_dbtp".to_string(), tp_max);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_lu = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_vad = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_anc = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+
+            if bus.get(pid_lu).is_some() { bus.set(pid_lu, gated_lufs); }
+            if bus.get(pid_vad).is_some() { bus.set(pid_vad, vad_pct); }
+            if bus.get(pid_anc).is_some() { bus.set(pid_anc, anchored_lufs); }
+        }
+    }
+
+    pub fn open_transient_reconstructor_hud(&mut self) {
+        self.show_transient_reconstructor_modal = true;
+    }
+
+    pub fn close_transient_reconstructor_hud(&mut self) {
+        self.show_transient_reconstructor_modal = false;
+    }
+
+    pub fn is_transient_reconstructor_hud_open(&self) -> bool {
+        self.show_transient_reconstructor_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_transient_reconstructor_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_transient_reconstructor_modal {
+            return;
+        }
+
+        let mut is_open = self.show_transient_reconstructor_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("💥 Multiband Linear-Phase Transient Reconstructor & Crest Expander HUD")
+            .id(egui::Id::new("transient_reconstructor_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(860.0, 560.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Mastering Multiband Lookahead Linear-Phase Transient Reconstruction & Crest Factor Expansion (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.transient_reconstructor_view.show_ui(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_transient_reconstructor_modal = is_open;
+        self.sync_transient_reconstructor_hud_state();
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn sync_transient_reconstructor_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let lookahead = self.transient_reconstructor_view.lookahead_ms;
+        let crest = self.transient_reconstructor_view.crest_factor_boost_db;
+        let sens = self.transient_reconstructor_view.transient_sensitivity;
+        let taps = self.transient_reconstructor_view.fir_taps as f32;
+        let hold = self.transient_reconstructor_view.envelope_hold_ms;
+
+        self.device_rack_state.node_param_values.insert("lookahead_ms".to_string(), lookahead);
+        self.device_rack_state.node_param_values.insert("crest_factor_boost_db".to_string(), crest);
+        self.device_rack_state.node_param_values.insert("transient_sensitivity".to_string(), sens);
+        self.device_rack_state.node_param_values.insert("fir_taps".to_string(), taps);
+        self.device_rack_state.node_param_values.insert("envelope_hold_ms".to_string(), hold);
+
+        self.inspector_state.node_param_values.insert("lookahead_ms".to_string(), lookahead);
+        self.inspector_state.node_param_values.insert("crest_factor_boost_db".to_string(), crest);
+        self.inspector_state.node_param_values.insert("transient_sensitivity".to_string(), sens);
+        self.inspector_state.node_param_values.insert("fir_taps".to_string(), taps);
+        self.inspector_state.node_param_values.insert("envelope_hold_ms".to_string(), hold);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_la = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_cr = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_se = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_hd = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_la).is_some() { bus.set(pid_la, lookahead); }
+            if bus.get(pid_cr).is_some() { bus.set(pid_cr, crest); }
+            if bus.get(pid_se).is_some() { bus.set(pid_se, sens); }
+            if bus.get(pid_hd).is_some() { bus.set(pid_hd, hold); }
         }
     }
     fn render_patch_cords_canvas(&mut self, ui: &mut egui::Ui, available_h: f32) {

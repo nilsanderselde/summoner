@@ -278,6 +278,10 @@ pub struct ModernInspectorState {
     pub requested_open_transient_declicker_hud: bool,
     #[serde(default)]
     pub requested_open_transient_gate_hud: bool,
+    #[serde(default)]
+    pub requested_open_dialog_gating_hud: bool,
+    #[serde(default)]
+    pub requested_open_transient_reconstructor_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -423,6 +427,8 @@ impl Default for ModernInspectorState {
             requested_open_tape_flux_master_hud: false,
             requested_open_transient_declicker_hud: false,
             requested_open_transient_gate_hud: false,
+            requested_open_dialog_gating_hud: false,
+            requested_open_transient_reconstructor_hud: false,
         }
     }
 }
@@ -2107,6 +2113,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open Dynamic Transient Sidechain Expander/Gate & Hysteresis HUD").clicked() {
                     state.requested_open_transient_gate_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("DialogGating") || active_kind.contains("DialogGate") || active_kind.contains("LoudnessGating") || active_kind == "DialogGatingNode" || active_kind.contains("SpeechNormalization") || active_kind.contains("BS1770") || active_kind.contains("ItuLoudness") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🎙 Open Dialog Gating HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(0, 229, 255)))
+                        .fill(Color32::from_rgb(14, 24, 38))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(0, 229, 255)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Broadcast Mastering ITU-R BS.1770-4 Dialog Gating HUD").clicked() {
+                    state.requested_open_dialog_gating_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("TransientReconstructor") || active_kind.contains("TransientReconstruct") || active_kind == "TransientReconstructorNode" || active_kind.contains("CrestFactor") || active_kind.contains("AttackReconstructor") || active_kind.contains("MultibandTransient") {
+                if ui.add(
+                    egui::Button::new(RichText::new("💥 Open Transient Reconstructor HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(255, 180, 0)))
+                        .fill(Color32::from_rgb(32, 26, 14))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(255, 180, 0)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Multiband Linear-Phase Transient Reconstructor & Crest Expander HUD").clicked() {
+                    state.requested_open_transient_reconstructor_hud = true;
                 }
                 ui.add_space(4.0);
             }
