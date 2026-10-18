@@ -1920,6 +1920,14 @@ impl eframe::App for SummonerApp {
                     self.current_view = ViewMode::ModernStudio;
                     self.award_winning_view.open_drum_machine_hud();
                 }
+                "open_live_session_recorder_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_live_session_recorder_hud();
+                }
+                "open_plugin_host_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_plugin_host_hud();
+                }
                 "sfz_convert" | "auto_slice" | "load_preset" | "export_clap" | "toggle_simd" => {
                     println!("Command palette action executed: {}", action);
                 }

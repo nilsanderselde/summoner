@@ -936,6 +936,10 @@ pub struct AwardWinningGuiView {
     pub chromatic_tuner_view: crate::views::chromatic_tuner_view::ChromaticTunerView,
     pub show_drum_machine_modal: bool,
     pub drum_machine_view: crate::views::drum_machine_view::DrumMachinePadView,
+    pub show_live_session_recorder_modal: bool,
+    pub live_session_recorder_view: crate::views::live_session_recorder_view::LiveSessionRecorderView,
+    pub show_plugin_host_modal: bool,
+    pub plugin_host_view: crate::views::plugin_host_view::PluginHostView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1488,6 +1492,10 @@ impl AwardWinningGuiView {
             chromatic_tuner_view: crate::views::chromatic_tuner_view::ChromaticTunerView::new(),
             show_drum_machine_modal: false,
             drum_machine_view: crate::views::drum_machine_view::DrumMachinePadView::new(),
+            show_live_session_recorder_modal: false,
+            live_session_recorder_view: crate::views::live_session_recorder_view::LiveSessionRecorderView::new(),
+            show_plugin_host_modal: false,
+            plugin_host_view: crate::views::plugin_host_view::PluginHostView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2867,6 +2875,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_drum_machine_hud = false;
             self.open_drum_machine_hud();
         }
+        if self.inspector_state.requested_open_live_session_recorder_hud || self.device_rack_state.requested_open_live_session_recorder_hud {
+            self.inspector_state.requested_open_live_session_recorder_hud = false;
+            self.device_rack_state.requested_open_live_session_recorder_hud = false;
+            self.open_live_session_recorder_hud();
+        }
+        if self.inspector_state.requested_open_plugin_host_hud || self.device_rack_state.requested_open_plugin_host_hud {
+            self.inspector_state.requested_open_plugin_host_hud = false;
+            self.device_rack_state.requested_open_plugin_host_hud = false;
+            self.open_plugin_host_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -3018,6 +3036,8 @@ impl AwardWinningGuiView {
         self.show_stem_separator_modal_window(ui);
         self.show_chromatic_tuner_modal_window(ui);
         self.show_drum_machine_modal_window(ui);
+        self.show_live_session_recorder_modal_window(ui);
+        self.show_plugin_host_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -22747,6 +22767,180 @@ impl AwardWinningGuiView {
             if bus.get(pid_decay).is_some() { bus.set(pid_decay, decay); }
             if bus.get(pid_pitch).is_some() { bus.set(pid_pitch, pitch); }
             if bus.get(pid_attack).is_some() { bus.set(pid_attack, attack); }
+        }
+    }
+
+    pub fn open_live_session_recorder_hud(&mut self) {
+        self.show_live_session_recorder_modal = true;
+    }
+
+    pub fn close_live_session_recorder_hud(&mut self) {
+        self.show_live_session_recorder_modal = false;
+    }
+
+    pub fn is_live_session_recorder_hud_open(&self) -> bool {
+        self.show_live_session_recorder_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_live_session_recorder_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_live_session_recorder_modal {
+            return;
+        }
+
+        let mut is_open = self.show_live_session_recorder_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("⏺ Real-Time Master Bus Live Session Recorder & Disk Capture HUD")
+            .id(egui::Id::new("live_session_recorder_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(640.0, 500.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Real-Time Stereo WAV/FLAC Disk Capture, Input Trim & Safety Ceiling Brickwall Guard (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.live_session_recorder_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_live_session_recorder_modal = is_open;
+        self.sync_live_session_recorder_hud_state();
+    }
+
+    pub fn sync_live_session_recorder_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let trim = self.live_session_recorder_view.input_trim_db;
+        let ceiling = self.live_session_recorder_view.safety_ceiling_db;
+        let tail = self.live_session_recorder_view.auto_tail_sec;
+        let sr = self.live_session_recorder_view.sample_rate as f32;
+
+        self.device_rack_state.node_param_values.insert("input_trim_db".to_string(), trim);
+        self.device_rack_state.node_param_values.insert("safety_ceiling_db".to_string(), ceiling);
+        self.device_rack_state.node_param_values.insert("auto_tail_sec".to_string(), tail);
+        self.device_rack_state.node_param_values.insert("sample_rate".to_string(), sr);
+
+        self.inspector_state.node_param_values.insert("input_trim_db".to_string(), trim);
+        self.inspector_state.node_param_values.insert("safety_ceiling_db".to_string(), ceiling);
+        self.inspector_state.node_param_values.insert("auto_tail_sec".to_string(), tail);
+        self.inspector_state.node_param_values.insert("sample_rate".to_string(), sr);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_trim = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_ceil = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_tail = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_sr = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_trim).is_some() { bus.set(pid_trim, trim); }
+            if bus.get(pid_ceil).is_some() { bus.set(pid_ceil, ceiling); }
+            if bus.get(pid_tail).is_some() { bus.set(pid_tail, tail); }
+            if bus.get(pid_sr).is_some() { bus.set(pid_sr, sr); }
+        }
+    }
+
+    pub fn open_plugin_host_hud(&mut self) {
+        self.show_plugin_host_modal = true;
+    }
+
+    pub fn close_plugin_host_hud(&mut self) {
+        self.show_plugin_host_modal = false;
+    }
+
+    pub fn is_plugin_host_hud_open(&self) -> bool {
+        self.show_plugin_host_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_plugin_host_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_plugin_host_modal {
+            return;
+        }
+
+        let mut is_open = self.show_plugin_host_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🔌 VST3 / CLAP / WebAssembly Plugin Host & Automapper HUD")
+            .id(egui::Id::new("plugin_host_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(640.0, 500.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("PluginAudioNode + ClapHostEngine + WasmDspRuntime + IsolatedPluginScanner (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.plugin_host_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_plugin_host_modal = is_open;
+        self.sync_plugin_host_hud_state();
+    }
+
+    pub fn sync_plugin_host_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let wet = self.plugin_host_view.wet_mix;
+        let cutoff = self.plugin_host_view.cutoff_hz;
+        let gain = self.plugin_host_view.plugin_gain;
+        let mpe = self.plugin_host_view.mpe_timbre;
+
+        self.device_rack_state.node_param_values.insert("wet_mix".to_string(), wet);
+        self.device_rack_state.node_param_values.insert("cutoff_hz".to_string(), cutoff);
+        self.device_rack_state.node_param_values.insert("plugin_gain".to_string(), gain);
+        self.device_rack_state.node_param_values.insert("mpe_timbre".to_string(), mpe);
+
+        self.inspector_state.node_param_values.insert("wet_mix".to_string(), wet);
+        self.inspector_state.node_param_values.insert("cutoff_hz".to_string(), cutoff);
+        self.inspector_state.node_param_values.insert("plugin_gain".to_string(), gain);
+        self.inspector_state.node_param_values.insert("mpe_timbre".to_string(), mpe);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_wet = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_cut = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_gain = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_mpe = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_wet).is_some() { bus.set(pid_wet, wet); }
+            if bus.get(pid_cut).is_some() { bus.set(pid_cut, cutoff); }
+            if bus.get(pid_gain).is_some() { bus.set(pid_gain, gain); }
+            if bus.get(pid_mpe).is_some() { bus.set(pid_mpe, mpe); }
         }
     }
 

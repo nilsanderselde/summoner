@@ -330,6 +330,10 @@ pub struct ModernInspectorState {
     pub requested_open_chromatic_tuner_hud: bool,
     #[serde(default)]
     pub requested_open_drum_machine_hud: bool,
+    #[serde(default)]
+    pub requested_open_live_session_recorder_hud: bool,
+    #[serde(default)]
+    pub requested_open_plugin_host_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -501,6 +505,8 @@ impl Default for ModernInspectorState {
             requested_open_stem_separator_hud: false,
             requested_open_chromatic_tuner_hud: false,
             requested_open_drum_machine_hud: false,
+            requested_open_live_session_recorder_hud: false,
+            requested_open_plugin_host_hud: false,
         }
     }
 }
@@ -2445,6 +2451,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open GM Multi-Pad Drum Machine & Per-Pad ADSR/VCA Synthesis HUD").clicked() {
                     state.requested_open_drum_machine_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("LiveSessionRecorder") || active_kind.contains("MasterRecorder") || active_kind == "SessionRecorderNode" {
+                if ui.add(
+                    egui::Button::new(RichText::new("⏺ Open Live Session Recorder HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(239, 68, 68)))
+                        .fill(Color32::from_rgb(28, 10, 14))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(239, 68, 68)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Master Output Live Session Recorder & Direct-to-Disk Capture HUD").clicked() {
+                    state.requested_open_live_session_recorder_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("PluginHost") || active_kind.contains("PluginAudioNode") || active_kind.contains("Vst3") || active_kind.contains("ClapHost") || active_kind.contains("WasmDsp") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🔌 Open Plugin Host HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(16, 185, 129)))
+                        .fill(Color32::from_rgb(10, 26, 20))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(16, 185, 129)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open VST3 / CLAP / Wasm Sandboxed Plugin Host & Automap HUD").clicked() {
+                    state.requested_open_plugin_host_hud = true;
                 }
                 ui.add_space(4.0);
             }

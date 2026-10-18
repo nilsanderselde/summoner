@@ -345,6 +345,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_chromatic_tuner_hud: bool,
     #[serde(default)]
     pub requested_open_drum_machine_hud: bool,
+    #[serde(default)]
+    pub requested_open_live_session_recorder_hud: bool,
+    #[serde(default)]
+    pub requested_open_plugin_host_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -506,6 +510,8 @@ impl Default for ModernDeviceRackState {
             requested_open_stem_separator_hud: false,
             requested_open_chromatic_tuner_hud: false,
             requested_open_drum_machine_hud: false,
+            requested_open_live_session_recorder_hud: false,
+            requested_open_plugin_host_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -1290,6 +1296,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_stem_separator = cur_selection.contains("StemSeparator") || cur_selection.contains("StemRouter") || cur_selection.contains("OnnxStem") || cur_selection == "StemSeparatorNode" || cur_selection == "MultiTrackAudioRouter";
                     let is_chromatic_tuner = cur_selection.contains("ChromaticTuner") || cur_selection.contains("StrobeTuner") || cur_selection == "TunerNode" || cur_selection == "ChromaticTunerNode";
                     let is_drum_machine = cur_selection.contains("DrumMachine") || cur_selection.contains("DrumPad") || cur_selection == "DrumMachineDevice" || cur_selection == "DrumKitNode";
+                    let is_live_session_recorder = cur_selection.contains("LiveSessionRecorder") || cur_selection.contains("SessionRecorder") || cur_selection == "LiveRecorderNode" || cur_selection == "LiveSessionRecorderNode";
+                    let is_plugin_host = cur_selection.contains("PluginHost") || cur_selection.contains("PluginAudioNode") || cur_selection.contains("ClapHost") || cur_selection.contains("Vst3Host") || cur_selection.contains("WasmDsp") || cur_selection == "PluginHostNode";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1878,6 +1886,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("🥁 DrumKit HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(249, 115, 22))).on_hover_text("Open GM Multi-Pad Drum Machine & Per-Pad ADSR/VCA Synthesis HUD").clicked()
                     {
                         state.requested_open_drum_machine_hud = true;
+                    } else if is_live_session_recorder
+                        && ui.button(RichText::new("⏺ Recorder HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(244, 63, 94))).on_hover_text("Open Real-Time Master Bus Live Session Recorder & Disk Capture HUD").clicked()
+                    {
+                        state.requested_open_live_session_recorder_hud = true;
+                    } else if is_plugin_host
+                        && ui.button(RichText::new("🔌 PluginHost HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open VST3 / CLAP / WebAssembly Plugin Host & Parameter Automapper HUD").clicked()
+                    {
+                        state.requested_open_plugin_host_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2790,6 +2806,8 @@ fn show_pro_parameter_drawer(
                     let is_stem_separator = dev_kind.contains("StemSeparator") || dev_kind.contains("StemRouter") || dev_kind.contains("OnnxStem") || dev_kind == "StemSeparatorNode" || dev_kind == "MultiTrackAudioRouter";
                     let is_chromatic_tuner = dev_kind.contains("ChromaticTuner") || dev_kind.contains("StrobeTuner") || dev_kind == "TunerNode" || dev_kind == "ChromaticTunerNode";
                     let is_drum_machine = dev_kind.contains("DrumMachine") || dev_kind.contains("DrumPad") || dev_kind == "DrumMachineDevice" || dev_kind == "DrumKitNode";
+                    let is_live_session_recorder = dev_kind.contains("LiveSessionRecorder") || dev_kind.contains("SessionRecorder") || dev_kind == "LiveRecorderNode" || dev_kind == "LiveSessionRecorderNode";
+                    let is_plugin_host = dev_kind.contains("PluginHost") || dev_kind.contains("PluginAudioNode") || dev_kind.contains("ClapHost") || dev_kind.contains("Vst3Host") || dev_kind.contains("WasmDsp") || dev_kind == "PluginHostNode";
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -13875,6 +13893,100 @@ fn show_pro_parameter_drawer(
                             let _ = dm_resp.on_hover_text(format!(
                                 "GM Drum Machine HUD\nDecay Scale: {:.2}x | Pitch: {:+.1} st\n[Drag: Decay (X) / Pitch (Y) Puck]",
                                 decay, pitch
+                            ));
+                        }
+                    } else if is_live_session_recorder {
+                        // Live Session Recorder Mini View
+                        let (rec_resp, rec_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let rec_rect = rec_resp.rect;
+                        rec_painter.rect_filled(rec_rect, 2.0, Color32::from_rgb(20, 8, 12));
+
+                        let mut trim = state.node_param_values.get("input_trim_db").copied().unwrap_or(0.0);
+                        let mut ceiling = state.node_param_values.get("safety_ceiling_db").copied().unwrap_or(-0.3);
+
+                        if rec_resp.dragged() || rec_resp.clicked() {
+                            if let Some(pos) = rec_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - rec_rect.left() - 4.0) / (rec_rect.width() - 60.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - rec_rect.top() - 10.0) / (rec_rect.height() - 20.0))).clamp(0.0, 1.0);
+                                trim = crate::views::live_session_recorder_view::LiveSessionRecorderView::normalized_to_trim(norm_x);
+                                ceiling = crate::views::live_session_recorder_view::LiveSessionRecorderView::normalized_to_ceiling(norm_y);
+                                state.node_param_values.insert("input_trim_db".to_string(), trim);
+                                state.node_param_values.insert("safety_ceiling_db".to_string(), ceiling);
+                                if let Some(bus) = param_bus {
+                                    let pid_trim = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_ceil = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_trim).is_some() { bus.set(pid_trim, trim); }
+                                    if bus.get(pid_ceil).is_some() { bus.set(pid_ceil, ceiling); }
+                                }
+                            }
+                        }
+
+                        let norm_x = crate::views::live_session_recorder_view::LiveSessionRecorderView::trim_to_normalized(trim);
+                        let norm_y = crate::views::live_session_recorder_view::LiveSessionRecorderView::ceiling_to_normalized(ceiling);
+                        let puck_x = rec_rect.left() + 4.0 + norm_x * (rec_rect.width() - 60.0);
+                        let puck_y = rec_rect.bottom() - 10.0 - norm_y * (rec_rect.height() - 20.0);
+                        rec_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(244, 63, 94));
+                        rec_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        rec_painter.text(
+                            egui::pos2(rec_rect.right() - 4.0, rec_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("RECORDER\nT:{:+.1}dB\nC:{:.1}dB", trim, ceiling),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(244, 63, 94),
+                        );
+
+                        if rec_resp.hovered() {
+                            let _ = rec_resp.on_hover_text(format!(
+                                "Live Session Recorder HUD\nInput Trim: {:+.2} dB | Safety Ceiling: {:+.2} dBFS\n[Drag: Trim (X) / Ceiling (Y) Puck]",
+                                trim, ceiling
+                            ));
+                        }
+                    } else if is_plugin_host {
+                        // Plugin Host Mini View
+                        let (ph_resp, ph_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let ph_rect = ph_resp.rect;
+                        ph_painter.rect_filled(ph_rect, 2.0, Color32::from_rgb(8, 16, 24));
+
+                        let mut wet = state.node_param_values.get("wet_mix").copied().unwrap_or(1.0);
+                        let mut cutoff = state.node_param_values.get("cutoff_hz").copied().unwrap_or(2400.0);
+
+                        if ph_resp.dragged() || ph_resp.clicked() {
+                            if let Some(pos) = ph_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - ph_rect.left() - 4.0) / (ph_rect.width() - 60.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - ph_rect.top() - 10.0) / (ph_rect.height() - 20.0))).clamp(0.0, 1.0);
+                                wet = crate::views::plugin_host_view::PluginHostView::normalized_to_mix(norm_x);
+                                cutoff = crate::views::plugin_host_view::PluginHostView::normalized_to_cutoff(norm_y);
+                                state.node_param_values.insert("wet_mix".to_string(), wet);
+                                state.node_param_values.insert("cutoff_hz".to_string(), cutoff);
+                                if let Some(bus) = param_bus {
+                                    let pid_wet = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_cut = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_wet).is_some() { bus.set(pid_wet, wet); }
+                                    if bus.get(pid_cut).is_some() { bus.set(pid_cut, cutoff); }
+                                }
+                            }
+                        }
+
+                        let norm_x = crate::views::plugin_host_view::PluginHostView::mix_to_normalized(wet);
+                        let norm_y = crate::views::plugin_host_view::PluginHostView::cutoff_to_normalized(cutoff);
+                        let puck_x = ph_rect.left() + 4.0 + norm_x * (ph_rect.width() - 60.0);
+                        let puck_y = ph_rect.bottom() - 10.0 - norm_y * (ph_rect.height() - 20.0);
+                        ph_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(56, 189, 248));
+                        ph_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        ph_painter.text(
+                            egui::pos2(ph_rect.right() - 4.0, ph_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("PLUGIN\nW:{:.0}%\n{:.0}Hz", wet * 100.0, cutoff),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(56, 189, 248),
+                        );
+
+                        if ph_resp.hovered() {
+                            let _ = ph_resp.on_hover_text(format!(
+                                "Plugin Host HUD\nWet Mix: {:.0}% | Cutoff Morph: {:.0} Hz\n[Drag: Wet (X) / Cutoff (Y) Puck]",
+                                wet * 100.0, cutoff
                             ));
                         }
                     } else {

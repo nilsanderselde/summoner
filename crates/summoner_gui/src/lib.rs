@@ -324,6 +324,8 @@ pub mod tier184_turn121_tests;
 #[cfg(feature = "gui")]
 pub mod tier185_turn122_tests;
 #[cfg(feature = "gui")]
+pub mod tier186_turn123_tests;
+#[cfg(feature = "gui")]
 pub mod touch_gestures;
 #[cfg(feature = "gui")]
 pub mod transport_bar;
@@ -402,6 +404,10 @@ pub use views::diffractive_propagation_view::DiffractivePropagationView;
 pub use views::dpi_scale_panel::DpiScalePanelView;
 #[cfg(feature = "gui")]
 pub use views::drum_machine_view::{DrumMachinePadView, DrumMachinePreset, DrumPadSlotConfig, DRUM_MACHINE_PUCK_HIT_RADIUS};
+#[cfg(feature = "gui")]
+pub use views::live_session_recorder_view::{LiveRecordDiskFormat, LiveRecorderPreset, LiveSessionRecorderView, LIVE_RECORDER_PUCK_HIT_RADIUS};
+#[cfg(feature = "gui")]
+pub use views::plugin_host_view::{HostedPluginFormat, PluginHostPreset, PluginHostView, PLUGIN_HOST_PUCK_HIT_RADIUS};
 pub use dsp_node_ui::*;
 #[cfg(feature = "gui")]
 pub use views::dsp_rack_dock::DspRackDockView;

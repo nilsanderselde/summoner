@@ -1196,6 +1196,18 @@ impl CommandPalette {
                 action_id: "open_drum_machine_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Real-Time Master Bus Live Session Recorder & Disk Capture HUD".into(),
+                category: "Mastering & Utility".into(),
+                action_id: "open_live_session_recorder_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open VST3 / CLAP / WebAssembly Plugin Host & Parameter Automapper HUD".into(),
+                category: "Ecosystem & Hardware".into(),
+                action_id: "open_plugin_host_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

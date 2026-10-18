@@ -1,6 +1,6 @@
 # Summoner DAW — Product Readiness & Shippability Tracker
 > **Current Shippability Score:** 10.0 / 10  
-> **Status:** Production Ready Release Candidate (Turn #122 / Sprint Turn #48)  
+> **Status:** Production Ready Release Candidate (Turn #123 / Sprint Turn #49)  
 > **Authoritative Root:** `PROGRESS.md`  
 > **License:** AGPLv3
 
@@ -3505,5 +3505,24 @@ Product Management has conducted a comprehensive readiness audit:
   - Registered `open_chromatic_tuner_hud` and `open_drum_machine_hud` in `CommandPalette` and `SummonerApp`.
 - [x] Verification & Test Suite (`crates/summoner_gui/src/tier185_turn122_tests.rs`):
   - Pure & GUI tests verifying initialization, preset switching, autocorrelation pitch detection on synthetic A440 buffers, drum pad envelope & pitch ratio physics, $\ge 44\times 44\text{pt}$ touch puck hit testing, deterministic ASCII snapshots, headless egui rendering, modal lifecycles, lock-free `ParamBus` synchronization, and command palette registration.
+
+### Turn #123 (Sprint Turn #49) — Real-Time Master Bus Live Session Recorder & Disk Capture HUD and VST3 / CLAP / WebAssembly Plugin Host & Parameter Automapper HUD Convergence (Milestones 33 & 34)
+- [x] Real-Time Master Bus Live Session Recorder & Disk Capture HUD (`crates/summoner_gui/src/views/live_session_recorder_view.rs`):
+  - Integrated `LiveSessionRecorderView` directly reflecting `crates/summoner_dsp/src/live_session_recorder.rs` (`LiveSessionRecorder`, `RecordingFormat`, `RecordingStats`):
+    * 4 Curated Disk Capture Presets: `MasterStereoWav44k` (44.1 kHz / 16-bit Stereo WAV, Trim $+0.0\text{ dB}$, Ceiling $-0.3\text{ dBFS}$, Dither $0.50$, Auto-Record Threshold $-48.0\text{ dBFS}$), `ArchivalFlac48k` (48 kHz / 24-bit Lossless FLAC, Trim $+0.0\text{ dB}$, Ceiling $-0.1\text{ dBFS}$, Dither $0.25$, Auto-Record Threshold $-60.0\text{ dBFS}$), `BroadcastSafeMaster` (24-bit Stereo WAV, Trim $-1.5\text{ dB}$, Ceiling $-1.0\text{ dBFS}$, Dither $0.75$, Auto-Record Threshold $-42.0\text{ dBFS}$), and `ModularJamHeadroom` (24-bit Stereo WAV, Trim $-3.0\text{ dB}$, Ceiling $-0.5\text{ dBFS}$, Dither $0.50$, Auto-Record Threshold $-54.0\text{ dBFS}$).
+    * Interactive 2D Input Gain Trim & Safety Ceiling Brickwall Guard Puck: Input Trim $\in [-18.0..=+6.0]\text{ dB}$ vs Safety Ceiling $\in [-6.0..=0.0]\text{ dBFS}$ with $\ge 44\times 44\text{pt}$ touch target (`LIVE_RECORDER_PUCK_HIT_RADIUS = 22.0`).
+    * Real-time PCM 16-bit quantization & brickwall safety clamp (`quantize_sample_i16`), duration & byte size estimators (`duration_seconds`, `estimated_file_size_bytes`), waveform capture preview, and deterministic ASCII snapshot rendering (`[PASS: >=44pt Hit Target]`).
+- [x] VST3 / CLAP / WebAssembly Plugin Host & Parameter Automapper HUD (`crates/summoner_gui/src/views/plugin_host_view.rs`):
+  - Integrated `PluginHostView` directly reflecting `crates/summoner_dsp/src/plugin_host.rs` (`PluginAudioNode`, `PluginDescriptor`, `PluginFormat`) and `crates/summoner_dsp/src/ecosystem_hardware.rs` (`ClapHostEngine`, `WasmDspRuntime`, `IsolatedPluginScanner`, `ParameterAutomapper`):
+    * 4 Curated Plugin Host Presets: `ClapPolyMpeSynth` (CLAP Polyphonic MPE Host, Wet $100\%$, Cutoff $2400.0\text{ Hz}$, Drive $0.22$, MPE Timbre Mod $0.65$), `Vst3MasteringChain` (VST3 Bundle Host, Wet $85\%$, Cutoff $8500.0\text{ Hz}$, Drive $0.10$, MPE Timbre Mod $0.20$), `WasmSandboxedGranular` (WASM Sandboxed DSP Runtime, Wet $70\%$, Cutoff $1650.0\text{ Hz}$, Drive $0.45$, MPE Timbre Mod $0.85$), and `ParallelInsertBlend` (CLAP Parallel Insert Blend, Wet $50\%$, Cutoff $1120.0\text{ Hz}$, Drive $0.68$, MPE Timbre Mod $0.40$).
+    * Interactive 2D Wet/Dry Parallel Blend & Logarithmic Cutoff Morph Puck: Wet Mix $\in [0.0..=1.0]$ vs Cutoff Morph $\in [20.0..=20000.0]\text{ Hz}$ with $\ge 44\times 44\text{pt}$ touch target (`PLUGIN_HOST_PUCK_HIT_RADIUS = 22.0`).
+    * Real-time hosted sample soft-clipping & wet/dry blend (`evaluate_hosted_sample`), out-of-process crash isolation toggle, 8-rotary parameter automapper toggle, and deterministic ASCII snapshot rendering (`[PASS: >=44pt Hit Target]`).
+- [x] View Re-Exports, Modal Windows, Rack & Inspector Integrations, and Command Palette Routing (`views/mod.rs`, `lib.rs`, `award_winning_gui_view.rs`, `modern_inspector.rs`, `modern_device_rack.rs`, `command_palette.rs`, `app.rs`):
+  - Exported `LiveSessionRecorderView`, `LiveRecorderPreset`, `LiveRecordDiskFormat`, `LIVE_RECORDER_PUCK_HIT_RADIUS`, `PluginHostView`, `PluginHostPreset`, `HostedPluginFormat`, and `PLUGIN_HOST_PUCK_HIT_RADIUS`.
+  - Added modal windows (`show_live_session_recorder_modal_window`, `show_plugin_host_modal_window`), lifecycle methods, and lock-free `ParamBus` slot dispatch (`sync_live_session_recorder_hud_state`, `sync_plugin_host_hud_state`).
+  - Added action buttons (`[⏺ Open Live Session Recorder HUD]`, `[🔌 Open Plugin Host HUD]`), collapsed rack header triggers (`[⏺ Recorder HUD]`, `[🔌 PluginHost HUD]`), and interactive 2D mini-visualizers in `ModernDeviceRackView`.
+  - Registered `open_live_session_recorder_hud` and `open_plugin_host_hud` in `CommandPalette` and `SummonerApp`.
+- [x] Verification & Test Suite (`crates/summoner_gui/src/tier186_turn123_tests.rs`):
+  - Pure & GUI tests verifying initialization, preset switching, PCM quantization & brickwall safety ceiling, plugin wet/dry & logarithmic cutoff morph math, $\ge 44\times 44\text{pt}$ touch puck hit testing, deterministic ASCII snapshots, headless egui rendering, modal lifecycles, lock-free `ParamBus` synchronization, and command palette registration.
 
 
