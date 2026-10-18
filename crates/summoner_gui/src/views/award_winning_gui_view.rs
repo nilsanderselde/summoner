@@ -940,6 +940,10 @@ pub struct AwardWinningGuiView {
     pub live_session_recorder_view: crate::views::live_session_recorder_view::LiveSessionRecorderView,
     pub show_plugin_host_modal: bool,
     pub plugin_host_view: crate::views::plugin_host_view::PluginHostView,
+    pub show_ai_autonomous_mastering_modal: bool,
+    pub ai_autonomous_mastering_view: crate::views::ai_autonomous_mastering_view::AiAutonomousMasteringView,
+    pub show_hardware_control_surface_modal: bool,
+    pub hardware_control_surface_view: crate::views::hardware_control_surface_view::HardwareControlSurfaceView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1496,6 +1500,10 @@ impl AwardWinningGuiView {
             live_session_recorder_view: crate::views::live_session_recorder_view::LiveSessionRecorderView::new(),
             show_plugin_host_modal: false,
             plugin_host_view: crate::views::plugin_host_view::PluginHostView::new(),
+            show_ai_autonomous_mastering_modal: false,
+            ai_autonomous_mastering_view: crate::views::ai_autonomous_mastering_view::AiAutonomousMasteringView::new(),
+            show_hardware_control_surface_modal: false,
+            hardware_control_surface_view: crate::views::hardware_control_surface_view::HardwareControlSurfaceView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2885,6 +2893,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_plugin_host_hud = false;
             self.open_plugin_host_hud();
         }
+        if self.inspector_state.requested_open_ai_autonomous_mastering_hud || self.device_rack_state.requested_open_ai_autonomous_mastering_hud {
+            self.inspector_state.requested_open_ai_autonomous_mastering_hud = false;
+            self.device_rack_state.requested_open_ai_autonomous_mastering_hud = false;
+            self.open_ai_autonomous_mastering_hud();
+        }
+        if self.inspector_state.requested_open_hardware_control_surface_hud || self.device_rack_state.requested_open_hardware_control_surface_hud {
+            self.inspector_state.requested_open_hardware_control_surface_hud = false;
+            self.device_rack_state.requested_open_hardware_control_surface_hud = false;
+            self.open_hardware_control_surface_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -3038,6 +3056,8 @@ impl AwardWinningGuiView {
         self.show_drum_machine_modal_window(ui);
         self.show_live_session_recorder_modal_window(ui);
         self.show_plugin_host_modal_window(ui);
+        self.show_ai_autonomous_mastering_modal_window(ui);
+        self.show_hardware_control_surface_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -22941,6 +22961,180 @@ impl AwardWinningGuiView {
             if bus.get(pid_cut).is_some() { bus.set(pid_cut, cutoff); }
             if bus.get(pid_gain).is_some() { bus.set(pid_gain, gain); }
             if bus.get(pid_mpe).is_some() { bus.set(pid_mpe, mpe); }
+        }
+    }
+
+    pub fn open_ai_autonomous_mastering_hud(&mut self) {
+        self.show_ai_autonomous_mastering_modal = true;
+    }
+
+    pub fn close_ai_autonomous_mastering_hud(&mut self) {
+        self.show_ai_autonomous_mastering_modal = false;
+    }
+
+    pub fn is_ai_autonomous_mastering_hud_open(&self) -> bool {
+        self.show_ai_autonomous_mastering_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_ai_autonomous_mastering_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_ai_autonomous_mastering_modal {
+            return;
+        }
+
+        let mut is_open = self.show_ai_autonomous_mastering_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("👑 AI Autonomous Mastering, Drum Replacer & Room Acoustic Matcher HUD")
+            .id(egui::Id::new("ai_autonomous_mastering_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(640.0, 500.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("AiAutonomousMasteringEngine + AutomatedDrumReplacer + NeuralRoomAcousticMatcher (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.ai_autonomous_mastering_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_ai_autonomous_mastering_modal = is_open;
+        self.sync_ai_autonomous_mastering_hud_state();
+    }
+
+    pub fn sync_ai_autonomous_mastering_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let lufs = self.ai_autonomous_mastering_view.target_lufs;
+        let ceil = self.ai_autonomous_mastering_view.ceiling_db;
+        let drum_blend = self.ai_autonomous_mastering_view.drum_blend;
+        let rt60 = self.ai_autonomous_mastering_view.room_rt60_sec;
+
+        self.device_rack_state.node_param_values.insert("target_lufs".to_string(), lufs);
+        self.device_rack_state.node_param_values.insert("ceiling_db".to_string(), ceil);
+        self.device_rack_state.node_param_values.insert("drum_blend".to_string(), drum_blend);
+        self.device_rack_state.node_param_values.insert("room_rt60_sec".to_string(), rt60);
+
+        self.inspector_state.node_param_values.insert("target_lufs".to_string(), lufs);
+        self.inspector_state.node_param_values.insert("ceiling_db".to_string(), ceil);
+        self.inspector_state.node_param_values.insert("drum_blend".to_string(), drum_blend);
+        self.inspector_state.node_param_values.insert("room_rt60_sec".to_string(), rt60);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_lufs = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_ceil = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_drum = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_rt60 = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_lufs).is_some() { bus.set(pid_lufs, lufs); }
+            if bus.get(pid_ceil).is_some() { bus.set(pid_ceil, ceil); }
+            if bus.get(pid_drum).is_some() { bus.set(pid_drum, drum_blend); }
+            if bus.get(pid_rt60).is_some() { bus.set(pid_rt60, rt60); }
+        }
+    }
+
+    pub fn open_hardware_control_surface_hud(&mut self) {
+        self.show_hardware_control_surface_modal = true;
+    }
+
+    pub fn close_hardware_control_surface_hud(&mut self) {
+        self.show_hardware_control_surface_modal = false;
+    }
+
+    pub fn is_hardware_control_surface_hud_open(&self) -> bool {
+        self.show_hardware_control_surface_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_hardware_control_surface_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_hardware_control_surface_modal {
+            return;
+        }
+
+        let mut is_open = self.show_hardware_control_surface_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎛 Hardware Control Surface, CV/Gate Modular Output & DIN Sync24 Bridge HUD")
+            .id(egui::Id::new("hardware_control_surface_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(640.0, 500.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("PushControllerDriver + McuControllerDriver + CvGateGenerator + DinSyncGenerator (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.hardware_control_surface_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_hardware_control_surface_modal = is_open;
+        self.sync_hardware_control_surface_hud_state();
+    }
+
+    pub fn sync_hardware_control_surface_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let cv = self.hardware_control_surface_view.cv_voltage;
+        let offset = self.hardware_control_surface_view.clock_offset_ms;
+        let vpo = self.hardware_control_surface_view.volts_per_octave;
+        let bpm = self.hardware_control_surface_view.din_sync_bpm;
+
+        self.device_rack_state.node_param_values.insert("cv_voltage".to_string(), cv);
+        self.device_rack_state.node_param_values.insert("clock_offset_ms".to_string(), offset);
+        self.device_rack_state.node_param_values.insert("volts_per_octave".to_string(), vpo);
+        self.device_rack_state.node_param_values.insert("din_sync_bpm".to_string(), bpm);
+
+        self.inspector_state.node_param_values.insert("cv_voltage".to_string(), cv);
+        self.inspector_state.node_param_values.insert("clock_offset_ms".to_string(), offset);
+        self.inspector_state.node_param_values.insert("volts_per_octave".to_string(), vpo);
+        self.inspector_state.node_param_values.insert("din_sync_bpm".to_string(), bpm);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_cv = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_off = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_vpo = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_bpm = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_cv).is_some() { bus.set(pid_cv, cv); }
+            if bus.get(pid_off).is_some() { bus.set(pid_off, offset); }
+            if bus.get(pid_vpo).is_some() { bus.set(pid_vpo, vpo); }
+            if bus.get(pid_bpm).is_some() { bus.set(pid_bpm, bpm); }
         }
     }
 

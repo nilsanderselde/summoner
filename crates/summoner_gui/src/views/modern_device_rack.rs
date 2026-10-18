@@ -349,6 +349,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_live_session_recorder_hud: bool,
     #[serde(default)]
     pub requested_open_plugin_host_hud: bool,
+    #[serde(default)]
+    pub requested_open_ai_autonomous_mastering_hud: bool,
+    #[serde(default)]
+    pub requested_open_hardware_control_surface_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -512,6 +516,8 @@ impl Default for ModernDeviceRackState {
             requested_open_drum_machine_hud: false,
             requested_open_live_session_recorder_hud: false,
             requested_open_plugin_host_hud: false,
+            requested_open_ai_autonomous_mastering_hud: false,
+            requested_open_hardware_control_surface_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -1298,6 +1304,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_drum_machine = cur_selection.contains("DrumMachine") || cur_selection.contains("DrumPad") || cur_selection == "DrumMachineDevice" || cur_selection == "DrumKitNode";
                     let is_live_session_recorder = cur_selection.contains("LiveSessionRecorder") || cur_selection.contains("SessionRecorder") || cur_selection == "LiveRecorderNode" || cur_selection == "LiveSessionRecorderNode";
                     let is_plugin_host = cur_selection.contains("PluginHost") || cur_selection.contains("PluginAudioNode") || cur_selection.contains("ClapHost") || cur_selection.contains("Vst3Host") || cur_selection.contains("WasmDsp") || cur_selection == "PluginHostNode";
+                    let is_ai_autonomous_mastering = cur_selection.contains("AiAutonomousMastering") || cur_selection.contains("AutonomousMastering") || cur_selection.contains("DrumReplacer") || cur_selection.contains("RoomAcousticMatcher") || cur_selection == "AiAutonomousMasteringEngine";
+                    let is_hardware_control_surface = cur_selection.contains("HardwareControl") || cur_selection.contains("CvGate") || cur_selection.contains("DinSync") || cur_selection.contains("PushController") || cur_selection.contains("McuController") || cur_selection.contains("NksIntegration");
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1894,6 +1902,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("🔌 PluginHost HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open VST3 / CLAP / WebAssembly Plugin Host & Parameter Automapper HUD").clicked()
                     {
                         state.requested_open_plugin_host_hud = true;
+                    } else if is_ai_autonomous_mastering
+                        && ui.button(RichText::new("👑 AI Master HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(245, 158, 11))).on_hover_text("Open AI Autonomous Mastering, Drum Replacer & Room Acoustic Matcher HUD").clicked()
+                    {
+                        state.requested_open_ai_autonomous_mastering_hud = true;
+                    } else if is_hardware_control_surface
+                        && ui.button(RichText::new("🎛 CV/Sync HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Hardware Control Surface, 1V/Oct CV/Gate & DIN Sync24 Bridge HUD").clicked()
+                    {
+                        state.requested_open_hardware_control_surface_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2808,6 +2824,8 @@ fn show_pro_parameter_drawer(
                     let is_drum_machine = dev_kind.contains("DrumMachine") || dev_kind.contains("DrumPad") || dev_kind == "DrumMachineDevice" || dev_kind == "DrumKitNode";
                     let is_live_session_recorder = dev_kind.contains("LiveSessionRecorder") || dev_kind.contains("SessionRecorder") || dev_kind == "LiveRecorderNode" || dev_kind == "LiveSessionRecorderNode";
                     let is_plugin_host = dev_kind.contains("PluginHost") || dev_kind.contains("PluginAudioNode") || dev_kind.contains("ClapHost") || dev_kind.contains("Vst3Host") || dev_kind.contains("WasmDsp") || dev_kind == "PluginHostNode";
+                    let is_ai_autonomous_mastering = dev_kind.contains("AiAutonomousMastering") || dev_kind.contains("AutonomousMastering") || dev_kind.contains("DrumReplacer") || dev_kind.contains("RoomAcousticMatcher") || dev_kind == "AiAutonomousMasteringEngine";
+                    let is_hardware_control_surface = dev_kind.contains("HardwareControl") || dev_kind.contains("CvGate") || dev_kind.contains("DinSync") || dev_kind.contains("PushController") || dev_kind.contains("McuController") || dev_kind.contains("NksIntegration");
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -13987,6 +14005,100 @@ fn show_pro_parameter_drawer(
                             let _ = ph_resp.on_hover_text(format!(
                                 "Plugin Host HUD\nWet Mix: {:.0}% | Cutoff Morph: {:.0} Hz\n[Drag: Wet (X) / Cutoff (Y) Puck]",
                                 wet * 100.0, cutoff
+                            ));
+                        }
+                    } else if is_ai_autonomous_mastering {
+                        // AI Autonomous Mastering Mini View
+                        let (am_resp, am_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let am_rect = am_resp.rect;
+                        am_painter.rect_filled(am_rect, 2.0, Color32::from_rgb(20, 14, 8));
+
+                        let mut target_lufs = state.node_param_values.get("target_lufs").copied().unwrap_or(-14.0);
+                        let mut ceiling_db = state.node_param_values.get("ceiling_db").copied().unwrap_or(-1.0);
+
+                        if am_resp.dragged() || am_resp.clicked() {
+                            if let Some(pos) = am_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - am_rect.left() - 4.0) / (am_rect.width() - 60.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - am_rect.top() - 10.0) / (am_rect.height() - 20.0))).clamp(0.0, 1.0);
+                                target_lufs = crate::views::ai_autonomous_mastering_view::AiAutonomousMasteringView::normalized_to_lufs(norm_x);
+                                ceiling_db = crate::views::ai_autonomous_mastering_view::AiAutonomousMasteringView::normalized_to_ceiling(norm_y);
+                                state.node_param_values.insert("target_lufs".to_string(), target_lufs);
+                                state.node_param_values.insert("ceiling_db".to_string(), ceiling_db);
+                                if let Some(bus) = param_bus {
+                                    let pid_lufs = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_ceil = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_lufs).is_some() { bus.set(pid_lufs, target_lufs); }
+                                    if bus.get(pid_ceil).is_some() { bus.set(pid_ceil, ceiling_db); }
+                                }
+                            }
+                        }
+
+                        let norm_x = crate::views::ai_autonomous_mastering_view::AiAutonomousMasteringView::lufs_to_normalized(target_lufs);
+                        let norm_y = crate::views::ai_autonomous_mastering_view::AiAutonomousMasteringView::ceiling_to_normalized(ceiling_db);
+                        let puck_x = am_rect.left() + 4.0 + norm_x * (am_rect.width() - 60.0);
+                        let puck_y = am_rect.bottom() - 10.0 - norm_y * (am_rect.height() - 20.0);
+                        am_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(245, 158, 11));
+                        am_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        am_painter.text(
+                            egui::pos2(am_rect.right() - 4.0, am_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("AI MASTER\n{:.1}LUFS\n{:+.1}dB", target_lufs, ceiling_db),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(245, 158, 11),
+                        );
+
+                        if am_resp.hovered() {
+                            let _ = am_resp.on_hover_text(format!(
+                                "AI Autonomous Mastering HUD\nTarget Loudness: {:.1} LUFS | Ceiling: {:+.2} dBFS\n[Drag: Target LUFS (X) / Ceiling (Y) Puck]",
+                                target_lufs, ceiling_db
+                            ));
+                        }
+                    } else if is_hardware_control_surface {
+                        // Hardware Control Surface & CV/Gate Mini View
+                        let (hw_resp, hw_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let hw_rect = hw_resp.rect;
+                        hw_painter.rect_filled(hw_rect, 2.0, Color32::from_rgb(10, 18, 28));
+
+                        let mut cv_voltage = state.node_param_values.get("cv_voltage").copied().unwrap_or(1.0);
+                        let mut clock_offset_ms = state.node_param_values.get("clock_offset_ms").copied().unwrap_or(0.0);
+
+                        if hw_resp.dragged() || hw_resp.clicked() {
+                            if let Some(pos) = hw_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - hw_rect.left() - 4.0) / (hw_rect.width() - 60.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - hw_rect.top() - 10.0) / (hw_rect.height() - 20.0))).clamp(0.0, 1.0);
+                                cv_voltage = crate::views::hardware_control_surface_view::HardwareControlSurfaceView::normalized_to_cv(norm_x);
+                                clock_offset_ms = crate::views::hardware_control_surface_view::HardwareControlSurfaceView::normalized_to_offset(norm_y);
+                                state.node_param_values.insert("cv_voltage".to_string(), cv_voltage);
+                                state.node_param_values.insert("clock_offset_ms".to_string(), clock_offset_ms);
+                                if let Some(bus) = param_bus {
+                                    let pid_cv = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_off = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_cv).is_some() { bus.set(pid_cv, cv_voltage); }
+                                    if bus.get(pid_off).is_some() { bus.set(pid_off, clock_offset_ms); }
+                                }
+                            }
+                        }
+
+                        let norm_x = crate::views::hardware_control_surface_view::HardwareControlSurfaceView::cv_to_normalized(cv_voltage);
+                        let norm_y = crate::views::hardware_control_surface_view::HardwareControlSurfaceView::offset_to_normalized(clock_offset_ms);
+                        let puck_x = hw_rect.left() + 4.0 + norm_x * (hw_rect.width() - 60.0);
+                        let puck_y = hw_rect.bottom() - 10.0 - norm_y * (hw_rect.height() - 20.0);
+                        hw_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(56, 189, 248));
+                        hw_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        hw_painter.text(
+                            egui::pos2(hw_rect.right() - 4.0, hw_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("CV/SYNC\n{:+.1}V\n{:+.1}ms", cv_voltage, clock_offset_ms),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(56, 189, 248),
+                        );
+
+                        if hw_resp.hovered() {
+                            let _ = hw_resp.on_hover_text(format!(
+                                "Hardware Control Surface & CV/Gate HUD\nCV Pitch: {:+.2} V | Clock Offset: {:+.2} ms\n[Drag: CV Voltage (X) / Clock Offset (Y) Puck]",
+                                cv_voltage, clock_offset_ms
                             ));
                         }
                     } else {

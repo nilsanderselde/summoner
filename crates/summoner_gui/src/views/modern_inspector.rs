@@ -334,6 +334,10 @@ pub struct ModernInspectorState {
     pub requested_open_live_session_recorder_hud: bool,
     #[serde(default)]
     pub requested_open_plugin_host_hud: bool,
+    #[serde(default)]
+    pub requested_open_ai_autonomous_mastering_hud: bool,
+    #[serde(default)]
+    pub requested_open_hardware_control_surface_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -507,6 +511,8 @@ impl Default for ModernInspectorState {
             requested_open_drum_machine_hud: false,
             requested_open_live_session_recorder_hud: false,
             requested_open_plugin_host_hud: false,
+            requested_open_ai_autonomous_mastering_hud: false,
+            requested_open_hardware_control_surface_hud: false,
         }
     }
 }
@@ -2471,6 +2477,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open VST3 / CLAP / Wasm Sandboxed Plugin Host & Automap HUD").clicked() {
                     state.requested_open_plugin_host_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("AiAutonomousMastering") || active_kind.contains("AutonomousMastering") || active_kind.contains("DrumReplacer") || active_kind.contains("RoomAcousticMatcher") {
+                if ui.add(
+                    egui::Button::new(RichText::new("👑 Open AI Autonomous Mastering HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(245, 158, 11)))
+                        .fill(Color32::from_rgb(28, 20, 10))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(245, 158, 11)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open AI Autonomous Mastering, Drum Replacer & Room Acoustic Matcher HUD").clicked() {
+                    state.requested_open_ai_autonomous_mastering_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("HardwareControl") || active_kind.contains("CvGate") || active_kind.contains("DinSync") || active_kind.contains("PushController") || active_kind.contains("McuController") || active_kind.contains("NksIntegration") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🎛 Open Hardware Control & CV/Gate HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(56, 189, 248)))
+                        .fill(Color32::from_rgb(10, 20, 32))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(56, 189, 248)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Hardware Control Surface, 1V/Oct CV/Gate & DIN Sync24 Bridge HUD").clicked() {
+                    state.requested_open_hardware_control_surface_hud = true;
                 }
                 ui.add_space(4.0);
             }

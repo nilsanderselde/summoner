@@ -1208,6 +1208,18 @@ impl CommandPalette {
                 action_id: "open_plugin_host_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open AI Autonomous Mastering, Drum Replacer & Room Acoustic Matcher HUD".into(),
+                category: "AI & Mastering".into(),
+                action_id: "open_ai_autonomous_mastering_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Hardware Control Surface, CV/Gate Modular Output & DIN Sync24 Bridge HUD".into(),
+                category: "Ecosystem & Hardware".into(),
+                action_id: "open_hardware_control_surface_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES
