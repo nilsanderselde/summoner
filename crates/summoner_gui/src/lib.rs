@@ -320,6 +320,8 @@ pub mod tier182_turn119_tests;
 #[cfg(feature = "gui")]
 pub mod tier183_turn120_tests;
 #[cfg(feature = "gui")]
+pub mod tier184_turn121_tests;
+#[cfg(feature = "gui")]
 pub mod touch_gestures;
 #[cfg(feature = "gui")]
 pub mod transport_bar;
@@ -328,6 +330,8 @@ pub mod views;
 
 #[cfg(feature = "gui")]
 pub use views::accessibility_announcer::AccessibilityAnnouncerView;
+#[cfg(feature = "gui")]
+pub use views::air_reed_view::{AirReedPreset, AirReedView, AIR_REED_PUCK_HIT_RADIUS};
 #[cfg(feature = "gui")]
 pub use views::ambisonic_radar_view::AmbisonicRadarView;
 #[cfg(feature = "gui")]
@@ -633,6 +637,8 @@ pub use views::spring_lattice_view::{
 pub use views::spring_reverb_view::SpringReverbView;
 #[cfg(feature = "gui")]
 pub use views::steelpan_drum_view::SteelpanDrumView;
+#[cfg(feature = "gui")]
+pub use views::stem_separator_view::{StemChannelConfig, StemSeparatorPreset, StemSeparatorView, STEM_SEPARATOR_PUCK_HIT_RADIUS};
 #[cfg(feature = "gui")]
 pub use views::step_sequencer_matrix::StepSequencerMatrixView;
 #[cfg(feature = "gui")]

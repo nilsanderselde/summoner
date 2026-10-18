@@ -928,6 +928,10 @@ pub struct AwardWinningGuiView {
     pub ring_mod_view: crate::views::ring_mod_view::RingModulatorView,
     pub show_dither_quantizer_modal: bool,
     pub dither_quantizer_view: crate::views::dither_quantizer_view::DitherQuantizerView,
+    pub show_air_reed_modal: bool,
+    pub air_reed_view: crate::views::air_reed_view::AirReedView,
+    pub show_stem_separator_modal: bool,
+    pub stem_separator_view: crate::views::stem_separator_view::StemSeparatorView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1472,6 +1476,10 @@ impl AwardWinningGuiView {
             ring_mod_view: crate::views::ring_mod_view::RingModulatorView::new(),
             show_dither_quantizer_modal: false,
             dither_quantizer_view: crate::views::dither_quantizer_view::DitherQuantizerView::new(),
+            show_air_reed_modal: false,
+            air_reed_view: crate::views::air_reed_view::AirReedView::new(),
+            show_stem_separator_modal: false,
+            stem_separator_view: crate::views::stem_separator_view::StemSeparatorView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2831,6 +2839,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_dither_quantizer_hud = false;
             self.open_dither_quantizer_hud();
         }
+        if self.inspector_state.requested_open_air_reed_hud || self.device_rack_state.requested_open_air_reed_hud {
+            self.inspector_state.requested_open_air_reed_hud = false;
+            self.device_rack_state.requested_open_air_reed_hud = false;
+            self.open_air_reed_hud();
+        }
+        if self.inspector_state.requested_open_stem_separator_hud || self.device_rack_state.requested_open_stem_separator_hud {
+            self.inspector_state.requested_open_stem_separator_hud = false;
+            self.device_rack_state.requested_open_stem_separator_hud = false;
+            self.open_stem_separator_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2978,6 +2996,8 @@ impl AwardWinningGuiView {
         self.show_bci_eeg_decoder_modal_window(ui);
         self.show_ring_mod_modal_window(ui);
         self.show_dither_quantizer_modal_window(ui);
+        self.show_air_reed_modal_window(ui);
+        self.show_stem_separator_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -22350,6 +22370,189 @@ impl AwardWinningGuiView {
             if bus.get(pid_shaping).is_some() { bus.set(pid_shaping, shaping); }
             if bus.get(pid_snr).is_some() { bus.set(pid_snr, snr); }
             if bus.get(pid_floor).is_some() { bus.set(pid_floor, floor); }
+        }
+    }
+
+    pub fn open_air_reed_hud(&mut self) {
+        self.show_air_reed_modal = true;
+    }
+
+    pub fn close_air_reed_hud(&mut self) {
+        self.show_air_reed_modal = false;
+    }
+
+    pub fn is_air_reed_hud_open(&self) -> bool {
+        self.show_air_reed_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_air_reed_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_air_reed_modal {
+            return;
+        }
+
+        let mut is_open = self.show_air_reed_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎋 Air-Jet Reed & Utaguchi Flue Vortex Aerodynamics HUD")
+            .id(egui::Id::new("air_reed_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(640.0, 490.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Bernoulli Jet Velocity, Meri/Kari Pitch Bending & Utaguchi Edge Splitting (Milestones 25, 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.air_reed_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_air_reed_modal = is_open;
+        self.sync_air_reed_hud_state();
+    }
+
+    pub fn sync_air_reed_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let pressure = self.air_reed_view.blowing_pressure_pa;
+        let cents = self.air_reed_view.meri_kari_cents;
+        let dist = self.air_reed_view.jet_distance_mm;
+        let sharp = self.air_reed_view.edge_sharpness;
+        let murai = self.air_reed_view.murai_iki_intensity;
+
+        self.device_rack_state.node_param_values.insert("blowing_pressure_pa".to_string(), pressure);
+        self.device_rack_state.node_param_values.insert("meri_kari_cents".to_string(), cents);
+        self.device_rack_state.node_param_values.insert("jet_distance_mm".to_string(), dist);
+        self.device_rack_state.node_param_values.insert("edge_sharpness".to_string(), sharp);
+        self.device_rack_state.node_param_values.insert("murai_iki_intensity".to_string(), murai);
+
+        self.inspector_state.node_param_values.insert("blowing_pressure_pa".to_string(), pressure);
+        self.inspector_state.node_param_values.insert("meri_kari_cents".to_string(), cents);
+        self.inspector_state.node_param_values.insert("jet_distance_mm".to_string(), dist);
+        self.inspector_state.node_param_values.insert("edge_sharpness".to_string(), sharp);
+        self.inspector_state.node_param_values.insert("murai_iki_intensity".to_string(), murai);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_pressure = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_cents = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_dist = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_sharp = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_pressure).is_some() { bus.set(pid_pressure, pressure); }
+            if bus.get(pid_cents).is_some() { bus.set(pid_cents, cents); }
+            if bus.get(pid_dist).is_some() { bus.set(pid_dist, dist); }
+            if bus.get(pid_sharp).is_some() { bus.set(pid_sharp, sharp); }
+        }
+    }
+
+    pub fn open_stem_separator_hud(&mut self) {
+        self.show_stem_separator_modal = true;
+    }
+
+    pub fn close_stem_separator_hud(&mut self) {
+        self.show_stem_separator_modal = false;
+    }
+
+    pub fn is_stem_separator_hud_open(&self) -> bool {
+        self.show_stem_separator_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_stem_separator_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_stem_separator_modal {
+            return;
+        }
+
+        let mut is_open = self.show_stem_separator_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🧬 Neural ONNX 4-Stem Spectral Separator & Router HUD")
+            .id(egui::Id::new("stem_separator_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(640.0, 490.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("ONNX Spectral Sub-Band Decomposition (Drums, Bass, Melody, Other) & Multi-Track Routing (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.stem_separator_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_stem_separator_modal = is_open;
+        self.sync_stem_separator_hud_state();
+    }
+
+    pub fn sync_stem_separator_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let tilt = self.stem_separator_view.spectral_tilt;
+        let sharp = self.stem_separator_view.mask_sharpness;
+        let drums_db = self.stem_separator_view.stems[0].gain_db;
+        let bass_db = self.stem_separator_view.stems[1].gain_db;
+        let melody_db = self.stem_separator_view.stems[2].gain_db;
+        let other_db = self.stem_separator_view.stems[3].gain_db;
+
+        self.device_rack_state.node_param_values.insert("spectral_tilt".to_string(), tilt);
+        self.device_rack_state.node_param_values.insert("mask_sharpness".to_string(), sharp);
+        self.device_rack_state.node_param_values.insert("drums_gain_db".to_string(), drums_db);
+        self.device_rack_state.node_param_values.insert("bass_gain_db".to_string(), bass_db);
+        self.device_rack_state.node_param_values.insert("melody_gain_db".to_string(), melody_db);
+        self.device_rack_state.node_param_values.insert("other_gain_db".to_string(), other_db);
+
+        self.inspector_state.node_param_values.insert("spectral_tilt".to_string(), tilt);
+        self.inspector_state.node_param_values.insert("mask_sharpness".to_string(), sharp);
+        self.inspector_state.node_param_values.insert("drums_gain_db".to_string(), drums_db);
+        self.inspector_state.node_param_values.insert("bass_gain_db".to_string(), bass_db);
+        self.inspector_state.node_param_values.insert("melody_gain_db".to_string(), melody_db);
+        self.inspector_state.node_param_values.insert("other_gain_db".to_string(), other_db);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_tilt = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_sharp = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_drums = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_bass = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_tilt).is_some() { bus.set(pid_tilt, tilt); }
+            if bus.get(pid_sharp).is_some() { bus.set(pid_sharp, sharp); }
+            if bus.get(pid_drums).is_some() { bus.set(pid_drums, drums_db); }
+            if bus.get(pid_bass).is_some() { bus.set(pid_bass, bass_db); }
         }
     }
 

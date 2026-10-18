@@ -337,6 +337,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_ring_mod_hud: bool,
     #[serde(default)]
     pub requested_open_dither_quantizer_hud: bool,
+    #[serde(default)]
+    pub requested_open_air_reed_hud: bool,
+    #[serde(default)]
+    pub requested_open_stem_separator_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -494,6 +498,8 @@ impl Default for ModernDeviceRackState {
             requested_open_bci_eeg_decoder_hud: false,
             requested_open_ring_mod_hud: false,
             requested_open_dither_quantizer_hud: false,
+            requested_open_air_reed_hud: false,
+            requested_open_stem_separator_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -1274,6 +1280,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_bci_eeg_decoder = cur_selection.contains("Bci") || cur_selection.contains("EEG") || cur_selection.contains("Eeg") || cur_selection.contains("Brainwave") || cur_selection == "BciEegDecoderNode" || cur_selection == "EegBands" || cur_selection == "MentalImageryClassifier";
                     let is_ring_mod = cur_selection.contains("RingMod") || cur_selection.contains("RingModulator") || cur_selection.contains("RingModulation") || cur_selection == "RingModulatorNode" || cur_selection == "DiodeRingModulator";
                     let is_dither_quantizer = cur_selection.contains("Dither") || cur_selection.contains("Quantizer") || cur_selection.contains("BitDepth") || cur_selection == "DitherNode" || cur_selection == "PsychoacousticDither";
+                    let is_air_reed = cur_selection.contains("AirReed") || cur_selection.contains("Utaguchi") || cur_selection.contains("MuraiIki") || cur_selection == "AirReedNode" || cur_selection == "AirReedConfig";
+                    let is_stem_separator = cur_selection.contains("StemSeparator") || cur_selection.contains("StemRouter") || cur_selection.contains("OnnxStem") || cur_selection == "StemSeparatorNode" || cur_selection == "MultiTrackAudioRouter";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1846,6 +1854,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("🎚 Dither HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Psychoacoustic Shaped Noise Dither & Bit-Depth Truncation Radar HUD").clicked()
                     {
                         state.requested_open_dither_quantizer_hud = true;
+                    } else if is_air_reed
+                        && ui.button(RichText::new("🎋 AirReed HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(52, 211, 153))).on_hover_text("Open Air-Jet Reed & Utaguchi Flue Vortex Aerodynamics HUD").clicked()
+                    {
+                        state.requested_open_air_reed_hud = true;
+                    } else if is_stem_separator
+                        && ui.button(RichText::new("🧬 Stems HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(192, 132, 252))).on_hover_text("Open Neural ONNX 4-Stem Spectral Separator & Multi-Track Router HUD").clicked()
+                    {
+                        state.requested_open_stem_separator_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2754,6 +2770,8 @@ fn show_pro_parameter_drawer(
                     let is_bci_eeg_decoder = dev_kind.contains("Bci") || dev_kind.contains("EEG") || dev_kind.contains("Eeg") || dev_kind.contains("Brainwave") || dev_kind == "BciEegDecoderNode" || dev_kind == "EegBands" || dev_kind == "MentalImageryClassifier";
                     let is_ring_mod = dev_kind.contains("RingMod") || dev_kind.contains("RingModulator") || dev_kind.contains("RingModulation") || dev_kind == "RingModulatorNode" || dev_kind == "DiodeRingModulator";
                     let is_dither_quantizer = dev_kind.contains("Dither") || dev_kind.contains("Quantizer") || dev_kind.contains("BitDepth") || dev_kind == "DitherNode" || dev_kind == "PsychoacousticDither";
+                    let is_air_reed = dev_kind.contains("AirReed") || dev_kind.contains("Utaguchi") || dev_kind.contains("MuraiIki") || dev_kind == "AirReedNode" || dev_kind == "AirReedConfig";
+                    let is_stem_separator = dev_kind.contains("StemSeparator") || dev_kind.contains("StemRouter") || dev_kind.contains("OnnxStem") || dev_kind == "StemSeparatorNode" || dev_kind == "MultiTrackAudioRouter";
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -13619,6 +13637,126 @@ fn show_pro_parameter_drawer(
                             let _ = dq_resp.on_hover_text(format!(
                                 "Psychoacoustic Shaped Noise Dither HUD\nBit Depth: {:.0} bits | Shaping: {:.2}x\n[Drag: Bit Depth (X) / Shaping (Y) Puck]",
                                 bits, shaping
+                            ));
+                        }
+                    } else if is_air_reed {
+                        // Air-Jet Reed & Utaguchi Flue Vortex Mini View
+                        let (ar_resp, ar_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let ar_rect = ar_resp.rect;
+                        ar_painter.rect_filled(ar_rect, 2.0, Color32::from_rgb(8, 22, 18));
+
+                        let mut pressure = state.node_param_values.get("blowing_pressure_pa").copied().unwrap_or(800.0);
+                        let mut cents = state.node_param_values.get("meri_kari_cents").copied().unwrap_or(0.0);
+
+                        if ar_resp.dragged() || ar_resp.clicked() {
+                            if let Some(pos) = ar_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - ar_rect.left() - 4.0) / (ar_rect.width() - 60.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - ar_rect.top() - 10.0) / (ar_rect.height() - 20.0))).clamp(0.0, 1.0);
+                                pressure = crate::views::air_reed_view::AirReedView::normalized_to_pressure(norm_x);
+                                cents = crate::views::air_reed_view::AirReedView::normalized_to_meri_kari(norm_y);
+                                state.node_param_values.insert("blowing_pressure_pa".to_string(), pressure);
+                                state.node_param_values.insert("meri_kari_cents".to_string(), cents);
+                                if let Some(bus) = param_bus {
+                                    let pid_pressure = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_cents = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_pressure).is_some() { bus.set(pid_pressure, pressure); }
+                                    if bus.get(pid_cents).is_some() { bus.set(pid_cents, cents); }
+                                }
+                            }
+                        }
+
+                        // Draw utaguchi splitting curve preview
+                        for i in 0..16 {
+                            let frac1 = i as f32 / 16.0;
+                            let frac2 = (i + 1) as f32 / 16.0;
+                            let d1 = -1.5 + frac1 * 3.0;
+                            let d2 = -1.5 + frac2 * 3.0;
+                            let v1 = (d1 * 1.45).tanh() - 0.22 * (d1 * 1.45).clamp(-2.0, 2.0).powi(3);
+                            let v2 = (d2 * 1.45).tanh() - 0.22 * (d2 * 1.45).clamp(-2.0, 2.0).powi(3);
+                            let p1 = egui::pos2(ar_rect.left() + 6.0 + frac1 * (ar_rect.width() - 65.0), ar_rect.center().y - v1 * 18.0);
+                            let p2 = egui::pos2(ar_rect.left() + 6.0 + frac2 * (ar_rect.width() - 65.0), ar_rect.center().y - v2 * 18.0);
+                            ar_painter.line_segment([p1, p2], Stroke::new(1.0_f32, Color32::from_rgb(52, 211, 153)));
+                        }
+
+                        let norm_p = crate::views::air_reed_view::AirReedView::pressure_to_normalized(pressure);
+                        let norm_c = crate::views::air_reed_view::AirReedView::meri_kari_to_normalized(cents);
+                        let puck_x = ar_rect.left() + 4.0 + norm_p * (ar_rect.width() - 60.0);
+                        let puck_y = ar_rect.bottom() - 10.0 - norm_c * (ar_rect.height() - 20.0);
+                        ar_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(52, 211, 153));
+                        ar_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        ar_painter.text(
+                            egui::pos2(ar_rect.right() - 4.0, ar_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("AIR REED\n{:.0} Pa\n{:+.0} c", pressure, cents),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(52, 211, 153),
+                        );
+
+                        if ar_resp.hovered() {
+                            let _ = ar_resp.on_hover_text(format!(
+                                "Air-Jet Reed & Utaguchi Flue Vortex HUD\nPressure: {:.0} Pa | Meri/Kari: {:+.0} cents\n[Drag: Pressure (X) / Meri-Kari (Y) Puck]",
+                                pressure, cents
+                            ));
+                        }
+                    } else if is_stem_separator {
+                        // Neural ONNX 4-Stem Separator Mini View
+                        let (ss_resp, ss_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let ss_rect = ss_resp.rect;
+                        ss_painter.rect_filled(ss_rect, 2.0, Color32::from_rgb(18, 12, 28));
+
+                        let mut tilt = state.node_param_values.get("spectral_tilt").copied().unwrap_or(0.50);
+                        let mut sharp = state.node_param_values.get("mask_sharpness").copied().unwrap_or(0.75);
+
+                        if ss_resp.dragged() || ss_resp.clicked() {
+                            if let Some(pos) = ss_resp.interact_pointer_pos() {
+                                tilt = ((pos.x - ss_rect.left() - 4.0) / (ss_rect.width() - 60.0)).clamp(0.0, 1.0);
+                                sharp = (1.0 - ((pos.y - ss_rect.top() - 10.0) / (ss_rect.height() - 20.0))).clamp(0.0, 1.0);
+                                state.node_param_values.insert("spectral_tilt".to_string(), tilt);
+                                state.node_param_values.insert("mask_sharpness".to_string(), sharp);
+                                if let Some(bus) = param_bus {
+                                    let pid_tilt = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_sharp = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_tilt).is_some() { bus.set(pid_tilt, tilt); }
+                                    if bus.get(pid_sharp).is_some() { bus.set(pid_sharp, sharp); }
+                                }
+                            }
+                        }
+
+                        // Draw 4 stem frequency sub-band bars
+                        let bar_cols = [
+                            Color32::from_rgb(249, 115, 22),
+                            Color32::from_rgb(56, 189, 248),
+                            Color32::from_rgb(192, 132, 252),
+                            Color32::from_rgb(52, 211, 153),
+                        ];
+                        for (idx, &col) in bar_cols.iter().enumerate() {
+                            let bx = ss_rect.left() + 8.0 + idx as f32 * 21.0;
+                            let bh = 16.0 + ((idx as f32 * 0.3 + tilt).sin().abs()) * 28.0;
+                            ss_painter.rect_filled(
+                                egui::Rect::from_min_size(egui::pos2(bx, ss_rect.bottom() - 8.0 - bh), Vec2::new(15.0, bh)),
+                                1.5,
+                                col,
+                            );
+                        }
+
+                        let puck_x = ss_rect.left() + 4.0 + tilt * (ss_rect.width() - 60.0);
+                        let puck_y = ss_rect.bottom() - 10.0 - sharp * (ss_rect.height() - 20.0);
+                        ss_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(192, 132, 252));
+                        ss_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        ss_painter.text(
+                            egui::pos2(ss_rect.right() - 4.0, ss_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("4-STEM\nT:{:.0}%\nS:{:.0}%", tilt * 100.0, sharp * 100.0),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(192, 132, 252),
+                        );
+
+                        if ss_resp.hovered() {
+                            let _ = ss_resp.on_hover_text(format!(
+                                "Neural ONNX 4-Stem Separator HUD\nSpectral Tilt: {:.0}% | Sharpness: {:.0}%\n[Drag: Tilt (X) / Sharpness (Y) Puck]",
+                                tilt * 100.0, sharp * 100.0
                             ));
                         }
                     } else {

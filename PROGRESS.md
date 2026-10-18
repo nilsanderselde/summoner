@@ -1,6 +1,6 @@
 # Summoner DAW — Product Readiness & Shippability Tracker
 > **Current Shippability Score:** 10.0 / 10  
-> **Status:** Production Ready Release Candidate (Turn #120 / Sprint Turn #46)  
+> **Status:** Production Ready Release Candidate (Turn #121 / Sprint Turn #47)  
 > **Authoritative Root:** `PROGRESS.md`  
 > **License:** AGPLv3
 
@@ -3466,22 +3466,24 @@ Product Management has conducted a comprehensive readiness audit:
   - Tests passing: 100% pass (`cargo test -p summoner_gui`).
   - Lints & check: 0 errors, 0 warnings (`cargo check -p summoner_gui`, `cargo check -p summoner_gui --features gui`, `cargo clippy -p summoner_gui -- -D warnings`, `cargo clippy -p summoner_gui --features gui -- -D warnings`).
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+### Turn #121 (Sprint Turn #47) — Physical Modeling Air-Jet Reed & Utaguchi Flue Vortex Aerodynamics HUD and Neural ONNX 4-Stem Spectral Mask Decomposition & Multi-Track Router HUD Convergence (Milestones 25, 33 & 34)
+- [x] Physical Modeling Air-Jet Reed & Utaguchi Flue Vortex Aerodynamics HUD (`crates/summoner_gui/src/views/air_reed_view.rs`):
+  - Integrated `AirReedView` directly reflecting `crates/summoner_dsp/src/air_reed.rs`:
+    * 4 Curated Presets: `HonkyokuRoMeditation` (Zen Honkyoku steady Ro fundamental, $P = 800.0\text{ Pa}$, $\Delta c = 0.0\text{ cents}$, Jet Distance $10.0\text{ mm}$, Sharpness $1.45$, Turbulence $0.15$, Murai-Iki $0.00$), `DeepMeriShadowBend` (Deep downward head tilt *Dai-Meri*, $P = 520.0\text{ Pa}$, $\Delta c = -200.0\text{ cents}$, Jet Distance $14.0\text{ mm}$, Sharpness $1.15$, Turbulence $0.28$, Murai-Iki $0.10$), `KariOverblownKan` (High-register *Kan* overblow with steep *Kari* angle, $P = 2200.0\text{ Pa}$, $\Delta c = +120.0\text{ cents}$, Jet Distance $6.5\text{ mm}$, Sharpness $2.10$, Turbulence $0.12$, Murai-Iki $0.25$), and `MuraiIkiExplosiveBurst` (Explosive bamboo breath turbulence burst at $1.2\text{ kHz}$ formant resonance, $P = 3600.0\text{ Pa}$, $\Delta c = -45.0\text{ cents}$, Jet Distance $8.0\text{ mm}$, Sharpness $2.65$, Turbulence $0.45$, Murai-Iki $0.95$).
+    * Interactive 2D Blowing Pressure & Meri/Kari Head-Tilt Pitch Puck: Blowing Pressure $P \in [50.0..=4000.0]\text{ Pa}$ vs Meri/Kari Pitch Offset $\Delta c \in [-300.0..=+200.0]\text{ cents}$ with $\ge 44\times 44\text{pt}$ touch target (`AIR_REED_PUCK_HIT_RADIUS = 22.0`).
+    * Real-time acoustic Bernoulli jet velocity $v_{\text{jet}} = \sqrt{2 P / \rho}$, Meri/Kari continuous pitch multiplier $2^{\Delta c / 1200}$, convective vortex transit delay in samples, and Utaguchi non-linear splitting transfer curve $f(\eta, \theta) = \tanh(\eta k + \theta) - 0.22(\eta k)^3$.
+    * Deterministic ASCII snapshot rendering with metadata banner and verified touch target badge (`[PASS: >=44pt Hit Target]`).
+- [x] Neural ONNX 4-Stem Spectral Mask Decomposition & Multi-Track Router HUD (`crates/summoner_gui/src/views/stem_separator_view.rs`):
+  - Integrated `StemSeparatorView` directly reflecting `crates/summoner_dsp/src/stem_separator.rs`:
+    * 4 Curated Separation Presets: `BalancedFull4Stem` ($[0.0, 0.0, 0.0, 0.0]\text{ dB}$, Tilt $0.50$, Sharpness $0.75$), `AcapellaMelodyFocus` ($[-18.0, -18.0, +3.0, -12.0]\text{ dB}$, Tilt $0.68$, Sharpness $0.92$), `DrumAndBassFoundation` ($[+2.0, +2.5, -24.0, -20.0]\text{ dB}$, Tilt $0.32$, Sharpness $0.85$), and `InstrumentalBackingKaraoke` ($[+0.5, +0.5, -36.0, +1.0]\text{ dB}$, Tilt $0.45$, Sharpness $0.88$).
+    * Interactive 2D Spectral Crossover Tilt & Mask Isolation Sharpness Puck: Spectral Tilt $[0.0..=1.0]$ vs Mask Sharpness $[0.0..=1.0]$ with $\ge 44\times 44\text{pt}$ touch target (`STEM_SEPARATOR_PUCK_HIT_RADIUS = 22.0`).
+    * 4-Stem Channel Controls (`Drums`, `Bass`, `Melody`, `Other`) with independent gain dB $[-36.0..=+12.0]\text{ dB}$, mute toggle, target track index routing, and real-time 4-stem spectral mask frequency contour visualization.
+    * Deterministic ASCII snapshot rendering with metadata banner and verified touch target badge (`[PASS: >=44pt Hit Target]`).
+- [x] View Re-Exports, Modal Windows, Rack & Inspector Integrations, and Command Palette Routing (`views/mod.rs`, `lib.rs`, `award_winning_gui_view.rs`, `modern_inspector.rs`, `modern_device_rack.rs`, `command_palette.rs`, `app.rs`):
+  - Exported `AirReedView`, `AirReedPreset`, `AIR_REED_PUCK_HIT_RADIUS`, `StemSeparatorView`, `StemSeparatorPreset`, `StemChannelConfig`, and `STEM_SEPARATOR_PUCK_HIT_RADIUS`.
+  - Added modal windows (`show_air_reed_modal_window`, `show_stem_separator_modal_window`), lifecycle methods, and lock-free `ParamBus` slot dispatch (`sync_air_reed_hud_state`, `sync_stem_separator_hud_state`).
+  - Added action buttons (`[🎋 Open Air-Jet Reed HUD]`, `[🧬 Open Stem Separator HUD]`), collapsed rack header triggers (`[🎋 AirReed HUD]`, `[🧬 Stems HUD]`), and interactive 2D mini-visualizers in `ModernDeviceRackView`.
+  - Registered `open_air_reed_hud` and `open_stem_separator_hud` in `CommandPalette` and `SummonerApp`.
+- [x] Verification & Test Suite (`crates/summoner_gui/src/tier184_turn121_tests.rs`):
+  - Pure & GUI tests verifying initialization, preset switching, Bernoulli jet velocity & Utaguchi physics, 4-stem spectral mask decomposition, $\ge 44\times 44\text{pt}$ touch puck hit testing, deterministic ASCII snapshots, headless egui rendering, modal lifecycles, lock-free `ParamBus` synchronization, and command palette registration.
 

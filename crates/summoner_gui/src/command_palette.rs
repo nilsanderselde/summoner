@@ -1172,6 +1172,18 @@ impl CommandPalette {
                 action_id: "open_dither_quantizer_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Air-Jet Reed & Utaguchi Flue Vortex Aerodynamics HUD".into(),
+                category: "Physical Modeling".into(),
+                action_id: "open_air_reed_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Neural ONNX 4-Stem Spectral Separator & Multi-Track Router HUD".into(),
+                category: "Neural & Spectral".into(),
+                action_id: "open_stem_separator_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

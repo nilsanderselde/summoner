@@ -1904,6 +1904,14 @@ impl eframe::App for SummonerApp {
                     self.current_view = ViewMode::ModernStudio;
                     self.award_winning_view.open_dither_quantizer_hud();
                 }
+                "open_air_reed_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_air_reed_hud();
+                }
+                "open_stem_separator_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_stem_separator_hud();
+                }
                 "sfz_convert" | "auto_slice" | "load_preset" | "export_clap" | "toggle_simd" => {
                     println!("Command palette action executed: {}", action);
                 }

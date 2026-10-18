@@ -322,6 +322,10 @@ pub struct ModernInspectorState {
     pub requested_open_ring_mod_hud: bool,
     #[serde(default)]
     pub requested_open_dither_quantizer_hud: bool,
+    #[serde(default)]
+    pub requested_open_air_reed_hud: bool,
+    #[serde(default)]
+    pub requested_open_stem_separator_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -489,6 +493,8 @@ impl Default for ModernInspectorState {
             requested_open_bci_eeg_decoder_hud: false,
             requested_open_ring_mod_hud: false,
             requested_open_dither_quantizer_hud: false,
+            requested_open_air_reed_hud: false,
+            requested_open_stem_separator_hud: false,
         }
     }
 }
@@ -2393,6 +2399,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open Psychoacoustic Shaped Noise Dither & Bit-Depth Truncation Radar HUD").clicked() {
                     state.requested_open_dither_quantizer_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("AirReed") || active_kind.contains("Utaguchi") || active_kind.contains("MuraiIki") || active_kind == "AirReedNode" || active_kind == "AirReedConfig" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🎋 Open Air-Jet Reed HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(52, 211, 153)))
+                        .fill(Color32::from_rgb(10, 28, 22))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(52, 211, 153)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Air-Jet Reed & Utaguchi Flue Vortex Aerodynamics HUD").clicked() {
+                    state.requested_open_air_reed_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("StemSeparator") || active_kind.contains("StemRouter") || active_kind.contains("OnnxStem") || active_kind == "StemSeparatorNode" || active_kind == "MultiTrackAudioRouter" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🧬 Open Stem Separator HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(192, 132, 252)))
+                        .fill(Color32::from_rgb(24, 14, 38))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(192, 132, 252)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Neural ONNX 4-Stem Spectral Separator & Multi-Track Router HUD").clicked() {
+                    state.requested_open_stem_separator_hud = true;
                 }
                 ui.add_space(4.0);
             }
