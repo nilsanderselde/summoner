@@ -101,6 +101,7 @@ pub mod meter_bridge_view;
 pub mod midi_panel;
 pub mod midside_focuser_view;
 pub mod mixer;
+pub mod modal_synthesis_view;
 pub mod modulation_matrix;
 pub mod mpe_editor;
 pub mod mpegh_3d_spatializer_view;
@@ -212,6 +213,7 @@ pub mod transient_shaper_view;
 pub mod transient_unwrapper_view;
 pub mod transient_warp_editor;
 pub mod trompette_bridge_view;
+pub mod true_peak_limiter_view;
 pub mod tube_bias_view;
 pub mod turkish_ney_view;
 pub mod upward_compressor_view;
@@ -321,6 +323,10 @@ pub use membrane_plate_view::MembranePlateView;
 pub use membrane_resonator_view::MembraneResonatorView;
 pub use meter_bridge_view::MeterBridgeView;
 pub use midside_focuser_view::{MidSideFocuserView, MidSideProfileType};
+pub use modal_synthesis_view::{
+    ModalExcitationMode, ModalMaterialKind, ModalSynthesisPreset, ModalSynthesisView,
+    MAX_MODAL_RESONATOR_MODES, MODAL_SYNTHESIS_PUCK_HIT_RADIUS,
+};
 pub use modulation_matrix::*;
 pub use mpe_editor::{MpeCurveNode, MpeDimension, MpeEditorView, MpeNoteBlock};
 pub use mpegh_3d_spatializer_view::Mpegh3DSpatializerView;
@@ -425,6 +431,10 @@ pub use transient_shaper_view::TransientShaperView;
 pub use transient_unwrapper_view::{TransientUnwrapperView, UnwrapperMode};
 pub use transient_warp_editor::TransientWarpEditorView;
 pub use trompette_bridge_view::*;
+pub use true_peak_limiter_view::{
+    TruePeakLimiterPreset, TruePeakLimiterView, ITU_BS1770_COEFFS, TRUE_PEAK_LIMITER_PUCK_HIT_RADIUS,
+    TRUE_PEAK_MAX_LOOKAHEAD, TRUE_PEAK_POLYPHASE_TAPS,
+};
 pub use tube_bias_view::TubeBiasView;
 pub use turkish_ney_view::TurkishNeyView;
 pub use upward_compressor_view::UpwardCompressorView;

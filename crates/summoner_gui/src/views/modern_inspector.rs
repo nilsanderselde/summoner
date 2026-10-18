@@ -350,6 +350,10 @@ pub struct ModernInspectorState {
     pub requested_open_simd_poly_wavetable_hud: bool,
     #[serde(default)]
     pub requested_open_multiband_compressor_hud: bool,
+    #[serde(default)]
+    pub requested_open_true_peak_limiter_hud: bool,
+    #[serde(default)]
+    pub requested_open_modal_synthesis_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -531,6 +535,8 @@ impl Default for ModernInspectorState {
             requested_open_polyphase_oversampler_hud: false,
             requested_open_simd_poly_wavetable_hud: false,
             requested_open_multiband_compressor_hud: false,
+            requested_open_true_peak_limiter_hud: false,
+            requested_open_modal_synthesis_hud: false,
         }
     }
 }
@@ -2575,6 +2581,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open 3-Band SVF Crossover Multiband Compressor & Dynamic Envelope HUD").clicked() {
                     state.requested_open_multiband_compressor_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("TruePeakLimiter") || active_kind.contains("TruePeakDetector") || active_kind == "OversampledClipper" || active_kind == "TruePeakIspLimiter" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🛡 Open True-Peak ISP Limiter HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(244, 63, 94)))
+                        .fill(Color32::from_rgb(22, 10, 14))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(244, 63, 94)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open ITU-R BS.1770-4 4x Polyphase True-Peak ISP Limiter & Safety Clipper HUD").clicked() {
+                    state.requested_open_true_peak_limiter_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("ModalSynthesis") || active_kind == "ModalSynthesisEngine" || active_kind == "ModalResonatorBank" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🔔 Open 16-Mode Modal Synth HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(245, 158, 11)))
+                        .fill(Color32::from_rgb(22, 16, 8))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(245, 158, 11)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open 16-Mode Dynamic Modal Synthesis Engine & Material Resonator Bank HUD").clicked() {
+                    state.requested_open_modal_synthesis_hud = true;
                 }
                 ui.add_space(4.0);
             }
