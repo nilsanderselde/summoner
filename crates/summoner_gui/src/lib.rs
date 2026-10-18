@@ -330,6 +330,8 @@ pub mod tier187_turn124_tests;
 #[cfg(feature = "gui")]
 pub mod tier188_turn125_tests;
 #[cfg(feature = "gui")]
+pub mod tier189_turn126_tests;
+#[cfg(feature = "gui")]
 pub mod touch_gestures;
 #[cfg(feature = "gui")]
 pub mod transport_bar;
@@ -338,6 +340,8 @@ pub mod views;
 
 #[cfg(feature = "gui")]
 pub use views::accessibility_announcer::AccessibilityAnnouncerView;
+#[cfg(feature = "gui")]
+pub use views::aether_synth_view::{AetherSynthPreset, AetherSynthView, CompositeSynthVoiceMode, AETHER_SYNTH_PUCK_HIT_RADIUS};
 #[cfg(feature = "gui")]
 pub use views::ai_autonomous_mastering_view::{AiAutonomousMasteringView, AiMasteringPreset, MasteringTargetCurve, AI_MASTERING_PUCK_HIT_RADIUS};
 #[cfg(feature = "gui")]
@@ -418,6 +422,8 @@ pub use views::live_session_recorder_view::{LiveRecordDiskFormat, LiveRecorderPr
 pub use views::parametric_eq_view::{BiquadFilterMode, ParametricBandConfig, ParametricEqPreset, ParametricEqView, PARAMETRIC_EQ_PUCK_HIT_RADIUS};
 #[cfg(feature = "gui")]
 pub use views::plugin_host_view::{HostedPluginFormat, PluginHostPreset, PluginHostView, PLUGIN_HOST_PUCK_HIT_RADIUS};
+#[cfg(feature = "gui")]
+pub use views::polyphase_oversampler_view::{OversampleFactorMode, PolyphaseOversamplerPreset, PolyphaseOversamplerView, FIR_TAPS_COUNT, HALF_BAND_FIR_COEFFS, OVERSAMPLER_PUCK_HIT_RADIUS};
 #[cfg(feature = "gui")]
 pub use views::sfz_sampler_view::{SfzLoopTopology, SfzRegionSlot, SfzSamplerPreset, SfzSamplerView, SFZ_SAMPLER_PUCK_HIT_RADIUS};
 pub use dsp_node_ui::*;

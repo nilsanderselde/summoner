@@ -1944,6 +1944,14 @@ impl eframe::App for SummonerApp {
                     self.current_view = ViewMode::ModernStudio;
                     self.award_winning_view.open_sfz_sampler_hud();
                 }
+                "open_aether_synth_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_aether_synth_hud();
+                }
+                "open_polyphase_oversampler_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_polyphase_oversampler_hud();
+                }
                 "sfz_convert" | "auto_slice" | "load_preset" | "export_clap" | "toggle_simd" => {
                     println!("Command palette action executed: {}", action);
                 }

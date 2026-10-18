@@ -1,4 +1,5 @@
 pub mod accessibility_announcer;
+pub mod aether_synth_view;
 pub mod ai_autonomous_mastering_view;
 pub mod air_reed_view;
 pub mod ambisonic_radar_view;
@@ -143,6 +144,7 @@ pub mod plate_dispersion_view;
 pub mod plucked_string_view;
 pub mod plugin_host_view;
 pub mod polar_phase_correlator_view;
+pub mod polyphase_oversampler_view;
 pub mod quantum_bloch_sphere_view;
 pub mod rank_voicing_view;
 pub mod raytraced_reverb_view;
@@ -224,6 +226,7 @@ pub mod woodwind_jet_view;
 pub mod zero_gravity_fluid_view;
 
 pub use accessibility_announcer::AccessibilityAnnouncerView;
+pub use aether_synth_view::{AetherSynthPreset, AetherSynthView, CompositeSynthVoiceMode, AETHER_SYNTH_PUCK_HIT_RADIUS};
 pub use ai_autonomous_mastering_view::{AiAutonomousMasteringView, AiMasteringPreset, MasteringTargetCurve, AI_MASTERING_PUCK_HIT_RADIUS};
 pub use air_reed_view::{AirReedPreset, AirReedView, AIR_REED_PUCK_HIT_RADIUS};
 pub use ambisonic_radar_view::AmbisonicRadarView;
@@ -352,6 +355,7 @@ pub use plate_dispersion_view::{PlateDispersionView, PlateReverbViewProfile, PLA
 pub use plucked_string_view::*;
 pub use plugin_host_view::{HostedPluginFormat, PluginHostPreset, PluginHostView, PLUGIN_HOST_PUCK_HIT_RADIUS};
 pub use polar_phase_correlator_view::PolarPhaseCorrelatorView;
+pub use polyphase_oversampler_view::{OversampleFactorMode, PolyphaseOversamplerPreset, PolyphaseOversamplerView, FIR_TAPS_COUNT, HALF_BAND_FIR_COEFFS, OVERSAMPLER_PUCK_HIT_RADIUS};
 pub use rank_voicing_view::*;
 pub use quantum_bloch_sphere_view::{QuantumBlochSphereView, QuantumStatePreset, QUANTUM_PUCK_HIT_RADIUS};
 pub use raytraced_reverb_view::RaytracedReverbView;

@@ -342,6 +342,10 @@ pub struct ModernInspectorState {
     pub requested_open_parametric_eq_hud: bool,
     #[serde(default)]
     pub requested_open_sfz_sampler_hud: bool,
+    #[serde(default)]
+    pub requested_open_aether_synth_hud: bool,
+    #[serde(default)]
+    pub requested_open_polyphase_oversampler_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -519,6 +523,8 @@ impl Default for ModernInspectorState {
             requested_open_hardware_control_surface_hud: false,
             requested_open_parametric_eq_hud: false,
             requested_open_sfz_sampler_hud: false,
+            requested_open_aether_synth_hud: false,
+            requested_open_polyphase_oversampler_hud: false,
         }
     }
 }
@@ -2523,6 +2529,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open Multi-Sample SFZ Keyzone & Velocity Layer Mapper HUD").clicked() {
                     state.requested_open_sfz_sampler_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("AetherSynth") || active_kind.contains("GlitchAether") || active_kind.contains("CyberpunkSub") || active_kind.contains("AtmosphericPad") || active_kind.contains("GlitchPercussion") {
+                if ui.add(
+                    egui::Button::new(RichText::new("🌌 Open Aether Composite Synth HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(56, 189, 248)))
+                        .fill(Color32::from_rgb(10, 18, 28))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(56, 189, 248)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Aether Subtractive & Glitch Composite Synthesizer HUD").clicked() {
+                    state.requested_open_aether_synth_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("Oversampler") || active_kind.contains("PolyphaseFir") || active_kind.contains("HalfBandFir") || active_kind == "OversamplerNode" {
+                if ui.add(
+                    egui::Button::new(RichText::new("📈 Open Polyphase FIR Oversampler HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(245, 158, 11)))
+                        .fill(Color32::from_rgb(24, 18, 10))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(245, 158, 11)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Polyphase 12-Tap Half-Band FIR Anti-Aliasing Oversampler HUD").clicked() {
+                    state.requested_open_polyphase_oversampler_hud = true;
                 }
                 ui.add_space(4.0);
             }

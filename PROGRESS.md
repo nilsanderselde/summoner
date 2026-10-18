@@ -1,6 +1,6 @@
 # Summoner DAW — Product Readiness & Shippability Tracker
 > **Current Shippability Score:** 10.0 / 10  
-> **Status:** Production Ready Release Candidate (Turn #123 / Sprint Turn #49)  
+> **Status:** Production Ready Release Candidate (Turn #126 / Sprint Turn #52)  
 > **Authoritative Root:** `PROGRESS.md`  
 > **License:** AGPLv3
 
@@ -3563,3 +3563,21 @@ Product Management has conducted a comprehensive readiness audit:
 - [x] Verification & Test Suite (`crates/summoner_gui/src/tier188_turn125_tests.rs`):
   - Pure & GUI tests verifying initialization, preset switching, RBJ biquad coefficients, 8-band frequency response curves, SFZ keyzone auto-mapping & semitone playback rate math, $\ge 44\times 44\text{pt}$ touch puck hit testing, deterministic ASCII snapshots, headless egui rendering, modal lifecycles, lock-free `ParamBus` synchronization, and command palette registration.
 
+### Turn #126 (Sprint Turn #52) — Aether Subtractive & Glitch Composite Synthesizer HUD and Polyphase 12-Tap Half-Band FIR Anti-Aliasing Oversampler HUD Convergence (Milestones 33 & 34)
+- [x] Aether Subtractive & Glitch Composite Synthesizer HUD (`crates/summoner_gui/src/views/aether_synth_view.rs`):
+  - Integrated `AetherSynthView` directly reflecting `crates/summoner_dsp/src/composites.rs` (`AetherSynth`, `AetherMacroView`, `GlitchAetherMachine`, `CyberpunkSubSynth`, `AtmosphericPadSynth`, `GlitchPercussionSynth`):
+    * 4 Curated Composite Synth Presets: `CyberpunkSubReese` (`CyberpunkSub`, Pitch $55.0\text{ Hz}$, Cutoff $320.0\text{ Hz}$, Resonance $0.75$, Macro Tone $0.18$, Macro Space $0.12$, Drive $1.85$), `AtmosphericDreamPad` (`AtmosphericPad`, Pitch $220.0\text{ Hz}$, Cutoff $1200.0\text{ Hz}$, Resonance $0.40$, Macro Tone $0.58$, Macro Space $0.82$, Attack $0.50\text{ s}$, Release $2.00\text{ s}$), `GlitchAetherStutter` (`GlitchAether`, Pitch $110.0\text{ Hz}$, Cutoff $1850.0\text{ Hz}$, Resonance $0.68$, Glitch Stutter Rate $16.0\text{ Hz}$, Glitch Mix $0.65$), and `GlitchPercussionSnap` (`GlitchPercussion`, Pitch $150.0\text{ Hz}$, Cutoff $2400.0\text{ Hz}$, Decay $0.05\text{ s}$, Sustain $0.00$, Release $0.05\text{ s}$, Drive $2.20$).
+    * Interactive 2D Macro Tone & Macro Space Puck (`AetherMacroView`): Macro Tone $\in [0.0..=1.0]$ (mapped exponentially to $100\text{ Hz}\dots 10000\text{ Hz}$ cutoff via $100 \cdot 100^{\text{tone}}$) vs Macro Space $\in [0.0..=1.0]$ (mapped to reverb room size $0.5 + \text{space} \cdot 0.45$ & wet mix $\text{space} \cdot 0.8$) with $\ge 44\times 44\text{pt}$ touch target (`AETHER_SYNTH_PUCK_HIT_RADIUS = 22.0`).
+    * Real-time composite voice preview synthesis (`evaluate_voice_sample`), ADSR contour curves (`evaluate_adsr_contour`), and deterministic ASCII snapshot rendering (`[PASS: >=44pt Hit Target]`).
+- [x] Polyphase 12-Tap Half-Band FIR Anti-Aliasing Oversampler HUD (`crates/summoner_gui/src/views/polyphase_oversampler_view.rs`):
+  - Integrated `PolyphaseOversamplerView` directly reflecting `crates/summoner_dsp/src/oversampling.rs` (`Oversampler`, `FIR_TAPS`, `FIR_COEFFS`):
+    * 4 Curated Oversampling Presets: `TwoXHalfBandLinear` (`TwoX` $2\times$, Drive $3.20\times$, Asymmetry $0.05$, Stopband $-72.0\text{ dB}$, Transition $0.08$, Mix $1.00$), `FourXUltraMastering` (`FourX` $4\times$, Drive $1.80\times$, Asymmetry $0.00$, Stopband $-96.0\text{ dB}$, Transition $0.04$, Mix $1.00$), `TwoXWarmTubeAsymmetric` (`TwoX` $2\times$, Drive $5.80\times$, Asymmetry $0.38$, Stopband $-78.0\text{ dB}$, Transition $0.10$, Mix $0.90$), and `BypassZeroLatency` (`Bypass1x` $1\times$, Drive $2.40\times$, Asymmetry $0.15$, Stopband $-48.0\text{ dB}$, Transition $0.18$, Mix $1.00$, Linear Phase Off).
+    * Interactive 2D Non-Linear Saturation Drive & Stopband Attenuation Puck: Saturation Drive $\in [1.0..=10.0]\times$ vs Stopband Attenuation $\in [-108.0..=-36.0]\text{ dB}$ with $\ge 44\times 44\text{pt}$ touch target (`OVERSAMPLER_PUCK_HIT_RADIUS = 22.0`).
+    * Exact 12-tap symmetrical half-band FIR filter evaluation (`HALF_BAND_FIR_COEFFS`), zero-stuffed $2\times / 4\times$ upsampling + $\tanh$ waveshaping + FIR decimation (`evaluate_oversampled_transfer`), stopband foldback alias suppression (`alias_foldback_suppression_db`), and deterministic ASCII snapshot rendering (`[PASS: >=44pt Hit Target]`).
+- [x] View Re-Exports, Modal Windows, Rack & Inspector Integrations, and Command Palette Routing (`views/mod.rs`, `lib.rs`, `award_winning_gui_view.rs`, `modern_inspector.rs`, `modern_device_rack.rs`, `command_palette.rs`, `app.rs`):
+  - Exported `AetherSynthView`, `AetherSynthPreset`, `CompositeSynthVoiceMode`, `AETHER_SYNTH_PUCK_HIT_RADIUS`, `PolyphaseOversamplerView`, `PolyphaseOversamplerPreset`, `OversampleFactorMode`, `FIR_TAPS_COUNT`, `HALF_BAND_FIR_COEFFS`, and `OVERSAMPLER_PUCK_HIT_RADIUS`.
+  - Added modal windows (`show_aether_synth_modal_window`, `show_polyphase_oversampler_modal_window`), lifecycle methods, and lock-free `ParamBus` slot dispatch (`sync_aether_synth_hud_state`, `sync_polyphase_oversampler_hud_state`).
+  - Added action buttons (`[🌌 Open Aether Composite Synth HUD]`, `[📈 Open Polyphase FIR Oversampler HUD]`), collapsed rack header triggers (`[🌌 Aether HUD]`, `[📈 FIR HUD]`), and interactive 2D mini-visualizers in `ModernDeviceRackView`.
+  - Registered `open_aether_synth_hud` and `open_polyphase_oversampler_hud` in `CommandPalette` and `SummonerApp`.
+- [x] Verification & Test Suite (`crates/summoner_gui/src/tier189_turn126_tests.rs`):
+  - Pure & GUI tests verifying initialization, preset switching, `AetherMacroView` exponential Tone & linear Space formulas, 12-tap half-band FIR unity DC gain & Nyquist attenuation, $\ge 44\times 44\text{pt}$ touch puck hit testing, deterministic ASCII snapshots, headless egui rendering, modal lifecycles, lock-free `ParamBus` synchronization, and command palette registration.

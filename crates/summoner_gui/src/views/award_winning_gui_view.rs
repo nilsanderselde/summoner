@@ -948,6 +948,10 @@ pub struct AwardWinningGuiView {
     pub parametric_eq_view: crate::views::parametric_eq_view::ParametricEqView,
     pub show_sfz_sampler_modal: bool,
     pub sfz_sampler_view: crate::views::sfz_sampler_view::SfzSamplerView,
+    pub show_aether_synth_modal: bool,
+    pub aether_synth_view: crate::views::aether_synth_view::AetherSynthView,
+    pub show_polyphase_oversampler_modal: bool,
+    pub polyphase_oversampler_view: crate::views::polyphase_oversampler_view::PolyphaseOversamplerView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1512,6 +1516,10 @@ impl AwardWinningGuiView {
             parametric_eq_view: crate::views::parametric_eq_view::ParametricEqView::new(),
             show_sfz_sampler_modal: false,
             sfz_sampler_view: crate::views::sfz_sampler_view::SfzSamplerView::new(),
+            show_aether_synth_modal: false,
+            aether_synth_view: crate::views::aether_synth_view::AetherSynthView::new(),
+            show_polyphase_oversampler_modal: false,
+            polyphase_oversampler_view: crate::views::polyphase_oversampler_view::PolyphaseOversamplerView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2921,6 +2929,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_sfz_sampler_hud = false;
             self.open_sfz_sampler_hud();
         }
+        if self.inspector_state.requested_open_aether_synth_hud || self.device_rack_state.requested_open_aether_synth_hud {
+            self.inspector_state.requested_open_aether_synth_hud = false;
+            self.device_rack_state.requested_open_aether_synth_hud = false;
+            self.open_aether_synth_hud();
+        }
+        if self.inspector_state.requested_open_polyphase_oversampler_hud || self.device_rack_state.requested_open_polyphase_oversampler_hud {
+            self.inspector_state.requested_open_polyphase_oversampler_hud = false;
+            self.device_rack_state.requested_open_polyphase_oversampler_hud = false;
+            self.open_polyphase_oversampler_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -3078,6 +3096,8 @@ impl AwardWinningGuiView {
         self.show_hardware_control_surface_modal_window(ui);
         self.show_parametric_eq_modal_window(ui);
         self.show_sfz_sampler_modal_window(ui);
+        self.show_aether_synth_modal_window(ui);
+        self.show_polyphase_oversampler_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -23329,6 +23349,180 @@ impl AwardWinningGuiView {
             if bus.get(pid_len).is_some() { bus.set(pid_len, l_len); }
             if bus.get(pid_fine).is_some() { bus.set(pid_fine, fine); }
             if bus.get(pid_xfade).is_some() { bus.set(pid_xfade, xfade); }
+        }
+    }
+
+    pub fn open_aether_synth_hud(&mut self) {
+        self.show_aether_synth_modal = true;
+    }
+
+    pub fn close_aether_synth_hud(&mut self) {
+        self.show_aether_synth_modal = false;
+    }
+
+    pub fn is_aether_synth_hud_open(&self) -> bool {
+        self.show_aether_synth_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_aether_synth_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_aether_synth_modal {
+            return;
+        }
+
+        let mut is_open = self.show_aether_synth_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🌌 Aether Subtractive & Glitch Composite Synthesizer HUD")
+            .id(egui::Id::new("aether_synth_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(640.0, 500.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("AetherSynth + GlitchAetherMachine + CyberpunkSubSynth (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.aether_synth_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_aether_synth_modal = is_open;
+        self.sync_aether_synth_hud_state();
+    }
+
+    pub fn sync_aether_synth_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let mix = self.aether_synth_view.osc_mix;
+        let cut = self.aether_synth_view.filter_cutoff_hz;
+        let res = self.aether_synth_view.filter_resonance;
+        let lfo = self.aether_synth_view.lfo_rate_hz;
+
+        self.device_rack_state.node_param_values.insert("aether_osc_mix".to_string(), mix);
+        self.device_rack_state.node_param_values.insert("aether_cutoff_hz".to_string(), cut);
+        self.device_rack_state.node_param_values.insert("aether_resonance".to_string(), res);
+        self.device_rack_state.node_param_values.insert("aether_lfo_hz".to_string(), lfo);
+
+        self.inspector_state.node_param_values.insert("aether_osc_mix".to_string(), mix);
+        self.inspector_state.node_param_values.insert("aether_cutoff_hz".to_string(), cut);
+        self.inspector_state.node_param_values.insert("aether_resonance".to_string(), res);
+        self.inspector_state.node_param_values.insert("aether_lfo_hz".to_string(), lfo);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_mix = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_cut = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_res = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_lfo = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_mix).is_some() { bus.set(pid_mix, mix); }
+            if bus.get(pid_cut).is_some() { bus.set(pid_cut, cut); }
+            if bus.get(pid_res).is_some() { bus.set(pid_res, res); }
+            if bus.get(pid_lfo).is_some() { bus.set(pid_lfo, lfo); }
+        }
+    }
+
+    pub fn open_polyphase_oversampler_hud(&mut self) {
+        self.show_polyphase_oversampler_modal = true;
+    }
+
+    pub fn close_polyphase_oversampler_hud(&mut self) {
+        self.show_polyphase_oversampler_modal = false;
+    }
+
+    pub fn is_polyphase_oversampler_hud_open(&self) -> bool {
+        self.show_polyphase_oversampler_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_polyphase_oversampler_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_polyphase_oversampler_modal {
+            return;
+        }
+
+        let mut is_open = self.show_polyphase_oversampler_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("📈 Polyphase 12-Tap Half-Band FIR Anti-Aliasing Oversampler HUD")
+            .id(egui::Id::new("polyphase_oversampler_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(640.0, 500.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Oversampler 2x/4x/8x Zero-Stuffing + 12-Tap Half-Band FIR (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.polyphase_oversampler_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_polyphase_oversampler_modal = is_open;
+        self.sync_polyphase_oversampler_hud_state();
+    }
+
+    pub fn sync_polyphase_oversampler_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let drive = self.polyphase_oversampler_view.nonlinear_drive;
+        let stop_db = self.polyphase_oversampler_view.stopband_attenuation_db;
+        let cut_frac = self.polyphase_oversampler_view.cutoff_nyquist_fraction;
+        let wet = self.polyphase_oversampler_view.wet_mix;
+
+        self.device_rack_state.node_param_values.insert("oversample_drive".to_string(), drive);
+        self.device_rack_state.node_param_values.insert("oversample_stopband_db".to_string(), stop_db);
+        self.device_rack_state.node_param_values.insert("oversample_cutoff_fraction".to_string(), cut_frac);
+        self.device_rack_state.node_param_values.insert("oversample_wet_mix".to_string(), wet);
+
+        self.inspector_state.node_param_values.insert("oversample_drive".to_string(), drive);
+        self.inspector_state.node_param_values.insert("oversample_stopband_db".to_string(), stop_db);
+        self.inspector_state.node_param_values.insert("oversample_cutoff_fraction".to_string(), cut_frac);
+        self.inspector_state.node_param_values.insert("oversample_wet_mix".to_string(), wet);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_drv = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_stp = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_cut = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_wet = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_drv).is_some() { bus.set(pid_drv, drive); }
+            if bus.get(pid_stp).is_some() { bus.set(pid_stp, stop_db); }
+            if bus.get(pid_cut).is_some() { bus.set(pid_cut, cut_frac); }
+            if bus.get(pid_wet).is_some() { bus.set(pid_wet, wet); }
         }
     }
 

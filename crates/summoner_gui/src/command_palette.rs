@@ -1232,6 +1232,18 @@ impl CommandPalette {
                 action_id: "open_sfz_sampler_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Aether Subtractive & Glitch Composite Synthesizer HUD".into(),
+                category: "Synthesizers & Oscillators".into(),
+                action_id: "open_aether_synth_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Polyphase 12-Tap Half-Band FIR Anti-Aliasing Oversampler HUD".into(),
+                category: "Mastering & Utility".into(),
+                action_id: "open_polyphase_oversampler_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

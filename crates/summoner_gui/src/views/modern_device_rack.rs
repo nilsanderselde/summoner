@@ -357,6 +357,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_parametric_eq_hud: bool,
     #[serde(default)]
     pub requested_open_sfz_sampler_hud: bool,
+    #[serde(default)]
+    pub requested_open_aether_synth_hud: bool,
+    #[serde(default)]
+    pub requested_open_polyphase_oversampler_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -524,6 +528,8 @@ impl Default for ModernDeviceRackState {
             requested_open_hardware_control_surface_hud: false,
             requested_open_parametric_eq_hud: false,
             requested_open_sfz_sampler_hud: false,
+            requested_open_aether_synth_hud: false,
+            requested_open_polyphase_oversampler_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -1314,6 +1320,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_hardware_control_surface = cur_selection.contains("HardwareControl") || cur_selection.contains("CvGate") || cur_selection.contains("DinSync") || cur_selection.contains("PushController") || cur_selection.contains("McuController") || cur_selection.contains("NksIntegration");
                     let is_parametric_eq = cur_selection.contains("ParametricEq") || cur_selection.contains("FilterBiquad") || cur_selection == "ParametricEqNode" || cur_selection == "Eq8Band";
                     let is_sfz_sampler = cur_selection.contains("MultiSampler") || cur_selection.contains("SfzSampler") || cur_selection == "SamplerNode" || cur_selection == "MultiSamplerNode";
+                    let is_aether_synth = cur_selection.contains("AetherSynth") || cur_selection.contains("GlitchAether") || cur_selection.contains("CyberpunkSub") || cur_selection.contains("AtmosphericPad") || cur_selection.contains("GlitchPercussion");
+                    let is_polyphase_oversampler = cur_selection.contains("Oversampler") || cur_selection.contains("PolyphaseFir") || cur_selection.contains("HalfBandFir") || cur_selection == "OversamplerNode";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1926,6 +1934,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("🎹 SFZ HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(192, 132, 252))).on_hover_text("Open Multi-Sample SFZ Keyzone & Velocity Layer Mapper HUD").clicked()
                     {
                         state.requested_open_sfz_sampler_hud = true;
+                    } else if is_aether_synth
+                        && ui.button(RichText::new("🌌 Aether HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Aether Subtractive & Glitch Composite Synthesizer HUD").clicked()
+                    {
+                        state.requested_open_aether_synth_hud = true;
+                    } else if is_polyphase_oversampler
+                        && ui.button(RichText::new("📈 FIR HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(245, 158, 11))).on_hover_text("Open Polyphase 12-Tap Half-Band FIR Anti-Aliasing Oversampler HUD").clicked()
+                    {
+                        state.requested_open_polyphase_oversampler_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2844,6 +2860,8 @@ fn show_pro_parameter_drawer(
                     let is_hardware_control_surface = dev_kind.contains("HardwareControl") || dev_kind.contains("CvGate") || dev_kind.contains("DinSync") || dev_kind.contains("PushController") || dev_kind.contains("McuController") || dev_kind.contains("NksIntegration");
                     let is_parametric_eq = dev_kind.contains("ParametricEq") || dev_kind.contains("FilterBiquad") || dev_kind == "ParametricEqNode" || dev_kind == "Eq8Band";
                     let is_sfz_sampler = dev_kind.contains("MultiSampler") || dev_kind.contains("SfzSampler") || dev_kind == "SamplerNode" || dev_kind == "MultiSamplerNode";
+                    let is_aether_synth = dev_kind.contains("AetherSynth") || dev_kind.contains("GlitchAether") || dev_kind.contains("CyberpunkSub") || dev_kind.contains("AtmosphericPad") || dev_kind.contains("GlitchPercussion");
+                    let is_polyphase_oversampler = dev_kind.contains("Oversampler") || dev_kind.contains("PolyphaseFir") || dev_kind.contains("HalfBandFir") || dev_kind == "OversamplerNode";
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -14211,6 +14229,100 @@ fn show_pro_parameter_drawer(
                             let _ = sfz_resp.on_hover_text(format!(
                                 "Multi-Sample SFZ Mapper HUD\nLoop Start: {:.0}% | Loop Length: {:.0}%\n[Drag: Loop Start (X) / Loop Length (Y) Puck]",
                                 loop_start * 100.0, loop_len * 100.0
+                            ));
+                        }
+                    } else if is_aether_synth {
+                        // Aether Subtractive & Glitch Composite Synth Mini View
+                        let (ae_resp, ae_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let ae_rect = ae_resp.rect;
+                        ae_painter.rect_filled(ae_rect, 2.0, Color32::from_rgb(10, 18, 28));
+
+                        let mut osc_mix = state.node_param_values.get("aether_osc_mix").copied().unwrap_or(0.50);
+                        let mut cutoff_hz = state.node_param_values.get("aether_cutoff_hz").copied().unwrap_or(1200.0);
+
+                        if ae_resp.dragged() || ae_resp.clicked() {
+                            if let Some(pos) = ae_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - ae_rect.left() - 4.0) / (ae_rect.width() - 60.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - ae_rect.top() - 10.0) / (ae_rect.height() - 20.0))).clamp(0.0, 1.0);
+                                osc_mix = crate::views::aether_synth_view::AetherSynthView::normalized_to_mix(norm_x);
+                                cutoff_hz = crate::views::aether_synth_view::AetherSynthView::normalized_to_cutoff(norm_y);
+                                state.node_param_values.insert("aether_osc_mix".to_string(), osc_mix);
+                                state.node_param_values.insert("aether_cutoff_hz".to_string(), cutoff_hz);
+                                if let Some(bus) = param_bus {
+                                    let pid_m = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_c = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_m).is_some() { bus.set(pid_m, osc_mix); }
+                                    if bus.get(pid_c).is_some() { bus.set(pid_c, cutoff_hz); }
+                                }
+                            }
+                        }
+
+                        let norm_x = crate::views::aether_synth_view::AetherSynthView::mix_to_normalized(osc_mix);
+                        let norm_y = crate::views::aether_synth_view::AetherSynthView::cutoff_to_normalized(cutoff_hz);
+                        let puck_x = ae_rect.left() + 4.0 + norm_x * (ae_rect.width() - 60.0);
+                        let puck_y = ae_rect.bottom() - 10.0 - norm_y * (ae_rect.height() - 20.0);
+                        ae_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(56, 189, 248));
+                        ae_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        ae_painter.text(
+                            egui::pos2(ae_rect.right() - 4.0, ae_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("AETHER\n{:.0}% PLS\n{:.0}Hz", osc_mix * 100.0, cutoff_hz),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(56, 189, 248),
+                        );
+
+                        if ae_resp.hovered() {
+                            let _ = ae_resp.on_hover_text(format!(
+                                "Aether Composite Synth HUD\nOsc Mix: {:.0}% Pulse | Cutoff: {:.0} Hz\n[Drag: Osc Mix (X) / Ladder Cutoff (Y) Puck]",
+                                osc_mix * 100.0, cutoff_hz
+                            ));
+                        }
+                    } else if is_polyphase_oversampler {
+                        // Polyphase 12-Tap Half-Band FIR Oversampler Mini View
+                        let (ov_resp, ov_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let ov_rect = ov_resp.rect;
+                        ov_painter.rect_filled(ov_rect, 2.0, Color32::from_rgb(24, 18, 10));
+
+                        let mut drive = state.node_param_values.get("oversample_drive").copied().unwrap_or(2.5);
+                        let mut stop_db = state.node_param_values.get("oversample_stopband_db").copied().unwrap_or(84.0);
+
+                        if ov_resp.dragged() || ov_resp.clicked() {
+                            if let Some(pos) = ov_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - ov_rect.left() - 4.0) / (ov_rect.width() - 60.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - ov_rect.top() - 10.0) / (ov_rect.height() - 20.0))).clamp(0.0, 1.0);
+                                drive = crate::views::polyphase_oversampler_view::PolyphaseOversamplerView::normalized_to_drive(norm_x);
+                                stop_db = crate::views::polyphase_oversampler_view::PolyphaseOversamplerView::normalized_to_stopband(norm_y);
+                                state.node_param_values.insert("oversample_drive".to_string(), drive);
+                                state.node_param_values.insert("oversample_stopband_db".to_string(), stop_db);
+                                if let Some(bus) = param_bus {
+                                    let pid_d = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_s = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_d).is_some() { bus.set(pid_d, drive); }
+                                    if bus.get(pid_s).is_some() { bus.set(pid_s, stop_db); }
+                                }
+                            }
+                        }
+
+                        let norm_x = crate::views::polyphase_oversampler_view::PolyphaseOversamplerView::drive_to_normalized(drive);
+                        let norm_y = crate::views::polyphase_oversampler_view::PolyphaseOversamplerView::stopband_to_normalized(stop_db);
+                        let puck_x = ov_rect.left() + 4.0 + norm_x * (ov_rect.width() - 60.0);
+                        let puck_y = ov_rect.bottom() - 10.0 - norm_y * (ov_rect.height() - 20.0);
+                        ov_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(245, 158, 11));
+                        ov_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        ov_painter.text(
+                            egui::pos2(ov_rect.right() - 4.0, ov_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("FIR 12T\n{:.1}x DRV\n-{:.0}dB", drive, stop_db),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(245, 158, 11),
+                        );
+
+                        if ov_resp.hovered() {
+                            let _ = ov_resp.on_hover_text(format!(
+                                "Polyphase 12-Tap FIR Oversampler HUD\nDrive: {:.2}x | Stopband: -{:.1} dB\n[Drag: Nonlinear Drive (X) / Stopband dB (Y) Puck]",
+                                drive, stop_db
                             ));
                         }
                     } else {
