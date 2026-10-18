@@ -341,6 +341,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_air_reed_hud: bool,
     #[serde(default)]
     pub requested_open_stem_separator_hud: bool,
+    #[serde(default)]
+    pub requested_open_chromatic_tuner_hud: bool,
+    #[serde(default)]
+    pub requested_open_drum_machine_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -500,6 +504,8 @@ impl Default for ModernDeviceRackState {
             requested_open_dither_quantizer_hud: false,
             requested_open_air_reed_hud: false,
             requested_open_stem_separator_hud: false,
+            requested_open_chromatic_tuner_hud: false,
+            requested_open_drum_machine_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -1282,6 +1288,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_dither_quantizer = cur_selection.contains("Dither") || cur_selection.contains("Quantizer") || cur_selection.contains("BitDepth") || cur_selection == "DitherNode" || cur_selection == "PsychoacousticDither";
                     let is_air_reed = cur_selection.contains("AirReed") || cur_selection.contains("Utaguchi") || cur_selection.contains("MuraiIki") || cur_selection == "AirReedNode" || cur_selection == "AirReedConfig";
                     let is_stem_separator = cur_selection.contains("StemSeparator") || cur_selection.contains("StemRouter") || cur_selection.contains("OnnxStem") || cur_selection == "StemSeparatorNode" || cur_selection == "MultiTrackAudioRouter";
+                    let is_chromatic_tuner = cur_selection.contains("ChromaticTuner") || cur_selection.contains("StrobeTuner") || cur_selection == "TunerNode" || cur_selection == "ChromaticTunerNode";
+                    let is_drum_machine = cur_selection.contains("DrumMachine") || cur_selection.contains("DrumPad") || cur_selection == "DrumMachineDevice" || cur_selection == "DrumKitNode";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1862,6 +1870,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("🧬 Stems HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(192, 132, 252))).on_hover_text("Open Neural ONNX 4-Stem Spectral Separator & Multi-Track Router HUD").clicked()
                     {
                         state.requested_open_stem_separator_hud = true;
+                    } else if is_chromatic_tuner
+                        && ui.button(RichText::new("🎯 Tuner HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Chromatic Autocorrelation Pitch Tuner & Strobe Phase Calibration HUD").clicked()
+                    {
+                        state.requested_open_chromatic_tuner_hud = true;
+                    } else if is_drum_machine
+                        && ui.button(RichText::new("🥁 DrumKit HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(249, 115, 22))).on_hover_text("Open GM Multi-Pad Drum Machine & Per-Pad ADSR/VCA Synthesis HUD").clicked()
+                    {
+                        state.requested_open_drum_machine_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2772,6 +2788,8 @@ fn show_pro_parameter_drawer(
                     let is_dither_quantizer = dev_kind.contains("Dither") || dev_kind.contains("Quantizer") || dev_kind.contains("BitDepth") || dev_kind == "DitherNode" || dev_kind == "PsychoacousticDither";
                     let is_air_reed = dev_kind.contains("AirReed") || dev_kind.contains("Utaguchi") || dev_kind.contains("MuraiIki") || dev_kind == "AirReedNode" || dev_kind == "AirReedConfig";
                     let is_stem_separator = dev_kind.contains("StemSeparator") || dev_kind.contains("StemRouter") || dev_kind.contains("OnnxStem") || dev_kind == "StemSeparatorNode" || dev_kind == "MultiTrackAudioRouter";
+                    let is_chromatic_tuner = dev_kind.contains("ChromaticTuner") || dev_kind.contains("StrobeTuner") || dev_kind == "TunerNode" || dev_kind == "ChromaticTunerNode";
+                    let is_drum_machine = dev_kind.contains("DrumMachine") || dev_kind.contains("DrumPad") || dev_kind == "DrumMachineDevice" || dev_kind == "DrumKitNode";
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -13757,6 +13775,106 @@ fn show_pro_parameter_drawer(
                             let _ = ss_resp.on_hover_text(format!(
                                 "Neural ONNX 4-Stem Separator HUD\nSpectral Tilt: {:.0}% | Sharpness: {:.0}%\n[Drag: Tilt (X) / Sharpness (Y) Puck]",
                                 tilt * 100.0, sharp * 100.0
+                            ));
+                        }
+                    } else if is_chromatic_tuner {
+                        // Chromatic Autocorrelation Pitch Tuner Mini View
+                        let (ct_resp, ct_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let ct_rect = ct_resp.rect;
+                        ct_painter.rect_filled(ct_rect, 2.0, Color32::from_rgb(8, 16, 28));
+
+                        let mut ref_a4 = state.node_param_values.get("reference_a4_hz").copied().unwrap_or(440.0);
+                        let mut cents = state.node_param_values.get("cents_deviation").copied().unwrap_or(0.0);
+
+                        if ct_resp.dragged() || ct_resp.clicked() {
+                            if let Some(pos) = ct_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - ct_rect.left() - 4.0) / (ct_rect.width() - 60.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - ct_rect.top() - 10.0) / (ct_rect.height() - 20.0))).clamp(0.0, 1.0);
+                                ref_a4 = crate::views::chromatic_tuner_view::ChromaticTunerView::normalized_to_reference_a4(norm_x);
+                                cents = crate::views::chromatic_tuner_view::ChromaticTunerView::normalized_to_cents(norm_y);
+                                state.node_param_values.insert("reference_a4_hz".to_string(), ref_a4);
+                                state.node_param_values.insert("cents_deviation".to_string(), cents);
+                                if let Some(bus) = param_bus {
+                                    let pid_a4 = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_cents = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_a4).is_some() { bus.set(pid_a4, ref_a4); }
+                                    if bus.get(pid_cents).is_some() { bus.set(pid_cents, cents); }
+                                }
+                            }
+                        }
+
+                        // Draw center 0-cent lock line
+                        ct_painter.line_segment(
+                            [egui::pos2(ct_rect.left() + 4.0, ct_rect.center().y), egui::pos2(ct_rect.right() - 56.0, ct_rect.center().y)],
+                            Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(52, 211, 153, 95)),
+                        );
+
+                        let norm_x = crate::views::chromatic_tuner_view::ChromaticTunerView::reference_a4_to_normalized(ref_a4);
+                        let norm_y = crate::views::chromatic_tuner_view::ChromaticTunerView::cents_to_normalized(cents);
+                        let puck_x = ct_rect.left() + 4.0 + norm_x * (ct_rect.width() - 60.0);
+                        let puck_y = ct_rect.bottom() - 10.0 - norm_y * (ct_rect.height() - 20.0);
+                        ct_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(56, 189, 248));
+                        ct_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        ct_painter.text(
+                            egui::pos2(ct_rect.right() - 4.0, ct_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("TUNER\n{:.0} Hz\n{:+.0} c", ref_a4, cents),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(56, 189, 248),
+                        );
+
+                        if ct_resp.hovered() {
+                            let _ = ct_resp.on_hover_text(format!(
+                                "Chromatic Autocorrelation Tuner HUD\nRef A4: {:.1} Hz | Cents: {:+.1} c\n[Drag: Ref A4 (X) / Cents (Y) Puck]",
+                                ref_a4, cents
+                            ));
+                        }
+                    } else if is_drum_machine {
+                        // GM Multi-Pad Drum Machine Mini View
+                        let (dm_resp, dm_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let dm_rect = dm_resp.rect;
+                        dm_painter.rect_filled(dm_rect, 2.0, Color32::from_rgb(22, 12, 8));
+
+                        let mut decay = state.node_param_values.get("decay_scale").copied().unwrap_or(1.35);
+                        let mut pitch = state.node_param_values.get("pitch_semitones").copied().unwrap_or(-2.0);
+
+                        if dm_resp.dragged() || dm_resp.clicked() {
+                            if let Some(pos) = dm_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - dm_rect.left() - 4.0) / (dm_rect.width() - 60.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - dm_rect.top() - 10.0) / (dm_rect.height() - 20.0))).clamp(0.0, 1.0);
+                                decay = crate::views::drum_machine_view::DrumMachinePadView::normalized_to_decay(norm_x);
+                                pitch = crate::views::drum_machine_view::DrumMachinePadView::normalized_to_pitch(norm_y);
+                                state.node_param_values.insert("decay_scale".to_string(), decay);
+                                state.node_param_values.insert("pitch_semitones".to_string(), pitch);
+                                if let Some(bus) = param_bus {
+                                    let pid_decay = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_pitch = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_decay).is_some() { bus.set(pid_decay, decay); }
+                                    if bus.get(pid_pitch).is_some() { bus.set(pid_pitch, pitch); }
+                                }
+                            }
+                        }
+
+                        let norm_x = crate::views::drum_machine_view::DrumMachinePadView::decay_to_normalized(decay);
+                        let norm_y = crate::views::drum_machine_view::DrumMachinePadView::pitch_to_normalized(pitch);
+                        let puck_x = dm_rect.left() + 4.0 + norm_x * (dm_rect.width() - 60.0);
+                        let puck_y = dm_rect.bottom() - 10.0 - norm_y * (dm_rect.height() - 20.0);
+                        dm_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(249, 115, 22));
+                        dm_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        dm_painter.text(
+                            egui::pos2(dm_rect.right() - 4.0, dm_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("DRUMS\nD:{:.1}x\n{:+.0}st", decay, pitch),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(249, 115, 22),
+                        );
+
+                        if dm_resp.hovered() {
+                            let _ = dm_resp.on_hover_text(format!(
+                                "GM Drum Machine HUD\nDecay Scale: {:.2}x | Pitch: {:+.1} st\n[Drag: Decay (X) / Pitch (Y) Puck]",
+                                decay, pitch
                             ));
                         }
                     } else {

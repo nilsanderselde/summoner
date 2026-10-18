@@ -322,6 +322,8 @@ pub mod tier183_turn120_tests;
 #[cfg(feature = "gui")]
 pub mod tier184_turn121_tests;
 #[cfg(feature = "gui")]
+pub mod tier185_turn122_tests;
+#[cfg(feature = "gui")]
 pub mod touch_gestures;
 #[cfg(feature = "gui")]
 pub mod transport_bar;
@@ -373,6 +375,8 @@ pub use views::bowed_string_view::BowedStringView;
 #[cfg(feature = "gui")]
 pub use views::cadence_flow_view::CadenceFlowView;
 #[cfg(feature = "gui")]
+pub use views::chromatic_tuner_view::{ChromaticTunerPreset, ChromaticTunerView, CHROMATIC_TUNER_PUCK_HIT_RADIUS};
+#[cfg(feature = "gui")]
 pub use views::clavinet_view::*;
 #[cfg(feature = "gui")]
 pub use views::comb_resonator_view::CombResonatorView;
@@ -396,6 +400,8 @@ pub use views::dither_quantizer_view::{DitherMode, DitherPreset, DitherQuantizer
 pub use views::diffractive_propagation_view::DiffractivePropagationView;
 #[cfg(feature = "gui")]
 pub use views::dpi_scale_panel::DpiScalePanelView;
+#[cfg(feature = "gui")]
+pub use views::drum_machine_view::{DrumMachinePadView, DrumMachinePreset, DrumPadSlotConfig, DRUM_MACHINE_PUCK_HIT_RADIUS};
 pub use dsp_node_ui::*;
 #[cfg(feature = "gui")]
 pub use views::dsp_rack_dock::DspRackDockView;

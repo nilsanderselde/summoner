@@ -1,6 +1,6 @@
 # Summoner DAW — Product Readiness & Shippability Tracker
 > **Current Shippability Score:** 10.0 / 10  
-> **Status:** Production Ready Release Candidate (Turn #121 / Sprint Turn #47)  
+> **Status:** Production Ready Release Candidate (Turn #122 / Sprint Turn #48)  
 > **Authoritative Root:** `PROGRESS.md`  
 > **License:** AGPLv3
 
@@ -3486,4 +3486,24 @@ Product Management has conducted a comprehensive readiness audit:
   - Registered `open_air_reed_hud` and `open_stem_separator_hud` in `CommandPalette` and `SummonerApp`.
 - [x] Verification & Test Suite (`crates/summoner_gui/src/tier184_turn121_tests.rs`):
   - Pure & GUI tests verifying initialization, preset switching, Bernoulli jet velocity & Utaguchi physics, 4-stem spectral mask decomposition, $\ge 44\times 44\text{pt}$ touch puck hit testing, deterministic ASCII snapshots, headless egui rendering, modal lifecycles, lock-free `ParamBus` synchronization, and command palette registration.
+
+### Turn #122 (Sprint Turn #48) — Chromatic Autocorrelation Pitch Tuner & Strobe Phase Calibration HUD and GM Multi-Pad Drum Machine & Per-Pad ADSR/VCA Synthesis HUD Convergence (Milestones 33 & 34)
+- [x] Chromatic Autocorrelation Pitch Tuner & Strobe Phase Calibration HUD (`crates/summoner_gui/src/views/chromatic_tuner_view.rs`):
+  - Integrated `ChromaticTunerView` directly reflecting `crates/summoner_dsp/src/tuner.rs` (`detect_chromatic_pitch`, `TunerResult`, `NOTE_NAMES`):
+    * 4 Curated Reference & Temperament Presets: `ConcertStandard440Hz` (ISO 16 Concert Pitch $A_4 = 440.0\text{ Hz}$, Cent Tolerance $\pm 2.0\text{ c}$, Autocorrelation Gate $0.70$, Strobe Speed $1.00\times$), `BaroqueChamber415Hz` (Historical Baroque Chamber $A_4 = 415.0\text{ Hz}$, Cent Tolerance $\pm 3.0\text{ c}$, Autocorrelation Gate $0.65$, Strobe Speed $0.85\times$), `OrchestralBright442Hz` (European Symphonic Pitch $A_4 = 442.0\text{ Hz}$, Cent Tolerance $\pm 1.5\text{ c}$, Autocorrelation Gate $0.75$, Strobe Speed $1.15\times$), and `VerdiNatural432Hz` (Scientific / Verdi Tuning $A_4 = 432.0\text{ Hz}$, Cent Tolerance $\pm 2.5\text{ c}$, Autocorrelation Gate $0.68$, Strobe Speed $0.95\times$).
+    * Interactive 2D Reference Concert Pitch & Cent Calibration Puck: Reference $A_4 \in [410.0..=450.0]\text{ Hz}$ vs Cents Deviation $\Delta c \in [-50.0..=+50.0]\text{ cents}$ with $\ge 44\times 44\text{pt}$ touch target (`CHROMATIC_TUNER_PUCK_HIT_RADIUS = 22.0`).
+    * Real-time time-domain autocorrelation fundamental lag detector (`detect_pitch_from_buffer`), equal-tempered note & MIDI pitch solver, in-tune lock indicator, and deterministic ASCII snapshot rendering (`[PASS: >=44pt Hit Target]`).
+- [x] GM Multi-Pad Drum Machine & Per-Pad ADSR/VCA Synthesis HUD (`crates/summoner_gui/src/views/drum_machine_view.rs`):
+  - Integrated `DrumMachinePadView` directly reflecting `crates/summoner_dsp/src/drum_machine.rs` (`DrumMachineDevice`, `DrumPad`, `DrumMacroView`, `MAX_PADS = 24`):
+    * 4 Curated Drum Kit Presets: `Analog808SubKit` (Master $0.90$, Decay Scale $1.35\times$, Pitch $-2.0\text{ st}$, Attack $2.0\text{ ms}$, Velocity Sens $0.85$), `AcousticStudioKit` (Master $0.85$, Decay Scale $1.00\times$, Pitch $0.0\text{ st}$, Attack $4.5\text{ ms}$, Velocity Sens $0.95$), `CyberpunkIndustrialKit` (Master $0.95$, Decay Scale $0.75\times$, Pitch $+3.5\text{ st}$, Attack $1.0\text{ ms}$, Velocity Sens $0.70$), and `LoFiVinylDustKit` (Master $0.82$, Decay Scale $0.65\times$, Pitch $-3.0\text{ st}$, Attack $6.0\text{ ms}$, Velocity Sens $0.90$).
+    * Interactive 2D Envelope Decay Scale & Global Pitch Transpose Puck: Decay Scale $\in [0.20..=2.50]\times$ vs Pitch Tune $\in [-12.0..=+12.0]\text{ st}$ with $\ge 44\times 44\text{pt}$ touch target (`DRUM_MACHINE_PUCK_HIT_RADIUS = 22.0`).
+    * 8-Pad tactile GM drum pad bank (`Kick 36`, `Rim 37`, `Snare 38`, `Clap 39`, `CHat 42`, `OHat 46`, `LowTom 45`, `Crash 49`) with per-pad gain, mute toggle, ADSR + VCA envelope contour, and deterministic ASCII snapshot rendering (`[PASS: >=44pt Hit Target]`).
+- [x] View Re-Exports, Modal Windows, Rack & Inspector Integrations, and Command Palette Routing (`views/mod.rs`, `lib.rs`, `award_winning_gui_view.rs`, `modern_inspector.rs`, `modern_device_rack.rs`, `command_palette.rs`, `app.rs`):
+  - Exported `ChromaticTunerView`, `ChromaticTunerPreset`, `CHROMATIC_TUNER_PUCK_HIT_RADIUS`, `DrumMachinePadView`, `DrumMachinePreset`, `DrumPadSlotConfig`, and `DRUM_MACHINE_PUCK_HIT_RADIUS`.
+  - Added modal windows (`show_chromatic_tuner_modal_window`, `show_drum_machine_modal_window`), lifecycle methods, and lock-free `ParamBus` slot dispatch (`sync_chromatic_tuner_hud_state`, `sync_drum_machine_hud_state`).
+  - Added action buttons (`[🎯 Open Chromatic Tuner HUD]`, `[🥁 Open Drum Machine HUD]`), collapsed rack header triggers (`[🎯 Tuner HUD]`, `[🥁 DrumKit HUD]`), and interactive 2D mini-visualizers in `ModernDeviceRackView`.
+  - Registered `open_chromatic_tuner_hud` and `open_drum_machine_hud` in `CommandPalette` and `SummonerApp`.
+- [x] Verification & Test Suite (`crates/summoner_gui/src/tier185_turn122_tests.rs`):
+  - Pure & GUI tests verifying initialization, preset switching, autocorrelation pitch detection on synthetic A440 buffers, drum pad envelope & pitch ratio physics, $\ge 44\times 44\text{pt}$ touch puck hit testing, deterministic ASCII snapshots, headless egui rendering, modal lifecycles, lock-free `ParamBus` synchronization, and command palette registration.
+
 

@@ -1912,6 +1912,14 @@ impl eframe::App for SummonerApp {
                     self.current_view = ViewMode::ModernStudio;
                     self.award_winning_view.open_stem_separator_hud();
                 }
+                "open_chromatic_tuner_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_chromatic_tuner_hud();
+                }
+                "open_drum_machine_hud" => {
+                    self.current_view = ViewMode::ModernStudio;
+                    self.award_winning_view.open_drum_machine_hud();
+                }
                 "sfz_convert" | "auto_slice" | "load_preset" | "export_clap" | "toggle_simd" => {
                     println!("Command palette action executed: {}", action);
                 }

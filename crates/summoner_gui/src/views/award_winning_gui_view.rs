@@ -932,6 +932,10 @@ pub struct AwardWinningGuiView {
     pub air_reed_view: crate::views::air_reed_view::AirReedView,
     pub show_stem_separator_modal: bool,
     pub stem_separator_view: crate::views::stem_separator_view::StemSeparatorView,
+    pub show_chromatic_tuner_modal: bool,
+    pub chromatic_tuner_view: crate::views::chromatic_tuner_view::ChromaticTunerView,
+    pub show_drum_machine_modal: bool,
+    pub drum_machine_view: crate::views::drum_machine_view::DrumMachinePadView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1480,6 +1484,10 @@ impl AwardWinningGuiView {
             air_reed_view: crate::views::air_reed_view::AirReedView::new(),
             show_stem_separator_modal: false,
             stem_separator_view: crate::views::stem_separator_view::StemSeparatorView::new(),
+            show_chromatic_tuner_modal: false,
+            chromatic_tuner_view: crate::views::chromatic_tuner_view::ChromaticTunerView::new(),
+            show_drum_machine_modal: false,
+            drum_machine_view: crate::views::drum_machine_view::DrumMachinePadView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2849,6 +2857,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_stem_separator_hud = false;
             self.open_stem_separator_hud();
         }
+        if self.inspector_state.requested_open_chromatic_tuner_hud || self.device_rack_state.requested_open_chromatic_tuner_hud {
+            self.inspector_state.requested_open_chromatic_tuner_hud = false;
+            self.device_rack_state.requested_open_chromatic_tuner_hud = false;
+            self.open_chromatic_tuner_hud();
+        }
+        if self.inspector_state.requested_open_drum_machine_hud || self.device_rack_state.requested_open_drum_machine_hud {
+            self.inspector_state.requested_open_drum_machine_hud = false;
+            self.device_rack_state.requested_open_drum_machine_hud = false;
+            self.open_drum_machine_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -2998,6 +3016,8 @@ impl AwardWinningGuiView {
         self.show_dither_quantizer_modal_window(ui);
         self.show_air_reed_modal_window(ui);
         self.show_stem_separator_modal_window(ui);
+        self.show_chromatic_tuner_modal_window(ui);
+        self.show_drum_machine_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -22553,6 +22573,180 @@ impl AwardWinningGuiView {
             if bus.get(pid_sharp).is_some() { bus.set(pid_sharp, sharp); }
             if bus.get(pid_drums).is_some() { bus.set(pid_drums, drums_db); }
             if bus.get(pid_bass).is_some() { bus.set(pid_bass, bass_db); }
+        }
+    }
+
+    pub fn open_chromatic_tuner_hud(&mut self) {
+        self.show_chromatic_tuner_modal = true;
+    }
+
+    pub fn close_chromatic_tuner_hud(&mut self) {
+        self.show_chromatic_tuner_modal = false;
+    }
+
+    pub fn is_chromatic_tuner_hud_open(&self) -> bool {
+        self.show_chromatic_tuner_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_chromatic_tuner_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_chromatic_tuner_modal {
+            return;
+        }
+
+        let mut is_open = self.show_chromatic_tuner_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎯 Chromatic Autocorrelation Pitch Tuner & Strobe HUD")
+            .id(egui::Id::new("chromatic_tuner_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(640.0, 480.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Time-Domain Autocorrelation Pitch Tracking, Strobe Phase Needle & Concert Reference (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.chromatic_tuner_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_chromatic_tuner_modal = is_open;
+        self.sync_chromatic_tuner_hud_state();
+    }
+
+    pub fn sync_chromatic_tuner_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let ref_a4 = self.chromatic_tuner_view.reference_a4_hz;
+        let cents = self.chromatic_tuner_view.cents_deviation;
+        let tol = self.chromatic_tuner_view.cents_tolerance;
+        let thresh = self.chromatic_tuner_view.autocorr_threshold;
+
+        self.device_rack_state.node_param_values.insert("reference_a4_hz".to_string(), ref_a4);
+        self.device_rack_state.node_param_values.insert("cents_deviation".to_string(), cents);
+        self.device_rack_state.node_param_values.insert("cents_tolerance".to_string(), tol);
+        self.device_rack_state.node_param_values.insert("autocorr_threshold".to_string(), thresh);
+
+        self.inspector_state.node_param_values.insert("reference_a4_hz".to_string(), ref_a4);
+        self.inspector_state.node_param_values.insert("cents_deviation".to_string(), cents);
+        self.inspector_state.node_param_values.insert("cents_tolerance".to_string(), tol);
+        self.inspector_state.node_param_values.insert("autocorr_threshold".to_string(), thresh);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_a4 = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_cents = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_tol = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_thresh = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_a4).is_some() { bus.set(pid_a4, ref_a4); }
+            if bus.get(pid_cents).is_some() { bus.set(pid_cents, cents); }
+            if bus.get(pid_tol).is_some() { bus.set(pid_tol, tol); }
+            if bus.get(pid_thresh).is_some() { bus.set(pid_thresh, thresh); }
+        }
+    }
+
+    pub fn open_drum_machine_hud(&mut self) {
+        self.show_drum_machine_modal = true;
+    }
+
+    pub fn close_drum_machine_hud(&mut self) {
+        self.show_drum_machine_modal = false;
+    }
+
+    pub fn is_drum_machine_hud_open(&self) -> bool {
+        self.show_drum_machine_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_drum_machine_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_drum_machine_modal {
+            return;
+        }
+
+        let mut is_open = self.show_drum_machine_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🥁 GM Multi-Pad Drum Machine & Per-Pad ADSR/VCA HUD")
+            .id(egui::Id::new("drum_machine_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(640.0, 500.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("MultiSamplerNode + EnvADSR + VCA Composite GM Drum Pad Matrix (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.drum_machine_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_drum_machine_modal = is_open;
+        self.sync_drum_machine_hud_state();
+    }
+
+    pub fn sync_drum_machine_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let master = self.drum_machine_view.master_gain;
+        let decay = self.drum_machine_view.decay_scale;
+        let pitch = self.drum_machine_view.pitch_semitones;
+        let attack = self.drum_machine_view.punch_attack_ms;
+
+        self.device_rack_state.node_param_values.insert("master_gain".to_string(), master);
+        self.device_rack_state.node_param_values.insert("decay_scale".to_string(), decay);
+        self.device_rack_state.node_param_values.insert("pitch_semitones".to_string(), pitch);
+        self.device_rack_state.node_param_values.insert("punch_attack_ms".to_string(), attack);
+
+        self.inspector_state.node_param_values.insert("master_gain".to_string(), master);
+        self.inspector_state.node_param_values.insert("decay_scale".to_string(), decay);
+        self.inspector_state.node_param_values.insert("pitch_semitones".to_string(), pitch);
+        self.inspector_state.node_param_values.insert("punch_attack_ms".to_string(), attack);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_master = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_decay = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_pitch = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_attack = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_master).is_some() { bus.set(pid_master, master); }
+            if bus.get(pid_decay).is_some() { bus.set(pid_decay, decay); }
+            if bus.get(pid_pitch).is_some() { bus.set(pid_pitch, pitch); }
+            if bus.get(pid_attack).is_some() { bus.set(pid_attack, attack); }
         }
     }
 

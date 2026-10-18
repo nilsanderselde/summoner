@@ -1184,6 +1184,18 @@ impl CommandPalette {
                 action_id: "open_stem_separator_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open Chromatic Autocorrelation Pitch Tuner & Strobe Phase Calibration HUD".into(),
+                category: "Mastering & Utility".into(),
+                action_id: "open_chromatic_tuner_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open GM Multi-Pad Drum Machine & Per-Pad ADSR/VCA Synthesis HUD".into(),
+                category: "Drums & Percussion".into(),
+                action_id: "open_drum_machine_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

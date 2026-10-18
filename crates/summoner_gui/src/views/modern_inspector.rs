@@ -326,6 +326,10 @@ pub struct ModernInspectorState {
     pub requested_open_air_reed_hud: bool,
     #[serde(default)]
     pub requested_open_stem_separator_hud: bool,
+    #[serde(default)]
+    pub requested_open_chromatic_tuner_hud: bool,
+    #[serde(default)]
+    pub requested_open_drum_machine_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -495,6 +499,8 @@ impl Default for ModernInspectorState {
             requested_open_dither_quantizer_hud: false,
             requested_open_air_reed_hud: false,
             requested_open_stem_separator_hud: false,
+            requested_open_chromatic_tuner_hud: false,
+            requested_open_drum_machine_hud: false,
         }
     }
 }
@@ -2419,6 +2425,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open Neural ONNX 4-Stem Spectral Separator & Multi-Track Router HUD").clicked() {
                     state.requested_open_stem_separator_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("ChromaticTuner") || active_kind.contains("StrobeTuner") || active_kind == "TunerNode" || active_kind == "ChromaticTunerNode" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🎯 Open Chromatic Tuner HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(56, 189, 248)))
+                        .fill(Color32::from_rgb(10, 22, 36))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(56, 189, 248)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Chromatic Autocorrelation Pitch Tuner & Strobe Phase Calibration HUD").clicked() {
+                    state.requested_open_chromatic_tuner_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("DrumMachine") || active_kind.contains("DrumPad") || active_kind == "DrumMachineDevice" || active_kind == "DrumKitNode" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🥁 Open Drum Machine HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(249, 115, 22)))
+                        .fill(Color32::from_rgb(28, 16, 10))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(249, 115, 22)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open GM Multi-Pad Drum Machine & Per-Pad ADSR/VCA Synthesis HUD").clicked() {
+                    state.requested_open_drum_machine_hud = true;
                 }
                 ui.add_space(4.0);
             }
