@@ -944,6 +944,10 @@ pub struct AwardWinningGuiView {
     pub ai_autonomous_mastering_view: crate::views::ai_autonomous_mastering_view::AiAutonomousMasteringView,
     pub show_hardware_control_surface_modal: bool,
     pub hardware_control_surface_view: crate::views::hardware_control_surface_view::HardwareControlSurfaceView,
+    pub show_parametric_eq_modal: bool,
+    pub parametric_eq_view: crate::views::parametric_eq_view::ParametricEqView,
+    pub show_sfz_sampler_modal: bool,
+    pub sfz_sampler_view: crate::views::sfz_sampler_view::SfzSamplerView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1504,6 +1508,10 @@ impl AwardWinningGuiView {
             ai_autonomous_mastering_view: crate::views::ai_autonomous_mastering_view::AiAutonomousMasteringView::new(),
             show_hardware_control_surface_modal: false,
             hardware_control_surface_view: crate::views::hardware_control_surface_view::HardwareControlSurfaceView::new(),
+            show_parametric_eq_modal: false,
+            parametric_eq_view: crate::views::parametric_eq_view::ParametricEqView::new(),
+            show_sfz_sampler_modal: false,
+            sfz_sampler_view: crate::views::sfz_sampler_view::SfzSamplerView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2903,6 +2911,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_hardware_control_surface_hud = false;
             self.open_hardware_control_surface_hud();
         }
+        if self.inspector_state.requested_open_parametric_eq_hud || self.device_rack_state.requested_open_parametric_eq_hud {
+            self.inspector_state.requested_open_parametric_eq_hud = false;
+            self.device_rack_state.requested_open_parametric_eq_hud = false;
+            self.open_parametric_eq_hud();
+        }
+        if self.inspector_state.requested_open_sfz_sampler_hud || self.device_rack_state.requested_open_sfz_sampler_hud {
+            self.inspector_state.requested_open_sfz_sampler_hud = false;
+            self.device_rack_state.requested_open_sfz_sampler_hud = false;
+            self.open_sfz_sampler_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -3058,6 +3076,8 @@ impl AwardWinningGuiView {
         self.show_plugin_host_modal_window(ui);
         self.show_ai_autonomous_mastering_modal_window(ui);
         self.show_hardware_control_surface_modal_window(ui);
+        self.show_parametric_eq_modal_window(ui);
+        self.show_sfz_sampler_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -23135,6 +23155,180 @@ impl AwardWinningGuiView {
             if bus.get(pid_off).is_some() { bus.set(pid_off, offset); }
             if bus.get(pid_vpo).is_some() { bus.set(pid_vpo, vpo); }
             if bus.get(pid_bpm).is_some() { bus.set(pid_bpm, bpm); }
+        }
+    }
+
+    pub fn open_parametric_eq_hud(&mut self) {
+        self.show_parametric_eq_modal = true;
+    }
+
+    pub fn close_parametric_eq_hud(&mut self) {
+        self.show_parametric_eq_modal = false;
+    }
+
+    pub fn is_parametric_eq_hud_open(&self) -> bool {
+        self.show_parametric_eq_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_parametric_eq_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_parametric_eq_modal {
+            return;
+        }
+
+        let mut is_open = self.show_parametric_eq_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎚 8-Band Parametric Equalizer & Biquad Magnitude Response HUD")
+            .id(egui::Id::new("parametric_eq_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(640.0, 500.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("ParametricEqNode + FilterBiquad RBJ Transfer Function (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.parametric_eq_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_parametric_eq_modal = is_open;
+        self.sync_parametric_eq_hud_state();
+    }
+
+    pub fn sync_parametric_eq_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let freq = self.parametric_eq_view.active_freq_hz;
+        let gain = self.parametric_eq_view.active_gain_db;
+        let q = self.parametric_eq_view.active_q;
+        let trim = self.parametric_eq_view.output_trim_db;
+
+        self.device_rack_state.node_param_values.insert("eq_freq_hz".to_string(), freq);
+        self.device_rack_state.node_param_values.insert("eq_gain_db".to_string(), gain);
+        self.device_rack_state.node_param_values.insert("eq_q".to_string(), q);
+        self.device_rack_state.node_param_values.insert("eq_output_trim_db".to_string(), trim);
+
+        self.inspector_state.node_param_values.insert("eq_freq_hz".to_string(), freq);
+        self.inspector_state.node_param_values.insert("eq_gain_db".to_string(), gain);
+        self.inspector_state.node_param_values.insert("eq_q".to_string(), q);
+        self.inspector_state.node_param_values.insert("eq_output_trim_db".to_string(), trim);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_freq = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_gain = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_q = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_trim = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_freq).is_some() { bus.set(pid_freq, freq); }
+            if bus.get(pid_gain).is_some() { bus.set(pid_gain, gain); }
+            if bus.get(pid_q).is_some() { bus.set(pid_q, q); }
+            if bus.get(pid_trim).is_some() { bus.set(pid_trim, trim); }
+        }
+    }
+
+    pub fn open_sfz_sampler_hud(&mut self) {
+        self.show_sfz_sampler_modal = true;
+    }
+
+    pub fn close_sfz_sampler_hud(&mut self) {
+        self.show_sfz_sampler_modal = false;
+    }
+
+    pub fn is_sfz_sampler_hud_open(&self) -> bool {
+        self.show_sfz_sampler_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_sfz_sampler_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_sfz_sampler_modal {
+            return;
+        }
+
+        let mut is_open = self.show_sfz_sampler_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎹 Multi-Sample SFZ Keyzone & Velocity Layer Mapper HUD")
+            .id(egui::Id::new("sfz_sampler_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(640.0, 500.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("MultiSamplerNode + MultiSampleBank + LoopMode Engine (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.sfz_sampler_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_sfz_sampler_modal = is_open;
+        self.sync_sfz_sampler_hud_state();
+    }
+
+    pub fn sync_sfz_sampler_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let l_start = self.sfz_sampler_view.loop_start_norm;
+        let l_len = self.sfz_sampler_view.loop_length_norm;
+        let fine = self.sfz_sampler_view.fine_tune_cents;
+        let xfade = self.sfz_sampler_view.crossfade_ms;
+
+        self.device_rack_state.node_param_values.insert("sfz_loop_start".to_string(), l_start);
+        self.device_rack_state.node_param_values.insert("sfz_loop_length".to_string(), l_len);
+        self.device_rack_state.node_param_values.insert("sfz_fine_tune_cents".to_string(), fine);
+        self.device_rack_state.node_param_values.insert("sfz_crossfade_ms".to_string(), xfade);
+
+        self.inspector_state.node_param_values.insert("sfz_loop_start".to_string(), l_start);
+        self.inspector_state.node_param_values.insert("sfz_loop_length".to_string(), l_len);
+        self.inspector_state.node_param_values.insert("sfz_fine_tune_cents".to_string(), fine);
+        self.inspector_state.node_param_values.insert("sfz_crossfade_ms".to_string(), xfade);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_start = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_len = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_fine = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_xfade = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_start).is_some() { bus.set(pid_start, l_start); }
+            if bus.get(pid_len).is_some() { bus.set(pid_len, l_len); }
+            if bus.get(pid_fine).is_some() { bus.set(pid_fine, fine); }
+            if bus.get(pid_xfade).is_some() { bus.set(pid_xfade, xfade); }
         }
     }
 

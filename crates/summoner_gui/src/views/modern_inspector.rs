@@ -338,6 +338,10 @@ pub struct ModernInspectorState {
     pub requested_open_ai_autonomous_mastering_hud: bool,
     #[serde(default)]
     pub requested_open_hardware_control_surface_hud: bool,
+    #[serde(default)]
+    pub requested_open_parametric_eq_hud: bool,
+    #[serde(default)]
+    pub requested_open_sfz_sampler_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -513,6 +517,8 @@ impl Default for ModernInspectorState {
             requested_open_plugin_host_hud: false,
             requested_open_ai_autonomous_mastering_hud: false,
             requested_open_hardware_control_surface_hud: false,
+            requested_open_parametric_eq_hud: false,
+            requested_open_sfz_sampler_hud: false,
         }
     }
 }
@@ -2497,6 +2503,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open Hardware Control Surface, 1V/Oct CV/Gate & DIN Sync24 Bridge HUD").clicked() {
                     state.requested_open_hardware_control_surface_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("ParametricEq") || active_kind.contains("FilterBiquad") || active_kind == "ParametricEqNode" || active_kind == "Eq8Band" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🎚 Open 8-Band Parametric EQ HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(52, 211, 153)))
+                        .fill(Color32::from_rgb(10, 24, 20))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(52, 211, 153)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open 8-Band Parametric Equalizer & Biquad Magnitude Response HUD").clicked() {
+                    state.requested_open_parametric_eq_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("MultiSampler") || active_kind.contains("SfzSampler") || active_kind == "SamplerNode" || active_kind == "MultiSamplerNode" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🎹 Open Multi-Sample SFZ Mapper HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(192, 132, 252)))
+                        .fill(Color32::from_rgb(20, 12, 30))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(192, 132, 252)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open Multi-Sample SFZ Keyzone & Velocity Layer Mapper HUD").clicked() {
+                    state.requested_open_sfz_sampler_hud = true;
                 }
                 ui.add_space(4.0);
             }

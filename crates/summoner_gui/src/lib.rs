@@ -328,6 +328,8 @@ pub mod tier186_turn123_tests;
 #[cfg(feature = "gui")]
 pub mod tier187_turn124_tests;
 #[cfg(feature = "gui")]
+pub mod tier188_turn125_tests;
+#[cfg(feature = "gui")]
 pub mod touch_gestures;
 #[cfg(feature = "gui")]
 pub mod transport_bar;
@@ -413,7 +415,11 @@ pub use views::hardware_control_surface_view::{HardwareControlPreset, HardwareCo
 #[cfg(feature = "gui")]
 pub use views::live_session_recorder_view::{LiveRecordDiskFormat, LiveRecorderPreset, LiveSessionRecorderView, LIVE_RECORDER_PUCK_HIT_RADIUS};
 #[cfg(feature = "gui")]
+pub use views::parametric_eq_view::{BiquadFilterMode, ParametricBandConfig, ParametricEqPreset, ParametricEqView, PARAMETRIC_EQ_PUCK_HIT_RADIUS};
+#[cfg(feature = "gui")]
 pub use views::plugin_host_view::{HostedPluginFormat, PluginHostPreset, PluginHostView, PLUGIN_HOST_PUCK_HIT_RADIUS};
+#[cfg(feature = "gui")]
+pub use views::sfz_sampler_view::{SfzLoopTopology, SfzRegionSlot, SfzSamplerPreset, SfzSamplerView, SFZ_SAMPLER_PUCK_HIT_RADIUS};
 pub use dsp_node_ui::*;
 #[cfg(feature = "gui")]
 pub use views::dsp_rack_dock::DspRackDockView;

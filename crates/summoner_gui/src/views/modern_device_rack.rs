@@ -353,6 +353,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_ai_autonomous_mastering_hud: bool,
     #[serde(default)]
     pub requested_open_hardware_control_surface_hud: bool,
+    #[serde(default)]
+    pub requested_open_parametric_eq_hud: bool,
+    #[serde(default)]
+    pub requested_open_sfz_sampler_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -518,6 +522,8 @@ impl Default for ModernDeviceRackState {
             requested_open_plugin_host_hud: false,
             requested_open_ai_autonomous_mastering_hud: false,
             requested_open_hardware_control_surface_hud: false,
+            requested_open_parametric_eq_hud: false,
+            requested_open_sfz_sampler_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -1306,6 +1312,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_plugin_host = cur_selection.contains("PluginHost") || cur_selection.contains("PluginAudioNode") || cur_selection.contains("ClapHost") || cur_selection.contains("Vst3Host") || cur_selection.contains("WasmDsp") || cur_selection == "PluginHostNode";
                     let is_ai_autonomous_mastering = cur_selection.contains("AiAutonomousMastering") || cur_selection.contains("AutonomousMastering") || cur_selection.contains("DrumReplacer") || cur_selection.contains("RoomAcousticMatcher") || cur_selection == "AiAutonomousMasteringEngine";
                     let is_hardware_control_surface = cur_selection.contains("HardwareControl") || cur_selection.contains("CvGate") || cur_selection.contains("DinSync") || cur_selection.contains("PushController") || cur_selection.contains("McuController") || cur_selection.contains("NksIntegration");
+                    let is_parametric_eq = cur_selection.contains("ParametricEq") || cur_selection.contains("FilterBiquad") || cur_selection == "ParametricEqNode" || cur_selection == "Eq8Band";
+                    let is_sfz_sampler = cur_selection.contains("MultiSampler") || cur_selection.contains("SfzSampler") || cur_selection == "SamplerNode" || cur_selection == "MultiSamplerNode";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1910,6 +1918,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("🎛 CV/Sync HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Hardware Control Surface, 1V/Oct CV/Gate & DIN Sync24 Bridge HUD").clicked()
                     {
                         state.requested_open_hardware_control_surface_hud = true;
+                    } else if is_parametric_eq
+                        && ui.button(RichText::new("🎚 EQ8 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(52, 211, 153))).on_hover_text("Open 8-Band Parametric Equalizer & Biquad Magnitude Response HUD").clicked()
+                    {
+                        state.requested_open_parametric_eq_hud = true;
+                    } else if is_sfz_sampler
+                        && ui.button(RichText::new("🎹 SFZ HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(192, 132, 252))).on_hover_text("Open Multi-Sample SFZ Keyzone & Velocity Layer Mapper HUD").clicked()
+                    {
+                        state.requested_open_sfz_sampler_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2826,6 +2842,8 @@ fn show_pro_parameter_drawer(
                     let is_plugin_host = dev_kind.contains("PluginHost") || dev_kind.contains("PluginAudioNode") || dev_kind.contains("ClapHost") || dev_kind.contains("Vst3Host") || dev_kind.contains("WasmDsp") || dev_kind == "PluginHostNode";
                     let is_ai_autonomous_mastering = dev_kind.contains("AiAutonomousMastering") || dev_kind.contains("AutonomousMastering") || dev_kind.contains("DrumReplacer") || dev_kind.contains("RoomAcousticMatcher") || dev_kind == "AiAutonomousMasteringEngine";
                     let is_hardware_control_surface = dev_kind.contains("HardwareControl") || dev_kind.contains("CvGate") || dev_kind.contains("DinSync") || dev_kind.contains("PushController") || dev_kind.contains("McuController") || dev_kind.contains("NksIntegration");
+                    let is_parametric_eq = dev_kind.contains("ParametricEq") || dev_kind.contains("FilterBiquad") || dev_kind == "ParametricEqNode" || dev_kind == "Eq8Band";
+                    let is_sfz_sampler = dev_kind.contains("MultiSampler") || dev_kind.contains("SfzSampler") || dev_kind == "SamplerNode" || dev_kind == "MultiSamplerNode";
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -14099,6 +14117,100 @@ fn show_pro_parameter_drawer(
                             let _ = hw_resp.on_hover_text(format!(
                                 "Hardware Control Surface & CV/Gate HUD\nCV Pitch: {:+.2} V | Clock Offset: {:+.2} ms\n[Drag: CV Voltage (X) / Clock Offset (Y) Puck]",
                                 cv_voltage, clock_offset_ms
+                            ));
+                        }
+                    } else if is_parametric_eq {
+                        // 8-Band Parametric Equalizer Mini View
+                        let (eq_resp, eq_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let eq_rect = eq_resp.rect;
+                        eq_painter.rect_filled(eq_rect, 2.0, Color32::from_rgb(10, 22, 20));
+
+                        let mut eq_freq_hz = state.node_param_values.get("eq_freq_hz").copied().unwrap_or(1000.0);
+                        let mut eq_gain_db = state.node_param_values.get("eq_gain_db").copied().unwrap_or(0.0);
+
+                        if eq_resp.dragged() || eq_resp.clicked() {
+                            if let Some(pos) = eq_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - eq_rect.left() - 4.0) / (eq_rect.width() - 60.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - eq_rect.top() - 10.0) / (eq_rect.height() - 20.0))).clamp(0.0, 1.0);
+                                eq_freq_hz = crate::views::parametric_eq_view::ParametricEqView::normalized_to_freq(norm_x);
+                                eq_gain_db = crate::views::parametric_eq_view::ParametricEqView::normalized_to_gain(norm_y);
+                                state.node_param_values.insert("eq_freq_hz".to_string(), eq_freq_hz);
+                                state.node_param_values.insert("eq_gain_db".to_string(), eq_gain_db);
+                                if let Some(bus) = param_bus {
+                                    let pid_f = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_g = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_f).is_some() { bus.set(pid_f, eq_freq_hz); }
+                                    if bus.get(pid_g).is_some() { bus.set(pid_g, eq_gain_db); }
+                                }
+                            }
+                        }
+
+                        let norm_x = crate::views::parametric_eq_view::ParametricEqView::freq_to_normalized(eq_freq_hz);
+                        let norm_y = crate::views::parametric_eq_view::ParametricEqView::gain_to_normalized(eq_gain_db);
+                        let puck_x = eq_rect.left() + 4.0 + norm_x * (eq_rect.width() - 60.0);
+                        let puck_y = eq_rect.bottom() - 10.0 - norm_y * (eq_rect.height() - 20.0);
+                        eq_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(52, 211, 153));
+                        eq_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        eq_painter.text(
+                            egui::pos2(eq_rect.right() - 4.0, eq_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("EQ8 BIQUAD\n{:.0}Hz\n{:+.1}dB", eq_freq_hz, eq_gain_db),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(52, 211, 153),
+                        );
+
+                        if eq_resp.hovered() {
+                            let _ = eq_resp.on_hover_text(format!(
+                                "8-Band Parametric EQ HUD\nActive Frequency: {:.0} Hz | Gain: {:+.1} dB\n[Drag: Frequency (X) / Gain dB (Y) Puck]",
+                                eq_freq_hz, eq_gain_db
+                            ));
+                        }
+                    } else if is_sfz_sampler {
+                        // Multi-Sample SFZ Keyzone & Velocity Mapper Mini View
+                        let (sfz_resp, sfz_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let sfz_rect = sfz_resp.rect;
+                        sfz_painter.rect_filled(sfz_rect, 2.0, Color32::from_rgb(18, 12, 28));
+
+                        let mut loop_start = state.node_param_values.get("sfz_loop_start").copied().unwrap_or(0.25);
+                        let mut loop_len = state.node_param_values.get("sfz_loop_length").copied().unwrap_or(0.55);
+
+                        if sfz_resp.dragged() || sfz_resp.clicked() {
+                            if let Some(pos) = sfz_resp.interact_pointer_pos() {
+                                let norm_x = ((pos.x - sfz_rect.left() - 4.0) / (sfz_rect.width() - 60.0)).clamp(0.0, 1.0);
+                                let norm_y = (1.0 - ((pos.y - sfz_rect.top() - 10.0) / (sfz_rect.height() - 20.0))).clamp(0.0, 1.0);
+                                loop_start = crate::views::sfz_sampler_view::SfzSamplerView::normalized_to_loop_start(norm_x);
+                                loop_len = crate::views::sfz_sampler_view::SfzSamplerView::normalized_to_loop_length(norm_y);
+                                state.node_param_values.insert("sfz_loop_start".to_string(), loop_start);
+                                state.node_param_values.insert("sfz_loop_length".to_string(), loop_len);
+                                if let Some(bus) = param_bus {
+                                    let pid_s = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20);
+                                    let pid_l = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20 + 1);
+                                    if bus.get(pid_s).is_some() { bus.set(pid_s, loop_start); }
+                                    if bus.get(pid_l).is_some() { bus.set(pid_l, loop_len); }
+                                }
+                            }
+                        }
+
+                        let norm_x = crate::views::sfz_sampler_view::SfzSamplerView::loop_start_to_normalized(loop_start);
+                        let norm_y = crate::views::sfz_sampler_view::SfzSamplerView::loop_length_to_normalized(loop_len);
+                        let puck_x = sfz_rect.left() + 4.0 + norm_x * (sfz_rect.width() - 60.0);
+                        let puck_y = sfz_rect.bottom() - 10.0 - norm_y * (sfz_rect.height() - 20.0);
+                        sfz_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(192, 132, 252));
+                        sfz_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        sfz_painter.text(
+                            egui::pos2(sfz_rect.right() - 4.0, sfz_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("SFZ LOOP\n{:.0}%..{:.0}%", loop_start * 100.0, (loop_start + loop_len).min(1.0) * 100.0),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(192, 132, 252),
+                        );
+
+                        if sfz_resp.hovered() {
+                            let _ = sfz_resp.on_hover_text(format!(
+                                "Multi-Sample SFZ Mapper HUD\nLoop Start: {:.0}% | Loop Length: {:.0}%\n[Drag: Loop Start (X) / Loop Length (Y) Puck]",
+                                loop_start * 100.0, loop_len * 100.0
                             ));
                         }
                     } else {

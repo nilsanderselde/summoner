@@ -1220,6 +1220,18 @@ impl CommandPalette {
                 action_id: "open_hardware_control_surface_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open 8-Band Parametric Equalizer & Biquad Magnitude Response HUD".into(),
+                category: "Filters & EQ".into(),
+                action_id: "open_parametric_eq_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open Multi-Sample SFZ Keyzone & Velocity Layer Mapper HUD".into(),
+                category: "Samplers & Instruments".into(),
+                action_id: "open_sfz_sampler_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES
