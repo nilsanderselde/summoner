@@ -346,6 +346,10 @@ pub struct ModernInspectorState {
     pub requested_open_aether_synth_hud: bool,
     #[serde(default)]
     pub requested_open_polyphase_oversampler_hud: bool,
+    #[serde(default)]
+    pub requested_open_simd_poly_wavetable_hud: bool,
+    #[serde(default)]
+    pub requested_open_multiband_compressor_hud: bool,
 }
 
 impl Default for ModernInspectorState {
@@ -525,6 +529,8 @@ impl Default for ModernInspectorState {
             requested_open_sfz_sampler_hud: false,
             requested_open_aether_synth_hud: false,
             requested_open_polyphase_oversampler_hud: false,
+            requested_open_simd_poly_wavetable_hud: false,
+            requested_open_multiband_compressor_hud: false,
         }
     }
 }
@@ -2549,6 +2555,26 @@ pub fn show_modern_inspector_with_context(
                         .rounding(Rounding::same(4.0))
                 ).on_hover_text("Open Polyphase 12-Tap Half-Band FIR Anti-Aliasing Oversampler HUD").clicked() {
                     state.requested_open_polyphase_oversampler_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("SimdPolyWavetable") || active_kind.contains("OscWavetable") || active_kind == "SimdPolyWavetableOscillator" || active_kind == "PolyWavetableNode" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🌊 Open SIMD Poly Wavetable HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(168, 85, 247)))
+                        .fill(Color32::from_rgb(16, 12, 28))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(168, 85, 247)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open SIMD 4-Wide Polyphonic Wavetable Morphing & 4-Point Hermite Anti-Aliasing Oscillator HUD").clicked() {
+                    state.requested_open_simd_poly_wavetable_hud = true;
+                }
+                ui.add_space(4.0);
+            } else if active_kind.contains("MultibandCompressor") || active_kind == "MultibandCompressorNode" || active_kind == "ThreeBandCompressor" {
+                if ui.add(
+                    egui::Button::new(RichText::new("🎚 Open 3-Band Multiband Comp HUD").font(FontId::proportional(10.5)).strong().color(Color32::from_rgb(16, 185, 129)))
+                        .fill(Color32::from_rgb(10, 22, 18))
+                        .stroke(Stroke::new(1.0_f32, Color32::from_rgb(16, 185, 129)))
+                        .rounding(Rounding::same(4.0))
+                ).on_hover_text("Open 3-Band SVF Crossover Multiband Compressor & Dynamic Envelope HUD").clicked() {
+                    state.requested_open_multiband_compressor_hud = true;
                 }
                 ui.add_space(4.0);
             }

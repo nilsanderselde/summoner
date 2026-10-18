@@ -361,6 +361,10 @@ pub struct ModernDeviceRackState {
     pub requested_open_aether_synth_hud: bool,
     #[serde(default)]
     pub requested_open_polyphase_oversampler_hud: bool,
+    #[serde(default)]
+    pub requested_open_simd_poly_wavetable_hud: bool,
+    #[serde(default)]
+    pub requested_open_multiband_compressor_hud: bool,
 }
 
 impl Default for ModernDeviceRackState {
@@ -530,6 +534,8 @@ impl Default for ModernDeviceRackState {
             requested_open_sfz_sampler_hud: false,
             requested_open_aether_synth_hud: false,
             requested_open_polyphase_oversampler_hud: false,
+            requested_open_simd_poly_wavetable_hud: false,
+            requested_open_multiband_compressor_hud: false,
             cutoff: 0.65,
             resonance: 0.45,
             decay: 0.50,
@@ -1322,6 +1328,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_sfz_sampler = cur_selection.contains("MultiSampler") || cur_selection.contains("SfzSampler") || cur_selection == "SamplerNode" || cur_selection == "MultiSamplerNode";
                     let is_aether_synth = cur_selection.contains("AetherSynth") || cur_selection.contains("GlitchAether") || cur_selection.contains("CyberpunkSub") || cur_selection.contains("AtmosphericPad") || cur_selection.contains("GlitchPercussion");
                     let is_polyphase_oversampler = cur_selection.contains("Oversampler") || cur_selection.contains("PolyphaseFir") || cur_selection.contains("HalfBandFir") || cur_selection == "OversamplerNode";
+                    let is_simd_poly_wavetable = cur_selection.contains("SimdPolyWavetable") || cur_selection.contains("PolyWavetable") || cur_selection.contains("OscWavetable") || cur_selection == "SimdPolyWavetableOscillator" || cur_selection == "WavetableOsc";
+                    let is_multiband_compressor = cur_selection.contains("MultibandComp") || cur_selection.contains("MultibandCompressor") || cur_selection == "MultibandCompressorNode";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
@@ -1942,6 +1950,14 @@ pub fn show_modern_device_rack_with_context(
                         && ui.button(RichText::new("📈 FIR HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(245, 158, 11))).on_hover_text("Open Polyphase 12-Tap Half-Band FIR Anti-Aliasing Oversampler HUD").clicked()
                     {
                         state.requested_open_polyphase_oversampler_hud = true;
+                    } else if is_simd_poly_wavetable
+                        && ui.button(RichText::new("🌊 PolyWT HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open 16-Voice SIMD 4-Wide Polyphonic Hermite Wavetable Oscillator HUD").clicked()
+                    {
+                        state.requested_open_simd_poly_wavetable_hud = true;
+                    } else if is_multiband_compressor
+                        && ui.button(RichText::new("🎚 MBComp HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(245, 158, 11))).on_hover_text("Open 3-Band SVF Crossover Multiband Dynamics Compressor HUD").clicked()
+                    {
+                        state.requested_open_multiband_compressor_hud = true;
                     }
                     let _ = ui.small_button("✕");
                     egui::Frame::none()
@@ -2862,6 +2878,8 @@ fn show_pro_parameter_drawer(
                     let is_sfz_sampler = dev_kind.contains("MultiSampler") || dev_kind.contains("SfzSampler") || dev_kind == "SamplerNode" || dev_kind == "MultiSamplerNode";
                     let is_aether_synth = dev_kind.contains("AetherSynth") || dev_kind.contains("GlitchAether") || dev_kind.contains("CyberpunkSub") || dev_kind.contains("AtmosphericPad") || dev_kind.contains("GlitchPercussion");
                     let is_polyphase_oversampler = dev_kind.contains("Oversampler") || dev_kind.contains("PolyphaseFir") || dev_kind.contains("HalfBandFir") || dev_kind == "OversamplerNode";
+                    let is_simd_poly_wavetable = dev_kind.contains("SimdPolyWavetable") || dev_kind.contains("PolyWavetable") || dev_kind.contains("OscWavetable") || dev_kind == "SimdPolyWavetableOscillator" || dev_kind == "WavetableOsc";
+                    let is_multiband_compressor = dev_kind.contains("MultibandComp") || dev_kind.contains("MultibandCompressor") || dev_kind == "MultibandCompressorNode";
 
                     if is_crystal {
                         // Crystal Resonator 2D Acoustic Rim & Hydro-Acoustic Water Level Visualizer
@@ -14323,6 +14341,119 @@ fn show_pro_parameter_drawer(
                             let _ = ov_resp.on_hover_text(format!(
                                 "Polyphase 12-Tap FIR Oversampler HUD\nDrive: {:.2}x | Stopband: -{:.1} dB\n[Drag: Nonlinear Drive (X) / Stopband dB (Y) Puck]",
                                 drive, stop_db
+                            ));
+                        }
+                    } else if is_simd_poly_wavetable {
+                        let (wt_resp, wt_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let wt_rect = wt_resp.rect;
+                        wt_painter.rect_filled(wt_rect, 2.0, Color32::from_rgb(8, 12, 22));
+
+                        let mut morph = state.node_param_values.get("poly_wavetable_morph").copied().unwrap_or(0.35).clamp(0.0, 1.0);
+                        let mut freq_hz = state.node_param_values.get("poly_wavetable_freq_hz").copied().unwrap_or(220.0).clamp(20.0, 8000.0);
+
+                        if wt_resp.dragged() {
+                            if let Some(pos) = wt_resp.interact_pointer_pos() {
+                                let nx = ((pos.x - wt_rect.left()) / wt_rect.width()).clamp(0.0, 1.0);
+                                let ny = (1.0 - ((pos.y - wt_rect.top()) / wt_rect.height())).clamp(0.0, 1.0);
+                                morph = nx;
+                                freq_hz = (20.0 * (8000.0 / 20.0_f32).powf(ny)).clamp(20.0, 8000.0);
+                                state.node_param_values.insert("poly_wavetable_morph".to_string(), morph);
+                                state.node_param_values.insert("poly_wavetable_freq_hz".to_string(), freq_hz);
+                                if let Some(bus) = param_bus {
+                                    let base_id = track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20;
+                                    let pid_morph = summoner_core::param_bus::ParamId(base_id);
+                                    if bus.get(pid_morph).is_some() { bus.set(pid_morph, morph); }
+                                    let pid_freq = summoner_core::param_bus::ParamId(base_id + 1);
+                                    if bus.get(pid_freq).is_some() { bus.set(pid_freq, freq_hz); }
+                                }
+                            }
+                        }
+
+                        let mid_y = wt_rect.center().y;
+                        let steps = 40usize;
+                        let mut pts = Vec::with_capacity(steps);
+                        for i in 0..steps {
+                            let t = i as f32 / (steps - 1) as f32;
+                            let px = wt_rect.left() + 4.0 + t * (wt_rect.width() - 56.0);
+                            let saw = 2.0 * t - 1.0;
+                            let sq = if t < 0.5 { 1.0 } else { -1.0 };
+                            let s = ((1.0 - morph) * saw + morph * sq).clamp(-1.0, 1.0);
+                            let py = mid_y - s * (wt_rect.height() * 0.34);
+                            pts.push(egui::pos2(px, py));
+                        }
+                        wt_painter.add(egui::Shape::line(pts, Stroke::new(1.4_f32, Color32::from_rgb(56, 189, 248))));
+
+                        let norm_y = ((freq_hz / 20.0).ln() / (8000.0_f32 / 20.0).ln()).clamp(0.0, 1.0);
+                        let puck_x = wt_rect.left() + 4.0 + morph * (wt_rect.width() - 60.0);
+                        let puck_y = wt_rect.bottom() - 8.0 - norm_y * (wt_rect.height() - 16.0);
+                        wt_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(245, 158, 11));
+                        wt_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        wt_painter.text(
+                            egui::pos2(wt_rect.right() - 4.0, wt_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("POLY WT\nM:{:.0}%\n{:.0}Hz", morph * 100.0, freq_hz),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(56, 189, 248),
+                        );
+
+                        if wt_resp.hovered() {
+                            let _ = wt_resp.on_hover_text(format!(
+                                "SIMD 4-Wide Polyphonic Wavetable HUD\nMorph: {:.1}% | Pitch: {:.1} Hz\n[Drag: Morph (X) / Pitch Hz (Y) Puck]",
+                                morph * 100.0, freq_hz
+                            ));
+                        }
+                    } else if is_multiband_compressor {
+                        let (mb_resp, mb_painter) = ui.allocate_painter(Vec2::new(158.0, 68.0), egui::Sense::click_and_drag());
+                        let mb_rect = mb_resp.rect;
+                        mb_painter.rect_filled(mb_rect, 2.0, Color32::from_rgb(8, 12, 22));
+
+                        let mut low_mid_hz = state.node_param_values.get("mb_comp_low_mid_hz").copied().unwrap_or(200.0).clamp(60.0, 800.0);
+                        let mut mid_high_hz = state.node_param_values.get("mb_comp_mid_high_hz").copied().unwrap_or(3000.0).clamp(1000.0, 10000.0);
+
+                        if mb_resp.dragged() {
+                            if let Some(pos) = mb_resp.interact_pointer_pos() {
+                                let nx = ((pos.x - mb_rect.left()) / mb_rect.width()).clamp(0.0, 1.0);
+                                let ny = (1.0 - ((pos.y - mb_rect.top()) / mb_rect.height())).clamp(0.0, 1.0);
+                                low_mid_hz = (60.0 * (800.0 / 60.0_f32).powf(nx)).clamp(60.0, 800.0);
+                                mid_high_hz = (1000.0 * (10000.0 / 1000.0_f32).powf(ny)).clamp(1000.0, 10000.0);
+                                state.node_param_values.insert("mb_comp_low_mid_hz".to_string(), low_mid_hz);
+                                state.node_param_values.insert("mb_comp_mid_high_hz".to_string(), mid_high_hz);
+                                if let Some(bus) = param_bus {
+                                    let base_id = track_id as u32 * 1000 + state.selected_chain_idx as u32 * 20;
+                                    let pid_lm = summoner_core::param_bus::ParamId(base_id);
+                                    if bus.get(pid_lm).is_some() { bus.set(pid_lm, low_mid_hz); }
+                                    let pid_mh = summoner_core::param_bus::ParamId(base_id + 1);
+                                    if bus.get(pid_mh).is_some() { bus.set(pid_mh, mid_high_hz); }
+                                }
+                            }
+                        }
+
+                        let norm_lm = ((low_mid_hz / 60.0).ln() / (800.0_f32 / 60.0).ln()).clamp(0.0, 1.0);
+                        let norm_mh = ((mid_high_hz / 1000.0).ln() / (10000.0_f32 / 1000.0).ln()).clamp(0.0, 1.0);
+
+                        let x_lm = mb_rect.left() + 8.0 + norm_lm * (mb_rect.width() * 0.35);
+                        let x_mh = mb_rect.left() + mb_rect.width() * 0.42 + norm_mh * (mb_rect.width() * 0.25);
+                        mb_painter.line_segment([egui::pos2(x_lm, mb_rect.top() + 4.0), egui::pos2(x_lm, mb_rect.bottom() - 4.0)], Stroke::new(1.0_f32, Color32::from_rgb(56, 189, 248)));
+                        mb_painter.line_segment([egui::pos2(x_mh, mb_rect.top() + 4.0), egui::pos2(x_mh, mb_rect.bottom() - 4.0)], Stroke::new(1.0_f32, Color32::from_rgb(245, 158, 11)));
+
+                        let puck_x = mb_rect.left() + 4.0 + norm_lm * (mb_rect.width() - 60.0);
+                        let puck_y = mb_rect.bottom() - 8.0 - norm_mh * (mb_rect.height() - 16.0);
+                        mb_painter.circle_filled(egui::pos2(puck_x, puck_y), 4.0, Color32::from_rgb(245, 158, 11));
+                        mb_painter.circle_stroke(egui::pos2(puck_x, puck_y), 6.5, Stroke::new(1.0_f32, Color32::WHITE));
+
+                        mb_painter.text(
+                            egui::pos2(mb_rect.right() - 4.0, mb_rect.top() + 4.0),
+                            egui::Align2::RIGHT_TOP,
+                            format!("MB COMP\n{:.0}Hz\n{:.1}kHz", low_mid_hz, mid_high_hz * 0.001),
+                            FontId::proportional(7.5),
+                            Color32::from_rgb(245, 158, 11),
+                        );
+
+                        if mb_resp.hovered() {
+                            let _ = mb_resp.on_hover_text(format!(
+                                "3-Band Multiband Dynamics Compressor HUD\nLow-Mid: {:.0} Hz | Mid-High: {:.0} Hz\n[Drag: Low-Mid Hz (X) / Mid-High Hz (Y) Puck]",
+                                low_mid_hz, mid_high_hz
                             ));
                         }
                     } else {

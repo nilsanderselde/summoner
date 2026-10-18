@@ -1244,6 +1244,18 @@ impl CommandPalette {
                 action_id: "open_polyphase_oversampler_hud".into(),
                 shortcut_hint: None,
             },
+            CommandAction {
+                label: "Open 16-Voice SIMD 4-Wide Polyphonic Hermite Wavetable Oscillator HUD".into(),
+                category: "Synthesizers & Samplers".into(),
+                action_id: "open_simd_poly_wavetable_hud".into(),
+                shortcut_hint: None,
+            },
+            CommandAction {
+                label: "Open 3-Band SVF Crossover Multiband Dynamics Compressor HUD".into(),
+                category: "Mastering & Dynamics".into(),
+                action_id: "open_multiband_compressor_hud".into(),
+                shortcut_hint: None,
+            },
         ];
 
         // Add entries for all KNOWN_NODE_TYPES

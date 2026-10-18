@@ -332,6 +332,8 @@ pub mod tier188_turn125_tests;
 #[cfg(feature = "gui")]
 pub mod tier189_turn126_tests;
 #[cfg(feature = "gui")]
+pub mod tier190_turn127_tests;
+#[cfg(feature = "gui")]
 pub mod touch_gestures;
 #[cfg(feature = "gui")]
 pub mod transport_bar;
@@ -735,6 +737,16 @@ pub use views::waveguide_mesh_view::WaveguideMeshView;
 pub use views::wfs_array_spatializer_view::WfsArraySpatializerView;
 #[cfg(feature = "gui")]
 pub use views::woodwind_jet_view::WoodwindJetView;
+#[cfg(feature = "gui")]
+pub use views::multiband_compressor_view::{
+    MultibandCompBandSlot, MultibandCompressorPreset, MultibandCompressorView,
+    MULTIBAND_COMP_PUCK_HIT_RADIUS,
+};
+#[cfg(feature = "gui")]
+pub use views::simd_poly_wavetable_view::{
+    SimdPolyWavetablePreset, SimdPolyWavetableView, WavetableFrameShape, MAX_SIMD_POLY_VOICES,
+    SIMD_POLY_WAVETABLE_PUCK_HIT_RADIUS, WAVETABLE_FRAME_SIZE,
+};
 
 #[cfg(feature = "gui")]
 pub fn launch(

@@ -1,6 +1,6 @@
 # Summoner DAW — Product Readiness & Shippability Tracker
 > **Current Shippability Score:** 10.0 / 10  
-> **Status:** Production Ready Release Candidate (Turn #126 / Sprint Turn #52)  
+> **Status:** Production Ready Release Candidate (Turn #127 / Sprint Turn #53)  
 > **Authoritative Root:** `PROGRESS.md`  
 > **License:** AGPLv3
 
@@ -3581,3 +3581,23 @@ Product Management has conducted a comprehensive readiness audit:
   - Registered `open_aether_synth_hud` and `open_polyphase_oversampler_hud` in `CommandPalette` and `SummonerApp`.
 - [x] Verification & Test Suite (`crates/summoner_gui/src/tier189_turn126_tests.rs`):
   - Pure & GUI tests verifying initialization, preset switching, `AetherMacroView` exponential Tone & linear Space formulas, 12-tap half-band FIR unity DC gain & Nyquist attenuation, $\ge 44\times 44\text{pt}$ touch puck hit testing, deterministic ASCII snapshots, headless egui rendering, modal lifecycles, lock-free `ParamBus` synchronization, and command palette registration.
+
+### Turn #127 (Sprint Turn #53) — 16-Voice SIMD 4-Wide Polyphonic Hermite Wavetable Oscillator HUD and 3-Band SVF Crossover Multiband Dynamics Compressor HUD Convergence (Milestones 33 & 34)
+- [x] 16-Voice SIMD 4-Wide Polyphonic Hermite Wavetable Oscillator HUD (`crates/summoner_gui/src/views/simd_poly_wavetable_view.rs`):
+  - Integrated `SimdPolyWavetableView` directly reflecting `crates/summoner_dsp/src/oscillators.rs` (`SimdPolyWavetableOscillator`, `SimdPolyVoice`, `OscWavetable`, `WAVETABLE_SIZE = 2048`, `DEFAULT_MAX_VOICES = 16`):
+    * 4 Curated SIMD Wavetable Presets: `AnalogSawSquarePad` (8v SIMD, $35\%$ Morph, $220.0\text{ Hz}$, Sawtooth $\to$ Square), `CrystallineChebyshevChoir` (12v SIMD, $62\%$ Morph, $440.0\text{ Hz}$, Sine $\to$ Chebyshev 5th-order folded), `FormantSyncHyperLead` (16v Full $4\times 4$ SIMD, $78\%$ Morph, $880.0\text{ Hz}$, Sawtooth $\to$ Formant Sync), and `SubHarmonic16VoiceStack` (16v SIMD, $20\%$ Morph, $110.0\text{ Hz}$, Triangle $\to$ Sine).
+    * Interactive 2D Cross-Table Morph & Fundamental Pitch Puck: Morph Position $\in [0.0..=1.0]$ vs Logarithmic Fundamental Frequency $f \in [20.0..=8000.0]\text{ Hz}$ with $\ge 44\times 44\text{pt}$ touch target (`SIMD_POLY_WAVETABLE_PUCK_HIT_RADIUS = 22.0`).
+    * Real-time 4-point Hermite cubic interpolation + Nyquist anti-aliasing linear blend (`compute_hermite_aa_blend`, `evaluate_hermite_morphed_sample`), SIMD 4-wide batch breakdown (`simd_batch_breakdown`), and deterministic ASCII snapshot rendering (`[PASS: >=44pt Hit Target]`).
+- [x] 3-Band SVF Crossover Multiband Dynamics Compressor HUD (`crates/summoner_gui/src/views/multiband_compressor_view.rs`):
+  - Integrated `MultibandCompressorView` directly reflecting `crates/summoner_dsp/src/multiband_compressor.rs` (`MultibandCompressorNode`, `FilterSVF` crossovers, `CompressorNode`):
+    * 4 Curated Multiband Presets: `StudioThreeBandGlue` ($200.0\text{ Hz} / 3000.0\text{ Hz}$ SVF, Low $-18.0\text{ dB} / 3.0:1$, Mid $-16.0\text{ dB} / 2.5:1$, High $-20.0\text{ dB} / 4.0:1$), `TightSubCrispAir` ($120.0\text{ Hz} / 4800.0\text{ Hz}$ SVF, Low $-22.0\text{ dB} / 4.5:1$, Mid $-15.0\text{ dB} / 2.0:1$, High $-24.0\text{ dB} / 5.0:1$), `BroadcastMidrangeControl` ($280.0\text{ Hz} / 2400.0\text{ Hz}$ SVF, Low $-16.0\text{ dB} / 2.5:1$, Mid $-22.0\text{ dB} / 4.0:1$, High $-18.0\text{ dB} / 3.5:1$), and `AggressiveElectronicPunch` ($150.0\text{ Hz} / 3600.0\text{ Hz}$ SVF, Low $-26.0\text{ dB} / 6.0:1$, Mid $-24.0\text{ dB} / 4.5:1$, High $-28.0\text{ dB} / 8.0:1$).
+    * Interactive 2D SVF Crossover Frequency Puck: Logarithmic Low-Mid Crossover $f_{\text{LM}} \in [60.0..=800.0]\text{ Hz}$ vs Logarithmic Mid-High Crossover $f_{\text{MH}} \in [1000.0..=10000.0]\text{ Hz}$ with $\ge 44\times 44\text{pt}$ touch target (`MULTIBAND_COMP_PUCK_HIT_RADIUS = 22.0`).
+    * Real-time 3-band gain reduction evaluation (`compute_band_gain_reduction_db`, `evaluate_three_band_gain_reduction_db`), composite 3-band response contour (`evaluate_composite_response_db_at_freq`), and deterministic ASCII snapshot rendering (`[PASS: >=44pt Hit Target]`).
+- [x] View Re-Exports, Modal Windows, Rack & Inspector Integrations, and Command Palette Routing (`views/mod.rs`, `lib.rs`, `award_winning_gui_view.rs`, `modern_inspector.rs`, `modern_device_rack.rs`, `command_palette.rs`, `app.rs`):
+  - Exported `SimdPolyWavetableView`, `SimdPolyWavetablePreset`, `WavetableFrameShape`, `MAX_SIMD_POLY_VOICES`, `SIMD_POLY_WAVETABLE_PUCK_HIT_RADIUS`, `WAVETABLE_FRAME_SIZE`, `MultibandCompressorView`, `MultibandCompressorPreset`, `MultibandCompBandSlot`, and `MULTIBAND_COMP_PUCK_HIT_RADIUS`.
+  - Added modal windows (`show_simd_poly_wavetable_modal_window`, `show_multiband_compressor_modal_window`), lifecycle methods, and lock-free `ParamBus` slot dispatch (`sync_simd_poly_wavetable_hud_state`, `sync_multiband_compressor_hud_state`).
+  - Added action buttons (`[🌊 Open SIMD Poly Wavetable HUD]`, `[🎚 Open 3-Band Multiband Comp HUD]`), collapsed rack header triggers (`[🌊 PolyWT HUD]`, `[🎚 MBComp HUD]`), and interactive 2D mini-visualizers in `ModernDeviceRackView`.
+  - Registered `open_simd_poly_wavetable_hud` and `open_multiband_compressor_hud` in `CommandPalette` and `SummonerApp`.
+- [x] Verification & Test Suite (`crates/summoner_gui/src/tier190_turn127_tests.rs`):
+  - Pure & GUI tests verifying initialization, preset switching, 4-point Hermite cubic interpolation & Nyquist anti-aliasing blend, SIMD 4-wide batch breakdown, 3-band SVF crossover gain reduction & composite response math, $\ge 44\times 44\text{pt}$ touch puck hit testing, deterministic ASCII snapshots, headless egui rendering, modal lifecycles, lock-free `ParamBus` synchronization, and command palette registration.
+

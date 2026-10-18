@@ -952,6 +952,10 @@ pub struct AwardWinningGuiView {
     pub aether_synth_view: crate::views::aether_synth_view::AetherSynthView,
     pub show_polyphase_oversampler_modal: bool,
     pub polyphase_oversampler_view: crate::views::polyphase_oversampler_view::PolyphaseOversamplerView,
+    pub show_simd_poly_wavetable_modal: bool,
+    pub simd_poly_wavetable_view: crate::views::simd_poly_wavetable_view::SimdPolyWavetableView,
+    pub show_multiband_compressor_modal: bool,
+    pub multiband_compressor_view: crate::views::multiband_compressor_view::MultibandCompressorView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1520,6 +1524,10 @@ impl AwardWinningGuiView {
             aether_synth_view: crate::views::aether_synth_view::AetherSynthView::new(),
             show_polyphase_oversampler_modal: false,
             polyphase_oversampler_view: crate::views::polyphase_oversampler_view::PolyphaseOversamplerView::new(),
+            show_simd_poly_wavetable_modal: false,
+            simd_poly_wavetable_view: crate::views::simd_poly_wavetable_view::SimdPolyWavetableView::new(),
+            show_multiband_compressor_modal: false,
+            multiband_compressor_view: crate::views::multiband_compressor_view::MultibandCompressorView::new(),
         };
         view.reset_modular_nodes();
         view.device_rack_state.device_name = "Synth 1".to_string();
@@ -2939,6 +2947,16 @@ impl AwardWinningGuiView {
             self.device_rack_state.requested_open_polyphase_oversampler_hud = false;
             self.open_polyphase_oversampler_hud();
         }
+        if self.inspector_state.requested_open_simd_poly_wavetable_hud || self.device_rack_state.requested_open_simd_poly_wavetable_hud {
+            self.inspector_state.requested_open_simd_poly_wavetable_hud = false;
+            self.device_rack_state.requested_open_simd_poly_wavetable_hud = false;
+            self.open_simd_poly_wavetable_hud();
+        }
+        if self.inspector_state.requested_open_multiband_compressor_hud || self.device_rack_state.requested_open_multiband_compressor_hud {
+            self.inspector_state.requested_open_multiband_compressor_hud = false;
+            self.device_rack_state.requested_open_multiband_compressor_hud = false;
+            self.open_multiband_compressor_hud();
+        }
 
         // Global Modal Windows: Live Parameter Automation Editor, Modular DSP Catalog, Physical Modeling, Ambisonic & Neural HUDs, Stems Exporter
         self.show_modular_automation_editor_window(ui);
@@ -3098,6 +3116,8 @@ impl AwardWinningGuiView {
         self.show_sfz_sampler_modal_window(ui);
         self.show_aether_synth_modal_window(ui);
         self.show_polyphase_oversampler_modal_window(ui);
+        self.show_simd_poly_wavetable_modal_window(ui);
+        self.show_multiband_compressor_modal_window(ui);
     }
 
     #[cfg(feature = "gui")]
@@ -23523,6 +23543,180 @@ impl AwardWinningGuiView {
             if bus.get(pid_stp).is_some() { bus.set(pid_stp, stop_db); }
             if bus.get(pid_cut).is_some() { bus.set(pid_cut, cut_frac); }
             if bus.get(pid_wet).is_some() { bus.set(pid_wet, wet); }
+        }
+    }
+
+    pub fn open_simd_poly_wavetable_hud(&mut self) {
+        self.show_simd_poly_wavetable_modal = true;
+    }
+
+    pub fn close_simd_poly_wavetable_hud(&mut self) {
+        self.show_simd_poly_wavetable_modal = false;
+    }
+
+    pub fn is_simd_poly_wavetable_hud_open(&self) -> bool {
+        self.show_simd_poly_wavetable_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_simd_poly_wavetable_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_simd_poly_wavetable_modal {
+            return;
+        }
+
+        let mut is_open = self.show_simd_poly_wavetable_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🌊 SIMD 4-Wide Polyphonic Wavetable Oscillator HUD")
+            .id(egui::Id::new("simd_poly_wavetable_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(640.0, 500.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("SimdPolyWavetableOscillator + 4-Pt Hermite AA (2048-pt / 16 Voices) (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.simd_poly_wavetable_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_simd_poly_wavetable_modal = is_open;
+        self.sync_simd_poly_wavetable_hud_state();
+    }
+
+    pub fn sync_simd_poly_wavetable_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let morph = self.simd_poly_wavetable_view.morph;
+        let freq = self.simd_poly_wavetable_view.fundamental_freq_hz;
+        let voices = self.simd_poly_wavetable_view.active_voices as f32;
+        let atk = self.simd_poly_wavetable_view.attack_rate;
+
+        self.device_rack_state.node_param_values.insert("poly_wavetable_morph".to_string(), morph);
+        self.device_rack_state.node_param_values.insert("poly_wavetable_freq_hz".to_string(), freq);
+        self.device_rack_state.node_param_values.insert("poly_wavetable_voices".to_string(), voices);
+        self.device_rack_state.node_param_values.insert("poly_wavetable_attack".to_string(), atk);
+
+        self.inspector_state.node_param_values.insert("poly_wavetable_morph".to_string(), morph);
+        self.inspector_state.node_param_values.insert("poly_wavetable_freq_hz".to_string(), freq);
+        self.inspector_state.node_param_values.insert("poly_wavetable_voices".to_string(), voices);
+        self.inspector_state.node_param_values.insert("poly_wavetable_attack".to_string(), atk);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_m = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_f = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_v = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_a = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_m).is_some() { bus.set(pid_m, morph); }
+            if bus.get(pid_f).is_some() { bus.set(pid_f, freq); }
+            if bus.get(pid_v).is_some() { bus.set(pid_v, voices); }
+            if bus.get(pid_a).is_some() { bus.set(pid_a, atk); }
+        }
+    }
+
+    pub fn open_multiband_compressor_hud(&mut self) {
+        self.show_multiband_compressor_modal = true;
+    }
+
+    pub fn close_multiband_compressor_hud(&mut self) {
+        self.show_multiband_compressor_modal = false;
+    }
+
+    pub fn is_multiband_compressor_hud_open(&self) -> bool {
+        self.show_multiband_compressor_modal
+    }
+
+    #[cfg(feature = "gui")]
+    pub fn show_multiband_compressor_modal_window(&mut self, ui: &mut egui::Ui) {
+        if !self.show_multiband_compressor_modal {
+            return;
+        }
+
+        let mut is_open = self.show_multiband_compressor_modal;
+        let mut close_modal = false;
+
+        egui::Window::new("🎚 3-Band SVF Crossover Multiband Compressor HUD")
+            .id(egui::Id::new("multiband_compressor_hud_modal"))
+            .open(&mut is_open)
+            .collapsible(false)
+            .resizable(true)
+            .default_size(egui::vec2(640.0, 500.0))
+            .show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("MultibandCompressorNode + FilterSVF Low/Mid/High Crossovers (Milestones 33 & 34)")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("✕ Close").clicked() {
+                            close_modal = true;
+                        }
+                    });
+                });
+                ui.separator();
+                self.multiband_compressor_view.show(ui);
+            });
+
+        if close_modal {
+            is_open = false;
+        }
+        self.show_multiband_compressor_modal = is_open;
+        self.sync_multiband_compressor_hud_state();
+    }
+
+    pub fn sync_multiband_compressor_hud_state(&mut self) {
+        let cur_track_id = if self.inspecting_master {
+            9
+        } else {
+            self.tracks.get(self.selected_track_idx).map(|t| t.id).unwrap_or(1)
+        };
+        let cur_slot = self.device_rack_state.selected_chain_idx;
+
+        let lm_hz = self.multiband_compressor_view.low_mid_freq_hz;
+        let mh_hz = self.multiband_compressor_view.mid_high_freq_hz;
+        let low_th = self.multiband_compressor_view.low_band.threshold_db;
+        let high_th = self.multiband_compressor_view.high_band.threshold_db;
+
+        self.device_rack_state.node_param_values.insert("mb_comp_low_mid_hz".to_string(), lm_hz);
+        self.device_rack_state.node_param_values.insert("mb_comp_mid_high_hz".to_string(), mh_hz);
+        self.device_rack_state.node_param_values.insert("mb_comp_low_thresh_db".to_string(), low_th);
+        self.device_rack_state.node_param_values.insert("mb_comp_high_thresh_db".to_string(), high_th);
+
+        self.inspector_state.node_param_values.insert("mb_comp_low_mid_hz".to_string(), lm_hz);
+        self.inspector_state.node_param_values.insert("mb_comp_mid_high_hz".to_string(), mh_hz);
+        self.inspector_state.node_param_values.insert("mb_comp_low_thresh_db".to_string(), low_th);
+        self.inspector_state.node_param_values.insert("mb_comp_high_thresh_db".to_string(), high_th);
+
+        if let Some(ref bus) = self.live_param_bus {
+            let pid_lm = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
+            let pid_mh = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+            let pid_lt = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 2);
+            let pid_ht = summoner_core::param_bus::ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 3);
+
+            if bus.get(pid_lm).is_some() { bus.set(pid_lm, lm_hz); }
+            if bus.get(pid_mh).is_some() { bus.set(pid_mh, mh_hz); }
+            if bus.get(pid_lt).is_some() { bus.set(pid_lt, low_th); }
+            if bus.get(pid_ht).is_some() { bus.set(pid_ht, high_th); }
         }
     }
 
