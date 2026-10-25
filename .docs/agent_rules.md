@@ -1,0 +1,1 @@
+Read AI_RULES.md before taking any action.
