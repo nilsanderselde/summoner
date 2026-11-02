@@ -136,7 +136,7 @@ pub mod pure_tests {
         assert_eq!(view.simd_batch_breakdown(), (4, 0));
 
         // Hermite vs Nyquist anti-aliasing blend: (1.0 - dt * 2048 * 1.5).clamp(0.0, 1.0)
-        view.sample_rate = 48000;
+        view.sample_rate = 192000;
         view.fundamental_freq_hz = 20.0; // low pitch -> high Hermite cubic weight
         assert!(view.compute_hermite_aa_blend() > 0.0);
         view.fundamental_freq_hz = 16000.0; // high pitch -> Nyquist linear fallback (0.0 cubic weight)
