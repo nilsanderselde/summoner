@@ -19,6 +19,8 @@ use summoner_dsp::{
     CompressorNode, EffectChorus, EffectFlanger, EffectPhaser, FilterBiquad, FrequencyShifter,
     GranularSynthNode, LimiterNode, LufsMeterNode, RingModulator,
 };
+use summoner_core::node::NodeEvent;
+use summoner_core::track::ScheduledEvent;
 use summoner_project::schema::{NodeConfig, ProjectConfig};
 
 use summoner_dsp::{
@@ -424,6 +426,50 @@ pub fn graph_from_project(project: &ProjectConfig, max_block_size: usize) -> Nod
 
 const MAX_RUNNER_BLOCK_SIZE: usize = 8192;
 
+/// Convert a track's sequence and clips into frame-stamped note events.
+/// Tracks with any notes start gated closed (NoteOff at frame 0).
+fn build_schedule(
+    tc: &summoner_project::schema::TrackConfig,
+    sample_rate: u32,
+    bpm: f64,
+) -> Vec<ScheduledEvent> {
+    let frames_per_beat = sample_rate as f64 * 60.0 / bpm.max(1.0);
+    let mut events = Vec::new();
+    for seq in tc.sequence.iter().chain(tc.clips.iter()) {
+        for (i, step) in seq.steps.iter().enumerate() {
+            if !step.active || step.muted || step.probability <= 0.0 {
+                continue;
+            }
+            let note = (step.note + seq.pitch_offset + step.pitch_offset as f64)
+                .round()
+                .clamp(0.0, 127.0) as u8;
+            let beat = seq.start_beat + i as f64 * seq.step_division;
+            let on = (beat * frames_per_beat).round().max(0.0) as u64;
+            let off = ((beat + step.gate as f64 * seq.step_division) * frames_per_beat)
+                .round()
+                .max(0.0) as u64;
+            events.push(ScheduledEvent {
+                frame: on,
+                event: NodeEvent::NoteOn {
+                    note,
+                    velocity: (step.velocity * seq.gain as f32).clamp(0.0, 1.0),
+                },
+            });
+            events.push(ScheduledEvent {
+                frame: off.max(on + 1),
+                event: NodeEvent::NoteOff { note },
+            });
+        }
+    }
+    if !events.is_empty() {
+        events.push(ScheduledEvent {
+            frame: 0,
+            event: NodeEvent::NoteOff { note: 0 },
+        });
+    }
+    events
+}
+
 pub struct GraphRunner {
     pub tracks: Vec<Track>,
     scratch_l: Box<[f32; MAX_RUNNER_BLOCK_SIZE]>,
@@ -448,6 +494,8 @@ impl GraphRunner {
                     eprintln!("Warning: Unknown node kind '{}'", nc.kind);
                 }
             }
+            let events = build_schedule(tc, project.transport.sample_rate, project.transport.bpm);
+            track.set_schedule(events);
             tracks.push(track);
         }
         Self {
@@ -510,6 +558,40 @@ impl GraphRunner {
 mod tests {
     use super::*;
     use summoner_project::create_default_project;
+
+    #[test]
+    fn test_runner_plays_clip_notes_only_when_scheduled() {
+        use summoner_project::schema::{SequenceConfig, TrackConfig, TrackerStepConfig};
+        let mut project = create_default_project("Clip Test");
+        let mut tc: TrackConfig = project.tracks[0].clone();
+        tc.nodes.clear();
+        tc.clips.clear();
+        tc.gain = 1.0;
+        tc.muted = false;
+        project.tracks.clear();
+        let mut params = std::collections::HashMap::new();
+        params.insert("freq".to_string(), 100.0);
+        tc.nodes.push(NodeConfig {
+            kind: "SineOscillatorNode".to_string(),
+            params,
+            plugin_state: None,
+        });
+        // One step on beat 1 (second beat) at 120 bpm / 44.1k => frame 22050.
+        tc.sequence = Some(SequenceConfig {
+            start_beat: 1.0,
+            steps: vec![TrackerStepConfig::default()],
+            ..Default::default()
+        });
+        project.tracks.push(tc);
+        let mut runner = GraphRunner::new(&project);
+        let (mut l, mut r) = (vec![0.0f32; 512], vec![0.0f32; 512]);
+        let mut ctx = summoner_core::node::ProcessContext::new(44100, 120.0, 0);
+        runner.process_block(512, &ctx, &mut [&mut l[..], &mut r[..]]);
+        assert!(l.iter().all(|s| *s == 0.0), "silent before the note");
+        ctx.frame_position = 22050;
+        runner.process_block(512, &ctx, &mut [&mut l[..], &mut r[..]]);
+        assert!(l.iter().any(|s| s.abs() > 0.1), "sounds during the note");
+    }
 
     #[test]
     fn test_graph_from_project_builds_valid_dag() {

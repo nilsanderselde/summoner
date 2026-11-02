@@ -242,6 +242,8 @@ impl SignalProcessor for OscPulse {
 pub struct OscSine {
     pub frequency: f32,
     pub phase: f32,
+    /// Gate/level; open (1.0) by default so a bare oscillator still sounds.
+    pub amplitude: f32,
 }
 
 impl OscSine {
@@ -249,6 +251,7 @@ impl OscSine {
         Self {
             frequency,
             phase: 0.0,
+            amplitude: 1.0,
         }
     }
 
@@ -272,6 +275,19 @@ impl SignalProcessor for OscSine {
         "OscSine"
     }
 
+    fn handle_event(&mut self, event: &summoner_core::node::NodeEvent, ctx: &ProcessContext) {
+        use summoner_core::node::NodeEvent;
+        match *event {
+            NodeEvent::NoteOn { note, velocity } => {
+                self.trigger(note, ctx);
+                self.amplitude = velocity;
+            }
+            NodeEvent::NoteOff { .. } => self.amplitude = 0.0,
+            NodeEvent::SetParam { id: 0, value } => self.frequency = value,
+            NodeEvent::SetParam { .. } => {}
+        }
+    }
+
     fn process_block(
         &mut self,
         inputs: &[&[Sample]],
@@ -290,7 +306,7 @@ impl SignalProcessor for OscSine {
                 0.0
             };
 
-            let val = self.process_sample(ctx.sample_rate, pm_offset);
+            let val = self.process_sample(ctx.sample_rate, pm_offset) * self.amplitude;
             for out_ch in outputs.iter_mut() {
                 if i < out_ch.len() {
                     out_ch[i] = val;

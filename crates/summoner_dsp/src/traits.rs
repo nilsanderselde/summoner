@@ -14,7 +14,7 @@
 //! Standard SignalProcessor trait for atomic DSP primitives.
 
 use summoner_core::audio::Sample;
-use summoner_core::node::{AudioNode, ProcessContext};
+use summoner_core::node::{AudioNode, NodeEvent, ProcessContext};
 
 /// Unified interface for zero-allocation atomic DSP primitives.
 pub trait SignalProcessor: Send {
@@ -29,6 +29,9 @@ pub trait SignalProcessor: Send {
         outputs: &mut [&mut [Sample]],
         ctx: &ProcessContext,
     );
+
+    /// Receive a control event before the next block. Default: ignore.
+    fn handle_event(&mut self, _event: &NodeEvent, _ctx: &ProcessContext) {}
 }
 
 /// Adapter converting any `SignalProcessor` into an `AudioNode`.
@@ -50,5 +53,9 @@ impl<T: SignalProcessor> AudioNode for ProcessorNodeAdapter<T> {
 
     fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
         self.processor.process_block(input, output, ctx);
+    }
+
+    fn handle_event(&mut self, event: &NodeEvent, ctx: &ProcessContext) {
+        self.processor.handle_event(event, ctx);
     }
 }

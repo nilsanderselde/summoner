@@ -13,10 +13,17 @@
 
 //! Universal N-channel track abstraction and node processing chain container.
 
-use crate::node::AudioNode;
+use crate::node::{AudioNode, NodeEvent};
 
 /// Track unique identifier type.
 pub type TrackId = u64;
+
+/// A control event scheduled at an absolute frame position.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ScheduledEvent {
+    pub frame: u64,
+    pub event: NodeEvent,
+}
 
 /// Track representation holding node graph chain, routing, and channel layout.
 pub struct Track {
@@ -30,6 +37,9 @@ pub struct Track {
     pub tuning_edo: Option<u32>,
     pub tuning_root_hz: Option<f32>,
     pub nodes: Vec<Box<dyn AudioNode>>,
+    schedule: Vec<ScheduledEvent>,
+    cursor: usize,
+    last_pos: u64,
     temp_buf_a: Vec<Vec<crate::audio::Sample>>,
     temp_buf_b: Vec<Vec<crate::audio::Sample>>,
 }
@@ -54,6 +64,9 @@ impl Track {
             tuning_edo: None,
             tuning_root_hz: None,
             nodes: Vec::new(),
+            schedule: Vec::new(),
+            cursor: 0,
+            last_pos: 0,
             temp_buf_a,
             temp_buf_b,
         }
@@ -63,12 +76,42 @@ impl Track {
         self.nodes.push(node);
     }
 
+    /// Replace the event schedule (sorted by frame; stable for equal frames).
+    pub fn set_schedule(&mut self, mut events: Vec<ScheduledEvent>) {
+        events.sort_by_key(|e| e.frame);
+        self.schedule = events;
+        self.cursor = 0;
+        self.last_pos = 0;
+    }
+
+    /// Deliver all events due before the end of this block to every node.
+    fn dispatch_events(&mut self, block_size: usize, ctx: &crate::node::ProcessContext) {
+        if self.schedule.is_empty() || !ctx.is_playing {
+            return;
+        }
+        if ctx.frame_position < self.last_pos {
+            self.cursor = self.schedule.partition_point(|e| e.frame < ctx.frame_position);
+        }
+        self.last_pos = ctx.frame_position;
+        let end = ctx.frame_position + block_size as u64;
+        while let Some(se) = self.schedule.get(self.cursor) {
+            if se.frame >= end {
+                break;
+            }
+            for node in self.nodes.iter_mut() {
+                node.handle_event(&se.event, ctx);
+            }
+            self.cursor += 1;
+        }
+    }
+
     pub fn process(
         &mut self,
         block_size: usize,
         ctx: &crate::node::ProcessContext,
         out_buffers: &mut [&mut [crate::audio::Sample]],
     ) {
+        self.dispatch_events(block_size, ctx);
         if self.muted || self.nodes.is_empty() {
             for out in out_buffers.iter_mut() {
                 out[..block_size].fill(0.0);
