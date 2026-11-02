@@ -381,10 +381,7 @@ impl NodeFactory {
                 }
                 Some(Box::new(ProcessorNodeAdapter::new(sitar)))
             }
-            _ => {
-                eprintln!("Warning: Unknown node kind '{}'", config.kind);
-                Some(Box::new(GainNode::new(0.0)))
-            }
+            _ => None,
         }
     }
 }
@@ -396,6 +393,9 @@ pub fn graph_from_project(project: &ProjectConfig, max_block_size: usize) -> Nod
         for nc in &track.nodes {
             if let Some(node) = NodeFactory::create_node(nc) {
                 graph.add_node(node);
+            } else {
+                eprintln!("Warning: Unknown node kind '{}'; using passthrough", nc.kind);
+                graph.add_node(Box::new(summoner_core::node::PassthroughNode));
             }
         }
 
