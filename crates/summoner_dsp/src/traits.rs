@@ -59,3 +59,90 @@ impl<T: SignalProcessor> AudioNode for ProcessorNodeAdapter<T> {
         self.processor.handle_event(event, ctx);
     }
 }
+
+/// A processor whose pitch can be set directly in Hz.
+pub trait Pitched: SignalProcessor {
+    fn set_frequency(&mut self, hz: f32);
+}
+
+macro_rules! impl_pitched {
+    ($($t:ty),*) => {$(
+        impl Pitched for $t {
+            fn set_frequency(&mut self, hz: f32) {
+                self.frequency = hz;
+            }
+        }
+    )*};
+}
+impl_pitched!(
+    crate::oscillators::OscSaw,
+    crate::oscillators::OscPulse,
+    crate::oscillators::OscTriangle,
+    crate::oscillators::OscWavetable
+);
+
+/// Adapter making a pitched oscillator note-driven: `NoteOn` sets pitch and
+/// level, `NoteOff` closes the gate. Starts open so a bare oscillator sounds.
+#[derive(Debug)]
+pub struct VoiceNode<T: Pitched> {
+    pub processor: T,
+    pub amplitude: f32,
+}
+
+impl<T: Pitched> VoiceNode<T> {
+    pub fn new(processor: T) -> Self {
+        Self {
+            processor,
+            amplitude: 1.0,
+        }
+    }
+}
+
+impl<T: Pitched> AudioNode for VoiceNode<T> {
+    fn name(&self) -> &str {
+        self.processor.name()
+    }
+
+    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
+        self.processor.process_block(input, output, ctx);
+        if self.amplitude != 1.0 {
+            for ch in output.iter_mut() {
+                for s in ch.iter_mut() {
+                    *s *= self.amplitude;
+                }
+            }
+        }
+    }
+
+    fn handle_event(&mut self, event: &NodeEvent, ctx: &ProcessContext) {
+        match *event {
+            NodeEvent::NoteOn { note, velocity } => {
+                self.processor.set_frequency(ctx.note_to_hz(note as i32));
+                self.amplitude = velocity;
+            }
+            NodeEvent::NoteOff { .. } => self.amplitude = 0.0,
+            NodeEvent::SetParam { id: 0, value } => self.processor.set_frequency(value),
+            NodeEvent::SetParam { .. } => {}
+        }
+    }
+}
+
+#[cfg(test)]
+mod voice_tests {
+    use super::*;
+    use crate::oscillators::OscSaw;
+
+    #[test]
+    fn test_voice_node_gates_and_tunes() {
+        let ctx = ProcessContext::new(48000, 120.0, 0);
+        let mut v = VoiceNode::new(OscSaw::new(100.0));
+        v.handle_event(&NodeEvent::NoteOn { note: 69, velocity: 1.0 }, &ctx);
+        assert!((v.processor.frequency - 440.0).abs() < 1e-3);
+        let mut buf = vec![0.0f32; 256];
+        v.process(&[], &mut [&mut buf[..]], &ctx);
+        assert!(buf.iter().any(|s| s.abs() > 0.1));
+        v.handle_event(&NodeEvent::NoteOff { note: 69 }, &ctx);
+        v.process(&[], &mut [&mut buf[..]], &ctx);
+        assert!(buf.iter().all(|s| *s == 0.0));
+    }
+}

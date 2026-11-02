@@ -13,7 +13,7 @@ use summoner_dsp::filters::{FilterComb, FilterLadder, FilterSVF};
 use summoner_dsp::math::VCA;
 use summoner_dsp::modulators::EnvADSR;
 use summoner_dsp::oscillators::{NoiseGen, OscPulse, OscSaw, OscSine, OscTriangle, OscWavetable};
-use summoner_dsp::traits::ProcessorNodeAdapter;
+use summoner_dsp::traits::{ProcessorNodeAdapter, VoiceNode};
 use summoner_dsp::SamplerNode;
 use summoner_dsp::{
     CompressorNode, EffectChorus, EffectFlanger, EffectPhaser, FilterBiquad, FrequencyShifter,
@@ -34,10 +34,10 @@ impl NodeFactory {
     pub fn create_node(config: &NodeConfig) -> Option<Box<dyn AudioNode>> {
         let params = &config.params;
         match config.kind.as_str() {
-            "OscSaw" => Some(Box::new(ProcessorNodeAdapter::new(OscSaw::new(
+            "OscSaw" => Some(Box::new(VoiceNode::new(OscSaw::new(
                 *params.get("freq").unwrap_or(&440.0),
             )))),
-            "OscPulse" => Some(Box::new(ProcessorNodeAdapter::new(OscPulse::new(
+            "OscPulse" => Some(Box::new(VoiceNode::new(OscPulse::new(
                 *params.get("freq").unwrap_or(&440.0),
                 *params.get("pw").unwrap_or(&0.5),
             )))),
@@ -49,7 +49,7 @@ impl NodeFactory {
                     .unwrap_or(440.0);
                 Some(Box::new(ProcessorNodeAdapter::new(OscSine::new(freq))))
             }
-            "OscTriangle" => Some(Box::new(ProcessorNodeAdapter::new(OscTriangle::new(
+            "OscTriangle" => Some(Box::new(VoiceNode::new(OscTriangle::new(
                 *params.get("freq").unwrap_or(&440.0),
             )))),
             "OscWavetable" | "WavetableOscillator" => {
@@ -61,7 +61,7 @@ impl NodeFactory {
                 let morph = *params.get("morph").unwrap_or(&0.0);
                 let osc = OscWavetable::new(freq, OscWavetable::default_saw())
                     .with_table2(OscWavetable::default_square(), morph);
-                Some(Box::new(ProcessorNodeAdapter::new(osc)))
+                Some(Box::new(VoiceNode::new(osc)))
             }
             "NoiseGen" => Some(Box::new(ProcessorNodeAdapter::new(NoiseGen::new(
                 summoner_dsp::oscillators::NoiseType::White,
