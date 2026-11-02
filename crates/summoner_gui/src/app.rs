@@ -883,11 +883,17 @@ impl eframe::App for SummonerApp {
         }
 
         // Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y Undo and Redo
-        if is_ctrl && ctx.input(|i| i.key_pressed(egui::Key::Z)) {
-            let path = self
-                .project_path
-                .clone()
-                .unwrap_or_else(|| std::path::PathBuf::from("."));
+        if is_ctrl
+            && self.project_path.is_none()
+            && ctx.input(|i| i.key_pressed(egui::Key::Z) || i.key_pressed(egui::Key::Y))
+        {
+            self.status_message = Some("Undo/Redo: no project open".to_string());
+        }
+        if is_ctrl
+            && self.project_path.is_some()
+            && ctx.input(|i| i.key_pressed(egui::Key::Z))
+        {
+            let path = self.project_path.clone().unwrap_or_default();
             let dir = if path.is_dir() {
                 path
             } else {
@@ -915,11 +921,11 @@ impl eframe::App for SummonerApp {
                 self.status_message = Some("Git repository operation unavailable".to_string());
             }
         }
-        if is_ctrl && ctx.input(|i| i.key_pressed(egui::Key::Y)) {
-            let path = self
-                .project_path
-                .clone()
-                .unwrap_or_else(|| std::path::PathBuf::from("."));
+        if is_ctrl
+            && self.project_path.is_some()
+            && ctx.input(|i| i.key_pressed(egui::Key::Y))
+        {
+            let path = self.project_path.clone().unwrap_or_default();
             let dir = if path.is_dir() {
                 path
             } else {
