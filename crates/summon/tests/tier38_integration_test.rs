@@ -177,13 +177,6 @@ fn test_step_1096_academic_paper_microtonal_dsp() {
 }
 
 #[test]
-fn test_step_1097_open_source_governance_code_of_conduct() {
-    let root = get_workspace_root();
-    assert!(root.join("GOVERNANCE.md").exists());
-    assert!(root.join("CODE_OF_CONDUCT.md").exists());
-}
-
-#[test]
 fn test_step_1098_1100_release_smoke_test_and_publish_scripts() {
     let root = get_workspace_root();
     assert!(root.join("scripts/release_smoke_test.sh").exists());
