@@ -76,6 +76,17 @@ impl ProcessContext {
     }
 }
 
+/// Allocation-free control event delivered to a node by the graph runner.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum NodeEvent {
+    /// Start a note (MIDI note number, velocity 0.0..=1.0).
+    NoteOn { note: u8, velocity: f32 },
+    /// Release a note.
+    NoteOff { note: u8 },
+    /// Set a node parameter by numeric id.
+    SetParam { id: u32, value: f32 },
+}
+
 /// Fundamental signal processing node interface for audio rendering graph.
 pub trait AudioNode: Send {
     /// Return human-readable identifier for this node type.
@@ -84,6 +95,10 @@ pub trait AudioNode: Send {
     /// Process an input sample buffer slice into output sample buffer slice.
     /// MUST NOT perform heap allocations (`malloc`/`free`) or block on locks.
     fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext);
+
+    /// Receive a control event before the next `process` call. Default: ignore.
+    /// MUST NOT allocate or block.
+    fn handle_event(&mut self, _event: &NodeEvent, _ctx: &ProcessContext) {}
 }
 
 /// A transparent audio node that copies inputs directly to outputs.
@@ -147,6 +162,8 @@ impl AudioNode for GainNode {
 pub struct SineOscillatorNode {
     pub frequency: f32,
     pub phase: f32,
+    /// Output gate and level; defaults to open so a bare oscillator still sounds.
+    pub amplitude: f32,
 }
 
 impl SineOscillatorNode {
@@ -154,6 +171,7 @@ impl SineOscillatorNode {
         Self {
             frequency,
             phase: 0.0,
+            amplitude: 1.0,
         }
     }
 
@@ -165,6 +183,18 @@ impl SineOscillatorNode {
 impl AudioNode for SineOscillatorNode {
     fn name(&self) -> &str {
         "SineOscillatorNode"
+    }
+
+    fn handle_event(&mut self, event: &NodeEvent, ctx: &ProcessContext) {
+        match *event {
+            NodeEvent::NoteOn { note, velocity } => {
+                self.trigger(note, ctx);
+                self.amplitude = velocity;
+            }
+            NodeEvent::NoteOff { .. } => self.amplitude = 0.0,
+            NodeEvent::SetParam { id: 0, value } => self.frequency = value,
+            NodeEvent::SetParam { .. } => {}
+        }
     }
 
     fn process(
@@ -184,7 +214,7 @@ impl AudioNode for SineOscillatorNode {
 
         let num_samples = output[0].len();
         for i in 0..num_samples {
-            let val = self.phase.sin();
+            let val = self.phase.sin() * self.amplitude;
             self.phase = (self.phase + phase_step) % TAU;
             for ch_slice in output.iter_mut().take(output_channels) {
                 if i < ch_slice.len() {
@@ -237,6 +267,29 @@ pub const KNOWN_NODE_TYPES: &[&str] = &[
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_sine_note_events_drive_pitch_and_gate() {
+        let ctx = ProcessContext::new(48000, 120.0, 0);
+        let mut osc = SineOscillatorNode::new(100.0);
+        osc.handle_event(&NodeEvent::NoteOn { note: 69, velocity: 0.5 }, &ctx);
+        assert!((osc.frequency - 440.0).abs() < 1e-3);
+        let mut buf = vec![0.0f32; 256];
+        osc.process(&[], &mut [&mut buf[..]], &ctx);
+        let peak = buf.iter().fold(0.0f32, |m, v| m.max(v.abs()));
+        assert!(peak > 0.4 && peak <= 0.5 + 1e-3);
+        osc.handle_event(&NodeEvent::NoteOff { note: 69 }, &ctx);
+        osc.process(&[], &mut [&mut buf[..]], &ctx);
+        assert!(buf.iter().all(|v| *v == 0.0));
+    }
+
+    #[test]
+    fn test_default_handle_event_is_noop() {
+        let ctx = ProcessContext::new(48000, 120.0, 0);
+        let mut g = GainNode::new(0.5);
+        g.handle_event(&NodeEvent::SetParam { id: 0, value: 1.0 }, &ctx);
+        assert_eq!(g.gain, 0.5);
+    }
 
     #[test]
     fn test_process_context_tuning() {
