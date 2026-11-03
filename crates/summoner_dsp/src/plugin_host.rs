@@ -251,14 +251,10 @@ impl AudioNode for PluginAudioNode {
 
         // Route plugin parameter automation via ProcessContext ParamBus (Step 509)
         if let Some(ref bus) = ctx.param_bus {
-            let updates: Vec<(u32, f32)> = self
-                .param_name_to_id
-                .values()
-                .filter_map(|&param_id| bus.get(ParamId(param_id)).map(|val| (param_id, val)))
-                .collect();
-
-            for (param_id, val) in updates {
-                self.set_parameter(param_id, val);
+            for (&param_id, param) in self.parameters.iter_mut() {
+                if let Some(val) = bus.get(ParamId(param_id)) {
+                    param.value = val.clamp(param.min_value, param.max_value);
+                }
             }
         }
 
@@ -384,5 +380,47 @@ mod tests {
 
         assert_eq!(restored_node.get_parameter(0), Some(1.5));
         assert_eq!(restored_node.get_parameter(1), Some(5000.0));
+    }
+
+    #[test]
+    fn test_plugin_audio_node_zero_alloc_with_param_bus() {
+        use std::sync::Arc;
+        use summoner_core::allocator::AllocGuard;
+        use summoner_core::param_bus::ParamBus;
+
+        let desc = PluginDescriptor {
+            name: "Vst3Filter".to_string(),
+            vendor: "Vendor".to_string(),
+            format: PluginFormat::Vst3,
+            path: PathBuf::from("plugins/filter.vst3"),
+            version: "2.0".to_string(),
+            category: "Filter".to_string(),
+            num_inputs: 2,
+            num_outputs: 2,
+        };
+        let mut plugin_node = PluginAudioNode::new(desc);
+        let bus = Arc::new(ParamBus::new());
+        bus.set(ParamId(0), 0.75);
+
+        let mut ctx = ProcessContext::new(44100, 120.0, 0);
+        ctx.param_bus = Some(bus);
+
+        let in_l = [1.0f32; 128];
+        let in_r = [1.0f32; 128];
+        let mut out_l = [0.0f32; 128];
+        let mut out_r = [0.0f32; 128];
+
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let _guard = AllocGuard::new();
+            plugin_node.process(
+                &[&in_l[..], &in_r[..]],
+                &mut [&mut out_l[..], &mut out_r[..]],
+                &ctx,
+            );
+        }));
+
+        assert!(result.is_ok(), "PluginAudioNode::process triggered heap allocation!");
+        assert_eq!(plugin_node.get_parameter(0), Some(0.75));
+        assert_eq!(out_l[0], 0.75);
     }
 }
