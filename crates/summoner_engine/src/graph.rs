@@ -553,38 +553,56 @@ fn build_schedule(
     bpm: f64,
 ) -> Vec<ScheduledEvent> {
     let frames_per_beat = sample_rate as f64 * 60.0 / bpm.max(1.0);
-    let mut events = Vec::new();
+    let mut events = vec![ScheduledEvent {
+        frame: 0,
+        event: NodeEvent::NoteOff { note: 0 },
+    }];
+    let mut has_notes = false;
     for seq in tc.sequence.iter().chain(tc.clips.iter()) {
         for (i, step) in seq.steps.iter().enumerate() {
             if !step.active || step.muted || step.probability <= 0.0 {
                 continue;
             }
-            let note = (step.note + seq.pitch_offset + step.pitch_offset as f64)
+            has_notes = true;
+            let note = (step.note
+                + seq.pitch_offset
+                + step.pitch_offset as f64
+                + tc.midi_transpose as f64)
                 .round()
                 .clamp(0.0, 127.0) as u8;
-            let beat = seq.start_beat + i as f64 * seq.step_division;
-            let on = (beat * frames_per_beat).round().max(0.0) as u64;
-            let off = ((beat + step.gate as f64 * seq.step_division) * frames_per_beat)
-                .round()
-                .max(0.0) as u64;
-            events.push(ScheduledEvent {
-                frame: on,
-                event: NodeEvent::NoteOn {
-                    note,
-                    velocity: (step.velocity * seq.gain as f32).clamp(0.0, 1.0),
-                },
-            });
-            events.push(ScheduledEvent {
-                frame: off.max(on + 1),
-                event: NodeEvent::NoteOff { note },
-            });
+            let swing_beats = if i % 2 == 1 {
+                (step.swing as f64).clamp(-0.5, 0.5) * seq.step_division
+            } else {
+                0.0
+            };
+            let micro_beats = (step.micro_shift as f64 / 100.0) * seq.step_division;
+            let base_beat = seq.start_beat + i as f64 * seq.step_division + swing_beats + micro_beats;
+            let ratchet_count = step.ratchet.max(1);
+            let sub_step_beats = seq.step_division / ratchet_count as f64;
+            let vel = (step.velocity * seq.gain as f32).clamp(0.0, 1.0);
+            for r in 0..ratchet_count {
+                let beat = base_beat + r as f64 * sub_step_beats;
+                let on = (beat * frames_per_beat).round().max(0.0) as u64;
+                let off = ((beat + (step.gate as f64).clamp(0.01, 1.0) * sub_step_beats)
+                    * frames_per_beat)
+                    .round()
+                    .max(0.0) as u64;
+                events.push(ScheduledEvent {
+                    frame: on,
+                    event: NodeEvent::NoteOn {
+                        note,
+                        velocity: vel,
+                    },
+                });
+                events.push(ScheduledEvent {
+                    frame: off.max(on + 1),
+                    event: NodeEvent::NoteOff { note },
+                });
+            }
         }
     }
-    if !events.is_empty() {
-        events.push(ScheduledEvent {
-            frame: 0,
-            event: NodeEvent::NoteOff { note: 0 },
-        });
+    if !has_notes {
+        events.clear();
     }
     for lane in automation_lanes.iter().filter(|l| l.track_id == tc.id) {
         let param_id = match lane.param_id.to_lowercase().as_str() {
@@ -630,6 +648,7 @@ fn parse_node_port(spec: &str) -> Option<(usize, usize)> {
 
 pub struct GraphRunner {
     pub tracks: Vec<Track>,
+    pub master_trim_db: f32,
     scratch_l: Box<[f32; MAX_RUNNER_BLOCK_SIZE]>,
     scratch_r: Box<[f32; MAX_RUNNER_BLOCK_SIZE]>,
 }
@@ -643,6 +662,9 @@ impl GraphRunner {
             track.pan = tc.pan;
             track.muted = tc.muted;
             track.soloed = tc.soloed;
+            track.phase_flip = tc.phase_flip;
+            track.input_gain_db = tc.input_gain_db;
+            track.output_gain_db = tc.output_gain_db;
             track.tuning_edo = tc.tuning_edo;
             track.tuning_root_hz = tc.tuning_root_hz;
 
@@ -698,6 +720,7 @@ impl GraphRunner {
         }
         Self {
             tracks,
+            master_trim_db: project.transport.master_trim_db,
             scratch_l: Box::new([0.0f32; MAX_RUNNER_BLOCK_SIZE]),
             scratch_r: Box::new([0.0f32; MAX_RUNNER_BLOCK_SIZE]),
         }
@@ -715,6 +738,7 @@ impl GraphRunner {
         }
 
         let any_soloed = self.tracks.iter().any(|t| t.soloed);
+        let master_trim = 10.0f32.powf(self.master_trim_db / 20.0);
 
         for track in &mut self.tracks {
             self.scratch_l[..block_size].fill(0.0);
@@ -744,13 +768,23 @@ impl GraphRunner {
                 continue;
             }
 
+            let strip_db = track.input_gain_db + track.output_gain_db;
+            let strip_gain = 10.0f32.powf(strip_db / 20.0)
+                * if track.phase_flip { -1.0 } else { 1.0 }
+                * master_trim;
+            let effective_gain = track.gain * strip_gain;
+
             let pan = track.pan.clamp(-1.0, 1.0);
             let num_out = out_buffers.len().min(2);
             if num_out == 2 {
-                let left_gain = track.gain * (1.0 - pan).min(1.0);
-                let right_gain = track.gain * (1.0 + pan).min(1.0);
+                let left_gain = effective_gain * (1.0 - pan).min(1.0);
+                let right_gain = effective_gain * (1.0 + pan).min(1.0);
                 let scratch_l = &self.scratch_l[..block_size];
-                let scratch_r = &self.scratch_r[..block_size];
+                let scratch_r = if track.channels <= 1 {
+                    &self.scratch_l[..block_size]
+                } else {
+                    &self.scratch_r[..block_size]
+                };
                 for i in 0..block_size {
                     out_buffers[0][i] += scratch_l[i] * left_gain;
                     out_buffers[1][i] += scratch_r[i] * right_gain;
@@ -758,7 +792,7 @@ impl GraphRunner {
             } else if num_out == 1 {
                 let scratch_l = &self.scratch_l[..block_size];
                 for i in 0..block_size {
-                    out_buffers[0][i] += scratch_l[i] * track.gain;
+                    out_buffers[0][i] += scratch_l[i] * effective_gain;
                 }
             }
         }
@@ -1001,5 +1035,53 @@ mod tests {
                 kind
             );
         }
+    }
+
+    #[test]
+    fn test_runner_ratchet_phase_flip_channel_strip_and_mono_pan() {
+        use summoner_project::schema::{SequenceConfig, TrackConfig, TrackerStepConfig};
+        let mut project = create_default_project("Ratchet & Channel Strip Test");
+        project.tracks.clear();
+        project.transport.master_trim_db = -6.0;
+
+        let mut tc = TrackConfig {
+            id: 1,
+            name: "Mono Panned Right".to_string(),
+            channels: 1,
+            gain: 1.0,
+            pan: 1.0, // Hard right
+            phase_flip: true,
+            output_gain_db: 6.0, // cancels master_trim_db (-6 dB)
+            sequence: Some(SequenceConfig {
+                start_beat: 0.0,
+                step_division: 1.0,
+                steps: vec![TrackerStepConfig {
+                    note: 69.0,
+                    velocity: 1.0,
+                    gate: 0.5,
+                    ratchet: 2,
+                    ..Default::default()
+                }],
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        tc.nodes.push(NodeConfig {
+            kind: "SineOscillatorNode".to_string(),
+            params: [("freq".to_string(), 440.0)].into_iter().collect(),
+            plugin_state: None,
+        });
+        project.tracks.push(tc);
+
+        let mut runner = GraphRunner::new(&project);
+        let (mut l, mut r) = (vec![0.0f32; 256], vec![0.0f32; 256]);
+        let ctx = summoner_core::node::ProcessContext::new(44100, 120.0, 0);
+        runner.process_block(256, &ctx, &mut [&mut l[..], &mut r[..]]);
+
+        // Mono track panned hard right (+1.0) should be silent on left and non-zero on right
+        assert!(l.iter().all(|&s| s == 0.0));
+        assert!(r.iter().any(|&s| s.abs() > 0.5));
+        // Phase flip inverted the initial positive sine half-cycle to negative
+        assert!(r[1] < 0.0);
     }
 }
