@@ -9,7 +9,7 @@
 use summoner_core::graph::{Edge, NodeGraph};
 use summoner_core::node::{AudioNode, GainNode};
 use summoner_core::track::Track;
-use summoner_dsp::filters::{FilterComb, FilterLadder, FilterSVF};
+use summoner_dsp::filters::{FilterComb, FilterLadder, FilterSVF, DcBlockFilter, LowCutFilter, HighCutFilter};
 use summoner_dsp::math::VCA;
 use summoner_dsp::modulators::EnvADSR;
 use summoner_dsp::oscillators::{NoiseGen, OscPulse, OscSaw, OscSine, OscTriangle, OscWavetable};
@@ -646,8 +646,15 @@ fn parse_node_port(spec: &str) -> Option<(usize, usize)> {
     }
 }
 
+pub struct TrackFilters {
+    pub dc_block: Option<[DcBlockFilter; 2]>,
+    pub low_cut: Option<[LowCutFilter; 2]>,
+    pub high_cut: Option<[HighCutFilter; 2]>,
+}
+
 pub struct GraphRunner {
     pub tracks: Vec<Track>,
+    pub track_filters: Vec<TrackFilters>,
     pub master_trim_db: f32,
     scratch_l: Box<[f32; MAX_RUNNER_BLOCK_SIZE]>,
     scratch_r: Box<[f32; MAX_RUNNER_BLOCK_SIZE]>,
@@ -718,8 +725,25 @@ impl GraphRunner {
             track.set_schedule(events);
             tracks.push(track);
         }
+        let mut track_filters = Vec::new();
+        for tc in &project.tracks {
+            let dc_block = if tc.dc_block {
+                Some([DcBlockFilter::new(), DcBlockFilter::new()])
+            } else {
+                None
+            };
+            let low_cut = tc.low_cut_hz.map(|hz| [LowCutFilter::new(hz), LowCutFilter::new(hz)]);
+            let high_cut = tc.high_cut_hz.map(|hz| [HighCutFilter::new(hz), HighCutFilter::new(hz)]);
+            track_filters.push(TrackFilters {
+                dc_block,
+                low_cut,
+                high_cut,
+            });
+        }
+
         Self {
             tracks,
+            track_filters,
             master_trim_db: project.transport.master_trim_db,
             scratch_l: Box::new([0.0f32; MAX_RUNNER_BLOCK_SIZE]),
             scratch_r: Box::new([0.0f32; MAX_RUNNER_BLOCK_SIZE]),
@@ -740,7 +764,7 @@ impl GraphRunner {
         let any_soloed = self.tracks.iter().any(|t| t.soloed);
         let master_trim = 10.0f32.powf(self.master_trim_db / 20.0);
 
-        for track in &mut self.tracks {
+        for (track_idx, track) in self.tracks.iter_mut().enumerate() {
             self.scratch_l[..block_size].fill(0.0);
             self.scratch_r[..block_size].fill(0.0);
 
@@ -763,6 +787,27 @@ impl GraphRunner {
                 &local_ctx,
                 &mut track_out_slices[..out_buffers.len().min(2)],
             );
+
+            if let Some(tf) = self.track_filters.get_mut(track_idx) {
+                if let Some(ref mut dcf) = tf.dc_block {
+                    for i in 0..block_size {
+                        self.scratch_l[i] = dcf[0].process_sample(self.scratch_l[i]);
+                        self.scratch_r[i] = dcf[1].process_sample(self.scratch_r[i]);
+                    }
+                }
+                if let Some(ref mut lcf) = tf.low_cut {
+                    for i in 0..block_size {
+                        self.scratch_l[i] = lcf[0].process_sample(self.scratch_l[i], ctx.sample_rate);
+                        self.scratch_r[i] = lcf[1].process_sample(self.scratch_r[i], ctx.sample_rate);
+                    }
+                }
+                if let Some(ref mut hcf) = tf.high_cut {
+                    for i in 0..block_size {
+                        self.scratch_l[i] = hcf[0].process_sample(self.scratch_l[i], ctx.sample_rate);
+                        self.scratch_r[i] = hcf[1].process_sample(self.scratch_r[i], ctx.sample_rate);
+                    }
+                }
+            }
 
             if any_soloed && !track.soloed {
                 continue;
@@ -803,6 +848,46 @@ impl GraphRunner {
 mod tests {
     use super::*;
     use summoner_project::create_default_project;
+
+    #[test]
+    fn test_track_filters_dc_block_and_high_cut() {
+        let mut project = create_default_project("Filter Test");
+        project.tracks[0].nodes.clear();
+        project.tracks[0].clips.clear();
+        project.tracks[0].dc_block = true;
+        project.tracks[0].high_cut_hz = Some(200.0);
+        project.tracks[0].gain = 1.0;
+        project.tracks[0].muted = false;
+
+        struct DcAndHighFreqNode {
+            phase: f32,
+        }
+        impl AudioNode for DcAndHighFreqNode {
+            fn name(&self) -> &str { "DcAndHighFreq" }
+            fn process(&mut self, _in: &[&[summoner_core::audio::Sample]], out: &mut [&mut [summoner_core::audio::Sample]], ctx: &summoner_core::node::ProcessContext) {
+                for sample in out[0].iter_mut() {
+                    let freq = 5000.0f32;
+                    let s = (self.phase * std::f32::consts::TAU).sin();
+                    self.phase = (self.phase + freq / ctx.sample_rate as f32).fract();
+                    *sample = 1.0 + s * 0.5;
+                }
+            }
+        }
+
+        let mut runner = GraphRunner::new(&project);
+        runner.tracks[0].nodes.clear();
+        runner.tracks[0].add_node(Box::new(DcAndHighFreqNode { phase: 0.0 }));
+
+        let (mut out_l, mut out_r) = (vec![0.0f32; 1024], vec![0.0f32; 1024]);
+        let ctx = summoner_core::node::ProcessContext::new(44100, 120.0, 0);
+
+        for _ in 0..10 {
+            runner.process_block(1024, &ctx, &mut [&mut out_l[..], &mut out_r[..]]);
+        }
+
+        let dc_avg: f32 = out_l.iter().sum::<f32>() / out_l.len() as f32;
+        assert!(dc_avg.abs() < 0.1, "DC block filter failed to remove DC offset, avg: {}", dc_avg);
+    }
 
     #[test]
     fn test_runner_plays_clip_notes_only_when_scheduled() {
