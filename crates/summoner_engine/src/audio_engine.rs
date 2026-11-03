@@ -149,6 +149,62 @@ pub fn render_project_to_wav<P: AsRef<Path>>(
     Ok(frames_processed)
 }
 
+/// Render each track in `project` to an interleaved stereo buffer `[L0, R0, L1, R1, ...]` at `sample_rate`.
+pub fn render_project_track_stems(
+    project: &ProjectConfig,
+    sample_rate: u32,
+    explicit_frames: Option<usize>,
+) -> Vec<Vec<f32>> {
+    let mut proj_for_rate = project.clone();
+    proj_for_rate.transport.sample_rate = sample_rate;
+    let num_frames = explicit_frames.unwrap_or_else(|| default_render_frames(&proj_for_rate));
+
+    const BLOCK_SIZE: usize = 64;
+    let mut stems = Vec::with_capacity(proj_for_rate.tracks.len());
+
+    for (idx, tc) in proj_for_rate.tracks.iter().enumerate() {
+        let mut single_proj = proj_for_rate.clone();
+        let mut solo_tc = tc.clone();
+        solo_tc.soloed = false;
+        single_proj.tracks = vec![solo_tc];
+
+        let mut runner = GraphRunner::new(&single_proj);
+        let mut transport = Transport::new(sample_rate, single_proj.transport.bpm);
+        transport.play();
+
+        let mut out_l = [0.0f32; BLOCK_SIZE];
+        let mut out_r = [0.0f32; BLOCK_SIZE];
+        let mut interleaved = Vec::with_capacity(num_frames * 2);
+
+        if !tc.muted {
+            let mut frames_processed = 0usize;
+            while frames_processed < num_frames {
+                let block_frames = (num_frames - frames_processed).min(BLOCK_SIZE);
+                out_l[..block_frames].fill(0.0);
+                out_r[..block_frames].fill(0.0);
+                let ctx = ProcessContext::from_transport(&transport);
+                runner.process_block(
+                    block_frames,
+                    &ctx,
+                    &mut [&mut out_l[..block_frames], &mut out_r[..block_frames]],
+                );
+                for f in 0..block_frames {
+                    interleaved.push(out_l[f]);
+                    interleaved.push(out_r[f]);
+                }
+                transport.advance_frames(block_frames as u64);
+                frames_processed += block_frames;
+            }
+        } else {
+            interleaved.resize(num_frames * 2, 0.0);
+        }
+        let _ = idx;
+        stems.push(interleaved);
+    }
+
+    stems
+}
+
 /// Start a non-blocking real-time CPAL audio stream for the given project and shared `ParamBus`.
 /// If no audio output device is available (e.g. headless CI), returns a handle without an active hardware stream.
 pub fn spawn_live_engine(

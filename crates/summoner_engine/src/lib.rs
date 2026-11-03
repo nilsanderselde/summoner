@@ -12,8 +12,8 @@ pub mod audio_engine;
 pub mod graph;
 
 pub use audio_engine::{
-    default_render_frames, render_project_to_wav, run_live, spawn_live_engine, EngineCommand,
-    LiveEngineHandle, ParamUpdate,
+    default_render_frames, render_project_to_wav, render_project_track_stems, run_live,
+    spawn_live_engine, EngineCommand, LiveEngineHandle, ParamUpdate,
 };
 pub use graph::{graph_from_project, GraphRunner, NodeFactory};
 

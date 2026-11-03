@@ -355,8 +355,24 @@ fn main() {
             }
         }
         "undo" => {
-            let dir_str = args.get(2).map(|s| s.as_str()).unwrap_or(".");
+            let dir_str = match args.get(2) {
+                Some(d) => d.as_str(),
+                None => {
+                    eprintln!("Error: Project directory is required. Usage: summon undo <PROJECT_DIR>");
+                    process::exit(1);
+                }
+            };
             let dir_path = Path::new(dir_str);
+            if !dir_path.join("summoner_session.toml").exists()
+                && !dir_path.join("session.toml").exists()
+                && !dir_path.join("project.toml").exists()
+            {
+                eprintln!(
+                    "Refusing to run undo: '{}' does not contain a Summoner session TOML file.",
+                    dir_str
+                );
+                process::exit(1);
+            }
             let repo = open_or_init_repo(dir_path).unwrap_or_else(|e| {
                 eprintln!("Error opening Git repository at '{}': {}", dir_str, e);
                 process::exit(1);
@@ -370,8 +386,24 @@ fn main() {
             }
         }
         "redo" => {
-            let dir_str = args.get(2).map(|s| s.as_str()).unwrap_or(".");
+            let dir_str = match args.get(2) {
+                Some(d) => d.as_str(),
+                None => {
+                    eprintln!("Error: Project directory is required. Usage: summon redo <PROJECT_DIR>");
+                    process::exit(1);
+                }
+            };
             let dir_path = Path::new(dir_str);
+            if !dir_path.join("summoner_session.toml").exists()
+                && !dir_path.join("session.toml").exists()
+                && !dir_path.join("project.toml").exists()
+            {
+                eprintln!(
+                    "Refusing to run redo: '{}' does not contain a Summoner session TOML file.",
+                    dir_str
+                );
+                process::exit(1);
+            }
             let repo = open_or_init_repo(dir_path).unwrap_or_else(|e| {
                 eprintln!("Error opening Git repository at '{}': {}", dir_str, e);
                 process::exit(1);
@@ -1424,7 +1456,12 @@ fn main() {
                 }
             }
 
-            match manager.export_stems(&preset, &project, Path::new(out_dir), None) {
+            let rendered_stems = summoner_engine::render_project_track_stems(
+                &project,
+                preset.settings.sample_rate,
+                None,
+            );
+            match manager.export_stems(&preset, &project, Path::new(out_dir), Some(&rendered_stems)) {
                 Ok(report) => {
                     println!("Stem export finished successfully!");
                     println!("  Preset used: {}", report.preset_used);

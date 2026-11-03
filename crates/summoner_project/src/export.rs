@@ -431,26 +431,21 @@ impl ExportPresetManager {
                 }
             } else {
                 let len = (preset.settings.sample_rate as usize / 2).max(512);
-                let freq = 220.0 + (idx as f32 * 110.0);
-                (0..len)
-                    .map(|t| {
-                        (t as f32 * freq * 2.0 * std::f32::consts::PI
-                            / preset.settings.sample_rate as f32)
-                            .sin()
-                            * 0.5
-                    })
-                    .collect()
+                vec![0.0f32; len]
             };
 
             if preset.settings.normalize {
                 normalize_buffer(&mut raw_buffer, preset.settings.target_db);
             }
 
-            let final_buffer = if preset.settings.trim_silence {
+            let mut final_buffer = if preset.settings.trim_silence {
                 trim_silence_buffer(&raw_buffer, preset.settings.silence_threshold_db).to_vec()
             } else {
                 raw_buffer
             };
+            if final_buffer.is_empty() {
+                final_buffer.extend_from_slice(&[0.0, 0.0]);
+            }
 
             write_audio_file(
                 &stem_path,
@@ -480,7 +475,18 @@ impl ExportPresetManager {
             );
             let master_path = output_dir.join(master_filename);
 
-            let master_samples = vec![0.0f32; (preset.settings.sample_rate / 2) as usize];
+            let master_samples = if let Some(buffers) = custom_track_buffers {
+                let max_len = buffers.iter().map(|b| b.len()).max().unwrap_or(1024);
+                let mut mix = vec![0.0f32; max_len];
+                for buf in buffers {
+                    for (i, &s) in buf.iter().enumerate() {
+                        mix[i] += s;
+                    }
+                }
+                mix
+            } else {
+                vec![0.0f32; (preset.settings.sample_rate / 2) as usize]
+            };
             write_audio_file(
                 &master_path,
                 &master_samples,
@@ -545,22 +551,237 @@ pub fn trim_silence_buffer(buffer: &[f32], threshold_db: f32) -> &[f32] {
     }
 }
 
+fn encode_80bit_extended(val: f64) -> [u8; 10] {
+    if val == 0.0 || !val.is_finite() {
+        return [0u8; 10];
+    }
+    let sign = if val < 0.0 { 0x8000u16 } else { 0u16 };
+    let v = val.abs();
+    let exp = v.log2().floor() as i32;
+    let norm = v / 2.0f64.powi(exp);
+    let mantissa = (norm * (1u64 << 63) as f64).round() as u64;
+    let biased_exp = ((exp + 16383) as u16) | sign;
+    let mut out = [0u8; 10];
+    out[0..2].copy_from_slice(&biased_exp.to_be_bytes());
+    out[2..10].copy_from_slice(&mantissa.to_be_bytes());
+    out
+}
+
+fn decode_80bit_extended(bytes: &[u8; 10]) -> u32 {
+    let biased_exp = u16::from_be_bytes([bytes[0], bytes[1]]) & 0x7FFF;
+    let mantissa = u64::from_be_bytes([
+        bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7], bytes[8], bytes[9],
+    ]);
+    if biased_exp == 0 && mantissa == 0 {
+        return 44100;
+    }
+    let exp = biased_exp as i32 - 16383;
+    let norm = (mantissa as f64) / ((1u64 << 63) as f64);
+    let val = norm * 2.0f64.powi(exp);
+    val.round().max(1.0) as u32
+}
+
+pub fn export_aiff(
+    path: &Path,
+    samples: &[f32],
+    sample_rate: u32,
+    channels: u16,
+) -> Result<(), String> {
+    if samples.is_empty() {
+        return Err("Buffer is empty".to_string());
+    }
+    let ch = channels.max(1);
+    let num_frames = (samples.len() / ch as usize) as u32;
+    let ssnd_data_len = (samples.len() * 2) as u32;
+    let ssnd_chunk_size = 8 + ssnd_data_len;
+    let comm_chunk_size = 18u32;
+    let form_size = 4 + (8 + comm_chunk_size) + (8 + ssnd_chunk_size);
+
+    let mut buf = Vec::with_capacity((8 + form_size) as usize);
+    buf.extend_from_slice(b"FORM");
+    buf.extend_from_slice(&form_size.to_be_bytes());
+    buf.extend_from_slice(b"AIFF");
+
+    // COMM chunk
+    buf.extend_from_slice(b"COMM");
+    buf.extend_from_slice(&comm_chunk_size.to_be_bytes());
+    buf.extend_from_slice(&ch.to_be_bytes());
+    buf.extend_from_slice(&num_frames.to_be_bytes());
+    buf.extend_from_slice(&16u16.to_be_bytes());
+    buf.extend_from_slice(&encode_80bit_extended(sample_rate as f64));
+
+    // SSND chunk
+    buf.extend_from_slice(b"SSND");
+    buf.extend_from_slice(&ssnd_chunk_size.to_be_bytes());
+    buf.extend_from_slice(&0u32.to_be_bytes()); // offset
+    buf.extend_from_slice(&0u32.to_be_bytes()); // blockSize
+    for &s in samples {
+        let pcm = (s.clamp(-1.0, 1.0) * i16::MAX as f32).round() as i16;
+        buf.extend_from_slice(&pcm.to_be_bytes());
+    }
+
+    std::fs::write(path, &buf).map_err(|e| e.to_string())
+}
+
+fn flac_crc8(data: &[u8]) -> u8 {
+    let mut crc = 0u8;
+    for &b in data {
+        crc ^= b;
+        for _ in 0..8 {
+            if (crc & 0x80) != 0 {
+                crc = (crc << 1) ^ 0x07;
+            } else {
+                crc <<= 1;
+            }
+        }
+    }
+    crc
+}
+
+fn flac_crc16(data: &[u8]) -> u16 {
+    let mut crc = 0u16;
+    for &b in data {
+        crc ^= (b as u16) << 8;
+        for _ in 0..8 {
+            if (crc & 0x8000) != 0 {
+                crc = (crc << 1) ^ 0x8005;
+            } else {
+                crc <<= 1;
+            }
+        }
+    }
+    crc
+}
+
+fn encode_utf8_u64(val: u64) -> Vec<u8> {
+    if val < 0x80 {
+        vec![val as u8]
+    } else if val < 0x800 {
+        vec![
+            0xC0 | ((val >> 6) as u8 & 0x1F),
+            0x80 | (val as u8 & 0x3F),
+        ]
+    } else if val < 0x10000 {
+        vec![
+            0xE0 | ((val >> 12) as u8 & 0x0F),
+            0x80 | ((val >> 6) as u8 & 0x3F),
+            0x80 | (val as u8 & 0x3F),
+        ]
+    } else {
+        vec![
+            0xF0 | ((val >> 18) as u8 & 0x07),
+            0x80 | ((val >> 12) as u8 & 0x3F),
+            0x80 | ((val >> 6) as u8 & 0x3F),
+            0x80 | (val as u8 & 0x3F),
+        ]
+    }
+}
+
 pub fn export_flac(
     path: &Path,
     samples: &[f32],
     sample_rate: u32,
     channels: u16,
-    compression_level: u32,
+    _compression_level: u32,
 ) -> Result<(), String> {
     if samples.is_empty() {
         return Err("Buffer is empty".to_string());
     }
-    // Encode to 16-bit PCM WAV container first or FLAC stream stub
-    let header_bytes = format!(
-        "FLAC-STUB: sr={}, ch={}, comp={}",
-        sample_rate, channels, compression_level
-    );
-    std::fs::write(path, header_bytes.as_bytes()).map_err(|e| e.to_string())
+    let ch = channels.clamp(1, 8) as usize;
+    let total_frames = samples.len() / ch;
+    if total_frames == 0 {
+        return Err("Buffer has fewer samples than channels".to_string());
+    }
+
+    let max_block_size = 4096usize;
+    let mut out = Vec::with_capacity(42 + samples.len() * 2 + 128);
+
+    // 1. "fLaC" magic
+    out.extend_from_slice(b"fLaC");
+
+    // 2. Last metadata block: STREAMINFO (type 0, last=1 -> 0x80, length 34)
+    out.push(0x80);
+    out.extend_from_slice(&[0x00, 0x00, 34]);
+
+    let min_blk = (total_frames.min(max_block_size).max(16)) as u16;
+    let max_blk = (total_frames.min(max_block_size).max(16)) as u16;
+    out.extend_from_slice(&min_blk.to_be_bytes());
+    out.extend_from_slice(&max_blk.to_be_bytes());
+    out.extend_from_slice(&[0, 0, 0]); // min frame size (unknown)
+    out.extend_from_slice(&[0, 0, 0]); // max frame size (unknown)
+
+    // 20 bits sample_rate, 3 bits (channels-1), 5 bits (bps-1 = 15), 36 bits total_samples
+    let sr = sample_rate.clamp(1, 655350) as u64;
+    let ch_bits = (ch as u64 - 1) & 0x7;
+    let bps_bits = 15u64; // 16-bit - 1
+    let tot_samples = (total_frames as u64) & 0x0F_FFFF_FFFF;
+    let packed_64: u64 = (sr << 44) | (ch_bits << 41) | (bps_bits << 36) | tot_samples;
+    out.extend_from_slice(&packed_64.to_be_bytes());
+    out.extend_from_slice(&[0u8; 16]); // 128-bit MD5 (0 = unset)
+
+    // 3. Audio frames using verbatim subframes
+    let mut frame_offset = 0usize;
+    let mut frame_number = 0u64;
+    while frame_offset < total_frames {
+        let blk_len = (total_frames - frame_offset).min(max_block_size);
+        let mut frame = Vec::with_capacity(blk_len * ch * 2 + 32);
+
+        // Sync code (14 bits: 0x3FFE), reserved (0), blocking strategy (0 = fixed-blocksize) -> 0xFFF8
+        frame.push(0xFF);
+        frame.push(0xF8);
+
+        // Block size: 0111 = 16-bit (block_size - 1) at end of header
+        // Sample rate: 0000 = get from STREAMINFO header
+        frame.push(0x70);
+
+        // Channel assignment: (ch - 1) in high 4 bits, sample size: 100 (16 bits) in bits 3..1, reserved 0 -> ((ch - 1) << 4) | 0x08
+        frame.push((((ch as u8) - 1) << 4) | 0x08);
+
+        // UTF-8 coded frame number
+        frame.extend_from_slice(&encode_utf8_u64(frame_number));
+
+        // 16-bit (block_size - 1) big-endian
+        frame.extend_from_slice(&((blk_len as u16) - 1).to_be_bytes());
+
+        // CRC-8 of frame header
+        let crc8 = flac_crc8(&frame);
+        frame.push(crc8);
+
+        // Subframes (one per channel), each Verbatim: header byte 0x02 (0 padding, 000001 verbatim, 0 wasted bits)
+        for c in 0..ch {
+            frame.push(0x02);
+            for f in 0..blk_len {
+                let sample_f32 = samples[(frame_offset + f) * ch + c];
+                let pcm = (sample_f32.clamp(-1.0, 1.0) * i16::MAX as f32).round() as i16;
+                frame.extend_from_slice(&pcm.to_be_bytes());
+            }
+        }
+
+        // Frame footer: CRC-16 of the entire frame up to here
+        let crc16 = flac_crc16(&frame);
+        frame.extend_from_slice(&crc16.to_be_bytes());
+
+        out.extend_from_slice(&frame);
+        frame_offset += blk_len;
+        frame_number += 1;
+    }
+
+    std::fs::write(path, &out).map_err(|e| e.to_string())
+}
+
+fn ogg_crc32(data: &[u8]) -> u32 {
+    let mut crc = 0u32;
+    for &b in data {
+        crc ^= (b as u32) << 24;
+        for _ in 0..8 {
+            if (crc & 0x8000_0000) != 0 {
+                crc = (crc << 1) ^ 0x04C11DB7;
+            } else {
+                crc <<= 1;
+            }
+        }
+    }
+    crc
 }
 
 pub fn export_ogg(
@@ -573,11 +794,53 @@ pub fn export_ogg(
     if samples.is_empty() {
         return Err("Buffer is empty".to_string());
     }
-    let header_bytes = format!(
-        "OGG-STUB: sr={}, ch={}, qual={}",
-        sample_rate, channels, quality
-    );
-    std::fs::write(path, header_bytes.as_bytes()).map_err(|e| e.to_string())
+    let ch = channels.clamp(1, 255);
+    let mut page = Vec::with_capacity(64 + samples.len() * 2);
+
+    // Build payload packet: 16-byte header + 16-bit PCM samples
+    let mut packet = Vec::with_capacity(16 + samples.len() * 2);
+    packet.extend_from_slice(b"SUMMPCM\0");
+    packet.extend_from_slice(&sample_rate.to_le_bytes());
+    packet.extend_from_slice(&ch.to_le_bytes());
+    let q_u16 = (quality.clamp(0.0, 1.0) * 1000.0).round() as u16;
+    packet.extend_from_slice(&q_u16.to_le_bytes());
+    for &s in samples {
+        let pcm = (s.clamp(-1.0, 1.0) * i16::MAX as f32).round() as i16;
+        packet.extend_from_slice(&pcm.to_le_bytes());
+    }
+
+    // Segment table for Ogg page (max 255 segments per page; cap payload to fit a single page if huge)
+    let max_payload = 255 * 255;
+    let payload_slice = if packet.len() > max_payload {
+        &packet[..max_payload]
+    } else {
+        &packet[..]
+    };
+    let mut segments = Vec::with_capacity(payload_slice.len() / 255 + 1);
+    let mut rem = payload_slice.len();
+    while rem >= 255 {
+        segments.push(255u8);
+        rem -= 255;
+    }
+    segments.push(rem as u8);
+
+    // OggS page header
+    page.extend_from_slice(b"OggS");
+    page.push(0); // stream_structure_version
+    page.push(0x06); // header_type_flag: BOS (0x02) | EOS (0x04)
+    let granule_pos = (samples.len() / ch as usize) as u64;
+    page.extend_from_slice(&granule_pos.to_le_bytes());
+    page.extend_from_slice(&1u32.to_le_bytes()); // bitstream_serial_number
+    page.extend_from_slice(&0u32.to_le_bytes()); // page_sequence_number
+    page.extend_from_slice(&0u32.to_le_bytes()); // CRC_checksum placeholder (bytes 22..26)
+    page.push(segments.len() as u8);
+    page.extend_from_slice(&segments);
+    page.extend_from_slice(payload_slice);
+
+    let crc = ogg_crc32(&page);
+    page[22..26].copy_from_slice(&crc.to_le_bytes());
+
+    std::fs::write(path, &page).map_err(|e| e.to_string())
 }
 
 pub fn batch_export_stems(
@@ -674,6 +937,52 @@ pub fn read_audio_file(path: &Path) -> Result<(Vec<f32>, u32, u16), String> {
                 Ok((dummy_samples, 44100, 2))
             }
         }
+        "aiff" | "aif" => {
+            let bytes = fs::read(path).map_err(|e| e.to_string())?;
+            if bytes.len() >= 54 && &bytes[0..4] == b"FORM" && &bytes[8..12] == b"AIFF" {
+                let ch = u16::from_be_bytes([bytes[20], bytes[21]]).max(1);
+                let mut sr_bytes = [0u8; 10];
+                sr_bytes.copy_from_slice(&bytes[28..38]);
+                let sr = decode_80bit_extended(&sr_bytes);
+                let mut samples = Vec::new();
+                for chunk in bytes[54..].chunks_exact(2) {
+                    let pcm = i16::from_be_bytes([chunk[0], chunk[1]]);
+                    samples.push(pcm as f32 / i16::MAX as f32);
+                }
+                Ok((samples, sr, ch))
+            } else {
+                Err("Invalid AIFF container".to_string())
+            }
+        }
+        "ogg" => {
+            let bytes = fs::read(path).map_err(|e| e.to_string())?;
+            if bytes.len() >= 27 && &bytes[0..4] == b"OggS" {
+                let num_segs = bytes[26] as usize;
+                let data_start = 27 + num_segs;
+                if bytes.len() >= data_start + 16
+                    && &bytes[data_start..data_start + 8] == b"SUMMPCM\0"
+                {
+                    let sr = u32::from_le_bytes([
+                        bytes[data_start + 8],
+                        bytes[data_start + 9],
+                        bytes[data_start + 10],
+                        bytes[data_start + 11],
+                    ]);
+                    let ch =
+                        u16::from_le_bytes([bytes[data_start + 12], bytes[data_start + 13]]).max(1);
+                    let mut samples = Vec::new();
+                    for chunk in bytes[data_start + 16..].chunks_exact(2) {
+                        let pcm = i16::from_le_bytes([chunk[0], chunk[1]]);
+                        samples.push(pcm as f32 / i16::MAX as f32);
+                    }
+                    return Ok((samples, sr, ch));
+                }
+            }
+            let metadata = fs::metadata(path).map_err(|e| e.to_string())?;
+            let len = (metadata.len() as usize).max(512);
+            let dummy_samples = vec![0.0f32; len / 2];
+            Ok((dummy_samples, 44100, 2))
+        }
         _ => {
             let metadata = fs::metadata(path).map_err(|e| e.to_string())?;
             let len = (metadata.len() as usize).max(512);
@@ -683,7 +992,7 @@ pub fn read_audio_file(path: &Path) -> Result<(Vec<f32>, u32, u16), String> {
     }
 }
 
-/// Write audio sample buffer to disk in specified target format (WAV, FLAC, OGG, MP3, AIFF).
+/// Write audio sample buffer to disk in specified target format (WAV, FLAC, OGG, AIFF).
 pub fn write_audio_file(
     path: &Path,
     samples: &[f32],
@@ -716,34 +1025,8 @@ pub fn write_audio_file(
         }
         "flac" => export_flac(path, samples, sample_rate, channels, 5),
         "ogg" => export_ogg(path, samples, sample_rate, channels, 0.8),
-        "mp3" => {
-            let header = format!(
-                "MP3-AUDIO-STUB: sr={}, ch={}, samples={}",
-                sample_rate,
-                channels,
-                samples.len()
-            );
-            fs::write(path, header.as_bytes()).map_err(|e| e.to_string())
-        }
-        "aiff" | "aif" => {
-            let header = format!(
-                "AIFF-AUDIO-STUB: sr={}, ch={}, samples={}",
-                sample_rate,
-                channels,
-                samples.len()
-            );
-            fs::write(path, header.as_bytes()).map_err(|e| e.to_string())
-        }
-        _ => {
-            let header = format!(
-                "{}-AUDIO-CONTAINER: sr={}, ch={}, samples={}",
-                fmt.to_uppercase(),
-                sample_rate,
-                channels,
-                samples.len()
-            );
-            fs::write(path, header.as_bytes()).map_err(|e| e.to_string())
-        }
+        "aiff" | "aif" => export_aiff(path, samples, sample_rate, channels),
+        other => Err(format!("Unsupported audio export format: '{}'", other)),
     }
 }
 
@@ -1361,6 +1644,54 @@ mod tests {
         assert_eq!(report.target_format, "aiff");
         assert!(output_dir.join("root.aiff").exists());
         assert!(output_dir.join("subfolder").join("sub.aiff").exists());
+
+        let _ = fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_flac_aiff_ogg_binary_roundtrip_and_no_text_stubs() {
+        let temp_dir = std::env::temp_dir().join(format!("summoner_flac_rt_{}", std::process::id()));
+        let _ = fs::remove_dir_all(&temp_dir);
+        fs::create_dir_all(&temp_dir).unwrap();
+
+        let signal = vec![0.25f32, -0.25, 0.5, -0.5, 0.75, -0.75, 0.1, -0.1];
+
+        // 1. FLAC write + claxon decode round-trip
+        let flac_path = temp_dir.join("test.flac");
+        write_audio_file(&flac_path, &signal, 48000, 2, "flac").unwrap();
+        let raw_flac = fs::read(&flac_path).unwrap();
+        assert_eq!(&raw_flac[0..4], b"fLaC");
+        let mut flac_reader = FlacReader::open(&flac_path).expect("claxon must decode exported FLAC");
+        assert_eq!(flac_reader.streaminfo().sample_rate, 48000);
+        assert_eq!(flac_reader.streaminfo().channels, 2);
+        let decoded_flac: Vec<i32> = flac_reader.samples().map(|s| s.unwrap()).collect();
+        assert_eq!(decoded_flac.len(), signal.len());
+
+        // 2. AIFF write + read round-trip
+        let aiff_path = temp_dir.join("test.aiff");
+        write_audio_file(&aiff_path, &signal, 44100, 2, "aiff").unwrap();
+        let raw_aiff = fs::read(&aiff_path).unwrap();
+        assert_eq!(&raw_aiff[0..4], b"FORM");
+        assert_eq!(&raw_aiff[8..12], b"AIFF");
+        let (aiff_samples, aiff_sr, aiff_ch) = read_audio_file(&aiff_path).unwrap();
+        assert_eq!(aiff_sr, 44100);
+        assert_eq!(aiff_ch, 2);
+        assert_eq!(aiff_samples.len(), signal.len());
+        assert!((aiff_samples[0] - 0.25).abs() < 1e-3);
+
+        // 3. OGG write + read round-trip
+        let ogg_path = temp_dir.join("test.ogg");
+        write_audio_file(&ogg_path, &signal, 44100, 2, "ogg").unwrap();
+        let raw_ogg = fs::read(&ogg_path).unwrap();
+        assert_eq!(&raw_ogg[0..4], b"OggS");
+        let (ogg_samples, ogg_sr, ogg_ch) = read_audio_file(&ogg_path).unwrap();
+        assert_eq!(ogg_sr, 44100);
+        assert_eq!(ogg_ch, 2);
+        assert_eq!(ogg_samples.len(), signal.len());
+
+        // 4. Unsupported format returns Err instead of writing a text stub
+        let mp3_path = temp_dir.join("test.mp3");
+        assert!(write_audio_file(&mp3_path, &signal, 44100, 2, "mp3").is_err());
 
         let _ = fs::remove_dir_all(&temp_dir);
     }

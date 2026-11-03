@@ -141,6 +141,12 @@ impl AudioNode for GainNode {
         "GainNode"
     }
 
+    fn handle_event(&mut self, event: &NodeEvent, _ctx: &ProcessContext) {
+        if let NodeEvent::SetParam { id: 0, value } = *event {
+            self.gain = value;
+        }
+    }
+
     fn process(
         &mut self,
         input: &[&[Sample]],
@@ -286,9 +292,11 @@ mod tests {
     #[test]
     fn test_default_handle_event_is_noop() {
         let ctx = ProcessContext::new(48000, 120.0, 0);
+        let mut p = PassthroughNode;
+        p.handle_event(&NodeEvent::SetParam { id: 0, value: 1.0 }, &ctx);
         let mut g = GainNode::new(0.5);
-        g.handle_event(&NodeEvent::SetParam { id: 0, value: 1.0 }, &ctx);
-        assert_eq!(g.gain, 0.5);
+        g.handle_event(&NodeEvent::SetParam { id: 0, value: 0.75 }, &ctx);
+        assert_eq!(g.gain, 0.75);
     }
 
     #[test]

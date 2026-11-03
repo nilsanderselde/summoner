@@ -619,8 +619,19 @@ impl StemsExportView {
 
         let preset = self.to_export_preset();
         let manager = ExportPresetManager::new();
+        let owned_stems;
+        let stems_slice = if let Some(bufs) = custom_track_buffers {
+            Some(bufs)
+        } else {
+            owned_stems = summoner_engine::render_project_track_stems(
+                project,
+                preset.settings.sample_rate,
+                None,
+            );
+            Some(owned_stems.as_slice())
+        };
 
-        match manager.export_stems(&preset, project, output_dir, custom_track_buffers) {
+        match manager.export_stems(&preset, project, output_dir, stems_slice) {
             Ok(report) => {
                 self.is_exporting = false;
                 self.export_progress = 1.0;

@@ -440,10 +440,11 @@ pub fn graph_from_project(project: &ProjectConfig, max_block_size: usize) -> Nod
 
 const MAX_RUNNER_BLOCK_SIZE: usize = 8192;
 
-/// Convert a track's sequence and clips into frame-stamped note events.
-/// Tracks with any notes start gated closed (NoteOff at frame 0).
+/// Convert a track's sequence, clips, and automation lanes into frame-stamped events.
+/// Tracks with any note events start gated closed (NoteOff at frame 0).
 fn build_schedule(
     tc: &summoner_project::schema::TrackConfig,
+    automation_lanes: &[summoner_project::schema::AutomationLaneConfig],
     sample_rate: u32,
     bpm: f64,
 ) -> Vec<ScheduledEvent> {
@@ -481,7 +482,46 @@ fn build_schedule(
             event: NodeEvent::NoteOff { note: 0 },
         });
     }
+    for lane in automation_lanes.iter().filter(|l| l.track_id == tc.id) {
+        let param_id = match lane.param_id.to_lowercase().as_str() {
+            "0" | "freq" | "frequency" | "cutoff" | "gain" | "drive" | "rate" | "pitch" => 0,
+            "1" | "res" | "resonance" | "pw" | "pulse_width" | "depth" | "mix" | "feedback" => 1,
+            "2" | "attack" | "damping" | "room_size" => 2,
+            "3" | "decay" => 3,
+            "4" | "sustain" => 4,
+            "5" | "release" => 5,
+            other => other.parse::<u32>().unwrap_or(0),
+        };
+        for ev in &lane.events {
+            events.push(ScheduledEvent {
+                frame: ev.frame,
+                event: NodeEvent::SetParam {
+                    id: param_id,
+                    value: ev.value,
+                },
+            });
+        }
+    }
     events
+}
+
+fn parse_node_port(spec: &str) -> Option<(usize, usize)> {
+    if let Some((node_str, port_str)) = spec.split_once(':') {
+        let n = node_str
+            .trim()
+            .trim_start_matches('n')
+            .parse::<usize>()
+            .ok()?;
+        let p = port_str.trim().parse::<usize>().ok()?;
+        Some((n, p))
+    } else {
+        let n = spec
+            .trim()
+            .trim_start_matches('n')
+            .parse::<usize>()
+            .ok()?;
+        Some((n, 0))
+    }
 }
 
 pub struct GraphRunner {
@@ -498,17 +538,57 @@ impl GraphRunner {
             track.gain = tc.gain;
             track.pan = tc.pan;
             track.muted = tc.muted;
+            track.soloed = tc.soloed;
             track.tuning_edo = tc.tuning_edo;
             track.tuning_root_hz = tc.tuning_root_hz;
 
-            for nc in &tc.nodes {
-                if let Some(node) = NodeFactory::create_node_with_rate(nc, project.transport.sample_rate) {
-                    track.add_node(node);
-                } else {
-                    eprintln!("Warning: Unknown node kind '{}'", nc.kind);
+            if !tc.connections.is_empty() {
+                let mut dag = NodeGraph::new(
+                    tc.name.clone(),
+                    MAX_RUNNER_BLOCK_SIZE,
+                    tc.channels.max(2),
+                );
+                dag.parallel_execution = false;
+                for nc in &tc.nodes {
+                    if let Some(node) =
+                        NodeFactory::create_node_with_rate(nc, project.transport.sample_rate)
+                    {
+                        dag.add_node(node);
+                    } else {
+                        eprintln!("Warning: Unknown node kind '{}'", nc.kind);
+                    }
+                }
+                for conn in &tc.connections {
+                    if let (Some((f_node, f_port)), Some((t_node, t_port))) =
+                        (parse_node_port(&conn.from), parse_node_port(&conn.to))
+                    {
+                        dag.add_edge(Edge {
+                            from_node: f_node,
+                            from_port: f_port,
+                            to_node: t_node,
+                            to_port: t_port,
+                        });
+                    }
+                }
+                dag.compile();
+                track.add_node(Box::new(dag));
+            } else {
+                for nc in &tc.nodes {
+                    if let Some(node) =
+                        NodeFactory::create_node_with_rate(nc, project.transport.sample_rate)
+                    {
+                        track.add_node(node);
+                    } else {
+                        eprintln!("Warning: Unknown node kind '{}'", nc.kind);
+                    }
                 }
             }
-            let events = build_schedule(tc, project.transport.sample_rate, project.transport.bpm);
+            let events = build_schedule(
+                tc,
+                &project.automation_lanes,
+                project.transport.sample_rate,
+                project.transport.bpm,
+            );
             track.set_schedule(events);
             tracks.push(track);
         }
@@ -529,6 +609,8 @@ impl GraphRunner {
         for out in out_buffers.iter_mut() {
             out[..block_size].fill(0.0);
         }
+
+        let any_soloed = self.tracks.iter().any(|t| t.soloed);
 
         for track in &mut self.tracks {
             self.scratch_l[..block_size].fill(0.0);
@@ -554,14 +636,25 @@ impl GraphRunner {
                 &mut track_out_slices[..out_buffers.len().min(2)],
             );
 
-            for ch in 0..out_buffers.len().min(2) {
-                let scratch_slice = if ch == 0 {
-                    &self.scratch_l[..block_size]
-                } else {
-                    &self.scratch_r[..block_size]
-                };
+            if any_soloed && !track.soloed {
+                continue;
+            }
+
+            let pan = track.pan.clamp(-1.0, 1.0);
+            let num_out = out_buffers.len().min(2);
+            if num_out == 2 {
+                let left_gain = track.gain * (1.0 - pan).min(1.0);
+                let right_gain = track.gain * (1.0 + pan).min(1.0);
+                let scratch_l = &self.scratch_l[..block_size];
+                let scratch_r = &self.scratch_r[..block_size];
                 for i in 0..block_size {
-                    out_buffers[ch][i] += scratch_slice[i] * track.gain;
+                    out_buffers[0][i] += scratch_l[i] * left_gain;
+                    out_buffers[1][i] += scratch_r[i] * right_gain;
+                }
+            } else if num_out == 1 {
+                let scratch_l = &self.scratch_l[..block_size];
+                for i in 0..block_size {
+                    out_buffers[0][i] += scratch_l[i] * track.gain;
                 }
             }
         }
@@ -680,5 +773,89 @@ mod tests {
             rms > 0.0,
             "SineOscillatorNode RMS output must be greater than zero"
         );
+    }
+
+    #[test]
+    fn test_runner_respects_solo_pan_connections_and_automation() {
+        use summoner_project::schema::{
+            AutomationEventConfig, AutomationLaneConfig, ConnectionConfig, TrackConfig,
+        };
+        let mut project = create_default_project("Solo Pan Automation Test");
+        project.tracks.clear();
+
+        // Track 1: soloed, panned hard left (-1.0), SineOscillatorNode -> GainNode via connection
+        let mut t1 = TrackConfig {
+            id: 1,
+            name: "Solo Left".to_string(),
+            channels: 2,
+            gain: 1.0,
+            pan: -1.0,
+            muted: false,
+            soloed: true,
+            ..Default::default()
+        };
+        t1.nodes.push(NodeConfig {
+            kind: "SineOscillatorNode".to_string(),
+            params: [("freq".to_string(), 440.0)].into_iter().collect(),
+            plugin_state: None,
+        });
+        t1.nodes.push(NodeConfig {
+            kind: "GainNode".to_string(),
+            params: [("gain".to_string(), 1.0)].into_iter().collect(),
+            plugin_state: None,
+        });
+        t1.connections.push(ConnectionConfig {
+            from: "0:0".to_string(),
+            to: "1:0".to_string(),
+        });
+        t1.connections.push(ConnectionConfig {
+            from: "0:1".to_string(),
+            to: "1:1".to_string(),
+        });
+
+        // Track 2: not soloed, panned hard right (+1.0)
+        let mut t2 = TrackConfig {
+            id: 2,
+            name: "Unsoloed Right".to_string(),
+            channels: 2,
+            gain: 1.0,
+            pan: 1.0,
+            muted: false,
+            soloed: false,
+            ..Default::default()
+        };
+        t2.nodes.push(NodeConfig {
+            kind: "SineOscillatorNode".to_string(),
+            params: [("freq".to_string(), 880.0)].into_iter().collect(),
+            plugin_state: None,
+        });
+
+        project.tracks.push(t1);
+        project.tracks.push(t2);
+
+        // Automation lane on track 1 silencing gain at frame 512
+        project.automation_lanes.push(AutomationLaneConfig {
+            param_id: "gain".to_string(),
+            track_id: 1,
+            events: vec![AutomationEventConfig {
+                frame: 512,
+                value: 0.0,
+            }],
+        });
+
+        let mut runner = GraphRunner::new(&project);
+        let (mut l, mut r) = (vec![0.0f32; 256], vec![0.0f32; 256]);
+        let mut ctx = summoner_core::node::ProcessContext::new(44100, 120.0, 0);
+
+        runner.process_block(256, &ctx, &mut [&mut l[..], &mut r[..]]);
+        // Track 1 is soloed and panned hard left (-1.0), so left has signal and right is 0.0
+        assert!(l.iter().any(|s| s.abs() > 0.1));
+        assert!(r.iter().all(|s| *s == 0.0));
+
+        // Advance to frame 512 where automation sets GainNode gain to 0.0
+        ctx.frame_position = 512;
+        runner.process_block(256, &ctx, &mut [&mut l[..], &mut r[..]]);
+        // After 16-sample crossfade (if any), output should be silent
+        assert!(l[32..].iter().all(|s| s.abs() < 1e-5));
     }
 }

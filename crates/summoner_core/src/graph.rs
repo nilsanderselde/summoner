@@ -323,6 +323,12 @@ impl AudioNode for NodeGraph {
         &self.name
     }
 
+    fn handle_event(&mut self, event: &crate::node::NodeEvent, ctx: &ProcessContext) {
+        for node in &mut self.nodes {
+            node.handle_event(event, ctx);
+        }
+    }
+
     fn process(
         &mut self,
         _input: &[&[Sample]],

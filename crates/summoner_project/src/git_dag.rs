@@ -220,32 +220,57 @@ pub fn commit_project_state(
     repo.commit(Some("HEAD"), &sig, &sig, message, &tree, &parents[..])
 }
 
-/// Undo: Reset repository hard to HEAD~1.
+/// Undo: Checkout `summoner_session.toml` from HEAD~1 and move HEAD to HEAD~1 softly,
+/// refusing to operate if `summoner_session.toml` is not present in the parent commit tree.
 pub fn undo(repo: &git2::Repository) -> Result<(), git2::Error> {
     let head = repo.head()?.peel_to_commit()?;
     if head.parent_count() > 0 {
         let parent = head.parent(0)?;
-        repo.reset(parent.as_object(), git2::ResetType::Hard, None)?;
+        let parent_tree = parent.tree()?;
+        if parent_tree
+            .get_name("summoner_session.toml")
+            .is_none()
+        {
+            return Err(git2::Error::from_str(
+                "Refusing to undo: parent commit is not a Summoner session commit",
+            ));
+        }
+        let mut checkout_opts = git2::build::CheckoutBuilder::new();
+        checkout_opts.force().path("summoner_session.toml");
+        repo.checkout_tree(parent.as_object(), Some(&mut checkout_opts))?;
+        repo.reset(parent.as_object(), git2::ResetType::Mixed, None)?;
         Ok(())
     } else {
         Err(git2::Error::from_str("No parent commit to undo to"))
     }
 }
 
-/// Redo: Reset repository hard to previous state prior to undo.
+/// Redo: Checkout `summoner_session.toml` from the previous HEAD in reflog.
 pub fn redo(repo: &git2::Repository) -> Result<(), git2::Error> {
     let head_oid = repo.head()?.peel_to_commit()?.id();
     let reflog = repo.reflog("HEAD")?;
 
-    if let Some(entry) = reflog.iter().find(|e| e.id_old() == head_oid) {
-        let target_oid = entry.id_new();
+    let target_oid_opt = reflog
+        .iter()
+        .find(|e| e.id_old() == head_oid)
+        .map(|e| e.id_new())
+        .or_else(|| reflog.get(1).map(|e| e.id_old()));
+
+    if let Some(target_oid) = target_oid_opt {
         let target_commit = repo.find_commit(target_oid)?;
-        repo.reset(target_commit.as_object(), git2::ResetType::Hard, None)?;
-        Ok(())
-    } else if let Some(entry) = reflog.get(1) {
-        let target_oid = entry.id_old();
-        let target_commit = repo.find_commit(target_oid)?;
-        repo.reset(target_commit.as_object(), git2::ResetType::Hard, None)?;
+        let target_tree = target_commit.tree()?;
+        if target_tree
+            .get_name("summoner_session.toml")
+            .is_none()
+        {
+            return Err(git2::Error::from_str(
+                "Refusing to redo: target commit is not a Summoner session commit",
+            ));
+        }
+        let mut checkout_opts = git2::build::CheckoutBuilder::new();
+        checkout_opts.force().path("summoner_session.toml");
+        repo.checkout_tree(target_commit.as_object(), Some(&mut checkout_opts))?;
+        repo.reset(target_commit.as_object(), git2::ResetType::Mixed, None)?;
         Ok(())
     } else {
         Err(git2::Error::from_str("No redo state found in reflog"))
