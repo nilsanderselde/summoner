@@ -126,6 +126,31 @@ impl SignalProcessor for EnvADSR {
         "EnvADSR"
     }
 
+    fn handle_event(&mut self, event: &summoner_core::node::NodeEvent, _ctx: &ProcessContext) {
+        use summoner_core::node::NodeEvent;
+        match *event {
+            NodeEvent::NoteOn { .. } => {
+                self.trigger(true);
+            }
+            NodeEvent::NoteOff { .. } => {
+                self.trigger(false);
+            }
+            NodeEvent::SetParam { id: 0, value } => {
+                self.attack = value.max(0.001);
+            }
+            NodeEvent::SetParam { id: 1, value } => {
+                self.decay = value.max(0.001);
+            }
+            NodeEvent::SetParam { id: 2, value } => {
+                self.sustain = value.clamp(0.0, 1.0);
+            }
+            NodeEvent::SetParam { id: 3, value } => {
+                self.release = value.max(0.001);
+            }
+            NodeEvent::SetParam { .. } => {}
+        }
+    }
+
     fn process_block(
         &mut self,
         inputs: &[&[Sample]],
@@ -232,6 +257,13 @@ impl LFO {
 impl SignalProcessor for LFO {
     fn name(&self) -> &str {
         "LFO"
+    }
+
+    fn handle_event(&mut self, event: &summoner_core::node::NodeEvent, _ctx: &ProcessContext) {
+        use summoner_core::node::NodeEvent;
+        if let NodeEvent::SetParam { id: 0, value } = *event {
+            self.frequency = value.clamp(0.01, 100.0);
+        }
     }
 
     fn process_block(

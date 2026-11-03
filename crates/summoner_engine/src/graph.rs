@@ -13,7 +13,7 @@ use summoner_dsp::filters::{FilterComb, FilterLadder, FilterSVF};
 use summoner_dsp::math::VCA;
 use summoner_dsp::modulators::EnvADSR;
 use summoner_dsp::oscillators::{NoiseGen, OscPulse, OscSaw, OscSine, OscTriangle, OscWavetable};
-use summoner_dsp::traits::{ProcessorNodeAdapter, VoiceNode};
+use summoner_dsp::traits::ProcessorNodeAdapter;
 use summoner_dsp::SamplerNode;
 use summoner_dsp::{
     CompressorNode, EffectChorus, EffectFlanger, EffectPhaser, FilterBiquad, FrequencyShifter,
@@ -40,10 +40,10 @@ impl NodeFactory {
     pub fn create_node_with_rate(config: &NodeConfig, sample_rate: u32) -> Option<Box<dyn AudioNode>> {
         let params = &config.params;
         match config.kind.as_str() {
-            "OscSaw" => Some(Box::new(VoiceNode::new(OscSaw::new(
+            "OscSaw" => Some(Box::new(ProcessorNodeAdapter::new(OscSaw::new(
                 *params.get("freq").unwrap_or(&440.0),
             )))),
-            "OscPulse" => Some(Box::new(VoiceNode::new(OscPulse::new(
+            "OscPulse" => Some(Box::new(ProcessorNodeAdapter::new(OscPulse::new(
                 *params.get("freq").unwrap_or(&440.0),
                 *params.get("pw").unwrap_or(&0.5),
             )))),
@@ -55,7 +55,7 @@ impl NodeFactory {
                     .unwrap_or(440.0);
                 Some(Box::new(ProcessorNodeAdapter::new(OscSine::new(freq))))
             }
-            "OscTriangle" => Some(Box::new(VoiceNode::new(OscTriangle::new(
+            "OscTriangle" => Some(Box::new(ProcessorNodeAdapter::new(OscTriangle::new(
                 *params.get("freq").unwrap_or(&440.0),
             )))),
             "OscWavetable" | "WavetableOscillator" => {
@@ -67,7 +67,111 @@ impl NodeFactory {
                 let morph = *params.get("morph").unwrap_or(&0.0);
                 let osc = OscWavetable::new(freq, OscWavetable::default_saw())
                     .with_table2(OscWavetable::default_square(), morph);
-                Some(Box::new(VoiceNode::new(osc)))
+                Some(Box::new(ProcessorNodeAdapter::new(osc)))
+            }
+            "OscLFO" | "LFO" => {
+                let freq = params
+                    .get("freq")
+                    .or_else(|| params.get("frequency"))
+                    .copied()
+                    .unwrap_or(2.0);
+                Some(Box::new(ProcessorNodeAdapter::new(
+                    summoner_dsp::modulators::LFO::new(freq, summoner_dsp::modulators::LfoShape::Sine),
+                )))
+            }
+            "MathAdd" => Some(Box::new(ProcessorNodeAdapter::new(
+                summoner_dsp::math::MathAdd,
+            ))),
+            "MathMult" => Some(Box::new(ProcessorNodeAdapter::new(
+                summoner_dsp::math::MathMult,
+            ))),
+            "PassthroughNode" | "Oscilloscope" => {
+                Some(Box::new(summoner_core::node::PassthroughNode))
+            }
+            "AetherSynth" => {
+                let freq = params
+                    .get("freq")
+                    .or_else(|| params.get("frequency"))
+                    .copied()
+                    .unwrap_or(440.0);
+                Some(Box::new(ProcessorNodeAdapter::new(
+                    summoner_dsp::AetherSynth::new(freq),
+                )))
+            }
+            "PluckSynth" => {
+                let freq = params
+                    .get("freq")
+                    .or_else(|| params.get("frequency"))
+                    .copied()
+                    .unwrap_or(440.0);
+                Some(Box::new(ProcessorNodeAdapter::new(
+                    summoner_dsp::PluckSynth::new(freq),
+                )))
+            }
+            "FmOperatorPair" => {
+                let freq = params
+                    .get("freq")
+                    .or_else(|| params.get("frequency"))
+                    .copied()
+                    .unwrap_or(440.0);
+                let ratio = *params.get("ratio").unwrap_or(&2.0);
+                Some(Box::new(ProcessorNodeAdapter::new(
+                    summoner_dsp::FmOperatorPair::new(freq, ratio),
+                )))
+            }
+            "GlitchAetherMachine" => {
+                let freq = params
+                    .get("freq")
+                    .or_else(|| params.get("frequency"))
+                    .copied()
+                    .unwrap_or(440.0);
+                Some(Box::new(ProcessorNodeAdapter::new(
+                    summoner_dsp::GlitchAetherMachine::new(freq),
+                )))
+            }
+            "CyberpunkSubSynth" => {
+                let freq = params
+                    .get("freq")
+                    .or_else(|| params.get("frequency"))
+                    .copied()
+                    .unwrap_or(110.0);
+                Some(Box::new(ProcessorNodeAdapter::new(
+                    summoner_dsp::CyberpunkSubSynth::new(freq),
+                )))
+            }
+            "AtmosphericPadSynth" => {
+                let freq = params
+                    .get("freq")
+                    .or_else(|| params.get("frequency"))
+                    .copied()
+                    .unwrap_or(220.0);
+                Some(Box::new(ProcessorNodeAdapter::new(
+                    summoner_dsp::AtmosphericPadSynth::new(freq),
+                )))
+            }
+            "GlitchPercussionSynth" => {
+                let freq = params
+                    .get("freq")
+                    .or_else(|| params.get("frequency"))
+                    .copied()
+                    .unwrap_or(110.0);
+                Some(Box::new(ProcessorNodeAdapter::new(
+                    summoner_dsp::GlitchPercussionSynth::new(freq),
+                )))
+            }
+            "DrumMachineDevice" => Some(Box::new(ProcessorNodeAdapter::new(
+                summoner_dsp::DrumMachineDevice::new("Default Kit"),
+            ))),
+            "PluckedStringNode" => {
+                let freq = params
+                    .get("freq")
+                    .or_else(|| params.get("frequency"))
+                    .copied()
+                    .unwrap_or(440.0);
+                Some(Box::new(summoner_dsp::PluckedStringNode::new(
+                    freq,
+                    sample_rate,
+                )))
             }
             "NoiseGen" => Some(Box::new(ProcessorNodeAdapter::new(NoiseGen::new(
                 summoner_dsp::oscillators::NoiseType::White,
@@ -857,5 +961,45 @@ mod tests {
         runner.process_block(256, &ctx, &mut [&mut l[..], &mut r[..]]);
         // After 16-sample crossfade (if any), output should be silent
         assert!(l[32..].iter().all(|s| s.abs() < 1e-5));
+    }
+
+    #[test]
+    fn test_factory_supports_all_known_node_types_and_composites() {
+        for &kind in summoner_core::node::KNOWN_NODE_TYPES {
+            let cfg = NodeConfig {
+                kind: kind.to_string(),
+                params: Default::default(),
+                plugin_state: None,
+            };
+            assert!(
+                NodeFactory::create_node_with_rate(&cfg, 48000).is_some(),
+                "NodeFactory missing KNOWN_NODE_TYPES entry: {}",
+                kind
+            );
+        }
+
+        for kind in [
+            "AetherSynth",
+            "PluckSynth",
+            "FmOperatorPair",
+            "GlitchAetherMachine",
+            "CyberpunkSubSynth",
+            "AtmosphericPadSynth",
+            "GlitchPercussionSynth",
+            "DrumMachineDevice",
+            "PluckedStringNode",
+            "SamplerDevice",
+        ] {
+            let cfg = NodeConfig {
+                kind: kind.to_string(),
+                params: Default::default(),
+                plugin_state: None,
+            };
+            assert!(
+                NodeFactory::create_node_with_rate(&cfg, 48000).is_some(),
+                "NodeFactory missing composite/instrument entry: {}",
+                kind
+            );
+        }
     }
 }

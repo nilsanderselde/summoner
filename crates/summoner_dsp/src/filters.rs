@@ -114,6 +114,19 @@ impl SignalProcessor for FilterLadder {
         "FilterLadder"
     }
 
+    fn handle_event(&mut self, event: &summoner_core::node::NodeEvent, _ctx: &ProcessContext) {
+        use summoner_core::node::NodeEvent;
+        match *event {
+            NodeEvent::SetParam { id: 0, value } => {
+                self.cutoff = value.clamp(20.0, 20000.0);
+            }
+            NodeEvent::SetParam { id: 1, value } => {
+                self.resonance = value.clamp(0.0, 4.0);
+            }
+            _ => {}
+        }
+    }
+
     fn process_block(
         &mut self,
         inputs: &[&[Sample]],
@@ -330,6 +343,19 @@ impl SignalProcessor for FilterSVF {
         "FilterSVF"
     }
 
+    fn handle_event(&mut self, event: &summoner_core::node::NodeEvent, _ctx: &ProcessContext) {
+        use summoner_core::node::NodeEvent;
+        match *event {
+            NodeEvent::SetParam { id: 0, value } => {
+                self.cutoff = value.clamp(20.0, 20000.0);
+            }
+            NodeEvent::SetParam { id: 1, value } => {
+                self.resonance = value.max(0.1);
+            }
+            _ => {}
+        }
+    }
+
     fn process_block(
         &mut self,
         inputs: &[&[Sample]],
@@ -502,6 +528,19 @@ impl FilterComb {
 impl SignalProcessor for FilterComb {
     fn name(&self) -> &str {
         "FilterComb"
+    }
+
+    fn handle_event(&mut self, event: &summoner_core::node::NodeEvent, _ctx: &ProcessContext) {
+        use summoner_core::node::NodeEvent;
+        match *event {
+            NodeEvent::SetParam { id: 0, value } => {
+                self.frequency = value.max(20.0);
+            }
+            NodeEvent::SetParam { id: 1, value } => {
+                self.feedback = value.clamp(-0.999, 0.999);
+            }
+            _ => {}
+        }
     }
 
     fn process_block(

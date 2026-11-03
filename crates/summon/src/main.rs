@@ -1196,40 +1196,14 @@ fn main() {
                                 warnings += 1;
                             }
                         }
-                        let valid_kinds = [
-                            "SineOscillatorNode",
-                            "OscSine",
-                            "OscSaw",
-                            "OscPulse",
-                            "OscWavetable",
-                            "FilterLadder",
-                            "FilterSVF",
-                            "EnvADSR",
-                            "GainNode",
-                            "MathAdd",
-                            "DistortionNode",
-                            "EffectDelay",
-                            "EffectReverb",
-                            "EffectChorus",
-                            "EffectFlanger",
-                            "EffectPhaser",
-                            "WavefolderNode",
-                            "PitchShifterNode",
-                            "BitcrusherNode",
-                            "CompressorNode",
-                            "LimiterNode",
-                            "MidSideNode",
-                            "ParametricEqNode",
-                            "GranularSynthNode",
-                            "AetherSynth",
-                            "PluckSynth",
-                            "FmOperatorPair",
-                            "SamplerDevice",
-                            "Oscilloscope",
-                        ];
                         for track in &proj.tracks {
                             for node in &track.nodes {
-                                if !valid_kinds.contains(&node.kind.as_str()) {
+                                if summoner_engine::graph::NodeFactory::create_node_with_rate(
+                                    node,
+                                    proj.transport.sample_rate,
+                                )
+                                .is_none()
+                                {
                                     println!(
                                         "WARNING: Track {} contains unknown node kind: {}",
                                         track.id, node.kind

@@ -548,6 +548,7 @@ pub struct OscWavetable {
     pub table: std::sync::Arc<[f32; WAVETABLE_SIZE]>,
     pub table2: Option<std::sync::Arc<[f32; WAVETABLE_SIZE]>>,
     pub morph: f32,
+    pub amplitude: f32,
 }
 
 impl OscWavetable {
@@ -558,6 +559,7 @@ impl OscWavetable {
             table,
             table2: None,
             morph: 0.0,
+            amplitude: 1.0,
         }
     }
 
@@ -637,6 +639,20 @@ impl SignalProcessor for OscWavetable {
         "OscWavetable"
     }
 
+    fn handle_event(&mut self, event: &summoner_core::node::NodeEvent, ctx: &ProcessContext) {
+        use summoner_core::node::NodeEvent;
+        match *event {
+            NodeEvent::NoteOn { note, velocity } => {
+                self.trigger(note, ctx);
+                self.amplitude = velocity;
+            }
+            NodeEvent::NoteOff { .. } => self.amplitude = 0.0,
+            NodeEvent::SetParam { id: 0, value } => self.frequency = value,
+            NodeEvent::SetParam { id: 1, value } => self.morph = value.clamp(0.0, 1.0),
+            NodeEvent::SetParam { .. } => {}
+        }
+    }
+
     fn process_block(
         &mut self,
         _inputs: &[&[Sample]],
@@ -648,7 +664,7 @@ impl SignalProcessor for OscWavetable {
         }
         let num_samples = outputs[0].len();
         for i in 0..num_samples {
-            let val = self.process_sample(ctx.sample_rate);
+            let val = self.process_sample(ctx.sample_rate) * self.amplitude;
             for out_ch in outputs.iter_mut() {
                 if i < out_ch.len() {
                     out_ch[i] = val;

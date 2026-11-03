@@ -52,6 +52,22 @@ impl SignalProcessor for EffectDelay {
         "EffectDelay"
     }
 
+    fn handle_event(&mut self, event: &summoner_core::node::NodeEvent, _ctx: &ProcessContext) {
+        use summoner_core::node::NodeEvent;
+        match *event {
+            NodeEvent::SetParam { id: 0, value } => {
+                self.delay_time_sec = value.clamp(0.01, 1.0);
+            }
+            NodeEvent::SetParam { id: 1, value } => {
+                self.feedback = value.clamp(0.0, 0.95);
+            }
+            NodeEvent::SetParam { id: 2, value } => {
+                self.mix = value.clamp(0.0, 1.0);
+            }
+            _ => {}
+        }
+    }
+
     fn process_block(
         &mut self,
         inputs: &[&[Sample]],
@@ -170,6 +186,22 @@ impl EffectReverb {
 impl SignalProcessor for EffectReverb {
     fn name(&self) -> &str {
         "EffectReverb"
+    }
+
+    fn handle_event(&mut self, event: &summoner_core::node::NodeEvent, _ctx: &ProcessContext) {
+        use summoner_core::node::NodeEvent;
+        match *event {
+            NodeEvent::SetParam { id: 0, value } => {
+                self.room_size = value.clamp(0.0, 0.98);
+            }
+            NodeEvent::SetParam { id: 1, value } => {
+                self.mix = value.clamp(0.0, 1.0);
+            }
+            NodeEvent::SetParam { id: 2, value } => {
+                self.damping = value.clamp(0.0, 1.0);
+            }
+            _ => {}
+        }
     }
 
     fn process_block(

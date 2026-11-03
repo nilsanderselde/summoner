@@ -105,13 +105,6 @@ impl<T: Pitched> AudioNode for VoiceNode<T> {
 
     fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
         self.processor.process_block(input, output, ctx);
-        if self.amplitude != 1.0 {
-            for ch in output.iter_mut() {
-                for s in ch.iter_mut() {
-                    *s *= self.amplitude;
-                }
-            }
-        }
     }
 
     fn handle_event(&mut self, event: &NodeEvent, ctx: &ProcessContext) {
@@ -124,6 +117,7 @@ impl<T: Pitched> AudioNode for VoiceNode<T> {
             NodeEvent::SetParam { id: 0, value } => self.processor.set_frequency(value),
             NodeEvent::SetParam { .. } => {}
         }
+        self.processor.handle_event(event, ctx);
     }
 }
 

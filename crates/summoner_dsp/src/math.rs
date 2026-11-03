@@ -166,6 +166,13 @@ impl SignalProcessor for VCA {
         "VCA"
     }
 
+    fn handle_event(&mut self, event: &summoner_core::node::NodeEvent, _ctx: &ProcessContext) {
+        use summoner_core::node::NodeEvent;
+        if let NodeEvent::SetParam { id: 0, value } = *event {
+            self.gain = value;
+        }
+    }
+
     fn process_block(
         &mut self,
         inputs: &[&[Sample]],
