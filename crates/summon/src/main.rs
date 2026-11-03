@@ -13,10 +13,10 @@
 
 //! CLI entry point for Summoner DAW (`summon`).
 
-pub mod audio_engine;
+pub use summoner_engine::audio_engine;
 pub mod export_clap;
 pub mod github;
-pub mod graph;
+pub use summoner_engine::graph;
 pub mod osc;
 
 use summoner_core::allocator::AllocGuard;
