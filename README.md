@@ -40,7 +40,7 @@ cargo run -p summon -- play my_project/project.toml
 
 ```bash
 # Launch GUI
-cargo run -p summoner_gui --features gui
+cargo run -p summon --features gui -- gui
 ```
 
 ---
