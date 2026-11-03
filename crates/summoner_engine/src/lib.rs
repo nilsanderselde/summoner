@@ -1,0 +1,19 @@
+// Summoner - Deterministic, Headless-First DAW
+// Copyright (C) 2026 nilsanderselde
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+//! Shared audio rendering engine, node factory, graph runner, and live CPAL stream host.
+
+pub mod audio_engine;
+pub mod graph;
+
+pub use audio_engine::{
+    default_render_frames, render_project_to_wav, run_live, spawn_live_engine, EngineCommand,
+    LiveEngineHandle, ParamUpdate,
+};
+pub use graph::{graph_from_project, GraphRunner, NodeFactory};
+

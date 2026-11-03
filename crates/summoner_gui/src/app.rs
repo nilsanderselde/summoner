@@ -267,6 +267,7 @@ pub struct SummonerApp {
     pub dpi_scale_panel: crate::views::dpi_scale_panel::DpiScalePanelView,
     pub show_dpi_scale_panel_modal: bool,
     pub award_winning_view: crate::views::award_winning_gui_view::AwardWinningGuiView,
+    pub audio_engine: Option<summoner_engine::LiveEngineHandle>,
 }
 
 impl SummonerApp {
@@ -274,21 +275,32 @@ impl SummonerApp {
         let sample_rate = project.transport.sample_rate;
         let bpm = project.transport.bpm;
 
-        // Pre-register ParamIds for each track and node
-        let mut bus = (*param_bus).clone();
+        // Pre-register ParamIds for each track and node on the shared ParamBus
         for track in &project.tracks {
             let tid = track.id as u32;
             for p_idx in 0..64 {
-                bus.register(summoner_core::param_bus::ParamId(tid * 1000 + p_idx), 0.5);
+                if param_bus
+                    .get(summoner_core::param_bus::ParamId(tid * 1000 + p_idx))
+                    .is_none()
+                {
+                    param_bus.register_shared(
+                        summoner_core::param_bus::ParamId(tid * 1000 + p_idx),
+                        0.5,
+                    );
+                }
             }
             for p_idx in 0..16 {
-                bus.register(
-                    summoner_core::param_bus::ParamId(tid * 1000 + 100 + p_idx),
-                    0.5,
-                );
+                if param_bus
+                    .get(summoner_core::param_bus::ParamId(tid * 1000 + 100 + p_idx))
+                    .is_none()
+                {
+                    param_bus.register_shared(
+                        summoner_core::param_bus::ParamId(tid * 1000 + 100 + p_idx),
+                        0.5,
+                    );
+                }
             }
         }
-        let param_bus = Arc::new(bus);
 
         let mut oscilloscope_buffers = HashMap::new();
         for track in &project.tracks {
@@ -441,6 +453,7 @@ impl SummonerApp {
             ),
             show_dpi_scale_panel_modal: false,
             award_winning_view: crate::views::award_winning_gui_view::AwardWinningGuiView::new(),
+            audio_engine: None,
         };
         app.award_winning_view.live_param_bus = Some(param_bus.clone());
 
@@ -728,6 +741,9 @@ impl SummonerApp {
                         .insert(track.id, Arc::new(Oscilloscope::new()));
                 }
                 self.stage_view.populate_from_project(&self.project);
+                if let Some(ref engine) = self.audio_engine {
+                    engine.reload_project(self.project.clone());
+                }
                 self.status_message = Some(format!("Loaded session: {}", path.display()));
                 self.add_recent_project(path);
             } else {
@@ -774,6 +790,23 @@ impl SummonerApp {
         }
     }
 
+    pub fn start_live_audio(&mut self) {
+        self.audio_engine = Some(summoner_engine::spawn_live_engine(
+            &self.project,
+            Arc::clone(&self.param_bus),
+            self.transport_running,
+        ));
+    }
+
+    pub fn export_wav_to_path(&self, path: &std::path::Path) -> Result<usize, String> {
+        summoner_engine::render_project_to_wav(
+            &self.project,
+            path,
+            None,
+            Some(Arc::clone(&self.param_bus)),
+        )
+    }
+
     pub fn export_wav(&mut self) {
         #[cfg(feature = "gui")]
         {
@@ -783,24 +816,23 @@ impl SummonerApp {
                 .save_file();
             if let Some(path) = save_path {
                 let proj = self.project.clone();
+                let bus = Arc::clone(&self.param_bus);
                 self.status_message = Some(format!("Exporting WAV to {}...", path.display()));
-                std::thread::spawn(move || {
-                    let spec = hound::WavSpec {
-                        channels: 2,
-                        sample_rate: proj.transport.sample_rate,
-                        bits_per_sample: 32,
-                        sample_format: hound::SampleFormat::Float,
-                    };
-                    if let Ok(mut writer) = hound::WavWriter::create(&path, spec) {
-                        let duration_secs = 4.0;
-                        let total_samples =
-                            (proj.transport.sample_rate as f64 * duration_secs) as usize;
-                        for _ in 0..total_samples {
-                            let _ = writer.write_sample(0.0f32);
-                            let _ = writer.write_sample(0.0f32);
-                        }
-                        let _ = writer.finalize();
-                        println!("Exported WAV render to {}", path.display());
+                std::thread::spawn(move || match summoner_engine::render_project_to_wav(
+                    &proj,
+                    &path,
+                    None,
+                    Some(bus),
+                ) {
+                    Ok(frames) => {
+                        println!(
+                            "Exported WAV render ({} frames) to {}",
+                            frames,
+                            path.display()
+                        );
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to export WAV to {}: {}", path.display(), e);
                     }
                 });
             }
@@ -3109,6 +3141,9 @@ impl eframe::App for SummonerApp {
                 if self.transport_running {
                     ctx.request_repaint();
                 }
+                if let Some(ref engine) = self.audio_engine {
+                    engine.set_playing(self.transport_running);
+                }
             });
         });
 
@@ -3657,5 +3692,30 @@ mod tests {
         assert_eq!(loaded.window_size, Some([1280.0, 800.0]));
 
         let _ = std::fs::remove_file(&temp_path);
+    }
+
+    #[test]
+    fn test_gui_shares_param_bus_without_forking_and_exports_real_wav() {
+        let project = create_default_project("GUI Engine Integration Test");
+        let caller_bus = Arc::new(ParamBus::new());
+        let app = SummonerApp::new(project, Arc::clone(&caller_bus));
+
+        // Verify that writes through app.param_bus are visible in caller_bus (audit #8)
+        let id = summoner_core::param_bus::ParamId(1001);
+        app.param_bus.set(id, 0.875);
+        assert_eq!(caller_bus.get(id), Some(0.875));
+
+        // Verify that export_wav_to_path renders real audio, not zeros (audit #9)
+        let wav_path =
+            std::env::temp_dir().join(format!("gui_export_real_{}.wav", std::process::id()));
+        let frames = app.export_wav_to_path(&wav_path).expect("export should succeed");
+        assert!(frames > 44100);
+        let mut reader = hound::WavReader::open(&wav_path).unwrap();
+        let samples: Vec<f32> = reader
+            .samples::<i16>()
+            .map(|s| s.unwrap() as f32 / i16::MAX as f32)
+            .collect();
+        assert!(samples.iter().any(|s| s.abs() > 0.05));
+        let _ = std::fs::remove_file(&wav_path);
     }
 }

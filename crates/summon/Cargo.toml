@@ -14,6 +14,7 @@ path = "src/main.rs"
 summoner_core = { path = "../summoner_core" }
 summoner_project = { path = "../summoner_project" }
 summoner_dsp = { path = "../summoner_dsp" }
+summoner_engine = { path = "../summoner_engine" }
 summoner_harmony = { path = "../summoner_harmony" }
 summoner_sequencer = { path = "../summoner_sequencer" }
 summoner_gui = { path = "../summoner_gui", optional = true }

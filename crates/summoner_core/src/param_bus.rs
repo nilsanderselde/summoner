@@ -59,44 +59,62 @@ impl AtomicParam {
 /// Built at project load time and passed to both the UI and the audio engine.
 #[derive(Debug, Default, Clone)]
 pub struct ParamBus {
-    params: Vec<Arc<AtomicParam>>,
+    params: Arc<arc_swap::ArcSwap<Vec<Arc<AtomicParam>>>>,
 }
 
 impl ParamBus {
     /// Create an empty parameter bus.
     pub fn new() -> Self {
-        Self { params: Vec::new() }
+        Self {
+            params: Arc::new(arc_swap::ArcSwap::from_pointee(Vec::new())),
+        }
     }
 
     /// Register a new parameter. Returns the Arc to the atomic container.
     /// This should only be called during setup, NOT on the real-time audio thread.
     pub fn register(&mut self, id: ParamId, initial: f32) -> Arc<AtomicParam> {
-        // Ensure vector has enough capacity if index is based on ParamId(u32)
-        // Since ParamId is typically dense, we can treat it as an index.
+        self.register_shared(id, initial)
+    }
+
+    /// Register a new parameter via a shared reference (e.g. `Arc<ParamBus>`).
+    /// This should only be called during setup, NOT on the real-time audio thread.
+    pub fn register_shared(&self, id: ParamId, initial: f32) -> Arc<AtomicParam> {
+        let param = AtomicParam::new(id, initial);
         let idx = id.0 as usize;
-        if idx >= self.params.len() {
-            self.params.resize_with(idx + 1, || {
+        let current = self.params.load();
+        let mut next: Vec<Arc<AtomicParam>> = (**current).clone();
+        if idx >= next.len() {
+            next.resize_with(idx + 1, || {
                 Arc::new(AtomicParam {
-                    id: ParamId(0), // Dummy id for padded elements
+                    id: ParamId(0),
                     value: AtomicU32::new(0.0f32.to_bits()),
                 })
             });
         }
-        let param = AtomicParam::new(id, initial);
-        self.params[idx] = param.clone();
+        next[idx] = param.clone();
+        self.params.store(Arc::new(next));
         param
     }
 
     /// Get the current value of a parameter. Returns None if unregistered.
     #[inline]
     pub fn get(&self, id: ParamId) -> Option<f32> {
-        self.params.get(id.0 as usize).map(|p| p.get())
+        let guard = self.params.load();
+        guard.get(id.0 as usize).map(|p| p.get())
     }
 
-    /// Set a parameter value by ID. Panics if the parameter is not registered.
+    /// Set a parameter value by ID. If not yet registered, registers it on the fly.
     #[inline]
     pub fn set(&self, id: ParamId, v: f32) {
-        self.params[id.0 as usize].set(v);
+        let guard = self.params.load();
+        if let Some(p) = guard.get(id.0 as usize) {
+            if p.id == id || id.0 == 0 {
+                p.set(v);
+                return;
+            }
+        }
+        drop(guard);
+        self.register_shared(id, v);
     }
 }
 
@@ -140,5 +158,11 @@ mod tests {
         // Test writing via the bus index
         bus.set(id3, 35.0);
         assert_eq!(param3.get(), 35.0);
+
+        // Cloning ParamBus shares the underlying store (no fork)
+        let mut cloned_bus = bus.clone();
+        cloned_bus.register(ParamId(100), 1.0);
+        cloned_bus.set(ParamId(100), 42.0);
+        assert_eq!(bus.get(ParamId(100)), Some(42.0));
     }
 }

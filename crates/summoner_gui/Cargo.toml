@@ -12,6 +12,7 @@ summoner_project = { path = "../summoner_project" }
 summoner_harmony = { path = "../summoner_harmony" }
 summoner_sequencer = { path = "../summoner_sequencer" }
 summoner_dsp = { path = "../summoner_dsp" }
+summoner_engine = { path = "../summoner_engine" }
 hound = "3.5"
 serde = { workspace = true, features = ["derive"] }
 toml = { workspace = true }
@@ -31,4 +32,3 @@ optional = true
 [features]
 default = []
 gui = ["egui", "eframe", "rfd"]
-

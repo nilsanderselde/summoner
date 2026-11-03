@@ -757,7 +757,11 @@ pub fn launch(
     eframe::run_native(
         "Summoner DAW",
         native_options,
-        Box::new(|_cc| Ok(Box::new(app::SummonerApp::new(project, param_bus)))),
+        Box::new(|_cc| {
+            let mut app = app::SummonerApp::new(project, param_bus);
+            app.start_live_audio();
+            Ok(Box::new(app))
+        }),
     )
     .unwrap();
 }

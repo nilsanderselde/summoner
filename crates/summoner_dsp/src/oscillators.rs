@@ -38,6 +38,7 @@ fn poly_blep(t: f32, dt: f32) -> f32 {
 pub struct OscSaw {
     pub frequency: f32,
     pub phase: f32,
+    pub amplitude: f32,
 }
 
 impl OscSaw {
@@ -45,6 +46,7 @@ impl OscSaw {
         Self {
             frequency,
             phase: 0.0,
+            amplitude: 1.0,
         }
     }
 
@@ -67,6 +69,19 @@ impl OscSaw {
 impl SignalProcessor for OscSaw {
     fn name(&self) -> &str {
         "OscSaw"
+    }
+
+    fn handle_event(&mut self, event: &summoner_core::node::NodeEvent, ctx: &ProcessContext) {
+        use summoner_core::node::NodeEvent;
+        match *event {
+            NodeEvent::NoteOn { note, velocity } => {
+                self.trigger(note, ctx);
+                self.amplitude = velocity;
+            }
+            NodeEvent::NoteOff { .. } => self.amplitude = 0.0,
+            NodeEvent::SetParam { id: 0, value } => self.frequency = value,
+            NodeEvent::SetParam { .. } => {}
+        }
     }
 
     fn process_block(
@@ -92,6 +107,13 @@ impl SignalProcessor for OscSaw {
                     if i < out_ch.len() {
                         out_ch[i] = val;
                     }
+                }
+            }
+        }
+        if self.amplitude != 1.0 {
+            for out_ch in outputs.iter_mut() {
+                for s in out_ch.iter_mut() {
+                    *s *= self.amplitude;
                 }
             }
         }
@@ -178,6 +200,7 @@ pub struct OscPulse {
     pub frequency: f32,
     pub pulse_width: f32,
     pub phase: f32,
+    pub amplitude: f32,
 }
 
 impl OscPulse {
@@ -186,6 +209,7 @@ impl OscPulse {
             frequency,
             pulse_width: pulse_width.clamp(0.01, 0.99),
             phase: 0.0,
+            amplitude: 1.0,
         }
     }
 
@@ -215,6 +239,20 @@ impl SignalProcessor for OscPulse {
         "OscPulse"
     }
 
+    fn handle_event(&mut self, event: &summoner_core::node::NodeEvent, ctx: &ProcessContext) {
+        use summoner_core::node::NodeEvent;
+        match *event {
+            NodeEvent::NoteOn { note, velocity } => {
+                self.trigger(note, ctx);
+                self.amplitude = velocity;
+            }
+            NodeEvent::NoteOff { .. } => self.amplitude = 0.0,
+            NodeEvent::SetParam { id: 0, value } => self.frequency = value,
+            NodeEvent::SetParam { id: 1, value } => self.pulse_width = value.clamp(0.01, 0.99),
+            NodeEvent::SetParam { .. } => {}
+        }
+    }
+
     fn process_block(
         &mut self,
         _inputs: &[&[Sample]],
@@ -227,7 +265,7 @@ impl SignalProcessor for OscPulse {
 
         let num_samples = outputs[0].len();
         for i in 0..num_samples {
-            let val = self.process_sample(ctx.sample_rate);
+            let val = self.process_sample(ctx.sample_rate) * self.amplitude;
             for out_ch in outputs.iter_mut() {
                 if i < out_ch.len() {
                     out_ch[i] = val;
@@ -322,6 +360,7 @@ pub struct OscTriangle {
     pub frequency: f32,
     pub phase: f32,
     pub state: f32,
+    pub amplitude: f32,
 }
 
 impl OscTriangle {
@@ -330,6 +369,7 @@ impl OscTriangle {
             frequency,
             phase: 0.0,
             state: 0.0,
+            amplitude: 1.0,
         }
     }
 
@@ -360,6 +400,19 @@ impl SignalProcessor for OscTriangle {
         "OscTriangle"
     }
 
+    fn handle_event(&mut self, event: &summoner_core::node::NodeEvent, ctx: &ProcessContext) {
+        use summoner_core::node::NodeEvent;
+        match *event {
+            NodeEvent::NoteOn { note, velocity } => {
+                self.trigger(note, ctx);
+                self.amplitude = velocity;
+            }
+            NodeEvent::NoteOff { .. } => self.amplitude = 0.0,
+            NodeEvent::SetParam { id: 0, value } => self.frequency = value,
+            NodeEvent::SetParam { .. } => {}
+        }
+    }
+
     fn process_block(
         &mut self,
         _inputs: &[&[Sample]],
@@ -372,7 +425,7 @@ impl SignalProcessor for OscTriangle {
 
         let num_samples = outputs[0].len();
         for i in 0..num_samples {
-            let val = self.process_sample(ctx.sample_rate);
+            let val = self.process_sample(ctx.sample_rate) * self.amplitude;
             for out_ch in outputs.iter_mut() {
                 if i < out_ch.len() {
                     out_ch[i] = val;
@@ -1128,5 +1181,33 @@ mod tests {
             0,
             "All voices should decay and become inactive after release"
         );
+    }
+
+    #[test]
+    fn test_osc_saw_pulse_triangle_handle_note_events() {
+        use summoner_core::node::NodeEvent;
+        let ctx = ProcessContext::new(48000, 120.0, 0);
+        let mut saw = OscSaw::new(100.0);
+        let mut pulse = OscPulse::new(100.0, 0.5);
+        let mut tri = OscTriangle::new(100.0);
+
+        saw.handle_event(&NodeEvent::NoteOn { note: 69, velocity: 0.5 }, &ctx);
+        pulse.handle_event(&NodeEvent::NoteOn { note: 69, velocity: 0.5 }, &ctx);
+        tri.handle_event(&NodeEvent::NoteOn { note: 69, velocity: 0.5 }, &ctx);
+        assert!((saw.frequency - 440.0).abs() < 1e-3);
+        assert!((pulse.frequency - 440.0).abs() < 1e-3);
+        assert!((tri.frequency - 440.0).abs() < 1e-3);
+
+        saw.handle_event(&NodeEvent::NoteOff { note: 69 }, &ctx);
+        pulse.handle_event(&NodeEvent::NoteOff { note: 69 }, &ctx);
+        tri.handle_event(&NodeEvent::NoteOff { note: 69 }, &ctx);
+
+        let mut buf = [0.0f32; 128];
+        saw.process_block(&[], &mut [&mut buf[..]], &ctx);
+        assert!(buf.iter().all(|&s| s == 0.0));
+        pulse.process_block(&[], &mut [&mut buf[..]], &ctx);
+        assert!(buf.iter().all(|&s| s == 0.0));
+        tri.process_block(&[], &mut [&mut buf[..]], &ctx);
+        assert!(buf.iter().all(|&s| s == 0.0));
     }
 }

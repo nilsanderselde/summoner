@@ -5,6 +5,7 @@ members = [
     "crates/summoner_dsp",
     "crates/summoner_harmony",
     "crates/summoner_project",
+    "crates/summoner_engine",
     "crates/summoner_gui",
     "crates/summoner_sequencer",
     "crates/summon",

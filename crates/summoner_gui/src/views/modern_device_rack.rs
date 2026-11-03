@@ -1336,8 +1336,8 @@ pub fn show_modern_device_rack_with_context(
                     let is_polyphase_oversampler = cur_selection.contains("Oversampler") || cur_selection.contains("PolyphaseFir") || cur_selection.contains("HalfBandFir") || cur_selection == "OversamplerNode";
                     let is_simd_poly_wavetable = cur_selection.contains("SimdPolyWavetable") || cur_selection.contains("PolyWavetable") || cur_selection.contains("OscWavetable") || cur_selection == "SimdPolyWavetableOscillator" || cur_selection == "WavetableOsc";
                     let is_multiband_compressor = cur_selection.contains("MultibandComp") || cur_selection.contains("MultibandCompressor") || cur_selection == "MultibandCompressorNode";
-                    let is_true_peak_limiter = cur_selection == "TruePeakLimiter" || cur_selection == "TruePeakDetector" || cur_selection == "OversampledClipper" || cur_selection == "TruePeakIspLimiter";
-                    let is_modal_synthesis = cur_selection.contains("ModalSynthesis") || cur_selection == "ModalSynthesisEngine" || cur_selection == "ModalResonatorBank";
+                    let _is_true_peak_limiter = cur_selection == "TruePeakLimiter" || cur_selection == "TruePeakDetector" || cur_selection == "OversampledClipper" || cur_selection == "TruePeakIspLimiter";
+                    let _is_modal_synthesis = cur_selection.contains("ModalSynthesis") || cur_selection == "ModalSynthesisEngine" || cur_selection == "ModalResonatorBank";
                     if is_crystal {
                         if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
                             state.requested_open_crystal_hud = true;
