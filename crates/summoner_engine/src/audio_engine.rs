@@ -249,6 +249,9 @@ pub fn spawn_live_engine(
         proj_for_rate.transport.sample_rate = sample_rate;
         let mut runner = GraphRunner::new(&proj_for_rate);
         let mut bpm = project.transport.bpm;
+        let mut loop_enabled = project.loop_enabled;
+        let mut loop_start_beat = project.loop_start_beat;
+        let mut loop_end_beat = project.loop_end_beat;
         let mut current_frame = 0u64;
 
         let playing_cb = Arc::clone(&playing);
@@ -268,6 +271,9 @@ pub fn spawn_live_engine(
                         EngineCommand::ReloadProject(mut p) => {
                             p.transport.sample_rate = sample_rate;
                             bpm = p.transport.bpm;
+                            loop_enabled = p.loop_enabled;
+                            loop_start_beat = p.loop_start_beat;
+                            loop_end_beat = p.loop_end_beat;
                             let _ = reload_proj_tx.try_send(*p);
                         }
                         EngineCommand::SeekFrame(f) => {
@@ -323,6 +329,15 @@ pub fn spawn_live_engine(
                     }
                 }
                 current_frame += frames as u64;
+                if loop_enabled && loop_end_beat > loop_start_beat && bpm > 0.0 {
+                    let frames_per_beat = (sample_rate as f64 * 60.0) / bpm;
+                    let loop_start_frame = (loop_start_beat * frames_per_beat).round() as u64;
+                    let loop_end_frame = (loop_end_beat * frames_per_beat).round() as u64;
+                    if current_frame >= loop_end_frame && loop_end_frame > loop_start_frame {
+                        let loop_len = loop_end_frame - loop_start_frame;
+                        current_frame = loop_start_frame + ((current_frame - loop_start_frame) % loop_len);
+                    }
+                }
                 frame_pos_cb.store(current_frame, Ordering::Relaxed);
             },
             |err| eprintln!("an error occurred on stream: {}", err),
