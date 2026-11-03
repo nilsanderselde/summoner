@@ -576,17 +576,17 @@ impl MacroModulationMatrix {
     /// Process sample step: advances all internal LFOs and Envelopes,
     /// evaluates all modulation assignments, and updates target parameter values.
     pub fn process_sample(&mut self, sample_rate: u32) {
-        let lfo_vals: Vec<f32> = self
-            .lfos
-            .iter_mut()
-            .map(|lfo| lfo.process_sample(sample_rate))
-            .collect();
-        let env_vals: Vec<f32> = self
-            .envelopes
-            .iter_mut()
-            .map(|env| env.process_sample(sample_rate))
-            .collect();
-        let macro_vals: Vec<f32> = self.macros.iter().map(|m| m.get_value()).collect();
+        let mut lfo_vals = [0.0f32; 64];
+        for (dst, lfo) in lfo_vals.iter_mut().zip(self.lfos.iter_mut()) {
+            *dst = lfo.process_sample(sample_rate);
+        }
+        let lfo_count = self.lfos.len().min(lfo_vals.len());
+
+        let mut env_vals = [0.0f32; 64];
+        for (dst, env) in env_vals.iter_mut().zip(self.envelopes.iter_mut()) {
+            *dst = env.process_sample(sample_rate);
+        }
+        let env_count = self.envelopes.len().min(env_vals.len());
 
         for target in self.targets.iter_mut() {
             let range = target.max_value - target.min_value;
@@ -598,9 +598,15 @@ impl MacroModulationMatrix {
                 }
 
                 let raw_val = match assignment.source {
-                    ModulationSourceId::Macro(idx) => macro_vals.get(idx).copied().unwrap_or(0.0),
-                    ModulationSourceId::Lfo(idx) => lfo_vals.get(idx).copied().unwrap_or(0.0),
-                    ModulationSourceId::Envelope(idx) => env_vals.get(idx).copied().unwrap_or(0.0),
+                    ModulationSourceId::Macro(idx) => {
+                        self.macros.get(idx).map(|m| m.get_value()).unwrap_or(0.0)
+                    }
+                    ModulationSourceId::Lfo(idx) => {
+                        lfo_vals[..lfo_count].get(idx).copied().unwrap_or(0.0)
+                    }
+                    ModulationSourceId::Envelope(idx) => {
+                        env_vals[..env_count].get(idx).copied().unwrap_or(0.0)
+                    }
                     ModulationSourceId::Velocity => self.velocity,
                     ModulationSourceId::ModWheel => self.mod_wheel,
                     ModulationSourceId::PitchBend => self.pitch_bend,

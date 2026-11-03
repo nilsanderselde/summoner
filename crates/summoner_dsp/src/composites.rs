@@ -489,15 +489,35 @@ impl SignalProcessor for AtmosphericPadSynth {
         }
 
         let num_samples = outputs[0].len();
-        let mut temp_l = vec![0.0; num_samples];
-        let mut temp_r = vec![0.0; num_samples];
-        for i in 0..num_samples {
-            temp_l[i] = outputs[0][i];
+        let mut temp_l = [0.0f32; 4096];
+        let mut temp_r = [0.0f32; 4096];
+        let mut offset = 0;
+        while offset < num_samples {
+            let chunk_len = (num_samples - offset).min(temp_l.len());
+            temp_l[..chunk_len].copy_from_slice(&outputs[0][offset..offset + chunk_len]);
             if outputs.len() > 1 {
-                temp_r[i] = outputs[1][i];
+                temp_r[..chunk_len].copy_from_slice(&outputs[1][offset..offset + chunk_len]);
+            } else {
+                temp_r[..chunk_len].fill(0.0);
             }
+            if outputs.len() > 1 {
+                let (out0, rest) = outputs.split_at_mut(1);
+                let mut out_slices = [
+                    &mut out0[0][offset..offset + chunk_len],
+                    &mut rest[0][offset..offset + chunk_len],
+                ];
+                self.delay.process_block(
+                    &[&temp_l[..chunk_len], &temp_r[..chunk_len]],
+                    &mut out_slices,
+                    ctx,
+                );
+            } else {
+                let mut out_slices = [&mut outputs[0][offset..offset + chunk_len]];
+                self.delay
+                    .process_block(&[&temp_l[..chunk_len]], &mut out_slices, ctx);
+            }
+            offset += chunk_len;
         }
-        self.delay.process_block(&[&temp_l, &temp_r], outputs, ctx);
     }
 }
 
@@ -567,9 +587,26 @@ impl SignalProcessor for GlitchPercussionSynth {
         }
 
         let num_samples = outputs[0].len();
-        let mut temp_l = vec![0.0; num_samples];
-        temp_l[..num_samples].copy_from_slice(&outputs[0][..num_samples]);
-        self.stutter.process_block(&[&temp_l], outputs, ctx);
+        let mut temp_l = [0.0f32; 4096];
+        let mut offset = 0;
+        while offset < num_samples {
+            let chunk_len = (num_samples - offset).min(temp_l.len());
+            temp_l[..chunk_len].copy_from_slice(&outputs[0][offset..offset + chunk_len]);
+            if outputs.len() > 1 {
+                let (out0, rest) = outputs.split_at_mut(1);
+                let mut out_slices = [
+                    &mut out0[0][offset..offset + chunk_len],
+                    &mut rest[0][offset..offset + chunk_len],
+                ];
+                self.stutter
+                    .process_block(&[&temp_l[..chunk_len]], &mut out_slices, ctx);
+            } else {
+                let mut out_slices = [&mut outputs[0][offset..offset + chunk_len]];
+                self.stutter
+                    .process_block(&[&temp_l[..chunk_len]], &mut out_slices, ctx);
+            }
+            offset += chunk_len;
+        }
     }
 }
 
@@ -650,26 +687,79 @@ impl SignalProcessor for SamplerDevice {
         }
 
         let num_samples = outputs[0].len();
-        let mut raw_buf = vec![0.0f32; num_samples];
-        let mut sampler_out = [&mut raw_buf[..]];
+        let mut raw_buf = [0.0f32; 4096];
+        let mut offset = 0;
+        while offset < num_samples {
+            let chunk_len = (num_samples - offset).min(raw_buf.len());
+            raw_buf[..chunk_len].fill(0.0);
+            {
+                let mut sampler_out = [&mut raw_buf[..chunk_len]];
+                self.sampler
+                    .process_block(inputs, &mut sampler_out[..], ctx);
+            }
 
-        self.sampler
-            .process_block(inputs, &mut sampler_out[..], ctx);
+            for (i, &sample_in) in raw_buf[..chunk_len].iter().enumerate() {
+                self.filter.cutoff = self.macro_view.filter_cutoff.get_value() * 18000.0 + 20.0;
+                self.filter.resonance = self.macro_view.filter_res.get_value() * 3.9;
+                let filtered = self.filter.process_sample(sample_in, ctx.sample_rate);
 
-        for i in 0..num_samples {
-            let sample_in = raw_buf[i];
-            self.filter.cutoff = self.macro_view.filter_cutoff.get_value() * 18000.0 + 20.0;
-            self.filter.resonance = self.macro_view.filter_res.get_value() * 3.9;
-            let filtered = self.filter.process_sample(sample_in, ctx.sample_rate);
+                let env_level = self.amp_env.process_sample(ctx.sample_rate);
+                let vca_out = filtered * env_level * self.macro_view.gain.get_value();
 
-            let env_level = self.amp_env.process_sample(ctx.sample_rate);
-            let vca_out = filtered * env_level * self.macro_view.gain.get_value();
-
-            for out_ch in outputs.iter_mut() {
-                if i < out_ch.len() {
-                    out_ch[i] = vca_out;
+                let dst_idx = offset + i;
+                for out_ch in outputs.iter_mut() {
+                    if dst_idx < out_ch.len() {
+                        out_ch[dst_idx] = vca_out;
+                    }
                 }
             }
+            offset += chunk_len;
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::modulators::{LfoShape, MacroModulationMatrix, ModulationCurve};
+    use summoner_core::allocator::AllocGuard;
+
+    #[test]
+    fn test_zero_heap_allocation_in_composites_and_mod_matrix() {
+        let mut pad = AtmosphericPadSynth::new(220.0);
+        let mut perc = GlitchPercussionSynth::new(110.0);
+        let mut sampler_dev = SamplerDevice::new(MultiSampleBank::new());
+        sampler_dev.trigger_note(60, 100);
+
+        let mut matrix = MacroModulationMatrix::new("RT Matrix");
+        let lfo = matrix.add_lfo(2.0, LfoShape::Sine);
+        let env = matrix.add_envelope(0.01, 0.1, 0.5, 0.2);
+        let mac = matrix.add_macro(0.5);
+        let target = matrix.add_target("Cutoff", 1000.0, 20.0, 20000.0);
+        matrix.add_assignment(lfo, target, 0.5, true, ModulationCurve::Linear);
+        matrix.add_assignment(env, target, 0.3, false, ModulationCurve::Linear);
+        matrix.add_assignment(mac, target, 0.2, false, ModulationCurve::Linear);
+        matrix.trigger_envelope(0, true);
+
+        let mut out_l = [0.0f32; 256];
+        let mut out_r = [0.0f32; 256];
+        let ctx = ProcessContext::new(48000, 120.0, 0);
+
+        let _guard = AllocGuard::new();
+        {
+            let mut outs = [&mut out_l[..], &mut out_r[..]];
+            pad.process_block(&[], &mut outs, &ctx);
+        }
+        {
+            let mut outs = [&mut out_l[..], &mut out_r[..]];
+            perc.process_block(&[], &mut outs, &ctx);
+        }
+        {
+            let mut outs = [&mut out_l[..], &mut out_r[..]];
+            sampler_dev.process_block(&[], &mut outs, &ctx);
+        }
+        for _ in 0..256 {
+            matrix.process_sample(48000);
         }
     }
 }
