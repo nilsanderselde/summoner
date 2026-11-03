@@ -996,11 +996,42 @@ impl LuaScriptEngine {
                 );
             }
             if let Some(dir) = allowed_dir {
-                if script.contains("..") || script.contains("/etc") || script.contains("C:\\") {
+                if script.contains("..")
+                    || script.contains("/etc")
+                    || script.contains("C:\\")
+                    || script.contains("C:/")
+                    || script.contains("/tmp")
+                    || script.contains("/var")
+                    || script.contains("/usr")
+                    || script.contains("/System")
+                    || script.contains("/Users")
+                    || script.contains("\\\\")
+                {
                     return Err(format!(
                         "Security sandbox error: path outside allowed project directory '{:?}'",
                         dir
                     ));
+                }
+                // Also check path literals inside quotes
+                for quote in ['\'', '"'] {
+                    let mut start = 0;
+                    while let Some(q1) = script[start..].find(quote) {
+                        let actual_q1 = start + q1;
+                        if let Some(q2) = script[actual_q1 + 1..].find(quote) {
+                            let actual_q2 = actual_q1 + 1 + q2;
+                            let lit = &script[actual_q1 + 1..actual_q2];
+                            let path = Path::new(lit);
+                            if path.is_absolute() && !path.starts_with(dir) {
+                                return Err(format!(
+                                    "Security sandbox error: path outside allowed project directory '{:?}'",
+                                    dir
+                                ));
+                            }
+                            start = actual_q2 + 1;
+                        } else {
+                            break;
+                        }
+                    }
                 }
             }
         }
