@@ -559,31 +559,65 @@ fn build_schedule(
     }];
     let mut has_notes = false;
     for seq in tc.sequence.iter().chain(tc.clips.iter()) {
-        for (i, step) in seq.steps.iter().enumerate() {
-            if !step.active || step.muted || step.probability <= 0.0 {
+        let stretch = if seq.time_stretch > 0.0 { seq.time_stretch } else { 1.0 };
+        let effective_step_division = seq.step_division * stretch;
+        let total_seq_beats = seq.steps.len() as f64 * effective_step_division;
+
+        for (i, _step) in seq.steps.iter().enumerate() {
+            let logical_step_idx = if seq.is_reversed {
+                seq.steps.len().saturating_sub(1 + i)
+            } else {
+                i
+            };
+            let actual_step = &seq.steps[logical_step_idx];
+
+            if !actual_step.active || actual_step.muted || actual_step.probability <= 0.0 {
                 continue;
             }
+
+            let rel_step_beat = i as f64 * effective_step_division;
+            if rel_step_beat < seq.trim_start {
+                continue;
+            }
+            if seq.trim_end > seq.trim_start && rel_step_beat >= seq.trim_end {
+                continue;
+            }
+
             has_notes = true;
-            let note = (step.note
+            let note = (actual_step.note
                 + seq.pitch_offset
-                + step.pitch_offset as f64
+                + actual_step.pitch_offset as f64
                 + tc.midi_transpose as f64)
                 .round()
                 .clamp(0.0, 127.0) as u8;
+
             let swing_beats = if i % 2 == 1 {
-                (step.swing as f64).clamp(-0.5, 0.5) * seq.step_division
+                (actual_step.swing as f64).clamp(-0.5, 0.5) * effective_step_division
             } else {
                 0.0
             };
-            let micro_beats = (step.micro_shift as f64 / 100.0) * seq.step_division;
-            let base_beat = seq.start_beat + i as f64 * seq.step_division + swing_beats + micro_beats;
-            let ratchet_count = step.ratchet.max(1);
-            let sub_step_beats = seq.step_division / ratchet_count as f64;
-            let vel = (step.velocity * seq.gain as f32).clamp(0.0, 1.0);
+            let micro_beats = (actual_step.micro_shift as f64 / 100.0) * effective_step_division;
+            let base_beat = seq.start_beat + rel_step_beat + swing_beats + micro_beats;
+            let ratchet_count = actual_step.ratchet.max(1);
+            let sub_step_beats = effective_step_division / ratchet_count as f64;
+
+            // Fade-in / Fade-out multiplier
+            let mut fade_mult = 1.0f32;
+            if seq.fade_in > 0.0 && rel_step_beat < seq.fade_in {
+                fade_mult *= (rel_step_beat / seq.fade_in) as f32;
+            }
+            if seq.fade_out > 0.0 && total_seq_beats > 0.0 {
+                let dist_from_end = total_seq_beats - rel_step_beat;
+                if dist_from_end < seq.fade_out {
+                    fade_mult *= (dist_from_end / seq.fade_out).max(0.0) as f32;
+                }
+            }
+
+            let vel = (actual_step.velocity * seq.gain as f32 * fade_mult).clamp(0.0, 1.0);
             for r in 0..ratchet_count {
                 let beat = base_beat + r as f64 * sub_step_beats;
                 let on = (beat * frames_per_beat).round().max(0.0) as u64;
-                let off = ((beat + (step.gate as f64).clamp(0.01, 1.0) * sub_step_beats)
+                let off = ((beat + (actual_step.gate as f64).clamp(0.01, 1.0) * sub_step_beats)
                     * frames_per_beat)
                     .round()
                     .max(0.0) as u64;
@@ -848,6 +882,43 @@ impl GraphRunner {
 mod tests {
     use super::*;
     use summoner_project::create_default_project;
+
+    #[test]
+    fn test_sequence_clip_modifiers_reversed_pitch_time_stretch_and_fades() {
+        use summoner_project::schema::{SequenceConfig, TrackConfig, TrackerStepConfig};
+        let mut tc = TrackConfig::default();
+        let step0 = TrackerStepConfig { note: 60.0, velocity: 1.0, active: true, ..Default::default() };
+        let step1 = TrackerStepConfig { note: 72.0, velocity: 1.0, active: true, ..Default::default() };
+
+        let seq = SequenceConfig {
+            start_beat: 0.0,
+            step_division: 1.0,
+            is_reversed: true,
+            pitch_offset: 2.0,
+            time_stretch: 2.0,
+            gain: 0.5,
+            steps: vec![step0, step1],
+            ..Default::default()
+        };
+        tc.sequence = Some(seq);
+
+        let sched = build_schedule(&tc, &[], 44100, 120.0);
+        // Reversed: step1 (note 72 + 2 = 74) is played first at frame 0
+        // step0 (note 60 + 2 = 62) is played second at beat 2.0 (frame 44100)
+        let note_ons: Vec<_> = sched.iter().filter_map(|s| match s.event {
+            NodeEvent::NoteOn { note, velocity } => Some((s.frame, note, velocity)),
+            _ => None,
+        }).collect();
+
+        assert_eq!(note_ons.len(), 2);
+        assert_eq!(note_ons[0].0, 0);
+        assert_eq!(note_ons[0].1, 74);
+        assert!((note_ons[0].2 - 0.5).abs() < 1e-4);
+
+        assert_eq!(note_ons[1].0, 44100);
+        assert_eq!(note_ons[1].1, 62);
+        assert!((note_ons[1].2 - 0.5).abs() < 1e-4);
+    }
 
     #[test]
     fn test_track_filters_dc_block_and_high_cut() {
