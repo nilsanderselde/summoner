@@ -206,14 +206,16 @@ pub mod pure_tests {
 
     #[test]
     fn test_turn53_wcag_aaa_touch_targets() {
-        assert!(
-            STEM_EXPORT_MIN_HIT_HEIGHT >= 44.0,
-            "Interactive buttons hit height must be >= 44pt (WCAG AAA)"
-        );
-        assert!(
-            STEM_EXPORT_TOUCH_TARGET_SIZE.x >= 44.0 && STEM_EXPORT_TOUCH_TARGET_SIZE.y >= 44.0,
-            "Touch target dimensions must be at least 44x44pt"
-        );
+        const {
+            assert!(
+                STEM_EXPORT_MIN_HIT_HEIGHT >= 44.0,
+                "Interactive buttons hit height must be >= 44pt (WCAG AAA)"
+            );
+            assert!(
+                STEM_EXPORT_TOUCH_TARGET_SIZE.x >= 44.0 && STEM_EXPORT_TOUCH_TARGET_SIZE.y >= 44.0,
+                "Touch target dimensions must be at least 44x44pt"
+            );
+        }
     }
 
     #[test]

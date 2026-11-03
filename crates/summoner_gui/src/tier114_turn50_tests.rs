@@ -171,8 +171,8 @@ pub mod pure_tests {
 
     #[test]
     fn test_turn50_device_catalog_touch_target_dimensions() {
-        assert!(CATALOG_TOUCH_TARGET_SIZE.x >= 44.0);
-        assert!(CATALOG_TOUCH_TARGET_SIZE.y >= 44.0);
+        const { assert!(CATALOG_TOUCH_TARGET_SIZE.x >= 44.0); }
+        const { assert!(CATALOG_TOUCH_TARGET_SIZE.y >= 44.0); }
     }
 
     #[test]

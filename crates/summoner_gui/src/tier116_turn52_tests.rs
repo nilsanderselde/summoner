@@ -79,7 +79,7 @@ pub mod pure_tests {
                 sum
             );
             for (i, &w) in view.anchor_weights.iter().enumerate() {
-                assert!(w >= 0.0 && w <= 1.0, "Weight {} out of bounds: {}", i, w);
+                assert!((0.0..=1.0).contains(&w), "Weight {} out of bounds: {}", i, w);
             }
         }
     }
@@ -129,10 +129,12 @@ pub mod pure_tests {
     #[test]
     fn test_turn52_touch_target_bounds_wcag_aaa() {
         // WCAG AAA requires touch targets to be at least 44x44pt
-        assert!(
-            NEURAL_ORB_PUCK_HIT_RADIUS >= 22.0,
-            "Puck hit radius must be >= 22pt (diameter >= 44pt)"
-        );
+        const {
+            assert!(
+                NEURAL_ORB_PUCK_HIT_RADIUS >= 22.0,
+                "Puck hit radius must be >= 22pt (diameter >= 44pt)"
+            );
+        }
     }
 
     #[test]
