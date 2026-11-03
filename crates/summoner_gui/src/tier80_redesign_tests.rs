@@ -603,11 +603,13 @@ mod tests {
         let ctx = eframe::egui::Context::default();
 
         // 1. Click on timeline ruler in Arranger canvas to scrub playhead
-        let mut input = eframe::egui::RawInput::default();
-        input.screen_rect = Some(eframe::egui::Rect::from_min_size(
-            eframe::egui::Pos2::ZERO,
-            eframe::egui::Vec2::new(1200.0, 800.0),
-        ));
+        let mut input = eframe::egui::RawInput {
+            screen_rect: Some(eframe::egui::Rect::from_min_size(
+                eframe::egui::Pos2::ZERO,
+                eframe::egui::Vec2::new(1200.0, 800.0),
+            )),
+            ..Default::default()
+        };
         let ruler_click = eframe::egui::pos2(350.0, 80.0);
         input.events.push(eframe::egui::Event::PointerButton {
             pos: ruler_click,
@@ -632,11 +634,13 @@ mod tests {
         assert!(view.playhead_beat > 0.0, "Playhead beat should scrub forward on ruler click, got {}", view.playhead_beat);
 
         // 2. Click on Track 2 lane (idx 1) to select it
-        let mut track_click_input = eframe::egui::RawInput::default();
-        track_click_input.screen_rect = Some(eframe::egui::Rect::from_min_size(
-            eframe::egui::Pos2::ZERO,
-            eframe::egui::Vec2::new(1200.0, 800.0),
-        ));
+        let mut track_click_input = eframe::egui::RawInput {
+            screen_rect: Some(eframe::egui::Rect::from_min_size(
+                eframe::egui::Pos2::ZERO,
+                eframe::egui::Vec2::new(1200.0, 800.0),
+            )),
+            ..Default::default()
+        };
         let track_click = eframe::egui::pos2(120.0, 180.0);
         track_click_input.events.push(eframe::egui::Event::PointerButton {
             pos: track_click,
@@ -663,11 +667,13 @@ mod tests {
         // 3. Switch to Piano Roll canvas and scrub ruler
         view.top_bar_state.active_tab = crate::views::modern_top_bar::ModernViewTab::PianoRoll;
         view.playhead_beat = 0.0;
-        let mut pr_input = eframe::egui::RawInput::default();
-        pr_input.screen_rect = Some(eframe::egui::Rect::from_min_size(
-            eframe::egui::Pos2::ZERO,
-            eframe::egui::Vec2::new(1200.0, 800.0),
-        ));
+        let mut pr_input = eframe::egui::RawInput {
+            screen_rect: Some(eframe::egui::Rect::from_min_size(
+                eframe::egui::Pos2::ZERO,
+                eframe::egui::Vec2::new(1200.0, 800.0),
+            )),
+            ..Default::default()
+        };
         let pr_click = eframe::egui::pos2(350.0, 80.0);
         pr_input.events.push(eframe::egui::Event::PointerButton {
             pos: pr_click,
@@ -703,11 +709,13 @@ mod tests {
         let ctx = eframe::egui::Context::default();
 
         // Click Mute button for channel 0 (approx x: 110px, y: 124px inside canvas)
-        let mut mute_input = eframe::egui::RawInput::default();
-        mute_input.screen_rect = Some(eframe::egui::Rect::from_min_size(
-            eframe::egui::Pos2::ZERO,
-            eframe::egui::Vec2::new(1200.0, 800.0),
-        ));
+        let mut mute_input = eframe::egui::RawInput {
+            screen_rect: Some(eframe::egui::Rect::from_min_size(
+                eframe::egui::Pos2::ZERO,
+                eframe::egui::Vec2::new(1200.0, 800.0),
+            )),
+            ..Default::default()
+        };
         let mute_pos = eframe::egui::pos2(110.0, 152.0);
         mute_input.events.push(eframe::egui::Event::PointerButton {
             pos: mute_pos,
@@ -732,11 +740,13 @@ mod tests {
         assert!(view.inspector_state.is_muted, "Inspector mute state should mirror track mute");
 
         // Click Solo button for channel 0 (approx x: 158px, y: 152px)
-        let mut solo_input = eframe::egui::RawInput::default();
-        solo_input.screen_rect = Some(eframe::egui::Rect::from_min_size(
-            eframe::egui::Pos2::ZERO,
-            eframe::egui::Vec2::new(1200.0, 800.0),
-        ));
+        let mut solo_input = eframe::egui::RawInput {
+            screen_rect: Some(eframe::egui::Rect::from_min_size(
+                eframe::egui::Pos2::ZERO,
+                eframe::egui::Vec2::new(1200.0, 800.0),
+            )),
+            ..Default::default()
+        };
         let solo_pos = eframe::egui::pos2(158.0, 152.0);
         solo_input.events.push(eframe::egui::Event::PointerButton {
             pos: solo_pos,
@@ -873,8 +883,10 @@ mod tests {
         let ctx = eframe::egui::Context::default();
 
         // 1. Initial render of Stage Canvas
-        let mut raw_input = eframe::egui::RawInput::default();
-        raw_input.screen_rect = Some(eframe::egui::Rect::from_min_size(eframe::egui::Pos2::ZERO, eframe::egui::Vec2::new(1200.0, 800.0)));
+        let raw_input = eframe::egui::RawInput {
+            screen_rect: Some(eframe::egui::Rect::from_min_size(eframe::egui::Pos2::ZERO, eframe::egui::Vec2::new(1200.0, 800.0))),
+            ..Default::default()
+        };
         let _ = ctx.run(raw_input.clone(), |ctx| {
             eframe::egui::CentralPanel::default().show(ctx, |ui| {
                 view.show(ui);
@@ -976,8 +988,10 @@ mod tests {
         view.top_bar_state.master_gain = 1.0;
 
         let ctx = eframe::egui::Context::default();
-        let mut raw_input = eframe::egui::RawInput::default();
-        raw_input.screen_rect = Some(eframe::egui::Rect::from_min_size(eframe::egui::Pos2::ZERO, eframe::egui::Vec2::new(1200.0, 800.0)));
+        let raw_input = eframe::egui::RawInput {
+            screen_rect: Some(eframe::egui::Rect::from_min_size(eframe::egui::Pos2::ZERO, eframe::egui::Vec2::new(1200.0, 800.0))),
+            ..Default::default()
+        };
 
         // Drag master fader near right edge of mixer canvas (approx x=920.0, y=140.0)
         let mut drag_master = raw_input.clone();
@@ -1004,8 +1018,10 @@ mod tests {
         view.asset_browser_state.is_collapsed = true;
 
         let ctx = eframe::egui::Context::default();
-        let mut raw_input = eframe::egui::RawInput::default();
-        raw_input.screen_rect = Some(eframe::egui::Rect::from_min_size(eframe::egui::Pos2::ZERO, eframe::egui::Vec2::new(1200.0, 800.0)));
+        let raw_input = eframe::egui::RawInput {
+            screen_rect: Some(eframe::egui::Rect::from_min_size(eframe::egui::Pos2::ZERO, eframe::egui::Vec2::new(1200.0, 800.0))),
+            ..Default::default()
+        };
 
         // Select track 2 (HiHats)
         view.selected_track_idx = 2;
