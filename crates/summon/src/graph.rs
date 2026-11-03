@@ -31,7 +31,13 @@ use summoner_dsp::{
 pub struct NodeFactory;
 
 impl NodeFactory {
+    /// Create a node at the default 44.1 kHz rate (prefer create_node_with_rate).
     pub fn create_node(config: &NodeConfig) -> Option<Box<dyn AudioNode>> {
+        Self::create_node_with_rate(config, 44100)
+    }
+
+    /// Create a node whose internal state is sized for sample_rate.
+    pub fn create_node_with_rate(config: &NodeConfig, sample_rate: u32) -> Option<Box<dyn AudioNode>> {
         let params = &config.params;
         match config.kind.as_str() {
             "OscSaw" => Some(Box::new(VoiceNode::new(OscSaw::new(
@@ -104,7 +110,7 @@ impl NodeFactory {
             }
             "LufsMeterNode" => Some(Box::new(ProcessorNodeAdapter::new(LufsMeterNode::new()))),
             "GranularSynthNode" => Some(Box::new(ProcessorNodeAdapter::new(
-                GranularSynthNode::new(44100),
+                GranularSynthNode::new(sample_rate),
             ))),
             "EffectDelay" | "DelayNode" => {
                 Some(Box::new(ProcessorNodeAdapter::new(EffectDelay::new(
@@ -139,12 +145,12 @@ impl NodeFactory {
             }
             "MultiChannelSpectralEqualizerNode" | "SpectralEqualizer" => {
                 Some(Box::new(ProcessorNodeAdapter::new(
-                    summoner_dsp::MultiChannelSpectralEqualizerNode::new(44100, 2, 8),
+                    summoner_dsp::MultiChannelSpectralEqualizerNode::new(sample_rate, 2, 8),
                 )))
             }
             "SimdPolyWavetableOscillator" | "SimdWavetableOscillator" => {
                 Some(Box::new(ProcessorNodeAdapter::new(
-                    summoner_dsp::oscillators::SimdPolyWavetableOscillator::new(44100),
+                    summoner_dsp::oscillators::SimdPolyWavetableOscillator::new(sample_rate),
                 )))
             }
             "MultibandCompressorNode" | "MultibandCompressor" => Some(Box::new(
@@ -267,7 +273,11 @@ impl NodeFactory {
             )),
             "SamplerDevice" => {
                 let mut bank = summoner_dsp::sampler::MultiSampleBank::new();
-                let base_dir = std::path::Path::new("local");
+                let base_dir = if std::path::Path::new("samples").exists() {
+                    std::path::Path::new("samples")
+                } else {
+                    std::path::Path::new(".")
+                };
                 summoner_dsp::sampler::load_bank_buffers(&mut bank, base_dir);
                 Some(Box::new(ProcessorNodeAdapter::new(
                     summoner_dsp::SamplerDevice::new(bank),
@@ -275,7 +285,11 @@ impl NodeFactory {
             }
             "MultiSamplerNode" => {
                 let mut bank = summoner_dsp::sampler::MultiSampleBank::new();
-                let base_dir = std::path::Path::new("local");
+                let base_dir = if std::path::Path::new("samples").exists() {
+                    std::path::Path::new("samples")
+                } else {
+                    std::path::Path::new(".")
+                };
                 summoner_dsp::sampler::load_bank_buffers(&mut bank, base_dir);
                 Some(Box::new(ProcessorNodeAdapter::new(
                     summoner_dsp::sampler::MultiSamplerNode::new(bank),
@@ -318,7 +332,7 @@ impl NodeFactory {
             }
 
             "TonewheelOrganNode" | "TonewheelOrgan" => {
-                let mut organ = summoner_dsp::TonewheelOrgan::new(44100);
+                let mut organ = summoner_dsp::TonewheelOrgan::new(sample_rate);
                 if let Some(&gain) = params.get("gain") {
                     organ.master_gain = gain;
                 }
@@ -331,7 +345,7 @@ impl NodeFactory {
                 Some(Box::new(ProcessorNodeAdapter::new(organ)))
             }
             "RotarySpeakerNode" | "RotarySpeaker" => {
-                let mut speaker = summoner_dsp::RotarySpeaker::new(44100);
+                let mut speaker = summoner_dsp::RotarySpeaker::new(sample_rate);
                 if let Some(&drive) = params.get("drive") {
                     speaker.drive_saturation_db = drive;
                 }
@@ -344,7 +358,7 @@ impl NodeFactory {
                 Some(Box::new(ProcessorNodeAdapter::new(speaker)))
             }
             "ElectricPianoNode" | "ElectricPiano" => {
-                let mut ep = summoner_dsp::ElectricPiano::new(44100);
+                let mut ep = summoner_dsp::ElectricPiano::new(sample_rate);
                 if let Some(&gain) = params.get("gain") {
                     ep.master_gain = gain;
                 }
@@ -366,7 +380,7 @@ impl NodeFactory {
                 Some(Box::new(ProcessorNodeAdapter::new(ep)))
             }
             "SitarNode" | "Sitar" => {
-                let mut sitar = summoner_dsp::Sitar::new(44100);
+                let mut sitar = summoner_dsp::Sitar::new(sample_rate);
                 if let Some(&gain) = params.get("gain") {
                     sitar.master_gain = gain;
                 }
@@ -391,7 +405,7 @@ pub fn graph_from_project(project: &ProjectConfig, max_block_size: usize) -> Nod
 
     if let Some(track) = project.tracks.first() {
         for nc in &track.nodes {
-            if let Some(node) = NodeFactory::create_node(nc) {
+            if let Some(node) = NodeFactory::create_node_with_rate(nc, project.transport.sample_rate) {
                 graph.add_node(node);
             } else {
                 eprintln!("Warning: Unknown node kind '{}'; using passthrough", nc.kind);
@@ -488,7 +502,7 @@ impl GraphRunner {
             track.tuning_root_hz = tc.tuning_root_hz;
 
             for nc in &tc.nodes {
-                if let Some(node) = NodeFactory::create_node(nc) {
+                if let Some(node) = NodeFactory::create_node_with_rate(nc, project.transport.sample_rate) {
                     track.add_node(node);
                 } else {
                     eprintln!("Warning: Unknown node kind '{}'", nc.kind);

@@ -653,12 +653,14 @@ fn main() {
                 .map(|s| s.as_str())
                 .unwrap_or("summoner_session.toml");
             let out_wav_path = args.get(3).map(|s| s.as_str()).unwrap_or("output.wav");
-            let mut num_frames: usize = 44100; // 1 second default
+            let mut explicit_frames: Option<usize> = None;
 
             let mut i = 4;
             while i < args.len() {
                 if args[i] == "--frames" && i + 1 < args.len() {
-                    num_frames = args[i + 1].parse().unwrap_or(44100);
+                    if let Ok(n) = args[i + 1].parse() {
+                        explicit_frames = Some(n);
+                    }
                     i += 2;
                 } else {
                     i += 1;
@@ -676,6 +678,24 @@ fn main() {
             let content = fs::read_to_string(proj_path).expect("Failed to read project file");
             let project = parse_project_toml(&content).expect("Failed to parse project TOML");
 
+            let num_frames = explicit_frames.unwrap_or_else(|| {
+                let mut max_beat = project.loop_end_beat.max(0.0);
+                for tc in &project.tracks {
+                    for seq in tc.all_sequences() {
+                        let seq_end = seq.start_beat + (seq.steps.len() as f64) * seq.step_division;
+                        if seq_end > max_beat {
+                            max_beat = seq_end;
+                        }
+                    }
+                }
+                if max_beat <= 0.0 {
+                    max_beat = 4.0;
+                }
+                let frames_per_beat =
+                    project.transport.sample_rate as f64 * 60.0 / project.transport.bpm.max(1.0);
+                (max_beat * frames_per_beat).round().max(1.0) as usize
+            });
+
             println!("Rendering WAV file: '{}' -> '{}'", proj_path, out_wav_path);
 
             let mut transport =
@@ -684,17 +704,8 @@ fn main() {
 
             let mut runner = graph::GraphRunner::new(&project);
 
-            let use_fallback =
-                runner.tracks.is_empty() || runner.tracks.iter().all(|t| t.nodes.is_empty());
-            if use_fallback {
-                eprintln!("Warning: All tracks are empty. Using fallback sine oscillator.");
-            }
-            let mut fallback_sine = SineOscillatorNode::new(440.0);
-            let mut fallback_gain = GainNode::new(0.5);
-
             const CHANNELS: usize = 2;
             const BLOCK_SIZE: usize = 64;
-            let mut mid_buffer = FixedAudioBuffer::<CHANNELS, BLOCK_SIZE>::new();
             let mut out_buffer = FixedAudioBuffer::<CHANNELS, BLOCK_SIZE>::new();
 
             let mut wav_writer =
@@ -706,10 +717,7 @@ fn main() {
 
             while frames_processed < num_frames {
                 let block_frames = (num_frames - frames_processed).min(BLOCK_SIZE);
-                mid_buffer.set_active_frames(block_frames);
                 out_buffer.set_active_frames(block_frames);
-
-                mid_buffer.clear();
                 out_buffer.clear();
 
                 let ctx = ProcessContext::from_transport(&transport);
@@ -717,16 +725,7 @@ fn main() {
                 {
                     let _guard = AllocGuard::new();
                     let mut out_slices = out_buffer.channels_mut_2();
-
-                    if use_fallback {
-                        let dummy_in: [&[Sample]; 0] = [];
-                        let mut mid_slices = mid_buffer.channels_mut_2();
-                        fallback_sine.process(&dummy_in, &mut mid_slices, &ctx);
-                        let mid_ref = mid_buffer.channels_ref_2();
-                        fallback_gain.process(&mid_ref, &mut out_slices, &ctx);
-                    } else {
-                        runner.process_block(block_frames, &ctx, &mut out_slices);
-                    }
+                    runner.process_block(block_frames, &ctx, &mut out_slices);
                 }
 
                 // Interleave samples and write file I/O outside real-time audio thread scope
@@ -1048,8 +1047,8 @@ fn main() {
                 if let Ok(project) = parse_project_toml(&content) {
                     println!("Auto-rendering session to 'output.wav'...");
                     let mut runner = graph::GraphRunner::new(&project);
-                    let sample_rate = 44100;
-                    let num_frames = 44100 * 2;
+                    let sample_rate = project.transport.sample_rate;
+                    let num_frames = (sample_rate as usize) * 2;
                     let spec = hound::WavSpec {
                         channels: 2,
                         sample_rate,
@@ -1230,7 +1229,7 @@ fn main() {
                 let mut runner = graph::GraphRunner::new(&proj);
                 let mut out_l = vec![0.0f32; 512];
                 let mut out_r = vec![0.0f32; 512];
-                let ctx = ProcessContext::new(44100, proj.transport.bpm, 0);
+                let ctx = ProcessContext::new(proj.transport.sample_rate, proj.transport.bpm, 0);
                 let block_start = std::time::Instant::now();
                 runner.process_block(512, &ctx, &mut [&mut out_l, &mut out_r]);
                 let block_duration = block_start.elapsed();
@@ -2061,37 +2060,16 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_render_wav_uses_graph_with_partial_empty_tracks() {
-        let mut project = summoner_project::create_default_project("Partial Test");
-        // Add an empty track to project
-        let empty_track = summoner_project::schema::TrackConfig {
-            id: 99,
-            name: "Empty Track".to_string(),
-            channels: 2,
-            gain: 1.0,
-            pan: 0.0,
-            muted: false,
-            soloed: false,
-            send_level: 0.0,
-            nodes: vec![],
-            sequence: None,
-            clips: vec![],
-            connections: vec![],
-            tuning_edo: None,
-            tuning_root_hz: None,
-            tuning_scl_path: None,
-            ..Default::default()
-        };
-        project.tracks.push(empty_track);
-
-        let runner = graph::GraphRunner::new(&project);
-        // Track 0 has nodes, Track 1 (index 1) has 0 nodes.
-        let use_fallback =
-            runner.tracks.is_empty() || runner.tracks.iter().all(|t| t.nodes.is_empty());
-        assert!(
-            !use_fallback,
-            "Should not fallback when at least one track has non-empty nodes"
-        );
+    fn test_render_wav_empty_project_renders_silence_without_fallback() {
+        let mut project = summoner_project::create_default_project("Empty Test");
+        project.tracks.clear();
+        let mut runner = graph::GraphRunner::new(&project);
+        let mut out_l = vec![1.0f32; 64];
+        let mut out_r = vec![1.0f32; 64];
+        let ctx = ProcessContext::new(44100, 120.0, 0);
+        runner.process_block(64, &ctx, &mut [&mut out_l, &mut out_r]);
+        assert!(out_l.iter().all(|&s| s == 0.0));
+        assert!(out_r.iter().all(|&s| s == 0.0));
     }
 
     #[test]
