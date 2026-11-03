@@ -278,28 +278,30 @@ pub mod gui_tests {
 
     #[test]
     fn test_turn53_project_config_synchronization() {
-        let mut project = ProjectConfig::default();
-        project.name = "GoldenSession".to_string();
-        project.tracks = vec![
-            TrackConfig {
-                id: 10,
-                name: "Lead Vocal".to_string(),
-                bus_target: Some("Vocals".to_string()),
-                ..Default::default()
-            },
-            TrackConfig {
-                id: 20,
-                name: "Bass Synth".to_string(),
-                bus_target: Some("Bass".to_string()),
-                ..Default::default()
-            },
-            TrackConfig {
-                id: 30,
-                name: "Drum Machine".to_string(),
-                bus_target: Some("Drums".to_string()),
-                ..Default::default()
-            },
-        ];
+        let project = ProjectConfig {
+            name: "GoldenSession".to_string(),
+            tracks: vec![
+                TrackConfig {
+                    id: 10,
+                    name: "Lead Vocal".to_string(),
+                    bus_target: Some("Vocals".to_string()),
+                    ..Default::default()
+                },
+                TrackConfig {
+                    id: 20,
+                    name: "Bass Synth".to_string(),
+                    bus_target: Some("Bass".to_string()),
+                    ..Default::default()
+                },
+                TrackConfig {
+                    id: 30,
+                    name: "Drum Machine".to_string(),
+                    bus_target: Some("Drums".to_string()),
+                    ..Default::default()
+                },
+            ],
+            ..Default::default()
+        };
 
         let mut view = StemsExportView::new();
         view.sync_from_project(&project);
@@ -350,20 +352,22 @@ pub mod gui_tests {
         let temp_dir = std::env::temp_dir().join("summoner_turn53_test_stems");
         let _ = std::fs::remove_dir_all(&temp_dir);
 
-        let mut project = ProjectConfig::default();
-        project.name = "Turn53Test".to_string();
-        project.tracks = vec![
-            TrackConfig {
-                id: 1,
-                name: "Kick".to_string(),
-                ..Default::default()
-            },
-            TrackConfig {
-                id: 2,
-                name: "Snare".to_string(),
-                ..Default::default()
-            },
-        ];
+        let project = ProjectConfig {
+            name: "Turn53Test".to_string(),
+            tracks: vec![
+                TrackConfig {
+                    id: 1,
+                    name: "Kick".to_string(),
+                    ..Default::default()
+                },
+                TrackConfig {
+                    id: 2,
+                    name: "Snare".to_string(),
+                    ..Default::default()
+                },
+            ],
+            ..Default::default()
+        };
 
         let mut view = StemsExportView::new();
         view.sync_from_project(&project);

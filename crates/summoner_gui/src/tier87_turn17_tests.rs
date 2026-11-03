@@ -277,8 +277,7 @@ pub mod tests {
 
     #[test]
     fn test_turn17_piano_roll_m33_live_parameter_bridge_audition() {
-        let mut view = AwardWinningGuiView::default();
-        view.selected_track_idx = 0; // Explicitly bind track 0
+        let mut view = AwardWinningGuiView { selected_track_idx: 0, ..Default::default() };
         let project = create_default_project("Turn17Test");
         let mut param_bus = ParamBus::new();
         let mut auto_registry = AutomationRegistry::new();

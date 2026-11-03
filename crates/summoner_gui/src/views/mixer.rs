@@ -554,10 +554,10 @@ mod tests {
     fn test_mixer_pro_launchers_and_navigation() {
         let _project = create_default_project("Launcher Test");
         let _selected_track_id = Some(1);
-        let mut state = MixerState::default();
-
-        // Simulate requested navigation
-        state.requested_navigation = Some((1, "dag".to_string()));
+        let mut state = MixerState {
+            requested_navigation: Some((1, "dag".to_string())),
+            ..Default::default()
+        };
         assert_eq!(state.requested_navigation, Some((1, "dag".to_string())));
 
         state.requested_navigation = Some((1, "rack".to_string()));
@@ -571,10 +571,11 @@ mod tests {
     fn test_mixer_universal_fx_insertion() {
         let mut project = create_default_project("FX Insertion Test");
         let track_id = project.tracks[0].id;
-        let mut state = MixerState::default();
-
-        state.fx_popup_track_id = Some(track_id);
-        state.fx_search_query = "chorus".to_string();
+        let state = MixerState {
+            fx_popup_track_id: Some(track_id),
+            fx_search_query: "chorus".to_string(),
+            ..Default::default()
+        };
 
         let registry = crate::dsp_node_ui::DspNodeRegistry::new();
         let q = state.fx_search_query.trim().to_lowercase();

@@ -33,8 +33,7 @@ mod tests {
         let mut registry = AutomationRegistry::new();
         let mut timeline = AutomationTimeline::new();
 
-        let mut view = AwardWinningGuiView::default();
-        view.selected_track_idx = 0; // Track ID 1
+        let mut view = AwardWinningGuiView { selected_track_idx: 0, ..Default::default() };
 
         // User tweaks dials in the GUI
         view.device_rack_state.cutoff = 0.88;
@@ -115,8 +114,7 @@ mod tests {
             curve,
         });
 
-        let mut view = AwardWinningGuiView::default();
-        view.selected_track_idx = 0;
+        let mut view = AwardWinningGuiView { selected_track_idx: 0, ..Default::default() };
         view.top_bar_state.is_playing = true;
 
         // Evaluate at beat 2.0 (midpoint => 0.5)
