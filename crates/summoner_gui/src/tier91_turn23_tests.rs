@@ -126,7 +126,7 @@ pub mod pure_tests {
             }
         }
         let filter_n_idx = view.modular_nodes.iter().position(|n| n.id == "filter_1").unwrap();
-        let cutoff_pid = ParamId(track_id * 1000 + 500 + (filter_n_idx as u32 * 16) + 0);
+        let cutoff_pid = ParamId(track_id * 1000 + 500 + (filter_n_idx as u32 * 16));
 
         // 3. Sync at beat 0.0 (editor curve syncs to timeline, then timeline evaluates at beat 0.0)
         view.sync_with_param_bus(&project, &bus, &mut reg, &mut timeline, 0.0, false);
@@ -164,7 +164,7 @@ pub mod pure_tests {
             "modular_cord_{}_{}_{}_{}_intensity",
             cord.from_node_id, cord.from_port_id, cord.to_node_id, cord.to_port_id
         );
-        let cord_pid = ParamId(track_id * 1000 + 700 + 0);
+        let cord_pid = ParamId(track_id * 1000 + 700);
         for c_idx in 0..view.patch_cords.len() {
             let pid = ParamId(track_id * 1000 + 700 + c_idx as u32);
             bus.register(pid, 0.0);

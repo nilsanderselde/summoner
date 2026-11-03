@@ -19,7 +19,7 @@ pub mod pure_tests {
         let track_id = 1u32;
 
         // Register standard device rack dial PIDs (offsets 0..9, 200)
-        let cutoff_pid = ParamId(track_id * 1000 + 0);
+        let cutoff_pid = ParamId(track_id * 1000);
         let resonance_pid = ParamId(track_id * 1000 + 1);
         let decay_pid = ParamId(track_id * 1000 + 2);
         let env_decay_pid = ParamId(track_id * 1000 + 3);
@@ -79,7 +79,7 @@ pub mod pure_tests {
     fn test_turn38_pure_param_id_track_offset_invariants() {
         for track_id in 1..=16u32 {
             let base = track_id * 1000;
-            assert_eq!(ParamId(base + 0), ParamId(track_id * 1000));
+            assert_eq!(ParamId(base), ParamId(track_id * 1000));
             assert_eq!(ParamId(base + 200), ParamId(track_id * 1000 + 200));
             assert_eq!(ParamId(base + 500), ParamId(track_id * 1000 + 500));
         }

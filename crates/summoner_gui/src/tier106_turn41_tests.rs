@@ -20,11 +20,11 @@ pub mod pure_tests {
         let node_idx = 2u32;
 
         // Pro node parameters mapped to track_id * 1000 + 500 + p_i
-        let pro_cutoff_pid = ParamId(track_id * 1000 + 500 + 0);
+        let pro_cutoff_pid = ParamId(track_id * 1000 + 500);
         let pro_res_pid = ParamId(track_id * 1000 + 500 + 1);
 
         // Multi-node slot offset: track_id * 1000 + node_idx * 20 + p_i
-        let slot_cutoff_pid = ParamId(track_id * 1000 + node_idx * 20 + 0);
+        let slot_cutoff_pid = ParamId(track_id * 1000 + node_idx * 20);
         let slot_res_pid = ParamId(track_id * 1000 + node_idx * 20 + 1);
 
         bus.register(pro_cutoff_pid, 880.0);

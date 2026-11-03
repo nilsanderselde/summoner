@@ -113,7 +113,7 @@ pub mod pure_tests {
         // Synchronize with ParamBus while recording automation at beat 4.0
         view.sync_with_param_bus(
             &project,
-            &mut bus,
+            &bus,
             &mut reg,
             &mut timeline,
             4.0,  // playhead_beat

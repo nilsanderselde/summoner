@@ -19,7 +19,7 @@ pub mod pure_tests {
         let track_id = 2u32;
 
         // Pro node parameters mapped to track_id * 1000 + 500 + p_i
-        let cutoff_pid = ParamId(track_id * 1000 + 500 + 0);
+        let cutoff_pid = ParamId(track_id * 1000 + 500);
         let res_pid = ParamId(track_id * 1000 + 500 + 1);
         let drive_pid = ParamId(track_id * 1000 + 500 + 2);
 

@@ -115,7 +115,7 @@ pub mod pure_tests {
         view.sync_with_param_bus(&project, &bus, &mut reg, &mut timeline, playhead, true);
 
         // Verify ParamBus receives exact values without audio-thread allocation
-        let val0 = bus.get(ParamId(track_id * 1000 + 700 + 0)).expect("Cord 0 ParamId must exist");
+        let val0 = bus.get(ParamId(track_id * 1000 + 700)).expect("Cord 0 ParamId must exist");
         let val1 = bus.get(ParamId(track_id * 1000 + 700 + 1)).expect("Cord 1 ParamId must exist");
         let val2 = bus.get(ParamId(track_id * 1000 + 700 + 2)).expect("Cord 2 ParamId must exist");
 
