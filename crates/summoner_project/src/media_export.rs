@@ -916,7 +916,12 @@ impl LuaScriptEngine {
             return Err("Lua param mutation error".to_string());
         }
         for val in params.values_mut() {
-            if clean.contains("* 2") {
+            let mut vars = std::collections::HashMap::new();
+            vars.insert("x".to_string(), *val as f64);
+            vars.insert("val".to_string(), *val as f64);
+            if let Some(res) = eval_lua_math(clean, &mut vars) {
+                *val = res as f32;
+            } else if clean.contains("* 2") {
                 *val *= 2.0;
             } else if clean.contains("+ 0.1") {
                 *val += 0.1;
@@ -939,7 +944,11 @@ impl LuaScriptEngine {
         let num_points = (duration_beats * 2.0) as usize;
         for i in 0..=num_points {
             let beat = i as f64 * 0.5;
-            let val = (beat * 0.5).sin() as f32 * 0.5 + 0.5;
+            let norm_t = if duration_beats > 0.0 { beat / duration_beats } else { 0.0 };
+            let val = match self.evaluate_curve(clean, norm_t) {
+                Ok(v) => v as f32,
+                Err(_) => (beat * 0.5).sin() as f32 * 0.5 + 0.5,
+            };
             points.push((beat, val));
         }
         Ok(points)
@@ -955,8 +964,14 @@ impl LuaScriptEngine {
         if clean.contains("error") {
             return Err("Lua render control error".to_string());
         }
+        let mut vars = std::collections::HashMap::new();
+        vars.insert("bpm".to_string(), proj.transport.bpm);
         if clean.contains("set_bpm") {
             proj.transport.bpm = 140.0;
+        } else if let Some(res) = eval_lua_math(clean, &mut vars) {
+            if res > 10.0 && res < 999.0 {
+                proj.transport.bpm = res;
+            }
         }
         Ok("Render pipeline controlled by Lua script".to_string())
     }
@@ -972,6 +987,18 @@ impl LuaScriptEngine {
             if max_amp > 0.0 {
                 for s in samples.iter_mut() {
                     *s /= max_amp;
+                }
+            }
+        } else {
+            let mut vars = std::collections::HashMap::new();
+            vars.insert("x".to_string(), 0.0);
+            if eval_lua_math(clean, &mut vars).is_some() {
+                for s in samples.iter_mut() {
+                    vars.insert("x".to_string(), *s as f64);
+                    vars.insert("s".to_string(), *s as f64);
+                    if let Some(res) = eval_lua_math(clean, &mut vars) {
+                        *s = res as f32;
+                    }
                 }
             }
         }
