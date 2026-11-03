@@ -489,6 +489,22 @@ impl SignalProcessor for TonewheelOrgan {
         "TonewheelOrgan"
     }
 
+    fn handle_event(&mut self, event: &summoner_core::node::NodeEvent, _ctx: &ProcessContext) {
+        use summoner_core::node::NodeEvent;
+        match *event {
+            NodeEvent::NoteOn { note, velocity } => {
+                self.note_on(note, velocity);
+            }
+            NodeEvent::NoteOff { note } => {
+                self.note_off(note);
+            }
+            NodeEvent::SetParam { id: 0, value } => {
+                self.master_gain = value.clamp(0.0, 2.0);
+            }
+            NodeEvent::SetParam { .. } => {}
+        }
+    }
+
     fn process_block(
         &mut self,
         _inputs: &[&[Sample]],
@@ -528,6 +544,10 @@ impl TonewheelOrganNode {
 impl AudioNode for TonewheelOrganNode {
     fn name(&self) -> &str {
         "TonewheelOrganNode"
+    }
+
+    fn handle_event(&mut self, event: &summoner_core::node::NodeEvent, ctx: &ProcessContext) {
+        self.organ.handle_event(event, ctx);
     }
 
     fn process(

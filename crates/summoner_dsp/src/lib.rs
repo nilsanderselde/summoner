@@ -254,6 +254,31 @@ impl AudioNode for PluckedStringNode {
         "PluckedStringNode"
     }
 
+    fn handle_event(&mut self, event: &summoner_core::node::NodeEvent, ctx: &ProcessContext) {
+        use summoner_core::node::NodeEvent;
+        match *event {
+            NodeEvent::NoteOn { note, velocity } => {
+                let sr = if ctx.sample_rate > 0 {
+                    ctx.sample_rate
+                } else {
+                    44100
+                };
+                self.string.set_frequency(ctx.note_to_hz(note as i32), sr);
+                self.string.pluck(velocity.clamp(0.0, 1.0));
+            }
+            NodeEvent::NoteOff { .. } => {}
+            NodeEvent::SetParam { id: 0, value } => {
+                let sr = if ctx.sample_rate > 0 {
+                    ctx.sample_rate
+                } else {
+                    44100
+                };
+                self.string.set_frequency(value.max(10.0), sr);
+            }
+            NodeEvent::SetParam { .. } => {}
+        }
+    }
+
     fn process(
         &mut self,
         _input: &[&[Sample]],

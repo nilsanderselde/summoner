@@ -204,6 +204,23 @@ impl SignalProcessor for DrumMachineDevice {
         "DrumMachineDevice"
     }
 
+    fn handle_event(&mut self, event: &summoner_core::node::NodeEvent, _ctx: &ProcessContext) {
+        use summoner_core::node::NodeEvent;
+        match *event {
+            NodeEvent::NoteOn { note, velocity } => {
+                let vel_u8 = (velocity.clamp(0.0, 1.0) * 127.0).round() as u8;
+                self.trigger_note(note, vel_u8.max(1));
+            }
+            NodeEvent::NoteOff { note } => {
+                self.release_note(note);
+            }
+            NodeEvent::SetParam { id: 0, value } => {
+                self.macro_view.master_gain = value.clamp(0.0, 2.0);
+            }
+            NodeEvent::SetParam { .. } => {}
+        }
+    }
+
     fn process_block(
         &mut self,
         _inputs: &[&[Sample]],

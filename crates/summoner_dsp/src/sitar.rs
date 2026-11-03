@@ -575,6 +575,25 @@ impl SignalProcessor for Sitar {
         "Sitar"
     }
 
+    fn handle_event(&mut self, event: &summoner_core::node::NodeEvent, _ctx: &ProcessContext) {
+        use summoner_core::node::NodeEvent;
+        match *event {
+            NodeEvent::NoteOn { note, velocity } => {
+                self.note_on(note, velocity);
+            }
+            NodeEvent::NoteOff { note } => {
+                self.note_off(note);
+            }
+            NodeEvent::SetParam { id: 0, value } => {
+                self.set_meend_pull(value);
+            }
+            NodeEvent::SetParam { id: 1, value } => {
+                self.master_gain = value.clamp(0.0, 2.0);
+            }
+            NodeEvent::SetParam { .. } => {}
+        }
+    }
+
     fn process_block(
         &mut self,
         _inputs: &[&[Sample]],
@@ -615,6 +634,10 @@ impl SitarNode {
 impl AudioNode for SitarNode {
     fn name(&self) -> &str {
         "SitarNode"
+    }
+
+    fn handle_event(&mut self, event: &summoner_core::node::NodeEvent, ctx: &ProcessContext) {
+        self.sitar.handle_event(event, ctx);
     }
 
     fn process(

@@ -249,6 +249,22 @@ impl SignalProcessor for SamplerNode {
         "SamplerNode"
     }
 
+    fn handle_event(&mut self, event: &summoner_core::node::NodeEvent, _ctx: &ProcessContext) {
+        use summoner_core::node::NodeEvent;
+        match *event {
+            NodeEvent::NoteOn { note, .. } => {
+                self.trigger_pitch(note as f64 - 60.0);
+            }
+            NodeEvent::NoteOff { .. } => {
+                self.stop();
+            }
+            NodeEvent::SetParam { id: 0, value } => {
+                self.playback_rate = (value as f64).max(0.01);
+            }
+            NodeEvent::SetParam { .. } => {}
+        }
+    }
+
     fn process_block(
         &mut self,
         _inputs: &[&[Sample]],
@@ -361,6 +377,23 @@ impl MultiSamplerNode {
 impl SignalProcessor for MultiSamplerNode {
     fn name(&self) -> &str {
         "MultiSamplerNode"
+    }
+
+    fn handle_event(&mut self, event: &summoner_core::node::NodeEvent, _ctx: &ProcessContext) {
+        use summoner_core::node::NodeEvent;
+        match *event {
+            NodeEvent::NoteOn { note, velocity } => {
+                let vel_u8 = (velocity.clamp(0.0, 1.0) * 127.0).round() as u8;
+                self.trigger_note(note, vel_u8.max(1));
+            }
+            NodeEvent::NoteOff { .. } => {
+                self.stop();
+            }
+            NodeEvent::SetParam { id: 0, value } => {
+                self.playback_rate = (value as f64).max(0.01);
+            }
+            NodeEvent::SetParam { .. } => {}
+        }
     }
 
     fn process_block(

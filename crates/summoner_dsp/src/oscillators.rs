@@ -1022,6 +1022,22 @@ impl SignalProcessor for SimdPolyWavetableOscillator {
         "SimdPolyWavetableOscillator"
     }
 
+    fn handle_event(&mut self, event: &summoner_core::node::NodeEvent, _ctx: &ProcessContext) {
+        use summoner_core::node::NodeEvent;
+        match *event {
+            NodeEvent::NoteOn { note, velocity } => {
+                self.note_on(note, velocity);
+            }
+            NodeEvent::NoteOff { note } => {
+                self.note_off(note);
+            }
+            NodeEvent::SetParam { id: 0, value } => {
+                self.set_morph(value);
+            }
+            NodeEvent::SetParam { .. } => {}
+        }
+    }
+
     fn process_block(
         &mut self,
         _inputs: &[&[Sample]],

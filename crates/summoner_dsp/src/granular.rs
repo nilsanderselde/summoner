@@ -111,6 +111,28 @@ impl SignalProcessor for GranularSynthNode {
         "GranularSynthNode"
     }
 
+    fn handle_event(&mut self, event: &summoner_core::node::NodeEvent, _ctx: &ProcessContext) {
+        use summoner_core::node::NodeEvent;
+        match *event {
+            NodeEvent::NoteOn { note, .. } => {
+                self.pitch_track_mode = true;
+                self.set_midi_note(note);
+                self.spawn_grain();
+            }
+            NodeEvent::NoteOff { .. } => {}
+            NodeEvent::SetParam { id: 0, value } => {
+                self.grain_size_ms = value.clamp(5.0, 1000.0);
+            }
+            NodeEvent::SetParam { id: 1, value } => {
+                self.density = value.clamp(0.0, 200.0);
+            }
+            NodeEvent::SetParam { id: 2, value } => {
+                self.spray = value.clamp(0.0, 1.0);
+            }
+            NodeEvent::SetParam { .. } => {}
+        }
+    }
+
     fn process_block(
         &mut self,
         _inputs: &[&[Sample]],

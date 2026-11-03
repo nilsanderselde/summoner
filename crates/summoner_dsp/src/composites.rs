@@ -84,6 +84,32 @@ impl SignalProcessor for AetherSynth {
         "AetherSynth"
     }
 
+    fn handle_event(&mut self, event: &summoner_core::node::NodeEvent, ctx: &ProcessContext) {
+        use summoner_core::node::NodeEvent;
+        match *event {
+            NodeEvent::NoteOn { note, velocity } => {
+                self.vca.gain = velocity;
+                self.trigger_note(note, ctx);
+            }
+            NodeEvent::NoteOff { .. } => {
+                self.trigger(false);
+            }
+            NodeEvent::SetParam { id: 0, value } => {
+                self.macro_view.osc_mix.value = value.clamp(0.0, 1.0);
+            }
+            NodeEvent::SetParam { id: 1, value } => {
+                self.filter.cutoff = value.clamp(20.0, 20000.0);
+            }
+            NodeEvent::SetParam { id: 2, value } => {
+                self.filter.resonance = value.clamp(0.0, 4.0);
+            }
+            NodeEvent::SetParam { id: 3, value } => {
+                self.lfo.frequency = value.clamp(0.01, 50.0);
+            }
+            NodeEvent::SetParam { .. } => {}
+        }
+    }
+
     fn process_block(
         &mut self,
         inputs: &[&[Sample]],
@@ -158,6 +184,29 @@ impl SignalProcessor for PluckSynth {
         "PluckSynth"
     }
 
+    fn handle_event(&mut self, event: &summoner_core::node::NodeEvent, ctx: &ProcessContext) {
+        use summoner_core::node::NodeEvent;
+        match *event {
+            NodeEvent::NoteOn { note, .. } => {
+                self.comb_filter.frequency = ctx.note_to_hz(note as i32);
+                self.pluck();
+            }
+            NodeEvent::NoteOff { .. } => {
+                self.exciter_env.trigger(false);
+            }
+            NodeEvent::SetParam { id: 0, value } => {
+                self.comb_filter.frequency = value.max(10.0);
+            }
+            NodeEvent::SetParam { id: 1, value } => {
+                self.comb_filter.feedback = value.clamp(0.0, 0.999);
+            }
+            NodeEvent::SetParam { id: 2, value } => {
+                self.damping_filter.cutoff = value.clamp(20.0, 20000.0);
+            }
+            NodeEvent::SetParam { .. } => {}
+        }
+    }
+
     fn process_block(
         &mut self,
         _inputs: &[&[Sample]],
@@ -222,6 +271,31 @@ impl FmOperatorPair {
 impl SignalProcessor for FmOperatorPair {
     fn name(&self) -> &str {
         "FmOperatorPair"
+    }
+
+    fn handle_event(&mut self, event: &summoner_core::node::NodeEvent, ctx: &ProcessContext) {
+        use summoner_core::node::NodeEvent;
+        match *event {
+            NodeEvent::NoteOn { note, velocity } => {
+                let freq = ctx.note_to_hz(note as i32);
+                self.carrier.frequency = freq;
+                self.modulator.frequency = freq * self.ratio;
+                self.vca.gain = velocity;
+                self.trigger(true);
+            }
+            NodeEvent::NoteOff { .. } => {
+                self.trigger(false);
+            }
+            NodeEvent::SetParam { id: 0, value } => {
+                self.carrier.frequency = value.max(1.0);
+                self.modulator.frequency = self.carrier.frequency * self.ratio;
+            }
+            NodeEvent::SetParam { id: 1, value } => {
+                self.ratio = value.max(0.01);
+                self.modulator.frequency = self.carrier.frequency * self.ratio;
+            }
+            NodeEvent::SetParam { .. } => {}
+        }
     }
 
     fn process_block(
@@ -303,6 +377,31 @@ impl SignalProcessor for GlitchAetherMachine {
         "GlitchAetherMachine"
     }
 
+    fn handle_event(&mut self, event: &summoner_core::node::NodeEvent, ctx: &ProcessContext) {
+        use summoner_core::node::NodeEvent;
+        match *event {
+            NodeEvent::NoteOn { note, velocity } => {
+                self.osc_saw.trigger(note, ctx);
+                self.osc_pulse.trigger(note, ctx);
+                self.vca.gain = velocity;
+                self.trigger(true);
+            }
+            NodeEvent::NoteOff { .. } => {
+                self.trigger(false);
+            }
+            NodeEvent::SetParam { id: 0, value } => {
+                self.filter.cutoff = value.clamp(20.0, 20000.0);
+            }
+            NodeEvent::SetParam { id: 1, value } => {
+                self.filter.resonance = value.clamp(0.0, 4.0);
+            }
+            NodeEvent::SetParam { id: 2, value } => {
+                self.chopper.rate_hz = value.clamp(0.1, 100.0);
+            }
+            NodeEvent::SetParam { .. } => {}
+        }
+    }
+
     fn process_block(
         &mut self,
         inputs: &[&[Sample]],
@@ -379,6 +478,28 @@ impl SignalProcessor for CyberpunkSubSynth {
         "CyberpunkSubSynth"
     }
 
+    fn handle_event(&mut self, event: &summoner_core::node::NodeEvent, ctx: &ProcessContext) {
+        use summoner_core::node::NodeEvent;
+        match *event {
+            NodeEvent::NoteOn { note, .. } => {
+                let freq = ctx.note_to_hz(note as i32);
+                self.sub_sine.frequency = freq;
+                self.drive_saw.frequency = freq * 2.0;
+                self.trigger(true);
+            }
+            NodeEvent::NoteOff { .. } => {
+                self.trigger(false);
+            }
+            NodeEvent::SetParam { id: 0, value } => {
+                self.filter_svf.cutoff = value.clamp(20.0, 20000.0);
+            }
+            NodeEvent::SetParam { id: 1, value } => {
+                self.pitch_lfo.frequency = value.clamp(0.01, 50.0);
+            }
+            NodeEvent::SetParam { .. } => {}
+        }
+    }
+
     fn process_block(
         &mut self,
         inputs: &[&[Sample]],
@@ -449,6 +570,28 @@ impl AtmosphericPadSynth {
 impl SignalProcessor for AtmosphericPadSynth {
     fn name(&self) -> &str {
         "AtmosphericPadSynth"
+    }
+
+    fn handle_event(&mut self, event: &summoner_core::node::NodeEvent, ctx: &ProcessContext) {
+        use summoner_core::node::NodeEvent;
+        match *event {
+            NodeEvent::NoteOn { note, .. } => {
+                let freq = ctx.note_to_hz(note as i32);
+                self.saw1.frequency = freq;
+                self.tri2.frequency = freq * 1.003;
+                self.trigger(true);
+            }
+            NodeEvent::NoteOff { .. } => {
+                self.trigger(false);
+            }
+            NodeEvent::SetParam { id: 0, value } => {
+                self.svf.cutoff = value.clamp(20.0, 20000.0);
+            }
+            NodeEvent::SetParam { id: 1, value } => {
+                self.lfo_filter.frequency = value.clamp(0.01, 50.0);
+            }
+            NodeEvent::SetParam { .. } => {}
+        }
     }
 
     fn process_block(
@@ -555,6 +698,26 @@ impl GlitchPercussionSynth {
 impl SignalProcessor for GlitchPercussionSynth {
     fn name(&self) -> &str {
         "GlitchPercussionSynth"
+    }
+
+    fn handle_event(&mut self, event: &summoner_core::node::NodeEvent, ctx: &ProcessContext) {
+        use summoner_core::node::NodeEvent;
+        match *event {
+            NodeEvent::NoteOn { note, .. } => {
+                let freq = ctx.note_to_hz(note as i32);
+                self.pitch_sine.frequency = freq;
+                self.comb_filter.frequency = freq * 2.0;
+                self.trigger();
+            }
+            NodeEvent::NoteOff { .. } => {
+                self.perc_env.trigger(false);
+            }
+            NodeEvent::SetParam { id: 0, value } => {
+                self.pitch_sine.frequency = value.max(10.0);
+                self.comb_filter.frequency = self.pitch_sine.frequency * 2.0;
+            }
+            NodeEvent::SetParam { .. } => {}
+        }
     }
 
     fn process_block(
@@ -676,6 +839,29 @@ impl SignalProcessor for SamplerDevice {
         "SamplerDevice"
     }
 
+    fn handle_event(&mut self, event: &summoner_core::node::NodeEvent, _ctx: &ProcessContext) {
+        use summoner_core::node::NodeEvent;
+        match *event {
+            NodeEvent::NoteOn { note, velocity } => {
+                let vel_u8 = (velocity.clamp(0.0, 1.0) * 127.0).round() as u8;
+                self.trigger_note(note, vel_u8.max(1));
+            }
+            NodeEvent::NoteOff { .. } => {
+                self.release_note();
+            }
+            NodeEvent::SetParam { id: 0, value } => {
+                self.macro_view.filter_cutoff.value = value.clamp(0.0, 1.0);
+            }
+            NodeEvent::SetParam { id: 1, value } => {
+                self.macro_view.filter_res.value = value.clamp(0.0, 1.0);
+            }
+            NodeEvent::SetParam { id: 2, value } => {
+                self.macro_view.gain.value = value.clamp(0.0, 1.0);
+            }
+            NodeEvent::SetParam { .. } => {}
+        }
+    }
+
     fn process_block(
         &mut self,
         inputs: &[&[Sample]],
@@ -761,5 +947,30 @@ mod tests {
         for _ in 0..256 {
             matrix.process_sample(48000);
         }
+    }
+
+    #[test]
+    fn test_composite_synths_handle_note_events() {
+        use summoner_core::node::NodeEvent;
+        let ctx = ProcessContext::new(48000, 120.0, 0);
+        let mut aether = AetherSynth::new(220.0);
+        let mut out_l = [0.0f32; 128];
+        let mut out_r = [0.0f32; 128];
+
+        // Initially silent (envelope not triggered)
+        aether.process_block(&[], &mut [&mut out_l[..], &mut out_r[..]], &ctx);
+        assert!(out_l.iter().all(|&s| s == 0.0));
+
+        // NoteOn triggers envelope and sets note frequency
+        aether.handle_event(
+            &NodeEvent::NoteOn {
+                note: 69,
+                velocity: 0.9,
+            },
+            &ctx,
+        );
+        aether.process_block(&[], &mut [&mut out_l[..], &mut out_r[..]], &ctx);
+        assert!(out_l.iter().any(|&s| s.abs() > 1e-4));
+        assert!((aether.osc_saw.frequency - 440.0).abs() < 0.01);
     }
 }

@@ -468,6 +468,22 @@ impl SignalProcessor for ElectricPiano {
         "ElectricPiano"
     }
 
+    fn handle_event(&mut self, event: &summoner_core::node::NodeEvent, _ctx: &ProcessContext) {
+        use summoner_core::node::NodeEvent;
+        match *event {
+            NodeEvent::NoteOn { note, velocity } => {
+                self.note_on(note, velocity);
+            }
+            NodeEvent::NoteOff { note } => {
+                self.note_off(note);
+            }
+            NodeEvent::SetParam { id: 0, value } => {
+                self.master_gain = value.clamp(0.0, 2.0);
+            }
+            NodeEvent::SetParam { .. } => {}
+        }
+    }
+
     #[allow(clippy::needless_range_loop)]
     fn process_block(
         &mut self,
@@ -495,6 +511,10 @@ impl SignalProcessor for ElectricPiano {
 impl AudioNode for ElectricPiano {
     fn name(&self) -> &str {
         "ElectricPianoNode"
+    }
+
+    fn handle_event(&mut self, event: &summoner_core::node::NodeEvent, ctx: &ProcessContext) {
+        SignalProcessor::handle_event(self, event, ctx);
     }
 
     fn process(
