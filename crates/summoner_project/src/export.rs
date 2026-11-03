@@ -863,15 +863,34 @@ pub fn batch_export_stems(
 }
 
 pub fn backup_project_zip(project_dir: &Path, zip_path: &Path) -> Result<(), String> {
+    use std::io::Write;
+    let file = std::fs::File::create(zip_path).map_err(|e| e.to_string())?;
+    let mut zip = zip::ZipWriter::new(file);
+    let options = zip::write::FileOptions::default()
+        .compression_method(zip::CompressionMethod::Deflated);
+
     let mut manifest = String::from("PROJECT BACKUP MANIFEST:\n");
     if project_dir.exists() {
         if let Ok(entries) = std::fs::read_dir(project_dir) {
             for entry in entries.flatten() {
-                manifest.push_str(&format!(" - {}\n", entry.file_name().to_string_lossy()));
+                let path = entry.path();
+                let fname = entry.file_name().to_string_lossy().to_string();
+                manifest.push_str(&format!(" - {}\n", fname));
+                if path.is_file() && path != zip_path {
+                    if let Ok(bytes) = std::fs::read(&path) {
+                        zip.start_file(&fname, options).map_err(|e| e.to_string())?;
+                        zip.write_all(&bytes).map_err(|e| e.to_string())?;
+                    }
+                }
             }
         }
     }
-    std::fs::write(zip_path, manifest.as_bytes()).map_err(|e| e.to_string())
+    zip.start_file("MANIFEST.txt", options)
+        .map_err(|e| e.to_string())?;
+    zip.write_all(manifest.as_bytes())
+        .map_err(|e| e.to_string())?;
+    zip.finish().map_err(|e| e.to_string())?;
+    Ok(())
 }
 
 /// Statistics and report returned by multi-format audio batch converter.
@@ -1692,6 +1711,15 @@ mod tests {
         // 4. Unsupported format returns Err instead of writing a text stub
         let mp3_path = temp_dir.join("test.mp3");
         assert!(write_audio_file(&mp3_path, &signal, 44100, 2, "mp3").is_err());
+
+        // 5. backup_project_zip writes a valid ZIP archive
+        let zip_path = temp_dir.join("backup.zip");
+        backup_project_zip(&temp_dir, &zip_path).unwrap();
+        let zip_bytes = fs::read(&zip_path).unwrap();
+        assert_eq!(&zip_bytes[0..4], b"PK\x03\x04");
+        let zip_file = fs::File::open(&zip_path).unwrap();
+        let mut archive = zip::ZipArchive::new(zip_file).unwrap();
+        assert!(archive.by_name("MANIFEST.txt").is_ok());
 
         let _ = fs::remove_dir_all(&temp_dir);
     }

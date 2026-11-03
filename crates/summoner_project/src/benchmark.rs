@@ -241,16 +241,55 @@ impl AudioGraphBenchmarkSuite {
         }
     }
 
-    /// Benchmark project graph directly using built-in synthetic signal generator.
+    /// Benchmark project graph directly using `summoner_core::track::Track` and `AudioNode` chains.
     pub fn run_benchmark_on_project(
         project: &ProjectConfig,
         config: &AudioGraphBenchmarkConfig,
     ) -> AudioGraphBenchmarkReport {
-        let total_nodes: usize = project.tracks.iter().map(|t| t.nodes.len()).sum();
+        use summoner_core::node::{GainNode, PassthroughNode, ProcessContext, SineOscillatorNode};
+        use summoner_core::track::Track;
 
-        let mut phase = 0.0f32;
-        let freq = 440.0f32;
-        let sr = config.sample_rate as f32;
+        let total_nodes: usize = project.tracks.iter().map(|t| t.nodes.len()).sum();
+        let channels = config.channels.max(1);
+
+        let mut tracks: Vec<Track> = project
+            .tracks
+            .iter()
+            .map(|tc| {
+                let mut tr = Track::new(tc.id, tc.name.clone(), channels);
+                tr.gain = tc.gain;
+                tr.pan = tc.pan;
+                tr.muted = tc.muted;
+                tr.soloed = tc.soloed;
+                for nc in &tc.nodes {
+                    let freq = nc
+                        .params
+                        .get("freq")
+                        .or_else(|| nc.params.get("frequency"))
+                        .copied()
+                        .unwrap_or(440.0);
+                    let gain = nc.params.get("gain").copied().unwrap_or(1.0);
+                    match nc.kind.as_str() {
+                        "GainNode" | "VCA" => tr.add_node(Box::new(GainNode::new(gain))),
+                        "PassthroughNode" => tr.add_node(Box::new(PassthroughNode)),
+                        _ => tr.add_node(Box::new(SineOscillatorNode::new(freq))),
+                    }
+                }
+                if tr.nodes.is_empty() {
+                    tr.add_node(Box::new(SineOscillatorNode::new(440.0)));
+                }
+                tr
+            })
+            .collect();
+
+        if tracks.is_empty() {
+            let mut tr = Track::new(1, "Benchmark Default", channels);
+            tr.add_node(Box::new(SineOscillatorNode::new(440.0)));
+            tracks.push(tr);
+        }
+
+        let ctx = ProcessContext::new(config.sample_rate, project.transport.bpm, 0);
+        let mut scratch = vec![vec![0.0f32; 8192]; channels];
 
         Self::run_benchmark_with_runner(
             &project.name,
@@ -258,15 +297,21 @@ impl AudioGraphBenchmarkSuite {
             total_nodes,
             config,
             move |block_size, outputs| {
-                let phase_step = 2.0 * std::f32::consts::PI * freq / sr;
-                for i in 0..block_size {
-                    let sample = (phase).sin() * 0.5;
-                    phase += phase_step;
-                    if phase > 2.0 * std::f32::consts::PI {
-                        phase -= 2.0 * std::f32::consts::PI;
-                    }
-                    for ch in outputs.iter_mut() {
-                        ch[i] = sample;
+                let blk = block_size.min(8192);
+                for ch in outputs.iter_mut() {
+                    ch[..blk].fill(0.0);
+                }
+                for track in tracks.iter_mut() {
+                    let mut track_outs: Vec<&mut [f32]> =
+                        scratch.iter_mut().map(|b| &mut b[..blk]).collect();
+                    track.process(blk, &ctx, &mut track_outs);
+                    let g = track.gain;
+                    for (ch_idx, out_ch) in outputs.iter_mut().enumerate() {
+                        if ch_idx < scratch.len() {
+                            for i in 0..blk {
+                                out_ch[i] += scratch[ch_idx][i] * g;
+                            }
+                        }
                     }
                 }
             },
@@ -340,5 +385,29 @@ impl AudioGraphBenchmarkSuite {
             "================================================================================\n",
         );
         out
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::create_default_project;
+
+    #[test]
+    fn test_run_benchmark_on_project_processes_tracks() {
+        let project = create_default_project("Bench Project");
+        let cfg = AudioGraphBenchmarkConfig {
+            sample_rate: 44100,
+            channels: 2,
+            frames_to_process: 512,
+            runs_per_block_size: 1,
+            warmup_runs: 0,
+            block_sizes: vec![128, 256],
+        };
+        let report = AudioGraphBenchmarkSuite::run_benchmark_on_project(&project, &cfg);
+        assert_eq!(report.project_name, "Bench Project");
+        assert_eq!(report.track_count, project.tracks.len());
+        assert_eq!(report.block_results.len(), 2);
+        assert!(report.peak_realtime_factor > 0.0);
     }
 }

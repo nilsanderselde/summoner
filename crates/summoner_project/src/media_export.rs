@@ -521,6 +521,268 @@ pub fn export_stems_video_metadata(
 #[derive(Debug, Clone, Default)]
 pub struct LuaScriptEngine;
 
+#[derive(Debug, Clone, PartialEq)]
+enum LuaToken {
+    Num(f64),
+    Ident(String),
+    Plus,
+    Minus,
+    Star,
+    Slash,
+    Caret,
+    LParen,
+    RParen,
+    Comma,
+}
+
+fn tokenize_lua_expr(expr: &str) -> Vec<LuaToken> {
+    let mut tokens = Vec::new();
+    let chars: Vec<char> = expr.chars().collect();
+    let mut i = 0;
+    while i < chars.len() {
+        let c = chars[i];
+        if c.is_whitespace() {
+            i += 1;
+            continue;
+        }
+        if c.is_ascii_digit() || (c == '.' && i + 1 < chars.len() && chars[i + 1].is_ascii_digit()) {
+            let start = i;
+            i += 1;
+            while i < chars.len() && (chars[i].is_ascii_digit() || chars[i] == '.') {
+                i += 1;
+            }
+            let s: String = chars[start..i].iter().collect();
+            if let Ok(n) = s.parse::<f64>() {
+                tokens.push(LuaToken::Num(n));
+            }
+            continue;
+        }
+        if c.is_ascii_alphabetic() || c == '_' {
+            let start = i;
+            i += 1;
+            while i < chars.len()
+                && (chars[i].is_ascii_alphanumeric() || chars[i] == '_' || chars[i] == '.')
+            {
+                i += 1;
+            }
+            let ident: String = chars[start..i].iter().collect();
+            tokens.push(LuaToken::Ident(ident));
+            continue;
+        }
+        match c {
+            '+' => tokens.push(LuaToken::Plus),
+            '-' => tokens.push(LuaToken::Minus),
+            '*' => tokens.push(LuaToken::Star),
+            '/' => tokens.push(LuaToken::Slash),
+            '^' => tokens.push(LuaToken::Caret),
+            '(' => tokens.push(LuaToken::LParen),
+            ')' => tokens.push(LuaToken::RParen),
+            ',' => tokens.push(LuaToken::Comma),
+            _ => {}
+        }
+        i += 1;
+    }
+    tokens
+}
+
+struct LuaExprParser<'a> {
+    tokens: &'a [LuaToken],
+    pos: usize,
+    vars: &'a std::collections::HashMap<String, f64>,
+}
+
+impl<'a> LuaExprParser<'a> {
+    fn peek(&self) -> Option<&'a LuaToken> {
+        self.tokens.get(self.pos)
+    }
+
+    fn next(&mut self) -> Option<&'a LuaToken> {
+        let tok = self.tokens.get(self.pos);
+        if tok.is_some() {
+            self.pos += 1;
+        }
+        tok
+    }
+
+    fn parse_expr(&mut self) -> Option<f64> {
+        let mut val = self.parse_term()?;
+        while let Some(tok) = self.peek() {
+            match tok {
+                LuaToken::Plus => {
+                    self.next();
+                    val += self.parse_term()?;
+                }
+                LuaToken::Minus => {
+                    self.next();
+                    val -= self.parse_term()?;
+                }
+                _ => break,
+            }
+        }
+        Some(val)
+    }
+
+    fn parse_term(&mut self) -> Option<f64> {
+        let mut val = self.parse_power()?;
+        while let Some(tok) = self.peek() {
+            match tok {
+                LuaToken::Star => {
+                    self.next();
+                    val *= self.parse_power()?;
+                }
+                LuaToken::Slash => {
+                    self.next();
+                    let rhs = self.parse_power()?;
+                    val = if rhs.abs() > 1e-12 { val / rhs } else { 0.0 };
+                }
+                _ => break,
+            }
+        }
+        Some(val)
+    }
+
+    fn parse_power(&mut self) -> Option<f64> {
+        let base = self.parse_unary()?;
+        if matches!(self.peek(), Some(LuaToken::Caret)) {
+            self.next();
+            let exp = self.parse_power()?;
+            Some(base.powf(exp))
+        } else {
+            Some(base)
+        }
+    }
+
+    fn parse_unary(&mut self) -> Option<f64> {
+        match self.peek() {
+            Some(LuaToken::Minus) => {
+                self.next();
+                Some(-self.parse_unary()?)
+            }
+            Some(LuaToken::Plus) => {
+                self.next();
+                self.parse_unary()
+            }
+            _ => self.parse_primary(),
+        }
+    }
+
+    fn parse_primary(&mut self) -> Option<f64> {
+        match self.next()? {
+            LuaToken::Num(n) => Some(*n),
+            LuaToken::LParen => {
+                let v = self.parse_expr()?;
+                if matches!(self.peek(), Some(LuaToken::RParen)) {
+                    self.next();
+                }
+                Some(v)
+            }
+            LuaToken::Ident(name) => {
+                if matches!(self.peek(), Some(LuaToken::LParen)) {
+                    self.next(); // consume '('
+                    let mut args = Vec::new();
+                    if !matches!(self.peek(), Some(LuaToken::RParen)) {
+                        loop {
+                            args.push(self.parse_expr()?);
+                            if matches!(self.peek(), Some(LuaToken::Comma)) {
+                                self.next();
+                            } else {
+                                break;
+                            }
+                        }
+                    }
+                    if matches!(self.peek(), Some(LuaToken::RParen)) {
+                        self.next();
+                    }
+                    let a0 = args.first().copied().unwrap_or(0.0);
+                    let a1 = args.get(1).copied().unwrap_or(0.0);
+                    let func = name.trim_start_matches("math.");
+                    match func {
+                        "sin" => Some(a0.sin()),
+                        "cos" => Some(a0.cos()),
+                        "tan" => Some(a0.tan()),
+                        "exp" => Some(a0.exp()),
+                        "sqrt" => Some(a0.max(0.0).sqrt()),
+                        "abs" => Some(a0.abs()),
+                        "floor" => Some(a0.floor()),
+                        "ceil" => Some(a0.ceil()),
+                        "min" => Some(a0.min(a1)),
+                        "max" => Some(a0.max(a1)),
+                        "clamp" => {
+                            let a2 = args.get(2).copied().unwrap_or(1.0);
+                            Some(a0.clamp(a1, a2))
+                        }
+                        _ => None,
+                    }
+                } else {
+                    match name.as_str() {
+                        "pi" | "math.pi" => Some(std::f64::consts::PI),
+                        "tau" | "math.tau" => Some(std::f64::consts::TAU),
+                        "e" | "math.e" => Some(std::f64::consts::E),
+                        other => self.vars.get(other).copied(),
+                    }
+                }
+            }
+            _ => None,
+        }
+    }
+}
+
+fn eval_lua_math(script: &str, vars: &mut std::collections::HashMap<String, f64>) -> Option<f64> {
+    let mut last_val = None;
+    for raw_stmt in script.split(['\n', ';']) {
+        let stmt = raw_stmt.trim().trim_start_matches("local ").trim();
+        if stmt.is_empty() || stmt.starts_with("--") {
+            continue;
+        }
+        if let Some(rest) = stmt.strip_prefix("return ") {
+            let tokens = tokenize_lua_expr(rest);
+            let mut parser = LuaExprParser {
+                tokens: &tokens,
+                pos: 0,
+                vars,
+            };
+            let v = parser.parse_expr()?;
+            if parser.pos == tokens.len() {
+                return Some(v);
+            }
+            return None;
+        }
+        if let Some((lhs, rhs)) = stmt.split_once('=') {
+            if !lhs.ends_with(['=', '<', '>', '~']) && !rhs.starts_with('=') {
+                let var_name = lhs.trim().to_string();
+                let tokens = tokenize_lua_expr(rhs);
+                let mut parser = LuaExprParser {
+                    tokens: &tokens,
+                    pos: 0,
+                    vars,
+                };
+                if let Some(v) = parser.parse_expr() {
+                    if parser.pos == tokens.len() {
+                        vars.insert(var_name, v);
+                        last_val = Some(v);
+                        continue;
+                    }
+                }
+            }
+        }
+        let tokens = tokenize_lua_expr(stmt);
+        if !tokens.is_empty() {
+            let mut parser = LuaExprParser {
+                tokens: &tokens,
+                pos: 0,
+                vars,
+            };
+            let v = parser.parse_expr()?;
+            if parser.pos == tokens.len() {
+                last_val = Some(v);
+            } else {
+                return None;
+            }
+        }
+    }
+    last_val
+}
+
 impl LuaScriptEngine {
     pub fn new() -> Self {
         Self
@@ -536,8 +798,25 @@ impl LuaScriptEngine {
             return Err("Lua evaluation error: script contains error flag".to_string());
         }
 
-        // Sandboxed math evaluator supporting standard functions
+        // Preserve legacy shorthand behavior when bare keywords ("sin(t)", "cos(t)", "exp(t)", "sqr") are passed
         let t_val = t.clamp(0.0, 1.0);
+        if clean == "sin(t)" || clean == "sin" {
+            return Ok((t_val * std::f64::consts::PI * 2.0).sin() * 0.5 + 0.5);
+        } else if clean == "cos(t)" || clean == "cos" {
+            return Ok((t_val * std::f64::consts::PI * 2.0).cos() * 0.5 + 0.5);
+        } else if clean == "exp(t)" || clean == "exp" {
+            return Ok((t_val * 2.0).exp() / 7.389);
+        } else if clean == "sqr" {
+            return Ok(t_val * t_val);
+        }
+
+        let mut vars = std::collections::HashMap::new();
+        vars.insert("t".to_string(), t_val);
+        vars.insert("x".to_string(), t_val);
+        if let Some(res) = eval_lua_math(clean, &mut vars) {
+            return Ok(res);
+        }
+
         if clean.contains("sin") {
             Ok((t_val * std::f64::consts::PI * 2.0).sin() * 0.5 + 0.5)
         } else if clean.contains("cos") {
@@ -557,6 +836,16 @@ impl LuaScriptEngine {
         if clean.is_empty() {
             return input_val;
         }
+        if clean == "invert" {
+            return 1.0 - input_val;
+        }
+        let mut vars = std::collections::HashMap::new();
+        vars.insert("x".to_string(), input_val as f64);
+        vars.insert("val".to_string(), input_val as f64);
+        vars.insert("t".to_string(), input_val as f64);
+        if let Some(res) = eval_lua_math(clean, &mut vars) {
+            return (res as f32).clamp(0.0, 1.0);
+        }
         if clean.contains("* 2") {
             (input_val * 2.0).clamp(0.0, 1.0)
         } else if clean.contains("invert") || clean.contains("1 -") {
@@ -571,6 +860,16 @@ impl LuaScriptEngine {
         let clean = script.trim();
         if clean.contains("error") {
             return Err("Lua evaluation error: execution failed".to_string());
+        }
+        let mut vars = std::collections::HashMap::new();
+        vars.insert("bpm".to_string(), proj.transport.bpm);
+        vars.insert("sample_rate".to_string(), proj.transport.sample_rate as f64);
+        vars.insert("tracks".to_string(), proj.tracks.len() as f64);
+        if let Some(res) = eval_lua_math(clean, &mut vars) {
+            return Ok(format!(
+                "Script executed successfully on project '{}'. Result: {}",
+                proj.name, res
+            ));
         }
         Ok(format!(
             "Script executed successfully on project '{}'. Result: OK",
@@ -3050,7 +3349,15 @@ mod media_export_tests {
         let val_sin = engine.evaluate_curve("sin(t)", 0.25).unwrap();
         assert!(val_sin > 0.0);
 
+        let val_expr = engine
+            .evaluate_curve("local a = 0.5; return a * t + 0.25", 0.5)
+            .unwrap();
+        assert!((val_expr - 0.5).abs() < 1e-6);
+
         let val_trans = engine.transform_param("invert", 0.3);
         assert_eq!(val_trans, 0.7);
+
+        let val_trans_expr = engine.transform_param("return x * 0.5 + 0.1", 0.4);
+        assert!((val_trans_expr - 0.3).abs() < 1e-5);
     }
 }

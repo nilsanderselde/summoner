@@ -1268,24 +1268,18 @@ fn main() {
                         let path = entry.path();
                         if path.extension().and_then(|e| e.to_str()) == Some("toml") {
                             let wav_out = path.with_extension("wav");
-                            let spec = hound::WavSpec {
-                                channels: 1,
-                                sample_rate: 44100,
-                                bits_per_sample: 16,
-                                sample_format: hound::SampleFormat::Int,
-                            };
-                            if let Ok(mut writer) = hound::WavWriter::create(&wav_out, spec) {
-                                for t in 0..44100 {
-                                    let s = (((t as f32 * 440.0 * 2.0 * std::f32::consts::PI
-                                        / 44100.0)
-                                        .sin()
-                                        * 0.5)
-                                        .clamp(-1.0, 1.0)
-                                        * i16::MAX as f32)
-                                        .round() as i16;
-                                    let _ = writer.write_sample(s);
-                                }
-                                let _ = writer.finalize();
+                            let content = fs::read_to_string(&path).unwrap_or_default();
+                            let proj = parse_project_toml(&content)
+                                .unwrap_or_else(|_| create_default_project("Baked Preset"));
+                            let sr = proj.transport.sample_rate.max(8000) as usize;
+                            if summoner_engine::audio_engine::render_project_to_wav(
+                                &proj,
+                                &wav_out,
+                                Some(sr),
+                                None,
+                            )
+                            .is_ok()
+                            {
                                 println!(
                                     "Baked preset: {} -> {}",
                                     path.display(),
