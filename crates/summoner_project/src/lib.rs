@@ -13,6 +13,7 @@
 
 //! Project document TOML schema parsing and serialization for Summoner DAW.
 
+pub mod audio_clip;
 pub mod backup;
 pub mod benchmark;
 pub mod cloud_federated;
@@ -31,6 +32,7 @@ pub mod session_markers;
 pub mod sfz;
 pub mod system_tools;
 
+pub use audio_clip::*;
 pub use backup::*;
 pub use benchmark::*;
 pub use cloud_federated::*;

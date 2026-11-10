@@ -15,6 +15,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use crate::audio_clip::{ArrangerLaneConfig, AudioClipConfig};
 
 /// Root project session definition.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -115,6 +116,39 @@ impl Default for ProjectConfig {
             meta: None,
             scripts: Vec::new(),
             lua_state: None,
+        }
+    }
+}
+
+impl ProjectConfig {
+    /// Migrate or parse legacy project TOML into the current schema version (1.1.0).
+    pub fn migrate_schema(raw_toml: &str) -> Result<Self, String> {
+        match toml::from_str::<ProjectConfig>(raw_toml) {
+            Ok(mut proj) => {
+                if proj.version == "1.0" {
+                    proj.version = "1.1.0".to_string();
+                }
+                Ok(proj)
+            }
+            Err(_) => {
+                let mut val: toml::Value = toml::from_str(raw_toml).map_err(|e| e.to_string())?;
+                if let Some(table) = val.as_table_mut() {
+                    table.insert("version".to_string(), toml::Value::String("1.1.0".to_string()));
+                    if let Some(tracks) = table.get_mut("tracks").and_then(|t| t.as_array_mut()) {
+                        for track in tracks {
+                            if let Some(t_table) = track.as_table_mut() {
+                                if !t_table.contains_key("audio_clips") {
+                                    t_table.insert("audio_clips".to_string(), toml::Value::Array(Vec::new()));
+                                }
+                                if !t_table.contains_key("arranger_lanes") {
+                                    t_table.insert("arranger_lanes".to_string(), toml::Value::Array(Vec::new()));
+                                }
+                            }
+                        }
+                    }
+                }
+                val.try_into().map_err(|e: toml::de::Error| e.to_string())
+            }
         }
     }
 }
@@ -220,6 +254,10 @@ pub struct TrackConfig {
     #[serde(default)]
     pub clips: Vec<SequenceConfig>,
     #[serde(default)]
+    pub audio_clips: Vec<AudioClipConfig>,
+    #[serde(default)]
+    pub arranger_lanes: Vec<ArrangerLaneConfig>,
+    #[serde(default)]
     pub connections: Vec<ConnectionConfig>,
     #[serde(default)]
     pub tuning_edo: Option<u32>,
@@ -299,6 +337,8 @@ impl Default for TrackConfig {
             nodes: Vec::new(),
             sequence: None,
             clips: Vec::new(),
+            audio_clips: Vec::new(),
+            arranger_lanes: Vec::new(),
             connections: Vec::new(),
             tuning_edo: None,
             tuning_root_hz: None,
@@ -352,6 +392,29 @@ impl TrackConfig {
             list.push(clip);
         }
         list
+    }
+
+    pub fn add_audio_clip(&mut self, clip: AudioClipConfig) {
+        self.audio_clips.push(clip);
+    }
+
+    pub fn remove_audio_clip(&mut self, clip_id: &str) -> Option<AudioClipConfig> {
+        if let Some(pos) = self.audio_clips.iter().position(|c| c.id == clip_id) {
+            Some(self.audio_clips.remove(pos))
+        } else {
+            None
+        }
+    }
+
+    pub fn audio_clips_at_beat(&self, beat: f64) -> Vec<&AudioClipConfig> {
+        self.audio_clips.iter().filter(|c| c.contains_beat(beat)).collect()
+    }
+
+    pub fn audio_clips_in_range(&self, start_beat: f64, end_beat: f64) -> Vec<&AudioClipConfig> {
+        self.audio_clips
+            .iter()
+            .filter(|c| c.start_beat < end_beat && c.end_beat() > start_beat)
+            .collect()
     }
 }
 
@@ -542,4 +605,55 @@ fn default_ratchet() -> u32 {
 
 fn default_micro_shift() -> i32 {
     0
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_track_audio_clips_management() {
+        let mut track = TrackConfig::default();
+        assert!(track.audio_clips.is_empty());
+
+        let clip1 = AudioClipConfig::new("c1", "Take 1", "asset1", 0.0, 4.0);
+        let clip2 = AudioClipConfig::new("c2", "Take 2", "asset2", 4.0, 4.0);
+
+        track.add_audio_clip(clip1);
+        track.add_audio_clip(clip2);
+        assert_eq!(track.audio_clips.len(), 2);
+
+        let active = track.audio_clips_at_beat(2.0);
+        assert_eq!(active.len(), 1);
+        assert_eq!(active[0].id, "c1");
+
+        let in_range = track.audio_clips_in_range(2.0, 6.0);
+        assert_eq!(in_range.len(), 2);
+
+        let removed = track.remove_audio_clip("c1");
+        assert!(removed.is_some());
+        assert_eq!(track.audio_clips.len(), 1);
+    }
+
+    #[test]
+    fn test_project_schema_migration_v1_0_to_v1_1() {
+        let legacy_toml = r#"
+name = "Legacy Project"
+version = "1.0"
+
+[transport]
+sample_rate = 48000
+bpm = 128.0
+time_signature = "4/4"
+
+[[tracks]]
+id = 1
+name = "Audio 1"
+"#;
+        let migrated = ProjectConfig::migrate_schema(legacy_toml).expect("Migration should succeed");
+        assert_eq!(migrated.version, "1.1.0");
+        assert_eq!(migrated.tracks.len(), 1);
+        assert!(migrated.tracks[0].audio_clips.is_empty());
+        assert!(migrated.tracks[0].arranger_lanes.is_empty());
+    }
 }
