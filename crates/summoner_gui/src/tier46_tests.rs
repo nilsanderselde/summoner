@@ -276,6 +276,8 @@ mod tests {
                 target_db: -0.5,
                 trim_silence: true,
                 silence_threshold_db: -50.0,
+                dither: summoner_project::export::DitherMode::None,
+                target_lufs: None,
             },
             naming_pattern: "{project}_{idx}_{name}".to_string(),
             include_master: true,

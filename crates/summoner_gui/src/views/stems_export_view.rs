@@ -599,6 +599,8 @@ impl StemsExportView {
                 target_db,
                 trim_silence: self.trim_silence,
                 silence_threshold_db: self.silence_threshold_db,
+                dither: summoner_project::export::DitherMode::None,
+                target_lufs: None,
             },
             naming_pattern: self.naming_pattern.clone(),
             include_master: self.include_master,

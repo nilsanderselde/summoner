@@ -124,6 +124,19 @@ pub struct SampleEditorView {
     pub selected_version: String,
     pub viewport_width: f32,
     pub viewport_height: f32,
+
+    // Task D7: Selection, loop points, spectral view, and undo/redo history
+    pub selection_start: Option<usize>,
+    pub selection_end: Option<usize>,
+    pub loop_enabled: bool,
+    pub loop_start_sample: usize,
+    pub loop_end_sample: usize,
+    pub loop_crossfade_samples: usize,
+    pub spectral_view_enabled: bool,
+    #[serde(skip)]
+    pub undo_stack: Vec<Vec<f32>>,
+    #[serde(skip)]
+    pub redo_stack: Vec<Vec<f32>>,
 }
 
 impl Default for SampleEditorView {
@@ -136,6 +149,7 @@ impl Default for SampleEditorView {
             TransientMarker::new(3, "TR3", (2.50 * sample_rate) as usize, sample_rate),
         ];
 
+        let num_samples = default_samples.len();
         Self {
             zoom_level: 100.0,
             base_scale: 0.01,
@@ -150,6 +164,15 @@ impl Default for SampleEditorView {
             selected_version: "V1".to_string(),
             viewport_width: 800.0,
             viewport_height: 300.0,
+            selection_start: None,
+            selection_end: None,
+            loop_enabled: false,
+            loop_start_sample: 0,
+            loop_end_sample: num_samples,
+            loop_crossfade_samples: 128,
+            spectral_view_enabled: false,
+            undo_stack: Vec::new(),
+            redo_stack: Vec::new(),
         }
     }
 }
@@ -337,6 +360,296 @@ impl SampleEditorView {
         let ms = total_ms % 1000;
         format!("{:02}:{:02}.{:03}", mins, secs, ms)
     }
+
+    // =========================================================================
+    // Task D7: Destructive & Non-Destructive Editing, Loop Points & Spectral View
+    // =========================================================================
+
+    /// Get current selection range clamped to waveform boundaries.
+    pub fn get_selection_range(&self) -> (usize, usize) {
+        if self.waveform_samples.is_empty() {
+            return (0, 0);
+        }
+        let max_idx = self.waveform_samples.len();
+        match (self.selection_start, self.selection_end) {
+            (Some(s), Some(e)) => {
+                let start = s.min(e).min(max_idx);
+                let end = s.max(e).min(max_idx);
+                (start, end)
+            }
+            _ => (0, max_idx),
+        }
+    }
+
+    /// Save current state to undo history before making modifications.
+    pub fn push_undo_state(&mut self) {
+        self.undo_stack.push(self.waveform_samples.clone());
+        self.redo_stack.clear();
+        // Limit undo stack depth
+        if self.undo_stack.len() > 64 {
+            self.undo_stack.remove(0);
+        }
+    }
+
+    /// Undo last edit.
+    pub fn undo(&mut self) -> bool {
+        if let Some(prev) = self.undo_stack.pop() {
+            self.redo_stack.push(self.waveform_samples.clone());
+            self.waveform_samples = prev;
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Redo last undone edit.
+    pub fn redo(&mut self) -> bool {
+        if let Some(next) = self.redo_stack.pop() {
+            self.undo_stack.push(self.waveform_samples.clone());
+            self.waveform_samples = next;
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Trim waveform to selection (destructive).
+    pub fn trim_selection(&mut self) -> bool {
+        let (start, end) = self.get_selection_range();
+        if end <= start || self.waveform_samples.is_empty() {
+            return false;
+        }
+
+        self.push_undo_state();
+        self.waveform_samples = self.waveform_samples[start..end].to_vec();
+        self.selection_start = None;
+        self.selection_end = None;
+        self.loop_start_sample = 0;
+        self.loop_end_sample = self.waveform_samples.len();
+        true
+    }
+
+    /// Reverse samples within selection.
+    pub fn reverse_selection(&mut self) -> bool {
+        let (start, end) = self.get_selection_range();
+        if end <= start {
+            return false;
+        }
+
+        self.push_undo_state();
+        self.waveform_samples[start..end].reverse();
+        true
+    }
+
+    /// Normalize selection to target dBFS (e.g. 0.0 dBFS).
+    pub fn normalize_selection(&mut self, target_db: f32) -> bool {
+        let (start, end) = self.get_selection_range();
+        if end <= start {
+            return false;
+        }
+
+        let mut peak = 0.0f32;
+        for &s in &self.waveform_samples[start..end] {
+            let abs_s = s.abs();
+            if abs_s > peak {
+                peak = abs_s;
+            }
+        }
+
+        if peak <= 1e-6 {
+            return false;
+        }
+
+        self.push_undo_state();
+        let target_linear = 10.0f32.powf(target_db / 20.0);
+        let factor = target_linear / peak;
+
+        for s in &mut self.waveform_samples[start..end] {
+            *s = (*s * factor).clamp(-1.0, 1.0);
+        }
+        true
+    }
+
+    /// Invert phase (polarity) of selection.
+    pub fn invert_phase_selection(&mut self) -> bool {
+        let (start, end) = self.get_selection_range();
+        if end <= start {
+            return false;
+        }
+
+        self.push_undo_state();
+        for s in &mut self.waveform_samples[start..end] {
+            *s = -*s;
+        }
+        true
+    }
+
+    /// Apply fade-in over selection (cosine equal-power or linear).
+    pub fn fade_in_selection(&mut self) -> bool {
+        let (start, end) = self.get_selection_range();
+        let len = end.saturating_sub(start);
+        if len == 0 {
+            return false;
+        }
+
+        self.push_undo_state();
+        for i in 0..len {
+            let t = i as f32 / len as f32;
+            let gain = (t * std::f32::consts::PI * 0.5).sin();
+            self.waveform_samples[start + i] *= gain;
+        }
+        true
+    }
+
+    /// Apply fade-out over selection.
+    pub fn fade_out_selection(&mut self) -> bool {
+        let (start, end) = self.get_selection_range();
+        let len = end.saturating_sub(start);
+        if len == 0 {
+            return false;
+        }
+
+        self.push_undo_state();
+        for i in 0..len {
+            let t = (len - 1 - i) as f32 / len as f32;
+            let gain = (t * std::f32::consts::PI * 0.5).sin();
+            self.waveform_samples[start + i] *= gain;
+        }
+        true
+    }
+
+    /// Adjust gain of selection by dB amount.
+    pub fn adjust_gain_selection(&mut self, gain_db: f32) -> bool {
+        let (start, end) = self.get_selection_range();
+        if end <= start {
+            return false;
+        }
+
+        self.push_undo_state();
+        let factor = 10.0f32.powf(gain_db / 20.0);
+        for s in &mut self.waveform_samples[start..end] {
+            *s = (*s * factor).clamp(-1.0, 1.0);
+        }
+        true
+    }
+
+    /// Silence selection (zero out samples).
+    pub fn silence_selection(&mut self) -> bool {
+        let (start, end) = self.get_selection_range();
+        if end <= start {
+            return false;
+        }
+
+        self.push_undo_state();
+        for s in &mut self.waveform_samples[start..end] {
+            *s = 0.0;
+        }
+        true
+    }
+
+    /// Set loop points for seamless sampler / playback looping.
+    pub fn set_loop_points(&mut self, start_sample: usize, end_sample: usize) {
+        let max_idx = self.waveform_samples.len();
+        self.loop_start_sample = start_sample.min(max_idx);
+        self.loop_end_sample = end_sample.min(max_idx).max(self.loop_start_sample);
+        self.loop_enabled = true;
+    }
+
+    /// Auto-snap loop start and end to nearest zero crossings to avoid clicks.
+    pub fn snap_loop_to_zero_crossing(&mut self) {
+        self.loop_start_sample = self.find_nearest_zero_crossing(self.loop_start_sample);
+        self.loop_end_sample = self.find_nearest_zero_crossing(self.loop_end_sample);
+    }
+
+    fn find_nearest_zero_crossing(&self, sample: usize) -> usize {
+        if self.waveform_samples.len() < 2 {
+            return sample;
+        }
+        let window = 256;
+        let start = sample.saturating_sub(window);
+        let end = (sample + window).min(self.waveform_samples.len() - 1);
+
+        let mut best_idx = sample;
+        let mut min_dist = usize::MAX;
+
+        for i in start..end {
+            let s1 = self.waveform_samples[i];
+            let s2 = self.waveform_samples[i + 1];
+            if (s1 >= 0.0 && s2 <= 0.0) || (s1 <= 0.0 && s2 >= 0.0) {
+                let dist = (i as isize - sample as isize).unsigned_abs();
+                if dist < min_dist {
+                    min_dist = dist;
+                    best_idx = if s1.abs() <= s2.abs() { i } else { i + 1 };
+                }
+            }
+        }
+
+        best_idx
+    }
+
+    /// Compute a spectral slice (magnitude spectrum in dB) centered around a sample index.
+    pub fn compute_spectral_slice(&self, center_sample: usize, window_size: usize) -> Vec<f32> {
+        let half_win = window_size / 2;
+        let start = center_sample.saturating_sub(half_win);
+        let num_bins = window_size / 2;
+        let mut magnitudes = vec![0.0f32; num_bins];
+
+        if self.waveform_samples.is_empty() {
+            return magnitudes;
+        }
+
+        // Hann-windowed DFT analysis
+        let mut windowed = vec![0.0f32; window_size];
+        for i in 0..window_size {
+            let idx = start + i;
+            let sample_val = if idx < self.waveform_samples.len() {
+                self.waveform_samples[idx]
+            } else {
+                0.0
+            };
+            // Hann window
+            let w = 0.5 * (1.0 - (2.0 * std::f32::consts::PI * i as f32 / window_size as f32).cos());
+            windowed[i] = sample_val * w;
+        }
+
+        for k in 0..num_bins {
+            let mut re = 0.0f32;
+            let mut im = 0.0f32;
+            for n in 0..window_size {
+                let angle = 2.0 * std::f32::consts::PI * k as f32 * n as f32 / window_size as f32;
+                re += windowed[n] * angle.cos();
+                im -= windowed[n] * angle.sin();
+            }
+            let mag = (re * re + im * im).sqrt() / (window_size as f32 * 0.5);
+            let mag_db = (20.0 * (mag + 1e-6).log10()).clamp(-120.0, 0.0);
+            magnitudes[k] = mag_db;
+        }
+
+        magnitudes
+    }
+
+    /// Compute full spectrogram matrix (time slices x freq bins in dB) for current viewport.
+    pub fn compute_spectrogram(
+        &self,
+        num_time_slices: usize,
+        num_freq_bins: usize,
+    ) -> Vec<Vec<f32>> {
+        let total_samples = self.waveform_samples.len();
+        if total_samples == 0 || num_time_slices == 0 {
+            return Vec::new();
+        }
+
+        let window_size = num_freq_bins * 2;
+        let step = total_samples as f32 / num_time_slices as f32;
+        let mut spectrogram = Vec::with_capacity(num_time_slices);
+
+        for s in 0..num_time_slices {
+            let center = (s as f32 * step) as usize;
+            spectrogram.push(self.compute_spectral_slice(center, window_size));
+        }
+
+        spectrogram
+    }
 }
 
 #[cfg(feature = "gui")]
@@ -513,5 +826,113 @@ impl SampleEditorView {
         }
 
         response
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_sample_editor_editing_and_undo_redo() {
+        let mut editor = SampleEditorView::new();
+        editor.waveform_samples = vec![0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8];
+        editor.selection_start = Some(2);
+        editor.selection_end = Some(6);
+
+        // Reverse selection: [0.3, 0.4, 0.5, 0.6] -> [0.6, 0.5, 0.4, 0.3]
+        assert!(editor.reverse_selection());
+        assert_eq!(
+            editor.waveform_samples,
+            vec![0.1, 0.2, 0.6, 0.5, 0.4, 0.3, 0.7, 0.8]
+        );
+
+        // Undo reverse
+        assert!(editor.undo());
+        assert_eq!(
+            editor.waveform_samples,
+            vec![0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]
+        );
+
+        // Redo reverse
+        assert!(editor.redo());
+        assert_eq!(
+            editor.waveform_samples,
+            vec![0.1, 0.2, 0.6, 0.5, 0.4, 0.3, 0.7, 0.8]
+        );
+
+        // Invert phase of selection
+        assert!(editor.invert_phase_selection());
+        assert_eq!(
+            editor.waveform_samples,
+            vec![0.1, 0.2, -0.6, -0.5, -0.4, -0.3, 0.7, 0.8]
+        );
+
+        // Silence selection
+        assert!(editor.silence_selection());
+        assert_eq!(
+            editor.waveform_samples,
+            vec![0.1, 0.2, 0.0, 0.0, 0.0, 0.0, 0.7, 0.8]
+        );
+
+        // Trim selection
+        assert!(editor.trim_selection());
+        assert_eq!(editor.waveform_samples, vec![0.0, 0.0, 0.0, 0.0]);
+    }
+
+    #[test]
+    fn test_sample_editor_normalization_and_fades() {
+        let mut editor = SampleEditorView::new();
+        editor.waveform_samples = vec![0.1, 0.2, 0.5, 0.2, 0.1];
+        editor.selection_start = None;
+        editor.selection_end = None; // Full buffer
+
+        // Normalize to 0 dBFS (peak = 1.0)
+        assert!(editor.normalize_selection(0.0));
+        assert!((editor.waveform_samples[2] - 1.0).abs() < 1e-4);
+        assert!((editor.waveform_samples[1] - 0.4).abs() < 1e-4);
+
+        // Fade in
+        assert!(editor.fade_in_selection());
+        assert_eq!(editor.waveform_samples[0], 0.0);
+        assert!(editor.waveform_samples[4] > 0.1);
+    }
+
+    #[test]
+    fn test_sample_editor_loop_points_and_spectral_analysis() {
+        let mut editor = SampleEditorView::new();
+        // 440Hz sine wave
+        let sample_rate = 44100.0;
+        let mut samples = Vec::new();
+        for i in 0..4410 {
+            let t = i as f32 / sample_rate as f32;
+            samples.push((2.0 * std::f32::consts::PI * 440.0 * t).sin());
+        }
+        editor.waveform_samples = samples;
+        editor.sample_rate = sample_rate;
+
+        // Set loop points
+        editor.set_loop_points(100, 2000);
+        assert!(editor.loop_enabled);
+        assert_eq!(editor.loop_start_sample, 100);
+        assert_eq!(editor.loop_end_sample, 2000);
+
+        // Snap loop points to zero crossing
+        editor.snap_loop_to_zero_crossing();
+        let s_val = editor.waveform_samples[editor.loop_start_sample];
+        let e_val = editor.waveform_samples[editor.loop_end_sample];
+        assert!(s_val.abs() < 0.1);
+        assert!(e_val.abs() < 0.1);
+
+        // Compute spectral slice (FFT magnitude bins)
+        let slice = editor.compute_spectral_slice(1000, 256);
+        assert_eq!(slice.len(), 128); // 128 bins for 256-point window
+        // 440 Hz bin at 44.1kHz with 256 window is bin round(440 * 256 / 44100) = ~3
+        assert!(slice[3] > -20.0); // Strong peak near 440Hz
+
+        // Spectrogram matrix
+        let spec = editor.compute_spectrogram(8, 64);
+        assert_eq!(spec.len(), 8);
+        assert_eq!(spec[0].len(), 64);
     }
 }
