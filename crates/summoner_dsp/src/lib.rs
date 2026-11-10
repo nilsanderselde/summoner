@@ -93,6 +93,7 @@ pub mod sitar;
 pub mod slicer;
 pub mod soundboard_bridge;
 pub mod spatial_audio;
+pub mod spatial_multichannel;
 pub mod spatial_room;
 pub mod spectral_eq;
 pub mod spectral_resynthesis;
@@ -166,6 +167,7 @@ pub use shakuhachi::*;
 pub use sitar::*;
 pub use soundboard_bridge::*;
 pub use spatial_audio::*;
+pub use spatial_multichannel::*;
 pub use spatial_room::*;
 pub mod spectral_eq_alias {
     pub use crate::spectral_eq::*;
