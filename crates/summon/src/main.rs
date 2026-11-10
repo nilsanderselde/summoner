@@ -77,6 +77,7 @@ fn print_usage() {
     println!("  summon package-wasm [SRC]");
     println!("  summon export-adm [PROJECT_PATH] [OUTPUT_ADM_PATH]");
     println!("  summon convert [INPUT_PATH] [OUTPUT_PATH] [--format=flac]");
+    println!("  summon scan-plugin [PLUGIN_PATH]");
     println!("  summon analyze-crash-dump [FILE_OR_DIR]");
     println!("  summon benchmark [PROJECT_PATH] [--frames N] [--runs R] [--block-size B] [--json]");
     println!("  summon-build-pi-img [OUTPUT_DIR] [--target pi5|pizero2w]");
@@ -108,6 +109,32 @@ fn main() {
         "--help" | "-h" | "help" | "--version" | "-v" => {
             print_usage();
             process::exit(0);
+        }
+        "scan-plugin" => {
+            let plugin_path_str = match args.get(2) {
+                Some(p) => p.as_str(),
+                None => {
+                    eprintln!("Usage: summon scan-plugin <PLUGIN_PATH>");
+                    process::exit(1);
+                }
+            };
+            let path = Path::new(plugin_path_str);
+            let mut blacklist = summoner_dsp::plugin_scanner::PluginBlacklist::new();
+            match summoner_dsp::plugin_scanner::PluginProcessSandbox::scan_isolated(path, 5000, &mut blacklist) {
+                Ok(desc) => {
+                    match serde_json::to_string(&desc) {
+                        Ok(json) => println!("{}", json),
+                        Err(e) => {
+                            eprintln!("Serialization error: {}", e);
+                            process::exit(1);
+                        }
+                    }
+                }
+                Err(report) => {
+                    eprintln!("Plugin scan error: {:?}", report);
+                    process::exit(report.exit_code);
+                }
+            }
         }
         "analyze-crash-dump" | "dump-analyze" => {
             let target_path_str = match args.get(2) {

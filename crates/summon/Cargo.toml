@@ -23,6 +23,7 @@ cpal = "0.15"
 crossbeam-channel = "0.5"
 clap-sys = "0.3"
 hound = "3.5"
+serde_json = "1.0"
 git2.workspace = true
 ureq.workspace = true
 

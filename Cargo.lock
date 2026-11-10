@@ -167,7 +167,7 @@ dependencies = [
  "ndk",
  "ndk-context",
  "ndk-sys",
- "num_enum 0.7.6",
+ "num_enum",
  "thiserror 1.0.69",
 ]
 
@@ -2680,7 +2680,7 @@ dependencies = [
  "jni-sys 0.3.1",
  "log",
  "ndk-sys",
- "num_enum 0.7.6",
+ "num_enum",
  "raw-window-handle 0.5.2",
  "raw-window-handle 0.6.2",
  "thiserror 1.0.69",
@@ -2770,33 +2770,12 @@ dependencies = [
 
 [[package]]
 name = "num_enum"
-version = "0.5.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1f646caf906c20226733ed5b1374287eb97e3c2a5c227ce668c1f2ce20ae57c9"
-dependencies = [
- "num_enum_derive 0.5.11",
-]
-
-[[package]]
-name = "num_enum"
 version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5d0bca838442ec211fa11de3a8b0e0e8f3a4522575b5c4c06ed722e005036f26"
 dependencies = [
- "num_enum_derive 0.7.6",
+ "num_enum_derive",
  "rustversion",
-]
-
-[[package]]
-name = "num_enum_derive"
-version = "0.5.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dcbff9bc912032c62bf65ef1d5aea88983b420f4f839db1e9b0c281a25c9c799"
-dependencies = [
- "proc-macro-crate 1.3.1",
- "proc-macro2",
- "quote",
- "syn 1.0.109",
 ]
 
 [[package]]
@@ -3987,6 +3966,7 @@ dependencies = [
  "crossbeam-channel",
  "git2",
  "hound",
+ "serde_json",
  "summoner_core",
  "summoner_dsp",
  "summoner_engine",
@@ -4016,11 +3996,11 @@ dependencies = [
  "claxon",
  "criterion",
  "hound",
+ "libloading 0.8.9",
  "serde",
  "serde_json",
  "summoner_core",
  "summoner_project",
- "vst",
  "wide",
 ]
 
@@ -4689,20 +4669,6 @@ name = "version_check"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
-
-[[package]]
-name = "vst"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "111c58168c9208a20c3f5cedeca0721aee2cac0e92c5ec2a16dc4beb5886a40a"
-dependencies = [
- "bitflags 1.3.2",
- "libc",
- "libloading 0.7.4",
- "log",
- "num-traits",
- "num_enum 0.5.11",
-]
 
 [[package]]
 name = "waker-fn"
