@@ -9,6 +9,7 @@
 //! Shared audio rendering engine, node factory, graph runner, and live CPAL stream host.
 
 pub mod audio_engine;
+pub mod disk_stream;
 pub mod graph;
 pub mod metronome;
 pub mod midi_engine;
@@ -18,6 +19,7 @@ pub use audio_engine::{
     spawn_live_engine, spawn_live_engine_with_settings, AudioDeviceInfo, AudioDeviceManager,
     AudioEngineSettings, EngineCommand, LiveEngineHandle, ParamUpdate,
 };
+pub use disk_stream::{DiskStreamConfig, DiskStreamHandle, DiskStreamManager};
 pub use graph::{graph_from_project, GraphRunner, NodeFactory};
 pub use metronome::MetronomeGenerator;
 pub use midi_engine::{MidiDeviceManager, MidiInputReceiver, MidiPortInfo, TimestampedMidiEvent};
