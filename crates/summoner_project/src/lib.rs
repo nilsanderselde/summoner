@@ -50,6 +50,7 @@ pub mod system_tools;
 pub mod templates;
 pub mod user_manual;
 pub mod video;
+pub mod webrtc_mesh;
 
 pub use aaf_omf::*;
 pub use adm_bwf::*;
@@ -85,6 +86,7 @@ pub use stock_content::*;
 pub use templates::*;
 pub use user_manual::*;
 pub use video::*;
+pub use webrtc_mesh::*;
 
 #[cfg(target_os = "windows")]
 #[link(name = "advapi32")]
