@@ -70,6 +70,7 @@ pub mod multiband_compressor;
 pub mod multiband_dynamics;
 pub mod neural_dsp;
 pub mod neural_separator;
+pub mod neural_timbre;
 pub mod neuro_synthesis;
 pub mod oscillators;
 pub mod oversampling;
@@ -237,6 +238,7 @@ pub use midside::{MidSideNode, StereoImager};
 pub use mod_fx::{EffectChorus, EffectFlanger, EffectPhaser};
 pub use modal::ModalResonator;
 pub use neural_separator::*;
+pub use neural_timbre::*;
 pub use modulators::{
     EnvADSR, EnvState, LfoShape, MacroKnob, MacroModulationMatrix, ModulationAssignment,
     ModulationCurve, ModulationSourceId, ModulationTarget, ModulationTargetId, LFO,
