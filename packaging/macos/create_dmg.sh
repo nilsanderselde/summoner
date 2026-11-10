@@ -60,9 +60,16 @@ cat <<EOF > "${STAGE_DIR}/${APP_NAME}.app/Contents/Info.plist"
     <string>11.0</string>
     <key>NSHighResolutionCapable</key>
     <true/>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Summoner DAW requires access to the microphone and audio inputs for multi-track audio recording and live monitoring.</string>
 </dict>
 </plist>
 EOF
+
+if command -v codesign >/dev/null 2>&1; then
+    echo "Signing application bundle with hardened runtime and entitlements..."
+    codesign --force --options runtime --entitlements packaging/macos/entitlements.plist --deep -s - "${STAGE_DIR}/${APP_NAME}.app" || true
+fi
 
 rm -f "${STAGE_DIR}/Applications"
 ln -s /Applications "${STAGE_DIR}/Applications"

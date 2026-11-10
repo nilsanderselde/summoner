@@ -11,6 +11,7 @@
 pub mod audio_engine;
 pub mod disk_stream;
 pub mod graph;
+pub mod latency_probe;
 pub mod metronome;
 pub mod midi_engine;
 pub mod midi_recorder;
@@ -23,6 +24,9 @@ pub use audio_engine::{
 };
 pub use disk_stream::{DiskStreamConfig, DiskStreamHandle, DiskStreamManager};
 pub use graph::{graph_from_project, GraphRunner, NodeFactory};
+pub use latency_probe::{
+    LatencyDetector, LatencyProbeGenerator, RecordingLatencyCompensation, RoundTripLatency,
+};
 pub use metronome::MetronomeGenerator;
 pub use midi_engine::{MidiDeviceManager, MidiInputReceiver, MidiPortInfo, TimestampedMidiEvent};
 pub use midi_recorder::{

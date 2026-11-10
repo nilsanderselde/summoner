@@ -449,9 +449,89 @@ impl NativeAudioDriverTuner {
     }
 }
 
+/// macOS CoreAudio Aggregate Device Configuration (Task A4).
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct CoreAudioAggregateConfig {
+    pub name: String,
+    pub aggregate_uid: String,
+    pub sub_device_uids: Vec<String>,
+    pub master_clock_device_uid: String,
+    pub sample_rate: u32,
+    pub drift_compensation_device_uids: Vec<String>,
+}
+
+/// macOS CoreAudio hardware notification event types (Task A4).
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum CoreAudioNotificationEvent {
+    SampleRateChanged { old_rate: u32, new_rate: u32 },
+    DefaultDeviceChanged { device_uid: String, direction: DeviceDirection },
+    DeviceAliveStateChanged { device_uid: String, is_alive: bool },
+    HardwareOverload,
+}
+
+/// Manager and validator for macOS CoreAudio aggregate devices and notifications.
+pub struct CoreAudioAggregateManager;
+
+impl CoreAudioAggregateManager {
+    /// Validate aggregate device configuration requirements.
+    pub fn validate_config(config: &CoreAudioAggregateConfig) -> Result<(), String> {
+        if config.sub_device_uids.is_empty() {
+            return Err("Aggregate device requires at least one sub-device".to_string());
+        }
+        if !config.sub_device_uids.contains(&config.master_clock_device_uid) {
+            return Err("Master clock device UID must be one of the sub-devices".to_string());
+        }
+        if config.sample_rate == 0 {
+            return Err("Sample rate must be non-zero".to_string());
+        }
+        Ok(())
+    }
+
+    /// Construct an AudioDeviceDescriptor representing the synthesized aggregate device.
+    pub fn build_descriptor(config: &CoreAudioAggregateConfig, total_channels: usize) -> AudioDeviceDescriptor {
+        AudioDeviceDescriptor {
+            name: config.name.clone(),
+            backend: AudioDriverBackendType::CoreAudio,
+            direction: DeviceDirection::Duplex,
+            default_sample_rate: config.sample_rate,
+            supported_sample_rates: vec![44100, 48000, 88200, 96000, 192000],
+            min_channels: 2,
+            max_channels: total_channels.max(2),
+            min_buffer_size: 32,
+            max_buffer_size: 2048,
+            is_default: false,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_coreaudio_aggregate_device_validation() {
+        let valid_config = CoreAudioAggregateConfig {
+            name: "Summoner Aggregate (Mic + DAC)".to_string(),
+            aggregate_uid: "org.summoner.aggregate.001".to_string(),
+            sub_device_uids: vec!["BuiltInMic".to_string(), "ExternalDAC".to_string()],
+            master_clock_device_uid: "ExternalDAC".to_string(),
+            sample_rate: 48000,
+            drift_compensation_device_uids: vec!["BuiltInMic".to_string()],
+        };
+
+        assert!(CoreAudioAggregateManager::validate_config(&valid_config).is_ok());
+
+        let desc = CoreAudioAggregateManager::build_descriptor(&valid_config, 4);
+        assert_eq!(desc.backend, AudioDriverBackendType::CoreAudio);
+        assert_eq!(desc.direction, DeviceDirection::Duplex);
+        assert_eq!(desc.max_channels, 4);
+
+        let invalid_clock_config = CoreAudioAggregateConfig {
+            master_clock_device_uid: "NonExistentDevice".to_string(),
+            ..valid_config
+        };
+        assert!(CoreAudioAggregateManager::validate_config(&invalid_clock_config).is_err());
+    }
 
     #[test]
     fn test_step_1242_wasapi_driver_tuning() {
