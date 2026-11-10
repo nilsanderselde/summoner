@@ -275,6 +275,12 @@ impl MidiFilterEngine {
                 }
                 Some(MidiEvent::SystemRealtime(msg))
             }
+            MidiEvent::SongPositionPointer(spp) => {
+                if !self.filter.allow_system_realtime {
+                    return None;
+                }
+                Some(MidiEvent::SongPositionPointer(spp))
+            }
         }
     }
 
@@ -315,6 +321,11 @@ impl MidiFilterEngine {
             MidiEvent::ProgramChange(ch, p) => [0xC0 | (ch & 0x0F), p & 0x7F, 0],
             MidiEvent::Aftertouch(ch, p) => [0xD0 | (ch & 0x0F), p & 0x7F, 0],
             MidiEvent::PolyPressure(ch, n, p) => [0xA0 | (ch & 0x0F), n & 0x7F, p & 0x7F],
+            MidiEvent::SongPositionPointer(spp) => [
+                0xF2,
+                (spp & 0x7F) as u8,
+                ((spp >> 7) & 0x7F) as u8,
+            ],
             MidiEvent::SystemRealtime(msg) => [msg, 0, 0],
         })
     }

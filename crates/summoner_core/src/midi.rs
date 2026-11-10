@@ -25,7 +25,9 @@ pub enum MidiEvent {
     Aftertouch(u8, u8),
     /// Polyphonic Key Pressure event with (channel 0-15, note 0-127, pressure value 0-127).
     PolyPressure(u8, u8, u8),
-    /// System Realtime status byte message (e.g. 0xF8 Timing Clock, 0xFA Start, 0xFC Stop).
+    /// Song Position Pointer (14-bit beat index, 1 beat = 6 MIDI clock ticks = sixteenth note).
+    SongPositionPointer(u16),
+    /// System Realtime status byte message (e.g. 0xF8 Timing Clock, 0xFA Start, 0xFB Continue, 0xFC Stop).
     SystemRealtime(u8),
 }
 
@@ -107,7 +109,15 @@ impl MidiEvent {
                 }
             }
             0xF0 => {
-                if status >= 0xF8 {
+                if status == 0xF2 {
+                    if bytes.len() >= 3 {
+                        let lsb = (bytes[1] & 0x7F) as u16;
+                        let msb = (bytes[2] & 0x7F) as u16;
+                        Some(MidiEvent::SongPositionPointer((msb << 7) | lsb))
+                    } else {
+                        None
+                    }
+                } else if status >= 0xF8 || status == 0xFA || status == 0xFB || status == 0xFC {
                     Some(MidiEvent::SystemRealtime(status))
                 } else {
                     None
@@ -115,6 +125,105 @@ impl MidiEvent {
             }
             _ => None,
         }
+    }
+
+    /// Write raw MIDI byte serialization into the provided buffer. Returns number of bytes written.
+    pub fn write_bytes(&self, out: &mut [u8]) -> usize {
+        match *self {
+            MidiEvent::NoteOn(ch, note, vel) => {
+                if out.len() >= 3 {
+                    out[0] = 0x90 | (ch & 0x0F);
+                    out[1] = note & 0x7F;
+                    out[2] = vel & 0x7F;
+                    3
+                } else {
+                    0
+                }
+            }
+            MidiEvent::NoteOff(ch, note, vel) => {
+                if out.len() >= 3 {
+                    out[0] = 0x80 | (ch & 0x0F);
+                    out[1] = note & 0x7F;
+                    out[2] = vel & 0x7F;
+                    3
+                } else {
+                    0
+                }
+            }
+            MidiEvent::PitchBend(ch, val) => {
+                if out.len() >= 3 {
+                    out[0] = 0xE0 | (ch & 0x0F);
+                    out[1] = (val & 0x7F) as u8;
+                    out[2] = ((val >> 7) & 0x7F) as u8;
+                    3
+                } else {
+                    0
+                }
+            }
+            MidiEvent::ControlChange(ch, cc, val) => {
+                if out.len() >= 3 {
+                    out[0] = 0xB0 | (ch & 0x0F);
+                    out[1] = cc & 0x7F;
+                    out[2] = val & 0x7F;
+                    3
+                } else {
+                    0
+                }
+            }
+            MidiEvent::ProgramChange(ch, prog) => {
+                if out.len() >= 2 {
+                    out[0] = 0xC0 | (ch & 0x0F);
+                    out[1] = prog & 0x7F;
+                    2
+                } else {
+                    0
+                }
+            }
+            MidiEvent::Aftertouch(ch, press) => {
+                if out.len() >= 2 {
+                    out[0] = 0xD0 | (ch & 0x0F);
+                    out[1] = press & 0x7F;
+                    2
+                } else {
+                    0
+                }
+            }
+            MidiEvent::PolyPressure(ch, note, press) => {
+                if out.len() >= 3 {
+                    out[0] = 0xA0 | (ch & 0x0F);
+                    out[1] = note & 0x7F;
+                    out[2] = press & 0x7F;
+                    3
+                } else {
+                    0
+                }
+            }
+            MidiEvent::SongPositionPointer(spp) => {
+                if out.len() >= 3 {
+                    out[0] = 0xF2;
+                    out[1] = (spp & 0x7F) as u8;
+                    out[2] = ((spp >> 7) & 0x7F) as u8;
+                    3
+                } else {
+                    0
+                }
+            }
+            MidiEvent::SystemRealtime(byte) => {
+                if !out.is_empty() {
+                    out[0] = byte;
+                    1
+                } else {
+                    0
+                }
+            }
+        }
+    }
+
+    /// Serialize event to a byte vector.
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut buf = [0u8; 3];
+        let len = self.write_bytes(&mut buf);
+        buf[..len].to_vec()
     }
 }
 

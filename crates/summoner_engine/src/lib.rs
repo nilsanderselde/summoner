@@ -28,7 +28,10 @@ pub use latency_probe::{
     LatencyDetector, LatencyProbeGenerator, RecordingLatencyCompensation, RoundTripLatency,
 };
 pub use metronome::MetronomeGenerator;
-pub use midi_engine::{MidiDeviceManager, MidiInputReceiver, MidiPortInfo, TimestampedMidiEvent};
+pub use midi_engine::{
+    MidiClockOutRunner, MidiDeviceManager, MidiInputReceiver, MidiOutputSender, MidiPortInfo,
+    MidiSyncReceiver, MidiSyncState, TimestampedMidiEvent,
+};
 pub use midi_recorder::{
     MidiRecordMode, MidiRecorder, QuantizeGrid, RecordedMidiNote, RetrospectiveMidiBuffer,
     StepInputController,
