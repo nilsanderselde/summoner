@@ -32,6 +32,7 @@ pub mod schema;
 pub mod scratch_audio_cache;
 pub mod session_markers;
 pub mod sfz;
+pub mod smf;
 pub mod system_tools;
 
 pub use audio_clip::*;
@@ -50,6 +51,7 @@ pub use preset::*;
 pub use project_tools::*;
 pub use schema::*;
 pub use scratch_audio_cache::*;
+pub use smf::*;
 pub use session_markers::*;
 
 #[cfg(target_os = "windows")]

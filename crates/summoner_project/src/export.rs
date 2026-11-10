@@ -1360,58 +1360,93 @@ pub fn export_dawproject(project: &ProjectConfig) -> Result<Vec<u8>, String> {
     Ok(manifest.into_bytes())
 }
 
-/// Step 835: MIDI File Import.
+/// Step 835: Standard MIDI File Import (Format 0 and 1).
 pub fn import_midi_file(bytes: &[u8]) -> Result<SequenceConfig, String> {
-    if bytes.len() < 14 || &bytes[0..4] != b"MThd" {
-        return Err("Invalid MIDI file header".to_string());
+    let smf = crate::smf::SmfData::parse(bytes)?;
+    if let Some(track) = smf.tracks.first() {
+        let mut seq = SequenceConfig {
+            clip_name: Some(track.name.clone()),
+            step_division: 0.25,
+            name: track.name.clone(),
+            ..Default::default()
+        };
+        for note in &track.notes {
+            let step_idx = (note.start_beat / seq.step_division).round() as usize;
+            while seq.steps.len() <= step_idx {
+                seq.steps.push(crate::schema::TrackerStepConfig {
+                    active: false,
+                    ..Default::default()
+                });
+            }
+            seq.steps[step_idx] = crate::schema::TrackerStepConfig {
+                note: note.pitch as f64,
+                velocity: note.velocity,
+                gate: (note.duration_beats / seq.step_division) as f32,
+                active: true,
+                ..Default::default()
+            };
+        }
+        Ok(seq)
+    } else {
+        Ok(SequenceConfig {
+            clip_name: Some("Imported MIDI".to_string()),
+            ..Default::default()
+        })
     }
-    let steps = vec![crate::schema::TrackerStepConfig {
-        active: true,
-        note: 60.0,
-        velocity: 0.8,
-        gate: 0.5,
-        ..Default::default()
-    }];
-    Ok(SequenceConfig {
-        clip_name: Some("Imported MIDI".to_string()),
-        steps,
-        ..Default::default()
-    })
 }
 
-/// Step 836: MIDI File Export.
+/// Step 836: Standard MIDI File Export (Format 1).
 pub fn export_midi_file(sequence: &SequenceConfig, bpm: f64) -> Result<Vec<u8>, String> {
-    let ticks_per_quarter = 480u16;
-    let us_per_quarter = (60_000_000.0 / bpm.max(1.0)).round() as u32;
-
-    let mut track_data = Vec::new();
-    track_data.extend_from_slice(&[0x00, 0xFF, 0x51, 0x03]);
-    track_data.push((us_per_quarter >> 16) as u8);
-    track_data.push((us_per_quarter >> 8) as u8);
-    track_data.push(us_per_quarter as u8);
-
-    for step in &sequence.steps {
+    let mut notes = Vec::new();
+    for (s_idx, step) in sequence.steps.iter().enumerate() {
         if step.active && !step.muted {
-            let note = (step.note.round() as u8).clamp(0, 127);
-            let vel = ((step.velocity * 127.0).round() as u8).clamp(1, 127);
-            track_data.extend_from_slice(&[0x00, 0x90, note, vel]);
-            track_data.extend_from_slice(&[0x60, 0x80, note, 0x00]);
+            let beat = sequence.start_beat + (s_idx as f64) * sequence.step_division;
+            let dur = (step.gate as f64) * sequence.step_division;
+            notes.push(crate::smf::SmfNote {
+                channel: 0,
+                pitch: step.note.round().clamp(0.0, 127.0) as u8,
+                velocity: step.velocity.clamp(0.0, 1.0),
+                start_beat: beat,
+                duration_beats: dur.max(0.1),
+            });
         }
     }
-    track_data.extend_from_slice(&[0x00, 0xFF, 0x2F, 0x00]);
 
-    let mut midi = Vec::new();
-    midi.extend_from_slice(b"MThd");
-    midi.extend_from_slice(&6u32.to_be_bytes());
-    midi.extend_from_slice(&0u16.to_be_bytes());
-    midi.extend_from_slice(&1u16.to_be_bytes());
-    midi.extend_from_slice(&ticks_per_quarter.to_be_bytes());
+    let smf = crate::smf::SmfData {
+        format: 1,
+        division: 480,
+        initial_bpm: bpm,
+        tempo_points: vec![crate::schema::TempoPointConfig {
+            beat: 0.0,
+            bpm,
+            curve: "jump".to_string(),
+            ..Default::default()
+        }],
+        meter_points: vec![crate::schema::MeterPointConfig {
+            beat: 0.0,
+            numerator: 4,
+            denominator: 4,
+        }],
+        markers: Vec::new(),
+        tracks: vec![crate::smf::SmfTrack {
+            name: sequence.clip_name.clone().unwrap_or_else(|| "Sequence".to_string()),
+            channel: 0,
+            notes,
+        }],
+    };
 
-    midi.extend_from_slice(b"MTrk");
-    midi.extend_from_slice(&(track_data.len() as u32).to_be_bytes());
-    midi.extend_from_slice(&track_data);
+    Ok(smf.to_bytes())
+}
 
-    Ok(midi)
+/// Export full project to multi-track Standard MIDI File bytes (Format 1).
+pub fn export_project_to_smf(project: &ProjectConfig) -> Vec<u8> {
+    crate::smf::SmfData::from_project(project).to_bytes()
+}
+
+/// Import full project from multi-track Standard MIDI File bytes (Format 0 or 1).
+pub fn import_smf_to_project(bytes: &[u8], project_name: &str) -> Result<ProjectConfig, String> {
+    let smf = crate::smf::SmfData::parse(bytes)?;
+    Ok(smf.to_project(project_name))
 }
 
 /// Export project to Dolby Atmos ADM BWF (Broadcast Wave Format) file with axml metadata (Step 1066).
