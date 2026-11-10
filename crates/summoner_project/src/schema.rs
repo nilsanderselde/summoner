@@ -206,6 +206,27 @@ fn default_slice_threshold() -> f32 {
     0.15
 }
 
+/// Tempo point configuration stored in project TOML.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+pub struct TempoPointConfig {
+    pub beat: f64,
+    pub bpm: f64,
+    #[serde(default)]
+    pub curve: String,
+    #[serde(default)]
+    pub target_bpm: Option<f64>,
+    #[serde(default)]
+    pub ramp_length_beats: f64,
+}
+
+/// Time signature / meter point configuration stored in project TOML.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+pub struct MeterPointConfig {
+    pub beat: f64,
+    pub numerator: u8,
+    pub denominator: u8,
+}
+
 /// Transport settings in project document.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TransportConfig {
@@ -216,6 +237,10 @@ pub struct TransportConfig {
     pub master_tune_cents: f32,
     #[serde(default)]
     pub master_trim_db: f32,
+    #[serde(default)]
+    pub tempo_points: Vec<TempoPointConfig>,
+    #[serde(default)]
+    pub meter_points: Vec<MeterPointConfig>,
 }
 
 impl Default for TransportConfig {
@@ -226,7 +251,37 @@ impl Default for TransportConfig {
             time_signature: "4/4".to_string(),
             master_tune_cents: 0.0,
             master_trim_db: 0.0,
+            tempo_points: Vec::new(),
+            meter_points: Vec::new(),
         }
+    }
+}
+
+impl TransportConfig {
+    /// Convert project transport configuration into live core `TempoMap`.
+    pub fn to_tempo_map(&self) -> summoner_core::TempoMap {
+        let mut map = summoner_core::TempoMap::new(self.bpm, 4, 4, self.sample_rate);
+        if let Some((num_str, den_str)) = self.time_signature.split_once('/') {
+            if let (Ok(num), Ok(den)) = (num_str.trim().parse::<u8>(), den_str.trim().parse::<u8>()) {
+                map.meter_points[0] = summoner_core::MeterPoint::new(0.0, num, den);
+            }
+        }
+        for tp in &self.tempo_points {
+            if tp.curve.eq_ignore_ascii_case("ramp") {
+                map.add_tempo_point(summoner_core::TempoPoint::ramp(
+                    tp.beat,
+                    tp.bpm,
+                    tp.target_bpm.unwrap_or(tp.bpm),
+                    tp.ramp_length_beats,
+                ));
+            } else {
+                map.add_tempo_point(summoner_core::TempoPoint::jump(tp.beat, tp.bpm));
+            }
+        }
+        for mp in &self.meter_points {
+            map.add_meter_point(summoner_core::MeterPoint::new(mp.beat, mp.numerator, mp.denominator));
+        }
+        map
     }
 }
 
@@ -655,5 +710,34 @@ name = "Audio 1"
         assert_eq!(migrated.tracks.len(), 1);
         assert!(migrated.tracks[0].audio_clips.is_empty());
         assert!(migrated.tracks[0].arranger_lanes.is_empty());
+    }
+
+    #[test]
+    fn test_transport_config_to_tempo_map() {
+        let mut transport = TransportConfig {
+            sample_rate: 48000,
+            bpm: 130.0,
+            time_signature: "7/8".to_string(),
+            ..Default::default()
+        };
+        transport.tempo_points.push(TempoPointConfig {
+            beat: 16.0,
+            bpm: 150.0,
+            curve: "Jump".to_string(),
+            target_bpm: None,
+            ramp_length_beats: 0.0,
+        });
+        transport.meter_points.push(MeterPointConfig {
+            beat: 16.0,
+            numerator: 4,
+            denominator: 4,
+        });
+
+        let map = transport.to_tempo_map();
+        assert_eq!(map.sample_rate, 48000);
+        assert_eq!(map.tempo_at_beat(0.0), 130.0);
+        assert_eq!(map.meter_at_beat(0.0), (7, 8));
+        assert_eq!(map.tempo_at_beat(16.0), 150.0);
+        assert_eq!(map.meter_at_beat(16.0), (4, 4));
     }
 }
