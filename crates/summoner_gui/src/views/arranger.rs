@@ -5,6 +5,8 @@
 use crate::app::ViewMode;
 use eframe::egui;
 use std::collections::HashSet;
+use summoner_project::audio_clip::AudioClipConfig;
+use summoner_project::clip_editing::{duplicate_audio_clip, slip_audio_clip};
 use summoner_project::schema::{
     MarkerConfig, ProjectConfig, SequenceConfig, TrackConfig, TrackerStepConfig,
 };
@@ -34,17 +36,60 @@ pub enum AutomationToolMode {
     Curve,
 }
 
+/// Time ruler display mode.
+#[derive(PartialEq, Clone, Copy, Debug, Default)]
+pub enum RulerTimeFormat {
+    #[default]
+    BarsBeats,
+    MinutesSeconds,
+    SMPTE,
+}
+
+/// Format beat into Bars:Beats string (e.g. "1.1.00").
+pub fn format_bars_beats(beat: f64) -> String {
+    let bar = (beat / 4.0).floor() as i64 + 1;
+    let rem_beat = (beat % 4.0).floor() as i64 + 1;
+    let ticks = ((beat.fract()) * 100.0).round() as i64;
+    format!("{}.{}.{:02}", bar, rem_beat, ticks)
+}
+
+/// Format beat into Minutes:Seconds:Millis string based on BPM.
+pub fn format_minutes_seconds(beat: f64, bpm: f64) -> String {
+    let total_secs = beat * (60.0 / bpm.max(1.0));
+    let mins = (total_secs / 60.0).floor() as u64;
+    let secs = (total_secs % 60.0).floor() as u64;
+    let millis = ((total_secs.fract()) * 1000.0).round() as u64;
+    format!("{:02}:{:02}.{:03}", mins, secs, millis)
+}
+
+/// Format beat into SMPTE timecode string (HH:MM:SS:FF) at 24 fps based on BPM.
+pub fn format_smpte(beat: f64, bpm: f64, fps: f64) -> String {
+    let total_secs = beat * (60.0 / bpm.max(1.0));
+    let hours = (total_secs / 3600.0).floor() as u64;
+    let rem_secs = total_secs % 3600.0;
+    let mins = (rem_secs / 60.0).floor() as u64;
+    let secs = (rem_secs % 60.0).floor() as u64;
+    let frames = ((rem_secs.fract()) * fps).floor() as u64;
+    format!("{:02}:{:02}:{:02}:{:02}", hours, mins, secs, frames)
+}
+
 /// Persistent UI state for Arranger View (stored in egui memory).
 #[derive(Clone)]
 pub struct ArrangerState {
     pub follow_playhead: bool,
     pub selected_clips: HashSet<(u64, usize)>, // (track_id, sequence_index)
+    pub selected_audio_clips: HashSet<String>, // audio clip id
     pub punch_in_active: bool,
     pub global_bpm_nodes: Vec<(f64, f64)>, // (beat, bpm)
     pub time_signature_markers: Vec<(f64, String)>, // (beat, time_sig)
     pub clipboard_clip: Option<SequenceConfig>,
+    pub clipboard_audio_clip: Option<summoner_project::audio_clip::AudioClipConfig>,
     pub automation_tool: AutomationToolMode,
     pub snap_automation: bool,
+    pub ruler_format: RulerTimeFormat,
+    pub default_track_height: f32,
+    pub marquee_start: Option<egui::Pos2>,
+    pub marquee_current: Option<egui::Pos2>,
 }
 
 impl Default for ArrangerState {
@@ -52,12 +97,18 @@ impl Default for ArrangerState {
         Self {
             follow_playhead: false,
             selected_clips: HashSet::new(),
+            selected_audio_clips: HashSet::new(),
             punch_in_active: false,
             global_bpm_nodes: vec![(0.0, 120.0), (16.0, 124.0)],
             time_signature_markers: vec![(0.0, "4/4".to_string()), (16.0, "3/4".to_string())],
             clipboard_clip: None,
+            clipboard_audio_clip: None,
             automation_tool: AutomationToolMode::Pointer,
             snap_automation: true,
+            ruler_format: RulerTimeFormat::BarsBeats,
+            default_track_height: 56.0,
+            marquee_start: None,
+            marquee_current: None,
         }
     }
 }
@@ -221,6 +272,30 @@ pub fn show_arranger(
         if ui.button("🔍 Zoom Selection").clicked() {
             *pixels_per_beat = 80.0;
         }
+
+        ui.separator();
+        ui.label("Ruler:");
+        ui.selectable_value(
+            &mut state.ruler_format,
+            RulerTimeFormat::BarsBeats,
+            "Bars",
+        );
+        ui.selectable_value(
+            &mut state.ruler_format,
+            RulerTimeFormat::MinutesSeconds,
+            "Time",
+        );
+        ui.selectable_value(
+            &mut state.ruler_format,
+            RulerTimeFormat::SMPTE,
+            "SMPTE",
+        );
+
+        ui.separator();
+        ui.label("Height:");
+        ui.selectable_value(&mut state.default_track_height, 34.0, "Compact");
+        ui.selectable_value(&mut state.default_track_height, 56.0, "Normal");
+        ui.selectable_value(&mut state.default_track_height, 96.0, "Tall");
 
         ui.separator();
         ui.label("Grid:");
@@ -504,10 +579,19 @@ pub fn show_arranger(
                     ),
                 );
                 if is_bar {
+                    let label = match state.ruler_format {
+                        RulerTimeFormat::BarsBeats => format!("Bar {}", (beat / 4) + 1),
+                        RulerTimeFormat::MinutesSeconds => {
+                            format_minutes_seconds(beat as f64, project.transport.bpm)
+                        }
+                        RulerTimeFormat::SMPTE => {
+                            format_smpte(beat as f64, project.transport.bpm, 24.0)
+                        }
+                    };
                     ruler_painter.text(
                         egui::pos2(x + 4.0, ruler_rect.top() + 2.0),
                         egui::Align2::LEFT_TOP,
-                        format!("Bar {}", (beat / 4) + 1),
+                        label,
                         egui::FontId::proportional(10.0),
                         egui::Color32::WHITE,
                     );
@@ -536,7 +620,7 @@ pub fn show_arranger(
             let track = &mut project.tracks[t_idx];
             let is_selected = selected_track_id.is_some_and(|id| id == track.id);
             let is_dimmed = any_soloed && !track.soloed;
-            let row_height = if track.collapsed { 22.0 } else { 50.0 };
+            let row_height = if track.collapsed { 22.0 } else { state.default_track_height };
 
             ui.horizontal(|ui| {
                 // Track Control Header (Steps 419, 420, 422, 424, 446, 448)
@@ -557,10 +641,15 @@ pub fn show_arranger(
 
                         ui.vertical(|ui| {
                             ui.horizontal(|ui| {
-                                let name_text = if track.is_frozen {
-                                    format!("❄ {}", track.name)
+                                let group_tag = if let Some(ref grp) = track.group_bus {
+                                    format!(" [{}]", grp)
                                 } else {
-                                    track.name.clone()
+                                    String::new()
+                                };
+                                let name_text = if track.is_frozen {
+                                    format!("❄ {}{}", track.name, group_tag)
+                                } else {
+                                    format!("{}{}", track.name, group_tag)
                                 };
                                 let head_text = if is_dimmed {
                                     egui::RichText::new(&name_text)
@@ -620,6 +709,18 @@ pub fn show_arranger(
                                         .clicked()
                                     {
                                         track.send_to_master = !track.send_to_master;
+                                        ui.close_menu();
+                                    }
+                                    if ui.button("📁 Group: Drum Bus").clicked() {
+                                        track.group_bus = Some("Drum Bus".to_string());
+                                        ui.close_menu();
+                                    }
+                                    if ui.button("📁 Group: Synth Bus").clicked() {
+                                        track.group_bus = Some("Synth Bus".to_string());
+                                        ui.close_menu();
+                                    }
+                                    if track.group_bus.is_some() && ui.button("🚫 Clear Group").clicked() {
+                                        track.group_bus = None;
                                         ui.close_menu();
                                     }
                                     if t_idx > 0 && ui.button("⬆ Move Up").clicked() {
@@ -1102,6 +1203,122 @@ pub fn show_arranger(
                         }
                     }
                 }
+
+                // Render Audio Clips (Task D3 & C1)
+                let mut audio_clips_to_del: Vec<String> = Vec::new();
+                let mut audio_clips_to_dup: Vec<AudioClipConfig> = Vec::new();
+
+                for audio_clip in &mut track.audio_clips {
+                    let start_x = lane_rect.left() + (audio_clip.start_beat as f32 * ppb);
+                    let clip_width = (audio_clip.duration_beats as f32 * ppb).max(20.0);
+                    let clip_rect = egui::Rect::from_min_size(
+                        egui::pos2(start_x, lane_rect.top() + 3.0),
+                        egui::vec2(clip_width, lane_rect.height() - 6.0),
+                    );
+
+                    let clip_id = ui.id().with(("audio_clip", track_id, &audio_clip.id));
+                    let clip_resp = ui.interact(clip_rect, clip_id, egui::Sense::click_and_drag());
+                    let is_clip_selected = state.selected_audio_clips.contains(&audio_clip.id);
+
+                    if clip_resp.dragged() {
+                        let delta_x = clip_resp.drag_delta().x;
+                        let delta_beats = (delta_x / ppb) as f64;
+                        audio_clip.start_beat = (audio_clip.start_beat + delta_beats).max(0.0);
+                    }
+                    if clip_resp.drag_stopped() {
+                        let div = (*grid_division).max(0.01);
+                        audio_clip.start_beat = (audio_clip.start_beat / div).round() * div;
+                    }
+
+                    if clip_resp.clicked() {
+                        *selected_track_id = Some(track_id);
+                        if !ui.input(|i| i.modifiers.shift) {
+                            state.selected_audio_clips.clear();
+                            state.selected_clips.clear();
+                        }
+                        state.selected_audio_clips.insert(audio_clip.id.clone());
+                    }
+
+                    clip_resp.context_menu(|ui| {
+                        if ui.button("✂ Split at Playhead").clicked() {
+                            let playhead_rel = *playhead_beat;
+                            if audio_clip.contains_beat(playhead_rel) {
+                                if let Ok((_, p2)) = audio_clip.split_at_beat(playhead_rel, 44100, project.transport.bpm) {
+                                    audio_clips_to_dup.push(p2);
+                                }
+                            }
+                            ui.close_menu();
+                        }
+                        if ui.button("📋 Duplicate Audio Clip").clicked() {
+                            audio_clips_to_dup.push(duplicate_audio_clip(audio_clip));
+                            ui.close_menu();
+                        }
+                        if ui.button("↔ Slip +0.25 Beat").clicked() {
+                            slip_audio_clip(audio_clip, 0.25, 44100, project.transport.bpm);
+                            ui.close_menu();
+                        }
+                        if ui.button("↔ Slip -0.25 Beat").clicked() {
+                            slip_audio_clip(audio_clip, -0.25, 44100, project.transport.bpm);
+                            ui.close_menu();
+                        }
+                        if ui.button("🔄 Reverse Audio").clicked() {
+                            audio_clip.is_reversed = !audio_clip.is_reversed;
+                            ui.close_menu();
+                        }
+                        if ui.button("🗑 Delete Audio Clip").clicked() {
+                            audio_clips_to_del.push(audio_clip.id.clone());
+                            ui.close_menu();
+                        }
+                    });
+
+                    // Draw Audio Clip Block Fill (distinct cyan/teal theme for audio)
+                    let fill_col = if is_clip_selected {
+                        egui::Color32::from_rgb(14, 116, 144) // Vibrant Cyan
+                    } else if let Some(rgb) = audio_clip.color {
+                        egui::Color32::from_rgb(rgb[0], rgb[1], rgb[2])
+                    } else {
+                        egui::Color32::from_rgb(21, 67, 85) // Deep Teal
+                    };
+                    painter.rect_filled(clip_rect, 4.0, fill_col);
+                    let stroke_col = if is_clip_selected {
+                        egui::Color32::from_rgb(56, 189, 248)
+                    } else {
+                        egui::Color32::from_rgb(45, 212, 191)
+                    };
+                    painter.rect_stroke(clip_rect, 4.0, egui::Stroke::new(1.5_f32, stroke_col));
+
+                    // Waveform line representation down center
+                    let center_y = clip_rect.center().y;
+                    let num_peaks = ((clip_rect.width() / 4.0) as usize).clamp(4, 200);
+                    let mut points = Vec::with_capacity(num_peaks);
+                    for p in 0..num_peaks {
+                        let px = clip_rect.left() + (p as f32 * 4.0);
+                        let norm = (p as f32 * 0.4).sin() * 0.45;
+                        let py = center_y + norm * (clip_rect.height() * 0.35);
+                        points.push(egui::pos2(px, py));
+                    }
+                    if points.len() >= 2 {
+                        painter.add(egui::Shape::line(
+                            points,
+                            egui::Stroke::new(1.0_f32, egui::Color32::from_rgba_unmultiplied(204, 251, 241, 140)),
+                        ));
+                    }
+
+                    // Clip Name Header
+                    if !track_is_collapsed {
+                        let rev_tag = if audio_clip.is_reversed { " 🔄" } else { "" };
+                        painter.text(
+                            egui::pos2(clip_rect.left() + 6.0, clip_rect.top() + 3.0),
+                            egui::Align2::LEFT_TOP,
+                            format!("🎵 {}{}", audio_clip.name, rev_tag),
+                            egui::FontId::proportional(11.0),
+                            egui::Color32::WHITE,
+                        );
+                    }
+                }
+
+                track.audio_clips.extend(audio_clips_to_dup);
+                track.audio_clips.retain(|c| !audio_clips_to_del.contains(&c.id));
 
                 // Context menu on empty track lane area (Step 589)
                 lane_resp.context_menu(|ui| {
@@ -1680,5 +1897,30 @@ mod tests {
         let seq = SequenceConfig::default();
         state.clipboard_clip = Some(seq);
         assert!(state.clipboard_clip.is_some());
+    }
+
+    #[test]
+    fn test_ruler_time_formatting() {
+        // At 120 BPM, 4 beats = 2.0s
+        assert_eq!(format_bars_beats(0.0), "1.1.00");
+        assert_eq!(format_bars_beats(4.0), "2.1.00");
+        assert_eq!(format_bars_beats(5.5), "2.2.50");
+
+        assert_eq!(format_minutes_seconds(0.0, 120.0), "00:00.000");
+        assert_eq!(format_minutes_seconds(4.0, 120.0), "00:02.000");
+
+        assert_eq!(format_smpte(0.0, 120.0, 24.0), "00:00:00:00");
+        assert_eq!(format_smpte(4.0, 120.0, 24.0), "00:00:02:00");
+    }
+
+    #[test]
+    fn test_arranger_audio_clip_and_state_defaults() {
+        let mut state = ArrangerState::default();
+        assert_eq!(state.ruler_format, RulerTimeFormat::BarsBeats);
+        assert_eq!(state.default_track_height, 56.0);
+        assert!(state.selected_audio_clips.is_empty());
+
+        state.selected_audio_clips.insert("clip_audio_1".to_string());
+        assert!(state.selected_audio_clips.contains("clip_audio_1"));
     }
 }
