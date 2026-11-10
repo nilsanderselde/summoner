@@ -10,6 +10,7 @@
 
 pub mod audio_engine;
 pub mod graph;
+pub mod metronome;
 pub mod midi_engine;
 
 pub use audio_engine::{
@@ -18,5 +19,6 @@ pub use audio_engine::{
     AudioEngineSettings, EngineCommand, LiveEngineHandle, ParamUpdate,
 };
 pub use graph::{graph_from_project, GraphRunner, NodeFactory};
+pub use metronome::MetronomeGenerator;
 pub use midi_engine::{MidiDeviceManager, MidiInputReceiver, MidiPortInfo, TimestampedMidiEvent};
 

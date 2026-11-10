@@ -104,5 +104,6 @@ pub use smoothing::SmoothParam;
 pub use spatial_bus::*;
 pub use spring_bus::*;
 pub use tempo_map::*;
+pub use transport::{TapTempoCalculator, Transport};
 pub use tuning_matrix::*;
 pub use voice::{PolyphonicVoice, VoicePool};

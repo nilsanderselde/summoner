@@ -35,6 +35,9 @@ pub enum EngineCommand {
     ReloadProject(Box<ProjectConfig>),
     SeekFrame(u64),
     SetBpm(f64),
+    SetMetronomeEnabled(bool),
+    SetMetronomeGain(f32),
+    StartCountIn(u32),
 }
 
 #[cfg(target_os = "windows")]
@@ -228,6 +231,18 @@ impl LiveEngineHandle {
 
     pub fn try_recv_midi(&self) -> Option<crate::midi_engine::TimestampedMidiEvent> {
         self.midi_receiver.as_ref().and_then(|r| r.try_recv())
+    }
+
+    pub fn set_metronome_enabled(&self, enabled: bool) {
+        let _ = self.cmd_tx.try_send(EngineCommand::SetMetronomeEnabled(enabled));
+    }
+
+    pub fn set_metronome_gain(&self, gain: f32) {
+        let _ = self.cmd_tx.try_send(EngineCommand::SetMetronomeGain(gain));
+    }
+
+    pub fn start_count_in(&self, bars: u32) {
+        let _ = self.cmd_tx.try_send(EngineCommand::StartCountIn(bars));
     }
 }
 
@@ -497,6 +512,7 @@ pub fn spawn_live_engine_with_settings(
         let mut loop_start_beat = project.loop_start_beat;
         let mut loop_end_beat = project.loop_end_beat;
         let mut current_frame = 0u64;
+        let mut metronome = crate::metronome::MetronomeGenerator::new(sample_rate);
 
         let playing_cb = Arc::clone(&playing);
         let frame_pos_cb = Arc::clone(&frame_position);
@@ -534,6 +550,15 @@ pub fn spawn_live_engine_with_settings(
                         }
                         EngineCommand::SetBpm(b) => {
                             bpm = b;
+                        }
+                        EngineCommand::SetMetronomeEnabled(en) => {
+                            metronome.enabled = en;
+                        }
+                        EngineCommand::SetMetronomeGain(g) => {
+                            metronome.gain = g;
+                        }
+                        EngineCommand::StartCountIn(bars) => {
+                            metronome.start_count_in(bars);
                         }
                     }
                 }
@@ -596,6 +621,13 @@ pub fn spawn_live_engine_with_settings(
 
                 let start_time = Instant::now();
                 runner.process_block_with_input(frames, &ctx, in_slices, &mut [buf_l, buf_r]);
+
+                if metronome.enabled || metronome.is_counting_in {
+                    let mut transport = Transport::new(sample_rate, bpm);
+                    transport.seek_frame(current_frame);
+                    transport.play();
+                    metronome.process_block(&transport, frames, buf_l, buf_r);
+                }
                 let elapsed = start_time.elapsed();
                 let block_duration = frames as f64 / sample_rate as f64;
                 let cpu_pct = (elapsed.as_secs_f64() / block_duration.max(0.0001) * 100.0) as f32;
@@ -794,6 +826,18 @@ mod tests {
         // With input monitoring enabled, the live input audio must be mixed into the track output
         assert!(out_l.iter().any(|&s| s.abs() > 0.1));
         assert!(out_r.iter().any(|&s| s.abs() > 0.1));
+    }
+
+    #[test]
+    fn test_live_engine_metronome_commands() {
+        let project = create_default_project("Metronome Engine Test");
+        let param_bus = Arc::new(ParamBus::new());
+        let handle = spawn_live_engine(&project, param_bus, false);
+
+        // Verify sending metronome commands without panic
+        handle.set_metronome_enabled(true);
+        handle.set_metronome_gain(0.85);
+        handle.start_count_in(2);
     }
 }
 

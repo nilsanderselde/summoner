@@ -1303,6 +1303,9 @@ impl eframe::App for SummonerApp {
         // 818. Ctrl+Shift+M: toggle metronome click
         if is_ctrl && is_shift && ctx.input(|i| i.key_pressed(egui::Key::M)) {
             self.metronome_enabled = !self.metronome_enabled;
+            if let Some(ref engine) = self.audio_engine {
+                engine.set_metronome_enabled(self.metronome_enabled);
+            }
             self.status_message = Some(format!(
                 "Metronome: {}",
                 if self.metronome_enabled { "ON" } else { "OFF" }
