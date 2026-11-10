@@ -78,6 +78,134 @@ impl MidiControllerMapping {
     }
 }
 
+/// Soft takeover / pickup state tracking to prevent sudden parameter jumps on hardware faders (Task B3).
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct SoftTakeoverState {
+    pub is_picked_up: bool,
+    pub last_hardware_val: Option<f32>,
+}
+
+impl SoftTakeoverState {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Reset pickup state (e.g. when switching presets or tracks).
+    pub fn reset(&mut self) {
+        self.is_picked_up = false;
+        self.last_hardware_val = None;
+    }
+
+    /// Update with incoming hardware value.
+    ///
+    /// If not yet picked up, checks if hardware value is within threshold or crossed over
+    /// `current_project_val`. Once picked up, updates pass through freely.
+    pub fn update(&mut self, incoming_val: f32, current_project_val: f32, threshold: f32) -> Option<f32> {
+        if self.is_picked_up {
+            self.last_hardware_val = Some(incoming_val);
+            return Some(incoming_val);
+        }
+
+        let is_close = (incoming_val - current_project_val).abs() <= threshold;
+        let crossed_over = if let Some(last) = self.last_hardware_val {
+            (last < current_project_val && incoming_val >= current_project_val)
+                || (last > current_project_val && incoming_val <= current_project_val)
+        } else {
+            false
+        };
+
+        self.last_hardware_val = Some(incoming_val);
+
+        if is_close || crossed_over {
+            self.is_picked_up = true;
+            Some(incoming_val)
+        } else {
+            None
+        }
+    }
+}
+
+/// Decode relative 2's complement encoder values (1..64 = +1..+64, 127..65 = -1..-63).
+pub fn decode_relative_twos_complement(raw: u8) -> i8 {
+    if raw <= 64 {
+        raw as i8
+    } else {
+        (raw as i16 - 128) as i8
+    }
+}
+
+/// Decode relative signed bit encoder values (bit 6 = sign: 0x40 | delta).
+pub fn decode_relative_signed_bit(raw: u8) -> i8 {
+    let sign = (raw & 0x40) != 0;
+    let magnitude = (raw & 0x3F) as i8;
+    if sign {
+        -magnitude
+    } else {
+        magnitude
+    }
+}
+
+/// Decode relative binary offset encoder values (64 = zero, >64 = positive, <64 = negative).
+pub fn decode_relative_bin_offset(raw: u8) -> i8 {
+    raw as i8 - 64
+}
+
+/// Interactive MIDI Learn session manager (Task B3).
+#[derive(Debug, Clone, Default)]
+pub struct MidiLearnSession {
+    pub is_learning: bool,
+    pub target_param_id: Option<String>,
+    pub target_track_id: Option<u64>,
+}
+
+impl MidiLearnSession {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Begin listening for incoming MIDI messages to bind to a parameter.
+    pub fn start_learning(&mut self, param_id: impl Into<String>, track_id: Option<u64>) {
+        self.is_learning = true;
+        self.target_param_id = Some(param_id.into());
+        self.target_track_id = track_id;
+    }
+
+    /// Cancel active learn session.
+    pub fn cancel(&mut self) {
+        self.is_learning = false;
+        self.target_param_id = None;
+        self.target_track_id = None;
+    }
+
+    /// Process incoming MIDI CC event. If in learn mode, produces a new `MidiMappingConfig` and ends learn mode.
+    pub fn process_cc_event(
+        &mut self,
+        channel: u8,
+        cc: u8,
+        device_name: Option<String>,
+    ) -> Option<summoner_project::schema::MidiMappingConfig> {
+        if !self.is_learning {
+            return None;
+        }
+
+        let param_id = self.target_param_id.take()?;
+        let track_id = self.target_track_id;
+        self.is_learning = false;
+
+        Some(summoner_project::schema::MidiMappingConfig {
+            channel,
+            cc,
+            param_id,
+            track_id,
+            mode: summoner_project::schema::ControllerMappingMode::Absolute,
+            min_val: 0.0,
+            max_val: 1.0,
+            soft_takeover: true,
+            device_name,
+        })
+    }
+}
+
 /// Log entry for MIDI event monitoring.
 #[derive(Debug, Clone, PartialEq)]
 pub struct MidiLogEntry {
@@ -494,4 +622,77 @@ pub fn cents_to_freq_ratio(cents: f32) -> f32 {
 pub fn midi_note_to_hz_tuned(note: u8, master_cents: f32, fine_cents: f32) -> f32 {
     let total_cents = master_cents.clamp(-100.0, 100.0) + fine_cents.clamp(-50.0, 50.0);
     440.0 * 2.0f32.powf(((note as f32) - 69.0 + total_cents / 100.0) / 12.0)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_soft_takeover_pickup_logic() {
+        let mut st = SoftTakeoverState::new();
+        let target_project_val = 0.75;
+        let threshold = 0.05;
+
+        // Fader starting far away at 0.1: should not update (prevent jumps)
+        assert_eq!(st.update(0.1, target_project_val, threshold), None);
+        assert!(!st.is_picked_up);
+
+        // Fader moving to 0.4: still too far
+        assert_eq!(st.update(0.4, target_project_val, threshold), None);
+        assert!(!st.is_picked_up);
+
+        // Fader reaches 0.73 (within 0.05 threshold of 0.75): should pick up!
+        assert_eq!(st.update(0.73, target_project_val, threshold), Some(0.73));
+        assert!(st.is_picked_up);
+
+        // Once picked up, arbitrary movements pass through
+        assert_eq!(st.update(0.85, target_project_val, threshold), Some(0.85));
+        assert_eq!(st.update(0.20, target_project_val, threshold), Some(0.20));
+    }
+
+    #[test]
+    fn test_relative_encoder_decoding() {
+        // Two's complement
+        assert_eq!(decode_relative_twos_complement(1), 1);
+        assert_eq!(decode_relative_twos_complement(5), 5);
+        assert_eq!(decode_relative_twos_complement(127), -1);
+        assert_eq!(decode_relative_twos_complement(123), -5);
+
+        // Signed bit
+        assert_eq!(decode_relative_signed_bit(3), 3);
+        assert_eq!(decode_relative_signed_bit(0x40 | 3), -3);
+
+        // Binary offset
+        assert_eq!(decode_relative_bin_offset(64), 0);
+        assert_eq!(decode_relative_bin_offset(67), 3);
+        assert_eq!(decode_relative_bin_offset(60), -4);
+    }
+
+    #[test]
+    fn test_midi_learn_session() {
+        let mut session = MidiLearnSession::new();
+        assert!(!session.is_learning);
+
+        // Event before learning starts is ignored
+        assert!(session.process_cc_event(1, 7, None).is_none());
+
+        // Start learning parameter
+        session.start_learning("track_1_filter_cutoff", Some(1));
+        assert!(session.is_learning);
+
+        // Move hardware knob CC 14 on Channel 2
+        let mapping = session.process_cc_event(2, 14, Some("APC40 MkII".to_string()));
+        assert!(mapping.is_some());
+        let map = mapping.unwrap();
+        assert_eq!(map.channel, 2);
+        assert_eq!(map.cc, 14);
+        assert_eq!(map.param_id, "track_1_filter_cutoff");
+        assert_eq!(map.track_id, Some(1));
+        assert_eq!(map.device_name.as_deref(), Some("APC40 MkII"));
+        assert!(map.soft_takeover);
+
+        // Session ended
+        assert!(!session.is_learning);
+    }
 }

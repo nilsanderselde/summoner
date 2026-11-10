@@ -169,12 +169,49 @@ pub struct MarkerConfig {
     pub hotkey_binding: Option<String>,
 }
 
-/// MIDI Learn mapping entry in project TOML.
+/// Controller mapping operating mode (Task B3).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ControllerMappingMode {
+    Absolute,
+    RelativeTwosComplement,
+    RelativeSignedBit,
+    RelativeBinOffset,
+    Toggle,
+    Momentary,
+}
+
+impl Default for ControllerMappingMode {
+    fn default() -> Self {
+        Self::Absolute
+    }
+}
+
+fn default_min_val() -> f32 {
+    0.0
+}
+
+fn default_max_val() -> f32 {
+    1.0
+}
+
+/// MIDI Learn mapping entry in project TOML (Task B3).
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct MidiMappingConfig {
     pub channel: u8,
     pub cc: u8,
     pub param_id: String,
+    #[serde(default)]
+    pub track_id: Option<u64>,
+    #[serde(default)]
+    pub mode: ControllerMappingMode,
+    #[serde(default = "default_min_val")]
+    pub min_val: f32,
+    #[serde(default = "default_max_val")]
+    pub max_val: f32,
+    #[serde(default)]
+    pub soft_takeover: bool,
+    #[serde(default)]
+    pub device_name: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
