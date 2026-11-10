@@ -43,6 +43,7 @@ pub mod smf;
 pub mod stock_content;
 pub mod system_tools;
 pub mod templates;
+pub mod video;
 
 pub use aaf_omf::*;
 pub use audio_clip::*;
@@ -71,6 +72,7 @@ pub use smf::*;
 pub use session_markers::*;
 pub use stock_content::*;
 pub use templates::*;
+pub use video::*;
 
 #[cfg(target_os = "windows")]
 #[link(name = "advapi32")]
