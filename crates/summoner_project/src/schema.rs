@@ -170,20 +170,15 @@ pub struct MarkerConfig {
 }
 
 /// Controller mapping operating mode (Task B3).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum ControllerMappingMode {
+    #[default]
     Absolute,
     RelativeTwosComplement,
     RelativeSignedBit,
     RelativeBinOffset,
     Toggle,
     Momentary,
-}
-
-impl Default for ControllerMappingMode {
-    fn default() -> Self {
-        Self::Absolute
-    }
 }
 
 fn default_min_val() -> f32 {

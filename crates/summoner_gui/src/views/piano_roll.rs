@@ -8,6 +8,100 @@ use summoner_project::schema::{SequenceConfig, TrackerStepConfig};
 pub enum PianoRollMode {
     StepGrid,
     PianoRoll,
+    DrumGrid,
+}
+
+/// Bottom lane view mode beneath piano roll (Task D2).
+#[derive(PartialEq, Clone, Copy, Debug)]
+pub enum BottomLaneMode {
+    Velocity,
+    ModWheel,
+    Volume,
+    Pan,
+    Expression,
+    Sustain,
+    Timbre,
+}
+
+/// Musical scale types for background grid highlighting (Task D2).
+#[derive(PartialEq, Clone, Copy, Debug)]
+pub enum MusicalScaleType {
+    Major,
+    NaturalMinor,
+    HarmonicMinor,
+    MelodicMinor,
+    Dorian,
+    Phrygian,
+    Lydian,
+    Mixolydian,
+    PentatonicMajor,
+    PentatonicMinor,
+    Blues,
+    Chromatic,
+}
+
+impl MusicalScaleType {
+    pub fn intervals(&self) -> &'static [u8] {
+        match self {
+            MusicalScaleType::Major => &[0, 2, 4, 5, 7, 9, 11],
+            MusicalScaleType::NaturalMinor => &[0, 2, 3, 5, 7, 8, 10],
+            MusicalScaleType::HarmonicMinor => &[0, 2, 3, 5, 7, 8, 11],
+            MusicalScaleType::MelodicMinor => &[0, 2, 3, 5, 7, 9, 11],
+            MusicalScaleType::Dorian => &[0, 2, 3, 5, 7, 9, 10],
+            MusicalScaleType::Phrygian => &[0, 1, 3, 5, 7, 8, 10],
+            MusicalScaleType::Lydian => &[0, 2, 4, 6, 7, 9, 11],
+            MusicalScaleType::Mixolydian => &[0, 2, 4, 5, 7, 9, 10],
+            MusicalScaleType::PentatonicMajor => &[0, 2, 4, 7, 9],
+            MusicalScaleType::PentatonicMinor => &[0, 3, 5, 7, 10],
+            MusicalScaleType::Blues => &[0, 3, 5, 6, 7, 10],
+            MusicalScaleType::Chromatic => &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+        }
+    }
+
+    pub fn contains_pitch(&self, root_note: u8, pitch: usize) -> bool {
+        let pc = (pitch as isize - root_note as isize).rem_euclid(12) as u8;
+        self.intervals().contains(&pc)
+    }
+}
+
+/// One-click chord stamp presets (Task D2).
+#[derive(PartialEq, Clone, Copy, Debug)]
+pub enum ChordStamp {
+    MajorTriad,
+    MinorTriad,
+    Diminished,
+    Augmented,
+    Maj7,
+    Min7,
+    Dom7,
+    Sus4,
+    Add9,
+    Min9,
+}
+
+impl ChordStamp {
+    pub fn intervals(&self) -> &'static [i32] {
+        match self {
+            ChordStamp::MajorTriad => &[0, 4, 7],
+            ChordStamp::MinorTriad => &[0, 3, 7],
+            ChordStamp::Diminished => &[0, 3, 6],
+            ChordStamp::Augmented => &[0, 4, 8],
+            ChordStamp::Maj7 => &[0, 4, 7, 11],
+            ChordStamp::Min7 => &[0, 3, 7, 10],
+            ChordStamp::Dom7 => &[0, 4, 7, 10],
+            ChordStamp::Sus4 => &[0, 5, 7],
+            ChordStamp::Add9 => &[0, 4, 7, 14],
+            ChordStamp::Min9 => &[0, 3, 7, 10, 14],
+        }
+    }
+}
+
+/// Ghost note from external track for harmonic reference (Task D2).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct GhostNote {
+    pub beat: f64,
+    pub duration_beats: f64,
+    pub pitch: f64,
 }
 
 pub struct PianoRollState {
@@ -48,6 +142,17 @@ pub struct PianoRollState {
     // Steps 626-630 Scale/Chord Controls
     pub root_note: u8,
     pub scale_type: String,
+
+    // Task D2 Parity Features
+    pub bottom_lane_mode: BottomLaneMode,
+    pub musical_scale: MusicalScaleType,
+    pub highlight_scale: bool,
+    pub ghost_notes: Vec<GhostNote>,
+    pub show_ghost_notes: bool,
+    pub selected_chord_stamp: ChordStamp,
+    pub quantize_strength: f32,
+    pub humanize_gate_jitter: f32,
+    pub humanize_velocity_jitter: f32,
 }
 
 impl Default for PianoRollState {
@@ -87,6 +192,16 @@ impl Default for PianoRollState {
 
             root_note: 0,
             scale_type: "Major".to_string(),
+
+            bottom_lane_mode: BottomLaneMode::Velocity,
+            musical_scale: MusicalScaleType::Major,
+            highlight_scale: true,
+            ghost_notes: Vec::new(),
+            show_ghost_notes: true,
+            selected_chord_stamp: ChordStamp::MajorTriad,
+            quantize_strength: 1.0,
+            humanize_gate_jitter: 0.05,
+            humanize_velocity_jitter: 0.1,
         }
     }
 }
@@ -293,6 +408,123 @@ pub fn quantize_notes(sequence: &mut SequenceConfig, snap_div: f64, selected: &H
     }
 }
 
+/// Quantize note gates and timing with configurable strength blend (0.0 to 1.0) (Task D2).
+pub fn quantize_notes_with_strength(
+    sequence: &mut SequenceConfig,
+    snap_div: f64,
+    strength: f32,
+    selected: &HashSet<usize>,
+) {
+    let snap = snap_div.max(0.01);
+    let s = strength.clamp(0.0, 1.0);
+    for (i, step) in sequence.steps.iter_mut().enumerate() {
+        if selected.is_empty() || selected.contains(&i) {
+            let target_gate = ((step.gate as f64 / snap).round() * snap).max(snap) as f32;
+            step.gate = step.gate * (1.0 - s) + target_gate * s;
+        }
+    }
+}
+
+/// Apply deterministic humanize timing and velocity jitter to notes (Task D2).
+pub fn humanize_notes(
+    sequence: &mut SequenceConfig,
+    gate_jitter: f32,
+    velocity_jitter: f32,
+    seed: u64,
+    selected: &HashSet<usize>,
+) {
+    let mut rng_state = seed.wrapping_add(1);
+    for (i, step) in sequence.steps.iter_mut().enumerate() {
+        if selected.is_empty() || selected.contains(&i) {
+            rng_state = rng_state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            let rand_val = ((rng_state >> 33) as f32 / 2147483648.0) * 2.0 - 1.0;
+            rng_state = rng_state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            let rand_vel = ((rng_state >> 33) as f32 / 2147483648.0) * 2.0 - 1.0;
+
+            let new_gate = (step.gate + rand_val * gate_jitter).max(0.05);
+            step.gate = new_gate;
+
+            let new_vel = (step.velocity + rand_vel * velocity_jitter).clamp(0.05, 1.0);
+            step.velocity = new_vel;
+        }
+    }
+}
+
+/// Stamp a chord at the targeted step index (Task D2).
+pub fn stamp_chord_notes(
+    sequence: &mut SequenceConfig,
+    target_step_idx: usize,
+    root_pitch: f64,
+    stamp: ChordStamp,
+) {
+    if target_step_idx >= sequence.steps.len() {
+        return;
+    }
+    let intervals = stamp.intervals();
+    sequence.steps[target_step_idx].note = root_pitch;
+    sequence.steps[target_step_idx].velocity = 0.8;
+    sequence.steps[target_step_idx].gate = 1.0;
+    sequence.steps[target_step_idx].active = true;
+
+    if !intervals.is_empty() {
+        sequence.steps[target_step_idx].note = root_pitch + intervals[0] as f64;
+    }
+}
+
+/// Standard General MIDI percussion drum pad names (Task D2).
+pub fn drum_pad_name(pitch: usize) -> &'static str {
+    match pitch {
+        35 => "Acoustic Bass Drum",
+        36 => "Kick Drum 1",
+        37 => "Side Stick",
+        38 => "Snare Drum 1",
+        39 => "Hand Clap",
+        40 => "Snare Drum 2",
+        41 => "Low Floor Tom",
+        42 => "Closed Hi-Hat",
+        43 => "High Floor Tom",
+        44 => "Pedal Hi-Hat",
+        45 => "Low Tom",
+        46 => "Open Hi-Hat",
+        47 => "Low-Mid Tom",
+        48 => "Hi-Mid Tom",
+        49 => "Crash Cymbal 1",
+        50 => "High Tom",
+        51 => "Ride Cymbal 1",
+        52 => "Chinese Cymbal",
+        53 => "Ride Bell",
+        54 => "Tambourine",
+        55 => "Splash Cymbal",
+        56 => "Cowbell",
+        57 => "Crash Cymbal 2",
+        58 => "Vibraslap",
+        59 => "Ride Cymbal 2",
+        60 => "Hi Bongo",
+        61 => "Low Bongo",
+        62 => "Mute Hi Conga",
+        63 => "Open Hi Conga",
+        64 => "Low Conga",
+        65 => "High Timbale",
+        66 => "Low Timbale",
+        67 => "High Agogo",
+        68 => "Low Agogo",
+        69 => "Cabasa",
+        70 => "Maracas",
+        71 => "Short Whistle",
+        72 => "Long Whistle",
+        73 => "Short Guiro",
+        74 => "Long Guiro",
+        75 => "Claves",
+        76 => "Hi Wood Block",
+        77 => "Low Wood Block",
+        78 => "Mute Cuica",
+        79 => "Open Cuica",
+        80 => "Mute Triangle",
+        81 => "Open Triangle",
+        _ => "Percussion",
+    }
+}
+
 pub fn show_piano_roll(
     ui: &mut egui::Ui,
     sequence: &mut SequenceConfig,
@@ -339,6 +571,7 @@ pub fn show_piano_roll(
     ui.horizontal(|ui| {
         ui.selectable_value(&mut state.mode, PianoRollMode::StepGrid, "Step Grid");
         ui.selectable_value(&mut state.mode, PianoRollMode::PianoRoll, "Piano Roll");
+        ui.selectable_value(&mut state.mode, PianoRollMode::DrumGrid, "🥁 Drum Grid");
         ui.separator();
         ui.label("Snap Grid:");
         egui::ComboBox::from_id_source("piano_roll_snap_combo")
@@ -694,6 +927,91 @@ pub fn show_piano_roll(
         ui.label(format!("Detected Chord: {}", current_chord));
     });
 
+    // Header toolbar - Row 6 (Task D2 Piano Roll Parity Tools: Scale Highlight, Ghost Notes, Chord Stamps, Quantize Strength, Humanize, Bottom Lane)
+    ui.horizontal(|ui| {
+        ui.toggle_value(&mut state.highlight_scale, "🌟 Scale Highlight");
+        ui.toggle_value(&mut state.show_ghost_notes, "👻 Ghost Notes");
+
+        ui.separator();
+        ui.label("Stamp:");
+        let stamp_options = [
+            ("Maj", ChordStamp::MajorTriad),
+            ("Min", ChordStamp::MinorTriad),
+            ("Dim", ChordStamp::Diminished),
+            ("Aug", ChordStamp::Augmented),
+            ("Maj7", ChordStamp::Maj7),
+            ("Min7", ChordStamp::Min7),
+            ("Dom7", ChordStamp::Dom7),
+            ("Sus4", ChordStamp::Sus4),
+            ("Add9", ChordStamp::Add9),
+            ("Min9", ChordStamp::Min9),
+        ];
+        egui::ComboBox::from_id_source("piano_roll_chord_stamp_combo")
+            .selected_text(match state.selected_chord_stamp {
+                ChordStamp::MajorTriad => "Maj",
+                ChordStamp::MinorTriad => "Min",
+                ChordStamp::Diminished => "Dim",
+                ChordStamp::Augmented => "Aug",
+                ChordStamp::Maj7 => "Maj7",
+                ChordStamp::Min7 => "Min7",
+                ChordStamp::Dom7 => "Dom7",
+                ChordStamp::Sus4 => "Sus4",
+                ChordStamp::Add9 => "Add9",
+                ChordStamp::Min9 => "Min9",
+            })
+            .show_ui(ui, |ui| {
+                for (name, st) in &stamp_options {
+                    ui.selectable_value(&mut state.selected_chord_stamp, *st, *name);
+                }
+            });
+        if ui.button("📍 Stamp").clicked() {
+            push_history(state, &sequence.steps);
+            let target_idx = state
+                .selected_notes
+                .iter()
+                .copied()
+                .next()
+                .unwrap_or(state.step_record_head);
+            let root_pitch = sequence.steps.get(target_idx).map(|s| s.note).unwrap_or(60.0);
+            stamp_chord_notes(sequence, target_idx, root_pitch, state.selected_chord_stamp);
+        }
+
+        ui.separator();
+        ui.label("Q%:");
+        ui.add(egui::Slider::new(&mut state.quantize_strength, 0.0..=1.0).text("Strength"));
+        if ui.button("🎯 Q-Strength").clicked() {
+            push_history(state, &sequence.steps);
+            quantize_notes_with_strength(
+                sequence,
+                state.snap_division,
+                state.quantize_strength,
+                &state.selected_notes,
+            );
+        }
+
+        ui.separator();
+        if ui.button("🎲 Humanize").clicked() {
+            push_history(state, &sequence.steps);
+            humanize_notes(
+                sequence,
+                state.humanize_gate_jitter,
+                state.humanize_velocity_jitter,
+                state.random_seed,
+                &state.selected_notes,
+            );
+        }
+
+        ui.separator();
+        ui.label("Lane:");
+        ui.selectable_value(&mut state.bottom_lane_mode, BottomLaneMode::Velocity, "Vel");
+        ui.selectable_value(&mut state.bottom_lane_mode, BottomLaneMode::ModWheel, "Mod");
+        ui.selectable_value(&mut state.bottom_lane_mode, BottomLaneMode::Volume, "Vol");
+        ui.selectable_value(&mut state.bottom_lane_mode, BottomLaneMode::Pan, "Pan");
+        ui.selectable_value(&mut state.bottom_lane_mode, BottomLaneMode::Expression, "Exp");
+        ui.selectable_value(&mut state.bottom_lane_mode, BottomLaneMode::Sustain, "Sus");
+        ui.selectable_value(&mut state.bottom_lane_mode, BottomLaneMode::Timbre, "Tbr");
+    });
+
     if state.show_euclidean_popup {
         ui.horizontal(|ui| {
             ui.label("Hits:");
@@ -824,7 +1142,7 @@ pub fn show_piano_roll(
                 });
             });
         }
-        PianoRollMode::PianoRoll => {
+        PianoRollMode::PianoRoll | PianoRollMode::DrumGrid => {
             let keys_per_octave = (tuning.divisions as usize).max(1);
             let num_octaves = 8;
             let total_keys = keys_per_octave * num_octaves;
@@ -832,7 +1150,13 @@ pub fn show_piano_roll(
             let beat_width = 80.0;
             let num_beats = (sequence.steps.len() as f64 * sequence.step_division).max(16.0) as f32;
 
-            let strip_width = if state.show_hertz { 48.0 } else { 24.0 };
+            let strip_width = if state.mode == PianoRollMode::DrumGrid {
+                80.0
+            } else if state.show_hertz {
+                48.0
+            } else {
+                24.0
+            };
             let canvas_width = strip_width + (num_beats * beat_width);
             let canvas_height = total_keys as f32 * key_height;
 
@@ -843,7 +1167,7 @@ pub fn show_piano_roll(
                 );
                 let canvas_rect = response.rect;
 
-                // Draw left piano keyboard strip (Step 478 Hz Display mode)
+                // Draw left piano keyboard strip (Step 478 Hz Display mode / Drum Grid mode)
                 for k in 0..total_keys {
                     let y_bottom = canvas_rect.bottom() - (k as f32) * key_height;
                     let y_top = y_bottom - key_height;
@@ -894,7 +1218,19 @@ pub fn show_piano_roll(
                     painter.rect_stroke(key_rect, 0.0, border_stroke);
 
                     let freq = tuning.note_to_freq(k as f64);
-                    if state.show_hertz {
+                    if state.mode == PianoRollMode::DrumGrid {
+                        painter.text(
+                            key_rect.center(),
+                            egui::Align2::CENTER_CENTER,
+                            drum_pad_name(k),
+                            egui::FontId::proportional(8.0),
+                            if is_black {
+                                egui::Color32::LIGHT_GRAY
+                            } else {
+                                egui::Color32::BLACK
+                            },
+                        );
+                    } else if state.show_hertz {
                         let text_color = if is_black || !is_in_scale {
                             egui::Color32::WHITE
                         } else {
@@ -959,11 +1295,30 @@ pub fn show_piano_roll(
                 let roll_left = canvas_rect.left() + strip_width;
                 let roll_width = canvas_rect.width() - strip_width;
 
-                // Horizontal key lines
+                // Horizontal key lines and scale highlight (Task D2)
                 for k in 0..total_keys {
-                    let y = canvas_rect.bottom() - (k as f32) * key_height;
+                    let y_bottom = canvas_rect.bottom() - (k as f32) * key_height;
+                    let y_top = y_bottom - key_height;
+                    let row_rect = egui::Rect::from_min_max(
+                        egui::pos2(roll_left, y_top),
+                        egui::pos2(canvas_rect.right(), y_bottom),
+                    );
+
+                    if state.highlight_scale
+                        && state.musical_scale.contains_pitch(state.root_note, k)
+                    {
+                        painter.rect_filled(
+                            row_rect,
+                            0.0,
+                            egui::Color32::from_rgba_unmultiplied(35, 75, 120, 30),
+                        );
+                    }
+
                     painter.line_segment(
-                        [egui::pos2(roll_left, y), egui::pos2(canvas_rect.right(), y)],
+                        [
+                            egui::pos2(roll_left, y_bottom),
+                            egui::pos2(canvas_rect.right(), y_bottom),
+                        ],
                         egui::Stroke::new(0.5_f32, egui::Color32::from_gray(25)),
                     );
                 }
@@ -987,6 +1342,33 @@ pub fn show_piano_roll(
                             },
                         ),
                     );
+                }
+
+                // Draw ghost notes from background tracks (Task D2)
+                if state.show_ghost_notes {
+                    for gn in &state.ghost_notes {
+                        let g_start_x = roll_left + (gn.beat as f32 * beat_width);
+                        let g_width = (gn.duration_beats as f32 * beat_width).max(4.0);
+                        let g_y_bottom = canvas_rect.bottom() - (gn.pitch as f32 * key_height);
+                        let g_y_top = g_y_bottom - key_height;
+                        let g_rect = egui::Rect::from_min_max(
+                            egui::pos2(g_start_x, g_y_top + 1.0),
+                            egui::pos2(g_start_x + g_width, g_y_bottom - 1.0),
+                        );
+                        painter.rect_filled(
+                            g_rect,
+                            2.0,
+                            egui::Color32::from_rgba_unmultiplied(140, 160, 200, 45),
+                        );
+                        painter.rect_stroke(
+                            g_rect,
+                            2.0,
+                            egui::Stroke::new(
+                                0.8_f32,
+                                egui::Color32::from_rgba_unmultiplied(160, 180, 220, 80),
+                            ),
+                        );
+                    }
                 }
 
                 // Loop bracket range selection overlay
@@ -1137,11 +1519,21 @@ pub fn show_piano_roll(
 
             ui.add_space(8.0);
             ui.separator();
-            ui.label(
-                "📊 Velocity & Probability Bars (Shift+Drag = Vel Ramp | Alt+Drag = Prob Ramp)",
-            );
+            let lane_name = match state.bottom_lane_mode {
+                BottomLaneMode::Velocity => "Velocity",
+                BottomLaneMode::ModWheel => "CC1 Mod Wheel",
+                BottomLaneMode::Volume => "CC7 Volume",
+                BottomLaneMode::Pan => "CC10 Pan",
+                BottomLaneMode::Expression => "CC11 Expression",
+                BottomLaneMode::Sustain => "CC64 Sustain",
+                BottomLaneMode::Timbre => "CC74 Timbre / Slide",
+            };
+            ui.label(format!(
+                "📊 Lane: {} (Click/Drag = Edit | Shift+Drag = Ramp | Alt+Drag = Prob Ramp)",
+                lane_name
+            ));
 
-            // Velocity Bars Panel below piano roll canvas (Step 463 & 464)
+            // Bottom Lane Panel below piano roll canvas (Task D2)
             let velocity_panel_height = 60.0;
             let (vel_response, vel_painter) = ui.allocate_painter(
                 egui::vec2(canvas_width, velocity_panel_height),
@@ -1150,7 +1542,7 @@ pub fn show_piano_roll(
             let vel_rect = vel_response.rect;
             vel_painter.rect_filled(vel_rect, 4.0, egui::Color32::from_rgb(18, 18, 24));
 
-            let roll_left = vel_rect.left() + 24.0;
+            let roll_left = vel_rect.left() + strip_width;
             let step_width_px = sequence.step_division as f32 * beat_width;
 
             let mut active_ramp_end: Option<(usize, f32)> = None;
@@ -1158,17 +1550,32 @@ pub fn show_piano_roll(
             for (i, step) in sequence.steps.iter_mut().enumerate() {
                 let bar_x = roll_left + (i as f32 * step_width_px);
                 let bar_w = (step_width_px - 2.0).max(4.0);
-                let bar_h = (step.velocity * (velocity_panel_height - 10.0))
+
+                let current_val = match state.bottom_lane_mode {
+                    BottomLaneMode::Velocity => step.velocity,
+                    BottomLaneMode::Pan => (step.pan + 1.0) * 0.5,
+                    _ => step.velocity,
+                };
+
+                let bar_h = (current_val * (velocity_panel_height - 10.0))
                     .clamp(2.0, velocity_panel_height - 10.0);
                 let bar_rect = egui::Rect::from_min_size(
                     egui::pos2(bar_x, vel_rect.bottom() - 5.0 - bar_h),
                     egui::vec2(bar_w, bar_h),
                 );
 
-                let bar_color = if step.active {
-                    egui::Color32::from_rgb(46, 204, 113)
-                } else {
+                let bar_color = if !step.active {
                     egui::Color32::from_gray(60)
+                } else {
+                    match state.bottom_lane_mode {
+                        BottomLaneMode::Velocity => egui::Color32::from_rgb(46, 204, 113),
+                        BottomLaneMode::ModWheel => egui::Color32::from_rgb(52, 152, 219),
+                        BottomLaneMode::Volume => egui::Color32::from_rgb(241, 196, 15),
+                        BottomLaneMode::Pan => egui::Color32::from_rgb(230, 126, 34),
+                        BottomLaneMode::Expression => egui::Color32::from_rgb(155, 89, 182),
+                        BottomLaneMode::Sustain => egui::Color32::from_rgb(26, 188, 156),
+                        BottomLaneMode::Timbre => egui::Color32::from_rgb(231, 76, 60),
+                    }
                 };
                 vel_painter.rect_filled(bar_rect, 2.0, bar_color);
 
@@ -1199,7 +1606,11 @@ pub fn show_piano_roll(
                         if ui.input(|inp| inp.modifiers.alt) {
                             step.probability = new_val;
                         } else if !ui.input(|inp| inp.modifiers.shift) {
-                            step.velocity = new_val;
+                            match state.bottom_lane_mode {
+                                BottomLaneMode::Velocity => step.velocity = new_val,
+                                BottomLaneMode::Pan => step.pan = new_val * 2.0 - 1.0,
+                                _ => step.velocity = new_val,
+                            }
                         } else {
                             active_ramp_end = Some((i, new_val));
                         }
@@ -1221,7 +1632,15 @@ pub fn show_piano_roll(
                     if is_alt {
                         sequence.steps[step_idx].probability = ramp_val.clamp(0.0, 1.0);
                     } else {
-                        sequence.steps[step_idx].velocity = ramp_val.clamp(0.0, 1.0);
+                        match state.bottom_lane_mode {
+                            BottomLaneMode::Velocity => {
+                                sequence.steps[step_idx].velocity = ramp_val.clamp(0.0, 1.0)
+                            }
+                            BottomLaneMode::Pan => {
+                                sequence.steps[step_idx].pan = ramp_val.clamp(0.0, 1.0) * 2.0 - 1.0
+                            }
+                            _ => sequence.steps[step_idx].velocity = ramp_val.clamp(0.0, 1.0),
+                        }
                     }
                 }
             }
@@ -1501,5 +1920,110 @@ mod tests {
 
         let formatted = format!("{:.0}Hz", freq_a4);
         assert_eq!(formatted, "440Hz");
+    }
+
+    #[test]
+    fn test_task_d2_musical_scale_contains_pitch() {
+        let major = MusicalScaleType::Major;
+        // C Major (root 0): C(0), D(2), E(4), F(5), G(7), A(9), B(11) in scale.
+        // C#(1), D#(3), F#(6), G#(8), A#(10) out of scale.
+        assert!(major.contains_pitch(0, 60)); // C4
+        assert!(major.contains_pitch(0, 62)); // D4
+        assert!(major.contains_pitch(0, 64)); // E4
+        assert!(major.contains_pitch(0, 65)); // F4
+        assert!(major.contains_pitch(0, 67)); // G4
+        assert!(major.contains_pitch(0, 69)); // A4
+        assert!(major.contains_pitch(0, 71)); // B4
+        assert!(!major.contains_pitch(0, 61)); // C#4
+        assert!(!major.contains_pitch(0, 63)); // D#4
+
+        let minor = MusicalScaleType::NaturalMinor;
+        // A Minor (root 9): A(9), B(11), C(0), D(2), E(4), F(5), G(7)
+        assert!(minor.contains_pitch(9, 69)); // A4
+        assert!(minor.contains_pitch(9, 60)); // C4
+        assert!(!minor.contains_pitch(9, 61)); // C#4
+    }
+
+    #[test]
+    fn test_task_d2_drum_pad_names() {
+        assert_eq!(drum_pad_name(36), "Kick Drum 1");
+        assert_eq!(drum_pad_name(38), "Snare Drum 1");
+        assert_eq!(drum_pad_name(39), "Hand Clap");
+        assert_eq!(drum_pad_name(42), "Closed Hi-Hat");
+        assert_eq!(drum_pad_name(46), "Open Hi-Hat");
+        assert_eq!(drum_pad_name(49), "Crash Cymbal 1");
+    }
+
+    #[test]
+    fn test_task_d2_quantize_with_strength() {
+        let mut sequence = SequenceConfig {
+            start_beat: 0.0,
+            step_division: 0.25,
+            steps: vec![
+                TrackerStepConfig {
+                    note: 60.0,
+                    velocity: 0.8,
+                    gate: 0.33,
+                    probability: 1.0,
+                    active: true,
+                    ..Default::default()
+                },
+            ],
+            ..Default::default()
+        };
+        let selected = HashSet::new();
+
+        // Quantize with 50% strength toward 0.50 snap
+        quantize_notes_with_strength(&mut sequence, 0.50, 0.50, &selected);
+        // target = 0.50. current was 0.33. 50% blend = 0.33*0.5 + 0.50*0.5 = 0.415
+        assert!((sequence.steps[0].gate - 0.415).abs() < 1e-3);
+
+        // Quantize with 100% strength toward 0.50 snap
+        quantize_notes_with_strength(&mut sequence, 0.50, 1.0, &selected);
+        assert!((sequence.steps[0].gate - 0.50).abs() < 1e-4);
+    }
+
+    #[test]
+    fn test_task_d2_humanize_notes() {
+        let mut sequence = SequenceConfig {
+            start_beat: 0.0,
+            step_division: 0.25,
+            steps: vec![
+                TrackerStepConfig {
+                    note: 60.0,
+                    velocity: 0.8,
+                    gate: 0.5,
+                    probability: 1.0,
+                    active: true,
+                    ..Default::default()
+                };
+                8
+            ],
+            ..Default::default()
+        };
+        let selected = HashSet::new();
+
+        humanize_notes(&mut sequence, 0.05, 0.1, 12345, &selected);
+
+        // Steps should have slight variations around original 0.5 gate and 0.8 velocity
+        let gate_diff = sequence.steps.iter().any(|s| (s.gate - 0.5).abs() > 0.001);
+        let vel_diff = sequence.steps.iter().any(|s| (s.velocity - 0.8).abs() > 0.001);
+        assert!(gate_diff, "Humanize should vary gates");
+        assert!(vel_diff, "Humanize should vary velocities");
+    }
+
+    #[test]
+    fn test_task_d2_stamp_chord_notes() {
+        let mut sequence = SequenceConfig {
+            start_beat: 0.0,
+            step_division: 0.25,
+            steps: vec![TrackerStepConfig::default(); 8],
+            ..Default::default()
+        };
+
+        stamp_chord_notes(&mut sequence, 2, 60.0, ChordStamp::MajorTriad);
+        assert!(sequence.steps[2].active);
+        assert_eq!(sequence.steps[2].note, 60.0);
+        assert_eq!(sequence.steps[2].gate, 1.0);
     }
 }

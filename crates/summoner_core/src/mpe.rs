@@ -239,9 +239,9 @@ impl MpeZone {
     /// Check whether a 0-indexed MIDI channel is a member voice channel in this zone.
     pub fn is_member_channel(&self, ch: u8) -> bool {
         if self.is_lower_zone {
-            ch >= 1 && ch <= 14
+            (1..=14).contains(&ch)
         } else {
-            ch >= 1 && ch <= 14
+            (0..=14).contains(&ch)
         }
     }
 
