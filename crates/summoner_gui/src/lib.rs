@@ -34,6 +34,8 @@ pub mod visualizer;
 pub mod waveform_cache;
 
 #[cfg(feature = "gui")]
+pub mod app_state;
+#[cfg(feature = "gui")]
 pub mod app;
 #[cfg(feature = "gui")]
 pub mod command_palette;
